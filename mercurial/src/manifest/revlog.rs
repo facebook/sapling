@@ -17,7 +17,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use errors::*;
 use failure;
 use file;
-use mercurial_types::{Blob, FileType, MPath, MPathElement, RepoPath};
+use mercurial_types::{FileType, HgBlob, MPath, MPathElement, RepoPath};
 use mercurial_types::manifest::Type;
 
 use blobnode::{BlobNode, Parents};
@@ -42,8 +42,8 @@ pub struct RevlogManifest {
 
 /// Concrete representation of various Entry Types.
 pub enum EntryContent {
-    File(Blob),       // TODO stream
-    Executable(Blob), // TODO stream
+    File(HgBlob),       // TODO stream
+    Executable(HgBlob), // TODO stream
     Symlink(MPath),
     Tree(RevlogManifest),
 }
@@ -331,7 +331,7 @@ impl RevlogEntry {
             .boxify()
     }
 
-    pub fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
+    pub fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
         let nodeid = self.get_hash().into_nodehash();
         revlog
@@ -418,11 +418,11 @@ impl RevlogEntry {
     }
 }
 
-fn strip_file_metadata(blob: &Blob) -> Blob {
+fn strip_file_metadata(blob: &HgBlob) -> HgBlob {
     match blob {
-        &Blob::Dirty(ref bytes) => {
+        &HgBlob::Dirty(ref bytes) => {
             let (_, off) = file::File::extract_meta(bytes);
-            Blob::from(bytes.slice_from(off))
+            HgBlob::from(bytes.slice_from(off))
         }
         _ => blob.clone(),
     }

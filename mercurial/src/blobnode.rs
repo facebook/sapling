@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::Blob;
+use mercurial_types::HgBlob;
 use mercurial_types::hash::{self, Context};
 
 use nodehash::NodeHash;
@@ -66,7 +66,7 @@ impl Iterator for ParentIter {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize)]
 pub struct BlobNode {
-    blob: Blob,
+    blob: HgBlob,
     parents: Parents,
     maybe_copied: bool,
 }
@@ -78,7 +78,7 @@ impl BlobNode {
     /// Two parent nodes are always considered to have been potentially copied.
     pub fn new<B>(blob: B, p1: Option<&NodeHash>, p2: Option<&NodeHash>) -> BlobNode
     where
-        B: Into<Blob>,
+        B: Into<HgBlob>,
     {
         let blob = blob.into();
         BlobNode {
@@ -92,7 +92,7 @@ impl BlobNode {
         self.blob.size()
     }
 
-    pub fn as_blob(&self) -> &Blob {
+    pub fn as_blob(&self) -> &HgBlob {
         &self.blob
     }
 
@@ -137,14 +137,14 @@ mod test {
 
     #[test]
     fn test_node_none() {
-        let blob = Blob::from(Bytes::from(&[0; 10][..]));
+        let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
         let n = BlobNode::new(blob, None, None);
         assert_eq!(n.parents, Parents::None);
     }
 
     #[test]
     fn test_node_one() {
-        let blob = Blob::from(Bytes::from(&[0; 10][..]));
+        let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
         let p = &BlobNode::new(blob.clone(), None, None);
         assert!(p.maybe_copied);
         {
@@ -170,8 +170,8 @@ mod test {
     #[test]
     fn test_node_two() {
         use std::mem;
-        let mut p1 = BlobNode::new(Blob::from(Bytes::from(&b"foo1"[..])), None, None);
-        let mut p2 = BlobNode::new(Blob::from(Bytes::from(&b"foo2"[..])), None, None);
+        let mut p1 = BlobNode::new(HgBlob::from(Bytes::from(&b"foo1"[..])), None, None);
+        let mut p2 = BlobNode::new(HgBlob::from(Bytes::from(&b"foo2"[..])), None, None);
         assert!(p1.maybe_copied);
         assert!(p2.maybe_copied);
 
@@ -184,7 +184,7 @@ mod test {
 
         let node1 = {
             let n = BlobNode::new(
-                Blob::from(Bytes::from(&b"bar"[..])),
+                HgBlob::from(Bytes::from(&b"bar"[..])),
                 pid1.as_ref(),
                 pid2.as_ref(),
             );
@@ -194,7 +194,7 @@ mod test {
         };
         let node2 = {
             let n = BlobNode::new(
-                Blob::from(Bytes::from(&b"bar"[..])),
+                HgBlob::from(Bytes::from(&b"bar"[..])),
                 pid2.as_ref(),
                 pid1.as_ref(),
             );

@@ -25,7 +25,7 @@ use linknodes::Linknodes;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{Blob, BlobNode, HgFileNodeId, NodeHash, RepoPath};
+use mercurial_types::{BlobNode, HgBlob, HgFileNodeId, NodeHash, RepoPath};
 use mercurial_types::nodehash::HgChangesetId;
 use stats::Timeseries;
 
@@ -293,7 +293,7 @@ where
 }
 
 fn create_filenode(
-    blob: Blob,
+    blob: HgBlob,
     filenode_hash: mercurial::NodeHash,
     parents: mercurial::Parents,
     repopath: RepoPath,

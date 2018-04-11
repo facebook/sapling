@@ -12,7 +12,7 @@ use futures::stream::{self, Stream};
 
 use mononoke_types::{FileType, MPathElement};
 
-use blob::Blob;
+use blob::HgBlob;
 use blobnode::Parents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use nodehash::EntryId;
@@ -152,16 +152,16 @@ impl Display for Type {
 
 /// Concrete representation of various Entry Types.
 pub enum Content {
-    File(Blob),       // TODO stream
-    Executable(Blob), // TODO stream
+    File(HgBlob),       // TODO stream
+    Executable(HgBlob), // TODO stream
     // Symlinks typically point to files but can have arbitrary content, so represent them as
     // blobs rather than as MPath instances.
-    Symlink(Blob), // TODO stream
+    Symlink(HgBlob), // TODO stream
     Tree(Box<Manifest + Sync>),
 }
 
 impl Content {
-    pub fn new_file(file_type: FileType, blob: Blob) -> Self {
+    pub fn new_file(file_type: FileType, blob: HgBlob) -> Self {
         match file_type {
             FileType::Regular => Content::File(blob),
             FileType::Executable => Content::Executable(blob),
@@ -194,7 +194,7 @@ pub trait Entry: Send + 'static {
 
     /// Get the raw content of the object as it exists in the blobstore,
     /// without any interpretation. This is only really useful for doing a bit-level duplication.
-    fn get_raw_content(&self) -> BoxFuture<Blob, Error>;
+    fn get_raw_content(&self) -> BoxFuture<HgBlob, Error>;
 
     /// Get the interpreted content of the object. This will likely require IO
     fn get_content(&self) -> BoxFuture<Content, Error>;
@@ -249,7 +249,7 @@ where
         self.entry.get_parents().boxify()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
+    fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
         self.entry.get_raw_content().boxify()
     }
 
@@ -279,7 +279,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_parents()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
+    fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
         (**self).get_raw_content()
     }
 

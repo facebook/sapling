@@ -10,8 +10,8 @@ use bincode;
 
 pub use failure::{Error, ResultExt};
 
-use mercurial_types::{Blob, HgBlobHash, HgChangesetId, HgFileNodeId, NodeHash, Parents, RepoPath,
-                      Type};
+use mercurial_types::{HgBlob, HgBlobHash, HgChangesetId, HgFileNodeId, NodeHash, Parents,
+                      RepoPath, Type};
 
 #[derive(Debug)]
 pub enum StateOpenError {
@@ -46,7 +46,7 @@ pub enum ErrorKind {
     #[fail(display = "Node id {} is missing", _0)] NodeMissing(NodeHash),
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]
     ContentMissing(NodeHash, HgBlobHash),
-    #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(Blob),
+    #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(HgBlob),
     #[fail(display = "Parents are not in blob store {:?}", _0)] ParentsUnknown(Parents),
     #[fail(display = "Serialization of node failed {} ({})", _0, _1)]
     SerializationFailed(NodeHash, bincode::Error),

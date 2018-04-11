@@ -20,7 +20,7 @@ use failure;
 use memmap::Mmap;
 use nom::IResult;
 
-pub use mercurial_types::{delta, Blob};
+pub use mercurial_types::{delta, HgBlob};
 pub use mercurial_types::bdiff::{self, Delta};
 
 use blobnode::BlobNode;
@@ -494,7 +494,7 @@ impl RevlogInner {
         Ok(data)
     }
 
-    fn make_node(&self, entry: &Entry, blob: Blob) -> Result<BlobNode> {
+    fn make_node(&self, entry: &Entry, blob: HgBlob) -> Result<BlobNode> {
         let mut pnodeid = |p| {
             let pn = self.get_entry(p);
             pn.map(|n| n.nodeid)
@@ -518,7 +518,7 @@ impl RevlogInner {
             self.construct_simple(tgtidx)?
         };
 
-        self.make_node(&entry, Blob::from(Bytes::from(data)))
+        self.make_node(&entry, HgBlob::from(Bytes::from(data)))
     }
 
     fn get_rev_by_nodeid(&self, id: &NodeHash) -> Result<BlobNode> {

@@ -11,7 +11,7 @@ use bytes::Bytes;
 use mercurial::{BlobNode, NodeHash, NULL_HASH};
 use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, Blob};
+use mercurial_types::{delta, HgBlob};
 
 use errors::*;
 
@@ -43,7 +43,7 @@ where
             Ok((
                 chunk.node,
                 RevlogChangeset::new(BlobNode::new(
-                    Blob::from(Bytes::from(delta::apply(b"", &chunk.delta))),
+                    HgBlob::from(Bytes::from(delta::apply(b"", &chunk.delta))),
                     chunk.p1.into_option().as_ref(),
                     chunk.p2.into_option().as_ref(),
                 ))?,

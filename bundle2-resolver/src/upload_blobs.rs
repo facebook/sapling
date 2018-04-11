@@ -43,7 +43,7 @@ where
             let (key, value) = item.upload(&repo)?;
             ensure_msg!(
                 map.insert(key.clone(), value).is_none() || ubtype == IgnoreDuplicates,
-                "Blob {:?} already provided before",
+                "HgBlob {:?} already provided before",
                 key
             );
             Ok(map)

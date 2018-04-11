@@ -15,7 +15,7 @@ use failure::{Error, ResultExt};
 use futures::{future, stream, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{Blob, Entry, FileType, MPath, MPathElement, Manifest, RepoPath, Type};
+use mercurial_types::{Entry, FileType, HgBlob, MPath, MPathElement, Manifest, RepoPath, Type};
 use mercurial_types::blobnode::Parents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::EntryId;
@@ -26,7 +26,7 @@ pub type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
 
 pub fn make_file<C: Into<Bytes>>(file_type: FileType, content: C) -> ContentFactory {
     let content = content.into();
-    Arc::new(move || Content::new_file(file_type, Blob::Dirty(content.clone())))
+    Arc::new(move || Content::new_file(file_type, HgBlob::Dirty(content.clone())))
 }
 
 #[derive(Clone)]
@@ -266,7 +266,7 @@ impl Entry for MockEntry {
     fn get_parents(&self) -> BoxFuture<Parents, Error> {
         unimplemented!();
     }
-    fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
+    fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
         unimplemented!();
     }
     fn get_content(&self) -> BoxFuture<Content, Error> {

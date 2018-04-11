@@ -37,7 +37,7 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial_types::{Blob, BlobNode, Changeset, Entry, HgChangesetId, HgFileNodeId, Manifest,
+use mercurial_types::{BlobNode, Changeset, Entry, HgBlob, HgChangesetId, HgFileNodeId, Manifest,
                       NodeHash, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::HgManifestId;
@@ -342,7 +342,7 @@ impl BlobRepo {
     // adding the entries to a changeset.
     pub fn upload_entry(
         &self,
-        raw_content: Blob,
+        raw_content: HgBlob,
         content_type: manifest::Type,
         p1: Option<NodeHash>,
         p2: Option<NodeHash>,

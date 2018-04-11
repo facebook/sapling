@@ -18,7 +18,7 @@ use mercurial;
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
-use mercurial_types::{delta, manifest, Blob, NodeHash, RepoPath};
+use mercurial_types::{delta, manifest, HgBlob, NodeHash, RepoPath};
 
 use errors::*;
 use upload_blobs::UploadableBlob;
@@ -100,7 +100,7 @@ impl UploadableBlob for TreemanifestEntry {
         let p1 = self.p1.map(|p1| NodeHash::new(p1.sha1().clone()));
         let p2 = self.p2.map(|p1| NodeHash::new(p1.sha1().clone()));
         repo.upload_entry(
-            Blob::from(self.data),
+            HgBlob::from(self.data),
             manifest::Type::Tree,
             p1,
             p2,

@@ -13,7 +13,7 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{Blob, BlobNode, FileType, HgManifestId, MPath, MPathElement, NodeHash,
+use mercurial_types::{BlobNode, FileType, HgBlob, HgManifestId, MPath, MPathElement, NodeHash,
                       Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::EntryId;
@@ -120,9 +120,9 @@ impl Entry for BlobEntry {
         self.get_node().map(|node| node.parents).boxify()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
+    fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
         self.get_raw_content_inner()
-            .map(|bytes| Blob::from(bytes))
+            .map(|bytes| HgBlob::from(bytes))
             .boxify()
     }
 
@@ -140,9 +140,9 @@ impl Entry for BlobEntry {
                         bytes.slice_from(off)
                     };
                     let res = match ty {
-                        Type::File(FileType::Regular) => Content::File(Blob::from(blob)),
-                        Type::File(FileType::Executable) => Content::Executable(Blob::from(blob)),
-                        Type::File(FileType::Symlink) => Content::Symlink(Blob::from(blob)),
+                        Type::File(FileType::Regular) => Content::File(HgBlob::from(blob)),
+                        Type::File(FileType::Executable) => Content::Executable(HgBlob::from(blob)),
+                        Type::File(FileType::Symlink) => Content::Symlink(HgBlob::from(blob)),
                         Type::Tree => Content::Tree(BlobManifest::parse(blobstore, blob)?.boxed()),
                     };
 

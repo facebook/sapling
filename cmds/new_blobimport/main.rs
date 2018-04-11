@@ -39,13 +39,13 @@ use tokio_core::reactor::Core;
 use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use changesets::SqliteChangesets;
 use mercurial::{RevlogChangeset, RevlogEntry, RevlogRepo};
-use mercurial_types::{Blob, MPath, NodeHash, RepoPath, RepositoryId, Type};
+use mercurial_types::{HgBlob, MPath, NodeHash, RepoPath, RepositoryId, Type};
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
     rootmf: BoxFuture<
         (
-            Blob,
+            HgBlob,
             Option<mercurial::NodeHash>,
             Option<mercurial::NodeHash>,
         ),
@@ -122,7 +122,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: mercurial::HgChangesetId) -> P
                 .with_context(|_| format!("While generating root manifest blob for {:?}", csid))?;
 
             let (p1, p2) = mf.parents().get_nodes();
-            Ok((Blob::from(Bytes::from(bytes)), p1.cloned(), p2.cloned()))
+            Ok((HgBlob::from(Bytes::from(bytes)), p1.cloned(), p2.cloned()))
         })
         .boxify();
 
@@ -163,8 +163,8 @@ fn upload_entry(
         let content = content
             .as_slice()
             .ok_or_else(|| err_msg(format!("corrupt blob {}", entryid)))?;
-        // convert from Blob<Vec<u8>> to Blob<Bytes>
-        Ok(Blob::from(Bytes::from(content)))
+        // convert from HgBlob<Vec<u8>> to HgBlob<Bytes>
+        Ok(HgBlob::from(Bytes::from(content)))
     });
 
     let parents = entry.get_parents().map(|parents| {

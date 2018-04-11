@@ -94,7 +94,7 @@ pub mod repo;
 pub mod sql_types;
 mod node;
 
-pub use blob::{Blob, HgBlobHash};
+pub use blob::{HgBlob, HgBlobHash};
 pub use blobnode::{BlobNode, Parents};
 pub use changeset::{Changeset, Time};
 pub use delta::Delta;

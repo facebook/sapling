@@ -14,7 +14,7 @@ use errors::*;
 /// Representation of a blob of data.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(Serialize, Deserialize)]
-pub enum Blob {
+pub enum HgBlob {
     /// Modified data with no corresponding hash
     Dirty(Bytes),
     /// Clean data paired with its hash
@@ -67,79 +67,79 @@ impl<'a> From<&'a [u8]> for HgBlobHash {
     }
 }
 
-impl Blob {
-    /// Clean a `Blob` by computing its hash. Leaves non-`Dirty` blobs unchanged.
+impl HgBlob {
+    /// Clean a `HgBlob` by computing its hash. Leaves non-`Dirty` blobs unchanged.
     pub fn clean(self) -> Self {
         match self {
-            Blob::Dirty(data) => {
+            HgBlob::Dirty(data) => {
                 let hash = HgBlobHash::from(data.as_ref());
-                Blob::Clean(data, hash)
+                HgBlob::Clean(data, hash)
             }
-            b @ Blob::Clean(..) | b @ Blob::Extern(..) => b,
+            b @ HgBlob::Clean(..) | b @ HgBlob::Extern(..) => b,
         }
     }
 
     pub fn size(&self) -> Option<usize> {
         match self {
-            &Blob::Dirty(ref data) => Some(data.len()),
-            &Blob::Clean(ref data, _) => Some(data.as_ref().len()),
-            &Blob::Extern(..) => None,
+            &HgBlob::Dirty(ref data) => Some(data.len()),
+            &HgBlob::Clean(ref data, _) => Some(data.as_ref().len()),
+            &HgBlob::Extern(..) => None,
         }
     }
 
     pub fn as_inner(&self) -> Option<&Bytes> {
         match self {
-            &Blob::Dirty(ref data) => Some(data),
-            &Blob::Clean(ref data, _) => Some(data),
-            &Blob::Extern(..) => None,
+            &HgBlob::Dirty(ref data) => Some(data),
+            &HgBlob::Clean(ref data, _) => Some(data),
+            &HgBlob::Extern(..) => None,
         }
     }
 
     pub fn hash(&self) -> Option<HgBlobHash> {
         match self {
-            &Blob::Clean(_, hash) | &Blob::Extern(hash) => Some(hash),
-            &Blob::Dirty(..) => None,
+            &HgBlob::Clean(_, hash) | &HgBlob::Extern(hash) => Some(hash),
+            &HgBlob::Dirty(..) => None,
         }
     }
 
     pub fn into_inner(self) -> Option<Bytes> {
         match self {
-            Blob::Dirty(data) => Some(data),
-            Blob::Clean(data, _) => Some(data),
-            Blob::Extern(..) => None,
+            HgBlob::Dirty(data) => Some(data),
+            HgBlob::Clean(data, _) => Some(data),
+            HgBlob::Extern(..) => None,
         }
     }
 
     pub fn as_slice(&self) -> Option<&[u8]> {
         match self {
-            &Blob::Dirty(ref data) => Some(data.as_ref()),
-            &Blob::Clean(ref data, _) => Some(data.as_ref()),
-            &Blob::Extern(..) => None,
+            &HgBlob::Dirty(ref data) => Some(data.as_ref()),
+            &HgBlob::Clean(ref data, _) => Some(data.as_ref()),
+            &HgBlob::Extern(..) => None,
         }
     }
 }
 
-impl From<Bytes> for Blob {
+impl From<Bytes> for HgBlob {
     fn from(data: Bytes) -> Self {
-        Blob::Dirty(data)
+        HgBlob::Dirty(data)
     }
 }
 
-/// Get a reference to the `Blob`'s data, if it has some (ie, not `Extern`)
-impl<'a> Into<Option<&'a [u8]>> for &'a Blob {
+/// Get a reference to the `HgBlob`'s data, if it has some (ie, not `Extern`)
+impl<'a> Into<Option<&'a [u8]>> for &'a HgBlob {
     fn into(self) -> Option<&'a [u8]> {
         match self {
-            &Blob::Clean(ref data, _) => Some(data.as_ref()),
-            &Blob::Dirty(ref data) => Some(data.as_ref()),
-            &Blob::Extern(..) => None,
+            &HgBlob::Clean(ref data, _) => Some(data.as_ref()),
+            &HgBlob::Dirty(ref data) => Some(data.as_ref()),
+            &HgBlob::Extern(..) => None,
         }
     }
 }
 
-/// Construct an `Extern` `Blob` from a `HgBlobHash`
-impl From<HgBlobHash> for Blob {
+/// Construct an `Extern` `HgBlob` from a `HgBlobHash`
+impl From<HgBlobHash> for HgBlob {
     fn from(bh: HgBlobHash) -> Self {
-        Blob::Extern(bh)
+        HgBlob::Extern(bh)
     }
 }
 

@@ -16,7 +16,7 @@ use futures_ext::{BoxFuture, StreamExt};
 
 use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use memblob::{EagerMemblob, LazyMemblob};
-use mercurial_types::{manifest, Blob, FileType, NodeHash, RepoPath, Time};
+use mercurial_types::{manifest, FileType, HgBlob, NodeHash, RepoPath, Time};
 use std::sync::Arc;
 
 pub fn get_empty_eager_repo() -> BlobRepo {
@@ -72,7 +72,7 @@ pub fn upload_file_no_parents<S>(
 where
     S: Into<String>,
 {
-    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
+    let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
     repo.upload_entry(
         blob,
         manifest::Type::File(FileType::Regular),
@@ -91,7 +91,7 @@ pub fn upload_file_one_parent<S>(
 where
     S: Into<String>,
 {
-    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
+    let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
     repo.upload_entry(
         blob,
         manifest::Type::File(FileType::Regular),
@@ -109,7 +109,7 @@ pub fn upload_manifest_no_parents<S>(
 where
     S: Into<String>,
 {
-    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
+    let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
     repo.upload_entry(blob, manifest::Type::Tree, None, None, path.clone())
         .unwrap()
 }
@@ -123,7 +123,7 @@ pub fn upload_manifest_one_parent<S>(
 where
     S: Into<String>,
 {
-    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
+    let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
     repo.upload_entry(blob, manifest::Type::Tree, Some(p1), None, path.clone())
         .unwrap()
 }

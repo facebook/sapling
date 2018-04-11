@@ -19,7 +19,7 @@ use quickcheck::{Arbitrary, Gen};
 use blobrepo::{BlobEntry, BlobRepo};
 use mercurial;
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, manifest, Blob, Delta, FileType, MPath, NodeHash, RepoPath};
+use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, NodeHash, RepoPath};
 
 use errors::*;
 use stats::*;
@@ -38,7 +38,7 @@ pub struct Filelog {
     pub p1: Option<mercurial::NodeHash>,
     pub p2: Option<mercurial::NodeHash>,
     pub linknode: mercurial::NodeHash,
-    pub blob: Blob,
+    pub blob: HgBlob,
 }
 
 impl UploadableBlob for Filelog {
@@ -111,7 +111,7 @@ impl DeltaCache {
         node: mercurial::NodeHash,
         base: Option<mercurial::NodeHash>,
         delta: Delta,
-    ) -> BoxFuture<Blob, Error> {
+    ) -> BoxFuture<HgBlob, Error> {
         let bytes = match self.bytes_cache.get(&node).cloned() {
             Some(bytes) => bytes,
             None => {
@@ -158,7 +158,7 @@ impl DeltaCache {
                 STATS::deltacache_fsize.add_value(fsize);
                 STATS::deltacache_fsize_large.add_value(fsize);
             })
-            .map(|bytes| Blob::from((*bytes).clone()))
+            .map(|bytes| HgBlob::from((*bytes).clone()))
             .from_err()
             .boxify()
     }
@@ -173,7 +173,7 @@ impl Arbitrary for Filelog {
             p1: mercurial::NodeHash::arbitrary(g).into_option(),
             p2: mercurial::NodeHash::arbitrary(g).into_option(),
             linknode: mercurial::NodeHash::arbitrary(g),
-            blob: Blob::from(Bytes::from(Vec::<u8>::arbitrary(g))),
+            blob: HgBlob::from(Bytes::from(Vec::<u8>::arbitrary(g))),
         }
     }
 
@@ -217,7 +217,7 @@ impl Arbitrary for Filelog {
 
         if self.blob.size() != Some(0) {
             let mut f = self.clone();
-            f.blob = Blob::from(Bytes::from(Vec::new()));
+            f.blob = HgBlob::from(Bytes::from(Vec::new()));
             append(&mut result, f);
         }
 
@@ -348,7 +348,7 @@ mod tests {
             p1: Some(TWOS_HASH),
             p2: Some(THREES_HASH),
             linknode: FOURS_HASH,
-            blob: Blob::from(Bytes::from("test file content")),
+            blob: HgBlob::from(Bytes::from("test file content")),
         };
 
         let f2 = Filelog {
@@ -357,7 +357,7 @@ mod tests {
             p1: Some(SIXES_HASH),
             p2: Some(SEVENS_HASH),
             linknode: EIGHTS_HASH,
-            blob: Blob::from(Bytes::from("test2 file content")),
+            blob: HgBlob::from(Bytes::from("test2 file content")),
         };
 
         check_conversion(
@@ -373,7 +373,7 @@ mod tests {
             p1: Some(TWOS_HASH),
             p2: Some(THREES_HASH),
             linknode: FOURS_HASH,
-            blob: Blob::from(Bytes::from("test file content")),
+            blob: HgBlob::from(Bytes::from("test file content")),
         };
 
         let f2 = Filelog {
@@ -382,7 +382,7 @@ mod tests {
             p1: Some(SIXES_HASH),
             p2: Some(SEVENS_HASH),
             linknode: EIGHTS_HASH,
-            blob: Blob::from(Bytes::from("test2 file content")),
+            blob: HgBlob::from(Bytes::from("test2 file content")),
         };
 
         let f1_deltaed = filelog_to_deltaed(&f1);
