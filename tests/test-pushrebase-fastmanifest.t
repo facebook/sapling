@@ -60,6 +60,8 @@ Test that pushing to a remotename gets rebased (client1 -> client2) works
   $ hg push --to mybook ssh://user@dummy/client2
   pushing to ssh://user@dummy/client2
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     eb7a4df38d10  dummy commit
 

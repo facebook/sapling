@@ -34,6 +34,8 @@ test preparation
   $ REQUEST_METHOD="POST"; export REQUEST_METHOD
   $ CONTENT_TYPE="application/octet-stream"; export CONTENT_TYPE
   $ hg bundle --type v1 --all bundle.hg
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   1 changesets found
   $ CONTENT_LENGTH=279; export CONTENT_LENGTH;
 

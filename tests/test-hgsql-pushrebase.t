@@ -58,6 +58,8 @@ Test verify sql lock is not held during prelockrebase and txnclose hooks
   $ hg push ssh://user@dummy/master --to master
   pushing to ssh://user@dummy/master
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: error: prepushrebase hook failed: lock was FREE
   remote: lock was FREE
   abort: push failed on remote

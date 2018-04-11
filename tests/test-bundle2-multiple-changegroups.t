@@ -76,6 +76,10 @@ Pull the new commits in the clone
   $ hg pull
   pulling from $TESTTMP/repo
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: changegroup1
   adding changesets
   adding manifests
@@ -147,6 +151,10 @@ pullop.cgresult
   $ hg pull
   pulling from $TESTTMP/repo
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: changegroup1
   adding changesets
   adding manifests
@@ -221,6 +229,10 @@ pullop.cgresult
   $ hg pull
   pulling from $TESTTMP/repo
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: changegroup1
   adding changesets
   adding manifests

@@ -282,6 +282,8 @@ Test push hook locking
   $ hg --cwd 3 push ../2 --config devel.legacy.exchange=bundle1
   pushing to ../2
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   adding changesets
   adding manifests
   adding file changes

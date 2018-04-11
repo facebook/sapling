@@ -154,6 +154,8 @@ Local is empty:
 Local is subset:
 
   $ hg clone main subset --rev name2 ; cd subset
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -228,6 +230,8 @@ Remote is empty:
   $ hg push $remote
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -243,6 +247,8 @@ Remote is empty:
 Local is superset:
 
   $ hg clone main subset2 --rev name2
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -279,6 +285,8 @@ Local is superset:
   $ hg push $remote --new-branch
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -339,8 +347,12 @@ Partial pull:
 Both have new stuff in new named branches:
 
   $ hg clone main repo1a --rev name1 -q
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   $ hg clone repo1a repo1b -q
   $ hg clone main repo2a --rev name2 -q
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   $ hg clone repo2a repo2b -q
   $ tstart repo1a
 
@@ -361,6 +373,8 @@ Both have new stuff in new named branches:
   $ hg push $remote --new-branch
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -414,6 +428,8 @@ Both have new stuff in new named branches:
   $ hg push $remote --new-branch
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -435,8 +451,12 @@ Both have new stuff in existing named branches:
 
   $ rm -r repo1a repo1b repo2a repo2b
   $ hg clone main repo1a --rev 3 --rev 8 -q
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   $ hg clone repo1a repo1b -q
   $ hg clone main repo2a --rev 4 --rev 7 -q
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   $ hg clone repo2a repo2b -q
   $ tstart repo1a
 
@@ -452,6 +472,8 @@ Both have new stuff in existing named branches:
   $ hg push $remote --new-branch
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -500,6 +522,8 @@ Both have new stuff in existing named branches:
   $ hg push $remote --new-branch
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes

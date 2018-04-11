@@ -29,6 +29,8 @@ Clone the repository and push a change.
   $ hg push -R local
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes

@@ -253,6 +253,8 @@ test http authentication
   $ hg -R dest push http://user:pass@localhost:$HGPORT2/
   pushing to http://user:***@localhost:$HGPORT2/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes

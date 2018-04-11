@@ -965,6 +965,9 @@ def makechangegroup(repo, outgoing, version, source, fastpath=False,
 
 def makestream(repo, outgoing, version, source, fastpath=False,
                bundlecaps=None, b2caps=None):
+    if version == '01':
+        repo.ui.develwarn("using deprecated bundlev1 format\n")
+
     bundler = getbundler(version, repo, bundlecaps=bundlecaps, b2caps=b2caps)
 
     repo = repo.unfiltered()

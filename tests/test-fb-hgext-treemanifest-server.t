@@ -124,6 +124,8 @@ Test pushing only flat fails if forcetreereceive is on
   $ hg push --to mybook --config treemanifest.sendtrees=False
   pushing to ssh://user@dummy/master
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: error: pushes must contain tree manifests when the server has pushrebase.forcetreereceive enabled
   abort: push failed on remote
   [255]
@@ -152,6 +154,8 @@ Test pushing flat and tree
   $ hg push --to mybook
   pushing to ssh://user@dummy/master
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: +++ hg log -r 15486e46ccf6947fbb0a0209e6ce479e7f87ffae -T '{file_adds}'
   remote: ++ [[ subdir2/z == \s\u\b\d\i\r\2\/\z ]]
   remote: ++ exit 1
@@ -167,6 +171,8 @@ Test pushing tree-only commit with commit hooks
   $ hg push --to mybook -r .
   pushing to ssh://user@dummy/master
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: +++ hg log -r aa8c79ec65bb33cc0dff01df2d70f8635cffc02d -T '{file_adds}'
   remote: ++ [[ subdir2/z == \s\u\b\d\i\r\2\/\z ]]
   remote: ++ exit 1
@@ -179,6 +185,8 @@ Test pushing only trees (no flats) with pushrebase creates trees on the server
   $ hg push --to mybook -r .
   pushing to ssh://user@dummy/master
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     aa8c79ec65bb  add subdir2/z (treeonly)
   remote: 1 new changeset from the server will be downloaded

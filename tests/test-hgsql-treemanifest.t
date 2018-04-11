@@ -90,6 +90,8 @@ Test that trees created during push are synced to the db
   $ hg push ssh://user@dummy/master --to master
   pushing to ssh://user@dummy/master
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     c46827e4453c  c
 

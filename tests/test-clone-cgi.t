@@ -28,7 +28,7 @@ try hgweb request
   $ QUERY_STRING="cmd=changegroup&roots=0000000000000000000000000000000000000000"; export QUERY_STRING
   $ $PYTHON hgweb.cgi >page1 2>&1
   $ $PYTHON "$TESTDIR/md5sum.py" page1
-  1f424bb22ec05c3c6bc866b6e67efe43  page1
+  b76498dc318539f1108a7ca5301b0fe7  page1
 
 make sure headers are sent even when there is no body
 

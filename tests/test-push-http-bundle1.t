@@ -43,6 +43,8 @@ expect ssl error
   $ req
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   abort: HTTP Error 403: ssl required
   % serve errors
   [255]
@@ -54,6 +56,8 @@ expect authorization error
   $ req
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   abort: authorization failed
   % serve errors
   [255]
@@ -64,6 +68,8 @@ expect authorization error: must have authorized user
   $ req
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   abort: authorization failed
   % serve errors
   [255]
@@ -79,6 +85,8 @@ expect success
   $ req
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -95,6 +103,8 @@ expect success, server lacks the httpheader capability
   $ req
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -111,6 +121,8 @@ expect success, server lacks the unbundlehash capability
   $ req
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -140,6 +152,8 @@ has no parameter
   $ req
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -162,6 +176,8 @@ expect push success, phase change failure
   $ req
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -190,6 +206,8 @@ expect authorization error: all users denied
   $ req
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   abort: authorization failed
   % serve errors
   [255]
@@ -200,6 +218,8 @@ expect authorization error: some users denied, users must be authenticated
   $ req
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   abort: authorization failed
   % serve errors
   [255]

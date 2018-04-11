@@ -97,6 +97,8 @@ We can override failure to fall back to regular clone
 Bundle with partial content works
 
   $ hg -R server bundle --type gzip-v1 --base null -r 53245c60e682 partial.hg
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   1 changesets found
 
 We verify exact bundle content as an extra check against accidental future

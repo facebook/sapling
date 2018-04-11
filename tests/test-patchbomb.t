@@ -400,6 +400,8 @@ with a specific bundle type
   $ hg email --date '1970-1-1 0:3' -n -f quux -t foo \
   >  -c bar -s test -r tip -b --desc description \
   > --config patchbomb.bundletype=gzip-v1 | $FILTERBOUNDARY
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   searching for changes
   1 changesets found
   

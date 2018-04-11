@@ -116,6 +116,8 @@ test bundle types
   
   % test bundle type v1
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   1 changesets found
   HG10BZ
   c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
@@ -123,6 +125,8 @@ test bundle types
   
   % test bundle type gzip-v1
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   1 changesets found
   HG10GZ
   c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf

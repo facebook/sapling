@@ -99,6 +99,8 @@ Stack of non-conflicting commits should be accepted
   o  initial [public:2bb9d20e471c]
   
   $ hg push --to default --config devel.bundle2.debug=1 --debug | tee stuff | grep -v bundle2-
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   pushing to ssh://user@dummy/server
   running * (glob)
   sending hello command
@@ -220,6 +222,8 @@ Regular commits should go through without changing hash
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     741fd2094512  b => quux
 
@@ -253,6 +257,8 @@ Stack with conflict in tail should abort
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: conflicting changes in:
       a
   remote: (pull and rebase your changes locally, then try again)
@@ -287,6 +293,8 @@ Stack with conflict in head should abort
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: conflicting changes in:
       a
   remote: (pull and rebase your changes locally, then try again)
@@ -359,6 +367,8 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg push --to master -B master
   pushing to ssh://user@dummy/server
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 5 changesets:
   remote:     e6b7549904cd  branch left
   remote:     add5ec74853d  branch start
@@ -444,6 +454,8 @@ With evolution enabled, should set obsolescence markers
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 2 changesets:
   remote:     9467a8ee5d0d  b => k
   remote:     e73acfaeee82  b => foobar
@@ -519,6 +531,8 @@ Test pushing master bookmark, fast forward
   $ hg push --to master
   pushing to ssh://user@dummy/server
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     56b2e0949966  b => babar
   updating bookmark master
@@ -585,6 +599,8 @@ Test that the prepushrebase hook can run against the bundle repo
   $ hg push --to master
   pushing to ssh://user@dummy/prepushrebaseserver
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: changeset:   1:0e067c57feba
   remote: tag:         tip
   remote: user:        test
@@ -645,6 +661,8 @@ Test that hooks are fired with the correct variables
   $ hg push --to master -B master
   pushing to $TESTTMP/hookserver (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   prepushrebase hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushrebase HG_HOOKTYPE=prepushrebase HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_ONTO=e95be919ac60f0c114075e32a0a4301afabadb60 HG_ONTO=master HG_SOURCE=push (glob)
   prechangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=prechangegroup HG_HOOKTYPE=prechangegroup HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   pushing 3 changesets:
@@ -706,6 +724,8 @@ Test date rewriting
   $ hg push --to master
   pushing to $TESTTMP/rewritedate (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   pushing 1 changeset:
       d5e255ef74f8  c
   1 new changeset from the server will be downloaded
@@ -736,6 +756,8 @@ Test date rewriting with a merge commit
   $ hg push --to master
   pushing to $TESTTMP/rewritedate (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   pushing 3 changesets:
       a5f9a9a43049  x
       c1392466a61e  y
@@ -778,6 +800,8 @@ Test pushrebase on merge commit where master is on the p2 side
   $ hg push --to master
   pushing to $TESTTMP/p2mergeserver (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   pushing 3 changesets:
       cde40f86152f  add b
       6c337f0241b3  add c
@@ -836,6 +860,8 @@ Test force pushes
   $ hg push -f --to master -B master
   pushing to $TESTTMP/forcepushserver (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   pushing 1 changeset:
       1846eede8b68  b
   exporting bookmark master
@@ -899,6 +925,8 @@ phase is updated correctly with the marker information.
   $ hg push -r . --to default
   pushing to $TESTTMP/server1 (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   pushing 1 changeset:
       045279cde9f0  a2
   2 new changesets from the server will be downloaded
@@ -962,6 +990,8 @@ Push a file-copy changeset and the copy source gets modified by others:
   $ hg push -r . --to default
   pushing to $TESTTMP/server2 (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   abort: conflicting changes in:
       A
   (pull and rebase your changes locally, then try again)

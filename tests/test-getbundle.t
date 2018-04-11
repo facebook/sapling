@@ -52,6 +52,8 @@ Create a test repository:
 Get everything:
 
   $ hg debuggetbundle repo bundle
+  devel-warn: using deprecated bundlev1 format
+   at: */exchange.py:* (getbundlechunks) (glob)
   $ hg debugbundle bundle
   7704483d56b2a7b5db54dcee7c62378ac629b348
   29a4d1f17bd3f0779ca0525bebb1cfb51067c738
@@ -75,6 +77,8 @@ Get everything:
 Get part of linear run:
 
   $ hg debuggetbundle repo bundle -H 4801a72e5d88cb515b0c7e40fae34180f3f837f2 -C 8365676dbab05860ce0d9110f2af51368b961bbd
+  devel-warn: using deprecated bundlev1 format
+   at: */exchange.py:* (getbundlechunks) (glob)
   $ hg debugbundle bundle
   0b2f73f04880d9cb6a5cd8a757f0db0ad01e32c3
   4801a72e5d88cb515b0c7e40fae34180f3f837f2
@@ -82,6 +86,8 @@ Get part of linear run:
 Get missing branch and merge:
 
   $ hg debuggetbundle repo bundle -H 4801a72e5d88cb515b0c7e40fae34180f3f837f2 -C 13c0170174366b441dc68e8e33757232fa744458
+  devel-warn: using deprecated bundlev1 format
+   at: */exchange.py:* (getbundlechunks) (glob)
   $ hg debugbundle bundle
   713346a995c363120712aed1aee7e04afd867638
   d5f6e1ea452285324836a49d7d3c2a63cfed1d31
@@ -96,6 +102,8 @@ Get missing branch and merge:
 Get from only one head:
 
   $ hg debuggetbundle repo bundle -H 928b5f94cdb278bb536eba552de348a4e92ef24d -C 29a4d1f17bd3f0779ca0525bebb1cfb51067c738
+  devel-warn: using deprecated bundlev1 format
+   at: */exchange.py:* (getbundlechunks) (glob)
   $ hg debugbundle bundle
   8931463777131cd73923e560b760061f2aa8a4bc
   f34414c64173e0ecb61b25dc55e116dbbcc89bee
@@ -104,6 +112,8 @@ Get from only one head:
 Get parts of two branches:
 
   $ hg debuggetbundle repo bundle -H 13c0170174366b441dc68e8e33757232fa744458 -C 700b7e19db54103633c4bf4a6a6b6d55f4d50c03 -H bac16991d12ff45f9dc43c52da1946dfadb83e80 -C d5f6e1ea452285324836a49d7d3c2a63cfed1d31
+  devel-warn: using deprecated bundlev1 format
+   at: */exchange.py:* (getbundlechunks) (glob)
   $ hg debugbundle bundle
   ff42371d57168345fdf1a3aac66a51f6a45d41d2
   bac16991d12ff45f9dc43c52da1946dfadb83e80
@@ -148,6 +158,8 @@ Check that we get all needed file changes:
 Get branch and merge:
 
   $ hg debuggetbundle repo bundle -C 7704483d56b2a7b5db54dcee7c62378ac629b348 -H 0b2f73f04880d9cb6a5cd8a757f0db0ad01e32c3
+  devel-warn: using deprecated bundlev1 format
+   at: */exchange.py:* (getbundlechunks) (glob)
   $ hg debugbundle bundle
   29a4d1f17bd3f0779ca0525bebb1cfb51067c738
   713346a995c363120712aed1aee7e04afd867638
@@ -168,6 +180,8 @@ Get branch and merge:
 = Test bundle2 =
 
   $ hg debuggetbundle repo bundle -t bundle2
+  devel-warn: using deprecated bundlev1 format
+   at: */exchange.py:* (getbundlechunks) (glob)
   $ hg debugbundle bundle
   Stream params: {}
   changegroup -- {version: 01}

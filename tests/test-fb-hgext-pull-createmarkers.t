@@ -58,6 +58,8 @@ The first client works on several diffs while the second client lands one of her
   $ hg push --to master
   pushing rev 2e73b79a63d8 to destination ssh://user@dummy/server bookmark master
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     2e73b79a63d8  add b
   updating bookmark master
@@ -82,6 +84,8 @@ The first client works on several diffs while the second client lands one of her
   $ hg push --to master
   pushing rev d5895ab36037 to destination ssh://user@dummy/server bookmark master
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 3 changesets:
   remote:     1a07332e9fa1  add c
   remote:     ee96b78ae17d  add d

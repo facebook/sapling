@@ -1124,6 +1124,8 @@ Verify bundle1 pushes can be disabled
   $ hg --config devel.legacy.exchange=bundle1 push
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   abort: remote error:
   incompatible Mercurial client; bundle2 required
   (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
@@ -1134,6 +1136,8 @@ Verify bundle1 pushes can be disabled
   $ hg --config devel.legacy.exchange=bundle1 push ssh://user@dummy/bundle2onlyserver
   pushing to ssh://user@dummy/bundle2onlyserver
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: abort: incompatible Mercurial client; bundle2 required
   remote: (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
   [1]

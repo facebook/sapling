@@ -291,6 +291,8 @@ Test unbundling
 Test old style bundle are detected and refused
 
   $ hg bundle --all --type v1 ../bundle.hg
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   1 changesets found
   $ hg statbundle2 < ../bundle.hg
   abort: unknown bundle version 10
@@ -859,6 +861,8 @@ Support for changegroup
   
 
   $ hg bundle2 --debug --config progress.debug=true --config devel.bundle2.debug=true --rev '8+7+5+4' ../rev.hg2
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   4 changesets found
   list of changesets:
   32af7686d403cf45b5d95f2d70cebea587ac806a
@@ -1011,6 +1015,8 @@ Support for changegroup
 with reply
 
   $ hg bundle2 --rev '8+7+5+4' --reply ../rev-rr.hg2
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   $ hg unbundle2 ../rev-reply.hg2 < ../rev-rr.hg2
   0 unread bytes
   addchangegroup return: 1
@@ -1065,6 +1071,8 @@ Simple case where it just work: GZ
 ----------------------------------
 
   $ hg bundle2 --compress GZ --rev '8+7+5+4' ../rev.hg2.bz
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
 #if common-zlib
   $ f --hexdump ../rev.hg2.bz
   ../rev.hg2.bz:
@@ -1142,6 +1150,8 @@ Simple case where it just work: BZ
 ----------------------------------
 
   $ hg bundle2 --compress BZ --rev '8+7+5+4' ../rev.hg2.bz
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   $ f --hexdump ../rev.hg2.bz
   ../rev.hg2.bz:
   0000: 48 47 32 30 00 00 00 0e 43 6f 6d 70 72 65 73 73 |HG20....Compress|
@@ -1230,6 +1240,8 @@ unknown compression while unbundling
 -----------------------------
 
   $ hg bundle2 --param Compression=FooBarUnknown --rev '8+7+5+4' ../rev.hg2.bz
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   $ cat ../rev.hg2.bz | hg statbundle2
   abort: unknown parameters: Stream Parameter - Compression='FooBarUnknown'
   [255]

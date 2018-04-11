@@ -1096,6 +1096,8 @@ no general delta
   $ echo babar > jungle
   $ hg add jungle
   $ hg shelve
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugbundle .hg/shelved/*.hg

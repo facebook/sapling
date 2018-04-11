@@ -65,6 +65,26 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   $ initclients
   2 trees fetched over * (glob)
   $ pushclients
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
 
   $ cd master
   $ hg debugdata .hg/store/00manifesttree.i 10
@@ -124,6 +144,8 @@ Test that pushrebase hooks can access the commit data
   $ hg push --to master -B master
   pushing to ssh://user@dummy/master
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: baz
   remote: prepushrebase.cat hook exited with status 1
   abort: push failed on remote
@@ -133,6 +155,8 @@ Test that pushrebase hooks can access the commit data
   $ hg push --to master -B master --config treemanifest.sendtrees=True
   pushing to ssh://user@dummy/master
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: baz
   remote: prepushrebase.cat hook exited with status 1
   abort: push failed on remote

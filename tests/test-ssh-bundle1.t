@@ -99,6 +99,8 @@ clone remote via pull
   $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote local
   requesting all changes
   adding changesets
+  remote: devel-warn: using deprecated bundlev1 format
+  remote:  at: */exchange.py:* (getbundlechunks) (glob)
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
@@ -166,6 +168,8 @@ find incoming on the remote side
   $ hg incoming -R ../remote -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/local
   comparing with ssh://user@dummy/local
   searching for changes
+  remote: devel-warn: using deprecated bundlev1 format
+  remote:  at: */exchange.py:* (getbundlechunks) (glob)
   changeset:   3:a28a9d1a809c
   tag:         tip
   parent:      0:1160648e36ce
@@ -179,6 +183,8 @@ find incoming on the remote side (using absolute path)
   $ hg incoming -R ../remote -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" "ssh://user@dummy/`pwd`"
   comparing with ssh://user@dummy/$TESTTMP/local
   searching for changes
+  remote: devel-warn: using deprecated bundlev1 format
+  remote:  at: */exchange.py:* (getbundlechunks) (glob)
   changeset:   3:a28a9d1a809c
   tag:         tip
   parent:      0:1160648e36ce
@@ -192,6 +198,8 @@ push
   $ hg push
   pushing to ssh://user@dummy/remote
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -282,6 +290,8 @@ push should succeed even though it has an unexpected response
   pushing to ssh://user@dummy/remote
   searching for changes
   remote has heads on branch 'default' that are not known locally: 6c0482d977a3
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -310,6 +320,8 @@ clone bookmarks
   $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote local-bookmarks
   requesting all changes
   adding changesets
+  remote: devel-warn: using deprecated bundlev1 format
+  remote:  at: */exchange.py:* (getbundlechunks) (glob)
   adding manifests
   adding file changes
   added 6 changesets with 5 changes to 4 files (+1 heads)
@@ -398,6 +410,8 @@ Test hg-ssh in read-only mode:
   $ hg clone --ssh "sh ssh.sh" "ssh://user@dummy/$TESTTMP/remote" read-only-local
   requesting all changes
   adding changesets
+  remote: devel-warn: using deprecated bundlev1 format
+  remote:  at: */exchange.py:* (getbundlechunks) (glob)
   adding manifests
   adding file changes
   added 6 changesets with 5 changes to 4 files (+1 heads)
@@ -411,6 +425,8 @@ Test hg-ssh in read-only mode:
   $ hg push --ssh "sh ../ssh.sh"
   pushing to ssh://user@dummy/*/remote (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: Permission denied
   remote: abort: pretxnopen.readonlyrejectpush hook failed
   remote: Permission denied
@@ -452,6 +468,8 @@ stderr from remote commands should be printed before stdout from local code (iss
   $ hg push
   pushing to ssh://user@dummy/remote
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -535,6 +553,8 @@ remote hook failure is attributed to remote
   $ hg --config ui.ssh="\"$PYTHON\" $TESTDIR/dummyssh" push
   pushing to ssh://user@dummy/remote
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -554,4 +574,6 @@ abort during pull is properly reported as such
   > crash = ${TESTDIR}/crashgetbundler.py
   > EOF
   $ hg --config ui.ssh="\"$PYTHON\" $TESTDIR/dummyssh" pull 2>&1 | grep "remote:"
+  remote: devel-warn: using deprecated bundlev1 format
+  remote:  at: */exchange.py:* (getbundlechunks) (glob)
   remote: abort: this is an exercise

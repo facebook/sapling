@@ -87,6 +87,8 @@ Push in from the client.
   $ hg push --to @
   pushing rev b41b83f633d8 to destination ssh://user@dummy/server bookmark @
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 5 changesets:
   remote:     c85f9ce7b342  alpha
   remote:     0fcb170b6d84  merge alpha

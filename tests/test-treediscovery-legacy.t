@@ -244,6 +244,8 @@ Remote is empty:
   $ hg push $remote
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -295,6 +297,8 @@ Local is superset:
   $ hg push $remote --new-branch
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
