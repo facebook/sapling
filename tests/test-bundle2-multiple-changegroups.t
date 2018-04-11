@@ -13,15 +13,17 @@ Create an extension to test bundle2 with multiple changegroups
   >     # in 'heads' as intermediate heads for the first changegroup.
   >     intermediates = [repo[r].p1().node() for r in heads]
   >     outgoing = discovery.outgoing(repo, common, intermediates)
-  >     cg = changegroup.makechangegroup(repo, outgoing, '01',
+  >     cg = changegroup.makechangegroup(repo, outgoing, '02',
   >                                      source, bundlecaps=bundlecaps)
   >     bundler.newpart('output', data='changegroup1')
-  >     bundler.newpart('changegroup', data=cg.getchunks())
+  >     part = bundler.newpart('changegroup', data=cg.getchunks())
+  >     part.addparam('version', '02')
   >     outgoing = discovery.outgoing(repo, common + intermediates, heads)
-  >     cg = changegroup.makechangegroup(repo, outgoing, '01',
+  >     cg = changegroup.makechangegroup(repo, outgoing, '02',
   >                                      source, bundlecaps=bundlecaps)
   >     bundler.newpart('output', data='changegroup2')
-  >     bundler.newpart('changegroup', data=cg.getchunks())
+  >     part = bundler.newpart('changegroup', data=cg.getchunks())
+  >     part.addparam('version', '02')
   > 
   > def _pull(repo, *args, **kwargs):
   >   pullop = _orig_pull(repo, *args, **kwargs)
@@ -76,10 +78,6 @@ Pull the new commits in the clone
   $ hg pull
   pulling from $TESTTMP/repo
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
   remote: changegroup1
   adding changesets
   adding manifests
@@ -151,10 +149,6 @@ pullop.cgresult
   $ hg pull
   pulling from $TESTTMP/repo
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
   remote: changegroup1
   adding changesets
   adding manifests
@@ -229,10 +223,6 @@ pullop.cgresult
   $ hg pull
   pulling from $TESTTMP/repo
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
   remote: changegroup1
   adding changesets
   adding manifests

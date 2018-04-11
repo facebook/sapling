@@ -64,9 +64,10 @@ Create an extension to test bundle2 remote-changegroup parts
   >             common.extend(repo.lookup(r) for r in repo.revs(_common))
   >             heads = [repo.lookup(r) for r in repo.revs(heads)]
   >             outgoing = discovery.outgoing(repo, common, heads)
-  >             cg = changegroup.makechangegroup(repo, outgoing, '01',
+  >             cg = changegroup.makechangegroup(repo, outgoing, '02',
   >                                              'changegroup')
-  >             newpart('changegroup', cg.getchunks())
+  >             part = newpart('changegroup', cg.getchunks())
+  >             part.addparam('version', '02')
   >         else:
   >             raise Exception('unknown verb')
   > 
@@ -187,8 +188,6 @@ Test a pull with an remote-changegroup and a following changegroup
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: devel-warn: using deprecated bundlev1 format
-  remote:  at: */changegroup.py:* (makechangegroup) (glob)
   remote: remote-changegroup
   adding changesets
   adding manifests
@@ -241,8 +240,6 @@ Test a pull with a changegroup followed by an remote-changegroup
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: devel-warn: using deprecated bundlev1 format
-  remote:  at: */changegroup.py:* (makechangegroup) (glob)
   remote: changegroup
   adding changesets
   adding manifests
@@ -300,8 +297,6 @@ Test a pull with two remote-changegroups and a changegroup
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: devel-warn: using deprecated bundlev1 format
-  remote:  at: */changegroup.py:* (makechangegroup) (glob)
   remote: remote-changegroup
   adding changesets
   adding manifests
@@ -463,8 +458,6 @@ Corruption tests
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: devel-warn: using deprecated bundlev1 format
-  remote:  at: */changegroup.py:* (makechangegroup) (glob)
   remote: remote-changegroup
   adding changesets
   adding manifests
