@@ -7,6 +7,8 @@ Tests discovery against servers without getbundle support:
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > logtemplate="{rev} {node|short}: {desc} {branches}\n"
+  > [format]
+  > allowbundle1=True
   > EOF
 
 Setup HTTP server control:

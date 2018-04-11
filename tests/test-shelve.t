@@ -1096,12 +1096,12 @@ no general delta
   $ echo babar > jungle
   $ hg add jungle
   $ hg shelve
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugbundle .hg/shelved/*.hg
-  45993d65fe9dc3c6d8764b9c3b07fa831ee7d92d
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 1, version: 02}
+      45993d65fe9dc3c6d8764b9c3b07fa831ee7d92d
   $ cd ..
 
 with general delta

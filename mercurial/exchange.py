@@ -279,6 +279,8 @@ def _forcebundle1(op):
     # developer config: devel.legacy.exchange
     exchange = ui.configlist('devel', 'legacy.exchange')
     forcebundle1 = 'bundle2' not in exchange and 'bundle1' in exchange
+    if forcebundle1:
+        op.repo.ui.setconfig('format', 'allowbundle1', True)
     return forcebundle1 or not op.remote.capable('bundle2')
 
 class pushoperation(object):

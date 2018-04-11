@@ -916,6 +916,11 @@ def supportedincomingversions(repo):
 # Changegroup versions that can be created from the repo
 def supportedoutgoingversions(repo):
     versions = allsupportedversions(repo)
+    versions.discard('01')
+    # developer config: format.allowbundle1
+    if (repo.ui.configbool('format', 'allowbundle1') or
+        'bundle1' in repo.ui.configlist('devel', 'legacy.exchange')):
+        versions.add('01')
     if 'treemanifest' in repo.requirements:
         # Versions 01 and 02 support only flat manifests and it's just too
         # expensive to convert between the flat manifest and tree manifest on

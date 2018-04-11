@@ -1,5 +1,10 @@
 #require serve
 
+  $ cat >> $HGRCPATH <<EOF
+  > [format]
+  > allowbundle1=True
+  > EOF
+
 = Test the getbundle() protocol function =
 
 Create a test repository:

@@ -993,6 +993,8 @@ bundle1 can still pull non-generaldelta repos when generaldelta bundle1 disabled
   $ cat > .hg/hgrc << EOF
   > [server]
   > bundle1gd.pull = false
+  > [format]
+  > allowbundle1=True
   > EOF
 
   $ touch foo
@@ -1019,6 +1021,8 @@ bundle1 pull can be disabled for generaldelta repos only
   $ cat > .hg/hgrc << EOF
   > [server]
   > bundle1gd.pull = false
+  > [format]
+  > allowbundle1=True
   > EOF
 
   $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
@@ -1039,6 +1043,8 @@ Verify the global server.bundle1 option works
   $ cat > bundle2onlyserver/.hg/hgrc << EOF
   > [server]
   > bundle1 = false
+  > [format]
+  > allowbundle1=True
   > EOF
   $ hg serve -R bundle2onlyserver -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
   $ HGPORT=`cat $TESTTMP/.port`
@@ -1076,6 +1082,8 @@ Verify the global server.bundle1 option works
   $ cat > .hg/hgrc << EOF
   > [server]
   > bundle1gd = false
+  > [format]
+  > allowbundle1=True
   > EOF
   $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
   $ HGPORT=`cat $TESTTMP/.port`

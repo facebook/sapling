@@ -1,6 +1,7 @@
 
   $ cat << EOF >> $HGRCPATH
   > [format]
+  > allowbundle1=True
   > usegeneraldelta=yes
   > EOF
 

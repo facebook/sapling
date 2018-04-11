@@ -4,6 +4,11 @@
 
 This is a test of the push wire protocol over CGI-based hgweb.
 
+  $ cat >> $HGRCPATH <<EOF
+  > [format]
+  > allowbundle1=True
+  > EOF
+
 initialize repository
 
   $ hg init r

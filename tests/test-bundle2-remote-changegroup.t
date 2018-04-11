@@ -83,6 +83,8 @@ Start a simple HTTP server to serve bundles
   > [ui]
   > ssh=$PYTHON "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
+  > [format]
+  > allowbundle1=True
   > EOF
 
   $ hg init repo
