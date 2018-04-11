@@ -399,9 +399,7 @@ with a specific bundle type
 #if common-zlib
   $ hg email --date '1970-1-1 0:3' -n -f quux -t foo \
   >  -c bar -s test -r tip -b --desc description \
-  > --config patchbomb.bundletype=gzip-v1 | $FILTERBOUNDARY
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
+  > --config patchbomb.bundletype=gzip | $FILTERBOUNDARY
   searching for changes
   1 changesets found
   
@@ -431,11 +429,12 @@ with a specific bundle type
   Content-Disposition: attachment; filename="bundle.hg"
   Content-Transfer-Encoding: base64
   
-  SEcxMEdaeJxjYGBY8V9n/iLGbtFfJZuNk/euDCpWfrRy/vTrevFCx1/4t7J5LdeL0ix0Opx3kwEL
-  wKYXKqUJwqnG5sYWSWmmJsaWlqYWaRaWJpaWiWamZpYWRgZGxolJiabmSQbmZqlcQMV6QGwCxGzG
-  CgZcySARUyA2A2LGZKiZ3Y+Lu786z4z4MWXmsrAZCsqrl1az5y21PMcjpbThzWeXGT+/nutbmvvz
-  zXYS3BoGxdrJDIYmlimJJiZpRokmqYYmaSYWFknmSSkmhqbmliamiZYWxuYmBhbJBgZcUBNZQe5K
-  Epm7xF/LT+RLx/a9juFTomaYO/Rgsx4rwBN+IMCUDLOKAQBrsmti
+  SEcyMAAAAA5Db21wcmVzc2lvbj1HWnicY2Bg0OR29nD0c3d1D/IPDWAAAkZGdiZOxrLUouLM/DwD
+  o7yk5IzEvPTUYkOg1BWg/Kr/OvMXMXaL/irZbJy8d2VQsfKjlfOnX9eLFzr+wr+VzWu5XpRmodPh
+  vJsMRAJs5iFJm6UamxtbJKWZmhhbWppapFlYmlhaJpqZmllaGBkYGScmJZqaJxmYm6VylaQWl3AZ
+  KxhwJXNxJUN1z39c3P3VeWbEjykzl4XNUFBevbSaPW+p5TkeKaUNbz67zPj59Vzf0tyfb7Zjcxk2
+  dThcGwbF2skMhiaWKYkmJmlGiSaphiZpJhYWSeZJKSaGpuaWJqaJlhbG5iYGFskGBlxQW1hBbi0T
+  mbvEX8tP5EvH9r2O4VOiZpg79BAbgOSEKlMyF7oOAMXVhFo=
   --===============*==-- (glob)
 
 #endif
