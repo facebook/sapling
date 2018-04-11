@@ -96,9 +96,7 @@ We can override failure to fall back to regular clone
 
 Bundle with partial content works
 
-  $ hg -R server bundle --type gzip-v1 --base null -r 53245c60e682 partial.hg
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
+  $ hg -R server bundle --type gzip --base null -r 53245c60e682 partial.hg
   1 changesets found
 
 We verify exact bundle content as an extra check against accidental future
@@ -106,20 +104,24 @@ changes. If this output changes, we could break old clients.
 
 #if common-zlib
   $ f --size --hexdump partial.hg
-  partial.hg: size=207
-  0000: 48 47 31 30 47 5a 78 9c 63 60 60 98 17 ac 12 93 |HG10GZx.c``.....|
-  0010: f0 ac a9 23 45 70 cb bf 0d 5f 59 4e 4a 7f 79 21 |...#Ep..._YNJ.y!|
-  0020: 9b cc 40 24 20 a0 d7 ce 2c d1 38 25 cd 24 25 d5 |..@$ ...,.8%.$%.|
-  0030: d8 c2 22 cd 38 d9 24 cd 22 d5 c8 22 cd 24 cd 32 |..".8.$."..".$.2|
-  0040: d1 c2 d0 c4 c8 d2 32 d1 38 39 29 c9 34 cd d4 80 |......2.89).4...|
-  0050: ab 24 b5 b8 84 cb 40 c1 80 2b 2d 3f 9f 8b 2b 31 |.$....@..+-?..+1|
-  0060: 25 45 01 c8 80 9a d2 9b 65 fb e5 9e 45 bf 8d 7f |%E......e...E...|
-  0070: 9f c6 97 9f 2b 44 34 67 d9 ec 8e 0f a0 92 0b 75 |....+D4g.......u|
-  0080: 41 d6 24 59 18 a4 a4 9a a6 18 1a 5b 98 9b 5a 98 |A.$Y.......[..Z.|
-  0090: 9a 18 26 9b a6 19 98 1a 99 99 26 a6 18 9a 98 24 |..&.......&....$|
-  00a0: 26 59 a6 25 5a 98 a5 18 a6 24 71 41 35 b1 43 dc |&Y.%Z....$qA5.C.|
-  00b0: 16 b2 83 f7 e9 45 8b d2 56 c7 a3 1f 82 52 d7 8a |.....E..V....R..|
-  00c0: 78 ed fc d5 76 f1 36 35 dc 05 00 36 ed 5e c7    |x...v.65...6.^.|
+  partial.hg: size=270
+  0000: 48 47 32 30 00 00 00 0e 43 6f 6d 70 72 65 73 73 |HG20....Compress|
+  0010: 69 6f 6e 3d 47 5a 78 9c 63 60 60 d0 e4 76 f6 70 |ion=GZx.c``..v.p|
+  0020: f4 73 77 75 0f f2 0f 0d 60 00 02 46 46 76 26 4e |.swu....`..FFv&N|
+  0030: c6 b2 d4 a2 e2 cc fc 3c 03 a3 bc a4 e4 8c c4 bc |.......<........|
+  0040: f4 d4 62 43 a0 d4 25 a0 fc a6 60 95 98 84 67 4d |..bC..%...`...gM|
+  0050: 1d 29 82 5b fe 6d f8 ca 72 52 fa cb 0b d9 64 06 |.).[.m..rR....d.|
+  0060: 0a 00 01 f3 ec cc 12 8d 53 d2 4c 52 52 8d 2d 2c |........S.LRR.-,|
+  0070: d2 8c 93 4d d2 2c 52 8d 2c d2 4c d2 2c 13 2d 0c |...M.,R.,.L.,.-.|
+  0080: 4d 8c 2c 2d 13 8d 93 93 92 4c d3 4c 0d b8 4a 52 |M.,-.....L.L..JR|
+  0090: 8b 4b b8 0c 14 0c b8 d2 f2 f3 b9 b8 12 53 52 14 |.K...........SR.|
+  00a0: 80 0c a8 29 0b b3 6c bf dc b3 e8 b7 f1 ef d3 f8 |...)..l.........|
+  00b0: f2 73 85 88 e6 2c 9b dd f1 01 34 74 b5 2e c8 ea |.s...,....4t....|
+  00c0: 24 0b 83 94 54 d3 14 43 63 0b 73 53 0b 53 13 c3 |$...T..Cc.sS.S..|
+  00d0: 64 d3 34 03 53 23 33 d3 c4 14 43 13 93 c4 24 cb |d.4.S#3...C...$.|
+  00e0: b4 44 0b b3 14 c3 94 24 2e a8 26 76 88 7b 33 76 |.D.....$..&v.{3v|
+  00f0: f0 3e bd 68 51 da ea 78 f4 43 50 ea 5a 11 af 9d |.>.hQ..x.CP.Z...|
+  0100: bf da 2e de a6 a1 5b c1 00 00 17 b4 6a 94       |......[.....j.|
 #endif
 
   $ echo "http://localhost:$HGPORT1/partial.hg" > server/.hg/clonebundles.manifest
