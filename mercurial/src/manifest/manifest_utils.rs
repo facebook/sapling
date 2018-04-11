@@ -19,12 +19,19 @@ use super::revlog::EntryContent;
 
 use errors::*;
 
+// Note that:
+// * this isn't "left" and "right" because an explicit direction makes the API clearer
+// * this isn't "new" and "old" because one could ask for either a diff from a child manifest to
+//   its parent, or the other way round
 pub enum EntryStatus {
     Added(RevlogEntry),
     Deleted(RevlogEntry),
     // Entries should have the same type. Note - we may change it in future to allow
     // (File, Symlink), (Symlink, Executable) etc
-    Modified(RevlogEntry, RevlogEntry),
+    Modified {
+        to_entry: RevlogEntry,
+        from_entry: RevlogEntry,
+    },
 }
 
 pub struct ChangedEntry {
@@ -47,10 +54,17 @@ impl ChangedEntry {
         }
     }
 
-    pub fn new_modified(path: Option<MPath>, left: RevlogEntry, right: RevlogEntry) -> Self {
+    pub fn new_modified(
+        path: Option<MPath>,
+        to_entry: RevlogEntry,
+        from_entry: RevlogEntry,
+    ) -> Self {
         ChangedEntry {
             path,
-            status: EntryStatus::Modified(left, right),
+            status: EntryStatus::Modified {
+                to_entry,
+                from_entry,
+            },
         }
     }
 }
@@ -65,9 +79,10 @@ impl NewEntry {
         let path = ce.path;
         match ce.status {
             EntryStatus::Deleted(_) => None,
-            EntryStatus::Added(entry) | EntryStatus::Modified(entry, _) => {
-                Some(Self { path, entry })
-            }
+            EntryStatus::Added(entry)
+            | EntryStatus::Modified {
+                to_entry: entry, ..
+            } => Some(Self { path, entry }),
         }
     }
 
@@ -166,23 +181,26 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
         EntryStatus::Deleted(entry) => recursive_entry_stream(changed_entry.path, entry)
             .map(|(path, entry)| ChangedEntry::new_deleted(path, entry))
             .boxify(),
-        EntryStatus::Modified(left, right) => {
-            debug_assert!(left.get_type() == right.get_type());
+        EntryStatus::Modified {
+            to_entry,
+            from_entry,
+        } => {
+            debug_assert!(to_entry.get_type() == from_entry.get_type());
 
-            let substream = if left.get_type() == Type::Tree {
-                let contents = left.get_content().join(right.get_content());
+            let substream = if to_entry.get_type() == Type::Tree {
+                let contents = to_entry.get_content().join(from_entry.get_content());
                 let path = changed_entry.path.clone();
-                let entry_path = left.get_name().cloned();
+                let entry_path = to_entry.get_name().cloned();
 
                 let substream = contents
-                    .map(move |(left_content, right_content)| {
-                        let left_manifest = get_tree_content(left_content);
-                        let right_manifest = get_tree_content(right_content);
+                    .map(move |(to_content, from_content)| {
+                        let to_manifest = get_tree_content(to_content);
+                        let from_manifest = get_tree_content(from_content);
 
                         diff_manifests(
                             MPath::join_element_opt(path.as_ref(), entry_path.as_ref()),
-                            &left_manifest,
-                            &right_manifest,
+                            &to_manifest,
+                            &from_manifest,
                         ).map(recursive_changed_entry_stream)
                     })
                     .flatten_stream()
@@ -195,8 +213,8 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
 
             let current_entry = once(Ok(ChangedEntry::new_modified(
                 changed_entry.path.clone(),
-                left,
-                right,
+                to_entry,
+                from_entry,
             )));
             current_entry.chain(substream).boxify()
         }
@@ -236,15 +254,15 @@ pub fn recursive_entry_stream(
 /// It fetches manifest content, sorts it and compares.
 fn diff_manifests(
     path: Option<MPath>,
-    left: &RevlogManifest,
-    right: &RevlogManifest,
+    to: &RevlogManifest,
+    from: &RevlogManifest,
 ) -> BoxStream<ChangedEntry, Error> {
-    let left_vec_future = left.list().collect();
-    let right_vec_future = right.list().collect();
+    let to_vec_future = to.list().collect();
+    let from_vec_future = from.list().collect();
 
-    left_vec_future
-        .join(right_vec_future)
-        .map(|(left, right)| iter_ok(diff_sorted_vecs(path, left, right).into_iter()))
+    to_vec_future
+        .join(from_vec_future)
+        .map(|(to, from)| iter_ok(diff_sorted_vecs(path, to, from).into_iter()))
         .flatten_stream()
         .boxify()
 }
@@ -256,48 +274,48 @@ fn diff_manifests(
 // We need to find a workaround for an issue.
 pub fn diff_sorted_vecs(
     path: Option<MPath>,
-    left: Vec<RevlogEntry>,
-    right: Vec<RevlogEntry>,
+    to: Vec<RevlogEntry>,
+    from: Vec<RevlogEntry>,
 ) -> Vec<ChangedEntry> {
-    let mut left = VecDeque::from(left);
-    let mut right = VecDeque::from(right);
+    let mut to = VecDeque::from(to);
+    let mut from = VecDeque::from(from);
 
     let mut res = vec![];
     loop {
-        match (left.pop_front(), right.pop_front()) {
-            (Some(left_entry), Some(right_entry)) => {
-                let left_path: Option<MPathElement> = left_entry.get_name().cloned();
-                let right_path: Option<MPathElement> = right_entry.get_name().cloned();
+        match (to.pop_front(), from.pop_front()) {
+            (Some(to_entry), Some(from_entry)) => {
+                let to_path: Option<MPathElement> = to_entry.get_name().cloned();
+                let from_path: Option<MPathElement> = from_entry.get_name().cloned();
 
                 // note that for Option types, None is less than any Some
-                if left_path < right_path {
-                    res.push(ChangedEntry::new_added(path.clone(), left_entry));
-                    right.push_front(right_entry);
-                } else if left_path > right_path {
-                    res.push(ChangedEntry::new_deleted(path.clone(), right_entry));
-                    left.push_front(left_entry);
+                if to_path < from_path {
+                    res.push(ChangedEntry::new_added(path.clone(), to_entry));
+                    from.push_front(from_entry);
+                } else if to_path > from_path {
+                    res.push(ChangedEntry::new_deleted(path.clone(), from_entry));
+                    to.push_front(to_entry);
                 } else {
-                    if left_entry.get_type() == right_entry.get_type() {
-                        if left_entry.get_hash() != right_entry.get_hash() {
+                    if to_entry.get_type() == from_entry.get_type() {
+                        if to_entry.get_hash() != from_entry.get_hash() {
                             res.push(ChangedEntry::new_modified(
                                 path.clone(),
-                                left_entry,
-                                right_entry,
+                                to_entry,
+                                from_entry,
                             ));
                         }
                     } else {
-                        res.push(ChangedEntry::new_added(path.clone(), left_entry));
-                        res.push(ChangedEntry::new_deleted(path.clone(), right_entry));
+                        res.push(ChangedEntry::new_added(path.clone(), to_entry));
+                        res.push(ChangedEntry::new_deleted(path.clone(), from_entry));
                     }
                 }
             }
 
-            (Some(left_entry), None) => {
-                res.push(ChangedEntry::new_added(path.clone(), left_entry));
+            (Some(to_entry), None) => {
+                res.push(ChangedEntry::new_added(path.clone(), to_entry));
             }
 
-            (None, Some(right_entry)) => {
-                res.push(ChangedEntry::new_deleted(path.clone(), right_entry));
+            (None, Some(from_entry)) => {
+                res.push(ChangedEntry::new_deleted(path.clone(), from_entry));
             }
             (None, None) => {
                 break;

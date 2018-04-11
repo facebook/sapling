@@ -67,7 +67,7 @@ fn count_entries(entries: &Vec<ChangedEntry>) -> (usize, usize, usize) {
             EntryStatus::Added(..) => {
                 added += 1;
             }
-            EntryStatus::Modified(..) => modified += 1,
+            EntryStatus::Modified { .. } => modified += 1,
             EntryStatus::Deleted(..) => {
                 deleted += 1;
             }
@@ -230,11 +230,14 @@ fn check_changed_paths(
                     entry.get_name(),
                 ));
             }
-            EntryStatus::Modified(left_entry, right_entry) => {
-                assert_eq!(left_entry.get_type(), right_entry.get_type());
+            EntryStatus::Modified {
+                to_entry,
+                from_entry,
+            } => {
+                assert_eq!(to_entry.get_type(), from_entry.get_type());
                 paths_modified.push(MPath::join_element_opt(
                     changed_entry.path.as_ref(),
-                    left_entry.get_name(),
+                    to_entry.get_name(),
                 ));
             }
         }

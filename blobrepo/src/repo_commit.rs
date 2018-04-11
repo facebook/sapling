@@ -307,7 +307,7 @@ fn compute_changed_files_pair(
         .filter_map(|change| match change.status {
             EntryStatus::Deleted(entry)
             | EntryStatus::Added(entry)
-            | EntryStatus::Modified(entry, _) => {
+            | EntryStatus::Modified { to_entry: entry, .. } => {
                 if entry.get_type() == manifest::Type::Tree {
                     None
                 } else {

@@ -785,9 +785,9 @@ fn get_changed_entry_stream(
                     None
                 }
             }
-            EntryStatus::Modified(entry, _) => {
-                if entry.get_type() == Type::Tree {
-                    Some((entry, entry_status.path))
+            EntryStatus::Modified { to_entry, .. } => {
+                if to_entry.get_type() == Type::Tree {
+                    Some((to_entry, entry_status.path))
                 } else {
                     None
                 }
