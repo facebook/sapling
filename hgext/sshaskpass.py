@@ -220,7 +220,11 @@ def _shoulddisableecho(prompt):
     # we don't have the "flag" information from openssh's
     # read_passphrase(const char *prompt, int flags).
     # guess from the prompt string.
-    return prompt.find('assword:') >= 0
+    # do not match "Passcode or option"
+    if 'Passcode or option' in prompt:
+        return False
+    # match "password", "Password", "passphrase", "Passphrase".
+    return prompt.find('ass') >= 0
 
 def _sshaskpassmain(prompt):
     """the ssh-askpass client"""
