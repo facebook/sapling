@@ -339,12 +339,16 @@ class lock(object):
         # if locker dead, break lock.  must do this with another lock
         # held, or can race and break valid lock.
         try:
-            l = lock(self.vfs, self.f + '.break', timeout=0)
+            msg = _('trying to removed the stale lock file '
+                    '(will acquire %s for that)\n')
+            breaklock = self.f + '.break'
+            self._debugprintonce(msg % breaklock)
+            l = lock(self.vfs, breaklock, timeout=0)
             self.vfs.unlink(self.f)
             l.release()
-            self._debugprintonce('removed the stale lock file\n')
+            self._debugprintonce(_('removed the stale lock file\n'))
         except error.LockError:
-            self._debugprintonce('failed to remove the stale lock file\n')
+            self._debugprintonce(_('failed to remove the stale lock file\n'))
             return lockerdesc
 
     def testlock(self):
