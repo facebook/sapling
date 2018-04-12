@@ -39,41 +39,54 @@
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R repo3 perftestsuite --seed 1 --print
-  stdout: M a
-  M b
-  M c
+  stdout: ? i/s/o/aae
+  ? t/y/c/aag
+  ? u/r/l/aaa
+  ? v/f/r/aab
+  ? v/f/r/aaf
+  
+  stdout: adding i/s/o/aae
+  adding t/y/c/aag
+  adding u/r/l/aaa
+  adding v/f/r/aab
+  adding v/f/r/aaf
   
   ran 'commit' in * sec (glob)
-  stdout: M a
-  M b
-  M c
-  ! d
+  stdout: M v/f/r/aab
+  ? m/h/f/aag
+  ? u/r/l/aag
+  ? v/f/r/aaa
+  ? v/f/r/aac
+  ? z/y/x/aae
   
-  stdout: removing d
+  stdout: adding m/h/f/aag
+  adding u/r/l/aag
+  adding v/f/r/aaa
+  adding v/f/r/aac
+  adding z/y/x/aae
   
-  stdout: saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/78cee9739c2b-81996245-amend.hg
+  stdout: saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/20b2121f9781-5b3ae32a-amend.hg
   
   ran 'amend' in * sec (glob)
-  stdout: M a
-  M b
-  M c
-  ? d
+  stdout: ! u/r/l/aaa
+  ? h/o/v/aag
+  ? i/s/o/aag
+  ? t/y/c/aab
+  ? t/y/c/aaf
   
   ran 'status' in * sec (glob)
-  stdout: reverting repo3/a
-  reverting repo3/b
-  reverting repo3/c
+  stdout: reverting repo3/u/r/l/aaa
   
   ran 'revert' in * sec (glob)
-  stdout: rebasing 4:40cde51ade58 "test commit" (tip)
-  saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/40cde51ade58-07bec616-rebase.hg
+  stdout: rebasing 4:b17a0147d61c "test commit" (tip)
+  saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/b17a0147d61c-bd5f50f4-rebase.hg
   
   ran 'rebase' in * sec (glob)
-  stdout: 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  stdout: 1 files updated, 0 files merged, 10 files removed, 0 files unresolved
   (activating bookmark master)
   
-  stdout: rebasing 4:45a785d41f50 "test commit" (tip)
-  saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/45a785d41f50-016652a0-rebase.hg
+  stdout: rebasing 4:f8d4b0697695 "test commit" (tip)
+  saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/f8d4b0697695-7388783a-rebase.hg
   
   ran 'immrebase' in * sec (glob)
   stdout: pulling from $TESTTMP/repo1

@@ -5,6 +5,7 @@
 
 from __future__ import absolute_import
 
+import random
 import time
 import traceback
 
@@ -27,10 +28,12 @@ def _mainloop(repo, ui, tr, count, batchsize):
     batchcount = 0
     start = time.time()
     base = repo['tip']
-    ui.write(_("starting commit is: %s\n") % base.rev())
+    goalrev = ui.configint('repogenerator', 'numcommits', 10000) - 1
+    ui.write(_("starting commit is: %d (goal is %d)\n") %
+             (base.rev(), goalrev))
     generator = editsgenerator.randomeditsgenerator(base)
 
-    while True:
+    while base.rev() < goalrev:
         # Make a commit:
         wctx = context.overlayworkingctx(repo)
         wctx.setbase(base)
@@ -39,7 +42,6 @@ def _mainloop(repo, ui, tr, count, batchsize):
         newctx = repo[repo.commitctx(memctx)]
 
         # Log production rate:
-        i += 1
         elapsed = time.time() - start
         if i % 5 == 0:
             ui.write(
@@ -49,7 +51,8 @@ def _mainloop(repo, ui, tr, count, batchsize):
                  "{:,}".format(int(i / elapsed * 3600)),
                  "{:,}".format(int(i / elapsed * 86400)),
                  ))
-            base = newctx
+        base = newctx
+        i += 1
         batchcount += 1
         if batchcount > batchsize:
             ui.status(_('committing txn...\n'))
@@ -57,15 +60,31 @@ def _mainloop(repo, ui, tr, count, batchsize):
             tr = repo.transaction('newtxn_')
             batchcount = 0
         if i >= count:
+            ui.status(_('generated %d commits; quitting\n') % count)
             return
 
 @command('repogenerator', [
     ('', 'batch-size', 50000, _('size of transactiions to commit')),
     ('n', 'count', 50000, _('number of commits to generate')),
+    ('', 'seed', 0, _('random seed to use')),
 ], _('hg repogenerator [OPTION] [REV]'))
 def repogenerator(ui, repo, *revs, **opts):
     """Generates random commits for large-scale repo generation
+
+    The number of commits is configurable::
+
+        [repogenerator]
+        numcommits = 10000
+
+    The shape of generated paths can be tweaked::
+
+        [repogenerator]
+        filenamedircount = 3
+        filenameleaflength = 3
     """
+    if opts['seed']:
+        random.seed(opts['seed'])
+
     with repo.wlock(), repo.lock():
         try:
             tr = repo.transaction('')
@@ -75,7 +94,7 @@ def repogenerator(ui, repo, *revs, **opts):
             tr = repo.transaction('')
 
         try:
-            _mainloop(repo, ui, tr, opts['count'], opts['batch-size'])
+            _mainloop(repo, ui, tr, opts['count'], opts['batch_size'])
             tr.close()
         except KeyboardInterrupt:
             ui.status(_("interrupted...\n"))
