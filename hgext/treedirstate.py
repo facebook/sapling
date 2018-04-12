@@ -28,10 +28,14 @@
     # Percentage probability of performing a cleanup after a write to a
     # treedirstate file that doesn't involve a repack.
     cleanuppercent = 1
+
+    # Verify trees on each update by re-reading the tree root.
+    verify = True
 """
 
 from __future__ import absolute_import
 
+import binascii
 import errno
 import heapq
 import itertools
@@ -39,6 +43,7 @@ import os
 import random
 import string
 import struct
+import time
 
 from mercurial.i18n import _
 from mercurial import (
@@ -484,6 +489,8 @@ class treedirstatemap(object):
             self._rmap.writedelta(now, nonnormadd)
         st.write(self._genrootdata())
         st.close()
+        if self._ui.configbool('treedirstate', 'verify'):
+            self._verify()
         self._dirtyparents = False
 
     def writeflat(self):
@@ -496,6 +503,33 @@ class treedirstatemap(object):
             st.write(dirstate.parsers.pack_dirstate(
                 newdmap, self.copymap, self._parents,
                 dirstate._getfsnow(self._opener)))
+
+    def _verify(self):
+        # Re-open the treedirstate to check it's ok
+        rootid = self._rmap.rootid()
+        try:
+            self._ui.debug('reopening %s with root %s to check it\n'
+                           % (treefileprefix + self._treeid, rootid))
+            self._rmap.read(treefileprefix + self._treeid, rootid)
+        except Exception as e:
+            self._ui.warn(_('error verifying treedirstate after update: %s\n')
+                          % e)
+            self._ui.warn(_('please post the following debug information '
+                            'to the Source Control @ FB group:\n'))
+            treestat = self._opener.lstat(treefileprefix + self._treeid)
+            self._ui.warn(_('rootid: %s, treefile: %s, treestat: %s, now: %s\n')
+                          % (rootid, treefileprefix + self._treeid,
+                             treestat, time.time()))
+            with self._opener(treefileprefix + self._treeid, 'rb') as f:
+                f.seek(-256, 2)
+                pos = f.tell()
+                data = f.read(32)
+                while data:
+                    self._ui.warn(('%08x: %s\n')
+                                  % (pos, binascii.hexlify(data)))
+                    pos = f.tell()
+                    data = f.read(32)
+            raise error.Abort(_('error verifying treedirstate'))
 
     def _genrootdata(self):
         w = _writer()
