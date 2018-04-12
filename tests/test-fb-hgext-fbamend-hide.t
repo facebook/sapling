@@ -63,8 +63,8 @@ Hide multiple commits with bookmarks on them, hide wc parent
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 426bada5c675
   3 changesets hidden
-  removing bookmark "cat"
-  removing bookmark "dog"
+  removing bookmark "cat (was at: 26805aba1e60)"
+  removing bookmark "dog (was at: 112478962961)"
   2 bookmarks removed
   hint[undo]: you can undo this using the `hg undo` command
   hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
@@ -150,7 +150,7 @@ hg hide --cleanup tests
   hiding commit 78d2dca436b2 "E"
   hiding commit 1f7934a9b4de "F"
   2 changesets hidden
-  removing bookmark "alive"
+  removing bookmark "alive (was at: 1f7934a9b4de)"
   1 bookmarks removed
   hint[undo]: you can undo this using the `hg undo` command
   hint[hint-ack]: use 'hg hint --ack undo' to silence these hints

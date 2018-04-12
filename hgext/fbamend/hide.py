@@ -9,18 +9,19 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
+from mercurial.i18n import _
+from mercurial.node import short
 from mercurial import (
     bookmarks as bookmarksmod,
     cmdutil,
     error,
+    extensions,
     hg,
     hintutil,
-    extensions,
     obsolete,
     registrar,
     scmutil,
 )
-from mercurial.i18n import _
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -90,13 +91,13 @@ def hide(ui, repo, *revs, **opts):
         # remove bookmarks pointing to hidden changesets
         hnodes = [r.node() for r in hidectxs]
         bmchanges = []
-        for book, node in bookmarksmod.listbinbookmarks(repo):
+        for book, node in sorted(bookmarksmod.listbinbookmarks(repo)):
             if node in hnodes:
                 bmchanges.append((book, None))
+                if not ui.quiet:
+                    ui.status(_('removing bookmark "%s (was at: %s)"\n') %
+                              (book, short(node)))
 
-        if not ui.quiet:
-            for bmchange in sorted(bmchanges):
-                ui.status(_('removing bookmark "%s"\n') % bmchange[0])
         repo._bookmarks.applychanges(repo, tr, bmchanges)
 
         if len(bmchanges) > 0:
