@@ -109,3 +109,12 @@ def uisetup(ui):
 
     # Replace the class for this instance and all clones created from it:
     ui.__class__ = logtofile
+
+def reposetup(ui, repo):
+    @repo.ui.atexit
+    def telemetry():
+        if util.safehasattr(repo, 'requirements'):
+            ui.log('requirements',
+                generaldelta=str('generaldelta' in repo.requirements).lower())
+            ui.log('requirements',
+                remotefilelog=str('remotefilelog' in repo.requirements).lower())
