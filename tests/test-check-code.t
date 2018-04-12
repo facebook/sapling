@@ -19,6 +19,9 @@ New errors are not allowed. Warnings are strongly discouraged.
   fb/tests/sqldirstate_benchmark.py:100:
    >             hg.next()
    don't use .next(), use next(...)
+  fb/tests/test-fbclone-fbsource.t:1:
+   >   $ FBCLONE=$TESTDIR/../staticfiles/opt/facebook/bin/fbclone
+   don't use explicit paths for tools
   fb/tests/test-hg-rsh.t:2:
    >   $ HGRSH=$TESTDIR/../staticfiles/bin/hg-rsh
    don't use explicit paths for tools
