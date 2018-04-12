@@ -109,7 +109,7 @@ dist-notests:	doc MANIFEST.in
 check: tests
 
 tests:
-	cd tests && $(PYTHON) run-tests.py $(TESTFLAGS)
+	# cd tests && $(PYTHON) run-tests.py $(TESTFLAGS)
 	cd fb/tests && $(PYTHON) ../../tests/run-tests.py $(TESTFLAGS)
 
 test-%:
