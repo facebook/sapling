@@ -154,7 +154,7 @@ impl Store for FileStore {
     fn flush(&mut self) -> Result<()> {
         let file = self.file.get_mut();
         file.flush()?;
-        file.get_mut().sync_data()?;
+        file.get_mut().sync_all()?;
         Ok(())
     }
 }
