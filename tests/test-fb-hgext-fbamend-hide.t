@@ -39,7 +39,7 @@ Create repo
 
 Hide a single commit
   $ hg hide 3
-  hiding commit be0ef73c17ad
+  hiding commit be0ef73c17ad "D"
   1 changesets hidden
   hint[undo]: you can undo this using the `hg undo` command
   hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
@@ -57,9 +57,9 @@ Hide multiple commits with bookmarks on them, hide wc parent
   $ hg update 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg hide .
-  hiding commit 112478962961
-  hiding commit 26805aba1e60
-  hiding commit 78d2dca436b2
+  hiding commit 112478962961 "B"
+  hiding commit 26805aba1e60 "C"
+  hiding commit 78d2dca436b2 "E"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 426bada5c675
   3 changesets hidden
@@ -147,8 +147,8 @@ hg hide --cleanup tests
   o  0 A
   
   $ hg hide --cleanup
-  hiding commit 78d2dca436b2
-  hiding commit 1f7934a9b4de
+  hiding commit 78d2dca436b2 "E"
+  hiding commit 1f7934a9b4de "F"
   2 changesets hidden
   removing bookmark "alive"
   1 bookmarks removed

@@ -67,7 +67,8 @@ def hide(ui, repo, *revs, **opts):
                     _('cannot hide immutable changeset: %s') % ctx,
                     hint="see 'hg help phases' for details")
             if not ui.quiet:
-                ui.status(_('hiding commit %s\n') % ctx)
+                ui.status(_('hiding commit %s "%s"\n') %
+                          (ctx, ctx.description().split('\n')[0][:50]))
 
         wdp = repo['.']
         newnode = wdp

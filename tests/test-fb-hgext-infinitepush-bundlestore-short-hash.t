@@ -66,7 +66,7 @@ Check update now accesses hidden commits rather than trying to pull
   > evolution.createmarkers=True
   > EOF
   $ hg hide c1b6fe8fce73
-  hiding commit c1b6fe8fce73
+  hiding commit c1b6fe8fce73 "someothercommit"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at f8b49bf62d4d
   1 changesets hidden
