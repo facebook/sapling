@@ -110,9 +110,11 @@ check: tests
 
 tests:
 	cd tests && $(PYTHON) run-tests.py $(TESTFLAGS)
+	cd fb/tests && $(PYTHON) ../../tests/run-tests.py $(TESTFLAGS)
 
 test-%:
-	cd tests && $(PYTHON) run-tests.py $(TESTFLAGS) $@
+	@[ -e tests/$@ ] && cd tests && $(PYTHON) run-tests.py $(TESTFLAGS) $@ || :
+	@[ -e fb/tests/$@ ] && cd fb/tests && $(PYTHON) ../../tests/run-tests.py $(TESTFLAGS) $@ || :
 
 testpy-%:
 	@echo Looking for Python $* in $(HGPYTHONS)

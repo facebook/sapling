@@ -24,11 +24,13 @@ syntax: glob
 .shim/
 tests/.coverage*
 tests/.testtimes*
+fb/tests/.testtimes*
 tests/.hypothesis
 tests/hypothesis-generated
 tests/annotated
 tests/exceptions
 tests/*.err
+fb/tests/*.err
 tests/htmlcov
 tests/getdb.sh
 contrib/chg/chg

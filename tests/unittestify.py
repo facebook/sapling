@@ -12,10 +12,17 @@ from __future__ import absolute_import
 import contextlib
 import glob
 import os
+import pprint
 import random
 import re
+import shlex
 import subprocess
 import unittest
+
+try:
+    shlex_quote = shlex.quote  # Python 3.3 and up
+except AttributeError:
+    shlex_quote = subprocess.list2cmdline
 
 @contextlib.contextmanager
 def chdir(path):
@@ -60,7 +67,13 @@ def gettestmethod(name, port):
                     reason = 'skipped by run-tests.py'
                 raise unittest.SkipTest(reason)
             elif returncode != 0:
-                raise self.failureException(err + out)
+                raise self.failureException(
+                    '\nCommand:\n{}\n'
+                    '\nEnvironment:\n{}\n'
+                    '\nError:\n{}{}'.format(
+                        shlex_quote(args + [name]),
+                        pprint.pformat(env),
+                        err, out))
     return runsingletest
 
 class hgtests(unittest.TestCase):
