@@ -41,27 +41,27 @@ class MergeTest(EdenHgTestCase):
 
     def _do_merge_and_commit(self, tool: str) -> None:
         self.hg('merge', '--tool', tool, '-r', self.commit1)
-        self.assert_status({'foo': 'M'})
+        self.assert_status({'foo': 'M'}, op='merge')
         self.repo.commit('merge commit1 into commit2')
         self.assert_status_empty()
 
     def test_resolve_merge(self) -> None:
         # Perform the merge and let it fail with the file unresolved
         self.hg('merge', '--tool', ':fail', '-r', self.commit1, check=False)
-        self.assert_status({'foo': 'M'})
+        self.assert_status({'foo': 'M'}, op='merge')
         self.assert_unresolved(['foo'])
 
         self.write_file('foo', '3')
         self.hg('resolve', '--mark', 'foo')
         self.assert_unresolved(unresolved=[], resolved=['foo'])
-        self.assert_status({'foo': 'M'})
+        self.assert_status({'foo': 'M'}, op='merge')
         self.repo.commit('merge commit1 into commit2')
         self._verify_tip('3')
 
     def test_clear_merge_state(self) -> None:
         # Perform the merge and let it fail with the file unresolved
         self.hg('merge', '--tool', ':fail', '-r', self.commit1, check=False)
-        self.assert_status({'foo': 'M'})
+        self.assert_status({'foo': 'M'}, op='merge')
         self.assert_unresolved(['foo'])
 
         # "hg update --clean ." should reset is back to a clean state

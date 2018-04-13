@@ -227,8 +227,9 @@ class EdenHgTestCase(testcase.EdenTestCase):
         self,
         expected: Dict[str, str],
         msg: Optional[str] = None,
-        check_ignored: bool = True
-    ):
+        op: Optional[str] = None,
+        check_ignored: bool = True,
+    ) -> None:
         '''Asserts the output of `hg status` matches the expected state.
 
         `expected` is a dict where keys are paths relative to the repo
@@ -251,14 +252,68 @@ class EdenHgTestCase(testcase.EdenTestCase):
             actual_status[path] = flag
 
         self.assertDictEqual(expected, actual_status, msg=msg)
+        self.assert_unfinished_operation(op)
 
     def assert_status_empty(
         self,
         msg: Optional[str] = None,
-        check_ignored: bool = True
-    ):
+        op: Optional[str] = None,
+        check_ignored: bool = True,
+    ) -> None:
         '''Ensures that `hg status` reports no modifications.'''
-        self.assert_status({}, msg=msg, check_ignored=check_ignored)
+        self.assert_status({}, msg=msg, op=op, check_ignored=check_ignored)
+
+    def assert_unfinished_operation(self, op: Optional[str]) -> None:
+        '''
+        Check if the repository appears to be in the middle of an unfinished
+        update/rebase/graft/etc.
+
+        The op argument should be the name fo the expected operation, or None
+        to check that the repository is not in the middle of an unfinished
+        operation.
+        '''
+        # Ideally we could use `hg status` to detect if the repository is the
+        # middle of an unfinished operation.  Unfortunately the built-in status
+        # code provides no way to display that information when HGPLAIN is set.
+        # There are also currently two copies of that code (in the morestatus
+        # extension and built-in to the core status command), which
+        # unfortunately do not check the same list of states.
+        state_files = {
+            'update': 'updatestate',
+            'rebase': 'rebasestate',
+            'graft': 'graftstate',
+            'rebase': 'rebasestate',
+            'histedit': 'histedit-state'
+        }
+        if not (op is None or op in state_files or op == 'merge'):
+            self.fail('invalid operation argument: %r' % (op,))
+
+        for operation, state_file in state_files.items():
+            state_path = os.path.join(self.repo.path, '.hg', state_file)
+            in_state = os.path.exists(state_path)
+            if in_state and operation != op:
+                self.fail(
+                    'repository is in the middle of an unfinished %s' %
+                    operation
+                )
+            elif not in_state and operation == op:
+                self.fail(
+                    'expected repository to be in the middle of an '
+                    'unfinished %s, but it is not' % operation
+                )
+
+        # The merge state file is present when there are unresolved conflicts.
+        # It may be present in addition to one of the unfinished state files
+        # above.
+        merge_state_path = os.path.join(self.repo.path, '.hg', 'merge', 'state')
+        in_merge = os.path.exists(merge_state_path)
+        if in_merge and op is None:
+            self.fail('repository is in the middle of an unfinished merge')
+        elif op == 'merge' and not in_merge:
+            self.fail(
+                'expected repository to be in the middle of an '
+                'unfinished merge, but it is not'
+            )
 
     def assert_dirstate(
         self,

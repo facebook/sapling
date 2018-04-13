@@ -57,7 +57,7 @@ class HisteditTest(EdenHgTestCase):
         )
 
         # Make sure the working copy is in the expected state.
-        self.assert_status_empty()
+        self.assert_status_empty(op='histedit')
         self.assertSetEqual(
             set(['.eden', '.hg', 'first', 'second']),
             set(os.listdir(self.repo.get_canonical_root()))
@@ -163,7 +163,7 @@ class HisteditTest(EdenHgTestCase):
         self.assertIn(expected_msg, str(context.exception))
         self.assert_status({
             'will_have_confict.txt': 'M',
-        })
+        }, op='histedit')
         self.assert_file_regex('will_have_confict.txt', '''\
             <<<<<<< local: .*
             original

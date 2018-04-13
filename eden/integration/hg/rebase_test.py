@@ -137,7 +137,7 @@ class RebaseTest(EdenHgTestCase):
         self.assert_status({
             'numbers/1/11': 'M',
             'numbers/1/12': 'M',
-        })
+        }, op='rebase')
         self.assert_file_regex('numbers/1/11', '''\
             <<<<<<< dest: .*
             11
@@ -172,7 +172,7 @@ class RebaseTest(EdenHgTestCase):
             'numbers/1/12': 'M',
             'numbers/1/13': 'M',
             'numbers/1/14': 'M',
-        })
+        }, op='rebase')
         self.assert_file_regex('numbers/1/12', '''\
             <<<<<<< dest: .*
             12 merged.

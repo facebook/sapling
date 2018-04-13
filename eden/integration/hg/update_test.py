@@ -193,7 +193,7 @@ class UpdateTest(EdenHgTestCase):
         )
         self.assert_status({
             'foo/bar.txt': 'M',
-        })
+        }, op='merge')
         self.assert_file_regex('foo/bar.txt', '''\
             <<<<<<< working copy: .*
             changing yet again
@@ -236,12 +236,17 @@ class UpdateTest(EdenHgTestCase):
                 'bar/some_new_file.txt': ('a', 0, 'MERGE_BOTH'),
             }
         )
-        self.assert_status({'bar/some_new_file.txt': 'A'})
+        # TODO: The repository should not actually be left in the middle of an
+        # update operation here.
+        self.assert_status({'bar/some_new_file.txt': 'A'}, op='update')
         self.assertEqual(file_contents, self.read_file('bar/some_new_file.txt'))
 
         # Now do the update with --merge specified.
         self.repo.update(new_commit, merge=True)
-        self.assert_status_empty()
+        # The repository will have no file changes, but will still report
+        # as being in the middle of a merge, even though everything was
+        # automatically resolved.
+        self.assert_status_empty(op='merge')
         self.assertEqual(
             new_commit,
             self.repo.get_head_hash(),
@@ -304,7 +309,7 @@ class UpdateTest(EdenHgTestCase):
         self.assert_dirstate_empty()
         self.assert_status({
             'some_new_file.txt': 'M',
-        })
+        }, op='merge')
         merge_contents = dedent(
             '''\
         <<<<<<< working copy: .*
@@ -330,7 +335,7 @@ class UpdateTest(EdenHgTestCase):
         self.assert_dirstate_empty()
         self.assert_status({
             'some_new_file.txt': 'M',
-        })
+        }, op='merge')
         self.repo.commit('Resolved file changes.')
         self.assert_dirstate_empty()
         self.assert_status_empty()
@@ -363,7 +368,7 @@ class UpdateTest(EdenHgTestCase):
 
         self.hg('update', '.^', '--merge', '--tool', ':local')
         self.assertEqual(new_contents, self.read_file('some_new_file.txt'))
-        self.assert_status({'some_new_file.txt': 'A'})
+        self.assert_status({'some_new_file.txt': 'A'}, op='merge')
 
     def test_update_ignores_untracked_directory(self) -> None:
         base_commit = self.repo.get_head_hash()
