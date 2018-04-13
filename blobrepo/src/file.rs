@@ -48,6 +48,9 @@ pub fn fetch_file_content_and_renames_from_blobstore(
                 blobstore.get(key).and_then(move |blob| {
                     blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
                         .and_then(|blob| {
+                            // XXX this is broken -- parents.get_nodes() will never return
+                            // (None, Some(hash)), which is what BlobNode relies on to figure out
+                            // whether a node is copied.
                             let (p1, p2) = parents.get_nodes();
                             let blobnode = BlobNode::new(blob, p1, p2);
                             let file = file::File::new(blobnode);

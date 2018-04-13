@@ -281,6 +281,9 @@ fn compute_copy_from_info(
             .and_then({
                 let parents = parents.clone();
                 move |blob| {
+                    // XXX this is broken -- parents.get_nodes() will never return
+                    // (None, Some(hash)), which is what BlobNode relies on to figure out
+                    // whether a node is copied.
                     let (p1, p2) = parents.get_nodes();
                     file::File::new(BlobNode::new(blob, p1, p2))
                         .copied_from()

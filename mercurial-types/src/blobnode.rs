@@ -74,8 +74,13 @@ pub struct BlobNode {
 impl BlobNode {
     /// Construct a node with the given content and parents.
     /// NOTE: Mercurial encodes the fact that a file has been copied from some other path
-    /// by encoding the fact by using p2 instead of p1 to refer to the parent version.
-    /// Two parent nodes are always considered to have been potentially copied.
+    /// in metadata. The possible presence of metadata is signaled by marking p1 as None.
+    /// * If both p1 and p2 are not None, there's no copy involved (no metadata).
+    /// * If a merge has two parents and there's a copy involved, p1 is null, p2 is non-null and
+    ///   is the parent rev that isn't copied, and the metadata contains a copyrev that's the
+    ///   parent that's copied.
+    /// * If both p1 and p2 are None, it shouldn't really be possible to have copy info. But
+    ///   the Mercurial Python client tries to parse metadata anyway, so match that behavior.
     pub fn new<B>(blob: B, p1: Option<&NodeHash>, p2: Option<&NodeHash>) -> BlobNode
     where
         B: Into<HgBlob>,
