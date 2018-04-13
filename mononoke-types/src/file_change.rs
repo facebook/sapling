@@ -9,14 +9,14 @@ use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 use errors::*;
 use path::MPath;
 use thrift;
-use typed_hash::ContentId;
+use typed_hash::{ChangesetId, ContentId};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct FileChange {
     content_id: ContentId,
     file_type: FileType,
     size: u64,
-    copy_from: Option<MPath>,
+    copy_from: Option<(MPath, ChangesetId)>,
 }
 
 impl FileChange {
@@ -24,7 +24,7 @@ impl FileChange {
         content_id: ContentId,
         file_type: FileType,
         size: u64,
-        copy_from: Option<MPath>,
+        copy_from: Option<(MPath, ChangesetId)>,
     ) -> Self {
         // XXX maybe convert this to a builder
         Self {
@@ -42,7 +42,10 @@ impl FileChange {
                 file_type: FileType::from_thrift(fc.file_type)?,
                 size: fc.size as u64,
                 copy_from: match fc.copy_from {
-                    Some(f) => Some(MPath::from_thrift(f)?),
+                    Some(copy_info) => Some((
+                        MPath::from_thrift(copy_info.file)?,
+                        ChangesetId::from_thrift(copy_info.cs_id)?,
+                    )),
                     None => None,
                 },
             })
@@ -68,7 +71,7 @@ impl FileChange {
         self.size
     }
 
-    pub fn copy_from(&self) -> Option<&MPath> {
+    pub fn copy_from(&self) -> Option<&(MPath, ChangesetId)> {
         self.copy_from.as_ref()
     }
 
@@ -77,7 +80,10 @@ impl FileChange {
             content_id: self.content_id.into_thrift(),
             file_type: self.file_type.into_thrift(),
             size: self.size as i64,
-            copy_from: self.copy_from.map(|mpath| mpath.into_thrift()),
+            copy_from: self.copy_from.map(|(file, cs_id)| thrift::CopyInfo {
+                file: file.into_thrift(),
+                cs_id: cs_id.into_thrift(),
+            }),
         }
     }
 }
@@ -85,7 +91,7 @@ impl FileChange {
 impl Arbitrary for FileChange {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let copy_from = if g.gen_weighted_bool(5) {
-            Some(MPath::arbitrary(g))
+            Some((MPath::arbitrary(g), ChangesetId::arbitrary(g)))
         } else {
             None
         };

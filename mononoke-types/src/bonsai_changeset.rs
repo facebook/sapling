@@ -32,6 +32,8 @@ pub struct BonsaiChangesetMut {
     pub committer_date: Option<DateTime>,
     pub message: String,
     pub extra: BTreeMap<String, String>,
+    // XXX consider adding a check that changeset IDs inside copy info in FileChange are all
+    // members of parents
     pub file_changes: BTreeMap<MPath, FileChange>,
     pub file_deletes: BTreeSet<MPath>,
 }
@@ -289,7 +291,10 @@ mod test {
                     ContentId::new(Blake2::from_byte_array([2; 32])),
                     FileType::Executable,
                     84,
-                    Some(MPath::new("e/f").unwrap()),
+                    Some((
+                        MPath::new("e/f").unwrap(),
+                        ChangesetId::new(Blake2::from_byte_array([3; 32])),
+                    )),
                 ),
             ],
             file_deletes: btreeset![MPath::new("g/h").unwrap(), MPath::new("i/j").unwrap(),],
@@ -301,7 +306,7 @@ mod test {
             blob.id(),
             &ChangesetId::new(
                 Blake2::from_str(
-                    "759d450632c77a186c75c1ea900279769a2392167513ec91fee2aa065fd487bc"
+                    "faa223c0a81127750c74c04f7484618b9e2817a7e90c69551bc07a9758718e47"
                 ).unwrap()
             )
         );

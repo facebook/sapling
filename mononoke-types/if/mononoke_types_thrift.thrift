@@ -64,8 +64,8 @@ typedef list<MPathElement> MPath (hs.newtype)
 //   deserializer that just wants to read metadata can stop early.
 // * The "required" fields are only for data that is absolutely core to the
 //   model. Note that Thrift does allow changing "required" to unqualified.
-// * Id and DateTime fields do not have a reasonable default value, so they must
-//   always be either "required" or "optional".
+// * MPath, Id and DateTime fields do not have a reasonable default value, so
+//   they must always be either "required" or "optional".
 struct BonsaiChangeset {
   1: required list<ChangesetId> parents,
   2: string author,
@@ -103,5 +103,11 @@ struct FileChange {
   2: FileType file_type,
   // size is a u64 stored as an i64
   3: required i64 size,
-  4: optional MPath copy_from,
+  4: optional CopyInfo copy_from,
+}
+
+// This is only used optionally so it is OK to use `required` here.
+struct CopyInfo {
+  1: required MPath file,
+  2: required ChangesetId cs_id,
 }
