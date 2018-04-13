@@ -7,6 +7,8 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import os
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
@@ -39,8 +41,32 @@ class StatusTest(EdenHgTestCase):
             'world.txt': 'A',
         })
 
+        self.hg('forget', 'hello.txt')
+        self.assert_status({
+            'hello.txt': 'R',
+            'world.txt': 'A',
+        })
+        self.assertEqual('new contents', self.read_file('hello.txt'))
+
+        self.hg('rm', 'hello.txt')
+        self.assert_status({
+            'hello.txt': 'R',
+            'world.txt': 'A',
+        })
+        # If the file is already forgotten, `hg rm` does not remove it from
+        # disk.
+        self.assertEqual('new contents', self.read_file('hello.txt'))
+
+        self.hg('add', 'hello.txt')
+        self.assert_status({
+            'hello.txt': 'M',
+            'world.txt': 'A',
+        })
+        self.assertEqual('new contents', self.read_file('hello.txt'))
+
         self.hg('rm', '--force', 'hello.txt')
         self.assert_status({
             'hello.txt': 'R',
             'world.txt': 'A',
         })
+        self.assertFalse(os.path.exists(self.get_path('hello.txt')))

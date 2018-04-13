@@ -84,7 +84,6 @@ class AddTest(EdenHgTestCase):
             }
         )
 
-    @unittest.skip('Need to add precondition checks that true Hg has.')
     def test_add_nonexistent_directory(self):
         # I believe this does not pass today because _eden_walk_helper does not
         # invoke the bad() method of the matcher.
@@ -92,7 +91,7 @@ class AddTest(EdenHgTestCase):
             self.hg('add', 'dir3')
         self.assertEqual(
             'dir3: No such file or directory\n',
-            context.exception.output.decode('utf-8')
+            context.exception.stderr.decode('utf-8')
         )
         self.assertEqual(1, context.exception.returncode)
 
