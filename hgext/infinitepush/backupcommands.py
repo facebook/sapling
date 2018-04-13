@@ -385,22 +385,32 @@ def waitbackup(ui, repo, timeout):
         raise
 
 @command('isbackedup',
-     [('r', 'rev', [], _('show the specified revision or revset'), _('REV'))])
-def isbackedup(ui, repo, **opts):
+     [('r', 'rev', [], _('show the specified revision or revset'), _('REV')),
+      ('', 'remote', None, _('check on the remote server'))])
+def isbackedup(ui, repo, dest=None, **opts):
     """checks if commit was backed up to infinitepush
 
     If no revision are specified then it checks working copy parent
     """
 
     revs = opts.get('rev')
+    remote = opts.get('remote')
     if not revs:
         revs = ['.']
     bkpstate = _readlocalbackupstate(ui, repo)
     unfi = repo.unfiltered()
     backeduprevs = unfi.revs('draft() and ::%ls', bkpstate.heads)
+    if remote:
+        other = _getremote(repo, ui, dest, **opts)
     for r in scmutil.revrange(unfi, revs):
         ui.write(_(unfi[r].hex() + ' '))
-        ui.write(_('backed up' if r in backeduprevs else 'not backed up'))
+        backedup = r in backeduprevs
+        if remote and backedup:
+            try:
+                other.lookup(unfi[r].hex())
+            except error.RepoError:
+                backedup = False
+        ui.write(_('backed up' if backedup else 'not backed up'))
         ui.write(_('\n'))
 
 @revsetpredicate('backedup')

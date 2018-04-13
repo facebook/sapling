@@ -428,6 +428,15 @@ Test isbackedup command
   6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up
   630839011471e17f808b92ab084bedfaca33b110 not backed up
 
+Delete a commit from the server
+  $ rm ../repo/.hg/scratchbranches/index/nodemap/6c4f4b30ae4c2dd928d551836c70c741ee836650
+
+Local state still shows it as backed up, but can check the remote
+  $ hg isbackedup -r .
+  6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up
+  $ hg isbackedup -r . --remote
+  6c4f4b30ae4c2dd928d551836c70c741ee836650 not backed up
+
 Delete backup state file and try again
   $ rm .hg/infinitepushbackupstate
   $ hg isbackedup -r . -r 630839011471e17
