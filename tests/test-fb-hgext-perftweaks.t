@@ -116,7 +116,7 @@ Test avoiding calculating head changes during commit
   $ hg commit -m C -A C
   $ hg up -q A
   $ echo D > D
-  $ hg commit -m D -A D --config perftweaks.disableheaddetection=1
+  $ hg commit -m D -A D
 
 Test disabling updating branchcache during commit
 
