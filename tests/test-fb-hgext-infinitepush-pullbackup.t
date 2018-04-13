@@ -276,14 +276,14 @@ Make sure that both repos were checked even though check for one of them fails
 Test getavailablebackups command
   $ hg getavailablebackups
   user test has 4 available backups:
-  (backed are ordered, the most recent are at the top of the list)
+  (backups are ordered, the most recent are at the top of the list)
   \$TESTTMP on .* (re)
   \$TESTTMP/bookmarks/backupsource3 on .* (re)
   \$TESTTMP/backupsource2 on .* (re)
   \$TESTTMP/backupsource on .* (re)
   $ hg getavailablebackups --user anotheruser
   user anotheruser has 2 available backups:
-  (backed are ordered, the most recent are at the top of the list)
+  (backups are ordered, the most recent are at the top of the list)
   \$TESTTMP/backupsource2 on .* (re)
   \$TESTTMP/backupsource on .* (re)
   $ hg getavailablebackups --json

@@ -330,7 +330,7 @@ def getavailablebackups(ui, repo, dest=None, **opts):
             ui.write(_('no backups available for %s\n') % namingmgr.username)
 
         ui.write(_('user %s has %d available backups:\n'
-                   '(backed are ordered, '
+                   '(backups are ordered, '
                    'the most recent are at the top of the list)\n') %
                  (namingmgr.username, len(allbackupstates)))
 

@@ -149,7 +149,7 @@ Getavailablebackups should also go in MRU order
   }
   $ hg getavailablebackups
   user test has 4 available backups:
-  (backed are ordered, the most recent are at the top of the list)
+  (backups are ordered, the most recent are at the top of the list)
   $TESTTMP/client4 on mydevhost
   $TESTTMP/client3 on devhost
   $TESTTMP/client2 on devhost
