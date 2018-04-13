@@ -53,8 +53,8 @@ type = hg
         self.assertEqual(expected, self._list_repos())
 
     def test_add_multiple(self) -> None:
-        hg_repo = self.create_repo('hg_repo', hgrepo.HgRepository)
-        git_repo = self.create_repo('git_repo', gitrepo.GitRepository)
+        hg_repo = self.create_hg_repo('hg_repo')
+        git_repo = self.create_git_repo('git_repo')
 
         self.eden.add_repository('hg1', hg_repo.path)
         self.assertEqual(['hg1'], self._list_repos())

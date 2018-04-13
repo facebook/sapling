@@ -61,7 +61,7 @@ class RCTest(testcase.EdenRepoTest):
                          msg='The client directory should have been restored')
 
     def test_override_system_config(self) -> None:
-        system_repo = self.create_repo('system_repo', self.get_repo_class())
+        system_repo = self.create_repo('system_repo')
 
         system_repo.write_file('hello.txt', 'hola\n')
         system_repo.commit('Initial commit.')

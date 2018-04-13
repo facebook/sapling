@@ -27,7 +27,7 @@ class HgError(CommandError):
 
 
 class HgRepository(repobase.Repository):
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, system_hgrc: Optional[str] = None) -> None:
         '''
         If hgrc is specified, it will be used as the value of the HGRCPATH
         environment variable when `hg` is run.
@@ -41,7 +41,10 @@ class HgRepository(repobase.Repository):
         self.hg_environment['HGPLAIN'] = '1'
         # Set HGRCPATH to make sure we aren't affected by the local system's
         # mercurial settings from /etc/mercurial/
-        self.hg_environment['HGRCPATH'] = ''
+        if system_hgrc:
+            self.hg_environment['HGRCPATH'] = system_hgrc
+        else:
+            self.hg_environment['HGRCPATH'] = ''
         self.hg_bin = FindExe.HG
 
     def hg(

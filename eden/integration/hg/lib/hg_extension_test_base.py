@@ -109,7 +109,7 @@ class EdenHgTestCase(testcase.EdenTestCase):
 
     def create_backing_repo(self):
         hgrc = self.get_hgrc()
-        repo = self.create_repo('main', hgrepo.HgRepository, hgrc=hgrc)
+        repo = self.create_hg_repo('main', hgrc=hgrc)
         self.populate_backing_repo(repo)
         return repo
 

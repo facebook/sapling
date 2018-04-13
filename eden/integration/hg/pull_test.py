@@ -21,7 +21,7 @@ class PullTest(EdenHgTestCase):
         hgrc['paths'] = {
             'default': self.server_repo.path,
         }
-        repo = self.create_repo('main', hgrepo.HgRepository, hgrc=hgrc)
+        repo = self.create_hg_repo('main', hgrc=hgrc)
         self.populate_backing_repo(repo)
         return repo
 
@@ -44,9 +44,7 @@ class PullTest(EdenHgTestCase):
                 'autocreatetrees': 'True',
             }
 
-        repo = self.create_repo('server_repo',
-                                hgrepo.HgRepository,
-                                hgrc=hgrc)
+        repo = self.create_hg_repo('server_repo', hgrc=hgrc)
 
         # Create a commit in the server repository
         repo.write_file('hello.txt', 'hola')

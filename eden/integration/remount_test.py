@@ -44,8 +44,8 @@ class RemountTest(testcase.EdenRepoTest):
     def test_git_and_hg(self) -> None:
         # Create git and hg repositories for mounting
         repo_names = {'git': 'git_repo', 'hg': 'hg_repo'}
-        git_repo = self.create_repo(repo_names['git'], gitrepo.GitRepository)
-        hg_repo = self.create_repo(repo_names['hg'], hgrepo.HgRepository)
+        git_repo = self.create_git_repo(repo_names['git'])
+        hg_repo = self.create_hg_repo(repo_names['hg'])
 
         git_repo.write_file('hello', 'hola\n')
         git_repo.commit('Initial commit.')

@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import atexit
+import configparser
 import errno
 import inspect
 import logging
@@ -164,7 +165,7 @@ class EdenTestCase(TestParent):
         os.mkdir(self.home_dir)
         old_home = os.getenv('HOME')
 
-        def restore_home():
+        def restore_home() -> None:
             if old_home is None:
                 del os.environ['HOME']
             else:
@@ -232,25 +233,21 @@ class EdenTestCase(TestParent):
         '''
         return None
 
-    def create_repo(
-        self, name: str, repo_class: Type[repobase.Repository], **kwargs: Any
-    ) -> repobase.Repository:
-        '''
-        Create a new repository.
-
-        Arguments:
-        - name
-          The repository name.  This determines the repository location inside
-          the self.repos_dir directory.  The full repository path can be
-          accessed as repo.path on the returned repo object.
-        - repo_class
-          The repository class object, such as hgrepo.HgRepository or
-          gitrepo.GitRepository.
-        '''
+    def create_hg_repo(
+        self, name: str, hgrc: Optional[configparser.ConfigParser] = None
+    ) -> hgrepo.HgRepository:
         repo_path = os.path.join(self.repos_dir, name)
         os.mkdir(repo_path)
-        repo = repo_class(repo_path)
-        repo.init(**kwargs)
+        repo = hgrepo.HgRepository(repo_path)
+        repo.init(hgrc=hgrc)
+
+        return repo
+
+    def create_git_repo(self, name: str) -> gitrepo.GitRepository:
+        repo_path = os.path.join(self.repos_dir, name)
+        os.mkdir(repo_path)
+        repo = gitrepo.GitRepository(repo_path)
+        repo.init()
 
         return repo
 
@@ -320,7 +317,7 @@ class EdenRepoTest(EdenTestCase):
         super().setup_eden_test()
 
         self.repo_name = 'main'
-        self.repo = self.create_repo(self.repo_name, self.get_repo_class())
+        self.repo = self.create_repo(self.repo_name)
         self.populate_repo()
         self.report_time('repository setup done')
 
@@ -332,9 +329,18 @@ class EdenRepoTest(EdenTestCase):
         raise NotImplementedError('individual test classes must implement '
                                   'populate_repo()')
 
-    def get_repo_class(self) -> Type[repobase.Repository]:
+    def create_repo(self, name: str) -> Type[repobase.Repository]:
+        '''
+        Create a new repository.
+
+        Arguments:
+        - name
+          The repository name.  This determines the repository location inside
+          the self.repos_dir directory.  The full repository path can be
+          accessed as repo.path on the returned repo object.
+        '''
         raise NotImplementedError('test subclasses must implement '
-                                  'get_repo_class().  This is normally '
+                                  'create_repo().  This is normally '
                                   'implemented automatically by '
                                   '@eden_repo_test')
 
@@ -398,19 +404,16 @@ def test_replicator(
 def _replicate_eden_repo_test(
     test_class: Type[EdenRepoTest]
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
-    repo_types = [
-        (hgrepo.HgRepository, 'Hg'),
-        (gitrepo.GitRepository, 'Git'),
-    ]
 
-    for (repo_class, suffix) in repo_types:
-        # Define a new class that derives from the input class
-        # as well as the repo-specific parent class type
-        class RepoSpecificTest(test_class):
-            def get_repo_class(self) -> Type[repobase.Repository]:
-                return repo_class
+    class HgRepoTest(test_class):
+        def create_repo(self, name: str) -> repobase.Repository:
+            return self.create_hg_repo(name)
 
-        yield suffix, RepoSpecificTest
+    class GitRepoTest(test_class):
+        def create_repo(self, name: str) -> repobase.Repository:
+            return self.create_git_repo(name)
+
+    return [('Hg', HgRepoTest), ('Git', GitRepoTest)]
 
 
 # A decorator function used to create EdenHgTest and EdenGitTest
