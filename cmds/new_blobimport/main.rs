@@ -27,7 +27,8 @@ use std::path::Path;
 
 use bytes::Bytes;
 use clap::{App, Arg};
-use failure_ext::{err_msg, Error, Fail, ResultExt};
+use failure_ext::{err_msg, Error, Fail, FutureFailureErrorExt, FutureFailureExt, ResultExt,
+                  StreamFailureErrorExt};
 use futures::{Future, IntoFuture};
 use futures::future::{self, SharedItem};
 use futures::stream::Stream;
@@ -58,7 +59,7 @@ struct ParseChangeset {
 fn parse_changeset(revlog_repo: RevlogRepo, csid: mercurial::HgChangesetId) -> ParseChangeset {
     let revlogcs = revlog_repo
         .get_changeset(&csid)
-        .map_err(move |err| err.context(format!("While reading changeset {:?}", csid)))
+        .with_context(move |_| format!("While reading changeset {:?}", csid))
         .map_err(Fail::compat)
         .boxify()
         .shared();
@@ -70,7 +71,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: mercurial::HgChangesetId) -> P
             let revlog_repo = revlog_repo.clone();
             move |cs| revlog_repo.get_root_manifest(cs.manifestid())
         })
-        .map_err(move |err| err.context(format!("While reading root manifest for {:?}", csid)))
+        .with_context(move |_| format!("While reading root manifest for {:?}", csid))
         .map_err(Fail::compat)
         .boxify()
         .shared();
@@ -96,10 +97,9 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: mercurial::HgChangesetId) -> P
                 let p1 = parents.next().unwrap_or(Ok(None).into_future().boxify());
                 let p2 = parents.next().unwrap_or(Ok(None).into_future().boxify());
 
-                p1.join(p2).map_err(move |err| {
-                    err.context(format!("While reading parents of {:?}", csid))
-                        .into()
-                })
+                p1.join(p2)
+                    .with_context(move |_| format!("While reading parents of {:?}", csid))
+                    .from_err()
             }
         })
         .join(rootmf.clone().from_err())
@@ -107,9 +107,8 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: mercurial::HgChangesetId) -> P
             mercurial::manifest::new_entry_intersection_stream(&*rootmf, p1.as_ref(), p2.as_ref())
         })
         .flatten_stream()
-        .map_err(move |err| {
-            Error::from(err.context(format!("While reading entries for {:?}", csid)))
-        })
+        .with_context(move |_| format!("While reading entries for {:?}", csid))
+        .from_err()
         .boxify();
 
     let revlogcs = revlogcs.map_err(Error::from).boxify();
@@ -347,9 +346,9 @@ fn main() {
                     .expect(&format!("non-utf8 comments for {:?}", csid)),
             );
             parent_changeset_handles.insert(csid, cshandle.clone());
-            cshandle.get_completed_changeset().map_err({
-                move |e| Error::from(e.context(format!("While uploading changeset: {:?}", csid)))
-            })
+            cshandle
+                .get_completed_changeset()
+                .with_context(move |_| format!("While uploading changeset: {:?}", csid))
         });
 
     core.run(csstream.for_each(|cs| {

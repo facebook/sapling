@@ -286,7 +286,8 @@ impl Bundle2Resolver {
                         repo,
                         TreemanifestBundle2Parser::new(parts),
                         UploadBlobsType::IgnoreDuplicates,
-                    ).map_err(|err| err.context("While uploading Manifest Blobs").into())
+                    ).context("While uploading Manifest Blobs")
+                        .from_err()
                         .map(move |manifests| (manifests, bundle2))
                         .boxify()
                 }
@@ -388,10 +389,9 @@ impl Bundle2Resolver {
                         uploaded_changesets,
                         &filelogs,
                         &manifests,
-                    ).context(format!(
-                        "While trying to upload Changeset with id {:?}",
-                        node
-                    ))
+                    ).with_context(move |_| {
+                        format!("While trying to upload Changeset with id {:?}", node)
+                    })
                 },
             )
             .and_then(|uploaded_changesets| {
@@ -566,10 +566,12 @@ fn walk_manifests(
             &manifest_content,
             manifests,
             filelogs,
-        )?).context(format!(
-            "While walking dependencies of Root Manifest with id {:?}",
-            manifest_root_id
-        ))
+        )?).with_context(move |_| {
+            format!(
+                "While walking dependencies of Root Manifest with id {:?}",
+                manifest_root_id
+            )
+        })
             .from_err()
             .boxify(),
     ))
