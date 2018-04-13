@@ -315,7 +315,7 @@ void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
     InodeTimestamps dummy;
     auto dirData = deserializeOverlayDir(ino, dummy);
     if (!dirData.hasValue()) {
-      XLOG(DBG2) << "no dir data for inode " << ino;
+      XLOG(DBG3) << "no dir data for inode " << ino;
       continue;
     }
     const auto& dir = dirData.value();
