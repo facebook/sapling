@@ -236,9 +236,7 @@ class UpdateTest(EdenHgTestCase):
                 'bar/some_new_file.txt': ('a', 0, 'MERGE_BOTH'),
             }
         )
-        # TODO: The repository should not actually be left in the middle of an
-        # update operation here.
-        self.assert_status({'bar/some_new_file.txt': 'A'}, op='update')
+        self.assert_status({'bar/some_new_file.txt': 'A'})
         self.assertEqual(file_contents, self.read_file('bar/some_new_file.txt'))
 
         # Now do the update with --merge specified.
@@ -369,6 +367,34 @@ class UpdateTest(EdenHgTestCase):
         self.hg('update', '.^', '--merge', '--tool', ':local')
         self.assertEqual(new_contents, self.read_file('some_new_file.txt'))
         self.assert_status({'some_new_file.txt': 'A'}, op='merge')
+
+    def test_update_untracked_added_conflict(self) -> None:
+        # Create a commit with a newly-created file foo/new_file.txt
+        self.write_file('foo/new_file.txt', 'new file\n')
+        self.hg('add', 'foo/new_file.txt')
+        new_commit = self.repo.commit('Add foo/new_file.txt')
+
+        # Switch back to commit 3
+        self.hg('update', self.commit3)
+
+        # Write foo/new_file.txt as an untracked file
+        self.write_file('foo/new_file.txt', 'different contents\n')
+
+        # Try to switch back to the new commit
+        result = self.repo.run_hg(
+            'update', new_commit,
+            '--config', 'experimental.updatecheck=noconflict',
+            check=False
+        )
+        self.assertEqual(
+            'abort: conflicting changes:\n'
+            '  foo/new_file.txt\n'
+            '(commit or update --clean to discard changes)\n',
+            result.stderr.decode('utf-8')
+        )
+        self.assertNotEqual(0, result.returncode)
+
+        self.assert_status({'foo/new_file.txt': '?'})
 
     def test_update_ignores_untracked_directory(self) -> None:
         base_commit = self.repo.get_head_hash()
