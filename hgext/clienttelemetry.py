@@ -79,8 +79,11 @@ def _peersetup(ui, peer):
         logargs.update(_clienttelemetrydata)
         peername = peer._call('clienttelemetry', **logargs)
         ui.log('clienttelemetry', '', server_realhostname=peername)
-        if ui.configbool('clienttelemetry', 'announceremotehostname', True):
-            ui.status(_('connected to %s\n') % peername)
+        ann = ui.configbool('clienttelemetry', 'announceremotehostname', None)
+        if ann is None:
+            ann = not ui.plain() and ui._isatty(ui.ferr)
+        if ann and not ui.quiet:
+            ui.warn(_('connected to %s\n') % peername)
 
 def uisetup(ui):
     wireproto.wireprotocommand('clienttelemetry', '*')(_clienttelemetry)

@@ -3,6 +3,8 @@
   > ssh = $PYTHON "$TESTDIR/dummyssh"
   > [extensions]
   > clienttelemetry=
+  > [clienttelemetry]
+  > announceremotehostname=true
   > EOF
 
 set up the server repo
@@ -22,6 +24,7 @@ set up the local repo
   pulling from ssh://user@dummy/server
   connected to * (glob)
   no changes found
+  $ hg pull -q
   $ hg pull --config clienttelemetry.announceremotehostname=False
   pulling from ssh://user@dummy/server
   no changes found
@@ -38,6 +41,8 @@ check telemetry
   fullcommand: clone 'ssh://user@dummy/server' local -q
   command: pull
   fullcommand: pull
+  command: pull
+  fullcommand: pull -q
   command: pull
   fullcommand: pull --config 'clienttelemetry.announceremotehostname=False'
 
