@@ -358,11 +358,16 @@ impl RepoClient {
             .flatten_stream();
 
         let changelogentries = nodestosend
+            .map(|node| (node.into_mercurial(), node))
             .and_then({
                 let hgrepo = hgrepo.clone();
-                move |node| hgrepo.get_changeset_by_changesetid(&HgChangesetId::new(node))
+                move |(mercurial_node, node)| {
+                    hgrepo
+                        .get_changeset_by_changesetid(&HgChangesetId::new(node))
+                        .map(move |cs| (mercurial_node, cs))
+                }
             })
-            .and_then(|cs| {
+            .and_then(|(mercurial_node, cs)| {
                 let parents = {
                     let (p1, p2) = cs.parents().get_nodes();
                     let p1 = p1.map(|p| p.into_mercurial());
@@ -386,10 +391,9 @@ impl RepoClient {
                 let mut v = Vec::new();
                 mercurial::changeset::serialize_cs(&revlogcs, &mut v)?;
                 let parents = revlogcs.parents().get_nodes();
-                Ok(mercurial::BlobNode::new(
-                    Bytes::from(v),
-                    parents.0,
-                    parents.1,
+                Ok((
+                    mercurial_node,
+                    mercurial::BlobNode::new(Bytes::from(v), parents.0, parents.1),
                 ))
             });
 

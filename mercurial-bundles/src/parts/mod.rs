@@ -51,13 +51,12 @@ where
 
 pub fn changegroup_part<S>(changelogentries: S) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = BlobNode, Error = Error> + Send + 'static,
+    S: Stream<Item = (NodeHash, BlobNode), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Changegroup)?;
     builder.add_mparam("version", "02")?;
 
-    let changelogentries = changelogentries.map(|blobnode| {
-        let node = blobnode.nodeid().expect("blobnode should store data");
+    let changelogentries = changelogentries.map(|(node, blobnode)| {
         let parents = blobnode.parents().get_nodes();
         let p1 = *parents.0.unwrap_or(&NULL_HASH);
         let p2 = *parents.1.unwrap_or(&NULL_HASH);
