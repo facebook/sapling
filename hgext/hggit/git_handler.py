@@ -150,6 +150,11 @@ class GitHandler(object):
         if os.path.exists(self.gitdir):
             return Repo(gitpath)
         else:
+            # Set disallowinitbare to prevent hggit from creating a .hg/git
+            # directory. This is useful when the .hg/git directory should be
+            # managed externally.
+            if self.ui.configbool("hggit", "disallowinitbare"):
+                raise error.Abort(_("missing .hg/git repo"))
             os.mkdir(self.gitdir)
             return Repo.init_bare(gitpath)
 

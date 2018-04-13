@@ -69,6 +69,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: format.usehgsql (bool)
   undocumented: git.public (list)
   undocumented: grep.command (str)
+  undocumented: hggit.disallowinitbare (bool)
   undocumented: hggit.usephases (bool)
   undocumented: hgsql.bypass (bool)
   undocumented: hgsql.database (str)

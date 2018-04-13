@@ -86,3 +86,15 @@ clone empty repo
   $ hg clone empty emptyhg
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Ensure hggit.disallowinitbare blocks initting .hg/git
+  $ hg init nogitbare
+  $ cd nogitbare
+  $ cat >> .hg/hgrc <<EOF
+  > [hggit]
+  > disallowinitbare=True
+  > EOF
+  $ hg pull ../empty
+  pulling from ../empty
+  abort: missing .hg/git repo
+  [255]
