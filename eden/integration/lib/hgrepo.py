@@ -68,7 +68,7 @@ class HgRepository(repobase.Repository):
         )
         return contents
 
-    def hg(
+    def run_hg(
         self,
         *args: str,
         encoding: str = 'utf-8',
@@ -78,7 +78,7 @@ class HgRepository(repobase.Repository):
         hgeditor: Optional[str] = None,
         cwd: Optional[str] = None,
         check: bool = True
-    ) -> Optional[str]:
+    ) -> subprocess.CompletedProcess:
         cmd = [self.hg_bin] + list(args)
         env = self.hg_environment
         if hgeditor is not None:
@@ -92,13 +92,39 @@ class HgRepository(repobase.Repository):
         if cwd is None:
             cwd = self.path
         try:
-            completed_process = subprocess.run(cmd, stdout=stdout,
-                                               stderr=stderr,
-                                               input=input_bytes,
-                                               check=check, cwd=cwd,
-                                               env=env)
+            return subprocess.run(
+                cmd,
+                stdout=stdout,
+                stderr=stderr,
+                input=input_bytes,
+                check=check,
+                cwd=cwd,
+                env=env
+            )
         except subprocess.CalledProcessError as ex:
             raise HgError(ex) from ex
+
+    def hg(
+        self,
+        *args: str,
+        encoding: str = 'utf-8',
+        stdout: Any = subprocess.PIPE,
+        stderr: Any = subprocess.PIPE,
+        input: Optional[str] = None,
+        hgeditor: Optional[str] = None,
+        cwd: Optional[str] = None,
+        check: bool = True
+    ) -> Optional[str]:
+        completed_process = self.run_hg(
+            *args,
+            encoding=encoding,
+            stdout=stdout,
+            stderr=stderr,
+            input=input,
+            hgeditor=hgeditor,
+            cwd=cwd,
+            check=check
+        )
         if completed_process.stdout is not None:
             return typing.cast(str, completed_process.stdout.decode(encoding))
         else:
