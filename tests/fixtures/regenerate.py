@@ -106,7 +106,6 @@ server=True"""
                     blobimport,
                     '--blobstore',
                     'files',
-                    '--linknodes',
                     revlog_repo,
                     new_dir,
                 ]
