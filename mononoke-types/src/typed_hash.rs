@@ -17,6 +17,12 @@ use thrift;
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
 // Option type, or perhaps a list as desired.
 
+/// An identifier used throughout Mononoke.
+pub trait MononokeId {
+    /// Return a key suitable for blobstore use.
+    fn blobstore_key(&self) -> String;
+}
+
 /// An identifier for a changeset in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
@@ -116,6 +122,13 @@ macro_rules! impl_typed_hash {
             }
         }
 
+        impl MononokeId for $typed {
+            #[inline]
+            fn blobstore_key(&self) -> String {
+                format!(concat!($key, ".blake2.{}"), self.0)
+            }
+        }
+
         impl AsRef<[u8]> for $typed {
             fn as_ref(&self) -> &[u8] {
                 self.0.as_ref()
@@ -184,5 +197,19 @@ mod test {
                 .expect("converting a valid Thrift structure should always work");
             h == sh
         }
+    }
+
+    #[test]
+    fn blobstore_key() {
+        // These IDs are persistent, and this test is really to make sure that they don't change
+        // accidentally.
+        let id = ChangesetId::new(Blake2::from_byte_array([1; 32]));
+        assert_eq!(id.blobstore_key(), format!("changeset.blake2.{}", id));
+
+        let id = UnodeId::new(Blake2::from_byte_array([1; 32]));
+        assert_eq!(id.blobstore_key(), format!("unode.blake2.{}", id));
+
+        let id = ContentId::new(Blake2::from_byte_array([1; 32]));
+        assert_eq!(id.blobstore_key(), format!("content.blake2.{}", id));
     }
 }
