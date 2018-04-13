@@ -11,8 +11,10 @@ from textwrap import dedent
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from eden.integration.lib import find_executables, hgrepo, testcase
 import configparser
+import itertools
 import json
 import os
+import re
 import subprocess
 import textwrap
 
@@ -330,6 +332,81 @@ class EdenHgTestCase(testcase.EdenTestCase):
             expected_regex = textwrap.dedent(expected_regex)
         contents = self.read_file(path)
         self.assertRegex(contents, expected_regex)
+
+    def assert_journal(self, *entries: 'JournalEntry') -> None:
+        '''
+        Check that the journal contents match an expected state.
+
+        Acceptes a series of JournalEntry arguments, in order from oldest to
+        newest expected journal entry.
+        '''
+        data = self.repo.journal()
+        failures = []
+
+        # The 'hg journal' command returns entries from newest to oldest.
+        # It feels a bit more logical in tests to list the entries from oldest
+        # to newest (in the order in which we create them in the test), so
+        # reverse the actual journal output when checking it.
+        for idx, (expected, actual) in enumerate(
+            itertools.zip_longest(entries, reversed(data))
+        ):
+            if (
+                actual is not None and expected is not None and
+                expected.match(actual)
+            ):
+                # This entry matches
+                continue
+
+            if actual is None:
+                formatted_actual = 'None'
+            else:
+                formatted_actual = json.dumps(actual, indent=2, sort_keys=True)
+                formatted_actual = '\n    '.join(formatted_actual.splitlines())
+            failures.append(
+                'journal mismatch at index %d:\n  expected: %s\n  actual=%s\n' %
+                (idx, str(expected), formatted_actual)
+            )
+
+        if failures:
+            self.fail('\n'.join(failures))
+
+    def assert_journal_empty(self) -> None:
+        self.assertEqual([], self.repo.journal())
+
+
+class JournalEntry(object):
+    '''
+    JournalEntry describes an expected journal entry.
+    It is intended to pass to EdenHgTestCase.assert_journal()
+    '''
+    def __init__(self, command: str, name: str, old: str, new: str) -> None:
+        '''
+        Create a JournalEntry object.
+
+        The command argument only requires a regular expression match, rather
+        than an exact string match.
+        '''
+        self.command = command
+        self.name = name
+        self.old = old
+        self.new = new
+
+    def __str__(self) -> str:
+        return (
+            f'(command={self.command!r}, name={self.name!r}, '
+            f'old={self.old!r}, new={self.new!r})'
+        )
+
+    def match(self, json_data: Dict[str, Any]) -> bool:
+        if not re.search(self.command, json_data['command']):
+            return False
+        if json_data['name'] != self.name:
+            return False
+        if json_data['oldhashes'] != [self.old]:
+            return False
+        if json_data['newhashes'] != [self.new]:
+            return False
+        return True
 
 
 def _apply_flatmanifest_config(test, config):

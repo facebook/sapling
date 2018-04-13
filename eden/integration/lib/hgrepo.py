@@ -9,6 +9,7 @@
 
 import configparser
 import datetime
+import json
 import logging
 import os
 import subprocess
@@ -16,7 +17,7 @@ import sys
 import tempfile
 import textwrap
 import typing
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from . import repobase
 from .error import CommandError
@@ -201,6 +202,10 @@ class HgRepository(repobase.Repository):
         template += escaped_delimiter
         output = self.hg('log', '-T', template, '-r', revset)
         return output.split(delimiter)[:-1]
+
+    def journal(self) -> List[Dict[str, Any]]:
+        output = self.hg('journal', '-T', 'json')
+        return json.loads(output)
 
     def status(self) -> str:
         '''Returns the output of `hg status` as a string.'''
