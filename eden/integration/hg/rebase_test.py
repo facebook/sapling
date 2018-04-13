@@ -138,20 +138,20 @@ class RebaseTest(EdenHgTestCase):
             'numbers/1/11': 'M',
             'numbers/1/12': 'M',
         })
-        self.assertEqual(dedent('''\
-        <<<<<<< dest
-        11
-        =======
-        new 11
-        >>>>>>> source
-        '''), self.read_file('numbers/1/11'))
-        self.assertEqual(dedent('''\
-        <<<<<<< dest
-        12
-        =======
-        new 12
-        >>>>>>> source
-        '''), self.read_file('numbers/1/12'))
+        self.assert_file_regex('numbers/1/11', '''\
+            <<<<<<< dest: .*
+            11
+            =======
+            new 11
+            >>>>>>> source: .*
+            ''')
+        self.assert_file_regex('numbers/1/12', '''\
+            <<<<<<< dest: .*
+            12
+            =======
+            new 12
+            >>>>>>> source: .*
+            ''')
 
         self.write_file('numbers/1/11', '11 merged.\n')
         self.write_file('numbers/1/12', '12 merged.\n')
@@ -173,27 +173,27 @@ class RebaseTest(EdenHgTestCase):
             'numbers/1/13': 'M',
             'numbers/1/14': 'M',
         })
-        self.assertEqual(dedent('''\
-        <<<<<<< dest
-        12 merged.
-        =======
-        change 12 again
-        >>>>>>> source
-        '''), self.read_file('numbers/1/12'))
-        self.assertEqual(dedent('''\
-        <<<<<<< dest
-        13
-        =======
-        new 13
-        >>>>>>> source
-        '''), self.read_file('numbers/1/13'))
-        self.assertEqual(dedent('''\
-        <<<<<<< dest
-        14
-        =======
-        new 14
-        >>>>>>> source
-        '''), self.read_file('numbers/1/14'))
+        self.assert_file_regex('numbers/1/12', '''\
+            <<<<<<< dest: .*
+            12 merged.
+            =======
+            change 12 again
+            >>>>>>> source: .*
+            ''')
+        self.assert_file_regex('numbers/1/13', '''\
+            <<<<<<< dest: .*
+            13
+            =======
+            new 13
+            >>>>>>> source: .*
+            ''')
+        self.assert_file_regex('numbers/1/14', '''\
+            <<<<<<< dest: .*
+            14
+            =======
+            new 14
+            >>>>>>> source: .*
+            ''')
 
         self.write_file('numbers/1/12', 'merged.\n')
         self.write_file('numbers/1/13', 'merged.\n')

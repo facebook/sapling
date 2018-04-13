@@ -164,19 +164,13 @@ class HisteditTest(EdenHgTestCase):
         self.assert_status({
             'will_have_confict.txt': 'M',
         })
-        expected_contents_with_conflict_markers = dedent(
-            '''\
-        <<<<<<< local
-        original
-        =======
-        2
-        >>>>>>> histedit
-        '''
-        )
-        self.assertEqual(
-            expected_contents_with_conflict_markers,
-            self.read_file('will_have_confict.txt')
-        )
+        self.assert_file_regex('will_have_confict.txt', '''\
+            <<<<<<< local: .*
+            original
+            =======
+            2
+            >>>>>>> histedit: .*
+            ''')
 
         self.hg('histedit', '--abort')
         self.assertEqual('2\n', self.read_file('will_have_confict.txt'))

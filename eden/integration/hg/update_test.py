@@ -194,16 +194,13 @@ class UpdateTest(EdenHgTestCase):
         self.assert_status({
             'foo/bar.txt': 'M',
         })
-        expected_contents = dedent(
-            '''\
-        <<<<<<< working copy
-        changing yet again
-        =======
-        test
-        >>>>>>> destination
-        '''
-        )
-        self.assertEqual(expected_contents, self.read_file('foo/bar.txt'))
+        self.assert_file_regex('foo/bar.txt', '''\
+            <<<<<<< working copy: .*
+            changing yet again
+            =======
+            test
+            >>>>>>> destination: .*
+            ''')
 
     def test_merge_update_added_file_with_same_contents_in_destination(
         self
@@ -310,14 +307,16 @@ class UpdateTest(EdenHgTestCase):
         })
         merge_contents = dedent(
             '''\
-        <<<<<<< working copy
+        <<<<<<< working copy: .*
         Re-create the file with different contents.
         =======
         Original contents.
-        >>>>>>> destination
+        >>>>>>> destination: .*
         '''
         )
-        self.assertEqual(merge_contents, self.read_file('some_new_file.txt'))
+        self.assertRegex(
+            self.read_file('some_new_file.txt'), merge_contents
+        )
         self.assert_unresolved(['some_new_file.txt'])
 
         # Verify the previous version of the file was backed up as expected.

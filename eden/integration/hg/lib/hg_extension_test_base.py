@@ -14,6 +14,7 @@ import configparser
 import json
 import os
 import subprocess
+import textwrap
 
 
 def _find_post_clone() -> str:
@@ -105,7 +106,9 @@ class EdenHgTestCase(testcase.EdenTestCase):
         self.eden.clone(self.backing_repo_name, self.mount, allow_empty=True)
 
         # Now create the repository object that refers to the eden client
-        self.repo = hgrepo.HgRepository(self.mount)
+        self.repo = hgrepo.HgRepository(
+            self.mount, system_hgrc=self.system_hgrc
+        )
 
     def create_backing_repo(self):
         hgrc = self.get_hgrc()
@@ -321,6 +324,13 @@ class EdenHgTestCase(testcase.EdenTestCase):
 
         self.assertEqual(actual_unresolved, set(unresolved))
         self.assertEqual(actual_resolved, set(resolved or []))
+
+    def assert_file_regex(self, path, expected_regex, dedent=True):
+        if dedent:
+            expected_regex = textwrap.dedent(expected_regex)
+        contents = self.read_file(path)
+        self.assertRegex(contents, expected_regex)
+
 
 def _apply_flatmanifest_config(test, config):
     # flatmanifest is the default mercurial behavior

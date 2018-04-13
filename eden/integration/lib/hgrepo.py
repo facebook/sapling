@@ -14,6 +14,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import textwrap
 import typing
 from typing import Any, List, Optional
 
@@ -46,6 +47,25 @@ class HgRepository(repobase.Repository):
         else:
             self.hg_environment['HGRCPATH'] = ''
         self.hg_bin = FindExe.HG
+
+    @classmethod
+    def get_system_hgrc_contents(cls) -> str:
+        hgrc_path = 'scm/hg/fb/staticfiles/etc/mercurial'
+        contents = textwrap.dedent(
+            '''
+            %include {repo_root}/{hgrc_path}/facebook.rc
+            %include {repo_root}/{hgrc_path}/tier-specific/posix.rc
+            %include {repo_root}/{hgrc_path}/tier-specific/client.rc
+
+            # Override ui.merge to make sure it does not get set
+            # to something that tries to prompt for user input.
+            [ui]
+            merge = :merge
+            '''
+        ).format(
+            repo_root=FindExe.REPO_ROOT, hgrc_path=hgrc_path
+        )
+        return contents
 
     def hg(
         self,

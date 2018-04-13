@@ -139,6 +139,7 @@ class EdenTestCase(TestParent):
     def setUp(self) -> None:
         self.start = time.time()
         self.last_event = self.start
+        self.system_hgrc: Optional[str] = None
 
         # Add a cleanup event just to log once the other cleanup
         # actions have completed.
@@ -238,7 +239,14 @@ class EdenTestCase(TestParent):
     ) -> hgrepo.HgRepository:
         repo_path = os.path.join(self.repos_dir, name)
         os.mkdir(repo_path)
-        repo = hgrepo.HgRepository(repo_path)
+
+        if self.system_hgrc is None:
+            system_hgrc_path = os.path.join(self.repos_dir, 'hgrc')
+            with open(system_hgrc_path, 'w') as f:
+                f.write(hgrepo.HgRepository.get_system_hgrc_contents())
+            self.system_hgrc = system_hgrc_path
+
+        repo = hgrepo.HgRepository(repo_path, system_hgrc=self.system_hgrc)
         repo.init(hgrc=hgrc)
 
         return repo
