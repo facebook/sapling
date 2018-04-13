@@ -256,6 +256,9 @@ class basematcher(object):
             self.bad = badfn
         self._relativeuipath = relativeuipath
 
+    def __repr__(self):
+        return '<%s>' % self.__class__.__name__
+
     def __call__(self, fn):
         return self.matchfn(fn)
     def __iter__(self):
