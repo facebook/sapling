@@ -16,15 +16,16 @@ use slog::Logger;
 use tokio_core::reactor::Core;
 
 use blobrepo::BlobChangeset;
+use changesets::{ChangesetInsert, Changesets};
 use failure::{Error, Result};
 use filenodes::FilenodeInfo;
 use futures::sync::mpsc::UnboundedSender;
-use futures_ext::{BoxStream, FutureExt, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heads::Heads;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{BlobNode, HgBlob, HgFileNodeId, NodeHash, RepoPath};
+use mercurial_types::{BlobNode, HgBlob, HgFileNodeId, NodeHash, RepoPath, RepositoryId};
 use mercurial_types::nodehash::HgChangesetId;
 use stats::Timeseries;
 
@@ -34,29 +35,29 @@ use manifest;
 
 pub(crate) struct ConvertContext<H> {
     pub repo: RevlogRepo,
-    pub sender: SyncSender<BlobstoreEntry>,
     pub headstore: H,
     pub core: Core,
     pub cpupool: Arc<CpuPool>,
     pub logger: Logger,
     pub skip: Option<u64>,
     pub commits_limit: Option<u64>,
-    pub filenodes_sender: UnboundedSender<FilenodeInfo>,
 }
 
 impl<H> ConvertContext<H>
 where
     H: Heads,
 {
-    pub fn convert(self) -> Result<()> {
-        let mut core = self.core;
-        let logger_owned = self.logger;
-        let logger = &logger_owned;
-        let cpupool = self.cpupool;
-        let headstore = self.headstore;
+    pub fn convert(
+        &mut self,
+        sender: SyncSender<BlobstoreEntry>,
+        filenodes_sender: UnboundedSender<FilenodeInfo>,
+    ) -> Result<()> {
+        let core = &mut self.core;
+        let logger = &self.logger.clone();
+        let cpupool = self.cpupool.clone();
+        let headstore = &self.headstore;
         let skip = self.skip;
         let commits_limit = self.commits_limit;
-        let filenodes_sender = self.filenodes_sender;
 
         let changesets: BoxStream<mercurial::NodeHash, mercurial::Error> = if let Some(skip) = skip
         {
@@ -79,7 +80,7 @@ where
             .enumerate()
             .map({
                 let repo = self.repo.clone();
-                let sender = self.sender.clone();
+                let sender = sender.clone();
                 move |(seq, csid)| {
                     debug!(logger, "{}: changeset {}", seq, csid);
                     STATS::changesets.add_value(1);
@@ -117,6 +118,50 @@ where
 
         info!(logger, "parsed everything, waiting for io");
         Ok(())
+    }
+
+    pub fn fill_changesets_store(
+        &self,
+        changesets_store: Arc<Changesets>,
+        repo_id: &RepositoryId,
+    ) -> BoxFuture<(), mercurial::Error> {
+        let repo = self.repo.clone();
+        let repo_id = *repo_id;
+        self.get_changesets_stream()
+            .and_then(move |node| {
+                let node = mercurial::NodeHash::new(node.sha1().clone());
+                repo.get_changeset(&mercurial::HgChangesetId::new(node))
+                    .map(move |cs| (cs, node))
+            })
+            .for_each(move |(cs, node)| {
+                let parents = cs.parents()
+                    .into_iter()
+                    .map(|p| HgChangesetId::new(NodeHash::new(p.sha1().clone())))
+                    .collect();
+                let node = NodeHash::new(node.sha1().clone());
+                let insert = ChangesetInsert {
+                    repo_id,
+                    cs_id: HgChangesetId::new(node),
+                    parents,
+                };
+                changesets_store.add(insert)
+            })
+            .boxify()
+    }
+
+    fn get_changesets_stream(&self) -> BoxStream<mercurial::NodeHash, mercurial::Error> {
+        let changesets: BoxStream<mercurial::NodeHash, mercurial::Error> =
+            if let Some(skip) = self.skip {
+                self.repo.changesets().skip(skip).boxify()
+            } else {
+                self.repo.changesets().boxify()
+            };
+
+        if let Some(limit) = self.commits_limit {
+            changesets.take(limit).boxify()
+        } else {
+            changesets.boxify()
+        }
     }
 }
 

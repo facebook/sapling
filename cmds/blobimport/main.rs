@@ -52,7 +52,7 @@ use std::sync::mpsc::sync_channel;
 use std::thread;
 
 use bytes::Bytes;
-use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
+use changesets::{Changesets, SqliteChangesets};
 use clap::{App, Arg, ArgMatches};
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
@@ -72,7 +72,7 @@ use fileblob::Fileblob;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use manifoldblob::ManifoldBlob;
 use mercurial::{RevlogRepo, RevlogRepoOptions};
-use mercurial_types::{HgChangesetId, NodeHash, RepositoryId};
+use mercurial_types::RepositoryId;
 use rocksblob::Rocksblob;
 
 const DEFAULT_MANIFOLD_BUCKET: &str = "mononoke_prod";
@@ -209,55 +209,27 @@ where
     let repo = open_repo(&input, inmemory_logs_capacity)?;
 
     info!(logger, "Converting: {}", input.display());
-    let convert_context = convert::ConvertContext {
+    let mut convert_context = convert::ConvertContext {
         repo: repo.clone(),
-        sender,
         headstore,
         core,
         cpupool: cpupool.clone(),
         logger: logger.clone(),
         skip: skip,
         commits_limit: commits_limit,
-        filenodes_sender: filenodes_sender,
     };
-    let res = convert_context.convert();
+    let res = convert_context.convert(sender, filenodes_sender);
     iothread.join().expect("failed to join io thread")?;
     filenodesthread
         .join()
         .expect("failed to join filenodesthread");
     res?;
 
-    if !skip.is_none() || !commits_limit.is_none() {
-        warn!(
-            logger,
-            "skipping filling up changesets store because --skip or --commits-limit is set"
-        );
-    } else {
-        warn!(logger, "filling up changesets changesets store");
-        let changesets = open_changesets_store(output.into())?;
-        let mut core = Core::new()?;
-        let fut = repo.changesets()
-            .and_then(|node| {
-                let node = mercurial::NodeHash::new(node.sha1().clone());
-                repo.get_changeset(&mercurial::HgChangesetId::new(node))
-                    .map(move |cs| (cs, node))
-            })
-            .for_each(|(cs, node)| {
-                let parents = cs.parents()
-                    .into_iter()
-                    .map(|p| HgChangesetId::new(NodeHash::new(p.sha1().clone())))
-                    .collect();
-                let node = NodeHash::new(node.sha1().clone());
-                let insert = ChangesetInsert {
-                    repo_id,
-                    cs_id: HgChangesetId::new(node),
-                    parents,
-                };
-                changesets.add(insert)
-            });
-        core.run(fut)?;
-    }
-    Ok(())
+    warn!(logger, "filling up changesets changesets store");
+    let changesets_store = open_changesets_store(output.into())?;
+    let mut core = Core::new()?;
+    let fill_cs_store = convert_context.fill_changesets_store(changesets_store, &repo_id);
+    core.run(fill_cs_store)
 }
 
 fn open_changesets_store(mut output: PathBuf) -> Result<Arc<Changesets>> {
