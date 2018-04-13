@@ -828,7 +828,7 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     if (!treeContentsLock->isMaterialized()) {
       XLOG(DBG5) << "saving non-materialized tree " << asTree->getNodeId()
                  << " (" << asTree->getLogPath() << ") to overlay";
-      asTree->getOverlay()->saveOverlayDir(
+      mount_->getOverlay()->saveOverlayDir(
           inode->getNodeId(), *treeContentsLock);
     }
 

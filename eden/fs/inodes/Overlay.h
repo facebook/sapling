@@ -48,9 +48,6 @@ class Overlay {
  public:
   explicit Overlay(AbsolutePathPiece localDir);
 
-  /** Returns the path to the root of the Overlay storage area */
-  const AbsolutePath& getLocalDir() const;
-
   void saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir);
 
   folly::Optional<TreeInode::Dir> loadOverlayDir(

@@ -411,10 +411,6 @@ InodeNumber Overlay::getMaxRecordedInode() {
   return maxInode;
 }
 
-const AbsolutePath& Overlay::getLocalDir() const {
-  return localDir_;
-}
-
 size_t Overlay::getFilePath(InodeNumber inodeNumber, InodePath& outPath) {
   formatSubdirPath(MutableStringPiece{outPath.data(), 2}, inodeNumber.get());
   outPath[2] = '/';

@@ -366,8 +366,7 @@ void TreeInode::loadUnlinkedChildInode(
         // Note that the .value() call will throw if we couldn't
         // load the dir data; we'll catch and propagate that in
         // the containing try/catch block.
-        dir = getOverlay()->loadOverlayDir(number, getInodeMap()).value();
-
+        dir = loadOverlayDir(number).value();
         if (!dir.entries.empty()) {
           // Should be impossible, but worth checking for
           // defensive purposes!
@@ -589,8 +588,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
             -> unique_ptr<InodeBase> {
               // Even if the inode is not materialized, it may have inode
               // numbers stored in the overlay.
-              auto overlayDir = self->getOverlay()->loadOverlayDir(
-                  number, self->getInodeMap());
+              auto overlayDir = self->loadOverlayDir(number);
               if (overlayDir) {
                 overlayDir->treeHash = treeHash;
                 // Compare the Tree and the Dir from the overlay.  If they
@@ -625,8 +623,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   }
 
   // The entry is materialized, so data must exist in the overlay.
-  auto overlayDir =
-      getOverlay()->loadOverlayDir(entry.getInodeNumber(), getInodeMap());
+  auto overlayDir = loadOverlayDir(entry.getInodeNumber());
   if (!overlayDir) {
     auto bug = EDEN_BUG() << "missing overlay for " << getLogPath() << " / "
                           << name;
@@ -689,7 +686,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
         return;
       }
       contents->setMaterialized();
-      getOverlay()->saveOverlayDir(this->getNodeId(), *contents);
+      saveOverlayDir(*contents);
     }
 
     // Mark ourself materialized in our parent directory (if we have one)
@@ -724,7 +721,7 @@ void TreeInode::childMaterialized(
 
     childEntry.setMaterialized();
     contents->setMaterialized();
-    getOverlay()->saveOverlayDir(this->getNodeId(), *contents);
+    saveOverlayDir(*contents);
   }
 
   // If we have a parent directory, ask our parent to materialize itself
@@ -767,7 +764,7 @@ void TreeInode::childDematerialized(
     // saveOverlayPostCheckout() on this directory, and here we will check to
     // see if we can dematerialize ourself.
     contents->setMaterialized();
-    getOverlay()->saveOverlayDir(this->getNodeId(), *contents);
+    saveOverlayDir(*contents);
   }
 
   // We are materialized now.
@@ -777,6 +774,24 @@ void TreeInode::childDematerialized(
   if (location.parent && !location.unlinked) {
     location.parent->childMaterialized(renameLock, location.name);
   }
+}
+
+Overlay* TreeInode::getOverlay() const {
+  return getMount()->getOverlay();
+}
+
+folly::Optional<TreeInode::Dir> TreeInode::loadOverlayDir(
+    InodeNumber inodeNumber) const {
+  return getOverlay()->loadOverlayDir(inodeNumber, getInodeMap());
+}
+
+void TreeInode::saveOverlayDir(const Dir& contents) const {
+  return saveOverlayDir(getNodeId(), contents);
+}
+
+void TreeInode::saveOverlayDir(InodeNumber inodeNumber, const Dir& contents)
+    const {
+  return getOverlay()->saveOverlayDir(inodeNumber, contents);
 }
 
 TreeInode::Dir TreeInode::buildDirFromTree(
@@ -875,7 +890,7 @@ FileInodePtr TreeInode::createImpl(
     // Update the directory timestamps, and save it to the overlay
     contents->timeStamps.ctime = currentTime;
     contents->timeStamps.mtime = currentTime;
-    this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
+    saveOverlayDir(*contents);
 
     // Release the contents lock
     contents.unlock();
@@ -994,7 +1009,6 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     if (entIter != contents->entries.end()) {
       throw InodeError(EEXIST, this->inodePtrFromThis(), name);
     }
-    auto overlay = this->getOverlay();
 
     // Allocate an inode number
     auto* inodeMap = this->getInodeMap();
@@ -1014,7 +1028,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     contents->timeStamps.mtime = now;
     contents->timeStamps.ctime = now;
 
-    overlay->saveOverlayDir(childNumber, emptyDir);
+    saveOverlayDir(childNumber, emptyDir);
 
     // Add a new entry to contents_.entries
     auto emplaceResult = contents->entries.emplace(name, mode, childNumber);
@@ -1029,7 +1043,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     inodeMap->inodeCreated(newChild);
 
     // Save our updated overlay data
-    overlay->saveOverlayDir(getNodeId(), *contents);
+    saveOverlayDir(*contents);
   }
 
   invalidateFuseCacheIfRequired(name);
@@ -1208,8 +1222,7 @@ int TreeInode::tryRemoveChild(
     contents->timeStamps.ctime = now;
 
     // Update the on-disk overlay
-    auto overlay = this->getOverlay();
-    overlay->saveOverlayDir(getNodeId(), *contents);
+    saveOverlayDir(*contents);
   }
   deletedInode.reset();
 
@@ -1527,13 +1540,12 @@ Future<Unit> TreeInode::doRename(
   locks.srcContents()->entries.erase(srcIter);
 
   // Save the overlay data
-  const auto& overlay = getOverlay();
-  overlay->saveOverlayDir(getNodeId(), *locks.srcContents());
+  saveOverlayDir(getNodeId(), *locks.srcContents());
   if (destParent.get() != this) {
     // We have already verified that destParent is not unlinked, and we are
     // holding the rename lock which prevents it from being renamed or unlinked
     // while we are operating, so getPath() must have a value here.
-    overlay->saveOverlayDir(destParent->getNodeId(), *locks.destContents());
+    saveOverlayDir(destParent->getNodeId(), *locks.destContents());
   }
 
   // Release the TreeInode locks before we write a journal entry.
@@ -1643,10 +1655,6 @@ InodeMap* TreeInode::getInodeMap() const {
 
 ObjectStore* TreeInode::getStore() const {
   return getMount()->getObjectStore();
-}
-
-Overlay* TreeInode::getOverlay() const {
-  return getMount()->getOverlay();
 }
 
 Future<Unit> TreeInode::diff(
@@ -2723,7 +2731,7 @@ void TreeInode::saveOverlayPostCheckout(
       // If we are materialized, write out our state to the overlay.
       // (It's possible our state is unchanged from what's already on disk,
       // but for now we can't detect this, and just always write it out.)
-      getOverlay()->saveOverlayDir(getNodeId(), *contents);
+      saveOverlayDir(*contents);
     } else {
       // If we are not materialized now, but we were before we'll need to
       // remove ourself from the overlay.  However, we wait to do this until

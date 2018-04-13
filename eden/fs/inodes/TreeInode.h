@@ -355,7 +355,6 @@ class TreeInode : public InodeBase {
    */
   ObjectStore* getStore() const;
 
-  Overlay* getOverlay() const;
   folly::Future<CreateResult>
   create(PathComponentPiece name, mode_t mode, int flags);
   FileInodePtr symlink(PathComponentPiece name, folly::StringPiece contents);
@@ -617,6 +616,23 @@ class TreeInode : public InodeBase {
       PathMap<Entry>::iterator srcIter,
       TreeInodePtr destParent,
       PathComponentPiece destName);
+
+  Overlay* getOverlay() const;
+
+  /**
+   * Loads a tree from the overlay given an inode number.
+   */
+  folly::Optional<Dir> loadOverlayDir(InodeNumber inodeNumber) const;
+
+  /**
+   * Saves the entries of this inode to the overlay.
+   */
+  void saveOverlayDir(const Dir& contents) const;
+
+  /**
+   * Saves the entries for a specified inode number.
+   */
+  void saveOverlayDir(InodeNumber inodeNumber, const Dir& contents) const;
 
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
