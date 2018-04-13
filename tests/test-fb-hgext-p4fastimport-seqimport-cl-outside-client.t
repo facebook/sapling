@@ -59,13 +59,13 @@ it cannot be used as source for move operation)
   importing CL1
   committing files:
   a
-  file: //depot/foo/a, src: p4
+  file: //depot/foo/a, src: * (glob)
   committing manifest
   committing changelog
   importing CL3
   committing files:
   b
-  file: //depot/foo/b, src: p4
+  file: //depot/foo/b, src: * (glob)
   committing manifest
   committing changelog
   updating the branch cache
