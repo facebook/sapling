@@ -99,7 +99,7 @@ macro_rules! impl_typed_hash {
             /// Construct a context.
             #[inline]
             pub fn new() -> Self {
-                $typed_context(Context::new($key))
+                $typed_context(Context::new($key.as_bytes()))
             }
 
             #[inline]
@@ -144,19 +144,19 @@ macro_rules! impl_typed_hash {
 impl_typed_hash! {
     hash_type => ChangesetId,
     context_type => ChangesetIdContext,
-    context_key => b"ChangesetId",
+    context_key => "changeset",
 }
 
 impl_typed_hash! {
     hash_type => UnodeId,
     context_type => UnodeIdContext,
-    context_key => b"UnodeId",
+    context_key => "unode",
 }
 
 impl_typed_hash! {
     hash_type => ContentId,
     context_type => ContentIdContext,
-    context_key => b"ContentId",
+    context_key => "content",
 }
 
 #[cfg(test)]
