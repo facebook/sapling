@@ -37,7 +37,7 @@ pub struct Filelog {
     pub p1: Option<mercurial::NodeHash>,
     pub p2: Option<mercurial::NodeHash>,
     pub linknode: mercurial::NodeHash,
-    pub blob: HgBlob,
+    pub data: Bytes,
 }
 
 impl UploadableHgBlob for Filelog {
@@ -49,7 +49,7 @@ impl UploadableHgBlob for Filelog {
         let p2 = self.p2.map(|p| p.into_mononoke());
 
         repo.upload_entry(
-            self.blob,
+            HgBlob::from(self.data),
             manifest::Type::File(FileType::Regular),
             p1,
             p2,
@@ -76,7 +76,7 @@ where
 
             delta_cache
                 .decode(node.clone(), base.into_option(), delta)
-                .and_then(move |blob| {
+                .and_then(move |data| {
                     Ok(Filelog {
                         node_key: mercurial::HgNodeKey {
                             path: RepoPath::FilePath(path),
@@ -85,7 +85,7 @@ where
                         p1: p1.into_option(),
                         p2: p2.into_option(),
                         linknode,
-                        blob,
+                        data,
                     })
                 })
                 .boxify()
@@ -111,7 +111,7 @@ impl DeltaCache {
         node: mercurial::NodeHash,
         base: Option<mercurial::NodeHash>,
         delta: Delta,
-    ) -> BoxFuture<HgBlob, Error> {
+    ) -> BoxFuture<Bytes, Error> {
         let bytes = match self.bytes_cache.get(&node).cloned() {
             Some(bytes) => bytes,
             None => {
@@ -158,7 +158,7 @@ impl DeltaCache {
                 STATS::deltacache_fsize.add_value(fsize);
                 STATS::deltacache_fsize_large.add_value(fsize);
             })
-            .map(|bytes| HgBlob::from((*bytes).clone()))
+            .map(|bytes| (*bytes).clone())
             .from_err()
             .boxify()
     }
@@ -174,7 +174,7 @@ impl Arbitrary for Filelog {
             p1: mercurial::NodeHash::arbitrary(g).into_option(),
             p2: mercurial::NodeHash::arbitrary(g).into_option(),
             linknode: mercurial::NodeHash::arbitrary(g),
-            blob: HgBlob::from(Bytes::from(Vec::<u8>::arbitrary(g))),
+            data: Bytes::from(Vec::<u8>::arbitrary(g)),
         }
     }
 
@@ -210,9 +210,9 @@ impl Arbitrary for Filelog {
             append(&mut result, f);
         }
 
-        if self.blob.size() != Some(0) {
+        if self.data.len() != 0 {
             let mut f = self.clone();
-            f.blob = HgBlob::from(Bytes::from(Vec::new()));
+            f.data = Bytes::from(Vec::new());
             append(&mut result, f);
         }
 
@@ -283,7 +283,7 @@ mod tests {
                 p2: f.p2.clone().unwrap_or(NULL_HASH),
                 base: NULL_HASH,
                 linknode: f.linknode.clone(),
-                delta: Delta::new_fulltext(f.blob.as_slice().unwrap()),
+                delta: Delta::new_fulltext(f.data.as_ref()),
             },
         }
     }
@@ -345,7 +345,7 @@ mod tests {
             p1: Some(TWOS_HASH),
             p2: Some(THREES_HASH),
             linknode: FOURS_HASH,
-            blob: HgBlob::from(Bytes::from("test file content")),
+            data: Bytes::from("test file content"),
         };
 
         let f2 = Filelog {
@@ -356,7 +356,7 @@ mod tests {
             p1: Some(SIXES_HASH),
             p2: Some(SEVENS_HASH),
             linknode: EIGHTS_HASH,
-            blob: HgBlob::from(Bytes::from("test2 file content")),
+            data: Bytes::from("test2 file content"),
         };
 
         check_conversion(
@@ -374,7 +374,7 @@ mod tests {
             p1: Some(TWOS_HASH),
             p2: Some(THREES_HASH),
             linknode: FOURS_HASH,
-            blob: HgBlob::from(Bytes::from("test file content")),
+            data: Bytes::from("test file content"),
         };
 
         let f2 = Filelog {
@@ -385,15 +385,14 @@ mod tests {
             p1: Some(SIXES_HASH),
             p2: Some(SEVENS_HASH),
             linknode: EIGHTS_HASH,
-            blob: HgBlob::from(Bytes::from("test2 file content")),
+            data: Bytes::from("test2 file content"),
         };
 
         let f1_deltaed = filelog_to_deltaed(&f1);
         let mut f2_deltaed = filelog_to_deltaed(&f2);
 
         f2_deltaed.chunk.base = f1.node_key.hash.clone();
-        f2_deltaed.chunk.delta =
-            compute_delta(f1.blob.as_slice().unwrap(), f2.blob.as_slice().unwrap());
+        f2_deltaed.chunk.delta = compute_delta(&f1.data, &f2.data);
 
         let inp = if correct_order {
             vec![f1_deltaed, f2_deltaed]
@@ -460,7 +459,7 @@ mod tests {
                 let mut delta = filelog_to_deltaed(filelog);
                 delta.chunk.base = f.node_key.hash.clone();
                 delta.chunk.delta =
-                    compute_delta(f.blob.as_slice().unwrap(), filelog.blob.as_slice().unwrap());
+                    compute_delta(&f.data, &filelog.data);
                 deltas.push(delta);
             }
 
@@ -488,7 +487,7 @@ mod tests {
                     let mut delta = filelog_to_deltaed(next);
                     delta.chunk.base = prev.node_key.hash.clone();
                     delta.chunk.delta =
-                        compute_delta(prev.blob.as_slice().unwrap(), next.blob.as_slice().unwrap());
+                        compute_delta(&prev.data, &next.data);
                     deltas.push(delta);
                 }
 
