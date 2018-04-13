@@ -6,32 +6,34 @@ We have some guiding principles that affect the design of Eden and its
 durability properties.
 
 We intend for Eden to reliably preserve user data if the Eden processes aborts
-or is killed, none of the user's data should be lost.  Eden crashing ought to be
-rare, but, while it's in development, it's realistic to expect things to go
-wrong, including stray `killall edenfs` commands.
+or is killed.  If the process dies, none of the user's data should be lost.
+Eden crashing ought to be rare, but, especially while it's in development, it's
+realistic to expect things to go wrong, including stray `killall edenfs`
+commands.
 
 However, we do not guarantee consistent data if a VM suddenly powers off
 or if a disk fails.  It is a substantial amount of work, and probably a
 performance penalty, to be durable under those conditions.
 
-Fortunately, thanks to commit cloud, the risk of losing days of data due to disk
+Fortunately, thanks to commit cloud, the risk of losing days of work due to disk
 or machine shutdown is low.  While many engineer-hours will be spent working in
 an Eden checkout, the amount of work that builds up prior to a commit is
-hopefully bounded.
+hopefully bounded.  (And perhaps someday we will automatically snapshot your
+working copy!)
 
 ## Concepts
 
 Git and Mercurial have abstract, hash-indexed tree data structures representing
 a file hierarchy.  (You'll find the corresponding code in `eden/fs/model`.)
-Version control trees and files only cover a subset of the possible states a
-real filesystem can be in.  For example, neither Git nor Mercurial version a
-file's user or group state, and the only permission bit versioned is executable
-status.  Also, version control systems do not support hard links.
+Version control trees and files have a subset of the possible states that a real
+filesystem can be in.  For example, neither Git nor Mercurial version a file's
+user or group ownership, and the only versioned permission bit is
+user-executable.  Also, version control systems do not support hard links.
 
-In a non-Eden, traditional version control system, checkout operations convert
-that abstract tree data structure into actual directories and files on disk. The
-downside of course is that checkout becomes O(repo) in disk operations and
-the entire tree is physically allocated on disk.
+In a non-Eden, traditional version control system, checkout operations
+immediately materialize that abstract tree data structure into actual
+directories and files on disk.  The downside of course is that checkout becomes
+O(repo) in disk operations and the entire tree is physically allocated on disk.
 
 What makes Eden useful is that it only fetches trees and blobs from version
 control as the filesystem is explored.  This makes checkout O(changes).  But it
@@ -40,17 +42,17 @@ timestamps, permission bits, and inode numbers.
 
 ## Inode States
 
-As the filesystem is explored through FUSE, the source control trees are
-instantiated into inodes.  A given inode can then transition between states as
-filesystem operations are performed on it.
+As the filesystem is explored through FUSE, inodes are allocated to represent a
+accessed source control trees and files.  A given inode can then transition
+between states as filesystem operations are performed on it.
 
 ### Metadata State Machine
 
-edenfs inodes transition between a series of states:
+Eden inodes transition between a series of states:
 
 Once the parent tree has been loaded, the names, types, and hashes of its
 children are known.  At this point, questions like "does this entry exist?" or
-"what is its hash?" can be answered, as well as any metadata, like file size, we
+"what is its hash?" can be answered, in addition to providing any metadata we
 have from the backing version control system.  (For example, Mononoke will
 provide file sizes and SHA-1 hashes so Eden does not have to actually load the
 files and compute them.)
@@ -64,35 +66,36 @@ once` addendum below.)
 
 Inode metadata such as timestamps and permission bits, once accessed, should be
 remembered as long as the inode numbers are.  See `make` addendum below.  When
-Eden forgets an inode number, the timestamps and permission bits should be
-forgotten too.  Moreover, when the inode number is forgotten, the inode numbers
-of its children must be forgotten.
+Eden forgets an inode number, the timestamps and permission bits are forgotten
+too.  Moreover, when the inode number is forgotten, the inode numbers of its
+children must be forgotten.
 
-There is only one type of inode metadata that can change a file from the
-perspective of version control: the user executable bit.  If that bit changes,
-the file and all of its parents must be marked potentially-modified.  Other
-metadata changes are local-only and can be ignored by version control
+There is only one type of inode metadata change that matters from the
+perspective of version control: the user executable bit on files.  If that bit
+changes, the file and all of its parents must be marked potentially-modified.
+Other metadata changes are local-only and can be ignored by version control
 operations.
 
-At the risk of repeating myself, here are some other rules.  If an inode has an
-inode number, its parent must also have an inode number.  If an inode is marked
-potentially-modified, its parent must also be marked potentially-modified.  Why?
-Because Eden needs to be able to crawl from the root tree and rapidly enumerate
-the potentially-modified set, even at process startup.
+At the risk of repeating myself, here are some other rules.  If a source control
+tree entry has an inode number, its parent must also have an inode number.  If
+an inode is marked potentially-modified, its parent must also be marked
+potentially-modified.  Why? Because Eden needs to be able to crawl from the root
+tree and rapidly enumerate the potentially-modified set, even at process
+startup.
 
 During a checkout operation (or otherwise) we may determine that the contents of
 a file or tree now matches its unmodified state.  If so, to reduce the size of
-the tree Eden closely tracks, it may dematerialize the tree (from the parents
-down).  Dematerialization should preserve inode numbers for any entries that are
-loaded.
+the tree Eden is tracking, it may dematerialize the tree (from the parents
+down).  Dematerialization must preserve inode numbers for any entries that may
+currently be referenced by FUSE, but since checkout is an "anything could
+happen" operation, inodes for other unmodified files could be forgotten.
 
-Eden should never hand out duplicate inode numbers as tools like `du` use them
-to determine uniqueness.
+For our own sanity, Eden should never hand out duplicate inode numbers.
 
 ### Data State Machine
 
-Note that the previous section talks about inode numbers and inode metadata
-(e.g. timestamps, user, group, and mode bits).
+The previous section talks about inode numbers and inode metadata (e.g.
+timestamps, user, group, and mode bits).
 
 The other half of an inode is its data: the contents of a file (or symlink) and
 the entries of a tree.  (Note that it's possible for an inode's data to be
@@ -122,6 +125,27 @@ Conversely, a file can be rewritten with contents that are identical to the
 current source control state. The process of writing it will generally leave it
 in a materialized state, even though it may be the same as the current source
 control state at the end.
+
+### What Does Materialized Mean?
+
+[TODO: not sure where to put this section]
+
+This document talks about an inode entering and leaving the 'materialized'
+state.  It's a bit of an unintuitive concept.  If an inode is materialized,
+it is potentially modified relative to its original source control object, as
+indicated by its parent's entry's source control hash.
+
+Note that being materialized is orthogonal to whether a file is considered
+modified or not.  If a file has been overwritten with its original contents, it
+will be materialized (at least temporarily) but not show up as modified from the
+perspective of version control.  On the other hand, if a subtree has been
+renamed (imagine root/foo -> root/bar), then everything inside the subtree will
+not be materialized, but will show up as modified from a status or diff
+operation.
+
+If an inode is materialized, its parent must also be materialized.  The
+materialized status is used to rapidly determine which set of files is worth
+looking at when performing a status or diff operation.
 
 ## Concrete Storage
 
