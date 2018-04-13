@@ -33,7 +33,7 @@ pub struct HgFileNodeIdSql;
 
 impl<DB: Backend> ToSql<HgChangesetIdSql, DB> for HgChangesetId {
     fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
-        out.write_all(self.as_nodehash().as_ref())?;
+        out.write_all(self.as_nodehash().0.as_ref())?;
         Ok(IsNull::No)
     }
 }
@@ -53,7 +53,7 @@ where
 
 impl<DB: Backend> ToSql<HgManifestIdSql, DB> for HgManifestId {
     fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
-        out.write_all(self.as_nodehash().as_ref())?;
+        out.write_all(self.as_nodehash().0.as_ref())?;
         Ok(IsNull::No)
     }
 }
@@ -73,7 +73,7 @@ where
 
 impl<DB: Backend> ToSql<HgFileNodeIdSql, DB> for HgFileNodeId {
     fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
-        out.write_all(self.as_nodehash().as_ref())?;
+        out.write_all(self.as_nodehash().0.as_ref())?;
         Ok(IsNull::No)
     }
 }

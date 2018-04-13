@@ -14,35 +14,39 @@ use ascii::{AsciiStr, AsciiString};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 use errors::*;
-use mercurial_types::RepoPath;
+use mercurial_types::{self, RepoPath};
 use mercurial_types::hash::{self, Sha1};
 use serde;
 use sql_types::{HgChangesetIdSql, HgManifestIdSql};
 
 pub const NULL_HASH: NodeHash = NodeHash(hash::NULL);
 
+/// This structure represents Sha1 based hashes that are used in Mercurial, but the Sha1
+/// structure is private outside this crate to keep it an implementation detail.
+/// This is why the main constructors to create this structure are from_bytes and from_ascii_str
+/// which parses raw bytes or hex string to create NodeHash.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
-pub struct NodeHash(Sha1);
+pub struct NodeHash(pub(crate) Sha1);
 
 impl NodeHash {
-    pub const fn new(sha1: Sha1) -> NodeHash {
-        NodeHash(sha1)
-    }
-
+    /// Constructor to be used to parse 20 raw bytes that represent a sha1 hash into NodeHash
     pub fn from_bytes(bytes: &[u8]) -> Result<NodeHash> {
         Sha1::from_bytes(bytes).map(NodeHash)
     }
 
+    /// Returns the underlying 20 raw bytes that represent a sha1 hash
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+
+    /// Constructor to be used to parse 40 hex digits that represent a sha1 hash into NodeHash
     #[inline]
     pub fn from_ascii_str(s: &AsciiStr) -> Result<NodeHash> {
         Sha1::from_ascii_str(s).map(NodeHash)
     }
 
-    pub fn sha1(&self) -> &Sha1 {
-        &self.0
-    }
-
+    /// Returns a 40 hex digits representation of the sha1 hash
     #[inline]
     pub fn to_hex(&self) -> AsciiString {
         self.0.to_hex()
@@ -55,6 +59,40 @@ impl NodeHash {
         } else {
             Some(self)
         }
+    }
+
+    /// Method used to convert a Mercurial Sha1 based NodeHash into Mononoke Sha1 based NodeHash
+    /// without performing lookups in a remapping tables. It should be used only on Filenodes and
+    /// Manifests that are not Root Manifests.
+    /// This method is temporary (as the mercurial_types hashes are) and will go away once
+    /// transision to BonsaiChangesets is complete
+    #[inline]
+    pub fn into_mononoke(self) -> mercurial_types::NodeHash {
+        #![allow(deprecated)]
+        mercurial_types::NodeHash::new(self.0)
+    }
+
+    /// Returns true if self Mercurial hash is equal to Mononoke Sha1 based hash
+    pub fn is_equal_to(&self, hash: mercurial_types::NodeHash) -> bool {
+        self.as_bytes() == hash.as_bytes()
+    }
+}
+
+/// Trait to convieniently track the places where Mononoke to Mercurial NodeHash coversion is
+/// taking place without performing a lookup in remapping tables.
+pub trait NodeHashConversion {
+    fn into_mercurial(self) -> NodeHash;
+}
+
+impl NodeHashConversion for mercurial_types::NodeHash {
+    /// Method used to convert a Mononoke Sha1 based NodeHash into Mercurial Sha1 based NodeHash
+    /// without performing lookups in a remapping tables. It should be used only on Filenodes and
+    /// Manifests that are not Root Manifests.
+    /// This method is temporary (as the mercurial_types hashes are) and will go away once
+    /// transision to BonsaiChangesets is complete
+    fn into_mercurial(self) -> NodeHash {
+        #![allow(deprecated)]
+        NodeHash(self.into_sha1())
     }
 }
 
@@ -107,21 +145,9 @@ impl<'de> serde::de::Deserialize<'de> for NodeHash {
     {
         let hex = deserializer.deserialize_string(StringVisitor)?;
         match Sha1::from_str(hex.as_str()) {
-            Ok(sha1) => Ok(NodeHash::new(sha1)),
+            Ok(sha1) => Ok(NodeHash(sha1)),
             Err(error) => Err(serde::de::Error::custom(error)),
         }
-    }
-}
-
-impl From<Sha1> for NodeHash {
-    fn from(h: Sha1) -> NodeHash {
-        NodeHash(h)
-    }
-}
-
-impl<'a> From<&'a Sha1> for NodeHash {
-    fn from(h: &'a Sha1) -> NodeHash {
-        NodeHash(*h)
     }
 }
 

@@ -20,7 +20,7 @@ use mercurial;
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{HgChangesetId, MPath, NodeHash, RepoPath};
+use mercurial_types::{HgChangesetId, MPath, RepoPath};
 use slog::Logger;
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
@@ -461,7 +461,7 @@ fn get_parent(
         None => ok(None).boxify(),
         Some(p) => match map.get(&p) {
             None => {
-                let p = NodeHash::new(p.sha1().clone());
+                let p = p.into_mononoke();
                 repo.get_changeset_by_changesetid(&HgChangesetId::new(p))
                     .map(|cs| Some(cs.into()))
                     .boxify()

@@ -18,7 +18,7 @@ use futures_ext::StreamExt;
 use mercurial::{self, RevlogEntry, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{HgBlob, HgBlobHash, MPath, NodeHash, Parents, RepoPath, Type};
+use mercurial_types::{HgBlob, HgBlobHash, MPath, Parents, RepoPath, Type};
 
 use BlobstoreEntry;
 
@@ -36,8 +36,8 @@ where
         .into_future();
     let parents = {
         let (p1, p2) = parents.get_nodes();
-        let p1 = p1.map(|p| NodeHash::new(p.sha1().clone()));
-        let p2 = p2.map(|p| NodeHash::new(p.sha1().clone()));
+        let p1 = p1.map(|p| p.into_mononoke());
+        let p2 = p2.map(|p| p.into_mononoke());
         Parents::new(p1.as_ref(), p2.as_ref())
     };
 

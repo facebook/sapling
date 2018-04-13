@@ -39,7 +39,7 @@ use tokio_core::reactor::Core;
 use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use changesets::SqliteChangesets;
 use mercurial::{RevlogChangeset, RevlogEntry, RevlogRepo};
-use mercurial_types::{HgBlob, MPath, NodeHash, RepoPath, RepositoryId, Type};
+use mercurial_types::{HgBlob, MPath, RepoPath, RepositoryId, Type};
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
@@ -169,8 +169,8 @@ fn upload_entry(
 
     let parents = entry.get_parents().map(|parents| {
         let (p1, p2) = parents.get_nodes();
-        let p1 = p1.map(|p| NodeHash::new(p.sha1().clone()));
-        let p2 = p2.map(|p| NodeHash::new(p.sha1().clone()));
+        let p1 = p1.map(|p| p.into_mononoke());
+        let p2 = p2.map(|p| p.into_mononoke());
         (p1, p2)
     });
 
@@ -307,8 +307,8 @@ fn main() {
                 .and_then({
                     let blobrepo = blobrepo.clone();
                     move |(blob, p1, p2)| {
-                        let p1 = p1.map(|p| NodeHash::new(p.sha1().clone()));
-                        let p2 = p2.map(|p| NodeHash::new(p.sha1().clone()));
+                        let p1 = p1.map(|p| p.into_mononoke());
+                        let p2 = p2.map(|p| p.into_mononoke());
 
                         blobrepo.upload_entry(blob, Type::Tree, p1, p2, RepoPath::root())
                     }

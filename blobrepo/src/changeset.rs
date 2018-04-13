@@ -16,11 +16,11 @@ use futures::future::{Either, Future, IntoFuture};
 
 use blobstore::Blobstore;
 
-use mercurial;
+use mercurial::{self, NodeHashConversion};
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
 use mercurial_types::{BlobNode, Changeset, HgBlob, MPath, Parents, Time};
-use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NodeHash, NULL_HASH};
+use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NULL_HASH};
 
 use errors::*;
 
@@ -51,14 +51,12 @@ impl From<RevlogChangeset> for ChangesetContent {
     fn from(revlogcs: RevlogChangeset) -> Self {
         let parents = {
             let (p1, p2) = revlogcs.parents.get_nodes();
-            let p1 = p1.map(|p1| NodeHash::new(p1.sha1().clone()));
-            let p2 = p2.map(|p2| NodeHash::new(p2.sha1().clone()));
+            let p1 = p1.map(|p| p.into_mononoke());
+            let p2 = p2.map(|p| p.into_mononoke());
             Parents::new(p1.as_ref(), p2.as_ref())
         };
 
-        let manifestid = HgManifestId::new(NodeHash::new(
-            revlogcs.manifestid.into_nodehash().sha1().clone(),
-        ));
+        let manifestid = HgManifestId::new(revlogcs.manifestid.into_nodehash().into_mononoke());
 
         Self {
             parents,
@@ -172,8 +170,8 @@ impl BlobChangeset {
                 Some(bytes) => {
                     let RawCSBlob { parents, blob } = bincode::deserialize(bytes.as_ref())?;
                     let (p1, p2) = parents.get_nodes();
-                    let p1 = p1.map(|p1| mercurial::NodeHash::new(p1.sha1().clone()));
-                    let p2 = p2.map(|p2| mercurial::NodeHash::new(p2.sha1().clone()));
+                    let p1 = p1.map(|p| p.into_mercurial());
+                    let p2 = p2.map(|p| p.into_mercurial());
 
                     let blob = HgBlob::from(Bytes::from(blob.into_owned()));
                     let node = mercurial::BlobNode::new(blob, p1.as_ref(), p2.as_ref());

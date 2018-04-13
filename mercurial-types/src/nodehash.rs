@@ -10,7 +10,8 @@ use std::fmt::{self, Display};
 use std::result;
 use std::str::FromStr;
 
-use ascii::{AsciiStr, AsciiString};
+use ascii::AsciiStr;
+
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 use errors::*;
@@ -21,11 +22,20 @@ use sql_types::{HgChangesetIdSql, HgFileNodeIdSql, HgManifestIdSql};
 pub const NULL_HASH: NodeHash = NodeHash(hash::NULL);
 pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
 
+/// This structure represents Sha1 based hashes that are used in Mononoke. It is a temporary
+/// structure that will be entirely replaced by structures from mononoke-types::typed_hash.
+/// It's current distinction from mercurial::NodeHash serves two purposes:
+/// - make it relatively straightforward to replace it in future with typed_hash
+/// - easily distinguish between the NodeHash values provided by Mercurial client that might
+///   require remapping, f.e. hashes of Changeset and hashes of Root Manifests since the client
+///   provides Flat Manifest hashes as aliases for Root Manifest hashes
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
-pub struct NodeHash(Sha1);
+pub struct NodeHash(pub(crate) Sha1);
 
 impl NodeHash {
+    #[deprecated(note = "This constructor is only used in two places: \
+                         conversion from mercurial NodeHash and creation of NodeHash mocks")]
     pub const fn new(sha1: Sha1) -> NodeHash {
         NodeHash(sha1)
     }
@@ -34,18 +44,13 @@ impl NodeHash {
         Sha1::from_bytes(bytes).map(NodeHash)
     }
 
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+
     #[inline]
     pub fn from_ascii_str(s: &AsciiStr) -> Result<NodeHash> {
         Sha1::from_ascii_str(s).map(NodeHash)
-    }
-
-    pub fn sha1(&self) -> &Sha1 {
-        &self.0
-    }
-
-    #[inline]
-    pub fn to_hex(&self) -> AsciiString {
-        self.0.to_hex()
     }
 
     #[inline]
@@ -55,6 +60,12 @@ impl NodeHash {
         } else {
             Some(self)
         }
+    }
+
+    #[deprecated(note = "This method is used only to have a \
+                         zero-cost conversion to mercurial::NodeHash")]
+    pub fn into_sha1(self) -> Sha1 {
+        self.0
     }
 }
 
@@ -96,7 +107,7 @@ impl serde::ser::Serialize for NodeHash {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(self.to_hex().as_str())
+        serializer.serialize_str(self.0.to_hex().as_str())
     }
 }
 
@@ -107,27 +118,9 @@ impl<'de> serde::de::Deserialize<'de> for NodeHash {
     {
         let hex = deserializer.deserialize_string(StringVisitor)?;
         match Sha1::from_str(hex.as_str()) {
-            Ok(sha1) => Ok(NodeHash::new(sha1)),
+            Ok(sha1) => Ok(NodeHash(sha1)),
             Err(error) => Err(serde::de::Error::custom(error)),
         }
-    }
-}
-
-impl From<Sha1> for NodeHash {
-    fn from(h: Sha1) -> NodeHash {
-        NodeHash(h)
-    }
-}
-
-impl<'a> From<&'a Sha1> for NodeHash {
-    fn from(h: &'a Sha1) -> NodeHash {
-        NodeHash(*h)
-    }
-}
-
-impl AsRef<[u8]> for NodeHash {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
     }
 }
 
@@ -177,11 +170,6 @@ impl HgChangesetId {
 
     pub const fn new(hash: NodeHash) -> Self {
         HgChangesetId(hash)
-    }
-
-    #[inline]
-    pub fn to_hex(&self) -> AsciiString {
-        self.0.to_hex()
     }
 }
 

@@ -4,6 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+// Ignore deprecation of NodeHash::new
+#![allow(deprecated)]
+
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, NodeHash};
 // NULL_HASH is exported for convenience.
 pub use mercurial_types::NULL_HASH;

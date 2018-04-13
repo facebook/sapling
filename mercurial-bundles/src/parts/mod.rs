@@ -18,7 +18,7 @@ use super::wirepack;
 use super::wirepack::packer::WirePackPacker;
 
 use errors::*;
-use mercurial::{BlobNode, NodeHash, NULL_HASH};
+use mercurial::{BlobNode, NodeHash, NodeHashConversion, NULL_HASH};
 use mercurial_types::{Delta, Entry, MPath, RepoPath};
 use part_encode::PartEncodeBuilder;
 use part_header::PartHeaderType;
@@ -137,12 +137,10 @@ where
                 entry_count: 1,
             };
 
-            let node = NodeHash::new(entry.get_hash().into_nodehash().sha1().clone());
+            let node = entry.get_hash().into_nodehash().into_mercurial();
             let (p1, p2) = parents.get_nodes();
-            let p1 = p1.map(|p| NodeHash::new(p.sha1().clone()))
-                .unwrap_or(NULL_HASH);
-            let p2 = p2.map(|p| NodeHash::new(p.sha1().clone()))
-                .unwrap_or(NULL_HASH);
+            let p1 = p1.map(|p| p.into_mercurial()).unwrap_or(NULL_HASH);
+            let p2 = p2.map(|p| p.into_mercurial()).unwrap_or(NULL_HASH);
 
             let history = wirepack::Part::History(wirepack::HistoryEntry {
                 node: node.clone(),

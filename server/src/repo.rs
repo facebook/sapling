@@ -35,7 +35,7 @@ use slog_scuba::ScubaDrain;
 
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
-use mercurial::{self, RevlogChangeset};
+use mercurial::{self, NodeHashConversion, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, Changeset, Entry, HgChangesetId, HgManifestId, MPath,
                       NodeHash, Parents, RepoPath, RepositoryId, Type, NULL_HASH};
@@ -363,14 +363,13 @@ impl RepoClient {
             .and_then(|cs| {
                 let parents = {
                     let (p1, p2) = cs.parents().get_nodes();
-                    let p1 = p1.map(|p| mercurial::NodeHash::new(p.sha1().clone()));
-                    let p2 = p2.map(|p| mercurial::NodeHash::new(p.sha1().clone()));
+                    let p1 = p1.map(|p| p.into_mercurial());
+                    let p2 = p2.map(|p| p.into_mercurial());
                     mercurial::Parents::new(p1.as_ref(), p2.as_ref())
                 };
 
-                let manifestid = mercurial::HgManifestId::new(mercurial::NodeHash::new(
-                    cs.manifestid().into_nodehash().sha1().clone(),
-                ));
+                let manifestid =
+                    mercurial::HgManifestId::new(cs.manifestid().into_nodehash().into_mercurial());
 
                 let revlogcs = RevlogChangeset::new_from_parts(
                     parents,
@@ -399,7 +398,7 @@ impl RepoClient {
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
             let hgrepo = self.repo.hgrepo.clone();
             let items = hgrepo.get_bookmarks().map(|(name, cs)| {
-                let hash: Vec<u8> = cs.to_hex().into();
+                let hash: Vec<u8> = cs.into_nodehash().into_mercurial().to_hex().into();
                 (name, hash)
             });
             bundle.add_part(parts::listkey_part("bookmarks", items)?);
@@ -458,9 +457,7 @@ impl RepoClient {
                 let mut used_hashes = HashSet::new();
                 move |entry| used_hashes.insert(*entry.0.get_hash())
             })
-            .map(|(entry, hash, path)| {
-                (entry, mercurial::NodeHash::new(hash.sha1().clone()), path)
-            });
+            .map(|(entry, hash, path)| (entry, hash.into_mercurial(), path));
 
         parts::treepack_part(changed_entries)
             .into_future()
@@ -583,12 +580,13 @@ impl HgCommands for RepoClient {
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::LOOKUP);
         let remote = self.repo.remote.clone();
-        NodeHash::from_str(&key)
+        mercurial::NodeHash::from_str(&key)
             .into_future()
-            .and_then(move |node| {
+            .map(|h| (h, h.into_mononoke()))
+            .and_then(move |(mercurial_node, node)| {
                 let csid = HgChangesetId::new(node);
                 repo.changeset_exists(&csid)
-                    .map(move |exists| (node, exists))
+                    .map(move |exists| (mercurial_node, exists))
             })
             .and_then(|(node, exists)| {
                 if exists {
@@ -666,6 +664,7 @@ impl HgCommands for RepoClient {
             self.repo
                 .hgrepo
                 .get_bookmarks()
+                .map(|(name, cs)| (name, cs.into_nodehash().into_mercurial()))
                 .map(|(name, cs)| {
                     let hash: Vec<u8> = cs.to_hex().into();
                     (name, hash)
@@ -953,10 +952,10 @@ fn create_remotefilelog_blob(
                     (p1, p2, None)
                 };
 
-                writer.write_all(node.sha1().as_ref())?;
-                writer.write_all(p1.sha1().as_ref())?;
-                writer.write_all(p2.sha1().as_ref())?;
-                writer.write_all(linknode.sha1().as_ref())?;
+                writer.write_all(node.into_mercurial().as_bytes())?;
+                writer.write_all(p1.into_mercurial().as_bytes())?;
+                writer.write_all(p2.into_mercurial().as_bytes())?;
+                writer.write_all(linknode.into_mercurial().as_bytes())?;
                 if let Some(copied_from) = copied_from {
                     writer.write_all(&copied_from.to_vec())?;
                 }

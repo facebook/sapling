@@ -112,9 +112,9 @@ impl BlobNode {
 
         let (h1, h2) = match &self.parents {
             &Parents::None => (&null, &null),
-            &Parents::One(ref p1) => (&null, p1.sha1()),
-            &Parents::Two(ref p1, ref p2) if p1 > p2 => (p2.sha1(), p1.sha1()),
-            &Parents::Two(ref p1, ref p2) => (p1.sha1(), p2.sha1()),
+            &Parents::One(ref p1) => (&null, &p1.0),
+            &Parents::Two(ref p1, ref p2) if p1 > p2 => (&p2.0, &p1.0),
+            &Parents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
         };
 
         self.as_blob().as_slice().map(|data| {
@@ -124,7 +124,7 @@ impl BlobNode {
             ctxt.update(h2);
             ctxt.update(data);
 
-            NodeHash::new(ctxt.finish())
+            NodeHash(ctxt.finish())
         })
     }
 }

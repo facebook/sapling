@@ -19,7 +19,7 @@ use quickcheck::{Arbitrary, Gen};
 use blobrepo::{BlobEntry, BlobRepo};
 use mercurial;
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, NodeHash, RepoPath};
+use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, RepoPath};
 
 use errors::*;
 use stats::*;
@@ -45,8 +45,8 @@ impl UploadableHgBlob for Filelog {
 
     fn upload(self, repo: &BlobRepo) -> Result<(mercurial::HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
-        let p1 = self.p1.map(|p1| NodeHash::new(p1.sha1().clone()));
-        let p2 = self.p2.map(|p1| NodeHash::new(p1.sha1().clone()));
+        let p1 = self.p1.map(|p| p.into_mononoke());
+        let p2 = self.p2.map(|p| p.into_mononoke());
 
         repo.upload_entry(
             self.blob,
@@ -129,7 +129,7 @@ impl DeltaCache {
                                 .map_err(Error::from)
                                 .boxify(),
                             None => self.repo
-                                .get_file_content(&NodeHash::new(base.sha1().clone()))
+                                .get_file_content(&base.into_mononoke())
                                 .map(move |bytes| delta::apply(bytes.as_ref(), &delta))
                                 .boxify(),
                         };

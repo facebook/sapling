@@ -25,7 +25,7 @@ use heads::Heads;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{BlobNode, HgBlob, HgFileNodeId, NodeHash, RepoPath, RepositoryId};
+use mercurial_types::{BlobNode, HgBlob, HgFileNodeId, RepoPath, RepositoryId};
 use mercurial_types::nodehash::HgChangesetId;
 use stats::Timeseries;
 
@@ -102,7 +102,7 @@ where
             .map(|h| {
                 debug!(logger, "head {}", h);
                 STATS::heads.add_value(1);
-                let h = NodeHash::new(h.sha1().clone());
+                let h = h.into_mononoke();
                 headstore.add(&h).map_err({
                     move |err| {
                         err.context(format_err!("Failed to create head {}", h))
@@ -129,16 +129,15 @@ where
         let repo_id = *repo_id;
         self.get_changesets_stream()
             .and_then(move |node| {
-                let node = mercurial::NodeHash::new(node.sha1().clone());
                 repo.get_changeset(&mercurial::HgChangesetId::new(node))
                     .map(move |cs| (cs, node))
             })
             .for_each(move |(cs, node)| {
                 let parents = cs.parents()
                     .into_iter()
-                    .map(|p| HgChangesetId::new(NodeHash::new(p.sha1().clone())))
+                    .map(|p| HgChangesetId::new(p.into_mononoke()))
                     .collect();
-                let node = NodeHash::new(node.sha1().clone());
+                let node = node.into_mononoke();
                 let insert = ChangesetInsert {
                     repo_id,
                     cs_id: HgChangesetId::new(node),
@@ -190,7 +189,7 @@ where
             .get_changeset(&csid)
             .from_err()
             .and_then(move |cs| {
-                let csid = HgChangesetId::new(NodeHash::new(csid.into_nodehash().sha1().clone()));
+                let csid = HgChangesetId::new(csid.into_nodehash().into_mononoke());
                 let bcs = BlobChangeset::new_with_id(&csid, cs.into());
                 sender
                     .send(BlobstoreEntry::Changeset(bcs))
@@ -324,8 +323,8 @@ fn create_filenode(
     linknode: mercurial::NodeHash,
 ) -> FilenodeInfo {
     let (p1, p2) = parents.get_nodes();
-    let p1 = p1.map(convert_node_hash);
-    let p2 = p2.map(convert_node_hash);
+    let p1 = p1.map(|p| p.into_mononoke());
+    let p2 = p2.map(|p| p.into_mononoke());
 
     let copyfrom = mercurial::file::File::new(BlobNode::new(blob, p1.as_ref(), p2.as_ref()))
         .copied_from()
@@ -336,16 +335,12 @@ fn create_filenode(
 
     FilenodeInfo {
         path: repopath.clone(),
-        filenode: HgFileNodeId::new(convert_node_hash(&filenode_hash)),
+        filenode: HgFileNodeId::new(filenode_hash.into_mononoke()),
         p1: p1.map(HgFileNodeId::new),
         p2: p2.map(HgFileNodeId::new),
         copyfrom,
-        linknode: HgChangesetId::new(convert_node_hash(&linknode)),
+        linknode: HgChangesetId::new(linknode.into_mononoke()),
     }
-}
-
-fn convert_node_hash(hash: &mercurial::NodeHash) -> NodeHash {
-    NodeHash::new(hash.sha1().clone())
 }
 
 fn _assert_sized<T: Sized>(_: &T) {}
