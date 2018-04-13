@@ -7,10 +7,9 @@
 use std::fmt;
 
 use bytes::Bytes;
-use failure::err_msg;
 use futures::{Future, Stream};
 use futures::stream::{iter_ok, once};
-use futures_trace::{self, Traced};
+use futures_ext::BoxFuture;
 
 use super::changegroup::{CgDeltaChunk, Part, Section};
 use super::changegroup::packer::Cg2Packer;
@@ -18,8 +17,8 @@ use super::wirepack;
 use super::wirepack::packer::WirePackPacker;
 
 use errors::*;
-use mercurial::{BlobNode, NodeHash, NodeHashConversion, NULL_HASH};
-use mercurial_types::{Delta, Entry, MPath, RepoPath};
+use mercurial::{BlobNode, NodeHash, NULL_HASH};
+use mercurial_types::{Delta, MPath, MPathElement, RepoPath};
 use part_encode::PartEncodeBuilder;
 use part_header::PartHeaderType;
 
@@ -95,9 +94,19 @@ where
     Ok(builder)
 }
 
+pub struct TreepackPartInput {
+    pub node: NodeHash,
+    pub p1: Option<NodeHash>,
+    pub p2: Option<NodeHash>,
+    pub content: Bytes,
+    pub name: Option<MPathElement>,
+    pub linknode: NodeHash,
+    pub basepath: Option<MPath>,
+}
+
 pub fn treepack_part<S>(entries: S) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = (Box<Entry + Sync>, NodeHash, Option<MPath>), Error = Error> + Send + 'static,
+    S: Stream<Item = BoxFuture<TreepackPartInput, Error>, Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xTreegroup2)?;
     builder.add_mparam("version", "1")?;
@@ -106,46 +115,23 @@ where
 
     let buffer_size = 100; // TODO(stash): make it configurable
     let wirepack_parts = entries
-        .map(|(entry, linknode, basepath)| {
-            let parents = entry
-                .get_parents()
-                .traced_global("fetching parents", trace_args!());
-
-            let raw_content = entry
-                .get_raw_content()
-                .and_then(|blob| blob.into_inner().ok_or(err_msg("bad blob content")))
-                .traced_global("fetching raw content", trace_args!());
-
-            parents
-                .join(raw_content)
-                .map(move |(parents, raw_content)| {
-                    (entry, parents, raw_content, linknode, basepath)
-                })
-        })
         .buffered(buffer_size)
-        .map(|(entry, parents, content, linknode, basepath)| {
-            let path = match MPath::join_element_opt(basepath.as_ref(), entry.get_name()) {
+        .map(|input| {
+            let path = match MPath::join_element_opt(input.basepath.as_ref(), input.name.as_ref()) {
                 Some(path) => RepoPath::DirectoryPath(path),
                 None => RepoPath::RootPath,
             };
-            (entry, parents, content, linknode, path)
-        })
-        .map(|(entry, parents, content, linknode, path)| {
+
             let history_meta = wirepack::Part::HistoryMeta {
                 path: path.clone(),
                 entry_count: 1,
             };
 
-            let node = entry.get_hash().into_nodehash().into_mercurial();
-            let (p1, p2) = parents.get_nodes();
-            let p1 = p1.map(|p| p.into_mercurial()).unwrap_or(NULL_HASH);
-            let p2 = p2.map(|p| p.into_mercurial()).unwrap_or(NULL_HASH);
-
             let history = wirepack::Part::History(wirepack::HistoryEntry {
-                node: node.clone(),
-                p1,
-                p2,
-                linknode,
+                node: input.node.clone(),
+                p1: input.p1.into(),
+                p2: input.p2.into(),
+                linknode: input.linknode,
                 // No copies/renames for trees
                 copy_from: None,
             });
@@ -156,9 +142,9 @@ where
             };
 
             let data = wirepack::Part::Data(wirepack::DataEntry {
-                node,
+                node: input.node,
                 delta_base: NULL_HASH,
-                delta: Delta::new_fulltext(content.to_vec()),
+                delta: Delta::new_fulltext(input.content.to_vec()),
             });
 
             iter_ok(vec![history_meta, history, data_meta, data].into_iter())

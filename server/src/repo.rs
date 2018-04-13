@@ -467,7 +467,10 @@ impl RepoClient {
                 let mut used_hashes = HashSet::new();
                 move |entry| used_hashes.insert(*entry.0.get_hash())
             })
-            .map(|(entry, hash, path)| (entry, hash.into_mercurial(), path));
+            .map({
+                let hgrepo = self.repo.hgrepo.clone();
+                move |(entry, basepath)| fetch_treepack_part_input(hgrepo.clone(), entry, basepath)
+            });
 
         parts::treepack_part(changed_entries)
             .into_future()
@@ -785,7 +788,7 @@ fn get_changed_entry_stream(
     repo: Arc<BlobRepo>,
     mfid: &NodeHash,
     basemfid: &NodeHash,
-) -> BoxStream<(Box<Entry + Sync>, NodeHash, Option<MPath>), Error> {
+) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
     let manifest = repo.get_manifest_by_nodeid(mfid)
         .traced_global("fetch rootmf", trace_args!());
     let basemanifest = repo.get_manifest_by_nodeid(basemfid)
@@ -796,8 +799,8 @@ fn get_changed_entry_stream(
         .map(|(mf, basemf)| changed_entry_stream(&mf, &basemf, None))
         .flatten_stream();
 
-    let changed_entries = changed_entries
-        .filter_map(move |entry_status| match entry_status.status {
+    let changed_entries =
+        changed_entries.filter_map(move |entry_status| match entry_status.status {
             EntryStatus::Added(entry) => {
                 if entry.get_type() == Type::Tree {
                     Some((entry, entry_status.path))
@@ -813,31 +816,20 @@ fn get_changed_entry_stream(
                 }
             }
             EntryStatus::Deleted(..) => None,
-        })
-        .and_then({
-            let hgrepo = repo.clone();
-            move |(entry, path)| fetch_linknode(hgrepo.clone(), entry, path)
-        })
-        .map(|(entry, linknode, basepath)| (entry, linknode, basepath));
+        });
 
     // Append root manifest
-    let root_entry_stream = Ok(repo.get_root_entry(&HgManifestId::new(*mfid)))
-        .into_future()
-        .and_then({
-            let hgrepo = repo.clone();
-            move |entry| fetch_linknode(hgrepo.clone(), entry, None)
-        })
-        .map(|(entry, linknode, basepath)| stream::once(Ok((entry, linknode, basepath))))
-        .flatten_stream();
+    let root_entry_stream =
+        stream::once(Ok((repo.get_root_entry(&HgManifestId::new(*mfid)), None)));
 
     changed_entries.chain(root_entry_stream).boxify()
 }
 
-fn fetch_linknode(
+fn fetch_treepack_part_input(
     repo: Arc<BlobRepo>,
     entry: Box<Entry + Sync>,
     basepath: Option<MPath>,
-) -> BoxFuture<(Box<Entry + Sync>, NodeHash, Option<MPath>), Error> {
+) -> BoxFuture<parts::TreepackPartInput, Error> {
     let path = MPath::join_element_opt(basepath.as_ref(), entry.get_name());
     let repo_path = match path {
         Some(path) => {
@@ -849,19 +841,77 @@ fn fetch_linknode(
         }
         None => RepoPath::RootPath,
     };
+    let is_root = basepath.is_none();
 
     let node = entry.get_hash().clone();
+    let mercurial_node = if is_root {
+        // TODO(luk) this is a root manifest, so it requires remapping
+        node.into_nodehash().into_mercurial()
+    } else {
+        node.into_nodehash().into_mercurial()
+    };
+
     let path = repo_path.clone();
 
-    let linknode_fut = repo.get_linknode(repo_path, &entry.get_hash().into_nodehash());
-    linknode_fut
-        .map(|linknode| (entry, linknode, basepath))
+    let parents = entry
+        .get_parents()
+        .map(move |parents| {
+            let (p1, p2) = parents.get_nodes();
+            if is_root {
+                // TODO(luk) this is a root manifest, so it requires remapping
+                (
+                    p1.map(|p| p.into_mercurial()),
+                    p2.map(|p| p.into_mercurial()),
+                )
+            } else {
+                (
+                    p1.map(|p| p.into_mercurial()),
+                    p2.map(|p| p.into_mercurial()),
+                )
+            }
+        })
+        .traced_global(
+            "fetching parents",
+            trace_args!(
+                "node" => format!("{}", node),
+                "path" => format!("{}", path)
+            ),
+        );
+
+    let linknode_fut = repo.get_linknode(repo_path, &entry.get_hash().into_nodehash())
+        .map(|h| h.into_mercurial())
         .traced_global(
             "fetching linknode",
             trace_args!(
                 "node" => format!("{}", node),
                 "path" => format!("{}", path)
             ),
+        );
+
+    let content_fut = entry
+        .get_raw_content()
+        .and_then(|blob| blob.into_inner().ok_or(err_msg("bad blob content")))
+        .traced_global(
+            "fetching raw content",
+            trace_args!(
+                "node" => format!("{}", node),
+                "path" => format!("{}", path)
+            ),
+        );
+
+    parents
+        .join(linknode_fut)
+        .join(content_fut)
+        .map(
+            move |(((p1, p2), linknode), content)| parts::TreepackPartInput {
+                node: mercurial_node,
+                p1,
+                p2,
+                content,
+                name: entry.get_name().cloned(),
+                linknode,
+                basepath,
+            },
         )
         .boxify()
 }
