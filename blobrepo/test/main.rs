@@ -23,7 +23,6 @@ extern crate dbbookmarks;
 extern crate many_files_dirs;
 extern crate memblob;
 extern crate memheads;
-extern crate memlinknodes;
 extern crate mercurial_types;
 
 use bytes::Bytes;

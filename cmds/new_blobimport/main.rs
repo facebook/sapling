@@ -228,7 +228,7 @@ fn main() {
                 output
             );
 
-            for subdir in &[".hg", "blobs", "books", "heads", "linknodes"] {
+            for subdir in &[".hg", "blobs", "books", "heads"] {
                 let subdir = output.join(subdir);
                 if subdir.exists() {
                     assert!(

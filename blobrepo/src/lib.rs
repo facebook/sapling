@@ -42,11 +42,9 @@ extern crate filenodes;
 #[macro_use]
 extern crate futures_ext;
 extern crate heads;
-extern crate linknodes;
 extern crate manifoldblob;
 extern crate memblob;
 extern crate memheads;
-extern crate memlinknodes;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate rocksblob;

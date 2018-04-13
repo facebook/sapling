@@ -59,14 +59,14 @@ CONFIG
 
   # We need to have a RocksDb version of config repo
   mkdir mononoke-config-rocks
-  $MONONOKE_BLOBIMPORT --blobstore rocksdb --linknodes mononoke-config mononoke-config-rocks >> "$TESTTMP/mononoke-config-blobimport.out" 2>&1
+  $MONONOKE_BLOBIMPORT --blobstore rocksdb mononoke-config mononoke-config-rocks >> "$TESTTMP/mononoke-config-blobimport.out" 2>&1
   mkdir -p "mononoke-config-rocks"/.hg
   mkdir -p "mononoke-config-rocks"/books
   mkdir -p "mononoke-config-rocks"/heads
 }
 
 function blobimport {
-  $MONONOKE_BLOBIMPORT --blobstore rocksdb --linknodes "$@" >> "$TESTTMP/blobimport.out" 2>&1
+  $MONONOKE_BLOBIMPORT --blobstore rocksdb "$@" >> "$TESTTMP/blobimport.out" 2>&1
   reponame=$_
   mkdir -p "$reponame"/.hg
   mkdir -p "$reponame"/books

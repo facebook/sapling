@@ -30,11 +30,9 @@ extern crate dieselfilenodes;
 extern crate fileblob;
 extern crate fileheads;
 extern crate filekv;
-extern crate filelinknodes;
 extern crate filenodes;
 extern crate futures_ext;
 extern crate heads;
-extern crate linknodes;
 extern crate manifoldblob;
 extern crate memheads;
 extern crate mercurial;
@@ -71,9 +69,7 @@ use tokio_core::reactor::{Core, Remote};
 use blobrepo::BlobChangeset;
 use blobstore::Blobstore;
 use fileblob::Fileblob;
-use filelinknodes::FileLinknodes;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use linknodes::NoopLinknodes;
 use manifoldblob::ManifoldBlob;
 use mercurial::{RevlogRepo, RevlogRepoOptions};
 use mercurial_types::{HgChangesetId, NodeHash, RepositoryId};
@@ -113,7 +109,6 @@ fn run_blobimport<In, Out>(
     input: In,
     output: Out,
     blobtype: BlobstoreType,
-    write_linknodes: bool,
     logger: &Logger,
     postpone_compaction: bool,
     channel_size: usize,
@@ -225,15 +220,7 @@ where
         commits_limit: commits_limit,
         filenodes_sender: filenodes_sender,
     };
-    let res = if write_linknodes {
-        info!(logger, "Opening linknodes store: {:?}", output);
-        let output = output.clone().into();
-        let linknodes_store = open_linknodes_store(&output, &cpupool)?;
-        convert_context.convert(linknodes_store)
-    } else {
-        info!(logger, "--linknodes not specified, not writing linknodes");
-        convert_context.convert(NoopLinknodes::new())
-    };
+    let res = convert_context.convert();
     iothread.join().expect("failed to join io thread")?;
     filenodesthread
         .join()
@@ -335,13 +322,6 @@ fn open_headstore<P: Into<PathBuf>>(path: P, pool: &Arc<CpuPool>) -> Result<Box<
     Ok(Box::new(headstore))
 }
 
-fn open_linknodes_store<P: Into<PathBuf>>(path: P, pool: &Arc<CpuPool>) -> Result<FileLinknodes> {
-    let mut linknodes_path = path.into();
-    linknodes_path.push("linknodes");
-    let linknodes_store = FileLinknodes::create_with_pool(linknodes_path, pool.clone())?;
-    Ok(linknodes_store)
-}
-
 fn open_blobstore<P: Into<PathBuf>>(
     output: P,
     ty: BlobstoreType,
@@ -424,7 +404,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --postpone-compaction    '(rocksdb only) postpone auto compaction while importing'
 
             -d, --debug              'print debug level output'
-            --linknodes              'also generate linknodes'
             --channel-size [SIZE]    'channel size between worker and io threads. Default: 1000'
             --skip [SKIP]            'skips commits from the beginning'
             --commits-limit [LIMIT]  'import only LIMIT first commits from revlog repo'
@@ -532,13 +511,10 @@ fn main() {
             .map(|size| size.parse().expect("channel-size must be positive integer"))
             .unwrap_or(1000);
 
-        let write_linknodes = matches.is_present("linknodes");
-
         run_blobimport(
             input,
             output.expect("output must be specified").to_string(),
             blobtype,
-            write_linknodes,
             &root_log,
             postpone_compaction,
             channel_size,

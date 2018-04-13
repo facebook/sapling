@@ -77,7 +77,7 @@ impl From<BlobChangeset> for ChangesetHandle {
 }
 
 /// State used while tracking uploaded entries, to ensure that a changeset ends up with the right
-/// set of blobs uploaded, and all linknodes present.
+/// set of blobs uploaded, and all filenodes present.
 struct UploadEntriesState {
     /// Listing of blobs that we need, based on parsing the root manifest and all the newly
     /// uploaded child manifests
@@ -233,7 +233,7 @@ impl UploadEntries {
             future::join_all(checks).boxify()
         };
 
-        let linknodes = {
+        let filenodes = {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             let uploaded_entries = mem::replace(&mut inner.uploaded_entries, HashMap::new());
             let filenodeinfos = stream::iter_ok(uploaded_entries.into_iter())
@@ -263,7 +263,7 @@ impl UploadEntries {
         };
 
         parent_checks
-            .join3(required_checks, linknodes)
+            .join3(required_checks, filenodes)
             .map(|_| ())
             .boxify()
     }

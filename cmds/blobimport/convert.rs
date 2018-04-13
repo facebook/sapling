@@ -21,7 +21,6 @@ use filenodes::FilenodeInfo;
 use futures::sync::mpsc::UnboundedSender;
 use futures_ext::{BoxStream, FutureExt, StreamExt};
 use heads::Heads;
-use linknodes::Linknodes;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
@@ -49,7 +48,7 @@ impl<H> ConvertContext<H>
 where
     H: Heads,
 {
-    pub fn convert<L: Linknodes>(self, linknodes_store: L) -> Result<()> {
+    pub fn convert(self) -> Result<()> {
         let mut core = self.core;
         let logger_owned = self.logger;
         let logger = &logger_owned;
@@ -72,7 +71,6 @@ where
             } else {
                 changesets.boxify()
             };
-        let linknodes_store = Arc::new(linknodes_store);
 
         // Generate stream of changesets. For each changeset, save the cs blob, and the manifest
         // blob, and the files.
@@ -88,7 +86,6 @@ where
                     copy_changeset(
                         repo.clone(),
                         sender.clone(),
-                        linknodes_store.clone(),
                         filenodes_sender.clone(),
                         mercurial::HgChangesetId::new(csid)
                     )
@@ -131,16 +128,14 @@ where
 /// The files are more complex. For each manifest, we generate a stream of entries, then flatten
 /// the entry streams from all changesets into a single stream. Then each entry is filtered
 /// against a set of entries that have already been copied, and any remaining are actually copied.
-fn copy_changeset<L>(
+fn copy_changeset(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
-    linknodes_store: L,
     filenodes: UnboundedSender<FilenodeInfo>,
     csid: mercurial::HgChangesetId,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
     Error: Send + 'static,
-    L: Linknodes,
 {
     let put = {
         let sender = sender.clone();
@@ -170,7 +165,6 @@ where
             put_blobs(
                 revlog_repo,
                 sender,
-                linknodes_store,
                 filenodes,
                 mfid.clone().into_nodehash(),
                 linkrev,
@@ -189,17 +183,13 @@ where
 /// Copy manifest and filelog entries into the blob store.
 ///
 /// See the help for copy_changeset for a full description.
-fn put_blobs<L>(
+fn put_blobs(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
-    linknodes_store: L,
     filenodes: UnboundedSender<FilenodeInfo>,
     mfid: mercurial::NodeHash,
     linkrev: RevIdx,
-) -> impl Future<Item = (), Error = Error> + Send + 'static
-where
-    L: Linknodes,
-{
+) -> impl Future<Item = (), Error = Error> + Send + 'static {
     let cs_entry_fut = revlog_repo
         .get_changelog_entry_by_idx(linkrev)
         .into_future();
@@ -218,12 +208,6 @@ where
             );
 
             let linknode = cs_entry.nodeid;
-            let put_root_linknode = linknodes_store.add(
-                RepoPath::root(),
-                &NodeHash::new(mfid.sha1().clone()),
-                &NodeHash::new(linknode.sha1().clone()),
-            );
-
             let filenode = create_filenode(
                 rootmfblob.as_blob().clone(),
                 mfid,
@@ -261,11 +245,6 @@ where
                         })
                         .for_each(move |(entry, blob, repopath, parents)| {
                             // All entries share the same linknode to the changelog.
-                            let linknode_future = linknodes_store.add(
-                                repopath.clone(),
-                                &convert_node_hash(&entry.get_hash().into_nodehash()),
-                                &convert_node_hash(&linknode),
-                            );
                             let filenode_hash = entry.get_hash().clone();
                             let filenode = create_filenode(
                                 blob,
@@ -278,7 +257,7 @@ where
                                 .unbounded_send(filenode)
                                 .expect("failed to send filenodeinfo");
                             let copy_future = manifest::copy_entry(entry, sender.clone());
-                            copy_future.join(linknode_future).map(|_| ())
+                            copy_future.map(|_| ())
                         })
                 })
                 .into_future()
@@ -288,7 +267,7 @@ where
             // Huh? No idea why this is needed to avoid an error below.
             let files = files.boxify();
 
-            putmf.join3(put_root_linknode, files).map(|_| ())
+            putmf.join(files).map(|_| ())
         })
 }
 
