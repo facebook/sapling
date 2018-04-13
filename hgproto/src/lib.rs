@@ -48,7 +48,7 @@ use std::fmt::{self, Debug};
 
 use bytes::Bytes;
 
-use mercurial_types::NodeHash;
+use mercurial::NodeHash;
 
 mod batch;
 mod dechunker;

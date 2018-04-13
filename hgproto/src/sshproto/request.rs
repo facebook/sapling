@@ -11,7 +11,7 @@ use std::str::{self, FromStr};
 use bytes::{Bytes, BytesMut};
 use nom::{is_alphanumeric, is_digit, ErrorKind, FindSubstring, IResult, Needed, Slice};
 
-use mercurial_types::NodeHash;
+use mercurial::NodeHash;
 
 use {GetbundleArgs, GettreepackArgs, Request, SingleRequest};
 use batch;
@@ -502,7 +502,7 @@ fn parse_with_params(
 #[cfg(test)]
 mod test {
     use super::*;
-    use mercurial_types::nodehash;
+    use mercurial::NULL_HASH;
 
     #[test]
     fn test_integer() {
@@ -785,7 +785,7 @@ mod test {
     fn test_nodehash() {
         assert_eq!(
             nodehash(b"0000000000000000000000000000000000000000"),
-            IResult::Done(&b""[..], nodehash::NULL_HASH)
+            IResult::Done(&b""[..], NULL_HASH)
         );
 
         assert_eq!(
@@ -831,10 +831,7 @@ mod test {
     fn test_pair() {
         let p =
             b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
-        assert_eq!(
-            pair(p),
-            IResult::Done(&b""[..], (nodehash::NULL_HASH, nodehash::NULL_HASH))
-        );
+        assert_eq!(pair(p), IResult::Done(&b""[..], (NULL_HASH, NULL_HASH)));
 
         assert_eq!(pair(&p[..80]), IResult::Incomplete(Needed::Size(81)));
 
@@ -852,10 +849,7 @@ mod test {
             pairlist(p),
             IResult::Done(
                 &b""[..],
-                vec![
-                    (nodehash::NULL_HASH, nodehash::NULL_HASH),
-                    (nodehash::NULL_HASH, nodehash::NULL_HASH),
-                ]
+                vec![(NULL_HASH, NULL_HASH), (NULL_HASH, NULL_HASH)]
             )
         );
 
@@ -863,7 +857,7 @@ mod test {
             b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pairlist(p),
-            IResult::Done(&b""[..], vec![(nodehash::NULL_HASH, nodehash::NULL_HASH)])
+            IResult::Done(&b""[..], vec![(NULL_HASH, NULL_HASH)])
         );
 
         let p = b"";
@@ -886,22 +880,11 @@ mod test {
               0000000000000000000000000000000000000000 0000000000000000000000000000000000000000";
         assert_eq!(
             hashlist(p),
-            IResult::Done(
-                &b""[..],
-                vec![
-                    nodehash::NULL_HASH,
-                    nodehash::NULL_HASH,
-                    nodehash::NULL_HASH,
-                    nodehash::NULL_HASH,
-                ]
-            )
+            IResult::Done(&b""[..], vec![NULL_HASH, NULL_HASH, NULL_HASH, NULL_HASH])
         );
 
         let p = b"0000000000000000000000000000000000000000";
-        assert_eq!(
-            hashlist(p),
-            IResult::Done(&b""[..], vec![nodehash::NULL_HASH])
-        );
+        assert_eq!(hashlist(p), IResult::Done(&b""[..], vec![NULL_HASH]));
 
         let p = b"";
         assert_eq!(hashlist(p), IResult::Done(&b""[..], vec![]));

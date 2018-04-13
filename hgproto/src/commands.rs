@@ -24,9 +24,10 @@ use futures::sync::oneshot;
 
 use dechunker::Dechunker;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
+use mercurial::NodeHash;
 use mercurial_bundles::Bundle2Item;
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
-use mercurial_types::{MPath, NodeHash};
+use mercurial_types::MPath;
 use tokio_io::AsyncRead;
 use tokio_io::codec::Decoder;
 

@@ -339,8 +339,10 @@ impl RepoClient {
             ))
         };
 
-        let heads_ancestors = ancestors_stream(&args.heads);
-        let common_ancestors = ancestors_stream(&args.common);
+        let heads_ancestors =
+            ancestors_stream(&args.heads.into_iter().map(|h| h.into_mononoke()).collect());
+        let common_ancestors =
+            ancestors_stream(&args.common.into_iter().map(|h| h.into_mononoke()).collect());
 
         let nodestosend = Box::new(SetDifferenceNodeStream::new(
             hgrepo,
@@ -425,7 +427,11 @@ impl RepoClient {
 
         // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
         // already has can be sent to the client.
-        let basemfnode = params.basemfnodes.get(0).unwrap_or(&NULL_HASH);
+        let basemfnode = params
+            .basemfnodes
+            .get(0)
+            .map(|h| h.into_mononoke())
+            .unwrap_or(NULL_HASH);
 
         if params.rootdir.len() != 0 {
             // For now, only root repo
@@ -443,11 +449,11 @@ impl RepoClient {
 
         // TODO(stash): T25850889 same entries will be generated over and over again.
         // Potentially it can be very inefficient.
-        let changed_entries = params.mfnodes.iter().fold(
+        let changed_entries = params.mfnodes.iter().map(|h| h.into_mononoke()).fold(
             stream::empty().boxify(),
             |cur_stream, manifest_id| {
                 let new_stream =
-                    get_changed_entry_stream(self.repo.hgrepo.clone(), manifest_id, basemfnode);
+                    get_changed_entry_stream(self.repo.hgrepo.clone(), &manifest_id, &basemfnode);
                 cur_stream.select(new_stream).boxify()
             },
         );
@@ -473,7 +479,10 @@ impl RepoClient {
 
 impl HgCommands for RepoClient {
     // @wireprotocommand('between', 'pairs')
-    fn between(&self, pairs: Vec<(NodeHash, NodeHash)>) -> HgCommandRes<Vec<Vec<NodeHash>>> {
+    fn between(
+        &self,
+        pairs: Vec<(mercurial::NodeHash, mercurial::NodeHash)>,
+    ) -> HgCommandRes<Vec<Vec<mercurial::NodeHash>>> {
         info!(self.logger, "between pairs {:?}", pairs);
 
         struct ParentStream<CS> {
@@ -532,29 +541,32 @@ impl HgCommands for RepoClient {
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
         let repo = self.repo.clone();
-        stream::iter_ok(pairs.into_iter())
-            .and_then(move |(top, bottom)| {
-                let mut f = 1;
-                ParentStream::new(&repo, top, bottom)
-                    .enumerate()
-                    .filter(move |&(i, _)| {
-                        if i == f {
-                            f *= 2;
-                            true
-                        } else {
-                            false
-                        }
-                    })
-                    .map(|(_, v)| v)
-                    .collect()
-            })
+        stream::iter_ok(
+            pairs
+                .into_iter()
+                .map(|(h1, h2)| (h1.into_mononoke(), h2.into_mononoke())),
+        ).and_then(move |(top, bottom)| {
+            let mut f = 1;
+            ParentStream::new(&repo, top, bottom)
+                .enumerate()
+                .filter(move |&(i, _)| {
+                    if i == f {
+                        f *= 2;
+                        true
+                    } else {
+                        false
+                    }
+                })
+                .map(|(_, v)| v.into_mercurial())
+                .collect()
+        })
             .collect()
             .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
             .boxify()
     }
 
     // @wireprotocommand('heads')
-    fn heads(&self) -> HgCommandRes<HashSet<NodeHash>> {
+    fn heads(&self) -> HgCommandRes<HashSet<mercurial::NodeHash>> {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
         let logger = self.logger.clone();
@@ -566,7 +578,7 @@ impl HgCommands for RepoClient {
             .get_heads()
             .collect()
             .from_err()
-            .and_then(|v| Ok(v.into_iter().collect()))
+            .and_then(|v| Ok(v.into_iter().map(|h| h.into_mercurial()).collect()))
             .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
             .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
             .boxify()
@@ -611,7 +623,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
-    fn known(&self, nodes: Vec<NodeHash>) -> HgCommandRes<Vec<bool>> {
+    fn known(&self, nodes: Vec<mercurial::NodeHash>) -> HgCommandRes<Vec<bool>> {
         info!(self.logger, "known: {:?}", nodes);
         let hgrepo = self.repo.hgrepo.clone();
         let scuba = self.repo.scuba.clone();
@@ -621,6 +633,7 @@ impl HgCommands for RepoClient {
         future::join_all(
             nodes
                 .into_iter()
+                .map(|h| h.into_mononoke())
                 .map(move |node| hgrepo.changeset_exists(&HgChangesetId::new(node))),
         ).timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
             .boxify()
@@ -731,12 +744,16 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('getfiles', 'files*')
-    fn getfiles(&self, params: BoxStream<(NodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
+    fn getfiles(
+        &self,
+        params: BoxStream<(mercurial::NodeHash, MPath), Error>,
+    ) -> BoxStream<Bytes, Error> {
         let logger = self.logger.clone();
         info!(logger, "getfiles");
         let repo = self.repo.clone();
         let getfiles_buffer_size = 100; // TODO(stash): make it configurable
         params
+            .map(|(node, path)| (node.into_mononoke(), path))
             .map(move |(node, path)| {
                 debug!(logger, "get file request: {:?} {}", path, node);
                 let repo = repo.clone();
