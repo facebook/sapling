@@ -770,7 +770,14 @@ def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
     Hostnames and reporoot will not be nicely MRU ordered
     until the order of insertion is not supported in fileindex
     """
-    pattern = namingmgr.getcommonuserprefix()
+    if sourcehostname and sourcereporoot:
+        pattern = namingmgr.getcommonuserhostreporootprefix(
+            sourcehostname, sourcereporoot)
+    elif sourcehostname:
+        pattern = namingmgr.getcommonuserhostprefix(sourcehostname)
+    else:
+        pattern = namingmgr.getcommonuserprefix()
+
     fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])
     allbackupstates = util.sortdict()
     for book, hexnode in fetchedbookmarks.iteritems():
@@ -821,6 +828,12 @@ def _checkbackupstates(allbackupstates):
             hint=_('set --reporoot to disambiguate'))
 
 class BackupBookmarkNamingManager(object):
+    '''
+    The naming convention is:
+    infinitepush/backups/<unixusername>/<host>/<reporoot>/bookmarks/<name>
+    or:
+    infinitepush/backups/<unixusername>/<host>/<reporoot>/heads/<hash>
+    '''
     def __init__(self, ui, repo, username=None):
         self.ui = ui
         self.repo = repo
@@ -834,6 +847,12 @@ class BackupBookmarkNamingManager(object):
 
     def getcommonuserprefix(self):
         return '/'.join((self._getcommonuserprefix(), '*'))
+
+    def getcommonuserhostprefix(self, host):
+        return '/'.join((self._getcommonuserprefix(), host, '*'))
+
+    def getcommonuserhostreporootprefix(self, host, reporoot):
+        return '/'.join((self._getcommonuserprefix(), host, reporoot, '*'))
 
     def getcommonprefix(self):
         return '/'.join((self._getcommonprefix(), '*'))
