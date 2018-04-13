@@ -152,7 +152,6 @@ class CommitTest(EdenHgTestCase):
         })
         self.assert_dirstate_empty()
 
-    @unittest.skip('TODO: this behavior is currently broken')
     def test_commit_subdirectory(self) -> None:
         self.assert_status_empty()
         self.assert_dirstate_empty()
