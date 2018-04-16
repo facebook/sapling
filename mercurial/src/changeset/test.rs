@@ -12,7 +12,7 @@ use mercurial_types::{HgBlob, MPath};
 
 use blobnode::BlobNode;
 use changeset::{escape, serialize_extras, unescape, Extra, RevlogChangeset, Time};
-use nodehash::{HgManifestId, NodeHash};
+use nodehash::{HgManifestId, HgNodeHash};
 
 use bytes::Bytes;
 
@@ -21,8 +21,8 @@ const CHANGESET_NOEXTRA: &[u8] = include_bytes!("cset_noextra.bin");
 
 #[test]
 fn test_parse() {
-    let csid: NodeHash = "0849d280663e46b3e247857f4a68fabd2ba503c3".parse().unwrap();
-    let p1: NodeHash = "169cb9e47f8e86079ee9fd79972092f78fbf68b1".parse().unwrap();
+    let csid: HgNodeHash = "0849d280663e46b3e247857f4a68fabd2ba503c3".parse().unwrap();
+    let p1: HgNodeHash = "169cb9e47f8e86079ee9fd79972092f78fbf68b1".parse().unwrap();
     let node = BlobNode::new(HgBlob::Dirty(Bytes::from(CHANGESET)), Some(&p1), None);
     let cset = RevlogChangeset::parse(node.clone()).expect("parsed");
 
@@ -54,8 +54,8 @@ the user expected."#.into(),
         }
     );
 
-    let csid: NodeHash = "526722d24ee5b3b860d4060e008219e083488356".parse().unwrap();
-    let p1: NodeHash = "db5eb6a86179ce819db03da9ef2090b32f8e3fc4".parse().unwrap();
+    let csid: HgNodeHash = "526722d24ee5b3b860d4060e008219e083488356".parse().unwrap();
+    let p1: HgNodeHash = "db5eb6a86179ce819db03da9ef2090b32f8e3fc4".parse().unwrap();
     let node = BlobNode::new(
         HgBlob::Dirty(Bytes::from(CHANGESET_NOEXTRA)),
         Some(&p1),
@@ -88,7 +88,7 @@ clean up html code for w3c validation
 
 #[test]
 fn test_generate() {
-    fn test(csid: NodeHash, p1: Option<&NodeHash>, blob: HgBlob, cs: &[u8]) {
+    fn test(csid: HgNodeHash, p1: Option<&HgNodeHash>, blob: HgBlob, cs: &[u8]) {
         let node = BlobNode::new(blob, p1, None);
         let cset = RevlogChangeset::parse(node.clone()).expect("parsed");
 
@@ -101,8 +101,8 @@ fn test_generate() {
         assert_eq!(new, cs);
     }
 
-    let csid: NodeHash = "0849d280663e46b3e247857f4a68fabd2ba503c3".parse().unwrap();
-    let p1: NodeHash = "169cb9e47f8e86079ee9fd79972092f78fbf68b1".parse().unwrap();
+    let csid: HgNodeHash = "0849d280663e46b3e247857f4a68fabd2ba503c3".parse().unwrap();
+    let p1: HgNodeHash = "169cb9e47f8e86079ee9fd79972092f78fbf68b1".parse().unwrap();
     test(
         csid,
         Some(&p1),
@@ -110,8 +110,8 @@ fn test_generate() {
         CHANGESET,
     );
 
-    let csid: NodeHash = "526722d24ee5b3b860d4060e008219e083488356".parse().unwrap();
-    let p1: NodeHash = "db5eb6a86179ce819db03da9ef2090b32f8e3fc4".parse().unwrap();
+    let csid: HgNodeHash = "526722d24ee5b3b860d4060e008219e083488356".parse().unwrap();
+    let p1: HgNodeHash = "db5eb6a86179ce819db03da9ef2090b32f8e3fc4".parse().unwrap();
     test(
         csid,
         Some(&p1),

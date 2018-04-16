@@ -24,7 +24,7 @@ pub use mercurial_types::{delta, HgBlob};
 pub use mercurial_types::bdiff::{self, Delta};
 
 use blobnode::BlobNode;
-use nodehash::{EntryId, NodeHash};
+use nodehash::{EntryId, HgNodeHash};
 
 // Submodules
 mod parser;
@@ -92,8 +92,8 @@ struct RevlogInner {
     header: Header,
     idx: Datafile,
     data: Option<Datafile>,
-    idxoff: BTreeMap<RevIdx, usize>,    // cache of index -> offset
-    nodeidx: HashMap<NodeHash, RevIdx>, // cache of nodeid -> index
+    idxoff: BTreeMap<RevIdx, usize>,      // cache of index -> offset
+    nodeidx: HashMap<HgNodeHash, RevIdx>, // cache of nodeid -> index
 }
 
 impl PartialEq<Self> for Revlog {
@@ -212,7 +212,7 @@ impl Revlog {
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
-    pub fn get_idx_by_nodeid(&self, nodeid: &NodeHash) -> Result<RevIdx> {
+    pub fn get_idx_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<RevIdx> {
         self.inner.get_idx_by_nodeid(nodeid)
     }
 
@@ -236,12 +236,12 @@ impl Revlog {
         self.inner.get_rev(tgtidx)
     }
 
-    pub fn get_rev_by_nodeid(&self, id: &NodeHash) -> Result<BlobNode> {
+    pub fn get_rev_by_nodeid(&self, id: &HgNodeHash) -> Result<BlobNode> {
         self.inner.get_rev_by_nodeid(id)
     }
 
     /// Return the set of head revisions in a revlog
-    pub fn get_heads(&self) -> Result<HashSet<NodeHash>> {
+    pub fn get_heads(&self) -> Result<HashSet<HgNodeHash>> {
         self.inner.get_heads()
     }
 }
@@ -319,14 +319,14 @@ impl RevlogInner {
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
-    fn get_idx_by_nodeid(&self, nodeid: &NodeHash) -> Result<RevIdx> {
+    fn get_idx_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<RevIdx> {
         match self.nodeidx.get(nodeid).cloned() {
             Some(idx) => Ok(idx), // cache hit
             None => Err(ErrorKind::Revlog(format!("nodeid {} not found", nodeid)).into()),
         }
     }
 
-    fn get_entry_by_nodeid(&self, nodeid: &NodeHash) -> Result<Entry> {
+    fn get_entry_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<Entry> {
         self.get_idx_by_nodeid(nodeid)
             .and_then(|idx| self.get_entry(idx))
     }
@@ -521,7 +521,7 @@ impl RevlogInner {
         self.make_node(&entry, HgBlob::from(Bytes::from(data)))
     }
 
-    fn get_rev_by_nodeid(&self, id: &NodeHash) -> Result<BlobNode> {
+    fn get_rev_by_nodeid(&self, id: &HgNodeHash) -> Result<BlobNode> {
         self.get_idx_by_nodeid(&id).and_then(move |idx| {
             self.get_rev(idx)
                 .with_context(|_| format!("can't get rev for id {}", id))
@@ -530,7 +530,7 @@ impl RevlogInner {
     }
 
     /// Return the set of head revisions in a revlog
-    fn get_heads(&self) -> Result<HashSet<NodeHash>> {
+    fn get_heads(&self) -> Result<HashSet<HgNodeHash>> {
         // Current set of candidate heads
         let mut heads = HashMap::new();
 

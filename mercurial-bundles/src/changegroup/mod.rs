@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial::NodeHash;
+use mercurial::HgNodeHash;
 use mercurial_types::{Delta, MPath};
 
 pub mod packer;
@@ -35,11 +35,11 @@ impl Part {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CgDeltaChunk {
-    pub node: NodeHash,
-    pub p1: NodeHash,
-    pub p2: NodeHash,
-    pub base: NodeHash,
-    pub linknode: NodeHash,
+    pub node: HgNodeHash,
+    pub p1: HgNodeHash,
+    pub p2: HgNodeHash,
+    pub base: HgNodeHash,
+    pub linknode: HgNodeHash,
     pub delta: Delta,
 }
 

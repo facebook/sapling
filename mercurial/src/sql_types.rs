@@ -14,7 +14,7 @@ use diesel::serialize::{self, IsNull, Output, ToSql};
 use diesel::sql_types::Binary;
 
 use errors::*;
-use nodehash::{HgChangesetId, HgManifestId, NodeHash};
+use nodehash::{HgChangesetId, HgManifestId, HgNodeHash};
 
 #[derive(QueryId, SqlType)]
 #[mysql_type = "Blob"]
@@ -41,7 +41,7 @@ where
         // Using unsafe here saves on a heap allocation. See https://goo.gl/K6hapb.
         let raw_bytes: *const [u8] = FromSql::<Binary, DB>::from_sql(bytes)?;
         let raw_bytes: &[u8] = unsafe { &*raw_bytes };
-        let hash = NodeHash::from_bytes(raw_bytes).compat()?;
+        let hash = HgNodeHash::from_bytes(raw_bytes).compat()?;
         Ok(Self::new(hash))
     }
 }
@@ -61,7 +61,7 @@ where
         // Using unsafe here saves on a heap allocation. See https://goo.gl/K6hapb.
         let raw_bytes: *const [u8] = FromSql::<Binary, DB>::from_sql(bytes)?;
         let raw_bytes: &[u8] = unsafe { &*raw_bytes };
-        let hash = NodeHash::from_bytes(raw_bytes).compat()?;
+        let hash = HgNodeHash::from_bytes(raw_bytes).compat()?;
         Ok(Self::new(hash))
     }
 }

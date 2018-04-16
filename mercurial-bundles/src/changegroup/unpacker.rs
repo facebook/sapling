@@ -191,11 +191,11 @@ impl Cg2Unpacker {
 
         // A chunk header has:
         // ---
-        // node: NodeHash (20 bytes)
-        // p1: NodeHash (20 bytes)
-        // p2: NodeHash (20 bytes) -- NULL_HASH if only 1 parent
-        // base node: NodeHash (20 bytes) (new in changegroup2)
-        // link node: NodeHash (20 bytes)
+        // node: HgNodeHash (20 bytes)
+        // p1: HgNodeHash (20 bytes)
+        // p2: HgNodeHash (20 bytes) -- NULL_HASH if only 1 parent
+        // base node: HgNodeHash (20 bytes) (new in changegroup2)
+        // link node: HgNodeHash (20 bytes)
         // ---
 
         let node = buf.drain_node();

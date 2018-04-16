@@ -8,7 +8,7 @@
 
 use quickcheck::{Arbitrary, Gen};
 
-use mercurial::{NodeHash, NULL_HASH};
+use mercurial::{HgNodeHash, NULL_HASH};
 use mercurial_types::{Delta, MPath, RepoPath};
 
 use super::{DataEntry, HistoryEntry, Kind};
@@ -114,10 +114,10 @@ impl HistoryEntry {
             Kind::Tree => None,
         };
         Self {
-            node: NodeHash::arbitrary(g),
-            p1: NodeHash::arbitrary(g),
-            p2: NodeHash::arbitrary(g),
-            linknode: NodeHash::arbitrary(g),
+            node: HgNodeHash::arbitrary(g),
+            p1: HgNodeHash::arbitrary(g),
+            p2: HgNodeHash::arbitrary(g),
+            linknode: HgNodeHash::arbitrary(g),
             copy_from: copy_from,
         }
     }
@@ -140,12 +140,12 @@ impl Arbitrary for DataEntry {
         } else {
             let mut delta_base = NULL_HASH;
             while delta_base == NULL_HASH {
-                delta_base = NodeHash::arbitrary(g);
+                delta_base = HgNodeHash::arbitrary(g);
             }
             (delta_base, Delta::arbitrary(g))
         };
         Self {
-            node: NodeHash::arbitrary(g),
+            node: HgNodeHash::arbitrary(g),
             delta_base,
             delta,
         }

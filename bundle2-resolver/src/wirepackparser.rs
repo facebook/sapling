@@ -14,7 +14,7 @@ use futures::future::Shared;
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::{BlobEntry, BlobRepo};
-use mercurial;
+use mercurial::{self, HgNodeHash};
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
@@ -60,8 +60,8 @@ where
 pub struct TreemanifestEntry {
     pub node_key: mercurial::HgNodeKey,
     pub data: Bytes,
-    pub p1: Option<mercurial::NodeHash>,
-    pub p2: Option<mercurial::NodeHash>,
+    pub p1: Option<HgNodeHash>,
+    pub p2: Option<HgNodeHash>,
     pub manifest_content: ManifestContent,
 }
 
@@ -69,8 +69,8 @@ impl TreemanifestEntry {
     fn new(
         node_key: mercurial::HgNodeKey,
         data: Bytes,
-        p1: mercurial::NodeHash,
-        p2: mercurial::NodeHash,
+        p1: HgNodeHash,
+        p2: HgNodeHash,
     ) -> Result<Self> {
         let manifest_content = ManifestContent::parse(data.as_ref())?;
 
@@ -114,9 +114,9 @@ impl UploadableHgBlob for TreemanifestEntry {
 }
 
 struct TreemanifestPartProcessor {
-    node: Option<mercurial::NodeHash>,
-    p1: Option<mercurial::NodeHash>,
-    p2: Option<mercurial::NodeHash>,
+    node: Option<HgNodeHash>,
+    p1: Option<HgNodeHash>,
+    p2: Option<HgNodeHash>,
     path: Option<RepoPath>,
 }
 

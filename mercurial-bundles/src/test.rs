@@ -20,7 +20,7 @@ use tokio_io::AsyncRead;
 
 use async_compression::{Bzip2Compression, CompressorType, FlateCompression};
 use async_compression::membuf::MemBuf;
-use mercurial::{NodeHash, NULL_HASH};
+use mercurial::{HgNodeHash, NULL_HASH};
 use mercurial_types::{MPath, RepoPath};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
 use quickcheck::{QuickCheck, StdGen};
@@ -253,7 +253,7 @@ fn verify_cg2(core: &mut Core, stream: BoxStream<changegroup::Part, Error>) {
     let chunk = res.chunk();
 
     // Verify that changesets parsed correctly.
-    let changeset1_hash = NodeHash::from_str(CHANGESET1_HASH_STR).unwrap();
+    let changeset1_hash = HgNodeHash::from_str(CHANGESET1_HASH_STR).unwrap();
     assert_eq!(chunk.node, changeset1_hash);
     assert_eq!(chunk.p1, NULL_HASH);
     assert_eq!(chunk.p2, NULL_HASH);
@@ -271,7 +271,7 @@ fn verify_cg2(core: &mut Core, stream: BoxStream<changegroup::Part, Error>) {
     assert_eq!(*res.section(), changegroup::Section::Changeset);
     let chunk = res.chunk();
 
-    let changeset2_hash = NodeHash::from_str(CHANGESET2_HASH_STR).unwrap();
+    let changeset2_hash = HgNodeHash::from_str(CHANGESET2_HASH_STR).unwrap();
     assert_eq!(chunk.node, changeset2_hash);
     assert_eq!(chunk.p1, changeset1_hash);
     assert_eq!(chunk.p2, NULL_HASH);
@@ -298,7 +298,7 @@ fn verify_cg2(core: &mut Core, stream: BoxStream<changegroup::Part, Error>) {
     assert_eq!(*res.section(), changegroup::Section::Manifest);
     let chunk = res.chunk();
 
-    let manifest1_hash = NodeHash::from_str(MANIFEST1_HASH_STR).unwrap();
+    let manifest1_hash = HgNodeHash::from_str(MANIFEST1_HASH_STR).unwrap();
     assert_eq!(chunk.node, manifest1_hash);
     assert_eq!(chunk.p1, NULL_HASH);
     assert_eq!(chunk.p2, NULL_HASH);
@@ -311,7 +311,7 @@ fn verify_cg2(core: &mut Core, stream: BoxStream<changegroup::Part, Error>) {
     assert_eq!(*res.section(), changegroup::Section::Manifest);
     let chunk = res.chunk();
 
-    let manifest2_hash = NodeHash::from_str(MANIFEST2_HASH_STR).unwrap();
+    let manifest2_hash = HgNodeHash::from_str(MANIFEST2_HASH_STR).unwrap();
     assert_eq!(chunk.node, manifest2_hash);
     assert_eq!(chunk.p1, manifest1_hash);
     assert_eq!(chunk.p2, NULL_HASH);
@@ -333,7 +333,7 @@ fn verify_cg2(core: &mut Core, stream: BoxStream<changegroup::Part, Error>) {
     assert_eq!(*res.section(), changegroup::Section::Filelog(path(b"abc")));
     let chunk = res.chunk();
 
-    let abch = NodeHash::from_str(ABC_HASH_STR).unwrap();
+    let abch = HgNodeHash::from_str(ABC_HASH_STR).unwrap();
     assert_eq!(chunk.node, abch);
     assert_eq!(chunk.p1, NULL_HASH);
     assert_eq!(chunk.p2, NULL_HASH);
@@ -354,7 +354,7 @@ fn verify_cg2(core: &mut Core, stream: BoxStream<changegroup::Part, Error>) {
     assert_eq!(*res.section(), changegroup::Section::Filelog(path(b"def")));
     let chunk = res.chunk();
 
-    let defh = NodeHash::from_str(DEF_HASH_STR).unwrap();
+    let defh = HgNodeHash::from_str(DEF_HASH_STR).unwrap();
     assert_eq!(chunk.node, defh);
     assert_eq!(chunk.p1, NULL_HASH);
     assert_eq!(chunk.p2, NULL_HASH);
@@ -428,9 +428,9 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
 
     // These are a few identifiers present in the bundle.
     let baz_dir = RepoPath::dir("baz").unwrap();
-    let baz_hash = NodeHash::from_str("dcb9fa4bb7cdb673cd5752088b48d4c3f9c1fc23").unwrap();
-    let root_hash = NodeHash::from_str("7d315c7a04cce5404f7ef16bf55eb7f4e90d159f").unwrap();
-    let root_p1 = NodeHash::from_str("e313fc172615835d205f5881f8f34dd9bb0f0092").unwrap();
+    let baz_hash = HgNodeHash::from_str("dcb9fa4bb7cdb673cd5752088b48d4c3f9c1fc23").unwrap();
+    let root_hash = HgNodeHash::from_str("7d315c7a04cce5404f7ef16bf55eb7f4e90d159f").unwrap();
+    let root_p1 = HgNodeHash::from_str("e313fc172615835d205f5881f8f34dd9bb0f0092").unwrap();
 
     let (res, wirepacks) = core.next_stream(wirepacks);
     let res = res.expect("expected part");

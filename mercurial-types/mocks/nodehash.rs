@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-// Ignore deprecation of NodeHash::new
+// Ignore deprecation of HgNodeHash::new
 #![allow(deprecated)]
 
 use mercurial_types::{DChangesetId, DFileNodeId, DManifestId, DNodeHash};

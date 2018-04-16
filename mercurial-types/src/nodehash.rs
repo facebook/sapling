@@ -24,9 +24,9 @@ pub const NULL_CSID: DChangesetId = DChangesetId(D_NULL_HASH);
 
 /// This structure represents Sha1 based hashes that are used in Mononoke. It is a temporary
 /// structure that will be entirely replaced by structures from mononoke-types::typed_hash.
-/// It's current distinction from mercurial::NodeHash serves two purposes:
+/// It's current distinction from HgNodeHash serves two purposes:
 /// - make it relatively straightforward to replace it in future with typed_hash
-/// - easily distinguish between the NodeHash values provided by Mercurial client that might
+/// - easily distinguish between the HgNodeHash values provided by Mercurial client that might
 ///   require remapping, f.e. hashes of Changeset and hashes of Root Manifests since the client
 ///   provides Flat Manifest hashes as aliases for Root Manifest hashes
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -35,7 +35,7 @@ pub struct DNodeHash(pub(crate) Sha1);
 
 impl DNodeHash {
     #[deprecated(note = "This constructor is only used in two places: \
-                         conversion from mercurial NodeHash and creation of NodeHash mocks")]
+                         conversion from mercurial HgNodeHash and creation of HgNodeHash mocks")]
     pub const fn new(sha1: Sha1) -> Self {
         DNodeHash(sha1)
     }
@@ -63,7 +63,7 @@ impl DNodeHash {
     }
 
     #[deprecated(note = "This method is used only to have a \
-                         zero-cost conversion to mercurial::NodeHash")]
+                         zero-cost conversion to HgNodeHash")]
     pub fn into_sha1(self) -> Sha1 {
         self.0
     }

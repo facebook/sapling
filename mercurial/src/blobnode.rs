@@ -7,18 +7,18 @@
 use mercurial_types::HgBlob;
 use mercurial_types::hash::{self, Context};
 
-use nodehash::NodeHash;
+use nodehash::HgNodeHash;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
 pub enum Parents {
     None,
-    One(NodeHash),
-    Two(NodeHash, NodeHash),
+    One(HgNodeHash),
+    Two(HgNodeHash, HgNodeHash),
 }
 
 impl Parents {
-    pub fn new(p1: Option<&NodeHash>, p2: Option<&NodeHash>) -> Self {
+    pub fn new(p1: Option<&HgNodeHash>, p2: Option<&HgNodeHash>) -> Self {
         match (p1, p2) {
             (None, None) => Parents::None,
             (Some(p1), None) => Parents::One(*p1),
@@ -28,7 +28,7 @@ impl Parents {
         }
     }
 
-    pub fn get_nodes(&self) -> (Option<&NodeHash>, Option<&NodeHash>) {
+    pub fn get_nodes(&self) -> (Option<&HgNodeHash>, Option<&HgNodeHash>) {
         match self {
             &Parents::None => (None, None),
             &Parents::One(ref p1) => (Some(p1), None),
@@ -39,7 +39,7 @@ impl Parents {
 
 impl<'a> IntoIterator for &'a Parents {
     type IntoIter = ParentIter;
-    type Item = NodeHash;
+    type Item = HgNodeHash;
     fn into_iter(self) -> ParentIter {
         ParentIter(*self)
     }
@@ -49,7 +49,7 @@ impl<'a> IntoIterator for &'a Parents {
 pub struct ParentIter(Parents);
 
 impl Iterator for ParentIter {
-    type Item = NodeHash;
+    type Item = HgNodeHash;
     fn next(&mut self) -> Option<Self::Item> {
         let (ret, new) = match self.0 {
             Parents::None => (None, Parents::None),
@@ -81,7 +81,7 @@ impl BlobNode {
     ///   parent that's copied.
     /// * If both p1 and p2 are None, it shouldn't really be possible to have copy info. But
     ///   the Mercurial Python client tries to parse metadata anyway, so match that behavior.
-    pub fn new<B>(blob: B, p1: Option<&NodeHash>, p2: Option<&NodeHash>) -> BlobNode
+    pub fn new<B>(blob: B, p1: Option<&HgNodeHash>, p2: Option<&HgNodeHash>) -> BlobNode
     where
         B: Into<HgBlob>,
     {
@@ -112,7 +112,7 @@ impl BlobNode {
     // Annoyingly, filenode is defined as sha1(p1 || p2 || content), not
     // sha1(p1 || p2 || sha1(content)), so we can't compute a filenode for
     // a blob we don't have
-    pub fn nodeid(&self) -> Option<NodeHash> {
+    pub fn nodeid(&self) -> Option<HgNodeHash> {
         let null = hash::NULL;
 
         let (h1, h2) = match &self.parents {
@@ -129,7 +129,7 @@ impl BlobNode {
             ctxt.update(h2);
             ctxt.update(data);
 
-            NodeHash(ctxt.finish())
+            HgNodeHash(ctxt.finish())
         })
     }
 }
@@ -153,19 +153,19 @@ mod test {
         let p = &BlobNode::new(blob.clone(), None, None);
         assert!(p.maybe_copied);
         {
-            let pid: Option<NodeHash> = p.nodeid();
+            let pid: Option<HgNodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), pid.as_ref(), None);
             assert_eq!(n.parents, Parents::One(pid.unwrap()));
             assert!(!n.maybe_copied);
         }
         {
-            let pid: Option<NodeHash> = p.nodeid();
+            let pid: Option<HgNodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), None, pid.as_ref());
             assert_eq!(n.parents, Parents::One(pid.unwrap()));
             assert!(n.maybe_copied);
         }
         {
-            let pid: Option<NodeHash> = p.nodeid();
+            let pid: Option<HgNodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
             assert_eq!(n.parents, Parents::One(pid.unwrap()));
             assert!(!n.maybe_copied);
@@ -184,8 +184,8 @@ mod test {
             mem::swap(&mut p1, &mut p2);
         }
 
-        let pid1: Option<NodeHash> = (&p1).nodeid();
-        let pid2: Option<NodeHash> = (&p2).nodeid();
+        let pid1: Option<HgNodeHash> = (&p1).nodeid();
+        let pid2: Option<HgNodeHash> = (&p2).nodeid();
 
         let node1 = {
             let n = BlobNode::new(

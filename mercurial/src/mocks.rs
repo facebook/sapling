@@ -6,21 +6,21 @@
 
 use mercurial_types_mocks::hash;
 
-use nodehash::NodeHash;
+use nodehash::HgNodeHash;
 
 // Definitions for hashes 1111...ffff.
-pub const ONES_HASH: NodeHash = NodeHash(hash::ONES);
-pub const TWOS_HASH: NodeHash = NodeHash(hash::TWOS);
-pub const THREES_HASH: NodeHash = NodeHash(hash::THREES);
-pub const FOURS_HASH: NodeHash = NodeHash(hash::FOURS);
-pub const FIVES_HASH: NodeHash = NodeHash(hash::FIVES);
-pub const SIXES_HASH: NodeHash = NodeHash(hash::SIXES);
-pub const SEVENS_HASH: NodeHash = NodeHash(hash::SEVENS);
-pub const EIGHTS_HASH: NodeHash = NodeHash(hash::EIGHTS);
-pub const NINES_HASH: NodeHash = NodeHash(hash::NINES);
-pub const AS_HASH: NodeHash = NodeHash(hash::AS);
-pub const BS_HASH: NodeHash = NodeHash(hash::BS);
-pub const CS_HASH: NodeHash = NodeHash(hash::CS);
-pub const DS_HASH: NodeHash = NodeHash(hash::DS);
-pub const ES_HASH: NodeHash = NodeHash(hash::ES);
-pub const FS_HASH: NodeHash = NodeHash(hash::FS);
+pub const ONES_HASH: HgNodeHash = HgNodeHash(hash::ONES);
+pub const TWOS_HASH: HgNodeHash = HgNodeHash(hash::TWOS);
+pub const THREES_HASH: HgNodeHash = HgNodeHash(hash::THREES);
+pub const FOURS_HASH: HgNodeHash = HgNodeHash(hash::FOURS);
+pub const FIVES_HASH: HgNodeHash = HgNodeHash(hash::FIVES);
+pub const SIXES_HASH: HgNodeHash = HgNodeHash(hash::SIXES);
+pub const SEVENS_HASH: HgNodeHash = HgNodeHash(hash::SEVENS);
+pub const EIGHTS_HASH: HgNodeHash = HgNodeHash(hash::EIGHTS);
+pub const NINES_HASH: HgNodeHash = HgNodeHash(hash::NINES);
+pub const AS_HASH: HgNodeHash = HgNodeHash(hash::AS);
+pub const BS_HASH: HgNodeHash = HgNodeHash(hash::BS);
+pub const CS_HASH: HgNodeHash = HgNodeHash(hash::CS);
+pub const DS_HASH: HgNodeHash = HgNodeHash(hash::DS);
+pub const ES_HASH: HgNodeHash = HgNodeHash(hash::ES);
+pub const FS_HASH: HgNodeHash = HgNodeHash(hash::FS);

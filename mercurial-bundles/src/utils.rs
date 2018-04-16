@@ -13,7 +13,7 @@ use byteorder::{BigEndian, ByteOrder};
 use bytes::{Bytes, BytesMut};
 
 use async_compression::{CompressorType, DecompressorType};
-use mercurial::NodeHash;
+use mercurial::HgNodeHash;
 use mercurial_types::MPath;
 
 use errors::*;
@@ -44,7 +44,7 @@ pub trait BytesExt {
     fn drain_i32(&mut self) -> i32;
     fn drain_str(&mut self, len: usize) -> Result<String>;
     fn drain_path(&mut self, len: usize) -> Result<MPath>;
-    fn drain_node(&mut self) -> NodeHash;
+    fn drain_node(&mut self) -> HgNodeHash;
     fn peek_u16(&self) -> u16;
     fn peek_u32(&self) -> u32;
     fn peek_i32(&self) -> i32;
@@ -94,10 +94,10 @@ where
     }
 
     #[inline]
-    fn drain_node(&mut self) -> NodeHash {
+    fn drain_node(&mut self) -> HgNodeHash {
         // This only fails if the size of input passed in isn't 20
         // bytes. drain_to would have panicked in that case anyway.
-        NodeHash::from_bytes(self.split_to(20).as_ref()).unwrap()
+        HgNodeHash::from_bytes(self.split_to(20).as_ref()).unwrap()
     }
 
     #[inline]

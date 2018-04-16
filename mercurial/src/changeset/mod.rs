@@ -15,7 +15,7 @@ use mercurial_types::MPath;
 use mercurial_types::changeset::Time;
 
 use blobnode::{BlobNode, Parents};
-use nodehash::{HgManifestId, NodeHash, NULL_HASH};
+use nodehash::{HgManifestId, HgNodeHash, NULL_HASH};
 
 #[cfg(test)]
 mod test;
@@ -242,7 +242,7 @@ impl RevlogChangeset {
                 .ok_or(failure::err_msg("node has no data"))?;
             let mut lines = data.split(|b| *b == b'\n');
 
-            let nodehash = parseline(&mut lines, |l| NodeHash::from_str(str::from_utf8(l)?))
+            let nodehash = parseline(&mut lines, |l| HgNodeHash::from_str(str::from_utf8(l)?))
                 .context("can't get hash")?;
             ret.manifestid = HgManifestId::new(nodehash);
             ret.user =

@@ -11,7 +11,7 @@ use std::str::{self, FromStr};
 use bytes::{Bytes, BytesMut};
 use nom::{is_alphanumeric, is_digit, ErrorKind, FindSubstring, IResult, Needed, Slice};
 
-use mercurial::NodeHash;
+use HgNodeHash;
 
 use {GetbundleArgs, GettreepackArgs, Request, SingleRequest};
 use batch;
@@ -166,25 +166,25 @@ named_args!(batch_params(_count: usize)<HashMap<Vec<u8>, Vec<u8>>>,
 
 /// A nodehash is simply 40 hex digits.
 named!(
-    nodehash<NodeHash>,
+    nodehash<HgNodeHash>,
     map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
 );
 
 /// A pair of nodehashes, separated by '-'
 named!(
-    pair<(NodeHash, NodeHash)>,
+    pair<(HgNodeHash, HgNodeHash)>,
     do_parse!(a: nodehash >> tag!("-") >> b: nodehash >> ((a, b)))
 );
 
 /// A space-separated list of pairs.
 named!(
-    pairlist<Vec<(NodeHash, NodeHash)>>,
+    pairlist<Vec<(HgNodeHash, HgNodeHash)>>,
     separated_list_complete!(tag!(" "), pair)
 );
 
 /// A space-separated list of node hashes
 named!(
-    hashlist<Vec<NodeHash>>,
+    hashlist<Vec<HgNodeHash>>,
     separated_list_complete!(tag!(" "), nodehash)
 );
 
@@ -972,19 +972,19 @@ mod test_parse {
     use super::*;
     use std::fmt::Debug;
 
-    fn hash_ones() -> NodeHash {
+    fn hash_ones() -> HgNodeHash {
         "1111111111111111111111111111111111111111".parse().unwrap()
     }
 
-    fn hash_twos() -> NodeHash {
+    fn hash_twos() -> HgNodeHash {
         "2222222222222222222222222222222222222222".parse().unwrap()
     }
 
-    fn hash_threes() -> NodeHash {
+    fn hash_threes() -> HgNodeHash {
         "3333333333333333333333333333333333333333".parse().unwrap()
     }
 
-    fn hash_fours() -> NodeHash {
+    fn hash_fours() -> HgNodeHash {
         "4444444444444444444444444444444444444444".parse().unwrap()
     }
 

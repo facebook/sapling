@@ -27,7 +27,7 @@
 //!
 //! Changesets, manifests and files are uniformly represented by a `Node`. A `Node` has
 //! 0-2 parents and some content. A node's identity is computed by hashing over (p1, p2, content),
-//! resulting in `NodeHash` (TODO: rename NodeHash -> NodeId?). This means manifests and files
+//! resulting in `HgNodeHash` (TODO: rename HgNodeHash -> NodeId?). This means manifests and files
 //! have a notion of history independent of the changeset(s) they're embedded in.
 //!
 //! Nodes are stored as blobs in the blobstore, but with their content in a separate blob. This

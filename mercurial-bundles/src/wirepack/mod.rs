@@ -11,7 +11,7 @@ use std::fmt;
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, BytesMut};
 
-use mercurial::{NodeHash, NULL_HASH};
+use mercurial::{HgNodeHash, NULL_HASH};
 use mercurial_types::{Delta, RepoPath};
 
 use delta;
@@ -96,11 +96,11 @@ const DATA_HEADER_SIZE: usize = DATA_DELTA_OFFSET + 8;
 // TODO: move to mercurial-types
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HistoryEntry {
-    pub node: NodeHash,
+    pub node: HgNodeHash,
     // TODO: replace with Parents?
-    pub p1: NodeHash,
-    pub p2: NodeHash,
-    pub linknode: NodeHash,
+    pub p1: HgNodeHash,
+    pub p2: HgNodeHash,
+    pub linknode: HgNodeHash,
     pub copy_from: Option<RepoPath>,
 }
 
@@ -112,10 +112,10 @@ impl HistoryEntry {
 
         // A history revision has:
         // ---
-        // node: NodeHash (20 bytes)
-        // p1: NodeHash (20 bytes)
-        // p2: NodeHash (20 bytes)
-        // link node: NodeHash (20 bytes)
+        // node: HgNodeHash (20 bytes)
+        // p1: HgNodeHash (20 bytes)
+        // p2: HgNodeHash (20 bytes)
+        // link node: HgNodeHash (20 bytes)
         // copy from len: u16 (2 bytes) -- 0 if this revision is not a copy
         // copy from: RepoPath (<copy from len> bytes)
         // ---
@@ -218,8 +218,8 @@ impl HistoryEntry {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DataEntry {
-    pub node: NodeHash,
-    pub delta_base: NodeHash,
+    pub node: HgNodeHash,
+    pub delta_base: HgNodeHash,
     pub delta: Delta,
 }
 
@@ -231,8 +231,8 @@ impl DataEntry {
 
         // A data revision has:
         // ---
-        // node: NodeHash (20 bytes)
-        // delta base: NodeHash (20 bytes) -- NULL_HASH if full text
+        // node: HgNodeHash (20 bytes)
+        // delta base: HgNodeHash (20 bytes) -- NULL_HASH if full text
         // delta len: u64 (8 bytes)
         // delta: Delta (<delta len> bytes)
         // ---

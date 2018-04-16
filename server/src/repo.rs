@@ -35,7 +35,7 @@ use slog_scuba::ScubaDrain;
 
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
-use mercurial::{self, NodeHashConversion, RevlogChangeset};
+use mercurial::{self, HgNodeHash, NodeHashConversion, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, Changeset, DChangesetId, DManifestId, DNodeHash, DParents,
                       Entry, MPath, RepoPath, RepositoryId, Type, D_NULL_HASH};
@@ -486,10 +486,7 @@ impl RepoClient {
 
 impl HgCommands for RepoClient {
     // @wireprotocommand('between', 'pairs')
-    fn between(
-        &self,
-        pairs: Vec<(mercurial::NodeHash, mercurial::NodeHash)>,
-    ) -> HgCommandRes<Vec<Vec<mercurial::NodeHash>>> {
+    fn between(&self, pairs: Vec<(HgNodeHash, HgNodeHash)>) -> HgCommandRes<Vec<Vec<HgNodeHash>>> {
         info!(self.logger, "between pairs {:?}", pairs);
 
         struct ParentStream<CS> {
@@ -573,7 +570,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('heads')
-    fn heads(&self) -> HgCommandRes<HashSet<mercurial::NodeHash>> {
+    fn heads(&self) -> HgCommandRes<HashSet<HgNodeHash>> {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
         let logger = self.logger.clone();
@@ -599,7 +596,7 @@ impl HgCommands for RepoClient {
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::LOOKUP);
         let remote = self.repo.remote.clone();
-        mercurial::NodeHash::from_str(&key)
+        HgNodeHash::from_str(&key)
             .into_future()
             .map(|h| (h, h.into_mononoke()))
             .and_then(move |(mercurial_node, node)| {
@@ -630,7 +627,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
-    fn known(&self, nodes: Vec<mercurial::NodeHash>) -> HgCommandRes<Vec<bool>> {
+    fn known(&self, nodes: Vec<HgNodeHash>) -> HgCommandRes<Vec<bool>> {
         info!(self.logger, "known: {:?}", nodes);
         let hgrepo = self.repo.hgrepo.clone();
         let scuba = self.repo.scuba.clone();
@@ -751,10 +748,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('getfiles', 'files*')
-    fn getfiles(
-        &self,
-        params: BoxStream<(mercurial::NodeHash, MPath), Error>,
-    ) -> BoxStream<Bytes, Error> {
+    fn getfiles(&self, params: BoxStream<(HgNodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
         let logger = self.logger.clone();
         info!(logger, "getfiles");
         let repo = self.repo.clone();

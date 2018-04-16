@@ -22,7 +22,7 @@ use filenodes::FilenodeInfo;
 use futures::sync::mpsc::UnboundedSender;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heads::Heads;
-use mercurial::{self, RevlogManifest, RevlogRepo};
+use mercurial::{self, HgNodeHash, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
 use mercurial_types::{DBlobNode, DFileNodeId, HgBlob, RepoPath, RepositoryId};
@@ -59,19 +59,18 @@ where
         let skip = self.skip;
         let commits_limit = self.commits_limit;
 
-        let changesets: BoxStream<mercurial::NodeHash, mercurial::Error> = if let Some(skip) = skip
-        {
+        let changesets: BoxStream<HgNodeHash, mercurial::Error> = if let Some(skip) = skip {
             self.repo.changesets().skip(skip).boxify()
         } else {
             self.repo.changesets().boxify()
         };
 
-        let changesets: BoxStream<mercurial::NodeHash, mercurial::Error> =
-            if let Some(limit) = commits_limit {
-                changesets.take(limit).boxify()
-            } else {
-                changesets.boxify()
-            };
+        let changesets: BoxStream<HgNodeHash, mercurial::Error> = if let Some(limit) = commits_limit
+        {
+            changesets.take(limit).boxify()
+        } else {
+            changesets.boxify()
+        };
 
         // Generate stream of changesets. For each changeset, save the cs blob, and the manifest
         // blob, and the files.
@@ -148,13 +147,12 @@ where
             .boxify()
     }
 
-    fn get_changesets_stream(&self) -> BoxStream<mercurial::NodeHash, mercurial::Error> {
-        let changesets: BoxStream<mercurial::NodeHash, mercurial::Error> =
-            if let Some(skip) = self.skip {
-                self.repo.changesets().skip(skip).boxify()
-            } else {
-                self.repo.changesets().boxify()
-            };
+    fn get_changesets_stream(&self) -> BoxStream<HgNodeHash, mercurial::Error> {
+        let changesets: BoxStream<HgNodeHash, mercurial::Error> = if let Some(skip) = self.skip {
+            self.repo.changesets().skip(skip).boxify()
+        } else {
+            self.repo.changesets().boxify()
+        };
 
         if let Some(limit) = self.commits_limit {
             changesets.take(limit).boxify()
@@ -231,7 +229,7 @@ fn put_blobs(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
     filenodes: UnboundedSender<FilenodeInfo>,
-    mfid: mercurial::NodeHash,
+    mfid: HgNodeHash,
     linkrev: RevIdx,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static {
     let cs_entry_fut = revlog_repo
@@ -317,10 +315,10 @@ fn put_blobs(
 
 fn create_filenode(
     blob: HgBlob,
-    filenode_hash: mercurial::NodeHash,
+    filenode_hash: HgNodeHash,
     parents: mercurial::Parents,
     repopath: RepoPath,
-    linknode: mercurial::NodeHash,
+    linknode: HgNodeHash,
 ) -> FilenodeInfo {
     let (p1, p2) = parents.get_nodes();
     let p1 = p1.map(|p| p.into_mononoke());

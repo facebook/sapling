@@ -8,7 +8,7 @@ use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 
 use bytes::Bytes;
-use mercurial::{BlobNode, NodeHash, NULL_HASH};
+use mercurial::{BlobNode, HgNodeHash, NULL_HASH};
 use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, HgBlob};
@@ -20,7 +20,9 @@ pub struct ChangesetDeltaed {
     pub chunk: CgDeltaChunk,
 }
 
-pub fn convert_to_revlog_changesets<S>(deltaed: S) -> BoxStream<(NodeHash, RevlogChangeset), Error>
+pub fn convert_to_revlog_changesets<S>(
+    deltaed: S,
+) -> BoxStream<(HgNodeHash, RevlogChangeset), Error>
 where
     S: Stream<Item = ChangesetDeltaed, Error = Error> + Send + 'static,
 {
@@ -67,11 +69,11 @@ mod tests {
     use self::CheckResult::*;
 
     fn check_null_changeset(
-        node: NodeHash,
-        linknode: NodeHash,
-        base: NodeHash,
-        p1: NodeHash,
-        p2: NodeHash,
+        node: HgNodeHash,
+        linknode: HgNodeHash,
+        base: HgNodeHash,
+        p1: HgNodeHash,
+        p2: HgNodeHash,
     ) -> CheckResult {
         let blobnode = BlobNode::new(
             RevlogChangeset::new_null()
@@ -108,11 +110,11 @@ mod tests {
 
     quickcheck!{
         fn null_changeset_random(
-            node: NodeHash,
-            linknode: NodeHash,
-            base: NodeHash,
-            p1: NodeHash,
-            p2: NodeHash
+            node: HgNodeHash,
+            linknode: HgNodeHash,
+            base: HgNodeHash,
+            p1: HgNodeHash,
+            p2: HgNodeHash
         ) -> bool {
             match check_null_changeset(node, linknode, base, p1, p2) {
                 ExpectedOk(true) | ExpectedErr(true) => true,
@@ -120,7 +122,7 @@ mod tests {
             }
         }
 
-        fn null_changeset_correct(node: NodeHash, p1: NodeHash, p2: NodeHash) -> bool {
+        fn null_changeset_correct(node: HgNodeHash, p1: HgNodeHash, p2: HgNodeHash) -> bool {
             match check_null_changeset(node.clone(), node, NULL_HASH, p1, p2) {
                 ExpectedOk(true) => true,
                 _ => false

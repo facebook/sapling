@@ -21,7 +21,7 @@ use mercurial_types::{FileType, HgBlob, MPath, MPathElement, RepoPath};
 use mercurial_types::manifest::Type;
 
 use blobnode::{BlobNode, Parents};
-use nodehash::{EntryId, NodeHash};
+use nodehash::{EntryId, HgNodeHash};
 
 use RevlogRepo;
 
@@ -210,7 +210,7 @@ impl Details {
         let (hash, flags) = data.split_at(40);
         let hash = str::from_utf8(hash)
             .map_err(|err| Error::from(err))
-            .and_then(|hash| hash.parse::<NodeHash>())
+            .and_then(|hash| hash.parse::<HgNodeHash>())
             .with_context(|_| format!("malformed hash: {:?}", hash))?;
         let entryid = EntryId::new(hash);
 

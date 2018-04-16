@@ -17,7 +17,7 @@ use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::{BlobEntry, BlobRepo};
-use mercurial;
+use mercurial::{self, HgNodeHash};
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, RepoPath};
 
@@ -34,9 +34,9 @@ pub struct FilelogDeltaed {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Filelog {
     pub node_key: mercurial::HgNodeKey,
-    pub p1: Option<mercurial::NodeHash>,
-    pub p2: Option<mercurial::NodeHash>,
-    pub linknode: mercurial::NodeHash,
+    pub p1: Option<HgNodeHash>,
+    pub p2: Option<HgNodeHash>,
+    pub linknode: HgNodeHash,
     pub data: Bytes,
 }
 
@@ -95,7 +95,7 @@ where
 
 struct DeltaCache {
     repo: Arc<BlobRepo>,
-    bytes_cache: HashMap<mercurial::NodeHash, Shared<BoxFuture<Bytes, Compat<Error>>>>,
+    bytes_cache: HashMap<HgNodeHash, Shared<BoxFuture<Bytes, Compat<Error>>>>,
 }
 
 impl DeltaCache {
@@ -108,8 +108,8 @@ impl DeltaCache {
 
     fn decode(
         &mut self,
-        node: mercurial::NodeHash,
-        base: Option<mercurial::NodeHash>,
+        node: HgNodeHash,
+        base: Option<HgNodeHash>,
         delta: Delta,
     ) -> BoxFuture<Bytes, Error> {
         let bytes = match self.bytes_cache.get(&node).cloned() {
@@ -169,11 +169,11 @@ impl Arbitrary for Filelog {
         Filelog {
             node_key: mercurial::HgNodeKey {
                 path: RepoPath::FilePath(MPath::arbitrary(g)),
-                hash: mercurial::NodeHash::arbitrary(g),
+                hash: HgNodeHash::arbitrary(g),
             },
-            p1: mercurial::NodeHash::arbitrary(g).into_option(),
-            p2: mercurial::NodeHash::arbitrary(g).into_option(),
-            linknode: mercurial::NodeHash::arbitrary(g),
+            p1: HgNodeHash::arbitrary(g).into_option(),
+            p2: HgNodeHash::arbitrary(g).into_option(),
+            linknode: HgNodeHash::arbitrary(g),
             data: Bytes::from(Vec::<u8>::arbitrary(g)),
         }
     }
@@ -245,13 +245,13 @@ mod tests {
             }
         }
 
-        fn next(&mut self) -> mercurial::NodeHash {
+        fn next(&mut self) -> HgNodeHash {
             for i in 0..self.bytes.len() {
                 if self.bytes[i] == 255 {
                     self.bytes[i] = 0;
                 } else {
                     self.bytes[i] = self.bytes[i] + 1;
-                    return mercurial::NodeHash::from_bytes(self.bytes.as_slice()).unwrap();
+                    return HgNodeHash::from_bytes(self.bytes.as_slice()).unwrap();
                 }
             }
 

@@ -17,7 +17,7 @@ use super::wirepack;
 use super::wirepack::packer::WirePackPacker;
 
 use errors::*;
-use mercurial::{BlobNode, NodeHash, NULL_HASH};
+use mercurial::{BlobNode, HgNodeHash, NULL_HASH};
 use mercurial_types::{Delta, MPath, MPathElement, RepoPath};
 use part_encode::PartEncodeBuilder;
 use part_header::PartHeaderType;
@@ -50,7 +50,7 @@ where
 
 pub fn changegroup_part<S>(changelogentries: S) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = (NodeHash, BlobNode), Error = Error> + Send + 'static,
+    S: Stream<Item = (HgNodeHash, BlobNode), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Changegroup)?;
     builder.add_mparam("version", "02")?;
@@ -95,12 +95,12 @@ where
 }
 
 pub struct TreepackPartInput {
-    pub node: NodeHash,
-    pub p1: Option<NodeHash>,
-    pub p2: Option<NodeHash>,
+    pub node: HgNodeHash,
+    pub p1: Option<HgNodeHash>,
+    pub p2: Option<HgNodeHash>,
     pub content: Bytes,
     pub name: Option<MPathElement>,
-    pub linknode: NodeHash,
+    pub linknode: HgNodeHash,
     pub basepath: Option<MPath>,
 }
 

@@ -29,7 +29,7 @@ use blobnode::BlobNode;
 pub use changeset::RevlogChangeset;
 use errors::*;
 pub use manifest::RevlogManifest;
-use nodehash::{EntryId, HgChangesetId, HgManifestId, NodeHash, NULL_HASH};
+use nodehash::{EntryId, HgChangesetId, HgManifestId, HgNodeHash, NULL_HASH};
 use revlog::{self, RevIdx, Revlog, RevlogIter};
 
 const DEFAULT_LOGS_CAPACITY: usize = 1000000;
@@ -176,7 +176,7 @@ impl RevlogRepo {
         })
     }
 
-    pub fn get_heads(&self) -> BoxStream<NodeHash, Error> {
+    pub fn get_heads(&self) -> BoxStream<HgNodeHash, Error> {
         match self.changelog.get_heads() {
             Err(e) => stream::once(Err(e)).boxify(),
             Ok(set) => stream::iter_ok(set.into_iter()).boxify(),
@@ -324,7 +324,7 @@ pub trait RevlogRepoBlobimportExt {
 
     fn get_changelog_entry_by_idx(&self, revidx: RevIdx) -> Result<revlog::Entry>;
 
-    fn get_manifest_blob_by_id(&self, nodeid: &NodeHash) -> Result<BlobNode>;
+    fn get_manifest_blob_by_id(&self, nodeid: &HgNodeHash) -> Result<BlobNode>;
 
     fn get_path_revlog(&self, path: &RepoPath) -> Result<Revlog>;
 }
@@ -339,7 +339,7 @@ impl RevlogRepoBlobimportExt for RevlogRepo {
         self.changelog.get_entry(revidx)
     }
 
-    fn get_manifest_blob_by_id(&self, nodeid: &NodeHash) -> Result<BlobNode> {
+    fn get_manifest_blob_by_id(&self, nodeid: &HgNodeHash) -> Result<BlobNode> {
         // It's possible that commit has null pointer to manifest hash.
         // In that case we want to return empty blobnode
         if nodeid == &NULL_HASH {
@@ -366,10 +366,10 @@ impl ChangesetStream {
 }
 
 impl Stream for ChangesetStream {
-    type Item = NodeHash;
+    type Item = HgNodeHash;
     type Error = Error;
 
-    fn poll(&mut self) -> Poll<Option<NodeHash>, Error> {
+    fn poll(&mut self) -> Poll<Option<HgNodeHash>, Error> {
         match self.0.next() {
             Some((_, e)) => Ok(Async::Ready(Some(e.nodeid))),
             None => Ok(Async::Ready(None)),

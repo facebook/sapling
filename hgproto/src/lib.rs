@@ -48,7 +48,7 @@ use std::fmt::{self, Debug};
 
 use bytes::Bytes;
 
-use mercurial::NodeHash;
+use mercurial::HgNodeHash;
 
 mod batch;
 mod dechunker;
@@ -66,7 +66,7 @@ pub enum Request {
 #[derive(Debug, Eq, PartialEq)]
 pub enum SingleRequest {
     Between {
-        pairs: Vec<(NodeHash, NodeHash)>,
+        pairs: Vec<(HgNodeHash, HgNodeHash)>,
     },
     Branchmap,
     Capabilities,
@@ -85,7 +85,7 @@ pub enum SingleRequest {
         key: String,
     },
     Known {
-        nodes: Vec<NodeHash>,
+        nodes: Vec<HgNodeHash>,
     },
     Unbundle {
         heads: Vec<String>,
@@ -98,8 +98,8 @@ pub enum SingleRequest {
 /// the convenience of callers.
 #[derive(Eq, PartialEq)]
 pub struct GetbundleArgs {
-    pub heads: Vec<NodeHash>,
-    pub common: Vec<NodeHash>,
+    pub heads: Vec<HgNodeHash>,
+    pub common: Vec<HgNodeHash>,
     pub bundlecaps: Vec<Vec<u8>>,
     pub listkeys: Vec<Vec<u8>>,
 }
@@ -131,9 +131,9 @@ pub struct GettreepackArgs {
     /// "root of the repo".
     pub rootdir: Bytes,
     /// The manifest nodes of the specified root directory to send.
-    pub mfnodes: Vec<NodeHash>,
+    pub mfnodes: Vec<HgNodeHash>,
     /// The manifest nodes of the rootdir that are already on the client.
-    pub basemfnodes: Vec<NodeHash>,
+    pub basemfnodes: Vec<HgNodeHash>,
     ///  The fullpath (not relative path) of directories underneath
     /// the rootdir that should be sent.
     pub directories: Vec<Bytes>,
@@ -147,12 +147,12 @@ pub enum Response {
 
 #[derive(Debug)]
 pub enum SingleResponse {
-    Between(Vec<Vec<NodeHash>>),
-    Branchmap(HashMap<String, HashSet<NodeHash>>),
+    Between(Vec<Vec<HgNodeHash>>),
+    Branchmap(HashMap<String, HashSet<HgNodeHash>>),
     Capabilities(Vec<String>),
     Debugwireargs(Bytes),
     Getbundle(Bytes),
-    Heads(HashSet<NodeHash>),
+    Heads(HashSet<HgNodeHash>),
     Hello(HashMap<String, Vec<String>>),
     Listkeys(HashMap<Vec<u8>, Vec<u8>>),
     Lookup(Bytes),

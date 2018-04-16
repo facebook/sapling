@@ -39,19 +39,12 @@ use tokio_core::reactor::Core;
 
 use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use changesets::SqliteChangesets;
-use mercurial::{RevlogChangeset, RevlogEntry, RevlogRepo};
+use mercurial::{HgNodeHash, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, MPath, RepoPath, RepositoryId, Type};
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
-    rootmf: BoxFuture<
-        (
-            HgBlob,
-            Option<mercurial::NodeHash>,
-            Option<mercurial::NodeHash>,
-        ),
-        Error,
-    >,
+    rootmf: BoxFuture<(HgBlob, Option<HgNodeHash>, Option<HgNodeHash>), Error>,
     entries: BoxStream<(Option<MPath>, RevlogEntry), Error>,
 }
 
@@ -285,8 +278,7 @@ fn main() {
         bad => panic!("unexpected blobstore type: {}", bad),
     };
 
-    let mut parent_changeset_handles: HashMap<mercurial::NodeHash, ChangesetHandle> =
-        HashMap::new();
+    let mut parent_changeset_handles: HashMap<HgNodeHash, ChangesetHandle> = HashMap::new();
 
     let csstream = revlogrepo
         .changesets()

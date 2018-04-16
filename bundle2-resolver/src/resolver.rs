@@ -16,7 +16,7 @@ use futures::{Future, IntoFuture, Stream};
 use futures::future::{err, ok};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use mercurial;
+use mercurial::{self, HgNodeHash};
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
@@ -30,10 +30,10 @@ use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;
-type Changesets = Vec<(mercurial::NodeHash, RevlogChangeset)>;
+type Changesets = Vec<(HgNodeHash, RevlogChangeset)>;
 type Filelogs = HashMap<mercurial::HgNodeKey, <Filelog as UploadableHgBlob>::Value>;
 type Manifests = HashMap<mercurial::HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
-type UploadedChangesets = HashMap<mercurial::NodeHash, ChangesetHandle>;
+type UploadedChangesets = HashMap<HgNodeHash, ChangesetHandle>;
 
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
@@ -334,7 +334,7 @@ impl Bundle2Resolver {
     ) -> BoxFuture<(), Error> {
         fn upload_changeset(
             repo: Arc<BlobRepo>,
-            node: mercurial::NodeHash,
+            node: HgNodeHash,
             revlog_cs: RevlogChangeset,
             mut uploaded_changesets: UploadedChangesets,
             filelogs: &Filelogs,
@@ -455,7 +455,7 @@ impl Bundle2Resolver {
 fn get_parent(
     repo: &BlobRepo,
     map: &UploadedChangesets,
-    p: Option<mercurial::NodeHash>,
+    p: Option<HgNodeHash>,
 ) -> BoxFuture<Option<ChangesetHandle>, Error> {
     match p {
         None => ok(None).boxify(),

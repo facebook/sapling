@@ -19,7 +19,7 @@ use bytes::Bytes;
 use futures::stream;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
-use mercurial::NodeHash;
+use mercurial::HgNodeHash;
 use mercurial_types::{Delta, MPath};
 
 use changegroup;
@@ -192,11 +192,11 @@ impl Arbitrary for changegroup::CgDeltaChunk {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // TODO: should these be more structured? e.g. base = p1 some of the time
         changegroup::CgDeltaChunk {
-            node: NodeHash::arbitrary(g),
-            p1: NodeHash::arbitrary(g),
-            p2: NodeHash::arbitrary(g),
-            base: NodeHash::arbitrary(g),
-            linknode: NodeHash::arbitrary(g),
+            node: HgNodeHash::arbitrary(g),
+            p1: HgNodeHash::arbitrary(g),
+            p2: HgNodeHash::arbitrary(g),
+            base: HgNodeHash::arbitrary(g),
+            linknode: HgNodeHash::arbitrary(g),
             delta: Delta::arbitrary(g),
         }
     }

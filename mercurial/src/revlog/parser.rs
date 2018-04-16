@@ -14,7 +14,7 @@ use nom::{ErrorKind, IResult, Needed, be_u16, be_u32};
 
 use mercurial_types::bdiff::Delta;
 
-use nodehash::NodeHash;
+use nodehash::HgNodeHash;
 use revlog::revidx::RevIdx;
 
 use super::lz4;
@@ -81,11 +81,11 @@ pub struct Entry {
     pub linkrev: RevIdx,     // changeset id
     pub p1: Option<RevIdx>,  // parent p1
     pub p2: Option<RevIdx>,  // parent p2
-    pub nodeid: NodeHash,    // nodeid
+    pub nodeid: HgNodeHash,  // nodeid
 }
 
 impl Entry {
-    pub fn nodeid(&self) -> &NodeHash {
+    pub fn nodeid(&self) -> &HgNodeHash {
         &self.nodeid
     }
 }
@@ -140,7 +140,7 @@ named!(pub indexng<Entry>,
                 linkrev: linkrev.into(),
                 p1: if p1 == !0 { None } else { Some(p1.into()) },
                 p2: if p2 == !0 { None } else { Some(p2.into()) },
-                nodeid: NodeHash::from_bytes(&hash[..20]).expect("bad bytes for sha"),
+                nodeid: HgNodeHash::from_bytes(&hash[..20]).expect("bad bytes for sha"),
             }
         })
     )
@@ -171,7 +171,7 @@ named!(pub index0<Entry>,
                 linkrev: linkrev.into(),
                 p1: if p1 == !0 { None } else { Some(p1.into()) },
                 p2: if p2 == !0 { None } else { Some(p2.into()) },
-                nodeid: NodeHash::from_bytes(&hash[..20]).expect("bad bytes for sha"),
+                nodeid: HgNodeHash::from_bytes(&hash[..20]).expect("bad bytes for sha"),
             }
         })
     )

@@ -161,7 +161,6 @@ impl Context {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::{Sha1, NULL};
