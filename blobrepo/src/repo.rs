@@ -11,7 +11,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ascii::AsciiString;
-use bincode;
 use bytes::Bytes;
 use failure::{Fail, ResultExt};
 use futures::{Async, Poll};
@@ -37,6 +36,7 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
+use mercurial::NodeHashConversion;
 use mercurial_types::{Changeset, DBlobNode, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry,
                       HgBlob, Manifest, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
@@ -417,9 +417,7 @@ impl BlobRepo {
         // Upload the new node
         let node_upload = self.blobstore.put(
             get_node_key(nodeid),
-            bincode::serialize(&raw_node)
-                .map_err(|err| Error::from(ErrorKind::SerializationFailed(nodeid, err)))?
-                .into(),
+            raw_node.serialize(&nodeid.into_mercurial())?,
         );
 
         Ok((

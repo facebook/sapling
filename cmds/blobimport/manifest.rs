@@ -8,7 +8,6 @@
 
 use std::sync::mpsc::SyncSender;
 
-use bincode;
 use bytes::Bytes;
 use failure::{self, Error};
 use futures::{self, stream, Future, IntoFuture, Stream};
@@ -50,7 +49,7 @@ where
         // blobs.
         let nodekey = format!("node-{}.bincode", entry_hash);
         let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
-        let nodeblob = bincode::serialize(&nodeblob).expect("bincode serialize failed");
+        let nodeblob = nodeblob.serialize(&entry_hash).expect("serialize failed");
 
         let res1 = sender.send(BlobstoreEntry::ManifestEntry((
             nodekey,

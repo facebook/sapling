@@ -10,6 +10,7 @@ use bincode;
 
 pub use failure::{Error, ResultExt};
 
+use mercurial::HgNodeHash;
 use mercurial_types::{DChangesetId, DFileNodeId, DNodeHash, DParents, HgBlob, HgBlobHash,
                       RepoPath, Type};
 
@@ -49,7 +50,7 @@ pub enum ErrorKind {
     #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(HgBlob),
     #[fail(display = "DParents are not in blob store {:?}", _0)] ParentsUnknown(DParents),
     #[fail(display = "Serialization of node failed {} ({})", _0, _1)]
-    SerializationFailed(DNodeHash, bincode::Error),
+    SerializationFailed(HgNodeHash, bincode::Error),
     #[fail(display = "Root manifest is not a manifest (type {})", _0)] BadRootManifest(Type),
     #[fail(display = "Manifest type {} does not match uploaded type {}", _0, _1)]
     ManifestTypeMismatch(Type, Type),

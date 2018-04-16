@@ -9,7 +9,6 @@ use std::collections::BTreeMap;
 use std::io::Write;
 use std::sync::Arc;
 
-use bincode;
 use bytes::Bytes;
 use failure;
 use futures::future::{Either, Future, IntoFuture};
@@ -23,19 +22,7 @@ use mercurial_types::{Changeset, DBlobNode, DParents, HgBlob, MPath, Time};
 use mercurial_types::nodehash::{DChangesetId, DManifestId, D_NULL_HASH};
 
 use errors::*;
-
-// In stock mercurial, the revlog acts as an envelope which holds (primarily) the parents
-// for each entry. The changelog itself is encoded as a blob within the entry. This structure
-// replicates this for use within the blob store. In principle the cs blob and the envelope
-// could be stored separately, but I think the disadvantages (more objects, more latency,
-// more brittle) outweigh the advantages (potential for sharing changesets, consistency
-// with file storage).
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Serialize, Deserialize, HeapSizeOf)]
-struct RawCSBlob<'a> {
-    parents: DParents,
-    blob: Cow<'a, [u8]>,
-}
+use utils::RawCSBlob;
 
 pub struct ChangesetContent {
     parents: DParents,
@@ -168,7 +155,7 @@ impl BlobChangeset {
             let fut = blobstore.get(key).and_then(move |got| match got {
                 None => Ok(None),
                 Some(bytes) => {
-                    let RawCSBlob { parents, blob } = bincode::deserialize(bytes.as_ref())?;
+                    let RawCSBlob { parents, blob } = RawCSBlob::deserialize(&bytes)?;
                     let (p1, p2) = parents.get_nodes();
                     let p1 = p1.map(|p| p.into_mercurial());
                     let p2 = p2.map(|p| p.into_mercurial());
@@ -210,10 +197,10 @@ impl BlobChangeset {
                     parents: self.content.parents,
                     blob: Cow::Borrowed(data),
                 };
-                bincode::serialize(&blob).map_err(Error::from)
+                blob.serialize()
             })
             .into_future()
-            .and_then(move |blob| blobstore.put(key, blob.into()))
+            .and_then(move |blob| blobstore.put(key, blob))
     }
 }
 

@@ -7,7 +7,6 @@
 #![deny(warnings)]
 #![feature(conservative_impl_trait)]
 
-extern crate bincode;
 extern crate bytes;
 extern crate clap;
 #[macro_use]
