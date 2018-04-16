@@ -1339,8 +1339,6 @@ def debuglabelcomplete(ui, repo, *args):
          [('L', 'force-lock', None, _('free the store lock (DANGEROUS)')),
           ('W', 'force-wlock', None,
            _('free the working state lock (DANGEROUS)')),
-          ('U', 'force-undolog-lock', None, _('free the undolog lock '
-                                              '(DANGEROUS)')),
           ('s', 'set-lock', None, _('set the store lock until stopped')),
           ('S', 'set-wlock', None,
            _('set the working state lock until stopped'))],
@@ -1370,20 +1368,11 @@ def debuglocks(ui, repo, **opts):
 
     """
 
-    done = False
-    ull = None
-    if repo.vfs.exists('undolog'):
-        ull = os.path.join('undolog', 'lock')
     if opts.get(r'force_lock'):
         repo.svfs.unlink('lock')
-        done = True
     if opts.get(r'force_wlock'):
         repo.vfs.unlink('wlock')
-        done = True
-    if opts.get(r'force_undolog_lock'):
-        repo.vfs.unlink(ull)
-        done = True
-    if done:
+    if opts.get(r'force_lock') or opts.get(r'force_wlock'):
         return 0
 
     locks = []
@@ -1409,18 +1398,12 @@ def debuglocks(ui, repo, **opts):
 
     def report(vfs, name, method):
         # this causes stale locks to get reaped for more accurate reporting
-        malformed = object()
         try:
             l = method(False)
         except error.LockHeld:
             l = None
-        except error.MalformedLock:
-            l = malformed
 
-        if l == malformed:
-            ui.write("%-14s malformed\n" % (name + ":"))
-            return 1
-        elif l:
+        if l:
             l.release()
         else:
             try:
@@ -1435,21 +1418,17 @@ def debuglocks(ui, repo, **opts):
                     else:
                         locker = 'user %s, process %s, host %s' \
                                  % (user, pid, host)
-                ui.write(("%-14s %s (%ds)\n") % (name + ":", locker, age))
+                ui.write(("%-6s %s (%ds)\n") % (name + ":", locker, age))
                 return 1
             except OSError as e:
                 if e.errno != errno.ENOENT:
                     raise
 
-        ui.write(("%-14s free\n") % (name + ":"))
+        ui.write(("%-6s free\n") % (name + ":"))
         return 0
 
     held += report(repo.svfs, "lock", repo.lock)
     held += report(repo.vfs, "wlock", repo.wlock)
-    if ull is not None:
-        ullmtd = lambda _: lockmod.lock(repo.vfs, ull, desc='undolog',
-                                        timeout=0)
-        held += report(repo.vfs, ull, ullmtd)
 
     return held
 
