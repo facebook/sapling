@@ -9,7 +9,7 @@ use futures::{Future, Stream};
 
 /// A general source control Node
 ///
-/// A `Node` has some content, and some number of `Parents` (immediate ancestors).
+/// A `Node` has some content, and some number of `HgParents` (immediate ancestors).
 /// For Mercurial this is constrained to [0, 2] parents, but other scms (ie Git) can have
 /// arbitrary numbers of parents.
 ///

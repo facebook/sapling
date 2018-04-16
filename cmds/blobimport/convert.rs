@@ -22,7 +22,7 @@ use filenodes::FilenodeInfo;
 use futures::sync::mpsc::UnboundedSender;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heads::Heads;
-use mercurial::{self, HgChangesetId, HgEntryId, HgNodeHash, RevlogManifest, RevlogRepo};
+use mercurial::{self, HgChangesetId, HgEntryId, HgNodeHash, HgParents, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
 use mercurial_types::{DBlobNode, DFileNodeId, HgBlob, RepoPath, RepositoryId};
@@ -316,7 +316,7 @@ fn put_blobs(
 fn create_filenode(
     blob: HgBlob,
     filenode_hash: HgNodeHash,
-    parents: mercurial::Parents,
+    parents: HgParents,
     repopath: RepoPath,
     linknode: HgNodeHash,
 ) -> FilenodeInfo {

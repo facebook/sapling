@@ -97,7 +97,7 @@ const DATA_HEADER_SIZE: usize = DATA_DELTA_OFFSET + 8;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HistoryEntry {
     pub node: HgNodeHash,
-    // TODO: replace with Parents?
+    // TODO: replace with HgParents?
     pub p1: HgNodeHash,
     pub p2: HgNodeHash,
     pub linknode: HgNodeHash,

@@ -162,7 +162,7 @@ CREATE TABLE `unode` (
     FOREIGN KEY (`cs_id`) REFERENCES `changeset` (`id`)
 );
 
--- Parents for a unode.
+-- HgParents for a unode.
 -- SHARDING: shard on unodeid?
 CREATE TABLE `unodeparents` (
     `unode_id` BIGINT UNSIGNED NOT NULL,

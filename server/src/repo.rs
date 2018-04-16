@@ -35,7 +35,7 @@ use slog_scuba::ScubaDrain;
 
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
-use mercurial::{self, HgManifestId, HgNodeHash, NodeHashConversion, RevlogChangeset};
+use mercurial::{self, HgManifestId, HgNodeHash, HgParents, NodeHashConversion, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, Changeset, DChangesetId, DManifestId, DNodeHash, DParents,
                       Entry, MPath, RepoPath, RepositoryId, Type, D_NULL_HASH};
@@ -372,7 +372,7 @@ impl RepoClient {
                     let (p1, p2) = cs.parents().get_nodes();
                     let p1 = p1.map(|p| p.into_mercurial());
                     let p2 = p2.map(|p| p.into_mercurial());
-                    mercurial::Parents::new(p1.as_ref(), p2.as_ref())
+                    HgParents::new(p1.as_ref(), p2.as_ref())
                 };
 
                 let manifestid =

@@ -15,7 +15,7 @@ use futures::{self, stream, Future, IntoFuture, Stream};
 
 use blobrepo::RawNodeBlob;
 use futures_ext::StreamExt;
-use mercurial::{self, HgNodeHash, RevlogEntry, RevlogRepo};
+use mercurial::{self, HgNodeHash, HgParents, RevlogEntry, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
 use mercurial_types::{DParents, HgBlob, HgBlobHash, MPath, RepoPath, Type};
@@ -26,7 +26,7 @@ pub(crate) fn put_entry(
     sender: SyncSender<BlobstoreEntry>,
     entry_hash: HgNodeHash,
     blob: HgBlob,
-    parents: mercurial::Parents,
+    parents: HgParents,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
     Error: Send + 'static,

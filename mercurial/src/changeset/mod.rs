@@ -14,7 +14,7 @@ use failure;
 use mercurial_types::MPath;
 use mercurial_types::changeset::Time;
 
-use blobnode::{BlobNode, Parents};
+use blobnode::{BlobNode, HgParents};
 use nodehash::{HgManifestId, HgNodeHash, NULL_HASH};
 
 #[cfg(test)]
@@ -26,7 +26,7 @@ mod test;
 // See https://www.mercurial-scm.org/wiki/EncodingStrategy for details.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct RevlogChangeset {
-    pub parents: Parents,
+    pub parents: HgParents,
     pub manifestid: HgManifestId,
     pub user: Vec<u8>,
     pub time: Time,
@@ -171,7 +171,7 @@ fn parsetimeextra<S: AsRef<[u8]>>(s: S) -> Result<(Time, Extra)> {
 
 impl RevlogChangeset {
     pub fn new_from_parts(
-        parents: Parents,
+        parents: HgParents,
         manifestid: HgManifestId,
         user: Vec<u8>,
         time: Time,
@@ -196,7 +196,7 @@ impl RevlogChangeset {
 
     pub fn new_null() -> Self {
         Self {
-            parents: Parents::new(None, None),
+            parents: HgParents::new(None, None),
             manifestid: HgManifestId::new(NULL_HASH),
             user: Vec::new(),
             time: Time { time: 0, tz: 0 },
@@ -320,7 +320,7 @@ impl RevlogChangeset {
         &self.time
     }
 
-    pub fn parents(&self) -> &Parents {
+    pub fn parents(&self) -> &HgParents {
         &self.parents
     }
 }

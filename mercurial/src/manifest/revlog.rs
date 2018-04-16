@@ -20,7 +20,7 @@ use file;
 use mercurial_types::{FileType, HgBlob, MPath, MPathElement, RepoPath};
 use mercurial_types::manifest::Type;
 
-use blobnode::{BlobNode, Parents};
+use blobnode::{BlobNode, HgParents};
 use nodehash::{HgEntryId, HgNodeHash};
 
 use RevlogRepo;
@@ -36,7 +36,7 @@ pub struct Details {
 pub struct RevlogManifest {
     // This is None so that a RevlogManifest::empty() can be created for easy diffing manifests
     repo: Option<RevlogRepo>,
-    parents: Parents,
+    parents: HgParents,
     content: ManifestContent,
 }
 
@@ -129,14 +129,14 @@ impl RevlogManifest {
     pub(crate) fn empty() -> Self {
         Self {
             repo: None,
-            parents: Parents::new(None, None),
+            parents: HgParents::new(None, None),
             content: ManifestContent {
                 files: BTreeMap::new(),
             },
         }
     }
 
-    fn parse(repo: Option<RevlogRepo>, parents: &Parents, data: &[u8]) -> Result<RevlogManifest> {
+    fn parse(repo: Option<RevlogRepo>, parents: &HgParents, data: &[u8]) -> Result<RevlogManifest> {
         // This is private because it allows one to create a RevlogManifest with repo set to None.
         ManifestContent::parse(data).map(|content| RevlogManifest {
             repo,
@@ -147,7 +147,7 @@ impl RevlogManifest {
 
     fn parse_with_prefix(
         repo: RevlogRepo,
-        parents: &Parents,
+        parents: &HgParents,
         data: &[u8],
         prefix: &MPath,
     ) -> Result<RevlogManifest> {
@@ -158,7 +158,7 @@ impl RevlogManifest {
         })
     }
 
-    pub fn parents(&self) -> &Parents {
+    pub fn parents(&self) -> &HgParents {
         &self.parents
     }
 
@@ -321,7 +321,7 @@ impl RevlogEntry {
         self.details.flag()
     }
 
-    pub fn get_parents(&self) -> BoxFuture<Parents, Error> {
+    pub fn get_parents(&self) -> BoxFuture<HgParents, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
         let nodeid = self.get_hash().into_nodehash();
         revlog
@@ -445,10 +445,10 @@ mod test {
     #[test]
     fn empty() {
         assert_eq!(
-            RevlogManifest::parse(None, &Parents::None, b"").unwrap(),
+            RevlogManifest::parse(None, &HgParents::None, b"").unwrap(),
             RevlogManifest {
                 repo: None,
-                parents: Parents::None,
+                parents: HgParents::None,
                 content: ManifestContent {
                     files: BTreeMap::new(),
                 },
@@ -458,7 +458,7 @@ mod test {
 
     #[test]
     fn bad_nonil() {
-        match RevlogManifest::parse(None, &Parents::None, b"hello123") {
+        match RevlogManifest::parse(None, &HgParents::None, b"hello123") {
             Ok(m) => panic!("unexpected manifest {:?}", m),
             Err(e) => println!("got expected error: {}", e),
         }
@@ -466,7 +466,7 @@ mod test {
 
     #[test]
     fn bad_nohash() {
-        match RevlogManifest::parse(None, &Parents::None, b"hello123\0") {
+        match RevlogManifest::parse(None, &HgParents::None, b"hello123\0") {
             Ok(m) => panic!("unexpected manifest {:?}", m),
             Err(e) => println!("got expected error: {}", e),
         }
@@ -474,7 +474,7 @@ mod test {
 
     #[test]
     fn bad_badhash1() {
-        match RevlogManifest::parse(None, &Parents::None, b"hello123\0abc123") {
+        match RevlogManifest::parse(None, &HgParents::None, b"hello123\0abc123") {
             Ok(m) => panic!("unexpected manifest {:?}", m),
             Err(e) => println!("got expected error: {}", e),
         }
@@ -484,11 +484,11 @@ mod test {
     fn good_one() {
         match RevlogManifest::parse(
             None,
-            &Parents::One(THREES_HASH),
+            &HgParents::One(THREES_HASH),
             b"hello123\0da39a3ee5e6b4b0d3255bfef95601890afd80709xltZZZ\n",
         ) {
             Ok(m) => {
-                assert_eq!(m.parents(), &Parents::One(THREES_HASH));
+                assert_eq!(m.parents(), &HgParents::One(THREES_HASH));
                 let expect = vec![
                     (
                         MPath::new(b"hello123").unwrap(),
@@ -510,7 +510,7 @@ mod test {
     fn one_roundtrip() {
         // Only one flag because its unclear how multiple flags should be ordered
         const RAW: &[u8] = b"hello123\0da39a3ee5e6b4b0d3255bfef95601890afd80709x\n";
-        let m = RevlogManifest::parse(None, &Parents::None, RAW).expect("failed to parse");
+        let m = RevlogManifest::parse(None, &HgParents::None, RAW).expect("failed to parse");
 
         let mut out = Vec::new();
         m.generate(&mut out).expect("generate failed");
@@ -525,20 +525,20 @@ mod test {
             );
         }
 
-        assert_eq!(m.parents(), &Parents::None);
+        assert_eq!(m.parents(), &HgParents::None);
     }
 
     const MANIFEST: &[u8] = include_bytes!("flatmanifest.bin");
 
     #[test]
     fn fullmanifest() {
-        match RevlogManifest::parse(None, &Parents::Two(ONES_HASH, TWOS_HASH), MANIFEST) {
+        match RevlogManifest::parse(None, &HgParents::Two(ONES_HASH, TWOS_HASH), MANIFEST) {
             Ok(m) => {
                 println!("Got manifest:");
                 for (k, v) in &m.content.files {
                     println!("{:?} {:?}", k, v);
                 }
-                assert_eq!(m.parents(), &Parents::Two(ONES_HASH, TWOS_HASH));
+                assert_eq!(m.parents(), &HgParents::Two(ONES_HASH, TWOS_HASH));
             }
             Err(e) => panic!("Failed to load manifest: {}", e),
         }
@@ -546,8 +546,8 @@ mod test {
 
     #[test]
     fn roundtrip() {
-        let m =
-            RevlogManifest::parse(None, &Parents::One(ONES_HASH), MANIFEST).expect("parse failed");
+        let m = RevlogManifest::parse(None, &HgParents::One(ONES_HASH), MANIFEST)
+            .expect("parse failed");
 
         let mut out = Vec::new();
         m.generate(&mut out).expect("generate failed");
@@ -560,6 +560,6 @@ mod test {
             )
         }
 
-        assert_eq!(m.parents(), &Parents::One(ONES_HASH));
+        assert_eq!(m.parents(), &HgParents::One(ONES_HASH));
     }
 }
