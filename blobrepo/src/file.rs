@@ -13,7 +13,7 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{BlobNode, DManifestId, DNodeHash, DParents, FileType, HgBlob, MPath,
+use mercurial_types::{DBlobNode, DManifestId, DNodeHash, DParents, FileType, HgBlob, MPath,
                       MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::DEntryId;
@@ -52,7 +52,7 @@ pub fn fetch_file_content_and_renames_from_blobstore(
                             // (None, Some(hash)), which is what BlobNode relies on to figure out
                             // whether a node is copied.
                             let (p1, p2) = parents.get_nodes();
-                            let blobnode = BlobNode::new(blob, p1, p2);
+                            let blobnode = DBlobNode::new(blob, p1, p2);
                             let file = file::File::new(blobnode);
 
                             file.copied_from().and_then(|from| {

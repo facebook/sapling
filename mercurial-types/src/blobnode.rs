@@ -65,13 +65,13 @@ impl Iterator for ParentIter {
 /// blob.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize)]
-pub struct BlobNode {
+pub struct DBlobNode {
     blob: HgBlob,
     parents: DParents,
     maybe_copied: bool,
 }
 
-impl BlobNode {
+impl DBlobNode {
     /// Construct a node with the given content and parents.
     /// NOTE: Mercurial encodes the fact that a file has been copied from some other path
     /// in metadata. The possible presence of metadata is signaled by marking p1 as None.
@@ -81,12 +81,12 @@ impl BlobNode {
     ///   parent that's copied.
     /// * If both p1 and p2 are None, it shouldn't really be possible to have copy info. But
     ///   the Mercurial Python client tries to parse metadata anyway, so match that behavior.
-    pub fn new<B>(blob: B, p1: Option<&DNodeHash>, p2: Option<&DNodeHash>) -> BlobNode
+    pub fn new<B>(blob: B, p1: Option<&DNodeHash>, p2: Option<&DNodeHash>) -> DBlobNode
     where
         B: Into<HgBlob>,
     {
         let blob = blob.into();
-        BlobNode {
+        DBlobNode {
             blob: blob,
             parents: DParents::new(p1, p2),
             maybe_copied: p1.is_none(),
@@ -143,30 +143,30 @@ mod test {
     #[test]
     fn test_node_none() {
         let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
-        let n = BlobNode::new(blob, None, None);
+        let n = DBlobNode::new(blob, None, None);
         assert_eq!(n.parents, DParents::None);
     }
 
     #[test]
     fn test_node_one() {
         let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
-        let p = &BlobNode::new(blob.clone(), None, None);
+        let p = &DBlobNode::new(blob.clone(), None, None);
         assert!(p.maybe_copied);
         {
             let pid: Option<DNodeHash> = p.nodeid();
-            let n = BlobNode::new(blob.clone(), pid.as_ref(), None);
+            let n = DBlobNode::new(blob.clone(), pid.as_ref(), None);
             assert_eq!(n.parents, DParents::One(pid.unwrap()));
             assert!(!n.maybe_copied);
         }
         {
             let pid: Option<DNodeHash> = p.nodeid();
-            let n = BlobNode::new(blob.clone(), None, pid.as_ref());
+            let n = DBlobNode::new(blob.clone(), None, pid.as_ref());
             assert_eq!(n.parents, DParents::One(pid.unwrap()));
             assert!(n.maybe_copied);
         }
         {
             let pid: Option<DNodeHash> = p.nodeid();
-            let n = BlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
+            let n = DBlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
             assert_eq!(n.parents, DParents::One(pid.unwrap()));
             assert!(!n.maybe_copied);
         }
@@ -175,8 +175,8 @@ mod test {
     #[test]
     fn test_node_two() {
         use std::mem;
-        let mut p1 = BlobNode::new(HgBlob::from(Bytes::from(&b"foo1"[..])), None, None);
-        let mut p2 = BlobNode::new(HgBlob::from(Bytes::from(&b"foo2"[..])), None, None);
+        let mut p1 = DBlobNode::new(HgBlob::from(Bytes::from(&b"foo1"[..])), None, None);
+        let mut p2 = DBlobNode::new(HgBlob::from(Bytes::from(&b"foo2"[..])), None, None);
         assert!(p1.maybe_copied);
         assert!(p2.maybe_copied);
 
@@ -188,7 +188,7 @@ mod test {
         let pid2: Option<DNodeHash> = (&p2).nodeid();
 
         let node1 = {
-            let n = BlobNode::new(
+            let n = DBlobNode::new(
                 HgBlob::from(Bytes::from(&b"bar"[..])),
                 pid1.as_ref(),
                 pid2.as_ref(),
@@ -198,7 +198,7 @@ mod test {
             n.nodeid().expect("no nodeid 1")
         };
         let node2 = {
-            let n = BlobNode::new(
+            let n = DBlobNode::new(
                 HgBlob::from(Bytes::from(&b"bar"[..])),
                 pid2.as_ref(),
                 pid1.as_ref(),

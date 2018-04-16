@@ -11,18 +11,18 @@ use errors::*;
 
 use itertools::Itertools;
 
-use mercurial_types::{BlobNode, DNodeHash, MPath};
+use mercurial_types::{DBlobNode, DNodeHash, MPath};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct File {
-    node: BlobNode,
+    node: DBlobNode,
 }
 
 const META_MARKER: &[u8] = b"\x01\n";
 const META_SZ: usize = 2;
 
 impl File {
-    pub fn new(node: BlobNode) -> File {
+    pub fn new(node: DBlobNode) -> File {
         File { node: node }
     }
 
@@ -107,7 +107,7 @@ impl File {
     }
 
     pub fn size(&self) -> Option<usize> {
-        // XXX This doesn't really help because the BlobNode will have already been constructed
+        // XXX This doesn't really help because the DBlobNode will have already been constructed
         // with the content so a size-only query will have already done too much work.
         if self.node.maybe_copied() {
             self.content().map(|s| s.len())

@@ -22,7 +22,7 @@ use uuid::Uuid;
 use blobstore::Blobstore;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial::file;
-use mercurial_types::{BlobNode, Changeset, DChangesetId, DEntryId, DNodeHash, DParents, Entry,
+use mercurial_types::{Changeset, DBlobNode, DChangesetId, DEntryId, DNodeHash, DParents, Entry,
                       MPath, Manifest, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
@@ -285,7 +285,7 @@ fn compute_copy_from_info(
                     // (None, Some(hash)), which is what BlobNode relies on to figure out
                     // whether a node is copied.
                     let (p1, p2) = parents.get_nodes();
-                    file::File::new(BlobNode::new(blob, p1, p2))
+                    file::File::new(DBlobNode::new(blob, p1, p2))
                         .copied_from()
                         .map(|copiedfrom| {
                             copiedfrom.map(|(path, node)| {

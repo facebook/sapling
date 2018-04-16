@@ -37,7 +37,7 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial_types::{BlobNode, Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry,
+use mercurial_types::{Changeset, DBlobNode, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry,
                       HgBlob, Manifest, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::DManifestId;
@@ -362,7 +362,7 @@ impl BlobRepo {
             blob: blob_hash,
         };
 
-        let nodeid = BlobNode::new(raw_content.clone(), p1, p2)
+        let nodeid = DBlobNode::new(raw_content.clone(), p1, p2)
             .nodeid()
             .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?;
 

@@ -19,7 +19,7 @@ use blobstore::Blobstore;
 use mercurial::{self, NodeHashConversion};
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
-use mercurial_types::{BlobNode, Changeset, DParents, HgBlob, MPath, Time};
+use mercurial_types::{Changeset, DBlobNode, DParents, HgBlob, MPath, Time};
 use mercurial_types::nodehash::{DChangesetId, DManifestId, D_NULL_HASH};
 
 use errors::*;
@@ -96,7 +96,7 @@ impl ChangesetContent {
 
         self.generate(&mut v)?;
         let (p1, p2) = self.parents.get_nodes();
-        let blobnode = BlobNode::new(Bytes::from(v), p1, p2);
+        let blobnode = DBlobNode::new(Bytes::from(v), p1, p2);
 
         let nodeid = blobnode
             .nodeid()
@@ -197,7 +197,7 @@ impl BlobChangeset {
 
             self.content.generate(&mut v).map(|()| {
                 let (p1, p2) = self.content.parents.get_nodes();
-                BlobNode::new(Bytes::from(v), p1, p2)
+                DBlobNode::new(Bytes::from(v), p1, p2)
             })
         };
 

@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::{BlobNode, MPath};
+use mercurial_types::{DBlobNode, MPath};
 
 use errors::*;
 use file::File;
@@ -13,7 +13,7 @@ use file::File;
 pub struct Symlink(File);
 
 impl Symlink {
-    pub fn new(node: BlobNode) -> Symlink {
+    pub fn new(node: DBlobNode) -> Symlink {
         Symlink(File::new(node))
     }
 
