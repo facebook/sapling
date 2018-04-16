@@ -15,7 +15,7 @@ use mononoke_types::{FileType, MPathElement};
 use blob::HgBlob;
 use blobnode::Parents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use nodehash::EntryId;
+use nodehash::DEntryId;
 
 /// Interface for a manifest
 ///
@@ -203,7 +203,7 @@ pub trait Entry: Send + 'static {
     fn get_size(&self) -> BoxFuture<Option<usize>, Error>;
 
     /// Get the identity of the object this entry refers to.
-    fn get_hash(&self) -> &EntryId;
+    fn get_hash(&self) -> &DEntryId;
 
     /// Get the name of the entry. None means that this is a root entry
     fn get_name(&self) -> Option<&MPathElement>;
@@ -261,7 +261,7 @@ where
         self.entry.get_size().boxify()
     }
 
-    fn get_hash(&self) -> &EntryId {
+    fn get_hash(&self) -> &DEntryId {
         self.entry.get_hash()
     }
 
@@ -291,7 +291,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_size()
     }
 
-    fn get_hash(&self) -> &EntryId {
+    fn get_hash(&self) -> &DEntryId {
         (**self).get_hash()
     }
 

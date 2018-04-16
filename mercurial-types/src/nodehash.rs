@@ -263,22 +263,22 @@ impl Display for DFileNodeId {
     }
 }
 
-/// TODO: (jsgf) T25576292 EntryId should be a (Type, NodeId) tuple
+/// TODO: (jsgf) T25576292 DEntryId should be a (Type, NodeId) tuple
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
-pub struct EntryId(DNodeHash);
+pub struct DEntryId(DNodeHash);
 
-impl EntryId {
+impl DEntryId {
     pub fn into_nodehash(self) -> DNodeHash {
         self.0
     }
 
     pub fn new(hash: DNodeHash) -> Self {
-        EntryId(hash)
+        DEntryId(hash)
     }
 }
 
-impl Display for EntryId {
+impl Display for DEntryId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }

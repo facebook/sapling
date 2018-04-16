@@ -16,7 +16,7 @@ use mercurial::file;
 use mercurial_types::{BlobNode, DManifestId, DNodeHash, FileType, HgBlob, MPath, MPathElement,
                       Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
-use mercurial_types::nodehash::EntryId;
+use mercurial_types::nodehash::DEntryId;
 
 use blobstore::Blobstore;
 
@@ -30,7 +30,7 @@ use utils::{get_node, RawNodeBlob};
 pub struct BlobEntry {
     blobstore: Arc<Blobstore>,
     name: Option<MPathElement>,
-    id: EntryId,
+    id: DEntryId,
     ty: Type,
 }
 
@@ -77,7 +77,7 @@ impl BlobEntry {
         Ok(Self {
             blobstore,
             name,
-            id: EntryId::new(nodeid),
+            id: DEntryId::new(nodeid),
             ty,
         })
     }
@@ -86,7 +86,7 @@ impl BlobEntry {
         Self {
             blobstore,
             name: None,
-            id: EntryId::new(manifestid.into_nodehash()),
+            id: DEntryId::new(manifestid.into_nodehash()),
             ty: Type::Tree,
         }
     }
@@ -166,7 +166,7 @@ impl Entry for BlobEntry {
             .boxify()
     }
 
-    fn get_hash(&self) -> &EntryId {
+    fn get_hash(&self) -> &DEntryId {
         &self.id
     }
 

@@ -22,7 +22,7 @@ use uuid::Uuid;
 use blobstore::Blobstore;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial::file;
-use mercurial_types::{BlobNode, Changeset, DChangesetId, DNodeHash, Entry, EntryId, MPath,
+use mercurial_types::{BlobNode, Changeset, DChangesetId, DEntryId, DNodeHash, Entry, MPath,
                       Manifest, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
@@ -81,7 +81,7 @@ impl From<BlobChangeset> for ChangesetHandle {
 struct UploadEntriesState {
     /// Listing of blobs that we need, based on parsing the root manifest and all the newly
     /// uploaded child manifests
-    required_entries: HashMap<RepoPath, EntryId>,
+    required_entries: HashMap<RepoPath, DEntryId>,
     /// All the blobs that have been uploaded in this changeset
     uploaded_entries: HashMap<RepoPath, BlobEntry>,
     /// Parent hashes (if any) of the blobs that have been uploaded in this changeset. Used for

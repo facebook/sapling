@@ -27,7 +27,7 @@ use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Typ
 use mercurial_types::manifest::Content;
 use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, ChangedEntry,
                                       EntryStatus};
-use mercurial_types::nodehash::{DChangesetId, DNodeHash, EntryId};
+use mercurial_types::nodehash::{DChangesetId, DEntryId, DNodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry};
 use mercurial_types_mocks::nodehash;
 
@@ -41,12 +41,12 @@ fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &DChangesetId) -> Box<Man
         .unwrap()
 }
 
-fn get_hash(c: char) -> EntryId {
+fn get_hash(c: char) -> DEntryId {
     let hash: String = repeat(c).take(40).collect();
-    EntryId::new(DNodeHash::from_str(&hash).unwrap())
+    DEntryId::new(DNodeHash::from_str(&hash).unwrap())
 }
 
-fn get_entry(ty: Type, hash: EntryId, path: RepoPath) -> Box<Entry + Sync> {
+fn get_entry(ty: Type, hash: DEntryId, path: RepoPath) -> Box<Entry + Sync> {
     let content_factory: ContentFactory = Arc::new(|| -> Content {
         panic!("should not be called");
     });

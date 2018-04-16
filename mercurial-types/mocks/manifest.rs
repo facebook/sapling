@@ -18,7 +18,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial_types::{Entry, FileType, HgBlob, MPath, MPathElement, Manifest, RepoPath, Type};
 use mercurial_types::blobnode::Parents;
 use mercurial_types::manifest::Content;
-use mercurial_types::nodehash::EntryId;
+use mercurial_types::nodehash::DEntryId;
 
 use errors::*;
 
@@ -58,7 +58,7 @@ impl MockManifest {
 
     /// Build a root tree manifest from a map of paths to file types and contents.
     pub fn from_path_map(
-        path_map: BTreeMap<MPath, (FileType, Bytes, Option<EntryId>)>,
+        path_map: BTreeMap<MPath, (FileType, Bytes, Option<DEntryId>)>,
     ) -> Result<Self> {
         // Stack of directory names and entry lists currently being built
         let mut wip: Vec<(Option<MPath>, _)> = vec![(None, BTreeMap::new())];
@@ -118,7 +118,7 @@ impl MockManifest {
     /// A generic version of `from_path_map`.
     pub fn from_path_hashes<I, P, B>(paths: I) -> Result<Self>
     where
-        I: IntoIterator<Item = (P, (FileType, B, EntryId))>,
+        I: IntoIterator<Item = (P, (FileType, B, DEntryId))>,
         P: AsRef<[u8]>,
         B: Into<Bytes>,
     {
@@ -218,7 +218,7 @@ pub struct MockEntry {
     name: Option<MPathElement>,
     content_factory: ContentFactory,
     ty: Option<Type>,
-    hash: Option<EntryId>,
+    hash: Option<DEntryId>,
 }
 
 impl Clone for MockEntry {
@@ -254,7 +254,7 @@ impl MockEntry {
         self.ty = Some(ty);
     }
 
-    pub fn set_hash(&mut self, hash: EntryId) {
+    pub fn set_hash(&mut self, hash: DEntryId) {
         self.hash = Some(hash);
     }
 }
@@ -275,7 +275,7 @@ impl Entry for MockEntry {
     fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         unimplemented!();
     }
-    fn get_hash(&self) -> &EntryId {
+    fn get_hash(&self) -> &DEntryId {
         match self.hash {
             Some(ref hash) => hash,
             None => panic!("hash is not set!"),

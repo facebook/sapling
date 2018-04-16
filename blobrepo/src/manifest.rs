@@ -15,7 +15,7 @@ use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial_types::{Entry, FileType, MPathElement, Manifest, Type};
-use mercurial_types::nodehash::{DManifestId, DNodeHash, EntryId, D_NULL_HASH};
+use mercurial_types::nodehash::{DEntryId, DManifestId, DNodeHash, D_NULL_HASH};
 
 use blobstore::Blobstore;
 
@@ -25,7 +25,7 @@ use utils::get_node;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {
-    entryid: EntryId,
+    entryid: DEntryId,
     flag: Type,
 }
 
@@ -183,7 +183,7 @@ impl Details {
             .map_err(|err| Error::from(err))
             .and_then(|hash| hash.parse::<DNodeHash>())
             .with_context(|_| format!("malformed hash: {:?}", hash))?;
-        let entryid = EntryId::new(hash);
+        let entryid = DEntryId::new(hash);
 
         ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
@@ -204,7 +204,7 @@ impl Details {
         })
     }
 
-    pub fn entryid(&self) -> &EntryId {
+    pub fn entryid(&self) -> &DEntryId {
         &self.entryid
     }
 
