@@ -25,7 +25,7 @@ use heads::Heads;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{BlobNode, HgBlob, HgFileNodeId, RepoPath, RepositoryId};
+use mercurial_types::{BlobNode, DFileNodeId, HgBlob, RepoPath, RepositoryId};
 use mercurial_types::nodehash::DChangesetId;
 use stats::Timeseries;
 
@@ -329,15 +329,15 @@ fn create_filenode(
     let copyfrom = mercurial::file::File::new(BlobNode::new(blob, p1.as_ref(), p2.as_ref()))
         .copied_from()
         .map(|copiedfrom| {
-            copiedfrom.map(|(path, node)| (RepoPath::FilePath(path), HgFileNodeId::new(node)))
+            copiedfrom.map(|(path, node)| (RepoPath::FilePath(path), DFileNodeId::new(node)))
         })
         .expect("cannot create filenode");
 
     FilenodeInfo {
         path: repopath.clone(),
-        filenode: HgFileNodeId::new(filenode_hash.into_mononoke()),
-        p1: p1.map(HgFileNodeId::new),
-        p2: p2.map(HgFileNodeId::new),
+        filenode: DFileNodeId::new(filenode_hash.into_mononoke()),
+        p1: p1.map(DFileNodeId::new),
+        p2: p2.map(DFileNodeId::new),
         copyfrom,
         linknode: DChangesetId::new(linknode.into_mononoke()),
     }

@@ -26,7 +26,7 @@ use mercurial_types::{BlobNode, Changeset, DChangesetId, DNodeHash, Entry, Entry
                       Manifest, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
-use mercurial_types::nodehash::{DManifestId, HgFileNodeId};
+use mercurial_types::nodehash::{DFileNodeId, DManifestId};
 
 use BlobChangeset;
 use BlobRepo;
@@ -250,9 +250,9 @@ impl UploadEntries {
                     let (p1, p2) = parents.get_nodes();
                     FilenodeInfo {
                         path,
-                        filenode: HgFileNodeId::new(blobentry.get_hash().into_nodehash()),
-                        p1: p1.cloned().map(HgFileNodeId::new),
-                        p2: p2.cloned().map(HgFileNodeId::new),
+                        filenode: DFileNodeId::new(blobentry.get_hash().into_nodehash()),
+                        p1: p1.cloned().map(DFileNodeId::new),
+                        p2: p2.cloned().map(DFileNodeId::new),
                         copyfrom,
                         linknode: DChangesetId::new(cs_id),
                     }
@@ -273,7 +273,7 @@ fn compute_copy_from_info(
     path: &RepoPath,
     blobentry: &BlobEntry,
     parents: &Parents,
-) -> BoxFuture<Option<(RepoPath, HgFileNodeId)>, Error> {
+) -> BoxFuture<Option<(RepoPath, DFileNodeId)>, Error> {
     let parents = parents.clone();
     match path {
         &RepoPath::FilePath(_) => blobentry
@@ -289,7 +289,7 @@ fn compute_copy_from_info(
                         .copied_from()
                         .map(|copiedfrom| {
                             copiedfrom.map(|(path, node)| {
-                                (RepoPath::FilePath(path), HgFileNodeId::new(node))
+                                (RepoPath::FilePath(path), DFileNodeId::new(node))
                             })
                         })
                 }

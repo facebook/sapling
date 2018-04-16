@@ -13,7 +13,7 @@ use diesel::deserialize::{self, FromSql};
 use diesel::serialize::{self, IsNull, Output, ToSql};
 use diesel::sql_types::{Binary, Integer};
 
-use {DChangesetId, DManifestId, DNodeHash, HgFileNodeId, RepositoryId};
+use {DChangesetId, DFileNodeId, DManifestId, DNodeHash, RepositoryId};
 use errors::*;
 
 #[derive(QueryId, SqlType)]
@@ -29,7 +29,7 @@ pub struct DManifestIdSql;
 #[derive(QueryId, SqlType)]
 #[mysql_type = "Blob"]
 #[sqlite_type = "Binary"]
-pub struct HgFileNodeIdSql;
+pub struct DFileNodeIdSql;
 
 impl<DB: Backend> ToSql<DChangesetIdSql, DB> for DChangesetId {
     fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
@@ -71,14 +71,14 @@ where
     }
 }
 
-impl<DB: Backend> ToSql<HgFileNodeIdSql, DB> for HgFileNodeId {
+impl<DB: Backend> ToSql<DFileNodeIdSql, DB> for DFileNodeId {
     fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
         out.write_all(self.as_nodehash().0.as_ref())?;
         Ok(IsNull::No)
     }
 }
 
-impl<DB: Backend> FromSql<HgFileNodeIdSql, DB> for HgFileNodeId
+impl<DB: Backend> FromSql<DFileNodeIdSql, DB> for DFileNodeId
 where
     *const [u8]: FromSql<Binary, DB>,
 {

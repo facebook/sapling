@@ -7,7 +7,7 @@
 // Ignore deprecation of NodeHash::new
 #![allow(deprecated)]
 
-use mercurial_types::{DChangesetId, DManifestId, DNodeHash, HgFileNodeId};
+use mercurial_types::{DChangesetId, DFileNodeId, DManifestId, DNodeHash};
 // D_NULL_HASH is exported for convenience.
 pub use mercurial_types::D_NULL_HASH;
 
@@ -65,18 +65,18 @@ pub const ES_MID: DManifestId = DManifestId::new(ES_HASH);
 pub const FS_MID: DManifestId = DManifestId::new(FS_HASH);
 
 // Definitions for filenode IDs 1111...ffff
-pub const ONES_FNID: HgFileNodeId = HgFileNodeId::new(ONES_HASH);
-pub const TWOS_FNID: HgFileNodeId = HgFileNodeId::new(TWOS_HASH);
-pub const THREES_FNID: HgFileNodeId = HgFileNodeId::new(THREES_HASH);
-pub const FOURS_FNID: HgFileNodeId = HgFileNodeId::new(FOURS_HASH);
-pub const FIVES_FNID: HgFileNodeId = HgFileNodeId::new(FIVES_HASH);
-pub const SIXES_FNID: HgFileNodeId = HgFileNodeId::new(SIXES_HASH);
-pub const SEVENS_FNID: HgFileNodeId = HgFileNodeId::new(SEVENS_HASH);
-pub const EIGHTS_FNID: HgFileNodeId = HgFileNodeId::new(EIGHTS_HASH);
-pub const NINES_FNID: HgFileNodeId = HgFileNodeId::new(NINES_HASH);
-pub const AS_FNID: HgFileNodeId = HgFileNodeId::new(AS_HASH);
-pub const BS_FNID: HgFileNodeId = HgFileNodeId::new(BS_HASH);
-pub const CS_FNID: HgFileNodeId = HgFileNodeId::new(CS_HASH);
-pub const DS_FNID: HgFileNodeId = HgFileNodeId::new(DS_HASH);
-pub const ES_FNID: HgFileNodeId = HgFileNodeId::new(ES_HASH);
-pub const FS_FNID: HgFileNodeId = HgFileNodeId::new(FS_HASH);
+pub const ONES_FNID: DFileNodeId = DFileNodeId::new(ONES_HASH);
+pub const TWOS_FNID: DFileNodeId = DFileNodeId::new(TWOS_HASH);
+pub const THREES_FNID: DFileNodeId = DFileNodeId::new(THREES_HASH);
+pub const FOURS_FNID: DFileNodeId = DFileNodeId::new(FOURS_HASH);
+pub const FIVES_FNID: DFileNodeId = DFileNodeId::new(FIVES_HASH);
+pub const SIXES_FNID: DFileNodeId = DFileNodeId::new(SIXES_HASH);
+pub const SEVENS_FNID: DFileNodeId = DFileNodeId::new(SEVENS_HASH);
+pub const EIGHTS_FNID: DFileNodeId = DFileNodeId::new(EIGHTS_HASH);
+pub const NINES_FNID: DFileNodeId = DFileNodeId::new(NINES_HASH);
+pub const AS_FNID: DFileNodeId = DFileNodeId::new(AS_HASH);
+pub const BS_FNID: DFileNodeId = DFileNodeId::new(BS_HASH);
+pub const CS_FNID: DFileNodeId = DFileNodeId::new(CS_HASH);
+pub const DS_FNID: DFileNodeId = DFileNodeId::new(DS_HASH);
+pub const ES_FNID: DFileNodeId = DFileNodeId::new(ES_HASH);
+pub const FS_FNID: DFileNodeId = DFileNodeId::new(FS_HASH);

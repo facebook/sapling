@@ -17,7 +17,7 @@ use quickcheck::{single_shrinker, Arbitrary, Gen};
 use errors::*;
 use hash::{self, Sha1};
 use serde;
-use sql_types::{DChangesetIdSql, DManifestIdSql, HgFileNodeIdSql};
+use sql_types::{DChangesetIdSql, DFileNodeIdSql, DManifestIdSql};
 
 pub const D_NULL_HASH: DNodeHash = DNodeHash(hash::NULL);
 pub const NULL_CSID: DChangesetId = DChangesetId(D_NULL_HASH);
@@ -239,10 +239,10 @@ impl Display for DManifestId {
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf, FromSqlRow, AsExpression)]
-#[sql_type = "HgFileNodeIdSql"]
-pub struct HgFileNodeId(DNodeHash);
+#[sql_type = "DFileNodeIdSql"]
+pub struct DFileNodeId(DNodeHash);
 
-impl HgFileNodeId {
+impl DFileNodeId {
     #[inline]
     pub(crate) fn as_nodehash(&self) -> &DNodeHash {
         &self.0
@@ -253,11 +253,11 @@ impl HgFileNodeId {
     }
 
     pub const fn new(hash: DNodeHash) -> Self {
-        HgFileNodeId(hash)
+        DFileNodeId(hash)
     }
 }
 
-impl Display for HgFileNodeId {
+impl Display for DFileNodeId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }

@@ -30,8 +30,8 @@ use failure::{Error, Result};
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
-use mercurial_types::{HgFileNodeId, RepoPath, RepositoryId};
-use mercurial_types::sql_types::HgFileNodeIdSql;
+use mercurial_types::{DFileNodeId, RepoPath, RepositoryId};
+use mercurial_types::sql_types::DFileNodeIdSql;
 
 use std::sync::{Arc, Mutex};
 
@@ -151,7 +151,7 @@ macro_rules! impl_filenodes {
             fn get_filenode(
                 &self,
                 path: &RepoPath,
-                filenode: &HgFileNodeId,
+                filenode: &DFileNodeId,
                 repo_id: &RepositoryId,
             ) -> BoxFuture<Option<FilenodeInfo>, Error> {
                 let connection = self.connection.lock().expect("lock poisoned");
@@ -271,10 +271,10 @@ macro_rules! impl_filenodes {
 
             fn fetch_copydata(
                 connection: &$connection,
-                filenode: &HgFileNodeId,
+                filenode: &DFileNodeId,
                 path: &RepoPath,
                 repo_id: &RepositoryId,
-            ) -> Result<Option<(RepoPath, HgFileNodeId)>> {
+            ) -> Result<Option<(RepoPath, DFileNodeId)>> {
                 let is_tree = match path {
                     &RepoPath::RootPath | &RepoPath::DirectoryPath(_) => true,
                     &RepoPath::FilePath(_) => false,
@@ -312,12 +312,12 @@ impl_filenodes!(SqliteFilenodes, SqliteConnection);
 
 fn filenode_query<DB>(
     repo_id: &RepositoryId,
-    filenode: &HgFileNodeId,
+    filenode: &DFileNodeId,
     path: &RepoPath,
 ) -> schema::filenodes::BoxedQuery<'static, DB>
 where
     DB: Backend,
-    DB: HasSqlType<HgFileNodeIdSql>,
+    DB: HasSqlType<DFileNodeIdSql>,
 {
     let (path_bytes, is_tree) = convert_from_repo_path(path);
 
@@ -334,12 +334,12 @@ where
 
 fn copyinfo_query<DB>(
     repo_id: &RepositoryId,
-    tonode: &HgFileNodeId,
+    tonode: &DFileNodeId,
     topath: &RepoPath,
 ) -> schema::fixedcopyinfo::BoxedQuery<'static, DB>
 where
     DB: Backend,
-    DB: HasSqlType<HgFileNodeIdSql>,
+    DB: HasSqlType<DFileNodeIdSql>,
 {
     let (topath_bytes, is_tree) = convert_from_repo_path(topath);
 
@@ -360,7 +360,7 @@ fn path_query<DB>(
 ) -> schema::paths::BoxedQuery<'static, DB>
 where
     DB: Backend,
-    DB: HasSqlType<HgFileNodeIdSql>,
+    DB: HasSqlType<DFileNodeIdSql>,
 {
     schema::paths::table
         .filter(schema::paths::repo_id.eq(*repo_id))

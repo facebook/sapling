@@ -37,7 +37,7 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial_types::{BlobNode, Changeset, DChangesetId, DNodeHash, Entry, HgBlob, HgFileNodeId,
+use mercurial_types::{BlobNode, Changeset, DChangesetId, DFileNodeId, DNodeHash, Entry, HgBlob,
                       Manifest, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::DManifestId;
@@ -217,7 +217,7 @@ impl BlobRepo {
 
     pub fn get_parents(&self, path: &RepoPath, node: &DNodeHash) -> BoxFuture<Parents, Error> {
         let path = path.clone();
-        let node = HgFileNodeId::new(*node);
+        let node = DFileNodeId::new(*node);
         self.filenodes
             .get_filenode(&path, &node, &self.repoid)
             .and_then({
@@ -240,7 +240,7 @@ impl BlobRepo {
         node: &DNodeHash,
     ) -> BoxFuture<Option<(RepoPath, DNodeHash)>, Error> {
         let path = path.clone();
-        let node = HgFileNodeId::new(*node);
+        let node = DFileNodeId::new(*node);
         self.filenodes
             .get_filenode(&path, &node, &self.repoid)
             .and_then({
@@ -313,7 +313,7 @@ impl BlobRepo {
     }
 
     pub fn get_linknode(&self, path: RepoPath, node: &DNodeHash) -> BoxFuture<DNodeHash, Error> {
-        let node = HgFileNodeId::new(*node);
+        let node = DFileNodeId::new(*node);
         self.filenodes
             .get_filenode(&path, &node, &self.repoid)
             .and_then({

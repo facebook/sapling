@@ -10,8 +10,8 @@ use bincode;
 
 pub use failure::{Error, ResultExt};
 
-use mercurial_types::{DChangesetId, DNodeHash, HgBlob, HgBlobHash, HgFileNodeId, Parents,
-                      RepoPath, Type};
+use mercurial_types::{DChangesetId, DFileNodeId, DNodeHash, HgBlob, HgBlobHash, Parents, RepoPath,
+                      Type};
 
 #[derive(Debug)]
 pub enum StateOpenError {
@@ -57,7 +57,7 @@ pub enum ErrorKind {
     #[fail(display = "Path {} appears multiple times in manifests", _0)] DuplicateEntry(RepoPath),
     #[fail(display = "Duplicate manifest hash {}", _0)] DuplicateManifest(DNodeHash),
     #[fail(display = "Missing entries in new changeset {}", _0)] MissingEntries(DNodeHash),
-    #[fail(display = "Filenode is missing: {} {}", _0, _1)] MissingFilenode(RepoPath, HgFileNodeId),
+    #[fail(display = "Filenode is missing: {} {}", _0, _1)] MissingFilenode(RepoPath, DFileNodeId),
     #[fail(display = "Some manifests do not exist")] MissingManifests,
     #[fail(display = "Parents failed to complete")] ParentsFailed,
     #[fail(display = "Expected {} to be a manifest, found a {} instead", _0, _1)]

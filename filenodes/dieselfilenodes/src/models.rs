@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use common::blake2_path_hash;
-use mercurial_types::{DChangesetId, HgFileNodeId, RepositoryId};
+use mercurial_types::{DChangesetId, DFileNodeId, RepositoryId};
 use schema::{filenodes, fixedcopyinfo, paths};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -17,11 +17,11 @@ pub(crate) struct FilenodeRow {
     pub repo_id: RepositoryId,
     pub path_hash: Vec<u8>,
     pub is_tree: i32,
-    pub filenode: HgFileNodeId,
+    pub filenode: DFileNodeId,
     // TODO(stash): shouldn't it be Mononoke changeset id?
     pub linknode: DChangesetId,
-    pub p1: Option<HgFileNodeId>,
-    pub p2: Option<HgFileNodeId>,
+    pub p1: Option<DFileNodeId>,
+    pub p2: Option<DFileNodeId>,
 }
 
 impl FilenodeRow {
@@ -29,10 +29,10 @@ impl FilenodeRow {
         repo_id: &RepositoryId,
         path: &Vec<u8>,
         is_tree: i32,
-        filenode: &HgFileNodeId,
+        filenode: &DFileNodeId,
         linknode: &DChangesetId,
-        p1: Option<HgFileNodeId>,
-        p2: Option<HgFileNodeId>,
+        p1: Option<DFileNodeId>,
+        p2: Option<DFileNodeId>,
     ) -> Self {
         FilenodeRow {
             repo_id: *repo_id,
@@ -71,20 +71,20 @@ impl PathRow {
 pub(crate) struct FixedCopyInfoRow {
     pub repo_id: RepositoryId,
     pub frompath_hash: Vec<u8>,
-    pub fromnode: HgFileNodeId,
+    pub fromnode: DFileNodeId,
     is_tree: i32,
     pub topath_hash: Vec<u8>,
-    pub tonode: HgFileNodeId,
+    pub tonode: DFileNodeId,
 }
 
 impl FixedCopyInfoRow {
     pub(crate) fn new(
         repo_id: &RepositoryId,
         frompath: &Vec<u8>,
-        fromnode: &HgFileNodeId,
+        fromnode: &DFileNodeId,
         is_tree: i32,
         topath: &Vec<u8>,
-        tonode: &HgFileNodeId,
+        tonode: &DFileNodeId,
     ) -> Self {
         let frompath_hash = blake2_path_hash(frompath);
         let topath_hash = blake2_path_hash(topath);
