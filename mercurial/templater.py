@@ -1039,6 +1039,15 @@ def obsfateverb(context, mapping, args):
         errmsg = _("obsfateverb first argument should be countable")
         raise error.ParseError(errmsg)
 
+@templatefunc('capitalize(word)')
+def capitalize(context, mapping, args):
+    '''Capitalize the first letter of each word in a string
+    '''
+    if len(args) != 1:
+        raise error.ParseError(_("capitalize expects one argument"))
+    word = evalfuncarg(context, mapping, args[0])
+    return word.capitalize()
+
 @templatefunc('relpath(path)')
 def relpath(context, mapping, args):
     """Convert a repository-absolute path into a filesystem path relative to
