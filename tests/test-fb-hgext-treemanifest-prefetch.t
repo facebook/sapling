@@ -200,6 +200,50 @@ requires tree manifest for the base commit.
   Node          Delta Base    Delta Length  Blob Size
   60a7f7acb6bb  000000000000  95            (missing)
   
+Test prefetching when a draft commit is marked public
+  $ mkdir $TESTTMP/cachedir.bak
+  $ mv $CACHEDIR/* $TESTTMP/cachedir.bak
+
+- Create a draft commit, and force it to be public
+#if remotefilelog.true.shallowrepo.true
+  $ hg prefetch -r .
+  3 trees fetched over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+#else
+  $ hg prefetch -r .
+  3 trees fetched over * (glob)
+#endif
+  $ echo foo > foo
+  $ hg commit -Aqm 'add foo'
+  $ hg phase -p -r .
+  $ hg log -G -T '{rev} {phase} {manifest}'
+  @  3 public 5cf0d3bd4f40594eff7f0c945bec8baa8d115d01
+  |
+  o  2 public 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5
+  |
+  o  1 public 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0
+  |
+  o  0 public ef362f8bbe8aa457b0cfc49f200cbeb7747984ed
+  
+- Add remotenames for the remote heads
+  $ hg pull --config extensions.remotenames=
+  pulling from ssh://user@dummy/master
+  searching for changes
+  no changes found
+
+- Attempt to download the latest server commit. Verify there's no error about a
+- missing manifest from the server.
+  $ clearcache
+  $ hg status --change 2 --config extensions.remotenames=
+  3 trees fetched over * (glob)
+  2 trees fetched over * (glob)
+  M dir/x
+  $ hg strip -r 3
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/b6308255e316-b2a7dcf7-backup.hg
+
+  $ clearcache
+  $ mv $TESTTMP/cachedir.bak/* $CACHEDIR
 
 Test auto prefetch during normal access
   $ rm -rf $CACHEDIR/master

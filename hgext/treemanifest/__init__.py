@@ -88,6 +88,7 @@ from __future__ import absolute_import
 import abc
 import contextlib
 import hashlib
+import itertools
 import os
 import random
 import shutil
@@ -1700,24 +1701,26 @@ def _postpullprefetch(ui, repo):
 def _findrecenttree(repo, startrev):
     cl = repo.changelog
     mfstore = repo.manifestlog.datastore
-    phasecache = repo._phasecache
-    maxrev = min(len(cl) - 1, startrev + BASENODESEARCHMAX)
-    minrev = max(0, startrev - BASENODESEARCHMAX)
 
     # Look up and down from the given rev
-    phase = phasecache.phase
-    walksize = max(maxrev - startrev, startrev - minrev) + 1
-    for offset in xrange(0, walksize):
-        revs = []
-        uprev = startrev + offset
-        downrev = startrev - offset
-        if uprev <= maxrev:
-            revs.append(uprev)
-        if downrev >= minrev:
-            revs.append(downrev)
+    ancestors = iter(repo.revs('reverse(ancestors(%d, %d)) & public()',
+                               startrev, BASENODESEARCHMAX))
+
+    descendantquery = 'descendants(%d, %d) & public()'
+    if extensions.enabled().get('remotenames', False):
+        descendantquery += ' & ::remotenames()'
+    descendants = iter(repo.revs(descendantquery,
+                                 startrev, BASENODESEARCHMAX))
+
+    revs = []
+    # Zip's the iterators together, using the fillvalue when the shorter
+    # iterator runs out of values.
+    candidates = itertools.izip_longest(ancestors, descendants, fillvalue=None)
+    for revs in candidates:
         for rev in revs:
-            if phase(repo, rev) != phases.public:
+            if rev is None:
                 continue
+
             mfnode = cl.changelogrevision(rev).manifest
             missing = mfstore.getmissing([('', mfnode)])
             if not missing:
