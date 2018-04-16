@@ -648,8 +648,8 @@ def _dobackuppush(ui, repo, other, outgoing, bookmarks):
             changegroup.cg2packer, 'deltaparent', _deltaparent)
     return 0
 
-def _dobackgroundbackup(ui, repo, dest=None):
-    background_cmd = ['hg', 'pushbackup']
+def _dobackgroundbackup(ui, repo, dest=None, command=None):
+    background_cmd = command or ['hg', 'pushbackup']
     infinitepush_bgssh = ui.config('infinitepush', 'bgssh')
     if infinitepush_bgssh:
         background_cmd += ['--config', 'ui.ssh=%s' % infinitepush_bgssh]

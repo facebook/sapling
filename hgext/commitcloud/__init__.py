@@ -70,7 +70,10 @@ from mercurial import (
     util,
 )
 
-from . import commitcloudcommands
+from . import (
+    commitcloudcommands,
+    commitcloudutil,
+)
 
 cmdtable = commitcloudcommands.cmdtable
 
@@ -79,12 +82,22 @@ colortable = {
     'commitcloud.team': 'bold',
 }
 
+def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None):
+    workspacemanager = commitcloudutil.WorkspaceManager(repo)
+    if workspacemanager.workspace is not None:
+        return orig(ui, repo, dest, ['hg', 'cloudsync'])
+    else:
+        return orig(ui, repo, dest, command)
+
 def extsetup(ui):
     try:
-        commitcloudcommands.infinitepush = extensions.find('infinitepush')
+        infinitepush = extensions.find('infinitepush')
     except KeyError:
         msg = _('The commitcloud extension requires the infinitepush extension')
         raise error.Abort(msg)
+    extensions.wrapfunction(infinitepush.backupcommands, '_dobackgroundbackup',
+                            _dobackgroundcloudsync)
+    commitcloudcommands.infinitepush = infinitepush
 
 def reposetup(ui, repo):
     def finalize(tr):
