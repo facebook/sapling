@@ -17,7 +17,7 @@ use quickcheck::{single_shrinker, Arbitrary, Gen};
 use errors::*;
 use hash::{self, Sha1};
 use serde;
-use sql_types::{DChangesetIdSql, HgFileNodeIdSql, HgManifestIdSql};
+use sql_types::{DChangesetIdSql, DManifestIdSql, HgFileNodeIdSql};
 
 pub const D_NULL_HASH: DNodeHash = DNodeHash(hash::NULL);
 pub const NULL_CSID: DChangesetId = DChangesetId(D_NULL_HASH);
@@ -213,10 +213,10 @@ impl<'de> serde::de::Deserialize<'de> for DChangesetId {
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf, FromSqlRow, AsExpression)]
-#[sql_type = "HgManifestIdSql"]
-pub struct HgManifestId(DNodeHash);
+#[sql_type = "DManifestIdSql"]
+pub struct DManifestId(DNodeHash);
 
-impl HgManifestId {
+impl DManifestId {
     #[inline]
     pub(crate) fn as_nodehash(&self) -> &DNodeHash {
         &self.0
@@ -227,11 +227,11 @@ impl HgManifestId {
     }
 
     pub const fn new(hash: DNodeHash) -> Self {
-        HgManifestId(hash)
+        DManifestId(hash)
     }
 }
 
-impl Display for HgManifestId {
+impl Display for DManifestId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }

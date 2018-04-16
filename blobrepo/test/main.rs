@@ -29,8 +29,8 @@ use bytes::Bytes;
 use futures::Future;
 
 use blobrepo::{compute_changed_files, BlobRepo};
-use mercurial_types::{manifest, Changeset, DChangesetId, Entry, EntryId, FileType, HgBlob,
-                      HgManifestId, MPath, MPathElement, RepoPath};
+use mercurial_types::{manifest, Changeset, DChangesetId, DManifestId, Entry, EntryId, FileType,
+                      HgBlob, MPath, MPathElement, RepoPath};
 
 mod stats_units;
 #[macro_use]
@@ -143,7 +143,7 @@ fn create_one_changeset(repo: BlobRepo) {
     );
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
-    assert!(cs.manifestid() == &HgManifestId::new(roothash));
+    assert!(cs.manifestid() == &DManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
     let files: Vec<_> = cs.files().into();
@@ -197,7 +197,7 @@ fn create_two_changesets(repo: BlobRepo) {
             .join(commit2.get_completed_changeset()),
     ).unwrap();
 
-    assert!(commit2.manifestid() == &HgManifestId::new(roothash));
+    assert!(commit2.manifestid() == &DManifestId::new(roothash));
     assert!(commit2.user() == utf_author.as_bytes());
     let files: Vec<_> = commit2.files().into();
     let expected_files = vec![MPath::new("dir/file").unwrap(), MPath::new("file").unwrap()];
@@ -337,7 +337,7 @@ fn check_linknode_creation(repo: BlobRepo) {
     let commit = create_changeset_no_parents(&repo, root_manifest_future, uploads);
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
-    assert!(cs.manifestid() == &HgManifestId::new(roothash));
+    assert!(cs.manifestid() == &DManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
 

@@ -26,7 +26,7 @@ use mercurial_types::{BlobNode, Changeset, DChangesetId, DNodeHash, Entry, Entry
                       Manifest, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
-use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
+use mercurial_types::nodehash::{DManifestId, HgFileNodeId};
 
 use BlobChangeset;
 use BlobRepo;
@@ -42,13 +42,13 @@ use utils::get_node_key;
 /// See `get_completed_changeset()` for the public API you can use to extract the final changeset
 #[derive(Clone)]
 pub struct ChangesetHandle {
-    can_be_parent: Shared<oneshot::Receiver<(DNodeHash, HgManifestId)>>,
+    can_be_parent: Shared<oneshot::Receiver<(DNodeHash, DManifestId)>>,
     completion_future: Shared<BoxFuture<BlobChangeset, Compat<Error>>>,
 }
 
 impl ChangesetHandle {
     pub fn new_pending(
-        can_be_parent: Shared<oneshot::Receiver<(DNodeHash, HgManifestId)>>,
+        can_be_parent: Shared<oneshot::Receiver<(DNodeHash, DManifestId)>>,
         completion_future: Shared<BoxFuture<BlobChangeset, Compat<Error>>>,
     ) -> Self {
         Self {
@@ -362,7 +362,7 @@ pub fn process_entries(
     entry_processor: &UploadEntries,
     root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
     new_child_entries: BoxStream<(BlobEntry, RepoPath), Error>,
-) -> BoxFuture<(Box<Manifest + Sync>, HgManifestId), Error> {
+) -> BoxFuture<(Box<Manifest + Sync>, DManifestId), Error> {
     root_manifest
         .and_then({
             let entry_processor = entry_processor.clone();
@@ -388,7 +388,7 @@ pub fn process_entries(
         })
         .and_then(move |root_hash| {
             repo.get_manifest_by_nodeid(&root_hash)
-                .map(move |m| (m, HgManifestId::new(root_hash)))
+                .map(move |m| (m, DManifestId::new(root_hash)))
         })
         .timed(move |stats, result| {
             if result.is_ok() {
@@ -482,7 +482,7 @@ pub fn handle_parents(
 
 pub fn make_new_changeset(
     parents: Parents,
-    root_hash: HgManifestId,
+    root_hash: DManifestId,
     user: String,
     time: Time,
     extra: BTreeMap<Vec<u8>, Vec<u8>>,

@@ -37,7 +37,7 @@ use blobrepo::BlobChangeset;
 use bundle2_resolver;
 use mercurial::{self, NodeHashConversion, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{percent_encode, Changeset, DChangesetId, DNodeHash, Entry, HgManifestId,
+use mercurial_types::{percent_encode, Changeset, DChangesetId, DManifestId, DNodeHash, Entry,
                       MPath, Parents, RepoPath, RepositoryId, Type, D_NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use metaconfig::repoconfig::RepoType;
@@ -819,8 +819,7 @@ fn get_changed_entry_stream(
         });
 
     // Append root manifest
-    let root_entry_stream =
-        stream::once(Ok((repo.get_root_entry(&HgManifestId::new(*mfid)), None)));
+    let root_entry_stream = stream::once(Ok((repo.get_root_entry(&DManifestId::new(*mfid)), None)));
 
     changed_entries.chain(root_entry_stream).boxify()
 }

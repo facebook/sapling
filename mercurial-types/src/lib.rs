@@ -101,7 +101,7 @@ pub use delta::Delta;
 pub use fsencode::{fncache_fsencode, simple_fsencode};
 pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
-pub use nodehash::{DChangesetId, DNodeHash, EntryId, HgFileNodeId, HgManifestId, D_NULL_HASH};
+pub use nodehash::{DChangesetId, DManifestId, DNodeHash, EntryId, HgFileNodeId, D_NULL_HASH};
 pub use repo::RepositoryId;
 pub use utils::percent_encode;
 

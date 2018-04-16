@@ -15,7 +15,7 @@ use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial_types::{Entry, FileType, MPathElement, Manifest, Type};
-use mercurial_types::nodehash::{DNodeHash, EntryId, HgManifestId, D_NULL_HASH};
+use mercurial_types::nodehash::{DManifestId, DNodeHash, EntryId, D_NULL_HASH};
 
 use blobstore::Blobstore;
 
@@ -92,7 +92,7 @@ pub struct BlobManifest {
 impl BlobManifest {
     pub fn load(
         blobstore: &Arc<Blobstore>,
-        manifestid: &HgManifestId,
+        manifestid: &DManifestId,
     ) -> BoxFuture<Option<Self>, Error> {
         let nodehash = manifestid.clone().into_nodehash();
         if nodehash == D_NULL_HASH {

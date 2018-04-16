@@ -40,7 +40,7 @@ use memheads::MemHeads;
 use mercurial_types::{BlobNode, Changeset, DChangesetId, DNodeHash, Entry, HgBlob, HgFileNodeId,
                       Manifest, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
-use mercurial_types::nodehash::HgManifestId;
+use mercurial_types::nodehash::DManifestId;
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Remote;
@@ -292,14 +292,14 @@ impl BlobRepo {
         nodeid: &DNodeHash,
     ) -> BoxFuture<Box<Manifest + Sync>, Error> {
         let nodeid = *nodeid;
-        let manifestid = HgManifestId::new(nodeid);
+        let manifestid = DManifestId::new(nodeid);
         BlobManifest::load(&self.blobstore, &manifestid)
             .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(nodeid).into()))
             .map(|m| m.boxed())
             .boxify()
     }
 
-    pub fn get_root_entry(&self, manifestid: &HgManifestId) -> Box<Entry + Sync> {
+    pub fn get_root_entry(&self, manifestid: &DManifestId) -> Box<Entry + Sync> {
         Box::new(BlobEntry::new_root(self.blobstore.clone(), *manifestid))
     }
 

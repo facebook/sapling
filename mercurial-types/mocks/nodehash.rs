@@ -7,7 +7,7 @@
 // Ignore deprecation of NodeHash::new
 #![allow(deprecated)]
 
-use mercurial_types::{DChangesetId, DNodeHash, HgFileNodeId, HgManifestId};
+use mercurial_types::{DChangesetId, DManifestId, DNodeHash, HgFileNodeId};
 // D_NULL_HASH is exported for convenience.
 pub use mercurial_types::D_NULL_HASH;
 
@@ -48,21 +48,21 @@ pub const ES_CSID: DChangesetId = DChangesetId::new(ES_HASH);
 pub const FS_CSID: DChangesetId = DChangesetId::new(FS_HASH);
 
 // Definitions for manifest IDs 1111...ffff
-pub const ONES_MID: HgManifestId = HgManifestId::new(ONES_HASH);
-pub const TWOS_MID: HgManifestId = HgManifestId::new(TWOS_HASH);
-pub const THREES_MID: HgManifestId = HgManifestId::new(THREES_HASH);
-pub const FOURS_MID: HgManifestId = HgManifestId::new(FOURS_HASH);
-pub const FIVES_MID: HgManifestId = HgManifestId::new(FIVES_HASH);
-pub const SIXES_MID: HgManifestId = HgManifestId::new(SIXES_HASH);
-pub const SEVENS_MID: HgManifestId = HgManifestId::new(SEVENS_HASH);
-pub const EIGHTS_MID: HgManifestId = HgManifestId::new(EIGHTS_HASH);
-pub const NINES_MID: HgManifestId = HgManifestId::new(NINES_HASH);
-pub const AS_MID: HgManifestId = HgManifestId::new(AS_HASH);
-pub const BS_MID: HgManifestId = HgManifestId::new(BS_HASH);
-pub const CS_MID: HgManifestId = HgManifestId::new(CS_HASH);
-pub const DS_MID: HgManifestId = HgManifestId::new(DS_HASH);
-pub const ES_MID: HgManifestId = HgManifestId::new(ES_HASH);
-pub const FS_MID: HgManifestId = HgManifestId::new(FS_HASH);
+pub const ONES_MID: DManifestId = DManifestId::new(ONES_HASH);
+pub const TWOS_MID: DManifestId = DManifestId::new(TWOS_HASH);
+pub const THREES_MID: DManifestId = DManifestId::new(THREES_HASH);
+pub const FOURS_MID: DManifestId = DManifestId::new(FOURS_HASH);
+pub const FIVES_MID: DManifestId = DManifestId::new(FIVES_HASH);
+pub const SIXES_MID: DManifestId = DManifestId::new(SIXES_HASH);
+pub const SEVENS_MID: DManifestId = DManifestId::new(SEVENS_HASH);
+pub const EIGHTS_MID: DManifestId = DManifestId::new(EIGHTS_HASH);
+pub const NINES_MID: DManifestId = DManifestId::new(NINES_HASH);
+pub const AS_MID: DManifestId = DManifestId::new(AS_HASH);
+pub const BS_MID: DManifestId = DManifestId::new(BS_HASH);
+pub const CS_MID: DManifestId = DManifestId::new(CS_HASH);
+pub const DS_MID: DManifestId = DManifestId::new(DS_HASH);
+pub const ES_MID: DManifestId = DManifestId::new(ES_HASH);
+pub const FS_MID: DManifestId = DManifestId::new(FS_HASH);
 
 // Definitions for filenode IDs 1111...ffff
 pub const ONES_FNID: HgFileNodeId = HgFileNodeId::new(ONES_HASH);

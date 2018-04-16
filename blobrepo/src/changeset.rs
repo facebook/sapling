@@ -20,7 +20,7 @@ use mercurial::{self, NodeHashConversion};
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
 use mercurial_types::{BlobNode, Changeset, HgBlob, MPath, Parents, Time};
-use mercurial_types::nodehash::{DChangesetId, HgManifestId, D_NULL_HASH};
+use mercurial_types::nodehash::{DChangesetId, DManifestId, D_NULL_HASH};
 
 use errors::*;
 
@@ -39,7 +39,7 @@ struct RawCSBlob<'a> {
 
 pub struct ChangesetContent {
     parents: Parents,
-    manifestid: HgManifestId,
+    manifestid: DManifestId,
     user: Vec<u8>,
     time: Time,
     extra: Extra,
@@ -56,7 +56,7 @@ impl From<RevlogChangeset> for ChangesetContent {
             Parents::new(p1.as_ref(), p2.as_ref())
         };
 
-        let manifestid = HgManifestId::new(revlogcs.manifestid.into_nodehash().into_mononoke());
+        let manifestid = DManifestId::new(revlogcs.manifestid.into_nodehash().into_mononoke());
 
         Self {
             parents,
@@ -73,7 +73,7 @@ impl From<RevlogChangeset> for ChangesetContent {
 impl ChangesetContent {
     pub fn new_from_parts(
         parents: Parents,
-        manifestid: HgManifestId,
+        manifestid: DManifestId,
         user: Vec<u8>,
         time: Time,
         extra: BTreeMap<Vec<u8>, Vec<u8>>,
@@ -218,7 +218,7 @@ impl BlobChangeset {
 }
 
 impl Changeset for BlobChangeset {
-    fn manifestid(&self) -> &HgManifestId {
+    fn manifestid(&self) -> &DManifestId {
         &self.content.manifestid
     }
 

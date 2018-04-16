@@ -13,7 +13,7 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{BlobNode, DNodeHash, FileType, HgBlob, HgManifestId, MPath, MPathElement,
+use mercurial_types::{BlobNode, DManifestId, DNodeHash, FileType, HgBlob, MPath, MPathElement,
                       Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::EntryId;
@@ -82,7 +82,7 @@ impl BlobEntry {
         })
     }
 
-    pub fn new_root(blobstore: Arc<Blobstore>, manifestid: HgManifestId) -> Self {
+    pub fn new_root(blobstore: Arc<Blobstore>, manifestid: DManifestId) -> Self {
         Self {
             blobstore,
             name: None,
