@@ -1902,6 +1902,10 @@ class forceincludematcher(matchmod.basematcher):
     def __call__(self, value):
         return value in self._includes or self._matcher(value)
 
+    def __repr__(self):
+        return '<forceincludematcher matcher=%r includes=%r>' % (
+            self._matcher, self._includes)
+
     def visitdir(self, dir):
         if any(True for path in self._includes if path.startswith(dir)):
             return True
@@ -1928,6 +1932,9 @@ class negatematcher(matchmod.basematcher):
 
     def __call__(self, value):
         return not self._matcher(value)
+
+    def __repr__(self):
+        return '<negatematcher matcher=%r>' % self._matcher
 
     def hash(self):
         sha1 = hashlib.sha1()
