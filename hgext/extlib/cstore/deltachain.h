@@ -150,7 +150,7 @@ public:
   {
   }
 
-  CDeltaChain(get_delta_chain_code_t error)
+  CDeltaChain(get_delta_chain_code_t /*error*/)
       : _chain(COMPOUND_LITERAL(delta_chain_t){GET_DELTA_CHAIN_NOT_FOUND})
   {
   }
@@ -188,7 +188,7 @@ protected:
   DeltaChainIterator() : _index(0)
   {
   }
-  virtual std::shared_ptr<DeltaChain> getNextChain(const Key &key)
+  virtual std::shared_ptr<DeltaChain> getNextChain(const Key& /*key*/)
   {
     return std::make_shared<CDeltaChain>(GET_DELTA_CHAIN_NOT_FOUND);
   }
