@@ -37,7 +37,7 @@ use blobrepo::BlobChangeset;
 use bundle2_resolver;
 use mercurial::{self, NodeHashConversion, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{percent_encode, Changeset, DNodeHash, Entry, HgChangesetId, HgManifestId,
+use mercurial_types::{percent_encode, Changeset, DChangesetId, DNodeHash, Entry, HgManifestId,
                       MPath, Parents, RepoPath, RepositoryId, Type, D_NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use metaconfig::repoconfig::RepoType;
@@ -363,7 +363,7 @@ impl RepoClient {
                 let hgrepo = hgrepo.clone();
                 move |(mercurial_node, node)| {
                     hgrepo
-                        .get_changeset_by_changesetid(&HgChangesetId::new(node))
+                        .get_changeset_by_changesetid(&DChangesetId::new(node))
                         .map(move |cs| (mercurial_node, cs))
                 }
             })
@@ -523,7 +523,7 @@ impl HgCommands for RepoClient {
                     Some(
                         self.repo
                             .hgrepo
-                            .get_changeset_by_changesetid(&HgChangesetId::new(self.n)),
+                            .get_changeset_by_changesetid(&DChangesetId::new(self.n)),
                     )
                 });
                 let cs = try_ready!(self.wait_cs.as_mut().unwrap().poll());
@@ -603,7 +603,7 @@ impl HgCommands for RepoClient {
             .into_future()
             .map(|h| (h, h.into_mononoke()))
             .and_then(move |(mercurial_node, node)| {
-                let csid = HgChangesetId::new(node);
+                let csid = DChangesetId::new(node);
                 repo.changeset_exists(&csid)
                     .map(move |exists| (mercurial_node, exists))
             })
@@ -641,7 +641,7 @@ impl HgCommands for RepoClient {
             nodes
                 .into_iter()
                 .map(|h| h.into_mononoke())
-                .map(move |node| hgrepo.changeset_exists(&HgChangesetId::new(node))),
+                .map(move |node| hgrepo.changeset_exists(&DChangesetId::new(node))),
         ).timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
             .boxify()
     }

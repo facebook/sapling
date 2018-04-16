@@ -26,7 +26,7 @@ use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
 use mercurial_types::{BlobNode, HgBlob, HgFileNodeId, RepoPath, RepositoryId};
-use mercurial_types::nodehash::HgChangesetId;
+use mercurial_types::nodehash::DChangesetId;
 use stats::Timeseries;
 
 use BlobstoreEntry;
@@ -135,12 +135,12 @@ where
             .for_each(move |(cs, node)| {
                 let parents = cs.parents()
                     .into_iter()
-                    .map(|p| HgChangesetId::new(p.into_mononoke()))
+                    .map(|p| DChangesetId::new(p.into_mononoke()))
                     .collect();
                 let node = node.into_mononoke();
                 let insert = ChangesetInsert {
                     repo_id,
-                    cs_id: HgChangesetId::new(node),
+                    cs_id: DChangesetId::new(node),
                     parents,
                 };
                 changesets_store.add(insert)
@@ -189,7 +189,7 @@ where
             .get_changeset(&csid)
             .from_err()
             .and_then(move |cs| {
-                let csid = HgChangesetId::new(csid.into_nodehash().into_mononoke());
+                let csid = DChangesetId::new(csid.into_nodehash().into_mononoke());
                 let bcs = BlobChangeset::new_with_id(&csid, cs.into());
                 sender
                     .send(BlobstoreEntry::Changeset(bcs))
@@ -339,7 +339,7 @@ fn create_filenode(
         p1: p1.map(HgFileNodeId::new),
         p2: p2.map(HgFileNodeId::new),
         copyfrom,
-        linknode: HgChangesetId::new(linknode.into_mononoke()),
+        linknode: DChangesetId::new(linknode.into_mononoke()),
     }
 }
 

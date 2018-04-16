@@ -209,7 +209,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
     )?;
 
     let changesetid =
-        mercurial_types::nodehash::HgChangesetId::from_str(matches.value_of("crhash").unwrap())?;
+        mercurial_types::nodehash::DChangesetId::from_str(matches.value_of("crhash").unwrap())?;
 
     info!(
         logger,

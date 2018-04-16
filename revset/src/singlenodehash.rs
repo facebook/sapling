@@ -12,7 +12,7 @@ use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::Stream;
 use mercurial_types::DNodeHash;
-use mercurial_types::nodehash::HgChangesetId;
+use mercurial_types::nodehash::DChangesetId;
 
 use NodeStream;
 
@@ -23,7 +23,7 @@ pub struct SingleNodeHash {
 
 impl SingleNodeHash {
     pub fn new(nodehash: DNodeHash, repo: &BlobRepo) -> Self {
-        let changesetid = HgChangesetId::new(nodehash);
+        let changesetid = DChangesetId::new(nodehash);
         let exists = Box::new(repo.changeset_exists(&changesetid));
         let nodehash = Some(nodehash);
         SingleNodeHash { nodehash, exists }

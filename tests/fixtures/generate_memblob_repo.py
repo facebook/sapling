@@ -61,7 +61,7 @@ use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use memblob::EagerMemblob;
 use dbbookmarks::SqliteDbBookmarks;
 use dieselfilenodes::SqliteFilenodes;
-use mercurial_types::{HgChangesetId, DNodeHash, RepositoryId};
+use mercurial_types::{DChangesetId, DNodeHash, RepositoryId};
 use memheads::MemHeads;
 use blobrepo::BlobRepo;
 use ascii::AsciiString;
@@ -104,7 +104,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
 
                 commit_hash = split[0]
                 writeline(
-                    'let cs_id = HgChangesetId::new(DNodeHash::from_str("{}").unwrap());'.
+                    'let cs_id = DChangesetId::new(DNodeHash::from_str("{}").unwrap());'.
                     format(commit_hash)
                 )
                 writeline('let parents = vec![')
@@ -112,12 +112,12 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                     indent += 1
                     for p in split[1:-1]:
                         writeline(
-                            'HgChangesetId::new(DNodeHash::from_str("{}").unwrap()), '.
+                            'DChangesetId::new(DNodeHash::from_str("{}").unwrap()), '.
                             format(p)
                         )
 
                     writeline(
-                        'HgChangesetId::new(DNodeHash::from_str("{}").unwrap())'.
+                        'DChangesetId::new(DNodeHash::from_str("{}").unwrap())'.
                         format(split[-1])
                     )
                     indent -= 1

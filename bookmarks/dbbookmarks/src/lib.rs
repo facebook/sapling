@@ -31,7 +31,7 @@ use failure::{Error, Result};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{HgChangesetId, RepositoryId};
+use mercurial_types::{DChangesetId, RepositoryId};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
@@ -75,14 +75,14 @@ impl Bookmarks for SqliteDbBookmarks {
         &self,
         name: &AsciiString,
         repo_id: &RepositoryId,
-    ) -> BoxFuture<Option<HgChangesetId>, Error> {
+    ) -> BoxFuture<Option<DChangesetId>, Error> {
         let connection = self.connection.lock().expect("lock poisoned");
         let name = name.as_str().to_string();
         schema::bookmarks::table
             .filter(schema::bookmarks::repo_id.eq(repo_id))
             .filter(schema::bookmarks::name.eq(name))
             .select(schema::bookmarks::changeset_id)
-            .first::<HgChangesetId>(&*connection)
+            .first::<DChangesetId>(&*connection)
             .optional()
             .into_future()
             .from_err()
@@ -93,7 +93,7 @@ impl Bookmarks for SqliteDbBookmarks {
         &self,
         prefix: &AsciiString,
         repo_id: &RepositoryId,
-    ) -> BoxStream<(AsciiString, HgChangesetId), Error> {
+    ) -> BoxStream<(AsciiString, DChangesetId), Error> {
         let connection = self.connection.lock().expect("lock poisoned");
         let prefix = prefix.as_str().to_string();
         let query = schema::bookmarks::table
@@ -124,17 +124,17 @@ impl Bookmarks for SqliteDbBookmarks {
 }
 
 struct BookmarkSetData {
-    new_cs: HgChangesetId,
-    old_cs: HgChangesetId,
+    new_cs: DChangesetId,
+    old_cs: DChangesetId,
 }
 
 struct SqliteBookmarksTransaction {
     connection: Arc<Mutex<SqliteConnection>>,
-    force_sets: HashMap<AsciiString, HgChangesetId>,
-    creates: HashMap<AsciiString, HgChangesetId>,
+    force_sets: HashMap<AsciiString, DChangesetId>,
+    creates: HashMap<AsciiString, DChangesetId>,
     sets: HashMap<AsciiString, BookmarkSetData>,
     force_deletes: HashSet<AsciiString>,
-    deletes: HashMap<AsciiString, HgChangesetId>,
+    deletes: HashMap<AsciiString, DChangesetId>,
     repo_id: RepositoryId,
 }
 
@@ -166,8 +166,8 @@ impl Transaction for SqliteBookmarksTransaction {
     fn update(
         &mut self,
         key: &AsciiString,
-        new_cs: &HgChangesetId,
-        old_cs: &HgChangesetId,
+        new_cs: &DChangesetId,
+        old_cs: &DChangesetId,
     ) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.sets.insert(
@@ -180,19 +180,19 @@ impl Transaction for SqliteBookmarksTransaction {
         Ok(())
     }
 
-    fn create(&mut self, key: &AsciiString, new_cs: &HgChangesetId) -> Result<()> {
+    fn create(&mut self, key: &AsciiString, new_cs: &DChangesetId) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.creates.insert(key.clone(), *new_cs);
         Ok(())
     }
 
-    fn force_set(&mut self, key: &AsciiString, new_cs: &HgChangesetId) -> Result<()> {
+    fn force_set(&mut self, key: &AsciiString, new_cs: &DChangesetId) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.force_sets.insert(key.clone(), *new_cs);
         Ok(())
     }
 
-    fn delete(&mut self, key: &AsciiString, old_cs: &HgChangesetId) -> Result<()> {
+    fn delete(&mut self, key: &AsciiString, old_cs: &DChangesetId) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.deletes.insert(key.clone(), *old_cs);
         Ok(())
@@ -253,7 +253,7 @@ impl Transaction for SqliteBookmarksTransaction {
 
 fn create_bookmarks_rows(
     repo_id: RepositoryId,
-    map: &HashMap<AsciiString, HgChangesetId>,
+    map: &HashMap<AsciiString, DChangesetId>,
 ) -> Vec<models::BookmarkRow> {
     map.iter()
         .map(|(name, changeset_id)| models::BookmarkRow {

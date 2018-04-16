@@ -6,12 +6,12 @@
 
 pub use failure::{Error, Result};
 
-use mercurial_types::HgChangesetId;
+use mercurial_types::DChangesetId;
 
 #[derive(Debug, Eq, Fail, PartialEq)]
 pub enum ErrorKind {
     #[fail(display = "Connection error")] ConnectionError,
     #[fail(display = "Changeset already in database")] DuplicateChangeset,
     #[fail(display = "Invalid data in database")] InvalidStoredData,
-    #[fail(display = "Missing parents")] MissingParents(Vec<HgChangesetId>),
+    #[fail(display = "Missing parents")] MissingParents(Vec<DChangesetId>),
 }

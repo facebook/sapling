@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use common::blake2_path_hash;
-use mercurial_types::{HgChangesetId, HgFileNodeId, RepositoryId};
+use mercurial_types::{DChangesetId, HgFileNodeId, RepositoryId};
 use schema::{filenodes, fixedcopyinfo, paths};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -19,7 +19,7 @@ pub(crate) struct FilenodeRow {
     pub is_tree: i32,
     pub filenode: HgFileNodeId,
     // TODO(stash): shouldn't it be Mononoke changeset id?
-    pub linknode: HgChangesetId,
+    pub linknode: DChangesetId,
     pub p1: Option<HgFileNodeId>,
     pub p2: Option<HgFileNodeId>,
 }
@@ -30,7 +30,7 @@ impl FilenodeRow {
         path: &Vec<u8>,
         is_tree: i32,
         filenode: &HgFileNodeId,
-        linknode: &HgChangesetId,
+        linknode: &DChangesetId,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
     ) -> Self {

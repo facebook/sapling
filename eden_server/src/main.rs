@@ -68,7 +68,7 @@ use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
 use mercurial_types::{Changeset, DNodeHash, FileType, RepositoryId};
-use mercurial_types::nodehash::HgChangesetId;
+use mercurial_types::nodehash::DChangesetId;
 use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
 use openssl::ssl::{SSL_VERIFY_FAIL_IF_NO_PEER_CERT, SSL_VERIFY_PEER};
@@ -255,7 +255,7 @@ where
     fn get_root_tree_manifest_id(
         &self,
         reponame: String,
-        changesetid: &HgChangesetId,
+        changesetid: &DChangesetId,
     ) -> Box<futures::Future<Item = Bytes, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
@@ -369,7 +369,7 @@ impl Service for EdenServer {
                 sample.add(SCUBA_COL_HASH, hash.to_string());
                 sample.add(SCUBA_COL_OPERATION, SCUBA_OPERATION_GET_MENIFEST);
                 sample.add(SCUBA_COL_REPO, reponame.clone());
-                self.get_root_tree_manifest_id(reponame, &HgChangesetId::new(hash))
+                self.get_root_tree_manifest_id(reponame, &DChangesetId::new(hash))
             }
             ParsedUrl::TreeContent(reponame, hash) => {
                 sample.add(SCUBA_COL_HASH, hash.to_string());

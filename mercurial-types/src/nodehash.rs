@@ -17,10 +17,10 @@ use quickcheck::{single_shrinker, Arbitrary, Gen};
 use errors::*;
 use hash::{self, Sha1};
 use serde;
-use sql_types::{HgChangesetIdSql, HgFileNodeIdSql, HgManifestIdSql};
+use sql_types::{DChangesetIdSql, HgFileNodeIdSql, HgManifestIdSql};
 
 pub const D_NULL_HASH: DNodeHash = DNodeHash(hash::NULL);
-pub const NULL_CSID: HgChangesetId = HgChangesetId(D_NULL_HASH);
+pub const NULL_CSID: DChangesetId = DChangesetId(D_NULL_HASH);
 
 /// This structure represents Sha1 based hashes that are used in Mononoke. It is a temporary
 /// structure that will be entirely replaced by structures from mononoke-types::typed_hash.
@@ -148,15 +148,17 @@ impl Arbitrary for DNodeHash {
     }
 }
 
+/// This structure represents Sha1 based hashes of Changesets used in Mononoke. It is a temporary
+/// structure that will be entirely replaced by structures from mononoke-types::typed_hash.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf, FromSqlRow, AsExpression)]
-#[sql_type = "HgChangesetIdSql"]
-pub struct HgChangesetId(DNodeHash);
+#[sql_type = "DChangesetIdSql"]
+pub struct DChangesetId(DNodeHash);
 
-impl HgChangesetId {
+impl DChangesetId {
     #[inline]
-    pub fn from_ascii_str(s: &AsciiStr) -> Result<HgChangesetId> {
-        DNodeHash::from_ascii_str(s).map(HgChangesetId)
+    pub fn from_ascii_str(s: &AsciiStr) -> Result<DChangesetId> {
+        DNodeHash::from_ascii_str(s).map(DChangesetId)
     }
 
     #[inline]
@@ -169,25 +171,25 @@ impl HgChangesetId {
     }
 
     pub const fn new(hash: DNodeHash) -> Self {
-        HgChangesetId(hash)
+        DChangesetId(hash)
     }
 }
 
-impl FromStr for HgChangesetId {
+impl FromStr for DChangesetId {
     type Err = <DNodeHash as FromStr>::Err;
 
-    fn from_str(s: &str) -> result::Result<HgChangesetId, Self::Err> {
-        DNodeHash::from_str(s).map(HgChangesetId)
+    fn from_str(s: &str) -> result::Result<DChangesetId, Self::Err> {
+        DNodeHash::from_str(s).map(DChangesetId)
     }
 }
 
-impl Display for HgChangesetId {
+impl Display for DChangesetId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }
 }
 
-impl serde::ser::Serialize for HgChangesetId {
+impl serde::ser::Serialize for DChangesetId {
     fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -196,14 +198,14 @@ impl serde::ser::Serialize for HgChangesetId {
     }
 }
 
-impl<'de> serde::de::Deserialize<'de> for HgChangesetId {
-    fn deserialize<D>(deserializer: D) -> ::std::result::Result<HgChangesetId, D::Error>
+impl<'de> serde::de::Deserialize<'de> for DChangesetId {
+    fn deserialize<D>(deserializer: D) -> ::std::result::Result<DChangesetId, D::Error>
     where
         D: serde::de::Deserializer<'de>,
     {
         let hex = deserializer.deserialize_string(StringVisitor)?;
         match DNodeHash::from_str(hex.as_str()) {
-            Ok(hash) => Ok(HgChangesetId::new(hash)),
+            Ok(hash) => Ok(DChangesetId::new(hash)),
             Err(error) => Err(serde::de::Error::custom(error)),
         }
     }

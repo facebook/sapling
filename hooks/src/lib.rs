@@ -40,7 +40,7 @@ use hlua::{AnyLuaValue, Lua, LuaError, PushGuard};
 use blobrepo::BlobRepo;
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
 use mercurial_types::{Changeset, DNodeHash};
-use mercurial_types::nodehash::HgChangesetId;
+use mercurial_types::nodehash::DChangesetId;
 
 pub use errors::*;
 
@@ -75,7 +75,7 @@ impl<'hook> HookContext<'hook> {
         let get_author = move |hash: String| -> Result<AnyFuture> {
             let hash = hash.into_ascii_string()
                 .map_err(|hash| ErrorKind::InvalidHash(name.clone(), hash.into_source()))?;
-            let changesetid = HgChangesetId::from_ascii_str(&hash)
+            let changesetid = DChangesetId::from_ascii_str(&hash)
                 .with_context(|_| ErrorKind::InvalidHash(name.clone(), hash.into()))?;
 
             let future = repo.get_changeset_by_changesetid(&changesetid)

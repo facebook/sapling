@@ -16,7 +16,7 @@ use futures::stream::{self, iter_ok, Stream};
 
 use blobrepo::BlobRepo;
 use mercurial_types::{Changeset, DNodeHash};
-use mercurial_types::nodehash::HgChangesetId;
+use mercurial_types::nodehash::DChangesetId;
 use repoinfo::{Generation, RepoGenCache};
 
 use NodeStream;
@@ -54,7 +54,7 @@ fn make_pending(
     Box::new(
         {
             let repo = repo.clone();
-            repo.get_changeset_by_changesetid(&HgChangesetId::new(child.hash))
+            repo.get_changeset_by_changesetid(&DChangesetId::new(child.hash))
                 .map(move |cs| (child, cs.parents().clone()))
                 .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
         }.map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))

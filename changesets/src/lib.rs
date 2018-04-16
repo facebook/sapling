@@ -35,8 +35,8 @@ use futures::{future, Future, sync::oneshot};
 
 use db::ConnectionParams;
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{HgChangesetId, RepositoryId};
-use mercurial_types::sql_types::HgChangesetIdSql;
+use mercurial_types::{DChangesetId, RepositoryId};
+use mercurial_types::sql_types::DChangesetIdSql;
 
 mod errors;
 mod schema;
@@ -50,16 +50,16 @@ use schema::{changesets, csparents};
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChangesetEntry {
     pub repo_id: RepositoryId,
-    pub cs_id: HgChangesetId,
-    pub parents: Vec<HgChangesetId>,
+    pub cs_id: DChangesetId,
+    pub parents: Vec<DChangesetId>,
     pub gen: u64,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChangesetInsert {
     pub repo_id: RepositoryId,
-    pub cs_id: HgChangesetId,
-    pub parents: Vec<HgChangesetId>,
+    pub cs_id: DChangesetId,
+    pub parents: Vec<DChangesetId>,
 }
 
 /// Interface to storage of changesets that have been completely stored in Mononoke.
@@ -71,7 +71,7 @@ pub trait Changesets: Send + Sync {
     fn get(
         &self,
         repo_id: RepositoryId,
-        cs_id: HgChangesetId,
+        cs_id: DChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error>;
 }
 
@@ -175,7 +175,7 @@ macro_rules! impl_changesets {
             fn get(
                 &self,
                 repo_id: RepositoryId,
-                cs_id: HgChangesetId,
+                cs_id: DChangesetId,
             ) -> BoxFuture<Option<ChangesetEntry>, Error> {
                 let db = self.clone();
                 let (tx, rx) = oneshot::channel();
@@ -329,11 +329,11 @@ impl_changesets!(SqliteChangesets);
 
 fn changeset_query<DB>(
     repo_id: RepositoryId,
-    cs_id: HgChangesetId,
+    cs_id: DChangesetId,
 ) -> changesets::BoxedQuery<'static, DB>
 where
     DB: Backend,
-    DB: HasSqlType<HgChangesetIdSql>,
+    DB: HasSqlType<DChangesetIdSql>,
 {
     changesets::table
         .filter(changesets::repo_id.eq(repo_id))
@@ -354,7 +354,7 @@ fn map_add_result(result: result::Result<usize, DieselError>) -> Result<()> {
 }
 
 fn check_missing_rows(
-    expected: &[HgChangesetId],
+    expected: &[DChangesetId],
     actual: &[ChangesetRow],
 ) -> result::Result<(), ErrorKind> {
     // Could just count the number here and report an error if any are missing, but the reporting

@@ -14,7 +14,7 @@ extern crate mercurial_types;
 
 use failure::Error;
 use futures_ext::{BoxFuture, BoxStream};
-use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath, RepositoryId};
+use mercurial_types::{DChangesetId, HgFileNodeId, RepoPath, RepositoryId};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FilenodeInfo {
@@ -23,7 +23,7 @@ pub struct FilenodeInfo {
     pub p1: Option<HgFileNodeId>,
     pub p2: Option<HgFileNodeId>,
     pub copyfrom: Option<(RepoPath, HgFileNodeId)>,
-    pub linknode: HgChangesetId,
+    pub linknode: DChangesetId,
 }
 
 pub trait Filenodes: Send + Sync {

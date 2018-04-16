@@ -11,14 +11,14 @@
 table! {
     use diesel::sql_types::{Binary, Integer, Nullable};
 
-    use mercurial_types::sql_types::{HgChangesetIdSql, HgFileNodeIdSql};
+    use mercurial_types::sql_types::{DChangesetIdSql, HgFileNodeIdSql};
 
     filenodes (repo_id, path_hash, is_tree, filenode) {
         repo_id -> Integer,
         path_hash -> Binary,
         is_tree -> Integer,
         filenode -> HgFileNodeIdSql,
-        linknode -> HgChangesetIdSql,
+        linknode -> DChangesetIdSql,
         p1 -> Nullable<HgFileNodeIdSql>,
         p2 -> Nullable<HgFileNodeIdSql>,
     }

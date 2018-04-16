@@ -37,7 +37,7 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial_types::{BlobNode, Changeset, DNodeHash, Entry, HgBlob, HgChangesetId, HgFileNodeId,
+use mercurial_types::{BlobNode, Changeset, DChangesetId, DNodeHash, Entry, HgBlob, HgFileNodeId,
                       Manifest, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::HgManifestId;
@@ -270,7 +270,7 @@ impl BlobRepo {
         self.heads.heads().boxify()
     }
 
-    pub fn changeset_exists(&self, changesetid: &HgChangesetId) -> BoxFuture<bool, Error> {
+    pub fn changeset_exists(&self, changesetid: &DChangesetId) -> BoxFuture<bool, Error> {
         self.changesets
             .get(self.repoid, *changesetid)
             .map(|res| res.is_some())
@@ -279,7 +279,7 @@ impl BlobRepo {
 
     pub fn get_changeset_by_changesetid(
         &self,
-        changesetid: &HgChangesetId,
+        changesetid: &DChangesetId,
     ) -> BoxFuture<BlobChangeset, Error> {
         let chid = changesetid.clone();
         BlobChangeset::load(&self.blobstore, &chid)
@@ -303,7 +303,7 @@ impl BlobRepo {
         Box::new(BlobEntry::new_root(self.blobstore.clone(), *manifestid))
     }
 
-    pub fn get_bookmarks(&self) -> BoxStream<(AsciiString, HgChangesetId), Error> {
+    pub fn get_bookmarks(&self) -> BoxStream<(AsciiString, DChangesetId), Error> {
         let empty_prefix = AsciiString::new();
         self.bookmarks.list_by_prefix(&empty_prefix, &self.repoid)
     }
@@ -326,7 +326,7 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn get_generation_number(&self, cs: &HgChangesetId) -> BoxFuture<Option<u64>, Error> {
+    pub fn get_generation_number(&self, cs: &DChangesetId) -> BoxFuture<Option<u64>, Error> {
         self.changesets
             .get(self.repoid, *cs)
             .map(|res| res.map(|res| res.gen))
@@ -558,7 +558,7 @@ impl BlobRepo {
                         cs_id: cs.get_changeset_id(),
                         parents: cs.parents()
                             .into_iter()
-                            .map(|n| HgChangesetId::new(n))
+                            .map(|n| DChangesetId::new(n))
                             .collect(),
                     };
                     complete_changesets.add(completion_record).map(|_| cs)
@@ -621,7 +621,7 @@ impl Stream for BlobChangesetStream {
                             WaitCS(
                                 next,
                                 self.repo
-                                    .get_changeset_by_changesetid(&HgChangesetId::new(next)),
+                                    .get_changeset_by_changesetid(&DChangesetId::new(next)),
                             )
                         } else {
                             Idle // already done it

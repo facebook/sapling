@@ -20,7 +20,7 @@ use mercurial::{self, NodeHashConversion};
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
 use mercurial_types::{BlobNode, Changeset, HgBlob, MPath, Parents, Time};
-use mercurial_types::nodehash::{HgChangesetId, HgManifestId, D_NULL_HASH};
+use mercurial_types::nodehash::{DChangesetId, HgManifestId, D_NULL_HASH};
 
 use errors::*;
 
@@ -91,7 +91,7 @@ impl ChangesetContent {
         }
     }
 
-    pub fn compute_hash(&self) -> Result<HgChangesetId> {
+    pub fn compute_hash(&self) -> Result<DChangesetId> {
         let mut v = Vec::new();
 
         self.generate(&mut v)?;
@@ -101,7 +101,7 @@ impl ChangesetContent {
         let nodeid = blobnode
             .nodeid()
             .ok_or(Error::from(ErrorKind::NodeGenerationFailed))?;
-        Ok(HgChangesetId::new(nodeid))
+        Ok(DChangesetId::new(nodeid))
     }
 
     /// Generate a serialized changeset. This is the counterpart to parse, and generates
@@ -129,11 +129,11 @@ impl ChangesetContent {
 }
 
 pub struct BlobChangeset {
-    changesetid: HgChangesetId, // redundant - can be computed from revlogcs?
+    changesetid: DChangesetId, // redundant - can be computed from revlogcs?
     content: ChangesetContent,
 }
 
-fn cskey(changesetid: &HgChangesetId) -> String {
+fn cskey(changesetid: &DChangesetId) -> String {
     format!("changeset-{}.bincode", changesetid)
 }
 
@@ -142,23 +142,23 @@ impl BlobChangeset {
         Ok(Self::new_with_id(&content.compute_hash()?, content))
     }
 
-    pub fn new_with_id(changesetid: &HgChangesetId, content: ChangesetContent) -> Self {
+    pub fn new_with_id(changesetid: &DChangesetId, content: ChangesetContent) -> Self {
         Self {
             changesetid: *changesetid,
             content,
         }
     }
 
-    pub fn get_changeset_id(&self) -> HgChangesetId {
+    pub fn get_changeset_id(&self) -> DChangesetId {
         self.changesetid
     }
 
     pub fn load(
         blobstore: &Arc<Blobstore>,
-        changesetid: &HgChangesetId,
+        changesetid: &DChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
         let changesetid = *changesetid;
-        if changesetid == HgChangesetId::new(D_NULL_HASH) {
+        if changesetid == DChangesetId::new(D_NULL_HASH) {
             let revlogcs = RevlogChangeset::new_null();
             let cs = BlobChangeset::new_with_id(&changesetid, revlogcs.into());
             Either::A(Ok(Some(cs)).into_future())

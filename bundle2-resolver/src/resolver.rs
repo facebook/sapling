@@ -20,7 +20,7 @@ use mercurial;
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{HgChangesetId, MPath, RepoPath};
+use mercurial_types::{DChangesetId, MPath, RepoPath};
 use slog::Logger;
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
@@ -122,8 +122,8 @@ struct ChangegroupPush {
 struct BookmarkPush {
     part_id: PartId,
     name: AsciiString,
-    old: Option<HgChangesetId>,
-    new: Option<HgChangesetId>,
+    old: Option<DChangesetId>,
+    new: Option<DChangesetId>,
 }
 
 /// Holds repo and logger for convienience access from it's methods
@@ -462,7 +462,7 @@ fn get_parent(
         Some(p) => match map.get(&p) {
             None => {
                 let p = p.into_mononoke();
-                repo.get_changeset_by_changesetid(&HgChangesetId::new(p))
+                repo.get_changeset_by_changesetid(&DChangesetId::new(p))
                     .map(|cs| Some(cs.into()))
                     .boxify()
             }
@@ -588,12 +588,12 @@ fn get_ascii_param(params: &HashMap<String, Bytes>, param: &str) -> Result<Ascii
 fn get_optional_changeset_param(
     params: &HashMap<String, Bytes>,
     param: &str,
-) -> Result<Option<HgChangesetId>> {
+) -> Result<Option<DChangesetId>> {
     let val = get_ascii_param(params, param)?;
 
     if val.is_empty() {
         Ok(None)
     } else {
-        Ok(Some(HgChangesetId::from_ascii_str(&val)?))
+        Ok(Some(DChangesetId::from_ascii_str(&val)?))
     }
 }

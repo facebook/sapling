@@ -10,7 +10,7 @@ use bincode;
 
 pub use failure::{Error, ResultExt};
 
-use mercurial_types::{DNodeHash, HgBlob, HgBlobHash, HgChangesetId, HgFileNodeId, Parents,
+use mercurial_types::{DChangesetId, DNodeHash, HgBlob, HgBlobHash, HgFileNodeId, Parents,
                       RepoPath, Type};
 
 #[derive(Debug)]
@@ -41,7 +41,7 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Error while opening state for {}", _0)] StateOpen(StateOpenError),
-    #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(HgChangesetId),
+    #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(DChangesetId),
     #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(DNodeHash),
     #[fail(display = "Node id {} is missing", _0)] NodeMissing(DNodeHash),
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]

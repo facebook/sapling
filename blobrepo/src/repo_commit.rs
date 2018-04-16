@@ -22,7 +22,7 @@ use uuid::Uuid;
 use blobstore::Blobstore;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial::file;
-use mercurial_types::{BlobNode, Changeset, DNodeHash, Entry, EntryId, HgChangesetId, MPath,
+use mercurial_types::{BlobNode, Changeset, DChangesetId, DNodeHash, Entry, EntryId, MPath,
                       Manifest, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
@@ -254,7 +254,7 @@ impl UploadEntries {
                         p1: p1.cloned().map(HgFileNodeId::new),
                         p2: p2.cloned().map(HgFileNodeId::new),
                         copyfrom,
-                        linknode: HgChangesetId::new(cs_id),
+                        linknode: DChangesetId::new(cs_id),
                     }
                 })
                 .boxify();
