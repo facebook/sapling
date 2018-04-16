@@ -141,3 +141,12 @@ Pushing to a local read-only repo that can't be locked
   [255]
 
   $ chmod 700 a/.hg/store
+
+Having an empty lock file
+  $ cd a
+  $ touch .hg/wlock
+  $ hg st
+  abort: malformed lock file ($TESTTMP/a/.hg/wlock)
+  (run hg debuglocks)
+  [255]
+  $ rm .hg/wlock

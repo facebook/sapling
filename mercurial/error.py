@@ -183,6 +183,9 @@ class LockError(IOError):
 
     # no __bytes__() because error message is derived from the standard IOError
 
+class MalformedLock(Abort):
+    pass
+
 class LockHeld(LockError):
     def __init__(self, errno, filename, desc, locker):
         LockError.__init__(self, errno, 'Lock held', filename, desc)

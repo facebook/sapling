@@ -45,7 +45,7 @@ class locker(object):
     """
     _currentnamespace = None
 
-    def __init__(self, fromstr):
+    def __init__(self, fromstr, path=None):
         """Create a locker object by parsing a string
 
         Modern `fromstr` should be a string of the following
@@ -59,7 +59,14 @@ class locker(object):
         self.pid = None
         self.starttime = None
 
-        ns, uid = fromstr.split(':', 1)
+        if ':' not in fromstr:
+            msg = _('malformed lock file')
+            hint = ''
+            if path is not None:
+                msg += ' (%s)' % path
+                hint = _('run hg debuglocks')
+            raise error.MalformedLock(msg, hint=hint)
+        ns, uid = fromstr.strip().split(':', 1)
 
         if '/' in ns:
             self.host, self.pidnamespace = ns.split('/', 1)
@@ -275,7 +282,8 @@ class lock(object):
                     lockfilecontents = self._readlock()
                     if lockfilecontents is None:
                         continue
-                    lockerdesc = locker(lockfilecontents)
+                    lockerdesc = locker(lockfilecontents,
+                                        path=self.vfs.join(self.f))
 
                     # special case where a parent process holds the lock -- this
                     # is different from the pid being different because we do
@@ -362,7 +370,8 @@ class lock(object):
         The lock file is only deleted when None is returned.
 
         """
-        lockerdesc = locker(self._readlock())
+        lockerdesc = locker(self._readlock(),
+                            path=self.vfs.join(self.f))
         return self._testlock(lockerdesc)
 
     @contextlib.contextmanager
