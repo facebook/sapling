@@ -19,7 +19,7 @@ use blobstore::Blobstore;
 use mercurial::{self, NodeHashConversion};
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
-use mercurial_types::{BlobNode, Changeset, HgBlob, MPath, Parents, Time};
+use mercurial_types::{BlobNode, Changeset, DParents, HgBlob, MPath, Time};
 use mercurial_types::nodehash::{DChangesetId, DManifestId, D_NULL_HASH};
 
 use errors::*;
@@ -33,12 +33,12 @@ use errors::*;
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
 struct RawCSBlob<'a> {
-    parents: Parents,
+    parents: DParents,
     blob: Cow<'a, [u8]>,
 }
 
 pub struct ChangesetContent {
-    parents: Parents,
+    parents: DParents,
     manifestid: DManifestId,
     user: Vec<u8>,
     time: Time,
@@ -53,7 +53,7 @@ impl From<RevlogChangeset> for ChangesetContent {
             let (p1, p2) = revlogcs.parents.get_nodes();
             let p1 = p1.map(|p| p.into_mononoke());
             let p2 = p2.map(|p| p.into_mononoke());
-            Parents::new(p1.as_ref(), p2.as_ref())
+            DParents::new(p1.as_ref(), p2.as_ref())
         };
 
         let manifestid = DManifestId::new(revlogcs.manifestid.into_nodehash().into_mononoke());
@@ -72,7 +72,7 @@ impl From<RevlogChangeset> for ChangesetContent {
 
 impl ChangesetContent {
     pub fn new_from_parts(
-        parents: Parents,
+        parents: DParents,
         manifestid: DManifestId,
         user: Vec<u8>,
         time: Time,
@@ -242,7 +242,7 @@ impl Changeset for BlobChangeset {
         &self.content.time
     }
 
-    fn parents(&self) -> &Parents {
+    fn parents(&self) -> &DParents {
         &self.content.parents
     }
 }

@@ -37,8 +37,8 @@ use blobrepo::BlobChangeset;
 use bundle2_resolver;
 use mercurial::{self, NodeHashConversion, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{percent_encode, Changeset, DChangesetId, DManifestId, DNodeHash, Entry,
-                      MPath, Parents, RepoPath, RepositoryId, Type, D_NULL_HASH};
+use mercurial_types::{percent_encode, Changeset, DChangesetId, DManifestId, DNodeHash, DParents,
+                      Entry, MPath, RepoPath, RepositoryId, Type, D_NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use metaconfig::repoconfig::RepoType;
 
@@ -530,9 +530,9 @@ impl HgCommands for RepoClient {
                 self.wait_cs = None; // got it
 
                 let p = match cs.parents() {
-                    &Parents::None => D_NULL_HASH,
-                    &Parents::One(ref p) => *p,
-                    &Parents::Two(ref p, _) => *p,
+                    &DParents::None => D_NULL_HASH,
+                    &DParents::One(ref p) => *p,
+                    &DParents::Two(ref p, _) => *p,
                 };
 
                 let prev_n = mem::replace(&mut self.n, p);
@@ -919,7 +919,7 @@ fn get_file_history(
     repo: Arc<BlobRepo>,
     startnode: DNodeHash,
     path: MPath,
-) -> BoxStream<(DNodeHash, Parents, DNodeHash, Option<(MPath, DNodeHash)>), Error> {
+) -> BoxStream<(DNodeHash, DParents, DNodeHash, Option<(MPath, DNodeHash)>), Error> {
     if startnode == D_NULL_HASH {
         return stream::empty().boxify();
     }
@@ -1007,9 +1007,9 @@ fn create_remotefilelog_blob(
 
             for (node, parents, linknode, copy) in history {
                 let (p1, p2) = match parents {
-                    Parents::None => (D_NULL_HASH, D_NULL_HASH),
-                    Parents::One(p) => (p, D_NULL_HASH),
-                    Parents::Two(p1, p2) => (p1, p2),
+                    DParents::None => (D_NULL_HASH, D_NULL_HASH),
+                    DParents::One(p) => (p, D_NULL_HASH),
+                    DParents::Two(p1, p2) => (p1, p2),
                 };
 
                 let (p1, p2, copied_from) = if let Some((copied_from, copied_rev)) = copy {

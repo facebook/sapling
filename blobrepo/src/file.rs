@@ -13,8 +13,8 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{BlobNode, DManifestId, DNodeHash, FileType, HgBlob, MPath, MPathElement,
-                      Parents};
+use mercurial_types::{BlobNode, DManifestId, DNodeHash, DParents, FileType, HgBlob, MPath,
+                      MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::DEntryId;
 
@@ -119,7 +119,7 @@ impl Entry for BlobEntry {
         self.ty
     }
 
-    fn get_parents(&self) -> BoxFuture<Parents, Error> {
+    fn get_parents(&self) -> BoxFuture<DParents, Error> {
         self.get_node().map(|node| node.parents).boxify()
     }
 

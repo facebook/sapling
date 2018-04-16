@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use mononoke_types::MPath;
 
-use blobnode::Parents;
+use blobnode::DParents;
 use nodehash::DManifestId;
 
 pub trait Changeset: Send + 'static {
@@ -18,7 +18,7 @@ pub trait Changeset: Send + 'static {
     fn comments(&self) -> &[u8];
     fn files(&self) -> &[MPath];
     fn time(&self) -> &Time;
-    fn parents(&self) -> &Parents;
+    fn parents(&self) -> &DParents;
 
     fn boxed(self) -> Box<Changeset>
     where
@@ -53,7 +53,7 @@ impl Changeset for Box<Changeset> {
         (**self).time()
     }
 
-    fn parents(&self) -> &Parents {
+    fn parents(&self) -> &DParents {
         (**self).parents()
     }
 }

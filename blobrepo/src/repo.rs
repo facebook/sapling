@@ -37,8 +37,8 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial_types::{BlobNode, Changeset, DChangesetId, DFileNodeId, DNodeHash, Entry, HgBlob,
-                      Manifest, Parents, RepoPath, RepositoryId, Time};
+use mercurial_types::{BlobNode, Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry,
+                      HgBlob, Manifest, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::DManifestId;
 use rocksblob::Rocksblob;
@@ -215,7 +215,7 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn get_parents(&self, path: &RepoPath, node: &DNodeHash) -> BoxFuture<Parents, Error> {
+    pub fn get_parents(&self, path: &RepoPath, node: &DNodeHash) -> BoxFuture<DParents, Error> {
         let path = path.clone();
         let node = DFileNodeId::new(*node);
         self.filenodes
@@ -227,7 +227,7 @@ impl BlobRepo {
                         .map(|filenode| {
                             let p1 = filenode.p1.map(|p| p.into_nodehash());
                             let p2 = filenode.p2.map(|p| p.into_nodehash());
-                            Parents::new(p1.as_ref(), p2.as_ref())
+                            DParents::new(p1.as_ref(), p2.as_ref())
                         })
                 }
             })
@@ -351,7 +351,7 @@ impl BlobRepo {
         let p1 = p1.as_ref();
         let p2 = p2.as_ref();
         let raw_content = raw_content.clean();
-        let parents = Parents::new(p1, p2);
+        let parents = DParents::new(p1, p2);
 
         let blob_hash = raw_content
             .hash()

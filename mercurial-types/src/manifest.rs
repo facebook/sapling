@@ -13,7 +13,7 @@ use futures::stream::{self, Stream};
 use mononoke_types::{FileType, MPathElement};
 
 use blob::HgBlob;
-use blobnode::Parents;
+use blobnode::DParents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use nodehash::DEntryId;
 
@@ -190,7 +190,7 @@ pub trait Entry: Send + 'static {
     fn get_type(&self) -> Type;
 
     /// Get the parents (in the history graph) of the referred-to object
-    fn get_parents(&self) -> BoxFuture<Parents, Error>;
+    fn get_parents(&self) -> BoxFuture<DParents, Error>;
 
     /// Get the raw content of the object as it exists in the blobstore,
     /// without any interpretation. This is only really useful for doing a bit-level duplication.
@@ -245,7 +245,7 @@ where
         self.entry.get_type()
     }
 
-    fn get_parents(&self) -> BoxFuture<Parents, Error> {
+    fn get_parents(&self) -> BoxFuture<DParents, Error> {
         self.entry.get_parents().boxify()
     }
 
@@ -275,7 +275,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_type()
     }
 
-    fn get_parents(&self) -> BoxFuture<Parents, Error> {
+    fn get_parents(&self) -> BoxFuture<DParents, Error> {
         (**self).get_parents()
     }
 

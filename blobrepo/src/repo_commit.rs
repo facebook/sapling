@@ -22,8 +22,8 @@ use uuid::Uuid;
 use blobstore::Blobstore;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial::file;
-use mercurial_types::{BlobNode, Changeset, DChangesetId, DEntryId, DNodeHash, Entry, MPath,
-                      Manifest, Parents, RepoPath, RepositoryId, Time};
+use mercurial_types::{BlobNode, Changeset, DChangesetId, DEntryId, DNodeHash, DParents, Entry,
+                      MPath, Manifest, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use mercurial_types::nodehash::{DFileNodeId, DManifestId};
@@ -272,7 +272,7 @@ impl UploadEntries {
 fn compute_copy_from_info(
     path: &RepoPath,
     blobentry: &BlobEntry,
-    parents: &Parents,
+    parents: &DParents,
 ) -> BoxFuture<Option<(RepoPath, DFileNodeId)>, Error> {
     let parents = parents.clone();
     match path {
@@ -436,7 +436,7 @@ pub fn handle_parents(
     p2: Option<ChangesetHandle>,
 ) -> BoxFuture<
     (
-        Parents,
+        DParents,
         (Option<Box<Manifest + Sync>>),
         (Option<Box<Manifest + Sync>>),
     ),
@@ -464,7 +464,7 @@ pub fn handle_parents(
         })
         .map_err(|e| Error::from(e))
         .and_then(move |((p1_hash, p1_manifest), (p2_hash, p2_manifest))| {
-            let parents = Parents::new(p1_hash.as_ref(), p2_hash.as_ref());
+            let parents = DParents::new(p1_hash.as_ref(), p2_hash.as_ref());
             let p1_manifest = p1_manifest.map(|m| repo.get_manifest_by_nodeid(&m.into_nodehash()));
             let p2_manifest = p2_manifest.map(|m| repo.get_manifest_by_nodeid(&m.into_nodehash()));
             p1_manifest
@@ -481,7 +481,7 @@ pub fn handle_parents(
 }
 
 pub fn make_new_changeset(
-    parents: Parents,
+    parents: DParents,
     root_hash: DManifestId,
     user: String,
     time: Time,

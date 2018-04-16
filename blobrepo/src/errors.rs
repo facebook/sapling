@@ -10,8 +10,8 @@ use bincode;
 
 pub use failure::{Error, ResultExt};
 
-use mercurial_types::{DChangesetId, DFileNodeId, DNodeHash, HgBlob, HgBlobHash, Parents, RepoPath,
-                      Type};
+use mercurial_types::{DChangesetId, DFileNodeId, DNodeHash, DParents, HgBlob, HgBlobHash,
+                      RepoPath, Type};
 
 #[derive(Debug)]
 pub enum StateOpenError {
@@ -47,7 +47,7 @@ pub enum ErrorKind {
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]
     ContentMissing(DNodeHash, HgBlobHash),
     #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(HgBlob),
-    #[fail(display = "Parents are not in blob store {:?}", _0)] ParentsUnknown(Parents),
+    #[fail(display = "DParents are not in blob store {:?}", _0)] ParentsUnknown(DParents),
     #[fail(display = "Serialization of node failed {} ({})", _0, _1)]
     SerializationFailed(DNodeHash, bincode::Error),
     #[fail(display = "Root manifest is not a manifest (type {})", _0)] BadRootManifest(Type),
@@ -59,7 +59,7 @@ pub enum ErrorKind {
     #[fail(display = "Missing entries in new changeset {}", _0)] MissingEntries(DNodeHash),
     #[fail(display = "Filenode is missing: {} {}", _0, _1)] MissingFilenode(RepoPath, DFileNodeId),
     #[fail(display = "Some manifests do not exist")] MissingManifests,
-    #[fail(display = "Parents failed to complete")] ParentsFailed,
+    #[fail(display = "DParents failed to complete")] ParentsFailed,
     #[fail(display = "Expected {} to be a manifest, found a {} instead", _0, _1)]
     NotAManifest(DNodeHash, Type),
 }

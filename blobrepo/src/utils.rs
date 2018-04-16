@@ -10,14 +10,14 @@ use futures_ext::{BoxFuture, FutureExt};
 use bincode;
 
 use blobstore::Blobstore;
-use mercurial_types::{DNodeHash, HgBlobHash, Parents};
+use mercurial_types::{DNodeHash, DParents, HgBlobHash};
 
 use errors::*;
 
 #[derive(Debug, Copy, Clone)]
 #[derive(Serialize, Deserialize)]
 pub struct RawNodeBlob {
-    pub parents: Parents,
+    pub parents: DParents,
     pub blob: HgBlobHash,
 }
 

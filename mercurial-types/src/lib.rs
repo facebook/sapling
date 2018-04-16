@@ -95,7 +95,7 @@ pub mod sql_types;
 mod node;
 
 pub use blob::{HgBlob, HgBlobHash};
-pub use blobnode::{BlobNode, Parents};
+pub use blobnode::{BlobNode, DParents};
 pub use changeset::{Changeset, Time};
 pub use delta::Delta;
 pub use fsencode::{fncache_fsencode, simple_fsencode};

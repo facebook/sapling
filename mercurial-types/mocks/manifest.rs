@@ -16,7 +16,7 @@ use futures::{future, stream, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial_types::{Entry, FileType, HgBlob, MPath, MPathElement, Manifest, RepoPath, Type};
-use mercurial_types::blobnode::Parents;
+use mercurial_types::blobnode::DParents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::DEntryId;
 
@@ -263,7 +263,7 @@ impl Entry for MockEntry {
     fn get_type(&self) -> Type {
         self.ty.expect("ty is not set!")
     }
-    fn get_parents(&self) -> BoxFuture<Parents, Error> {
+    fn get_parents(&self) -> BoxFuture<DParents, Error> {
         unimplemented!();
     }
     fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {

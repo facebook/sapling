@@ -11,33 +11,33 @@ use blob::HgBlob;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
-pub enum Parents {
+pub enum DParents {
     None,
     One(DNodeHash),
     Two(DNodeHash, DNodeHash),
 }
 
-impl Parents {
+impl DParents {
     pub fn new(p1: Option<&DNodeHash>, p2: Option<&DNodeHash>) -> Self {
         match (p1, p2) {
-            (None, None) => Parents::None,
-            (Some(p1), None) => Parents::One(*p1),
-            (None, Some(p2)) => Parents::One(*p2),
-            (Some(p1), Some(p2)) if p1 == p2 => Parents::One(*p1),
-            (Some(p1), Some(p2)) => Parents::Two(*p1, *p2),
+            (None, None) => DParents::None,
+            (Some(p1), None) => DParents::One(*p1),
+            (None, Some(p2)) => DParents::One(*p2),
+            (Some(p1), Some(p2)) if p1 == p2 => DParents::One(*p1),
+            (Some(p1), Some(p2)) => DParents::Two(*p1, *p2),
         }
     }
 
     pub fn get_nodes(&self) -> (Option<&DNodeHash>, Option<&DNodeHash>) {
         match self {
-            &Parents::None => (None, None),
-            &Parents::One(ref p1) => (Some(p1), None),
-            &Parents::Two(ref p1, ref p2) => (Some(p1), Some(p2)),
+            &DParents::None => (None, None),
+            &DParents::One(ref p1) => (Some(p1), None),
+            &DParents::Two(ref p1, ref p2) => (Some(p1), Some(p2)),
         }
     }
 }
 
-impl<'a> IntoIterator for &'a Parents {
+impl<'a> IntoIterator for &'a DParents {
     type IntoIter = ParentIter;
     type Item = DNodeHash;
     fn into_iter(self) -> ParentIter {
@@ -46,15 +46,15 @@ impl<'a> IntoIterator for &'a Parents {
 }
 
 #[derive(Debug)]
-pub struct ParentIter(Parents);
+pub struct ParentIter(DParents);
 
 impl Iterator for ParentIter {
     type Item = DNodeHash;
     fn next(&mut self) -> Option<Self::Item> {
         let (ret, new) = match self.0 {
-            Parents::None => (None, Parents::None),
-            Parents::One(p1) => (Some(p1), Parents::None),
-            Parents::Two(p1, p2) => (Some(p1), Parents::One(p2)),
+            DParents::None => (None, DParents::None),
+            DParents::One(p1) => (Some(p1), DParents::None),
+            DParents::Two(p1, p2) => (Some(p1), DParents::One(p2)),
         };
         self.0 = new;
         ret
@@ -67,7 +67,7 @@ impl Iterator for ParentIter {
 #[derive(Serialize, Deserialize)]
 pub struct BlobNode {
     blob: HgBlob,
-    parents: Parents,
+    parents: DParents,
     maybe_copied: bool,
 }
 
@@ -88,7 +88,7 @@ impl BlobNode {
         let blob = blob.into();
         BlobNode {
             blob: blob,
-            parents: Parents::new(p1, p2),
+            parents: DParents::new(p1, p2),
             maybe_copied: p1.is_none(),
         }
     }
@@ -101,7 +101,7 @@ impl BlobNode {
         &self.blob
     }
 
-    pub fn parents(&self) -> &Parents {
+    pub fn parents(&self) -> &DParents {
         &self.parents
     }
 
@@ -116,10 +116,10 @@ impl BlobNode {
         let null = hash::NULL;
 
         let (h1, h2) = match &self.parents {
-            &Parents::None => (&null, &null),
-            &Parents::One(ref p1) => (&null, &p1.0),
-            &Parents::Two(ref p1, ref p2) if p1 > p2 => (&p2.0, &p1.0),
-            &Parents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
+            &DParents::None => (&null, &null),
+            &DParents::One(ref p1) => (&null, &p1.0),
+            &DParents::Two(ref p1, ref p2) if p1 > p2 => (&p2.0, &p1.0),
+            &DParents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
         };
 
         self.as_blob().as_slice().map(|data| {
@@ -144,7 +144,7 @@ mod test {
     fn test_node_none() {
         let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
         let n = BlobNode::new(blob, None, None);
-        assert_eq!(n.parents, Parents::None);
+        assert_eq!(n.parents, DParents::None);
     }
 
     #[test]
@@ -155,19 +155,19 @@ mod test {
         {
             let pid: Option<DNodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), pid.as_ref(), None);
-            assert_eq!(n.parents, Parents::One(pid.unwrap()));
+            assert_eq!(n.parents, DParents::One(pid.unwrap()));
             assert!(!n.maybe_copied);
         }
         {
             let pid: Option<DNodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), None, pid.as_ref());
-            assert_eq!(n.parents, Parents::One(pid.unwrap()));
+            assert_eq!(n.parents, DParents::One(pid.unwrap()));
             assert!(n.maybe_copied);
         }
         {
             let pid: Option<DNodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
-            assert_eq!(n.parents, Parents::One(pid.unwrap()));
+            assert_eq!(n.parents, DParents::One(pid.unwrap()));
             assert!(!n.maybe_copied);
         }
     }
@@ -193,7 +193,7 @@ mod test {
                 pid1.as_ref(),
                 pid2.as_ref(),
             );
-            assert_eq!(n.parents, Parents::Two(pid1.unwrap(), pid2.unwrap()));
+            assert_eq!(n.parents, DParents::Two(pid1.unwrap(), pid2.unwrap()));
             assert!(!n.maybe_copied);
             n.nodeid().expect("no nodeid 1")
         };
@@ -203,7 +203,7 @@ mod test {
                 pid2.as_ref(),
                 pid1.as_ref(),
             );
-            assert_eq!(n.parents, Parents::Two(pid2.unwrap(), pid1.unwrap()));
+            assert_eq!(n.parents, DParents::Two(pid2.unwrap(), pid1.unwrap()));
             assert!(!n.maybe_copied);
             n.nodeid().expect("no nodeid 2")
         };
