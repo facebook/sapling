@@ -14,7 +14,7 @@ use ascii::{AsciiStr, AsciiString};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 use errors::*;
-use mercurial_types::{self, RepoPath};
+use mercurial_types::{DNodeHash, RepoPath};
 use mercurial_types::hash::{self, Sha1};
 use serde;
 use sql_types::{HgChangesetIdSql, HgManifestIdSql};
@@ -67,13 +67,13 @@ impl NodeHash {
     /// This method is temporary (as the mercurial_types hashes are) and will go away once
     /// transision to BonsaiChangesets is complete
     #[inline]
-    pub fn into_mononoke(self) -> mercurial_types::NodeHash {
+    pub fn into_mononoke(self) -> DNodeHash {
         #![allow(deprecated)]
-        mercurial_types::NodeHash::new(self.0)
+        DNodeHash::new(self.0)
     }
 
     /// Returns true if self Mercurial hash is equal to Mononoke Sha1 based hash
-    pub fn is_equal_to(&self, hash: mercurial_types::NodeHash) -> bool {
+    pub fn is_equal_to(&self, hash: DNodeHash) -> bool {
         self.as_bytes() == hash.as_bytes()
     }
 }
@@ -84,7 +84,7 @@ pub trait NodeHashConversion {
     fn into_mercurial(self) -> NodeHash;
 }
 
-impl NodeHashConversion for mercurial_types::NodeHash {
+impl NodeHashConversion for DNodeHash {
     /// Method used to convert a Mononoke Sha1 based NodeHash into Mercurial Sha1 based NodeHash
     /// without performing lookups in a remapping tables. It should be used only on Filenodes and
     /// Manifests that are not Root Manifests.

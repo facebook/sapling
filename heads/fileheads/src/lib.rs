@@ -32,7 +32,7 @@ use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use heads::Heads;
-use mercurial_types::NodeHash;
+use mercurial_types::DNodeHash;
 
 static PREFIX: &'static str = "head-";
 
@@ -74,13 +74,13 @@ impl FileHeads {
         Self::open_with_pool(path, pool)
     }
 
-    fn get_path(&self, key: &NodeHash) -> Result<PathBuf> {
+    fn get_path(&self, key: &DNodeHash) -> Result<PathBuf> {
         Ok(self.base.join(format!("{}{}", PREFIX, key.to_string())))
     }
 }
 
 impl Heads for FileHeads {
-    fn add(&self, key: &NodeHash) -> BoxFuture<(), Error> {
+    fn add(&self, key: &DNodeHash) -> BoxFuture<(), Error> {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
@@ -94,7 +94,7 @@ impl Heads for FileHeads {
             .boxify()
     }
 
-    fn remove(&self, key: &NodeHash) -> BoxFuture<(), Error> {
+    fn remove(&self, key: &DNodeHash) -> BoxFuture<(), Error> {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
@@ -114,7 +114,7 @@ impl Heads for FileHeads {
             .boxify()
     }
 
-    fn is_head(&self, key: &NodeHash) -> BoxFuture<bool, Error> {
+    fn is_head(&self, key: &DNodeHash) -> BoxFuture<bool, Error> {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
@@ -125,7 +125,7 @@ impl Heads for FileHeads {
             .boxify()
     }
 
-    fn heads(&self) -> BoxStream<NodeHash, Error> {
+    fn heads(&self) -> BoxStream<DNodeHash, Error> {
         let names = fs::read_dir(&self.base).map(|entries| {
             entries
                 .map(|result| {
@@ -136,7 +136,7 @@ impl Heads for FileHeads {
                 .filter_map(|result| match result {
                     Ok(ref name) if name.starts_with(PREFIX) => {
                         let name = &name[PREFIX.len()..];
-                        let name = NodeHash::from_str(name)
+                        let name = DNodeHash::from_str(name)
                             .context("can't parse name")
                             .map_err(Error::from);
                         Some(name)
@@ -151,7 +151,6 @@ impl Heads for FileHeads {
         }
     }
 }
-
 
 #[cfg(test)]
 mod test {

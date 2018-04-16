@@ -19,7 +19,7 @@ extern crate time_ext;
 use dieselfilenodes::{MysqlFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
 use filenodes::Filenodes;
 use futures::future::Future;
-use mercurial_types::{HgFileNodeId, NodeHash, RepoPath, RepositoryId};
+use mercurial_types::{DNodeHash, HgFileNodeId, RepoPath, RepositoryId};
 use slog::{Drain, Level};
 use slog_glog_fmt::default_drain as glog_drain;
 use std::str::FromStr;
@@ -74,7 +74,7 @@ fn main() {
         info!(root_log, "file");
         RepoPath::file(filename).expect("incorrect repopath")
     };
-    let filenode_hash = NodeHash::from_str(filenode).expect("incorrect filenode: should be sha1");
+    let filenode_hash = DNodeHash::from_str(filenode).expect("incorrect filenode: should be sha1");
 
     let mut filenode_hash = HgFileNodeId::new(filenode_hash);
 

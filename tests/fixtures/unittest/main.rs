@@ -19,7 +19,7 @@ use bytes::Bytes;
 use futures::executor::spawn;
 use mercurial_types::{Changeset, FileType, MPathElement};
 use mercurial_types::manifest::{Content, Type};
-use mercurial_types::nodehash::{HgChangesetId, NodeHash};
+use mercurial_types::nodehash::{DNodeHash, HgChangesetId};
 
 #[test]
 fn check_heads() {
@@ -32,11 +32,11 @@ fn check_heads() {
         assert!(
             if let Some(Ok(hash)) = heads.wait_stream() {
                 hash
-                    == NodeHash::from_ascii_str(&AsciiString::from_ascii(
+                    == DNodeHash::from_ascii_str(&AsciiString::from_ascii(
                         "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
                     ).expect("Can't turn string to AsciiString"))
                         .expect(
-                        "Can't turn AsciiString to NodeHash",
+                        "Can't turn AsciiString to DNodeHash",
                     )
             } else {
                 false
@@ -60,11 +60,11 @@ fn check_head_exists() {
     async_unit::tokio_unit_test(|| {
         let repo = linear::getrepo(None);
 
-        let nodehash = NodeHash::from_ascii_str(&AsciiString::from_ascii(
+        let nodehash = DNodeHash::from_ascii_str(&AsciiString::from_ascii(
             "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
         ).expect("Can't turn string to AsciiString"))
             .expect(
-            "Can't turn AsciiString to NodeHash",
+            "Can't turn AsciiString to DNodeHash",
         );
 
         let exists_future = repo.changeset_exists(&HgChangesetId::new(nodehash));
@@ -85,7 +85,7 @@ fn check_head_has_file() {
             repo.get_changeset_by_changesetid(&HgChangesetId::from_ascii_str(
                 &AsciiString::from_ascii("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
                     .expect("Can't turn string to AsciiString"),
-            ).expect("Can't turn AsciiString to NodeHash"));
+            ).expect("Can't turn AsciiString to DNodeHash"));
         let changeset = spawn(changeset_future)
             .wait_future()
             .expect("Can't get changeset");

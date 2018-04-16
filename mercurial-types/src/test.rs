@@ -24,7 +24,6 @@ fn test_fsencode_from_core_hg() {
     let expected = "data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}";
     check_fsencode_with_dotencode(&toencode[..], expected);
 
-
     let toencode = b"data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}xxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345";
     let expected = "data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}xxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345";
     check_fsencode_with_dotencode(&toencode[..], expected);
@@ -154,7 +153,8 @@ fn test_fsencode_from_core_hg() {
     check_fsencode_with_dotencode(&toencode[..], expected);
 
     let toencode = b"data/aux.bla/bla.aux/prn/PRN/lpt/com3/nul/coma/foo.NUL/normal.c.i";
-    let expected = "data/au~78.bla/bla.aux/pr~6e/_p_r_n/lpt/co~6d3/nu~6c/coma/foo._n_u_l/normal.c.i";
+    let expected =
+        "data/au~78.bla/bla.aux/pr~6e/_p_r_n/lpt/co~6d3/nu~6c/coma/foo._n_u_l/normal.c.i";
     check_fsencode_with_dotencode(&toencode[..], expected);
 
     let toencode = b"data/AUX/SECOND/X.PRN/FOURTH/FI:FTH/SIXTH/SEVENTH/EIGHTH/NINETH/TENTH/ELEVENTH/LOREMIPSUM.TXT.i";
@@ -178,11 +178,13 @@ fn test_fsencode_from_core_hg() {
     check_fsencode_with_dotencode(&toencode[..], expected);
 
     let toencode = b"data/foo.../foo   / /a./_. /__/.x../    bla/.FOO/something.i";
-    let expected = "data/foo..~2e/foo  ~20/~20/a~2e/__.~20/____/~2ex.~2e/~20   bla/~2e_f_o_o/something.i";
+    let expected =
+        "data/foo..~2e/foo  ~20/~20/a~2e/__.~20/____/~2ex.~2e/~20   bla/~2e_f_o_o/something.i";
     check_fsencode_with_dotencode(&toencode[..], expected);
 
     let toencode = b"data/c/co/com/com0/com1/com2/com3/com4/com5/com6/com7/com8/com9";
-    let expected = "data/c/co/com/com0/co~6d1/co~6d2/co~6d3/co~6d4/co~6d5/co~6d6/co~6d7/co~6d8/co~6d9";
+    let expected =
+        "data/c/co/com/com0/co~6d1/co~6d2/co~6d3/co~6d4/co~6d5/co~6d6/co~6d7/co~6d8/co~6d9";
     check_fsencode_with_dotencode(&toencode[..], expected);
 
     let toencode = b"data/C/CO/COM/COM0/COM1/COM2/COM3/COM4/COM5/COM6/COM7/COM8/COM9";
@@ -195,7 +197,8 @@ fn test_fsencode_from_core_hg() {
 
     let toencode =
         b"data/x.c/x.co/x.com0/x.com1/x.com2/x.com3/x.com4/x.com5/x.com6/x.com7/x.com8/x.com9";
-    let expected = "data/x.c/x.co/x.com0/x.com1/x.com2/x.com3/x.com4/x.com5/x.com6/x.com7/x.com8/x.com9";
+    let expected =
+        "data/x.c/x.co/x.com0/x.com1/x.com2/x.com3/x.com4/x.com5/x.com6/x.com7/x.com8/x.com9";
     check_fsencode_with_dotencode(&toencode[..], expected);
 
     let toencode = b"data/cx/cox/comx/com0x/com1x/com2x/com3x/com4x/com5x/com6x/com7x/com8x/com9x";
@@ -207,7 +210,8 @@ fn test_fsencode_from_core_hg() {
     check_fsencode_with_dotencode(&toencode[..], expected);
 
     let toencode = b"data/l/lp/lpt/lpt0/lpt1/lpt2/lpt3/lpt4/lpt5/lpt6/lpt7/lpt8/lpt9";
-    let expected = "data/l/lp/lpt/lpt0/lp~741/lp~742/lp~743/lp~744/lp~745/lp~746/lp~747/lp~748/lp~749";
+    let expected =
+        "data/l/lp/lpt/lpt0/lp~741/lp~742/lp~743/lp~744/lp~745/lp~746/lp~747/lp~748/lp~749";
     check_fsencode_with_dotencode(&toencode[..], expected);
 
     let toencode = b"data/L/LP/LPT/LPT0/LPT1/LPT2/LPT3/LPT4/LPT5/LPT6/LPT7/LPT8/LPT9";
@@ -219,7 +223,8 @@ fn test_fsencode_from_core_hg() {
     check_fsencode_with_dotencode(&toencode[..], expected);
 
     let toencode = b"data/x.l/x.lp/x.lpt/x.lpt0/x.lpt1/x.lpt2/x.lpt3/x.lpt4/x.lpt5/x.lpt6/x.lpt7/x.lpt8/x.lpt9";
-    let expected = "data/x.l/x.lp/x.lpt/x.lpt0/x.lpt1/x.lpt2/x.lpt3/x.lpt4/x.lpt5/x.lpt6/x.lpt7/x.lpt8/x.lpt9";
+    let expected =
+        "data/x.l/x.lp/x.lpt/x.lpt0/x.lpt1/x.lpt2/x.lpt3/x.lpt4/x.lpt5/x.lpt6/x.lpt7/x.lpt8/x.lpt9";
     check_fsencode_with_dotencode(&toencode[..], expected);
 
     let toencode = b"data/lx/lpx/lptx/lpt0x/lpt1x/lpt2x/lpt3x/lpt4x/lpt5x/lpt6x/lpt7x/lpt8x/lpt9x";

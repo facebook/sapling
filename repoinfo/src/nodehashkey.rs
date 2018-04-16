@@ -8,12 +8,12 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use heapsize::HeapSizeOf;
-use mercurial_types::NodeHash;
+use mercurial_types::DNodeHash;
 
 use ptrwrap::PtrWrap;
 
 #[derive(Debug)]
-pub struct Key<R>(pub PtrWrap<R>, pub NodeHash);
+pub struct Key<R>(pub PtrWrap<R>, pub DNodeHash);
 
 impl<R> Clone for Key<R> {
     fn clone(&self) -> Self {
@@ -41,14 +41,14 @@ impl<R> HeapSizeOf for Key<R> {
     }
 }
 
-impl<'a, R> From<(&'a Arc<R>, NodeHash)> for Key<R> {
-    fn from((repo, hash): (&'a Arc<R>, NodeHash)) -> Self {
+impl<'a, R> From<(&'a Arc<R>, DNodeHash)> for Key<R> {
+    fn from((repo, hash): (&'a Arc<R>, DNodeHash)) -> Self {
         Key(From::from(repo), hash)
     }
 }
 
-impl<'a, R> From<(&'a PtrWrap<R>, NodeHash)> for Key<R> {
-    fn from((repo, hash): (&'a PtrWrap<R>, NodeHash)) -> Self {
+impl<'a, R> From<(&'a PtrWrap<R>, DNodeHash)> for Key<R> {
+    fn from((repo, hash): (&'a PtrWrap<R>, DNodeHash)) -> Self {
         Key(repo.clone(), hash)
     }
 }

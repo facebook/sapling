@@ -10,7 +10,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use bincode;
 
 use blobstore::Blobstore;
-use mercurial_types::{HgBlobHash, NodeHash, Parents};
+use mercurial_types::{DNodeHash, HgBlobHash, Parents};
 
 use errors::*;
 
@@ -21,11 +21,11 @@ pub struct RawNodeBlob {
     pub blob: HgBlobHash,
 }
 
-pub fn get_node_key(nodeid: NodeHash) -> String {
+pub fn get_node_key(nodeid: DNodeHash) -> String {
     format!("node-{}.bincode", nodeid)
 }
 
-pub fn get_node(blobstore: &Blobstore, nodeid: NodeHash) -> BoxFuture<RawNodeBlob, Error> {
+pub fn get_node(blobstore: &Blobstore, nodeid: DNodeHash) -> BoxFuture<RawNodeBlob, Error> {
     let key = get_node_key(nodeid);
 
     blobstore

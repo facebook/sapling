@@ -67,7 +67,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
-use mercurial_types::{Changeset, FileType, NodeHash, RepositoryId};
+use mercurial_types::{Changeset, DNodeHash, FileType, RepositoryId};
 use mercurial_types::nodehash::HgChangesetId;
 use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
@@ -113,25 +113,25 @@ where
 
 fn parse_root_treemanifest_id_url(caps: Captures) -> Result<ParsedUrl> {
     let repo = parse_capture::<String>(&caps, 1)?;
-    let hash = parse_capture::<NodeHash>(&caps, 2)?;
+    let hash = parse_capture::<DNodeHash>(&caps, 2)?;
     Ok(ParsedUrl::RootTreeHgManifestId(repo, hash))
 }
 
 fn parse_tree_content_url(caps: Captures) -> Result<ParsedUrl> {
     let repo = parse_capture::<String>(&caps, 1)?;
-    let hash = parse_capture::<NodeHash>(&caps, 2)?;
+    let hash = parse_capture::<DNodeHash>(&caps, 2)?;
     Ok(ParsedUrl::TreeContent(repo, hash))
 }
 
 fn parse_tree_content_light_url(caps: Captures) -> Result<ParsedUrl> {
     let repo = parse_capture::<String>(&caps, 1)?;
-    let hash = parse_capture::<NodeHash>(&caps, 2)?;
+    let hash = parse_capture::<DNodeHash>(&caps, 2)?;
     Ok(ParsedUrl::TreeContentLight(repo, hash))
 }
 
 fn parse_blob_content_url(caps: Captures) -> Result<ParsedUrl> {
     let repo = parse_capture::<String>(&caps, 1)?;
-    let hash = parse_capture::<NodeHash>(&caps, 2)?;
+    let hash = parse_capture::<DNodeHash>(&caps, 2)?;
     Ok(ParsedUrl::BlobContent(repo, hash))
 }
 
@@ -148,10 +148,10 @@ fn parse_url(url: &str, routes: &[Route]) -> Result<ParsedUrl> {
 }
 
 enum ParsedUrl {
-    RootTreeHgManifestId(String, NodeHash),
-    TreeContent(String, NodeHash),
-    TreeContentLight(String, NodeHash),
-    BlobContent(String, NodeHash),
+    RootTreeHgManifestId(String, DNodeHash),
+    TreeContent(String, DNodeHash),
+    TreeContentLight(String, DNodeHash),
+    BlobContent(String, DNodeHash),
 }
 
 lazy_static! {
@@ -190,7 +190,7 @@ impl From<mercurial_types::Type> for MetadataType {
 }
 #[derive(Serialize)]
 struct TreeMetadata {
-    hash: NodeHash,
+    hash: DNodeHash,
     path: PathBuf,
     #[serde(rename = "type")]
     ty: MetadataType,
@@ -280,7 +280,7 @@ where
     fn get_tree_content(
         &self,
         reponame: String,
-        hash: &NodeHash,
+        hash: &DNodeHash,
         options: TreeMetadataOptions,
     ) -> Box<futures::Future<Item = Bytes, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
@@ -315,7 +315,7 @@ where
     fn get_blob_content(
         &self,
         reponame: String,
-        hash: &NodeHash,
+        hash: &DNodeHash,
     ) -> Box<futures::Future<Item = Bytes, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,

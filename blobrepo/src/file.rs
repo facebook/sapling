@@ -13,7 +13,7 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{BlobNode, FileType, HgBlob, HgManifestId, MPath, MPathElement, NodeHash,
+use mercurial_types::{BlobNode, DNodeHash, FileType, HgBlob, HgManifestId, MPath, MPathElement,
                       Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::EntryId;
@@ -36,8 +36,8 @@ pub struct BlobEntry {
 
 pub fn fetch_file_content_and_renames_from_blobstore(
     blobstore: &Arc<Blobstore>,
-    nodeid: NodeHash,
-) -> BoxFuture<(Bytes, Option<(MPath, NodeHash)>), Error> {
+    nodeid: DNodeHash,
+) -> BoxFuture<(Bytes, Option<(MPath, DNodeHash)>), Error> {
     get_node(blobstore, nodeid)
         .and_then({
             let blobstore = blobstore.clone();
@@ -71,7 +71,7 @@ impl BlobEntry {
     pub fn new(
         blobstore: Arc<Blobstore>,
         name: Option<MPathElement>,
-        nodeid: NodeHash,
+        nodeid: DNodeHash,
         ty: Type,
     ) -> Result<Self> {
         Ok(Self {

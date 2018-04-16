@@ -61,7 +61,7 @@ use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use memblob::EagerMemblob;
 use dbbookmarks::SqliteDbBookmarks;
 use dieselfilenodes::SqliteFilenodes;
-use mercurial_types::{HgChangesetId, NodeHash, RepositoryId};
+use mercurial_types::{HgChangesetId, DNodeHash, RepositoryId};
 use memheads::MemHeads;
 use blobrepo::BlobRepo;
 use ascii::AsciiString;
@@ -104,7 +104,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
 
                 commit_hash = split[0]
                 writeline(
-                    'let cs_id = HgChangesetId::new(NodeHash::from_str("{}").unwrap());'.
+                    'let cs_id = HgChangesetId::new(DNodeHash::from_str("{}").unwrap());'.
                     format(commit_hash)
                 )
                 writeline('let parents = vec![')
@@ -112,12 +112,12 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                     indent += 1
                     for p in split[1:-1]:
                         writeline(
-                            'HgChangesetId::new(NodeHash::from_str("{}").unwrap()), '.
+                            'HgChangesetId::new(DNodeHash::from_str("{}").unwrap()), '.
                             format(p)
                         )
 
                     writeline(
-                        'HgChangesetId::new(NodeHash::from_str("{}").unwrap())'.
+                        'HgChangesetId::new(DNodeHash::from_str("{}").unwrap())'.
                         format(split[-1])
                     )
                     indent -= 1
@@ -138,7 +138,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
         for head in glob.glob(os.path.join(args.source, "heads", "head-*")):
             head = head[-40:]
             writeline(
-                'heads.add(&NodeHash::from_ascii_str(&AsciiString::from_ascii("{}").unwrap()).unwrap()).wait().expect("Head put failed");'.
+                'heads.add(&DNodeHash::from_ascii_str(&AsciiString::from_ascii("{}").unwrap()).unwrap()).wait().expect("Head put failed");'.
                 format(head)
             )
         writeline("")

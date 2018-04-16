@@ -15,7 +15,7 @@ use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial_types::{Entry, FileType, MPathElement, Manifest, Type};
-use mercurial_types::nodehash::{EntryId, HgManifestId, NodeHash, NULL_HASH};
+use mercurial_types::nodehash::{DNodeHash, EntryId, HgManifestId, D_NULL_HASH};
 
 use blobstore::Blobstore;
 
@@ -95,7 +95,7 @@ impl BlobManifest {
         manifestid: &HgManifestId,
     ) -> BoxFuture<Option<Self>, Error> {
         let nodehash = manifestid.clone().into_nodehash();
-        if nodehash == NULL_HASH {
+        if nodehash == D_NULL_HASH {
             Ok(Some(BlobManifest {
                 blobstore: blobstore.clone(),
                 content: ManifestContent::new_empty(),
@@ -181,7 +181,7 @@ impl Details {
         let (hash, flags) = data.split_at(40);
         let hash = str::from_utf8(hash)
             .map_err(|err| Error::from(err))
-            .and_then(|hash| hash.parse::<NodeHash>())
+            .and_then(|hash| hash.parse::<DNodeHash>())
             .with_context(|_| format!("malformed hash: {:?}", hash))?;
         let entryid = EntryId::new(hash);
 

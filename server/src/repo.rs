@@ -37,8 +37,8 @@ use blobrepo::BlobChangeset;
 use bundle2_resolver;
 use mercurial::{self, NodeHashConversion, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{percent_encode, Changeset, Entry, HgChangesetId, HgManifestId, MPath,
-                      NodeHash, Parents, RepoPath, RepositoryId, Type, NULL_HASH};
+use mercurial_types::{percent_encode, Changeset, DNodeHash, Entry, HgChangesetId, HgManifestId,
+                      MPath, Parents, RepoPath, RepositoryId, Type, D_NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use metaconfig::repoconfig::RepoType;
 
@@ -328,7 +328,7 @@ impl RepoClient {
         let repo_generation = &self.repo.repo_generation;
         let hgrepo = &self.repo.hgrepo;
 
-        let ancestors_stream = |nodes: &Vec<NodeHash>| -> Box<NodeStream> {
+        let ancestors_stream = |nodes: &Vec<DNodeHash>| -> Box<NodeStream> {
             let heads_ancestors = nodes.iter().map(|head| {
                 AncestorsNodeStream::new(&hgrepo, repo_generation.clone(), *head).boxed()
             });
@@ -435,7 +435,7 @@ impl RepoClient {
             .basemfnodes
             .get(0)
             .map(|h| h.into_mononoke())
-            .unwrap_or(NULL_HASH);
+            .unwrap_or(D_NULL_HASH);
 
         if params.rootdir.len() != 0 {
             // For now, only root repo
@@ -494,13 +494,13 @@ impl HgCommands for RepoClient {
 
         struct ParentStream<CS> {
             repo: Arc<HgRepo>,
-            n: NodeHash,
-            bottom: NodeHash,
+            n: DNodeHash,
+            bottom: DNodeHash,
             wait_cs: Option<CS>,
         };
 
         impl<CS> ParentStream<CS> {
-            fn new(repo: &Arc<HgRepo>, top: NodeHash, bottom: NodeHash) -> Self {
+            fn new(repo: &Arc<HgRepo>, top: DNodeHash, bottom: DNodeHash) -> Self {
                 ParentStream {
                     repo: repo.clone(),
                     n: top,
@@ -511,11 +511,11 @@ impl HgCommands for RepoClient {
         }
 
         impl Stream for ParentStream<BoxFuture<BlobChangeset, hgproto::Error>> {
-            type Item = NodeHash;
+            type Item = DNodeHash;
             type Error = hgproto::Error;
 
             fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-                if self.n == self.bottom || self.n == NULL_HASH {
+                if self.n == self.bottom || self.n == D_NULL_HASH {
                     return Ok(Async::Ready(None));
                 }
 
@@ -530,7 +530,7 @@ impl HgCommands for RepoClient {
                 self.wait_cs = None; // got it
 
                 let p = match cs.parents() {
-                    &Parents::None => NULL_HASH,
+                    &Parents::None => D_NULL_HASH,
                     &Parents::One(ref p) => *p,
                     &Parents::Two(ref p, _) => *p,
                 };
@@ -786,8 +786,8 @@ impl HgCommands for RepoClient {
 
 fn get_changed_entry_stream(
     repo: Arc<BlobRepo>,
-    mfid: &NodeHash,
-    basemfid: &NodeHash,
+    mfid: &DNodeHash,
+    basemfid: &DNodeHash,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
     let manifest = repo.get_manifest_by_nodeid(mfid)
         .traced_global("fetch rootmf", trace_args!());
@@ -918,10 +918,10 @@ fn fetch_treepack_part_input(
 
 fn get_file_history(
     repo: Arc<BlobRepo>,
-    startnode: NodeHash,
+    startnode: DNodeHash,
     path: MPath,
-) -> BoxStream<(NodeHash, Parents, NodeHash, Option<(MPath, NodeHash)>), Error> {
-    if startnode == NULL_HASH {
+) -> BoxStream<(DNodeHash, Parents, DNodeHash, Option<(MPath, DNodeHash)>), Error> {
+    if startnode == D_NULL_HASH {
         return stream::empty().boxify();
     }
     let mut startstate = VecDeque::new();
@@ -931,7 +931,7 @@ fn get_file_history(
 
     stream::unfold(
         (startstate, seen_nodes),
-        move |cur_data: (VecDeque<NodeHash>, HashSet<NodeHash>)| {
+        move |cur_data: (VecDeque<DNodeHash>, HashSet<DNodeHash>)| {
             let (mut nodes, mut seen_nodes) = cur_data;
             let node = nodes.pop_front()?;
 
@@ -969,7 +969,7 @@ fn get_file_history(
 
 fn create_remotefilelog_blob(
     repo: Arc<BlobRepo>,
-    node: NodeHash,
+    node: DNodeHash,
     path: MPath,
 ) -> BoxFuture<Bytes, Error> {
     // raw_content includes copy information
@@ -1008,8 +1008,8 @@ fn create_remotefilelog_blob(
 
             for (node, parents, linknode, copy) in history {
                 let (p1, p2) = match parents {
-                    Parents::None => (NULL_HASH, NULL_HASH),
-                    Parents::One(p) => (p, NULL_HASH),
+                    Parents::None => (D_NULL_HASH, D_NULL_HASH),
+                    Parents::One(p) => (p, D_NULL_HASH),
                     Parents::Two(p1, p2) => (p1, p2),
                 };
 

@@ -20,7 +20,7 @@ use mercurial::{self, NodeHashConversion};
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
 use mercurial_types::{BlobNode, Changeset, HgBlob, MPath, Parents, Time};
-use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NULL_HASH};
+use mercurial_types::nodehash::{HgChangesetId, HgManifestId, D_NULL_HASH};
 
 use errors::*;
 
@@ -158,7 +158,7 @@ impl BlobChangeset {
         changesetid: &HgChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
         let changesetid = *changesetid;
-        if changesetid == HgChangesetId::new(NULL_HASH) {
+        if changesetid == HgChangesetId::new(D_NULL_HASH) {
             let revlogcs = RevlogChangeset::new_null();
             let cs = BlobChangeset::new_with_id(&changesetid, revlogcs.into());
             Either::A(Ok(Some(cs)).into_future())

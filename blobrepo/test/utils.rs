@@ -16,7 +16,7 @@ use futures_ext::{BoxFuture, StreamExt};
 
 use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use memblob::{EagerMemblob, LazyMemblob};
-use mercurial_types::{manifest, FileType, HgBlob, NodeHash, RepoPath, Time};
+use mercurial_types::{manifest, DNodeHash, FileType, HgBlob, RepoPath, Time};
 use std::sync::Arc;
 
 pub fn get_empty_eager_repo() -> BlobRepo {
@@ -68,7 +68,7 @@ pub fn upload_file_no_parents<S>(
     repo: &BlobRepo,
     data: S,
     path: &RepoPath,
-) -> (NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
+) -> (DNodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
@@ -86,8 +86,8 @@ pub fn upload_file_one_parent<S>(
     repo: &BlobRepo,
     data: S,
     path: &RepoPath,
-    p1: NodeHash,
-) -> (NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
+    p1: DNodeHash,
+) -> (DNodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
@@ -105,7 +105,7 @@ pub fn upload_manifest_no_parents<S>(
     repo: &BlobRepo,
     data: S,
     path: &RepoPath,
-) -> (NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
+) -> (DNodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
@@ -118,8 +118,8 @@ pub fn upload_manifest_one_parent<S>(
     repo: &BlobRepo,
     data: S,
     path: &RepoPath,
-    p1: NodeHash,
-) -> (NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
+    p1: DNodeHash,
+) -> (DNodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
@@ -163,8 +163,8 @@ pub fn create_changeset_one_parent(
     )
 }
 
-pub fn string_to_nodehash(hash: &str) -> NodeHash {
-    NodeHash::from_ascii_str(hash.as_ascii_str().unwrap()).unwrap()
+pub fn string_to_nodehash(hash: &str) -> DNodeHash {
+    DNodeHash::from_ascii_str(hash.as_ascii_str().unwrap()).unwrap()
 }
 
 pub fn run_future<F>(future: F) -> Result<F::Item, F::Error>

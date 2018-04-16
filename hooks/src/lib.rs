@@ -39,7 +39,7 @@ use hlua::{AnyLuaValue, Lua, LuaError, PushGuard};
 
 use blobrepo::BlobRepo;
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
-use mercurial_types::{Changeset, NodeHash};
+use mercurial_types::{Changeset, DNodeHash};
 use mercurial_types::nodehash::HgChangesetId;
 
 pub use errors::*;
@@ -48,8 +48,8 @@ pub use errors::*;
 pub struct HookInfo {
     pub repo: String,
     pub bookmark: String,
-    pub old_hash: NodeHash,
-    pub new_hash: NodeHash,
+    pub old_hash: DNodeHash,
+    pub new_hash: DNodeHash,
 }
 
 pub struct HookManager<'lua> {

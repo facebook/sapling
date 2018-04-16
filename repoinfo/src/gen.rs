@@ -20,7 +20,7 @@ use futures_ext::FutureExt;
 
 use asyncmemo::{Asyncmemo, Filler};
 use blobrepo::BlobRepo;
-use mercurial_types::{HgChangesetId, NodeHash, NULL_HASH};
+use mercurial_types::{DNodeHash, HgChangesetId, D_NULL_HASH};
 
 use nodehashkey::Key;
 
@@ -58,9 +58,9 @@ impl RepoGenCache {
     pub fn get(
         &self,
         repo: &Arc<BlobRepo>,
-        nodeid: NodeHash,
+        nodeid: DNodeHash,
     ) -> impl Future<Item = Generation, Error = Error> + Send {
-        if nodeid == NULL_HASH {
+        if nodeid == D_NULL_HASH {
             Either::A(Ok(Generation(0)).into_future())
         } else {
             Either::B(self.cache.get((repo, nodeid.clone())))

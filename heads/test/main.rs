@@ -23,10 +23,10 @@ use tempdir::TempDir;
 use fileheads::FileHeads;
 use heads::Heads;
 use memheads::MemHeads;
-use mercurial_types::NodeHash;
+use mercurial_types::DNodeHash;
 
 fn basic<H: Heads>(heads: H) {
-    let empty: Vec<NodeHash> = Vec::new();
+    let empty: Vec<DNodeHash> = Vec::new();
     assert_eq!(heads.heads().collect().wait().unwrap(), empty);
 
     let foo = mercurial_types_mocks::nodehash::ONES_HASH;

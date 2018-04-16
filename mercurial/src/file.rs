@@ -11,7 +11,7 @@ use errors::*;
 
 use itertools::Itertools;
 
-use mercurial_types::{BlobNode, MPath, NodeHash};
+use mercurial_types::{BlobNode, DNodeHash, MPath};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct File {
@@ -37,9 +37,7 @@ impl File {
                 .iter()
                 .enumerate()
                 .tuple_windows()
-                .find(|&((_, a), (_, b))| {
-                    *a == META_MARKER[0] && *b == META_MARKER[1]
-                })
+                .find(|&((_, a), (_, b))| *a == META_MARKER[0] && *b == META_MARKER[1])
                 .map(|((idx, _), _)| idx + META_SZ * 2)
                 .unwrap_or(META_SZ); // XXX malformed if None - unterminated metadata
 
@@ -75,7 +73,7 @@ impl File {
         kv
     }
 
-    pub fn copied_from(&self) -> Result<Option<(MPath, NodeHash)>> {
+    pub fn copied_from(&self) -> Result<Option<(MPath, DNodeHash)>> {
         if !self.node.maybe_copied() {
             return Ok(None);
         }

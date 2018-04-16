@@ -7,7 +7,7 @@
 use blobrepo::BlobRepo;
 use futures::future::Future;
 use futures::stream::Stream;
-use mercurial_types::NodeHash;
+use mercurial_types::DNodeHash;
 use repoinfo::{Generation, RepoGenCache};
 use std::boxed::Box;
 use std::sync::Arc;
@@ -17,7 +17,7 @@ use errors::*;
 
 use futures::{Async, Poll};
 
-pub type InputStream = Box<Stream<Item = (NodeHash, Generation), Error = Error> + 'static + Send>;
+pub type InputStream = Box<Stream<Item = (DNodeHash, Generation), Error = Error> + 'static + Send>;
 
 pub fn add_generations(
     stream: Box<NodeStream>,
@@ -35,7 +35,7 @@ pub fn add_generations(
 }
 
 pub fn all_inputs_ready(
-    inputs: &Vec<(InputStream, Poll<Option<(NodeHash, Generation)>, Error>)>,
+    inputs: &Vec<(InputStream, Poll<Option<(DNodeHash, Generation)>, Error>)>,
 ) -> bool {
     inputs
         .iter()
@@ -47,7 +47,7 @@ pub fn all_inputs_ready(
 }
 
 pub fn poll_all_inputs(
-    inputs: &mut Vec<(InputStream, Poll<Option<(NodeHash, Generation)>, Error>)>,
+    inputs: &mut Vec<(InputStream, Poll<Option<(DNodeHash, Generation)>, Error>)>,
 ) {
     for &mut (ref mut input, ref mut state) in inputs.iter_mut() {
         if let Ok(Async::NotReady) = *state {
@@ -63,7 +63,7 @@ pub struct NotReadyEmptyStream {
 
 #[cfg(test)]
 impl Stream for NotReadyEmptyStream {
-    type Item = NodeHash;
+    type Item = DNodeHash;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -78,12 +78,12 @@ impl Stream for NotReadyEmptyStream {
 
 #[cfg(test)]
 pub struct RepoErrorStream {
-    pub hash: NodeHash,
+    pub hash: DNodeHash,
 }
 
 #[cfg(test)]
 impl Stream for RepoErrorStream {
-    type Item = NodeHash;
+    type Item = DNodeHash;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {

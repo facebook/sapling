@@ -19,8 +19,8 @@ use hash::{self, Sha1};
 use serde;
 use sql_types::{HgChangesetIdSql, HgFileNodeIdSql, HgManifestIdSql};
 
-pub const NULL_HASH: NodeHash = NodeHash(hash::NULL);
-pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
+pub const D_NULL_HASH: DNodeHash = DNodeHash(hash::NULL);
+pub const NULL_CSID: HgChangesetId = HgChangesetId(D_NULL_HASH);
 
 /// This structure represents Sha1 based hashes that are used in Mononoke. It is a temporary
 /// structure that will be entirely replaced by structures from mononoke-types::typed_hash.
@@ -31,17 +31,17 @@ pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
 ///   provides Flat Manifest hashes as aliases for Root Manifest hashes
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
-pub struct NodeHash(pub(crate) Sha1);
+pub struct DNodeHash(pub(crate) Sha1);
 
-impl NodeHash {
+impl DNodeHash {
     #[deprecated(note = "This constructor is only used in two places: \
                          conversion from mercurial NodeHash and creation of NodeHash mocks")]
-    pub const fn new(sha1: Sha1) -> NodeHash {
-        NodeHash(sha1)
+    pub const fn new(sha1: Sha1) -> Self {
+        DNodeHash(sha1)
     }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<NodeHash> {
-        Sha1::from_bytes(bytes).map(NodeHash)
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        Sha1::from_bytes(bytes).map(DNodeHash)
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -49,13 +49,13 @@ impl NodeHash {
     }
 
     #[inline]
-    pub fn from_ascii_str(s: &AsciiStr) -> Result<NodeHash> {
-        Sha1::from_ascii_str(s).map(NodeHash)
+    pub fn from_ascii_str(s: &AsciiStr) -> Result<Self> {
+        Sha1::from_ascii_str(s).map(DNodeHash)
     }
 
     #[inline]
     pub fn into_option(self) -> Option<Self> {
-        if self == NULL_HASH {
+        if self == D_NULL_HASH {
             None
         } else {
             Some(self)
@@ -69,10 +69,10 @@ impl NodeHash {
     }
 }
 
-impl From<Option<NodeHash>> for NodeHash {
-    fn from(h: Option<NodeHash>) -> Self {
+impl From<Option<DNodeHash>> for DNodeHash {
+    fn from(h: Option<DNodeHash>) -> Self {
         match h {
-            None => NULL_HASH,
+            None => D_NULL_HASH,
             Some(h) => h,
         }
     }
@@ -102,7 +102,7 @@ impl<'de> serde::de::Visitor<'de> for StringVisitor {
     }
 }
 
-impl serde::ser::Serialize for NodeHash {
+impl serde::ser::Serialize for DNodeHash {
     fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -111,73 +111,73 @@ impl serde::ser::Serialize for NodeHash {
     }
 }
 
-impl<'de> serde::de::Deserialize<'de> for NodeHash {
-    fn deserialize<D>(deserializer: D) -> ::std::result::Result<NodeHash, D::Error>
+impl<'de> serde::de::Deserialize<'de> for DNodeHash {
+    fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
     where
         D: serde::de::Deserializer<'de>,
     {
         let hex = deserializer.deserialize_string(StringVisitor)?;
         match Sha1::from_str(hex.as_str()) {
-            Ok(sha1) => Ok(NodeHash(sha1)),
+            Ok(sha1) => Ok(DNodeHash(sha1)),
             Err(error) => Err(serde::de::Error::custom(error)),
         }
     }
 }
 
-impl FromStr for NodeHash {
+impl FromStr for DNodeHash {
     type Err = <Sha1 as FromStr>::Err;
 
-    fn from_str(s: &str) -> result::Result<NodeHash, Self::Err> {
-        Sha1::from_str(s).map(NodeHash)
+    fn from_str(s: &str) -> result::Result<Self, Self::Err> {
+        Sha1::from_str(s).map(DNodeHash)
     }
 }
 
-impl Display for NodeHash {
+impl Display for DNodeHash {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }
 }
 
-impl Arbitrary for NodeHash {
+impl Arbitrary for DNodeHash {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        NodeHash(Sha1::arbitrary(g))
+        DNodeHash(Sha1::arbitrary(g))
     }
 
     fn shrink(&self) -> Box<Iterator<Item = Self>> {
-        single_shrinker(NULL_HASH)
+        single_shrinker(D_NULL_HASH)
     }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf, FromSqlRow, AsExpression)]
 #[sql_type = "HgChangesetIdSql"]
-pub struct HgChangesetId(NodeHash);
+pub struct HgChangesetId(DNodeHash);
 
 impl HgChangesetId {
     #[inline]
     pub fn from_ascii_str(s: &AsciiStr) -> Result<HgChangesetId> {
-        NodeHash::from_ascii_str(s).map(HgChangesetId)
+        DNodeHash::from_ascii_str(s).map(HgChangesetId)
     }
 
     #[inline]
-    pub(crate) fn as_nodehash(&self) -> &NodeHash {
+    pub(crate) fn as_nodehash(&self) -> &DNodeHash {
         &self.0
     }
 
-    pub fn into_nodehash(self) -> NodeHash {
+    pub fn into_nodehash(self) -> DNodeHash {
         self.0
     }
 
-    pub const fn new(hash: NodeHash) -> Self {
+    pub const fn new(hash: DNodeHash) -> Self {
         HgChangesetId(hash)
     }
 }
 
 impl FromStr for HgChangesetId {
-    type Err = <NodeHash as FromStr>::Err;
+    type Err = <DNodeHash as FromStr>::Err;
 
     fn from_str(s: &str) -> result::Result<HgChangesetId, Self::Err> {
-        NodeHash::from_str(s).map(HgChangesetId)
+        DNodeHash::from_str(s).map(HgChangesetId)
     }
 }
 
@@ -202,7 +202,7 @@ impl<'de> serde::de::Deserialize<'de> for HgChangesetId {
         D: serde::de::Deserializer<'de>,
     {
         let hex = deserializer.deserialize_string(StringVisitor)?;
-        match NodeHash::from_str(hex.as_str()) {
+        match DNodeHash::from_str(hex.as_str()) {
             Ok(hash) => Ok(HgChangesetId::new(hash)),
             Err(error) => Err(serde::de::Error::custom(error)),
         }
@@ -212,19 +212,19 @@ impl<'de> serde::de::Deserialize<'de> for HgChangesetId {
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf, FromSqlRow, AsExpression)]
 #[sql_type = "HgManifestIdSql"]
-pub struct HgManifestId(NodeHash);
+pub struct HgManifestId(DNodeHash);
 
 impl HgManifestId {
     #[inline]
-    pub(crate) fn as_nodehash(&self) -> &NodeHash {
+    pub(crate) fn as_nodehash(&self) -> &DNodeHash {
         &self.0
     }
 
-    pub fn into_nodehash(self) -> NodeHash {
+    pub fn into_nodehash(self) -> DNodeHash {
         self.0
     }
 
-    pub const fn new(hash: NodeHash) -> Self {
+    pub const fn new(hash: DNodeHash) -> Self {
         HgManifestId(hash)
     }
 }
@@ -238,19 +238,19 @@ impl Display for HgManifestId {
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf, FromSqlRow, AsExpression)]
 #[sql_type = "HgFileNodeIdSql"]
-pub struct HgFileNodeId(NodeHash);
+pub struct HgFileNodeId(DNodeHash);
 
 impl HgFileNodeId {
     #[inline]
-    pub(crate) fn as_nodehash(&self) -> &NodeHash {
+    pub(crate) fn as_nodehash(&self) -> &DNodeHash {
         &self.0
     }
 
-    pub fn into_nodehash(self) -> NodeHash {
+    pub fn into_nodehash(self) -> DNodeHash {
         self.0
     }
 
-    pub const fn new(hash: NodeHash) -> Self {
+    pub const fn new(hash: DNodeHash) -> Self {
         HgFileNodeId(hash)
     }
 }
@@ -264,14 +264,14 @@ impl Display for HgFileNodeId {
 /// TODO: (jsgf) T25576292 EntryId should be a (Type, NodeId) tuple
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
-pub struct EntryId(NodeHash);
+pub struct EntryId(DNodeHash);
 
 impl EntryId {
-    pub fn into_nodehash(self) -> NodeHash {
+    pub fn into_nodehash(self) -> DNodeHash {
         self.0
     }
 
-    pub fn new(hash: NodeHash) -> Self {
+    pub fn new(hash: DNodeHash) -> Self {
         EntryId(hash)
     }
 }

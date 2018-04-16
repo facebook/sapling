@@ -23,11 +23,11 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
-use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Type, NULL_HASH};
+use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Type, D_NULL_HASH};
 use mercurial_types::manifest::Content;
 use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, ChangedEntry,
                                       EntryStatus};
-use mercurial_types::nodehash::{EntryId, HgChangesetId, NodeHash};
+use mercurial_types::nodehash::{DNodeHash, EntryId, HgChangesetId};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry};
 use mercurial_types_mocks::nodehash;
 
@@ -43,7 +43,7 @@ fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &HgChangesetId) -> Box<Ma
 
 fn get_hash(c: char) -> EntryId {
     let hash: String = repeat(c).take(40).collect();
-    EntryId::new(NodeHash::from_str(&hash).unwrap())
+    EntryId::new(DNodeHash::from_str(&hash).unwrap())
 }
 
 fn get_entry(ty: Type, hash: EntryId, path: RepoPath) -> Box<Entry + Sync> {
@@ -270,8 +270,8 @@ fn check_changed_paths(
 
 fn do_check(
     repo: Arc<BlobRepo>,
-    main_hash: NodeHash,
-    base_hash: NodeHash,
+    main_hash: DNodeHash,
+    base_hash: DNodeHash,
     expected_added: Vec<&str>,
     expected_deleted: Vec<&str>,
     expected_modified: Vec<&str>,
@@ -311,8 +311,8 @@ fn do_check(
 fn test_recursive_changed_entry_stream_simple() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = NodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
-        let base_hash = NodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
+        let main_hash = DNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let base_hash = DNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
         // A 2
@@ -344,8 +344,8 @@ fn test_recursive_changed_entry_stream_simple() {
 fn test_recursive_changed_entry_stream_changed_dirs() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = NodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-        let base_hash = NodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let main_hash = DNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let base_hash = DNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
         // A dir1/subdir1/subsubdir1/file_1
@@ -375,8 +375,8 @@ fn test_recursive_changed_entry_stream_changed_dirs() {
 fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = NodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
-        let base_hash = NodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let main_hash = DNodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
+        let base_hash = DNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
         // A dir1
@@ -414,12 +414,12 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
 
 #[test]
 fn nodehash_option() {
-    assert_eq!(NULL_HASH.into_option(), None);
-    assert_eq!(NodeHash::from(None), NULL_HASH);
+    assert_eq!(D_NULL_HASH.into_option(), None);
+    assert_eq!(DNodeHash::from(None), D_NULL_HASH);
 
     assert_eq!(nodehash::ONES_HASH.into_option(), Some(nodehash::ONES_HASH));
     assert_eq!(
-        NodeHash::from(Some(nodehash::ONES_HASH)),
+        DNodeHash::from(Some(nodehash::ONES_HASH)),
         nodehash::ONES_HASH
     );
 }

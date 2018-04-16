@@ -21,13 +21,12 @@ use futures::future::ok;
 use futures::stream::iter_ok;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-
 use heads::Heads;
-use mercurial_types::NodeHash;
+use mercurial_types::DNodeHash;
 
 /// Generic, in-memory heads store backed by a HashSet, intended to be used in tests.
 pub struct MemHeads {
-    heads: Mutex<HashSet<NodeHash>>,
+    heads: Mutex<HashSet<DNodeHash>>,
 }
 
 impl MemHeads {
@@ -40,21 +39,21 @@ impl MemHeads {
 }
 
 impl Heads for MemHeads {
-    fn add(&self, head: &NodeHash) -> BoxFuture<(), Error> {
+    fn add(&self, head: &DNodeHash) -> BoxFuture<(), Error> {
         self.heads.lock().unwrap().insert(head.clone());
         ok(()).boxify()
     }
 
-    fn remove(&self, head: &NodeHash) -> BoxFuture<(), Error> {
+    fn remove(&self, head: &DNodeHash) -> BoxFuture<(), Error> {
         self.heads.lock().unwrap().remove(head);
         ok(()).boxify()
     }
 
-    fn is_head(&self, head: &NodeHash) -> BoxFuture<bool, Error> {
+    fn is_head(&self, head: &DNodeHash) -> BoxFuture<bool, Error> {
         ok(self.heads.lock().unwrap().contains(head)).boxify()
     }
 
-    fn heads(&self) -> BoxStream<NodeHash, Error> {
+    fn heads(&self) -> BoxStream<DNodeHash, Error> {
         let guard = self.heads.lock().unwrap();
         let heads = (*guard).clone();
         iter_ok(heads).boxify()

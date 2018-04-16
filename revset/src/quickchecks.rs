@@ -15,7 +15,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
-use mercurial_types::NodeHash;
+use mercurial_types::DNodeHash;
 use repoinfo::RepoGenCache;
 
 use branch_even;
@@ -36,7 +36,7 @@ use validation::ValidateNodeStream;
 
 #[derive(Clone, Copy, Debug)]
 enum RevsetEntry {
-    SingleNode(Option<NodeHash>),
+    SingleNode(Option<DNodeHash>),
     SetDifference,
     Intersect(usize),
     Union(usize),
@@ -53,7 +53,7 @@ impl RevsetSpec {
         G: Rng,
     {
         let mut all_changesets_executor = spawn(repo.get_changesets());
-        let mut all_changesets: Vec<NodeHash> = Vec::new();
+        let mut all_changesets: Vec<DNodeHash> = Vec::new();
         loop {
             all_changesets.push(match all_changesets_executor.wait_stream() {
                 None => break,
@@ -70,8 +70,8 @@ impl RevsetSpec {
         }
     }
 
-    pub fn as_hashes(&self) -> HashSet<NodeHash> {
-        let mut output: Vec<HashSet<NodeHash>> = Vec::new();
+    pub fn as_hashes(&self) -> HashSet<DNodeHash> {
+        let mut output: Vec<HashSet<DNodeHash>> = Vec::new();
         for entry in self.rp_entries.iter() {
             match entry {
                 &RevsetEntry::SingleNode(None) => panic!("You need to add_hashes first!"),

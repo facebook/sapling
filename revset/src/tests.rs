@@ -9,14 +9,14 @@ use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
-use mercurial_types::NodeHash;
+use mercurial_types::DNodeHash;
 use repoinfo::RepoGenCache;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-pub fn string_to_nodehash(hash: &'static str) -> NodeHash {
-    NodeHash::from_ascii_str(&AsciiString::from_ascii(hash).expect("Can't turn string to AsciiString"))
-        .expect("Can't turn AsciiString to NodeHash")
+pub fn string_to_nodehash(hash: &'static str) -> DNodeHash {
+    DNodeHash::from_ascii_str(&AsciiString::from_ascii(hash).expect("Can't turn string to AsciiString"))
+        .expect("Can't turn AsciiString to DNodeHash")
 }
 
 /// Accounting for reordering within generations, ensure that a NodeStream gives the expected
@@ -27,7 +27,7 @@ pub fn assert_node_sequence<I>(
     hashes: I,
     stream: Box<NodeStream>,
 ) where
-    I: IntoIterator<Item = NodeHash>,
+    I: IntoIterator<Item = DNodeHash>,
 {
     let mut nodestream = spawn(stream);
     let mut received_hashes = HashSet::new();

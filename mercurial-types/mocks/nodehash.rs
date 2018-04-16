@@ -7,28 +7,28 @@
 // Ignore deprecation of NodeHash::new
 #![allow(deprecated)]
 
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, NodeHash};
-// NULL_HASH is exported for convenience.
-pub use mercurial_types::NULL_HASH;
+use mercurial_types::{DNodeHash, HgChangesetId, HgFileNodeId, HgManifestId};
+// D_NULL_HASH is exported for convenience.
+pub use mercurial_types::D_NULL_HASH;
 
 use hash;
 
 // Definitions for hashes 1111...ffff.
-pub const ONES_HASH: NodeHash = NodeHash::new(hash::ONES);
-pub const TWOS_HASH: NodeHash = NodeHash::new(hash::TWOS);
-pub const THREES_HASH: NodeHash = NodeHash::new(hash::THREES);
-pub const FOURS_HASH: NodeHash = NodeHash::new(hash::FOURS);
-pub const FIVES_HASH: NodeHash = NodeHash::new(hash::FIVES);
-pub const SIXES_HASH: NodeHash = NodeHash::new(hash::SIXES);
-pub const SEVENS_HASH: NodeHash = NodeHash::new(hash::SEVENS);
-pub const EIGHTS_HASH: NodeHash = NodeHash::new(hash::EIGHTS);
-pub const NINES_HASH: NodeHash = NodeHash::new(hash::NINES);
-pub const AS_HASH: NodeHash = NodeHash::new(hash::AS);
-pub const BS_HASH: NodeHash = NodeHash::new(hash::BS);
-pub const CS_HASH: NodeHash = NodeHash::new(hash::CS);
-pub const DS_HASH: NodeHash = NodeHash::new(hash::DS);
-pub const ES_HASH: NodeHash = NodeHash::new(hash::ES);
-pub const FS_HASH: NodeHash = NodeHash::new(hash::FS);
+pub const ONES_HASH: DNodeHash = DNodeHash::new(hash::ONES);
+pub const TWOS_HASH: DNodeHash = DNodeHash::new(hash::TWOS);
+pub const THREES_HASH: DNodeHash = DNodeHash::new(hash::THREES);
+pub const FOURS_HASH: DNodeHash = DNodeHash::new(hash::FOURS);
+pub const FIVES_HASH: DNodeHash = DNodeHash::new(hash::FIVES);
+pub const SIXES_HASH: DNodeHash = DNodeHash::new(hash::SIXES);
+pub const SEVENS_HASH: DNodeHash = DNodeHash::new(hash::SEVENS);
+pub const EIGHTS_HASH: DNodeHash = DNodeHash::new(hash::EIGHTS);
+pub const NINES_HASH: DNodeHash = DNodeHash::new(hash::NINES);
+pub const AS_HASH: DNodeHash = DNodeHash::new(hash::AS);
+pub const BS_HASH: DNodeHash = DNodeHash::new(hash::BS);
+pub const CS_HASH: DNodeHash = DNodeHash::new(hash::CS);
+pub const DS_HASH: DNodeHash = DNodeHash::new(hash::DS);
+pub const ES_HASH: DNodeHash = DNodeHash::new(hash::ES);
+pub const FS_HASH: DNodeHash = DNodeHash::new(hash::FS);
 
 // Definitions for changeset IDs 1111...ffff
 pub const ONES_CSID: HgChangesetId = HgChangesetId::new(ONES_HASH);

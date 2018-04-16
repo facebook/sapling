@@ -8,7 +8,7 @@ use blobrepo::BlobRepo;
 use futures::Async;
 use futures::Poll;
 use futures::stream::Stream;
-use mercurial_types::NodeHash;
+use mercurial_types::DNodeHash;
 use repoinfo::{Generation, RepoGenCache};
 use std::boxed::Box;
 use std::collections::HashSet;
@@ -23,10 +23,10 @@ use NodeStream;
 use setcommon::*;
 
 pub struct UnionNodeStream {
-    inputs: Vec<(InputStream, Poll<Option<(NodeHash, Generation)>, Error>)>,
+    inputs: Vec<(InputStream, Poll<Option<(DNodeHash, Generation)>, Error>)>,
     current_generation: Option<Generation>,
-    accumulator: HashSet<NodeHash>,
-    drain: Option<IntoIter<NodeHash>>,
+    accumulator: HashSet<DNodeHash>,
+    drain: Option<IntoIter<DNodeHash>>,
 }
 
 impl UnionNodeStream {
@@ -95,7 +95,7 @@ impl UnionNodeStream {
 }
 
 impl Stream for UnionNodeStream {
-    type Item = NodeHash;
+    type Item = DNodeHash;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {

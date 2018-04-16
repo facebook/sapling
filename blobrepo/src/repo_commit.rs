@@ -22,8 +22,8 @@ use uuid::Uuid;
 use blobstore::Blobstore;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial::file;
-use mercurial_types::{BlobNode, Changeset, Entry, EntryId, HgChangesetId, MPath, Manifest,
-                      NodeHash, Parents, RepoPath, RepositoryId, Time};
+use mercurial_types::{BlobNode, Changeset, DNodeHash, Entry, EntryId, HgChangesetId, MPath,
+                      Manifest, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
@@ -42,13 +42,13 @@ use utils::get_node_key;
 /// See `get_completed_changeset()` for the public API you can use to extract the final changeset
 #[derive(Clone)]
 pub struct ChangesetHandle {
-    can_be_parent: Shared<oneshot::Receiver<(NodeHash, HgManifestId)>>,
+    can_be_parent: Shared<oneshot::Receiver<(DNodeHash, HgManifestId)>>,
     completion_future: Shared<BoxFuture<BlobChangeset, Compat<Error>>>,
 }
 
 impl ChangesetHandle {
     pub fn new_pending(
-        can_be_parent: Shared<oneshot::Receiver<(NodeHash, HgManifestId)>>,
+        can_be_parent: Shared<oneshot::Receiver<(DNodeHash, HgManifestId)>>,
         completion_future: Shared<BoxFuture<BlobChangeset, Compat<Error>>>,
     ) -> Self {
         Self {
@@ -87,7 +87,7 @@ struct UploadEntriesState {
     /// Parent hashes (if any) of the blobs that have been uploaded in this changeset. Used for
     /// validation of this upload - all parents must either have been uploaded in this changeset,
     /// or be present in the blobstore before the changeset can complete.
-    parents: HashSet<NodeHash>,
+    parents: HashSet<DNodeHash>,
     blobstore: Arc<Blobstore>,
     repoid: RepositoryId,
 }
@@ -198,7 +198,7 @@ impl UploadEntries {
         }
     }
 
-    pub fn finalize(self, filenodes: Arc<Filenodes>, cs_id: NodeHash) -> BoxFuture<(), Error> {
+    pub fn finalize(self, filenodes: Arc<Filenodes>, cs_id: DNodeHash) -> BoxFuture<(), Error> {
         let required_checks = {
             let inner = self.inner.lock().expect("Lock poisoned");
             let checks: Vec<_> = inner
@@ -310,7 +310,9 @@ fn compute_changed_files_pair(
         .filter_map(|change| match change.status {
             EntryStatus::Deleted(entry)
             | EntryStatus::Added(entry)
-            | EntryStatus::Modified { to_entry: entry, .. } => {
+            | EntryStatus::Modified {
+                to_entry: entry, ..
+            } => {
                 if entry.get_type() == manifest::Type::Tree {
                     None
                 } else {

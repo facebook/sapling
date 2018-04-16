@@ -37,8 +37,8 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial_types::{BlobNode, Changeset, Entry, HgBlob, HgChangesetId, HgFileNodeId, Manifest,
-                      NodeHash, Parents, RepoPath, RepositoryId, Time};
+use mercurial_types::{BlobNode, Changeset, DNodeHash, Entry, HgBlob, HgChangesetId, HgFileNodeId,
+                      Manifest, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::HgManifestId;
 use rocksblob::Rocksblob;
@@ -209,13 +209,13 @@ impl BlobRepo {
         ))
     }
 
-    pub fn get_file_content(&self, key: &NodeHash) -> BoxFuture<Bytes, Error> {
+    pub fn get_file_content(&self, key: &DNodeHash) -> BoxFuture<Bytes, Error> {
         fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
             .map(|contentrename| contentrename.0)
             .boxify()
     }
 
-    pub fn get_parents(&self, path: &RepoPath, node: &NodeHash) -> BoxFuture<Parents, Error> {
+    pub fn get_parents(&self, path: &RepoPath, node: &DNodeHash) -> BoxFuture<Parents, Error> {
         let path = path.clone();
         let node = HgFileNodeId::new(*node);
         self.filenodes
@@ -237,8 +237,8 @@ impl BlobRepo {
     pub fn get_file_copy(
         &self,
         path: &RepoPath,
-        node: &NodeHash,
-    ) -> BoxFuture<Option<(RepoPath, NodeHash)>, Error> {
+        node: &DNodeHash,
+    ) -> BoxFuture<Option<(RepoPath, DNodeHash)>, Error> {
         let path = path.clone();
         let node = HgFileNodeId::new(*node);
         self.filenodes
@@ -257,7 +257,7 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn get_changesets(&self) -> BoxStream<NodeHash, Error> {
+    pub fn get_changesets(&self) -> BoxStream<DNodeHash, Error> {
         BlobChangesetStream {
             repo: self.clone(),
             heads: self.heads.heads().boxify(),
@@ -266,7 +266,7 @@ impl BlobRepo {
         }.boxify()
     }
 
-    pub fn get_heads(&self) -> BoxStream<NodeHash, Error> {
+    pub fn get_heads(&self) -> BoxStream<DNodeHash, Error> {
         self.heads.heads().boxify()
     }
 
@@ -289,7 +289,7 @@ impl BlobRepo {
 
     pub fn get_manifest_by_nodeid(
         &self,
-        nodeid: &NodeHash,
+        nodeid: &DNodeHash,
     ) -> BoxFuture<Box<Manifest + Sync>, Error> {
         let nodeid = *nodeid;
         let manifestid = HgManifestId::new(nodeid);
@@ -312,7 +312,7 @@ impl BlobRepo {
         self.bookmarks.create_transaction(&self.repoid)
     }
 
-    pub fn get_linknode(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {
+    pub fn get_linknode(&self, path: RepoPath, node: &DNodeHash) -> BoxFuture<DNodeHash, Error> {
         let node = HgFileNodeId::new(*node);
         self.filenodes
             .get_filenode(&path, &node, &self.repoid)
@@ -337,17 +337,17 @@ impl BlobRepo {
     // the entry or the data blob if the repo is aware of that data already existing in the
     // underlying store.
     // Note that the BlobEntry may not be consistent - parents do not have to be uploaded at this
-    // point, as long as you know their NodeHashes; this is also given to you as part of the
+    // point, as long as you know their DNodeHashes; this is also given to you as part of the
     // result type, so that you can parallelise uploads. Consistency will be verified when
     // adding the entries to a changeset.
     pub fn upload_entry(
         &self,
         raw_content: HgBlob,
         content_type: manifest::Type,
-        p1: Option<NodeHash>,
-        p2: Option<NodeHash>,
+        p1: Option<DNodeHash>,
+        p2: Option<DNodeHash>,
         path: RepoPath,
-    ) -> Result<(NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)> {
+    ) -> Result<(DNodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)> {
         let p1 = p1.as_ref();
         let p2 = p2.as_ref();
         let raw_content = raw_content.clean();
@@ -378,7 +378,7 @@ impl BlobRepo {
         fn log_upload_stats(
             logger: Logger,
             path: RepoPath,
-            nodeid: NodeHash,
+            nodeid: DNodeHash,
             phase: &str,
             stats: Stats,
         ) {
@@ -595,18 +595,18 @@ impl Clone for BlobRepo {
 
 pub struct BlobChangesetStream {
     repo: BlobRepo,
-    seen: HashSet<NodeHash>,
-    heads: BoxStream<NodeHash, Error>,
+    seen: HashSet<DNodeHash>,
+    heads: BoxStream<DNodeHash, Error>,
     state: BCState,
 }
 
 enum BCState {
     Idle,
-    WaitCS(NodeHash, BoxFuture<BlobChangeset, Error>),
+    WaitCS(DNodeHash, BoxFuture<BlobChangeset, Error>),
 }
 
 impl Stream for BlobChangesetStream {
-    type Item = NodeHash;
+    type Item = DNodeHash;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
