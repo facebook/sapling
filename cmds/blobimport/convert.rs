@@ -22,7 +22,7 @@ use filenodes::FilenodeInfo;
 use futures::sync::mpsc::UnboundedSender;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heads::Heads;
-use mercurial::{self, HgNodeHash, RevlogManifest, RevlogRepo};
+use mercurial::{self, HgChangesetId, HgNodeHash, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
 use mercurial_types::{DBlobNode, DFileNodeId, HgBlob, RepoPath, RepositoryId};
@@ -87,7 +87,7 @@ where
                         repo.clone(),
                         sender.clone(),
                         filenodes_sender.clone(),
-                        mercurial::HgChangesetId::new(csid)
+                        HgChangesetId::new(csid)
                     )
                 }
             }) // Stream<Future<()>>
@@ -128,7 +128,7 @@ where
         let repo_id = *repo_id;
         self.get_changesets_stream()
             .and_then(move |node| {
-                repo.get_changeset(&mercurial::HgChangesetId::new(node))
+                repo.get_changeset(&HgChangesetId::new(node))
                     .map(move |cs| (cs, node))
             })
             .for_each(move |(cs, node)| {
@@ -174,7 +174,7 @@ fn copy_changeset(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
     filenodes: UnboundedSender<FilenodeInfo>,
-    csid: mercurial::HgChangesetId,
+    csid: HgChangesetId,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
     Error: Send + 'static,

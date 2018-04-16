@@ -14,7 +14,7 @@ use futures::future::Shared;
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::{BlobEntry, BlobRepo};
-use mercurial::{self, HgNodeHash};
+use mercurial::{self, HgNodeHash, HgNodeKey};
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
@@ -58,7 +58,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TreemanifestEntry {
-    pub node_key: mercurial::HgNodeKey,
+    pub node_key: HgNodeKey,
     pub data: Bytes,
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
@@ -66,12 +66,7 @@ pub struct TreemanifestEntry {
 }
 
 impl TreemanifestEntry {
-    fn new(
-        node_key: mercurial::HgNodeKey,
-        data: Bytes,
-        p1: HgNodeHash,
-        p2: HgNodeHash,
-    ) -> Result<Self> {
+    fn new(node_key: HgNodeKey, data: Bytes, p1: HgNodeHash, p2: HgNodeHash) -> Result<Self> {
         let manifest_content = ManifestContent::parse(data.as_ref())?;
 
         Ok(Self {
@@ -90,7 +85,7 @@ impl UploadableHgBlob for TreemanifestEntry {
         Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>,
     );
 
-    fn upload(self, repo: &BlobRepo) -> Result<(mercurial::HgNodeKey, Self::Value)> {
+    fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let manifest_content = self.manifest_content;
         let p1 = self.p1.map(|p| p.into_mononoke());
@@ -168,7 +163,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
             return Err(ErrorKind::MalformedTreemanifestPart(msg).into());
         }
 
-        let node_key = mercurial::HgNodeKey {
+        let node_key = HgNodeKey {
             path: unwrap_field(&mut self.path, "path")?,
             hash: unwrap_field(&mut self.node, "node")?,
         };
@@ -335,7 +330,7 @@ mod test {
     }
 
     fn get_expected_entry() -> TreemanifestEntry {
-        let node_key = mercurial::HgNodeKey {
+        let node_key = HgNodeKey {
             path: RepoPath::root(),
             hash: nodehash_mocks::ONES_HASH,
         };

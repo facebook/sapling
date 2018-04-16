@@ -39,7 +39,7 @@ use tokio_core::reactor::Core;
 
 use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use changesets::SqliteChangesets;
-use mercurial::{HgNodeHash, RevlogChangeset, RevlogEntry, RevlogRepo};
+use mercurial::{HgChangesetId, HgNodeHash, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, MPath, RepoPath, RepositoryId, Type};
 
 struct ParseChangeset {
@@ -49,7 +49,7 @@ struct ParseChangeset {
 }
 
 // Extracts all the data from revlog repo that commit API may need.
-fn parse_changeset(revlog_repo: RevlogRepo, csid: mercurial::HgChangesetId) -> ParseChangeset {
+fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChangeset {
     let revlogcs = revlog_repo
         .get_changeset(&csid)
         .with_context(move |_| format!("While reading changeset {:?}", csid))
@@ -77,7 +77,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: mercurial::HgChangesetId) -> P
             move |cs| {
                 let mut parents = cs.parents()
                     .into_iter()
-                    .map(mercurial::HgChangesetId::new)
+                    .map(HgChangesetId::new)
                     .map(|csid| {
                         let revlog_repo = revlog_repo.clone();
                         revlog_repo
@@ -289,7 +289,7 @@ fn main() {
                     revlogcs,
                     rootmf,
                     entries,
-                } = parse_changeset(revlogrepo.clone(), mercurial::HgChangesetId::new(csid));
+                } = parse_changeset(revlogrepo.clone(), HgChangesetId::new(csid));
                 revlogcs.map(move |cs| (csid, cs, rootmf, entries))
             }
         })

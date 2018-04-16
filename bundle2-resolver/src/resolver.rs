@@ -16,7 +16,7 @@ use futures::{Future, IntoFuture, Stream};
 use futures::future::{err, ok};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use mercurial::{self, HgNodeHash};
+use mercurial::{HgManifestId, HgNodeHash, HgNodeKey};
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
@@ -31,8 +31,8 @@ use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;
 type Changesets = Vec<(HgNodeHash, RevlogChangeset)>;
-type Filelogs = HashMap<mercurial::HgNodeKey, <Filelog as UploadableHgBlob>::Value>;
-type Manifests = HashMap<mercurial::HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
+type Filelogs = HashMap<HgNodeKey, <Filelog as UploadableHgBlob>::Value>;
+type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 type UploadedChangesets = HashMap<HgNodeHash, ChangesetHandle>;
 
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
@@ -479,7 +479,7 @@ type BlobStream = BoxStream<(BlobEntry, RepoPath), Error>;
 /// This function starts with the Root Manifest Id and returns Future for Root Manifest and Stream
 /// of all dependent Manifests and Filelogs that were provided in this push.
 fn walk_manifests(
-    manifest_root_id: mercurial::HgManifestId,
+    manifest_root_id: HgManifestId,
     manifests: &Manifests,
     filelogs: &Filelogs,
 ) -> Result<(BlobFuture, BlobStream)> {
@@ -506,7 +506,7 @@ fn walk_manifests(
             };
 
             if details.is_tree() {
-                let key = mercurial::HgNodeKey {
+                let key = HgNodeKey {
                     path: RepoPath::DirectoryPath(next_path),
                     hash: nodehash,
                 };
@@ -527,7 +527,7 @@ fn walk_manifests(
                     )?);
                 }
             } else {
-                let key = mercurial::HgNodeKey {
+                let key = HgNodeKey {
                     path: RepoPath::FilePath(next_path),
                     hash: nodehash,
                 };
@@ -546,7 +546,7 @@ fn walk_manifests(
         Ok(entries)
     }
 
-    let root_key = mercurial::HgNodeKey {
+    let root_key = HgNodeKey {
         path: RepoPath::root(),
         hash: manifest_root_id.clone().into_nodehash(),
     };

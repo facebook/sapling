@@ -17,7 +17,7 @@ use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::{BlobEntry, BlobRepo};
-use mercurial::{self, HgNodeHash};
+use mercurial::{self, HgNodeHash, HgNodeKey};
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, RepoPath};
 
@@ -33,7 +33,7 @@ pub struct FilelogDeltaed {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Filelog {
-    pub node_key: mercurial::HgNodeKey,
+    pub node_key: HgNodeKey,
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
     pub linknode: HgNodeHash,
@@ -43,7 +43,7 @@ pub struct Filelog {
 impl UploadableHgBlob for Filelog {
     type Value = Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>;
 
-    fn upload(self, repo: &BlobRepo) -> Result<(mercurial::HgNodeKey, Self::Value)> {
+    fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let p1 = self.p1.map(|p| p.into_mononoke());
         let p2 = self.p2.map(|p| p.into_mononoke());
@@ -78,7 +78,7 @@ where
                 .decode(node.clone(), base.into_option(), delta)
                 .and_then(move |data| {
                     Ok(Filelog {
-                        node_key: mercurial::HgNodeKey {
+                        node_key: HgNodeKey {
                             path: RepoPath::FilePath(path),
                             hash: node,
                         },
@@ -167,7 +167,7 @@ impl DeltaCache {
 impl Arbitrary for Filelog {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         Filelog {
-            node_key: mercurial::HgNodeKey {
+            node_key: HgNodeKey {
                 path: RepoPath::FilePath(MPath::arbitrary(g)),
                 hash: HgNodeHash::arbitrary(g),
             },
@@ -338,7 +338,7 @@ mod tests {
     #[test]
     fn two_fulltext_files() {
         let f1 = Filelog {
-            node_key: mercurial::HgNodeKey {
+            node_key: HgNodeKey {
                 path: RepoPath::FilePath(MPath::new(b"test").unwrap()),
                 hash: ONES_HASH,
             },
@@ -349,7 +349,7 @@ mod tests {
         };
 
         let f2 = Filelog {
-            node_key: mercurial::HgNodeKey {
+            node_key: HgNodeKey {
                 path: RepoPath::FilePath(MPath::new(b"test2").unwrap()),
                 hash: FIVES_HASH,
             },
@@ -367,7 +367,7 @@ mod tests {
 
     fn files_check_order(correct_order: bool) {
         let f1 = Filelog {
-            node_key: mercurial::HgNodeKey {
+            node_key: HgNodeKey {
                 path: RepoPath::FilePath(MPath::new(b"test").unwrap()),
                 hash: ONES_HASH,
             },
@@ -378,7 +378,7 @@ mod tests {
         };
 
         let f2 = Filelog {
-            node_key: mercurial::HgNodeKey {
+            node_key: HgNodeKey {
                 path: RepoPath::FilePath(MPath::new(b"test2").unwrap()),
                 hash: FIVES_HASH,
             },
