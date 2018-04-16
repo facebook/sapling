@@ -29,7 +29,7 @@
     # be used
     hostname = ''
 
-    # Enable reporting of infinitepush backup status as a summary at the end
+    # Enable reporting of background backup status as a summary at the end
     # of smartlog.
     enablestatus = False
 
@@ -156,13 +156,13 @@ def checkinsertgeneratedconfig(localconfig, generatedconfig):
 @command('backupenable')
 def backupenable(ui, repo, **opts):
     """
-    Enable infinitepush backup
+    Enable background backup
 
     Enables backups that have been disabled by `hg backupdisable`.
     """
 
     if autobackupenabled(ui):
-        ui.write(_("infinitepush backup is already enabled\n"))
+        ui.write(_("background backup is already enabled\n"))
         return 0
 
     localconfig = repo.vfs.join('hgrc')
@@ -171,21 +171,21 @@ def backupenable(ui, repo, **opts):
     with open(generatedconfig, "w") as file:
         file.write('')
 
-    ui.write(_("infinitepush backup is enabled\n"))
+    ui.write(_("background backup is enabled\n"))
     return 0
 
 @command('backupdisable',
          [('', 'hours', '1', 'disable backup for the specified duration')])
 def backupdisable(ui, repo, **opts):
     """
-    Disable infinitepush backup
+    Disable background backup
 
     Sets the infinitepushbackup.disableduntil config option,
-    which disables infinitepush backups for the specified duration.
+    which disables background backups for the specified duration.
     """
 
     if not autobackupenabled(ui):
-        ui.write(_("note: infinitepush backup was already disabled\n"))
+        ui.write(_("note: background backup was already disabled\n"))
 
     localconfig = repo.vfs.join('hgrc')
     generatedconfig = repo.vfs.join(localoverridesfile)
@@ -209,7 +209,7 @@ def backupdisable(ui, repo, **opts):
         configfile.write("# disable infinitepush background backup\n")
         config.write(configfile)
 
-    ui.write(_("infinitepush backup is now disabled until {localtime}\n"
+    ui.write(_("background backup is now disabled until {localtime}\n"
         .format(localtime=converttimestamptolocaltime(timestamp))
     ))
     return 0
@@ -472,12 +472,12 @@ def smartlogsummary(ui, repo):
     if not autobackupenabledstatus:
         timestamp = ui.config('infinitepushbackup', 'disableduntil', None)
         if timestamp:
-            ui.write(_('note: infinitepush backup is currently disabled until '
+            ui.write(_('note: background backup is currently disabled until '
                 + converttimestamptolocaltime(int(timestamp)) + '\n'))
             ui.write(_('so your commits are not being backed up.\n'))
             ui.write(_('Run `hg backupenable` to turn backups back on.\n'))
         else:
-            ui.write(_('note: infinitepush backup is currently disabled ' +
+            ui.write(_('note: background backup is currently disabled ' +
                        'by the Source Control Team,\n'))
             ui.write(_('so your commits are not being backed up.\n'))
 
@@ -684,10 +684,10 @@ def _dobackgroundbackup(ui, repo, dest=None, command=None):
             _removeoldlogfiles(userlogdir, reponame)
             logfile = _getlogfilename(logdir, username, reponame)
         except (OSError, IOError) as e:
-            ui.debug('infinitepush backup log is disabled: %s\n' % e)
+            ui.debug('background backup log is disabled: %s\n' % e)
         except WrongPermissionsException as e:
             ui.debug(('%s directory has incorrect permission, ' +
-                     'infinitepush backup logging will be disabled\n') %
+                     'background backup logging will be disabled\n') %
                      e.logdir)
         finally:
             os.umask(oldumask)

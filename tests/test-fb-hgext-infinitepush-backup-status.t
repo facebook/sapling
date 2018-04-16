@@ -125,7 +125,7 @@ Check smartlog output
      date:        * (glob)
      summary:     Public changeset
   
-  note: infinitepush backup is currently disabled by the Source Control Team,
+  note: background backup is currently disabled by the Source Control Team,
   so your commits are not being backed up.
   
   note: changeset * is not backed up. (glob)
@@ -195,14 +195,14 @@ Test for infinitepushbackup disable
   $ echo "[infinitepushbackup]" >> .hg/hgrc
   $ echo "autobackup = True"  >> .hg/hgrc
   $ hg backupenable
-  infinitepush backup is already enabled
+  background backup is already enabled
   $ hg backupdisable
-  infinitepush backup is now disabled until * (glob)
+  background backup is now disabled until * (glob)
   $ hg backupdisable
-  note: infinitepush backup was already disabled
-  infinitepush backup is now disabled until * (glob)
+  note: background backup was already disabled
+  background backup is now disabled until * (glob)
   $ hg backupdisable --hours ggg
-  note: infinitepush backup was already disabled
+  note: background backup was already disabled
   abort: error: argument 'hours': invalid int value: 'ggg'
   
   [255]
@@ -211,8 +211,8 @@ Test for correct add include file in .hg/hgrc
   $ printf '\n' >> .hg/hgrc
   $ echo '[otherconfig]' >> .hg/hgrc
   $ hg backupdisable
-  note: infinitepush backup was already disabled
-  infinitepush backup is now disabled until * (glob)
+  note: background backup was already disabled
+  background backup is now disabled until * (glob)
   $ grep '%include' .hg/hgrc | wc -l | xargs printf && printf '\n'
   1
 
@@ -234,7 +234,7 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
   |/
   o  0 Public changeset
   
-  note: infinitepush backup is currently disabled until * (glob)
+  note: background backup is currently disabled until * (glob)
   so your commits are not being backed up.
   Run `hg backupenable` to turn backups back on.
   
