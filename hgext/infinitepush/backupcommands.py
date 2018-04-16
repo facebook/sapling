@@ -580,8 +580,8 @@ def _dobackup(ui, repo, dest, **opts):
     # can't backup. In this case let's remove them from afterbackupheads
     afterbackupheads.difference_update(badhexnodes)
 
-    # As afterbackupheads this variable stores what heads will be saved in
-    # backup state file if backup finishes successfully
+    # Similar to afterbackupheads, this variable stores what bookmarks will be
+    # saved in backup state file if backup finishes successfully
     afterbackuplocalbooks = _getlocalbookmarks(repo)
     afterbackuplocalbooks = _filterbookmarks(
         afterbackuplocalbooks, repo, afterbackupheads)
@@ -602,6 +602,18 @@ def _dobackup(ui, repo, dest, **opts):
         bookmarkstobackup[namingmgr.getbackupheadprefix()] = ''
         bookmarkstobackup[namingmgr.getbackupbookmarkprefix()] = ''
 
+    try:
+        if _dobackuppush(ui, repo, other, outgoing, bookmarkstobackup):
+            _writelocalbackupstate(repo.vfs, list(afterbackupheads),
+                                   afterbackuplocalbooks)
+            if ui.config('infinitepushbackup', 'savelatestbackupinfo'):
+                _writelocalbackupinfo(repo.vfs, **afterbackupinfo)
+        else:
+            ui.status(_('nothing to backup\n'))
+    finally:
+        ui.status(_('finished in %f seconds\n') % (time.time() - start))
+
+def _dobackuppush(ui, repo, other, outgoing, bookmarks):
     # Wrap deltaparent function to make sure that bundle takes less space
     # See _deltaparent comments for details
     extensions.wrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
@@ -617,19 +629,14 @@ def _dobackup(ui, repo, dest, **opts):
             for part in parts:
                 bundler.addpart(part)
 
-        if bookmarkstobackup:
+        if bookmarks:
             backup = True
             bundler.addpart(bundleparts.getscratchbookmarkspart(
-                other, bookmarkstobackup))
+                other, bookmarks))
 
         if backup:
             _sendbundle(bundler, other)
-            _writelocalbackupstate(repo.vfs, list(afterbackupheads),
-                                   afterbackuplocalbooks)
-            if ui.config('infinitepushbackup', 'savelatestbackupinfo'):
-                _writelocalbackupinfo(repo.vfs, **afterbackupinfo)
-        else:
-            ui.status(_('nothing to backup\n'))
+        return backup
     finally:
         # cleanup ensures that all pipes are flushed
         cleanup = getattr(other, '_cleanup', None) or getattr(other, 'cleanup')
@@ -637,7 +644,6 @@ def _dobackup(ui, repo, dest, **opts):
             cleanup()
         except Exception:
             ui.warn(_('remote connection cleanup failed\n'))
-        ui.status(_('finished in %f seconds\n') % (time.time() - start))
         extensions.unwrapfunction(
             changegroup.cg2packer, 'deltaparent', _deltaparent)
     return 0

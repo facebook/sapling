@@ -27,10 +27,8 @@ This means cloudsync in the repo1, cloudsync in the repo2 and then again in the 
 To be run if some test require full sync state before the test
   $ fullsync() {
   >   cd "$1"
-  >   hg pushb -q
   >   hg cloudsync -q
   >   cd ../"$2"
-  >   hg pushb -q
   >   hg cloudsync -q
   >   cd ../"$1"
   >   hg cloudsync -q
@@ -119,9 +117,10 @@ Joining:
 Make a commit in the first client, and sync it
   $ cd client1
   $ mkcommit "commit1"
-  $ hg pushbackup -q
   $ hg cloudsync
   #commitcloud start synchronization
+  remote: pushing 1 commit:
+  remote:     fa5d62c46fd7  commit1
   #commitcloud cloudsync done
   $ cd ..
 
@@ -147,9 +146,11 @@ Sync from the second client - the commit should appear
   
 Make a commit from the second client and sync it
   $ mkcommit "commit2"
-  $ hg pushbackup -q
   $ hg cloudsync
   #commitcloud start synchronization
+  remote: pushing 2 commits:
+  remote:     fa5d62c46fd7  commit1
+  remote:     02f6fc2b7154  commit2
   #commitcloud cloudsync done
   $ cd ..
 
@@ -217,9 +218,11 @@ Amend a commit
   $ echo more >> commit1
   $ hg amend --rebase -m "`hg descr | head -n1` amended"
   rebasing 2:02f6fc2b7154 "commit2" (bookmark1)
-  $ hg pushbackup -q
   $ hg cloudsync
   #commitcloud start synchronization
+  remote: pushing 2 commits:
+  remote:     a7bb357e7299  commit1 amended
+  remote:     48610b1a7ec0  commit2
   #commitcloud cloudsync done
   $ hg tglog
   o  48610b1a7ec0 'commit2' bookmark1
@@ -281,9 +284,11 @@ Expected result: the message telling that revision has been moved to another rev
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark bookmark1)
   $ hg amend -m "`hg descr | head -n1` amended"
-  $ hg pushbackup -q
   $ hg cloudsync
   #commitcloud start synchronization
+  remote: pushing 2 commits:
+  remote:     a7bb357e7299  commit1 amended
+  remote:     41f3b9359864  commit2 amended
   #commitcloud cloudsync done
 
   $ cd ..
@@ -327,9 +332,11 @@ Expected result: client2 should be moved to the amended version
   adding file.txt
   $ hg id -i
   8134e74ecdc8
-  $ hg pushbackup -q
   $ hg cloudsync
   #commitcloud start synchronization
+  remote: pushing 2 commits:
+  remote:     a7bb357e7299  commit1 amended
+  remote:     8134e74ecdc8  commit2 amended amended
   #commitcloud cloudsync done
 
   $ cd ..
@@ -383,9 +390,12 @@ Expected result: move should not happen, expect a message that move is ambiguous
   adding fileb.txt
   $ hg id -i
   cebbb614447e
-  $ hg pushbackup -q
   $ hg cloudsync
   #commitcloud start synchronization
+  remote: pushing 3 commits:
+  remote:     a7bb357e7299  commit1 amended
+  remote:     abd5311ab3c6  commit2 amended amended
+  remote:     cebbb614447e  commit2 amended amended
   #commitcloud cloudsync done
 
   $ cd ..
@@ -442,9 +452,11 @@ Expected result: client2 should be moved to fada67350ab0
   $ echo 4 >> filea.txt && hg amend -m "`hg descr | head -n1` amended"
   $ hg id -i
   fada67350ab0
-  $ hg pushbackup -q
   $ hg cloudsync
   #commitcloud start synchronization
+  remote: pushing 2 commits:
+  remote:     a7bb357e7299  commit1 amended
+  remote:     fada67350ab0  commit2 amended amended amended amended amended
   #commitcloud cloudsync done
 
   $ cd ..
@@ -500,9 +512,11 @@ Expected result: client2 should be moved to 68e035cc1996
   @  68e035cc1996 'commit2 amended amended rebased amended rebased amended'
   |
   ~
-  $ hg pushb -q
   $ hg cloudsync
   #commitcloud start synchronization
+  remote: pushing 2 commits:
+  remote:     a7bb357e7299  commit1 amended
+  remote:     68e035cc1996  commit2 amended amended rebased amended rebased am
   #commitcloud cloudsync done
 
   $ cd ..

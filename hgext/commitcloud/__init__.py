@@ -61,7 +61,11 @@
 
 from __future__ import absolute_import
 
+from mercurial.i18n import _
+
 from mercurial import (
+    error,
+    extensions,
     obsolete,
     util,
 )
@@ -74,6 +78,13 @@ colortable = {
     'commitcloud.tag': 'yellow',
     'commitcloud.team': 'bold',
 }
+
+def extsetup(ui):
+    try:
+        commitcloudcommands.infinitepush = extensions.find('infinitepush')
+    except KeyError:
+        msg = _('The commitcloud extension requires the infinitepush extension')
+        raise error.Abort(msg)
 
 def reposetup(ui, repo):
     def finalize(tr):
