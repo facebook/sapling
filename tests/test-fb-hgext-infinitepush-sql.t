@@ -154,4 +154,41 @@ Getavailablebackups should also go in MRU order
   $TESTTMP/client3 on devhost
   $TESTTMP/client2 on devhost
   $TESTTMP/client1 on mydevhost
+
+  $ cd ../
+  $ rm -rf client*
+
+Test of creation and later removal a bookmark that ends with '*'
+Extected that the bookmark 'feature1' will mot be removed and
+safely will be restored on the client2
+  $ hg clone -q ssh://user@dummy/server client1
+  $ hg clone -q ssh://user@dummy/server client2
+  $ cd client1 && setupsqlclienthgrc && cd ..
+  $ cd client2 && setupsqlclienthgrc && cd ..
+  $ cd client1
+  $ mkcommit 'Test commit1'
+  $ hg bookmark 'feature1'
+  $ sleep 1
+  $ mkcommit 'Test commit2'
+  $ hg up '.^'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark feature1)
+  $ hg bookmark '*'
+  $ sleep 1
+  $ hg log -G --template "{node|short} {bookmarks} '{desc}'\n"
+  o  679ff862f673 feature1 'Test commit2'
+  |
+  @  bf45ce9ee037 * 'Test commit1'
+  
+  $ hg pushb -q --config infinitepushbackup.hostname=testhost
+  $ hg bookmark '*' --delete
+  $ hg pushb -q --config infinitepushbackup.hostname=testhost
+  $ cd ../client2
+  $ hg pullbackup --hostname testhost -q
+  $ hg log -G --template "{node|short} {bookmarks} '{desc}'\n"
+  o  679ff862f673 feature1 'Test commit2'
+  |
+  o  bf45ce9ee037  'Test commit1'
+  
+
 #endif

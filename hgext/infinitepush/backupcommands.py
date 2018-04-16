@@ -901,13 +901,15 @@ def _escapebookmark(bookmark):
     If `bookmark` contains "bookmarks" as a substring then replace it with
     "bookmarksbookmarks". This will make parsing remote bookmark name
     unambigious.
+    Also, encode * since it is used for prefix pattern matching
     '''
-
     bookmark = encoding.fromlocal(bookmark)
+    bookmark = bookmark.replace('*', '*%')
     return bookmark.replace('bookmarks', 'bookmarksbookmarks')
 
 def _unescapebookmark(bookmark):
     bookmark = encoding.tolocal(bookmark)
+    bookmark = bookmark.replace('*%', '*')
     return bookmark.replace('bookmarksbookmarks', 'bookmarks')
 
 def _getremote(repo, ui, dest, **opts):
