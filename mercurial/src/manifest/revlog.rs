@@ -20,7 +20,7 @@ use file;
 use mercurial_types::{FileType, HgBlob, MPath, MPathElement, RepoPath};
 use mercurial_types::manifest::Type;
 
-use blobnode::{BlobNode, HgParents};
+use blobnode::{HgBlobNode, HgParents};
 use nodehash::{HgEntryId, HgNodeHash};
 
 use RevlogRepo;
@@ -119,7 +119,7 @@ impl ManifestContent {
 }
 
 impl RevlogManifest {
-    pub fn new(repo: RevlogRepo, node: BlobNode) -> Result<RevlogManifest> {
+    pub fn new(repo: RevlogRepo, node: HgBlobNode) -> Result<RevlogManifest> {
         node.as_blob()
             .as_slice()
             .ok_or(failure::err_msg("node missing data"))

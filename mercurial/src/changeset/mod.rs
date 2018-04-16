@@ -14,7 +14,7 @@ use failure;
 use mercurial_types::MPath;
 use mercurial_types::changeset::Time;
 
-use blobnode::{BlobNode, HgParents};
+use blobnode::{HgBlobNode, HgParents};
 use nodehash::{HgManifestId, HgNodeHash, NULL_HASH};
 
 #[cfg(test)]
@@ -190,7 +190,7 @@ impl RevlogChangeset {
         }
     }
 
-    pub fn new(node: BlobNode) -> Result<Self> {
+    pub fn new(node: HgBlobNode) -> Result<Self> {
         Self::parse(node)
     }
 
@@ -222,7 +222,7 @@ impl RevlogChangeset {
     // XXX Files sorted? No escaping?
     // XXX "extra" - how sorted? What encoding?
     // XXX "comment" - line endings normalized at all?
-    fn parse(node: BlobNode) -> Result<Self> {
+    fn parse(node: HgBlobNode) -> Result<Self> {
         // This is awkward - we want to store the node in the resulting
         // RevlogChangeset but we need to borrow from it to parse its data. Set up a
         // partially initialized RevlogChangeset then fill it in as we go.
@@ -288,12 +288,12 @@ impl RevlogChangeset {
         serialize_cs(self, out)
     }
 
-    pub fn get_node(&self) -> Result<BlobNode> {
+    pub fn get_node(&self) -> Result<HgBlobNode> {
         let mut v = Vec::new();
 
         self.generate(&mut v)?;
         let (p1, p2) = self.parents.get_nodes();
-        Ok(BlobNode::new(Bytes::from(v), p1, p2))
+        Ok(HgBlobNode::new(Bytes::from(v), p1, p2))
     }
 
     pub fn manifestid(&self) -> &HgManifestId {

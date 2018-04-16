@@ -14,7 +14,7 @@ use futures::{Future, Stream};
 /// arbitrary numbers of parents.
 ///
 /// NOTE: Unless you're writing code that should be general across multiple source control
-/// systems, don't use Node. For example, use BlobNode or manifest::Entry for Mercurial-specific
+/// systems, don't use Node. For example, use HgBlobNode or manifest::Entry for Mercurial-specific
 /// code.
 pub trait Node: Sized {
     type Content;

@@ -23,7 +23,7 @@ use nom::IResult;
 pub use mercurial_types::{delta, HgBlob};
 pub use mercurial_types::bdiff::{self, Delta};
 
-use blobnode::BlobNode;
+use blobnode::HgBlobNode;
 use nodehash::{HgEntryId, HgNodeHash};
 
 // Submodules
@@ -232,11 +232,11 @@ impl Revlog {
         self.inner.get_chunk(idx)
     }
 
-    pub fn get_rev(&self, tgtidx: RevIdx) -> Result<BlobNode> {
+    pub fn get_rev(&self, tgtidx: RevIdx) -> Result<HgBlobNode> {
         self.inner.get_rev(tgtidx)
     }
 
-    pub fn get_rev_by_nodeid(&self, id: &HgNodeHash) -> Result<BlobNode> {
+    pub fn get_rev_by_nodeid(&self, id: &HgNodeHash) -> Result<HgBlobNode> {
         self.inner.get_rev_by_nodeid(id)
     }
 
@@ -494,7 +494,7 @@ impl RevlogInner {
         Ok(data)
     }
 
-    fn make_node(&self, entry: &Entry, blob: HgBlob) -> Result<BlobNode> {
+    fn make_node(&self, entry: &Entry, blob: HgBlob) -> Result<HgBlobNode> {
         let mut pnodeid = |p| {
             let pn = self.get_entry(p);
             pn.map(|n| n.nodeid)
@@ -502,10 +502,10 @@ impl RevlogInner {
         let p1 = map_io(entry.p1, &mut pnodeid)?;
         let p2 = map_io(entry.p2, &mut pnodeid)?;
 
-        Ok(BlobNode::new(blob, p1.as_ref(), p2.as_ref()))
+        Ok(HgBlobNode::new(blob, p1.as_ref(), p2.as_ref()))
     }
 
-    fn get_rev(&self, tgtidx: RevIdx) -> Result<BlobNode> {
+    fn get_rev(&self, tgtidx: RevIdx) -> Result<HgBlobNode> {
         if !self.have_data() {
             return Err(failure::err_msg("Need data to assemble revision"));
         }
@@ -521,7 +521,7 @@ impl RevlogInner {
         self.make_node(&entry, HgBlob::from(Bytes::from(data)))
     }
 
-    fn get_rev_by_nodeid(&self, id: &HgNodeHash) -> Result<BlobNode> {
+    fn get_rev_by_nodeid(&self, id: &HgNodeHash) -> Result<HgBlobNode> {
         self.get_idx_by_nodeid(&id).and_then(move |idx| {
             self.get_rev(idx)
                 .with_context(|_| format!("can't get rev for id {}", id))

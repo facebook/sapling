@@ -25,7 +25,7 @@ use mercurial_types::{fncache_fsencode, simple_fsencode, MPath, MPathElement, Re
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
-use blobnode::BlobNode;
+use blobnode::HgBlobNode;
 pub use changeset::RevlogChangeset;
 use errors::*;
 pub use manifest::RevlogManifest;
@@ -324,7 +324,7 @@ pub trait RevlogRepoBlobimportExt {
 
     fn get_changelog_entry_by_idx(&self, revidx: RevIdx) -> Result<revlog::Entry>;
 
-    fn get_manifest_blob_by_id(&self, nodeid: &HgNodeHash) -> Result<BlobNode>;
+    fn get_manifest_blob_by_id(&self, nodeid: &HgNodeHash) -> Result<HgBlobNode>;
 
     fn get_path_revlog(&self, path: &RepoPath) -> Result<Revlog>;
 }
@@ -339,11 +339,11 @@ impl RevlogRepoBlobimportExt for RevlogRepo {
         self.changelog.get_entry(revidx)
     }
 
-    fn get_manifest_blob_by_id(&self, nodeid: &HgNodeHash) -> Result<BlobNode> {
+    fn get_manifest_blob_by_id(&self, nodeid: &HgNodeHash) -> Result<HgBlobNode> {
         // It's possible that commit has null pointer to manifest hash.
         // In that case we want to return empty blobnode
         if nodeid == &NULL_HASH {
-            Ok(BlobNode::new(Bytes::new(), None, None))
+            Ok(HgBlobNode::new(Bytes::new(), None, None))
         } else {
             let manifest = self.get_path_revlog(&RepoPath::root())?;
             manifest

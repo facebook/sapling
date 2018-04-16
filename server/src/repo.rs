@@ -35,7 +35,8 @@ use slog_scuba::ScubaDrain;
 
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
-use mercurial::{self, HgManifestId, HgNodeHash, HgParents, NodeHashConversion, RevlogChangeset};
+use mercurial::{self, HgBlobNode, HgManifestId, HgNodeHash, HgParents, NodeHashConversion,
+                RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, Changeset, DChangesetId, DManifestId, DNodeHash, DParents,
                       Entry, MPath, RepoPath, RepositoryId, Type, D_NULL_HASH};
@@ -393,7 +394,7 @@ impl RepoClient {
                 let parents = revlogcs.parents().get_nodes();
                 Ok((
                     mercurial_node,
-                    mercurial::BlobNode::new(Bytes::from(v), parents.0, parents.1),
+                    HgBlobNode::new(Bytes::from(v), parents.0, parents.1),
                 ))
             });
 

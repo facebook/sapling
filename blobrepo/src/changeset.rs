@@ -16,7 +16,7 @@ use futures::future::{Either, Future, IntoFuture};
 
 use blobstore::Blobstore;
 
-use mercurial::{self, NodeHashConversion};
+use mercurial::{self, HgBlobNode, NodeHashConversion};
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
 use mercurial_types::{Changeset, DBlobNode, DParents, HgBlob, MPath, Time};
@@ -174,7 +174,7 @@ impl BlobChangeset {
                     let p2 = p2.map(|p| p.into_mercurial());
 
                     let blob = HgBlob::from(Bytes::from(blob.into_owned()));
-                    let node = mercurial::BlobNode::new(blob, p1.as_ref(), p2.as_ref());
+                    let node = HgBlobNode::new(blob, p1.as_ref(), p2.as_ref());
                     let cs = BlobChangeset::new_with_id(
                         &changesetid,
                         RevlogChangeset::new(node)?.into(),

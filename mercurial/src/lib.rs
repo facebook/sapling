@@ -69,7 +69,7 @@ pub mod symlink;
 mod errors;
 pub use errors::*;
 
-pub use blobnode::{BlobNode, HgParents};
+pub use blobnode::{HgBlobNode, HgParents};
 pub use changeset::RevlogChangeset;
 pub use manifest::{EntryContent, RevlogEntry};
 pub use nodehash::{HgChangesetId, HgEntryId, HgManifestId, HgNodeHash, HgNodeKey,

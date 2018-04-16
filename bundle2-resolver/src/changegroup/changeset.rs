@@ -8,7 +8,7 @@ use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 
 use bytes::Bytes;
-use mercurial::{BlobNode, HgNodeHash, NULL_HASH};
+use mercurial::{HgBlobNode, HgNodeHash, NULL_HASH};
 use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, HgBlob};
@@ -44,7 +44,7 @@ where
 
             Ok((
                 chunk.node,
-                RevlogChangeset::new(BlobNode::new(
+                RevlogChangeset::new(HgBlobNode::new(
                     HgBlob::from(Bytes::from(delta::apply(b"", &chunk.delta))),
                     chunk.p1.into_option().as_ref(),
                     chunk.p2.into_option().as_ref(),
@@ -75,7 +75,7 @@ mod tests {
         p1: HgNodeHash,
         p2: HgNodeHash,
     ) -> CheckResult {
-        let blobnode = BlobNode::new(
+        let blobnode = HgBlobNode::new(
             RevlogChangeset::new_null()
                 .get_node()
                 .unwrap()
