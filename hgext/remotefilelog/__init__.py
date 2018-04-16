@@ -54,8 +54,19 @@ Configs:
     files to include in an incremental history repack.
     ``remotefilelog.dolfsprefetch`` means that fileserverclient's prefetch
     will also cause lfs prefetch to happen. This is True by default.
+    ``remotefilelog.updatesharedcache`` is used to prevent writing data to the
+    shared remotefilelog cache. This can be useful to prevent poisoning cache
+    while using experimental remotefilelog store.
 """
 from __future__ import absolute_import
+
+import os
+import time
+import traceback
+
+from mercurial.node import hex, nullrev
+from mercurial.i18n import _
+from mercurial.extensions import wrapfunction
 
 from . import (
     debugcommands,
@@ -69,9 +80,6 @@ from . import (
     shallowstore,
     shallowutil,
 )
-from mercurial.node import hex, nullrev
-from mercurial.i18n import _
-from mercurial.extensions import wrapfunction
 from mercurial import (
     changegroup,
     changelog,
@@ -101,10 +109,6 @@ from mercurial import (
     util,
 )
 
-import os
-import time
-import traceback
-
 # ensures debug commands are registered
 hgdebugcommands.command
 
@@ -121,6 +125,7 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem('remotefilelog', 'updatesharedcache', default=True)
 configitem('remotefilelog', 'servercachepath', default=None)
 configitem('remotefilelog', 'server', default=None)
 

@@ -426,9 +426,11 @@ class fileserverclient(object):
                     finally:
                         self.ui.verbose = verbose
                     # send to memcache
-                    count[0] = len(missed)
-                    request = "set\n%d\n%s\n" % (count[0], "\n".join(missed))
-                    cache.request(request)
+                    if self.ui.configbool('remotefilelog', 'updatesharedcache'):
+                        count[0] = len(missed)
+                        request = "set\n%d\n%s\n" % (count[0],
+                                                     "\n".join(missed))
+                        cache.request(request)
 
                 # mark ourselves as a user of this cache
                 writedata.markrepo(self.repo.path)
