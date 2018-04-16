@@ -32,9 +32,10 @@
   hint[next]: use 'hg next' to go from X to Y
   hint[hint-ack]: use 'hg hint --ack export next' to silence these hints
 
-Test HGPLAIN=1 silences all hints
+Test HGPLAIN=1 or HGPLAIN=hint silences all hints
 
   $ HGPLAIN=1 hg showhint
+  $ HGPLAIN=hint hg showhint
 
 Test silence configs
 

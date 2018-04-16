@@ -36,7 +36,7 @@ def _prefix(ui, name):
 
 def show(ui):
     """Show all triggered hint messages"""
-    if ui.plain():
+    if ui.plain('hint'):
         return
     acked = ui.configlist('hint', 'ack')
     if acked == ['*']:
