@@ -164,7 +164,7 @@ impl VfsFile for ManifestVfsFile {
         self.root
             .entries
             .get(entryid)
-            .expect("EntryId not found in entries list")
+            .expect("HgEntryId not found in entries list")
             .get_content()
     }
 

@@ -29,7 +29,7 @@ use blobnode::BlobNode;
 pub use changeset::RevlogChangeset;
 use errors::*;
 pub use manifest::RevlogManifest;
-use nodehash::{EntryId, HgChangesetId, HgManifestId, HgNodeHash, NULL_HASH};
+use nodehash::{HgChangesetId, HgEntryId, HgManifestId, HgNodeHash, NULL_HASH};
 use revlog::{self, RevIdx, Revlog, RevlogIter};
 
 const DEFAULT_LOGS_CAPACITY: usize = 1000000;
@@ -320,7 +320,7 @@ impl RevlogRepo {
 
 #[deprecated(note = "This is going to be deleted soon. It is used only in blobimport crate")]
 pub trait RevlogRepoBlobimportExt {
-    fn get_changelog_entry_by_id(&self, id: &EntryId) -> Result<revlog::Entry>;
+    fn get_changelog_entry_by_id(&self, id: &HgEntryId) -> Result<revlog::Entry>;
 
     fn get_changelog_entry_by_idx(&self, revidx: RevIdx) -> Result<revlog::Entry>;
 
@@ -331,7 +331,7 @@ pub trait RevlogRepoBlobimportExt {
 
 #[allow(deprecated)]
 impl RevlogRepoBlobimportExt for RevlogRepo {
-    fn get_changelog_entry_by_id(&self, id: &EntryId) -> Result<revlog::Entry> {
+    fn get_changelog_entry_by_id(&self, id: &HgEntryId) -> Result<revlog::Entry> {
         self.changelog.get_entry_by_id(&id)
     }
 

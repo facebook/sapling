@@ -22,7 +22,7 @@ use filenodes::FilenodeInfo;
 use futures::sync::mpsc::UnboundedSender;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heads::Heads;
-use mercurial::{self, HgChangesetId, HgNodeHash, RevlogManifest, RevlogRepo};
+use mercurial::{self, HgChangesetId, HgEntryId, HgNodeHash, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
 use mercurial_types::{DBlobNode, DFileNodeId, HgBlob, RepoPath, RepositoryId};
@@ -196,7 +196,7 @@ where
     };
 
     let nodeid = csid.clone().into_nodehash();
-    let entryid = mercurial::EntryId::new(nodeid);
+    let entryid = HgEntryId::new(nodeid);
     let manifest = revlog_repo
         .get_changeset(&csid)
         .join(revlog_repo.get_changelog_entry_by_id(&entryid))

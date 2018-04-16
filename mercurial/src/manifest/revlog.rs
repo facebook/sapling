@@ -21,13 +21,13 @@ use mercurial_types::{FileType, HgBlob, MPath, MPathElement, RepoPath};
 use mercurial_types::manifest::Type;
 
 use blobnode::{BlobNode, Parents};
-use nodehash::{EntryId, HgNodeHash};
+use nodehash::{HgEntryId, HgNodeHash};
 
 use RevlogRepo;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {
-    entryid: EntryId,
+    entryid: HgEntryId,
     flag: Type,
 }
 
@@ -200,7 +200,7 @@ impl RevlogManifest {
 }
 
 impl Details {
-    pub fn new(entryid: EntryId, flag: Type) -> Self {
+    pub fn new(entryid: HgEntryId, flag: Type) -> Self {
         Self { entryid, flag }
     }
 
@@ -212,7 +212,7 @@ impl Details {
             .map_err(|err| Error::from(err))
             .and_then(|hash| hash.parse::<HgNodeHash>())
             .with_context(|_| format!("malformed hash: {:?}", hash))?;
-        let entryid = EntryId::new(hash);
+        let entryid = HgEntryId::new(hash);
 
         ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
@@ -237,7 +237,7 @@ impl Details {
         write!(out, "{}{}", self.entryid.into_nodehash(), self.flag)
     }
 
-    pub fn entryid(&self) -> &EntryId {
+    pub fn entryid(&self) -> &HgEntryId {
         &self.entryid
     }
 
@@ -409,7 +409,7 @@ impl RevlogEntry {
             .boxify()
     }
 
-    pub fn get_hash(&self) -> &EntryId {
+    pub fn get_hash(&self) -> &HgEntryId {
         &self.details.entryid
     }
 
@@ -493,7 +493,7 @@ mod test {
                     (
                         MPath::new(b"hello123").unwrap(),
                         Details {
-                            entryid: EntryId::new(
+                            entryid: HgEntryId::new(
                                 "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap(),
                             ),
                             flag: Type::File(FileType::Symlink),

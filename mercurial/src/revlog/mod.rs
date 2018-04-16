@@ -24,7 +24,7 @@ pub use mercurial_types::{delta, HgBlob};
 pub use mercurial_types::bdiff::{self, Delta};
 
 use blobnode::BlobNode;
-use nodehash::{EntryId, HgNodeHash};
+use nodehash::{HgEntryId, HgNodeHash};
 
 // Submodules
 mod parser;
@@ -217,7 +217,7 @@ impl Revlog {
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
-    pub fn get_entry_by_id(&self, entryid: &EntryId) -> Result<Entry> {
+    pub fn get_entry_by_id(&self, entryid: &HgEntryId) -> Result<Entry> {
         let nodeid = entryid.clone().into_nodehash();
         self.inner.get_entry_by_nodeid(&nodeid)
     }

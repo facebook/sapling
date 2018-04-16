@@ -273,22 +273,22 @@ impl Display for HgManifestId {
     }
 }
 
-/// TODO: (jsgf) T25576292 EntryId should be a (Type, NodeId) tuple
+/// TODO: (jsgf) T25576292 HgEntryId should be a (Type, NodeId) tuple
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
-pub struct EntryId(HgNodeHash);
+pub struct HgEntryId(HgNodeHash);
 
-impl EntryId {
+impl HgEntryId {
     pub fn into_nodehash(self) -> HgNodeHash {
         self.0
     }
 
     pub fn new(hash: HgNodeHash) -> Self {
-        EntryId(hash)
+        HgEntryId(hash)
     }
 }
 
-impl Display for EntryId {
+impl Display for HgEntryId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }

@@ -295,12 +295,12 @@ mod test {
             files: btreemap!{
                 MPath::new("test_dir/test_file").unwrap() =>
                 Details::new(
-                    mercurial::EntryId::new(nodehash_mocks::ONES_HASH),
+                    mercurial::HgEntryId::new(nodehash_mocks::ONES_HASH),
                     Type::File(FileType::Regular),
                 ),
                 MPath::new("test_dir2/test_manifest").unwrap() =>
                 Details::new(
-                    mercurial::EntryId::new(nodehash_mocks::TWOS_HASH),
+                    mercurial::HgEntryId::new(nodehash_mocks::TWOS_HASH),
                     Type::Tree,
                 ),
             },
