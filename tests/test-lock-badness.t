@@ -145,8 +145,22 @@ Pushing to a local read-only repo that can't be locked
 Having an empty lock file
   $ cd a
   $ touch .hg/wlock
-  $ hg st
+  $ hg backout # a command which always acquires a lock
   abort: malformed lock file ($TESTTMP/a/.hg/wlock)
   (run hg debuglocks)
   [255]
   $ rm .hg/wlock
+
+Having an undolog lock file
+  $ mkdir .hg/undolog && touch .hg/undolog/lock
+  $ hg debuglocks
+  lock:          free
+  wlock:         free
+  undolog/lock:  malformed
+  [1]
+  $ hg debuglocks --force-undolog-lock
+  $ hg debuglocks
+  lock:          free
+  wlock:         free
+  undolog/lock:  free
+  $ cd ..
