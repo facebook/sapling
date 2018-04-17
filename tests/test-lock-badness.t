@@ -144,8 +144,8 @@ Pushing to a local read-only repo that can't be locked
 
 Having an empty lock file
   $ cd a
-  $ touch .hg/wlock
-  $ hg st
+  $ touch .hg/wlock x
+  $ hg add x
   abort: malformed lock file ($TESTTMP/a/.hg/wlock)
   (run hg debuglocks)
   [255]
