@@ -526,15 +526,31 @@ class engine(object):
 
 _engine = engine()
 
+def _suspendstart():
+    """suspend progress output
+
+    Returns True if there was an active progress bar, which has now been
+    suspended.  In this case the caller must call _suspendfinish to release
+    the suspension.
+    """
+    havebars = bool(_engine._bars)
+    if havebars:
+        _engine._cond.acquire()
+        _engine._clear()
+    return havebars
+
+def _suspendfinish():
+    _engine._cond.release()
+
 class suspend(object):
     """context manager to suspend progress output"""
     def __enter__(self):
-        _engine._cond.acquire()
-        _engine._clear()
+        self._suspended = _suspendstart()
         return self
 
     def __exit__(self, type, value, traceback):
-        _engine._cond.release()
+        if self._suspended:
+            _suspendfinish()
 
 def _progvalue(value):
     """split a progress bar value into a position and item"""
