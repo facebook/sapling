@@ -464,6 +464,7 @@ class hgbuildext(build_ext):
     user_options = build_ext.user_options + [
         ('zstd', None, 'compile zstd bindings [default]'),
         ('no-zstd', None, 'do not compile zstd bindings'),
+        ('re2-src=', None, 'directory containing re2 source code'),
     ]
 
     boolean_options = build_ext.boolean_options + ['zstd']
@@ -471,6 +472,7 @@ class hgbuildext(build_ext):
 
     def initialize_options(self):
         self.zstd = True
+        self.re2_src = os.environ.get('RE2SRC', '')
         return build_ext.initialize_options(self)
 
     def build_extensions(self):
@@ -478,6 +480,62 @@ class hgbuildext(build_ext):
         if not self.zstd:
             self.extensions = [e for e in self.extensions
                                if e.name != 'mercurial.zstd']
+
+        re2path = self.re2_src
+        if re2path:
+            self.extensions.append(Extension(
+                'mercurial.thirdparty.pyre2._re2',
+                sources=[
+                    'mercurial/thirdparty/pyre2/_re2.cc',
+                    os.path.join(re2path, 're2/bitstate.cc'),
+                    os.path.join(re2path, 're2/compile.cc'),
+                    os.path.join(re2path, 're2/dfa.cc'),
+                    os.path.join(re2path, 're2/filtered_re2.cc'),
+                    os.path.join(re2path, 're2/mimics_pcre.cc'),
+                    os.path.join(re2path, 're2/nfa.cc'),
+                    os.path.join(re2path, 're2/onepass.cc'),
+                    os.path.join(re2path, 're2/parse.cc'),
+                    os.path.join(re2path, 're2/perl_groups.cc'),
+                    os.path.join(re2path, 're2/prefilter.cc'),
+                    os.path.join(re2path, 're2/prefilter_tree.cc'),
+                    os.path.join(re2path, 're2/prog.cc'),
+                    os.path.join(re2path, 're2/re2.cc'),
+                    os.path.join(re2path, 're2/regexp.cc'),
+                    os.path.join(re2path, 're2/set.cc'),
+                    os.path.join(re2path, 're2/simplify.cc'),
+                    os.path.join(re2path, 're2/stringpiece.cc'),
+                    os.path.join(re2path, 're2/tostring.cc'),
+                    os.path.join(re2path, 're2/unicode_casefold.cc'),
+                    os.path.join(re2path, 're2/unicode_groups.cc'),
+                    os.path.join(re2path, 'util/rune.cc'),
+                    os.path.join(re2path, 'util/strutil.cc'),
+                ],
+                include_dirs=include_dirs + [re2path],
+                depends=common_depends + [
+                    os.path.join(re2path, 're2/bitmap256.h'),
+                    os.path.join(re2path, 're2/filtered_re2.h'),
+                    os.path.join(re2path, 're2/prefilter.h'),
+                    os.path.join(re2path, 're2/prefilter_tree.h'),
+                    os.path.join(re2path, 're2/prog.h'),
+                    os.path.join(re2path, 're2/re2.h'),
+                    os.path.join(re2path, 're2/regexp.h'),
+                    os.path.join(re2path, 're2/set.h'),
+                    os.path.join(re2path, 're2/stringpiece.h'),
+                    os.path.join(re2path, 're2/unicode_casefold.h'),
+                    os.path.join(re2path, 're2/unicode_groups.h'),
+                    os.path.join(re2path, 're2/walker-inl.h'),
+                    os.path.join(re2path, 'util/logging.h'),
+                    os.path.join(re2path, 'util/mix.h'),
+                    os.path.join(re2path, 'util/mutex.h'),
+                    os.path.join(re2path, 'util/sparse_array.h'),
+                    os.path.join(re2path, 'util/sparse_set.h'),
+                    os.path.join(re2path, 'util/strutil.h'),
+                    os.path.join(re2path, 'util/utf.h'),
+                    os.path.join(re2path, 'util/util.h'),
+                ],
+                extra_compile_args=filter(None, [STDCPP11,
+                                                 PRODUCEDEBUGSYMBOLS]),
+            ))
 
         return build_ext.build_extensions(self)
 
@@ -864,6 +922,7 @@ packages = ['mercurial',
             'mercurial.rust',
             'mercurial.thirdparty',
             'mercurial.thirdparty.attr',
+            'mercurial.thirdparty.pyre2',
             'hgext',
             'hgext.absorb',
             'hgext.convert',
