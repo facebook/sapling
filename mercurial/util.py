@@ -1446,7 +1446,8 @@ def fscasesensitive(path):
         return True
 
 try:
-    import re2
+    from .thirdparty import pyre2 as re2
+    re2._re2.escape  # the C module might be missing
     _re2 = None
 except ImportError:
     _re2 = False
