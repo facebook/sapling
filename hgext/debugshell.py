@@ -13,10 +13,10 @@ from mercurial import (
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-def pdb(ui, repo, msg, **opts):
-    objects = {
+def _assignobjects(objects, repo):
+    objects.update({
         'mercurial': mercurial,
-    }
+    })
     if repo:
         objects.update({
             'repo': repo,
@@ -24,16 +24,14 @@ def pdb(ui, repo, msg, **opts):
             'mf': repo.manifestlog,
         })
 
+def pdb(ui, repo, msg, **opts):
+    objects = {}
+    _assignobjects(objects, repo)
     code.interact(msg, local=objects)
 
 def ipdb(ui, repo, msg, **opts):
     import IPython
-
-    if repo:
-        cl = repo.changelog
-        mf = repo.manifestlog
-        cl, mf # use variables to appease pyflakes
-
+    _assignobjects(locals(), repo)
     IPython.embed()
 
 @command('debugshell|dbsh', [], optionalrepo=True)
