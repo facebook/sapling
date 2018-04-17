@@ -34,29 +34,6 @@ pub struct ChangesetContent {
     comments: Vec<u8>,
 }
 
-impl From<RevlogChangeset> for ChangesetContent {
-    fn from(revlogcs: RevlogChangeset) -> Self {
-        let parents = {
-            let (p1, p2) = revlogcs.parents.get_nodes();
-            let p1 = p1.map(|p| p.into_mononoke());
-            let p2 = p2.map(|p| p.into_mononoke());
-            DParents::new(p1.as_ref(), p2.as_ref())
-        };
-
-        let manifestid = DManifestId::new(revlogcs.manifestid.into_nodehash().into_mononoke());
-
-        Self {
-            parents,
-            manifestid,
-            user: revlogcs.user,
-            time: revlogcs.time,
-            extra: revlogcs.extra,
-            files: revlogcs.files,
-            comments: revlogcs.comments,
-        }
-    }
-}
-
 impl ChangesetContent {
     pub fn new_from_parts(
         parents: DParents,
@@ -75,6 +52,27 @@ impl ChangesetContent {
             extra: Extra::new(extra),
             files,
             comments,
+        }
+    }
+
+    pub fn from_revlogcs(revlogcs: RevlogChangeset) -> Self {
+        let parents = {
+            let (p1, p2) = revlogcs.parents.get_nodes();
+            let p1 = p1.map(|p| p.into_mononoke());
+            let p2 = p2.map(|p| p.into_mononoke());
+            DParents::new(p1.as_ref(), p2.as_ref())
+        };
+
+        let manifestid = DManifestId::new(revlogcs.manifestid.into_nodehash().into_mononoke());
+
+        Self {
+            parents,
+            manifestid,
+            user: revlogcs.user,
+            time: revlogcs.time,
+            extra: revlogcs.extra,
+            files: revlogcs.files,
+            comments: revlogcs.comments,
         }
     }
 
@@ -147,7 +145,8 @@ impl BlobChangeset {
         let changesetid = *changesetid;
         if changesetid == DChangesetId::new(D_NULL_HASH) {
             let revlogcs = RevlogChangeset::new_null();
-            let cs = BlobChangeset::new_with_id(&changesetid, revlogcs.into());
+            let cs =
+                BlobChangeset::new_with_id(&changesetid, ChangesetContent::from_revlogcs(revlogcs));
             Either::A(Ok(Some(cs)).into_future())
         } else {
             let key = cskey(&changesetid);
@@ -164,7 +163,7 @@ impl BlobChangeset {
                     let node = HgBlobNode::new(blob, p1.as_ref(), p2.as_ref());
                     let cs = BlobChangeset::new_with_id(
                         &changesetid,
-                        RevlogChangeset::new(node)?.into(),
+                        ChangesetContent::from_revlogcs(RevlogChangeset::new(node)?),
                     );
                     Ok(Some(cs))
                 }

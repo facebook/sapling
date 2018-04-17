@@ -15,7 +15,7 @@ use futures_cpupool::CpuPool;
 use slog::Logger;
 use tokio_core::reactor::Core;
 
-use blobrepo::BlobChangeset;
+use blobrepo::{BlobChangeset, ChangesetContent};
 use changesets::{ChangesetInsert, Changesets};
 use failure::{Error, Result};
 use filenodes::FilenodeInfo;
@@ -188,7 +188,7 @@ where
             .from_err()
             .and_then(move |cs| {
                 let csid = DChangesetId::new(csid.into_nodehash().into_mononoke());
-                let bcs = BlobChangeset::new_with_id(&csid, cs.into());
+                let bcs = BlobChangeset::new_with_id(&csid, ChangesetContent::from_revlogcs(cs));
                 sender
                     .send(BlobstoreEntry::Changeset(bcs))
                     .map_err(Error::from)

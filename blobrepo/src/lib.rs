@@ -61,7 +61,9 @@ mod repo_commit;
 
 pub use errors::*;
 
-pub use changeset::BlobChangeset;
+// TODO(luk): T28348119 ChangesetContent is made publicly visible here for blobimport, once it's
+// replaced by new blobimport it should be private again
+pub use changeset::{BlobChangeset, ChangesetContent};
 pub use file::BlobEntry;
 pub use manifest::BlobManifest;
 pub use repo::BlobRepo;
