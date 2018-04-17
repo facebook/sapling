@@ -17,6 +17,7 @@ use mercurial_types::{DBlobNode, DManifestId, DNodeHash, DParents, FileType, HgB
                       MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::DEntryId;
+use mononoke_types::FileContents;
 
 use blobstore::Blobstore;
 
@@ -143,9 +144,13 @@ impl Entry for BlobEntry {
                         bytes.slice_from(off)
                     };
                     let res = match ty {
-                        Type::File(FileType::Regular) => Content::File(HgBlob::from(blob)),
-                        Type::File(FileType::Executable) => Content::Executable(HgBlob::from(blob)),
-                        Type::File(FileType::Symlink) => Content::Symlink(HgBlob::from(blob)),
+                        Type::File(FileType::Regular) => Content::File(FileContents::Bytes(blob)),
+                        Type::File(FileType::Executable) => {
+                            Content::Executable(FileContents::Bytes(blob))
+                        }
+                        Type::File(FileType::Symlink) => {
+                            Content::Symlink(FileContents::Bytes(blob))
+                        }
                         Type::Tree => Content::Tree(BlobManifest::parse(blobstore, blob)?.boxed()),
                     };
 
@@ -157,11 +162,13 @@ impl Entry for BlobEntry {
 
     fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         self.get_content()
-            .and_then(|content| match content {
+            .and_then(|content| {
+                match content {
                 Content::File(data) | Content::Executable(data) | Content::Symlink(data) => {
-                    Ok(data.size())
+                    Ok(Some(data.size()))
                 }
                 Content::Tree(_) => Ok(None),
+            }
             })
             .boxify()
     }

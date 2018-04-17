@@ -47,6 +47,12 @@ impl FileContents {
         }
     }
 
+    pub fn size(&self) -> usize {
+        match *self {
+            FileContents::Bytes(ref bytes) => bytes.len(),
+        }
+    }
+
     pub fn into_bytes(self) -> Bytes {
         match self {
             FileContents::Bytes(bytes) => bytes,

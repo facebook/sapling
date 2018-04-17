@@ -10,7 +10,7 @@ use failure::Error;
 use futures::future::{self, Future};
 use futures::stream::{self, Stream};
 
-use mononoke_types::{FileType, MPathElement};
+use mononoke_types::{FileContents, FileType, MPathElement};
 
 use blob::HgBlob;
 use blobnode::DParents;
@@ -152,20 +152,20 @@ impl Display for Type {
 
 /// Concrete representation of various Entry Types.
 pub enum Content {
-    File(HgBlob),       // TODO stream
-    Executable(HgBlob), // TODO stream
+    File(FileContents),       // TODO stream
+    Executable(FileContents), // TODO stream
     // Symlinks typically point to files but can have arbitrary content, so represent them as
     // blobs rather than as MPath instances.
-    Symlink(HgBlob), // TODO stream
+    Symlink(FileContents), // TODO stream
     Tree(Box<Manifest + Sync>),
 }
 
 impl Content {
-    pub fn new_file(file_type: FileType, blob: HgBlob) -> Self {
+    pub fn new_file(file_type: FileType, contents: FileContents) -> Self {
         match file_type {
-            FileType::Regular => Content::File(blob),
-            FileType::Executable => Content::Executable(blob),
-            FileType::Symlink => Content::Symlink(blob),
+            FileType::Regular => Content::File(contents),
+            FileType::Executable => Content::Executable(contents),
+            FileType::Symlink => Content::Symlink(contents),
         }
     }
 }
@@ -174,9 +174,11 @@ impl fmt::Debug for Content {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Content::Tree(_) => write!(f, "Tree(...)"),
-            Content::File(ref blob) => f.debug_tuple("File").field(blob).finish(),
-            Content::Executable(ref blob) => f.debug_tuple("Executable").field(blob).finish(),
-            Content::Symlink(ref blob) => f.debug_tuple("Symlink").field(blob).finish(),
+            Content::File(ref contents) => f.debug_tuple("File").field(contents).finish(),
+            Content::Executable(ref contents) => {
+                f.debug_tuple("Executable").field(contents).finish()
+            }
+            Content::Symlink(ref contents) => f.debug_tuple("Symlink").field(contents).finish(),
         }
     }
 }

@@ -19,6 +19,7 @@ use mercurial_types::{Entry, FileType, HgBlob, MPath, MPathElement, Manifest, Re
 use mercurial_types::blobnode::DParents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::DEntryId;
+use mononoke_types::FileContents;
 
 use errors::*;
 
@@ -26,7 +27,7 @@ pub type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
 
 pub fn make_file<C: Into<Bytes>>(file_type: FileType, content: C) -> ContentFactory {
     let content = content.into();
-    Arc::new(move || Content::new_file(file_type, HgBlob::Dirty(content.clone())))
+    Arc::new(move || Content::new_file(file_type, FileContents::Bytes(content.clone())))
 }
 
 #[derive(Clone)]
@@ -337,7 +338,9 @@ mod test {
                 .wait()
                 .expect("content fetch should work");
             match bar1_content {
-                Content::File(blob) => assert_eq!(blob.as_slice(), Some(&b"bar1"[..])),
+                Content::File(FileContents::Bytes(contents)) => {
+                    assert_eq!(contents.as_ref(), &b"bar1"[..])
+                }
                 other => panic!("expected File content, found {:?}", other),
             };
 
@@ -351,7 +354,9 @@ mod test {
                 .wait()
                 .expect("content fetch should work");
             match bar2_content {
-                Content::Symlink(blob) => assert_eq!(blob.as_slice(), Some(&b"bar2"[..])),
+                Content::Symlink(FileContents::Bytes(contents)) => {
+                    assert_eq!(contents.as_ref(), &b"bar2"[..])
+                }
                 other => panic!("expected Symlink content, found {:?}", other),
             };
         })

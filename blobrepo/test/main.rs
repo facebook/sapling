@@ -24,13 +24,14 @@ extern crate many_files_dirs;
 extern crate memblob;
 extern crate memheads;
 extern crate mercurial_types;
+extern crate mononoke_types;
 
-use bytes::Bytes;
 use futures::Future;
 
 use blobrepo::{compute_changed_files, BlobRepo};
 use mercurial_types::{manifest, Changeset, DChangesetId, DEntryId, DManifestId, Entry, FileType,
-                      HgBlob, MPath, MPathElement, RepoPath};
+                      MPath, MPathElement, RepoPath};
+use mononoke_types::FileContents;
 
 mod stats_units;
 #[macro_use]
@@ -62,7 +63,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
 
     let content = run_future(entry.get_content()).unwrap();
     match content {
-        manifest::Content::File(f) => assert!(f == HgBlob::from(Bytes::from(&b"blob"[..]))),
+        manifest::Content::File(FileContents::Bytes(f)) => assert_eq!(f.as_ref(), &b"blob"[..]),
         _ => panic!(),
     };
 
@@ -102,7 +103,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
 
     let content = run_future(entry.get_content()).unwrap();
     match content {
-        manifest::Content::File(f) => assert!(f == HgBlob::from(Bytes::from(&b"blob"[..]))),
+        manifest::Content::File(FileContents::Bytes(f)) => assert_eq!(f.as_ref(), &b"blob"[..]),
         _ => panic!(),
     };
     // And the blob now exists

@@ -19,6 +19,7 @@ use blobrepo::BlobRepo;
 use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::DChangesetId;
+use mononoke_types::FileContents;
 use toml;
 use vfs::{vfs_from_manifest, ManifestVfsDir, ManifestVfsFile, VfsDir, VfsFile, VfsNode, VfsWalker};
 
@@ -143,17 +144,13 @@ impl RepoConfigs {
                                 })
                             })
                             .and_then(|content| match content {
-                                Content::File(blob) => Ok(blob),
+                                Content::File(FileContents::Bytes(bytes)) => Ok(bytes),
                                 _ => Err(ErrorKind::InvalidFileStructure("expected file".into()).into()),
                             })
-                            .and_then(|blob| {
-                                let bytes =
-                                    blob.as_slice().ok_or(ErrorKind::InvalidFileStructure(
-                                        "expected content of the blob".into(),
-                                    ))?;
+                            .and_then(|bytes| {
                                 Ok((
                                     reponame,
-                                    toml::from_slice::<RawRepoConfig>(bytes)?.try_into()?,
+                                    toml::from_slice::<RawRepoConfig>(bytes.as_ref())?.try_into()?,
                                 ))
                             })
                     }

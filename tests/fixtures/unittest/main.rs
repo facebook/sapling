@@ -8,18 +8,18 @@
 
 extern crate ascii;
 extern crate async_unit;
-extern crate bytes;
 extern crate futures;
 
 extern crate linear;
 extern crate mercurial_types;
+extern crate mononoke_types;
 
 use ascii::AsciiString;
-use bytes::Bytes;
 use futures::executor::spawn;
 use mercurial_types::{Changeset, FileType, MPathElement};
 use mercurial_types::manifest::{Content, Type};
 use mercurial_types::nodehash::{DChangesetId, DNodeHash};
+use mononoke_types::FileContents;
 
 #[test]
 fn check_heads() {
@@ -107,12 +107,9 @@ fn check_head_has_file() {
         let content = spawn(content_future)
             .wait_future()
             .expect("Can't get file content");
-        if let Content::File(blob) = content {
-            assert_eq!(blob.size(), Some(21));
-            assert_eq!(
-                blob.into_inner().expect("Can't read content"),
-                Bytes::from(&b"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n"[..])
-            );
+        if let Content::File(FileContents::Bytes(bytes)) = content {
+            assert_eq!(bytes.len(), 21);
+            assert_eq!(bytes.as_ref(), &b"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n"[..]);
         } else {
             panic!("files is not a file blob");
         }

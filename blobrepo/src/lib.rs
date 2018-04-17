@@ -47,6 +47,7 @@ extern crate memblob;
 extern crate memheads;
 extern crate mercurial;
 extern crate mercurial_types;
+extern crate mononoke_types;
 extern crate rocksblob;
 extern crate rocksdb;
 extern crate time_ext;

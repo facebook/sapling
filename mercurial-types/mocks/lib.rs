@@ -20,6 +20,7 @@ extern crate maplit;
 extern crate async_unit;
 extern crate futures_ext;
 extern crate mercurial_types;
+extern crate mononoke_types;
 
 pub mod errors;
 pub mod hash;

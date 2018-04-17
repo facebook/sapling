@@ -28,6 +28,7 @@ extern crate mercurial;
 extern crate mercurial_types;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
+extern crate mononoke_types;
 extern crate vfs;
 
 pub mod errors;
