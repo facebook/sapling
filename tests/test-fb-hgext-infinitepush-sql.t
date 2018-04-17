@@ -109,38 +109,51 @@ sleeps should be used to get predictable order
   $ cd client4 && setupsqlclienthgrc
   $ mkcommit 'Commit in repo client4'
   $ sleep 1
+  $ hg pushb -q --config infinitepushbackup.hostname=ourdevhost
+  $ cd ..
+  $ hg clone -q ssh://user@dummy/server client5
+  $ cd client5 && setupsqlclienthgrc
+  $ mkcommit 'Commit in repo client5'
+  $ sleep 1
   $ hg pushb -q --config infinitepushbackup.hostname=mydevhost
   $ hg pullbackup
   abort: ambiguous hostname to restore:
   mydevhost
+  ourdevhost
   devhost
   (set --hostname to disambiguate)
   [255]
   $ hg pullbackup --hostname mydevhost
   abort: ambiguous repo root to restore:
-  $TESTTMP/client4
+  $TESTTMP/client5
   $TESTTMP/client1
   (set --reporoot to disambiguate)
   [255]
-  $ hg pullbackup --reporoot $TESTTMP/client1 -q
-  $ hg pullbackup --reporoot $TESTTMP/client2 -q
-  $ hg pullbackup --reporoot $TESTTMP/client3 -q
+  $ hg pullbackup --reporoot $TESTTMP/client1 --hostname mydevhost -q # pullbackup should work with reporoot/hostname pair
+  $ hg pullbackup --reporoot $TESTTMP/client2 --hostname devhost -q   # pullbackup should work with reporoot/hostname pair
+  $ hg pullbackup --reporoot $TESTTMP/client3 -q                      # pullbackup should work with reporoot only if it is unambiguous
+  $ hg pullbackup --hostname ourdevhost -q                            # pullbackup should work with hostname only if it is unambiguous
   $ hg log -G --template "{node|short} '{desc}'\n"
+  o  3309f3c00117 'Commit in repo client4'
+  
   o  8b99f4b01a41 'Commit in repo client3'
   
   o  c25c4d010d8e 'Commit in repo client2'
   
   o  250e5455acab 'Commit in repo client1'
   
-  @  3309f3c00117 'Commit in repo client4'
+  @  ec33790d6769 'Commit in repo client5'
   
 
 Getavailablebackups should also go in MRU order
   $ hg getavailablebackups --json
   {
       "mydevhost": [
-          "$TESTTMP/client4", 
+          "$TESTTMP/client5", 
           "$TESTTMP/client1"
+      ], 
+      "ourdevhost": [
+          "$TESTTMP/client4"
       ], 
       "devhost": [
           "$TESTTMP/client3", 
@@ -148,9 +161,10 @@ Getavailablebackups should also go in MRU order
       ]
   }
   $ hg getavailablebackups
-  user test has 4 available backups:
+  user test has 5 available backups:
   (backups are ordered, the most recent are at the top of the list)
-  $TESTTMP/client4 on mydevhost
+  $TESTTMP/client5 on mydevhost
+  $TESTTMP/client4 on ourdevhost
   $TESTTMP/client3 on devhost
   $TESTTMP/client2 on devhost
   $TESTTMP/client1 on mydevhost
