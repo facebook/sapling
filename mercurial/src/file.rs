@@ -28,6 +28,12 @@ impl File {
         File { node }
     }
 
+    // (there's a use case for not providing parents, so should parents not be inside the file?)
+    #[inline]
+    pub fn data_only<B: Into<HgBlob>>(blob: B) -> Self {
+        Self::new(blob, None, None)
+    }
+
     // DBlobNode should probably go away eventually, probably? So mark this private.
     #[inline]
     pub(crate) fn from_blobnode(node: DBlobNode) -> Self {
