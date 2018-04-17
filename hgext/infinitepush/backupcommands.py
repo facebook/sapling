@@ -858,7 +858,10 @@ class BackupBookmarkNamingManager(object):
         return '/'.join((self._getcommonuserprefix(), host, '*'))
 
     def getcommonuserhostreporootprefix(self, host, reporoot):
-        return '/'.join((self._getcommonuserprefix(), host, reporoot, '*'))
+        # Remove any prefix or suffix slashes, since the join will add them
+        # back and the format doesn't expect a double slash.
+        strippedroot = reporoot.strip('/')
+        return '/'.join((self._getcommonuserprefix(), host, strippedroot, '*'))
 
     def getcommonprefix(self):
         return '/'.join((self._getcommonprefix(), '*'))
