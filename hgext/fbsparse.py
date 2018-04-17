@@ -1017,7 +1017,7 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
                     profilematchers = unionmatcher(
                         [matchers[k] for k in matchers if k])
                     repo.prefetch(
-                        repo.revs(ctx.hash()), matcher=profilematchers)
+                        repo.revs(ctx.hex()), matcher=profilematchers)
 
         with progress.bar(ui, _('calculating'), total=totalfiles) as prog:
             # only matchers for which there was no cache are processed
