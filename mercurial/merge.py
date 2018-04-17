@@ -505,6 +505,8 @@ class mergestate(object):
             actx = self._repo[anccommitnode]
         else:
             actx = None
+        self._repo.ui.log('merge-resolve', 'resolving %s, preresolve = %s',
+                          dfile, preresolve)
         fcd = self._filectxorabsent(hash, wctx, dfile)
         fco = self._filectxorabsent(onode, octx, ofile)
         # TODO: move this to filectxorabsent
