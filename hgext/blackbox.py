@@ -194,7 +194,10 @@ def wrapui(ui):
                 fmt = '%s %s @%s%s (%s)%s> %s'
                 args = (date, user, rev, changed, pid, src, formattedmsg)
                 with _openlogfile(ui, vfs) as fp:
-                    fp.write(fmt % args)
+                    line = fmt % args
+                    if not line.endswith('\n'):
+                        line += '\n'
+                    fp.write(line)
             except (IOError, OSError) as err:
                 self.debug('warning: cannot write to blackbox.log: %s\n' %
                            err.strerror)

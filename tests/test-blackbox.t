@@ -359,3 +359,14 @@ blackbox does not crash with empty log message
   $ hg blackbox | grep foo
   [1]
 
+blackbox adds "\n" automatically
+
+  $ setconfig blackbox.track=bar
+  $ hg uilog bar bar1-NEWLINE
+  $ hg uilog bar bar2
+  $ hg uilog bar bar3
+  $ hg blackbox | grep bar
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> bar1
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> bar2
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> bar3
+
