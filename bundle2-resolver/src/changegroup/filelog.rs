@@ -130,7 +130,7 @@ impl DeltaCache {
                                 .boxify(),
                             None => self.repo
                                 .get_file_content(&base.into_mononoke())
-                                .map(move |bytes| delta::apply(bytes.as_ref(), &delta))
+                                .map(move |bytes| delta::apply(bytes.into_bytes().as_ref(), &delta))
                                 .boxify(),
                         };
                         fut.map_err(move |err| {

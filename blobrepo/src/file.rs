@@ -13,8 +13,7 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{DBlobNode, DManifestId, DNodeHash, DParents, FileType, HgBlob, MPath,
-                      MPathElement};
+use mercurial_types::{DManifestId, DNodeHash, DParents, FileType, HgBlob, MPath, MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::DEntryId;
 use mononoke_types::FileContents;
@@ -38,7 +37,7 @@ pub struct BlobEntry {
 pub fn fetch_file_content_and_renames_from_blobstore(
     blobstore: &Arc<Blobstore>,
     nodeid: DNodeHash,
-) -> BoxFuture<(Bytes, Option<(MPath, DNodeHash)>), Error> {
+) -> BoxFuture<(FileContents, Option<(MPath, DNodeHash)>), Error> {
     get_node(blobstore, nodeid)
         .and_then({
             let blobstore = blobstore.clone();
@@ -53,14 +52,9 @@ pub fn fetch_file_content_and_renames_from_blobstore(
                             // (None, Some(hash)), which is what BlobNode relies on to figure out
                             // whether a node is copied.
                             let (p1, p2) = parents.get_nodes();
-                            let blobnode = DBlobNode::new(blob, p1, p2);
-                            let file = file::File::new(blobnode);
+                            let file = file::File::new(blob, p1, p2);
 
-                            file.copied_from().and_then(|from| {
-                                file.content()
-                                    .ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
-                                    .map(|content| (Bytes::from(content), from))
-                            })
+                            file.copied_from().map(|from| (file.file_contents(), from))
                         })
                 })
             }

@@ -969,6 +969,7 @@ fn create_remotefilelog_blob(
     // raw_content includes copy information
     let raw_content_bytes = repo.get_file_content(&node)
         .and_then(move |raw_content| {
+            let raw_content = raw_content.into_bytes();
             // requires digit counting to know for sure, use reasonable approximation
             let approximate_header_size = 12;
             let mut writer = Cursor::new(Vec::with_capacity(

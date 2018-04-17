@@ -11,7 +11,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ascii::AsciiString;
-use bytes::Bytes;
 use failure::{Fail, ResultExt};
 use futures::{Async, Poll};
 use futures::future::Future;
@@ -41,6 +40,7 @@ use mercurial_types::{Changeset, DBlobNode, DChangesetId, DFileNodeId, DNodeHash
                       HgBlob, Manifest, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::DManifestId;
+use mononoke_types::FileContents;
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Remote;
@@ -209,7 +209,7 @@ impl BlobRepo {
         ))
     }
 
-    pub fn get_file_content(&self, key: &DNodeHash) -> BoxFuture<Bytes, Error> {
+    pub fn get_file_content(&self, key: &DNodeHash) -> BoxFuture<FileContents, Error> {
         fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
             .map(|contentrename| contentrename.0)
             .boxify()

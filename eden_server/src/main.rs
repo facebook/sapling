@@ -326,7 +326,7 @@ where
 
         repo.get_file_content(hash)
             .from_err()
-            .and_then(|content| futures::future::ok(content))
+            .and_then(|content| futures::future::ok(content.into_bytes()))
             .boxify()
     }
 }

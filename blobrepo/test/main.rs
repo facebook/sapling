@@ -69,7 +69,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
 
     // And the blob now exists
     let bytes = run_future(repo.get_file_content(&expected_hash)).unwrap();
-    assert!(&bytes == &b"blob"[..]);
+    assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
 test_both_repotypes!(
@@ -108,7 +108,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
     };
     // And the blob now exists
     let bytes = run_future(repo.get_file_content(&expected_hash)).unwrap();
-    assert!(&bytes == &b"blob"[..]);
+    assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
 test_both_repotypes!(
@@ -155,7 +155,7 @@ fn create_one_changeset(repo: BlobRepo) {
 
     // And check the file blob is present
     let bytes = run_future(repo.get_file_content(&filehash)).unwrap();
-    assert!(&bytes == &b"blob"[..]);
+    assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
 test_both_repotypes!(

@@ -7,11 +7,12 @@
 use std::collections::HashMap;
 use std::str;
 
-use errors::*;
-
 use itertools::Itertools;
 
-use mercurial_types::{DBlobNode, DNodeHash, MPath};
+use mercurial_types::{DBlobNode, DNodeHash, HgBlob, MPath};
+use mononoke_types::FileContents;
+
+use errors::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct File {
@@ -22,8 +23,15 @@ const META_MARKER: &[u8] = b"\x01\n";
 const META_SZ: usize = 2;
 
 impl File {
-    pub fn new(node: DBlobNode) -> File {
-        File { node: node }
+    pub fn new<B: Into<HgBlob>>(blob: B, p1: Option<&DNodeHash>, p2: Option<&DNodeHash>) -> Self {
+        let node = DBlobNode::new(blob, p1, p2);
+        File { node }
+    }
+
+    // DBlobNode should probably go away eventually, probably? So mark this private.
+    #[inline]
+    pub(crate) fn from_blobnode(node: DBlobNode) -> Self {
+        File { node }
     }
 
     pub fn extract_meta(file: &[u8]) -> (&[u8], usize) {
@@ -99,20 +107,31 @@ impl File {
         }
     }
 
-    pub fn content(&self) -> Option<&[u8]> {
-        self.node.as_blob().as_slice().map(|s| {
-            let (_, off) = Self::extract_meta(s);
-            &s[off..]
-        })
+    pub fn content(&self) -> &[u8] {
+        let data = self.node
+            .as_blob()
+            .as_slice()
+            .expect("BlobNode should always have data");
+        let (_, off) = Self::extract_meta(data);
+        &data[off..]
     }
 
-    pub fn size(&self) -> Option<usize> {
+    pub fn file_contents(&self) -> FileContents {
+        let data = self.node
+            .as_blob()
+            .as_inner()
+            .expect("BlobNode should always have data");
+        let (_, off) = Self::extract_meta(data);
+        FileContents::Bytes(data.slice_from(off))
+    }
+
+    pub fn size(&self) -> usize {
         // XXX This doesn't really help because the DBlobNode will have already been constructed
         // with the content so a size-only query will have already done too much work.
         if self.node.maybe_copied() {
-            self.content().map(|s| s.len())
+            self.content().len()
         } else {
-            self.node.size()
+            self.node.size().expect("BlobNode should always have data")
         }
     }
 }

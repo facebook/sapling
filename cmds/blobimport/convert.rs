@@ -25,7 +25,7 @@ use heads::Heads;
 use mercurial::{self, HgChangesetId, HgEntryId, HgNodeHash, HgParents, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{DBlobNode, DFileNodeId, HgBlob, RepoPath, RepositoryId};
+use mercurial_types::{DFileNodeId, HgBlob, RepoPath, RepositoryId};
 use mercurial_types::nodehash::DChangesetId;
 use stats::Timeseries;
 
@@ -324,7 +324,7 @@ fn create_filenode(
     let p1 = p1.map(|p| p.into_mononoke());
     let p2 = p2.map(|p| p.into_mononoke());
 
-    let copyfrom = mercurial::file::File::new(DBlobNode::new(blob, p1.as_ref(), p2.as_ref()))
+    let copyfrom = mercurial::file::File::new(blob, p1.as_ref(), p2.as_ref())
         .copied_from()
         .map(|copiedfrom| {
             copiedfrom.map(|(path, node)| (RepoPath::FilePath(path), DFileNodeId::new(node)))
