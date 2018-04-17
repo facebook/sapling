@@ -106,6 +106,7 @@ def editconfig(path, section, name, value):
     Try to edit the config in-place without breaking config file syntax for
     simple cases. Fallback to just append the new config.
     """
+    path = os.path.realpath(path)
     content = ''
     try:
         content = util.readfile(path)
