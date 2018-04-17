@@ -11,6 +11,11 @@ use hash::Sha1;
 
 use errors::*;
 
+// This used to have an Extern state earlier, which stood for the hash
+// being present but the content not. This state ended up never being used in
+// practice, but most of the methods still return Option types because of that.
+// TODO(T28296583): Clean up HgBlob APIs to not return Option types
+
 /// Representation of a blob of data.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(Serialize, Deserialize)]
@@ -19,8 +24,6 @@ pub enum HgBlob {
     Dirty(Bytes),
     /// Clean data paired with its hash
     Clean(Bytes, HgBlobHash),
-    /// External data; we only have its hash
-    Extern(HgBlobHash),
 }
 
 /// Hash of a blob.
@@ -75,7 +78,7 @@ impl HgBlob {
                 let hash = HgBlobHash::from(data.as_ref());
                 HgBlob::Clean(data, hash)
             }
-            b @ HgBlob::Clean(..) | b @ HgBlob::Extern(..) => b,
+            b @ HgBlob::Clean(..) => b,
         }
     }
 
@@ -83,7 +86,6 @@ impl HgBlob {
         match self {
             &HgBlob::Dirty(ref data) => Some(data.len()),
             &HgBlob::Clean(ref data, _) => Some(data.as_ref().len()),
-            &HgBlob::Extern(..) => None,
         }
     }
 
@@ -91,13 +93,12 @@ impl HgBlob {
         match self {
             &HgBlob::Dirty(ref data) => Some(data),
             &HgBlob::Clean(ref data, _) => Some(data),
-            &HgBlob::Extern(..) => None,
         }
     }
 
     pub fn hash(&self) -> Option<HgBlobHash> {
         match self {
-            &HgBlob::Clean(_, hash) | &HgBlob::Extern(hash) => Some(hash),
+            &HgBlob::Clean(_, hash) => Some(hash),
             &HgBlob::Dirty(..) => None,
         }
     }
@@ -106,7 +107,6 @@ impl HgBlob {
         match self {
             HgBlob::Dirty(data) => Some(data),
             HgBlob::Clean(data, _) => Some(data),
-            HgBlob::Extern(..) => None,
         }
     }
 
@@ -114,7 +114,6 @@ impl HgBlob {
         match self {
             &HgBlob::Dirty(ref data) => Some(data.as_ref()),
             &HgBlob::Clean(ref data, _) => Some(data.as_ref()),
-            &HgBlob::Extern(..) => None,
         }
     }
 }
@@ -125,21 +124,13 @@ impl From<Bytes> for HgBlob {
     }
 }
 
-/// Get a reference to the `HgBlob`'s data, if it has some (ie, not `Extern`)
+/// Get a reference to the `HgBlob`'s data.
 impl<'a> Into<Option<&'a [u8]>> for &'a HgBlob {
     fn into(self) -> Option<&'a [u8]> {
         match self {
             &HgBlob::Clean(ref data, _) => Some(data.as_ref()),
             &HgBlob::Dirty(ref data) => Some(data.as_ref()),
-            &HgBlob::Extern(..) => None,
         }
-    }
-}
-
-/// Construct an `Extern` `HgBlob` from a `HgBlobHash`
-impl From<HgBlobHash> for HgBlob {
-    fn from(bh: HgBlobHash) -> Self {
-        HgBlob::Extern(bh)
     }
 }
 
