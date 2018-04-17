@@ -15,6 +15,7 @@ command = registrar.command(cmdtable)
 
 def _assignobjects(objects, repo):
     objects.update({
+        'm': mercurial,
         'mercurial': mercurial,
     })
     if repo:
