@@ -591,15 +591,12 @@ folly::File Overlay::createOverlayFileImpl(
       " in ",
       localDir_);
 
-  auto returnCode = folly::fdatasyncNoInt(tmpFD);
-  folly::checkUnixError(
-      returnCode,
-      "error flushing data to overlay file for inode ",
-      inodeNumber,
-      " in ",
-      localDir_);
+  // Eden used to call fdatasync() here because technically that's required to
+  // reliably, atomically write a file.  But, per docs/InodeStorage.md, Eden
+  // does not claim to handle disk, kernel, or power failure, and fdatasync has
+  // a nearly 300 microsecond cost.
 
-  returnCode =
+  auto returnCode =
       renameat(dirFile_.fd(), tmpPath.data(), dirFile_.fd(), path.data());
   folly::checkUnixError(
       returnCode,
