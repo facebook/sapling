@@ -82,13 +82,19 @@ class client(object):
 
     def _command(self, *args):
         watchmanargs = (args[0], self._root) + args[1:]
+        self._ui.log('watchman-command',
+                     'watchman command %r started with timeout = %s',
+                      watchmanargs, self._timeout)
         try:
             if self._watchmanclient is None:
                 self._firsttime = False
                 self._watchmanclient = pywatchman.client(
                     timeout=self._timeout,
                     useImmutableBser=True)
-            return self._watchmanclient.query(*watchmanargs)
+            result = self._watchmanclient.query(*watchmanargs)
+            self._ui.log('watchman-command',
+                         'watchman command %r completed', watchmanargs)
+            return result
         except pywatchman.CommandError as ex:
             if 'unable to resolve root' in ex.msg:
                 raise WatchmanNoRoot(self._root, ex.msg)
