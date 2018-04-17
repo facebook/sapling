@@ -1315,13 +1315,6 @@ rustextmodules = [
     ),
 ]
 
-# If the Subversion SWIG bindings aren't present, require Subvertpy
-requires = []
-try:
-    from hgext.hgsubversion.svnwrap import svn_swig_wrapper
-except ImportError:
-    requires.append('subvertpy>=0.7.4')
-
 setup(name='mercurial',
       version=setupversion,
       author='Matt Mackall and many others',
@@ -1364,7 +1357,6 @@ setup(name='mercurial',
       package_data=packagedata,
       cmdclass=cmdclass,
       distclass=hgdist,
-      install_requires=requires,
       options={
           'py2exe': {
               'packages': [
