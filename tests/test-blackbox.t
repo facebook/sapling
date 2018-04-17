@@ -339,3 +339,23 @@ blackbox should work if repo.ui.log is not called (issue5518)
   $ tail -2 .hg/blackbox.log
   RuntimeError: raise
   
+blackbox does not crash with empty log message
+
+  $ newrepo
+  $ cat > $TESTTMP/uilog.py << EOF
+  > from __future__ import absolute_import
+  > from mercurial import registrar, scmutil
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('uilog')
+  > def logcmd(ui, repo, category, *args):
+  >     args = [a.replace('-NEWLINE', '\n') for a in args]
+  >     ui.log(category, *args)
+  > EOF
+  $ setconfig extensions.uilog=$TESTTMP/uilog.py
+  $ setconfig blackbox.track=foo
+  $ hg uilog foo
+  $ hg uilog foo ''
+  $ hg blackbox | grep foo
+  [1]
+

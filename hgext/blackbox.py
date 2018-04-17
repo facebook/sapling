@@ -142,6 +142,9 @@ def wrapui(ui):
             if not '*' in self.track and not event in self.track:
                 return
 
+            if not msg or not msg[0]:
+                return
+
             if self._bbvfs:
                 ui = self
             else:
