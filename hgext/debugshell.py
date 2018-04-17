@@ -16,26 +16,30 @@ command = registrar.command(cmdtable)
 def pdb(ui, repo, msg, **opts):
     objects = {
         'mercurial': mercurial,
-        'repo': repo,
-        'cl': repo.changelog,
-        'mf': repo.manifestlog,
     }
+    if repo:
+        objects.update({
+            'repo': repo,
+            'cl': repo.changelog,
+            'mf': repo.manifestlog,
+        })
 
     code.interact(msg, local=objects)
 
 def ipdb(ui, repo, msg, **opts):
     import IPython
 
-    cl = repo.changelog
-    mf = repo.manifestlog
-    cl, mf # use variables to appease pyflakes
+    if repo:
+        cl = repo.changelog
+        mf = repo.manifestlog
+        cl, mf # use variables to appease pyflakes
 
     IPython.embed()
 
-@command('debugshell|dbsh', [])
+@command('debugshell|dbsh', [], optionalrepo=True)
 def debugshell(ui, repo, **opts):
     bannermsg = "loaded repo : %s\n" \
-                "using source: %s" % (repo.root,
+                "using source: %s" % (repo and repo.root or '(none)',
                                       mercurial.__path__[0])
 
     pdbmap = {
