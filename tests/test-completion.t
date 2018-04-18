@@ -287,7 +287,7 @@ Show all commands + options
   debuginstall: template
   debugknown: 
   debuglabelcomplete: 
-  debuglocks: force-lock, force-wlock, set-lock, set-wlock
+  debuglocks: force-lock, force-wlock, force-undolog-lock, set-lock, set-wlock
   debugmergestate: 
   debugnamecomplete: 
   debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template

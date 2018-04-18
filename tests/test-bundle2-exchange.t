@@ -877,8 +877,8 @@ Check abort from mandatory pushkey
   Cleaning up the mess...
   rollback completed
   pushkey: lock state after "phases"
-  lock:  free
-  wlock: free
+  lock:          free
+  wlock:         free
   abort: Clown phase push failed
   [255]
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
@@ -892,8 +892,8 @@ Check abort from mandatory pushkey
   remote: Cleaning up the mess...
   remote: rollback completed
   remote: pushkey: lock state after "phases"
-  remote: lock:  free
-  remote: wlock: free
+  remote: lock:          free
+  remote: wlock:         free
   abort: Clown phase push failed
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
@@ -907,8 +907,8 @@ Check abort from mandatory pushkey
   remote: Cleaning up the mess...
   remote: rollback completed
   remote: pushkey: lock state after "phases"
-  remote: lock:  free
-  remote: wlock: free
+  remote: lock:          free
+  remote: wlock:         free
   abort: Clown phase push failed
   [255]
 

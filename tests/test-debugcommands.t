@@ -150,8 +150,8 @@ Test max chain len
 Test debuglocks command:
 
   $ hg debuglocks
-  lock:  free
-  wlock: free
+  lock:          free
+  wlock:         free
 
 * Test setting the lock
 
@@ -180,8 +180,8 @@ amount of time, displays error message and returns 1
   $ waitlock .hg/store/lock
 
   $ hg debuglocks
-  lock:  user *, process * (*s) (glob)
-  wlock: free
+  lock:          user *, process * (*s) (glob)
+  wlock:         free
   [1]
   $ touch .hg/unlock
   $ wait
@@ -194,8 +194,8 @@ amount of time, displays error message and returns 1
   $ waitlock .hg/wlock
 
   $ hg debuglocks
-  lock:  free
-  wlock: user *, process * (*s) (glob)
+  lock:          free
+  wlock:         user *, process * (*s) (glob)
   [1]
   $ touch .hg/unlock
   $ wait
@@ -208,8 +208,8 @@ amount of time, displays error message and returns 1
   $ waitlock .hg/wlock && waitlock .hg/store/lock
 
   $ hg debuglocks
-  lock:  user *, process * (*s) (glob)
-  wlock: user *, process * (*s) (glob)
+  lock:          user *, process * (*s) (glob)
+  wlock:         user *, process * (*s) (glob)
   [2]
 
 * Test failing to set a lock
@@ -226,8 +226,8 @@ amount of time, displays error message and returns 1
   $ wait
 
   $ hg debuglocks
-  lock:  free
-  wlock: free
+  lock:          free
+  wlock:         free
 
 * Test forcing the lock
 
@@ -235,15 +235,15 @@ amount of time, displays error message and returns 1
   $ waitlock .hg/store/lock
 
   $ hg debuglocks
-  lock:  user *, process * (*s) (glob)
-  wlock: free
+  lock:          user *, process * (*s) (glob)
+  wlock:         free
   [1]
 
   $ hg debuglocks -L
 
   $ hg debuglocks
-  lock:  free
-  wlock: free
+  lock:          free
+  wlock:         free
 
   $ touch .hg/unlock
   $ wait
@@ -254,15 +254,15 @@ amount of time, displays error message and returns 1
   $ waitlock .hg/wlock
 
   $ hg debuglocks
-  lock:  free
-  wlock: user *, process * (*s) (glob)
+  lock:          free
+  wlock:         user *, process * (*s) (glob)
   [1]
 
   $ hg debuglocks -W
 
   $ hg debuglocks
-  lock:  free
-  wlock: free
+  lock:          free
+  wlock:         free
 
   $ touch .hg/unlock
   $ wait
