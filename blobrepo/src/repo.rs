@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ascii::AsciiString;
+use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
 use failure::{Fail, ResultExt};
 use futures::{Async, Poll};
 use futures::future::Future;
@@ -28,7 +29,7 @@ use bookmarks::{self, Bookmarks};
 use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
 use dbbookmarks::SqliteDbBookmarks;
 use delayblob::DelayBlob;
-use dieselfilenodes::{SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
+use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
 use fileheads::FileHeads;
 use filenodes::Filenodes;
 use heads::Heads;
@@ -188,13 +189,22 @@ impl BlobRepo {
         prefix: &str,
         remote: &Remote,
         repoid: RepositoryId,
+        db_address: &str,
     ) -> Result<Self> {
         let heads = MemHeads::new();
         // TODO(stash): use real bookmarks
         let bookmarks = SqliteDbBookmarks::in_memory()?;
         let blobstore = ManifoldBlob::new_with_prefix(bucket.to_string(), prefix, remote);
-        let filenodes =
-            SqliteFilenodes::in_memory().context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
+
+        // TODO(stash): T28429403 use local region first, fallback to master if not found
+        let connection_params = get_connection_params(
+            db_address.to_string(),
+            InstanceRequirement::Master,
+            None,
+            Some(ProxyRequirement::Forbidden),
+        )?;
+        let filenodes = MysqlFilenodes::open(connection_params, DEFAULT_INSERT_CHUNK_SIZE)
+            .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let changesets = SqliteChangesets::in_memory()
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 

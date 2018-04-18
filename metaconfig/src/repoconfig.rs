@@ -47,9 +47,16 @@ pub enum RepoType {
     /// RocksDb database
     BlobRocks(PathBuf),
     /// Blob repository with path pointing to the directory where a server socket is going to be.
-    /// Blobs are stored in Manifold, first parameter is Manifold bucket, second is prefix.
-    /// Bookmarks and heads are stored in memory
-    TestBlobManifold(String, String, PathBuf),
+    TestBlobManifold {
+        /// Bucket of the backing Manifold blobstore to connect to
+        manifold_bucket: String,
+        /// Prefix to be prepended to all the keys. In prod it should be ""
+        prefix: String,
+        /// Path is used to connect Mononoke server to hgcli
+        path: PathBuf,
+        /// db_address is a string that identifies the sql db to connect to.
+        db_address: String,
+    },
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database, and a log-normal delay is applied to access to simulate a remote store
     /// like Manifold. Params are path, mean microseconds, stddev microseconds.
@@ -171,6 +178,7 @@ struct RawRepoConfig {
     manifold_bucket: Option<String>,
     manifold_prefix: Option<String>,
     repoid: i32,
+    db_address: Option<String>,
     scuba_table: Option<String>,
     delay_mean: Option<u64>,
     delay_stddev: Option<u64>,
@@ -198,11 +206,13 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
                 let manifold_bucket = this.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
                     "manifold bucket must be specified".into(),
                 ))?;
-                RepoType::TestBlobManifold(
+                let db_address = this.db_address.expect("xdb tier was not specified");
+                RepoType::TestBlobManifold{
                     manifold_bucket,
-                    this.manifold_prefix.unwrap_or("".into()),
-                    this.path,
-                )
+                    prefix: this.manifold_prefix.unwrap_or("".into()),
+                    path: this.path,
+                    db_address,
+                }
             }
             TestBlobDelayRocks => RepoType::TestBlobDelayRocks(
                 this.path,

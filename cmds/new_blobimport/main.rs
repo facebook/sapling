@@ -185,6 +185,7 @@ fn main() {
             <INPUT>                    'input revlog repo'
             --repo_id <repo_id>        'ID of the newly imported repo'
             --manifold-bucket [BUCKET] 'manifold bucket'
+            --db-address [address]     'address of a db. Used only for manifold blobstore'
             [OUTPUT]                   'Blobstore output'
         "#,
         )
@@ -273,6 +274,9 @@ fn main() {
                 "new_blobimport_test",
                 &core.remote(),
                 repo_id,
+                matches
+                    .value_of("db-address")
+                    .expect("--db-address is not specified"),
             ).expect("failed to create manifold blobrepo")
         }
         bad => panic!("unexpected blobstore type: {}", bad),
