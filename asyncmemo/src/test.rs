@@ -9,7 +9,7 @@ use futures::executor::{spawn, Notify, NotifyHandle, Spawn};
 use futures_ext::FutureExt;
 use std::cell::RefCell;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread::{self, sleep};
 use std::time::Duration;
 use std::usize;
@@ -755,6 +755,142 @@ fn slow_poll_err() {
             assert!(spawn(fut).wait_future().is_err());
         }
     });
+
+    t1.join().unwrap();
+    t2.join().unwrap();
+}
+
+struct SignalBasedUpperrer {
+    res: Result<String, String>,
+    signal: Arc<AtomicBool>,
+}
+
+impl SignalBasedUpperrer {
+    fn new(res: Result<String, String>, signal: Arc<AtomicBool>) -> Self {
+        SignalBasedUpperrer { res, signal }
+    }
+}
+
+impl Filler for SignalBasedUpperrer {
+    type Key = String;
+    type Value = futures_ext::BoxFuture<String, String>;
+
+    fn fill(&self, _cache: &Asyncmemo<Self>, key: &Self::Key) -> Self::Value {
+        if !key.starts_with("skipwaiting") {
+            loop {
+                if self.signal.load(Ordering::SeqCst) {
+                    break;
+                }
+            }
+        }
+        return self.res.clone().into_future().boxify();
+    }
+}
+
+#[test]
+fn slow_poll_invalidate() {
+    let signal = Arc::new(AtomicBool::new(false));
+    let c = Asyncmemo::new_unbounded(SignalBasedUpperrer::new(Ok("RES".into()), signal.clone()));
+
+    let t1 = thread::spawn({
+        let c = c.clone();
+        move || {
+            let fut = c.get("res");
+            assert!(spawn(fut).wait_future().is_ok());
+        }
+    });
+
+    let t2 = thread::spawn({
+        let c = c.clone();
+        move || {
+            let fut = c.get("res");
+            assert!(spawn(fut).wait_future().is_ok());
+        }
+    });
+
+    // Make sure one future is in Polling, another future Polls.
+    thread::sleep(Duration::from_millis(50));
+    c.invalidate("res");
+    assert_eq!(c.len(), 0);
+    // Allow futures to proceed
+    signal.store(true, Ordering::SeqCst);
+
+    t1.join().unwrap();
+    t2.join().unwrap();
+}
+
+#[test]
+fn slow_clear_invalidate() {
+    let signal = Arc::new(AtomicBool::new(false));
+    let c = Asyncmemo::new_unbounded(SignalBasedUpperrer::new(Ok("RES".into()), signal.clone()));
+
+    let t1 = thread::spawn({
+        let c = c.clone();
+        move || {
+            let fut = c.get("res");
+            assert!(spawn(fut).wait_future().is_ok());
+        }
+    });
+
+    let t2 = thread::spawn({
+        let c = c.clone();
+        move || {
+            let fut = c.get("res");
+            assert!(spawn(fut).wait_future().is_ok());
+        }
+    });
+
+    // Make sure one future is in Polling, another future Polls.
+    thread::sleep(Duration::from_millis(50));
+    c.clear();
+    assert_eq!(c.len(), 0);
+    // Allow futures to proceed
+    signal.store(true, Ordering::SeqCst);
+
+    t1.join().unwrap();
+    t2.join().unwrap();
+}
+
+#[test]
+fn polling_hash_trimming() {
+    // Spawn two futures for the same key - one will be in Polling state.
+    // Spawn one more future that skips waiting on the signal and evicts the previous futures
+    // from the cache. Make sure nothing is deadlocked.
+    let signal = Arc::new(AtomicBool::new(false));
+
+    let longskipkey = String::from("skipwaiting");
+
+    let c = Asyncmemo::with_limits(
+        SignalBasedUpperrer::new(Ok("RES".into()), signal.clone()),
+        1,
+        // Make space exactly for one future and it's result
+        longskipkey.get_weight() + String::from("RES").get_weight(),
+    );
+
+    let t1 = thread::spawn({
+        let c = c.clone();
+        move || {
+            let fut = c.get("res");
+            assert!(spawn(fut).wait_future().is_ok());
+        }
+    });
+
+    let t2 = thread::spawn({
+        let c = c.clone();
+        move || {
+            let fut = c.get("res");
+            assert!(spawn(fut).wait_future().is_ok());
+        }
+    });
+
+    // Make sure one future is in Polling state, another future polls.
+    thread::sleep(Duration::from_millis(50));
+    // Evict "res" future
+    let fut = c.get(longskipkey);
+    assert!(spawn(fut).wait_future().is_ok());
+    assert_eq!(c.len(), 1);
+    // Allow futures to proceed
+    signal.store(true, Ordering::SeqCst);
 
     t1.join().unwrap();
     t2.join().unwrap();

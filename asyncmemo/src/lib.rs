@@ -42,14 +42,12 @@ extern crate tokio_timer;
 
 use std::fmt::{self, Debug};
 use std::hash::Hash;
-use std::mem;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::usize;
 
 use futures::{Async, Future, Poll};
 use futures::future::{IntoFuture, Shared, SharedError, SharedItem};
-use futures::task::{self, Task};
 
 #[cfg(test)]
 mod test;
@@ -211,7 +209,6 @@ fn wrap_filler_future<Fut: Future + 'static>(
 
 enum Slot<Item, Error> {
     Waiting(SharedAsyncmemoFuture<Item, Error>), // waiting for entry to become available
-    Polling(Vec<Task>), // Future currently being polled, with waiting Tasks
     Complete(Item),     // got value
 }
 
@@ -219,17 +216,7 @@ impl<Item, Error> Debug for Slot<Item, Error> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             &Slot::Waiting(..) => fmt.write_str("Waiting"),
-            &Slot::Polling(..) => fmt.write_str("Polling"),
             &Slot::Complete(..) => fmt.write_str("Complete"),
-        }
-    }
-}
-
-impl<Item, Error> Slot<Item, Error> {
-    fn is_waiting(&self) -> bool {
-        match self {
-            &Slot::Waiting(..) => true,
-            _ => false,
         }
     }
 }
@@ -240,7 +227,7 @@ where
 {
     fn get_weight(&self) -> usize {
         match self {
-            &Slot::Polling(_) | &Slot::Waiting(..) => 0,
+            &Slot::Waiting(..) => 0,
             &Slot::Complete(ref v) => v.get_weight(),
         }
     }
@@ -278,12 +265,6 @@ where
     }
 }
 
-fn wake_tasks(tasks: Vec<Task>) {
-    for t in tasks {
-        t.notify();
-    }
-}
-
 impl<F> MemoFuture<F>
 where
     F: Filler,
@@ -299,34 +280,16 @@ where
                 // straightforward cache hit
                 &mut Slot::Complete(ref val) => return Some(Slot::Complete(val.clone())),
 
-                // Someone else is polling on the future, so just add ourselves to the set of
-                // interested tasks and return.
-                &mut Slot::Polling(ref mut wait) => {
-                    wait.push(task::current());
-                    return Some(Slot::Polling(Vec::new()));
-                }
-
-                // Last possibility: we're waiting and there's a future
-                entry => {
-                    let waiting = mem::replace(entry, Slot::Polling(Vec::new()));
-                    assert!(waiting.is_waiting());
-                    return Some(waiting);
-                }
+                // In-flight future
+                &mut Slot::Waiting(ref fut) => return Some(Slot::Waiting(fut.clone())),
             }
         }
-
-        // There's no existing entry, but we're about to make one so put in a placeholder
-        // XXX use entry API?
-        let _ = hash.insert(self.key.clone(), Slot::Polling(Vec::new()));
         None
     }
 
     fn slot_remove(&self) {
         let mut hash = self.cache.inner.hash.lock().expect("locked poisoned");
-
-        if let Some(Slot::Polling(tasks)) = hash.remove(&self.key) {
-            wake_tasks(tasks);
-        }
+        let _ = hash.remove(&self.key);
     }
 
     fn slot_insert(&self, slot: FillerSlot<F>) {
@@ -348,7 +311,6 @@ where
                 // trim cache if that made it oversized
                 hash.trim();
             }
-            Ok(Some(Slot::Polling(tasks))) => wake_tasks(tasks),
             Ok(Some(_)) | Ok(None) => (), // nothing (interesting) there
         }
     }
@@ -401,7 +363,6 @@ where
         match self.slot_present() {
             None => (), // nothing there for this key
             Some(Slot::Complete(v)) => return Ok(Async::Ready(v)),
-            Some(Slot::Polling(_)) => return Ok(Async::NotReady),
             Some(Slot::Waiting(fut)) => {
                 if let SharedAsyncmemoFuturePoll::PollResult(poll) = self.poll_real_future(fut) {
                     return poll;
