@@ -56,6 +56,10 @@ impl ChangesetContent {
     }
 
     pub fn from_revlogcs(revlogcs: RevlogChangeset) -> Self {
+        // TODO(luk): T28348119 Following usages of into_mononoke are valid, because we use
+        // RevlogChangeset to parse content of Blobstore and immediately create a BlobChangeset out
+        // of it. In future this logic will go away, because we will either retrieve
+        // BonsaiChangesets or we will fetch RevlogChangeset just to pass it to client untouched.
         let parents = {
             let (p1, p2) = revlogcs.parents.get_nodes();
             let p1 = p1.map(|p| p.into_mononoke());
@@ -154,6 +158,11 @@ impl BlobChangeset {
             let fut = blobstore.get(key).and_then(move |got| match got {
                 None => Ok(None),
                 Some(bytes) => {
+                    // TODO(luk): T28348119 Following usages of into_mercurial are valid, because
+                    // we use RevlogChangeset to decode content of Blobstore and immediately create
+                    // a BlobChangeset out of it. In future this logic will go away, because we
+                    // will either retrieve BonsaiChangesets or we will fetch RevlogChangeset just
+                    // to pass it to client untouched.
                     let RawCSBlob { parents, blob } = RawCSBlob::deserialize(&bytes)?;
                     let (p1, p2) = parents.get_nodes();
                     let p1 = p1.map(|p| p.into_mercurial());
