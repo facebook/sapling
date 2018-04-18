@@ -12,15 +12,12 @@ import os
 import shlex
 import shutil
 import subprocess
-import sys
 import tempfile
-import time
 from types import TracebackType
 from typing import cast, Dict, Optional, List
 from eden.cli import util
 
 import eden.thrift
-from fb303.ttypes import fb_status
 from .find_executables import FindExe
 
 

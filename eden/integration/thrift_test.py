@@ -10,7 +10,6 @@
 import binascii
 import hashlib
 import os
-import time
 
 from facebook.eden.ttypes import EdenError, ScmFileStatus, SHA1Result
 from facebook.eden.ttypes import TimeSpec

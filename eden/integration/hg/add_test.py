@@ -10,7 +10,6 @@
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 import os
 import subprocess
-import unittest
 
 
 @hg_test

@@ -8,7 +8,6 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
-import re
 
 
 @hg_test

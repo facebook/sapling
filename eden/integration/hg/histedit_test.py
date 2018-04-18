@@ -8,7 +8,6 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
-from textwrap import dedent
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from .lib.histedit_command import HisteditCommand
@@ -59,7 +58,7 @@ class HisteditTest(EdenHgTestCase):
         # Make sure the working copy is in the expected state.
         self.assert_status_empty(op='histedit')
         self.assertSetEqual(
-            set(['.eden', '.hg', 'first', 'second']),
+            {'.eden', '.hg', 'first', 'second'},
             set(os.listdir(self.repo.get_canonical_root()))
         )
 
@@ -70,7 +69,7 @@ class HisteditTest(EdenHgTestCase):
         )
         self.assert_status_empty()
         self.assertSetEqual(
-            set(['.eden', '.hg', 'first', 'second', 'third']),
+            {'.eden', '.hg', 'first', 'second', 'third'},
             set(os.listdir(self.repo.get_canonical_root()))
         )
 
@@ -93,7 +92,7 @@ class HisteditTest(EdenHgTestCase):
         )
         self.assert_status_empty()
         self.assertSetEqual(
-            set(['.eden', '.hg', 'first', 'second', 'third']),
+            {'.eden', '.hg', 'first', 'second', 'third'},
             set(os.listdir(self.repo.get_canonical_root()))
         )
 
@@ -115,7 +114,7 @@ class HisteditTest(EdenHgTestCase):
         )
         self.assert_status_empty()
         self.assertSetEqual(
-            set(['.eden', '.hg', 'first', 'third']),
+            {'.eden', '.hg', 'first', 'third'},
             set(os.listdir(self.repo.get_canonical_root()))
         )
 
@@ -135,7 +134,7 @@ class HisteditTest(EdenHgTestCase):
         self.assertEqual(['first commit'], self.repo.log('{desc}'))
         self.assert_status_empty()
         self.assertSetEqual(
-            set(['.eden', '.hg', 'first', 'second', 'third']),
+            {'.eden', '.hg', 'first', 'second', 'third'},
             set(os.listdir(self.repo.get_canonical_root()))
         )
 

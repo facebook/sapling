@@ -10,10 +10,8 @@
 import configparser
 import datetime
 import json
-import logging
 import os
 import subprocess
-import sys
 import tempfile
 import textwrap
 import typing
@@ -38,8 +36,10 @@ class HgRepository(repobase.Repository):
         self.hg_environment = os.environ.copy()
         # Drop any environment variables starting with 'HG'
         # to ensure the user's environment does not affect the tests
-        self.hg_environment = dict((k, v) for k, v in os.environ.items()
-                                   if not k.startswith('HG'))
+        self.hg_environment = {
+            k: v
+            for k, v in os.environ.items() if not k.startswith('HG')
+        }
         self.hg_environment['HGPLAIN'] = '1'
         # Set HGRCPATH to make sure we aren't affected by the local system's
         # mercurial settings from /etc/mercurial/
@@ -167,12 +167,14 @@ class HgRepository(repobase.Repository):
         else:
             self.hg('remove', *paths)
 
-    def commit(self,
-               message: str,
-               author_name: Optional[str]=None,
-               author_email: Optional[str]=None,
-               date: Optional[datetime.datetime]=None,
-               amend: bool=False) -> str:
+    def commit(
+        self,
+        message: str,
+        author_name: Optional[str] = None,
+        author_email: Optional[str] = None,
+        date: Optional[datetime.datetime] = None,
+        amend: bool = False
+    ) -> str:
         '''
         - message Commit message to use.
         - author_name Author name to use: defaults to self.author_name.
@@ -192,17 +194,20 @@ class HgRepository(repobase.Repository):
 
         user_config = 'ui.username={} <{}>'.format(author_name, author_email)
 
-        with tempfile.NamedTemporaryFile(prefix='eden_commit_msg.',
-                                         mode='w',
-                                         encoding='utf-8') as msgf:
+        with tempfile.NamedTemporaryFile(
+            prefix='eden_commit_msg.', mode='w', encoding='utf-8'
+        ) as msgf:
             msgf.write(message)
             msgf.flush()
 
             args = [
                 'commit',
-                '--config', user_config,
-                '--date', date_str,
-                '--logfile', msgf.name,
+                '--config',
+                user_config,
+                '--date',
+                date_str,
+                '--logfile',
+                msgf.name,
             ]
             if amend:
                 args.append('--amend')

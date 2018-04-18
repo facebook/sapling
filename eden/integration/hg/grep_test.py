@@ -7,7 +7,6 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import unittest
 from textwrap import dedent
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test

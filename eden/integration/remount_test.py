@@ -9,7 +9,7 @@
 
 import json
 import os
-from .lib import edenclient, gitrepo, hgrepo, testcase
+from .lib import edenclient, testcase
 
 
 @testcase.eden_repo_test

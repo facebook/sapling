@@ -13,7 +13,6 @@ import os
 import subprocess
 import stat
 import tempfile
-import unittest
 
 from eden.cli import util
 from .lib import edenclient, testcase

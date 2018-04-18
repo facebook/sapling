@@ -509,6 +509,7 @@ def _replicate_hg_test(test_class, *variants):
 
     for name in variants:
         config_fn = ALL_CONFIGS[name]
+
         class HgTestVariant(test_class):
             config_variant_name = name
             apply_hg_config_variant = config_fn

@@ -11,6 +11,7 @@ from .lib import testcase
 import json
 import os
 
+
 @testcase.eden_repo_test
 class InfoTest(testcase.EdenRepoTest):
     def populate_repo(self) -> None:

@@ -10,8 +10,6 @@
 import os
 from typing import List
 
-from .lib import gitrepo
-from .lib import hgrepo
 from .lib import testcase
 
 

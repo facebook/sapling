@@ -23,18 +23,20 @@ class BasicTest(testcase.EdenRepoTest):
     about the sample git repo and that it is correct are all
     things that are appropriate to include in this test case.
     '''
+
     def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('adir/file', 'foo!\n')
-        self.repo.write_file('bdir/test.sh', '#!/bin/bash\necho test\n',
-                             mode=0o755)
+        self.repo.write_file(
+            'bdir/test.sh', '#!/bin/bash\necho test\n', mode=0o755
+        )
         self.repo.write_file('bdir/noexec.sh', '#!/bin/bash\necho test\n')
         self.repo.symlink('slink', 'hello')
         self.repo.commit('Initial commit.')
 
-        self.expected_mount_entries = set([
+        self.expected_mount_entries = {
             '.eden', 'adir', 'bdir', 'hello', 'slink'
-        ])
+        }
 
     def test_version(self) -> None:
         output = self.eden.run_cmd('version', cwd=self.mount)
@@ -197,9 +199,12 @@ class BasicTest(testcase.EdenRepoTest):
         cmd = [os.path.join(self.mount, 'bdir/noexec.sh')]
         with self.assertRaises(OSError) as context:
             out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        self.assertEqual(errno.EACCES, context.exception.errno,
-                         msg='attempting to run noexec.sh should fail with '
-                         'EACCES')
+        self.assertEqual(
+            errno.EACCES,
+            context.exception.errno,
+            msg='attempting to run noexec.sh should fail with '
+            'EACCES'
+        )
 
     def test_unmount(self) -> None:
         entries = set(os.listdir(self.mount))
