@@ -1418,7 +1418,7 @@ def debuglocks(ui, repo, **opts):
             l = malformed
 
         if l == malformed:
-            ui.write("%-14s malformed\n" % (name + ":"))
+            ui.write(_("%-14s malformed\n") % (name + ":"))
             return 1
         elif l:
             l.release()
