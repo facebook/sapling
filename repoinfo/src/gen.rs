@@ -9,6 +9,7 @@
 //! A generation number for a changeset is 1 + max(parents, 0). This number is computed for each
 //! changeset and memoized for efficiency.
 
+use std::mem;
 use std::sync::Arc;
 use std::usize;
 
@@ -18,7 +19,7 @@ use futures::future::{Either, Future};
 
 use futures_ext::FutureExt;
 
-use asyncmemo::{Asyncmemo, Filler};
+use asyncmemo::{Asyncmemo, Filler, Weight};
 use blobrepo::BlobRepo;
 use mercurial_types::{DChangesetId, DNodeHash, D_NULL_HASH};
 
@@ -30,6 +31,12 @@ use nodehashkey::Key;
 /// generation number plus 1; if there are no parents then it's 1.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, HeapSizeOf)]
 pub struct Generation(u64);
+
+impl Weight for Generation {
+    fn get_weight(&self) -> usize {
+        mem::size_of::<Self>()
+    }
+}
 
 /// Cache of generation numbers
 ///

@@ -17,14 +17,37 @@ pub trait Weight {
     fn get_weight(&self) -> usize;
 }
 
-/// Just implement Weight in terms of memory use for any type which implements `HeapSizeOf`.
-/// XXX Not sure how well this matches the O(1) requirement...
-impl<T> Weight for T
-where
-    T: HeapSizeOf,
-{
+impl Weight for String {
     #[inline]
     fn get_weight(&self) -> usize {
         mem::size_of::<Self>() + self.heap_size_of_children()
+    }
+}
+
+impl Weight for u32 {
+    #[inline]
+    fn get_weight(&self) -> usize {
+        mem::size_of::<Self>()
+    }
+}
+
+impl Weight for u64 {
+    #[inline]
+    fn get_weight(&self) -> usize {
+        mem::size_of::<Self>()
+    }
+}
+
+impl Weight for i32 {
+    #[inline]
+    fn get_weight(&self) -> usize {
+        mem::size_of::<Self>()
+    }
+}
+
+impl Weight for i64 {
+    #[inline]
+    fn get_weight(&self) -> usize {
+        mem::size_of::<Self>()
     }
 }

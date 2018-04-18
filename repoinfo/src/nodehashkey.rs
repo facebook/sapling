@@ -7,6 +7,7 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use asyncmemo::Weight;
 use heapsize::HeapSizeOf;
 use mercurial_types::DNodeHash;
 
@@ -38,6 +39,12 @@ impl<R> Hash for Key<R> {
 impl<R> HeapSizeOf for Key<R> {
     fn heap_size_of_children(&self) -> usize {
         self.0.heap_size_of_children() + self.1.heap_size_of_children()
+    }
+}
+
+impl<R> Weight for Key<R> {
+    fn get_weight(&self) -> usize {
+        self.heap_size_of_children()
     }
 }
 
