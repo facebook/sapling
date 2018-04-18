@@ -1,9 +1,8 @@
-#[macro_use]
-extern crate criterion;
+extern crate minibench;
 extern crate radixbuf;
 extern crate rand;
 
-use criterion::Criterion;
+use minibench::{bench, elapsed};
 use rand::{ChaChaRng, Rng};
 
 use radixbuf::key::{FixedKey, KeyId};
@@ -27,26 +26,23 @@ fn batch_insert_radix_buf(key_buf: &Vec<u8>, count: usize) -> Vec<u32> {
     radix_buf
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("index insertion", |b| {
+fn main() {
+    bench("index insertion", || {
         let key_buf = gen_buf(20 * N);
-        b.iter(|| {
+        elapsed(|| {
             batch_insert_radix_buf(&key_buf, N);
         })
     });
 
-    c.bench_function("index lookup", |b| {
+    bench("index lookup", || {
         let key_buf = gen_buf(20 * N);
         let radix_buf = batch_insert_radix_buf(&key_buf, N);
-        b.iter(move || {
+        elapsed(move || {
             for i in 0..N {
                 let key_id = (i as u32 * 20).into();
                 let key = FixedKey::read(&key_buf, key_id).unwrap();
                 radix_lookup(&radix_buf, 0, &key, FixedKey::read, &key_buf).expect("lookup");
             }
-        });
+        })
     });
 }
-
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
