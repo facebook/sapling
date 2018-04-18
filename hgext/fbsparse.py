@@ -77,6 +77,12 @@ def reposetup(ui, repo):
     if not util.safehasattr(repo, 'dirstate'):
         return
 
+    # The sparse extension should never be enabled in Eden repositories;
+    # Eden automatically only fetches the parts of the repository that are
+    # actually required.
+    if 'eden' in repo.requirements:
+        return
+
     _wraprepo(ui, repo)
 
 def replacefilecache(cls, propname, replacement):
