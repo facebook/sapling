@@ -47,28 +47,31 @@ Sync Commit
 
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
-  $ hg p4fastimport --debug -P $P4ROOT hg-p4-import-narrow
+  $ hg p4seqimport --debug -P $P4ROOT hg-p4-import-narrow
   loading changelist numbers.
   2 changelists to import.
-  loading list of files.
-  2 files to import.
-  reading filelog * (glob)
-  reading filelog * (glob)
-  updating the branch cache (?)
-  importing repository.
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
-  writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: Main/a (glob)
-  writing filelog: b3a729dd094e, p1 000000000000, linkrev 0, 44 bytes, src: *, path: Main/largefile (glob)
+  importing CL1
+  committing files:
+  Main/a
+  file: //depot/Main/a, src: * (glob)
+  Main/largefile
+  file: //depot/Main/largefile, src: * (glob)
+  committing manifest
+  committing changelog
   largefile: Main/largefile, oid: 37a7b43abd9e105a0e6b22088b140735a02f288767fe7a6f4f436cb46b064ca9
-  writing filelog: 9f14f96519e1, p1 b3a729dd094e, linkrev 1, 88 bytes, src: *, path: Main/largefile (glob)
+  writing lfs metadata to sqlite
+  importing CL2
+  file: //depot/Main/a, src: rcs
+  file: //depot/Main/largefile, src: rcs
+  committing files:
+  Main/a
+  Main/largefile
+  committing manifest
+  committing changelog
   largefile: Main/largefile, oid: b0d5c1968efbabbff9d94160f284cd7b52686ca3c46cfffdd351de07384fce9c
-  changelist 1: writing manifest. node: 9bbc5d2af2f4 p1: 000000000000 p2: 000000000000 linkrev: 0
-  changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: c14352bb3510 p1: 9bbc5d2af2f4 p2: 000000000000 linkrev: 1
-  changelist 2: writing changelog: second
   writing lfs metadata to sqlite
   updating the branch cache
-  2 revision(s), 2 file(s) imported.
+
 
   $ cd $p4wd
   $ mkdir Outside
