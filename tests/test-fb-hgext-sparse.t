@@ -136,7 +136,7 @@ Adding an excluded file should fail
 
   $ hg add hide3
   abort: cannot add 'hide3' - it is outside the sparse checkout
-  (include file with `hg sparse --include <pattern>` or use `hg add -s <file>` to include file directory while adding)
+  (include file with `hg sparse include <pattern>` or use `hg add -s <file>` to include file directory while adding)
   [255]
 
 Verify deleting sparseness while a file has changes fails
@@ -313,7 +313,7 @@ Test that add -s adds dirs to sparse profile
   $ touch add/bar
   $ hg add add/foo
   abort: cannot add 'add/foo' - it is outside the sparse checkout
-  (include file with `hg sparse --include <pattern>` or use `hg add -s <file>` to include file directory while adding)
+  (include file with `hg sparse include <pattern>` or use `hg add -s <file>` to include file directory while adding)
   [255]
   $ hg add -s add/foo
   $ hg st

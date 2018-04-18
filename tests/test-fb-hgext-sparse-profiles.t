@@ -27,11 +27,11 @@ test sparse
   > EOF
   $ hg ci -Aqm 'initial'
 
-  $ hg sparse --include '*.sparse'
+  $ hg sparse include '*.sparse'
 
 Verify enabling a single profile works
 
-  $ hg sparse --enable-profile webpage.sparse
+  $ hg sparse enableprofile webpage.sparse
   $ ls
   backend.sparse
   index.html
@@ -39,7 +39,7 @@ Verify enabling a single profile works
 
 Verify enabling two profiles works
 
-  $ hg sparse --enable-profile backend.sparse
+  $ hg sparse enableprofile backend.sparse
   $ ls
   backend.sparse
   data.py
@@ -48,7 +48,7 @@ Verify enabling two profiles works
 
 Verify disabling a profile works
 
-  $ hg sparse --disable-profile webpage.sparse
+  $ hg sparse disableprofile webpage.sparse
   $ ls
   backend.sparse
   data.py
@@ -65,7 +65,7 @@ Verify error checking includes filename and line numbers
   > EOF
   $ hg add broken.sparse
   $ hg ci -m 'Adding a broken file'
-  $ hg sparse --enable-profile broken.sparse
+  $ hg sparse enableprofile broken.sparse
   warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
   abort: A sparse file cannot have includes after excludes in broken.sparse:5
   [255]
@@ -245,11 +245,11 @@ Test checking out a commit that does not contain the sparse profile. The
 warning message can be suppressed by setting missingwarning = false in
 [sparse] section of your config:
 
-  $ hg sparse --reset
+  $ hg sparse reset
   $ hg rm *.sparse
   $ hg commit -m "delete profiles"
   $ hg up -q ".^"
-  $ hg sparse --enable-profile backend.sparse
+  $ hg sparse enableprofile backend.sparse
   $ ls
   index.html
   readme.txt
@@ -260,14 +260,14 @@ warning message can be suppressed by setting missingwarning = false in
   data.py
   index.html
   readme.txt
-  $ hg sparse --disable-profile backend.sparse | grep warning
+  $ hg sparse disableprofile backend.sparse | grep warning
   warning: sparse profile 'backend.sparse' not found in rev 42b23bc43905 - ignoring it
   [1]
   $ cat >> .hg/hgrc <<EOF
   > [sparse]
   > missingwarning = false
   > EOF
-  $ hg sparse --enable-profile backend.sparse
+  $ hg sparse enableprofile backend.sparse
 
   $ cd ..
 
@@ -290,7 +290,7 @@ Test file permissions changing across a sparse profile change
   > EOF
   $ hg commit -qm 'update profile'
   $ hg up -q 0
-  $ hg sparse --enable-profile .hgsparse
+  $ hg sparse enableprofile .hgsparse
   $ hg up -q 2
   $ ls -l b
   -rwxr-xr-x* b (glob)
@@ -349,7 +349,7 @@ Test profile discovery
   > EOF
   $ hg add -q profiles hidden interesting
   $ hg commit -qm 'created profiles and some data'
-  $ hg sparse --enable-profile profiles/foo/spam
+  $ hg sparse enableprofile profiles/foo/spam
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs - Base profile including the profiles directory
@@ -418,7 +418,7 @@ The current working directory plays no role in listing profiles:
 Profiles are loaded from the manifest, so excluding a profile directory should
 not hamper listing.
 
-  $ hg sparse --exclude profiles/bar
+  $ hg sparse exclude profiles/bar
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory

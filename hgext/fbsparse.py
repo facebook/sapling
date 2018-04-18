@@ -362,7 +362,7 @@ def _setupdirstate(ui):
 
     # Prevent adding files that are outside the sparse checkout
     editfuncs = ['normal', 'add', 'normallookup', 'copy', 'remove', 'merge']
-    hint = _('include file with `hg sparse --include <pattern>` or use ' +
+    hint = _('include file with `hg sparse include <pattern>` or use ' +
              '`hg add -s <file>` to include file directory while adding')
     for func in editfuncs:
         def _wrapper(orig, self, *args):
@@ -437,7 +437,7 @@ def _setupsubcommands(ui):
                     rst[0] = 'hg %s\n' % name
 
             if not self.ui.quiet:
-                subcmdsrst = subcmd.subcmdsrst(self.ui.verbose)
+                subcmdsrst = subcmd.subcmdsrst(self.ui.verbose, self.ui.quiet)
                 # in verbose mode there is an extra line we want to keep at the
                 # end.
                 pos = len(rst) if self.ui.verbose else -1
@@ -1035,8 +1035,11 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
 
     return results
 
+_deprecate = lambda o, l=_('(DEPRECATED)'): (
+    o[:3] + (' '.join([o[4], l]),) + o[4:]) if l not in o[4] else l
 @command('^sparse', [
-    ('f', 'force', False, _('allow changing rules even with pending changes')),
+    ('f', 'force', False, _('allow changing rules even with pending changes'
+                            '(DEPRECATED)')),
     ('I', 'include', False, _('include files in the sparse checkout '
                               '(DEPRECATED)')),
     ('X', 'exclude', False, _('exclude files in the sparse checkout '
@@ -1055,8 +1058,8 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
     ('', 'reset', False, _('makes the repo full again (DEPRECATED)')),
     ('', 'cwd-list', False, _('list the full contents of the current '
                               'directory (DEPRECATED)')),
-    ] + commands.templateopts,
-    _('[--OPTION] SUBCOMMAND ...'))
+    ] + [_deprecate(o) for o in commands.templateopts],
+    _('[OPTION] SUBCOMMAND ...'))
 def sparse(ui, repo, *pats, **opts):
     """make the current checkout sparse, or edit the existing checkout
 
@@ -1078,7 +1081,7 @@ def sparse(ui, repo, *pats, **opts):
     such profiles. Changes to shared profiles are not applied until they have
     been committed.
 
-    See :hg:`help sparse <subcommand>` to get additional information.
+    See :hg:`help sparse [subcommand]` to get additional information.
 
     .. container:: verbose
 
@@ -1241,7 +1244,7 @@ class subcmdfunc(registrar._funcregistrarbase):
     def __init__(self, table=None):
         if table is None:
             # List commands in registration order
-            table = collections.OrderedDict()
+            table = util.sortdict()
         super(subcmdfunc, self).__init__(table)
 
     def _doregister(self, func, name, options=(), synopsis=None, help=None):
@@ -1264,17 +1267,22 @@ class subcmdfunc(registrar._funcregistrarbase):
 
         return func
 
-    def subcmdsrst(self, verbose=False):
+    def subcmdsrst(self, verbose=False, quiet=False):
         """Produce a table of subcommands"""
         def cmdhelp():
             for name, entry in self._table.items():
                 doc = pycompat.getdoc(entry[0])
                 doc, __, rest = doc.strip().partition('\n')
                 if verbose and rest.strip():
+                    if len(entry) > 2:  # synopsis
+                        name = '{} {}'.format(name, entry[2])
                     doc = '{} - {}'.format(doc, rest.strip())
                 yield (name, doc)
         rst = ['\n%s:\n\n' % _('subcommands')]
         rst += minirst.maketable(list(cmdhelp()), 1)
+        if not quiet:
+            rst.append(_('\n(Use hg help sparse [subcommand] '
+                         'to show complete subcommand help)\n'))
         return ''.join(rst)
 
     def parseargs(self, parser, args, options, *posargs, **kwargs):
@@ -1298,10 +1306,10 @@ class subcmdfunc(registrar._funcregistrarbase):
             return self._table[name][0](ui, repo, *(moreargs + args), **opts)
         return callsubcmd
 
-subcmdtable = collections.OrderedDict()
+subcmdtable = util.sortdict()
 subcmd = subcmdfunc(subcmdtable)
 
-@subcmd('list')
+@subcmd('list', commands.templateopts, '[OPTION]')
 def _listprofiles(cmd, ui, repo, *pats, **opts):
     """List available sparse profiles
 
@@ -1342,7 +1350,7 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
     ('r', 'rev', '', _('explain the profile(s) against the specified revision'),
      _('REV')),
     ] + commands.templateopts,
-    '[OPTION]... [PROFILE]...')
+    _('[OPTION]... [PROFILE]...'))
 def _explainprofile(cmd, ui, repo, *profiles, **opts):
     """Show information on individual profiles
 
@@ -1458,7 +1466,7 @@ def _explainprofile(cmd, ui, repo, *profiles, **opts):
 
     return exitcode
 
-@subcmd('files')
+@subcmd('files', commands.templateopts, _('[OPTION]...'))
 def _listfilessubcmd(cmd, ui, repo, *profiles, **opts):
     """List all files included in a profiles
 
@@ -1499,16 +1507,26 @@ force a rule change even with pending changes (the changes on disk will
 be preserved).
 '''
 
-@subcmd('reset', help=_('makes the repo full again'))
-@subcmd('disableprofile', help=_('disables the specified profile'))
-@subcmd('enableprofile', help=_('enables the specified profile'))
-@subcmd('delete', help=_('delete an include/exclude rule' + _details))
-@subcmd('exclude', help=_('exclude files in the sparse checkout' + _details))
-@subcmd('include', help=_('include files in the sparse checkout' + _details))
+_common_config_opts = [
+    ('f', 'force', False, _('allow changing rules even with pending changes')),
+]
+@subcmd('reset', _common_config_opts, help=_('makes the repo full again'))
+@subcmd('disableprofile', _common_config_opts, '[PROFILE]...',
+        help=_('disables the specified profile'))
+@subcmd('enableprofile', _common_config_opts, '[PROFILE]...',
+        help=_('enables the specified profile'))
+@subcmd('delete', _common_config_opts, '[RULE]...',
+        help=_('delete an include/exclude rule' + _details))
+@subcmd('exclude', _common_config_opts, '[RULE]...',
+        help=_('exclude files in the sparse checkout' + _details))
+@subcmd('include', _common_config_opts, '[RULE]...',
+        help=_('include files in the sparse checkout' + _details))
 def _configsubcmd(cmd, ui, repo, *pats, **opts):
+    if cmd == 'reset' and pats:
+        raise error.CommandError('sparse ' + cmd, 'invalid arguments')
     _config(ui, repo, pats, opts, force=opts.get('force'), **{cmd: True})
 
-@subcmd('importrules')
+@subcmd('importrules', _common_config_opts, _('[OPTION]... [FILE]...'))
 def _importsubcmd(cmd, ui, repo, *pats, **opts):
     """Directly import sparse profile rules
 
@@ -1521,7 +1539,7 @@ def _importsubcmd(cmd, ui, repo, *pats, **opts):
     """
     _import(ui, repo, pats, opts, force=opts.get('force'))
 
-@subcmd('clear')
+@subcmd('clear', _common_config_opts, _('[OPTION]...'))
 def _clearsubcmd(cmd, ui, repo, *pats, **opts):
     """Clear local sparse rules
 
@@ -1531,7 +1549,7 @@ def _clearsubcmd(cmd, ui, repo, *pats, **opts):
     """
     _clear(ui, repo, pats, force=opts.get('force'))
 
-@subcmd('refresh')
+@subcmd('refresh', _common_config_opts, _('[OPTION]...'))
 def _refreshsubcmd(cmd, ui, repo, *pats, **opts):
     """Refreshes the files on disk based on the sparse rules
 
