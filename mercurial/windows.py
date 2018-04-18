@@ -13,6 +13,7 @@ import os
 import re
 import stat
 import sys
+import tempfile
 
 from .i18n import _
 from . import (
@@ -484,7 +485,26 @@ def readpipe(pipe):
 def bindunixsocket(sock, path):
     raise NotImplementedError('unsupported platform')
 
+def _cleanuptemplockfiles(dirname, basename):
+    for susp in os.listdir(dirname):
+        if not susp.startswith(basename) or not susp.endswith('.tmplock'):
+            continue
+        try:
+            os.unlink(os.path.join(dirname, susp))
+        except WindowsError:
+            pass
+
 def makelock(info, pathname):
-    ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
-    os.write(ld, info)
-    os.close(ld)
+    dirname = os.path.dirname(pathname)
+    basename = os.path.basename(pathname)
+    _cleanuptemplockfiles(dirname, basename)
+    fd, tname = tempfile.mkstemp(suffix='.tmplock',
+                                 prefix='%s.%i.' % (basename, os.getpid()),
+                                 dir=dirname)
+    os.write(fd, info)
+    os.close(fd)
+    try:
+        os.rename(tname, pathname)
+    except WindowsError:
+        os.unlink(tname)
+        raise
