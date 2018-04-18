@@ -347,31 +347,33 @@ void UnixSocket::send(Message&& message, SendCallback* callback) noexcept {
   }
 }
 
+// Iterates over an IOBuf and calls fn with a series of non-empty iovecs.
+template <typename Fn>
+static void enumerateIovecs(const IOBuf& buffer, Fn&& fn) {
+  const IOBuf* buf = &buffer;
+  do {
+    if (buf->length() > 0) {
+      fn(iovec{const_cast<uint8_t*>(buf->data()), buf->length()});
+    }
+    buf = buf->next();
+  } while (buf != &buffer);
+}
+
 UnixSocket::SendQueueEntry::SendQueueEntry(
     Message&& msg,
     SendCallback* cb,
-    size_t dataElements)
-    : message(std::move(msg)), callback(cb), iovCount(1 + dataElements) {
+    size_t iovecCount)
+    : message(std::move(msg)), callback(cb), iovCount(iovecCount) {
   iov[0].iov_base = header.data();
   iov[0].iov_len = header.size();
 
-  IOBuf* buf = &message.data;
   size_t bodySize = 0;
   size_t idx = 1;
-  for (size_t n = 0; n < dataElements; ++n) {
-    // Skip over 0-length elements in the IOBuf chain.
-    if (buf->length() > 0) {
-      iov[idx].iov_base = const_cast<uint8_t*>(buf->data());
-      iov[idx].iov_len = buf->length();
-      bodySize += buf->length();
-      ++idx;
-    }
+  enumerateIovecs(message.data, [&](const auto& iovec) {
+    iov[idx++] = iovec;
+    bodySize += iovec.iov_len;
+  });
 
-    buf = buf->next();
-    if (buf == &message.data) {
-      break;
-    }
-  }
   DCHECK_EQ(iovCount, idx);
 
   serializeHeader(header, bodySize, message.files.size());
@@ -394,26 +396,16 @@ UnixSocket::SendQueuePtr UnixSocket::createSendQueueEntry(
     SendCallback* callback) {
   // Compute how many iovec entries we will have.  We have 1 for the message
   // header plus one for each non-empty element in the IOBuf chain.
-  size_t dataElements = 0;
-  IOBuf* buf = &message.data;
-  while (true) {
-    if (buf->length() > 0) {
-      ++dataElements;
-    }
-    buf = buf->next();
-    if (buf == &message.data) {
-      break;
-    }
-  }
+  size_t iovecElements = 1;
+  enumerateIovecs(message.data, [&](const auto&) { ++iovecElements; });
 
-  auto iovecElements = 1 + dataElements;
   size_t allocationSize =
       sizeof(SendQueueEntry) + sizeof(struct iovec[iovecElements]);
   SendQueuePtr entry;
   void* data = operator new(allocationSize);
   try {
-    entry.reset(new (data)
-                    SendQueueEntry(std::move(message), callback, dataElements));
+    entry.reset(
+        new (data) SendQueueEntry(std::move(message), callback, iovecElements));
   } catch (const std::exception& ex) {
 #if __cpp_sized_deallocation
     operator delete(data, allocationSize);
@@ -490,18 +482,13 @@ void UnixSocket::trySend() {
 
 bool UnixSocket::trySendMessage(SendQueueEntry* entry) {
   uint8_t dataByte = 0;
-  struct msghdr msg;
-  msg.msg_name = nullptr;
-  msg.msg_namelen = 0;
-  msg.msg_flags = 0;
+  struct msghdr msg = {};
 
   vector<uint8_t> controlBuf;
   size_t filesToSend = 0;
   if (entry->iovIndex < entry->iovCount) {
     msg.msg_iov = entry->iov + entry->iovIndex;
     msg.msg_iovlen = entry->iovCount - entry->iovIndex;
-    msg.msg_control = nullptr;
-    msg.msg_controllen = 0;
 
     // Include FDs if we have them
     bool isFirstSend = entry->iovIndex == 0 &&

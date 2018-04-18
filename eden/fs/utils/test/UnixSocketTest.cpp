@@ -129,6 +129,10 @@ TEST(UnixSocket, sendDataAndFiles) {
   testSendDataAndFiles(0, 0);
   testSendDataAndFiles(4 * 1024 * 1024, 0);
   testSendDataAndFiles(4 * 1024 * 1024, 800);
+  testSendDataAndFiles(20 * 1024 * 1024, 0);
+  testSendDataAndFiles(20 * 1024 * 1024, 800);
+  testSendDataAndFiles(32 * 1024 * 1024, 0);
+  testSendDataAndFiles(32 * 1024 * 1024, 800);
 }
 
 TEST(FutureUnixSocket, receiveQueue) {

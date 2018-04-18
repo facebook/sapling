@@ -301,7 +301,7 @@ class UnixSocket : public folly::DelayedDestruction,
     SendQueueEntry(
         Message&& message,
         SendCallback* callback,
-        size_t dataElements);
+        size_t iovecCount);
 
     Message message;
     SendCallback* callback{nullptr};
@@ -326,7 +326,9 @@ class UnixSocket : public folly::DelayedDestruction,
   serializeHeader(HeaderBuffer& buffer, uint32_t dataSize, uint32_t numFiles);
   static Header deserializeHeader(const HeaderBuffer& buffer);
 
-  SendQueuePtr createSendQueueEntry(Message&& message, SendCallback* callback);
+  static SendQueuePtr createSendQueueEntry(
+      Message&& message,
+      SendCallback* callback);
 
   void trySend();
   bool trySendMessage(SendQueueEntry* entry);

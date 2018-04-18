@@ -183,6 +183,9 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
     return socket_.send(TakeoverData::serializeError(protocolVersion_, ew));
   }
 
+  XLOG(INFO) << "Sending takeover data to new process: "
+             << msg.data.computeChainDataLength() << " bytes";
+
   return socket_.send(std::move(msg))
       .then([promise = std::move(data.takeoverComplete)](
                 folly::Try<Unit>&& sendResult) mutable {
