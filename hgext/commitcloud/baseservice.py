@@ -7,11 +7,11 @@ from __future__ import absolute_import
 
 # Standard Library
 import abc
-import base64
 import collections
+import json
 
 # Mercurial
-from mercurial import obsolete
+from mercurial import node
 
 abstractmethod = abc.abstractmethod
 References = collections.namedtuple('References',
@@ -35,17 +35,34 @@ class BaseService(object):
             n.encode('utf-8'): v.encode('ascii')
             for n, v in data['bookmarks'].items()
         }
-        decobsmarkers = b''.join([
-            base64.b64decode(m)
-            for m in data['new_obsmarkers']
-        ])
-        newobsmarkers = obsolete._fm1readmarkers(
-            decobsmarkers, 0, len(decobsmarkers))
+        newobsmarkers = [
+            (
+                node.bin(m['pred']),
+                tuple(node.bin(s) for s in m['succs']),
+                m['flags'],
+                tuple((k.encode('utf-8'), v.encode('utf-8'))
+                      for k, v in json.loads(m['meta'])),
+                (float(m['date']), m['tz']),
+                tuple(node.bin(p) for p in m['predparents']),
+            )
+            for m in data['new_obsmarkers_data']
+        ]
+
         return References(version, newheads, newbookmarks, newobsmarkers)
 
     def _encodedmarkers(self, obsmarkers):
-        return [base64.b64encode(m) for m in obsolete.encodemarkers(
-            obsmarkers, False, obsolete._fm1version)]
+        # pred, succs, flags, metadata, date, parents = marker
+        return [
+            {
+                "pred": node.hex(m[0]),
+                "succs": [node.hex(s) for s in m[1]],
+                "predparents": [node.hex(p) for p in m[5]] if m[5] else [],
+                "flags": m[2],
+                "date": repr(m[4][0]),
+                "tz": m[4][1],
+                "meta": json.dumps(m[3]),
+            }
+            for m in obsmarkers]
 
     @abstractmethod
     def updatereferences(self, version, oldheads, newheads, oldbookmarks,

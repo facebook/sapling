@@ -48,8 +48,8 @@ class LocalService(baseservice.BaseService):
 
     def _filteredobsmarkers(self, data, baseversion):
         versions = range(baseversion, data['version'])
-        data['new_obsmarkers'] = sum((data['obsmarkers'][str(n + 1)]
-                                      for n in versions), [])
+        data['new_obsmarkers_data'] = sum((data['obsmarkers'][str(n + 1)]
+                                           for n in versions), [])
         del data['obsmarkers']
         return data
 

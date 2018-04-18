@@ -211,7 +211,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
             'new_heads': newheads,
             'removed_bookmarks': oldbookmarks,
             'updated_bookmarks': newbookmarks,
-            'new_obsmarkers': self._encodedmarkers(newobsmarkers),
+            'new_obsmarkers_data': self._encodedmarkers(newobsmarkers),
         }
 
         start = time.time()
