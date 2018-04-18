@@ -1062,6 +1062,8 @@ impl OpenOptions {
                 }
                 (vec![MemRadix::default()], MemRoot { radix_offset })
             } else {
+                // Verify the header byte.
+                check_type(&mmap, 0, TYPE_HEAD)?;
                 // Load root entry from the end of file.
                 (vec![], MemRoot::read_from_end(&mmap, len, &checksum)?)
             }
@@ -1698,6 +1700,8 @@ impl Debug for Index {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use std::fs::File;
+    use std::io::prelude::*;
     use tempdir::TempDir;
 
     fn open_opts() -> OpenOptions {
@@ -2094,6 +2098,77 @@ mod tests {
 
         // Empty linked list
         assert_eq!(index.get(&[1]).unwrap().values(&index).count(), 0);
+    }
+
+    #[test]
+    fn test_checksum_bitflip() {
+        let dir = TempDir::new("index").expect("tempdir");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
+
+        // Debug build is much slower than release build. Limit the key length to 1-byte.
+        #[cfg(debug_assertions)]
+        let keys = vec![vec![0x13], vec![0x17], vec![]];
+
+        // Release build can afford 2-byte key test.
+        #[cfg(not(debug_assertions))]
+        let keys = vec![
+            vec![0x12, 0x34],
+            vec![0x12, 0x78],
+            vec![0x34, 0x56],
+            vec![0x34],
+            vec![0x78],
+            vec![0x78, 0x9a],
+        ];
+
+        for (i, key) in keys.iter().enumerate() {
+            index.insert(key, i as u64).expect("insert");
+            index.insert(key, (i as u64) << 50).expect("insert");
+        }
+        index.flush().expect("flush");
+
+        // Read the raw bytes of the index content
+        let bytes = {
+            let mut f = File::open(dir.path().join("a")).expect("open");
+            let mut buf = vec![];
+            f.read_to_end(&mut buf).expect("read");
+            buf
+        };
+
+        fn is_corrupted(index: &Index, key: &[u8]) -> bool {
+            let link = index.get(&key);
+            match link {
+                Err(_) => true,
+                Ok(link) => link.values(&index).any(|v| v.is_err()),
+            }
+        }
+
+        // Every bit change should trigger errors when reading all contents
+        for i in 0..(bytes.len() * 8) {
+            let mut bytes = bytes.clone();
+            bytes[i / 8] ^= 1u8 << (i % 8);
+            let mut f = File::create(dir.path().join("a")).expect("create");
+            f.write_all(&bytes).expect("write");
+
+            let index = open_opts().open(dir.path().join("a"));
+            let detected = match index {
+                Err(_) => true,
+                Ok(index) => {
+                    #[cfg(debug_assertions)]
+                    let range = 0;
+                    #[cfg(not(debug_assertions))]
+                    let range = 0x10000;
+
+                    (0..range).any(|key_int| {
+                        let key = [(key_int >> 8) as u8, (key_int & 0xff) as u8];
+                        is_corrupted(&index, &key)
+                    }) || (0..0x100).any(|key_int| {
+                        let key = [key_int as u8];
+                        is_corrupted(&index, &key)
+                    }) || is_corrupted(&index, &[])
+                }
+            };
+            assert!(detected, "bit flip at {} is not detected", i);
+        }
     }
 
     quickcheck! {
