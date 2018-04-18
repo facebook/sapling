@@ -630,7 +630,13 @@ Excludes:
 - All changesets under @/master/tip that aren't related to your changesets.
 - Your local heads that are older than 2 weeks.'''
     if ui.configbool('smartlog', 'useancestorcache'):
-        with ancestorcache(repo.vfs.join('cache/smartlog-ancestor.db')):
+        cachevfs = repo.cachevfs
+
+        # The cache directory must exist before we pass the db path to
+        # ancestorcache.
+        if not cachevfs.exists(''):
+            cachevfs.makedir()
+        with ancestorcache(cachevfs.join('smartlog-ancestor.db')):
             return _smartlog(ui, repo, *pats, **opts)
     else:
         return _smartlog(ui, repo, *pats, **opts)
