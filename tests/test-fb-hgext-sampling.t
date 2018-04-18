@@ -30,7 +30,7 @@ Create an extension that logs the call to commit
   >     extensions.wrapfunction(localrepo.localrepository, 'commit', _commit)
   >     @ui.atexit
   >     def handler():
-  >       ui._blockedtimes['atexit_blocked'] += 7
+  >       ui._measuredtimes['atexit_measured'] += 7
   >       ui.warn("atexit handler executed\n")
   > EOF
 
@@ -40,10 +40,10 @@ We whitelist only the 'commit' key, only the events with that key will be
 logged
   $ cat >> $HGRCPATH << EOF
   > [ui]
-  > logblockedtimes=True
+  > logmeasuredtimes=True
   > [sampling]
   > key.commit=commit_table
-  > key.uiblocked=uiblocked
+  > key.measuredtimes=measuredtimes
   > [extensions]
   > sampling=
   > EOF
@@ -69,13 +69,13 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   ...     if parsedrecord['category'] == 'commit_table':
   ...         print(' '.join([parsedrecord["data"]["msg"], parsedrecord["category"]]))
   ...         assert len(parsedrecord["data"]) == 4
-  ...     elif parsedrecord['category'] == 'uiblocked':
-  ...         print('atexit_blocked: ', parsedrecord['data']['atexit_blocked'])
-  atexit_blocked:  7
+  ...     elif parsedrecord['category'] == 'measuredtimes':
+  ...         print('atexit_measured: ', parsedrecord['data']['atexit_measured'])
+  atexit_measured:  7
   match filter commit_table
   message string commit_table
-  atexit_blocked:  7
-  atexit_blocked:  7
+  atexit_measured:  7
+  atexit_measured:  7
   match filter commit_table
   message string commit_table
-  atexit_blocked:  7
+  atexit_measured:  7

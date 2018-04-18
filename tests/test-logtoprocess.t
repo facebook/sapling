@@ -76,10 +76,10 @@ Confirm that logging blocked time catches stdio properly:
   > logtoprocess=
   > pager=
   > [logtoprocess]
-  > uiblocked=echo "\$EVENT stdio \$OPT_STDIO_BLOCKED ms command \$OPT_COMMAND_DURATION ms"
+  > measuredtimes=echo "\$EVENT stdio \$OPT_STDIO_BLOCKED ms command \$OPT_COMMAND_DURATION ms"
   > [ui]
-  > logblockedtimes=True
+  > logmeasuredtimes=True
   > EOF
 
   $ hg log | cat
-  uiblocked stdio [0-9]+.[0-9]* ms command [0-9]+.[0-9]* ms (re)
+  measuredtimes stdio [0-9]+.[0-9]* ms command [0-9]+.[0-9]* ms (re)

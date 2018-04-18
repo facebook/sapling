@@ -218,8 +218,8 @@ class ui(object):
         self.callhooks = True
         # Insecure server connections requested.
         self.insecureconnections = False
-        # Blocked time
-        self.logblockedtimes = False
+        # Measured times
+        self.logmeasuredtimes = False
         # color mode: see mercurial/color.py for possible value
         self._colormode = None
         self._terminfoparams = {}
@@ -248,7 +248,7 @@ class ui(object):
             self.fixconfig()
 
             self.httppasswordmgrdb = src.httppasswordmgrdb
-            self._blockedtimes = src._blockedtimes
+            self._measuredtimes = src._measuredtimes
         else:
             self.fout = util.stdout
             self.ferr = util.stderr
@@ -261,7 +261,7 @@ class ui(object):
             self.environ = encoding.environ
 
             self.httppasswordmgrdb = httppasswordmgrdbproxy()
-            self._blockedtimes = collections.defaultdict(int)
+            self._measuredtimes = collections.defaultdict(int)
 
         allowed = self.configlist('experimental', 'exportableenviron')
         if '*' in allowed:
@@ -330,7 +330,7 @@ class ui(object):
         try:
             yield
         finally:
-            self._blockedtimes[key + '_blocked'] += \
+            self._measuredtimes[key + '_blocked'] += \
                 (util.timer() - starttime) * 1000
 
     def formatter(self, topic, opts):
@@ -438,7 +438,7 @@ class ui(object):
             self._reportuntrusted = self.debugflag or self.configbool("ui",
                 "report_untrusted")
             self.tracebackflag = self.configbool('ui', 'traceback')
-            self.logblockedtimes = self.configbool('ui', 'logblockedtimes')
+            self.logmeasuredtimes = self.configbool('ui', 'logmeasuredtimes')
 
         if section in (None, 'trusted'):
             # update trust information
@@ -921,7 +921,7 @@ class ui(object):
         except IOError as err:
             raise error.StdioError(err)
         finally:
-            self._blockedtimes['stdio_blocked'] += \
+            self._measuredtimes['stdio_blocked'] += \
                 (util.timer() - starttime) * 1000
             if suspended:
                 progress._suspendfinish()
@@ -972,7 +972,7 @@ class ui(object):
                     if err.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
                         raise error.StdioError(err)
         finally:
-            self._blockedtimes['stdio_blocked'] += \
+            self._measuredtimes['stdio_blocked'] += \
                 (util.timer() - starttime) * 1000
 
     def _isatty(self, fh):

@@ -671,7 +671,7 @@ coreconfigitem('logtoprocess', 'command',
 coreconfigitem('logtoprocess', 'develwarn',
     default=None,
 )
-coreconfigitem('logtoprocess', 'uiblocked',
+coreconfigitem('logtoprocess', 'measuredtimes',
     default=None,
 )
 coreconfigitem('merge', 'checkunknown',
@@ -1022,7 +1022,7 @@ coreconfigitem('ui', 'interface',
 coreconfigitem('ui', 'interface.chunkselector',
     default=None,
 )
-coreconfigitem('ui', 'logblockedtimes',
+coreconfigitem('ui', 'logmeasuredtimes',
     default=False,
 )
 coreconfigitem('ui', 'logtemplate',

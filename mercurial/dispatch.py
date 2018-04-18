@@ -181,14 +181,14 @@ def dispatch(req):
     starttime = util.timer()
     ret = None
     try:
-        def blockedtimeslogger():
-            req.ui.log('uiblocked', 'ui blocked ms',
-                       **pycompat.strkwargs(req.ui._blockedtimes))
+        def measuredtimeslogger():
+            req.ui.log('measuredtimes', 'measured times',
+                       **pycompat.strkwargs(req.ui._measuredtimes))
 
-        if req.ui.logblockedtimes:
+        if req.ui.logmeasuredtimes:
             # by registering this exit handler here, we guarantee that it runs
             # after other exithandlers, like the killpager one
-            req.ui.atexit(blockedtimeslogger)
+            req.ui.atexit(measuredtimeslogger)
 
         ret = _runcatch(req)
     except error.ProgrammingError as inst:
@@ -216,7 +216,7 @@ def dispatch(req):
         req.ui.flush()
         req.ui.log("commandfinish", "%s exited %d after %0.2f seconds\n",
                    msg, ret or 0, duration)
-        req.ui._blockedtimes['command_duration'] = duration * 1000
+        req.ui._measuredtimes['command_duration'] = duration * 1000
 
         try:
             req._runexithandlers()

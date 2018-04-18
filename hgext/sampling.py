@@ -85,7 +85,7 @@ def uisetup(ui):
 
             # special case: remove less interesting blocked fields starting
             # with "unknown_" or "alias_".
-            if event == 'uiblocked':
+            if event == 'measuredtimes':
                 opts = {k: v
                         for k, v in opts.items()
                         if (not k.startswith('alias_') and not
