@@ -1188,6 +1188,9 @@ def sparse(ui, repo, *pats, **opts):
       It is not set by default.
 
     """
+    if not util.safehasattr(repo, 'sparsematch'):
+        raise error.Abort(_('this is not a sparse repository'))
+
     cmd = subcmd.parse(pats, opts)
     if cmd is not None:
         return cmd(ui, repo)
