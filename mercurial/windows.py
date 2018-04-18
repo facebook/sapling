@@ -483,3 +483,8 @@ def readpipe(pipe):
 
 def bindunixsocket(sock, path):
     raise NotImplementedError('unsupported platform')
+
+def makelock(info, pathname):
+    ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
+    os.write(ld, info)
+    os.close(ld)

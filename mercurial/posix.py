@@ -70,6 +70,19 @@ def split(p):
         return nh, ht[1]
     return ht[0] + '/', ht[1]
 
+def makelock(info, pathname):
+    try:
+        return os.symlink(info, pathname)
+    except OSError as why:
+        if why.errno == errno.EEXIST:
+            raise
+    except AttributeError: # no symlink in os
+        pass
+
+    ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
+    os.write(ld, info)
+    os.close(ld)
+
 def openhardlinks():
     '''return true if it is safe to hold open file handles to hardlinks'''
     return True

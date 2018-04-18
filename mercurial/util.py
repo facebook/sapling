@@ -126,6 +126,7 @@ listdir = osutil.listdir
 localpath = platform.localpath
 lookupreg = platform.lookupreg
 makedir = platform.makedir
+makelock = platform.makelock
 nlinks = platform.nlinks
 normpath = platform.normpath
 normcase = platform.normcase
@@ -1386,19 +1387,6 @@ else:
 
 if safehasattr(time, "perf_counter"):
     timer = time.perf_counter
-
-def makelock(info, pathname):
-    try:
-        return os.symlink(info, pathname)
-    except OSError as why:
-        if why.errno == errno.EEXIST:
-            raise
-    except AttributeError: # no symlink in os
-        pass
-
-    ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
-    os.write(ld, info)
-    os.close(ld)
 
 def readlock(pathname):
     try:
