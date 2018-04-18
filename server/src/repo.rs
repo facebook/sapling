@@ -358,9 +358,10 @@ impl RepoClient {
             .map(|nodes| stream::iter_ok(nodes.into_iter().rev()))
             .flatten_stream();
 
+        let buffer_size = 100; // TODO(stash): make it configurable
         let changelogentries = nodestosend
             .map(|node| (node.into_mercurial(), node))
-            .and_then({
+            .map({
                 let hgrepo = hgrepo.clone();
                 move |(mercurial_node, node)| {
                     hgrepo
@@ -368,6 +369,7 @@ impl RepoClient {
                         .map(move |cs| (mercurial_node, cs))
                 }
             })
+            .buffered(buffer_size)
             .and_then(|(mercurial_node, cs)| {
                 let parents = {
                     let (p1, p2) = cs.parents().get_nodes();
