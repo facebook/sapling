@@ -303,6 +303,8 @@ Test profile discovery
   $ cat > .hg/hgrc <<EOF
   > [extensions]
   > sparse=$TESTDIR/../hgext/fbsparse.py
+  > [hint]
+  > ack-hint-ack = True
   > EOF
   $ mkdir -p profiles/foo profiles/bar interesting
   $ touch profiles/README.txt
@@ -482,6 +484,7 @@ We can look at invididual profiles:
   ===============
   
     profiles
+  hint[sparse-explain-verbose]: use 'hg sparse explain --verbose profiles/bar/eggs' to include the total file size for a give profile
 
   $ hg sparse explain profiles/bar/ham -T json
   [
@@ -494,6 +497,7 @@ We can look at invididual profiles:
     "stats": {"filecount": 9, "filecountpercentage": 90.0}
    }
   ]
+  hint[sparse-explain-verbose]: use 'hg sparse explain --verbose profiles/bar/ham' to include the total file size for a give profile
   $ hg sparse explain profiles/bar/ham -T json --verbose
   [
    {
@@ -505,6 +509,10 @@ We can look at invididual profiles:
     "stats": {"filecount": 9, "filecountpercentage": 90.0, "totalsize": 4145880}
    }
   ]
+  $ cat >> .hg/hgrc << EOF  # enough hints now
+  > [hint]
+  > ack-sparse-explain-verbose = true
+  > EOF
   $ hg sparse explain profiles/bar/eggs
   profiles/bar/eggs
   

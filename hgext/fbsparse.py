@@ -23,6 +23,7 @@ from mercurial import (
     error,
     help,
     hg,
+    hintutil,
     minirst,
     pathutil,
     registrar,
@@ -1035,6 +1036,14 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
 
     return results
 
+# hints
+hint = registrar.hint()
+
+@hint('sparse-explain-verbose')
+def hintexplainverbose(*profiles):
+    return _("use 'hg sparse explain --verbose {}' to include the total file "
+             "size for a give profile".format(' '.join(profiles)))
+
 _deprecate = lambda o, l=_('(DEPRECATED)'): (
     o[:3] + (' '.join([o[4], l]),) + o[4:]) if l not in o[4] else l
 @command('^sparse', [
@@ -1463,6 +1472,9 @@ def _explainprofile(cmd, ui, repo, *profiles, **opts):
                 if not (0 < textwidth <= termwidth):
                     textwidth = termwidth
                 fm.plain(minirst.format(''.join(lines), textwidth))
+
+    if not ui.verbose:
+        hintutil.trigger('sparse-explain-verbose', *profiles)
 
     return exitcode
 
