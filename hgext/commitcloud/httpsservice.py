@@ -200,6 +200,13 @@ class HttpsCommitCloudService(baseservice.BaseService):
                          newbookmarks, newobsmarkers):
         highlightdebug(self.ui, "sending 'update_references' request\n")
 
+        # remove duplicates, must preserve order in the newheads list
+        newheadsset = set(newheads)
+        commonset = set([item for item in oldheads if item in newheadsset])
+
+        newheads = filter(lambda h: h not in commonset, newheads)
+        oldheads = filter(lambda h: h not in commonset, oldheads)
+
         # send request
         path = '/commit_cloud/update_references?' + self.auth_params
 
