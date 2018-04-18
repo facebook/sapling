@@ -5,8 +5,8 @@ version = "0.1.0"
 [dependencies]
 
 [dev-dependencies]
-quickcheck = "*"
-criterion = "*"
+minibench = { path = "../minibench" }
+quickcheck = "0.6"
 
 [[bench]]
 name = "bench"
