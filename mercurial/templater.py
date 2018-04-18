@@ -1041,8 +1041,7 @@ def obsfateverb(context, mapping, args):
 
 @templatefunc('capitalize(word)')
 def capitalize(context, mapping, args):
-    '''Capitalize the first letter of each word in a string
-    '''
+    """Capitalize the first letter"""
     if len(args) != 1:
         raise error.ParseError(_("capitalize expects one argument"))
     word = evalfuncarg(context, mapping, args[0])
