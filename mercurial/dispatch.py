@@ -690,6 +690,7 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     hook.hook(lui, repo, "pre-%s" % cmd, True, args=" ".join(fullargs),
               pats=cmdpats, opts=cmdoptions)
     try:
+        ui.log('jobid', jobid=encoding.environ.get('HG_JOB_ID', 'unknown'))
         ret = _runcommand(ui, options, cmd, d)
         # run post-hook, passing command result
         hook.hook(lui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
