@@ -26,7 +26,7 @@ use uuid::Uuid;
 
 use blobstore::Blobstore;
 use bookmarks::{self, Bookmarks};
-use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
+use changesets::{ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
 use dbbookmarks::SqliteDbBookmarks;
 use delayblob::DelayBlob;
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
@@ -203,9 +203,9 @@ impl BlobRepo {
             None,
             Some(ProxyRequirement::Forbidden),
         )?;
-        let filenodes = MysqlFilenodes::open(connection_params, DEFAULT_INSERT_CHUNK_SIZE)
+        let filenodes = MysqlFilenodes::open(connection_params.clone(), DEFAULT_INSERT_CHUNK_SIZE)
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
-        let changesets = SqliteChangesets::in_memory()
+        let changesets = MysqlChangesets::open(connection_params)
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
         Ok(Self::new(
