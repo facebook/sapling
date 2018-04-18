@@ -10,7 +10,7 @@ use std::iter::FromIterator;
 
 use futures::future::Future;
 use futures::stream::{empty, iter_ok, once, Stream};
-use futures_ext::{BoxStream, StreamExt};
+use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use super::{Entry, MPath, MPathElement, Manifest};
 use super::manifest::{Content, EmptyManifest, Type};
@@ -172,6 +172,8 @@ where
     FM: Manifest,
 {
     diff_manifests(path, to, from)
+        .map(|diff| iter_ok(diff))
+        .flatten_stream()
         .map(recursive_changed_entry_stream)
         .flatten()
         .boxify()
@@ -208,10 +210,12 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
                             MPath::join_element_opt(path.as_ref(), entry_path.as_ref()),
                             &to_manifest,
                             &from_manifest,
-                        ).map(recursive_changed_entry_stream)
+                        ).map(|diff| {
+                            select_all(diff.into_iter().map(recursive_changed_entry_stream))
+                        })
+                            .flatten_stream()
                     })
-                    .flatten_stream()
-                    .flatten();
+                    .flatten_stream();
 
                 substream.boxify()
             } else {
@@ -246,10 +250,17 @@ pub fn recursive_entry_stream(
                 .map(|content| {
                     get_tree_content(content)
                         .list()
-                        .map(move |entry| recursive_entry_stream(path.clone(), entry))
+                        .collect()
+                        .map(move |entries| {
+                            select_all(
+                                entries
+                                    .into_iter()
+                                    .map(move |entry| recursive_entry_stream(path.clone(), entry)),
+                            )
+                        })
+                        .flatten_stream()
                 })
                 .flatten_stream()
-                .flatten()
                 .boxify()
         }
     };
@@ -259,7 +270,11 @@ pub fn recursive_entry_stream(
 
 /// Difference between manifests, non-recursive.
 /// It fetches manifest content, sorts it and compares.
-fn diff_manifests<TM, FM>(path: Option<MPath>, to: &TM, from: &FM) -> BoxStream<ChangedEntry, Error>
+fn diff_manifests<TM, FM>(
+    path: Option<MPath>,
+    to: &TM,
+    from: &FM,
+) -> BoxFuture<Vec<ChangedEntry>, Error>
 where
     TM: Manifest,
     FM: Manifest,
@@ -269,8 +284,7 @@ where
 
     to_vec_future
         .join(from_vec_future)
-        .map(|(to, from)| iter_ok(diff_sorted_vecs(path, to, from).into_iter()))
-        .flatten_stream()
+        .map(|(to, from)| diff_sorted_vecs(path, to, from))
         .boxify()
 }
 
