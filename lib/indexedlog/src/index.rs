@@ -450,9 +450,10 @@ impl LeafOffset {
         Ok((key_content, link_offset))
     }
 
-    /// Create a new in-memory leaf entry.
+    /// Create a new in-memory leaf entry. The key entry cannot be null.
     #[inline]
     fn create(index: &mut Index, link_offset: LinkOffset, key_offset: Offset) -> LeafOffset {
+        debug_assert!(!key_offset.is_null());
         let len = index.dirty_leafs.len();
         index.dirty_leafs.push(MemLeaf {
             link_offset,
@@ -474,6 +475,20 @@ impl LeafOffset {
         } else {
             let entry = MemLeaf::read_from(&index.buf, u64::from(self), &index.checksum)?;
             Ok(Self::create(index, link_offset, entry.key_offset))
+        }
+    }
+
+    /// Mark the entry as unused. An unused entry won't be written to disk.
+    /// No effect on an on-disk entry.
+    fn mark_unused(self, index: &mut Index) {
+        if self.is_dirty() {
+            let key_offset = index.dirty_leafs[self.dirty_index()].key_offset;
+            match key_offset.to_typed(&index.buf, &index.checksum) {
+                Ok(TypedOffset::Key(x)) => x.mark_unused(index),
+                Ok(TypedOffset::ExtKey(x)) => x.mark_unused(index),
+                _ => (),
+            };
+            index.dirty_leafs[self.dirty_index()].mark_unused()
         }
     }
 }
@@ -565,14 +580,23 @@ impl KeyOffset {
         }
     }
 
-    /// Create a new in-memory key entry.
+    /// Create a new in-memory key entry. The key cannot be empty.
     #[inline]
     fn create(index: &mut Index, key: &[u8]) -> KeyOffset {
+        debug_assert!(key.len() > 0);
         let len = index.dirty_keys.len();
         index.dirty_keys.push(MemKey {
             key: Vec::from(key).into_boxed_slice(),
         });
         KeyOffset::from_dirty_index(len)
+    }
+
+    /// Mark the entry as unused. An unused entry won't be written to disk.
+    /// No effect on an on-disk entry.
+    fn mark_unused(self, index: &mut Index) {
+        if self.is_dirty() {
+            index.dirty_keys[self.dirty_index()].mark_unused();
+        }
     }
 }
 
@@ -595,12 +619,21 @@ impl ExtKeyOffset {
         Ok(&index.key_buf.as_ref().as_ref()[start as usize..(start + len) as usize])
     }
 
-    /// Create a new in-memory external key entry.
+    /// Create a new in-memory external key entry. The key cannot be empty.
     #[inline]
     fn create(index: &mut Index, start: u64, len: u64) -> ExtKeyOffset {
+        debug_assert!(len > 0);
         let i = index.dirty_ext_keys.len();
         index.dirty_ext_keys.push(MemExtKey { start, len });
         ExtKeyOffset::from_dirty_index(i)
+    }
+
+    /// Mark the entry as unused. An unused entry won't be written to disk.
+    /// No effect on an on-disk entry.
+    fn mark_unused(self, index: &mut Index) {
+        if self.is_dirty() {
+            index.dirty_ext_keys[self.dirty_index()].mark_unused();
+        }
     }
 }
 
@@ -693,6 +726,16 @@ impl MemLeaf {
         writer.write_vlq(self.link_offset.to_disk(offset_map))?;
         Ok(())
     }
+
+    /// Mark the entry as unused. An unused entry won't be written to disk.
+    fn mark_unused(&mut self) {
+        self.key_offset = Offset::default();
+    }
+
+    #[inline]
+    fn is_unused(&self) -> bool {
+        self.key_offset.is_null()
+    }
 }
 
 impl MemLink {
@@ -739,6 +782,16 @@ impl MemKey {
         writer.write_all(&self.key)?;
         Ok(())
     }
+
+    /// Mark the entry as unused. An unused entry won't be written to disk.
+    fn mark_unused(&mut self) {
+        self.key = Vec::new().into_boxed_slice();
+    }
+
+    #[inline]
+    fn is_unused(&self) -> bool {
+        self.key.len() == 0
+    }
 }
 
 impl MemExtKey {
@@ -760,6 +813,16 @@ impl MemExtKey {
         writer.write_all(&[TYPE_EXT_KEY])?;
         writer.write_vlq(self.start)?;
         writer.write_vlq(self.len)
+    }
+
+    /// Mark the entry as unused. An unused entry won't be written to disk.
+    fn mark_unused(&mut self) {
+        self.len = 0;
+    }
+
+    #[inline]
+    fn is_unused(&self) -> bool {
+        self.len == 0
     }
 }
 
@@ -825,7 +888,7 @@ impl OffsetMap {
     #[inline]
     fn get(&self, offset: Offset) -> u64 {
         if offset.is_dirty() {
-            match offset.to_typed(&b""[..], &None).unwrap() {
+            let result = match offset.to_typed(&b""[..], &None).unwrap() {
                 // Radix entries are pushed in the reversed order. So the index needs to be
                 // reversed.
                 TypedOffset::Radix(x) => self.radix_map[self.radix_len - 1 - x.dirty_index()],
@@ -833,7 +896,10 @@ impl OffsetMap {
                 TypedOffset::Link(x) => self.link_map[x.dirty_index()],
                 TypedOffset::Key(x) => self.key_map[x.dirty_index()],
                 TypedOffset::ExtKey(x) => self.ext_key_map[x.dirty_index()],
-            }
+            };
+            // result == 0 means an entry marked "unused" is actually used. It's a logic error.
+            debug_assert!(result > 0);
+            result
         } else {
             // No need to translate.
             offset.0
@@ -1086,14 +1152,24 @@ impl Index {
             }
 
             for entry in self.dirty_keys.iter() {
-                let offset = buf.len() as u64 + len;
-                entry.write_to(&mut buf, &offset_map)?;
+                let offset = if entry.is_unused() {
+                    0
+                } else {
+                    let offset = buf.len() as u64 + len;
+                    entry.write_to(&mut buf, &offset_map)?;
+                    offset
+                };
                 offset_map.key_map.push(offset);
             }
 
             for entry in self.dirty_ext_keys.iter() {
-                let offset = buf.len() as u64 + len;
-                entry.write_to(&mut buf, &offset_map)?;
+                let offset = if entry.is_unused() {
+                    0
+                } else {
+                    let offset = buf.len() as u64 + len;
+                    entry.write_to(&mut buf, &offset_map)?;
+                    offset
+                };
                 offset_map.ext_key_map.push(offset);
             }
 
@@ -1104,8 +1180,13 @@ impl Index {
             }
 
             for entry in self.dirty_leafs.iter() {
-                let offset = buf.len() as u64 + len;
-                entry.write_to(&mut buf, &offset_map)?;
+                let offset = if entry.is_unused() {
+                    0
+                } else {
+                    let offset = buf.len() as u64 + len;
+                    entry.write_to(&mut buf, &offset_map)?;
+                    offset
+                };
                 offset_map.leaf_map.push(offset);
             }
 
@@ -1387,6 +1468,7 @@ impl Index {
             } else {
                 // Example 3. old_key is a prefix of new_key. A leaf is still needed.
                 // The new leaf will be created by the next "if" block.
+                old_leaf_offset.mark_unused(self);
                 radix.link_offset = old_link_offset;
             }
 
@@ -1468,11 +1550,15 @@ impl Debug for MemRadix {
 
 impl Debug for MemLeaf {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "Leaf {{ key: {:?}, link: {:?} }}",
-            self.key_offset, self.link_offset
-        )
+        if self.is_unused() {
+            write!(f, "Leaf (unused)")
+        } else {
+            write!(
+                f,
+                "Leaf {{ key: {:?}, link: {:?} }}",
+                self.key_offset, self.link_offset
+            )
+        }
     }
 }
 
@@ -1488,17 +1574,25 @@ impl Debug for MemLink {
 
 impl Debug for MemKey {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "Key {{ key:")?;
-        for byte in self.key.iter() {
-            write!(f, " {:X}", byte)?;
+        if self.is_unused() {
+            write!(f, "Key (unused)")
+        } else {
+            write!(f, "Key {{ key:")?;
+            for byte in self.key.iter() {
+                write!(f, " {:X}", byte)?;
+            }
+            write!(f, " }}")
         }
-        write!(f, " }}")
     }
 }
 
 impl Debug for MemExtKey {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "ExtKey {{ start: {}, len: {} }}", self.start, self.len)
+        if self.is_unused() {
+            write!(f, "ExtKey (unused)")
+        } else {
+            write!(f, "ExtKey {{ start: {}, len: {} }}", self.start, self.len)
+        }
     }
 }
 
@@ -1768,11 +1862,11 @@ mod tests {
              Radix[0]: Radix { link: None, 1: Radix[1] }\n\
              Radix[1]: Radix { link: None, 2: Radix[2] }\n\
              Radix[2]: Radix { link: Link[0], 7: Leaf[1] }\n\
-             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
+             Leaf[0]: Leaf (unused)\n\
              Leaf[1]: Leaf { key: Key[1], link: Link[1] }\n\
              Link[0]: Link { value: 5, next: None }\n\
              Link[1]: Link { value: 7, next: None }\n\
-             Key[0]: Key { key: 12 }\n\
+             Key[0]: Key (unused)\n\
              Key[1]: Key { key: 12 78 }\n"
         );
 
@@ -1796,7 +1890,7 @@ mod tests {
         // Similar with test_leaf_split, but flush the first key before inserting the second.
         // This triggers some new code paths.
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = open_opts().open(dir.path().join("a")).expect("open");
+        let mut index = open_opts().open(dir.path().join("1")).expect("open");
 
         // Example 1: two keys are not prefixes of each other
         index.insert(&[0x12, 0x34], 5).expect("insert");
@@ -1828,89 +1922,80 @@ mod tests {
         );
 
         // Example 2: new key is a prefix of the old key
-        let mut index = open_opts().open(dir.path().join("a")).expect("open");
+        let mut index = open_opts().open(dir.path().join("2")).expect("open");
         index.insert(&[0x12, 0x34], 5).expect("insert");
         index.flush().expect("flush");
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 61, root: Radix[0] }\n\
+            "Index { len: 33, root: Radix[0] }\n\
              Disk[1]: Key { key: 12 34 }\n\
              Disk[5]: Link { value: 5, next: None }\n\
              Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
              Disk[11]: Radix { link: None, 1: Disk[8] }\n\
              Disk[30]: Root { radix: Disk[11] }\n\
-             Disk[33]: Link { value: 5, next: Disk[5] }\n\
-             Disk[36]: Leaf { key: Disk[1], link: Disk[33] }\n\
-             Disk[39]: Radix { link: None, 1: Disk[36] }\n\
-             Disk[58]: Root { radix: Disk[39] }\n\
              Radix[0]: Radix { link: None, 1: Radix[1] }\n\
              Radix[1]: Radix { link: None, 2: Radix[2] }\n\
-             Radix[2]: Radix { link: Link[0], 3: Disk[36] }\n\
+             Radix[2]: Radix { link: Link[0], 3: Disk[8] }\n\
              Link[0]: Link { value: 7, next: None }\n"
         );
 
         // Example 3: old key is a prefix of the new key
-        let mut index = open_opts().open(dir.path().join("a")).expect("open");
+        // Only one flush - only one key is written.
+        let mut index = open_opts().open(dir.path().join("3a")).expect("open");
+        index.insert(&[0x12], 5).expect("insert");
+        index.insert(&[0x12, 0x78], 7).expect("insert");
+        index.flush().expect("flush");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 74, root: Disk[52] }\n\
+             Disk[1]: Key { key: 12 78 }\n\
+             Disk[5]: Link { value: 5, next: None }\n\
+             Disk[8]: Link { value: 7, next: None }\n\
+             Disk[11]: Leaf { key: Disk[1], link: Disk[8] }\n\
+             Disk[14]: Radix { link: Disk[5], 7: Disk[11] }\n\
+             Disk[33]: Radix { link: None, 2: Disk[14] }\n\
+             Disk[52]: Radix { link: None, 1: Disk[33] }\n\
+             Disk[71]: Root { radix: Disk[52] }\n"
+        );
+
+        // With two flushes - the old key cannot be removed since it was written.
+        let mut index = open_opts().open(dir.path().join("3b")).expect("open");
         index.insert(&[0x12], 5).expect("insert");
         index.flush().expect("flush");
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 124, root: Radix[0] }\n\
-             Disk[1]: Key { key: 12 34 }\n\
-             Disk[5]: Link { value: 5, next: None }\n\
-             Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
-             Disk[11]: Radix { link: None, 1: Disk[8] }\n\
-             Disk[30]: Root { radix: Disk[11] }\n\
-             Disk[33]: Link { value: 5, next: Disk[5] }\n\
-             Disk[36]: Leaf { key: Disk[1], link: Disk[33] }\n\
-             Disk[39]: Radix { link: None, 1: Disk[36] }\n\
-             Disk[58]: Root { radix: Disk[39] }\n\
-             Disk[61]: Link { value: 5, next: None }\n\
-             Disk[64]: Radix { link: Disk[61], 3: Disk[36] }\n\
-             Disk[83]: Radix { link: None, 2: Disk[64] }\n\
-             Disk[102]: Radix { link: None, 1: Disk[83] }\n\
-             Disk[121]: Root { radix: Disk[102] }\n\
+            "Index { len: 32, root: Radix[0] }\n\
+             Disk[1]: Key { key: 12 }\n\
+             Disk[4]: Link { value: 5, next: None }\n\
+             Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
+             Disk[10]: Radix { link: None, 1: Disk[7] }\n\
+             Disk[29]: Root { radix: Disk[10] }\n\
              Radix[0]: Radix { link: None, 1: Radix[1] }\n\
              Radix[1]: Radix { link: None, 2: Radix[2] }\n\
-             Radix[2]: Radix { link: Disk[61], 3: Disk[36], 7: Leaf[0] }\n\
+             Radix[2]: Radix { link: Disk[4], 7: Leaf[0] }\n\
              Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
              Link[0]: Link { value: 7, next: None }\n\
              Key[0]: Key { key: 12 78 }\n"
         );
 
         // Same key. Multiple values.
-        let mut index = open_opts().open(dir.path().join("a")).expect("open");
+        let mut index = open_opts().open(dir.path().join("4")).expect("open");
         index.insert(&[0x12], 5).expect("insert");
         index.flush().expect("flush");
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 189, root: Radix[0] }\n\
-             Disk[1]: Key { key: 12 34 }\n\
-             Disk[5]: Link { value: 5, next: None }\n\
-             Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
-             Disk[11]: Radix { link: None, 1: Disk[8] }\n\
-             Disk[30]: Root { radix: Disk[11] }\n\
-             Disk[33]: Link { value: 5, next: Disk[5] }\n\
-             Disk[36]: Leaf { key: Disk[1], link: Disk[33] }\n\
-             Disk[39]: Radix { link: None, 1: Disk[36] }\n\
-             Disk[58]: Root { radix: Disk[39] }\n\
-             Disk[61]: Link { value: 5, next: None }\n\
-             Disk[64]: Radix { link: Disk[61], 3: Disk[36] }\n\
-             Disk[83]: Radix { link: None, 2: Disk[64] }\n\
-             Disk[102]: Radix { link: None, 1: Disk[83] }\n\
-             Disk[121]: Root { radix: Disk[102] }\n\
-             Disk[124]: Link { value: 5, next: Disk[61] }\n\
-             Disk[127]: Radix { link: Disk[124], 3: Disk[36] }\n\
-             Disk[146]: Radix { link: None, 2: Disk[127] }\n\
-             Disk[165]: Radix { link: None, 1: Disk[146] }\n\
-             Disk[185]: Root { radix: Disk[165] }\n\
-             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
-             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
-             Radix[2]: Radix { link: Link[0], 3: Disk[36] }\n\
-             Link[0]: Link { value: 7, next: Disk[124] }\n"
+            "Index { len: 32, root: Radix[0] }\n\
+             Disk[1]: Key { key: 12 }\n\
+             Disk[4]: Link { value: 5, next: None }\n\
+             Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
+             Disk[10]: Radix { link: None, 1: Disk[7] }\n\
+             Disk[29]: Root { radix: Disk[10] }\n\
+             Radix[0]: Radix { link: None, 1: Leaf[0] }\n\
+             Leaf[0]: Leaf { key: Disk[1], link: Link[0] }\n\
+             Link[0]: Link { value: 7, next: Disk[4] }\n",
         );
     }
 
