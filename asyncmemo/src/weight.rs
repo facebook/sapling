@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use bytes::Bytes;
 use std::mem;
 
 use heapsize::HeapSizeOf;
@@ -49,5 +50,12 @@ impl Weight for i64 {
     #[inline]
     fn get_weight(&self) -> usize {
         mem::size_of::<Self>()
+    }
+}
+
+impl Weight for Bytes {
+    #[inline]
+    fn get_weight(&self) -> usize {
+        self.len()
     }
 }

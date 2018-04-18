@@ -32,6 +32,7 @@
 //! TODO: entry invalidation interface
 #![deny(warnings)]
 
+extern crate bytes;
 extern crate futures;
 extern crate futures_ext;
 extern crate heapsize;

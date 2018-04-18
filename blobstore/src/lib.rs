@@ -6,7 +6,9 @@
 
 #![deny(warnings)]
 
+extern crate asyncmemo;
 extern crate bytes;
+extern crate bytes_ext;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -15,6 +17,7 @@ extern crate tokio_core;
 
 use std::sync::Arc;
 
+use asyncmemo::{Asyncmemo, Filler};
 use bytes::Bytes;
 
 use failure::Error;
@@ -139,5 +142,61 @@ impl Blobstore for Box<Blobstore> {
     }
     fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
         self.as_ref().assert_present(key)
+    }
+}
+
+pub struct CachingBlobstore {
+    cache: Asyncmemo<BlobstoreCacheFiller>,
+    blobstore: Arc<Blobstore>,
+}
+
+impl CachingBlobstore {
+    pub fn new(blobstore: Arc<Blobstore>, entries_limit: usize, bytes_limit: usize) -> Self {
+        let filler = BlobstoreCacheFiller::new(blobstore.clone());
+        let cache = Asyncmemo::with_limits(filler, entries_limit, bytes_limit);
+        CachingBlobstore { cache, blobstore }
+    }
+}
+
+impl Blobstore for CachingBlobstore {
+    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
+        self.cache
+            .get(key)
+            .then(|val| match val {
+                Ok(val) => Ok(Some(val)),
+                Err(Some(err)) => Err(err),
+                Err(None) => Ok(None),
+            })
+            .boxify()
+    }
+
+    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
+        self.blobstore.put(key, value)
+    }
+}
+
+struct BlobstoreCacheFiller {
+    blobstore: Arc<Blobstore>,
+}
+
+impl BlobstoreCacheFiller {
+    fn new(blobstore: Arc<Blobstore>) -> Self {
+        Self { blobstore }
+    }
+}
+
+impl Filler for BlobstoreCacheFiller {
+    type Key = String;
+    type Value = BoxFuture<Bytes, Option<Error>>;
+
+    fn fill(&self, _cache: &Asyncmemo<Self>, key: &Self::Key) -> Self::Value {
+        self.blobstore
+            .get(key.clone())
+            .map_err(|err| Some(err))
+            .and_then(|res| match res {
+                Some(val) => Ok(val),
+                None => Err(None),
+            })
+            .boxify()
     }
 }
