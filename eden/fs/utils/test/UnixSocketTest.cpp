@@ -12,6 +12,7 @@
 
 #include <folly/Exception.h>
 #include <folly/File.h>
+#include <folly/Random.h>
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/experimental/TestUtil.h>
@@ -21,6 +22,7 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include <random>
 
 using folly::ByteRange;
 using folly::checkUnixError;
@@ -56,8 +58,17 @@ TEST(UnixSocket, getRemoteUID) {
   EXPECT_EQ(getuid(), socket2->getRemoteUID());
 }
 
-void testSendDataAndFiles(size_t dataSize, size_t numFiles) {
-  XLOG(INFO) << "sending " << dataSize << " bytes, " << numFiles << " files";
+struct DataSize {
+  explicit DataSize(size_t total, size_t maxChunk = 0)
+      : totalSize{total}, maxChunkSize{maxChunk} {}
+
+  size_t totalSize{0};
+  size_t maxChunkSize{0};
+};
+
+void testSendDataAndFiles(DataSize dataSize, size_t numFiles) {
+  XLOG(INFO) << "sending " << dataSize.totalSize << " bytes, " << numFiles
+             << " files, with max chunk size of " << dataSize.maxChunkSize;
 
   auto sockets = createSocketPair();
   EventBase evb;
@@ -71,15 +82,51 @@ void testSendDataAndFiles(size_t dataSize, size_t numFiles) {
     ADD_FAILURE() << "fstat failed: " << errnoStr(errno);
   }
 
-  auto sendBuf = IOBuf(IOBuf::CREATE, dataSize);
-  memset(sendBuf.writableTail(), 'a', dataSize);
-  sendBuf.append(dataSize);
+  std::unique_ptr<IOBuf> sendBuf;
+  if (dataSize.maxChunkSize == 0) {
+    // Send everything in one chunk
+    sendBuf = IOBuf::create(dataSize.totalSize);
+    memset(sendBuf->writableTail(), 'a', dataSize.totalSize);
+    sendBuf->append(dataSize.totalSize);
+  } else {
+    // Use a fixed seed so we get repeatable results across unit test runs.
+    std::mt19937 rng;
+    rng.seed(1);
+
+    // Break the data into randomly sized chunks, from 0 to maxChunkSize bytes
+    uint8_t byteValue = 1;
+    size_t bytesLeft = dataSize.totalSize;
+    while (bytesLeft > 0) {
+      auto chunkSize = folly::Random::rand32(dataSize.maxChunkSize, rng);
+      if (chunkSize > bytesLeft) {
+        chunkSize = bytesLeft;
+      }
+      // Request a minimum of 32 bytes just to ensure we allocate some data
+      // rather than a null buffer if chunkSize is 0.  This shouldn't really
+      // matter in practice, though.
+      auto buf = IOBuf::create(std::max(chunkSize, 32U));
+      memset(buf->writableTail(), byteValue, chunkSize);
+      buf->append(chunkSize);
+      bytesLeft -= chunkSize;
+      ++byteValue; // Fill each chunk with a different byte value
+      if (sendBuf == nullptr) {
+        sendBuf = std::move(buf);
+      } else {
+        // Yes, unfortunately "prependChain()" is the method that appends this
+        // buffer to the end of the IOBuf chain.  (The chain is a circularly
+        // linked list, prepending immediately in front of the head effectively
+        // appends to the end.)  I'm unfortunately to blame for this horrible
+        // naming choice.
+        sendBuf->prependChain(std::move(buf));
+      }
+    }
+  }
 
   std::vector<File> files;
   for (size_t n = 0; n < numFiles; ++n) {
     files.emplace_back(tmpFile.fd(), /* ownsFd */ false);
   }
-  socket1->send(UnixSocket::Message(sendBuf, std::move(files)))
+  socket1->send(UnixSocket::Message(sendBuf->cloneAsValue(), std::move(files)))
       .then([] { XLOG(DBG3) << "send complete"; })
       .onError([](const folly::exception_wrapper& ew) {
         ADD_FAILURE() << "send error: " << ew.what();
@@ -104,8 +151,8 @@ void testSendDataAndFiles(size_t dataSize, size_t numFiles) {
 
   auto& msg = receivedMessage.value();
 
-  EXPECT_EQ(dataSize, msg.data.computeChainDataLength());
-  EXPECT_EQ(StringPiece{sendBuf.coalesce()}, StringPiece{msg.data.coalesce()});
+  EXPECT_EQ(dataSize.totalSize, msg.data.computeChainDataLength());
+  EXPECT_EQ(StringPiece{sendBuf->coalesce()}, StringPiece{msg.data.coalesce()});
   EXPECT_EQ(numFiles, msg.files.size());
 
   for (size_t n = 0; n < numFiles; ++n) {
@@ -123,16 +170,19 @@ void testSendDataAndFiles(size_t dataSize, size_t numFiles) {
 
 TEST(UnixSocket, sendDataAndFiles) {
   // Test various combinations of data length and number of files
-  testSendDataAndFiles(5, 800);
-  testSendDataAndFiles(0, 800);
-  testSendDataAndFiles(5, 0);
-  testSendDataAndFiles(0, 0);
-  testSendDataAndFiles(4 * 1024 * 1024, 0);
-  testSendDataAndFiles(4 * 1024 * 1024, 800);
-  testSendDataAndFiles(20 * 1024 * 1024, 0);
-  testSendDataAndFiles(20 * 1024 * 1024, 800);
-  testSendDataAndFiles(32 * 1024 * 1024, 0);
-  testSendDataAndFiles(32 * 1024 * 1024, 800);
+  testSendDataAndFiles(DataSize(5), 800);
+  testSendDataAndFiles(DataSize(0), 800);
+  testSendDataAndFiles(DataSize(5), 0);
+  testSendDataAndFiles(DataSize(0), 0);
+  testSendDataAndFiles(DataSize(4 * 1024 * 1024), 0);
+  testSendDataAndFiles(DataSize(4 * 1024 * 1024), 800);
+  testSendDataAndFiles(DataSize(32 * 1024 * 1024), 0);
+  testSendDataAndFiles(DataSize(32 * 1024 * 1024), 800);
+
+  // Send several MB of data split up into chunks of at most 1000 bytes.
+  // This will result in a lot of iovecs to send.
+  testSendDataAndFiles(DataSize(4 * 1024 * 1024, 1000), 800);
+  testSendDataAndFiles(DataSize(32 * 1024 * 1024, 1000), 0);
 }
 
 TEST(FutureUnixSocket, receiveQueue) {

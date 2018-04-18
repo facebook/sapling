@@ -18,6 +18,8 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/portability/Fcntl.h>
 #include <folly/portability/Sockets.h>
+#include <folly/portability/SysUio.h>
+#include <algorithm>
 #include <new>
 
 #include "eden/fs/utils/Bug.h"
@@ -488,7 +490,10 @@ bool UnixSocket::trySendMessage(SendQueueEntry* entry) {
   size_t filesToSend = 0;
   if (entry->iovIndex < entry->iovCount) {
     msg.msg_iov = entry->iov + entry->iovIndex;
-    msg.msg_iovlen = entry->iovCount - entry->iovIndex;
+    // Send at most IOV_MAX chunks at once; the send may fail with EMSGSIZE
+    // if we send too many iovecs at once.
+    msg.msg_iovlen =
+        std::min(entry->iovCount - entry->iovIndex, folly::kIovMax);
 
     // Include FDs if we have them
     bool isFirstSend = entry->iovIndex == 0 &&
