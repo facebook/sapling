@@ -74,12 +74,12 @@ pub fn init_repo(
     remote: &Remote,
     repoid: RepositoryId,
     scuba_table: Option<String>,
-) -> Result<(PathBuf, HgRepo)> {
+) -> Result<(PathBuf, MononokeRepo)> {
     let repopath = repotype.path();
 
     let mut sock = repopath.join(".hg");
 
-    let repo = HgRepo::new(
+    let repo = MononokeRepo::new(
         parent_logger,
         repotype,
         cache_size,
@@ -214,9 +214,9 @@ fn add_common_stats_and_send_to_scuba(
         .boxify()
 }
 
-pub struct HgRepo {
+pub struct MononokeRepo {
     path: String,
-    hgrepo: Arc<BlobRepo>,
+    blobrepo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,
     scuba: Option<Arc<ScubaClient>>,
     remote: Remote,
@@ -259,7 +259,7 @@ fn bundle2caps() -> String {
     percent_encode(&encodedcaps.join("\n"))
 }
 
-impl HgRepo {
+impl MononokeRepo {
     pub fn new(
         parent_logger: &Logger,
         repo: &RepoType,
@@ -281,9 +281,9 @@ impl HgRepo {
             }
         };
 
-        Ok(HgRepo {
+        Ok(MononokeRepo {
             path: format!("{}", path.display()),
-            hgrepo: Arc::new(repo.open(logger, remote, repoid)?),
+            blobrepo: Arc::new(repo.open(logger, remote, repoid)?),
             repo_generation: RepoGenCache::new(cache_size),
             scuba: match scuba_table {
                 Some(name) => Some(Arc::new(ScubaClient::new(name))),
@@ -304,19 +304,19 @@ impl HgRepo {
     }
 }
 
-impl Debug for HgRepo {
+impl Debug for MononokeRepo {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "Repo({})", self.path)
     }
 }
 
 pub struct RepoClient {
-    repo: Arc<HgRepo>,
+    repo: Arc<MononokeRepo>,
     logger: Logger,
 }
 
 impl RepoClient {
-    pub fn new(repo: Arc<HgRepo>, parent_logger: &Logger) -> Self {
+    pub fn new(repo: Arc<MononokeRepo>, parent_logger: &Logger) -> Self {
         RepoClient {
             repo: repo,
             logger: parent_logger.new(o!()), // connection details?
@@ -337,14 +337,14 @@ impl RepoClient {
         bundle.set_compressor_type(None);
 
         let repo_generation = &self.repo.repo_generation;
-        let hgrepo = &self.repo.hgrepo;
+        let blobrepo = &self.repo.blobrepo;
 
         let ancestors_stream = |nodes: &Vec<DNodeHash>| -> Box<NodeStream> {
             let heads_ancestors = nodes.iter().map(|head| {
-                AncestorsNodeStream::new(&hgrepo, repo_generation.clone(), *head).boxed()
+                AncestorsNodeStream::new(&blobrepo, repo_generation.clone(), *head).boxed()
             });
             Box::new(UnionNodeStream::new(
-                &hgrepo,
+                &blobrepo,
                 repo_generation.clone(),
                 heads_ancestors,
             ))
@@ -356,7 +356,7 @@ impl RepoClient {
             ancestors_stream(&args.common.into_iter().map(|h| h.into_mononoke()).collect());
 
         let nodestosend = Box::new(SetDifferenceNodeStream::new(
-            hgrepo,
+            blobrepo,
             repo_generation.clone(),
             heads_ancestors,
             common_ancestors,
@@ -372,9 +372,9 @@ impl RepoClient {
         let changelogentries = nodestosend
             .map(|node| (node.into_mercurial(), node))
             .map({
-                let hgrepo = hgrepo.clone();
+                let blobrepo = blobrepo.clone();
                 move |(mercurial_node, node)| {
-                    hgrepo
+                    blobrepo
                         .get_changeset_by_changesetid(&DChangesetId::new(node))
                         .map(move |cs| (mercurial_node, cs))
                 }
@@ -415,8 +415,8 @@ impl RepoClient {
         // TODO: generalize this to other listkey types
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
-            let hgrepo = self.repo.hgrepo.clone();
-            let items = hgrepo.get_bookmarks().map(|(name, cs)| {
+            let blobrepo = self.repo.blobrepo.clone();
+            let items = blobrepo.get_bookmarks().map(|(name, cs)| {
                 let hash: Vec<u8> = cs.into_nodehash().into_mercurial().to_hex().into();
                 (name, hash)
             });
@@ -470,7 +470,7 @@ impl RepoClient {
             stream::empty().boxify(),
             |cur_stream, manifest_id| {
                 let new_stream =
-                    get_changed_entry_stream(self.repo.hgrepo.clone(), &manifest_id, &basemfnode);
+                    get_changed_entry_stream(self.repo.blobrepo.clone(), &manifest_id, &basemfnode);
                 cur_stream.select(new_stream).boxify()
             },
         );
@@ -481,8 +481,10 @@ impl RepoClient {
                 move |entry| used_hashes.insert(*entry.0.get_hash())
             })
             .map({
-                let hgrepo = self.repo.hgrepo.clone();
-                move |(entry, basepath)| fetch_treepack_part_input(hgrepo.clone(), entry, basepath)
+                let blobrepo = self.repo.blobrepo.clone();
+                move |(entry, basepath)| {
+                    fetch_treepack_part_input(blobrepo.clone(), entry, basepath)
+                }
             });
 
         parts::treepack_part(changed_entries)
@@ -503,14 +505,14 @@ impl HgCommands for RepoClient {
         info!(self.logger, "between pairs {:?}", pairs);
 
         struct ParentStream<CS> {
-            repo: Arc<HgRepo>,
+            repo: Arc<MononokeRepo>,
             n: DNodeHash,
             bottom: DNodeHash,
             wait_cs: Option<CS>,
         };
 
         impl<CS> ParentStream<CS> {
-            fn new(repo: &Arc<HgRepo>, top: DNodeHash, bottom: DNodeHash) -> Self {
+            fn new(repo: &Arc<MononokeRepo>, top: DNodeHash, bottom: DNodeHash) -> Self {
                 ParentStream {
                     repo: repo.clone(),
                     n: top,
@@ -532,7 +534,7 @@ impl HgCommands for RepoClient {
                 self.wait_cs = self.wait_cs.take().or_else(|| {
                     Some(
                         self.repo
-                            .hgrepo
+                            .blobrepo
                             .get_changeset_by_changesetid(&DChangesetId::new(self.n)),
                     )
                 });
@@ -591,7 +593,7 @@ impl HgCommands for RepoClient {
         let sample = self.repo.scuba_sample(ops::HEADS);
         let remote = self.repo.remote.clone();
         self.repo
-            .hgrepo
+            .blobrepo
             .get_heads()
             .collect()
             .from_err()
@@ -605,7 +607,7 @@ impl HgCommands for RepoClient {
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
         info!(self.logger, "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support bookmarks and prefixes too
-        let repo = self.repo.hgrepo.clone();
+        let repo = self.repo.blobrepo.clone();
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::LOOKUP);
         let remote = self.repo.remote.clone();
@@ -642,7 +644,7 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<HgNodeHash>) -> HgCommandRes<Vec<bool>> {
         info!(self.logger, "known: {:?}", nodes);
-        let hgrepo = self.repo.hgrepo.clone();
+        let blobrepo = self.repo.blobrepo.clone();
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::KNOWN);
         let remote = self.repo.remote.clone();
@@ -651,7 +653,7 @@ impl HgCommands for RepoClient {
             nodes
                 .into_iter()
                 .map(|h| h.into_mononoke())
-                .map(move |node| hgrepo.changeset_exists(&DChangesetId::new(node))),
+                .map(move |node| blobrepo.changeset_exists(&DChangesetId::new(node))),
         ).timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
             .boxify()
     }
@@ -692,7 +694,7 @@ impl HgCommands for RepoClient {
     fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
         if namespace == "bookmarks" {
             self.repo
-                .hgrepo
+                .blobrepo
                 .get_bookmarks()
                 .map(|(name, cs)| (name, cs.into_nodehash().into_mercurial()))
                 .map(|(name, cs)| {
@@ -725,7 +727,7 @@ impl HgCommands for RepoClient {
         stream: BoxStream<Bundle2Item, Error>,
     ) -> HgCommandRes<Bytes> {
         let res = bundle2_resolver::resolve(
-            self.repo.hgrepo.clone(),
+            self.repo.blobrepo.clone(),
             self.logger.new(o!("command" => "unbundle")),
             heads,
             stream,
@@ -771,7 +773,7 @@ impl HgCommands for RepoClient {
             .map(move |(node, path)| {
                 debug!(logger, "get file request: {:?} {}", path, node);
                 let repo = repo.clone();
-                create_remotefilelog_blob(repo.hgrepo.clone(), node, path.clone())
+                create_remotefilelog_blob(repo.blobrepo.clone(), node, path.clone())
                     .traced_global(
                         "getfile",
                         trace_args!("node" => format!("{}", node), "path" => format!("{}", path)),
