@@ -24,7 +24,7 @@ use utils::mmap_readonly;
 /// for the changed (mostly appended) part and atomic replace the checksum
 /// table.  The checksum table file has a simple format:
 ///
-///   SUM_FILE := CHUNK_SIZE (u64, BE) + END_OFFSET (u64, BE) + CHECKSUM_LIST
+///   SUM_FILE := CHUNK_SIZE_LOG (u64, BE) + END_OFFSET (u64, BE) + CHECKSUM_LIST
 ///   CHECKSUM_LIST := "" | CHECKSUM_LIST + CHUNK_CHECKSUM (u64, BE)
 ///
 /// The "atomic-replace" part could be a scaling issue if the checksum
@@ -46,7 +46,7 @@ pub struct ChecksumTable {
 
     // The checksum file
     checksum_path: PathBuf,
-    chunk_size: u64,
+    chunk_size_log: u32,
     end: u64,
     checksums: Vec<u64>,
 
@@ -80,7 +80,9 @@ fn path_appendext(path: &Path, ext: &str) -> PathBuf {
 }
 
 /// Default chunk size: 1MB
-const DEFAULT_CHUNK_SIZE: u64 = 1048576;
+const DEFAULT_CHUNK_SIZE_LOG: u32 = 20;
+/// Max chunk size: 2GB
+const MAX_CHUNK_SIZE_LOG: u32 = 31;
 
 impl ChecksumTable {
     /// Check given byte range.
@@ -101,8 +103,8 @@ impl ChecksumTable {
         }
 
         // Otherwise, scan related chunks.
-        let start = (offset / self.chunk_size) as usize;
-        let end = ((offset + length - 1) / self.chunk_size) as usize;
+        let start = (offset >> self.chunk_size_log) as usize;
+        let end = ((offset + length - 1) >> self.chunk_size_log) as usize;
         (start..(end + 1)).all(|i| self.check_chunk(i))
     }
 
@@ -111,8 +113,8 @@ impl ChecksumTable {
         if (checked[index / 64] >> (index % 64)) & 1 == 1 {
             true
         } else {
-            let start = self.chunk_size as usize * index;
-            let end = (self.end as usize).min(self.chunk_size as usize * (index + 1));
+            let start = index << self.chunk_size_log;
+            let end = (self.end as usize).min((index + 1) << self.chunk_size_log);
             if start == end {
                 return true;
             }
@@ -151,14 +153,16 @@ impl ChecksumTable {
         }
 
         // Parse checksum file
-        let (chunk_size, chunk_end, checksums, checked) = if checksum_buf.len() == 0 {
-            (DEFAULT_CHUNK_SIZE, 0, vec![], vec![])
+        let (chunk_size_log, chunk_end, checksums, checked) = if checksum_buf.len() == 0 {
+            (DEFAULT_CHUNK_SIZE_LOG, 0, vec![], vec![])
         } else {
             let mut cur = Cursor::new(checksum_buf);
-            let chunk_size = cur.read_u64::<BigEndian>()?;
-            if chunk_size == 0 {
+            let chunk_size_log = cur.read_u64::<BigEndian>()?;
+            if chunk_size_log > MAX_CHUNK_SIZE_LOG as u64 {
                 return Err(io::ErrorKind::InvalidData.into());
             }
+            let chunk_size_log = chunk_size_log as u32;
+            let chunk_size = 1 << chunk_size_log;
             let file_size = len.min(cur.read_u64::<BigEndian>()?);
             let n = (file_size + chunk_size - 1) / chunk_size;
             let mut checksums = Vec::with_capacity(n as usize);
@@ -166,13 +170,13 @@ impl ChecksumTable {
                 checksums.push(cur.read_u64::<BigEndian>()?);
             }
             let checked = vec![0; (n as usize + 63) / 64];
-            (chunk_size, file_size, checksums, checked)
+            (chunk_size_log, file_size, checksums, checked)
         };
 
         Ok(ChecksumTable {
             file,
             buf: mmap,
-            chunk_size,
+            chunk_size_log,
             end: chunk_end,
             checksum_path,
             checksums,
@@ -192,7 +196,7 @@ impl ChecksumTable {
             file,
             buf: mmap,
             checksum_path: self.checksum_path.clone(),
-            chunk_size: self.chunk_size,
+            chunk_size_log: self.chunk_size_log,
             end: self.end,
             checksums: self.checksums.clone(),
             checked: self.checked.clone(),
@@ -201,10 +205,12 @@ impl ChecksumTable {
 
     /// Update the checksum table.
     ///
-    /// If `chunk_size` is `None`, will reuse the existing `chunk_size` specified by the checksum
-    /// table, or a default value if the table is empty.
+    /// `chunk_size_log` decides the chunk size: `1 << chunk_size_log`.
     ///
-    /// If `chunk_size` differs from the existing one, the table will be rebuilt from scratch.
+    /// If `chunk_size_log` is `None`, will reuse the existing `chunk_size_log` specified by the
+    /// checksum table, or a default value if the table is empty.
+    ///
+    /// If `chunk_size_log` differs from the existing one, the table will be rebuilt from scratch.
     /// Otherwise it's updated incrementally.
     ///
     /// For any part in the old table that will be rewritten, checksum verification will be
@@ -215,15 +221,20 @@ impl ChecksumTable {
     ///
     /// If multiple processes can write to a same file, the caller is responsible for taking
     /// a lock which covers the appending and checksum updating.
-    pub fn update(&mut self, chunk_size: Option<u64>) -> io::Result<()> {
+    pub fn update(&mut self, chunk_size_log: Option<u32>) -> io::Result<()> {
         let (mmap, len) = mmap_readonly(&self.file)?;
-        let chunk_size = chunk_size.unwrap_or(self.chunk_size);
+        let chunk_size_log = chunk_size_log.unwrap_or(self.chunk_size_log);
+        if chunk_size_log > MAX_CHUNK_SIZE_LOG {
+            return Err(io::ErrorKind::InvalidInput.into());
+        }
+        let chunk_size = 1 << chunk_size_log;
+        let old_chunk_size = 1 << self.chunk_size_log;
 
         if chunk_size == 0 {
             return Err(io::ErrorKind::InvalidInput.into());
         }
 
-        if len == self.end && chunk_size == self.chunk_size {
+        if len == self.end && chunk_size == old_chunk_size {
             return Ok(());
         }
 
@@ -233,7 +244,7 @@ impl ChecksumTable {
         }
 
         let mut checksums = self.checksums.clone();
-        if chunk_size == self.chunk_size {
+        if chunk_size == old_chunk_size {
             if self.end % chunk_size != 0 {
                 // The last block need recalculate
                 checksums.pop();
@@ -244,7 +255,7 @@ impl ChecksumTable {
         };
 
         // Before recalculating, verify the changed chunks first.
-        let start = checksums.len() as u64 * self.chunk_size;
+        let start = checksums.len() as u64 * old_chunk_size;
         if !self.check_range(start, self.end - start) {
             return Err(io::ErrorKind::InvalidData.into());
         }
@@ -259,7 +270,7 @@ impl ChecksumTable {
 
         // Prepare changes
         let mut buf = vec![];
-        buf.write_u64::<BigEndian>(chunk_size)?;
+        buf.write_u64::<BigEndian>(chunk_size_log as u64)?;
         buf.write_u64::<BigEndian>(len)?;
         for checksum in &checksums {
             buf.write_u64::<BigEndian>(*checksum)?;
@@ -272,7 +283,7 @@ impl ChecksumTable {
         self.buf = mmap;
         self.end = len;
         self.checked = RefCell::new(vec![0u64; (checksums.len() + 63) / 64]);
-        self.chunk_size = chunk_size;
+        self.chunk_size_log = 63 - (chunk_size as u64).leading_zeros();
         self.checksums = checksums;
 
         Ok(())
@@ -344,11 +355,10 @@ mod tests {
         let (mut file, get_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(7.into()).expect("update");
+        table.update(3.into()).expect("update");
         assert!(table.check_range(0, 20));
         file.write_all(b"01234567890123456789").expect("write");
         assert!(!table.check_range(20, 1));
-        table.update(0.into()).expect_err("chunk_size cannot be 0");
         table.update(None).expect("update");
         assert!(table.check_range(20, 20));
     }
@@ -358,8 +368,8 @@ mod tests {
         let (mut file, get_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(7.into()).expect("update");
-        for &chunk_size in &[7, 200, 1, 19, 2, 3, 11] {
+        table.update(2.into()).expect("update");
+        for &chunk_size in &[1, 2, 3, 4] {
             table.update(chunk_size.into()).expect("update");
             assert!(table.check_range(0, 20));
             assert!(!table.check_range(0, 21));
@@ -371,7 +381,7 @@ mod tests {
         let (mut file, get_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(7.into()).expect("update");
+        table.update(3.into()).expect("update");
         assert!(table.check_range(0, 20));
         assert!(!table.check_range(0, 21));
         let table = get_table().unwrap();
@@ -384,7 +394,7 @@ mod tests {
         let (mut file, get_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(2.into()).expect("update");
+        table.update(1.into()).expect("update");
         // Corruption: Corrupt the file at byte 5
         file.seek(SeekFrom::Start(5)).expect("seek");
         file.write_all(&[1]).expect("write");
@@ -401,7 +411,7 @@ mod tests {
         let (mut file, get_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(2.into()).expect("update");
+        table.update(1.into()).expect("update");
         file.set_len(19).expect("set_len");
         let table = get_table().unwrap();
         assert!(!table.check_range(0, 20));
@@ -414,21 +424,21 @@ mod tests {
         let (mut file, get_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(7.into()).expect("update");
+        table.update(3.into()).expect("update");
         file.seek(SeekFrom::End(-1)).expect("seek");
-        file.write_all(b"x12345").expect("write");
+        file.write_all(b"x0123").expect("write");
         table.update(None).expect_err("broken during update");
-        table.update(1.into()).expect_err("broken during update");
+        table.update(3.into()).expect_err("broken during update");
         // With clear(), update can work.
         table.clear();
-        table.update(5.into()).expect("update");
+        table.update(3.into()).expect("update");
         // If chunk boundary aligns with the broken range, corruption won't be detected.
-        file.seek(SeekFrom::End(-1)).expect("seek");
+        assert_eq!(file.seek(SeekFrom::End(-1)).expect("seek"), 23);
         file.write_all(b"x123451234512345").expect("write");
         table.update(None).expect("update");
         // But explicitly verifying it will reveal the problem.
-        assert!(!table.check_range(24, 1));
+        assert!(!table.check_range(23, 1));
         // Update with a different chunk_size will also cause an error.
-        table.update(10.into()).expect_err("broken during update");
+        table.update(2.into()).expect_err("broken during update");
     }
 }

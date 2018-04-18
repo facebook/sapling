@@ -1214,7 +1214,9 @@ impl Index {
             }
 
             if let Some(ref mut table) = self.checksum {
-                table.update(self.checksum_chunk_size.into())?;
+                debug_assert!(self.checksum_chunk_size > 0);
+                let chunk_size_log = 63 - (self.checksum_chunk_size as u64).leading_zeros();
+                table.update(chunk_size_log.into())?;
             }
             self.root = MemRoot::read_from_end(&self.buf, new_len, &self.checksum)?;
         }
