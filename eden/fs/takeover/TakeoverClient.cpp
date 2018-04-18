@@ -21,6 +21,15 @@ using apache::thrift::CompactSerializer;
 using folly::IOBuf;
 using std::string;
 
+/**
+ * Five minutes is a high default value.  This could be lowered back to one
+ * minute after takeover no longer does O(loaded) expensive save operations.
+ */
+DEFINE_int32(
+    takeoverReceiveTimeout,
+    300,
+    "Timeout for receiving takeover data from old process in seconds");
+
 namespace facebook {
 namespace eden {
 
@@ -46,7 +55,7 @@ TakeoverData takeoverMounts(
       })
       .then([&socket] {
         // Wait for the takeover data response
-        auto timeout = std::chrono::seconds(60);
+        auto timeout = std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
         return socket.receive(timeout);
       })
       .then([&expectedMessage](UnixSocket::Message&& msg) {
