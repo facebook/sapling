@@ -528,10 +528,12 @@ void testModifyConflict(
   }
 }
 
-void runModifyConflictTests(folly::StringPiece path) {
-  for (auto loadType : kAllLoadTypes) {
-    for (auto checkoutMode :
-         {CheckoutMode::NORMAL, CheckoutMode::DRY_RUN, CheckoutMode::FORCE}) {
+void runModifyConflictTests(CheckoutMode checkoutMode) {
+  // Try with three separate path names, one that sorts first in the directory,
+  // one in the middle, and one that sorts last.  This helps ensure that we
+  // exercise all code paths in TreeInode::computeCheckoutActions()
+  for (StringPiece path : {"a/b/aaa.txt", "a/b/mmm.txt", "a/b/zzz.tzt"}) {
+    for (auto loadType : kAllLoadTypes) {
       SCOPED_TRACE(folly::to<string>(
           "path ", path, " load type ", loadType, " force=", checkoutMode));
       testModifyConflict(
@@ -548,10 +550,16 @@ void runModifyConflictTests(folly::StringPiece path) {
   }
 }
 
-TEST(Checkout, modifyConflict) {
-  runModifyConflictTests("a/b/aaa.txt");
-  runModifyConflictTests("a/b/mmm.txt");
-  runModifyConflictTests("a/b/zzz.txt");
+TEST(Checkout, modifyConflictNormal) {
+  runModifyConflictTests(CheckoutMode::NORMAL);
+}
+
+TEST(Checkout, modifyConflictDryRun) {
+  runModifyConflictTests(CheckoutMode::DRY_RUN);
+}
+
+TEST(Checkout, modifyConflictForce) {
+  runModifyConflictTests(CheckoutMode::FORCE);
 }
 
 TEST(Checkout, modifyThenRevert) {
