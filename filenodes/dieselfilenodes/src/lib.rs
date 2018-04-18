@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(try_from)]
+#![feature(try_from, never_type)]
 
 extern crate db;
 #[macro_use]
@@ -25,6 +25,7 @@ use diesel::{insert_or_ignore_into, Connection, SqliteConnection};
 use diesel::backend::Backend;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
+use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::sql_types::HasSqlType;
 use failure::{Error, Result};
 use filenodes::{FilenodeInfo, Filenodes};
@@ -33,7 +34,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use mercurial_types::{DFileNodeId, RepoPath, RepositoryId};
 use mercurial_types::sql_types::DFileNodeIdSql;
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 mod common;
 mod errors;
@@ -44,6 +45,7 @@ use errors::ErrorKind;
 
 pub const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
 
+#[derive(Clone)]
 pub struct SqliteFilenodes {
     connection: Arc<Mutex<SqliteConnection>>,
     insert_chunk_size: usize,
@@ -94,19 +96,28 @@ impl SqliteFilenodes {
     pub fn in_memory() -> Result<Self> {
         Self::create(":memory:", DEFAULT_INSERT_CHUNK_SIZE)
     }
+
+    pub fn get_conn(&self) -> ::std::result::Result<MutexGuard<SqliteConnection>, !> {
+        Ok(self.connection.lock().expect("lock poisoned"))
+    }
 }
 
+#[derive(Clone)]
 pub struct MysqlFilenodes {
-    connection: Arc<Mutex<MysqlConnection>>,
+    pool: Pool<ConnectionManager<MysqlConnection>>,
     insert_chunk_size: usize,
 }
 
 impl MysqlFilenodes {
     pub fn open(params: ConnectionParams, insert_chunk_size: usize) -> Result<Self> {
         let url = params.to_diesel_url()?;
-        let conn = MysqlConnection::establish(&url)?;
+        let manager = ConnectionManager::new(url);
+        let pool = Pool::builder()
+            .max_size(10)
+            .min_idle(Some(1))
+            .build(manager)?;
         Ok(Self {
-            connection: Arc::new(Mutex::new(conn)),
+            pool,
             insert_chunk_size,
         })
     }
@@ -120,13 +131,13 @@ impl MysqlFilenodes {
         let filenodes = Self::open(params, DEFAULT_INSERT_CHUNK_SIZE)?;
 
         let up_query = include_str!("../schemas/mysql-filenodes.sql");
-        filenodes
-            .connection
-            .lock()
-            .expect("lock poisoned")
-            .batch_execute(&up_query)?;
+        filenodes.pool.get()?.batch_execute(&up_query)?;
 
         Ok(filenodes)
+    }
+
+    fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
+        self.pool.get().map_err(Error::from)
     }
 }
 
@@ -139,9 +150,13 @@ macro_rules! impl_filenodes {
                 repo_id: &RepositoryId,
             ) -> BoxFuture<(), Error> {
                 let repo_id = *repo_id;
-                let connection = self.connection.clone();
+                let db = self.clone();
                 filenodes.chunks(self.insert_chunk_size).and_then(move |filenodes| {
-                    let connection = connection.lock().expect("poisoned lock");
+                    #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+                    let connection = match db.get_conn() {
+                        Ok(conn) => conn,
+                        Err(err) => return future::err(err).boxify(),
+                    };
                     Self::do_insert(&connection, &filenodes, &repo_id)
                 })
                 .for_each(|()| Ok(()))
@@ -154,7 +169,11 @@ macro_rules! impl_filenodes {
                 filenode: &DFileNodeId,
                 repo_id: &RepositoryId,
             ) -> BoxFuture<Option<FilenodeInfo>, Error> {
-                let connection = self.connection.lock().expect("lock poisoned");
+                #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+                let connection = match self.get_conn() {
+                    Ok(conn) => conn,
+                    Err(err) => return future::err(err).boxify(),
+                };
 
                 let query = filenode_query(repo_id, filenode, path);
                 let filenode_row = try_boxfuture!(
