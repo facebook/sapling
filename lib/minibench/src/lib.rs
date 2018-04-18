@@ -8,6 +8,7 @@
 //! - Use "min" instead of "average". "average" often makes less sense for wall time.
 //! - Minimalism. Without fancy features.
 
+use std::env::args;
 use std::time::SystemTime;
 
 /// Return the wall time (in seconds) executing the given function.
@@ -34,6 +35,9 @@ pub fn min_run<F: Fn() -> f64>(func: F, n: usize) -> f64 {
 
 /// Run a function for 40 times. Print the best wall time.
 ///
+/// If `std::env::args` (excluding the first item and flags) is not empty, and none of them is a
+/// substring of `name`, skip running and return directly.
+///
 /// Example:
 ///
 /// ```
@@ -46,6 +50,10 @@ pub fn min_run<F: Fn() -> f64>(func: F, n: usize) -> f64 {
 /// })
 /// ```
 pub fn bench<F: Fn() -> f64>(name: &str, func: F) {
-    let best = min_run(func, 40);
-    println!("{:30}{:7.3} ms", name, best * 1e3);
+    // The first arg is the program name. Skip it and flag-like arguments (ex. --bench).
+    let args: Vec<String> = args().skip(1).filter(|a| !a.starts_with('-')).collect();
+    if args.is_empty() || args.iter().any(|a| name.find(a).is_some()) {
+        let best = min_run(func, 40);
+        println!("{:30}{:7.3} ms", name, best * 1e3);
+    }
 }
