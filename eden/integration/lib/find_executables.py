@@ -60,7 +60,7 @@ class FindExeClass(object):
         return self._find_exe(
             'eden CLI',
             env='EDENFS_CLI_PATH',
-            candidates=[os.path.join(self.BUCK_OUT, 'gen/eden/cli/cli.par')]
+            candidates=[os.path.join(self.BUCK_OUT, 'gen/eden/cli/eden.par')]
         )
 
     @cached_property

@@ -40,7 +40,7 @@ def get_test_env_and_deps(suffix=''):
 
     daemon_target = '//eden/fs/service:edenfs%s' % suffix
     env_to_target = {
-        'EDENFS_CLI_PATH': '//eden/cli:cli',
+        'EDENFS_CLI_PATH': '//eden/cli:eden',
         'EDENFS_SERVER_PATH': daemon_target,
         'EDENFS_POST_CLONE_PATH': '//eden/hooks/hg:post-clone',
         'EDENFS_FSATTR_BIN': '//eden/integration:fsattr',
