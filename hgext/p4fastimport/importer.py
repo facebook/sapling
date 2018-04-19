@@ -41,17 +41,26 @@ def get_localname(client, p4filelogs):
         localname = relpath(client, depotfile)
         yield 1, json.dumps({depotfile:localname})
 
-def get_p4_file_content(storepath, p4filelog, p4cl):
+def get_p4_file_content(storepath, p4filelog, p4cl, skipp4revcheck=False):
     p4path = p4filelog._depotfile
     p4storepath = os.path.join(storepath, localpath(p4path))
     if p4.config('caseHandling') == 'insensitive':
         p4storepath = p4storepath.lower()
+
     rcs = RCSImporter(p4storepath)
     if p4cl.origcl in rcs.revisions:
         return rcs.content(p4cl.origcl), 'rcs'
+
     flat = FlatfileImporter(p4storepath)
     if p4cl.origcl in flat.revisions:
         return flat.content(p4cl.origcl), 'gzip'
+
+    # This is needed when reading a file from p4 during sync import:
+    # when sync import constructs a filelog, it uses "latestcl" as the key
+    # instead of "headcl", so the check for whether p4cl.cl is inside
+    # p4fi.revisions will fail, and not necessary
+    if skipp4revcheck:
+        return p4.get_file(p4filelog.depotfile, clnum=p4cl.cl), 'p4'
     p4fi = P4FileImporter(p4filelog)
     if p4cl.cl in p4fi.revisions:
         return p4fi.content(p4cl.cl), 'p4'
@@ -72,6 +81,7 @@ def get_filelogs_to_sync(ui, client, repo, p1ctx, cl, p4filelogs):
     p4flmapping = collections.defaultdict()
     addedp4filelogs = []
     reusep4filelogs = []
+    addedp4flheadcls = set()
     wargs = (client,)
 
     for p4fl in p4filelogs:
@@ -87,9 +97,10 @@ def get_filelogs_to_sync(ui, client, repo, p1ctx, cl, p4filelogs):
         else:
             p4fl = p4flmapping[p4file]
             addedp4filelogs.append((p4fl, localfile))
+            addedp4flheadcls.add(p4fl.getheadchangelist(cl))
     ui.debug('%d new filelogs and %s reuse filelogs\n' % (
         len(addedp4filelogs), len(reusep4filelogs)))
-    return addedp4filelogs, reusep4filelogs
+    return addedp4filelogs, addedp4flheadcls, reusep4filelogs
 
 class ImportSet(object):
     def __init__(self, repo, client, changelists, filelist, storagepath,
@@ -537,12 +548,17 @@ class FileImporter(object):
         return fileflags, largefiles, baserevatcl, origlen, newlen
 
 class SyncFileImporter(FileImporter):
-    def __init__(self, ui, repo, client, cl, p4filelog, localfile=None):
+    def __init__(
+        self, ui, repo, client, cl, p4cl,
+        p4filelog, storepath, localfile=None
+    ):
         self._ui = ui
         self._repo = repo
         self._client = client
         self._cl = cl
+        self._p4cl = p4cl
         self._p4filelog = p4filelog
+        self._storepath = storepath
         self._localfile = localfile
 
     @util.propertycache
@@ -564,11 +580,12 @@ class SyncFileImporter(FileImporter):
         if len(hgfilelog) > 0:
             fparent1 = hgfilelog.tip()
 
-        # Only read files from p4 for a sync commit
-        text, src = p4.get_file(self._p4filelog.depotfile, clnum=self._cl), 'p4'
-        if text is None:
-            raise error.Abort('error generating file content %d %s' % (
-                self._cl, localfile))
+        text, src = get_p4_file_content(
+            self._storepath,
+            self._p4filelog,
+            self._p4cl,
+            True,
+        )
 
         meta = {}
         if self._p4filelog.isexec(self._cl):

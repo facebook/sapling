@@ -295,7 +295,7 @@ def parse_filelogs(ui, client, changelists, filelist):
 
 def get_filelogs_at_cl(client, clnum):
     cmd = 'p4 --client %s -G fstat -T ' \
-         '"depotFile,headAction,headType,headRev" ' \
+         '"depotFile,headAction,headType,headRev,headChange" ' \
          '"//%s/..."@%d' % (
          util.shellquote(client),
          util.shellquote(client),
@@ -314,9 +314,19 @@ def get_filelogs_at_cl(client, clnum):
                 filelog[clnum] = {
                     'action': d['headAction'],
                     'type': d['headType'],
+                    'headchangelist': d['headChange'],
                 }
                 result.append(P4Filelog(depotfile, filelog))
         return result
+    except Exception:
+        raise P4Exception(stdout)
+
+def getorigcl(client, clnum):
+    cmd = 'p4 --client %s -ztag -G describe -fs %s' %(client, clnum)
+    stdout = util.popen(cmd, mode='rb')
+    try:
+        d = marshal.load(stdout)
+        return d.get("oldChange") or clnum
     except Exception:
         raise P4Exception(stdout)
 
@@ -400,6 +410,9 @@ class P4Filelog(object):
     def iskeyworded(self, clnum):
         t = self._data[clnum]['type']
         return 'k' in self._get_modifiers(t)
+
+    def getheadchangelist(self, clnum):
+        return self._data[clnum]['headchangelist']
 
 ACTION_EDIT = ['edit', 'integrate']
 ACTION_ADD = ['add', 'branch', 'move/add']

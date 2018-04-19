@@ -410,6 +410,7 @@ def p4seqimport(ui, repo, client, **opts):
         )
 def p4syncimport(ui, repo, oldclient, newclient, **opts):
     sanitizeopts(repo, opts)
+    storepath = opts.get('path')
 
     if len(repo) == 0:
         raise error.Abort(_('p4 sync commit does not support empty repo yet.'))
@@ -438,11 +439,18 @@ def p4syncimport(ui, repo, oldclient, newclient, **opts):
     # reusep4filelogs: a list of files that do not need new entries in hgfilelog
     p4filelogs = p4.get_filelogs_at_cl(newclient, latestcl)
     p4filelogs = sorted(p4filelogs)
-    newp4filelogs, reusep4filelogs = importer.get_filelogs_to_sync(
-            ui, newclient, repo, p1ctx, startcl - 1, p4filelogs)
+    newp4filelogs, newp4flheadcls, reusep4filelogs = \
+        importer.get_filelogs_to_sync(
+            ui, newclient, repo, p1ctx, latestcl, p4filelogs
+        )
 
     if not newp4filelogs and not reusep4filelogs:
         raise error.Abort(_('nothing to import.'))
+
+    newp4flheadclstoorignalcls = {}
+    for eachcl in newp4flheadcls:
+        origcl = p4.getorigcl(newclient, eachcl)
+        newp4flheadclstoorignalcls[eachcl] = origcl
 
     # sync import.
     with repo.wlock(), repo.lock():
@@ -453,9 +461,12 @@ def p4syncimport(ui, repo, oldclient, newclient, **opts):
         tr = repo.transaction('syncimport')
         try:
             for p4fl, localname in newp4filelogs:
+                headcl = p4fl.getheadchangelist(latestcl)
+                origcl = newp4flheadclstoorignalcls[headcl]
+                p4cl = p4.P4Changelist(int(origcl), int(headcl), None, None)
                 bfi = importer.SyncFileImporter(
-                        ui, repo, newclient, latestcl, p4fl,
-                        localfile=localname)
+                        ui, repo, newclient, latestcl, p4cl, p4fl,
+                        storepath, localfile=localname)
                 # Create hg filelog
                 fileflags, largefiles, oldtiprev, newtiprev = bfi.create(tr)
                 fileinfo[p4fl.depotfile] = {
