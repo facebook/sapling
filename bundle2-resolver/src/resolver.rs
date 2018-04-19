@@ -347,7 +347,7 @@ impl Bundle2Resolver {
                     get_parent(&repo, &uploaded_changesets, p2.cloned()),
                 )
             };
-            let (root_manifest, entries) = try_boxfuture!(walk_manifests(
+            let new_blobs = try_boxfuture!(NewBlobs::new(
                 *revlog_cs.manifestid(),
                 &manifests,
                 &filelogs
@@ -358,8 +358,8 @@ impl Bundle2Resolver {
                     let scheduled_uploading = repo.create_changeset(
                         p1,
                         p2,
-                        root_manifest,
-                        entries,
+                        new_blobs.root_manifest,
+                        new_blobs.sub_entries,
                         String::from_utf8(revlog_cs.user().into())?,
                         revlog_cs.time().clone(),
                         revlog_cs.extra().clone(),
@@ -476,13 +476,50 @@ type BlobStream = BoxStream<(BlobEntry, RepoPath), Error>;
 
 /// In order to generate the DAG of dependencies between Root Manifest and other Manifests and
 /// Filelogs we need to walk that DAG.
-/// This function starts with the Root Manifest Id and returns Future for Root Manifest and Stream
-/// of all dependent Manifests and Filelogs that were provided in this push.
-fn walk_manifests(
-    manifest_root_id: HgManifestId,
-    manifests: &Manifests,
-    filelogs: &Filelogs,
-) -> Result<(BlobFuture, BlobStream)> {
+/// This represents the manifests and file nodes introduced by a particular changeset.
+struct NewBlobs {
+    root_manifest: BlobFuture,
+    // sub_entries has both submanifest and filenode entries.
+    sub_entries: BlobStream,
+}
+
+impl NewBlobs {
+    fn new(
+        manifest_root_id: HgManifestId,
+        manifests: &Manifests,
+        filelogs: &Filelogs,
+    ) -> Result<Self> {
+        let root_key = HgNodeKey {
+            path: RepoPath::root(),
+            hash: manifest_root_id.clone().into_nodehash(),
+        };
+
+        let &(ref manifest_content, ref manifest_root) = manifests
+            .get(&root_key)
+            .ok_or_else(|| format_err!("Missing root tree manifest"))?;
+
+        Ok(Self {
+            root_manifest: manifest_root
+                .clone()
+                .map(|it| (*it).clone())
+                .from_err()
+                .boxify(),
+            sub_entries: stream::futures_unordered(Self::walk_helper(
+                &RepoPath::root(),
+                &manifest_content,
+                manifests,
+                filelogs,
+            )?).with_context(move |_| {
+                format!(
+                    "While walking dependencies of Root Manifest with id {:?}",
+                    manifest_root_id
+                )
+            })
+                .from_err()
+                .boxify(),
+        })
+    }
+
     fn walk_helper(
         path_taken: &RepoPath,
         manifest_content: &ManifestContent,
@@ -519,7 +556,7 @@ fn walk_manifests(
                             .from_err()
                             .boxify(),
                     );
-                    entries.append(&mut walk_helper(
+                    entries.append(&mut Self::walk_helper(
                         &key.path,
                         manifest_content,
                         manifests,
@@ -545,36 +582,6 @@ fn walk_manifests(
 
         Ok(entries)
     }
-
-    let root_key = HgNodeKey {
-        path: RepoPath::root(),
-        hash: manifest_root_id.clone().into_nodehash(),
-    };
-
-    let &(ref manifest_content, ref manifest_root) = manifests
-        .get(&root_key)
-        .ok_or_else(|| format_err!("Missing root tree manifest"))?;
-
-    Ok((
-        manifest_root
-            .clone()
-            .map(|it| (*it).clone())
-            .from_err()
-            .boxify(),
-        stream::futures_unordered(walk_helper(
-            &RepoPath::root(),
-            &manifest_content,
-            manifests,
-            filelogs,
-        )?).with_context(move |_| {
-            format!(
-                "While walking dependencies of Root Manifest with id {:?}",
-                manifest_root_id
-            )
-        })
-            .from_err()
-            .boxify(),
-    ))
 }
 
 fn get_ascii_param(params: &HashMap<String, Bytes>, param: &str) -> Result<AsciiString> {
