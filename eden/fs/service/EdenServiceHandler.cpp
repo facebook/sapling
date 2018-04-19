@@ -507,22 +507,7 @@ EdenServiceHandler::future_getScmStatus(
       folly::to<string>("commitHash=", logHash(*commitHash)));
 
   auto mount = server_->getMount(*mountPoint);
-  Hash hash;
-  if (commitHash->empty()) {
-    // Older clients did not send the commit hash, and expected us to diff
-    // against what we currently believe to be the root commit.
-    //
-    // This is problematic since there are potential race conditions if a
-    // commit/checkout was just performed and eden diffs against a different
-    // commit than what the client was expecting.
-    //
-    // For now we still support this old behavior, but we should drop support
-    // for this once the changes to the client-side code have been fully
-    // deployed.
-    hash = mount->getParentCommits().parent1();
-  } else {
-    hash = hashFromThrift(*commitHash);
-  }
+  auto hash = hashFromThrift(*commitHash);
   return helper.wrapFuture(diffMountForStatus(mount.get(), hash, listIgnored));
 }
 
