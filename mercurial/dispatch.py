@@ -518,6 +518,7 @@ class cmdalias(object):
             if self.help.startswith("hg " + cmd):
                 # drop prefix in old-style help lines so hg shows the alias
                 self.help = self.help[4 + len(cmd):]
+            self.norepo = self.fn.norepo
             self.__doc__ = self.fn.__doc__
 
         except error.UnknownCommand:
