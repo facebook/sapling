@@ -107,7 +107,7 @@ Verify
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master)
 
-Fast Import after Sync Import
+Seq Import after Sync Import
 
   $ hg p4seqimport --bookmark master -P $P4ROOT hg-p4-import
 
@@ -132,7 +132,7 @@ Syncimport must abort if there are newer commits
 
 Remove stuff
 
-  $ hg p4fastimport --bookmark master -P $P4ROOT hg-p4-import
+  $ hg p4seqimport --bookmark master -P $P4ROOT hg-p4-import
   $ hg p4syncimport --bookmark master --debug -P $P4ROOT hg-p4-import hg-p4-import-narrow
   incremental import from changelist: 6, node: * (glob)
   5 (current client) 2 (requested client) 5 (latest imported)
