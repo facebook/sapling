@@ -19,7 +19,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Union
 from unittest.mock import call, patch
 import eden.cli.doctor as doctor
 import eden.cli.config as config_mod
-from eden.cli.doctor import CheckResultType
+from eden.cli.doctor import CheckResult, CheckResultType
 from eden.cli import mtab
 from fb303.ttypes import fb_status
 import eden.dirstate
@@ -31,7 +31,10 @@ class DoctorTest(unittest.TestCase):
     maxDiff = None
 
     @patch('eden.cli.doctor._call_watchman')
-    def test_end_to_end_test_with_various_scenarios(self, mock_watchman):
+    @patch('eden.cli.doctor._get_roots_for_nuclide')
+    def test_end_to_end_test_with_various_scenarios(
+        self, mock_get_roots_for_nuclide, mock_watchman
+    ):
         side_effects: List[Dict[str, Any]] = []
         calls = []
         tmp_dir = tempfile.mkdtemp(prefix='eden_test.')
@@ -41,6 +44,11 @@ class DoctorTest(unittest.TestCase):
             # In edenfs_path2, we will break the inotify check and the Nuclide
             # subscriptions check.
             edenfs_path2 = os.path.join(tmp_dir, 'path2')
+
+            # Assume both paths are used as root folders in a connected Nuclide.
+            mock_get_roots_for_nuclide.return_value = {
+                edenfs_path1, edenfs_path2
+            }
 
             calls.append(call(['watch-list']))
             side_effects.append({'roots': [edenfs_path1, edenfs_path2]})
@@ -104,13 +112,14 @@ class DoctorTest(unittest.TestCase):
 
             mount_table = FakeMountTable()
             mount_table.stats[edenfs_path1] = mtab.MTStat(
-                st_uid=os.getuid(),
-                st_dev=11)
+                st_uid=os.getuid(), st_dev=11
+            )
             mount_table.stats[edenfs_path2] = mtab.MTStat(
-                st_uid=os.getuid(),
-                st_dev=12)
+                st_uid=os.getuid(), st_dev=12
+            )
             exit_code = doctor.cure_what_ails_you(
-                config, dry_run, out, mount_table)
+                config, dry_run, out, mount_table
+            )
         finally:
             shutil.rmtree(tmp_dir)
 
@@ -121,10 +130,17 @@ p1 for {edenfs_path1} is {'12345678' * 5}, but Eden's internal
 hash in its SNAPSHOT file is {edenfs_path1_snapshot_hex}.
 Performing 2 checks for {edenfs_path2}.
 Previous Watchman watcher for {edenfs_path2} was "inotify" but is now "eden".
-Nuclide appears to be used to edit {edenfs_path2},
-but a key Watchman subscription appears to be missing.
+Nuclide appears to be used to edit the following directories
+under {edenfs_path2}:
+
+  {edenfs_path2}
+
+but the following Watchman subscriptions appear to be missing:
+
+  filewatcher-{edenfs_path2}
+
 This can cause file changes to fail to show up in Nuclide.
-Currently, the only workaround this is to run
+Currently, the only workaround for this is to run
 "Nuclide Remote Projects: Kill And Restart" from the
 command palette in Atom.
 Number of fixes made: 1.
@@ -135,7 +151,10 @@ Number of issues that could not be fixed: 2.
         self.assertEqual(1, exit_code)
 
     @patch('eden.cli.doctor._call_watchman')
-    def test_not_all_mounts_have_watchman_watcher(self, mock_watchman):
+    @patch('eden.cli.doctor._get_roots_for_nuclide', return_value=set())
+    def test_not_all_mounts_have_watchman_watcher(
+        self, mock_get_roots_for_nuclide, mock_watchman
+    ):
         edenfs_path = '/path/to/eden-mount'
         edenfs_path_not_watched = '/path/to/eden-mount-not-watched'
         side_effects: List[Dict[str, Any]] = []
@@ -145,8 +164,6 @@ Number of issues that could not be fixed: 2.
         side_effects.append({'roots': [edenfs_path]})
         calls.append(call(['watch-project', edenfs_path]))
         side_effects.append({'watcher': 'eden'})
-        calls.append(call(['debug-get-subscriptions', edenfs_path]))
-        side_effects.append({})
         mock_watchman.side_effect = side_effects
 
         out = io.StringIO()
@@ -173,13 +190,14 @@ Number of issues that could not be fixed: 2.
         ]
         mount_table = FakeMountTable()
         mount_table.stats['/path/to/eden-mount'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=10)
+            st_uid=os.getuid(), st_dev=10
+        )
         mount_table.stats['/path/to/eden-mount-not-watched'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=11)
+            st_uid=os.getuid(), st_dev=11
+        )
         exit_code = doctor.cure_what_ails_you(
-            config, dry_run, out, mount_table=mount_table)
+            config, dry_run, out, mount_table=mount_table
+        )
 
         self.assertEqual(
             'Performing 2 checks for /path/to/eden-mount.\n'
@@ -190,10 +208,19 @@ Number of issues that could not be fixed: 2.
         self.assertEqual(0, exit_code)
 
     @patch('eden.cli.doctor._call_watchman')
-    def test_not_much_to_do_when_eden_is_not_running(self, mock_watchman):
+    @patch('eden.cli.doctor._get_roots_for_nuclide')
+    def test_not_much_to_do_when_eden_is_not_running(
+        self, mock_get_roots_for_nuclide, mock_watchman
+    ):
         edenfs_path = '/path/to/eden-mount'
         side_effects: List[Dict[str, Any]] = []
         calls = []
+
+        # Note that even though Nuclide has a root that points to an unmounted
+        # Eden directory, `eden doctor` is not going to be able to report
+        # anything because it cannot make the Thrift call to `eden list` to
+        # discover that edenfs_path is normally an Eden mount.
+        mock_get_roots_for_nuclide.return_value = {edenfs_path}
 
         calls.append(call(['watch-list']))
         side_effects.append({'roots': [edenfs_path]})
@@ -202,17 +229,19 @@ Number of issues that could not be fixed: 2.
         out = io.StringIO()
         dry_run = False
         mount_paths = {
-            edenfs_path: {
-                'bind-mounts': {},
-                'mount': edenfs_path,
-                'scm_type': 'hg',
-                'snapshot': 'abcd' * 10,
-                'client-dir': '/I_DO_NOT_EXIST'
-            }
+            edenfs_path:
+                {
+                    'bind-mounts': {},
+                    'mount': edenfs_path,
+                    'scm_type': 'hg',
+                    'snapshot': 'abcd' * 10,
+                    'client-dir': '/I_DO_NOT_EXIST'
+                }
         }
         config = FakeConfig(mount_paths, is_healthy=False)
         exit_code = doctor.cure_what_ails_you(
-            config, dry_run, out, FakeMountTable())
+            config, dry_run, out, FakeMountTable()
+        )
 
         self.assertEqual(
             dedent(
@@ -297,7 +326,7 @@ All is well.
             side_effects.append({'watch': edenfs_path, 'watcher': new_watcher})
         mock_watchman.side_effect = side_effects
 
-        watchman_roots = set([edenfs_path])
+        watchman_roots = {edenfs_path}
         watcher_check = doctor.WatchmanUsingEdenSubscriptionCheck(
             edenfs_path,
             watchman_roots,
@@ -319,21 +348,44 @@ All is well.
         )
 
     @patch('eden.cli.doctor._call_watchman')
-    def test_no_issue_when_marker_nuclide_subscription_not_present(
-        self, mock_watchman
-    ):
+    def test_no_issue_when_path_not_in_nuclide_roots(self, mock_watchman):
         self._test_nuclide_check(
             mock_watchman=mock_watchman,
             expected_check_result=CheckResultType.NO_ISSUE,
-            include_primary_subscription=False
+            include_path_in_nuclide_roots=False
         )
 
     @patch('eden.cli.doctor._call_watchman')
-    def test_filewatcher_subscription_is_missing(self, mock_watchman):
-        self._test_nuclide_check(
+    def test_watchman_subscriptions_are_missing(self, mock_watchman):
+        check_result = self._test_nuclide_check(
             mock_watchman=mock_watchman,
             expected_check_result=CheckResultType.FAILED_TO_FIX,
+            include_hg_subscriptions=False,
             dry_run=False,
+        )
+        self.assertEqual(
+            f'''\
+Nuclide appears to be used to edit the following directories
+under /path/to/eden-mount:
+
+  /path/to/eden-mount/subdirectory
+
+but the following Watchman subscriptions appear to be missing:
+
+  filewatcher-/path/to/eden-mount/subdirectory
+  hg-repository-watchman-subscription-primary
+  hg-repository-watchman-subscription-conflicts
+  hg-repository-watchman-subscription-hgbookmark
+  hg-repository-watchman-subscription-hgbookmarks
+  hg-repository-watchman-subscription-dirstate
+  hg-repository-watchman-subscription-progress
+  hg-repository-watchman-subscription-lock-files
+
+This can cause file changes to fail to show up in Nuclide.
+Currently, the only workaround for this is to run
+"Nuclide Remote Projects: Kill And Restart" from the
+command palette in Atom.
+''', check_result.message
         )
 
     @patch('eden.cli.doctor._call_watchman')
@@ -349,41 +401,51 @@ All is well.
         expected_check_result: CheckResultType,
         dry_run: bool = True,
         include_filewatcher_subscription: bool = False,
-        include_primary_subscription: bool = True,
-    ) -> None:
+        include_path_in_nuclide_roots: bool = True,
+        include_hg_subscriptions: bool = True,
+    ) -> CheckResult:
         edenfs_path = '/path/to/eden-mount'
         side_effects: List[Dict[str, Any]] = []
-        calls = []
+        watchman_calls = []
 
-        calls.append(call(['debug-get-subscriptions', edenfs_path]))
+        if include_path_in_nuclide_roots:
+            watchman_calls.append(
+                call(['debug-get-subscriptions', edenfs_path])
+            )
+
+        nuclide_root = os.path.join(edenfs_path, 'subdirectory')
         if include_filewatcher_subscription:
             # Note that a "filewatcher-" subscription in a subdirectory of the
             # Eden mount should signal that the proper Watchman subscription is
             # set up.
-            filewatcher_subscription: Optional[
-                str
-            ] = f'filewatcher-{os.path.join(edenfs_path, "subdirectory")}'
+            filewatcher_sub: Optional[str] = f'filewatcher-{nuclide_root}'
         else:
-            filewatcher_subscription = None
+            filewatcher_sub = None
+
+        unrelated_path = '/path/to/non-eden-mount'
+        if include_path_in_nuclide_roots:
+            nuclide_roots = {nuclide_root, unrelated_path}
+        else:
+            nuclide_roots = {unrelated_path}
 
         side_effects.append(
             _create_watchman_subscription(
-                filewatcher_subscription=filewatcher_subscription,
-                include_primary_subscription=include_primary_subscription,
+                filewatcher_subscription=filewatcher_sub,
+                include_hg_subscriptions=include_hg_subscriptions,
             )
         )
         mock_watchman.side_effect = side_effects
-
-        watchman_roots = set([edenfs_path])
+        watchman_roots = {edenfs_path}
         nuclide_check = doctor.NuclideHasExpectedWatchmanSubscriptions(
             edenfs_path,
             watchman_roots,
-            True  # is_healthy
+            nuclide_roots,
         )
 
         check_result = nuclide_check.do_check(dry_run)
         self.assertEqual(expected_check_result, check_result.result_type)
-        mock_watchman.assert_has_calls(calls)
+        mock_watchman.assert_has_calls(watchman_calls)
+        return check_result
 
     def test_snapshot_and_dirstate_file_match(self):
         dirstate_hash = b'\x12\x34\x56\x78' * 5
@@ -475,7 +537,8 @@ All is well.
 
         mock_rpm_q.assert_has_calls(calls)
 
-    def test_unconfigured_mounts_dont_crash(self):
+    @patch('eden.cli.doctor._get_roots_for_nuclide', return_value=set())
+    def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide):
         # If Eden advertises that a mount is active, but it is not in the
         # configuration, then at least don't throw an exception.
         tmp_dir = tempfile.mkdtemp(prefix='eden_test.')
@@ -502,11 +565,11 @@ All is well.
             # ... and is in the system mount table.
             mount_table = FakeMountTable()
             mount_table.stats[edenfs_path1] = mtab.MTStat(
-                st_uid=os.getuid(),
-                st_dev=11)
+                st_uid=os.getuid(), st_dev=11
+            )
             mount_table.stats[edenfs_path2] = mtab.MTStat(
-                st_uid=os.getuid(),
-                st_dev=12)
+                st_uid=os.getuid(), st_dev=12
+            )
 
             os.mkdir(edenfs_path1)
             hg_dir = os.path.join(edenfs_path1, '.hg')
@@ -520,7 +583,8 @@ All is well.
             dry_run = False
             out = io.StringIO()
             exit_code = doctor.cure_what_ails_you(
-                config, dry_run, out, mount_table)
+                config, dry_run, out, mount_table
+            )
         finally:
             shutil.rmtree(tmp_dir)
 
@@ -540,14 +604,15 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.active_mounts: List[bytes] = [b'/mnt/active1', b'/mnt/active2']
         self.mount_table = FakeMountTable()
         self.mount_table.stats['/mnt/active1'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=10)
+            st_uid=os.getuid(), st_dev=10
+        )
         self.mount_table.stats['/mnt/active2'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=11)
+            st_uid=os.getuid(), st_dev=11
+        )
         self.check = doctor.StaleMountsCheck(
             active_mount_points=self.active_mounts,
-            mount_table=self.mount_table)
+            mount_table=self.mount_table
+        )
 
     def test_does_not_unmount_active_mounts(self):
         self.mount_table.set_eden_mounts(self.active_mounts)
@@ -560,95 +625,123 @@ class StaleMountsCheckTest(unittest.TestCase):
     def test_stale_nonactive_mount_is_unmounted(self):
         self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
         self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=12)
+            st_uid=os.getuid(), st_dev=12
+        )
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
-        self.assertEqual(dedent('''\
+        self.assertEqual(
+            dedent(
+                '''\
             Unmounted 1 stale edenfs mount point:
               /mnt/stale1
-        '''), result.message)
+        '''
+            ), result.message
+        )
         self.assertEqual([b'/mnt/stale1'], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_force_unmounts_if_lazy_fails(self):
         self.mount_table.set_eden_mounts(
-            self.active_mounts + [b'/mnt/stale1', b'/mnt/stale2'])
+            self.active_mounts + [b'/mnt/stale1', b'/mnt/stale2']
+        )
         self.mount_table.fail_unmount_lazy(b'/mnt/stale1')
         self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=12)
+            st_uid=os.getuid(), st_dev=12
+        )
         self.mount_table.stats['/mnt/stale2'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=13)
+            st_uid=os.getuid(), st_dev=13
+        )
 
         result = self.check.do_check(dry_run=False)
-        self.assertEqual(dedent('''\
+        self.assertEqual(
+            dedent(
+                '''\
             Unmounted 2 stale edenfs mount points:
               /mnt/stale1
               /mnt/stale2
-        '''), result.message)
+        '''
+            ), result.message
+        )
         self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
         self.assertEqual(
             [b'/mnt/stale1', b'/mnt/stale2'],
-            self.mount_table.unmount_lazy_calls)
+            self.mount_table.unmount_lazy_calls
+        )
         self.assertEqual([b'/mnt/stale1'], self.mount_table.unmount_force_calls)
 
     def test_dry_run_prints_stale_mounts_and_does_not_unmount(self):
         self.mount_table.set_eden_mounts(
-            self.active_mounts + [b'/mnt/stale2', b'/mnt/stale1'])
+            self.active_mounts + [b'/mnt/stale2', b'/mnt/stale1']
+        )
         self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=12)
+            st_uid=os.getuid(), st_dev=12
+        )
         self.mount_table.stats['/mnt/stale2'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=13)
+            st_uid=os.getuid(), st_dev=13
+        )
 
         result = self.check.do_check(dry_run=True)
         self.assertEqual(
-            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN,
-            result.result_type)
-        self.assertEqual(dedent('''\
+            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+        )
+        self.assertEqual(
+            dedent(
+                '''\
             Found 2 stale edenfs mount points:
               /mnt/stale1
               /mnt/stale2
             Not unmounting because dry run.
-        '''), result.message)
+        '''
+            ), result.message
+        )
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_fails_if_unmount_fails(self):
         self.mount_table.set_eden_mounts(
-            self.active_mounts + [b'/mnt/stale1', b'/mnt/stale2'])
+            self.active_mounts + [b'/mnt/stale1', b'/mnt/stale2']
+        )
         self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=12)
+            st_uid=os.getuid(), st_dev=12
+        )
         self.mount_table.stats['/mnt/stale2'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=13)
+            st_uid=os.getuid(), st_dev=13
+        )
         self.mount_table.fail_unmount_lazy(b'/mnt/stale1', b'/mnt/stale2')
         self.mount_table.fail_unmount_force(b'/mnt/stale1')
 
         result = self.check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
-        self.assertEqual(dedent('''\
+        self.assertEqual(
+            doctor.CheckResultType.FAILED_TO_FIX, result.result_type
+        )
+        self.assertEqual(
+            dedent(
+                '''\
             Successfully unmounted 1 mount point:
               /mnt/stale2
             Failed to unmount 1 mount point:
               /mnt/stale1
-        '''), result.message)
+        '''
+            ), result.message
+        )
         self.assertEqual(
             [b'/mnt/stale1', b'/mnt/stale2'],
-            self.mount_table.unmount_lazy_calls)
+            self.mount_table.unmount_lazy_calls
+        )
         self.assertEqual(
             [b'/mnt/stale1', b'/mnt/stale2'],
-            self.mount_table.unmount_force_calls)
+            self.mount_table.unmount_force_calls
+        )
 
     def test_ignores_noneden_mounts(self):
-        self.mount_table.set_mounts([
-            mtab.MountInfo(device=b'/dev/sda1', mount_point=b'/', vfstype=b'ext4'),
-        ])
+        self.mount_table.set_mounts(
+            [
+                mtab.MountInfo(
+                    device=b'/dev/sda1', mount_point=b'/', vfstype=b'ext4'
+                ),
+            ]
+        )
         result = self.check.do_check(dry_run=False)
         self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
         self.assertEqual('', result.message)
@@ -658,10 +751,13 @@ class StaleMountsCheckTest(unittest.TestCase):
     def test_gives_up_if_cannot_stat_active_mount(self):
         del self.mount_table.stats['/mnt/active1']
         result = self.check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        self.assertEqual(
+            doctor.CheckResultType.FAILED_TO_FIX, result.result_type
+        )
         self.assertEqual(
             'Failed to lstat active eden mount b\'/mnt/active1\'\n',
-            result.message)
+            result.message
+        )
 
     @patch('eden.cli.doctor.log.warning')
     def test_does_not_unmount_if_cannot_stat_stale_mount(self, warning):
@@ -678,7 +774,8 @@ class StaleMountsCheckTest(unittest.TestCase):
         # Verify that the reason for skipping this mount is logged.
         warning.assert_called_once_with(
             'Unclear whether /mnt/stale1 is stale or not. '
-            'lstat() failed: [Errno 13] Permission denied')
+            'lstat() failed: [Errno 13] Permission denied'
+        )
 
     def test_does_unmount_if_stale_mount_is_unconnected(self):
         self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
@@ -690,15 +787,16 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
         self.assertEqual(
             'Unmounted 1 stale edenfs mount point:\n  /mnt/stale1\n',
-            result.message)
+            result.message
+        )
         self.assertEqual([b'/mnt/stale1'], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_does_not_unmount_other_users_mounts(self):
         self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
         self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid() + 1,
-            st_dev=12)
+            st_uid=os.getuid() + 1, st_dev=12
+        )
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual('', result.message)
@@ -709,8 +807,8 @@ class StaleMountsCheckTest(unittest.TestCase):
     def test_does_not_unmount_mounts_with_same_device_as_active_mount(self):
         self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
         self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid(),
-            st_dev=10)
+            st_uid=os.getuid(), st_dev=10
+        )
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual('', result.message)
@@ -721,36 +819,41 @@ class StaleMountsCheckTest(unittest.TestCase):
 
 def _create_watchman_subscription(
     filewatcher_subscription: Optional[str] = None,
-    include_primary_subscription: bool = True,
+    include_hg_subscriptions: bool = True,
 ) -> Dict:
     subscribers = []
     if filewatcher_subscription is not None:
         subscribers.append(
             {
-                'info': {
-                    'name': filewatcher_subscription,
-                    'query': {
-                        'empty_on_fresh_instance': True,
-                        'defer_vcs': False,
-                        'fields': ['name', 'new', 'exists', 'mode'],
-                        'relative_root': 'fbcode',
-                        'since': 'c:1511985586:2749065:2774073346:354'
-                    },
-                }
+                'info':
+                    {
+                        'name': filewatcher_subscription,
+                        'query':
+                            {
+                                'empty_on_fresh_instance': True,
+                                'defer_vcs': False,
+                                'fields': ['name', 'new', 'exists', 'mode'],
+                                'relative_root': 'fbcode',
+                                'since': 'c:1511985586:2749065:2774073346:354'
+                            },
+                    }
             }
         )
-    if include_primary_subscription:
-        subscribers.append(
-            {
-                'info': {
-                    'name': 'hg-repository-watchman-subscription-primary',
-                    'query': {
-                        'empty_on_fresh_instance': True,
-                        'fields': ['name', 'new', 'exists', 'mode'],
-                    },
+    if include_hg_subscriptions:
+        for name in doctor.NUCLIDE_HG_SUBSCRIPTIONS:
+            subscribers.append(
+                {
+                    'info':
+                        {
+                            'name': name,
+                            'query':
+                                {
+                                    'empty_on_fresh_instance': True,
+                                    'fields': ['name', 'new', 'exists', 'mode'],
+                                },
+                        }
                 }
-            }
-        )
+            )
     return {
         'subscribers': subscribers,
     }
@@ -809,12 +912,13 @@ class FakeMountTable(mtab.MountTable):
         self.stats: Dict[Union[bytes, str], mtab.MTStat] = {}
 
     def set_eden_mounts(self, mounts: List[bytes]):
-        self.set_mounts([
-            mtab.MountInfo(
-                device=b'edenfs',
-                mount_point=mp,
-                vfstype=b'fuse')
-            for mp in mounts])
+        self.set_mounts(
+            [
+                mtab.MountInfo(
+                    device=b'edenfs', mount_point=mp, vfstype=b'fuse'
+                ) for mp in mounts
+            ]
+        )
 
     def set_mounts(self, mounts: List[mtab.MountInfo]):
         self.mounts[:] = mounts
@@ -869,4 +973,5 @@ class FakeMountTable(mtab.MountTable):
     def _remove_mount(self, mount_point: bytes):
         self.mounts[:] = [
             mount_info for mount_info in self.mounts
-            if mount_info.mount_point != mount_point]
+            if mount_info.mount_point != mount_point
+        ]
