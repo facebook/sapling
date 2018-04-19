@@ -64,8 +64,6 @@ pub fn resolve(
             let mut changegroup_id = None;
             let bundle2 = if let Some(cg_push) = cg_push {
                 changegroup_id = Some(cg_push.part_id);
-                let changesets = cg_push.changesets;
-                let filelogs = cg_push.filelogs;
 
                 resolver
                     .resolve_b2xtreegroup2(bundle2)
@@ -74,7 +72,7 @@ pub fn resolve(
 
                         move |(manifests, bundle2)| {
                             resolver
-                                .upload_changesets(changesets, filelogs, manifests)
+                                .upload_changesets(cg_push, manifests)
                                 .map(|()| bundle2)
                         }
                     })
@@ -328,10 +326,12 @@ impl Bundle2Resolver {
     /// that the changesets were uploaded
     fn upload_changesets(
         &self,
-        changesets: Changesets,
-        filelogs: Filelogs,
+        cg_push: ChangegroupPush,
         manifests: Manifests,
     ) -> BoxFuture<(), Error> {
+        let changesets = cg_push.changesets;
+        let filelogs = cg_push.filelogs;
+
         fn upload_changeset(
             repo: Arc<BlobRepo>,
             node: HgNodeHash,
