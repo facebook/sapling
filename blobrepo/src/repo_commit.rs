@@ -44,6 +44,11 @@ use utils::get_node_key;
 #[derive(Clone)]
 pub struct ChangesetHandle {
     can_be_parent: Shared<oneshot::Receiver<(DNodeHash, DManifestId)>>,
+    // * Shared is required here because a single changeset can have more than one child, and
+    //   all of those children will want to refer to the corresponding future for their parents.
+    // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
+    //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
+    //   implements Error.
     completion_future: Shared<BoxFuture<BlobChangeset, Compat<Error>>>,
 }
 

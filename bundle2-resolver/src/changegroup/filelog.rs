@@ -41,6 +41,11 @@ pub struct Filelog {
 }
 
 impl UploadableHgBlob for Filelog {
+    // * Shared is required here because a single file node can be referred to by more than
+    //   one changeset, and all of those will want to refer to the corresponding future.
+    // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
+    //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
+    //   implements Error.
     type Value = Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>;
 
     fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {

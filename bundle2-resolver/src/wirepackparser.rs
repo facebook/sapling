@@ -80,6 +80,11 @@ impl TreemanifestEntry {
 }
 
 impl UploadableHgBlob for TreemanifestEntry {
+    // * Shared is required here because a single tree manifest can be referred to by more than
+    //   one changeset, and all of those will want to refer to the corresponding future.
+    // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
+    //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
+    //   implements Error.
     type Value = (
         ManifestContent,
         Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>,
