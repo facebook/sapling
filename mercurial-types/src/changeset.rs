@@ -6,7 +6,7 @@
 
 use std::collections::BTreeMap;
 
-use mononoke_types::MPath;
+use mononoke_types::{DateTime, MPath};
 
 use blobnode::DParents;
 use nodehash::DManifestId;
@@ -17,7 +17,7 @@ pub trait Changeset: Send + 'static {
     fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>>;
     fn comments(&self) -> &[u8];
     fn files(&self) -> &[MPath];
-    fn time(&self) -> &Time;
+    fn time(&self) -> &DateTime;
     fn parents(&self) -> &DParents;
 
     fn boxed(self) -> Box<Changeset>
@@ -49,17 +49,11 @@ impl Changeset for Box<Changeset> {
         (**self).files()
     }
 
-    fn time(&self) -> &Time {
+    fn time(&self) -> &DateTime {
         (**self).time()
     }
 
     fn parents(&self) -> &DParents {
         (**self).parents()
     }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Time {
-    pub time: u64,
-    pub tz: i32,
 }

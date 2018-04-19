@@ -96,7 +96,7 @@ mod node;
 
 pub use blob::{HgBlob, HgBlobHash};
 pub use blobnode::{DBlobNode, DParents};
-pub use changeset::{Changeset, Time};
+pub use changeset::Changeset;
 pub use delta::Delta;
 pub use fsencode::{fncache_fsencode, simple_fsencode};
 pub use manifest::{Entry, Manifest, Type};

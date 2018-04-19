@@ -18,8 +18,9 @@ use blobstore::Blobstore;
 use mercurial::{self, HgBlobNode, NodeHashConversion};
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
-use mercurial_types::{Changeset, DBlobNode, DParents, HgBlob, MPath, Time};
+use mercurial_types::{Changeset, DBlobNode, DParents, HgBlob, MPath};
 use mercurial_types::nodehash::{DChangesetId, DManifestId, D_NULL_HASH};
+use mononoke_types::DateTime;
 
 use errors::*;
 use utils::{EnvelopeBlob, RawCSBlob};
@@ -28,7 +29,7 @@ pub struct ChangesetContent {
     parents: DParents,
     manifestid: DManifestId,
     user: Vec<u8>,
-    time: Time,
+    time: DateTime,
     extra: Extra,
     files: Vec<MPath>,
     comments: Vec<u8>,
@@ -39,7 +40,7 @@ impl ChangesetContent {
         parents: DParents,
         manifestid: DManifestId,
         user: Vec<u8>,
-        time: Time,
+        time: DateTime,
         extra: BTreeMap<Vec<u8>, Vec<u8>>,
         files: Vec<MPath>,
         comments: Vec<u8>,
@@ -99,7 +100,12 @@ impl ChangesetContent {
         write!(out, "{}\n", self.manifestid.into_nodehash())?;
         out.write_all(&self.user)?;
         out.write_all(b"\n")?;
-        write!(out, "{} {}", self.time.time, self.time.tz)?;
+        write!(
+            out,
+            "{} {}",
+            self.time.timestamp_secs(),
+            self.time.tz_offset_secs()
+        )?;
 
         if !self.extra.is_empty() {
             write!(out, " ")?;
@@ -234,7 +240,7 @@ impl Changeset for BlobChangeset {
         &self.content.files
     }
 
-    fn time(&self) -> &Time {
+    fn time(&self) -> &DateTime {
         &self.content.time
     }
 

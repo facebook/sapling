@@ -38,10 +38,10 @@ use memblob::EagerMemblob;
 use memheads::MemHeads;
 use mercurial::NodeHashConversion;
 use mercurial_types::{Changeset, DBlobNode, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry,
-                      HgBlob, Manifest, RepoPath, RepositoryId, Time};
+                      HgBlob, Manifest, RepoPath, RepositoryId};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::DManifestId;
-use mononoke_types::FileContents;
+use mononoke_types::{DateTime, FileContents};
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Remote;
@@ -457,7 +457,7 @@ impl BlobRepo {
         root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
         new_child_entries: BoxStream<(BlobEntry, RepoPath), Error>,
         user: String,
-        time: Time,
+        time: DateTime,
         extra: BTreeMap<Vec<u8>, Vec<u8>>,
         comments: String,
     ) -> ChangesetHandle {

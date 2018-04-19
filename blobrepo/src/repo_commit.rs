@@ -23,10 +23,11 @@ use blobstore::Blobstore;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial::file;
 use mercurial_types::{Changeset, DChangesetId, DEntryId, DNodeHash, DParents, Entry, MPath,
-                      Manifest, RepoPath, RepositoryId, Time};
+                      Manifest, RepoPath, RepositoryId};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use mercurial_types::nodehash::{DFileNodeId, DManifestId};
+use mononoke_types::DateTime;
 
 use BlobChangeset;
 use BlobRepo;
@@ -484,7 +485,7 @@ pub fn make_new_changeset(
     parents: DParents,
     root_hash: DManifestId,
     user: String,
-    time: Time,
+    time: DateTime,
     extra: BTreeMap<Vec<u8>, Vec<u8>>,
     files: Vec<MPath>,
     comments: String,

@@ -9,9 +9,10 @@ use std::collections::BTreeMap;
 use quickcheck::{QuickCheck, TestResult};
 
 use mercurial_types::{HgBlob, MPath};
+use mononoke_types::DateTime;
 
 use blobnode::HgBlobNode;
-use changeset::{escape, serialize_extras, unescape, Extra, RevlogChangeset, Time};
+use changeset::{escape, serialize_extras, unescape, Extra, RevlogChangeset};
 use nodehash::{HgManifestId, HgNodeHash};
 
 use bytes::Bytes;
@@ -36,10 +37,7 @@ fn test_parse() {
                 "497522ef3706a1665bf4140497c65b467454e962".parse().unwrap()
             ),
             user: "Mads Kiilerich <madski@unity3d.com>".into(),
-            time: Time {
-                time: 1383910550,
-                tz: -3600,
-            },
+            time: DateTime::from_timestamp(1383910550, -3600).expect("valid timestamp"),
             extra: Extra(
                 vec![("branch".into(), "stable".into())]
                     .into_iter()
@@ -73,10 +71,7 @@ the user expected."#.into(),
                 "6c0d10b92d045127f9a3846b59480451fe3bbac9".parse().unwrap()
             ),
             user: "jake@edge2.net".into(),
-            time: Time {
-                time: 1116031690,
-                tz: 25200,
-            },
+            time: DateTime::from_timestamp(1116031690, 25200).expect("valid timestamp"),
             extra: Extra(vec![].into_iter().collect()),
             files: vec![MPath::new(b"hgweb.py").unwrap()],
             comments: r#"reorganize code into classes

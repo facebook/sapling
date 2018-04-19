@@ -16,7 +16,8 @@ use futures_ext::{BoxFuture, StreamExt};
 
 use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use memblob::{EagerMemblob, LazyMemblob};
-use mercurial_types::{manifest, DNodeHash, FileType, HgBlob, RepoPath, Time};
+use mercurial_types::{manifest, DNodeHash, FileType, HgBlob, RepoPath};
+use mononoke_types::DateTime;
 use std::sync::Arc;
 
 pub fn get_empty_eager_repo() -> BlobRepo {
@@ -139,7 +140,7 @@ pub fn create_changeset_no_parents(
         root_manifest,
         futures_unordered(other_nodes).boxify(),
         "author <author@fb.com>".into(),
-        Time { time: 0, tz: 0 },
+        DateTime::from_timestamp(0, 0).expect("valid timestamp"),
         BTreeMap::new(),
         "Test commit".into(),
     )
@@ -157,7 +158,7 @@ pub fn create_changeset_one_parent(
         root_manifest,
         futures_unordered(other_nodes).boxify(),
         "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into(),
-        Time { time: 1234, tz: 0 },
+        DateTime::from_timestamp(1234, 0).expect("valid timestamp"),
         BTreeMap::new(),
         "Child commit".into(),
     )

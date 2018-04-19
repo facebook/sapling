@@ -12,7 +12,7 @@ use bytes::Bytes;
 use errors::*;
 use failure;
 use mercurial_types::MPath;
-use mercurial_types::changeset::Time;
+use mononoke_types::DateTime;
 
 use blobnode::{HgBlobNode, HgParents};
 use nodehash::{HgManifestId, HgNodeHash, NULL_HASH};
@@ -29,7 +29,7 @@ pub struct RevlogChangeset {
     pub parents: HgParents,
     pub manifestid: HgManifestId,
     pub user: Vec<u8>,
-    pub time: Time,
+    pub time: DateTime,
     pub extra: Extra,
     pub files: Vec<MPath>,
     pub comments: Vec<u8>,
@@ -150,15 +150,15 @@ fn try_get<T>(v: &[T], idx: usize) -> Option<&T> {
 //     - what's TZ? seconds offset from UTC?
 //
 // Extra is key:value, \0 separated, with \\, \0, \n escaped
-fn parsetimeextra<S: AsRef<[u8]>>(s: S) -> Result<(Time, Extra)> {
+fn parsetimeextra<S: AsRef<[u8]>>(s: S) -> Result<(DateTime, Extra)> {
     let s = s.as_ref();
     let parts: Vec<_> = s.splitn(3, |c| *c == b' ').collect();
 
     if parts.len() < 2 {
         bail_msg!("not enough parts");
     }
-    let time: u64 = str::from_utf8(parts[0])?
-        .parse::<u64>()
+    let time: i64 = str::from_utf8(parts[0])?
+        .parse::<i64>()
         .context("can't parse time")?;
     let tz: i32 = str::from_utf8(parts[1])?
         .parse::<i32>()
@@ -166,7 +166,7 @@ fn parsetimeextra<S: AsRef<[u8]>>(s: S) -> Result<(Time, Extra)> {
 
     let extras = Extra::from_slice(try_get(parts.as_ref(), 2))?;
 
-    Ok((Time { time: time, tz: tz }, extras))
+    Ok((DateTime::from_timestamp(time, tz)?, extras))
 }
 
 impl RevlogChangeset {
@@ -174,7 +174,7 @@ impl RevlogChangeset {
         parents: HgParents,
         manifestid: HgManifestId,
         user: Vec<u8>,
-        time: Time,
+        time: DateTime,
         extra: BTreeMap<Vec<u8>, Vec<u8>>,
         files: Vec<MPath>,
         comments: Vec<u8>,
@@ -199,7 +199,7 @@ impl RevlogChangeset {
             parents: HgParents::new(None, None),
             manifestid: HgManifestId::new(NULL_HASH),
             user: Vec::new(),
-            time: Time { time: 0, tz: 0 },
+            time: DateTime::from_timestamp(0, 0).expect("this is a valid DateTime"),
             extra: Extra(BTreeMap::new()),
             files: Vec::new(),
             comments: Vec::new(),
@@ -230,7 +230,7 @@ impl RevlogChangeset {
             parents: *node.parents(),
             manifestid: HgManifestId::new(NULL_HASH),
             user: Vec::new(),
-            time: Time { time: 0, tz: 0 },
+            time: DateTime::from_timestamp(0, 0).expect("this is a valid DateTime"),
             extra: Extra(BTreeMap::new()),
             files: Vec::new(),
             comments: Vec::new(),
@@ -316,7 +316,7 @@ impl RevlogChangeset {
         self.files.as_ref()
     }
 
-    pub fn time(&self) -> &Time {
+    pub fn time(&self) -> &DateTime {
         &self.time
     }
 
@@ -331,7 +331,12 @@ pub fn serialize_cs<W: Write>(cs: &RevlogChangeset, out: &mut W) -> Result<()> {
     write!(out, "{}\n", cs.manifestid().into_nodehash())?;
     out.write_all(cs.user())?;
     out.write_all(b"\n")?;
-    write!(out, "{} {}", cs.time().time, cs.time().tz)?;
+    write!(
+        out,
+        "{} {}",
+        cs.time().timestamp_secs(),
+        cs.time().tz_offset_secs()
+    )?;
 
     if !cs.extra().is_empty() {
         write!(out, " ")?;
