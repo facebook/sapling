@@ -15,9 +15,9 @@ from mercurial import (
     commands,
     encoding,
     error,
+    metrics,
     registrar,
     scmutil,
-    url,
     util,
 )
 
@@ -29,23 +29,6 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 testedwith = 'ships-with-fb-hgext'
-
-def _logtoods(ui, entity, key, value):
-    root = ui.config("ods", "endpoint")
-    if root is None:
-        return
-    try:
-        params = {
-            'entity': entity,
-            'key': key,
-            'value': value,
-        }
-        data = util.urlreq.urlencode(params)
-        urlopener = url.opener(ui)
-        request = util.urlreq.request(root, data=data)
-        urlopener.open(request).read()
-    except Exception as e:
-        ui.warn(_("error duing ODS logging: %s\n") % e.message)
 
 class perftestsuite(object):
     """
@@ -102,7 +85,7 @@ class perftestsuite(object):
             duration = time.time() - start
             self.ui.warn(_("ran '%s' in %0.2f sec\n") % (cmd, duration))
             if self.publish:
-                _logtoods(self.ui, 'hg.perfsuite.%s' % reponame,
+                metrics.client(self.ui).gauge('hg.perfsuite.%s' % reponame,
                     '%s.time' % cmd, duration)
 
     def testcommit(self):
