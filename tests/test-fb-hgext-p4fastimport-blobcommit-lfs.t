@@ -61,8 +61,8 @@ Sync Commit
   largefile: Main/largefile, oid: 37a7b43abd9e105a0e6b22088b140735a02f288767fe7a6f4f436cb46b064ca9
   writing lfs metadata to sqlite
   importing CL2
-  file: //depot/Main/a, src: rcs
-  file: //depot/Main/largefile, src: rcs
+  file: //depot/Main/a, src: * (glob)
+  file: //depot/Main/largefile, src: * (glob)
   committing files:
   Main/a
   Main/largefile

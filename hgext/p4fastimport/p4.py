@@ -361,22 +361,6 @@ class P4Filelog(object):
             'xutf16': ('utf16', 'x'),
         }
 
-#    @property
-#    def branchcl(self):
-#        return self._parsed[1]
-#
-#    @property
-#    def branchsource(self):
-#        if self.branchcl:
-#            return self.parsed[self.branchcl]['from']
-#        return None
-#
-#    @property
-#    def branchrev(self):
-#        if self.branchcl:
-#            return self.parsed[self.branchcl]['rev']
-#        return None
-
     def __cmp__(self, other):
         return (self.depotfile > other.depotfile) - (self.depotfile <
                 other.depotfile)
