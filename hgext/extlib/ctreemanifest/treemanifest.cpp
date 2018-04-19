@@ -698,7 +698,7 @@ bool FinalizeIterator::next(std::string **path, Manifest **result,
           Manifest *p = parents[i];
           if (p) {
             p->serialize(parentRaw);
-            if (mainRaw.compare(parentRaw) == 0) {
+            if (mainRaw == parentRaw) {
               realResult->markPermanent(p->node(), resultEntry);
               parentMatch = true;
               break;
