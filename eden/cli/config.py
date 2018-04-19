@@ -505,7 +505,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         gdb_args: Optional[List[str]] = None,
         strace_file: Optional[str] = None,
         foreground: bool = False,
-        timeout: float = 60,
+        timeout: Optional[float] = None,
     ) -> HealthStatus:
         '''
         Start edenfs.
@@ -542,6 +542,14 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
             cmd.extend(extra_args)
         if takeover:
             cmd.append('--takeover')
+
+        # TODO: The larger timeout for takeovers is temporarily while takeover
+        # does a bunch of slow disk IO.  It should match takeoverReceiveTimeout
+        # in TakeoverClient.cpp.
+        # TODO: When edenfs does daemonization in C++, this
+        # timeout will no longer be necessary.
+        if timeout is None:
+            timeout = 300 if takeover else 60
 
         eden_env = self._build_eden_environment()
 

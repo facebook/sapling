@@ -344,7 +344,7 @@ def start_daemon(
     gdb_args: Optional[List[str]]=None,
     strace_file: Optional[str]=None,
     foreground: bool=False,
-    timeout: float=60,
+    timeout: Optional[float]=None,
 ) -> int:
     # If this is the first time running the daemon, the ~/.eden directory
     # structure needs to be set up.
