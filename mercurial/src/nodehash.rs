@@ -301,3 +301,9 @@ pub struct HgNodeKey {
     pub path: RepoPath,
     pub hash: HgNodeHash,
 }
+
+impl Display for HgNodeKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "path: {}, hash: {}", self.path, self.hash)
+    }
+}

@@ -100,9 +100,9 @@ impl RepoPath {
 impl Display for RepoPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            RepoPath::RootPath => write!(f, "root"),
-            RepoPath::DirectoryPath(ref path) => write!(f, "directory {}", path),
-            RepoPath::FilePath(ref path) => write!(f, "file {}", path),
+            RepoPath::RootPath => write!(f, "(root path)"),
+            RepoPath::DirectoryPath(ref path) => write!(f, "directory '{}'", path),
+            RepoPath::FilePath(ref path) => write!(f, "file '{}'", path),
         }
     }
 }

@@ -315,7 +315,7 @@ fn main() {
                     parent_changeset_handles
                         .get(&p)
                         .cloned()
-                        .expect(&format!("parent {} not found for {:?}", p, csid))
+                        .expect(&format!("parent {} not found for {}", p, csid))
                 });
 
                 (parents.next(), parents.next())
@@ -327,17 +327,17 @@ fn main() {
                 root_manifest: rootmf,
                 sub_entries: entries,
                 user: String::from_utf8(Vec::from(cs.user()))
-                    .expect(&format!("non-utf8 username for {:?}", csid)),
+                    .expect(&format!("non-utf8 username for {}", csid)),
                 time: cs.time().clone(),
                 extra: cs.extra().clone(),
                 comments: String::from_utf8(Vec::from(cs.comments()))
-                    .expect(&format!("non-utf8 comments for {:?}", csid)),
+                    .expect(&format!("non-utf8 comments for {}", csid)),
             };
             let cshandle = create_changeset.create(&blobrepo);
             parent_changeset_handles.insert(csid, cshandle.clone());
             cshandle
                 .get_completed_changeset()
-                .with_context(move |_| format!("While uploading changeset: {:?}", csid))
+                .with_context(move |_| format!("While uploading changeset: {}", csid))
         });
 
     core.run(csstream.for_each(|cs| {

@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use failure::{err_msg, Compat};
+use failure::{err_msg, Compat, FutureFailureErrorExt};
 use futures::IntoFuture;
 use futures::future::{self, Future, Shared, SharedError, SharedItem};
 use futures::stream::{self, Stream};
@@ -21,7 +21,7 @@ use uuid::Uuid;
 
 use blobstore::Blobstore;
 use filenodes::{FilenodeInfo, Filenodes};
-use mercurial::file;
+use mercurial::{file, HgNodeKey, NodeHashConversion};
 use mercurial_types::{Changeset, DChangesetId, DEntryId, DNodeHash, DParents, Entry, MPath,
                       Manifest, RepoPath, RepositoryId};
 use mercurial_types::manifest::{self, Content};
@@ -93,7 +93,7 @@ struct UploadEntriesState {
     /// Parent hashes (if any) of the blobs that have been uploaded in this changeset. Used for
     /// validation of this upload - all parents must either have been uploaded in this changeset,
     /// or be present in the blobstore before the changeset can complete.
-    parents: HashSet<DNodeHash>,
+    parents: HashSet<HgNodeKey>,
     blobstore: Arc<Blobstore>,
     repoid: RepositoryId,
 }
@@ -120,7 +120,7 @@ impl UploadEntries {
     /// a complete changeset with all blobs, or whether there is missing data.
     fn process_manifest(&self, entry: &BlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
         let inner_mutex = self.inner.clone();
-        let parents_found = self.find_parents(entry);
+        let parents_found = self.find_parents(entry, path.clone());
         let entry_hash = entry.get_hash().into_nodehash();
         let entry_type = entry.get_type();
 
@@ -158,13 +158,17 @@ impl UploadEntries {
             .boxify()
     }
 
-    fn find_parents(&self, entry: &BlobEntry) -> BoxFuture<(), Error> {
+    fn find_parents(&self, entry: &BlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
         let inner_mutex = self.inner.clone();
         entry
             .get_parents()
             .and_then(move |parents| {
                 let mut inner = inner_mutex.lock().expect("Lock poisoned");
-                inner.parents.extend(parents.into_iter());
+                let node_keys = parents.into_iter().map(move |hash| HgNodeKey {
+                    path: path.clone(),
+                    hash: hash.into_mercurial(),
+                });
+                inner.parents.extend(node_keys);
 
                 future::ok(())
             })
@@ -200,7 +204,7 @@ impl UploadEntries {
         if entry.get_type() == manifest::Type::Tree {
             self.process_manifest(entry, path)
         } else {
-            self.find_parents(&entry)
+            self.find_parents(&entry, path)
         }
     }
 
@@ -216,7 +220,13 @@ impl UploadEntries {
                     } else {
                         let key = get_node_key(entryid.into_nodehash());
                         let blobstore = inner.blobstore.clone();
-                        Some(blobstore.assert_present(key))
+                        let path = path.clone();
+                        Some(
+                            blobstore
+                                .assert_present(key)
+                                .with_context(move |_| format!("While checking for path: {}", path))
+                                .from_err(),
+                        )
                     }
                 })
                 .collect();
@@ -229,10 +239,16 @@ impl UploadEntries {
             let checks: Vec<_> = inner
                 .parents
                 .iter()
-                .map(|nodeid| {
-                    let key = get_node_key(*nodeid);
+                .map(|node_key| {
+                    let key = get_node_key(node_key.hash.into_mononoke());
                     let blobstore = inner.blobstore.clone();
-                    blobstore.assert_present(key)
+                    let node_key = node_key.clone();
+                    blobstore
+                        .assert_present(key)
+                        .with_context(move |_| {
+                            format!("While checking for a parent node: {}", node_key)
+                        })
+                        .from_err()
                 })
                 .collect();
 
