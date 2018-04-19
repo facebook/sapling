@@ -9,7 +9,7 @@ function mononoke {
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
   local socket="$1/.hg/mononoke.sock"
-  local attempts=50
+  local attempts=100
   until [[ -S $socket || $attempts -le 0 ]]; do
     attempts=$((attempts - 1))
     sleep 0.1
