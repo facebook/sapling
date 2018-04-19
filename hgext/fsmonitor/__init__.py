@@ -124,6 +124,7 @@ from mercurial import (
     encoding,
     error,
     extensions,
+    filemerge,
     localrepo,
     merge,
     pathutil,
@@ -677,6 +678,7 @@ def extsetup(ui):
         extensions.wrapfunction(os, 'symlink', wrapsymlink)
 
     extensions.wrapfunction(merge, 'update', wrapupdate)
+    extensions.wrapfunction(filemerge, '_xmerge', _xmerge)
 
     def purgeloaded(loaded=False):
         if not loaded:
@@ -695,6 +697,24 @@ def wrapsymlink(orig, source, link_name):
             os.utime(os.path.dirname(link_name), None)
         except OSError:
             pass
+
+class state_filemerge(object):
+    """Context manager for single filemerge event"""
+    def __init__(self, repo, path):
+        self.repo = repo
+        self.path = path
+
+    def __enter__(self):
+        self._state('state-enter')
+
+    def __exit__(self, errtype, value, tb):
+        self._state('state-leave')
+
+    def _state(self, name):
+        client = getattr(self.repo, '_watchmanclient', None)
+        if client:
+            metadata = {'path': self.path}
+            client.command(name, {'name': 'hg.filemerge', 'metadata': metadata})
 
 class state_update(object):
     ''' This context manager is responsible for dispatching the state-enter
@@ -824,6 +844,13 @@ def wrapupdate(orig, repo, node, branchmerge, force, ancestor=None,
         return orig(
             repo, node, branchmerge, force, ancestor, mergeancestor,
             labels, matcher, **kwargs)
+
+def _xmerge(origfunc, repo, mynode, orig, fcd, fco, fca, toolconf, files,
+            labels=None):
+    # _xmerge is called when an external merge tool is invoked.
+    with state_filemerge(repo, fcd.path()):
+        return origfunc(repo, mynode, orig, fcd, fco, fca, toolconf, files,
+                        labels)
 
 def reposetup(ui, repo):
     # We don't work with largefiles or inotify
