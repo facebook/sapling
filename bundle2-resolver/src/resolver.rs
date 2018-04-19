@@ -9,7 +9,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use ascii::AsciiString;
-use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
+use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle, CreateChangeset};
 use bytes::Bytes;
 use failure::{FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{Future, IntoFuture, Stream};
@@ -355,16 +355,17 @@ impl Bundle2Resolver {
 
             p1.join(p2)
                 .and_then(move |(p1, p2)| {
-                    let scheduled_uploading = repo.create_changeset(
+                    let create_changeset = CreateChangeset {
                         p1,
                         p2,
-                        new_blobs.root_manifest,
-                        new_blobs.sub_entries,
-                        String::from_utf8(revlog_cs.user().into())?,
-                        revlog_cs.time().clone(),
-                        revlog_cs.extra().clone(),
-                        String::from_utf8(revlog_cs.comments().into())?,
-                    );
+                        root_manifest: new_blobs.root_manifest,
+                        sub_entries: new_blobs.sub_entries,
+                        user: String::from_utf8(revlog_cs.user().into())?,
+                        time: revlog_cs.time().clone(),
+                        extra: revlog_cs.extra().clone(),
+                        comments: String::from_utf8(revlog_cs.comments().into())?,
+                    };
+                    let scheduled_uploading = create_changeset.create(&repo);
 
                     uploaded_changesets.insert(node, scheduled_uploading);
                     Ok(uploaded_changesets)

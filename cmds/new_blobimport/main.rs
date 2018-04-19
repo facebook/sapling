@@ -37,7 +37,7 @@ use slog::Drain;
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
 
-use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
+use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle, CreateChangeset};
 use changesets::SqliteChangesets;
 use mercurial::{HgChangesetId, HgNodeHash, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, MPath, RepoPath, RepositoryId, Type};
@@ -329,18 +329,19 @@ fn main() {
                 (parents.next(), parents.next())
             };
 
-            let cshandle = blobrepo.create_changeset(
-                p1handle,
-                p2handle,
-                rootmf,
-                entries,
-                String::from_utf8(Vec::from(cs.user()))
+            let create_changeset = CreateChangeset {
+                p1: p1handle,
+                p2: p2handle,
+                root_manifest: rootmf,
+                sub_entries: entries,
+                user: String::from_utf8(Vec::from(cs.user()))
                     .expect(&format!("non-utf8 username for {:?}", csid)),
-                cs.time().clone(),
-                cs.extra().clone(),
-                String::from_utf8(Vec::from(cs.comments()))
+                time: cs.time().clone(),
+                extra: cs.extra().clone(),
+                comments: String::from_utf8(Vec::from(cs.comments()))
                     .expect(&format!("non-utf8 comments for {:?}", csid)),
-            );
+            };
+            let cshandle = create_changeset.create(&blobrepo);
             parent_changeset_handles.insert(csid, cshandle.clone());
             cshandle
                 .get_completed_changeset()

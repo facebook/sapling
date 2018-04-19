@@ -14,7 +14,7 @@ use futures::future::Future;
 use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
 
-use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
+use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle, CreateChangeset};
 use memblob::{EagerMemblob, LazyMemblob};
 use mercurial_types::{manifest, DNodeHash, FileType, HgBlob, RepoPath};
 use mononoke_types::DateTime;
@@ -134,16 +134,17 @@ pub fn create_changeset_no_parents(
     root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
     other_nodes: Vec<BoxFuture<(BlobEntry, RepoPath), Error>>,
 ) -> ChangesetHandle {
-    repo.create_changeset(
-        None,
-        None,
+    let create_changeset = CreateChangeset {
+        p1: None,
+        p2: None,
         root_manifest,
-        futures_unordered(other_nodes).boxify(),
-        "author <author@fb.com>".into(),
-        DateTime::from_timestamp(0, 0).expect("valid timestamp"),
-        BTreeMap::new(),
-        "Test commit".into(),
-    )
+        sub_entries: futures_unordered(other_nodes).boxify(),
+        user: "author <author@fb.com>".into(),
+        time: DateTime::from_timestamp(0, 0).expect("valid timestamp"),
+        extra: BTreeMap::new(),
+        comments: "Test commit".into(),
+    };
+    create_changeset.create(repo)
 }
 
 pub fn create_changeset_one_parent(
@@ -152,16 +153,17 @@ pub fn create_changeset_one_parent(
     other_nodes: Vec<BoxFuture<(BlobEntry, RepoPath), Error>>,
     p1: ChangesetHandle,
 ) -> ChangesetHandle {
-    repo.create_changeset(
-        Some(p1),
-        None,
+    let create_changeset = CreateChangeset {
+        p1: Some(p1),
+        p2: None,
         root_manifest,
-        futures_unordered(other_nodes).boxify(),
-        "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into(),
-        DateTime::from_timestamp(1234, 0).expect("valid timestamp"),
-        BTreeMap::new(),
-        "Child commit".into(),
-    )
+        sub_entries: futures_unordered(other_nodes).boxify(),
+        user: "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into(),
+        time: DateTime::from_timestamp(1234, 0).expect("valid timestamp"),
+        extra: BTreeMap::new(),
+        comments: "Child commit".into(),
+    };
+    create_changeset.create(repo)
 }
 
 pub fn string_to_nodehash(hash: &str) -> DNodeHash {

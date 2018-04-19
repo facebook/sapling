@@ -446,47 +446,52 @@ impl BlobRepo {
                 .boxify(),
         ))
     }
+}
 
-    /// Create a changeset in this repo. This will upload all the blobs to the underlying Blobstore
-    /// and ensure that the changeset is marked as "complete".
-    /// No attempt is made to clean up the Blobstore if the changeset creation fails
-    pub fn create_changeset(
-        &self,
-        p1: Option<ChangesetHandle>,
-        p2: Option<ChangesetHandle>,
-        root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
-        new_child_entries: BoxStream<(BlobEntry, RepoPath), Error>,
-        user: String,
-        time: DateTime,
-        extra: BTreeMap<Vec<u8>, Vec<u8>>,
-        comments: String,
-    ) -> ChangesetHandle {
-        let entry_processor = UploadEntries::new(self.blobstore.clone(), self.repoid.clone());
+pub struct CreateChangeset {
+    pub p1: Option<ChangesetHandle>,
+    pub p2: Option<ChangesetHandle>,
+    pub root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
+    pub sub_entries: BoxStream<(BlobEntry, RepoPath), Error>,
+    pub user: String,
+    pub time: DateTime,
+    pub extra: BTreeMap<Vec<u8>, Vec<u8>>,
+    pub comments: String,
+}
+
+impl CreateChangeset {
+    pub fn create(self, repo: &BlobRepo) -> ChangesetHandle {
+        let entry_processor = UploadEntries::new(repo.blobstore.clone(), repo.repoid.clone());
         let (signal_parent_ready, can_be_parent) = oneshot::channel();
         // This is used for logging, so that we can tie up all our pieces without knowing about
         // the final commit hash
         let uuid = Uuid::new_v4();
 
         let upload_entries = process_entries(
-            self.logger.clone(),
+            repo.logger.clone(),
             uuid,
-            self.clone(),
+            repo.clone(),
             &entry_processor,
-            root_manifest,
-            new_child_entries,
+            self.root_manifest,
+            self.sub_entries,
         );
 
-        let parents_complete = extract_parents_complete(&p1, &p2);
-        let parents_data = handle_parents(self.logger.clone(), uuid, self.clone(), p1, p2);
+        let parents_complete = extract_parents_complete(&self.p1, &self.p2);
+        let parents_data =
+            handle_parents(repo.logger.clone(), uuid, repo.clone(), self.p1, self.p2);
         let changeset = {
-            let logger = self.logger.clone();
+            let logger = repo.logger.clone();
             upload_entries
                 .join(parents_data)
                 .and_then({
-                    let filenodes = self.filenodes.clone();
-                    let blobstore = self.blobstore.clone();
-                    let heads = self.heads.clone();
-                    let logger = self.logger.clone();
+                    let filenodes = repo.filenodes.clone();
+                    let blobstore = repo.blobstore.clone();
+                    let heads = repo.heads.clone();
+                    let logger = repo.logger.clone();
+                    let user = self.user;
+                    let time = self.time;
+                    let extra = self.extra;
+                    let comments = self.comments;
 
                     move |((root_manifest, root_hash), (parents, p1_manifest, p2_manifest))| {
                         compute_changed_files(
@@ -539,7 +544,7 @@ impl BlobRepo {
         let parents_complete = parents_complete
             .map_err(|e| ErrorKind::ParentsFailed.context(e).into())
             .timed({
-                let logger = self.logger.clone();
+                let logger = repo.logger.clone();
                 move |stats, result| {
                     if result.is_ok() {
                         log_cs_future_stats(&logger, "parents_complete", stats, uuid);
@@ -548,8 +553,8 @@ impl BlobRepo {
                 }
             });
 
-        let complete_changesets = self.changesets.clone();
-        let repo_id = self.repoid;
+        let complete_changesets = repo.changesets.clone();
+        let repo_id = repo.repoid;
         ChangesetHandle::new_pending(
             can_be_parent.shared(),
             changeset
@@ -567,7 +572,7 @@ impl BlobRepo {
                 })
                 .map_err(Error::compat)
                 .timed({
-                    let logger = self.logger.clone();
+                    let logger = repo.logger.clone();
                     move |stats, result| {
                         if result.is_ok() {
                             log_cs_future_stats(&logger, "finished", stats, uuid);
