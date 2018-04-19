@@ -129,7 +129,7 @@ Check smartlog output
   so your commits are not being backed up.
   
   note: changeset * is not backed up. (glob)
-  Run `hg pushbackup` to perform a backup.  If this fails,
+  Run `hg pushbackup` to perform a backup. If this fails,
   please report to the Source Control @ FB group.
 
 Check smartlog summary can be suppressed
@@ -168,7 +168,7 @@ Check smartlog summary with multiple unbacked up changesets
   o  0: Public changeset
   
   note: 2 changesets are not backed up.
-  Run `hg pushbackup` to perform a backup.  If this fails,
+  Run `hg pushbackup` to perform a backup. If this fails,
   please report to the Source Control @ FB group.
 
 Check backup status with an unbacked up changeset that is disjoint from existing backups
@@ -239,7 +239,7 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
   Run `hg backupenable` to turn backups back on.
   
   note: 3 changesets are not backed up.
-  Run `hg pushbackup` to perform a backup.  If this fails,
+  Run `hg pushbackup` to perform a backup. If this fails,
   please report to the Source Control @ FB group.
 
 # Shift time back to make disable expired
@@ -261,6 +261,6 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
   o  0 Public changeset
   
   note: 3 changesets are not backed up.
-  Run `hg pushbackup` to perform a backup.  If this fails,
+  Run `hg pushbackup` to perform a backup. If this fails,
   please report to the Source Control @ FB group.
 

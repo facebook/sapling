@@ -72,6 +72,7 @@ from mercurial import (
 
 from . import (
     commitcloudcommands,
+    commitcloudcommon,
     commitcloudutil,
 )
 
@@ -83,11 +84,19 @@ colortable = {
 }
 
 def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None):
-    workspacemanager = commitcloudutil.WorkspaceManager(repo)
-    if workspacemanager.workspace is not None:
+    if commitcloudutil.getworkspacename(repo) is not None:
         return orig(ui, repo, dest, ['hg', 'cloudsync'])
     else:
         return orig(ui, repo, dest, command)
+
+def _smartlogbackupsuggestion(orig, ui, repo):
+    if (commitcloudutil.getworkspacename(repo)):
+        commitcloudcommon.highlightstatus(ui,
+            _('Run `hg cloudsync` to synchronize your workspace. '
+              'If this fails,\n'
+              'please report to %s.\n') % commitcloudcommon.getownerteam(ui))
+    else:
+        orig(ui, repo)
 
 def extsetup(ui):
     try:
@@ -97,6 +106,9 @@ def extsetup(ui):
         raise error.Abort(msg)
     extensions.wrapfunction(infinitepush.backupcommands, '_dobackgroundbackup',
                             _dobackgroundcloudsync)
+    extensions.wrapfunction(infinitepush.backupcommands,
+                            '_smartlogbackupsuggestion',
+                            _smartlogbackupsuggestion)
     commitcloudcommands.infinitepush = infinitepush
 
 def reposetup(ui, repo):

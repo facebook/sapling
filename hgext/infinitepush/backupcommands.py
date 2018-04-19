@@ -463,6 +463,11 @@ def backingup(repo, ctx, **args):
     srcrepo = shareutil.getsrcrepo(repo)
     return srcrepo.vfs.lexists(_backuplockname)
 
+def _smartlogbackupsuggestion(ui, repo):
+    ui.warn(_('Run `hg pushbackup` to perform a backup. '
+          'If this fails,\n'
+          'please report to the Source Control @ FB group.\n'))
+
 def smartlogsummary(ui, repo):
     if not ui.configbool('infinitepushbackup', 'enablestatus'):
         return
@@ -505,8 +510,7 @@ def smartlogsummary(ui, repo):
         else:
             ui.warn(_('note: changeset %s is not backed up.\n') %
                     node.short(repo[singleunbackeduprev].node()))
-        ui.warn(_('Run `hg pushbackup` to perform a backup.  If this fails,\n'
-                  'please report to the Source Control @ FB group.\n'))
+        _smartlogbackupsuggestion(ui, repo)
 
 def _autobackupruncommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     '''
