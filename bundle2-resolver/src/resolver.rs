@@ -472,16 +472,16 @@ fn get_parent(
     }
 }
 
-type BlobFuture = BoxFuture<(BlobEntry, RepoPath), Error>;
-type BlobStream = BoxStream<(BlobEntry, RepoPath), Error>;
+type HgBlobFuture = BoxFuture<(BlobEntry, RepoPath), Error>;
+type HgBlobStream = BoxStream<(BlobEntry, RepoPath), Error>;
 
 /// In order to generate the DAG of dependencies between Root Manifest and other Manifests and
 /// Filelogs we need to walk that DAG.
 /// This represents the manifests and file nodes introduced by a particular changeset.
 struct NewBlobs {
-    root_manifest: BlobFuture,
+    root_manifest: HgBlobFuture,
     // sub_entries has both submanifest and filenode entries.
-    sub_entries: BlobStream,
+    sub_entries: HgBlobStream,
 }
 
 impl NewBlobs {
@@ -526,7 +526,7 @@ impl NewBlobs {
         manifest_content: &ManifestContent,
         manifests: &Manifests,
         filelogs: &Filelogs,
-    ) -> Result<Vec<BlobFuture>> {
+    ) -> Result<Vec<HgBlobFuture>> {
         if path_taken.len() > 4096 {
             bail_msg!(
                 "Exceeded max manifest path during walking with path: {:?}",
@@ -534,7 +534,7 @@ impl NewBlobs {
             );
         }
 
-        let mut entries: Vec<BlobFuture> = Vec::new();
+        let mut entries: Vec<HgBlobFuture> = Vec::new();
         for (name, details) in manifest_content.files.iter() {
             let nodehash = details.entryid().clone().into_nodehash();
             let next_path = MPath::join_opt(path_taken.mpath(), name);
