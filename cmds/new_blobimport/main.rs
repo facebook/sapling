@@ -132,8 +132,6 @@ fn upload_entry(
 ) -> BoxFuture<(BlobEntry, RepoPath), Error> {
     let blobrepo = blobrepo.clone();
 
-    let entryid = *entry.get_hash();
-
     let ty = entry.get_type();
 
     let path = MPath::join_element_opt(path.as_ref(), entry.get_name());
@@ -151,13 +149,7 @@ fn upload_entry(
         Type::File(_) => RepoPath::FilePath(path),
     };
 
-    let content = entry.get_raw_content().and_then(move |content| {
-        let content = content
-            .as_slice()
-            .ok_or_else(|| err_msg(format!("corrupt blob {}", entryid)))?;
-        // convert from HgBlob<Vec<u8>> to HgBlob<Bytes>
-        Ok(HgBlob::from(Bytes::from(content)))
-    });
+    let content = entry.get_raw_content();
 
     let parents = entry.get_parents().map(|parents| {
         let (p1, p2) = parents.get_nodes();
