@@ -7,6 +7,8 @@
 use ascii::{AsciiStr, AsciiString};
 use bytes::Bytes;
 
+use mononoke_types::BlobstoreBytes;
+
 use hash::Sha1;
 
 use errors::*;
@@ -138,5 +140,22 @@ impl<'a> Into<Option<&'a [u8]>> for &'a HgBlob {
 impl AsRef<[u8]> for HgBlobHash {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
+    }
+}
+
+impl From<BlobstoreBytes> for HgBlob {
+    #[inline]
+    fn from(bytes: BlobstoreBytes) -> HgBlob {
+        let data = bytes.into_bytes();
+        HgBlob::Dirty(data)
+    }
+}
+
+impl From<HgBlob> for BlobstoreBytes {
+    #[inline]
+    fn from(blob: HgBlob) -> BlobstoreBytes {
+        match blob {
+            HgBlob::Dirty(data) | HgBlob::Clean(data, _) => BlobstoreBytes::from_bytes(data),
+        }
     }
 }

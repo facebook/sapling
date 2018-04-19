@@ -15,6 +15,7 @@ use bincode;
 use blobstore::Blobstore;
 use mercurial::HgNodeHash;
 use mercurial_types::{DNodeHash, DParents, HgBlobHash};
+use mononoke_types::BlobstoreBytes;
 
 use errors::*;
 
@@ -26,14 +27,14 @@ pub struct RawNodeBlob {
 }
 
 impl RawNodeBlob {
-    pub fn serialize(&self, nodeid: &HgNodeHash) -> Result<Bytes> {
+    pub fn serialize(&self, nodeid: &HgNodeHash) -> Result<EnvelopeBlob> {
         let serialized = bincode::serialize(self)
             .map_err(|err| Error::from(ErrorKind::SerializationFailed(*nodeid, err)))?;
-        Ok(serialized.into())
+        Ok(EnvelopeBlob(serialized.into()))
     }
 
-    pub fn deserialize(blob: &Bytes) -> Result<Self> {
-        Ok(bincode::deserialize(blob.as_ref())?)
+    pub fn deserialize(blob: &EnvelopeBlob) -> Result<Self> {
+        Ok(bincode::deserialize(blob.0.as_ref())?)
     }
 }
 
@@ -51,14 +52,45 @@ pub struct RawCSBlob<'a> {
 }
 
 impl<'a> RawCSBlob<'a> {
-    pub(crate) fn serialize(&self) -> Result<Bytes> {
+    pub(crate) fn serialize(&self) -> Result<EnvelopeBlob> {
         let serialized = bincode::serialize(self)?;
         // XXX better error message?
-        Ok(serialized.into())
+        Ok(EnvelopeBlob(serialized.into()))
     }
 
-    pub(crate) fn deserialize(blob: &Bytes) -> Result<Self> {
-        Ok(bincode::deserialize(blob.as_ref())?)
+    pub(crate) fn deserialize(blob: &EnvelopeBlob) -> Result<Self> {
+        Ok(bincode::deserialize(blob.0.as_ref())?)
+    }
+}
+
+// XXX could possibly also compute and store an ID here
+#[derive(Debug)]
+pub struct EnvelopeBlob(Bytes);
+
+impl EnvelopeBlob {
+    #[deprecated(note = "this should only be used by blobimport")]
+    pub fn new<B: Into<Bytes>>(data: B) -> Self {
+        EnvelopeBlob(data.into())
+    }
+}
+
+impl AsRef<[u8]> for EnvelopeBlob {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
+impl From<BlobstoreBytes> for EnvelopeBlob {
+    #[inline]
+    fn from(bytes: BlobstoreBytes) -> EnvelopeBlob {
+        EnvelopeBlob(bytes.into_bytes())
+    }
+}
+
+impl From<EnvelopeBlob> for BlobstoreBytes {
+    #[inline]
+    fn from(blob: EnvelopeBlob) -> BlobstoreBytes {
+        BlobstoreBytes::from_bytes(blob.0)
     }
 }
 
@@ -72,6 +104,9 @@ pub fn get_node(blobstore: &Blobstore, nodeid: DNodeHash) -> BoxFuture<RawNodeBl
     blobstore
         .get(key)
         .and_then(move |got| got.ok_or(ErrorKind::NodeMissing(nodeid).into()))
-        .and_then(move |blob| RawNodeBlob::deserialize(&blob).into_future())
+        .and_then(move |blob| {
+            let blob = EnvelopeBlob::from(blob);
+            RawNodeBlob::deserialize(&blob).into_future()
+        })
         .boxify()
 }

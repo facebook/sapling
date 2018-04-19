@@ -39,11 +39,14 @@ if __name__ == '__main__':
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+
 extern crate changesets;
 extern crate memblob;
 extern crate dbbookmarks;
 extern crate dieselfilenodes;
 extern crate mercurial_types;
+extern crate mononoke_types;
 extern crate memheads;
 extern crate blobrepo;
 extern crate blobstore;
@@ -56,12 +59,12 @@ extern crate slog;
 
 use std::str::FromStr;
 
-use bytes::Bytes;
 use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use memblob::EagerMemblob;
 use dbbookmarks::SqliteDbBookmarks;
 use dieselfilenodes::SqliteFilenodes;
 use mercurial_types::{DChangesetId, DNodeHash, RepositoryId};
+use mononoke_types::BlobstoreBytes;
 use memheads::MemHeads;
 use blobrepo::BlobRepo;
 use ascii::AsciiString;
@@ -148,7 +151,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
             with open(blob, "rb") as data:
                 blobdata = "\\x".join(chunk_string(data.read().hex()))
                 writeline(
-                    'blobs.put(String::from("{}"), Bytes::from_static(b"\\x{}")).wait().expect("Blob put failed");'.
+                    'blobs.put(String::from("{}"), BlobstoreBytes::from_bytes(&b"\\x{}"[..])).wait().expect("Blob put failed");'.
                     format(key, blobdata)
                 )
         rs.writelines(

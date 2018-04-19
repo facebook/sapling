@@ -36,6 +36,7 @@ extern crate manifoldblob;
 extern crate memheads;
 extern crate mercurial;
 extern crate mercurial_types;
+extern crate mononoke_types;
 extern crate rocksblob;
 extern crate rocksdb;
 extern crate services;
@@ -50,7 +51,6 @@ use std::sync::Arc;
 use std::sync::mpsc::sync_channel;
 use std::thread;
 
-use bytes::Bytes;
 use changesets::{Changesets, SqliteChangesets};
 use clap::{App, Arg, ArgMatches};
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
@@ -72,6 +72,7 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use manifoldblob::ManifoldBlob;
 use mercurial::{RevlogRepo, RevlogRepoOptions};
 use mercurial_types::RepositoryId;
+use mononoke_types::BlobstoreBytes;
 use rocksblob::Rocksblob;
 
 const DEFAULT_MANIFOLD_BUCKET: &str = "mononoke_prod";
@@ -100,7 +101,7 @@ fn _assert_static<T: 'static>(_: &T) {}
 fn _assert_blobstore<T: Blobstore>(_: &T) {}
 
 pub(crate) enum BlobstoreEntry {
-    ManifestEntry((String, Bytes)),
+    ManifestEntry((String, BlobstoreBytes)),
     Changeset(BlobChangeset),
 }
 
@@ -348,11 +349,11 @@ struct LimitedBlobstore {
 }
 
 impl Blobstore for LimitedBlobstore {
-    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
+    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.blobstore.get(key)
     }
 
-    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
+    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         if value.len() >= self.max_blob_size {
             Ok(()).into_future().boxify()
         } else {

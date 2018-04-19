@@ -6,27 +6,29 @@
 
 #![deny(warnings)]
 
-extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate url;
 
-extern crate blobstore;
 extern crate futures_ext;
+
+extern crate blobstore;
+extern crate mononoke_types;
 
 use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-use bytes::Bytes;
 use failure::{Error, Result};
 use futures::Async;
 use futures::future::{poll_fn, Future};
-use futures_ext::{BoxFuture, FutureExt};
 use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
+use futures_ext::{BoxFuture, FutureExt};
+
 use blobstore::Blobstore;
+use mononoke_types::BlobstoreBytes;
 
 const PREFIX: &str = "blob";
 
@@ -61,7 +63,7 @@ impl Fileblob {
 }
 
 impl Blobstore for Fileblob {
-    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
+    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let p = self.path(&key);
 
         poll_fn(move || {
@@ -71,7 +73,7 @@ impl Blobstore for Fileblob {
                 Err(e) => return Err(e),
                 Ok(mut f) => {
                     f.read_to_end(&mut v)?;
-                    Some(Bytes::from(v))
+                    Some(BlobstoreBytes::from_bytes(v))
                 }
             };
             Ok(Async::Ready(ret))
@@ -79,11 +81,11 @@ impl Blobstore for Fileblob {
             .boxify()
     }
 
-    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
+    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         let p = self.path(&key);
 
         poll_fn::<_, Error, _>(move || {
-            File::create(&p)?.write_all(value.as_ref())?;
+            File::create(&p)?.write_all(value.as_bytes().as_ref())?;
             Ok(Async::Ready(()))
         }).boxify()
     }

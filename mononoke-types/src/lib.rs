@@ -34,6 +34,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
+extern crate asyncmemo;
 extern crate rust_thrift;
 
 extern crate mononoke_types_thrift;
@@ -48,7 +49,7 @@ pub mod hash;
 pub mod path;
 pub mod typed_hash;
 
-pub use blob::{Blob, ChangesetBlob, ContentBlob};
+pub use blob::{Blob, BlobstoreBytes, ChangesetBlob, ContentBlob};
 pub use bonsai_changeset::BonsaiChangeset;
 pub use datetime::DateTime;
 pub use file_change::{FileChange, FileType};

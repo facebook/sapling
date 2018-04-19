@@ -7,22 +7,22 @@
 #![deny(warnings)]
 
 extern crate asyncmemo;
-extern crate bytes;
-extern crate bytes_ext;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
-extern crate futures_ext;
 extern crate tokio_core;
 
-use std::sync::Arc;
+extern crate futures_ext;
+extern crate mononoke_types;
 
 use asyncmemo::{Asyncmemo, Filler};
-use bytes::Bytes;
+use std::sync::Arc;
 
 use failure::Error;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
+
+use mononoke_types::BlobstoreBytes;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -93,11 +93,11 @@ pub enum ErrorKind {
 // - streaming get/put?
 // - range get/put? (how does range put work? put-put-put-commit?)
 pub trait Blobstore: Send + Sync + 'static {
-    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error>;
+    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;
     // The underlying implementation is allowed to assume that the value for a given key is always
     // the same. Thus, it's legitimate for an implementation to do
     // "self.assert_present(key).or_else()" and never upload the same key twice.
-    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error>;
+    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error>;
     // Allows the underlying Blobstore to skip the download phase
     fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
         self.get(key).map(|opt| opt.is_some()).boxify()
@@ -116,10 +116,10 @@ pub trait Blobstore: Send + Sync + 'static {
 }
 
 impl Blobstore for Arc<Blobstore> {
-    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
+    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.as_ref().get(key)
     }
-    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
+    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         self.as_ref().put(key, value)
     }
     fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
@@ -131,10 +131,10 @@ impl Blobstore for Arc<Blobstore> {
 }
 
 impl Blobstore for Box<Blobstore> {
-    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
+    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.as_ref().get(key)
     }
-    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
+    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         self.as_ref().put(key, value)
     }
     fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
@@ -159,7 +159,7 @@ impl CachingBlobstore {
 }
 
 impl Blobstore for CachingBlobstore {
-    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
+    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.cache
             .get(key)
             .then(|val| match val {
@@ -170,7 +170,7 @@ impl Blobstore for CachingBlobstore {
             .boxify()
     }
 
-    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
+    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         self.blobstore.put(key, value)
     }
 }
@@ -187,7 +187,7 @@ impl BlobstoreCacheFiller {
 
 impl Filler for BlobstoreCacheFiller {
     type Key = String;
-    type Value = BoxFuture<Bytes, Option<Error>>;
+    type Value = BoxFuture<BlobstoreBytes, Option<Error>>;
 
     fn fill(&self, _cache: &Asyncmemo<Self>, key: &Self::Key) -> Self::Value {
         self.blobstore

@@ -19,6 +19,7 @@ extern crate tokio_core;
 extern crate blobstore;
 extern crate fileblob;
 extern crate memblob;
+extern crate mononoke_types;
 extern crate rocksblob;
 
 use bytes::Bytes;
@@ -28,6 +29,7 @@ use tempdir::TempDir;
 use blobstore::Blobstore;
 use fileblob::Fileblob;
 use memblob::EagerMemblob;
+use mononoke_types::BlobstoreBytes;
 use rocksblob::Rocksblob;
 
 fn simple<B>(blobstore: B)
@@ -36,11 +38,11 @@ where
 {
     let foo = "foo".to_string();
     let res = blobstore
-        .put(foo.clone(), Bytes::from_static(b"bar"))
+        .put(foo.clone(), BlobstoreBytes::from_bytes(&b"bar"[..]))
         .and_then(|_| blobstore.get(foo));
     let out = res.wait().expect("pub/get failed").expect("missing");
 
-    assert_eq!(out, Bytes::from_static(b"bar"));
+    assert_eq!(out.into_bytes(), Bytes::from_static(b"bar"));
 }
 
 fn missing<B>(blobstore: B)
@@ -61,11 +63,11 @@ where
 
     let foo = "foo".to_string();
     let res = blobstore
-        .put(foo.clone(), Bytes::from_static(b"bar"))
+        .put(foo.clone(), BlobstoreBytes::from_bytes(&b"bar"[..]))
         .and_then(|_| blobstore.get(foo));
-    let out: Bytes = res.wait().expect("pub/get failed").expect("missing");
+    let out: BlobstoreBytes = res.wait().expect("pub/get failed").expect("missing");
 
-    assert_eq!(out, Bytes::from_static(b"bar"));
+    assert_eq!(out.into_bytes(), Bytes::from_static(b"bar"));
 }
 
 macro_rules! blobstore_test_impl {

@@ -21,7 +21,7 @@ use blobstore::Blobstore;
 
 use errors::*;
 use file::BlobEntry;
-use utils::get_node;
+use utils::{get_node, EnvelopeBlob};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {
@@ -114,7 +114,7 @@ impl BlobManifest {
                     let blobstore = blobstore.clone();
                     move |got| match got {
                         None => Ok(None),
-                        Some(blob) => Ok(Some(Self::parse(blobstore, blob)?)),
+                        Some(blob) => Ok(Some(Self::parse(blobstore, EnvelopeBlob::from(blob))?)),
                     }
                 })
                 .boxify()

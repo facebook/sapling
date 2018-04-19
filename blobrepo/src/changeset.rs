@@ -22,7 +22,7 @@ use mercurial_types::{Changeset, DBlobNode, DParents, HgBlob, MPath, Time};
 use mercurial_types::nodehash::{DChangesetId, DManifestId, D_NULL_HASH};
 
 use errors::*;
-use utils::RawCSBlob;
+use utils::{EnvelopeBlob, RawCSBlob};
 
 pub struct ChangesetContent {
     parents: DParents,
@@ -163,7 +163,8 @@ impl BlobChangeset {
                     // a BlobChangeset out of it. In future this logic will go away, because we
                     // will either retrieve BonsaiChangesets or we will fetch RevlogChangeset just
                     // to pass it to client untouched.
-                    let RawCSBlob { parents, blob } = RawCSBlob::deserialize(&bytes)?;
+                    let RawCSBlob { parents, blob } =
+                        RawCSBlob::deserialize(&EnvelopeBlob::from(bytes))?;
                     let (p1, p2) = parents.get_nodes();
                     let p1 = p1.map(|p| p.into_mercurial());
                     let p2 = p2.map(|p| p.into_mercurial());
@@ -205,10 +206,10 @@ impl BlobChangeset {
                     parents: self.content.parents,
                     blob: Cow::Borrowed(data),
                 };
-                blob.serialize()
+                blob.serialize().into()
             })
             .into_future()
-            .and_then(move |blob| blobstore.put(key, blob))
+            .and_then(move |blob| blobstore.put(key, blob.into()))
     }
 }
 

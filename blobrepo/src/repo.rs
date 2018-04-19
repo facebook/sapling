@@ -406,13 +406,7 @@ impl BlobRepo {
 
         // Ensure that content is in the blobstore
         let content_upload = self.blobstore
-            .put(
-                format!("sha1-{}", blob_hash.sha1()),
-                raw_content
-                    .clone()
-                    .into_inner()
-                    .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?,
-            )
+            .put(format!("sha1-{}", blob_hash.sha1()), raw_content.into())
             .timed({
                 let logger = self.logger.clone();
                 let path = path.clone();
@@ -427,7 +421,7 @@ impl BlobRepo {
         // Upload the new node
         let node_upload = self.blobstore.put(
             get_node_key(nodeid),
-            raw_node.serialize(&nodeid.into_mercurial())?,
+            raw_node.serialize(&nodeid.into_mercurial())?.into(),
         );
 
         Ok((

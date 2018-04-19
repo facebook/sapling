@@ -7,8 +7,6 @@
 //! Plain files, symlinks
 use std::sync::Arc;
 
-use bytes::Bytes;
-
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -16,7 +14,7 @@ use mercurial::file;
 use mercurial_types::{DManifestId, DNodeHash, DParents, FileType, HgBlob, MPath, MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::DEntryId;
-use mononoke_types::FileContents;
+use mononoke_types::{BlobstoreBytes, FileContents};
 
 use blobstore::Blobstore;
 
@@ -52,7 +50,7 @@ pub fn fetch_file_content_and_renames_from_blobstore(
                             // (None, Some(hash)), which is what BlobNode relies on to figure out
                             // whether a node is copied.
                             let (p1, p2) = parents.get_nodes();
-                            let file = file::File::new(blob, p1, p2);
+                            let file = file::File::new(HgBlob::from(blob), p1, p2);
 
                             file.copied_from().map(|from| (file.file_contents(), from))
                         })
@@ -90,7 +88,7 @@ impl BlobEntry {
         get_node(&self.blobstore, self.id.into_nodehash())
     }
 
-    fn get_raw_content_inner(&self) -> BoxFuture<Bytes, Error> {
+    fn get_raw_content_inner(&self) -> BoxFuture<BlobstoreBytes, Error> {
         let nodeid = self.id.into_nodehash();
         let blobstore = self.blobstore.clone();
 
@@ -119,22 +117,25 @@ impl Entry for BlobEntry {
     }
 
     fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
-        self.get_raw_content_inner()
-            .map(|bytes| HgBlob::from(bytes))
-            .boxify()
+        self.get_raw_content_inner().map(HgBlob::from).boxify()
     }
 
     fn get_content(&self) -> BoxFuture<Content, Error> {
         let blobstore = self.blobstore.clone();
-        self.get_raw_content_inner()
+        self.get_raw_content()
             .and_then({
                 let ty = self.ty;
-                move |bytes| {
+                move |blob| {
                     // Mercurial file blob can have metadata, but tree manifest can't
                     let res = match ty {
-                        Type::Tree => Content::Tree(BlobManifest::parse(blobstore, bytes)?.boxed()),
+                        Type::Tree => Content::Tree(
+                            BlobManifest::parse(
+                                blobstore,
+                                blob.as_slice().expect("HgBlob should always have data"),
+                            )?.boxed(),
+                        ),
                         Type::File(ft) => {
-                            let f = file::File::data_only(bytes);
+                            let f = file::File::data_only(blob);
                             let contents = f.file_contents();
                             match ft {
                                 FileType::Regular => Content::File(contents),

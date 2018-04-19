@@ -8,7 +8,6 @@
 
 use std::sync::mpsc::SyncSender;
 
-use bytes::Bytes;
 use failure::{self, Error};
 use futures::{self, stream, Future, IntoFuture, Stream};
 
@@ -17,7 +16,7 @@ use futures_ext::StreamExt;
 use mercurial::{self, HgNodeHash, HgParents, RevlogEntry, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{DParents, HgBlob, HgBlobHash, MPath, RepoPath, Type};
+use mercurial_types::{DParents, HgBlob, MPath, RepoPath, Type};
 
 use BlobstoreEntry;
 
@@ -30,9 +29,7 @@ pub(crate) fn put_entry(
 where
     Error: Send + 'static,
 {
-    let bytes = blob.into_inner()
-        .ok_or(failure::err_msg("missing blob data"))
-        .into_future();
+    let blob = blob.clean();
     let parents = {
         let (p1, p2) = parents.get_nodes();
         let p1 = p1.map(|p| p.into_mononoke());
@@ -40,25 +37,25 @@ where
         DParents::new(p1.as_ref(), p2.as_ref())
     };
 
-    bytes.and_then(move |bytes| {
-        let nodeblob = RawNodeBlob {
-            parents: parents,
-            blob: HgBlobHash::from(bytes.as_ref()),
-        };
-        // TODO: (jsgf) T21597565 Convert blobimport to use blobrepo methods to name and create
-        // blobs.
-        let nodekey = format!("node-{}.bincode", entry_hash);
-        let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
-        let nodeblob = nodeblob.serialize(&entry_hash).expect("serialize failed");
+    let nodeblob = RawNodeBlob {
+        parents: parents,
+        blob: blob.hash().expect("clean blob must have hash"),
+    };
+    // TODO: (jsgf) T21597565 Convert blobimport to use blobrepo methods to name and create
+    // blobs.
+    let nodekey = format!("node-{}.bincode", entry_hash);
+    let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
+    let nodeblob = nodeblob.serialize(&entry_hash).expect("serialize failed");
 
-        let res1 = sender.send(BlobstoreEntry::ManifestEntry((
-            nodekey,
-            Bytes::from(nodeblob),
-        )));
-        let res2 = sender.send(BlobstoreEntry::ManifestEntry((blobkey, bytes)));
+    let res1 = sender.send(BlobstoreEntry::ManifestEntry((nodekey, nodeblob.into())));
+    let res2 = sender.send(BlobstoreEntry::ManifestEntry((
+        blobkey,
+        // Manifests are serialized as they are in Mercurial, so just
+        // uploading the exact bytes as they are in Mercurial is valid.
+        blob.into(),
+    )));
 
-        res1.and(res2).map_err(Error::from)
-    })
+    res1.and(res2).map_err(Error::from).into_future()
 }
 
 // Copy a single manifest entry into the blobstore

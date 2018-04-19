@@ -21,6 +21,9 @@ use thrift;
 pub trait MononokeId {
     /// Return a key suitable for blobstore use.
     fn blobstore_key(&self) -> String;
+
+    /// Compute this Id for some data.
+    fn from_data<T: AsRef<[u8]>>(data: T) -> Self;
 }
 
 /// An identifier for a changeset in Mononoke.
@@ -126,6 +129,12 @@ macro_rules! impl_typed_hash {
             #[inline]
             fn blobstore_key(&self) -> String {
                 format!(concat!($key, ".blake2.{}"), self.0)
+            }
+
+            fn from_data<T: AsRef<[u8]>>(data: T) -> Self {
+                let mut context = $typed_context::new();
+                context.update(data);
+                context.finish()
             }
         }
 
