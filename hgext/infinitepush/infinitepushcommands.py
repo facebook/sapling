@@ -15,7 +15,9 @@ from __future__ import absolute_import
 
 import json
 
-from .backupcommands import cmdtable as backupcmdtable
+# Mercurial
+from mercurial.node import bin
+from mercurial.i18n import _
 
 from mercurial import (
     copies as copiesmod,
@@ -28,11 +30,12 @@ from mercurial import (
     util,
 )
 
-from .common import downloadbundle
-from mercurial.node import bin
-from mercurial.i18n import _
+from . import (
+    backupcommands,
+    common,
+)
 
-cmdtable = backupcmdtable
+cmdtable = backupcommands.cmdtable
 command = registrar.command(cmdtable)
 
 @command('debugfillinfinitepushmetadata',
@@ -53,7 +56,7 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
             raise error.Abort(_('node %s is not found') % node)
 
         if node not in repo:
-            newbundlefile = downloadbundle(repo, bin(node))
+            newbundlefile = common.downloadbundle(repo, bin(node))
             bundlepath = "bundle:%s+%s" % (repo.root, newbundlefile)
             bundlerepo = hg.repository(ui, bundlepath)
             repo = bundlerepo

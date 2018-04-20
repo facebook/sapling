@@ -163,6 +163,7 @@ confignonforwardmove = 'non-forward-move'
 cmdtable = infinitepushcommands.cmdtable
 revsetpredicate = backupcommands.revsetpredicate
 templatekeyword = backupcommands.templatekeyword
+templatefunc = backupcommands.templatefunc
 _scratchbranchmatcher = lambda x: False
 _maybehash = re.compile(r'^[a-f0-9]+$').search
 

@@ -86,11 +86,6 @@ outputs, which should be fixed later.
   hgext/gitrevset.py:26: stdlib import "re" follows local import: mercurial.i18n
   hgext/hiddenerror.py:28: symbol import follows non-symbol import: mercurial.i18n
   hgext/hiddenerror.py:29: symbol import follows non-symbol import: mercurial.node
-  hgext/infinitepush/infinitepushcommands.py:18: direct symbol import cmdtable from hgext.infinitepush.backupcommands
-  hgext/infinitepush/infinitepushcommands.py:31: direct symbol import downloadbundle from hgext.infinitepush.common
-  hgext/infinitepush/infinitepushcommands.py:31: symbol import follows non-symbol import: hgext.infinitepush.common
-  hgext/infinitepush/infinitepushcommands.py:32: symbol import follows non-symbol import: mercurial.node
-  hgext/infinitepush/infinitepushcommands.py:33: symbol import follows non-symbol import: mercurial.i18n
   hgext/lz4revlog.py:76: relative import of stdlib module
   hgext/p4fastimport/__init__.py:40: direct symbol import decodefileflags, getcl, lastcl, runworker from hgext.p4fastimport.util
   hgext/p4fastimport/__init__.py:40: symbol import follows non-symbol import: hgext.p4fastimport.util

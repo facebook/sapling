@@ -83,6 +83,16 @@ colortable = {
     'commitcloud.team': 'bold',
 }
 
+def _smartlogbackupmessagemap(orig, ui, repo):
+    if commitcloudutil.getworkspacename(repo):
+        return {
+            'inprogress': 'syncing',
+            'pending': 'sync pending',
+            'failed':  'not synced',
+        }
+    else:
+        return orig(ui, repo)
+
 def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None):
     if commitcloudutil.getworkspacename(repo) is not None:
         return orig(ui, repo, dest, ['hg', 'cloudsync'])
@@ -107,8 +117,9 @@ def extsetup(ui):
     extensions.wrapfunction(infinitepush.backupcommands, '_dobackgroundbackup',
                             _dobackgroundcloudsync)
     extensions.wrapfunction(infinitepush.backupcommands,
-                            '_smartlogbackupsuggestion',
-                            _smartlogbackupsuggestion)
+        '_smartlogbackupsuggestion', _smartlogbackupsuggestion)
+    extensions.wrapfunction(infinitepush.backupcommands,
+        '_smartlogbackupmessagemap', _smartlogbackupmessagemap)
     commitcloudcommands.infinitepush = infinitepush
 
 def reposetup(ui, repo):

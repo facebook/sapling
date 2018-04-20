@@ -57,6 +57,7 @@ import stat
 import subprocess
 import time
 
+# Mercurial
 from mercurial.i18n import _
 from mercurial import (
     bundle2,
@@ -75,6 +76,7 @@ from mercurial import (
     policy,
     registrar,
     scmutil,
+    templater,
     util,
 )
 
@@ -88,6 +90,7 @@ command = registrar.command(cmdtable)
 
 revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
+templatefunc = registrar.templatefunc()
 localoverridesfile = 'generated.infinitepushbackups.rc'
 secondsinhour = 60 * 60
 
@@ -519,6 +522,24 @@ def _smartlogbackupsuggestion(ui, repo):
     ui.warn(_('Run `hg pushbackup` to perform a backup. '
           'If this fails,\n'
           'please report to the Source Control @ FB group.\n'))
+
+def _smartlogbackupmessagemap(ui, repo):
+    return {
+        'inprogress': 'backing up',
+        'pending': 'backup pending',
+        'failed':  'not backed up',
+    }
+
+@templatefunc('backupstatusmsg(status)')
+def backupstatusmsg(context, mapping, args):
+    if len(args) != 1:
+        raise error.ParseError(_("backupstatusmsg expects 1 argument"))
+    status = templater.evalfuncarg(context, mapping, args[0])
+    repo = mapping['ctx'].repo()
+    wordmap = _smartlogbackupmessagemap(repo.ui, repo)
+    if status not in wordmap:
+        raise error.ParseError(_("unknown status"))
+    return wordmap[status]
 
 def smartlogsummary(ui, repo):
     if not ui.configbool('infinitepushbackup', 'enablestatus'):
