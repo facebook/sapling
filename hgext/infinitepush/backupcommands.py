@@ -40,6 +40,9 @@
 
     # Enable creating obsolete markers when backup is restored.
     createlandedasmarkers = False
+
+    # Number of backups to list by default in getavailablebackups
+    backuplistlimit = 10
 """
 from __future__ import absolute_import
 
@@ -54,6 +57,7 @@ import stat
 import subprocess
 import time
 
+from mercurial.i18n import _
 from mercurial import (
     bundle2,
     changegroup,
@@ -73,7 +77,6 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
 
 from .. import shareutil
 from . import bundleparts
@@ -265,7 +268,7 @@ def restore(ui, repo, dest=None, **opts):
     if not allbackupstates:
         ui.warn(_('no backups found!'))
         return 1
-    _checkbackupstates(allbackupstates)
+    _checkbackupstates(ui, namingmgr.username, allbackupstates)
 
     __, backupstate = allbackupstates.popitem()
     pullcmd, pullopts = _getcommandandoptions('^pull')
@@ -307,7 +310,8 @@ def restore(ui, repo, dest=None, **opts):
     return result
 
 @command('getavailablebackups',
-    [('', 'user', '', _('username, defaults to current user')),
+    [('a', 'all', None, _('list all backups, not just the most recent')),
+     ('', 'user', '', _('username, defaults to current user')),
      ('', 'json', None, _('print available backups in json format'))])
 def getavailablebackups(ui, repo, dest=None, **opts):
     other = _getremote(repo, ui, dest, **opts)
@@ -325,17 +329,11 @@ def getavailablebackups(ui, repo, dest=None, **opts):
         for hostname, reporoot in allbackupstates.keys():
             jsondict.setdefault(hostname, []).append(reporoot)
         ui.write('%s\n' % json.dumps(jsondict, indent=4))
+    elif not allbackupstates:
+        ui.write(_('no backups available for %s\n') % namingmgr.username)
     else:
-        if not allbackupstates:
-            ui.write(_('no backups available for %s\n') % namingmgr.username)
-
-        ui.write(_('user %s has %d available backups:\n'
-                   '(backups are ordered, '
-                   'the most recent are at the top of the list)\n') %
-                 (namingmgr.username, len(allbackupstates)))
-
-        for hostname, reporoot in allbackupstates.keys():
-            ui.write(_('%s on %s\n') % (reporoot, hostname))
+        _printbackupstates(ui, namingmgr.username, allbackupstates,
+                           bool(opts.get('all')))
 
 @command('backupdelete',
     [('', 'reporoot', '', 'root of the repo to delete the backup for'),
@@ -409,7 +407,7 @@ def checkbackup(ui, repo, dest=None, **opts):
     allbackupstates = _downloadbackupstate(
         ui, other, sourcereporoot, sourcehostname, namingmgr)
     if not opts.get('all'):
-        _checkbackupstates(allbackupstates)
+        _checkbackupstates(ui, namingmgr.username, allbackupstates)
 
     ret = 0
     while allbackupstates:
@@ -874,27 +872,29 @@ def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
 
     return allbackupstatesrev
 
-def _checkbackupstates(allbackupstates):
+def _checkbackupstates(ui, username, allbackupstates):
     if not allbackupstates:
         raise error.Abort('no backups found!')
 
-    def unique(seq):
-        used = set()
-        return [x for x in seq if x not in used and (used.add(x) or True)]
-
-    hostnames = unique([key[0] for key in allbackupstates.iterkeys()])
-    reporoots = unique([key[1] for key in allbackupstates.iterkeys()])
-
-    # Preserve allbackupstates MRU order in messages for users
-    if len(hostnames) > 1:
+    if len(allbackupstates) > 1:
+        _printbackupstates(ui, username, allbackupstates)
         raise error.Abort(
-            _('ambiguous hostname to restore:\n') + '\n'.join(hostnames),
-            hint=_('set --hostname to disambiguate'))
+                _('multiple backups found'),
+                hint=_('set --hostname and --reporoot to pick a backup'))
 
-    if len(reporoots) > 1:
-        raise error.Abort(
-            _('ambiguous repo root to restore:\n') + '\n'.join(reporoots),
-            hint=_('set --reporoot to disambiguate'))
+def _printbackupstates(ui, username, allbackupstates, all=False):
+    ui.write(_('user %s has %d available backups:\n'
+               '(backups are ordered with '
+               'the most recent at the top of the list)\n') %
+             (username, len(allbackupstates)))
+
+    limit = ui.configint('infinitepushbackup', 'backuplistlimit', 5)
+    for i, (hostname, reporoot) in enumerate(allbackupstates.keys()):
+        if not all and i == limit:
+            ui.write(_("(older backups have been hidden, "
+                       "run 'hg getavailablebackups --all' to see them all)\n"))
+            break
+        ui.write(_('%s on %s\n') % (reporoot, hostname))
 
 class BackupBookmarkNamingManager(object):
     '''

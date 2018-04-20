@@ -80,10 +80,12 @@ Restore with ambiguous repo root
   $ hg clone ssh://user@dummy/repo restored -q
   $ cd restored
   $ hg pullbackup
-  abort: ambiguous repo root to restore:
-  $TESTTMP/backupsource2
-  $TESTTMP/backupsource
-  (set --reporoot to disambiguate)
+  user test has 2 available backups:
+  (backups are ordered with the most recent at the top of the list)
+  $TESTTMP/backupsource2 on testhost
+  $TESTTMP/backupsource on testhost
+  abort: multiple backups found
+  (set --hostname and --reporoot to pick a backup)
   [255]
   $ hg pullbackup --reporoot $TESTTMP/backupsource2
   pulling from ssh://user@dummy/repo
@@ -237,12 +239,14 @@ Make sure commit was pulled by checking that commit is present
 
 Test debugcheckbackup
   $ hg debugcheckbackup
-  abort: ambiguous repo root to restore:
-  $TESTTMP
-  $TESTTMP/bookmarks/backupsource3
-  $TESTTMP/backupsource2
-  $TESTTMP/backupsource
-  (set --reporoot to disambiguate)
+  user test has 4 available backups:
+  (backups are ordered with the most recent at the top of the list)
+  $TESTTMP on testhost
+  $TESTTMP/bookmarks/backupsource3 on testhost
+  $TESTTMP/backupsource2 on testhost
+  $TESTTMP/backupsource on testhost
+  abort: multiple backups found
+  (set --hostname and --reporoot to pick a backup)
   [255]
   $ hg debugcheckbackup --user anotheruser --reporoot $TESTTMP/backupsource
   checking \$TESTTMP/backupsource on .* (re)
@@ -277,14 +281,14 @@ Make sure that both repos were checked even though check for one of them fails
 Test getavailablebackups command
   $ hg getavailablebackups
   user test has 4 available backups:
-  (backups are ordered, the most recent are at the top of the list)
+  (backups are ordered with the most recent at the top of the list)
   \$TESTTMP on .* (re)
   \$TESTTMP/bookmarks/backupsource3 on .* (re)
   \$TESTTMP/backupsource2 on .* (re)
   \$TESTTMP/backupsource on .* (re)
   $ hg getavailablebackups --user anotheruser
   user anotheruser has 2 available backups:
-  (backups are ordered, the most recent are at the top of the list)
+  (backups are ordered with the most recent at the top of the list)
   \$TESTTMP/backupsource2 on .* (re)
   \$TESTTMP/backupsource on .* (re)
   $ hg getavailablebackups --json
@@ -296,6 +300,48 @@ Test getavailablebackups command
           "$TESTTMP/backupsource"
       ]
   }
+
+Make a couple more backup sources
+  $ cd ..
+  $ hg clone ssh://user@dummy/repo backupsource4 -q
+  $ cd backupsource4
+  $ mkcommit commit4
+  $ hg pushbackup
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     56d472a48d80  commit4
+  finished in \d+\.(\d+)? seconds (re)
+  $ cd ..
+  $ hg clone ssh://user@dummy/repo backupsource5 -q
+  $ cd backupsource5
+  $ mkcommit commit5
+  $ hg pushbackup
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     6def11a9e22f  commit5
+  finished in \d+\.(\d+)? seconds (re)
+  $ cd ../backupsource
+
+  $ hg getavailablebackups
+  user test has 6 available backups:
+  (backups are ordered with the most recent at the top of the list)
+  $TESTTMP on testhost
+  $TESTTMP/bookmarks/backupsource3 on testhost
+  $TESTTMP/backupsource5 on testhost
+  $TESTTMP/backupsource4 on testhost
+  $TESTTMP/backupsource2 on testhost
+  (older backups have been hidden, run 'hg getavailablebackups --all' to see them all)
+  $ hg getavailablebackups --all
+  user test has 6 available backups:
+  (backups are ordered with the most recent at the top of the list)
+  $TESTTMP on testhost
+  $TESTTMP/bookmarks/backupsource3 on testhost
+  $TESTTMP/backupsource5 on testhost
+  $TESTTMP/backupsource4 on testhost
+  $TESTTMP/backupsource2 on testhost
+  $TESTTMP/backupsource on testhost
 
 Delete a backup
   $ echo y | hg backupdelete --reporoot "$TESTTMP/backupsource2" --hostname testhost --config ui.interactive=true
@@ -310,10 +356,12 @@ Delete a backup
   (you can still access the commits directly using their hashes)
 
   $ hg getavailablebackups
-  user test has 3 available backups:
-  (backups are ordered, the most recent are at the top of the list)
+  user test has 5 available backups:
+  (backups are ordered with the most recent at the top of the list)
   $TESTTMP on testhost
   $TESTTMP/bookmarks/backupsource3 on testhost
+  $TESTTMP/backupsource5 on testhost
+  $TESTTMP/backupsource4 on testhost
   $TESTTMP/backupsource on testhost
 
 Try deleting invalid backup names

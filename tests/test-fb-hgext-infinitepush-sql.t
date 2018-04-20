@@ -116,18 +116,23 @@ sleeps should be used to get predictable order
   $ mkcommit 'Commit in repo client5'
   $ sleep 1
   $ hg pushb -q --config infinitepushbackup.hostname=mydevhost
-  $ hg pullbackup
-  abort: ambiguous hostname to restore:
-  mydevhost
-  ourdevhost
-  devhost
-  (set --hostname to disambiguate)
+  $ hg pullbackup --config infinitepushbackup.backuplistlimit=3
+  user test has 5 available backups:
+  (backups are ordered with the most recent at the top of the list)
+  $TESTTMP/client5 on mydevhost
+  $TESTTMP/client4 on ourdevhost
+  $TESTTMP/client3 on devhost
+  (older backups have been hidden, run 'hg getavailablebackups --all' to see them all)
+  abort: multiple backups found
+  (set --hostname and --reporoot to pick a backup)
   [255]
   $ hg pullbackup --hostname mydevhost
-  abort: ambiguous repo root to restore:
-  $TESTTMP/client5
-  $TESTTMP/client1
-  (set --reporoot to disambiguate)
+  user test has 2 available backups:
+  (backups are ordered with the most recent at the top of the list)
+  $TESTTMP/client5 on mydevhost
+  $TESTTMP/client1 on mydevhost
+  abort: multiple backups found
+  (set --hostname and --reporoot to pick a backup)
   [255]
   $ hg pullbackup --reporoot $TESTTMP/client1 --hostname mydevhost -q # pullbackup should work with reporoot/hostname pair
   $ hg pullbackup --reporoot $TESTTMP/client2 --hostname devhost -q   # pullbackup should work with reporoot/hostname pair
@@ -162,7 +167,7 @@ Getavailablebackups should also go in MRU order
   }
   $ hg getavailablebackups
   user test has 5 available backups:
-  (backups are ordered, the most recent are at the top of the list)
+  (backups are ordered with the most recent at the top of the list)
   $TESTTMP/client5 on mydevhost
   $TESTTMP/client4 on ourdevhost
   $TESTTMP/client3 on devhost
