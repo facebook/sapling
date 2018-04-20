@@ -179,6 +179,7 @@ fn upload_entry(
                 p1: p1.cloned(),
                 p2: p2.cloned(),
                 path,
+                check_nodeid: true,
             };
             upload.upload(&blobrepo)
         })
@@ -319,6 +320,10 @@ fn main() {
                             p1,
                             p2,
                             path: RepoPath::root(),
+                            // The root tree manifest is expected to have the wrong hash in hybrid
+                            // mode. This will probably never go away for compatibility with
+                            // old repositories.
+                            check_nodeid: false,
                         };
                         upload.upload(&blobrepo)
                     }

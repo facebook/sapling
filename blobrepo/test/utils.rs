@@ -161,6 +161,7 @@ fn upload_hg_entry(
         p1,
         p2,
         path,
+        check_nodeid: true,
     };
     upload.upload(repo).unwrap()
 }

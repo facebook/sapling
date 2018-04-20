@@ -63,4 +63,7 @@ pub enum ErrorKind {
     #[fail(display = "DParents failed to complete")] ParentsFailed,
     #[fail(display = "Expected {} to be a manifest, found a {} instead", _0, _1)]
     NotAManifest(DNodeHash, Type),
+    #[fail(display = "Inconsistent node hash for entry: path {}, provided: {}, computed: {}", _0,
+           _1, _2)]
+    InconsistentEntryHash(RepoPath, HgNodeHash, HgNodeHash),
 }

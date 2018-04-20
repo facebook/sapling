@@ -57,6 +57,7 @@ impl UploadableHgBlob for Filelog {
             p1: self.p1,
             p2: self.p2,
             path: node_key.path.clone(),
+            check_nodeid: true,
         };
         upload
             .upload(repo)

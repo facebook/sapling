@@ -36,7 +36,7 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial::{HgNodeHash, HgParents};
+use mercurial::{HgBlobNode, HgNodeHash, HgParents};
 use mercurial_types::{Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry, HgBlob,
                       Manifest, RepoPath, RepositoryId};
 use mercurial_types::manifest;
@@ -377,7 +377,6 @@ impl BlobRepo {
 
 /// Context for uploading a Mercurial entry.
 pub struct UploadHgEntry {
-    // XXX optionally verify that the hash actually matches the contents
     /// This hash is used as the blobstore key, even if it doesn't match the hash of the
     /// parents and raw content. This is done because in some cases like root tree manifests
     /// in hybrid mode, Mercurial sends fake hashes.
@@ -387,6 +386,8 @@ pub struct UploadHgEntry {
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
     pub path: RepoPath,
+    /// Pass `true` here to verify that the hash actually matches the inputs.
+    pub check_nodeid: bool,
 }
 
 impl UploadHgEntry {
@@ -408,13 +409,25 @@ impl UploadHgEntry {
             p1,
             p2,
             path,
+            check_nodeid,
         } = self;
 
         let p1 = p1.as_ref();
         let p2 = p2.as_ref();
         let raw_content = raw_content.clean();
 
-        // XXX verify nodeid here
+        if check_nodeid {
+            let computed_nodeid = HgBlobNode::new(raw_content.clone(), p1, p2)
+                .nodeid()
+                .expect("raw_content must have data available");
+            if nodeid != computed_nodeid {
+                bail_err!(ErrorKind::InconsistentEntryHash(
+                    path,
+                    nodeid,
+                    computed_nodeid
+                ));
+            }
+        }
 
         let parents = HgParents::new(p1, p2);
 

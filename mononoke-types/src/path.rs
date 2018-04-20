@@ -59,6 +59,33 @@ impl RepoPath {
         Ok(RepoPath::FilePath(path))
     }
 
+    /// Whether this path represents the root.
+    #[inline]
+    pub fn is_root(&self) -> bool {
+        match *self {
+            RepoPath::RootPath => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this path represents a directory that isn't the root.
+    #[inline]
+    pub fn is_dir(&self) -> bool {
+        match *self {
+            RepoPath::DirectoryPath(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this path represents a file.
+    #[inline]
+    pub fn is_file(&self) -> bool {
+        match *self {
+            RepoPath::FilePath(_) => true,
+            _ => false,
+        }
+    }
+
     /// Get the length of this repo path in bytes. `RepoPath::Root` has length 0.
     pub fn len(&self) -> usize {
         match *self {

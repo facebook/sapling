@@ -100,6 +100,9 @@ impl UploadableHgBlob for TreemanifestEntry {
             p1: self.p1,
             p2: self.p2,
             path: node_key.path.clone(),
+            // The root tree manifest is expected to have the wrong hash in hybrid mode.
+            // XXX possibly remove this once hybrid mode is gone
+            check_nodeid: !node_key.path.is_root(),
         };
         upload.upload(repo).map(move |(_node, value)| {
             (
