@@ -321,21 +321,23 @@ fn create_filenode(
     linknode: HgNodeHash,
 ) -> FilenodeInfo {
     let (p1, p2) = parents.get_nodes();
-    let p1 = p1.map(|p| p.into_mononoke());
-    let p2 = p2.map(|p| p.into_mononoke());
-
-    let copyfrom = mercurial::file::File::new(blob, p1.as_ref(), p2.as_ref())
+    let copyfrom = mercurial::file::File::new(blob, p1, p2)
         .copied_from()
         .map(|copiedfrom| {
-            copiedfrom.map(|(path, node)| (RepoPath::FilePath(path), DFileNodeId::new(node)))
+            copiedfrom.map(|(path, node)| {
+                (
+                    RepoPath::FilePath(path),
+                    DFileNodeId::new(node.into_mononoke()),
+                )
+            })
         })
         .expect("cannot create filenode");
 
     FilenodeInfo {
         path: repopath.clone(),
         filenode: DFileNodeId::new(filenode_hash.into_mononoke()),
-        p1: p1.map(DFileNodeId::new),
-        p2: p2.map(DFileNodeId::new),
+        p1: p1.map(|p| DFileNodeId::new(p.into_mononoke())),
+        p2: p2.map(|p| DFileNodeId::new(p.into_mononoke())),
         copyfrom,
         linknode: DChangesetId::new(linknode.into_mononoke()),
     }

@@ -9,22 +9,23 @@ use std::str;
 
 use itertools::Itertools;
 
-use mercurial_types::{DBlobNode, DNodeHash, HgBlob, MPath};
+use mercurial_types::{HgBlob, MPath};
 use mononoke_types::FileContents;
 
+use {HgBlobNode, HgNodeHash};
 use errors::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct File {
-    node: DBlobNode,
+    node: HgBlobNode,
 }
 
 const META_MARKER: &[u8] = b"\x01\n";
 const META_SZ: usize = 2;
 
 impl File {
-    pub fn new<B: Into<HgBlob>>(blob: B, p1: Option<&DNodeHash>, p2: Option<&DNodeHash>) -> Self {
-        let node = DBlobNode::new(blob, p1, p2);
+    pub fn new<B: Into<HgBlob>>(blob: B, p1: Option<&HgNodeHash>, p2: Option<&HgNodeHash>) -> Self {
+        let node = HgBlobNode::new(blob, p1, p2);
         File { node }
     }
 
@@ -36,7 +37,7 @@ impl File {
 
     // DBlobNode should probably go away eventually, probably? So mark this private.
     #[inline]
-    pub(crate) fn from_blobnode(node: DBlobNode) -> Self {
+    pub(crate) fn from_blobnode(node: HgBlobNode) -> Self {
         File { node }
     }
 
@@ -87,7 +88,7 @@ impl File {
         kv
     }
 
-    pub fn copied_from(&self) -> Result<Option<(MPath, DNodeHash)>> {
+    pub fn copied_from(&self) -> Result<Option<(MPath, HgNodeHash)>> {
         if !self.node.maybe_copied() {
             return Ok(None);
         }

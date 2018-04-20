@@ -17,7 +17,7 @@ use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry};
-use mercurial::{self, file, HgNodeHash, HgNodeKey, NodeHashConversion};
+use mercurial::{self, file, HgNodeHash, HgNodeKey};
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, RepoPath};
 
@@ -80,12 +80,9 @@ impl UploadableBlob for Filelog {
                 other
             ),
         };
-        let p1 = self.p1.map(|p| p.into_mononoke());
-        let p2 = self.p2.map(|p| p.into_mononoke());
 
-        let f = file::File::new(self.data, p1.as_ref(), p2.as_ref());
-        let copy_from = f.copied_from()?
-            .map(|(path, hash)| (path, hash.into_mercurial()));
+        let f = file::File::new(self.data, self.p1.as_ref(), self.p2.as_ref());
+        let copy_from = f.copied_from()?;
         let contents = f.file_contents();
         let contents_blob = contents.into_blob();
         let cbinfo = ContentBlobInfo {
