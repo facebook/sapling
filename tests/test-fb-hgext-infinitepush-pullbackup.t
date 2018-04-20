@@ -6,6 +6,7 @@
   $ cat >> $HGRCPATH << EOF
   > [infinitepushbackup]
   > logdir=$TESTTMP/logs
+  > hostname=testhost
   > EOF
 
 Setup server
@@ -295,3 +296,46 @@ Test getavailablebackups command
           "$TESTTMP/backupsource"
       ]
   }
+
+Delete a backup
+  $ echo y | hg backupdelete --reporoot "$TESTTMP/backupsource2" --hostname testhost --config ui.interactive=true
+  $TESTTMP/backupsource2 on testhost:
+      heads:
+          c1bfda8efb6e73473d6874e35125861a34a5594d
+      bookmarks:
+          secondbook:          c1bfda8efb6e73473d6874e35125861a34a5594d
+  delete this backup (yn)?  y
+  deleting backup for $TESTTMP/backupsource2 on testhost
+  backup deleted
+  (you can still access the commits directly using their hashes)
+
+  $ hg getavailablebackups
+  user test has 3 available backups:
+  (backups are ordered, the most recent are at the top of the list)
+  $TESTTMP on testhost
+  $TESTTMP/bookmarks/backupsource3 on testhost
+  $TESTTMP/backupsource on testhost
+
+Try deleting invalid backup names
+  $ hg backupdelete --reporoot '%' --hostname testhost
+  abort: repo root contains unexpected characters
+  [255]
+  $ hg backupdelete --reporoot foo --hostname '*'
+  abort: hostname contains unexpected characters
+  [255]
+  $ hg backupdelete --reporoot foo --hostname bar
+  abort: no backup found for foo on bar
+  [255]
+
+Try deleting the backup for the current directory
+  $ hg backupdelete --reporoot "$TESTTMP/backupsource" --hostname testhost
+  warning: this backup matches the current repo
+  $TESTTMP/backupsource on testhost:
+      heads:
+          0e1a088ff2825213eaa838a82a842bc186f10dd5
+          33c1c9df81e943319194decdb886cced08e67a29
+      bookmarks:
+          abook:               89ecc969c0ac7d7344728f1255250df7c54a56af
+          book/bookmarks/somebook: 89ecc969c0ac7d7344728f1255250df7c54a56af
+          book/bookmarksbookmarks/somebook: 33c1c9df81e943319194decdb886cced08e67a29
+  delete this backup (yn)?  n

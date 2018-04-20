@@ -337,6 +337,60 @@ def getavailablebackups(ui, repo, dest=None, **opts):
         for hostname, reporoot in allbackupstates.keys():
             ui.write(_('%s on %s\n') % (reporoot, hostname))
 
+@command('backupdelete',
+    [('', 'reporoot', '', 'root of the repo to delete the backup for'),
+     ('', 'hostname', '', 'hostname of the repo to delete the backup for')])
+def backupdelete(ui, repo, dest=None, **opts):
+    """
+    Deletes a backup from the server.  Removes all heads and bookmarks
+    associated with the backup from the server.  The commits themselves are
+    not removed, so you can still update to them using 'hg update HASH'.
+    """
+    sourcereporoot = opts.get('reporoot')
+    sourcehostname = opts.get('hostname')
+    if not sourcereporoot or not sourcehostname:
+        msg = _("you must specify a reporoot and hostname to delete a backup")
+        hint = _("use 'hg getavailablebackups' to find which backups exist")
+        raise error.Abort(msg, hint=hint)
+    namingmgr = BackupBookmarkNamingManager(ui, repo)
+
+    # Do some sanity checking on the names
+    if not re.match(r'^[-a-zA-Z0-9._/]+$', sourcereporoot):
+        msg = _("repo root contains unexpected characters")
+        raise error.Abort(msg)
+    if not re.match(r'^[-a-zA-Z0-9.]+$', sourcehostname):
+        msg = _("hostname contains unexpected characters")
+        raise error.Abort(msg)
+    if sourcereporoot == repo.origroot and sourcehostname == namingmgr.hostname:
+        ui.warn(_("warning: this backup matches the current repo\n"))
+
+    other = _getremote(repo, ui, dest, **opts)
+    backupstates = _downloadbackupstate(
+        ui, other, sourcereporoot, sourcehostname, namingmgr)
+    backupstate = backupstates.get((sourcehostname, sourcereporoot))
+    if backupstate is None:
+        raise error.Abort(_("no backup found for %s on %s")
+                          % (sourcereporoot, sourcehostname))
+    ui.write(_("%s on %s:\n") % (sourcereporoot, sourcehostname))
+    ui.write(_("    heads:\n"))
+    for head in backupstate.heads:
+        ui.write(("        %s\n") % head)
+    ui.write(_("    bookmarks:\n"))
+    for bookname, booknode in backupstate.localbookmarks.items():
+        ui.write(("        %-20s %s\n") % (bookname + ':', booknode))
+    if ui.promptchoice(_("delete this backup (yn)? $$ &Yes $$ &No"), 1) == 0:
+        ui.status(_("deleting backup for %s on %s\n") %
+                  (sourcereporoot, sourcehostname))
+        bookmarks = {
+            namingmgr.getcommonuserhostreporootprefix(sourcehostname,
+                                                      sourcereporoot): ''
+        }
+        _dobackuppush(ui, repo, other, None, bookmarks)
+        ui.status(_("backup deleted\n"))
+        ui.status(_("(you can still access the commits directly "
+                    "using their hashes)\n"))
+    return 0
+
 @command('debugcheckbackup',
          [('', 'all', None, _('check all backups that user have')),
          ] + restoreoptions)
