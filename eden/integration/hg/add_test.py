@@ -84,8 +84,6 @@ class AddTest(EdenHgTestCase):
         )
 
     def test_add_nonexistent_directory(self):
-        # I believe this does not pass today because _eden_walk_helper does not
-        # invoke the bad() method of the matcher.
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.hg('add', 'dir3')
         self.assertEqual(
