@@ -600,9 +600,14 @@ def _dobackup(ui, repo, dest, **opts):
         repo, newbookmarks, removedbookmarks,
         newheads, removedheads, namingmgr)
 
-    # Special case if backup state is empty. Clean all backup bookmarks from the
-    # server.
+    # Special cases if backup state is empty.
     if bkpstate.empty():
+        # If there is nothing to backup, exit now to prevent accidentally
+        # clearing a previous backup.
+        if not afterbackuplocalbooks and not afterbackupheads:
+            ui.status(_('nothing to backup\n'))
+            return
+        # Otherwise, clean all backup bookmarks from the server.
         bookmarkstobackup[namingmgr.getbackupheadprefix()] = ''
         bookmarkstobackup[namingmgr.getbackupbookmarkprefix()] = ''
 

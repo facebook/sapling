@@ -26,7 +26,7 @@ Backup empty repo
   $ setup
   $ hg pushbackup
   starting backup .* (re)
-  finished in \d+\.(\d+)? seconds (re)
+  nothing to backup
   $ mkcommit commit
   $ hg prune .
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -50,6 +50,13 @@ Re-clone the client
 
 Setup client
   $ setup
+
+Pushing in this new, empty clone shouldn't clear the old backup
+  $ hg pushbackup
+  starting backup .* (re)
+  nothing to backup
+  $ scratchbookmarks
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/606a357e69adb2e36d559ae3237626e82a955c9d 606a357e69adb2e36d559ae3237626e82a955c9d (re)
 
 Make commit and backup it. Use lockfail.py to make sure lock is not taken during
 pushbackup
