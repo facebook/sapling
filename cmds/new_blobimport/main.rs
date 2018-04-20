@@ -39,12 +39,12 @@ use tokio_core::reactor::Core;
 
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgEntry};
 use changesets::SqliteChangesets;
-use mercurial::{HgChangesetId, HgNodeHash, RevlogChangeset, RevlogEntry, RevlogRepo};
+use mercurial::{HgChangesetId, HgManifestId, HgNodeHash, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, MPath, RepoPath, RepositoryId, Type};
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
-    rootmf: BoxFuture<(HgBlob, Option<HgNodeHash>, Option<HgNodeHash>), Error>,
+    rootmf: BoxFuture<(HgManifestId, HgBlob, Option<HgNodeHash>, Option<HgNodeHash>), Error>,
     entries: BoxStream<(Option<MPath>, RevlogEntry), Error>,
 }
 
@@ -62,7 +62,12 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
         .map_err(Error::from)
         .and_then({
             let revlog_repo = revlog_repo.clone();
-            move |cs| revlog_repo.get_root_manifest(cs.manifestid())
+            move |cs| {
+                revlog_repo.get_root_manifest(cs.manifestid()).map({
+                    let manifest_id = *cs.manifestid();
+                    move |rootmf| (manifest_id, rootmf)
+                })
+            }
         })
         .with_context(move |_| format!("While reading root manifest for {:?}", csid))
         .map_err(Fail::compat)
@@ -96,8 +101,11 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
             }
         })
         .join(rootmf.clone().from_err())
-        .map(|((p1, p2), rootmf)| {
-            mercurial::manifest::new_entry_intersection_stream(&*rootmf, p1.as_ref(), p2.as_ref())
+        .map(|((p1, p2), rootmf_shared)| {
+            // The shared() combinator produces a SharedItem which can't be destructured in the
+            // function signature.
+            let (_, ref rootmf) = *rootmf_shared;
+            mercurial::manifest::new_entry_intersection_stream(&rootmf, p1.as_ref(), p2.as_ref())
         })
         .flatten_stream()
         .with_context(move |_| format!("While reading entries for {:?}", csid))
@@ -108,13 +116,21 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
 
     let rootmf = rootmf
         .map_err(Error::from)
-        .and_then(move |mf| {
+        .and_then(move |rootmf_shared| {
+            // The shared() combinator produces a SharedItem which can't be destructured in the
+            // function signature.
+            let (manifest_id, ref mf) = *rootmf_shared;
             let mut bytes = Vec::new();
             mf.generate(&mut bytes)
                 .with_context(|_| format!("While generating root manifest blob for {:?}", csid))?;
 
             let (p1, p2) = mf.parents().get_nodes();
-            Ok((HgBlob::from(Bytes::from(bytes)), p1.cloned(), p2.cloned()))
+            Ok((
+                manifest_id,
+                HgBlob::from(Bytes::from(bytes)),
+                p1.cloned(),
+                p2.cloned(),
+            ))
         })
         .boxify();
 
@@ -157,6 +173,7 @@ fn upload_entry(
         .and_then(move |(content, parents)| {
             let (p1, p2) = parents.get_nodes();
             let upload = UploadHgEntry {
+                nodeid: entry.get_hash().into_nodehash(),
                 raw_content: content,
                 content_type: ty,
                 p1: p1.cloned(),
@@ -294,8 +311,9 @@ fn main() {
             let rootmf = rootmf
                 .and_then({
                     let blobrepo = blobrepo.clone();
-                    move |(blob, p1, p2)| {
+                    move |(manifest_id, blob, p1, p2)| {
                         let upload = UploadHgEntry {
+                            nodeid: manifest_id.into_nodehash(),
                             raw_content: blob,
                             content_type: Type::Tree,
                             p1,

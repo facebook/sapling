@@ -51,6 +51,7 @@ impl UploadableHgBlob for Filelog {
     fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let upload = UploadHgEntry {
+            nodeid: node_key.hash,
             raw_content: HgBlob::from(self.data),
             content_type: manifest::Type::File(FileType::Regular),
             p1: self.p1,

@@ -36,7 +36,7 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial::{HgBlobNode, HgNodeHash, HgParents};
+use mercurial::{HgNodeHash, HgParents};
 use mercurial_types::{Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry, HgBlob,
                       Manifest, RepoPath, RepositoryId};
 use mercurial_types::manifest;
@@ -377,6 +377,11 @@ impl BlobRepo {
 
 /// Context for uploading a Mercurial entry.
 pub struct UploadHgEntry {
+    // XXX optionally verify that the hash actually matches the contents
+    /// This hash is used as the blobstore key, even if it doesn't match the hash of the
+    /// parents and raw content. This is done because in some cases like root tree manifests
+    /// in hybrid mode, Mercurial sends fake hashes.
+    pub nodeid: HgNodeHash,
     pub raw_content: HgBlob,
     pub content_type: manifest::Type,
     pub p1: Option<HgNodeHash>,
@@ -397,6 +402,7 @@ impl UploadHgEntry {
         repo: &BlobRepo,
     ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
         let UploadHgEntry {
+            nodeid,
             raw_content,
             content_type,
             p1,
@@ -407,6 +413,9 @@ impl UploadHgEntry {
         let p1 = p1.as_ref();
         let p2 = p2.as_ref();
         let raw_content = raw_content.clean();
+
+        // XXX verify nodeid here
+
         let parents = HgParents::new(p1, p2);
 
         let blob_hash = raw_content
@@ -417,10 +426,6 @@ impl UploadHgEntry {
             parents,
             blob: blob_hash,
         };
-
-        let nodeid = HgBlobNode::new(raw_content.clone(), p1, p2)
-            .nodeid()
-            .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?;
 
         let blob_entry = HgBlobEntry::new(
             repo.blobstore.clone(),

@@ -16,7 +16,7 @@ use futures_ext::{BoxFuture, StreamExt};
 
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgEntry};
 use memblob::{EagerMemblob, LazyMemblob};
-use mercurial::HgNodeHash;
+use mercurial::{HgBlobNode, HgNodeHash};
 use mercurial_types::{manifest, DNodeHash, FileType, HgBlob, RepoPath};
 use mononoke_types::DateTime;
 use std::sync::Arc;
@@ -149,7 +149,13 @@ fn upload_hg_entry(
     p2: Option<HgNodeHash>,
 ) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>) {
     let raw_content = HgBlob::from(data);
+    // compute the nodeid from the content
+    let nodeid = HgBlobNode::new(raw_content.clone(), p1.as_ref(), p2.as_ref())
+        .nodeid()
+        .expect("raw_content must have data available");
+
     let upload = UploadHgEntry {
+        nodeid,
         raw_content,
         content_type,
         p1,

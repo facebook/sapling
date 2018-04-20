@@ -94,6 +94,7 @@ impl UploadableHgBlob for TreemanifestEntry {
         let node_key = self.node_key;
         let manifest_content = self.manifest_content;
         let upload = UploadHgEntry {
+            nodeid: node_key.hash,
             raw_content: HgBlob::from(self.data),
             content_type: manifest::Type::Tree,
             p1: self.p1,
