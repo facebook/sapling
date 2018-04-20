@@ -510,7 +510,7 @@ class hgbuildext(build_ext):
                     os.path.join(re2path, 'util/rune.cc'),
                     os.path.join(re2path, 'util/strutil.cc'),
                 ],
-                include_dirs=include_dirs + [re2path],
+                include_dirs=[re2path] + include_dirs,
                 depends=common_depends + [
                     os.path.join(re2path, 're2/bitmap256.h'),
                     os.path.join(re2path, 're2/filtered_re2.h'),
