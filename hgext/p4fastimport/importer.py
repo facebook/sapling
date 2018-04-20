@@ -3,7 +3,6 @@ from __future__ import absolute_import
 
 import collections
 import gzip
-import json
 import os
 import re
 
@@ -17,7 +16,7 @@ from mercurial import (
 )
 
 from . import lfs, p4
-from .util import caseconflict, localpath, runworker
+from .util import caseconflict, localpath
 
 KEYWORD_REGEX = "\$(Id|Header|DateTime|" + \
                 "Date|Change|File|" + \
@@ -25,21 +24,6 @@ KEYWORD_REGEX = "\$(Id|Header|DateTime|" + \
 
 #TODO: make p4 user configurable
 P4_ADMIN_USER = 'p4admin'
-
-def relpath(client, depotfile, ignore_nonexisting=False):
-    where = p4.parse_where(client, depotfile)
-    filename = where.get('clientFile')
-    if filename is not None:
-        filename = filename.replace('//%s/' % client, '')
-    elif not ignore_nonexisting:
-        raise error.Abort('Could not find file %s' % (depotfile))
-    return p4.decodefilename(filename) if filename is not None else filename
-
-def get_localname(client, p4filelogs):
-    for p4fl in p4filelogs:
-        depotfile = p4fl.depotfile
-        localname = relpath(client, depotfile)
-        yield 1, json.dumps({depotfile:localname})
 
 def get_p4_file_content(storepath, p4filelog, p4cl, skipp4revcheck=False):
     p4path = p4filelog._depotfile
@@ -78,20 +62,14 @@ def get_filelogs_to_sync(ui, client, repo, p1ctx, cl, p4filelogs):
     #   it represents files not in the parent's commit
     p1 = repo[p1ctx.node()]
     hgfilelogs = p1.manifest().copy()
-    p4flmapping = collections.defaultdict()
+    p4flmapping = {p4fl.depotfile: p4fl for p4fl in p4filelogs}
     addedp4filelogs = []
     reusep4filelogs = []
     addedp4flheadcls = set()
-    wargs = (client,)
 
-    for p4fl in p4filelogs:
-        p4flmapping[p4fl.depotfile] = p4fl
     ui.debug('%d p4 filelogs to read\n' % (len(p4filelogs)))
-    # parallelize calls to translate each p4 filepath into hg filepath
-    for i, serialized in runworker(ui, get_localname, wargs, p4filelogs):
-        data = json.loads(serialized)
-        localfile = data.values()[0].encode('utf-8')
-        p4file = data.keys()[0].encode('utf-8')
+    mapping = p4.parse_where_multiple(client, p4flmapping.keys())
+    for p4file, localfile in mapping.items():
         if localfile in hgfilelogs:
             reusep4filelogs.append(localfile)
         else:
@@ -436,7 +414,7 @@ class FileImporter(object):
 
     @util.propertycache
     def relpath(self):
-        return relpath(self._importset.client, self.depotfile)
+        return p4.parse_where(self._importset.client, self.depotfile)
 
     @property
     def depotfile(self):
@@ -566,7 +544,7 @@ class SyncFileImporter(FileImporter):
         if self._localfile:
             return self._localfile
         else:
-            return relpath(self._client, self._p4filelog.depotfile)
+            return p4.parse_where(self._client, self._p4filelog.depotfile)
 
     def create(self, tr):
         assert tr is not None

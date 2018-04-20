@@ -35,11 +35,13 @@ class ChangelistImporter(object):
         added_or_modified = []
         removed = set()
         p4flogs = {}
+        p4paths = [info['depotFile'] for info in fstat]
+        hgpaths = p4.parse_where_multiple(self.client, p4paths)
         for info in fstat:
             action = info['action']
             p4path = info['depotFile']
+            hgpath = hgpaths[p4path]
             data = {p4cl.cl: {'action': action, 'type': info['type']}}
-            hgpath = importer.relpath(self.client, p4path)
             p4flogs[hgpath] = p4.P4Filelog(p4path, data)
 
             if action in p4.ACTION_DELETE + p4.ACTION_ARCHIVE:
@@ -67,30 +69,30 @@ class ChangelistImporter(object):
 
     def _get_move_info(self, p4cl, p4flogs):
         '''Returns a dict where entries are (dst, src)'''
-        moves = {}
         files_in_clientspec = {
             p4flog._depotfile: hgpath for hgpath, p4flog in p4flogs.items()
         }
+        hgdst_to_p4src = {}
         for filename, info in p4cl.parsed['files'].items():
             if filename not in files_in_clientspec:
                 continue
             src = info.get('src')
             if src:
-                hgdst = files_in_clientspec[filename]
-                # The below could return None if the source of the move is
-                # outside of client view. That is expected.
-                # This info will be used when creating the commit, and value of
-                # None in the moves dictionary is a no-op, it will treat it as
-                # an add in hg. As it just came into the client view we cannot
-                # store any move info for it in hg (even though it was a legit
-                # move in perforce).
-                hgsrc = importer.relpath(
-                    self.client,
-                    src,
-                    ignore_nonexisting=True,
-                )
-                moves[hgdst] = hgsrc
-        return moves
+                hgdst_to_p4src[files_in_clientspec[filename]] = src
+        w_map = p4.parse_where_multiple(
+            self.client,
+            hgdst_to_p4src.values(),
+            ignore_nonexisting=True,
+        )
+        # The 'get' below could return None if the source of the move is outside
+        # of client view. That is expected. This info will be used when creating
+        # the commit, and a value of None in this dictionary is a no-op, it will
+        # treat it as an add in hg. As it just came into the client view we
+        # cannot store any move info for it in hg (even though it was a legit
+        # move in perforce).
+        return {
+            hgdst: w_map.get(p4src) for hgdst, p4src in hgdst_to_p4src.items()
+        }
 
     def _create_commit(self, p4cl, p4flogs, removed, moved):
         '''Uses a memory context to commit files into the repo'''

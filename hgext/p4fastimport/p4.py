@@ -9,6 +9,7 @@ import time
 
 from .util import runworker
 from mercurial import (
+    error,
     util,
 )
 
@@ -139,22 +140,46 @@ def parse_filelist_at_cl(client, cl=None):
         if c:
             yield d
 
-def parse_where(client, depotname):
-    # TODO: investigate if we replace this with exactly one call to
-    # where //clientame/...
-    cmd = 'p4 --client %s -G where %s' % (
-            util.shellquote(client),
-            util.shellquote(depotname))
-    try:
-        stdout = ''
-        @retry(num=3, sleeps=0.3)
-        def helper():
-            global stdout
-            stdout = util.popen(cmd, mode='rb')
-            return marshal.load(stdout)
-        return helper()
-    except Exception:
-        raise P4Exception(stdout)
+def parse_where(client, depotname, ignore_nonexisting=False):
+    mapping = parse_where_multiple(client, [depotname], ignore_nonexisting)
+    return mapping.get(depotname)
+
+MAX_CMD_LEN = 2 ** 12  # 4K
+def batch_and_run_where(client, p4paths):
+    base_cmd = 'p4 -c %s -G where ' % (client)
+    paths = [util.shellquote(p) for p in p4paths]
+    max_length = MAX_CMD_LEN - len(base_cmd)
+    start = cmd_len = 0
+
+    @retry(num=3, sleeps=0.3)
+    def run_for(start, end=None):
+        paths_str = ' '.join(paths[start:end])
+        return util.popen(base_cmd + paths_str, mode='rb')
+
+    for index, path in enumerate(p4paths):
+        if cmd_len + len(path) + 1 < max_length:
+            cmd_len += len(path) + 1
+            continue
+        yield run_for(start, index)
+        start = index
+        cmd_len = 0
+
+    # Deal with the last few paths
+    if start < len(p4paths):
+        yield run_for(start)
+
+def parse_where_multiple(client, p4paths, ignore_nonexisting=False):
+    mapping = {}
+    client_prefix_len = len('//%s/' % client)
+    for stdout in batch_and_run_where(client, p4paths):
+        for info in loaditer(stdout):
+            cpath = info.get('clientFile')
+            if cpath is not None:
+                cpath = cpath[client_prefix_len:]
+                mapping[info['depotFile']] = decodefilename(cpath)
+            elif not ignore_nonexisting:
+                raise error.Abort('Could not find file %s' % (info))
+    return mapping
 
 def get_file(path, rev=None, clnum=None):
     """Returns a file from Perforce"""

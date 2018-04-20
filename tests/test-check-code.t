@@ -10,6 +10,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   $ testrepohg files -I . \
   > -X contrib/python-zstandard \
   > -X hgext/fsmonitor/pywatchman \
+  > -X hgext/p4fastimport \
   > -X lib/cdatapack \
   > -X lib/third-party \
   > -X mercurial/thirdparty \
