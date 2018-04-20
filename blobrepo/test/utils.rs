@@ -66,80 +66,95 @@ macro_rules! test_both_repotypes {
     }
 }
 
-pub fn upload_file_no_parents<S>(
+pub fn upload_file_no_parents<B>(
     repo: &BlobRepo,
-    data: S,
+    data: B,
     path: &RepoPath,
 ) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
-    S: Into<String>,
+    B: Into<Bytes>,
 {
-    let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
-    let upload = UploadHgEntry {
-        raw_content: blob,
-        content_type: manifest::Type::File(FileType::Regular),
-        p1: None,
-        p2: None,
-        path: path.clone(),
-    };
-    upload.upload(repo).unwrap()
+    upload_hg_entry(
+        repo,
+        data.into(),
+        manifest::Type::File(FileType::Regular),
+        path.clone(),
+        None,
+        None,
+    )
 }
 
-pub fn upload_file_one_parent<S>(
+pub fn upload_file_one_parent<B>(
     repo: &BlobRepo,
-    data: S,
+    data: B,
     path: &RepoPath,
     p1: HgNodeHash,
 ) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
-    S: Into<String>,
+    B: Into<Bytes>,
 {
-    let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
-    let upload = UploadHgEntry {
-        raw_content: blob,
-        content_type: manifest::Type::File(FileType::Regular),
-        p1: Some(p1),
-        p2: None,
-        path: path.clone(),
-    };
-    upload.upload(repo).unwrap()
+    upload_hg_entry(
+        repo,
+        data.into(),
+        manifest::Type::File(FileType::Regular),
+        path.clone(),
+        Some(p1),
+        None,
+    )
 }
 
-pub fn upload_manifest_no_parents<S>(
+pub fn upload_manifest_no_parents<B>(
     repo: &BlobRepo,
-    data: S,
+    data: B,
     path: &RepoPath,
 ) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
-    S: Into<String>,
+    B: Into<Bytes>,
 {
-    let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
-    let upload = UploadHgEntry {
-        raw_content: blob,
-        content_type: manifest::Type::Tree,
-        p1: None,
-        p2: None,
-        path: path.clone(),
-    };
-    upload.upload(repo).unwrap()
+    upload_hg_entry(
+        repo,
+        data.into(),
+        manifest::Type::Tree,
+        path.clone(),
+        None,
+        None,
+    )
 }
 
-pub fn upload_manifest_one_parent<S>(
+pub fn upload_manifest_one_parent<B>(
     repo: &BlobRepo,
-    data: S,
+    data: B,
     path: &RepoPath,
     p1: HgNodeHash,
 ) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
-    S: Into<String>,
+    B: Into<Bytes>,
 {
-    let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
+    upload_hg_entry(
+        repo,
+        data.into(),
+        manifest::Type::Tree,
+        path.clone(),
+        Some(p1),
+        None,
+    )
+}
+
+fn upload_hg_entry(
+    repo: &BlobRepo,
+    data: Bytes,
+    content_type: manifest::Type,
+    path: RepoPath,
+    p1: Option<HgNodeHash>,
+    p2: Option<HgNodeHash>,
+) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>) {
+    let raw_content = HgBlob::from(data);
     let upload = UploadHgEntry {
-        raw_content: blob,
-        content_type: manifest::Type::Tree,
-        p1: Some(p1),
-        p2: None,
-        path: path.clone(),
+        raw_content,
+        content_type,
+        p1,
+        p2,
+        path,
     };
     upload.upload(repo).unwrap()
 }
