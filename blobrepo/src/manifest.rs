@@ -20,7 +20,7 @@ use mercurial_types::nodehash::{DEntryId, DManifestId, DNodeHash, D_NULL_HASH};
 use blobstore::Blobstore;
 
 use errors::*;
-use file::BlobEntry;
+use file::HgBlobEntry;
 use utils::{get_node, EnvelopeBlob};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -137,7 +137,7 @@ impl Manifest for BlobManifest {
     fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         let res = self.content.files.get(path).map({
             move |d| {
-                BlobEntry::new(
+                HgBlobEntry::new(
                     self.blobstore.clone(),
                     Some(path.clone()),
                     d.entryid().into_nodehash(),
@@ -160,7 +160,7 @@ impl Manifest for BlobManifest {
             .map({
                 let blobstore = self.blobstore.clone();
                 move |(path, d)| {
-                    BlobEntry::new(
+                    HgBlobEntry::new(
                         blobstore.clone(),
                         Some(path),
                         d.entryid().into_nodehash(),

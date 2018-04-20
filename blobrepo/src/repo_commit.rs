@@ -33,7 +33,7 @@ use BlobChangeset;
 use BlobRepo;
 use changeset::ChangesetContent;
 use errors::*;
-use file::BlobEntry;
+use file::HgBlobEntry;
 use utils::get_node_key;
 
 /// A handle to a possibly incomplete BlobChangeset. This is used instead of
@@ -89,7 +89,7 @@ struct UploadEntriesState {
     /// uploaded child manifests
     required_entries: HashMap<RepoPath, DEntryId>,
     /// All the blobs that have been uploaded in this changeset
-    uploaded_entries: HashMap<RepoPath, BlobEntry>,
+    uploaded_entries: HashMap<RepoPath, HgBlobEntry>,
     /// Parent hashes (if any) of the blobs that have been uploaded in this changeset. Used for
     /// validation of this upload - all parents must either have been uploaded in this changeset,
     /// or be present in the blobstore before the changeset can complete.
@@ -118,7 +118,7 @@ impl UploadEntries {
 
     /// Parse a manifest and record the referenced blobs so that we know whether or not we have
     /// a complete changeset with all blobs, or whether there is missing data.
-    fn process_manifest(&self, entry: &BlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
+    fn process_manifest(&self, entry: &HgBlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
         let inner_mutex = self.inner.clone();
         let parents_found = self.find_parents(entry, path.clone());
         let entry_hash = entry.get_hash().into_nodehash();
@@ -158,7 +158,7 @@ impl UploadEntries {
             .boxify()
     }
 
-    fn find_parents(&self, entry: &BlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
+    fn find_parents(&self, entry: &HgBlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
         let inner_mutex = self.inner.clone();
         entry
             .get_parents()
@@ -181,7 +181,7 @@ impl UploadEntries {
     /// `process_one_entry` and can be called after it.
     /// It is safe to call this multiple times, but not recommended - every manifest passed to
     /// this function is assumed required for this commit, even if it is not the root.
-    pub fn process_root_manifest(&self, entry: &BlobEntry) -> BoxFuture<(), Error> {
+    pub fn process_root_manifest(&self, entry: &HgBlobEntry) -> BoxFuture<(), Error> {
         if entry.get_type() != manifest::Type::Tree {
             return future::err(
                 ErrorKind::NotAManifest(entry.get_hash().into_nodehash(), entry.get_type()).into(),
@@ -196,7 +196,7 @@ impl UploadEntries {
         self.process_one_entry(entry, RepoPath::root())
     }
 
-    pub fn process_one_entry(&self, entry: &BlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
+    pub fn process_one_entry(&self, entry: &HgBlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
         {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             inner.uploaded_entries.insert(path.clone(), entry.clone());
@@ -259,7 +259,7 @@ impl UploadEntries {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             let uploaded_entries = mem::replace(&mut inner.uploaded_entries, HashMap::new());
             let filenodeinfos = stream::iter_ok(uploaded_entries.into_iter())
-                .and_then(|(path, blobentry): (_, BlobEntry)| {
+                .and_then(|(path, blobentry): (_, HgBlobEntry)| {
                     blobentry
                         .get_parents()
                         .map(move |parents| (path, blobentry, parents))
@@ -293,7 +293,7 @@ impl UploadEntries {
 
 fn compute_copy_from_info(
     path: &RepoPath,
-    blobentry: &BlobEntry,
+    blobentry: &HgBlobEntry,
     parents: &DParents,
 ) -> BoxFuture<Option<(RepoPath, DFileNodeId)>, Error> {
     let parents = parents.clone();
@@ -382,8 +382,8 @@ pub fn process_entries(
     uuid: Uuid,
     repo: BlobRepo,
     entry_processor: &UploadEntries,
-    root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
-    new_child_entries: BoxStream<(BlobEntry, RepoPath), Error>,
+    root_manifest: BoxFuture<(HgBlobEntry, RepoPath), Error>,
+    new_child_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
 ) -> BoxFuture<(Box<Manifest + Sync>, DManifestId), Error> {
     root_manifest
         .and_then({

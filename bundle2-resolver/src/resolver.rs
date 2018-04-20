@@ -9,7 +9,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use ascii::AsciiString;
-use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle, ContentBlobInfo, CreateChangeset};
+use blobrepo::{BlobRepo, ChangesetHandle, ContentBlobInfo, CreateChangeset, HgBlobEntry};
 use bytes::Bytes;
 use failure::{FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{Future, IntoFuture, Stream};
@@ -492,8 +492,8 @@ fn get_parent(
     }
 }
 
-type HgBlobFuture = BoxFuture<(BlobEntry, RepoPath), Error>;
-type HgBlobStream = BoxStream<(BlobEntry, RepoPath), Error>;
+type HgBlobFuture = BoxFuture<(HgBlobEntry, RepoPath), Error>;
+type HgBlobStream = BoxStream<(HgBlobEntry, RepoPath), Error>;
 type ContentBlobFuture = (ContentBlobInfo, BoxFuture<(), Error>);
 
 /// In order to generate the DAG of dependencies between Root Manifest and other Manifests and

@@ -16,7 +16,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
-use blobrepo::{BlobEntry, BlobRepo, ContentBlobInfo, ContentBlobMeta};
+use blobrepo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry};
 use mercurial::{self, file, HgNodeHash, HgNodeKey, NodeHashConversion};
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, RepoPath};
@@ -46,7 +46,7 @@ impl UploadableHgBlob for Filelog {
     // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
     //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
     //   implements Error.
-    type Value = Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>;
+    type Value = Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>;
 
     fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;

@@ -25,7 +25,7 @@ use manifest::BlobManifest;
 use utils::{get_node, RawNodeBlob};
 
 #[derive(Clone)]
-pub struct BlobEntry {
+pub struct HgBlobEntry {
     blobstore: Arc<Blobstore>,
     name: Option<MPathElement>,
     id: DEntryId,
@@ -60,7 +60,7 @@ pub fn fetch_file_content_and_renames_from_blobstore(
         .boxify()
 }
 
-impl BlobEntry {
+impl HgBlobEntry {
     pub fn new(
         blobstore: Arc<Blobstore>,
         name: Option<MPathElement>,
@@ -107,7 +107,7 @@ impl BlobEntry {
     }
 }
 
-impl Entry for BlobEntry {
+impl Entry for HgBlobEntry {
     fn get_type(&self) -> Type {
         self.ty
     }

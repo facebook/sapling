@@ -14,7 +14,7 @@ use futures::future::Future;
 use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
 
-use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle, CreateChangeset};
+use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry};
 use memblob::{EagerMemblob, LazyMemblob};
 use mercurial_types::{manifest, DNodeHash, FileType, HgBlob, RepoPath};
 use mononoke_types::DateTime;
@@ -69,7 +69,7 @@ pub fn upload_file_no_parents<S>(
     repo: &BlobRepo,
     data: S,
     path: &RepoPath,
-) -> (DNodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
+) -> (DNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
@@ -88,7 +88,7 @@ pub fn upload_file_one_parent<S>(
     data: S,
     path: &RepoPath,
     p1: DNodeHash,
-) -> (DNodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
+) -> (DNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
@@ -106,7 +106,7 @@ pub fn upload_manifest_no_parents<S>(
     repo: &BlobRepo,
     data: S,
     path: &RepoPath,
-) -> (DNodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
+) -> (DNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
@@ -120,7 +120,7 @@ pub fn upload_manifest_one_parent<S>(
     data: S,
     path: &RepoPath,
     p1: DNodeHash,
-) -> (DNodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
+) -> (DNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
@@ -131,8 +131,8 @@ where
 
 pub fn create_changeset_no_parents(
     repo: &BlobRepo,
-    root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
-    other_nodes: Vec<BoxFuture<(BlobEntry, RepoPath), Error>>,
+    root_manifest: BoxFuture<(HgBlobEntry, RepoPath), Error>,
+    other_nodes: Vec<BoxFuture<(HgBlobEntry, RepoPath), Error>>,
 ) -> ChangesetHandle {
     let create_changeset = CreateChangeset {
         p1: None,
@@ -149,8 +149,8 @@ pub fn create_changeset_no_parents(
 
 pub fn create_changeset_one_parent(
     repo: &BlobRepo,
-    root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
-    other_nodes: Vec<BoxFuture<(BlobEntry, RepoPath), Error>>,
+    root_manifest: BoxFuture<(HgBlobEntry, RepoPath), Error>,
+    other_nodes: Vec<BoxFuture<(HgBlobEntry, RepoPath), Error>>,
     p1: ChangesetHandle,
 ) -> ChangesetHandle {
     let create_changeset = CreateChangeset {

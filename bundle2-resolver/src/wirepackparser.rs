@@ -13,7 +13,7 @@ use futures::{Future, Poll, Stream};
 use futures::future::Shared;
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo::{BlobEntry, BlobRepo};
+use blobrepo::{BlobRepo, HgBlobEntry};
 use mercurial::{self, HgNodeHash, HgNodeKey};
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
@@ -87,7 +87,7 @@ impl UploadableHgBlob for TreemanifestEntry {
     //   implements Error.
     type Value = (
         ManifestContent,
-        Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>,
+        Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>,
     );
 
     fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {

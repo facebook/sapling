@@ -49,7 +49,7 @@ use tokio_core::reactor::Remote;
 use BlobChangeset;
 use BlobManifest;
 use errors::*;
-use file::{fetch_file_content_and_renames_from_blobstore, BlobEntry};
+use file::{fetch_file_content_and_renames_from_blobstore, HgBlobEntry};
 use repo_commit::*;
 use utils::{get_node_key, RawNodeBlob};
 
@@ -310,7 +310,7 @@ impl BlobRepo {
     }
 
     pub fn get_root_entry(&self, manifestid: &DManifestId) -> Box<Entry + Sync> {
-        Box::new(BlobEntry::new_root(self.blobstore.clone(), *manifestid))
+        Box::new(HgBlobEntry::new_root(self.blobstore.clone(), *manifestid))
     }
 
     pub fn get_bookmarks(&self) -> BoxStream<(AsciiString, DChangesetId), Error> {
@@ -343,10 +343,10 @@ impl BlobRepo {
             .boxify()
     }
 
-    // Given content, ensure that there is a matching BlobEntry in the repo. This may not upload
+    // Given content, ensure that there is a matching HgBlobEntry in the repo. This may not upload
     // the entry or the data blob if the repo is aware of that data already existing in the
     // underlying store.
-    // Note that the BlobEntry may not be consistent - parents do not have to be uploaded at this
+    // Note that the HgBlobEntry may not be consistent - parents do not have to be uploaded at this
     // point, as long as you know their DNodeHashes; this is also given to you as part of the
     // result type, so that you can parallelise uploads. Consistency will be verified when
     // adding the entries to a changeset.
@@ -357,7 +357,7 @@ impl BlobRepo {
         p1: Option<DNodeHash>,
         p2: Option<DNodeHash>,
         path: RepoPath,
-    ) -> Result<(DNodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)> {
+    ) -> Result<(DNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
         let p1 = p1.as_ref();
         let p2 = p2.as_ref();
         let raw_content = raw_content.clean();
@@ -376,7 +376,7 @@ impl BlobRepo {
             .nodeid()
             .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?;
 
-        let blob_entry = BlobEntry::new(
+        let blob_entry = HgBlobEntry::new(
             self.blobstore.clone(),
             path.mpath()
                 .and_then(|m| m.into_iter().last())
@@ -498,8 +498,8 @@ pub struct ContentBlobMeta {
 pub struct CreateChangeset {
     pub p1: Option<ChangesetHandle>,
     pub p2: Option<ChangesetHandle>,
-    pub root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
-    pub sub_entries: BoxStream<(BlobEntry, RepoPath), Error>,
+    pub root_manifest: BoxFuture<(HgBlobEntry, RepoPath), Error>,
+    pub sub_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
     pub user: String,
     pub time: DateTime,
     pub extra: BTreeMap<Vec<u8>, Vec<u8>>,

@@ -37,7 +37,7 @@ use slog::Drain;
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
 
-use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle, CreateChangeset};
+use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry};
 use changesets::SqliteChangesets;
 use mercurial::{HgChangesetId, HgNodeHash, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, MPath, RepoPath, RepositoryId, Type};
@@ -129,7 +129,7 @@ fn upload_entry(
     blobrepo: &BlobRepo,
     entry: RevlogEntry,
     path: Option<MPath>,
-) -> BoxFuture<(BlobEntry, RepoPath), Error> {
+) -> BoxFuture<(HgBlobEntry, RepoPath), Error> {
     let blobrepo = blobrepo.clone();
 
     let ty = entry.get_type();
