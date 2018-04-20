@@ -496,15 +496,13 @@ command palette in Atom.
             mock_gierv, '20171120-246561', CheckResultType.FAILED_TO_FIX,
             dedent(
                 '''\
-                The version of Eden that is installed on your machine is:
-                    fb-eden-20171120-246561.x86_64
-                but the version of Eden that is currently running is:
-                    fb-eden-20171213-165642.x86_64
-                Consider running `eden daemon --takeover` to migrate
-                to the newer version.  If that doesn't work out, you
-                may wish to run `eden shutdown` followed by `eden daemon`
-                to restart with the installed version, which may have
-                important bug fixes or performance improvements.
+    The version of Eden that is installed on your machine is:
+        fb-eden-20171120-246561.x86_64
+    but the version of Eden that is currently running is:
+        fb-eden-20171213-165642.x86_64
+
+    Consider running `eden restart` to migrate to the newer version, which
+    may have important bug fixes or performance improvements.
                 '''
             )
         )
