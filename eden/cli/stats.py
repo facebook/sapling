@@ -12,17 +12,21 @@ import io
 import logging
 import sys
 import textwrap
-from typing import List, Dict, Optional, cast
+from typing import cast, Dict, List, Optional, Union
 from . import cmd_util
+from . import config as config_mod
 from . import stats_print
+from . import subcmd as subcmd_mod
+from .subcmd import Subcmd
 
+stats_cmd = subcmd_mod.Decorator()
 
 log = logging.getLogger('eden.cli.stats')
 
 
 DiagInfoCounters = Dict[str, int]
 Table = Dict[str, List[int]]
-Table2D = Dict[str, List[List[int]]]
+Table2D = Dict[str, List[List[Union[int, str]]]]
 
 # TODO: https://github.com/python/typeshed/issues/1240
 stdoutWrapper = cast(io.TextIOWrapper, sys.stdout)
@@ -31,10 +35,9 @@ stdoutWrapper = cast(io.TextIOWrapper, sys.stdout)
 # Shows information like memory usage, list of mount points and number of inodes
 # loaded, unloaded, and materialized in the mount points, etc.
 def do_stats_general(
-        args: argparse.Namespace,
-        out: io.TextIOWrapper=stdoutWrapper):
+        config: config_mod.Config,
+        out: io.TextIOWrapper=stdoutWrapper) -> None:
     stats_print.write_heading('General EdenFS Statistics', out)
-    config = cmd_util.create_config(args)
 
     with config.get_thrift_client() as client:
         diag_info = client.getStatInfo()
@@ -116,23 +119,25 @@ def total_private_dirty(maps: List[MemoryMapping]) -> Optional[int]:
     return total
 
 
-# Function that shows memory related informtion like memory usage, free memory
-# etc
-def do_stats_memory(args: argparse.Namespace):
-    out = sys.stdout
-    stats_print.write_heading('Memory Stats for EdenFS', out)
-    config = cmd_util.create_config(args)
+@stats_cmd('memory', 'Show memory statistics for Eden')
+class MemoryCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        out = sys.stdout
+        stats_print.write_heading('Memory Stats for EdenFS', out)
+        config = cmd_util.create_config(args)
 
-    with config.get_thrift_client() as client:
-        diag_info = client.getStatInfo()
-        stats_print.write_mem_status_table(diag_info.counters, out)
+        with config.get_thrift_client() as client:
+            diag_info = client.getStatInfo()
+            stats_print.write_mem_status_table(diag_info.counters, out)
 
-        # print memory counters
-        heading = 'Average values of Memory usage and availability'
-        out.write('\n\n %s \n\n' % heading.center(80, ' '))
+            # print memory counters
+            heading = 'Average values of Memory usage and availability'
+            out.write('\n\n %s \n\n' % heading.center(80, ' '))
 
-        mem_counters = get_memory_counters(diag_info.counters)
-        stats_print.write_table(mem_counters, '', out)
+            mem_counters = get_memory_counters(diag_info.counters)
+            stats_print.write_table(mem_counters, '', out)
+
+        return 0
 
 
 # Returns all the memory counters in ServiceData in a table format.
@@ -152,19 +157,32 @@ def get_memory_counters(counters: DiagInfoCounters) -> Table:
     return table
 
 
-# Prints information about Number of times a system call is performed in EdenFs.
-def do_stats_io(args: argparse.Namespace):
-    out = sys.stdout
-    stats_print.write_heading(
-        'Counts of I/O operations performed in EdenFs', out
-    )
-    config = cmd_util.create_config(args)
-    with config.get_thrift_client() as client:
-        diag_info = client.getStatInfo()
+@stats_cmd('io', 'Show information about the number of I/O calls')
+class IoCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            '-A',
+            '--all',
+            action='store_true',
+            default=False,
+            help='Show status for all the system calls'
+        )
 
-        # If the arguments has --all flag, we will have args.all set to true.
+    def run(self, args: argparse.Namespace) -> int:
+        out = sys.stdout
+        stats_print.write_heading(
+            'Counts of I/O operations performed in EdenFs', out
+        )
+        config = cmd_util.create_config(args)
+        with config.get_thrift_client() as client:
+            diag_info = client.getStatInfo()
+
+        # If the arguments has --all flag, we will have args.all set to
+        # true.
         fuse_counters = get_fuse_counters(diag_info.counters, args.all)
         stats_print.write_table(fuse_counters, 'SystemCall', out)
+
+        return 0
 
 
 # Filters Fuse counters from all the counters in ServiceData and returns a
@@ -200,17 +218,30 @@ def get_fuse_counters(counters: DiagInfoCounters, all_flg: bool) -> Table:
     return table
 
 
-# Prints the Latencies of system calls in EdenFs.
-def do_stats_latency(args: argparse.Namespace):
-    out = sys.stdout
-    config = cmd_util.create_config(args)
-    with config.get_thrift_client() as client:
-        diag_info = client.getStatInfo()
+@stats_cmd('latency', 'Show information about the latency of I/O calls')
+class LatencyCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            '-A',
+            '--all',
+            action='store_true',
+            default=False,
+            help='Show status for all the system calls'
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        out = sys.stdout
+        config = cmd_util.create_config(args)
+        with config.get_thrift_client() as client:
+            diag_info = client.getStatInfo()
+
         table = get_fuse_latency(diag_info.counters, args.all)
         stats_print.write_heading(
             'Latencies of I/O operations performed in EdenFs', out
         )
         stats_print.write_latency_table(table, out)
+
+        return 0
 
 
 # Returns all the latency information in ServiceData in a table format.
@@ -226,7 +257,7 @@ def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
         'opendir', 'readdir', 'rmdir'
     ]
 
-    def with_microsecond_units(i):
+    def with_microsecond_units(i: int) -> str:
         if i:
             return str(i) + u" \u03BCs"  # mu for micro
         else:
@@ -248,15 +279,20 @@ def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
     return table
 
 
-def do_stats_thrift(args: argparse.Namespace):
-    out = sys.stdout
-    stats_print.write_heading('Counts of Thrift calls performed in EdenFs', out)
-    config = cmd_util.create_config(args)
-    with config.get_thrift_client() as client:
-        diag_info = client.getStatInfo()
+@stats_cmd('thrift', 'Show the number of received thrift calls')
+class ThriftCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        out = sys.stdout
+        stats_print.write_heading('Counts of Thrift calls performed in EdenFs',
+                                  out)
+        config = cmd_util.create_config(args)
+        with config.get_thrift_client() as client:
+            diag_info = client.getStatInfo()
 
         thrift_counters = get_thrift_counters(diag_info.counters)
         stats_print.write_table(thrift_counters, 'Thrift Call', out)
+
+        return 0
 
 
 def get_thrift_counters(counters: DiagInfoCounters) -> Table:
@@ -279,40 +315,14 @@ def get_thrift_counters(counters: DiagInfoCounters) -> Table:
     return table
 
 
-def setup_argparse(parser: argparse.ArgumentParser):
-    subparsers = parser.add_subparsers(dest='subparser_name')
+class StatsCmd(Subcmd):
+    NAME = 'stats'
+    HELP = 'Prints statistics information for eden'
 
-    parser = subparsers.add_parser(
-        'io',
-        help='Shows status about number calls made for each io systemcall'
-    )
-    parser.add_argument(
-        '-A',
-        '--all',
-        action='store_true',
-        default=False,
-        help='Show status for all the system calls'
-    )
-    parser.set_defaults(func=do_stats_io)
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        self.add_subcommands(parser, stats_cmd.commands)
 
-    parser = subparsers.add_parser(
-        'latency', help='Shows latency report for io systemcalls'
-    )
-    parser.add_argument(
-        '-A',
-        '--all',
-        action='store_true',
-        default=False,
-        help='Show status for all the system calls'
-    )
-    parser.set_defaults(func=do_stats_latency)
-
-    parser = subparsers.add_parser(
-        'memory', help='Shows memory status of Edenfs'
-    )
-    parser.set_defaults(func=do_stats_memory)
-
-    parser = subparsers.add_parser(
-        'thrift', help='Shows number of thrift calls'
-    )
-    parser.set_defaults(func=do_stats_thrift)
+    def run(self, args: argparse.Namespace) -> int:
+        config = cmd_util.create_config(args)
+        do_stats_general(config)
+        return 0

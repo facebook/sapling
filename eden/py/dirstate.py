@@ -88,8 +88,8 @@ def write(file, parents, tuples_dict, copymap):
 
 
 def read(fp, filename):  # noqa: C901
-    # type(IO[bytes], string) -> ([bytes, bytes], Dict[bytes, [...]],
-    #                             Dict[bytes, bytes])
+    # type(IO[bytes], string) -> ([bytes, bytes], Dict[str, [...]],
+    #                             Dict[str, str])
     '''Returns a tuple of (parents, tuples_dict, copymap) if successful.
 
     Any exception from create_file(), such as IOError with errno == ENOENT, will
@@ -197,7 +197,7 @@ def _write_path(writer, path):
 
 
 def _read_path(reader, filename):
-    # type(Callable[[int], bytes], str, Callable[[str], None]) -> Optional[str]
+    # type(Callable[[int], bytes], str, Callable[[str], None]) -> str
     binary_path_len = reader(2)
     if len(binary_path_len) != 2:
         raise DirstateParseException(

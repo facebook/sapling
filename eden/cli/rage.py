@@ -12,6 +12,7 @@ import io
 import socket
 import subprocess
 
+from . import config as config_mod
 from . import debug as debug_mod
 from . import doctor as doctor_mod
 from . import mtab
@@ -19,7 +20,7 @@ from . import stats as stats_mod
 from typing import IO
 
 
-def print_diagnostic_info(config, args, out: IO[bytes]):
+def print_diagnostic_info(config: config_mod.Config, out: IO[bytes]) -> None:
     out.write(b'User                    : %s\n' % getpass.getuser().encode())
     out.write(b'Hostname                : %s\n' % socket.gethostname().encode())
     print_rpm_version(out)
@@ -27,9 +28,9 @@ def print_diagnostic_info(config, args, out: IO[bytes]):
     health_status = config.check_health()
     if health_status.is_healthy():
         out.write(b'\n')
-        debug_mod.do_buildinfo(args, out)
+        debug_mod.do_buildinfo(config, out)
         out.write(b'uptime: ')
-        debug_mod.do_uptime(args, out)
+        debug_mod.do_uptime(config, out)
         print_eden_doctor_report(config, out)
     else:
         out.write(b'Eden is not running. Some debug info will be omitted.\n')
@@ -49,7 +50,7 @@ def print_diagnostic_info(config, args, out: IO[bytes]):
             out.write('{:>10} : {}\n'.format(k, v).encode())
     if health_status.is_healthy():
         with io.StringIO() as stats_stream:
-            stats_mod.do_stats_general(args, out=stats_stream)
+            stats_mod.do_stats_general(config, out=stats_stream)
             out.write(stats_stream.getvalue().encode())
 
 
