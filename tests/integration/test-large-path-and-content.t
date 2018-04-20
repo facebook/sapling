@@ -48,7 +48,7 @@ create a hashed index and data revlogs
 blobimport and start mononoke
 
   $ cd $TESTTMP
-  $ blobimport repo-hg repo
+  $ newblobimport repo-hg/.hg repo
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
 

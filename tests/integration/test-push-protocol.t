@@ -22,7 +22,7 @@ setup repo
   
 
   $ cd $TESTTMP
-  $ blobimport repo-hg repo
+  $ newblobimport repo-hg/.hg repo
 
 setup two repos: one will be used to push from, another will be used
 to pull these pushed commits
