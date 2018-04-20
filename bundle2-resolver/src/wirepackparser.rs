@@ -13,7 +13,7 @@ use futures::{Future, Poll, Stream};
 use futures::future::Shared;
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo::{BlobRepo, HgBlobEntry};
+use blobrepo::{BlobRepo, HgBlobEntry, UploadHgEntry};
 use mercurial::{self, HgNodeHash, HgNodeKey};
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
@@ -93,15 +93,14 @@ impl UploadableHgBlob for TreemanifestEntry {
     fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let manifest_content = self.manifest_content;
-        let p1 = self.p1.map(|p| p.into_mononoke());
-        let p2 = self.p2.map(|p| p.into_mononoke());
-        repo.upload_entry(
-            HgBlob::from(self.data),
-            manifest::Type::Tree,
-            p1,
-            p2,
-            node_key.path.clone(),
-        ).map(move |(_node, value)| {
+        let upload = UploadHgEntry {
+            raw_content: HgBlob::from(self.data),
+            content_type: manifest::Type::Tree,
+            p1: self.p1,
+            p2: self.p2,
+            path: node_key.path.clone(),
+        };
+        upload.upload(repo).map(move |(_node, value)| {
             (
                 node_key,
                 (

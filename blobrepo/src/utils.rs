@@ -13,7 +13,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use bincode;
 
 use blobstore::Blobstore;
-use mercurial::HgNodeHash;
+use mercurial::{HgNodeHash, HgParents};
 use mercurial_types::{DNodeHash, DParents, HgBlobHash};
 use mononoke_types::BlobstoreBytes;
 
@@ -22,7 +22,7 @@ use errors::*;
 #[derive(Debug, Copy, Clone)]
 #[derive(Serialize, Deserialize)]
 pub struct RawNodeBlob {
-    pub parents: DParents,
+    pub parents: HgParents,
     pub blob: HgBlobHash,
 }
 

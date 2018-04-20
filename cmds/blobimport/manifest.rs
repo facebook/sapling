@@ -16,7 +16,7 @@ use futures_ext::StreamExt;
 use mercurial::{self, HgNodeHash, HgParents, RevlogEntry, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{DParents, HgBlob, MPath, RepoPath, Type};
+use mercurial_types::{HgBlob, MPath, RepoPath, Type};
 
 use BlobstoreEntry;
 
@@ -30,15 +30,9 @@ where
     Error: Send + 'static,
 {
     let blob = blob.clean();
-    let parents = {
-        let (p1, p2) = parents.get_nodes();
-        let p1 = p1.map(|p| p.into_mononoke());
-        let p2 = p2.map(|p| p.into_mononoke());
-        DParents::new(p1.as_ref(), p2.as_ref())
-    };
 
     let nodeblob = RawNodeBlob {
-        parents: parents,
+        parents,
         blob: blob.hash().expect("clean blob must have hash"),
     };
     // TODO: (jsgf) T21597565 Convert blobimport to use blobrepo methods to name and create

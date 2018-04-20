@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::HgBlob;
+use mercurial_types::{DParents, HgBlob};
 use mercurial_types::hash::{self, Context};
 
 use nodehash::HgNodeHash;
@@ -33,6 +33,14 @@ impl HgParents {
             &HgParents::None => (None, None),
             &HgParents::One(ref p1) => (Some(p1), None),
             &HgParents::Two(ref p1, ref p2) => (Some(p1), Some(p2)),
+        }
+    }
+
+    pub fn into_mononoke(self) -> DParents {
+        match self {
+            HgParents::None => DParents::None,
+            HgParents::One(p1) => DParents::One(p1.into_mononoke()),
+            HgParents::Two(p1, p2) => DParents::Two(p1.into_mononoke(), p2.into_mononoke()),
         }
     }
 }

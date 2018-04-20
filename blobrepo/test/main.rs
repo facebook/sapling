@@ -23,6 +23,7 @@ extern crate dbbookmarks;
 extern crate many_files_dirs;
 extern crate memblob;
 extern crate memheads;
+extern crate mercurial;
 extern crate mercurial_types;
 extern crate mononoke_types;
 
@@ -50,7 +51,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
 
     // We upload it...
     let (hash, future) = upload_file_no_parents(&repo, "blob", &fake_path);
-    assert!(hash == expected_hash);
+    assert!(hash.into_mononoke() == expected_hash);
 
     // The entry we're given is correct...
     let (entry, path) = run_future(future).unwrap();
@@ -89,7 +90,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
 
     // We upload it...
     let (hash, future2) = upload_file_one_parent(&repo, "blob", &fake_path, p1);
-    assert!(hash == expected_hash);
+    assert!(hash.into_mononoke() == expected_hash);
 
     // The entry we're given is correct...
     let (entry, path) = run_future(future2.join(future).map(|(item, _)| item)).unwrap();
@@ -144,7 +145,7 @@ fn create_one_changeset(repo: BlobRepo) {
     );
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
-    assert!(cs.manifestid() == &DManifestId::new(roothash));
+    assert!(cs.manifestid() == &DManifestId::new(roothash.into_mononoke()));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
     let files: Vec<_> = cs.files().into();
@@ -154,7 +155,7 @@ fn create_one_changeset(repo: BlobRepo) {
     );
 
     // And check the file blob is present
-    let bytes = run_future(repo.get_file_content(&filehash)).unwrap();
+    let bytes = run_future(repo.get_file_content(&filehash.into_mononoke())).unwrap();
     assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
@@ -198,7 +199,7 @@ fn create_two_changesets(repo: BlobRepo) {
             .join(commit2.get_completed_changeset()),
     ).unwrap();
 
-    assert!(commit2.manifestid() == &DManifestId::new(roothash));
+    assert!(commit2.manifestid() == &DManifestId::new(roothash.into_mononoke()));
     assert!(commit2.user() == utf_author.as_bytes());
     let files: Vec<_> = commit2.files().into();
     let expected_files = vec![MPath::new("dir/file").unwrap(), MPath::new("file").unwrap()];
@@ -212,7 +213,8 @@ fn create_two_changesets(repo: BlobRepo) {
     let expected_parents = (commit1_id.as_ref(), None);
     assert!(commit2.parents().get_nodes() == expected_parents);
 
-    let linknode = run_future(repo.get_linknode(fake_file_path, &filehash)).unwrap();
+    let linknode =
+        run_future(repo.get_linknode(fake_file_path, &filehash.into_mononoke())).unwrap();
     assert!(
         linknode == commit1.get_changeset_id().into_nodehash(),
         "Bad linknode {} - should be {}",
@@ -285,7 +287,8 @@ fn create_double_linknode(repo: BlobRepo) {
     let child = run_future(child_commit.get_completed_changeset()).unwrap();
     let parent = run_future(parent_commit.get_completed_changeset()).unwrap();
 
-    let linknode = run_future(repo.get_linknode(fake_file_path, &filehash)).unwrap();
+    let linknode =
+        run_future(repo.get_linknode(fake_file_path, &filehash.into_mononoke())).unwrap();
     assert!(
         linknode != child.get_changeset_id().into_nodehash(),
         "Linknode on child commit = should be on parent"
@@ -338,14 +341,14 @@ fn check_linknode_creation(repo: BlobRepo) {
     let commit = create_changeset_no_parents(&repo, root_manifest_future, uploads);
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
-    assert!(cs.manifestid() == &DManifestId::new(roothash));
+    assert!(cs.manifestid() == &DManifestId::new(roothash.into_mononoke()));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
 
     let cs_id = cs.get_changeset_id().into_nodehash();
     // And check all the linknodes got created
     metadata.into_iter().for_each(|(hash, path)| {
-        let linknode = run_future(repo.get_linknode(path, &hash)).unwrap();
+        let linknode = run_future(repo.get_linknode(path, &hash.into_mononoke())).unwrap();
         assert!(
             linknode == cs_id,
             "Linknode is {}, should be {}",

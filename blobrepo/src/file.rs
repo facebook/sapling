@@ -10,7 +10,7 @@ use std::sync::Arc;
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
-use mercurial::{file, NodeHashConversion};
+use mercurial::file;
 use mercurial_types::{DManifestId, DNodeHash, DParents, FileType, HgBlob, MPath, MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::DEntryId;
@@ -50,10 +50,7 @@ pub fn fetch_file_content_and_renames_from_blobstore(
                             // (None, Some(hash)), which is what BlobNode relies on to figure out
                             // whether a node is copied.
                             let (p1, p2) = parents.get_nodes();
-                            let p1 = p1.map(|p| p.into_mercurial());
-                            let p2 = p2.map(|p| p.into_mercurial());
-                            let file =
-                                file::File::new(HgBlob::from(blob), p1.as_ref(), p2.as_ref());
+                            let file = file::File::new(HgBlob::from(blob), p1, p2);
 
                             file.copied_from().map(|from| {
                                 (
@@ -121,7 +118,9 @@ impl Entry for HgBlobEntry {
     }
 
     fn get_parents(&self) -> BoxFuture<DParents, Error> {
-        self.get_node().map(|node| node.parents).boxify()
+        self.get_node()
+            .map(|node| node.parents.into_mononoke())
+            .boxify()
     }
 
     fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {

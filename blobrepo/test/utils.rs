@@ -14,8 +14,9 @@ use futures::future::Future;
 use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
 
-use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry};
+use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgEntry};
 use memblob::{EagerMemblob, LazyMemblob};
+use mercurial::HgNodeHash;
 use mercurial_types::{manifest, DNodeHash, FileType, HgBlob, RepoPath};
 use mononoke_types::DateTime;
 use std::sync::Arc;
@@ -69,64 +70,78 @@ pub fn upload_file_no_parents<S>(
     repo: &BlobRepo,
     data: S,
     path: &RepoPath,
-) -> (DNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
+) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
     let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
-    repo.upload_entry(
-        blob,
-        manifest::Type::File(FileType::Regular),
-        None,
-        None,
-        path.clone(),
-    ).unwrap()
+    let upload = UploadHgEntry {
+        raw_content: blob,
+        content_type: manifest::Type::File(FileType::Regular),
+        p1: None,
+        p2: None,
+        path: path.clone(),
+    };
+    upload.upload(repo).unwrap()
 }
 
 pub fn upload_file_one_parent<S>(
     repo: &BlobRepo,
     data: S,
     path: &RepoPath,
-    p1: DNodeHash,
-) -> (DNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
+    p1: HgNodeHash,
+) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
     let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
-    repo.upload_entry(
-        blob,
-        manifest::Type::File(FileType::Regular),
-        Some(p1),
-        None,
-        path.clone(),
-    ).unwrap()
+    let upload = UploadHgEntry {
+        raw_content: blob,
+        content_type: manifest::Type::File(FileType::Regular),
+        p1: Some(p1),
+        p2: None,
+        path: path.clone(),
+    };
+    upload.upload(repo).unwrap()
 }
 
 pub fn upload_manifest_no_parents<S>(
     repo: &BlobRepo,
     data: S,
     path: &RepoPath,
-) -> (DNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
+) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
     let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
-    repo.upload_entry(blob, manifest::Type::Tree, None, None, path.clone())
-        .unwrap()
+    let upload = UploadHgEntry {
+        raw_content: blob,
+        content_type: manifest::Type::Tree,
+        p1: None,
+        p2: None,
+        path: path.clone(),
+    };
+    upload.upload(repo).unwrap()
 }
 
 pub fn upload_manifest_one_parent<S>(
     repo: &BlobRepo,
     data: S,
     path: &RepoPath,
-    p1: DNodeHash,
-) -> (DNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
+    p1: HgNodeHash,
+) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
     S: Into<String>,
 {
     let blob: HgBlob = Bytes::from(data.into().as_bytes()).into();
-    repo.upload_entry(blob, manifest::Type::Tree, Some(p1), None, path.clone())
-        .unwrap()
+    let upload = UploadHgEntry {
+        raw_content: blob,
+        content_type: manifest::Type::Tree,
+        p1: Some(p1),
+        p2: None,
+        path: path.clone(),
+    };
+    upload.upload(repo).unwrap()
 }
 
 pub fn create_changeset_no_parents(

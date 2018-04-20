@@ -37,7 +37,7 @@ use slog::Drain;
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
 
-use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry};
+use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgEntry};
 use changesets::SqliteChangesets;
 use mercurial::{HgChangesetId, HgNodeHash, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, MPath, RepoPath, RepositoryId, Type};
@@ -150,19 +150,20 @@ fn upload_entry(
     };
 
     let content = entry.get_raw_content();
-
-    let parents = entry.get_parents().map(|parents| {
-        let (p1, p2) = parents.get_nodes();
-        let p1 = p1.map(|p| p.into_mononoke());
-        let p2 = p2.map(|p| p.into_mononoke());
-        (p1, p2)
-    });
+    let parents = entry.get_parents();
 
     content
         .join(parents)
         .and_then(move |(content, parents)| {
-            let (p1, p2) = parents;
-            blobrepo.upload_entry(content, ty, p1, p2, path)
+            let (p1, p2) = parents.get_nodes();
+            let upload = UploadHgEntry {
+                raw_content: content,
+                content_type: ty,
+                p1: p1.cloned(),
+                p2: p2.cloned(),
+                path,
+            };
+            upload.upload(&blobrepo)
         })
         .and_then(|(_, entry)| entry)
         .boxify()
@@ -294,10 +295,14 @@ fn main() {
                 .and_then({
                     let blobrepo = blobrepo.clone();
                     move |(blob, p1, p2)| {
-                        let p1 = p1.map(|p| p.into_mononoke());
-                        let p2 = p2.map(|p| p.into_mononoke());
-
-                        blobrepo.upload_entry(blob, Type::Tree, p1, p2, RepoPath::root())
+                        let upload = UploadHgEntry {
+                            raw_content: blob,
+                            content_type: Type::Tree,
+                            p1,
+                            p2,
+                            path: RepoPath::root(),
+                        };
+                        upload.upload(&blobrepo)
                     }
                 })
                 .and_then(|(_, entry)| entry)

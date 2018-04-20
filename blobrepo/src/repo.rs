@@ -36,9 +36,9 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial::{HgNodeHash, NodeHashConversion};
-use mercurial_types::{Changeset, DBlobNode, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry,
-                      HgBlob, Manifest, RepoPath, RepositoryId};
+use mercurial::{HgBlobNode, HgNodeHash, HgParents};
+use mercurial_types::{Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry, HgBlob,
+                      Manifest, RepoPath, RepositoryId};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::DManifestId;
 use mononoke_types::{Blob, ContentId, DateTime, FileContents, MPath, MononokeId};
@@ -343,110 +343,6 @@ impl BlobRepo {
             .boxify()
     }
 
-    // Given content, ensure that there is a matching HgBlobEntry in the repo. This may not upload
-    // the entry or the data blob if the repo is aware of that data already existing in the
-    // underlying store.
-    // Note that the HgBlobEntry may not be consistent - parents do not have to be uploaded at this
-    // point, as long as you know their DNodeHashes; this is also given to you as part of the
-    // result type, so that you can parallelise uploads. Consistency will be verified when
-    // adding the entries to a changeset.
-    pub fn upload_entry(
-        &self,
-        raw_content: HgBlob,
-        content_type: manifest::Type,
-        p1: Option<DNodeHash>,
-        p2: Option<DNodeHash>,
-        path: RepoPath,
-    ) -> Result<(DNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
-        let p1 = p1.as_ref();
-        let p2 = p2.as_ref();
-        let raw_content = raw_content.clean();
-        let parents = DParents::new(p1, p2);
-
-        let blob_hash = raw_content
-            .hash()
-            .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?;
-
-        let raw_node = RawNodeBlob {
-            parents,
-            blob: blob_hash,
-        };
-
-        let nodeid = DBlobNode::new(raw_content.clone(), p1, p2)
-            .nodeid()
-            .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?;
-
-        let blob_entry = HgBlobEntry::new(
-            self.blobstore.clone(),
-            path.mpath()
-                .and_then(|m| m.into_iter().last())
-                .map(|m| m.clone()),
-            nodeid,
-            content_type,
-        )?;
-
-        fn log_upload_stats(
-            logger: Logger,
-            path: RepoPath,
-            nodeid: DNodeHash,
-            phase: &str,
-            stats: Stats,
-        ) {
-            let path = format!("{}", path);
-            let nodeid = format!("{}", nodeid);
-            debug!(logger, "Upload blob stats";
-                "phase" => String::from(phase),
-                "path" => path,
-                "nodeid" => nodeid,
-                "poll_count" => stats.poll_count,
-                "poll_time_us" => stats.poll_time.as_micros_unchecked(),
-                "completion_time_us" => stats.completion_time.as_micros_unchecked(),
-            );
-        }
-
-        // Ensure that content is in the blobstore
-        let content_upload = self.blobstore
-            .put(format!("sha1-{}", blob_hash.sha1()), raw_content.into())
-            .timed({
-                let logger = self.logger.clone();
-                let path = path.clone();
-                let nodeid = nodeid.clone();
-                move |stats, result| {
-                    if result.is_ok() {
-                        log_upload_stats(logger, path, nodeid, "content_uploaded", stats)
-                    }
-                    Ok(())
-                }
-            });
-        // Upload the new node
-        let node_upload = self.blobstore.put(
-            get_node_key(nodeid),
-            raw_node.serialize(&nodeid.into_mercurial())?.into(),
-        );
-
-        Ok((
-            nodeid,
-            content_upload
-                .join(node_upload)
-                .map({
-                    let path = path.clone();
-                    |_| (blob_entry, path)
-                })
-                .timed({
-                    let logger = self.logger.clone();
-                    let path = path.clone();
-                    let nodeid = nodeid.clone();
-                    move |stats, result| {
-                        if result.is_ok() {
-                            log_upload_stats(logger, path, nodeid, "finished", stats)
-                        }
-                        Ok(())
-                    }
-                })
-                .boxify(),
-        ))
-    }
-
     pub fn upload_blob<Id>(&self, blob: Blob<Id>) -> impl Future<Item = Id, Error = Error> + Send
     where
         Id: MononokeId,
@@ -476,6 +372,125 @@ impl BlobRepo {
                     Ok(())
                 }
             })
+    }
+}
+
+/// Context for uploading a Mercurial entry.
+pub struct UploadHgEntry {
+    pub raw_content: HgBlob,
+    pub content_type: manifest::Type,
+    pub p1: Option<HgNodeHash>,
+    pub p2: Option<HgNodeHash>,
+    pub path: RepoPath,
+}
+
+impl UploadHgEntry {
+    // Given content, ensure that there is a matching HgBlobEntry in the repo. This may not upload
+    // the entry or the data blob if the repo is aware of that data already existing in the
+    // underlying store.
+    // Note that the HgBlobEntry may not be consistent - parents do not have to be uploaded at this
+    // point, as long as you know their DNodeHashes; this is also given to you as part of the
+    // result type, so that you can parallelise uploads. Consistency will be verified when
+    // adding the entries to a changeset.
+    pub fn upload(
+        self,
+        repo: &BlobRepo,
+    ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
+        let UploadHgEntry {
+            raw_content,
+            content_type,
+            p1,
+            p2,
+            path,
+        } = self;
+
+        let p1 = p1.as_ref();
+        let p2 = p2.as_ref();
+        let raw_content = raw_content.clean();
+        let parents = HgParents::new(p1, p2);
+
+        let blob_hash = raw_content
+            .hash()
+            .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?;
+
+        let raw_node = RawNodeBlob {
+            parents,
+            blob: blob_hash,
+        };
+
+        let nodeid = HgBlobNode::new(raw_content.clone(), p1, p2)
+            .nodeid()
+            .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?;
+
+        let blob_entry = HgBlobEntry::new(
+            repo.blobstore.clone(),
+            path.mpath()
+                .and_then(|m| m.into_iter().last())
+                .map(|m| m.clone()),
+            nodeid.into_mononoke(),
+            content_type,
+        )?;
+
+        fn log_upload_stats(
+            logger: Logger,
+            path: RepoPath,
+            nodeid: HgNodeHash,
+            phase: &str,
+            stats: Stats,
+        ) {
+            let path = format!("{}", path);
+            let nodeid = format!("{}", nodeid);
+            debug!(logger, "Upload blob stats";
+                "phase" => String::from(phase),
+                "path" => path,
+                "nodeid" => nodeid,
+                "poll_count" => stats.poll_count,
+                "poll_time_us" => stats.poll_time.as_micros_unchecked(),
+                "completion_time_us" => stats.completion_time.as_micros_unchecked(),
+            );
+        }
+
+        // Ensure that content is in the blobstore
+        let content_upload = repo.blobstore
+            .put(format!("sha1-{}", blob_hash.sha1()), raw_content.into())
+            .timed({
+                let logger = repo.logger.clone();
+                let path = path.clone();
+                let nodeid = nodeid.clone();
+                move |stats, result| {
+                    if result.is_ok() {
+                        log_upload_stats(logger, path, nodeid, "content_uploaded", stats)
+                    }
+                    Ok(())
+                }
+            });
+        // Upload the new node
+        let node_upload = repo.blobstore.put(
+            get_node_key(nodeid.into_mononoke()),
+            raw_node.serialize(&nodeid)?.into(),
+        );
+
+        Ok((
+            nodeid,
+            content_upload
+                .join(node_upload)
+                .map({
+                    let path = path.clone();
+                    |_| (blob_entry, path)
+                })
+                .timed({
+                    let logger = repo.logger.clone();
+                    let path = path.clone();
+                    let nodeid = nodeid.clone();
+                    move |stats, result| {
+                        if result.is_ok() {
+                            log_upload_stats(logger, path, nodeid, "finished", stats)
+                        }
+                        Ok(())
+                    }
+                })
+                .boxify(),
+        ))
     }
 }
 

@@ -16,7 +16,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
-use blobrepo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry};
+use blobrepo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry, UploadHgEntry};
 use mercurial::{self, file, HgNodeHash, HgNodeKey};
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, RepoPath};
@@ -50,16 +50,16 @@ impl UploadableHgBlob for Filelog {
 
     fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
-        let p1 = self.p1.map(|p| p.into_mononoke());
-        let p2 = self.p2.map(|p| p.into_mononoke());
-
-        repo.upload_entry(
-            HgBlob::from(self.data),
-            manifest::Type::File(FileType::Regular),
-            p1,
-            p2,
-            node_key.path.clone(),
-        ).map(move |(_node, fut)| (node_key, fut.map_err(Error::compat).boxify().shared()))
+        let upload = UploadHgEntry {
+            raw_content: HgBlob::from(self.data),
+            content_type: manifest::Type::File(FileType::Regular),
+            p1: self.p1,
+            p2: self.p2,
+            path: node_key.path.clone(),
+        };
+        upload
+            .upload(repo)
+            .map(move |(_node, fut)| (node_key, fut.map_err(Error::compat).boxify().shared()))
     }
 }
 
