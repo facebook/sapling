@@ -40,6 +40,7 @@ extern crate mercurial_bundles;
 extern crate mercurial_types;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
+extern crate mononoke_types;
 
 mod changegroup;
 pub mod errors;

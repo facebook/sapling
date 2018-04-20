@@ -36,12 +36,12 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial::NodeHashConversion;
+use mercurial::{HgNodeHash, NodeHashConversion};
 use mercurial_types::{Changeset, DBlobNode, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry,
                       HgBlob, Manifest, RepoPath, RepositoryId};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::DManifestId;
-use mononoke_types::{DateTime, FileContents};
+use mononoke_types::{Blob, ContentId, DateTime, FileContents, MPath, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Remote;
@@ -446,6 +446,53 @@ impl BlobRepo {
                 .boxify(),
         ))
     }
+
+    pub fn upload_blob<Id>(&self, blob: Blob<Id>) -> impl Future<Item = Id, Error = Error> + Send
+    where
+        Id: MononokeId,
+    {
+        let id = blob.id().clone();
+        let blobstore_key = id.blobstore_key();
+
+        fn log_upload_stats(logger: Logger, blobstore_key: String, phase: &str, stats: Stats) {
+            debug!(logger, "Upload blob stats";
+                "phase" => String::from(phase),
+                "blobstore_key" => blobstore_key,
+                "poll_count" => stats.poll_count,
+                "poll_time_us" => stats.poll_time.as_micros_unchecked(),
+                "completion_time_us" => stats.completion_time.as_micros_unchecked(),
+            );
+        }
+
+        self.blobstore
+            .put(blobstore_key.clone(), blob.into())
+            .map(move |_| id)
+            .timed({
+                let logger = self.logger.clone();
+                move |stats, result| {
+                    if result.is_ok() {
+                        log_upload_stats(logger, blobstore_key, "blob uploaded", stats)
+                    }
+                    Ok(())
+                }
+            })
+    }
+}
+
+/// Information about a content blob associated with a push that is available in
+/// the blobstore. (This blob wasn't necessarily uploaded in this push.)
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContentBlobInfo {
+    pub path: MPath,
+    pub meta: ContentBlobMeta,
+}
+
+/// Metadata associated with a content blob being uploaded as part of changeset creation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContentBlobMeta {
+    pub id: ContentId,
+    // The copy info will later be stored as part of the commit.
+    pub copy_from: Option<(MPath, HgNodeHash)>,
 }
 
 pub struct CreateChangeset {

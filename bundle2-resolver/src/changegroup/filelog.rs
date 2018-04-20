@@ -16,14 +16,14 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
-use blobrepo::{BlobEntry, BlobRepo};
-use mercurial::{self, HgNodeHash, HgNodeKey};
+use blobrepo::{BlobEntry, BlobRepo, ContentBlobInfo, ContentBlobMeta};
+use mercurial::{self, file, HgNodeHash, HgNodeKey, NodeHashConversion};
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, RepoPath};
 
 use errors::*;
 use stats::*;
-use upload_blobs::UploadableHgBlob;
+use upload_blobs::{UploadableBlob, UploadableHgBlob};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilelogDeltaed {
@@ -60,6 +60,48 @@ impl UploadableHgBlob for Filelog {
             p2,
             node_key.path.clone(),
         ).map(move |(_node, fut)| (node_key, fut.map_err(Error::compat).boxify().shared()))
+    }
+}
+
+impl UploadableBlob for Filelog {
+    // * Shared is required here because a single content blob can be referred to by more than
+    //   one changeset, and all of those will want to refer to the corresponding future.
+    // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
+    //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
+    //   implements Error.
+    type Value = (ContentBlobInfo, Shared<BoxFuture<(), Compat<Error>>>);
+
+    fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
+        let node_key = self.node_key;
+        let path = match node_key.path.clone() {
+            RepoPath::FilePath(p) => p,
+            other => bail_msg!(
+                "internal error: expected RepoPath::FilePath, found {:?}",
+                other
+            ),
+        };
+        let p1 = self.p1.map(|p| p.into_mononoke());
+        let p2 = self.p2.map(|p| p.into_mononoke());
+
+        let f = file::File::new(self.data, p1.as_ref(), p2.as_ref());
+        let copy_from = f.copied_from()?
+            .map(|(path, hash)| (path, hash.into_mercurial()));
+        let contents = f.file_contents();
+        let contents_blob = contents.into_blob();
+        let cbinfo = ContentBlobInfo {
+            path,
+            meta: ContentBlobMeta {
+                id: *contents_blob.id(),
+                copy_from,
+            },
+        };
+
+        let fut = repo.upload_blob(contents_blob)
+            .map(move |_id| ())
+            .map_err(Error::compat)
+            .boxify()
+            .shared();
+        Ok((node_key, (cbinfo, fut)))
     }
 }
 

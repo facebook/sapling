@@ -9,11 +9,11 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use ascii::AsciiString;
-use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle, CreateChangeset};
+use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle, ContentBlobInfo, CreateChangeset};
 use bytes::Bytes;
 use failure::{FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{Future, IntoFuture, Stream};
-use futures::future::{err, ok};
+use futures::future::{self, err, ok};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial::{HgManifestId, HgNodeHash, HgNodeKey};
@@ -26,12 +26,14 @@ use slog::Logger;
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
                   Filelog};
 use errors::*;
-use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
+use upload_blobs::{upload_blobs, upload_hg_blobs, UploadBlobsType, UploadableBlob,
+                   UploadableHgBlob};
 use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;
 type Changesets = Vec<(HgNodeHash, RevlogChangeset)>;
 type Filelogs = HashMap<HgNodeKey, <Filelog as UploadableHgBlob>::Value>;
+type ContentBlobs = HashMap<HgNodeKey, <Filelog as UploadableBlob>::Value>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 type UploadedChangesets = HashMap<HgNodeHash, ChangesetHandle>;
 
@@ -115,6 +117,7 @@ struct ChangegroupPush {
     part_id: PartId,
     changesets: Changesets,
     filelogs: Filelogs,
+    content_blobs: ContentBlobs,
 }
 
 struct BookmarkPush {
@@ -174,19 +177,22 @@ impl Bundle2Resolver {
                     convert_to_revlog_changesets(c)
                         .collect()
                         .and_then(|changesets| {
-                            upload_hg_blobs(
+                            upload_blobs(
                                 repo.clone(),
                                 convert_to_revlog_filelog(repo, f),
                                 UploadBlobsType::EnsureNoDuplicates,
-                            ).map(move |filelogs| (changesets, filelogs))
+                            ).map(move |(filelogs, content_blobs)| {
+                                (changesets, filelogs, content_blobs)
+                            })
                                 .context("While uploading File Blobs")
                                 .from_err()
                         })
-                        .map(move |(changesets, filelogs)| {
+                        .map(move |(changesets, filelogs, content_blobs)| {
                             let cg_push = ChangegroupPush {
                                 part_id,
                                 changesets,
                                 filelogs,
+                                content_blobs,
                             };
                             (Some(cg_push), bundle2)
                         })
@@ -331,6 +337,7 @@ impl Bundle2Resolver {
     ) -> BoxFuture<(), Error> {
         let changesets = cg_push.changesets;
         let filelogs = cg_push.filelogs;
+        let content_blobs = cg_push.content_blobs;
 
         fn upload_changeset(
             repo: Arc<BlobRepo>,
@@ -339,6 +346,7 @@ impl Bundle2Resolver {
             mut uploaded_changesets: UploadedChangesets,
             filelogs: &Filelogs,
             manifests: &Manifests,
+            content_blobs: &ContentBlobs,
         ) -> BoxFuture<UploadedChangesets, Error> {
             let (p1, p2) = {
                 let (p1, p2) = revlog_cs.parents().get_nodes();
@@ -347,19 +355,29 @@ impl Bundle2Resolver {
                     get_parent(&repo, &uploaded_changesets, p2.cloned()),
                 )
             };
-            let new_blobs = try_boxfuture!(NewBlobs::new(
+            let NewBlobs {
+                root_manifest,
+                sub_entries,
+                content_blobs,
+            } = try_boxfuture!(NewBlobs::new(
                 *revlog_cs.manifestid(),
                 &manifests,
-                &filelogs
+                &filelogs,
+                &content_blobs,
             ));
+            // XXX just wait for the content blobs to be uploaded for now -- this will actually
+            // be used in the future.
+            let content_blob_fut =
+                future::join_all(content_blobs.into_iter().map(|(_cbinfo, fut)| fut));
 
-            p1.join(p2)
-                .and_then(move |(p1, p2)| {
+            p1.join3(p2, content_blob_fut)
+                .and_then(move |(p1, p2, _content_blob_result)| {
                     let create_changeset = CreateChangeset {
                         p1,
                         p2,
-                        root_manifest: new_blobs.root_manifest,
-                        sub_entries: new_blobs.sub_entries,
+                        root_manifest,
+                        sub_entries,
+                        // XXX pass content blobs to CreateChangeset here
                         user: String::from_utf8(revlog_cs.user().into())?,
                         time: revlog_cs.time().clone(),
                         extra: revlog_cs.extra().clone(),
@@ -378,6 +396,7 @@ impl Bundle2Resolver {
         debug!(self.logger, "changesets: {:?}", changesets);
         debug!(self.logger, "filelogs: {:?}", filelogs.keys());
         debug!(self.logger, "manifests: {:?}", manifests.keys());
+        debug!(self.logger, "content blobs: {:?}", content_blobs.keys());
 
         stream::iter_ok(changesets)
             .fold(
@@ -390,6 +409,7 @@ impl Bundle2Resolver {
                         uploaded_changesets,
                         &filelogs,
                         &manifests,
+                        &content_blobs,
                     ).with_context(move |_| {
                         format!("While trying to upload Changeset with id {:?}", node)
                     })
@@ -474,6 +494,7 @@ fn get_parent(
 
 type HgBlobFuture = BoxFuture<(BlobEntry, RepoPath), Error>;
 type HgBlobStream = BoxStream<(BlobEntry, RepoPath), Error>;
+type ContentBlobFuture = (ContentBlobInfo, BoxFuture<(), Error>);
 
 /// In order to generate the DAG of dependencies between Root Manifest and other Manifests and
 /// Filelogs we need to walk that DAG.
@@ -482,6 +503,10 @@ struct NewBlobs {
     root_manifest: HgBlobFuture,
     // sub_entries has both submanifest and filenode entries.
     sub_entries: HgBlobStream,
+    // This is returned as a Vec rather than a Stream so that the path and metadata are
+    // available before the content blob is uploaded. This will allow creating and uploading
+    // changeset blobs without being blocked on content blob uploading being complete.
+    content_blobs: Vec<ContentBlobFuture>,
 }
 
 impl NewBlobs {
@@ -489,6 +514,7 @@ impl NewBlobs {
         manifest_root_id: HgManifestId,
         manifests: &Manifests,
         filelogs: &Filelogs,
+        content_blobs: &ContentBlobs,
     ) -> Result<Self> {
         let root_key = HgNodeKey {
             path: RepoPath::root(),
@@ -499,25 +525,30 @@ impl NewBlobs {
             .get(&root_key)
             .ok_or_else(|| format_err!("Missing root tree manifest"))?;
 
+        let (entries, content_blobs) = Self::walk_helper(
+            &RepoPath::root(),
+            &manifest_content,
+            manifests,
+            filelogs,
+            content_blobs,
+        )?;
+
         Ok(Self {
             root_manifest: manifest_root
                 .clone()
                 .map(|it| (*it).clone())
                 .from_err()
                 .boxify(),
-            sub_entries: stream::futures_unordered(Self::walk_helper(
-                &RepoPath::root(),
-                &manifest_content,
-                manifests,
-                filelogs,
-            )?).with_context(move |_| {
-                format!(
-                    "While walking dependencies of Root Manifest with id {:?}",
-                    manifest_root_id
-                )
-            })
+            sub_entries: stream::futures_unordered(entries)
+                .with_context(move |_| {
+                    format!(
+                        "While walking dependencies of Root Manifest with id {:?}",
+                        manifest_root_id
+                    )
+                })
                 .from_err()
                 .boxify(),
+            content_blobs,
         })
     }
 
@@ -526,7 +557,8 @@ impl NewBlobs {
         manifest_content: &ManifestContent,
         manifests: &Manifests,
         filelogs: &Filelogs,
-    ) -> Result<Vec<HgBlobFuture>> {
+        content_blobs: &ContentBlobs,
+    ) -> Result<(Vec<HgBlobFuture>, Vec<ContentBlobFuture>)> {
         if path_taken.len() > 4096 {
             bail_msg!(
                 "Exceeded max manifest path during walking with path: {:?}",
@@ -535,6 +567,8 @@ impl NewBlobs {
         }
 
         let mut entries: Vec<HgBlobFuture> = Vec::new();
+        let mut cbinfos: Vec<ContentBlobFuture> = Vec::new();
+
         for (name, details) in manifest_content.files.iter() {
             let nodehash = details.entryid().clone().into_nodehash();
             let next_path = MPath::join_opt(path_taken.mpath(), name);
@@ -557,12 +591,15 @@ impl NewBlobs {
                             .from_err()
                             .boxify(),
                     );
-                    entries.append(&mut Self::walk_helper(
+                    let (mut walked_entries, mut walked_cbinfos) = Self::walk_helper(
                         &key.path,
                         manifest_content,
                         manifests,
                         filelogs,
-                    )?);
+                        content_blobs,
+                    )?;
+                    entries.append(&mut walked_entries);
+                    cbinfos.append(&mut walked_cbinfos);
                 }
             } else {
                 let key = HgNodeKey {
@@ -577,11 +614,22 @@ impl NewBlobs {
                             .from_err()
                             .boxify(),
                     );
+                    match content_blobs.get(&key) {
+                        Some(&(ref cbinfo, ref fut)) => {
+                            cbinfos.push((
+                                cbinfo.clone(),
+                                fut.clone().map(|_| ()).from_err().boxify(),
+                            ));
+                        }
+                        None => {
+                            bail_msg!("internal error: content blob future missing for filenode")
+                        }
+                    }
                 }
             }
         }
 
-        Ok(entries)
+        Ok((entries, cbinfos))
     }
 }
 

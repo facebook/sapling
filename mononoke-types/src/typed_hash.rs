@@ -18,7 +18,7 @@ use thrift;
 // Option type, or perhaps a list as desired.
 
 /// An identifier used throughout Mononoke.
-pub trait MononokeId {
+pub trait MononokeId: Copy + Send + 'static {
     /// Return a key suitable for blobstore use.
     fn blobstore_key(&self) -> String;
 
