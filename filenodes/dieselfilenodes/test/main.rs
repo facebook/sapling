@@ -7,7 +7,9 @@
 //! Tests for the Filenodes store.
 
 #![deny(warnings)]
+#![feature(never_type)]
 
+extern crate async_unit;
 extern crate dieselfilenodes;
 extern crate failure_ext as failure;
 extern crate filenodes;
@@ -16,7 +18,6 @@ extern crate futures_ext;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate tokio;
-extern crate tokio_core;
 
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes};
 use filenodes::{FilenodeInfo, Filenodes};
@@ -26,7 +27,6 @@ use mercurial_types::{DFileNodeId, RepoPath, RepositoryId};
 use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID, THREES_CSID, THREES_FNID, TWOS_CSID,
                                       TWOS_FNID};
 use mercurial_types_mocks::repo::{REPO_ONE, REPO_ZERO};
-use tokio_core::reactor::Core;
 
 fn root_first_filenode() -> FilenodeInfo {
     FilenodeInfo {
@@ -120,9 +120,10 @@ fn assert_no_filenode(
     hash: &DFileNodeId,
     repo_id: &RepositoryId,
 ) {
-    let mut core = Core::new().expect("cannot create core");
-    let filenode = filenodes.get_filenode(path, hash, repo_id);
-    let res = core.run(filenode).expect("error while fetching filenode");
+    let res = filenodes
+        .get_filenode(path, hash, repo_id)
+        .wait()
+        .expect("error while fetching filenode");
     assert!(res.is_none());
 }
 
@@ -133,9 +134,9 @@ fn assert_filenode(
     repo_id: &RepositoryId,
     expected: FilenodeInfo,
 ) {
-    let mut core = Core::new().expect("cannot create core");
-    let filenode = filenodes.get_filenode(path, hash, repo_id);
-    let res = core.run(filenode)
+    let res = filenodes
+        .get_filenode(path, hash, repo_id)
+        .wait()
         .expect("error while fetching filenode")
         .expect(&format!("not found: {}", hash));
     assert_eq!(res, expected);
@@ -150,233 +151,266 @@ macro_rules! filenodes_test_impl {
 
             #[test]
             fn test_simple_filenode_insert_and_get() {
-                let filenodes = &$new_cb();
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
 
-                do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::root(),
-                    &ONES_FNID,
-                    &REPO_ZERO,
-                    root_first_filenode()
-                );
+                    do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                        root_first_filenode()
+                    );
 
-                assert_no_filenode(filenodes, &RepoPath::root(), &TWOS_FNID, &REPO_ZERO);
-                assert_no_filenode(filenodes, &RepoPath::root(), &ONES_FNID, &REPO_ONE);
+                    assert_no_filenode(filenodes, &RepoPath::root(), &TWOS_FNID, &REPO_ZERO);
+                    assert_no_filenode(filenodes, &RepoPath::root(), &ONES_FNID, &REPO_ONE);
+                    Ok(())
+                }).expect("test failed");
             }
 
             #[test]
             fn test_insert_identical_in_batch() {
-                let filenodes = &$new_cb();
-                do_add_filenodes(
-                    filenodes,
-                    vec![root_first_filenode(), root_first_filenode()],
-                    &REPO_ZERO,
-                );
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
+                    do_add_filenodes(
+                        filenodes,
+                        vec![root_first_filenode(), root_first_filenode()],
+                        &REPO_ZERO,
+                    );
+                    Ok(())
+                }).expect("test failed");
             }
 
             #[test]
             fn test_filenode_insert_twice() {
-                let filenodes = &$new_cb();
-                do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
-                do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
+                    do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
+                    do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
+                    Ok(())
+                }).expect("test failed");
             }
 
             #[test]
             fn test_insert_filenode_with_parent() {
-                let filenodes = &$new_cb();
-                do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
-                do_add_filenode(filenodes, root_second_filenode(), &REPO_ZERO);
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::root(),
-                    &ONES_FNID,
-                    &REPO_ZERO,
-                    root_first_filenode()
-                );
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::root(),
-                    &TWOS_FNID,
-                    &REPO_ZERO,
-                    root_second_filenode()
-                );
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
+                    do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
+                    do_add_filenode(filenodes, root_second_filenode(), &REPO_ZERO);
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                        root_first_filenode()
+                    );
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::root(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                        root_second_filenode()
+                    );
+                    Ok(())
+                }).expect("test failed");
             }
 
             #[test]
             fn test_insert_root_filenode_with_two_parents() {
-                let filenodes = &$new_cb();
-                do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
-                do_add_filenode(filenodes, root_second_filenode(), &REPO_ZERO);
-                do_add_filenode(filenodes, root_merge_filenode(), &REPO_ZERO);
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
+                    do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
+                    do_add_filenode(filenodes, root_second_filenode(), &REPO_ZERO);
+                    do_add_filenode(filenodes, root_merge_filenode(), &REPO_ZERO);
 
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::root(),
-                    &THREES_FNID,
-                    &REPO_ZERO,
-                    root_merge_filenode(),
-                );
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::root(),
+                        &THREES_FNID,
+                        &REPO_ZERO,
+                        root_merge_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
             }
 
             #[test]
             fn test_insert_file_filenode() {
-                let filenodes = &$new_cb();
-                do_add_filenode(filenodes, file_a_first_filenode(), &REPO_ZERO);
-                do_add_filenode(filenodes, file_b_first_filenode(), &REPO_ZERO);
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
+                    do_add_filenode(filenodes, file_a_first_filenode(), &REPO_ZERO);
+                    do_add_filenode(filenodes, file_b_first_filenode(), &REPO_ZERO);
 
-                assert_no_filenode(
-                    filenodes,
-                    &RepoPath::file("non-existent").unwrap(),
-                    &ONES_FNID,
-                    &REPO_ZERO,
-                );
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::file("a").unwrap(),
-                    &ONES_FNID,
-                    &REPO_ZERO,
-                    file_a_first_filenode(),
-                );
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::file("b").unwrap(),
-                    &TWOS_FNID,
-                    &REPO_ZERO,
-                    file_b_first_filenode(),
-                );
+                    assert_no_filenode(
+                        filenodes,
+                        &RepoPath::file("non-existent").unwrap(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                    );
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::file("a").unwrap(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                        file_a_first_filenode(),
+                    );
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::file("b").unwrap(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                        file_b_first_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
             }
 
             #[test]
             fn test_insert_different_repo() {
-                let filenodes = &$new_cb();
-                do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
-                do_add_filenode(filenodes, root_second_filenode(), &REPO_ONE);
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
+                    do_add_filenode(filenodes, root_first_filenode(), &REPO_ZERO);
+                    do_add_filenode(filenodes, root_second_filenode(), &REPO_ONE);
 
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::root(),
-                    &ONES_FNID,
-                    &REPO_ZERO,
-                    root_first_filenode(),
-                );
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                        root_first_filenode(),
+                    );
 
-                assert_no_filenode(
-                    filenodes,
-                    &RepoPath::root(),
-                    &ONES_FNID,
-                    &REPO_ONE,
-                );
+                    assert_no_filenode(
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ONE,
+                    );
 
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::root(),
-                    &TWOS_FNID,
-                    &REPO_ONE,
-                    root_second_filenode(),
-                );
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::root(),
+                        &TWOS_FNID,
+                        &REPO_ONE,
+                        root_second_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
             }
 
             #[test]
             fn test_insert_parent_and_child_in_same_batch() {
-                let filenodes = &$new_cb();
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
 
-                do_add_filenodes(
-                    filenodes,
-                    vec![root_first_filenode(), root_second_filenode()],
-                    &REPO_ZERO
-                );
+                    do_add_filenodes(
+                        filenodes,
+                        vec![root_first_filenode(), root_second_filenode()],
+                        &REPO_ZERO
+                    );
 
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::root(),
-                    &ONES_FNID,
-                    &REPO_ZERO,
-                    root_first_filenode(),
-                );
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                        root_first_filenode(),
+                    );
 
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::root(),
-                    &TWOS_FNID,
-                    &REPO_ZERO,
-                    root_second_filenode(),
-                );
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::root(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                        root_second_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
             }
 
             #[test]
             fn insert_copied_file() {
-                let filenodes = &$new_cb();
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
 
-                do_add_filenodes(
-                    filenodes,
-                    vec![copied_from_filenode(), copied_filenode()],
-                    &REPO_ZERO
-                );
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::file("copiedto").unwrap(),
-                    &TWOS_FNID,
-                    &REPO_ZERO,
-                    copied_filenode(),
-                );
+                    do_add_filenodes(
+                        filenodes,
+                        vec![copied_from_filenode(), copied_filenode()],
+                        &REPO_ZERO
+                    );
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::file("copiedto").unwrap(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                        copied_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
             }
 
             #[test]
             fn insert_same_copied_file() {
-                let filenodes = &$new_cb();
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
 
-                do_add_filenodes(filenodes, vec![copied_from_filenode()], &REPO_ZERO);
-                do_add_filenodes(
-                    filenodes,
-                    vec![copied_filenode(), copied_filenode()],
-                    &REPO_ZERO
-                );
+                    do_add_filenodes(filenodes, vec![copied_from_filenode()], &REPO_ZERO);
+                    do_add_filenodes(
+                        filenodes,
+                        vec![copied_filenode(), copied_filenode()],
+                        &REPO_ZERO
+                    );
+                    Ok(())
+                }).expect("test failed");
             }
 
             #[test]
             fn insert_copied_file_to_different_repo() {
-                let filenodes = &$new_cb();
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
 
-                let copied = FilenodeInfo {
-                    path: RepoPath::file("copiedto").unwrap(),
-                    filenode: TWOS_FNID,
-                    p1: None,
-                    p2: None,
-                    copyfrom: Some((RepoPath::file("copiedfrom").unwrap(), ONES_FNID)),
-                    linknode: TWOS_CSID,
-                };
+                    let copied = FilenodeInfo {
+                        path: RepoPath::file("copiedto").unwrap(),
+                        filenode: TWOS_FNID,
+                        p1: None,
+                        p2: None,
+                        copyfrom: Some((RepoPath::file("copiedfrom").unwrap(), ONES_FNID)),
+                        linknode: TWOS_CSID,
+                    };
 
-                let notcopied = FilenodeInfo {
-                    path: RepoPath::file("copiedto").unwrap(),
-                    filenode: TWOS_FNID,
-                    p1: None,
-                    p2: None,
-                    copyfrom: None,
-                    linknode: TWOS_CSID,
-                };
+                    let notcopied = FilenodeInfo {
+                        path: RepoPath::file("copiedto").unwrap(),
+                        filenode: TWOS_FNID,
+                        p1: None,
+                        p2: None,
+                        copyfrom: None,
+                        linknode: TWOS_CSID,
+                    };
 
-                do_add_filenodes(
-                    filenodes,
-                    vec![copied_from_filenode(), copied.clone()],
-                    &REPO_ZERO
-                );
-                do_add_filenodes(filenodes, vec![notcopied.clone()], &REPO_ONE);
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::file("copiedto").unwrap(),
-                    &TWOS_FNID,
-                    &REPO_ZERO,
-                    copied,
-                );
+                    do_add_filenodes(
+                        filenodes,
+                        vec![copied_from_filenode(), copied.clone()],
+                        &REPO_ZERO
+                    );
+                    do_add_filenodes(filenodes, vec![notcopied.clone()], &REPO_ONE);
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::file("copiedto").unwrap(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                        copied,
+                    );
 
-                assert_filenode(
-                    filenodes,
-                    &RepoPath::file("copiedto").unwrap(),
-                    &TWOS_FNID,
-                    &REPO_ONE,
-                    notcopied,
-                );
+                    assert_filenode(
+                        filenodes,
+                        &RepoPath::file("copiedto").unwrap(),
+                        &TWOS_FNID,
+                        &REPO_ONE,
+                        notcopied,
+                    );
+                    Ok(())
+                }).expect("test failed");
             }
         }
     }

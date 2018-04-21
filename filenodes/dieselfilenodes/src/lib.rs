@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(try_from, never_type)]
+#![feature(try_from, never_type, use_nested_groups)]
 
 extern crate db;
 #[macro_use]
@@ -15,10 +15,10 @@ extern crate failure_ext as failure;
 extern crate futures;
 
 extern crate filenodes;
-#[macro_use]
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate mononoke_types;
+extern crate tokio;
 
 use db::ConnectionParams;
 use diesel::{insert_or_ignore_into, Connection, SqliteConnection};
@@ -27,10 +27,10 @@ use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::sql_types::HasSqlType;
-use failure::{Error, Result};
+use failure::{Error, Result, ResultExt};
 use filenodes::{FilenodeInfo, Filenodes};
-use futures::{future, Future, Stream};
-use futures_ext::{BoxFuture, BoxStream, FutureExt};
+use futures::{Future, Stream};
+use futures_ext::{asynchronize, BoxFuture, BoxStream};
 use mercurial_types::{DFileNodeId, RepoPath, RepositoryId};
 use mercurial_types::sql_types::DFileNodeIdSql;
 
@@ -151,16 +151,16 @@ macro_rules! impl_filenodes {
             ) -> BoxFuture<(), Error> {
                 let repo_id = *repo_id;
                 let db = self.clone();
-                filenodes.chunks(self.insert_chunk_size).and_then(move |filenodes| {
-                    #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
-                    let connection = match db.get_conn() {
-                        Ok(conn) => conn,
-                        Err(err) => return future::err(err).boxify(),
-                    };
-                    Self::do_insert(&connection, &filenodes, &repo_id)
+                let insert_chunk_size = self.insert_chunk_size;
+
+                asynchronize(move || {
+                    filenodes.chunks(insert_chunk_size).and_then(move |filenodes| {
+                        let connection = db.get_conn()?;
+                        Self::do_insert(&connection, &filenodes, &repo_id)
+                    })
+                    .for_each(|()| Ok(()))
+                    .from_err()
                 })
-                .for_each(|()| Ok(()))
-                .boxify()
             }
 
             fn get_filenode(
@@ -169,36 +169,46 @@ macro_rules! impl_filenodes {
                 filenode: &DFileNodeId,
                 repo_id: &RepositoryId,
             ) -> BoxFuture<Option<FilenodeInfo>, Error> {
-                #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
-                let connection = match self.get_conn() {
-                    Ok(conn) => conn,
-                    Err(err) => return future::err(err).boxify(),
-                };
+                let db = self.clone();
+                let path = path.clone();
+                let filenode = *filenode;
+                let repo_id = *repo_id;
 
-                let query = filenode_query(repo_id, filenode, path);
-                let filenode_row = try_boxfuture!(
-                    query.first::<models::FilenodeRow>(&*connection).optional());
-                match filenode_row {
-                    Some(filenode_row) => {
-                        let copyfrom = try_boxfuture!(Self::fetch_copydata(
-                            &*connection,
-                            filenode,
-                            path,
-                            repo_id,
-                        ));
+                asynchronize(move || {
+                    let connection = db.get_conn()?;
+                    let query = filenode_query(&repo_id, &filenode, &path);
+                    let filenode_row = query.first::<models::FilenodeRow>(&*connection)
+                        .optional()
+                        .context(ErrorKind::FailFetchFilenode(filenode.clone(), path.clone()))?;
+                    match filenode_row {
+                        Some(filenode_row) => {
+                            let copyfrom = Self::fetch_copydata(
+                                &*connection,
+                                &filenode,
+                                &path,
+                                &repo_id,
+                            );
 
-                        let filenodeinfo = FilenodeInfo {
-                            path: path.clone(),
-                            filenode: filenode.clone(),
-                            p1: filenode_row.p1,
-                            p2: filenode_row.p2,
-                            copyfrom,
-                            linknode: filenode_row.linknode,
-                        };
-                        future::ok::<_, Error>(Some(filenodeinfo)).boxify()
+                            let copyfrom = copyfrom
+                                .context(
+                                    ErrorKind::FailFetchCopydata(filenode.clone(), path.clone())
+                                )?;
+
+                            let filenodeinfo = FilenodeInfo {
+                                path: path.clone(),
+                                filenode: filenode.clone(),
+                                p1: filenode_row.p1,
+                                p2: filenode_row.p2,
+                                copyfrom,
+                                linknode: filenode_row.linknode,
+                            };
+                            Ok(Some(filenodeinfo))
+                        }
+                        None => {
+                            Ok(None)
+                        },
                     }
-                    None => future::ok::<_, Error>(None).boxify(),
-                }
+                })
             }
         }
 
@@ -207,8 +217,8 @@ macro_rules! impl_filenodes {
                 connection: &$connection,
                 filenodes: &Vec<FilenodeInfo>,
                 repo_id: &RepositoryId,
-            ) -> BoxFuture<(), Error> {
-                let txnres = connection.transaction::<_, Error, _>(|| {
+            ) -> Result<()> {
+                connection.transaction::<_, Error, _>(|| {
                     Self::ensure_paths_exists(&*connection, repo_id, &filenodes)?;
 
                     Self::insert_filenodes(
@@ -217,8 +227,7 @@ macro_rules! impl_filenodes {
                         repo_id,
                     )?;
                     Ok(())
-                });
-                future::result(txnres).from_err().boxify()
+                })
             }
 
             fn ensure_paths_exists(
