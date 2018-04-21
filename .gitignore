@@ -1,7 +1,3 @@
-subinclude:hgsubversion/.hgignore
-
-syntax: glob
-
 *.elc
 *.tmp
 *.orig
@@ -15,12 +11,9 @@ syntax: glob
 *.pyd
 *.pyc
 *.pyo
-*$py.class
 *.swp
 *.prof
 *.zip
-\#*\#
-.\#*
 .shim/
 tests/.coverage*
 tests/.testtimes*
@@ -55,8 +48,8 @@ mercurial.egg-info
 .DS_Store
 tags
 cscope.*
-.idea/*
-.asv/*
+.idea/
+.asv/
 i18n/hg.pot
 mercurial/locale/*/LC_MESSAGES/hg.mo
 hgext/__index__.py
@@ -68,23 +61,21 @@ hgext/extlib/litemmap.c
 
 # Packaging sources
 SOURCES/
+
 # Build output
 build/
 debbuild/
 rpmbuild/
 
 # Rust libraries and extensions
-lib/*/Cargo.lock
-lib/*/target
-hgext/extlib/*/target
+Cargo.lock
+target/
 
 # Generated wheels
 wheelhouse/
 
-syntax: regexp
-^\.pc/
-^\.(pydev)?project
+*.pc/
 
 # hackable windows distribution additions
-^hg-python
-^hg.py$
+hg-python
+hg.py
