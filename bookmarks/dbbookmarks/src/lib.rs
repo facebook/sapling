@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(never_type)]
 
 extern crate ascii;
 extern crate bookmarks;
@@ -13,6 +14,7 @@ extern crate diesel;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+#[macro_use]
 extern crate futures_ext;
 extern crate mercurial_types;
 #[cfg(test)]
@@ -33,7 +35,8 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial_types::{DChangesetId, RepositoryId};
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::result;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 pub struct SqliteDbBookmarks {
     connection: Arc<Mutex<SqliteConnection>>,
@@ -68,6 +71,10 @@ impl SqliteDbBookmarks {
     pub fn in_memory() -> Result<Self> {
         Self::create(":memory:")
     }
+
+    fn get_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
+        Ok(self.connection.lock().expect("lock poisoned"))
+    }
 }
 
 impl Bookmarks for SqliteDbBookmarks {
@@ -76,7 +83,9 @@ impl Bookmarks for SqliteDbBookmarks {
         name: &AsciiString,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Option<DChangesetId>, Error> {
-        let connection = self.connection.lock().expect("lock poisoned");
+        #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+        let connection = try_boxfuture!(self.get_conn());
+
         let name = name.as_str().to_string();
         schema::bookmarks::table
             .filter(schema::bookmarks::repo_id.eq(repo_id))
@@ -94,7 +103,14 @@ impl Bookmarks for SqliteDbBookmarks {
         prefix: &AsciiString,
         repo_id: &RepositoryId,
     ) -> BoxStream<(AsciiString, DChangesetId), Error> {
-        let connection = self.connection.lock().expect("lock poisoned");
+        #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+        let connection = match self.get_conn() {
+            Ok(conn) => conn,
+            Err(err) => {
+                return stream::once(err).boxify();
+            }
+        };
+
         let prefix = prefix.as_str().to_string();
         let query = schema::bookmarks::table
             .filter(schema::bookmarks::repo_id.eq(repo_id))
