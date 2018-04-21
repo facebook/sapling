@@ -151,6 +151,13 @@ class BuildRustExt(distutils.core.Command):
     def build_ext(self, ext):
         distutils.log.info("building '%s' extension", ext.name)
 
+        # Cargo.lock may become out-of-date and make complication fail if
+        # vendored crates are updated. Remove it so it can be re-generated.
+        cargolockpath = os.path.join(os.path.dirname(ext.manifest),
+                                     'Cargo.lock')
+        if os.path.exists(cargolockpath):
+            os.unlink(cargolockpath)
+
         cmd = ['cargo', 'build', '--manifest-path', ext.manifest]
         if not self.debug:
             cmd.append('--release')
