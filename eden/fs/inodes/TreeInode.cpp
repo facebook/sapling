@@ -147,10 +147,7 @@ TreeInode::TreeInode(
           ino,
           parent,
           name,
-          buildDirFromTree(
-              tree.get(),
-              parent->getMount()->getLastCheckoutTime(),
-              parent->getInodeMap())) {}
+          saveDirFromTree(ino, tree.get(), parent->getMount())) {}
 
 TreeInode::TreeInode(
     InodeNumber ino,
@@ -162,12 +159,7 @@ TreeInode::TreeInode(
 }
 
 TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
-    : TreeInode(
-          mount,
-          buildDirFromTree(
-              tree.get(),
-              mount->getLastCheckoutTime(),
-              mount->getInodeMap())) {}
+    : TreeInode(mount, saveDirFromTree(kRootNodeId, tree.get(), mount)) {}
 
 TreeInode::TreeInode(EdenMount* mount, Dir&& dir)
     : InodeBase(mount), contents_(std::move(dir)) {}
@@ -792,6 +784,17 @@ void TreeInode::saveOverlayDir(const Dir& contents) const {
 void TreeInode::saveOverlayDir(InodeNumber inodeNumber, const Dir& contents)
     const {
   return getOverlay()->saveOverlayDir(inodeNumber, contents);
+}
+
+TreeInode::Dir TreeInode::saveDirFromTree(
+    InodeNumber inodeNumber,
+    const Tree* tree,
+    EdenMount* mount) {
+  auto dir = buildDirFromTree(
+      tree, mount->getLastCheckoutTime(), mount->getInodeMap());
+  // buildDirFromTree just allocated inode numbers; they should be saved.
+  mount->getOverlay()->saveOverlayDir(inodeNumber, dir);
+  return dir;
 }
 
 TreeInode::Dir TreeInode::buildDirFromTree(
@@ -2727,16 +2730,8 @@ void TreeInode::saveOverlayPostCheckout(
                                       : "none")
                << " isMaterialized=" << isMaterialized;
 
-    if (contents->isMaterialized()) {
-      // If we are materialized, write out our state to the overlay.
-      // (It's possible our state is unchanged from what's already on disk,
-      // but for now we can't detect this, and just always write it out.)
-      saveOverlayDir(*contents);
-    } else {
-      // If we are not materialized now, but we were before we'll need to
-      // remove ourself from the overlay.  However, we wait to do this until
-      // later, after we have written out our parent's overlay data.
-    }
+    // Update the overlay to include the new entries, even if dematerialized.
+    saveOverlayDir(*contents);
   }
 
   if (deleteSelf) {
@@ -2777,13 +2772,6 @@ void TreeInode::saveOverlayPostCheckout(
         loc.parent->childDematerialized(
             ctx->renameLock(), loc.name, tree->getHash());
       }
-    }
-
-    // If we were dematerialized, remove our overlay data only after updating
-    // our parent.  This ensures that we always have overlay data on disk when
-    // our parent thinks we do.
-    if (!isMaterialized) {
-      getOverlay()->removeOverlayData(getNodeId());
     }
   }
 }

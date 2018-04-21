@@ -822,16 +822,6 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     CHECK(treeContentsLock)
         << "TreeInode::Dir lock was held prior to unloadInode!";
 
-    // If the tree is materialized, its state in the overlay should already be
-    // up-to-date.  If the tree is unlinked, it has no children and will never
-    // have children again, so there's no need to write it into the overlay.
-    if (!treeContentsLock->isMaterialized()) {
-      XLOG(DBG5) << "saving non-materialized tree " << asTree->getNodeId()
-                 << " (" << asTree->getLogPath() << ") to overlay";
-      mount_->getOverlay()->saveOverlayDir(
-          inode->getNodeId(), *treeContentsLock);
-    }
-
     // If the fuse refcount is non-zero we have to remember this inode.
     if (fuseCount > 0) {
       XLOG(DBG5) << "unloading tree inode " << inode->getNodeId()

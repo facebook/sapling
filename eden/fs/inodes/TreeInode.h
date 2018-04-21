@@ -634,6 +634,15 @@ class TreeInode : public InodeBase {
    */
   void saveOverlayDir(InodeNumber inodeNumber, const Dir& contents) const;
 
+  /**
+   * Converts a Tree to a Dir and saves it to the Overlay under the given inode
+   * number.
+   */
+  static Dir saveDirFromTree(
+    InodeNumber inodeNumber,
+    const Tree* tree,
+    EdenMount* mount);
+
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
   static Dir buildDirFromTree(

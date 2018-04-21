@@ -910,6 +910,65 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   EXPECT_FALSE(dirContents->isMaterialized());
 }
 
+TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("dir/sub/file1.txt", "contents1");
+  TestMount testMount{builder1};
+
+  // Prepare a second commit, changing dir/sub.
+  auto builder2 = FakeTreeBuilder{};
+  builder2.setFile("dir/sub/file2.txt", "contents2");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  // Load "dir/sub" on behalf of a FUSE connection.
+  auto subTree = testMount.getEdenMount()
+                     ->getInode(RelativePathPiece{"dir/sub"})
+                     .get(1ms)
+                     .asTreePtr();
+  auto dirInodeNumber = subTree->getParentBuggy()->getNodeId();
+  auto subInodeNumber = subTree->getNodeId();
+  subTree->incFuseRefcount();
+  subTree.reset();
+
+  // Checkout to a revision with a new dir/sub tree.  The old data should be
+  // removed from the overlay.
+  auto checkoutResult =
+      testMount.getEdenMount()->checkout(makeTestHash("2")).get(1ms);
+  EXPECT_EQ(0, checkoutResult.size());
+
+  testMount.remountGracefully();
+
+  // Try to load the same tree by its inode number and verify its parents have
+  // the same inode numbers.
+  subTree = testMount.getEdenMount()
+                ->getInodeMap()
+                ->lookupInode(subInodeNumber)
+                .get(1ms)
+                .asTreePtr();
+  EXPECT_EQ(dirInodeNumber, subTree->getParentBuggy()->getNodeId());
+  EXPECT_EQ(subInodeNumber, subTree->getNodeId());
+
+  auto subTree2 = testMount.getEdenMount()
+                      ->getInode(RelativePathPiece{"dir/sub"})
+                      .get(1ms)
+                      .asTreePtr();
+  EXPECT_EQ(dirInodeNumber, subTree2->getParentBuggy()->getNodeId());
+  EXPECT_EQ(subInodeNumber, subTree2->getNodeId());
+
+  testMount.getEdenMount()->getInodeMap()->decFuseRefcount(subInodeNumber);
+  subTree.reset();
+  subTree2.reset();
+
+  subTree = testMount.getEdenMount()
+                ->getInode(RelativePathPiece{"dir/sub"})
+                .get(1ms)
+                .asTreePtr();
+  EXPECT_EQ(dirInodeNumber, subTree->getParentBuggy()->getNodeId());
+  EXPECT_EQ(subInodeNumber, subTree->getNodeId());
+}
+
 // TODO:
 // - remove subdirectory
 //   - with no untracked/ignored files, it should get removed entirely
