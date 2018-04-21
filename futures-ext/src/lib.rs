@@ -18,11 +18,12 @@ extern crate futures;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
+extern crate tokio;
 extern crate tokio_core;
 extern crate tokio_io;
 
 use bytes::Bytes;
-use futures::{Async, Future, IntoFuture, Poll, Sink, Stream};
+use futures::{future, Async, Future, IntoFuture, Poll, Sink, Stream};
 use futures::sync::oneshot;
 use tokio_io::codec::{Decoder, Encoder};
 
@@ -379,6 +380,39 @@ macro_rules! try_boxfuture {
         Ok(t) => t,
         Err(e) => return ::futures::future::err(e.into()).boxify(),
     })
+}
+
+///  This method allows us to take synchronous code, schedule it on the default tokio thread pool
+/// and convert it to the future. Func can return anything that is convertable to a future, for
+/// example, Result
+///
+/// ```
+/// use std::{thread, time};
+///
+/// asynchronize(move || {
+///   thread::sleep(time::Duration::from_secs(5));
+///   Ok(())
+/// })
+/// ```
+pub fn asynchronize<Func, T, E, R>(f: Func) -> BoxFuture<T, E>
+where
+    Func: FnOnce() -> R + Send + 'static,
+    E: From<futures::Canceled> + Send + 'static,
+    R: IntoFuture<Item = T, Error = E> + 'static,
+    T: Send + 'static,
+    <R as IntoFuture>::Future: Send,
+{
+    let (tx, rx) = oneshot::channel();
+
+    let fut = future::lazy(f).then(|res| {
+        let _ = tx.send(res);
+        Ok(())
+    });
+
+    future::lazy(move || {
+        let _ = tokio::spawn(fut);
+        rx.from_err().and_then(|v| v)
+    }).boxify()
 }
 
 #[cfg(test)]
