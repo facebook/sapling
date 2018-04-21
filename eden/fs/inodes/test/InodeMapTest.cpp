@@ -16,6 +16,7 @@
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -278,6 +279,37 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   // self (correctly) at its new path now.
   EXPECT_EQ(
       RelativePathPiece{"a/b/x/d/file.txt"}, fileInode->getPath().value());
+}
+
+TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir1/file.txt", "contents");
+  builder.setFile("dir2/file.txt", "contents");
+  TestMount mount{builder};
+  auto edenMount = mount.getEdenMount();
+
+  auto root = edenMount->getRootInode();
+  auto dir1 = edenMount->getInode(RelativePathPiece{"dir1"}).get().asTreePtr();
+  auto dir2 = edenMount->getInode(RelativePathPiece{"dir2"}).get().asTreePtr();
+
+  auto dir1ino = dir1->getNodeId();
+  auto dir2ino = dir2->getNodeId();
+
+  dir1->unlink(PathComponentPiece{"file.txt"}).get();
+  dir2->unlink(PathComponentPiece{"file.txt"}).get();
+
+  // Test both having a positive and zero fuse reference counts.
+  dir2->incFuseRefcount();
+
+  root->rmdir(PathComponentPiece{"dir1"});
+  root->rmdir(PathComponentPiece{"dir2"});
+
+  dir1.reset();
+  dir2.reset();
+
+  edenMount->getInodeMap()->decFuseRefcount(dir2ino);
+  EXPECT_FALSE(edenMount->getOverlay()->hasOverlayData(dir1ino));
+  EXPECT_FALSE(edenMount->getOverlay()->hasOverlayData(dir2ino));
 }
 
 struct InodePersistenceTreeTest : ::testing::Test {
