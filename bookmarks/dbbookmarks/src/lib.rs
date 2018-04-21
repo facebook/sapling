@@ -38,6 +38,7 @@ use std::collections::{HashMap, HashSet};
 use std::result;
 use std::sync::{Arc, Mutex, MutexGuard};
 
+#[derive(Clone)]
 pub struct SqliteDbBookmarks {
     connection: Arc<Mutex<SqliteConnection>>,
 }
@@ -132,10 +133,7 @@ impl Bookmarks for SqliteDbBookmarks {
     }
 
     fn create_transaction(&self, repoid: &RepositoryId) -> Box<Transaction> {
-        Box::new(SqliteBookmarksTransaction::new(
-            self.connection.clone(),
-            repoid,
-        ))
+        Box::new(SqliteBookmarksTransaction::new(self.clone(), repoid))
     }
 }
 
@@ -145,7 +143,7 @@ struct BookmarkSetData {
 }
 
 struct SqliteBookmarksTransaction {
-    connection: Arc<Mutex<SqliteConnection>>,
+    db: SqliteDbBookmarks,
     force_sets: HashMap<AsciiString, DChangesetId>,
     creates: HashMap<AsciiString, DChangesetId>,
     sets: HashMap<AsciiString, BookmarkSetData>,
@@ -155,9 +153,9 @@ struct SqliteBookmarksTransaction {
 }
 
 impl SqliteBookmarksTransaction {
-    fn new(connection: Arc<Mutex<SqliteConnection>>, repo_id: &RepositoryId) -> Self {
+    fn new(db: SqliteDbBookmarks, repo_id: &RepositoryId) -> Self {
         Self {
-            connection: connection,
+            db,
             force_sets: HashMap::new(),
             creates: HashMap::new(),
             sets: HashMap::new(),
@@ -221,7 +219,9 @@ impl Transaction for SqliteBookmarksTransaction {
     }
 
     fn commit(&self) -> BoxFuture<(), Error> {
-        let connection = self.connection.lock().expect("lock poisoned");
+        #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+        let connection = try_boxfuture!(self.db.get_conn());
+
         let txnres = connection.transaction::<_, Error, _>(|| {
             replace_into(schema::bookmarks::table)
                 .values(&create_bookmarks_rows(self.repo_id, &self.force_sets))
