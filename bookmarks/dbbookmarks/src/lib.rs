@@ -9,6 +9,7 @@
 
 extern crate ascii;
 extern crate bookmarks;
+extern crate db;
 #[macro_use]
 extern crate diesel;
 #[macro_use]
@@ -26,13 +27,15 @@ mod models;
 
 use ascii::AsciiString;
 use bookmarks::{Bookmarks, Transaction};
-use diesel::{delete, insert_into, replace_into, update, SqliteConnection};
+use diesel::{delete, insert_into, replace_into, update, MysqlConnection, SqliteConnection};
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
+use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use failure::{Error, Result};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
+use db::ConnectionParams;
 use mercurial_types::{DChangesetId, RepositoryId};
 use std::collections::{HashMap, HashSet};
 use std::result;
@@ -78,193 +81,238 @@ impl SqliteDbBookmarks {
     }
 }
 
-impl Bookmarks for SqliteDbBookmarks {
-    fn get(
-        &self,
-        name: &AsciiString,
-        repo_id: &RepositoryId,
-    ) -> BoxFuture<Option<DChangesetId>, Error> {
-        #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
-        let connection = try_boxfuture!(self.get_conn());
+#[derive(Clone)]
+pub struct MysqlDbBookmarks {
+    pool: Pool<ConnectionManager<MysqlConnection>>,
+}
 
-        let name = name.as_str().to_string();
-        schema::bookmarks::table
-            .filter(schema::bookmarks::repo_id.eq(repo_id))
-            .filter(schema::bookmarks::name.eq(name))
-            .select(schema::bookmarks::changeset_id)
-            .first::<DChangesetId>(&*connection)
-            .optional()
-            .into_future()
-            .from_err()
-            .boxify()
+impl MysqlDbBookmarks {
+    pub fn open(params: ConnectionParams) -> Result<Self> {
+        let url = params.to_diesel_url()?;
+        let manager = ConnectionManager::new(url);
+        let pool = Pool::builder()
+            .max_size(10)
+            .min_idle(Some(1))
+            .build(manager)?;
+        Ok(Self { pool })
     }
 
-    fn list_by_prefix(
-        &self,
-        prefix: &AsciiString,
-        repo_id: &RepositoryId,
-    ) -> BoxStream<(AsciiString, DChangesetId), Error> {
-        #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
-        let connection = match self.get_conn() {
-            Ok(conn) => conn,
-            Err(err) => {
-                return stream::once(err).boxify();
-            }
-        };
-
-        let prefix = prefix.as_str().to_string();
-        let query = schema::bookmarks::table
-            .filter(schema::bookmarks::repo_id.eq(repo_id))
-            .filter(schema::bookmarks::name.like(format!("{}%", prefix)));
-
-        query
-            .get_results::<models::BookmarkRow>(&*connection)
-            .into_future()
-            .and_then(|bookmarks| {
-                let bookmarks = bookmarks
-                    .into_iter()
-                    .map(|row| (row.name, row.changeset_id));
-                Ok(stream::iter_ok(bookmarks).boxify())
-            })
-            .from_err()
-            .flatten_stream()
-            .and_then(|entry| Ok((AsciiString::from_ascii(entry.0)?, entry.1)))
-            .boxify()
+    pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
+        let params = db::create_test_db(prefix)?;
+        Self::create(params)
     }
 
-    fn create_transaction(&self, repoid: &RepositoryId) -> Box<Transaction> {
-        Box::new(SqliteBookmarksTransaction::new(self.clone(), repoid))
+    fn create(params: ConnectionParams) -> Result<Self> {
+        let changesets = Self::open(params)?;
+
+        let up_query = include_str!("../schemas/mysql-bookmarks.sql");
+        changesets.pool.get()?.batch_execute(&up_query)?;
+
+        Ok(changesets)
+    }
+
+    fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
+        self.pool.get().map_err(Error::from)
     }
 }
+
+macro_rules! impl_bookmarks {
+    ($struct: ty, $transaction_struct: ident) => {
+        impl Bookmarks for $struct {
+            fn get(
+                &self,
+                name: &AsciiString,
+                repo_id: &RepositoryId,
+            ) -> BoxFuture<Option<DChangesetId>, Error> {
+                #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+                let connection = try_boxfuture!(self.get_conn());
+
+                let name = name.as_str().to_string();
+                schema::bookmarks::table
+                    .filter(schema::bookmarks::repo_id.eq(repo_id))
+                    .filter(schema::bookmarks::name.eq(name))
+                    .select(schema::bookmarks::changeset_id)
+                    .first::<DChangesetId>(&*connection)
+                    .optional()
+                    .into_future()
+                    .from_err()
+                    .boxify()
+            }
+
+            fn list_by_prefix(
+                &self,
+                prefix: &AsciiString,
+                repo_id: &RepositoryId,
+            ) -> BoxStream<(AsciiString, DChangesetId), Error> {
+                #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+                let connection = match self.get_conn() {
+                    Ok(conn) => conn,
+                    Err(err) => {
+                        return stream::once(Err(err)).boxify();
+                    },
+                };
+
+                let prefix = prefix.as_str().to_string();
+                let query = schema::bookmarks::table
+                    .filter(schema::bookmarks::repo_id.eq(repo_id))
+                    .filter(schema::bookmarks::name.like(format!("{}%", prefix)));
+
+                query
+                    .get_results::<models::BookmarkRow>(&*connection)
+                    .into_future()
+                    .and_then(|bookmarks| {
+                        let bookmarks = bookmarks
+                            .into_iter()
+                            .map(|row| (row.name, row.changeset_id));
+                        Ok(stream::iter_ok(bookmarks).boxify())
+                    })
+                    .from_err()
+                    .flatten_stream()
+                    .and_then(|entry| Ok((AsciiString::from_ascii(entry.0)?, entry.1)))
+                    .boxify()
+            }
+
+            fn create_transaction(&self, repoid: &RepositoryId) -> Box<Transaction> {
+                Box::new($transaction_struct::new(
+                    self.clone(),
+                    repoid,
+                ))
+            }
+        }
+
+        struct $transaction_struct {
+            db: $struct,
+            force_sets: HashMap<AsciiString, DChangesetId>,
+            creates: HashMap<AsciiString, DChangesetId>,
+            sets: HashMap<AsciiString, BookmarkSetData>,
+            force_deletes: HashSet<AsciiString>,
+            deletes: HashMap<AsciiString, DChangesetId>,
+            repo_id: RepositoryId,
+        }
+
+        impl $transaction_struct {
+            fn new(db: $struct, repo_id: &RepositoryId) -> Self {
+                Self {
+                    db,
+                    force_sets: HashMap::new(),
+                    creates: HashMap::new(),
+                    sets: HashMap::new(),
+                    force_deletes: HashSet::new(),
+                    deletes: HashMap::new(),
+                    repo_id: *repo_id,
+                }
+            }
+
+            fn check_if_bookmark_already_used(&self, key: &AsciiString) -> Result<()> {
+                if self.creates.contains_key(key) || self.force_sets.contains_key(key)
+                    || self.sets.contains_key(key) || self.force_deletes.contains(key)
+                    || self.deletes.contains_key(key)
+                {
+                    bail_msg!("{} bookmark was already used", key);
+                }
+                Ok(())
+            }
+        }
+
+        impl Transaction for $transaction_struct {
+            fn update(
+                &mut self,
+                key: &AsciiString,
+                new_cs: &DChangesetId,
+                old_cs: &DChangesetId,
+            ) -> Result<()> {
+                self.check_if_bookmark_already_used(key)?;
+                self.sets.insert(
+                    key.clone(),
+                    BookmarkSetData {
+                        new_cs: *new_cs,
+                        old_cs: *old_cs,
+                    },
+                );
+                Ok(())
+            }
+
+            fn create(&mut self, key: &AsciiString, new_cs: &DChangesetId) -> Result<()> {
+                self.check_if_bookmark_already_used(key)?;
+                self.creates.insert(key.clone(), *new_cs);
+                Ok(())
+            }
+
+            fn force_set(&mut self, key: &AsciiString, new_cs: &DChangesetId) -> Result<()> {
+                self.check_if_bookmark_already_used(key)?;
+                self.force_sets.insert(key.clone(), *new_cs);
+                Ok(())
+            }
+
+            fn delete(&mut self, key: &AsciiString, old_cs: &DChangesetId) -> Result<()> {
+                self.check_if_bookmark_already_used(key)?;
+                self.deletes.insert(key.clone(), *old_cs);
+                Ok(())
+            }
+
+            fn force_delete(&mut self, key: &AsciiString) -> Result<()> {
+                self.check_if_bookmark_already_used(key)?;
+                self.force_deletes.insert(key.clone());
+                Ok(())
+            }
+
+            fn commit(&self) -> BoxFuture<(), Error> {
+                #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+                let connection = try_boxfuture!(self.db.get_conn());
+
+                let txnres = connection.transaction::<_, Error, _>(|| {
+                    replace_into(schema::bookmarks::table)
+                        .values(&create_bookmarks_rows(self.repo_id, &self.force_sets))
+                        .execute(&*connection)?;
+
+                    insert_into(schema::bookmarks::table)
+                        .values(&create_bookmarks_rows(self.repo_id, &self.creates))
+                        .execute(&*connection)?;
+
+                    for (key, &BookmarkSetData { new_cs, old_cs }) in self.sets.iter() {
+                        let key = key.as_str().to_string();
+                        let num_affected_rows = update(
+                            schema::bookmarks::table
+                                .filter(schema::bookmarks::name.eq(key.clone()))
+                                .filter(schema::bookmarks::changeset_id.eq(old_cs)),
+                        ).set(schema::bookmarks::changeset_id.eq(new_cs))
+                            .execute(&*connection)?;
+                        if num_affected_rows != 1 {
+                            bail_msg!("cannot update bookmark {}", key);
+                        }
+                    }
+
+                    for key in self.force_deletes.iter() {
+                        let key = key.as_str().to_string();
+                        delete(schema::bookmarks::table.filter(schema::bookmarks::name.eq(key)))
+                            .execute(&*connection)?;
+                    }
+
+                    for (key, old_cs) in self.deletes.iter() {
+                        let key = key.as_str().to_string();
+                        let num_deleted_rows = delete(
+                            schema::bookmarks::table
+                                .filter(schema::bookmarks::name.eq(key.clone()))
+                                .filter(schema::bookmarks::changeset_id.eq(old_cs)),
+                        ).execute(&*connection)?;
+                        if num_deleted_rows != 1 {
+                            bail_msg!("cannot delete bookmark {}", key);
+                        }
+                    }
+                    Ok(())
+                });
+                future::result(txnres).from_err().boxify()
+            }
+        }
+    }
+}
+
+impl_bookmarks!(SqliteDbBookmarks, SqliteBookmarksTransaction);
+impl_bookmarks!(MysqlDbBookmarks, MysqlBookmarksTransaction);
 
 struct BookmarkSetData {
     new_cs: DChangesetId,
     old_cs: DChangesetId,
-}
-
-struct SqliteBookmarksTransaction {
-    db: SqliteDbBookmarks,
-    force_sets: HashMap<AsciiString, DChangesetId>,
-    creates: HashMap<AsciiString, DChangesetId>,
-    sets: HashMap<AsciiString, BookmarkSetData>,
-    force_deletes: HashSet<AsciiString>,
-    deletes: HashMap<AsciiString, DChangesetId>,
-    repo_id: RepositoryId,
-}
-
-impl SqliteBookmarksTransaction {
-    fn new(db: SqliteDbBookmarks, repo_id: &RepositoryId) -> Self {
-        Self {
-            db,
-            force_sets: HashMap::new(),
-            creates: HashMap::new(),
-            sets: HashMap::new(),
-            force_deletes: HashSet::new(),
-            deletes: HashMap::new(),
-            repo_id: *repo_id,
-        }
-    }
-
-    fn check_if_bookmark_already_used(&self, key: &AsciiString) -> Result<()> {
-        if self.creates.contains_key(key) || self.force_sets.contains_key(key)
-            || self.sets.contains_key(key) || self.force_deletes.contains(key)
-            || self.deletes.contains_key(key)
-        {
-            bail_msg!("{} bookmark was already used", key);
-        }
-        Ok(())
-    }
-}
-
-impl Transaction for SqliteBookmarksTransaction {
-    fn update(
-        &mut self,
-        key: &AsciiString,
-        new_cs: &DChangesetId,
-        old_cs: &DChangesetId,
-    ) -> Result<()> {
-        self.check_if_bookmark_already_used(key)?;
-        self.sets.insert(
-            key.clone(),
-            BookmarkSetData {
-                new_cs: *new_cs,
-                old_cs: *old_cs,
-            },
-        );
-        Ok(())
-    }
-
-    fn create(&mut self, key: &AsciiString, new_cs: &DChangesetId) -> Result<()> {
-        self.check_if_bookmark_already_used(key)?;
-        self.creates.insert(key.clone(), *new_cs);
-        Ok(())
-    }
-
-    fn force_set(&mut self, key: &AsciiString, new_cs: &DChangesetId) -> Result<()> {
-        self.check_if_bookmark_already_used(key)?;
-        self.force_sets.insert(key.clone(), *new_cs);
-        Ok(())
-    }
-
-    fn delete(&mut self, key: &AsciiString, old_cs: &DChangesetId) -> Result<()> {
-        self.check_if_bookmark_already_used(key)?;
-        self.deletes.insert(key.clone(), *old_cs);
-        Ok(())
-    }
-
-    fn force_delete(&mut self, key: &AsciiString) -> Result<()> {
-        self.check_if_bookmark_already_used(key)?;
-        self.force_deletes.insert(key.clone());
-        Ok(())
-    }
-
-    fn commit(&self) -> BoxFuture<(), Error> {
-        #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
-        let connection = try_boxfuture!(self.db.get_conn());
-
-        let txnres = connection.transaction::<_, Error, _>(|| {
-            replace_into(schema::bookmarks::table)
-                .values(&create_bookmarks_rows(self.repo_id, &self.force_sets))
-                .execute(&*connection)?;
-
-            insert_into(schema::bookmarks::table)
-                .values(&create_bookmarks_rows(self.repo_id, &self.creates))
-                .execute(&*connection)?;
-
-            for (key, &BookmarkSetData { new_cs, old_cs }) in self.sets.iter() {
-                let key = key.as_str().to_string();
-                let num_affected_rows = update(
-                    schema::bookmarks::table
-                        .filter(schema::bookmarks::name.eq(key.clone()))
-                        .filter(schema::bookmarks::changeset_id.eq(old_cs)),
-                ).set(schema::bookmarks::changeset_id.eq(new_cs))
-                    .execute(&*connection)?;
-                if num_affected_rows != 1 {
-                    bail_msg!("cannot update bookmark {}", key);
-                }
-            }
-
-            for key in self.force_deletes.iter() {
-                let key = key.as_str().to_string();
-                delete(schema::bookmarks::table.filter(schema::bookmarks::name.eq(key)))
-                    .execute(&*connection)?;
-            }
-
-            for (key, old_cs) in self.deletes.iter() {
-                let key = key.as_str().to_string();
-                let num_deleted_rows = delete(
-                    schema::bookmarks::table
-                        .filter(schema::bookmarks::name.eq(key.clone()))
-                        .filter(schema::bookmarks::changeset_id.eq(old_cs)),
-                ).execute(&*connection)?;
-                if num_deleted_rows != 1 {
-                    bail_msg!("cannot delete bookmark {}", key);
-                }
-            }
-            Ok(())
-        });
-        future::result(txnres).from_err().boxify()
-    }
 }
 
 fn create_bookmarks_rows(
@@ -278,278 +326,4 @@ fn create_bookmarks_rows(
             changeset_id: *changeset_id,
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mercurial_types_mocks::nodehash::{ONES_CSID, TWOS_CSID};
-    use mercurial_types_mocks::repo::REPO_ZERO;
-
-    #[test]
-    fn test_simple_unconditional_set_get() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_correct = AsciiString::from_ascii("book".to_string()).unwrap();
-        let name_incorrect = AsciiString::from_ascii("book2".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.force_set(&name_correct, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-
-        assert_eq!(
-            bookmarks.get(&name_correct, &REPO_ZERO).wait().unwrap(),
-            Some(ONES_CSID)
-        );
-        assert_eq!(
-            bookmarks.get(&name_incorrect, &REPO_ZERO).wait().unwrap(),
-            None
-        );
-    }
-
-    #[test]
-    fn test_multi_unconditional_set_get() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-        let name_2 = AsciiString::from_ascii("book2".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.force_set(&name_1, &ONES_CSID).unwrap();
-        txn.force_set(&name_2, &TWOS_CSID).unwrap();
-        txn.commit().wait().unwrap();
-
-        assert_eq!(
-            bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(),
-            Some(ONES_CSID)
-        );
-        assert_eq!(
-            bookmarks.get(&name_2, &REPO_ZERO).wait().unwrap(),
-            Some(TWOS_CSID)
-        );
-    }
-
-    #[test]
-    fn test_unconditional_set_same_bookmark() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.force_set(&name_1, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.force_set(&name_1, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-
-        assert_eq!(
-            bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(),
-            Some(ONES_CSID)
-        );
-    }
-
-    #[test]
-    fn test_simple_create() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.create(&name_1, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-
-        assert_eq!(
-            bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(),
-            Some(ONES_CSID)
-        );
-    }
-
-    #[test]
-    fn test_create_already_existing() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.create(&name_1, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.create(&name_1, &ONES_CSID).unwrap();
-        assert!(txn.commit().wait().is_err());
-    }
-
-    #[test]
-    fn test_create_change_same_bookmark() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.create(&name_1, &ONES_CSID).unwrap();
-        assert!(txn.force_set(&name_1, &ONES_CSID).is_err());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.force_set(&name_1, &ONES_CSID).unwrap();
-        assert!(txn.create(&name_1, &ONES_CSID).is_err());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.force_set(&name_1, &ONES_CSID).unwrap();
-        assert!(txn.update(&name_1, &TWOS_CSID, &ONES_CSID).is_err());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.update(&name_1, &TWOS_CSID, &ONES_CSID).unwrap();
-        assert!(txn.force_set(&name_1, &ONES_CSID).is_err());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.update(&name_1, &TWOS_CSID, &ONES_CSID).unwrap();
-        assert!(txn.force_delete(&name_1).is_err());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.force_delete(&name_1).unwrap();
-        assert!(txn.update(&name_1, &TWOS_CSID, &ONES_CSID).is_err());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.delete(&name_1, &ONES_CSID).unwrap();
-        assert!(txn.update(&name_1, &TWOS_CSID, &ONES_CSID).is_err());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.update(&name_1, &TWOS_CSID, &ONES_CSID).unwrap();
-        assert!(txn.delete(&name_1, &ONES_CSID).is_err());
-    }
-
-    #[test]
-    fn test_simple_update_bookmark() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.create(&name_1, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.update(&name_1, &TWOS_CSID, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-
-        assert_eq!(
-            bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(),
-            Some(TWOS_CSID)
-        );
-    }
-
-    #[test]
-    fn test_update_non_existent_bookmark() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.update(&name_1, &TWOS_CSID, &ONES_CSID).unwrap();
-        assert!(txn.commit().wait().is_err());
-    }
-
-    #[test]
-    fn test_update_existing_bookmark_with_incorrect_commit() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.create(&name_1, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.update(&name_1, &ONES_CSID, &TWOS_CSID).unwrap();
-        assert!(txn.commit().wait().is_err());
-    }
-
-    #[test]
-    fn test_force_delete() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.force_delete(&name_1).unwrap();
-        txn.commit().wait().unwrap();
-
-        assert_eq!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(), None);
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.create(&name_1, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-        assert!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap().is_some());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.force_delete(&name_1).unwrap();
-        txn.commit().wait().unwrap();
-
-        assert_eq!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(), None);
-    }
-
-    #[test]
-    fn test_delete() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.delete(&name_1, &ONES_CSID).unwrap();
-        assert!(txn.commit().wait().is_err());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.create(&name_1, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-        assert!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap().is_some());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.delete(&name_1, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-    }
-
-    #[test]
-    fn test_delete_incorrect_hash() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.create(&name_1, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-        assert!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap().is_some());
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.delete(&name_1, &TWOS_CSID).unwrap();
-        assert!(txn.commit().wait().is_err());
-    }
-
-    #[test]
-    fn test_list_by_prefix() {
-        let bookmarks = SqliteDbBookmarks::in_memory().unwrap();
-        let name_1 = AsciiString::from_ascii("book1".to_string()).unwrap();
-        let name_2 = AsciiString::from_ascii("book2".to_string()).unwrap();
-
-        let mut txn = bookmarks.create_transaction(&REPO_ZERO);
-        txn.create(&name_1, &ONES_CSID).unwrap();
-        txn.create(&name_2, &ONES_CSID).unwrap();
-        txn.commit().wait().unwrap();
-
-        let prefix = AsciiString::from_ascii("book".to_string()).unwrap();
-        assert_eq!(
-            bookmarks
-                .list_by_prefix(&prefix, &REPO_ZERO)
-                .collect()
-                .wait()
-                .unwrap(),
-            vec![(name_1.clone(), ONES_CSID), (name_2.clone(), ONES_CSID)]
-        );
-
-        assert_eq!(
-            bookmarks
-                .list_by_prefix(&name_1, &REPO_ZERO)
-                .collect()
-                .wait()
-                .unwrap(),
-            vec![(name_1.clone(), ONES_CSID)]
-        );
-
-        assert_eq!(
-            bookmarks
-                .list_by_prefix(&name_2, &REPO_ZERO)
-                .collect()
-                .wait()
-                .unwrap(),
-            vec![(name_2, ONES_CSID)]
-        );
-    }
 }
