@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(try_from, never_type, use_nested_groups)]
+#![feature(try_from, never_type)]
 
 extern crate db;
 #[macro_use]
