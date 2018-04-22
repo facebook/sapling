@@ -9,6 +9,7 @@ use std::mem;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
+use std::usize;
 
 use ascii::AsciiString;
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
@@ -24,7 +25,7 @@ use time_ext::DurationExt;
 use tokio_timer::Timer;
 use uuid::Uuid;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, CachingBlobstore};
 use bookmarks::{self, Bookmarks};
 use changesets::{ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
 use dbbookmarks::SqliteDbBookmarks;
@@ -190,11 +191,14 @@ impl BlobRepo {
         remote: &Remote,
         repoid: RepositoryId,
         db_address: &str,
+        blobstore_cache_size: usize,
     ) -> Result<Self> {
         let heads = MemHeads::new();
         // TODO(stash): use real bookmarks
         let bookmarks = SqliteDbBookmarks::in_memory()?;
         let blobstore = ManifoldBlob::new_with_prefix(bucket.to_string(), prefix, remote);
+        let blobstore =
+            CachingBlobstore::new(Arc::new(blobstore), usize::MAX, blobstore_cache_size);
 
         // TODO(stash): T28429403 use local region first, fallback to master if not found
         let connection_params = get_connection_params(

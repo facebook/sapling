@@ -115,6 +115,7 @@ impl OpenableRepoType for RepoType {
                 ref manifold_bucket,
                 ref prefix,
                 ref db_address,
+                ref blobstore_cache_size,
                 ..
             } => BlobRepo::new_test_manifold(
                 logger,
@@ -123,6 +124,7 @@ impl OpenableRepoType for RepoType {
                 remote,
                 repoid,
                 &db_address,
+                *blobstore_cache_size,
             )?,
             TestBlobDelayRocks(ref path, mean, stddev) => {
                 // We take in an arithmetic mean and stddev, and deduce a log normal

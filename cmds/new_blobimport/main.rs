@@ -197,6 +197,7 @@ fn main() {
             --repo_id <repo_id>        'ID of the newly imported repo'
             --manifold-bucket [BUCKET] 'manifold bucket'
             --db-address [address]     'address of a db. Used only for manifold blobstore'
+            --blobstore-cache-size [SIZE] 'size of the blobstore cache'
             [OUTPUT]                   'Blobstore output'
         "#,
         )
@@ -288,6 +289,10 @@ fn main() {
                 matches
                     .value_of("db-address")
                     .expect("--db-address is not specified"),
+                matches
+                    .value_of("blobstore-cache-size")
+                    .map(|val| val.parse::<usize>().expect("cache size must be integer"))
+                    .unwrap_or(100_000_000),
             ).expect("failed to create manifold blobrepo")
         }
         bad => panic!("unexpected blobstore type: {}", bad),

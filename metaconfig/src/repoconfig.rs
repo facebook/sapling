@@ -56,6 +56,11 @@ pub enum RepoType {
         path: PathBuf,
         /// db_address is a string that identifies the sql db to connect to.
         db_address: String,
+        /// Size of the blobstore cache. If not set in the config, then cache size is set to
+        /// a default value.
+        /// Currently we need to set separate cache size for each cache (blobstore, filenodes etc)
+        /// TODO(stash): have single cache size for all caches
+        blobstore_cache_size: usize,
     },
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database, and a log-normal delay is applied to access to simulate a remote store
@@ -182,6 +187,7 @@ struct RawRepoConfig {
     scuba_table: Option<String>,
     delay_mean: Option<u64>,
     delay_stddev: Option<u64>,
+    blobstore_cache_size: Option<usize>,
 }
 
 /// Types of repositories supported
@@ -212,6 +218,7 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
                     prefix: this.manifold_prefix.unwrap_or("".into()),
                     path: this.path,
                     db_address,
+                    blobstore_cache_size: this.blobstore_cache_size.unwrap_or(100_000_000),
                 }
             }
             TestBlobDelayRocks => RepoType::TestBlobDelayRocks(
