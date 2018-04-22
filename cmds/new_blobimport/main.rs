@@ -198,6 +198,7 @@ fn main() {
             --manifold-bucket [BUCKET] 'manifold bucket'
             --db-address [address]     'address of a db. Used only for manifold blobstore'
             --blobstore-cache-size [SIZE] 'size of the blobstore cache'
+            --changesets-cache-size [SIZE] 'size of the changesets cache'
             [OUTPUT]                   'Blobstore output'
         "#,
         )
@@ -291,6 +292,10 @@ fn main() {
                     .expect("--db-address is not specified"),
                 matches
                     .value_of("blobstore-cache-size")
+                    .map(|val| val.parse::<usize>().expect("cache size must be integer"))
+                    .unwrap_or(100_000_000),
+                matches
+                    .value_of("changesets-cache-size")
                     .map(|val| val.parse::<usize>().expect("cache size must be integer"))
                     .unwrap_or(100_000_000),
             ).expect("failed to create manifold blobrepo")

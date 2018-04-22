@@ -48,6 +48,7 @@
 #![feature(try_from)]
 
 extern crate ascii;
+extern crate asyncmemo;
 extern crate bincode;
 extern crate bytes;
 #[macro_use]
@@ -113,3 +114,15 @@ pub use errors::{Error, ErrorKind};
 
 #[cfg(test)]
 mod test;
+
+impl asyncmemo::Weight for RepositoryId {
+    fn get_weight(&self) -> usize {
+        std::mem::size_of::<RepositoryId>()
+    }
+}
+
+impl asyncmemo::Weight for DChangesetId {
+    fn get_weight(&self) -> usize {
+        std::mem::size_of::<DChangesetId>()
+    }
+}

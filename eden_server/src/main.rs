@@ -566,6 +566,7 @@ fn main() {
                 .expect("cannot get remote handle for manifold");
             // TODO(stash): bump it when we need it
             let blobstore_cache_size = 100_000_000;
+            let changesets_cache_size = 100_000_000;
             start_server(
                 &config.addr,
                 config.reponame,
@@ -577,6 +578,7 @@ fn main() {
                     RepositoryId::new(config.repoid),
                     &config.db_address.expect("db tier needs to be specified"),
                     blobstore_cache_size,
+                    changesets_cache_size,
                 ).expect("couldn't open blob state"),
                 root_logger.clone(),
                 config.ssl,

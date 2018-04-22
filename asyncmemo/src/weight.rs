@@ -59,3 +59,14 @@ impl Weight for Bytes {
         self.len()
     }
 }
+
+impl<A, B> Weight for (A, B)
+where
+    A: Weight,
+    B: Weight,
+{
+    #[inline]
+    fn get_weight(&self) -> usize {
+        self.0.get_weight() + self.1.get_weight()
+    }
+}

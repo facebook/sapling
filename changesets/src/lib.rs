@@ -7,11 +7,15 @@
 #![deny(warnings)]
 #![feature(try_from, never_type)]
 
+extern crate asyncmemo;
 #[macro_use]
 extern crate diesel;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate heapsize;
+#[macro_use]
+extern crate heapsize_derive;
 extern crate tokio;
 
 extern crate db;
@@ -23,6 +27,7 @@ use std::convert::TryFrom;
 use std::result;
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use asyncmemo::{Asyncmemo, Filler, Weight};
 use diesel::{insert_into, Connection, MysqlConnection, SqliteConnection};
 use diesel::backend::Backend;
 use diesel::connection::SimpleConnection;
@@ -47,7 +52,7 @@ pub use errors::*;
 use models::{ChangesetInsertRow, ChangesetParentRow, ChangesetRow};
 use schema::{changesets, csparents};
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, HeapSizeOf, PartialEq)]
 pub struct ChangesetEntry {
     pub repo_id: RepositoryId,
     pub cs_id: DChangesetId,
@@ -73,6 +78,75 @@ pub trait Changesets: Send + Sync {
         repo_id: RepositoryId,
         cs_id: DChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error>;
+}
+
+pub struct CachingChangests {
+    changesets: Arc<Changesets>,
+    cache: asyncmemo::Asyncmemo<ChangesetsFiller>,
+}
+
+impl CachingChangests {
+    pub fn new(changesets: Arc<Changesets>, sizelimit: usize) -> Self {
+        let cache = asyncmemo::Asyncmemo::with_limits(
+            ChangesetsFiller::new(changesets.clone()),
+            std::usize::MAX,
+            sizelimit,
+        );
+        Self { changesets, cache }
+    }
+}
+
+impl Changesets for CachingChangests {
+    fn add(&self, cs: ChangesetInsert) -> BoxFuture<(), Error> {
+        self.changesets.add(cs)
+    }
+
+    fn get(
+        &self,
+        repo_id: RepositoryId,
+        cs_id: DChangesetId,
+    ) -> BoxFuture<Option<ChangesetEntry>, Error> {
+        self.cache
+            .get((repo_id, cs_id))
+            .then(|val| match val {
+                Ok(val) => Ok(Some(val)),
+                Err(Some(err)) => Err(err),
+                Err(None) => Ok(None),
+            })
+            .boxify()
+    }
+}
+
+pub struct ChangesetsFiller {
+    changesets: Arc<Changesets>,
+}
+
+impl ChangesetsFiller {
+    fn new(changesets: Arc<Changesets>) -> Self {
+        ChangesetsFiller { changesets }
+    }
+}
+
+impl Filler for ChangesetsFiller {
+    type Key = (RepositoryId, DChangesetId);
+    type Value = Box<Future<Item = ChangesetEntry, Error = Option<Error>> + Send>;
+
+    fn fill(&self, _cache: &Asyncmemo<Self>, &(ref repo_id, ref cs_id): &Self::Key) -> Self::Value {
+        self.changesets
+            .get(*repo_id, *cs_id)
+            .map_err(|err| Some(err))
+            .and_then(|res| match res {
+                Some(val) => Ok(val),
+                None => Err(None),
+            })
+            .boxify()
+    }
+}
+
+impl Weight for ChangesetEntry {
+    fn get_weight(&self) -> usize {
+        self.repo_id.get_weight() + self.cs_id.get_weight() + self.gen.get_weight()
+    }
 }
 
 #[derive(Clone)]

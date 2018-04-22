@@ -27,7 +27,7 @@ use uuid::Uuid;
 
 use blobstore::{Blobstore, CachingBlobstore};
 use bookmarks::{self, Bookmarks};
-use changesets::{ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
+use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
 use dbbookmarks::SqliteDbBookmarks;
 use delayblob::DelayBlob;
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
@@ -192,6 +192,7 @@ impl BlobRepo {
         repoid: RepositoryId,
         db_address: &str,
         blobstore_cache_size: usize,
+        changesets_cache_size: usize,
     ) -> Result<Self> {
         let heads = MemHeads::new();
         // TODO(stash): use real bookmarks
@@ -211,6 +212,8 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let changesets = MysqlChangesets::open(connection_params)
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+
+        let changesets = CachingChangests::new(Arc::new(changesets), changesets_cache_size);
 
         Ok(Self::new(
             logger,
