@@ -52,34 +52,6 @@ def get_p4_file_content(storepath, p4filelog, p4cl, skipp4revcheck=False):
         'error generating file content %d %s' % (p4cl.cl, p4path)
     )
 
-def get_filelogs_to_sync(ui, client, repo, p1ctx, cl, p4filelogs):
-    # to categorize the list of p4 filelogs in current client spec.
-    # it returns two lists:
-    # - reusep4filelogs: each item in this list is a filename in hg.
-    #   it represents files present in the parent's commit
-    # - addedp4filelogs: each item in this list is a tuple containing
-    #   p4filelog and its corresponding filename in hg.
-    #   it represents files not in the parent's commit
-    p1 = repo[p1ctx.node()]
-    hgfilelogs = p1.manifest().copy()
-    p4flmapping = {p4fl.depotfile: p4fl for p4fl in p4filelogs}
-    addedp4filelogs = []
-    reusep4filelogs = []
-    addedp4flheadcls = set()
-
-    ui.debug('%d p4 filelogs to read\n' % (len(p4filelogs)))
-    mapping = p4.parse_where_multiple(client, p4flmapping.keys())
-    for p4file, localfile in mapping.items():
-        if localfile in hgfilelogs:
-            reusep4filelogs.append(localfile)
-        else:
-            p4fl = p4flmapping[p4file]
-            addedp4filelogs.append((p4fl, localfile))
-            addedp4flheadcls.add(p4fl.getheadchangelist(cl))
-    ui.debug('%d new filelogs and %s reuse filelogs\n' % (
-        len(addedp4filelogs), len(reusep4filelogs)))
-    return addedp4filelogs, addedp4flheadcls, reusep4filelogs
-
 class ImportSet(object):
     def __init__(self, repo, client, changelists, filelist, storagepath,
             isbranchpoint=False):
@@ -232,59 +204,6 @@ class ChangeManifestImporter(object):
                 mp1, changed, desc, tr, cp1, cp2,
                 user=username, date=date,
                 extra={'p4changelist': cl})
-
-class SyncChangeManifestImporter(ChangeManifestImporter):
-    def __init__(self, ui, repo, client, cl, p1ctx):
-        self._ui = ui
-        self._repo = repo
-        self._client = client
-        self._cl = cl
-        self._p1ctx = p1ctx
-
-    def creategen(self, tr, fileinfo, reusefilelogs):
-        mrevlog = self._repo.manifestlog._revlog
-        clog = self._repo.changelog
-        cp1 = self._p1ctx.node()
-        cp2 = nullid
-        p1 = self._repo[cp1]
-        mp1 = p1.manifestnode()
-        mp2 = nullid
-        mf = manifest.manifestdict()
-        p1mf = p1.manifest().copy()
-        changed = []
-
-        for info in fileinfo.values():
-            localname = info['localname']
-            baserev = info['baserev']
-            mf[localname] = self._repo.file(localname).node(baserev)
-            changed.append(localname)
-        for localfile in reusefilelogs:
-            mf[localfile] = p1mf[localfile]
-
-        linkrev = len(self._repo)
-        oldmp1 = mp1
-        mp1 = mrevlog.addrevision(mf.text(mrevlog._usemanifestv2), tr,
-                                  linkrev, mp1, mp2)
-
-        self._ui.debug('changelist %d: writing manifest. '
-            'node: %s p1: %s p2: %s linkrev: %d\n' % (
-            self._cl, short(mp1), short(oldmp1), short(mp2), linkrev))
-
-        desc = 'p4fastimport synchronizing client view'
-        username = P4_ADMIN_USER
-        self._ui.debug('changelist %d: writing changelog: %s\n' % (
-            self._cl, desc))
-        cp1 = self.writechangelog(
-                clog, mp1, changed, desc, tr, cp1, cp2,
-                username, None, self._cl)
-        yield self._cl, cp1
-
-    def writechangelog(
-            self, clog, mp1, changed, desc, tr, cp1, cp2, username, date, cl):
-        return clog.add(
-                mp1, changed, desc, tr, cp1, cp2,
-                user=username, date=date,
-                extra={'p4fullimportbasechangelist': cl})
 
 class RCSImporter(collections.Mapping):
     def __init__(self, path):
@@ -524,69 +443,3 @@ class FileImporter(object):
 
         newlen = len(hgfilelog)
         return fileflags, largefiles, baserevatcl, origlen, newlen
-
-class SyncFileImporter(FileImporter):
-    def __init__(
-        self, ui, repo, client, cl, p4cl,
-        p4filelog, storepath, localfile=None
-    ):
-        self._ui = ui
-        self._repo = repo
-        self._client = client
-        self._cl = cl
-        self._p4cl = p4cl
-        self._p4filelog = p4filelog
-        self._storepath = storepath
-        self._localfile = localfile
-
-    @util.propertycache
-    def relpath(self):
-        if self._localfile:
-            return self._localfile
-        else:
-            return p4.parse_where(self._client, self._p4filelog.depotfile)
-
-    def create(self, tr):
-        assert tr is not None
-
-        fileflags = collections.defaultdict(dict)
-
-        linkrev = len(self._repo)
-        fparent1, fparent2 = nullid, nullid
-        localfile = self.relpath
-        hgfilelog = self._repo.file(localfile)
-        if len(hgfilelog) > 0:
-            fparent1 = hgfilelog.tip()
-
-        text, src = get_p4_file_content(
-            self._storepath,
-            self._p4filelog,
-            self._p4cl,
-            True,
-        )
-
-        meta = {}
-        if self._p4filelog.isexec(self._cl):
-            fileflags[self._cl] = 'x'
-
-        if self._p4filelog.issymlink(self._cl):
-            fileflags[self._cl] = 'l'
-
-        if self._p4filelog.iskeyworded(self._cl):
-            text = re.sub(KEYWORD_REGEX, r'$\1$', text)
-
-        origlen = len(hgfilelog)
-        node = hgfilelog.add(text, meta, tr, linkrev, fparent1, fparent2)
-        self._ui.debug(
-            'writing filelog: %s, p1 %s, linkrev %d, %d bytes, src: %s, '
-            'path: %s\n' % (short(node), short(fparent1), linkrev,
-                len(text), src, self.relpath))
-
-        largefiles = []
-        islfs, oid = lfs.getlfsinfo(hgfilelog, node)
-        if islfs:
-            largefiles.append((self._cl, self._p4filelog.depotfile, oid))
-            self._ui.debug('largefile: %s, oid: %s\n' % (self.relpath, oid))
-
-        newlen = len(hgfilelog)
-        return fileflags, largefiles, origlen, newlen
