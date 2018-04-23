@@ -601,19 +601,14 @@ class StaleMountsCheckTest(unittest.TestCase):
     def setUp(self):
         self.active_mounts: List[bytes] = [b'/mnt/active1', b'/mnt/active2']
         self.mount_table = FakeMountTable()
-        self.mount_table.stats['/mnt/active1'] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=10
-        )
-        self.mount_table.stats['/mnt/active2'] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11
-        )
+        self.mount_table.add_mount('/mnt/active1')
+        self.mount_table.add_mount('/mnt/active2')
         self.check = doctor.StaleMountsCheck(
             active_mount_points=self.active_mounts,
             mount_table=self.mount_table
         )
 
     def test_does_not_unmount_active_mounts(self):
-        self.mount_table.set_eden_mounts(self.active_mounts)
         result = self.check.do_check(dry_run=False)
         self.assertEqual('', result.message)
         self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
@@ -621,10 +616,8 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_stale_nonactive_mount_is_unmounted(self):
-        self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
-        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12
-        )
+        # Add a working edenfs mount that is not part of our active list
+        self.mount_table.add_mount('/mnt/stale1')
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
@@ -640,16 +633,9 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_force_unmounts_if_lazy_fails(self):
-        self.mount_table.set_eden_mounts(
-            self.active_mounts + [b'/mnt/stale1', b'/mnt/stale2']
-        )
+        self.mount_table.add_mount('/mnt/stale1')
+        self.mount_table.add_mount('/mnt/stale2')
         self.mount_table.fail_unmount_lazy(b'/mnt/stale1')
-        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12
-        )
-        self.mount_table.stats['/mnt/stale2'] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=13
-        )
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual(
@@ -669,15 +655,8 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual([b'/mnt/stale1'], self.mount_table.unmount_force_calls)
 
     def test_dry_run_prints_stale_mounts_and_does_not_unmount(self):
-        self.mount_table.set_eden_mounts(
-            self.active_mounts + [b'/mnt/stale2', b'/mnt/stale1']
-        )
-        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12
-        )
-        self.mount_table.stats['/mnt/stale2'] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=13
-        )
+        self.mount_table.add_mount('/mnt/stale1')
+        self.mount_table.add_mount('/mnt/stale2')
 
         result = self.check.do_check(dry_run=True)
         self.assertEqual(
@@ -697,15 +676,8 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_fails_if_unmount_fails(self):
-        self.mount_table.set_eden_mounts(
-            self.active_mounts + [b'/mnt/stale1', b'/mnt/stale2']
-        )
-        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12
-        )
-        self.mount_table.stats['/mnt/stale2'] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=13
-        )
+        self.mount_table.add_mount('/mnt/stale1')
+        self.mount_table.add_mount('/mnt/stale2')
         self.mount_table.fail_unmount_lazy(b'/mnt/stale1', b'/mnt/stale2')
         self.mount_table.fail_unmount_force(b'/mnt/stale1')
 
@@ -733,13 +705,7 @@ class StaleMountsCheckTest(unittest.TestCase):
         )
 
     def test_ignores_noneden_mounts(self):
-        self.mount_table.set_mounts(
-            [
-                mtab.MountInfo(
-                    device=b'/dev/sda1', mount_point=b'/', vfstype=b'ext4'
-                ),
-            ]
-        )
+        self.mount_table.add_mount('/', device='/dev/sda1', vfstype='ext4')
         result = self.check.do_check(dry_run=False)
         self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
         self.assertEqual('', result.message)
@@ -759,10 +725,8 @@ class StaleMountsCheckTest(unittest.TestCase):
 
     @patch('eden.cli.doctor.log.warning')
     def test_does_not_unmount_if_cannot_stat_stale_mount(self, warning):
-        self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
-        self.mount_table.stats['/mnt/stale1'] = OSError(
-            errno.EACCES, os.strerror(errno.EACCES)
-        )
+        self.mount_table.add_mount('/mnt/stale1')
+        self.mount_table.fail_access('/mnt/stale1', errno.EACCES)
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
@@ -776,10 +740,8 @@ class StaleMountsCheckTest(unittest.TestCase):
         )
 
     def test_does_unmount_if_stale_mount_is_unconnected(self):
-        self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
-        self.mount_table.stats['/mnt/stale1'] = OSError(
-            errno.ENOTCONN, os.strerror(errno.ENOTCONN)
-        )
+        self.mount_table.add_mount('/mnt/stale1')
+        self.mount_table.fail_access('/mnt/stale1', errno.ENOTCONN)
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
@@ -791,10 +753,7 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_does_not_unmount_other_users_mounts(self):
-        self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
-        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid() + 1, st_dev=12
-        )
+        self.mount_table.add_mount('/mnt/stale1', uid=os.getuid() + 1)
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual('', result.message)
@@ -803,10 +762,8 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_does_not_unmount_mounts_with_same_device_as_active_mount(self):
-        self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
-        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=10
-        )
+        active1_dev = self.mount_table.lstat('/mnt/active1').st_dev
+        self.mount_table.add_mount('/mnt/stale1', dev=active1_dev)
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual('', result.message)
@@ -907,19 +864,37 @@ class FakeMountTable(mtab.MountTable):
         self.unmount_force_calls: List[bytes] = []
         self.unmount_lazy_fails: Set[bytes] = set()
         self.unmount_force_fails: Set[bytes] = set()
-        self.stats: Dict[Union[bytes, str], mtab.MTStat] = {}
+        self.stats: Dict[str, Union[mtab.MTStat, Exception]] = {}
+        self._next_dev: int = 10
 
-    def set_eden_mounts(self, mounts: List[bytes]):
-        self.set_mounts(
-            [
-                mtab.MountInfo(
-                    device=b'edenfs', mount_point=mp, vfstype=b'fuse'
-                ) for mp in mounts
-            ]
+    def add_mount(
+        self,
+        path: str,
+        uid: Optional[int] = None,
+        dev: Optional[int] = None,
+        device: str = 'edenfs',
+        vfstype: str = 'fuse',
+    ) -> None:
+        if uid is None:
+            uid = os.getuid()
+        if dev is None:
+            dev = self._next_dev
+        self._next_dev += 1
+
+        self._add_mount_info(path, device=device, vfstype=vfstype)
+        self.stats[path] = mtab.MTStat(st_uid=uid, st_dev=dev)
+
+    def fail_access(self, path: str, errnum: int) -> None:
+        self.stats[path] = OSError(errnum, os.strerror(errnum))
+
+    def _add_mount_info(self, path: str, device: str, vfstype: str):
+        self.mounts.append(
+            mtab.MountInfo(
+                device=device.encode('utf-8'),
+                mount_point=os.fsencode(path),
+                vfstype=vfstype.encode('utf-8'),
+            )
         )
-
-    def set_mounts(self, mounts: List[mtab.MountInfo]):
-        self.mounts[:] = mounts
 
     def fail_unmount_lazy(self, *mounts: bytes):
         self.unmount_lazy_fails |= set(mounts)
@@ -947,21 +922,14 @@ class FakeMountTable(mtab.MountTable):
         return True
 
     def lstat(self, path: Union[bytes, str]) -> mtab.MTStat:
-        # This is a little awkward because os.lstat supports both bytes and str
+        # If the input is bytes decode it to a string
         if isinstance(path, bytes):
-            path2: Any = path.decode('latin-1')
-        elif isinstance(path, str):
-            path2 = path.encode('utf-8')
-        else:
-            raise ValueError("path must be bytes or str")
+            path = os.fsdecode(path)
 
         try:
             result = self.stats[path]
         except KeyError:
-            try:
-                result = self.stats[path2]
-            except KeyError:
-                raise OSError(errno.ENOENT, f'no path {path}')
+            raise OSError(errno.ENOENT, f'no path {path}')
 
         if isinstance(result, BaseException):
             raise result
