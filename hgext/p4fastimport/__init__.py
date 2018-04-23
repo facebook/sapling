@@ -498,8 +498,7 @@ def p4syncimport(ui, repo, oldclient, newclient, **opts):
             tr.release()
 
 @command('debugscanlfs',
-         [('C', 'client', '', _('Perforce client to reverse lookup')),
-          ('r', 'rev', '.', _('display LFS files in REV')),
+         [('r', 'rev', '.', _('display LFS files in REV')),
           ('A', 'all', None, _('display LFS files all revisions'))])
 def debugscanlfs(ui, repo, **opts):
     lfs = extensions.find('lfs')
@@ -512,13 +511,6 @@ def debugscanlfs(ui, repo, **opts):
         return _('%d %s %s %d %s\n') % (
             flog.linkrev(rev), hex(filenode), ptr.oid(), cl, filename)
 
-    def batchfnmap(repo, client, infos):
-        for filename, flog, rev in infos:
-            whereinfo = p4.parse_where(client, filename)
-            yield 1, display(repo, whereinfo['depotFile'], flog, rev)
-
-    client = opts.get('client', None)
-    todisplay = []
     if opts.get('all'):
         prefix, suffix = "data/", ".i"
         plen, slen = len(prefix), len(suffix)
@@ -530,10 +522,7 @@ def debugscanlfs(ui, repo, **opts):
             for rev in range(0, len(flog)):
                 flags = flog.flags(rev)
                 if bool(flags & revlog.REVIDX_EXTSTORED):
-                    if client:
-                        todisplay.append((fn, flog, rev))
-                    else:
-                        ui.write(display(repo, fn, flog, rev))
+                    ui.write(display(repo, fn, flog, rev))
     else:
         revisions = repo.set(opts.get('rev', '.'))
         for ctx in revisions:
@@ -542,11 +531,4 @@ def debugscanlfs(ui, repo, **opts):
                 flog = fctx.filelog()
                 flags = flog.flags(fctx.filerev())
                 if bool(flags & revlog.REVIDX_EXTSTORED):
-                    if client:
-                        todisplay.append((fn, flog, fctx.filerev()))
-                    else:
-                        ui.write(display(repo, fn, flog, fctx.filerev()))
-    if todisplay:
-        args = (repo, client)
-        for i, s in runworker(ui, batchfnmap, args, todisplay):
-            ui.write(s)
+                    ui.write(display(repo, fn, flog, fctx.filerev()))
