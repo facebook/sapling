@@ -98,7 +98,7 @@ class EdenMount {
   static std::shared_ptr<EdenMount> create(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
-      ServerState* serverState);
+      std::shared_ptr<ServerState> serverState);
 
   /**
    * Asynchronous EdenMount initialization - post instantiation.
@@ -514,7 +514,7 @@ class EdenMount {
   EdenMount(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
-      ServerState* serverState);
+      std::shared_ptr<ServerState> serverState);
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -554,11 +554,8 @@ class EdenMount {
 
   /**
    * Eden server state shared across multiple mount points.
-   *
-   * Our creator owns this object, and ensures that it exists for longer than
-   * our EdenMount object does.
    */
-  ServerState* serverState_;
+  std::shared_ptr<ServerState> serverState_;
 
   std::unique_ptr<ClientConfig> config_;
   std::unique_ptr<InodeMap> inodeMap_;

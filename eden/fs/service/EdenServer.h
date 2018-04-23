@@ -192,11 +192,11 @@ class EdenServer : private TakeoverHandler {
     return edenDir_;
   }
 
-  ServerState* getServerState() {
-    return &serverState_;
+  const std::shared_ptr<ServerState>& getServerState() {
+    return serverState_;
   }
   ThreadLocalEdenStats* getStats() {
-    return &serverState_.getStats();
+    return &serverState_->getStats();
   }
 
   /**
@@ -362,7 +362,7 @@ class EdenServer : private TakeoverHandler {
   /**
    * Common state shared by all of the EdenMount objects.
    */
-  ServerState serverState_;
+  std::shared_ptr<ServerState> serverState_;
 
   /**
    * The EventBase driving the main thread loop.

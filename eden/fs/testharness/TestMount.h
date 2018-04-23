@@ -303,7 +303,7 @@ class TestMount {
   std::shared_ptr<FakeClock> clock_ = std::make_shared<FakeClock>();
   std::shared_ptr<FakePrivHelper> privHelper_;
 
-  ServerState serverState_;
+  std::shared_ptr<ServerState> serverState_;
 };
 } // namespace eden
 } // namespace facebook

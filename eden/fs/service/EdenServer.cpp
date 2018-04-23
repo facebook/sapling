@@ -155,10 +155,11 @@ EdenServer::EdenServer(
     : edenDir_(edenDir),
       etcEdenDir_(etcEdenDir),
       configPath_(configPath),
-      serverState_{std::move(userInfo),
-                   std::move(privHelper),
-                   std::make_shared<EdenCPUThreadPool>(),
-                   std::make_shared<UnixClock>()} {}
+      serverState_{make_shared<ServerState>(
+          std::move(userInfo),
+          std::move(privHelper),
+          std::make_shared<EdenCPUThreadPool>(),
+          std::make_shared<UnixClock>())} {}
 
 EdenServer::~EdenServer() {}
 
@@ -171,7 +172,7 @@ Future<Unit> EdenServer::unmountAll() {
       auto& info = entry.second;
 
       try {
-        serverState_.getPrivHelper()->fuseUnmount(mountPath);
+        serverState_->getPrivHelper()->fuseUnmount(mountPath);
         futures.emplace_back(info.unmountPromise.getFuture());
       } catch (const std::exception& ex) {
         XLOG(ERR) << "Failed to perform unmount for \"" << mountPath
@@ -210,7 +211,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
               if (!takeover.fuseFD) {
                 return folly::none;
               }
-              self->serverState_.getPrivHelper()->fuseTakeoverShutdown(
+              self->serverState_->getPrivHelper()->fuseTakeoverShutdown(
                   edenMount->getPath().stringPiece());
               return takeover;
             }));
@@ -493,7 +494,7 @@ Future<Unit> EdenServer::performNormalShutdown() {
 void EdenServer::shutdownPrivhelper() {
   // Explicitly stop the privhelper process so we can verify that it
   // exits normally.
-  const auto privhelperExitCode = serverState_.getPrivHelper()->stop();
+  const auto privhelperExitCode = serverState_->getPrivHelper()->stop();
   if (privhelperExitCode != 0) {
     if (privhelperExitCode > 0) {
       XLOG(ERR) << "privhelper process exited with unexpected code "
@@ -553,7 +554,7 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
   for (const auto& bindMount : info.bindMounts) {
     bindMounts.emplace_back(bindMount.value());
   }
-  serverState_.getPrivHelper()->fuseTakeoverStartup(
+  serverState_->getPrivHelper()->fuseTakeoverStartup(
       info.mountPath.stringPiece(), bindMounts);
 
   // (re)open file handles for each entry in info.fileHandleMap
@@ -609,7 +610,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   const bool doTakeover = optionalTakeover.hasValue();
 
   auto edenMount = EdenMount::create(
-      std::move(initialConfig), std::move(objectStore), &serverState_);
+      std::move(initialConfig), std::move(objectStore), serverState_);
 
   auto initFuture = edenMount->initialize(
       optionalTakeover ? folly::make_optional(optionalTakeover->inodeMap)
@@ -673,7 +674,7 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
       future = it->second.unmountPromise.getFuture();
     }
 
-    serverState_.getPrivHelper()->fuseUnmount(mountPath);
+    serverState_->getPrivHelper()->fuseUnmount(mountPath);
     return future;
   } catch (const std::exception& ex) {
     XLOG(ERR) << "Failed to perform unmount for \"" << mountPath
@@ -788,7 +789,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
   } else if (type == "hg") {
     const auto repoPath = realpath(name);
     return make_shared<HgBackingStore>(
-        repoPath, localStore_.get(), serverState_.getThreadPool().get());
+        repoPath, localStore_.get(), serverState_->getThreadPool().get());
   } else if (type == "git") {
     const auto repoPath = realpath(name);
     return make_shared<GitBackingStore>(repoPath, localStore_.get());
@@ -813,7 +814,7 @@ void EdenServer::createThriftServer() {
   folly::SocketAddress thriftAddress;
   thriftAddress.setFromPath(thriftSocketPath.stringPiece());
   server_->setAddress(thriftAddress);
-  serverState_.setSocketPath(thriftSocketPath);
+  serverState_->setSocketPath(thriftSocketPath);
 
   serverEventHandler_ = make_shared<ThriftServerEventHandler>(this);
   server_->setServerEventHandler(serverEventHandler_);
@@ -917,7 +918,7 @@ void EdenServer::shutdownSubscribers() const {
 }
 
 void EdenServer::flushStatsNow() {
-  for (auto& stats : serverState_.getStats().accessAllThreads()) {
+  for (auto& stats : serverState_->getStats().accessAllThreads()) {
     stats.aggregate();
   }
 }

@@ -16,10 +16,13 @@
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/test/TestUtils.h>
 
 using namespace facebook::eden;
 using namespace std::literals::chrono_literals;
+using folly::Future;
 using folly::ScopedEventBaseThread;
+using folly::Unit;
 using std::make_shared;
 
 TEST(FuseTest, initMount) {
@@ -51,13 +54,98 @@ TEST(FuseTest, initMount) {
   EXPECT_EQ(
       sizeof(fuse_out_header) + sizeof(fuse_init_out), response.header.len);
 
-  // TODO: EdenMount & FuseChannel currently have synchronization bugs where
-  // they can cause invalid memory accesses if we do not wait for the init
-  // future to complete before destroying them.
-  initFuture.get(100ms);
+  // Wait for the mount to complete
+  initFuture.get(250ms);
 
-  // TODO: FuseChannel currently crashes on destruction unless the FUSE channel
-  // has been closed and the session complete promise has been fulfilled.
+  // Close the FakeFuse device, and ensure that the mount's FUSE completion
+  // future is then signalled.
   fuse->close();
-  testMount.getEdenMount()->getFuseCompletionFuture().get(100ms);
+  auto mountInfo =
+      testMount.getEdenMount()->getFuseCompletionFuture().get(100ms);
+
+  // Since we closed the FUSE device from the "kernel" side the returned
+  // MountInfo should not contain a valid FUSE device any more.
+  EXPECT_FALSE(mountInfo.fuseFD);
+}
+
+// Test destroying the EdenMount object while FUSE initialization is still
+// pending
+TEST(FuseTest, destroyBeforeInitComplete) {
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("src/main.c", "int main() { return 0; }\n");
+  builder1.setFile("src/test/test.c", "testy tests");
+
+  auto fuse = make_shared<FakeFuse>();
+  auto initFuture = Future<Unit>::makeEmpty();
+  {
+    // Create the TestMountj
+    TestMount testMount{builder1};
+    testMount.registerFakeFuse(fuse);
+
+    // Call startFuse() on the test mount.
+    initFuture = testMount.getEdenMount()->startFuse();
+
+    // Exit the scope to destroy the mount
+  }
+
+  // The initFuture() should have completed unsuccessfully.
+  EXPECT_THROW_RE(
+      initFuture.get(100ms),
+      std::runtime_error,
+      "FuseChannel for .* stopped while waiting for INIT packet");
+}
+
+// Test destroying the EdenMount object immediately after the FUSE INIT request
+// has been received.  We previously had some race conditions that could cause
+// problems here.
+TEST(FuseTest, destroyWithInitRace) {
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("src/main.c", "int main() { return 0; }\n");
+  builder1.setFile("src/test/test.c", "testy tests");
+
+  auto fuse = make_shared<FakeFuse>();
+  auto initFuture = Future<Unit>::makeEmpty();
+  auto completionFuture = Future<TakeoverData::MountInfo>::makeEmpty();
+  {
+    // Create the TestMountj
+    TestMount testMount{builder1};
+    testMount.registerFakeFuse(fuse);
+
+    // Call startFuse() on the test mount.
+    initFuture = testMount.getEdenMount()->startFuse();
+    completionFuture = testMount.getEdenMount()->getFuseCompletionFuture();
+
+    // Send the FUSE INIT request.
+    struct fuse_init_in initArg;
+    initArg.major = FUSE_KERNEL_VERSION;
+    initArg.minor = FUSE_KERNEL_MINOR_VERSION;
+    initArg.max_readahead = 0;
+    initArg.flags = 0;
+    auto reqID = fuse->sendRequest(FUSE_INIT, 1, initArg);
+
+    // Wait to receive the INIT reply from the FuseChannel code to confirm
+    // that it saw the INIT request.
+    auto response = fuse->recvResponse();
+    EXPECT_EQ(reqID, response.header.unique);
+    EXPECT_EQ(0, response.header.error);
+    EXPECT_EQ(
+        sizeof(fuse_out_header) + sizeof(fuse_init_out), response.header.len);
+
+    // Exit the scope to destroy the TestMount.
+    // This will call EdenMount::destroy() to start destroying the EdenMount.
+    // However, this may not complete immediately.  Previously we had a bug
+    // where the ServerState object was not guaranteed to survive until the
+    // EdenMount was completely destroyed in this case.
+  }
+
+  // The initFuture should complete successfully, since we know that
+  // FuseChannel sent the INIT response.
+  initFuture.get(250ms);
+  // The FUSE completion future should also be signalled when the FuseChannel
+  // is destroyed.
+  auto mountInfo = completionFuture.get(250ms);
+  // Since we just destroyed the EdenMount and the kernel-side of the FUSE
+  // channel was not stopped the returned MountInfo should contain the FUSE
+  // device.
+  EXPECT_TRUE(mountInfo.fuseFD);
 }
