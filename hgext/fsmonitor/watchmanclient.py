@@ -102,6 +102,7 @@ class client(object):
         except pywatchman.WatchmanError as ex:
             raise Unavailable(str(ex))
 
+    @util.timefunction('watchmanquery', 0, '_ui')
     def command(self, *args):
         with progress.spinner(self._ui, 'querying watchman'):
             try:

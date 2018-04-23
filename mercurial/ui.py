@@ -333,6 +333,15 @@ class ui(object):
             self._measuredtimes[key + '_blocked'] += \
                 (util.timer() - starttime) * 1000
 
+    @contextlib.contextmanager
+    def timesection(self, key):
+        starttime = util.timer()
+        try:
+            yield
+        finally:
+            self._measuredtimes[key + '_time'] += \
+                (util.timer() - starttime) * 1000
+
     def formatter(self, topic, opts):
         return formatter.formatter(self, self, topic, opts)
 

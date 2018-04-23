@@ -1285,6 +1285,7 @@ class transactionmanager(util.transactional):
         if self._tr is not None:
             self._tr.release()
 
+@util.timefunction('pull', 0, 'ui')
 def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
          streamclonerequested=None):
     """Fetch repository data from a remote.

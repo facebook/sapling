@@ -849,6 +849,7 @@ class dirstate(object):
 
         return results, dirsfound, dirsnotfound
 
+    @util.timefunction('dirstatewalk', 0, '_ui')
     def walk(self, match, subrepos, unknown, ignored, full=True):
         '''
         Walk recursively through the directory tree, finding all files

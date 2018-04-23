@@ -265,6 +265,7 @@ def wrappurge(orig, repo, match, findfiles, finddirs, includeignored):
 
     return files, dirs
 
+@util.timefunction('fsmonitorwalk', 1, '_ui')
 def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     '''Replacement for dirstate.walk, hooking into Watchman.
 

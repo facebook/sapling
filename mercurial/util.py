@@ -3919,3 +3919,27 @@ class ring(object):
             head = self._data[self.offset:self._maxsize]
             tail = self._data[:(end % self._maxsize)]
             return head + tail
+
+def timefunction(key, uiposition, uiname):
+    """A decorator for indicating a function should be timed and logged.
+
+    `uiposition` the integer argument number that contains the ui or a reference
+    to the ui.
+
+    `uiname` the attribute name on the ui argument that contains the ui. Set to
+    None to indicate the argument is the ui.
+
+    Example: For a function with signature 'def foo(repo, something):` the
+    decorator would be `timefunction("blah", 0, 'ui')` to access repo.ui. For a
+    function with signature `def foo(something, ui):` the decorator would be
+    `timefunction("blah", 1, uiname=None)` to access ui.
+    """
+    def wrapper(func):
+        def inner(*args, **kwargs):
+            uiarg = args[uiposition]
+            if uiname is not None:
+                uiarg = getattr(uiarg, uiname)
+            with uiarg.timesection(key):
+                return func(*args, **kwargs)
+        return inner
+    return wrapper

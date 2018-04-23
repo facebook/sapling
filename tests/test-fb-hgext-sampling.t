@@ -70,12 +70,12 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   ...         print(' '.join([parsedrecord["data"]["msg"], parsedrecord["category"]]))
   ...         assert len(parsedrecord["data"]) == 4
   ...     elif parsedrecord['category'] == 'measuredtimes':
-  ...         print('atexit_measured: ', parsedrecord['data']['atexit_measured'])
-  atexit_measured:  7
+  ...         print('atexit_measured: ', repr(sorted(parsedrecord['data'])))
+  atexit_measured:  [u'atexit_measured', u'command_duration', u'dirstatewalk_time', u'metrics_type', u'msg', u'stdio_blocked']
   match filter commit_table
   message string commit_table
-  atexit_measured:  7
-  atexit_measured:  7
+  atexit_measured:  [u'atexit_measured', u'command_duration', u'dirstatewalk_time', u'metrics_type', u'msg', u'stdio_blocked']
+  atexit_measured:  [u'atexit_measured', u'command_duration', u'dirstatewalk_time', u'metrics_type', u'msg', u'stdio_blocked']
   match filter commit_table
   message string commit_table
-  atexit_measured:  7
+  atexit_measured:  [u'atexit_measured', u'command_duration', u'dirstatewalk_time', u'metrics_type', u'msg', u'stdio_blocked']

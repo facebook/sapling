@@ -1387,6 +1387,7 @@ def batchget(repo, mctx, wctx, actions):
     if i > 0:
         yield i, f
 
+@util.timefunction("applyupdates", 0, 'ui')
 def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     """apply the merge action list to the working directory
 
@@ -1444,7 +1445,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
 
     # record path conflicts
-    with progress.bar(repo.ui, _('updating'), _('files'), numupdates) as prog:
+    with progress.bar(repo.ui, _('updating'), _('files'), numupdates) as prog, \
+         repo.ui.timesection("updateworker"):
         for f, args, msg in actions['p']:
             f1, fo = args
             s = repo.ui.status
@@ -1557,7 +1559,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
 
         if usemergedriver:
             ms.commit()
-            proceed = driverpreprocess(repo, ms, wctx, labels=labels)
+            with repo.ui.timesection("mergedriver"):
+                proceed = driverpreprocess(repo, ms, wctx, labels=labels)
             driverresolved = [f for f in ms.driverresolved()]
 
             # Note which files were marked as driver-resolved but not matched by
@@ -1626,10 +1629,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         unresolved = ms.unresolvedcount()
 
         if usemergedriver and not unresolved and ms.mdstate() != 's':
-            if not driverconclude(repo, ms, wctx, labels=labels):
-                # XXX setting unresolved to at least 1 is a hack to make sure we
-                # error out
-                unresolved = max(unresolved, 1)
+            with repo.ui.timesection("mergedriver"):
+                if not driverconclude(repo, ms, wctx, labels=labels):
+                    # XXX setting unresolved to at least 1 is a hack to make
+                    # sure we error out
+                    unresolved = max(unresolved, 1)
 
             ms.commit()
 
@@ -1775,6 +1779,7 @@ def recordupdates(repo, actions, branchmerge):
                 repo.dirstate.normal(f)
             prog.value += 1
 
+@util.timefunction('mergeupdate', 0, 'ui')
 def update(repo, node, branchmerge, force, ancestor=None,
            mergeancestor=False, labels=None, matcher=None, mergeforce=False,
            updatecheck=None, wc=None):

@@ -612,7 +612,8 @@ class fileserverclient(object):
             missingids = [(file, hex(id)) for file, id in missingids]
             fetched += len(missingids)
             start = time.time()
-            missingids = self.request(missingids)
+            with self.ui.timesection("fetchingfiles"):
+                missingids = self.request(missingids)
             if missingids:
                 raise error.Abort(_("unable to download %d files") %
                                   len(missingids))

@@ -337,10 +337,11 @@ def wraprepo(repo):
             fallbackpath = getfallbackpath(self)
 
             start = time.time()
-            with self.connectionpool.get(fallbackpath) as conn:
-                remote = conn.peer
-                _gettrees(self, remote, rootdir, mfnodes, basemfnodes,
-                          directories, start)
+            with self.ui.timesection("fetchingtrees"):
+                with self.connectionpool.get(fallbackpath) as conn:
+                    remote = conn.peer
+                    _gettrees(self, remote, rootdir, mfnodes, basemfnodes,
+                              directories, start)
 
         def _restrictcapabilities(self, caps):
             caps = super(treerepository, self)._restrictcapabilities(caps)
