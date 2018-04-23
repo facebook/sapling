@@ -87,11 +87,11 @@ outputs, which should be fixed later.
   hgext/hiddenerror.py:28: symbol import follows non-symbol import: mercurial.i18n
   hgext/hiddenerror.py:29: symbol import follows non-symbol import: mercurial.node
   hgext/lz4revlog.py:76: relative import of stdlib module
-  hgext/p4fastimport/__init__.py:40: direct symbol import decodefileflags, getcl, lastcl, runworker from hgext.p4fastimport.util
-  hgext/p4fastimport/__init__.py:40: symbol import follows non-symbol import: hgext.p4fastimport.util
-  hgext/p4fastimport/__init__.py:42: symbol import follows non-symbol import: mercurial.i18n
-  hgext/p4fastimport/__init__.py:43: symbol import follows non-symbol import: mercurial.node
-  hgext/p4fastimport/__init__.py:43: imports from mercurial.node not lexically sorted: hex < short
+  hgext/p4fastimport/__init__.py:41: direct symbol import decodefileflags, getcl, lastcl, runworker from hgext.p4fastimport.util
+  hgext/p4fastimport/__init__.py:41: symbol import follows non-symbol import: hgext.p4fastimport.util
+  hgext/p4fastimport/__init__.py:43: symbol import follows non-symbol import: mercurial.i18n
+  hgext/p4fastimport/__init__.py:44: symbol import follows non-symbol import: mercurial.node
+  hgext/p4fastimport/__init__.py:44: imports from mercurial.node not lexically sorted: hex < short
   hgext/p4fastimport/importer.py:19: direct symbol import caseconflict, localpath from hgext.p4fastimport.util
   hgext/p4fastimport/importer.py:19: symbol import follows non-symbol import: hgext.p4fastimport.util
   hgext/p4fastimport/p4.py:10: direct symbol import runworker from hgext.p4fastimport.util

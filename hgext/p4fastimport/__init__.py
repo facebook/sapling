@@ -36,6 +36,7 @@ from . import (
     importer,
     p4,
     seqimporter,
+    syncimporter,
 )
 from .util import decodefileflags, getcl, lastcl, runworker
 
@@ -439,63 +440,35 @@ def p4syncimport(ui, repo, oldclient, newclient, **opts):
     # reusep4filelogs: a list of files that do not need new entries in hgfilelog
     p4filelogs = p4.get_filelogs_at_cl(newclient, latestcl)
     p4filelogs = sorted(p4filelogs)
-    newp4filelogs, newp4flheadcls, reusep4filelogs = \
-        importer.get_filelogs_to_sync(
-            ui, newclient, repo, p1ctx, latestcl, p4filelogs
-        )
+    filesadd, filesdel = syncimporter.get_filelogs_to_sync(
+        ui,
+        newclient,
+        repo,
+        p1ctx,
+        latestcl,
+        p4filelogs
+    )
 
-    if not newp4filelogs and not reusep4filelogs:
-        raise error.Abort(_('nothing to import.'))
+    if not filesadd and not filesdel:
+        ui.warn(_('nothing to import.\n'))
+        return
 
-    newp4flheadclstoorignalcls = {}
-    for eachcl in newp4flheadcls:
-        origcl = p4.getorigcl(newclient, eachcl)
-        newp4flheadclstoorignalcls[eachcl] = origcl
+    # sync import
+    simporter = syncimporter.SyncImporter(
+        ui,
+        repo,
+        p1ctx,
+        storepath,
+        latestcl,
+        filesadd,
+        filesdel
+    )
 
-    # sync import.
-    with repo.wlock(), repo.lock():
-        ui.note(_('running a sync import.\n'))
-        count = 0
-        fileinfo = {}
-        largefileslist = []
-        tr = repo.transaction('syncimport')
-        try:
-            for p4fl, localname in newp4filelogs:
-                headcl = p4fl.getheadchangelist(latestcl)
-                origcl = newp4flheadclstoorignalcls[headcl]
-                p4cl = p4.P4Changelist(int(origcl), int(headcl), None, None)
-                bfi = importer.SyncFileImporter(
-                        ui, repo, newclient, latestcl, p4cl, p4fl,
-                        storepath, localfile=localname)
-                # Create hg filelog
-                fileflags, largefiles, oldtiprev, newtiprev = bfi.create(tr)
-                fileinfo[p4fl.depotfile] = {
-                    'flags': fileflags,
-                    'localname': bfi.relpath,
-                    'baserev': oldtiprev,
-                }
-                largefileslist.extend(largefiles)
-                count += 1
-            # Generate manifest and changelog
-            clog = importer.SyncChangeManifestImporter(
-                     ui, repo, newclient, latestcl, p1ctx=p1ctx)
-            revisions = []
-            for cl, hgnode in clog.creategen(tr, fileinfo, reusep4filelogs):
-                revisions.append((cl, hex(hgnode)))
-
-            if opts.get('bookmark'):
-                ui.note(_('writing bookmark\n'))
-                writebookmark(tr, repo, revisions, opts['bookmark'])
-
-            if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
-                ui.note(_('writing lfs metadata to sqlite\n'))
-                writelfsmetadata(largefileslist, revisions,
-                    ui.config('p4fastimport', 'lfsmetadata', None))
-
-            tr.close()
-            ui.note(_('1 revision, %d file(s) imported.\n') % count)
-        finally:
-            tr.release()
+    with repo.wlock(), repo.lock(), repo.transaction('syncimport') as tr:
+        node, largefiles = simporter.sync_commit()
+        updatemetadata(ui, [(latestcl, hex(node))], largefiles)
+        if node is not None and opts.get('bookmark'):
+            writebookmark(tr, repo, [(None, hex(node))], opts['bookmark'])
 
 @command('debugscanlfs',
          [('r', 'rev', '.', _('display LFS files in REV')),

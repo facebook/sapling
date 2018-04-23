@@ -79,20 +79,26 @@ Sync Import
   2 (current client) 4 (requested client) 2 (latest imported)
   latest change list number 4
   4 p4 filelogs to read
-  1 new filelogs and 3 reuse filelogs
-  running a sync import.
-  writing filelog: b8a08782de62, p1 000000000000, linkrev 2, 4 bytes, src: *, path: Main/Outside/a (glob)
-  changelist 4: writing manifest. node: * p1: ab2dd3ad9b8a p2: 000000000000 linkrev: 2 (glob)
-  changelist 4: writing changelog: p4fastimport synchronizing client view
-  writing bookmark
-  updating the branch cache
-  1 revision, 1 file(s) imported.
-
-  $ hg manifest -r tip
-  Main/Narrow/a
-  Main/Narrow/b
-  Main/Narrow/symlink
+  committing files:
   Main/Outside/a
+  file: //depot/Main/Outside/a, src: * (glob)
+  committing manifest
+  committing changelog
+  updating the branch cache
+
+  $ hg manifest -vr tip
+  644   Main/Narrow/a
+  755 * Main/Narrow/b
+  644 @ Main/Narrow/symlink
+  644   Main/Outside/a
+
+  $ hg log -r tip -T '{files}'
+  Main/Outside/a (no-eol)
+  $ hg log -r tip -T '{file_adds}'
+  Main/Outside/a (no-eol)
+  $ hg log -r tip -T '{file_dels}'
+  $ hg log -r tip -T '{file_mods}'
+  $ hg log -r tip -T '{file_copies}'
 
 Verify
 
@@ -138,18 +144,37 @@ Remove stuff
   5 (current client) 2 (requested client) 5 (latest imported)
   latest change list number 2
   3 p4 filelogs to read
-  0 new filelogs and 3 reuse filelogs
-  running a sync import.
-  changelist 2: writing manifest. node: 75d827a98628 p1: 3a089c778dc1 p2: 000000000000 linkrev: 4
-  changelist 2: writing changelog: p4fastimport synchronizing client view
-  writing bookmark
+  committing files:
+  committing manifest
+  committing changelog
   updating the branch cache
-  1 revision, 0 file(s) imported.
 
-  $ hg manifest -r tip
-  Main/Narrow/a
-  Main/Narrow/b
-  Main/Narrow/symlink
+  $ hg manifest -vr tip
+  644   Main/Narrow/a
+  755 * Main/Narrow/b
+  644 @ Main/Narrow/symlink
+
+  $ hg log -r tip -T '{files}'
+  Main/Outside/a (no-eol)
+  $ hg log -r tip -T '{file_adds}'
+  $ hg log -r tip -T '{file_dels}'
+  Main/Outside/a (no-eol)
+  $ hg log -r tip -T '{file_mods}'
+  $ hg log -r tip -T '{file_copies}'
+
+Sync Import empty changes
+  $ cd $p4wd
+  $ p4 delete Main/Outside/a
+  //depot/Main/Outside/a#3 - opened for delete
+  $ p4 submit -d sixth
+  Submitting change 6.
+  Locking 1 files ...
+  delete //depot/Main/Outside/a#4
+  Change 6 submitted.
+  $ cd $hgwd
+  $ hg p4seqimport --bookmark master -P $P4ROOT hg-p4-import-narrow
+  $ hg p4syncimport --bookmark master -P $P4ROOT hg-p4-import-narrow hg-p4-import
+  nothing to import.
 
 End Test
   stopping the p4 server

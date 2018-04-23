@@ -75,13 +75,16 @@ Sync Commit
 
   $ cd $p4wd
   $ mkdir Outside
+  $ echo b > Outside/b
   $ echo thisisanotherlargefile > Outside/anotherlargefile
-  $ p4 add Outside/anotherlargefile
+  $ p4 add Outside/b Outside/anotherlargefile
+  //depot/Outside/b#1 - opened for add
   //depot/Outside/anotherlargefile#1 - opened for add
   $ p4 submit -d third
   Submitting change 3.
-  Locking 1 files ...
+  Locking 2 files ...
   add //depot/Outside/anotherlargefile#1
+  add //depot/Outside/b#1
   Change 3 submitted.
 
   $ cd $hgwd
@@ -89,20 +92,23 @@ Sync Commit
   incremental import from changelist: 3, node: * (glob)
   2 (current client) 3 (requested client) 2 (latest imported)
   latest change list number 3
-  3 p4 filelogs to read
-  1 new filelogs and 2 reuse filelogs
-  running a sync import.
-  writing filelog: cf38a89d2b54, p1 000000000000, linkrev 2, 23 bytes, src: *, path: Outside/anotherlargefile (glob)
+  4 p4 filelogs to read
+  committing files:
+  Outside/anotherlargefile
+  file: //depot/Outside/anotherlargefile, src: * (glob)
+  Outside/b
+  file: //depot/Outside/b, src: * (glob)
+  committing manifest
+  committing changelog
   largefile: Outside/anotherlargefile, oid: 9703972eff7a4df07317eda436ab7ef827ed16ea28c62abdcd7de269745c610c
-  changelist 3: writing manifest. node: ff600511f8ae p1: c14352bb3510 p2: 000000000000 linkrev: 2
-  changelist 3: writing changelog: p4fastimport synchronizing client view
   writing lfs metadata to sqlite
   updating the branch cache
-  1 revision, 1 file(s) imported.
-  $ hg manifest -r tip
-  Main/a
-  Main/largefile
-  Outside/anotherlargefile
+
+  $ hg manifest -vr tip
+  644   Main/a
+  644   Main/largefile
+  644   Outside/anotherlargefile
+  644   Outside/b
 
 Verify
 (waiting for https://patchwork.mercurial-scm.org/patch/20582/)
@@ -114,7 +120,7 @@ Verify
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  3 files, 3 changesets, 5 total revisions
+  4 files, 3 changesets, 6 total revisions
 
   $ test -d .hg/store/lfs/objects
   [1]
