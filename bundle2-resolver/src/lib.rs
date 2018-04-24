@@ -35,6 +35,7 @@ extern crate stats as stats_crate;
 extern crate tokio_io;
 
 extern crate blobrepo;
+extern crate bookmarks;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;

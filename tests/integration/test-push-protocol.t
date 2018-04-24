@@ -13,8 +13,17 @@ setup repo
   $ echo "a file content" > a
   $ hg add a
   $ hg ci -ma
+
+setup master bookmarks
+
+  $ hg bookmark master_bookmark -r 'tip'
+  $ hg bookmark master_bookmark2 -r 'tip'
+
+verify content
   $ hg log
   changeset:   0:0e7ec5675652
+  bookmark:    master_bookmark
+  bookmark:    master_bookmark2
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -39,6 +48,8 @@ start mononoke
 
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
+
+BEGIN Creation of new commits
 
 create new commits in repo2 and check that they are seen as outgoing
 
@@ -92,8 +103,16 @@ create a commit that renames, copy and deletes some files
   $ hg cp a_dir/a b_dir/a_bis
   $ hg ci -mg
 
+END Creation of new commits
+
+move master bookmarks
+
+  $ hg bookmark -f master_bookmark -r 'tip'
+  $ hg bookmark -f master_bookmark2 -r 'f40c09205504'
+
   $ hg sl --all -r "all()" --stat
   @  changeset:   6:634de738bb0f
+  |  bookmark:    master_bookmark
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -139,7 +158,8 @@ create a commit that renames, copy and deletes some files
   |   2 files changed, 2 insertions(+), 1 deletions(-)
   |
   | o  changeset:   2:f40c09205504
-  |/   user:        test
+  |/   bookmark:    master_bookmark2
+  |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     c
   |
@@ -174,6 +194,7 @@ create a commit that renames, copy and deletes some files
   summary:     b
   
   changeset:   2:f40c09205504
+  bookmark:    master_bookmark2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -195,6 +216,7 @@ create a commit that renames, copy and deletes some files
   summary:     f
   
   changeset:   6:634de738bb0f
+  bookmark:    master_bookmark
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -221,7 +243,7 @@ push to Mononoke
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command
-  received listkey for "bookmarks": 0 bytes
+  received listkey for "bookmarks": 115 bytes
   6 changesets found
   list of changesets:
   bb0985934a0f8a493887892173b68940ceb40b4f
@@ -231,22 +253,30 @@ push to Mononoke
   8315ea53ef41d34f56232c88669cc80225b6e66d
   634de738bb0ff135e32d48567718fb9d7dedf575
   sending unbundle command
-  bundle2-output-bundle: "HG20", 3 parts total
+  bundle2-output-bundle: "HG20", 5 parts total
   bundle2-output-part: "replycaps" 196 bytes payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   bundle2-input-bundle: 1 params no-transaction
   bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
-  bundle2-input-bundle: 0 parts total
+  bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
+  bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
+  bundle2-input-bundle: 2 parts total
+  updating bookmark master_bookmark
+  updating bookmark master_bookmark2
   preparing listkeys for "phases"
   sending listkeys command
   received listkey for "phases": 0 bytes
 
-Now pull what was just pushed TODO(T25252425) make this work
+Now pull what was just pushed
 
   $ cd ../repo3
   $ hgmn sl --all -r "all()" --stat
   @  changeset:   0:0e7ec5675652
+     bookmark:    master_bookmark
+     bookmark:    master_bookmark2
      tag:         tip
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -260,15 +290,15 @@ Now pull what was just pushed TODO(T25252425) make this work
 Because the revision numbers are assigned nondeterministically we cannot
 compare output of the entire tree. Instead we compare only linear histories
 
-  $ hgmn log --graph --template '{node}' -r "::f40c09205504"
-  o  f40c09205504d8410f8c8679bf7a85fef25f9337
+  $ hgmn log --graph --template '{node} {bookmarks}' -r "::f40c09205504"
+  o  f40c09205504d8410f8c8679bf7a85fef25f9337 master_bookmark2
   |
   o  bb0985934a0f8a493887892173b68940ceb40b4f
   |
   @  0e7ec5675652a04069cbf976a42e45b740f3243c
   
-  $ hgmn log --graph --template '{node}' -r "::634de738bb0f"
-  o  634de738bb0ff135e32d48567718fb9d7dedf575
+  $ hgmn log --graph --template '{node} {bookmarks}' -r "::634de738bb0f"
+  o  634de738bb0ff135e32d48567718fb9d7dedf575 master_bookmark
   |
   o  8315ea53ef41d34f56232c88669cc80225b6e66d
   |
@@ -280,6 +310,8 @@ compare output of the entire tree. Instead we compare only linear histories
   |
   @  0e7ec5675652a04069cbf976a42e45b740f3243c
   
+This last step is verifying every commit one by one, it is done in a single
+command, but the output of this command is long
 
   $ for commit in `hg log --template '{node} ' -r '0e7ec567::634de738'` f40c09205504d8410f8c8679bf7a85fef25f9337; do \
   $ if [ "`hg export -R $TESTTMP/repo2 ${commit}`" == "`hgmn export ${commit}`" ]; then echo "${commit} comparison SUCCESS"; fi; hgmn export ${commit}; echo; echo; done

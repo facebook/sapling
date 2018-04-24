@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use ascii::AsciiString;
 use blobrepo::{BlobRepo, ChangesetHandle, ContentBlobInfo, CreateChangeset, HgBlobEntry};
+use bookmarks;
 use bytes::Bytes;
 use failure::{FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{Future, IntoFuture, Stream};
@@ -58,7 +59,10 @@ pub fn resolve(
             let resolver = resolver.clone();
             move |(cg_push, bundle2)| {
                 resolver
-                    .maybe_resolve_bookmark_pushkey(bundle2)
+                    .resolve_multiple_parts(
+                        bundle2,
+                        Bundle2Resolver::maybe_resolve_bookmark_pushkey,
+                    )
                     .map(move |(bookmark_push, bundle2)| (cg_push, bookmark_push, bundle2))
             }
         })
@@ -92,15 +96,20 @@ pub fn resolve(
                 })
                 .and_then({
                     let resolver = resolver.clone();
-                    move |()| match bookmark_push {
-                        Some(bookmark_push) => resolver
-                            .update_bookmark(&bookmark_push)
-                            .map(move |()| Some(bookmark_push.part_id))
-                            .boxify(),
-                        None => ok(None).boxify(),
+                    move |()| {
+                        let bookmark_ids: Vec<_> =
+                            bookmark_push.iter().map(|bp| bp.part_id).collect();
+
+                        let mut txn = resolver.repo.update_bookmark_transaction();
+                        for bp in bookmark_push {
+                            try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp));
+                        }
+                        txn.commit().map(move |()| bookmark_ids).boxify()
                     }
                 })
-                .and_then(move |bookmark_id| resolver.prepare_response(changegroup_id, bookmark_id))
+                .and_then(move |bookmark_ids| {
+                    resolver.prepare_response(changegroup_id, bookmark_ids)
+                })
         })
         .context("bundle2-resolver error")
         .from_err()
@@ -251,27 +260,6 @@ impl Bundle2Resolver {
             .context("While resolving Pushkey")
             .from_err()
             .boxify()
-    }
-
-    fn update_bookmark(&self, bookmark_push: &BookmarkPush) -> BoxFuture<(), Error> {
-        let mut txn = self.repo.update_bookmark_transaction();
-
-        match (bookmark_push.new, bookmark_push.old) {
-            (Some(new), Some(old)) => {
-                try_boxfuture!(txn.update(&bookmark_push.name, &new, &old));
-            }
-            (Some(new), None) => {
-                try_boxfuture!(txn.create(&bookmark_push.name, &new));
-            }
-            (None, Some(old)) => {
-                try_boxfuture!(txn.delete(&bookmark_push.name, &old));
-            }
-            _ => {
-                return ok(()).boxify();
-            }
-        }
-
-        txn.commit()
     }
 
     /// Parse b2xtreegroup2.
@@ -446,7 +434,7 @@ impl Bundle2Resolver {
     fn prepare_response(
         &self,
         changegroup_id: Option<PartId>,
-        bookmark_id: Option<PartId>,
+        bookmark_ids: Vec<PartId>,
     ) -> BoxFuture<Bytes, Error> {
         let writer = Cursor::new(Vec::new());
         let mut bundle = Bundle2EncodeBuilder::new(writer);
@@ -460,7 +448,7 @@ impl Bundle2Resolver {
                 changegroup_id,
             )));
         }
-        if let Some(part_id) = bookmark_id {
+        for part_id in bookmark_ids {
             bundle.add_part(try_boxfuture!(parts::replypushkey_part(true, part_id)));
         }
         bundle
@@ -469,6 +457,46 @@ impl Bundle2Resolver {
             .context("While preparing response")
             .from_err()
             .boxify()
+    }
+
+    /// A method that can use any of the above maybe_resolve_* methods to return
+    /// a Vec of (potentailly multiple) Part rather than an Option of Part.
+    /// The original use case is to parse multiple pushkey Parts since bundle2 gets
+    /// one pushkey part per bookmark.
+    fn resolve_multiple_parts<T, Func>(
+        &self,
+        bundle2: BoxStream<Bundle2Item, Error>,
+        mut maybe_resolve: Func,
+    ) -> BoxFuture<(Vec<T>, BoxStream<Bundle2Item, Error>), Error>
+    where
+        Func: FnMut(&Self, BoxStream<Bundle2Item, Error>)
+            -> BoxFuture<(Option<T>, BoxStream<Bundle2Item, Error>), Error>
+            + Send
+            + 'static,
+        T: Send + 'static,
+    {
+        let this = self.clone();
+        future::loop_fn((Vec::new(), bundle2), move |(mut result, bundle2)| {
+            maybe_resolve(&this, bundle2).map(move |(maybe_element, bundle2)| match maybe_element {
+                None => future::Loop::Break((result, bundle2)),
+                Some(element) => {
+                    result.push(element);
+                    future::Loop::Continue((result, bundle2))
+                }
+            })
+        }).boxify()
+    }
+}
+
+fn add_bookmark_to_transaction(
+    txn: &mut Box<bookmarks::Transaction>,
+    bookmark_push: BookmarkPush,
+) -> Result<()> {
+    match (bookmark_push.new, bookmark_push.old) {
+        (Some(new), Some(old)) => txn.update(&bookmark_push.name, &new, &old),
+        (Some(new), None) => txn.create(&bookmark_push.name, &new),
+        (None, Some(old)) => txn.delete(&bookmark_push.name, &old),
+        _ => Ok(()),
     }
 }
 
