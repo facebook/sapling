@@ -49,6 +49,7 @@ where
 {
     pub fn convert(
         &mut self,
+        changesets: BoxStream<HgNodeHash, mercurial::Error>,
         sender: SyncSender<BlobstoreEntry>,
         filenodes_sender: UnboundedSender<FilenodeInfo>,
     ) -> Result<()> {
@@ -56,21 +57,6 @@ where
         let logger = &self.logger.clone();
         let cpupool = self.cpupool.clone();
         let headstore = &self.headstore;
-        let skip = self.skip;
-        let commits_limit = self.commits_limit;
-
-        let changesets: BoxStream<HgNodeHash, mercurial::Error> = if let Some(skip) = skip {
-            self.repo.changesets().skip(skip).boxify()
-        } else {
-            self.repo.changesets().boxify()
-        };
-
-        let changesets: BoxStream<HgNodeHash, mercurial::Error> = if let Some(limit) = commits_limit
-        {
-            changesets.take(limit).boxify()
-        } else {
-            changesets.boxify()
-        };
 
         // Generate stream of changesets. For each changeset, save the cs blob, and the manifest
         // blob, and the files.
@@ -121,12 +107,13 @@ where
 
     pub fn fill_changesets_store(
         &self,
+        changesets: BoxStream<HgNodeHash, mercurial::Error>,
         changesets_store: Arc<Changesets>,
         repo_id: &RepositoryId,
     ) -> BoxFuture<(), mercurial::Error> {
         let repo = self.repo.clone();
         let repo_id = *repo_id;
-        self.get_changesets_stream()
+        changesets
             .and_then(move |node| {
                 repo.get_changeset(&HgChangesetId::new(node))
                     .map(move |cs| (cs, node))
@@ -147,7 +134,7 @@ where
             .boxify()
     }
 
-    fn get_changesets_stream(&self) -> BoxStream<HgNodeHash, mercurial::Error> {
+    pub fn get_changesets_stream(&self) -> BoxStream<HgNodeHash, mercurial::Error> {
         let changesets: BoxStream<HgNodeHash, mercurial::Error> = if let Some(skip) = self.skip {
             self.repo.changesets().skip(skip).boxify()
         } else {

@@ -219,7 +219,15 @@ where
         skip: skip,
         commits_limit: commits_limit,
     };
-    let res = convert_context.convert(sender, filenodes_sender);
+    let changesets = convert_context.get_changesets_stream();
+    let mut core = Core::new()?;
+    let changesets = core.run(changesets.collect())?;
+
+    let res = convert_context.convert(
+        stream::iter_ok(changesets.clone().into_iter()).boxify(),
+        sender,
+        filenodes_sender,
+    );
     iothread.join().expect("failed to join io thread")?;
     filenodesthread
         .join()
@@ -228,8 +236,11 @@ where
 
     warn!(logger, "filling up changesets store");
     let changesets_store = open_changesets_store(output.into(), xdb_tier)?;
-    let mut core = Core::new()?;
-    let fill_cs_store = convert_context.fill_changesets_store(changesets_store, &repo_id);
+    let fill_cs_store = convert_context.fill_changesets_store(
+        stream::iter_ok(changesets.clone().into_iter()).boxify(),
+        changesets_store,
+        &repo_id,
+    );
     core.run(fill_cs_store)
 }
 
