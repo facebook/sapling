@@ -28,6 +28,7 @@ extern crate mercurial_types;
 extern crate mononoke_types;
 
 use futures::Future;
+use futures_ext::FutureExt;
 
 use blobrepo::{compute_changed_files, BlobRepo};
 use mercurial_types::{manifest, Changeset, DChangesetId, DEntryId, DManifestId, Entry, FileType,
@@ -140,7 +141,7 @@ fn create_one_changeset(repo: BlobRepo) {
 
     let commit = create_changeset_no_parents(
         &repo,
-        root_manifest_future,
+        root_manifest_future.map(Some).boxify(),
         vec![file_future, manifest_dir_future],
     );
 
@@ -180,7 +181,7 @@ fn create_two_changesets(repo: BlobRepo) {
 
     let commit1 = create_changeset_no_parents(
         &repo,
-        root_manifest_future,
+        root_manifest_future.map(Some).boxify(),
         vec![file_future, manifest_dir_future],
     );
 
@@ -191,7 +192,12 @@ fn create_two_changesets(repo: BlobRepo) {
         roothash,
     );
 
-    let commit2 = create_changeset_one_parent(&repo, root_manifest_future, vec![], commit1.clone());
+    let commit2 = create_changeset_one_parent(
+        &repo,
+        root_manifest_future.map(Some).boxify(),
+        vec![],
+        commit1.clone(),
+    );
 
     let (commit1, commit2) = run_future(
         commit1
@@ -235,7 +241,8 @@ fn create_bad_changeset(repo: BlobRepo) {
     let (_, root_manifest_future) =
         upload_manifest_no_parents(&repo, format!("dir\0{}t\n", dirhash), &RepoPath::root());
 
-    let commit = create_changeset_no_parents(&repo, root_manifest_future, vec![]);
+    let commit =
+        create_changeset_no_parents(&repo, root_manifest_future.map(Some).boxify(), vec![]);
 
     run_future(commit.get_completed_changeset()).unwrap();
 }
@@ -262,7 +269,7 @@ fn create_double_linknode(repo: BlobRepo) {
             filehash,
             create_changeset_no_parents(
                 &repo,
-                root_manifest_future,
+                root_manifest_future.map(Some).boxify(),
                 vec![manifest_dir_future, file_future],
             ),
         )
@@ -279,7 +286,7 @@ fn create_double_linknode(repo: BlobRepo) {
 
         create_changeset_one_parent(
             &repo,
-            root_manifest_future,
+            root_manifest_future.map(Some).boxify(),
             vec![manifest_dir_future, file_future],
             parent_commit.clone(),
         )
@@ -338,7 +345,8 @@ fn check_linknode_creation(repo: BlobRepo) {
 
     uploads.push(manifest_dir_future);
 
-    let commit = create_changeset_no_parents(&repo, root_manifest_future, uploads);
+    let commit =
+        create_changeset_no_parents(&repo, root_manifest_future.map(Some).boxify(), uploads);
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
     assert!(cs.manifestid() == &DManifestId::new(roothash.into_mononoke()));

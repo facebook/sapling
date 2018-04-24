@@ -115,24 +115,15 @@ Add commit with a directory
   $ echo "private_key=\"$TESTDIR/edenservertest.key\"" >> $TESTTMP/config
   $ echo "ca_pem_file=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
  
-  $ blobimport --postpone-compaction -d repo $TESTTMP/blobrepo
-  $ grep changeset < $TESTTMP/blobimport.out
-  D* 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
-  D* 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
-  D* 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  D* 3: changeset 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
-  D* 4: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
-  D* 5: changeset 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
-  * filling up changesets changesets store (glob)
+  $ newblobimport $TESTTMP/repo/.hg $TESTTMP/blobrepo
+  $ grep 'inserted:' < $TESTTMP/blobimport.out
+  I* inserted: 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
+  I* inserted: 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
+  I* inserted: 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  I* inserted: 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
+  I* inserted: 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+  I* inserted: 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
 
-Heads output order is unpredictable, let's sort them by commit hash
-  $ grep "head " < $TESTTMP/blobimport.out | sort -k 6
-  D* head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  D* head 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
-  D* head 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
-  $ grep compaction < $TESTTMP/blobimport.out
-  I* compaction started (glob)
-  I* compaction finished (glob)
   $ edenserver --config-file $TESTTMP/config
 
 Curl and debugdata output should match

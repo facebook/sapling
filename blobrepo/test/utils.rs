@@ -168,7 +168,7 @@ fn upload_hg_entry(
 
 pub fn create_changeset_no_parents(
     repo: &BlobRepo,
-    root_manifest: BoxFuture<(HgBlobEntry, RepoPath), Error>,
+    root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     other_nodes: Vec<BoxFuture<(HgBlobEntry, RepoPath), Error>>,
 ) -> ChangesetHandle {
     let create_changeset = CreateChangeset {
@@ -186,7 +186,7 @@ pub fn create_changeset_no_parents(
 
 pub fn create_changeset_one_parent(
     repo: &BlobRepo,
-    root_manifest: BoxFuture<(HgBlobEntry, RepoPath), Error>,
+    root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     other_nodes: Vec<BoxFuture<(HgBlobEntry, RepoPath), Error>>,
     p1: ChangesetHandle,
 ) -> ChangesetHandle {

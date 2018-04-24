@@ -16,7 +16,7 @@ use futures::{Future, IntoFuture, Stream};
 use futures::future::{self, err, ok};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use mercurial::{HgManifestId, HgNodeHash, HgNodeKey};
+use mercurial::{HgManifestId, HgNodeHash, HgNodeKey, NULL_HASH};
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
@@ -500,7 +500,8 @@ type ContentBlobFuture = (ContentBlobInfo, BoxFuture<(), Error>);
 /// Filelogs we need to walk that DAG.
 /// This represents the manifests and file nodes introduced by a particular changeset.
 struct NewBlobs {
-    root_manifest: HgBlobFuture,
+    // root_manifest can be None f.e. when commit removes all the content of the repo
+    root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     // sub_entries has both submanifest and filenode entries.
     sub_entries: HgBlobStream,
     // This is returned as a Vec rather than a Stream so that the path and metadata are
@@ -516,6 +517,15 @@ impl NewBlobs {
         filelogs: &Filelogs,
         content_blobs: &ContentBlobs,
     ) -> Result<Self> {
+        if manifest_root_id.into_nodehash() == NULL_HASH {
+            // If manifest root id is NULL_HASH then there is no content in this changest
+            return Ok(Self {
+                root_manifest: ok(None).boxify(),
+                sub_entries: stream::empty().boxify(),
+                content_blobs: Vec::new(),
+            });
+        }
+
         let root_key = HgNodeKey {
             path: RepoPath::root(),
             hash: manifest_root_id.clone().into_nodehash(),
@@ -536,7 +546,7 @@ impl NewBlobs {
         Ok(Self {
             root_manifest: manifest_root
                 .clone()
-                .map(|it| (*it).clone())
+                .map(|it| Some((*it).clone()))
                 .from_err()
                 .boxify(),
             sub_entries: stream::futures_unordered(entries)

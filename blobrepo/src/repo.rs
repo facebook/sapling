@@ -538,7 +538,8 @@ pub struct ContentBlobMeta {
 pub struct CreateChangeset {
     pub p1: Option<ChangesetHandle>,
     pub p2: Option<ChangesetHandle>,
-    pub root_manifest: BoxFuture<(HgBlobEntry, RepoPath), Error>,
+    // root_manifest can be None f.e. when commit removes all the content of the repo
+    pub root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     pub sub_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
     pub user: String,
     pub time: DateTime,

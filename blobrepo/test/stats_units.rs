@@ -10,6 +10,8 @@ use std::sync::{Arc, Mutex};
 
 use async_unit;
 use failure::Error;
+use futures::Future;
+use futures_ext::FutureExt;
 use slog::{self, Drain, Logger, OwnedKVList, Record, Serializer, KV};
 
 use blobrepo::BlobRepo;
@@ -232,7 +234,11 @@ fn test_create_changeset_stats() {
         let (_, root_manifest_future) =
             upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &RepoPath::root());
 
-        let commit = create_changeset_no_parents(&repo, root_manifest_future, vec![file_future]);
+        let commit = create_changeset_no_parents(
+            &repo,
+            root_manifest_future.map(Some).boxify(),
+            vec![file_future],
+        );
         let _ = run_future(commit.get_completed_changeset()).unwrap();
 
         let mut uuid = None;
