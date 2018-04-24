@@ -36,10 +36,10 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use diesel::sql_types::HasSqlType;
 use failure::ResultExt;
-use futures::{future, Future, sync::oneshot};
 
 use db::ConnectionParams;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::Future;
+use futures_ext::{asynchronize, BoxFuture, FutureExt};
 use mercurial_types::{DChangesetId, RepositoryId};
 use mercurial_types::sql_types::DChangesetIdSql;
 
@@ -252,23 +252,14 @@ macro_rules! impl_changesets {
                 cs_id: DChangesetId,
             ) -> BoxFuture<Option<ChangesetEntry>, Error> {
                 let db = self.clone();
-                let (tx, rx) = oneshot::channel();
 
-                let fut = future::lazy(move || {
+                asynchronize(move || {
                     let query = changeset_query(repo_id, cs_id);
-
-                    #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
-                    let connection = match db.get_conn() {
-                        Ok(conn) => conn,
-                        Err(err) => {
-                            let _ = tx.send(Err(err));
-                            return Ok(());
-                        }
-                    };
+                    let connection = db.get_conn()?;
 
                     let changeset_row = query.first::<ChangesetRow>(&*connection).optional();
                     // This code is written in this style to allow easy porting to futures.
-                    let entry = changeset_row.map_err(failure::Error::from).and_then(|row| {
+                    changeset_row.map_err(failure::Error::from).and_then(|row| {
                         match row {
                             None => Ok(None),
                             Some(row) => {
@@ -295,40 +286,26 @@ macro_rules! impl_changesets {
                                 }).map_err(failure::Error::from)
                             }
                         }
-                    });
-                    let _ = tx.send(entry);
-                    Ok(())
-                });
-                future::lazy(|| {
-                    let _ = tokio::spawn(fut);
-                    rx.from_err().and_then(|v| v)
-                }).boxify()
+                    })
+                })
             }
 
             /// Insert a new changeset into this table. Checks that all parents are already in
             /// storage.
             fn add(&self, cs: ChangesetInsert) -> BoxFuture<(), Error> {
                 let db = self.clone();
-                let (tx, rx) = oneshot::channel();
 
-                let fut = future::lazy(move || {
+                asynchronize(move || {
                     let parent_query = changesets::table
                         .filter(changesets::repo_id.eq(cs.repo_id))
                         .filter(changesets::cs_id.eq_any(&cs.parents));
 
-                    #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
-                    let connection = match db.get_conn() {
-                        Ok(conn) => conn,
-                        Err(err) => {
-                            let _ = tx.send(Err(err));
-                            return Ok(());
-                        }
-                    };
+                    let connection = db.get_conn()?;
 
                     // TODO: always hit master for this query?
                     let parent_rows = parent_query.load::<ChangesetRow>(&*connection);
 
-                    let txn_result = parent_rows.map_err(failure::Error::from).and_then(|parent_rows| {
+                    parent_rows.map_err(failure::Error::from).and_then(|parent_rows| {
                         check_missing_rows(&cs.parents, &parent_rows)?;
 
                         // A changeset with no parents has generation number 1.
@@ -384,15 +361,8 @@ macro_rules! impl_changesets {
                                 .execute(&*connection)?;
                             Ok(())
                         })
-                    });
-
-                    let _ = tx.send(txn_result);
-                    Ok(())
-                });
-                future::lazy(move || {
-                    let _ = tokio::spawn(fut);
-                    rx.from_err().and_then(|v| v)
-                }).boxify()
+                    })
+                })
             }
         }
     }
