@@ -209,11 +209,11 @@ impl StoreView for FileStore {
 
 #[cfg(test)]
 mod tests {
-    use tempdir::TempDir;
     use filestore::FileStore;
-    use store::{BlockId, Store, StoreView};
     use std::fs;
     use std::io::Write;
+    use store::{BlockId, Store, StoreView};
+    use tempdir::TempDir;
 
     #[test]
     fn goodpath() {

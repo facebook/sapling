@@ -11,14 +11,7 @@ name = "treedirstate"
 crate-type = ["cdylib"]
 
 [dependencies]
-byteorder = "*"
-error-chain = "*"
-vlqencoding = { version = "*", path = "../../../lib/vlqencoding" }
-
-[dev-dependencies]
-itertools = "*"
-quickcheck = "*"
-tempdir = "*"
+treestate = { path = "../../../lib/treestate" }
 
 [dependencies.cpython]
 version = "0.2"

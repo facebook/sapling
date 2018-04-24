@@ -12,37 +12,10 @@
 //! The directory state also stores files that are in the working copy parent manifest but have
 //! been marked as removed.
 
-extern crate byteorder;
-
-#[cfg(not(test))]
 #[macro_use]
 extern crate cpython;
+extern crate treestate;
 
-#[macro_use]
-extern crate error_chain;
-
-#[cfg(test)]
-extern crate itertools;
-
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-
-#[cfg(test)]
-extern crate tempdir;
-
-extern crate vlqencoding;
-
-pub mod treedirstate;
-pub mod errors;
-pub mod filestate;
-pub mod filestore;
 #[cfg(not(test))]
 #[allow(non_camel_case_types)]
 pub mod python;
-pub mod serialization;
-pub mod store;
-pub mod tree;
-pub mod vecmap;
-
-pub use errors::*;

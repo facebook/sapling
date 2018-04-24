@@ -43,10 +43,10 @@ impl StoreView for NullStore {
 
 #[cfg(test)]
 pub mod tests {
-    use std::collections::HashMap;
     use errors::*;
-    use store::{BlockId, Store, StoreView};
     use std::borrow::Cow;
+    use std::collections::HashMap;
+    use store::{BlockId, Store, StoreView};
 
     /// Define a Store to be used in tests.  This doesn't store the data on disk, but rather
     /// keeps it in memory in a hash map.

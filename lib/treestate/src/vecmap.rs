@@ -1,11 +1,11 @@
 // Copyright Facebook, Inc. 2017
 //! Ordered map implementation using a sorted vector
 
-use std::mem;
 use std::borrow::Borrow;
-use std::slice::{Iter as VecIter, IterMut as VecIterMut};
 use std::collections::Bound;
 use std::collections::Bound::*;
+use std::mem;
+use std::slice::{Iter as VecIter, IterMut as VecIterMut};
 
 #[derive(Debug)]
 pub struct VecMap<K, V> {
@@ -217,10 +217,10 @@ impl<'a, K: 'a, V: 'a> Iterator for IterMut<'a, K, V> {
 #[cfg(test)]
 mod tests {
 
-    use vecmap::{Iter, VecMap};
     use itertools;
-    use std::collections::Bound::*;
     use std::collections::BTreeMap;
+    use std::collections::Bound::*;
+    use vecmap::{Iter, VecMap};
 
     #[test]
     fn insert_get_remove() {

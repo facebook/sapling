@@ -2,15 +2,13 @@
 //! Python bindings for treedirstate.
 
 use cpython::*;
-use cpython::exc;
-use errors;
-use errors::ErrorKind;
-use filestate::FileState;
 use std::cell::RefCell;
 use std::path::PathBuf;
-use store::BlockId;
-use tree::{Key, KeyRef};
-use treedirstate::TreeDirstate;
+use treestate::errors::{self, ErrorKind};
+use treestate::filestate::FileState;
+use treestate::store::BlockId;
+use treestate::tree::{Key, KeyRef};
+use treestate::treedirstate::TreeDirstate;
 
 py_module_initializer!(
     treedirstate,
