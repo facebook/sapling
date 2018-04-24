@@ -62,13 +62,6 @@ CONFIG
   $MONONOKE_NEWBLOBIMPORT --repo_id 0 --blobstore rocksdb mononoke-config/.hg mononoke-config-rocks >> "$TESTTMP/mononoke-config-blobimport.out" 2>&1
 }
 
-function blobimport {
-  $MONONOKE_BLOBIMPORT --blobstore rocksdb "$@" >> "$TESTTMP/blobimport.out" 2>&1
-  reponame=$_
-  mkdir -p "$reponame"/.hg
-  mkdir -p "$reponame"/books
-}
-
 function newblobimport {
   reponame=$2
   mkdir -p "$reponame"
