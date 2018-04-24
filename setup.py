@@ -1,4 +1,3 @@
-#
 # This is the mercurial setup script.
 #
 # 'python setup.py install', or
