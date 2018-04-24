@@ -60,12 +60,20 @@ typedef list<MPathElement> MPath (hs.newtype)
 // * This uses sorted (B-tree) sets and maps to ensure deterministic
 //   serialization.
 // * Added and modified files are both part of file_changes.
-// * file_changes and file_deletes are at the end of the struct so that a
-//   deserializer that just wants to read metadata can stop early.
+// * file_changes is at the end of the struct so that a deserializer that just
+//   wants to read metadata can stop early.
 // * The "required" fields are only for data that is absolutely core to the
 //   model. Note that Thrift does allow changing "required" to unqualified.
 // * MPath, Id and DateTime fields do not have a reasonable default value, so
 //   they must always be either "required" or "optional".
+// * The set of keys in file_changes is path-prefix-free (ppf): no path is a
+//   directory prefix of another path. So file_changes can never have
+//   "foo" and "foo/bar" together, but "foo" and "foo1" are OK.
+//   * If a directory is replaced by a file, the bonsai changeset will only
+//     record the file being added. The directory being deleted is implicit.
+//   * The same for a file being replaced by a directory.
+//   * Corollary: The file list in Mercurial is not ppf, so that would have to
+//     be computed separately from manifest diffs.
 struct BonsaiChangeset {
   1: required list<ChangesetId> parents,
   2: string author,
@@ -75,8 +83,7 @@ struct BonsaiChangeset {
   5: optional DateTime committer_date,
   6: string message,
   7: map<string, string> extra,
-  8: map<MPath, FileChange> file_changes,
-  9: set<MPath> file_deletes,
+  8: map<MPath, FileChangeOpt> file_changes,
 }
 
 // DateTime fields do not have a reasonable default value! They must
@@ -96,6 +103,11 @@ enum FileType {
   Regular = 0,
   Executable = 1,
   Symlink = 2,
+}
+
+struct FileChangeOpt {
+  // The value being absent here means that the file was deleted.
+  1: optional FileChange change,
 }
 
 struct FileChange {

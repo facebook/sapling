@@ -35,6 +35,16 @@ impl FileChange {
         }
     }
 
+    pub(crate) fn from_thrift_opt(
+        fc_opt: thrift::FileChangeOpt,
+        mpath: &MPath,
+    ) -> Result<Option<Self>> {
+        match fc_opt.change {
+            Some(fc) => Ok(Some(Self::from_thrift(fc, mpath)?)),
+            None => Ok(None),
+        }
+    }
+
     pub(crate) fn from_thrift(fc: thrift::FileChange, mpath: &MPath) -> Result<Self> {
         let catch_block = || {
             Ok(Self {
@@ -75,7 +85,13 @@ impl FileChange {
         self.copy_from.as_ref()
     }
 
-    pub fn into_thrift(self) -> thrift::FileChange {
+    #[inline]
+    pub(crate) fn into_thrift_opt(fc_opt: Option<Self>) -> thrift::FileChangeOpt {
+        let fc_opt = fc_opt.map(Self::into_thrift);
+        thrift::FileChangeOpt { change: fc_opt }
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::FileChange {
         thrift::FileChange {
             content_id: self.content_id.into_thrift(),
             file_type: self.file_type.into_thrift(),

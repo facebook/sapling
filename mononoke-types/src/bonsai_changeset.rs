@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use failure::{err_msg, SyncFailure};
 use quickcheck::{Arbitrary, Gen};
@@ -32,16 +32,16 @@ pub struct BonsaiChangesetMut {
     pub committer_date: Option<DateTime>,
     pub message: String,
     pub extra: BTreeMap<String, String>,
-    // XXX consider adding a check that changeset IDs inside copy info in FileChange are all
-    // members of parents
-    pub file_changes: BTreeMap<MPath, FileChange>,
-    pub file_deletes: BTreeSet<MPath>,
+    // XXX consider adding checks that:
+    // * file_changes is ppf
+    // * changeset IDs inside copy info in FileChange are all members of parents
+    pub file_changes: BTreeMap<MPath, Option<FileChange>>,
 }
 
 impl BonsaiChangesetMut {
     /// Freeze this instance and turn it into a `BonsaiChangeset`.
-    pub fn freeze(self) -> BonsaiChangeset {
-        BonsaiChangeset { inner: self }
+    pub fn freeze(self) -> Result<BonsaiChangeset> {
+        Ok(BonsaiChangeset { inner: self })
     }
 }
 
@@ -70,24 +70,18 @@ impl BonsaiChangeset {
                 extra: tc.extra,
                 file_changes: tc.file_changes
                     .into_iter()
-                    .map(|(f, c)| {
+                    .map(|(f, fc_opt)| {
                         let mpath = MPath::from_thrift(f)?;
-                        let cf = FileChange::from_thrift(c, &mpath)?;
-                        Ok((mpath, cf))
+                        let fc_opt = FileChange::from_thrift_opt(fc_opt, &mpath)?;
+                        Ok((mpath, fc_opt))
                     })
                     .collect::<Result<_>>()?,
-                file_deletes: tc.file_deletes
-                    .into_iter()
-                    .map(|f| MPath::from_thrift(f))
-                    .collect::<Result<_>>()?,
-            })
+            }.freeze()?)
         };
 
-        Ok(catch_block()
-            .with_context(|_: &Error| {
-                ErrorKind::InvalidThrift("BonsaiChangeset".into(), "Invalid changeset".into())
-            })?
-            .freeze())
+        Ok(catch_block().with_context(|_: &Error| {
+            ErrorKind::InvalidThrift("BonsaiChangeset".into(), "Invalid changeset".into())
+        })?)
     }
 
     pub fn from_blob<T: AsRef<[u8]>>(t: T) -> Result<Self> {
@@ -106,15 +100,11 @@ impl BonsaiChangeset {
     /// Get the files changed in this changeset. The items returned are guaranteed
     /// to be in depth-first traversal order: once all the changes to a particular
     /// tree have been applied, it will never be referred to again.
-    pub fn file_changes(&self) -> impl Iterator<Item = (&MPath, &FileChange)> {
-        self.inner.file_changes.iter()
-    }
-
-    /// Get the files deleted in this changeset. The items returned are guaranteed
-    /// to be in depth-first traversal order: once all the changes to a particular
-    /// tree have been applied, it will never be referred to again.
-    pub fn file_deletes(&self) -> impl Iterator<Item = &MPath> {
-        self.inner.file_deletes.iter()
+    pub fn file_changes(&self) -> impl Iterator<Item = (&MPath, Option<&FileChange>)> {
+        self.inner
+            .file_changes
+            .iter()
+            .map(|(path, fc_opt)| (path, fc_opt.as_ref()))
     }
 
     /// Get the author for this changeset.
@@ -187,12 +177,7 @@ impl BonsaiChangeset {
             file_changes: self.inner
                 .file_changes
                 .into_iter()
-                .map(|(f, c)| (f.into_thrift(), c.into_thrift()))
-                .collect(),
-            file_deletes: self.inner
-                .file_deletes
-                .into_iter()
-                .map(|f| f.into_thrift())
+                .map(|(f, c)| (f.into_thrift(), FileChange::into_thrift_opt(c)))
                 .collect(),
         }
     }
@@ -209,7 +194,6 @@ impl Arbitrary for BonsaiChangeset {
         BonsaiChangesetMut {
             parents,
             file_changes: BTreeMap::arbitrary(g),
-            file_deletes: BTreeSet::arbitrary(g),
             author: String::arbitrary(g),
             author_date: DateTime::arbitrary(g),
             committer: Option::<String>::arbitrary(g),
@@ -217,6 +201,7 @@ impl Arbitrary for BonsaiChangeset {
             message: String::arbitrary(g),
             extra: BTreeMap::arbitrary(g),
         }.freeze()
+            .expect("generated bonsai changeset must be valid")
     }
 
     fn shrink(&self) -> Box<Iterator<Item = Self>> {
@@ -224,14 +209,12 @@ impl Arbitrary for BonsaiChangeset {
         let iter = (
             cs.parents.clone(),
             cs.file_changes.clone(),
-            cs.file_deletes.clone(),
             cs.extra.clone(),
         ).shrink()
-            .map(move |(parents, file_changes, file_deletes, extra)| {
+            .map(move |(parents, file_changes, extra)| {
                 BonsaiChangesetMut {
                     parents,
                     file_changes,
-                    file_deletes,
                     author: cs.author.clone(),
                     author_date: cs.author_date,
                     committer: cs.committer.clone(),
@@ -239,6 +222,7 @@ impl Arbitrary for BonsaiChangeset {
                     message: cs.message.clone(),
                     extra,
                 }.freeze()
+                    .expect("shrunken bonsai changeset must be valid")
             });
         Box::new(iter)
     }
@@ -281,13 +265,13 @@ mod test {
             message: "Commit message".into(),
             extra: BTreeMap::new(),
             file_changes: btreemap![
-                MPath::new("a/b").unwrap() => FileChange::new(
+                MPath::new("a/b").unwrap() => Some(FileChange::new(
                     ContentId::new(Blake2::from_byte_array([1; 32])),
                     FileType::Regular,
                     42,
                     None,
-                ),
-                MPath::new("c/d").unwrap() => FileChange::new(
+                )),
+                MPath::new("c/d").unwrap() => Some(FileChange::new(
                     ContentId::new(Blake2::from_byte_array([2; 32])),
                     FileType::Executable,
                     84,
@@ -295,18 +279,19 @@ mod test {
                         MPath::new("e/f").unwrap(),
                         ChangesetId::new(Blake2::from_byte_array([3; 32])),
                     )),
-                ),
+                )),
+                MPath::new("g/h").unwrap() => None,
+                MPath::new("i/j").unwrap() => None,
             ],
-            file_deletes: btreeset![MPath::new("g/h").unwrap(), MPath::new("i/j").unwrap(),],
         };
-        let tc = tc.freeze();
+        let tc = tc.freeze().expect("fixed bonsai changeset must be valid");
         let blob = tc.into_blob();
 
         assert_eq!(
             blob.id(),
             &ChangesetId::new(
                 Blake2::from_str(
-                    "2d433580ec4fe257a7c98c5e5630a48ad67e0a2c1b41b5050ce0ef0eba276770"
+                    "dfb3d7163d601880458752efcaf158e66178a2f29223b2a918a697faaeee8159"
                 ).unwrap()
             )
         );
