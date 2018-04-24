@@ -824,16 +824,8 @@ folly::Future<struct stat> FileInode::stat() {
           // NOTE: we don't set rdev to anything special here because we
           // don't support committing special device nodes.
         }
-#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
-    _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
-        st.st_atim = state->timeStamps.atime.toTimespec();
-        st.st_ctim = state->timeStamps.ctime.toTimespec();
-        st.st_mtim = state->timeStamps.mtime.toTimespec();
-#else
-        st.st_atime = state->timeStamps.atime.toTimespec().tv_sec;
-        st.st_mtime = state->timeStamps.mtime.toTimespec().tv_sec;
-        st.st_ctime = state->timeStamps.ctime.toTimespec().tv_sec;
-#endif
+
+        state->timeStamps.applyToStat(st);
         st.st_mode = state->mode;
         updateBlockCount(st);
 

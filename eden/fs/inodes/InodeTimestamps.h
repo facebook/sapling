@@ -15,6 +15,7 @@
 #include <time.h>
 
 struct fuse_setattr_in;
+struct stat;
 
 namespace facebook {
 namespace eden {
@@ -130,6 +131,11 @@ struct InodeTimestamps {
    * Always sets ctime to the current time as given by the clock.
    */
   void setattrTimes(const Clock& clock, const fuse_setattr_in& attr);
+
+  /**
+   * Updates st_atime, st_mtime, and st_ctime of the given stat struct.
+   */
+  void applyToStat(struct stat& st) const;
 };
 
 } // namespace eden

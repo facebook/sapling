@@ -175,16 +175,7 @@ Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
 
   attr.st.st_mode = S_IFDIR | 0755;
   attr.st.st_ino = getNodeId().get();
-#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
-    _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
-  attr.st.st_atim = contents->timeStamps.atime.toTimespec();
-  attr.st.st_ctim = contents->timeStamps.ctime.toTimespec();
-  attr.st.st_mtim = contents->timeStamps.mtime.toTimespec();
-#else
-  attr.st.st_atime = contents->timeStamps.atime.toTimespec().tv_sec;
-  attr.st.st_mtime = contents->timeStamps.mtime.toTimespec().tv_sec;
-  attr.st.st_ctime = contents->timeStamps.ctime.toTimespec().tv_sec;
-#endif
+  contents->timeStamps.applyToStat(attr.st);
 
   // For directories, nlink is the number of entries including the
   // "." and ".." links.

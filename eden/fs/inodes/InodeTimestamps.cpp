@@ -10,6 +10,7 @@
 #include "eden/fs/inodes/InodeTimestamps.h"
 
 #include <folly/Conv.h>
+#include <sys/stat.h>
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/utils/Clock.h"
 
@@ -143,6 +144,19 @@ void InodeTimestamps::setattrTimes(
   // when ever setattr is called, as this function is called in setattr, update
   // ctime to now.
   ctime = now;
+}
+
+void InodeTimestamps::applyToStat(struct stat& st) const {
+#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
+    _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
+  st.st_atim = atime.toTimespec();
+  st.st_ctim = ctime.toTimespec();
+  st.st_mtim = mtime.toTimespec();
+#else
+  st.st_atime = atime.toTimespec().tv_sec;
+  st.st_mtime = mtime.toTimespec().tv_sec;
+  st.st_ctime = ctime.toTimespec().tv_sec;
+#endif
 }
 
 } // namespace eden
