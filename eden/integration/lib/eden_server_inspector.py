@@ -9,6 +9,7 @@
 
 import eden.thrift
 from typing import Iterable
+from . import edenclient
 
 '''Utilities for inspecting the state of the Eden server via Thrift.
 
@@ -18,11 +19,12 @@ specified for each instance method.
 
 
 class EdenServerInspector(object):
-    def __init__(self, mount_point: str) -> None:
+    def __init__(self, eden: edenclient.EdenFS, mount_point: str) -> None:
+        self._eden = eden
         self._mount_point = mount_point
 
     def create_thrift_client(self) -> eden.thrift.EdenClient:
-        return eden.thrift.create_thrift_client(mounted_path=self._mount_point)
+        return self._eden.get_thrift_client()
 
     def unload_inode_for_path(self, path: str='') -> None:
         '''path: relative path to a directory under the mount.'''

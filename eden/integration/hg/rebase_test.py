@@ -63,7 +63,9 @@ class RebaseTest(EdenHgTestCase):
             revset=f'successors({self._c15})-{self._c15}')[0]
 
         # Record the pre-update inode count.
-        inspector = eden_server_inspector.EdenServerInspector(self.repo.path)
+        inspector = eden_server_inspector.EdenServerInspector(
+            self.eden, self.repo.path
+        )
         inspector.unload_inode_for_path('numbers')
         pre_update_count = inspector.get_inode_count('numbers')
         print(f'loaded inode count before `hg update`: {pre_update_count}')

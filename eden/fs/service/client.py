@@ -49,19 +49,14 @@ class EdenClient(EdenService.Client):
     - Implement the context manager __enter__ and __exit__ methods, so it can
       be used in with statements.
     '''
-    def __init__(self, eden_dir=None, mounted_path=None):
-        self._eden_dir = eden_dir
-        if mounted_path:
-            sock_path = os.readlink(
-                os.path.join(mounted_path, '.eden', 'socket')
-            )
-            self._eden_dir = os.path.dirname(sock_path)
+    def __init__(self, eden_dir=None, socket_path=None):
+        if socket_path is not None:
+            self._socket_path = socket_path
         elif eden_dir is not None:
-            self._eden_dir = eden_dir
-            sock_path = os.path.join(self._eden_dir, SOCKET_PATH)
+            self._socket_path = os.path.join(eden_dir, SOCKET_PATH)
         else:
-            raise TypeError('one of mounted_path or eden_dir is required')
-        self._socket = TSocket(unix_socket=sock_path)
+            raise TypeError('one of eden_dir or socket_path is required')
+        self._socket = TSocket(unix_socket=self._socket_path)
         # We used to set a timeout here, but picking the right duration is hard,
         # and safely retrying an arbitrary thrift call may not be safe.  So we
         # just leave the client with no timeout.
@@ -83,7 +78,7 @@ class EdenClient(EdenService.Client):
         except TTransportException as ex:
             self.close()
             if ex.type == TTransportException.NOT_OPEN:
-                raise EdenNotRunningError(self._eden_dir)
+                raise EdenNotRunningError(self._socket_path)
             raise
 
     def close(self):
@@ -92,10 +87,10 @@ class EdenClient(EdenService.Client):
             self._transport = None
 
 
-def create_thrift_client(eden_dir=None, mounted_path=None):
+def create_thrift_client(eden_dir=None, socket_path=None):
     '''Construct a thrift client to speak to the running eden server
     instance associated with the specified mount point.
 
     @return Returns a context manager for EdenService.Client.
     '''
-    return EdenClient(eden_dir=eden_dir, mounted_path=mounted_path)
+    return EdenClient(eden_dir=eden_dir, socket_path=socket_path)
