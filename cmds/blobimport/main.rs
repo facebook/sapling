@@ -51,7 +51,7 @@ use std::sync::Arc;
 use std::sync::mpsc::sync_channel;
 use std::thread;
 
-use changesets::{Changesets, SqliteChangesets};
+use changesets::{Changesets, MysqlChangesets, SqliteChangesets};
 use clap::{App, Arg, ArgMatches};
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
@@ -129,6 +129,7 @@ where
     let repo_id = RepositoryId::new(0);
     info!(logger, "Opening headstore: {:?}", output);
     let headstore = open_headstore(output.clone(), &cpupool)?;
+    let xdb_tier = xdb_tier.map(|tier| tier.into());
 
     if let BlobstoreType::Manifold(ref bucket) = blobtype {
         info!(logger, "Using ManifoldBlob with bucket: {:?}", bucket);
@@ -189,7 +190,7 @@ where
         .name("filenodeinserts".to_owned())
         .spawn({
             let output = output.clone();
-            let xdb_tier = xdb_tier.map(|tier| tier.into()).clone();
+            let xdb_tier = xdb_tier.clone();
             move || {
                 let mut core = Core::new().expect("cannot create core in iothread");
                 let filenodes = open_filenodes_store(output.into(), xdb_tier)
@@ -225,18 +226,34 @@ where
         .expect("failed to join filenodesthread");
     res?;
 
-    warn!(logger, "filling up changesets changesets store");
-    let changesets_store = open_changesets_store(output.into())?;
+    warn!(logger, "filling up changesets store");
+    let changesets_store = open_changesets_store(output.into(), xdb_tier)?;
     let mut core = Core::new()?;
     let fill_cs_store = convert_context.fill_changesets_store(changesets_store, &repo_id);
     core.run(fill_cs_store)
 }
 
-fn open_changesets_store(mut output: PathBuf) -> Result<Arc<Changesets>> {
-    output.push("changesets");
-    Ok(Arc::new(SqliteChangesets::create(
-        output.to_string_lossy(),
-    )?))
+fn open_changesets_store(
+    mut output: PathBuf,
+    xdb_tier: Option<PathBuf>,
+) -> Result<Arc<Changesets>> {
+    match xdb_tier {
+        Some(tier) => {
+            let connection_params = get_connection_params(
+                tier.to_string_lossy(),
+                InstanceRequirement::Master,
+                None,
+                Some(ProxyRequirement::Forbidden),
+            ).expect("cannot create ConnectionParams");
+            Ok(Arc::new(MysqlChangesets::open(connection_params)?))
+        }
+        None => {
+            output.push("changesets");
+            Ok(Arc::new(SqliteChangesets::create(
+                output.to_string_lossy(),
+            )?))
+        }
+    }
 }
 
 fn open_filenodes_store(mut output: PathBuf, xdb_tier: Option<PathBuf>) -> Result<Arc<Filenodes>> {
