@@ -820,6 +820,24 @@ def wraprepo(repo):
                         name = revdata[0]
                         chunk = revdata[1]
                         linkrev = revdata[3]
+
+                        # Some versions of the MySQL Python connector have a
+                        # bug where it converts aa column containing a single
+                        # null byte into None. hgsql needs this workaround to
+                        # handle file revisions that are exactly a single null
+                        # byte.
+                        #
+                        # The only column that can contain a single null byte
+                        # here is data1 (column 6):
+                        # * path is a path, so Unix rules prohibit it from
+                        #    containing null bytes.
+                        # * chunk, chunkcount and linkrev are integers.
+                        # * entry is a binary blob that matches a revlog index
+                        #   entry, which cannot be "\0".
+                        # * data0 is either empty or "u".
+                        if revdata[6] is None:
+                            revdata = revdata[:6] + (b'\0',)
+
                         groupedrevdata.setdefault((name, linkrev), {})[chunk] = revdata
 
                     if not groupedrevdata:

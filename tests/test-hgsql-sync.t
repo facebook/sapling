@@ -39,16 +39,27 @@
 
   $ cd ../client
   $ echo y > y
+
+# (also test for a file containing a single null byte)
+  $ printf '\0' > nullbyte
+  $ f --hexdump nullbyte
+  nullbyte:
+  0000: 00                                              |.|
+
   $ hg commit -qAm y
   $ hg push -q ssh://user@dummy/master
   $ cd ../master2
   $ hg log -l 1
-  changeset:   1:d34c38483be9
+  changeset:   1:b62091368546
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
   
+  $ hg cat -r 1 nullbyte | f --hexdump -
+  
+  0000: 00                                              |.|
+
 # Push a bookmark to one master, verify in the other
 
   $ cd ../client
@@ -61,7 +72,7 @@
   [1]
   $ cd ../master2
   $ hg book
-     mybook                    1:d34c38483be9
+     mybook                    1:b62091368546
 
 # Pull commit and bookmark to one master, verify in the other
 
@@ -74,7 +85,7 @@
   $ hg pull -q ssh://user@dummy/client
   $ cd ../master2
   $ hg log -l 1
-  changeset:   2:d47967ce72a5
+  changeset:   2:f3a7cb746fa9
   bookmark:    mybook
   tag:         tip
   user:        test
@@ -87,11 +98,11 @@
   $ cd ../master
   $ hg book
      book1                     -1:000000000000
-     mybook                    2:d47967ce72a5
+     mybook                    2:f3a7cb746fa9
   $ hg book -d book1
   $ cd ../master2
   $ hg book
-     mybook                    2:d47967ce72a5
+     mybook                    2:f3a7cb746fa9
 
 # Verify that --forcesync works
 
