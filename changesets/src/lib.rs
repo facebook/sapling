@@ -69,8 +69,9 @@ pub struct ChangesetInsert {
 
 /// Interface to storage of changesets that have been completely stored in Mononoke.
 pub trait Changesets: Send + Sync {
-    /// Add a new entry to the changesets table.
-    fn add(&self, cs: ChangesetInsert) -> BoxFuture<(), Error>;
+    /// Add a new entry to the changesets table. Returns true if new changeset was inserted,
+    /// returns false if the same changeset has already existed.
+    fn add(&self, cs: ChangesetInsert) -> BoxFuture<bool, Error>;
 
     /// Retrieve the row specified by this commit, if available.
     fn get(
@@ -97,7 +98,7 @@ impl CachingChangests {
 }
 
 impl Changesets for CachingChangests {
-    fn add(&self, cs: ChangesetInsert) -> BoxFuture<(), Error> {
+    fn add(&self, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
         self.changesets.add(cs)
     }
 
@@ -292,7 +293,7 @@ macro_rules! impl_changesets {
 
             /// Insert a new changeset into this table. Checks that all parents are already in
             /// storage.
-            fn add(&self, cs: ChangesetInsert) -> BoxFuture<(), Error> {
+            fn add(&self, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
                 let db = self.clone();
 
                 asynchronize(move || {
@@ -323,7 +324,36 @@ macro_rules! impl_changesets {
                             let result = insert_into(changesets::table)
                                 .values(&cs_insert)
                                 .execute(&*connection);
-                            map_add_result(result)?;
+
+                            if !map_add_result(result)? {
+                                let old_cs_row = changeset_query(cs.repo_id, cs.cs_id)
+                                    .first::<ChangesetRow>(&*connection)?;
+
+                                let parent_query = csparents::table
+                                    .filter(csparents::cs_id.eq(old_cs_row.id))
+                                    .order(csparents::seq.asc())
+                                    .inner_join(changesets::table);
+                                let old_parent_rows = parent_query
+                                    .load::<(ChangesetParentRow, ChangesetRow)>(&*connection)
+                                    .map_err(failure::Error::from)
+                                    .context("while fetching parents to check duplicate insertion")?;
+
+                                let old_parent_rows: Vec<_> =  old_parent_rows
+                                    .into_iter().map(|val| val.1).collect();
+                                if old_parent_rows == parent_rows {
+                                    return Ok(false);
+                                } else {
+                                    let old_parents: Vec<_> = old_parent_rows
+                                        .into_iter().map(|parent| parent.cs_id).collect();
+                                    return Err(
+                                        ErrorKind::DuplicateInsertionInconsistency(
+                                            cs.cs_id,
+                                            old_parents,
+                                            cs.parents.clone(),
+                                        ).into()
+                                    );
+                                }
+                            }
 
                             let cs_query = changeset_query(cs.repo_id, cs.cs_id);
                             // MySQL and SQLite both have functions to expose "last insert ID", but
@@ -359,7 +389,7 @@ macro_rules! impl_changesets {
                             insert_into(csparents::table)
                                 .values(&parent_inserts)
                                 .execute(&*connection)?;
-                            Ok(())
+                            Ok(true)
                         })
                     })
                 })
@@ -387,12 +417,10 @@ where
 }
 
 #[inline]
-fn map_add_result(result: result::Result<usize, DieselError>) -> Result<()> {
+fn map_add_result(result: result::Result<usize, DieselError>) -> Result<bool> {
     match result {
-        Ok(_rows) => Ok(()),
-        Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
-            Err(ErrorKind::DuplicateChangeset.into())
-        }
+        Ok(_rows) => Ok(true),
+        Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => Ok(false),
         Err(err) => Err(err.into()),
     }
 }

@@ -129,7 +129,7 @@ where
                     cs_id: DChangesetId::new(node),
                     parents,
                 };
-                changesets_store.add(insert)
+                changesets_store.add(insert).map(|_| ())
             })
             .boxify()
     }

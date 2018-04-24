@@ -80,17 +80,59 @@ fn duplicate<C: Changesets + 'static>(changesets: C) {
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets
-        .add(row.clone())
-        .wait()
-        .expect("Adding new entry failed");
+    assert_eq!(
+        changesets
+            .add(row.clone())
+            .wait()
+            .expect("Adding new entry failed"),
+        true,
+        "inserting unique changeset must return true"
+    );
 
+    assert_eq!(
+        changesets
+            .add(row)
+            .wait()
+            .expect("error while adding changeset"),
+        false,
+        "inserting the same changeset must return false"
+    );
+}
+
+fn broken_duplicate<C: Changesets + 'static>(changesets: C) {
+    let row = ChangesetInsert {
+        repo_id: REPO_ZERO,
+        cs_id: ONES_CSID,
+        parents: vec![],
+    };
+    assert_eq!(
+        changesets.add(row).wait().expect("Adding new entry failed"),
+        true,
+        "inserting unique changeset must return true"
+    );
+
+    let row = ChangesetInsert {
+        repo_id: REPO_ZERO,
+        cs_id: TWOS_CSID,
+        parents: vec![],
+    };
+    assert_eq!(
+        changesets.add(row).wait().expect("Adding new entry failed"),
+        true,
+        "inserting unique changeset must return true"
+    );
+
+    let row = ChangesetInsert {
+        repo_id: REPO_ZERO,
+        cs_id: ONES_CSID,
+        parents: vec![TWOS_CSID],
+    };
     let result = changesets
         .add(row)
         .wait()
-        .expect_err("Adding duplicate entry succeeded (should fail)");
+        .expect_err("Adding changeset with the same hash but differen parents should fail");
     match result.downcast::<ErrorKind>() {
-        Ok(ErrorKind::DuplicateChangeset) => {}
+        Ok(ErrorKind::DuplicateInsertionInconsistency(..)) => {}
         err => panic!("unexpected error: {:?}", err),
     };
 }
@@ -229,6 +271,13 @@ macro_rules! changesets_test_impl {
             fn test_duplicate() {
                 async_unit::tokio_unit_test(|| {
                     duplicate($new_cb());
+                });
+            }
+
+            #[test]
+            fn test_broken_duplicate() {
+                async_unit::tokio_unit_test(|| {
+                    broken_duplicate($new_cb());
                 });
             }
 
