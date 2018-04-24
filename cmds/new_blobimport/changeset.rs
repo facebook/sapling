@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use failure_ext::{err_msg, Error, Fail, FutureFailureErrorExt, FutureFailureExt, ResultExt,
-                  StreamFailureErrorExt};
+use failure::err_msg;
+use failure::prelude::*;
 use futures::{Future, IntoFuture};
 use futures::future::{self, SharedItem};
 use futures::stream::{self, Stream};

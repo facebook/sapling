@@ -7,11 +7,13 @@
 #![deny(warnings)]
 #![feature(conservative_impl_trait)]
 
+extern crate ascii;
 extern crate blobrepo;
 extern crate bytes;
 extern crate changesets;
 extern crate clap;
-extern crate failure_ext;
+#[macro_use]
+extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
 extern crate futures_ext;
@@ -22,6 +24,7 @@ extern crate slog;
 extern crate slog_glog_fmt;
 extern crate tokio_core;
 
+mod bookmark;
 mod changeset;
 
 use std::fs;
@@ -29,7 +32,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use clap::{App, Arg, ArgMatches};
-use failure_ext::err_msg;
+use failure::err_msg;
 use futures::{Future, Stream};
 use slog::{Drain, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
@@ -166,22 +169,28 @@ fn main() {
 
     let blobrepo = Arc::new(open_blobrepo(&logger, core.remote(), &matches));
 
-    let csstream = changeset::upload_changesets(revlogrepo, blobrepo);
+    let upload_changesets = changeset::upload_changesets(revlogrepo.clone(), blobrepo.clone())
+        .for_each(|cs| {
+            cs.map(|cs| {
+                info!(logger, "inserted: {}", cs.get_changeset_id());
+                ()
+            }).map_err(|err| {
+                error!(logger, "failed to blobimport: {}", err);
 
-    core.run(csstream.for_each(|cs| {
-        cs.map(|cs| {
-            info!(logger, "inserted: {}", cs.get_changeset_id());
-            ()
-        }).map_err(|err| {
-            error!(logger, "failed to blobimport: {}", err);
+                for cause in err.causes() {
+                    info!(logger, "cause: {}", cause);
+                }
+                info!(logger, "root cause: {:?}", err.root_cause());
 
-            for cause in err.causes() {
-                info!(logger, "cause: {}", cause);
-            }
-            info!(logger, "root cause: {:?}", err.root_cause());
+                let msg = format!("failed to blobimport: {}", err);
+                err_msg(msg)
+            })
+        });
 
-            let msg = format!("failed to blobimport: {}", err);
-            err_msg(msg)
-        })
+    let upload_bookmarks = bookmark::upload_bookmarks(&logger, revlogrepo, blobrepo);
+
+    core.run(upload_changesets.and_then(|()| {
+        info!(logger, "finished uploading changesets, now doing bookmarks");
+        upload_bookmarks
     })).expect("main stream failed");
 }
