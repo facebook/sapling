@@ -29,7 +29,7 @@ function build_tools {
   echo "Building Mononoke hgcli"
   MONONOKE_HGCLI="$(buck root)/$(buck build @mode/opt '//scm/mononoke/hgcli:hgcli' --show-output | cut -d\  -f2)"
   echo "Building Mononoke blobimport"
-  MONONOKE_BLOBIMPORT="$(buck root)/$(buck build @mode/opt '//scm/mononoke:blobimport' --show-output | cut -d\  -f2)"
+  MONONOKE_BLOBIMPORT="$(buck root)/$(buck build @mode/opt '//scm/mononoke:new_blobimport' --show-output | cut -d\  -f2)"
   export MONONOKE_BLOBIMPORT
   echo "Building Mononoke server"
   MONONOKE_SERVER="$(buck root)/$(buck build @mode/opt '//scm/mononoke:mononoke' --show-output | cut -d\  -f2)"
@@ -93,10 +93,7 @@ CONFIG
   hg backfilltree
   mkdir "$config_repo-rocks"
 
-  $MONONOKE_BLOBIMPORT --blobstore rocksdb "$config_repo" "$config_repo"-rocks >> "$REPO_PATH/blobimport.out" 2>&1
-  mkdir -p "$config_repo"-rocks/.hg
-  mkdir -p "$config_repo"-rocks/books
-  mkdir -p "$config_repo"-rocks/heads
+  $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb "$config_repo"/.hg "$config_repo"-rocks >> "$REPO_PATH/blobimport.out" 2>&1
 
   mkdir -p "$repos_path/repo/.hg"
 
@@ -140,10 +137,7 @@ CONFIG
   hg backfilltree
   mkdir "$config_repo-rocks"
 
-  $MONONOKE_BLOBIMPORT --blobstore rocksdb "$config_repo" "$config_repo"-rocks >> "$REPO_PATH/blobimport.out" 2>&1
-  mkdir -p "$config_repo"-rocks/.hg
-  mkdir -p "$config_repo"-rocks/books
-  mkdir -p "$config_repo"-rocks/heads
+  $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb "$config_repo"/.hg "$config_repo"-rocks >> "$REPO_PATH/blobimport.out" 2>&1
 
   mkdir -p "$repos_path/repo/.hg" \
            "$repos_path/repo/heads" \
