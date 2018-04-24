@@ -7,7 +7,9 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import abc
 import errno
+import json
 import os
 import pwd
 import subprocess
@@ -18,7 +20,7 @@ import typing
 import eden.thrift
 from thrift import Thrift
 from fb303.ttypes import fb_status
-from typing import Any, Callable, Optional, Tuple, TypeVar
+from typing import Any, Callable, List, Optional, TypeVar
 
 
 # These paths are relative to the user's client directory.
@@ -208,44 +210,123 @@ def mkdir_p(path: str) -> str:
     return path
 
 
+class Repo(abc.ABC):
+    HEAD: str = 'Must be defined by subclasses'
+
+    def __init__(
+        self, type: str, source: str, working_dir: Optional[str] = None
+    ) -> None:
+        # The repository type: 'hg' or 'git'
+        self.type = type
+        # The repository data source.
+        # For mercurial this is the directory containing .hg/store
+        # For git this is the repository .git directory
+        self.source = source
+        # The root of the working directory
+        self.working_dir = working_dir
+
+    def __repr__(self) -> str:
+        return (f'Repo(type={self.type!r}, source={self.source!r}, '
+                f'working_dir={self.working_dir!r})')
+
+    @abc.abstractmethod
+    def get_commit_hash(self, commit: str) -> str:
+        '''
+        Returns the commit hash for the given hg revision ID or git
+        commit-ish.
+        '''
+        pass
+
+    @abc.abstractmethod
+    def cat_file(self, commit: str, path: str) -> bytes:
+        '''
+        Returns the file contents for the given file at the given commit.
+        '''
+        pass
+
+
+class HgRepo(Repo):
+    HEAD = '.'
+
+    def __init__(self, source: str, working_dir: str) -> None:
+        super(HgRepo, self).__init__('hg', source, working_dir)
+        self._env = os.environ.copy()
+        self._env['HGPLAIN'] = '1'
+
+    def __repr__(self) -> str:
+        return (
+            f'HgRepo(source={self.source!r}, '
+            f'working_dir={self.working_dir!r})'
+        )
+
+    def _run_hg(self, args: List[str]) -> bytes:
+        cmd = ['hg'] + args
+        out_bytes = subprocess.check_output(cmd, cwd=self.working_dir,
+                                            env=self._env)
+        out = typing.cast(bytes, out_bytes)
+        return out
+
+    def get_commit_hash(self, commit: str) -> str:
+        out = self._run_hg(['log', '-r', commit, '-T{node}'])
+        return out.strip().decode('utf-8')
+
+    def cat_file(self, commit: str, path: str) -> bytes:
+        return self._run_hg(['cat', '-r', commit, path])
+
+
+class GitRepo(Repo):
+    HEAD = 'HEAD'
+
+    def __init__(self, source: str, working_dir: Optional[str] = None) -> None:
+        super(GitRepo, self).__init__('git', source, working_dir)
+
+    def __repr__(self) -> str:
+        return (
+            f'GitRepo(source={self.source!r}, '
+            f'working_dir={self.working_dir!r})'
+        )
+
+    def _run_git(self, args: List[str]) -> bytes:
+        cmd = ['git'] + args
+        out = typing.cast(bytes, subprocess.check_output(cmd, cwd=self.source))
+        return out
+
+    def get_commit_hash(self, commit: str) -> str:
+        out = self._run_git(['rev-parse', commit])
+        return out.strip().decode('utf-8')
+
+    def cat_file(self, commit: str, path: str) -> bytes:
+        return self._run_git(['cat-file', 'blob', ':'.join((commit, path))])
+
+
 def is_git_dir(path: str) -> bool:
     return (os.path.isdir(os.path.join(path, 'objects')) and
             os.path.isdir(os.path.join(path, 'refs')) and
             os.path.exists(os.path.join(path, 'HEAD')))
 
 
-def get_git_dir(path: str) -> Optional[str]:
+def _get_git_repo(path: str) -> Optional[GitRepo]:
     '''
-    If path points to a git repository, return the path to the repository .git
-    directory.  Otherwise, if the path is not a git repository, return None.
+    If path points to a git repository, return a GitRepo object.
+    Otherwise, if the path is not a git repository, return None.
     '''
-    path = os.path.realpath(path)
     if path.endswith('.git') and is_git_dir(path):
-        return path
+        return GitRepo(path)
 
     git_subdir = os.path.join(path, '.git')
     if is_git_dir(git_subdir):
-        return git_subdir
+        return GitRepo(git_subdir, path)
 
     return None
 
 
-def get_git_commit(git_dir: str, bookmark: str) -> str:
+def _get_hg_repo(path: str) -> Optional[HgRepo]:
     '''
-    returns git commit SHA for label (e.g., 'HEAD', 'master', etc.)
+    If path points to a mercurial repository, return a HgRepo object.
+    Otherwise, if path is not a mercurial repository, return None.
     '''
-    cmd = ['git', 'rev-parse', bookmark]
-    out = typing.cast(bytes, subprocess.check_output(cmd, cwd=git_dir))
-    return out.strip().decode('utf-8', errors='surrogateescape')
-
-
-def get_hg_repo(path: str) -> Optional[str]:
-    '''
-    If path points to a mercurial repository, return a normalized path to the
-    repository root.  Otherwise, if path is not a mercurial repository, return
-    None.
-    '''
-    repo_path = os.path.realpath(path)
+    repo_path = path
+    working_dir = path
     hg_dir = os.path.join(repo_path, '.hg')
     if not os.path.isdir(hg_dir):
         return None
@@ -264,30 +345,47 @@ def get_hg_repo(path: str) -> Optional[str]:
     if not os.path.isdir(os.path.join(hg_dir, 'store')):
         return None
 
-    return repo_path
+    return HgRepo(repo_path, working_dir)
 
 
-def get_hg_commit(repo: str, bookmark: str) -> str:
-    env = os.environ.copy()
-    env['HGPLAIN'] = '1'
-    cmd = ['hg', '--cwd', repo, 'log', '-r', bookmark, '-T{node}']
-    out = typing.cast(bytes, subprocess.check_output(cmd, env=env))
-    return out.decode('utf-8', errors='strict')
+def get_repo(path: str) -> Optional[Repo]:
+    '''
+    Given a path inside a repository, return the repository source and type.
+    '''
+    path = os.path.realpath(path)
+    if not os.path.exists(path):
+        return None
+
+    while True:
+        hg_repo = _get_hg_repo(path)
+        if hg_repo is not None:
+            return hg_repo
+        git_repo = _get_git_repo(path)
+        if git_repo is not None:
+            return git_repo
+
+        parent = os.path.dirname(path)
+        if parent == path:
+            return None
+
+        path = parent
 
 
-def get_repo_source_and_type(path: str) -> Tuple[str, Optional[str]]:
-    repo_source = ''
-    repo_type = None
-    git_dir = get_git_dir(path)
-    if git_dir:
-        repo_source = git_dir
-        repo_type = 'git'
-    else:
-        hg_repo = get_hg_repo(path)
-        if hg_repo:
-            repo_source = hg_repo
-            repo_type = 'hg'
-    return (repo_source, repo_type)
+def get_project_id(repo: Repo) -> Optional[str]:
+    try:
+        contents = repo.cat_file(repo.HEAD, '.arcconfig')
+    except subprocess.CalledProcessError:
+        # Most likely .arcconfig does not exist.
+        # We cannot determine the project ID.
+        return None
+
+    try:
+        data = json.loads(contents)
+    except Exception as ex:
+        # .arcconfig does not contain valid JSON data for some reason.
+        return None
+
+    return typing.cast(Optional[str], data.get('project_id', None))
 
 
 def print_stderr(message: str, *args: Any, **kwargs: Any) -> None:

@@ -193,9 +193,10 @@ class Config:
             raise Exception(f'repository "{alias}" missing key "path".')
 
         default_revision = (
-            repo_data.get('default-revision') or
-            (parser['clone']['default-revision'] if 'clone' in parser else None) or
-            DEFAULT_REVISION[scm_type]
+            repo_data.get('default-revision') or (
+                parser['clone']['default-revision']
+                if 'clone' in parser else None
+            ) or DEFAULT_REVISION[scm_type]
         )
 
         return ClientConfig(
@@ -727,11 +728,12 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         )
 
     def get_client_config_for_path(self, path: str) -> Optional[ClientConfig]:
-        directory_map = self._get_directory_map()
-        client_dir_component = directory_map.get(path)
-        if client_dir_component is None:
+        client_link = os.path.join(path, '.eden', 'client')
+        try:
+            client_dir = os.readlink(client_link)
+        except OSError:
             return None
-        client_dir = os.path.join(self._get_clients_dir(), client_dir_component)
+
         return self._get_client_config(client_dir)
 
     def _get_directory_map(self) -> Dict[str, str]:

@@ -66,9 +66,8 @@ class RCTest(testcase.EdenRepoTest):
         system_repo.write_file('hello.txt', 'hola\n')
         system_repo.commit('Initial commit.')
 
-        system_repo_path, system_repo_type = \
-            util.get_repo_source_and_type(system_repo.path)
-        assert system_repo_type is not None
+        repo_info = util.get_repo(system_repo.path)
+        assert repo_info is not None
 
         # Create temporary system config
         f, path = tempfile.mkstemp(dir=self.system_config_dir)
@@ -76,8 +75,8 @@ class RCTest(testcase.EdenRepoTest):
         # Add system_repo to system config file
         config = '''\
 [repository ''' + self.repo_name + ''']
-path = ''' + system_repo_path + '''
-type = ''' + system_repo_type + '''
+path = ''' + repo_info.source + '''
+type = ''' + repo_info.type + '''
 '''
         os.write(f, config.encode('utf-8'))
         os.close(f)
@@ -102,8 +101,8 @@ type = ''' + system_repo_type + '''
         f = os.open(path, os.O_WRONLY)
         config = '''\
 [repository ''' + repo_name + ''']
-path = ''' + system_repo_path + '''
-type = ''' + system_repo_type + '''
+path = ''' + repo_info.source + '''
+type = ''' + repo_info.type + '''
 '''
         os.write(f, config.encode('utf-8'))
         os.close(f)

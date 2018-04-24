@@ -16,7 +16,7 @@ import signal
 import subprocess
 import sys
 import typing
-from typing import Any, List, Optional, Set
+from typing import Any, List, Optional, Set, Tuple
 
 from . import config as config_mod
 from . import debug as debug_mod
@@ -126,15 +126,15 @@ class RepositoryCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
         if (args.name and args.path):
-            repo_source, repo_type = util.get_repo_source_and_type(args.path)
-            if repo_type is None:
+            repo = util.get_repo(args.path)
+            if repo is None:
                 print_stderr(
                     '%s does not look like a git or hg repository' % args.path)
                 return 1
             try:
                 config.add_repository(args.name,
-                                      repo_type=repo_type,
-                                      source=repo_source,
+                                      repo_type=repo.type,
+                                      source=repo.source,
                                       with_buck=args.with_buck)
             except config_mod.UsageError as ex:
                 print_stderr('error: {}', ex)
@@ -144,8 +144,8 @@ class RepositoryCmd(Subcmd):
             return 1
         else:
             repo_list = config.get_repository_list()
-            for repo in sorted(repo_list):
-                print(repo)
+            for repo_name in sorted(repo_list):
+                print(repo_name)
         return 0
 
 
@@ -176,18 +176,21 @@ class ListCmd(Subcmd):
         return 0
 
 
+class RepoError(Exception):
+    pass
+
+
 @subcmd('clone', 'Create a clone of a specific repo')
 class CloneCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             'repo',
-            help='Name of a repository config or path to an existing repo '
-            'to clone')
+            help='The path to an existing repo to clone, or the name of a '
+            'known repository configuration')
         parser.add_argument(
             'path', help='Path where the client should be mounted')
         parser.add_argument(
-            '--snapshot', '-s', type=str, help='Snapshot id of revision')
+            '--rev', '-r', type=str, help='The initial revision to check out')
         parser.add_argument(
             '--allow-empty-repo', '-e', action='store_true',
             help='Allow repo with null revision (no revisions)')
@@ -204,58 +207,68 @@ class CloneCmd(Subcmd):
             help=argparse.SUPPRESS)
 
     def run(self, args: argparse.Namespace) -> int:
-        NULL_REVISION = '0' * 40
         config = create_config(args)
+
+        # Make sure the destination directory does not exist or is an empty
+        # directory.  (We'll check this again later when actually creating the
+        # mount, but check this here just to fail early if things look wrong.)
         try:
-            client_config = config.find_config_for_alias(args.repo)
-        except Exception as e:
-            print_stderr('error: {}', e)
+            for _ in os.listdir(args.path):
+                print_stderr(f'error: destination path {args.path} '
+                             'is not empty')
+                return 1
+        except OSError as ex:
+            if ex.errno == errno.ENOTDIR:
+                print_stderr(f'error: destination path {args.path} '
+                             'is not a directory')
+                return 1
+            elif ex.errno != errno.ENOENT:
+                print_stderr(f'error: unable to access destination path '
+                             f'{args.path}: {ex}')
+                return 1
+
+        # Find the repository information
+        try:
+            repo, repo_type, repo_config = self._get_repo_info(
+                config, args.repo
+            )
+        except RepoError as ex:
+            print_stderr('error: {}', ex)
             return 1
 
-        if client_config is None:
-            # If args.repo does not identify a named repository defined in
-            # .edenrc, see if the argument corresponds to a local path that
-            # contains a repository.
-            client_config = try_create_config_from_repo(args.repo, config)
-            assert client_config is not None
+        # Find the commit to check out
+        if args.rev is not None:
+            try:
+                commit = repo.get_commit_hash(args.rev)
+            except Exception as ex:
+                print_stderr(f'error: unable to find hash for commit '
+                             f'{args.rev!r}: {ex}')
+                return 1
+        else:
+            try:
+                commit = repo.get_commit_hash(repo_config.default_revision)
+            except Exception as ex:
+                print_stderr(f'error: unable to find hash for commit '
+                             f'{repo_config.default_revision!r}: {ex}')
+                return 1
 
-        args.path = normalize_path_arg(args.path)
-        try:
-            bm = args.snapshot or client_config.default_revision
-            if client_config.scm_type == 'git':
-                snapshot_id = util.get_git_commit(
-                    git_dir=client_config.path, bookmark=bm)
-            elif client_config.scm_type == 'hg':
-                snapshot_id = util.get_hg_commit(
-                    repo=client_config.path, bookmark=bm)
-            else:
+            NULL_REVISION = '0' * 40
+            if commit == NULL_REVISION and not args.allow_empty_repo:
                 print_stderr(
-                    '%s does not look like a git or hg repository' %
-                    client_config.path
+                    f'''\
+error: the initial revision that would be checked out is the empty commit
+
+The repository at {repo.source} may still be cloning.
+Please make sure cloning completes before running `eden clone`
+If you do want to check out the empty commit,
+re-run `eden clone` with --allow-empty-repo'''
                 )
                 return 1
-        except Exception as e:
-            print_stderr('error: {}', e)
-            # set snapshot_id just to trigger error clause below
-            snapshot_id = NULL_REVISION
-        if ((not util.is_valid_sha1(snapshot_id)) or
-                (snapshot_id == NULL_REVISION and not args.allow_empty_repo)):
-            print_stderr(
-                'Obtained commit for repo is invalid: %s' % snapshot_id
-            )
-            print_stderr(
-                ' %s repository may still be cloning.' % client_config.path
-            )
-            print_stderr(
-                'Please make sure cloning completes before running '
-                '`eden clone`.'
-            )
-            print_stderr('If null revision is valid, add --allow-empty-repo .')
-            return 1
 
         # Attempt to start the daemon if it is not already running.
         health_info = config.check_health()
         if not health_info.is_healthy():
+            print('edenfs daemon is not currently running.  Starting edenfs...')
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
             exit_code = start_daemon(
@@ -264,49 +277,82 @@ class CloneCmd(Subcmd):
             if exit_code != 0:
                 return exit_code
 
+        if repo_type is not None:
+            print(f'Cloning new {repo_type} repository at {args.path}...')
+        else:
+            print(f'Cloning new repository at {args.path}...')
+
         try:
-            config.clone(client_config, args.path, snapshot_id)
+            config.clone(repo_config, args.path, commit)
+            print(f'Success.  Checked out commit {commit:.8}')
+            # In the future it would probably be nice to fork a background
+            # process here to prefetch files that we think the user is likely
+            # to want to access soon.
             return 0
         except Exception as ex:
             print_stderr('error: {}', ex)
             return 1
 
+    def _get_repo_info(
+        self, config: config_mod.Config, repo_arg: str
+    ) -> Tuple[util.Repo, Optional[str], config_mod.ClientConfig]:
+        # Check to see if repo_arg points to an existing Eden mount
+        eden_config = config.get_client_config_for_path(repo_arg)
+        if eden_config is not None:
+            repo = util.get_repo(eden_config.path)
+            if repo is None:
+                raise RepoError('eden mount is configured to use repository '
+                                f'{eden_config.path} but unable to find a '
+                                'repository at that location')
+            return repo, None, eden_config
 
-def try_create_config_from_repo(
-        repo: str,
-        config: config_mod.Config
-) -> config_mod.ClientConfig:
-    '''Checks if repo is a path to a Git or Hg repository, and if so, creates an
-    appropriate ClientConfig for that repository. Throws an Exception if repo
-    does not identify a Git or Hg repository.
-    '''
-    path_to_repo = normalize_path_arg(repo)
-    if not path_to_repo or not os.path.isdir(path_to_repo):
-        ex = config.create_no_such_repository_exception(repo)
-        raise ex
+        # Check to see if repo_arg looks like an existing repository path.
+        repo = util.get_repo(repo_arg)
+        if repo is None:
+            # This is not a valid repository path.
+            # Check to see if this is a repository config name instead.
+            repo_config = config.find_config_for_alias(repo_arg)
+            if repo_config is None:
+                raise RepoError(f'{repo_arg!r} does not look like a valid '
+                                'hg or git repository or a well-known '
+                                'repository name')
 
-    # Check whether path_to_repo is an Eden mount. Note this could theoretically
-    # be an Eden mount owned by a different user, so we must be sure it is
-    # defined in our own config.
-    client_config = config.get_client_config_for_path(path_to_repo)
-    if client_config is not None:
-        return client_config
+            repo = util.get_repo(repo_config.path)
+            if repo is None:
+                raise RepoError(f'cloning {repo_arg} requires an existing '
+                                f'repository to be present at '
+                                f'{repo_config.path}')
 
-    # TODO(mbolin): Check whether there is a config alias whose path matches
-    # path_to_repo.
+            return repo, repo_arg, repo_config
 
-    for extension, _scm_type in config_mod.REPO_FOR_EXTENSION.items():
-        if os.path.isdir(os.path.join(path_to_repo, extension)):
-            break
-    else:
-        raise Exception(f'Could not determine repo type for: {path_to_repo}')
+        # This is a valid repository path.
+        # Try to identify what type of repository this is, so we can find
+        # the proper configuration to use.
+        project_id = util.get_project_id(repo)
 
-    return config_mod.ClientConfig(
-        path=path_to_repo,
-        scm_type=_scm_type,
-        hooks_path=config.get_default_hooks_path(),
-        bind_mounts={},
-        default_revision=config_mod.DEFAULT_REVISION[_scm_type])
+        project_config = None
+        if project_id is not None:
+            project_config = config.find_config_for_alias(project_id)
+        repo_type = project_id
+        if project_config is None:
+            repo_config = config_mod.ClientConfig(
+                path=repo.source,
+                scm_type=repo.type,
+                hooks_path=config.get_default_hooks_path(),
+                bind_mounts={},
+                default_revision=config_mod.DEFAULT_REVISION[repo.type])
+        else:
+            # Build our own ClientConfig object, using our source repository
+            # path and type, but the hooks, bind-mount, and revision
+            # configuration from the project configuration.
+            repo_config = config_mod.ClientConfig(
+                path=repo.source,
+                scm_type=repo.type,
+                hooks_path=project_config.hooks_path,
+                bind_mounts=project_config.bind_mounts,
+                default_revision=project_config.default_revision)
+
+        return repo, repo_type, repo_config
 
 
 @subcmd('config', 'Query Eden configuration')

@@ -9,6 +9,7 @@
 
 from textwrap import dedent
 import errno
+import json
 import os
 import subprocess
 import stat
@@ -54,9 +55,53 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertTrue(os.path.isfile(os.path.join(destination_dir, 'hello')),
                         msg='clone should succeed in empty directory')
 
+    def test_clone_with_arcconfig(self) -> None:
+        project_id = 'special_project'
+        # Add an .arcconfig file to the repository
+        arcconfig_data = {
+            'project_id': project_id,
+            'conduit_uri': "https://phabricator.example.com/api/",
+            'phutil_libraries': {
+                'foo': 'foo/arcanist/',
+            },
+        }
+        self.repo.write_file('.arcconfig', json.dumps(arcconfig_data) + '\n')
+        self.repo.commit('Add .arcconfig')
+
+        # Add a config alias for a repo with some bind mounts.
+        edenrc = os.path.join(self.home_dir, '.edenrc')
+        with open(edenrc, 'w') as f:
+            f.write(
+                dedent(
+                    f'''\
+            [repository {project_id}]
+            path = {self.repo.get_canonical_root()}
+            type = {self.repo.get_type()}
+
+            [bindmounts {project_id}]
+            mnt1 = foo/stuff/build_output
+            mnt2 = node_modules
+            '''
+                )
+            )
+
+        # Clone the repository using its path.
+        # We should find the config from the project_id field in
+        # the .arcconfig file
+        eden_clone = self._new_tmp_dir()
+        self.eden.run_cmd('clone', self.repo.path, eden_clone)
+        self.assertTrue(
+            os.path.isdir(os.path.join(eden_clone, 'foo/stuff/build_output')),
+            msg='clone should create bind mounts'
+        )
+        self.assertTrue(
+            os.path.isdir(os.path.join(eden_clone, 'node_modules')),
+            msg='clone should create bind mounts'
+        )
+
     def test_clone_from_eden_repo(self) -> None:
         # Add a config alias for a repo with some bind mounts.
-        edenrc = os.path.join(os.environ['HOME'], '.edenrc')
+        edenrc = os.path.join(self.home_dir, '.edenrc')
         with open(edenrc, 'w') as f:
             f.write(
                 dedent(
@@ -80,7 +125,7 @@ class CloneTest(testcase.EdenRepoTest):
 
         # Clone the Eden clone! Note it should inherit its config.
         eden_clone2 = self._new_tmp_dir()
-        self.eden.run_cmd('clone', '--snapshot', self.repo.get_head_hash(),
+        self.eden.run_cmd('clone', '--rev', self.repo.get_head_hash(),
                           eden_clone1, eden_clone2)
         self.assertTrue(os.path.isdir(os.path.join(eden_clone2, 'tmp/bm1')),
                         msg='clone should inherit its config from eden_clone1, '
@@ -89,7 +134,7 @@ class CloneTest(testcase.EdenRepoTest):
     def test_clone_with_valid_revision_cmd_line_arg_works(self) -> None:
         tmp = self._new_tmp_dir()
         target = os.path.join(tmp, 'foo/bar/baz')
-        self.eden.run_cmd('clone', '--snapshot', self.repo.get_head_hash(),
+        self.eden.run_cmd('clone', '--rev', self.repo.get_head_hash(),
                           repo_name, target)
         self.assertTrue(os.path.isfile(os.path.join(target, 'hello')),
                         msg='clone should succeed with --snapshop arg.')
@@ -98,7 +143,7 @@ class CloneTest(testcase.EdenRepoTest):
         tmp = self._new_tmp_dir()
         target = os.path.join(tmp, 'foo/bar/baz')
         short = self.repo.get_head_hash()[:6]
-        self.eden.run_cmd('clone', '--snapshot', short, repo_name, target)
+        self.eden.run_cmd('clone', '--rev', short, repo_name, target)
         self.assertTrue(os.path.isfile(os.path.join(target, 'hello')),
                         msg='clone should succeed with short --snapshop arg.')
 
@@ -112,8 +157,11 @@ class CloneTest(testcase.EdenRepoTest):
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.eden.run_cmd('clone', repo_name, non_empty_dir)
         stderr = context.exception.stderr.decode('utf-8')
-        self.assertIn(os.strerror(errno.ENOTEMPTY), stderr,
-                      msg='clone into non-empty dir should raise ENOTEMPTY')
+        self.assertRegex(
+            stderr,
+            'destination path .* is not empty',
+            msg='clone into non-empty dir should fail'
+        )
 
     def test_clone_with_invalid_revision_cmd_line_arg_fails(self) -> None:
         tmp = self._new_tmp_dir()
@@ -121,10 +169,13 @@ class CloneTest(testcase.EdenRepoTest):
         os.makedirs(empty_dir)
 
         with self.assertRaises(subprocess.CalledProcessError) as context:
-            self.eden.run_cmd('clone', repo_name, empty_dir, '--snapshot', 'X')
+            self.eden.run_cmd('clone', repo_name, empty_dir, '--rev', 'X')
         stderr = context.exception.stderr.decode('utf-8')
-        self.assertIn('Obtained commit for repo is invalid', stderr,
-                      msg='passing invalid commit on cmd line should fail')
+        self.assertIn(
+            "unable to find hash for commit 'X': ",
+            stderr,
+            msg='passing invalid commit on cmd line should fail'
+        )
 
     def test_clone_to_file_fails(self) -> None:
         tmp = self._new_tmp_dir()
@@ -137,8 +188,10 @@ class CloneTest(testcase.EdenRepoTest):
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.eden.run_cmd('clone', repo_name, file_in_directory)
         stderr = context.exception.stderr.decode('utf-8')
-        self.assertIn(os.strerror(errno.ENOTDIR), stderr,
-                      msg='clone into file should raise ENOTDIR')
+        self.assertEqual(
+            stderr,
+            f'error: destination path {file_in_directory} is not a directory\n'
+        )
 
     def test_clone_to_non_existent_directory_that_is_under_a_file_fails(
         self
@@ -151,12 +204,13 @@ class CloneTest(testcase.EdenRepoTest):
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.eden.run_cmd('clone', repo_name, non_existent_dir)
         stderr = context.exception.stderr.decode('utf-8')
-        self.assertIn(os.strerror(errno.ENOTDIR), stderr,
-                      msg='When the directory cannot be created because the '
-                          'ancestor is a parent, clone should raise ENOTDIR')
+        self.assertEqual(
+            stderr,
+            f'error: destination path {non_existent_dir} is not a directory\n'
+        )
 
     def test_post_clone_hook(self) -> None:
-        edenrc = os.path.join(os.environ['HOME'], '.edenrc')
+        edenrc = os.path.join(self.home_dir, '.edenrc')
         hooks_dir = os.path.join(self.tmp_dir, 'the_hooks')
         os.mkdir(hooks_dir)
 
@@ -203,9 +257,11 @@ echo -n "$1" >> "{scratch_file}"
 
         with self.assertRaises(edenclient.EdenCommandError) as context:
             self.eden.run_cmd('clone', repo_name, tmp)
-        self.assertIn(
-            f'No repository configured named "{repo_name}". '
-            'Try one of: "main".', context.exception.stderr.decode())
+        self.assertEqual(
+            context.exception.stderr.decode(),
+            f'error: {repo_name!r} does not look like a valid hg or git '
+            'repository or a well-known repository name\n'
+        )
 
     def test_clone_should_start_daemon(self) -> None:
         # Shut down Eden.
