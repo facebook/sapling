@@ -84,7 +84,7 @@ fn open_blobrepo<'a>(logger: &Logger, remote: Remote, matches: &ArgMatches<'a>) 
                 output
             );
 
-            for subdir in &[".hg", "blobs", "books", "heads"] {
+            for subdir in &[".hg", "blobs", "heads"] {
                 let subdir = output.join(subdir);
                 if subdir.exists() {
                     assert!(

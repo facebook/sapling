@@ -88,8 +88,7 @@ impl BlobRepo {
     pub fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
             .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
-        // TODO(stash): read bookmarks from file when blobimport supports it
-        let bookmarks = SqliteDbBookmarks::in_memory()
+        let bookmarks = SqliteDbBookmarks::open_or_create(path.join("books").to_string_lossy())
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
         let options = rocksdb::Options::new().create_if_missing(true);
@@ -99,8 +98,9 @@ impl BlobRepo {
             path.join("filenodes").to_string_lossy(),
             DEFAULT_INSERT_CHUNK_SIZE,
         ).context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
-        let changesets = SqliteChangesets::open(path.join("changesets").to_string_lossy())
-            .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+        let changesets = SqliteChangesets::open_or_create(
+            path.join("changesets").to_string_lossy(),
+        ).context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
         Ok(Self::new(
             logger,
@@ -129,8 +129,7 @@ impl BlobRepo {
     {
         let heads = FileHeads::open(path.join("heads"))
             .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
-        // TODO(stash): read bookmarks from file when blobimport supports it
-        let bookmarks = SqliteDbBookmarks::in_memory()
+        let bookmarks = SqliteDbBookmarks::open_or_create(path.join("books").to_string_lossy())
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
         let options = rocksdb::Options::new().create_if_missing(true);

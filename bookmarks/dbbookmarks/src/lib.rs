@@ -57,16 +57,31 @@ impl SqliteDbBookmarks {
         })
     }
 
-    /// Create a new SQLite database.
-    pub fn create<P: AsRef<str>>(path: P) -> Result<Self> {
-        let bookmarks = Self::open(path)?;
-
+    fn create_tables(&mut self) -> Result<()> {
         let up_query = include_str!("../schemas/sqlite-bookmarks.sql");
-        bookmarks
-            .connection
+
+        self.connection
             .lock()
             .expect("lock poisoned")
             .batch_execute(&up_query)?;
+
+        Ok(())
+    }
+
+    /// Create a new SQLite database.
+    pub fn create<P: AsRef<str>>(path: P) -> Result<Self> {
+        let mut bookmarks = Self::open(path)?;
+
+        bookmarks.create_tables()?;
+
+        Ok(bookmarks)
+    }
+
+    /// Open a SQLite database, and create the tables if they are missing
+    pub fn open_or_create<P: AsRef<str>>(path: P) -> Result<Self> {
+        let mut bookmarks = Self::open(path)?;
+
+        let _ = bookmarks.create_tables();
 
         Ok(bookmarks)
     }
