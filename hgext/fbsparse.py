@@ -931,7 +931,15 @@ def _discover(ui, repo, include_hidden=False):
 
     # sort profiles and read profile metadata as we iterate
     for p in sorted(available | included):
-        raw = repo.getrawprofile(p, '.')
+        try:
+            raw = repo.getrawprofile(p, '.')
+        except error.ManifestLookupError:
+            # ignore a missing profile; this should only happen for 'included'
+            # profiles, however. repo.getactiveprofiles() above will already
+            # have printed a warning about such profiles.
+            if p not in included:
+                raise
+            continue
         md = repo.readsparseconfig(raw, filename=p).metadata
         if 'hidden' not in md or include_hidden or p in active or p in included:
             yield ProfileInfo(
