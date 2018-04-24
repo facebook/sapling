@@ -1,0 +1,8 @@
+[package]
+name = "watchman_client"
+version = "0.1.0"
+
+[dependencies]
+serde_bser = { path = "../../../../watchman/rust/serde_bser" }
+
+[dev-dependencies]
