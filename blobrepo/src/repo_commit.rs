@@ -313,7 +313,10 @@ fn compute_copy_from_info(
                         .copied_from()
                         .map(|copiedfrom| {
                             copiedfrom.map(|(path, node)| {
-                                (RepoPath::FilePath(path), DFileNodeId::new(node.into_mononoke()))
+                                (
+                                    RepoPath::FilePath(path),
+                                    DFileNodeId::new(node.into_mononoke()),
+                                )
                             })
                         })
                 }
@@ -351,6 +354,14 @@ fn compute_changed_files_pair(
         .boxify()
 }
 
+/// This function is used to extract any new files that the given root manifest has provided
+/// compared to the provided p1 and p2 parents.
+/// A files is considered new when it was not present in neither of parent manifests or it was
+/// present, but with a different content.
+///
+/// TODO(luk): T28626409 this probably deserves a unit tests, but taking into account that Bonsai
+/// Changesets might as well make this function obsolete and that I am not familiar with creating
+/// mock Manifests I will postpone writing tests for this
 pub fn compute_changed_files(
     root: &Box<Manifest + Sync>,
     p1: Option<&Box<Manifest + Sync>>,
@@ -365,7 +376,7 @@ pub fn compute_changed_files(
         (Some(p1), Some(p2)) => compute_changed_files_pair(&root, &p1)
             .join(compute_changed_files_pair(&root, &p2))
             .map(|(left, right)| {
-                left.symmetric_difference(&right)
+                left.intersection(&right)
                     .cloned()
                     .collect::<HashSet<MPath>>()
             })
