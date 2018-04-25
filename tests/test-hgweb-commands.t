@@ -2143,6 +2143,7 @@ capabilities
   batch
   stream-preferred
   streamreqs=generaldelta,revlogv1
+  stream_option
   $USUAL_BUNDLE2_CAPS$
   unbundle=HG10GZ,HG10BZ,HG10UN
   httpheader=1024

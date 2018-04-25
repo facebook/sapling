@@ -246,6 +246,7 @@ def cloneshallow(orig, ui, repo, *args, **opts):
                 else:
                     return orig()
             wrapfunction(remote, 'stream_out', stream_out_shallow)
+
         if hasstreamclone:
             def stream_wrap(orig, op):
                 setup_streamout(op.repo, op.remote)

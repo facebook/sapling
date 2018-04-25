@@ -26,6 +26,28 @@ Basic clone
   searching for changes
   no changes found
 
+Block full streaming clones
+  $ cat >> server/.hg/hgrc <<EOF
+  > [server]
+  > requireexplicitfullclone=True
+  > EOF
+  $ cat >> $HGRCPATH <<EOF
+  > [ui]
+  > ssh=python "$TESTDIR/dummyssh"
+  > EOF
+  $ hg clone --stream -U ssh://user@dummy/server blockedclone
+  streaming all changes
+  remote: unable to perform an implicit streaming clone - make sure remotefilelog is enabled
+  abort: locking the remote repository failed
+  [255]
+  $ hg clone --stream --config clone.requestfullclone=True -U ssh://user@dummy/server blockedclone
+  streaming all changes
+  * files to transfer, * of data (glob)
+  transferred * in * seconds (*) (glob)
+  searching for changes
+  no changes found
+  $ rm server/.hg/hgrc
+
 --uncompressed is an alias to --stream
 
   $ hg clone --uncompressed -U http://localhost:$HGPORT clone1-uncompressed
@@ -42,7 +64,7 @@ Clone with background file closing enabled
   sending capabilities command
   sending branchmap command
   streaming all changes
-  sending stream_out command
+  sending stream_out_option command
   1027 files to transfer, * of data (glob)
   starting 4 threads for background file closing
   transferred * in * seconds (*) (glob)

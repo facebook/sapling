@@ -316,6 +316,12 @@ class wirepeer(repository.legacypeer):
         yield d
 
     def stream_out(self):
+        if self.capable('stream_option'):
+            fullclone = self.ui.configbool('clone', 'requestfullclone')
+            args = pycompat.strkwargs({
+                'fullclone': str(fullclone)
+            })
+            return self._callstream('stream_out_option', **args)
         return self._callstream('stream_out')
 
     def getbundle(self, source, **kwargs):
@@ -772,6 +778,7 @@ def _capabilities(repo, proto):
         # otherwise, add 'streamreqs' detailing our local revlog format
         else:
             caps.append('streamreqs=%s' % ','.join(sorted(requiredformats)))
+        caps.append('stream_option')
     if repo.ui.configbool('experimental', 'bundle2-advertise'):
         capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
         caps.append('bundle2=' + urlreq.quote(capsblob))
@@ -969,6 +976,17 @@ def stream(repo, proto):
         return streamres(gen=getstream(it))
     except error.LockError:
         return '2\n'
+
+@wireprotocommand('stream_out_option', '*')
+def streamoption(repo, proto, options):
+    if (repo.ui.configbool("server", "requireexplicitfullclone") and
+        options.get('fullclone', False) != 'True'):
+        # For large repositories, we want to block accidental full clones.
+        repo.ui.warn(_("unable to perform an implicit streaming clone - "
+                       "make sure remotefilelog is enabled"))
+        return '1\n'
+
+    return stream(repo, proto)
 
 @wireprotocommand('unbundle', 'heads')
 def unbundle(repo, proto, heads):
