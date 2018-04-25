@@ -68,9 +68,12 @@ folly::Future<DirList> TreeInodeDirHandle::readdir(DirList&& list, off_t off) {
 
     // Reserved entries for linking to parent and self.
     entries.emplace_back(".", dtype_t::Dir, dir_inode);
-    auto parent = inode_->getParentBuggy();
-    // For the root of the mount point, just add its own inode ID
-    // as its parent.
+    // It's okay to query the parent without the rename lock held because, if
+    // readdir is racing with rename, the results are unspecified anyway.
+    // http://pubs.opengroup.org/onlinepubs/007908799/xsh/readdir.html
+    auto parent = inode_->getParentRacy();
+    // For the root of the mount point, just add its own inode ID as its parent.
+    // FUSE seems to overwrite the parent inode number on the root dir anyway.
     auto parent_inode = parent ? parent->getNodeId() : dir_inode;
     entries.emplace_back("..", dtype_t::Dir, parent_inode);
 

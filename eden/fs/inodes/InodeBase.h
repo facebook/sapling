@@ -303,19 +303,14 @@ class InodeBase {
   }
 
   /**
-   * TODO: A temporary hack for children inodes looking up their parent without
-   * proper locking.
+   * Returns this inode's parent at this exact point in time.  Note that, unless
+   * the rename lock is held, the parent can change between the call and the
+   * return value being used.  If the rename lock is held, call getParent()
+   * instead.
    *
-   * At the moment this is primarily use for dealing with the Overlay.  The
-   * right long-term fix is to just change the overlay so that the path to an
-   * inodes overlay data depends only on its inode number, and not on is path.
-   * As-is, the overlay code is racy with respect to rename() and unlink()
-   * operations.
-   *
-   * TODO: Remove this method once the Overlay code is updated to use inode
-   * numbers instead of path names.
+   * Used in TreeInodeDirHandle.
    */
-  TreeInodePtr getParentBuggy() {
+  TreeInodePtr getParentRacy() {
     return location_.rlock()->parent;
   }
 

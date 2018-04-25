@@ -930,7 +930,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
                      ->getInode(RelativePathPiece{"dir/sub"})
                      .get(1ms)
                      .asTreePtr();
-  auto dirInodeNumber = subTree->getParentBuggy()->getNodeId();
+  auto dirInodeNumber = subTree->getParentRacy()->getNodeId();
   auto subInodeNumber = subTree->getNodeId();
   subTree->incFuseRefcount();
   subTree.reset();
@@ -950,14 +950,14 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
                 ->lookupInode(subInodeNumber)
                 .get(1ms)
                 .asTreePtr();
-  EXPECT_EQ(dirInodeNumber, subTree->getParentBuggy()->getNodeId());
+  EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 
   auto subTree2 = testMount.getEdenMount()
                       ->getInode(RelativePathPiece{"dir/sub"})
                       .get(1ms)
                       .asTreePtr();
-  EXPECT_EQ(dirInodeNumber, subTree2->getParentBuggy()->getNodeId());
+  EXPECT_EQ(dirInodeNumber, subTree2->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree2->getNodeId());
 
   testMount.getEdenMount()->getInodeMap()->decFuseRefcount(subInodeNumber);
@@ -968,7 +968,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
                 ->getInode(RelativePathPiece{"dir/sub"})
                 .get(1ms)
                 .asTreePtr();
-  EXPECT_EQ(dirInodeNumber, subTree->getParentBuggy()->getNodeId());
+  EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 }
 
