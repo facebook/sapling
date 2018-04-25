@@ -1,0 +1,10 @@
+[package]
+name = "argparse"
+version = "0.0.1"
+authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+
+[dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tempdir = "0.3"
