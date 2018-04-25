@@ -17,11 +17,19 @@ setup repo
   $ echo b > b
   $ hg add b
   $ hg ci -mb
+
+setup master bookmark
+
+  $ hg bookmark master_bookmark -r 'tip'
+
+verify content
+
   $ hg log -r ::. -T '{node}: {files}\n'
   3903775176ed42b1458a6281db4a0ccf4d9f287a: a
   c201a1696ba0db28be95eedf0949329fa8c44478: b
   $ hg log
   changeset:   1:c201a1696ba0
+  bookmark:    master_bookmark
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -40,7 +48,7 @@ setup repo
 
   $ cd client
   $ echo 'remotefilelog' >> .hg/requires
-  $ hgmn pull -r c201a1696ba0db28be95eedf0949329fa8c44478 -q
+  $ hgmn pull -q
   $ hgmn up c201a1696ba0db28be95eedf0949329fa8c44478 -q
   $ cat a
   $ cat b

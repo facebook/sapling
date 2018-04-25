@@ -103,6 +103,14 @@ setup repo2
   |
   o  3903775176ed a
   
+
+setup master bookmarks
+
+  $ hg bookmark master_bookmark -r e635b24c95f7
+  $ hg bookmark master_bookmark2 -r 28468743616e
+
+blobimport
+
   $ cd ..
   $ newblobimport repo-hg/.hg repo
 

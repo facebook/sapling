@@ -282,8 +282,10 @@ impl BlobRepo {
         }.boxify()
     }
 
-    pub fn get_heads(&self) -> BoxStream<DNodeHash, Error> {
-        self.heads.heads().boxify()
+    pub fn get_heads(&self) -> impl Stream<Item = DNodeHash, Error = Error> {
+        self.bookmarks
+            .list_by_prefix(&AsciiString::default(), &self.repoid)
+            .map(|(_, cs)| cs.into_nodehash())
     }
 
     pub fn changeset_exists(&self, changesetid: &DChangesetId) -> BoxFuture<bool, Error> {

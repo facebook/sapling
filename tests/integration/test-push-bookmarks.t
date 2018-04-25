@@ -14,6 +14,12 @@ setup repo
   $ hg add a
   $ hg ci -ma
 
+setup master bookmark
+
+  $ hg bookmark master_bookmark -r tip
+
+blobimport
+
   $ cd $TESTTMP
   $ newblobimport repo-hg/.hg repo
 
@@ -44,6 +50,7 @@ Pull the bookmark
 
   $ hgmn pull -q
   $ hg book --remote
+     default/master_bookmark   0:0e7ec5675652
      default/withbook          1:11f53bbd855a
 
 Update the bookmark
@@ -58,6 +65,7 @@ Update the bookmark
   $ cd ../repo-pull
   $ hgmn pull -q
   $ hg book --remote
+     default/master_bookmark   0:0e7ec5675652
      default/withbook          2:66b9c137712a
 
 Delete the bookmark
@@ -72,3 +80,4 @@ Delete the bookmark
   $ hgmn pull -q
   devel-warn: applied empty changegroup * (glob)
   $ hg book --remote
+     default/master_bookmark   0:0e7ec5675652

@@ -37,6 +37,9 @@ setup repo-hg
   summary:     long
   
 
+create master bookmark
+  $ hg bookmark master_bookmark -r tip
+
 check that the file created had both the content and path large enough to
 create a hashed index and data revlogs
 
@@ -62,17 +65,20 @@ pull on repo2
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
+  adding remote bookmark master_bookmark
   new changesets bf1993b0fae3
   (run 'hg update' to get a working copy)
   $ hgmn log
   changeset:   0:bf1993b0fae3
+  bookmark:    master_bookmark
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
   
-  $ hgmn update -r tip
+  $ hgmn update -r master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark master_bookmark)
   $ du ${LONG_PATH}/${LONG_FILENAME}
   153600	this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars
 
@@ -89,6 +95,7 @@ push one more long path from repo2
   $ hg ci -mlong2
   $ hg log
   changeset:   1:fe4bdd54b7fa
+  bookmark:    master_bookmark
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -102,6 +109,7 @@ push one more long path from repo2
   $ hgmn push
   pushing to ssh://user@dummy/repo
   searching for changes
+  updating bookmark master_bookmark
 
 pull on repo3
 
@@ -113,10 +121,12 @@ pull on repo3
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
+  adding remote bookmark master_bookmark
   new changesets bf1993b0fae3:fe4bdd54b7fa
   (run 'hg update' to get a working copy)
   $ hgmn log
   changeset:   1:fe4bdd54b7fa
+  bookmark:    master_bookmark
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -127,8 +137,9 @@ pull on repo3
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
   
-  $ hgmn update -r tip
+  $ hgmn update -r master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark master_bookmark)
   $ du ${LONG_PATH}/${LONG_FILENAME}
   153600	this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars
   $ du ${LONG_PATH}2/${LONG_FILENAME}2

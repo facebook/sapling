@@ -22,40 +22,6 @@ use mercurial_types::nodehash::{DChangesetId, DNodeHash};
 use mononoke_types::FileContents;
 
 #[test]
-fn check_heads() {
-    async_unit::tokio_unit_test(|| {
-        let repo = linear::getrepo(None);
-
-        let heads_stream = repo.get_heads();
-        let mut heads = spawn(heads_stream);
-
-        assert!(
-            if let Some(Ok(hash)) = heads.wait_stream() {
-                hash
-                    == DNodeHash::from_ascii_str(&AsciiString::from_ascii(
-                        "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                    ).expect("Can't turn string to AsciiString"))
-                        .expect(
-                        "Can't turn AsciiString to DNodeHash",
-                    )
-            } else {
-                false
-            },
-            "Wrong head"
-        );
-
-        assert!(
-            if let None = heads.wait_stream() {
-                true
-            } else {
-                false
-            },
-            "Too many heads"
-        );
-    })
-}
-
-#[test]
 fn check_head_exists() {
     async_unit::tokio_unit_test(|| {
         let repo = linear::getrepo(None);

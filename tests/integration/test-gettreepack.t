@@ -28,6 +28,10 @@ make a few commits on the server
   > A
   > EOF
 
+create master bookmark
+
+  $ hg bookmark master_bookmark -r tip
+
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
   $ newblobimport repo-hg/.hg repo

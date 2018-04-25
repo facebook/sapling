@@ -11,11 +11,17 @@ setup repo
   adding a
   $ hg log -T '{node}\n'
   3903775176ed42b1458a6281db4a0ccf4d9f287a
+
+create master bookmark
+  $ hg bookmark master_bookmark -r tip
+
   $ cd $TESTTMP
 
 setup repo-push and repo-pull
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push --noupdate
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull --noupdate
+
+blobimport
 
   $ newblobimport repo-hg/.hg repo
 
@@ -56,7 +62,7 @@ Do infinitepush (aka commit cloud) push
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command
-  received listkey for "bookmarks": 0 bytes
+  received listkey for "bookmarks": 57 bytes
   1 changesets found
   list of changesets:
   47da8b81097c5534f3eb7947a8764dd323cffe3d
@@ -73,15 +79,15 @@ Do infinitepush (aka commit cloud) push
   received listkey for "phases": 0 bytes
 
   $ cd ../repo-pull
-  $ hgmn pull
+  $ hgmn pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
   pulling from ssh://user@dummy/repo
   searching for changes
+  no changes found
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 47da8b81097c
-  (run 'hg update' to get a working copy)
   $ hgmn up -q 47da8b81097c
   $ cat newfile
   new
@@ -102,8 +108,9 @@ Pushbackup also works
   sending batch command
   searching for changes
   all remote heads known locally
-  1 changesets found
+  2 changesets found
   list of changesets:
+  47da8b81097c5534f3eb7947a8764dd323cffe3d
   95cad53aab1b0b33eceee14473b3983312721529
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 4 parts total
@@ -114,15 +121,15 @@ Pushbackup also works
   finished in * seconds (glob)
 
   $ cd ../repo-pull
-  $ hgmn pull 
+  $ hgmn pull -r 95cad53aab1b0b33eceee14473b3983312721529
   pulling from ssh://user@dummy/repo
   searching for changes
+  no changes found
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 95cad53aab1b
-  (run 'hg update' to get a working copy)
   $ hgmn up -q 95cad53aab1b0b33ecee
   $ cat aa
   aa
