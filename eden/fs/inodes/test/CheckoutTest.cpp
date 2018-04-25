@@ -18,6 +18,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -851,6 +852,10 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("2")).get(1ms);
   EXPECT_EQ(0, checkoutResult.size());
+
+  // The checkout kicked off an async deletion of a subtree - wait for it to
+  // complete.
+  testMount.getEdenMount()->getOverlay()->flushPendingAsync().get(60s);
 
   EXPECT_FALSE(testMount.hasOverlayData(subInodeNumber));
 }

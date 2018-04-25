@@ -18,7 +18,6 @@
 #include <folly/io/IOBuf.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/inodes/InodeMap.h"
-#include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -88,6 +87,15 @@ constexpr size_t Overlay::kHeaderLength;
 
 Overlay::Overlay(AbsolutePathPiece localDir) : localDir_(localDir) {
   initOverlay();
+
+  gcThread_ = std::thread([this] { gcThread(); });
+}
+
+Overlay::~Overlay() {
+  CHECK_NE(std::this_thread::get_id(), gcThread_.get_id());
+  gcQueue_.lock()->stop = true;
+  gcCondVar_.notify_one();
+  gcThread_.join();
 }
 
 void Overlay::initOverlay() {
@@ -298,38 +306,37 @@ void Overlay::saveOverlayDir(
 void Overlay::removeOverlayData(InodeNumber inodeNumber) {
   InodePath path;
   getFilePath(inodeNumber, path);
-  if (::unlinkat(dirFile_.fd(), path.data(), 0) != 0 && errno != ENOENT) {
+  int result = ::unlinkat(dirFile_.fd(), path.data(), 0);
+  if (result == 0) {
+    XLOG(DBG4) << "removed overlay data for inode " << inodeNumber;
+  } else if (errno != ENOENT) {
     folly::throwSystemError("error unlinking overlay file: ", path);
   }
 }
 
 void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
-  std::queue<InodeNumber> queue;
-  queue.push(inodeNumber);
+  InodeTimestamps dummy;
+  auto dirData = deserializeOverlayDir(inodeNumber, dummy);
+  // This inode's data must be removed from the overlay before
+  // recursivelyRemoveOverlayData returns to avoid a race condition if
+  // recursivelyRemoveOverlayData(I) is called immediately prior to
+  // saveOverlayDir(I).  There's also no risk of violating our durability
+  // guarantees if the process dies after this call but before the thread could
+  // remove this data.
+  removeOverlayData(inodeNumber);
 
-  while (!queue.empty()) {
-    auto ino = queue.front();
-    queue.pop();
-
-    // This could be done more efficiently.
-    InodeTimestamps dummy;
-    auto dirData = deserializeOverlayDir(ino, dummy);
-    if (!dirData.hasValue()) {
-      XLOG(DBG3) << "no dir data for inode " << ino;
-      continue;
-    }
-    const auto& dir = dirData.value();
-
-    for (auto& iter : dir.entries) {
-      const auto& value = iter.second;
-      if (S_ISDIR(value.mode) && value.inodeNumber) {
-        queue.push(InodeNumber::fromThrift(value.inodeNumber));
-      }
-    }
-
-    XLOG(DBG3) << "removing overlay data for inode " << ino;
-    removeOverlayData(ino);
+  if (dirData) {
+    gcQueue_.lock()->queue.emplace_back(std::move(*dirData));
+    gcCondVar_.notify_one();
   }
+}
+
+folly::Future<folly::Unit> Overlay::flushPendingAsync() {
+  folly::Promise<folly::Unit> promise;
+  auto future = promise.getFuture();
+  gcQueue_.lock()->queue.emplace_back(std::move(promise));
+  gcCondVar_.notify_one();
+  return future;
 }
 
 bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
@@ -714,6 +721,103 @@ void Overlay::updateTimestampToHeader(
   if (wrote != newHeader.size()) {
     folly::throwSystemError(
         "writeNoInt wrote only ", wrote, " of ", newHeader.size(), " bytes");
+  }
+}
+
+void Overlay::gcThread() noexcept {
+  for (;;) {
+    std::vector<GCRequest> requests;
+    {
+      auto lock = gcQueue_.lock();
+      while (lock->queue.empty()) {
+        if (lock->stop) {
+          return;
+        }
+        gcCondVar_.wait(lock.getUniqueLock());
+        continue;
+      }
+
+      requests = std::move(lock->queue);
+    }
+
+    for (auto& request : requests) {
+      try {
+        handleGCRequest(request);
+      } catch (const std::exception& e) {
+        XLOG(ERR) << "handleGCRequest should never throw, but it did: "
+                  << e.what();
+      }
+    }
+  }
+}
+
+void Overlay::handleGCRequest(GCRequest& request) {
+  if (request.flush) {
+    request.flush->setValue();
+    return;
+  }
+
+  // Should only include inode numbers for trees.
+  std::queue<InodeNumber> queue;
+
+  // TODO: For better throughput on large tree collections, it might make
+  // sense to split this into two threads: one for traversing the tree and
+  // another that makes the actual unlink calls.
+  auto safeRemoveOverlayData = [&](InodeNumber inodeNumber) {
+    try {
+      removeOverlayData(inodeNumber);
+    } catch (const std::exception& e) {
+      XLOG(ERR) << "Failed to remove overlay data for inode " << inodeNumber
+                << ": " << e.what();
+    }
+  };
+
+  auto processDir = [&](const overlay::OverlayDir& dir) {
+    for (const auto& entry : dir.entries) {
+      const auto& value = entry.second;
+      if (!value.inodeNumber) {
+        // Legacy-only.  All new Overlay trees have inode numbers for all
+        // children.
+        continue;
+      }
+      auto ino = InodeNumber::fromThrift(value.inodeNumber);
+
+      if (S_ISDIR(value.mode)) {
+        queue.push(ino);
+      } else {
+        // No need to recurse, but delete any file at this inode.  Note that,
+        // under normal operation, there should be nothing at this path
+        // because files are only written into the overlay if they're
+        // materialized.
+        safeRemoveOverlayData(ino);
+      }
+    }
+  };
+
+  processDir(request.dir);
+
+  while (!queue.empty()) {
+    auto ino = queue.front();
+    queue.pop();
+
+    overlay::OverlayDir dir;
+    try {
+      InodeTimestamps dummy;
+      auto dirData = deserializeOverlayDir(ino, dummy);
+      if (!dirData.hasValue()) {
+        XLOG(DBG3) << "no dir data for inode " << ino;
+        continue;
+      } else {
+        dir = std::move(*dirData);
+      }
+    } catch (const std::exception& e) {
+      XLOG(ERR) << "While collecting, failed to load tree data for inode "
+                << ino << ": " << e.what();
+      continue;
+    }
+
+    safeRemoveOverlayData(ino);
+    processDir(dir);
   }
 }
 } // namespace eden

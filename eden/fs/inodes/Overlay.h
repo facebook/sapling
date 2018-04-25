@@ -12,7 +12,10 @@
 #include <folly/Optional.h>
 #include <folly/Range.h>
 #include <gtest/gtest_prod.h>
+#include <condition_variable>
+#include <thread>
 #include "TreeInode.h"
+#include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/PathMap.h"
@@ -47,6 +50,7 @@ class InodeMap;
 class Overlay {
  public:
   explicit Overlay(AbsolutePathPiece localDir);
+  ~Overlay();
 
   void saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir);
 
@@ -63,6 +67,12 @@ class Overlay {
    * Must only be called on trees.
    */
   void recursivelyRemoveOverlayData(InodeNumber inodeNumber);
+
+  /**
+   * Returns a future that completes once all previously-issued async
+   * operations, namely recursivelyRemoveOverlayData, finish.
+   */
+  folly::Future<folly::Unit> flushPendingAsync();
 
   bool hasOverlayData(InodeNumber inodeNumber);
 
@@ -136,6 +146,32 @@ class Overlay {
   FRIEND_TEST(OverlayTest, getFilePath);
   using InodePath = std::array<char, kMaxPathLength>;
 
+  /**
+   * A request for the background GC thread.  There are two types of requests:
+   * recursively forget data underneath an given directory, or complete a
+   * promise.  The latter is used for synchronization with the GC thread,
+   * primarily in unit tests.
+   *
+   * If additional request types are added in the future, consider renaming to
+   * AsyncRequest.  However, recursive collection of forgotten inode numbers
+   * is the only operation that can be made async while preserving our
+   * durability goals.
+   */
+  struct GCRequest {
+    GCRequest() {}
+    explicit GCRequest(overlay::OverlayDir&& d) : dir{std::move(d)} {}
+    explicit GCRequest(folly::Promise<folly::Unit> p) : flush{std::move(p)} {}
+
+    overlay::OverlayDir dir;
+    // Iff set, this is a flush request.
+    folly::Optional<folly::Promise<folly::Unit>> flush;
+  };
+
+  struct GCQueue {
+    bool stop = false;
+    std::vector<GCRequest> queue;
+  };
+
   void initOverlay();
   bool isOldFormatOverlay() const;
   void readExistingOverlay(int infoFD);
@@ -174,6 +210,9 @@ class Overlay {
       folly::StringPiece headerId,
       InodeTimestamps& timeStamps);
 
+  void gcThread() noexcept;
+  void handleGCRequest(GCRequest& request);
+
   /** path to ".eden/CLIENT/local" */
   AbsolutePath localDir_;
 
@@ -191,6 +230,14 @@ class Overlay {
    * We maintain this so we can use openat(), unlinkat(), etc.
    */
   folly::File dirFile_;
+
+  /**
+   * Thread which recursively removes entries from the overlay underneath the
+   * trees added to gcQueue_.
+   */
+  std::thread gcThread_;
+  folly::Synchronized<GCQueue, std::mutex> gcQueue_;
+  std::condition_variable gcCondVar_;
 };
 } // namespace eden
 } // namespace facebook
