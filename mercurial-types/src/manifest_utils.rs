@@ -9,7 +9,7 @@ use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 
 use futures::future::Future;
-use futures::stream::{empty, iter_ok, once, Stream};
+use futures::stream::{empty, once, Stream};
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use super::{Entry, MPath, MPathElement, Manifest};
@@ -172,10 +172,8 @@ where
     FM: Manifest,
 {
     diff_manifests(path, to, from)
-        .map(|diff| iter_ok(diff))
+        .map(|diff| select_all(diff.into_iter().map(recursive_changed_entry_stream)))
         .flatten_stream()
-        .map(recursive_changed_entry_stream)
-        .flatten()
         .boxify()
 }
 
