@@ -17,6 +17,7 @@ from . import util
 class Subcmd(abc.ABC):
     NAME: Optional[str] = None
     HELP: Optional[str] = None
+    ALIASES: Optional[List[str]] = None
 
     def __init__(self, parser: argparse.ArgumentParser) -> None:
         # Save a pointer to the parent ArgumentParser that this Subcmd belongs
@@ -28,9 +29,15 @@ class Subcmd(abc.ABC):
         # If get_help() returns None, do not pass in a help argument at all.
         # This will prevent the command from appearing in the help output at
         # all.
-        kwargs = {}
+        kwargs = {
+            'aliases': self.get_aliases(),
+        }
         help = self.get_help()
         if help is not None:
+            # The add_parser() code checks if 'help' is present in the keyword
+            # arguments.  Not being present is handled differently than if it
+            # is present and None.  It only hides the command from the help
+            # output if the 'help' argument is not present at all.
             kwargs['help'] = help
         parser = subparsers.add_parser(self.get_name(), **kwargs)
         parser.set_defaults(func=self.run)
@@ -43,6 +50,11 @@ class Subcmd(abc.ABC):
 
     def get_help(self) -> Optional[str]:
         return self.HELP
+
+    def get_aliases(self) -> List[str]:
+        if self.ALIASES is None:
+            return []
+        return self.ALIASES[:]
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         # Subclasses should override setup_parser() if they have any
@@ -65,6 +77,7 @@ CmdTable = List[Type[Subcmd]]
 def subcmd(
     name: str,
     help: Optional[str] = None,
+    aliases: Optional[List[str]] = None,
     cmd_table: Optional[CmdTable] = None
 ) -> Callable[[Type[Subcmd]], Type[Subcmd]]:
     '''
@@ -85,6 +98,7 @@ def subcmd(
         class SubclassedCmd(cls):
             NAME = name
             HELP = help
+            ALIASES = aliases
 
         if cmd_table is not None:
             cmd_table.append(SubclassedCmd)
@@ -105,9 +119,10 @@ class Decorator(object):
     def __init__(self) -> None:
         self.commands: CmdTable = []
 
-    def __call__(self, name: str,
-                 help: str) -> Callable[[Type[Subcmd]], Type[Subcmd]]:
-        return subcmd(name, help, cmd_table=self.commands)
+    def __call__(
+        self, name: str, help: str, aliases: Optional[List[str]] = None
+    ) -> Callable[[Type[Subcmd]], Type[Subcmd]]:
+        return subcmd(name, help, aliases=aliases, cmd_table=self.commands)
 
 
 def add_subcommands(parser: argparse.ArgumentParser,

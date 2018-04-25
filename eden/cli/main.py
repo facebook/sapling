@@ -95,8 +95,8 @@ class InfoCmd(Subcmd):
         return 0
 
 
-@subcmd('health', 'Check the health of the Eden service')
-class HealthCmd(Subcmd):
+@subcmd('status', 'Check the health of the Eden service', aliases=['health'])
+class StatusCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
         health_info = config.check_health()
@@ -463,8 +463,8 @@ class CheckoutCmd(Subcmd):
         return 0
 
 
-@subcmd('daemon', 'Run the edenfs daemon')
-class DaemonCmd(Subcmd):
+@subcmd('start', 'Start the edenfs daemon', aliases=['daemon'])
+class StartCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             '--daemon-binary',
@@ -702,8 +702,8 @@ class ShutdownError(Exception):
     pass
 
 
-@subcmd('shutdown', 'Shutdown the daemon')
-class ShutdownCmd(Subcmd):
+@subcmd('stop', 'Shutdown the daemon', aliases=['shutdown'])
+class StopCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             '-t', '--timeout', type=float, default=15.0,
