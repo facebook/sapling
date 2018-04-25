@@ -167,6 +167,7 @@ test sparse subcommands (help, verbose)
   
   options:
   
+   -r --rev REV           explain the profile(s) against the specified revision
    -T --template TEMPLATE display with template
   
   subcommands:

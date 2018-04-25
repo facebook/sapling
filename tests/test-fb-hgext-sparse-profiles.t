@@ -69,9 +69,7 @@ Verify error checking includes filename and line numbers
   warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
   abort: A sparse file cannot have includes after excludes in broken.sparse:5
   [255]
-  $ hg strip .
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/* (glob)
+  $ hg -q strip . --no-backup
 
 Verify that a profile is updated across multiple commits
 
@@ -180,7 +178,7 @@ Verify resolving the merge removes the temporarily unioned files
 
 Verify stripping refreshes dirstate
 
-  $ hg strip -q -r .
+  $ hg strip -q -r . --no-backup
   $ ls
   backend.sparse
   index.html
@@ -303,6 +301,7 @@ Test profile discovery
   $ cat > .hg/hgrc <<EOF
   > [extensions]
   > sparse=$TESTDIR/../hgext/fbsparse.py
+  > strip=
   > [hint]
   > ack-hint-ack = True
   > EOF
@@ -437,6 +436,25 @@ Hidden profiles only show up when we use the --verbose switch:
     profiles/bar/python
     profiles/foo/monty 
   * profiles/foo/spam   - Profile that only includes another
+
+You can specify a revision to list profiles for; in this case the current
+sparse configuration is ignored; no profile can be 'active' or 'included':
+
+  $ cat > profiles/foo/new_in_later_revision <<EOF
+  > [metadata]
+  > title: this profile is only available in a later revision, not the current.
+  > EOF
+  $ hg commit -Aqm 'Add another profile in a later revision'
+  $ hg up -r ".^"
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg sparse list -r tip
+  symbols: * = active profile, ~ = transitively included
+    profiles/bar/eggs                  - Base profile including the profiles directory
+    profiles/bar/ham                   - An extended profile including some interesting files
+    profiles/bar/python               
+    profiles/foo/new_in_later_revision - this profile is only available in a later revision, not the current.
+    profiles/foo/spam                  - Profile that only includes another
+  $ hg -q strip -r tip --no-backup
 
 The metadata section format can have errors, but those are only listed as
 warnings:

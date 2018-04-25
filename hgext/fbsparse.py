@@ -889,7 +889,7 @@ class ProfileInfo(collections.Mapping):
     def __len__(self):
         return len(self._metadata)
 
-def _discover(ui, repo, include_hidden=False):
+def _discover(ui, repo, include_hidden=False, rev=None):
     """Generate a list of available profiles with metadata
 
     Returns a generator yielding ProfileInfo objects, paths are relative to the
@@ -903,11 +903,19 @@ def _discover(ui, repo, include_hidden=False):
     If `include_hidden` is False, we filter out any profile with a 'hidden'
     entry in the profile metadata (unless it is currently active).
 
+    If rev is given, show profiles available at that revision. The working copy
+    sparse configuration is ignored and no active profile information is
+    made available (all profiles are marked as 'inactive').
+
     """
-    included = repo.getactiveprofiles()
-    sparse = repo.vfs.read('sparse')
-    active = repo.readsparseconfig(sparse).profiles
-    active = set(active)
+    if not rev:
+        included = repo.getactiveprofiles()
+        sparse = repo.vfs.read('sparse')
+        active = repo.readsparseconfig(sparse).profiles
+        active = frozenset(active)
+        rev = '.'
+    else:
+        included = active = frozenset()
 
     profile_directory = ui.config('sparse', 'profile_directory')
     available = set()
@@ -920,7 +928,7 @@ def _discover(ui, repo, include_hidden=False):
         if not profile_directory.endswith('/'):
             profile_directory += '/'
 
-        ctx = repo['.']
+        ctx = scmutil.revsingle(repo, rev)
         mf = ctx.manifest()
 
         matcher = matchmod.match(
@@ -932,7 +940,7 @@ def _discover(ui, repo, include_hidden=False):
     # sort profiles and read profile metadata as we iterate
     for p in sorted(available | included):
         try:
-            raw = repo.getrawprofile(p, '.')
+            raw = repo.getrawprofile(p, rev)
         except error.ManifestLookupError:
             # ignore a missing profile; this should only happen for 'included'
             # profiles, however. repo.getactiveprofiles() above will already
@@ -1335,7 +1343,11 @@ class subcmdfunc(registrar._funcregistrarbase):
 subcmdtable = util.sortdict()
 subcmd = subcmdfunc(subcmdtable)
 
-@subcmd('list', commands.templateopts, '[OPTION]')
+@subcmd('list', [
+    ('r', 'rev', '', _('explain the profile(s) against the specified revision'),
+     _('REV')),
+    ] + commands.templateopts,
+    '[OPTION]')
 def _listprofiles(cmd, ui, repo, *pats, **opts):
     """List available sparse profiles
 
@@ -1359,7 +1371,8 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
                   'included\n'),
                 label='sparse.profile.legend')
 
-        profiles = list(_discover(ui, repo, include_hidden=ui.verbose))
+        profiles = list(_discover(
+            ui, repo, include_hidden=ui.verbose, rev=opts.get('rev')))
         max_width = max(len(p.path) for p in profiles)
 
         for info in profiles:
