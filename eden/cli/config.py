@@ -263,12 +263,6 @@ class Config:
             assert f.read(8) == SNAPSHOT_MAGIC
             return binascii.hexlify(f.read(20)).decode('utf-8')
 
-    def checkout(self, path: str, snapshot_id: bytes) -> None:
-        '''Switch the active snapshot id for a given client'''
-        with self.get_thrift_client() as client:
-            client.checkOutRevision(path, snapshot_id,
-                                    eden_ttypes.CheckoutMode.NORMAL)
-
     def add_repository(
         self, name: str, repo_type: str, source: str, with_buck: bool = False
     ) -> None:

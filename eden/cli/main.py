@@ -437,32 +437,6 @@ class UnmountCmd(Subcmd):
         return 0
 
 
-@subcmd('checkout', 'Check out an alternative snapshot hash')
-class CheckoutCmd(Subcmd):
-
-    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            '--client', '-c',
-            default=None,
-            help='Name of the mounted client')
-        parser.add_argument(
-            'snapshot',
-            help='Snapshot hash to check out')
-
-    def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
-        try:
-            config.checkout(infer_client_from_cwd(config, args.client),
-                            args.snapshot)
-        except Exception as ex:
-            print_stderr('checkout of %s failed for client %s: %s' % (
-                         args.snapshot,
-                         args.client,
-                         str(ex)))
-            return 1
-        return 0
-
-
 @subcmd('start', 'Start the edenfs daemon', aliases=['daemon'])
 class StartCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
