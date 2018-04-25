@@ -399,21 +399,18 @@ void testModifyFile(
   EXPECT_FILE_INODE(postInode, contents2, perms2);
 }
 
-void testModifyFile(
-    folly::StringPiece path,
-    LoadBehavior loadType,
-    folly::StringPiece contents1,
-    folly::StringPiece contents2) {
-  testModifyFile(path, loadType, contents1, 0644, contents2, 0644);
-}
-
 void runModifyFileTests(folly::StringPiece path) {
   // Modify just the file contents, but not the permissions
   for (auto loadType : kAllLoadTypes) {
     SCOPED_TRACE(folly::to<string>(
         "contents change, path ", path, " load type ", loadType));
     testModifyFile(
-        path, loadType, "contents v1", "updated file contents\nextra stuff\n");
+        path,
+        loadType,
+        "contents v1",
+        0644,
+        "updated file contents\nextra stuff\n",
+        0644);
   }
 
   // Modify just the permissions, but not the contents
@@ -512,7 +509,8 @@ void testModifyConflict(
   postInode.reset();
   testMount.remount();
   postInode = testMount.getFileInode(path);
-  auto ddddInode = testMount.getFileInode("a/b/dddd.c");
+  auto ddddPath = "a/b/dddd.c";
+  auto ddddInode = testMount.getFileInode(ddddPath);
   switch (checkoutMode) {
     case CheckoutMode::FORCE:
       EXPECT_FILE_INODE(postInode, contents2, perms2);

@@ -47,7 +47,7 @@ class FileInode : public InodeBase {
       PathComponentPiece name,
       mode_t mode,
       folly::File&& file,
-      timespec ctime);
+      timespec timestamp);
 
   /**
    * If hash is none, this opens the file in the overlay and leaves the inode
@@ -71,7 +71,7 @@ class FileInode : public InodeBase {
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
-      timespec ctime);
+      timespec timestamp);
 
   folly::Future<Dispatcher::Attr> getattr() override;
 

@@ -526,9 +526,9 @@ std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
     PathComponentPiece name,
     mode_t mode,
     folly::File&& file,
-    timespec ctime) {
+    timespec timestamp) {
   // The FileInode is in MATERIALIZED_IN_OVERLAY state.
-  auto inode = FileInodePtr::makeNew(ino, parentInode, name, mode, ctime);
+  auto inode = FileInodePtr::makeNew(ino, parentInode, name, mode, timestamp);
 
   auto state = LockedState{inode};
   state.incOpenCount();
@@ -559,9 +559,9 @@ FileInode::FileInode(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t mode,
-    timespec ctime)
+    timespec timestamp)
     : InodeBase(ino, mode_to_dtype(mode), std::move(parentInode), name),
-      state_(folly::in_place, this, mode, ctime) {}
+      state_(folly::in_place, this, mode, timestamp) {}
 
 folly::Future<Dispatcher::Attr> FileInode::getattr() {
   // Future optimization opportunity: right now, if we have not already

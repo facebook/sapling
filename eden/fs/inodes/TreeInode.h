@@ -280,20 +280,27 @@ class TreeInode : public InodeBase {
     explicit CreateResult(const EdenMount* mount);
   };
 
+  /**
+   * Construct a TreeInode from a source control tree.
+   */
   TreeInode(
       InodeNumber ino,
       TreeInodePtr parent,
       PathComponentPiece name,
       std::shared_ptr<const Tree>&& tree);
 
-  /// Construct an inode that only has backing in the Overlay area
+  /**
+   * Construct an inode that only has backing in the Overlay area.
+   */
   TreeInode(
       InodeNumber ino,
       TreeInodePtr parent,
       PathComponentPiece name,
       Dir&& dir);
 
-  /// Constructors for the root TreeInode
+  /**
+   * Construct the root TreeInode from a source control commit's root.
+   */
   TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree);
   TreeInode(EdenMount* mount, Dir&& tree);
 
