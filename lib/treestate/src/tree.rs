@@ -100,6 +100,10 @@ pub trait CompatExt<T> {
 
     /// Update extra fields when file state is changed. Extends `remove` and `get_mut`.
     fn file_mut_ext(&mut self) -> Result<()>;
+
+    /// Match file state. Return true if the file state contains all `required_all` bits, and
+    /// at least one of `required_any` bits if `required_any` is not empty.
+    fn file_state_match(file: &T, required_all: StateFlags, required_any: StateFlags) -> bool;
 }
 
 impl CompatExt<FileState> for Node<FileState> {
@@ -117,6 +121,13 @@ impl CompatExt<FileState> for Node<FileState> {
 
     fn file_mut_ext(&mut self) -> Result<()> {
         Ok(())
+    }
+
+    fn file_state_match(_: &FileState, required_all: StateFlags, required_any: StateFlags) -> bool {
+        if !required_all.is_empty() && !required_any.is_empty() {
+            panic!("FileState does not support filtering by StateFlags")
+        }
+        true
     }
 }
 
@@ -152,6 +163,15 @@ impl CompatExt<FileStateV2> for Node<FileStateV2> {
         // Set aggregated_state to empty so it will be re-calculated on write.
         self.aggregated_state = StateFlags::empty();
         Ok(())
+    }
+
+    fn file_state_match(
+        f: &FileStateV2,
+        required_all: StateFlags,
+        required_any: StateFlags,
+    ) -> bool {
+        f.state.contains(required_all)
+            && (required_any.is_empty() || f.state.intersects(required_any))
     }
 }
 
@@ -268,12 +288,16 @@ where
 
     // Visit all of the files in under this node, by calling the visitor function on each one.
     // If `visit_flags` contains `CHANGED_ONLY`, unchanged nodes won't be visited.
+    // `state_required_all` and `state_required_any` filters file state - must contain all bits
+    // from `state_required_all`, and one bit from `state_required_any` (if non-empty).
     fn visit<'a, F>(
         &'a mut self,
         store: &StoreView,
         path: &mut Vec<KeyRef<'a>>,
         visitor: &mut F,
         visit_flags: VisitFlags,
+        state_required_all: StateFlags,
+        state_required_any: StateFlags,
     ) -> Result<()>
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
@@ -282,14 +306,35 @@ where
             return Ok(());
         }
 
+        // Do not trust empty aggregated_state. Only do filtering if it's non-empty.
+        if !self.aggregated_state.is_empty() {
+            if !self.aggregated_state.contains(state_required_all) {
+                return Ok(());
+            }
+            if !state_required_any.is_empty()
+                && !self.aggregated_state.intersects(state_required_any)
+            {
+                return Ok(());
+            }
+        }
+
         for (name, entry) in self.load_entries(store)?.iter_mut() {
             path.push(name);
             match entry {
                 &mut NodeEntry::Directory(ref mut node) => {
-                    node.visit(store, path, visitor, visit_flags)?;
+                    node.visit(
+                        store,
+                        path,
+                        visitor,
+                        visit_flags,
+                        state_required_all,
+                        state_required_any,
+                    )?;
                 }
                 &mut NodeEntry::File(ref mut file) => {
-                    visitor(path, file)?;
+                    if Self::file_state_match(file, state_required_all, state_required_any) {
+                        visitor(path, file)?;
+                    }
                 }
             }
             path.pop();
@@ -632,7 +677,14 @@ where
                                 Ok(())
                             };
                             path.push(entry_name);
-                            node.visit(store, path, &mut visit_adapter, VisitFlags::empty())?;
+                            node.visit(
+                                store,
+                                path,
+                                &mut visit_adapter,
+                                VisitFlags::empty(),
+                                StateFlags::empty(),
+                                StateFlags::empty(),
+                            )?;
                             path.pop();
                         } else {
                             // The entry is a directory, and the caller has asked for matching
@@ -713,7 +765,14 @@ where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
         let mut path = Vec::new();
-        self.root.visit(store, &mut path, visitor, VisitFlags::empty())
+        self.root.visit(
+            store,
+            &mut path,
+            visitor,
+            VisitFlags::empty(),
+            StateFlags::empty(),
+            StateFlags::empty(),
+        )
     }
 
     pub fn visit_changed<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
@@ -721,8 +780,14 @@ where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
         let mut path = Vec::new();
-        self.root
-            .visit(store, &mut path, visitor, VisitFlags::CHANGED_ONLY)
+        self.root.visit(
+            store,
+            &mut path,
+            visitor,
+            VisitFlags::CHANGED_ONLY,
+            StateFlags::empty(),
+            StateFlags::empty(),
+        )
     }
 
     pub fn get_first<'a>(&'a mut self, store: &StoreView) -> Result<Option<(Key, &'a T)>> {
