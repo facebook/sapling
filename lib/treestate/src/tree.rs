@@ -2,6 +2,7 @@
 //! Directory State Tree.
 
 use errors::*;
+use filestate::StateFlags;
 use serialization::Serializable;
 use std::collections::Bound;
 use std::io::Cursor;
@@ -33,6 +34,11 @@ pub(crate) struct Node<T> {
     /// then the ID must not be None, and the entries are yet to be loaded from the back-end
     /// store.
     pub(crate) entries: Option<NodeEntryMap<T>>,
+
+    /// Aggregated state flags. This is useful for quickly test whether there is a file matching
+    /// given state or not in this tree (recursively). An empty value means it cannot be trusted
+    /// (ex. not computed yet - due to old file format or operations like "remove").
+    pub(crate) aggregated_state: StateFlags,
 
     /// A map from keys that have been filtered through a case-folding filter function to the
     /// original key.  This is used for case-folded look-ups.  Filtered values are cached, so
@@ -88,6 +94,7 @@ impl<T: Serializable + Clone> Node<T> {
             id: None,
             entries: Some(NodeEntryMap::new()),
             filtered_keys: None,
+            aggregated_state: StateFlags::empty(),
         }
     }
 
@@ -98,6 +105,7 @@ impl<T: Serializable + Clone> Node<T> {
             id: Some(id),
             entries: None,
             filtered_keys: None,
+            aggregated_state: StateFlags::empty(),
         }
     }
 
