@@ -3,7 +3,7 @@
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use errors::*;
-use filestate::FileState;
+use filestate::{FileState, StateFlags};
 use std::io::{Read, Write};
 use store::BlockId;
 use tree::{Key, Node, NodeEntry, NodeEntryMap};
@@ -149,5 +149,16 @@ impl Serializable for TreeDirstateRoot {
         w.write_u64::<BigEndian>(self.removed_root_id.0)?;
         w.write_u32::<BigEndian>(self.removed_file_count)?;
         Ok(())
+    }
+}
+
+impl Serializable for StateFlags {
+    fn deserialize(mut r: &mut Read) -> Result<Self> {
+        let v = r.read_vlq()?;
+        Ok(Self::from_bits_truncate(v))
+    }
+
+    fn serialize(&self, mut w: &mut Write) -> Result<()> {
+        Ok(w.write_vlq(self.to_bits())?)
     }
 }

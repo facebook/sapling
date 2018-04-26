@@ -54,6 +54,12 @@ bitflags! {
     }
 }
 
+impl StateFlags {
+    pub fn to_bits(self) -> u16 {
+        self.bits
+    }
+}
+
 /// Information relating to a file in the dirstate, version 2.
 /// Unlike V1, the `state` field is no longer a char defined by Mercurial,
 /// but a bitflag. It also has a `copied` field.
