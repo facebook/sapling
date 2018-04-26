@@ -155,6 +155,12 @@ impl CompatExt<FileStateV2> for Node<FileStateV2> {
     }
 }
 
+bitflags! {
+    pub struct VisitFlags: u8 {
+        const CHANGED_ONLY = 1;
+    }
+}
+
 impl<T: Serializable + Clone> Node<T> {
     /// Create a new empty Node.  This has no ID as it is not yet written to the store.
     fn new() -> Node<T> {
@@ -261,20 +267,26 @@ where
     }
 
     // Visit all of the files in under this node, by calling the visitor function on each one.
+    // If `visit_flags` contains `CHANGED_ONLY`, unchanged nodes won't be visited.
     fn visit<'a, F>(
         &'a mut self,
         store: &StoreView,
         path: &mut Vec<KeyRef<'a>>,
         visitor: &mut F,
+        visit_flags: VisitFlags,
     ) -> Result<()>
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
+        if visit_flags.contains(VisitFlags::CHANGED_ONLY) && self.id.is_some() {
+            return Ok(());
+        }
+
         for (name, entry) in self.load_entries(store)?.iter_mut() {
             path.push(name);
             match entry {
                 &mut NodeEntry::Directory(ref mut node) => {
-                    node.visit(store, path, visitor)?;
+                    node.visit(store, path, visitor, visit_flags)?;
                 }
                 &mut NodeEntry::File(ref mut file) => {
                     visitor(path, file)?;
@@ -285,37 +297,6 @@ where
         Ok(())
     }
 
-    // Visit all of the files in changed nodes under this node, by calling the visitor function
-    // on each one.
-    fn visit_changed<'a, F>(
-        &'a mut self,
-        store: &StoreView,
-        path: &mut Vec<KeyRef<'a>>,
-        visitor: &mut F,
-    ) -> Result<()>
-    where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
-    {
-        if self.id.is_none() {
-            // This node has been modified. The entries list must already have been populated when
-            // the node was modified, so no need to load it here.
-            if let Some(ref mut entries) = self.entries {
-                for (name, entry) in entries.iter_mut() {
-                    path.push(name);
-                    match entry {
-                        &mut NodeEntry::Directory(ref mut node) => {
-                            node.visit_changed(store, path, visitor)?;
-                        }
-                        &mut NodeEntry::File(ref mut file) => {
-                            visitor(path, file)?;
-                        }
-                    }
-                    path.pop();
-                }
-            }
-        }
-        Ok(())
-    }
     /// Get the first file in the subtree under this node.  If the subtree is not empty, returns a
     /// pair containing the path to the file as a reversed vector of key references for each path
     /// element, and a reference to the file.
@@ -651,7 +632,7 @@ where
                                 Ok(())
                             };
                             path.push(entry_name);
-                            node.visit(store, path, &mut visit_adapter)?;
+                            node.visit(store, path, &mut visit_adapter, VisitFlags::empty())?;
                             path.pop();
                         } else {
                             // The entry is a directory, and the caller has asked for matching
@@ -732,7 +713,7 @@ where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
         let mut path = Vec::new();
-        self.root.visit(store, &mut path, visitor)
+        self.root.visit(store, &mut path, visitor, VisitFlags::empty())
     }
 
     pub fn visit_changed<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
@@ -740,7 +721,8 @@ where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
         let mut path = Vec::new();
-        self.root.visit_changed(store, &mut path, visitor)
+        self.root
+            .visit(store, &mut path, visitor, VisitFlags::CHANGED_ONLY)
     }
 
     pub fn get_first<'a>(&'a mut self, store: &StoreView) -> Result<Option<(Key, &'a T)>> {
