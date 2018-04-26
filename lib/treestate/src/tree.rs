@@ -120,6 +120,41 @@ impl CompatExt<FileState> for Node<FileState> {
     }
 }
 
+impl CompatExt<FileStateV2> for Node<FileStateV2> {
+    fn write_ext(&mut self, writer: &mut Write) -> Result<()> {
+        // An empty state is invalid and requires re-calcuation.
+        if self.aggregated_state.is_empty() {
+            let state = self.entries
+                .as_ref()
+                .expect("entries should exist")
+                .iter()
+                .fold(StateFlags::empty(), |acc, (_, x)| match x {
+                    &NodeEntry::Directory(ref x) => acc | x.aggregated_state,
+                    &NodeEntry::File(ref x) => acc | x.state,
+                });
+            self.aggregated_state = state;
+        }
+        self.aggregated_state.serialize(writer)?;
+        Ok(())
+    }
+
+    fn load_ext(&mut self, data: &mut Read) -> Result<()> {
+        self.aggregated_state = StateFlags::deserialize(data)?;
+        Ok(())
+    }
+
+    fn file_add_ext(&mut self, info: &FileStateV2) -> Result<()> {
+        self.aggregated_state |= info.state;
+        Ok(())
+    }
+
+    fn file_mut_ext(&mut self) -> Result<()> {
+        // Set aggregated_state to empty so it will be re-calculated on write.
+        self.aggregated_state = StateFlags::empty();
+        Ok(())
+    }
+}
+
 impl<T: Serializable + Clone> Node<T> {
     /// Create a new empty Node.  This has no ID as it is not yet written to the store.
     fn new() -> Node<T> {
