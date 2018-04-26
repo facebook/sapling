@@ -11,7 +11,7 @@ import binascii
 import hashlib
 import os
 
-from facebook.eden.ttypes import EdenError, ScmFileStatus, SHA1Result
+from facebook.eden.ttypes import ScmFileStatus, SHA1Result
 from facebook.eden.ttypes import TimeSpec
 from .lib import testcase
 
@@ -107,38 +107,6 @@ class ThriftTest(testcase.EdenRepoTest):
         error = sha1result.get_error()
         self.assertIsNotNone(error)
         self.assertEqual(error_message, error.message)
-
-    def test_glob(self) -> None:
-        self.assertEqual(
-            ['adir/file'], self.client.glob(self.mount, ['a*/file']))
-        self.assertCountEqual(
-            ['adir/file', 'bdir/file'],
-            self.client.glob(self.mount, ['**/file'])
-        )
-        self.assertEqual(
-            ['adir/file'], self.client.glob(self.mount, ['adir/*']))
-        self.assertCountEqual(
-            ['adir/file', 'bdir/file'],
-            self.client.glob(self.mount, ['adir/*', '**/file']),
-            msg='De-duplicate results from multiple globs')
-        self.assertEqual(
-            ['hello'], self.client.glob(self.mount, ['hello']))
-        self.assertEqual(
-            [], self.client.glob(self.mount, ['hell']),
-            msg="No accidental substring match")
-        self.assertEqual(
-            ['hello'], self.client.glob(self.mount, ['hel*']))
-        self.assertEqual(
-            ['adir'], self.client.glob(self.mount, ['ad*']))
-        self.assertEqual(
-            ['adir/file'], self.client.glob(self.mount, ['adir/**/*']))
-        self.assertEqual(
-            ['adir/file'], self.client.glob(self.mount, ['adir/**']))
-
-        with self.assertRaises(EdenError) as ctx:
-            self.client.glob(self.mount, ['adir['])
-        self.assertIn('unterminated bracket sequence',
-                      str(ctx.exception))
 
     def test_unload_free_inodes(self) -> None:
         for i in range(100):
