@@ -6,6 +6,9 @@
 //! whether deleted or not, etc. These can be useful for source control to determine if the file
 //! is tracked, or has changed, etc.
 
+#[macro_use]
+extern crate bitflags;
+
 extern crate byteorder;
 
 #[macro_use]

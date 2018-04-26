@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 
 [dependencies]
+bitflags = "*"
 byteorder = "*"
 error-chain = "*"
 vlqencoding = { version = "*", path = "../vlqencoding" }
