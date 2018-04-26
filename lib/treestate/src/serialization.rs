@@ -3,7 +3,7 @@
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use errors::*;
-use filestate::{FileState, StateFlags};
+use filestate::{FileState, FileStateV2, StateFlags};
 use std::io::{Read, Write};
 use store::BlockId;
 use tree::{Key, Node, NodeEntry, NodeEntryMap};
@@ -42,6 +42,61 @@ impl Serializable for FileState {
             mode,
             size,
             mtime,
+        })
+    }
+}
+
+impl Serializable for Box<[u8]> {
+    fn serialize(&self, mut w: &mut Write) -> Result<()> {
+        w.write_vlq(self.len())?;
+        w.write_all(&self)?;
+
+        Ok(())
+    }
+
+    fn deserialize(mut r: &mut Read) -> Result<Self> {
+        let len: usize = r.read_vlq()?;
+        let mut buf = vec![0; len];
+        r.read_exact(&mut buf)?;
+        Ok(buf.into_boxed_slice())
+    }
+}
+
+impl Serializable for FileStateV2 {
+    fn serialize(&self, mut w: &mut Write) -> Result<()> {
+        w.write_vlq(self.state.to_bits())?;
+        w.write_vlq(self.mode)?;
+        w.write_vlq(self.size)?;
+        w.write_vlq(self.mtime)?;
+
+        if self.state.contains(StateFlags::COPIED) {
+            if let &Some(ref copied) = &self.copied {
+                copied.serialize(w)?;
+            } else {
+                panic!("COPIED flag set without copied path");
+            }
+        }
+        Ok(())
+    }
+
+    fn deserialize(mut r: &mut Read) -> Result<FileStateV2> {
+        let state: u16 = r.read_vlq()?;
+        let state = StateFlags::from_bits_truncate(state);
+        let mode = r.read_vlq()?;
+        let size = r.read_vlq()?;
+        let mtime = r.read_vlq()?;
+        let copied = if state.contains(StateFlags::COPIED) {
+            Some(Box::<[u8]>::deserialize(r)?)
+        } else {
+            None
+        };
+
+        Ok(FileStateV2 {
+            state,
+            mode,
+            size,
+            mtime,
+            copied,
         })
     }
 }
