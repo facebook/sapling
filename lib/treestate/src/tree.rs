@@ -2,10 +2,10 @@
 //! Directory State Tree.
 
 use errors::*;
-use filestate::StateFlags;
+use filestate::{FileState, FileStateV2, StateFlags};
 use serialization::Serializable;
 use std::collections::Bound;
-use std::io::Cursor;
+use std::io::{Cursor, Read, Write};
 use store::{BlockId, Store, StoreView};
 use vecmap::VecMap;
 
@@ -25,7 +25,7 @@ pub(crate) type NodeEntryMap<T> = VecMap<Key, NodeEntry<T>>;
 
 /// The contents of a directory.
 #[derive(Debug)]
-pub(crate) struct Node<T> {
+pub struct Node<T> {
     /// The ID of the directory in the store.  If None, this directory has not yet been
     /// written to the back-end store in its current state.
     pub(crate) id: Option<BlockId>,
@@ -87,6 +87,39 @@ fn split_key_exact<'a>(key: KeyRef<'a>) -> (KeyRef<'a>, Option<KeyRef<'a>>) {
     (key, None)
 }
 
+/// Compatiblity layer - difference between `FileState` and `FileStateV2`
+pub trait CompatExt<T> {
+    /// Load extra fields. Extends `load`.
+    fn load_ext(&mut self, data: &mut Read) -> Result<()>;
+
+    /// Write extra fields. Extends `write_entries`.
+    fn write_ext(&mut self, writer: &mut Write) -> Result<()>;
+
+    /// Update extra fields after adding. Extends `add`.
+    fn file_add_ext(&mut self, info: &T) -> Result<()>;
+
+    /// Update extra fields when file state is changed. Extends `remove` and `get_mut`.
+    fn file_mut_ext(&mut self) -> Result<()>;
+}
+
+impl CompatExt<FileState> for Node<FileState> {
+    fn load_ext(&mut self, _: &mut Read) -> Result<()> {
+        Ok(())
+    }
+
+    fn write_ext(&mut self, _: &mut Write) -> Result<()> {
+        Ok(())
+    }
+
+    fn file_add_ext(&mut self, _: &FileState) -> Result<()> {
+        Ok(())
+    }
+
+    fn file_mut_ext(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
 impl<T: Serializable + Clone> Node<T> {
     /// Create a new empty Node.  This has no ID as it is not yet written to the store.
     fn new() -> Node<T> {
@@ -108,7 +141,12 @@ impl<T: Serializable + Clone> Node<T> {
             aggregated_state: StateFlags::empty(),
         }
     }
+}
 
+impl<T: Serializable + Clone> Node<T>
+where
+    Self: CompatExt<T>,
+{
     /// Attempt to load a node from a store.
     fn load(&mut self, store: &StoreView) -> Result<()> {
         if self.entries.is_some() {
@@ -117,7 +155,9 @@ impl<T: Serializable + Clone> Node<T> {
         }
         let id = self.id.expect("Node must have a valid ID to be loaded");
         let data = store.read(id)?;
-        self.entries = Some(NodeEntryMap::<T>::deserialize(&mut Cursor::new(data))?);
+        let mut cur = Cursor::new(data);
+        self.entries = Some(NodeEntryMap::<T>::deserialize(&mut cur)?);
+        self.load_ext(&mut cur)?;
         Ok(())
     }
 
@@ -135,10 +175,13 @@ impl<T: Serializable + Clone> Node<T> {
     /// had IDs assigned to them.
     fn write_entries(&mut self, store: &mut Store) -> Result<()> {
         let mut data = Vec::new();
-        let entries = self.entries
-            .as_mut()
-            .expect("Node should have entries populated before writing out.");
-        entries.serialize(&mut data)?;
+        {
+            let entries = self.entries
+                .as_ref()
+                .expect("Node should have entries populated before writing out.");
+            entries.serialize(&mut data)?;
+        }
+        self.write_ext(&mut data)?;
         self.id = Some(store.append(&data)?);
         Ok(())
     }
@@ -401,6 +444,11 @@ impl<T: Serializable + Clone> Node<T> {
             self.load_entries(store)?.insert(new_key, new_entry);
             self.filtered_keys = None;
         }
+        if file_added {
+            self.file_add_ext(info)?;
+        } else {
+            self.file_mut_ext()?;
+        }
         self.id = None;
         Ok(file_added)
     }
@@ -428,6 +476,7 @@ impl<T: Serializable + Clone> Node<T> {
             self.id = None;
         }
         if file_removed {
+            self.file_mut_ext()?;
             self.id = None;
         }
         Ok((file_removed, self.load_entries(store)?.is_empty()))
@@ -595,7 +644,10 @@ impl<T: Serializable + Clone> Node<T> {
     }
 }
 
-impl<T: Serializable + Clone> Tree<T> {
+impl<T: Serializable + Clone> Tree<T>
+where
+    Node<T>: CompatExt<T>,
+{
     /// Create a new empty tree.
     pub fn new() -> Tree<T> {
         Tree {
