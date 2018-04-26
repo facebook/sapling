@@ -10,6 +10,7 @@
 import unittest
 from facebook.eden.ttypes import EdenError
 from .lib import testcase
+from typing import List, Optional
 
 
 @testcase.eden_repo_test
@@ -40,87 +41,72 @@ class GlobTest(testcase.EdenRepoTest):
         self.addCleanup(self.client.close)
 
     def test_exact_path_component_match(self) -> None:
-        self.assertEqual(['hello'], self.client.glob(self.mount, ['hello']))
-        self.assertEqual(
-            ['ddir/subdir/.dotfile'],
-            self.client.glob(self.mount, ['ddir/subdir/.dotfile'])
-        )
+        self.assert_glob(['hello'], ['hello'])
+        self.assert_glob(['ddir/subdir/.dotfile'], ['ddir/subdir/.dotfile'])
 
     def test_wildcard_path_component_match(self) -> None:
-        self.assertEqual(['hello'], self.client.glob(self.mount, ['hel*']))
-        self.assertEqual(['adir'], self.client.glob(self.mount, ['ad*']))
-        self.assertEqual(
-            ['adir/file'], self.client.glob(self.mount, ['a*/file'])
-        )
+        self.assert_glob(['hel*'], ['hello'])
+        self.assert_glob(['ad*'], ['adir'])
+        self.assert_glob(['a*/file'], ['adir/file'])
 
     def test_no_accidental_substring_match(self) -> None:
-        self.assertEqual(
-            [],
-            self.client.glob(self.mount, ['hell']),
-            msg='No accidental substring match'
-        )
+        self.assert_glob(['hell'], [], msg='No accidental substring match')
 
     def test_match_all_files_in_directory(self) -> None:
-        self.assertEqual(
-            ['bdir/file', 'bdir/otherfile'],
-            self.client.glob(self.mount, ['bdir/*'])
-        )
+        self.assert_glob(['bdir/*'], ['bdir/file', 'bdir/otherfile'])
 
     @unittest.skip('TDD: This does not pass yet.')
     def test_match_all_files_in_directory_with_dotfile(self) -> None:
-        self.assertEqual(
-            ['ddir/subdir/notdotfile'],
-            self.client.glob(self.mount, ['ddir/subdir/*'])
-        )
+        self.assert_glob(['ddir/subdir/*'], ['ddir/subdir/notdotfile'])
 
     def test_overlapping_globs(self) -> None:
-        self.assertCountEqual(
-            ['adir/file', 'bdir/file'],
-            self.client.glob(self.mount, ['adir/*', '**/file']),
+        self.assert_glob(
+            ['adir/*', '**/file'], ['adir/file', 'bdir/file'],
             msg='De-duplicate results from multiple globs'
         )
 
     def test_recursive_wildcard_prefix(self) -> None:
-        self.assertCountEqual(
-            ['adir/file', 'bdir/file'],
-            self.client.glob(self.mount, ['**/file'])
-        )
+        self.assert_glob(['**/file'], ['adir/file', 'bdir/file'])
 
     def test_recursive_wildcard_suffix(self) -> None:
-        self.assertEqual(
-            ['adir/file'], self.client.glob(self.mount, ['adir/**'])
-        )
-        self.assertEqual(
-            ['adir/file'], self.client.glob(self.mount, ['adir/**/*'])
-        )
+        self.assert_glob(['adir/**'], ['adir/file'])
+        self.assert_glob(['adir/**/*'], ['adir/file'])
 
     @unittest.skip('TDD: This does not pass yet.')
     def test_recursive_wildcard_suffix_with_dotfile(self) -> None:
-        self.assertCountEqual(
-            ['ddir/notdotfile', 'ddir/subdir/notdotfile'],
-            self.client.glob(self.mount, ['ddir/**'])
+        self.assert_glob(
+            ['ddir/**'], ['ddir/notdotfile', 'ddir/subdir/notdotfile']
         )
-        self.assertCountEqual(
-            ['ddir/notdotfile', 'ddir/subdir/notdotfile'],
-            self.client.glob(self.mount, ['ddir/**/*'])
+        self.assert_glob(
+            ['ddir/**/*'], ['ddir/notdotfile', 'ddir/subdir/notdotfile']
         )
 
     def test_qualified_recursive_wildcard(self) -> None:
-        self.assertCountEqual(
-            [
+        self.assert_glob(
+            ['java/com/**/*.java'], [
                 'java/com/example/Example.java',
                 'java/com/example/foo/Foo.java',
                 'java/com/example/foo/bar/Bar.java',
                 'java/com/example/foo/bar/baz/Baz.java',
-            ], self.client.glob(self.mount, ['java/com/**/*.java'])
+            ]
         )
-        self.assertCountEqual(
-            [
+        self.assert_glob(
+            ['java/com/example/*/*.java'], [
                 'java/com/example/foo/Foo.java',
-            ], self.client.glob(self.mount, ['java/com/example/*/*.java'])
+            ]
         )
 
     def test_malformed_query(self) -> None:
         with self.assertRaises(EdenError) as ctx:
             self.client.glob(self.mount, ['adir['])
         self.assertIn('unterminated bracket sequence', str(ctx.exception))
+
+    def assert_glob(
+        self,
+        globs: List[str],
+        expected_matches: List[str],
+        msg: Optional[str] = None
+    ) -> None:
+        self.assertCountEqual(
+            expected_matches, self.client.glob(self.mount, globs), msg=msg
+        )
