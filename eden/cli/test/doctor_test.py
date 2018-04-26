@@ -615,26 +615,19 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
-    def test_stale_nonactive_mount_is_unmounted(self):
+    def test_working_nonactive_mount_is_not_unmounted(self):
         # Add a working edenfs mount that is not part of our active list
-        self.mount_table.add_mount('/mnt/stale1')
+        self.mount_table.add_mount('/mnt/other1')
 
         result = self.check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
-        self.assertEqual(
-            dedent(
-                '''\
-            Unmounted 1 stale edenfs mount point:
-              /mnt/stale1
-        '''
-            ), result.message
-        )
-        self.assertEqual([b'/mnt/stale1'], self.mount_table.unmount_lazy_calls)
+        self.assertEqual('', result.message)
+        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+        self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_force_unmounts_if_lazy_fails(self):
-        self.mount_table.add_mount('/mnt/stale1')
-        self.mount_table.add_mount('/mnt/stale2')
+        self.mount_table.add_stale_mount('/mnt/stale1')
+        self.mount_table.add_stale_mount('/mnt/stale2')
         self.mount_table.fail_unmount_lazy(b'/mnt/stale1')
 
         result = self.check.do_check(dry_run=False)
@@ -655,8 +648,8 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual([b'/mnt/stale1'], self.mount_table.unmount_force_calls)
 
     def test_dry_run_prints_stale_mounts_and_does_not_unmount(self):
-        self.mount_table.add_mount('/mnt/stale1')
-        self.mount_table.add_mount('/mnt/stale2')
+        self.mount_table.add_stale_mount('/mnt/stale1')
+        self.mount_table.add_stale_mount('/mnt/stale2')
 
         result = self.check.do_check(dry_run=True)
         self.assertEqual(
@@ -676,8 +669,8 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_fails_if_unmount_fails(self):
-        self.mount_table.add_mount('/mnt/stale1')
-        self.mount_table.add_mount('/mnt/stale2')
+        self.mount_table.add_stale_mount('/mnt/stale1')
+        self.mount_table.add_stale_mount('/mnt/stale2')
         self.mount_table.fail_unmount_lazy(b'/mnt/stale1', b'/mnt/stale2')
         self.mount_table.fail_unmount_force(b'/mnt/stale1')
 
@@ -713,7 +706,9 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_gives_up_if_cannot_stat_active_mount(self):
-        del self.mount_table.stats['/mnt/active1']
+        self.mount_table.fail_access('/mnt/active1', errno.ENOENT)
+        self.mount_table.fail_access('/mnt/active1/.eden', errno.ENOENT)
+
         result = self.check.do_check(dry_run=False)
         self.assertEqual(
             doctor.CheckResultType.FAILED_TO_FIX, result.result_type
@@ -727,6 +722,7 @@ class StaleMountsCheckTest(unittest.TestCase):
     def test_does_not_unmount_if_cannot_stat_stale_mount(self, warning):
         self.mount_table.add_mount('/mnt/stale1')
         self.mount_table.fail_access('/mnt/stale1', errno.EACCES)
+        self.mount_table.fail_access('/mnt/stale1/.eden', errno.EACCES)
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
@@ -740,8 +736,7 @@ class StaleMountsCheckTest(unittest.TestCase):
         )
 
     def test_does_unmount_if_stale_mount_is_unconnected(self):
-        self.mount_table.add_mount('/mnt/stale1')
-        self.mount_table.fail_access('/mnt/stale1', errno.ENOTCONN)
+        self.mount_table.add_stale_mount('/mnt/stale1')
 
         result = self.check.do_check(dry_run=False)
         self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
@@ -883,6 +878,23 @@ class FakeMountTable(mtab.MountTable):
 
         self._add_mount_info(path, device=device, vfstype=vfstype)
         self.stats[path] = mtab.MTStat(st_uid=uid, st_dev=dev)
+        if device == 'edenfs':
+            self.stats[os.path.join(path, '.eden')] = mtab.MTStat(
+                st_uid=uid, st_dev=dev
+            )
+
+    def add_stale_mount(
+        self,
+        path: str,
+        uid: Optional[int] = None,
+        dev: Optional[int] = None,
+    ) -> None:
+        # Stale mounts are always edenfs FUSE mounts
+        self.add_mount(path, uid=uid, dev=dev)
+        # Stale mounts still successfully respond to stat() calls for the root
+        # directory itself, but fail stat() calls to any other path with
+        # ENOTCONN
+        self.fail_access(os.path.join(path, '.eden'), errno.ENOTCONN)
 
     def fail_access(self, path: str, errnum: int) -> None:
         self.stats[path] = OSError(errnum, os.strerror(errnum))

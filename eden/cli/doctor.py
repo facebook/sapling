@@ -93,8 +93,8 @@ def cure_what_ails_you(
         if mount_path not in config.get_mount_paths():
             # TODO: if there are mounts in active_mount_points that aren't in
             # config.get_mount_paths(), should we try to add them to the config?
-            # I've only seen this happen in the wild if a clone fails partway, for
-            # example, if a post-clone hook fails.
+            # I've only seen this happen in the wild if a clone fails partway,
+            # for example, if a post-clone hook fails.
             continue
 
         # For now, we assume that each mount_path is actively mounted. We should
@@ -178,10 +178,9 @@ class StaleMountsCheck(Check):
         self._mount_table = mount_table
 
     def do_check(self, dry_run: bool) -> CheckResult:
-        active_mount_devices: List[int] = []
         for amp in self._active_mount_points:
             try:
-                active_mount_devices.append(self._mount_table.lstat(amp).st_dev)
+                self._mount_table.lstat(amp).st_dev
             except OSError as e:
                 # If dry_run, should this return NOT_FIXED_BECAUSE_DRY_RUN?
                 return CheckResult(
@@ -189,14 +188,13 @@ class StaleMountsCheck(Check):
                     f'Failed to lstat active eden mount {amp}\n'
                 )
 
-        stale_mounts = self.get_all_stale_eden_mount_points(
-            active_mount_devices
-        )
+        stale_mounts = self.get_all_stale_eden_mount_points()
         if not stale_mounts:
             return CheckResult(CheckResultType.NO_ISSUE, '')
 
         if dry_run:
-            message = f'Found {len(stale_mounts)} stale edenfs mount point{"s" if len(stale_mounts) != 1 else ""}:\n'
+            message = (f'Found {len(stale_mounts)} stale edenfs mount '
+                       f'point{"s" if len(stale_mounts) != 1 else ""}:\n')
             for mp in stale_mounts:
                 message += f'  {printable_bytes(mp)}\n'
             message += 'Not unmounting because dry run.\n'
@@ -216,7 +214,7 @@ class StaleMountsCheck(Check):
 
         # Use a refreshed list -- it's possible MNT_DETACH succeeded on some of
         # the points.
-        for mp in self.get_all_stale_eden_mount_points(active_mount_devices):
+        for mp in self.get_all_stale_eden_mount_points():
             if self._mount_table.unmount_force(mp):
                 unmounted.append(mp)
             else:
@@ -225,27 +223,33 @@ class StaleMountsCheck(Check):
         if failed_to_unmount:
             message = ''
             if len(unmounted):
-                message += f'Successfully unmounted {len(unmounted)} mount point{"s" if len(unmounted) != 1 else ""}:\n'
+                message += (f'Successfully unmounted {len(unmounted)} mount '
+                            f'point{"s" if len(unmounted) != 1 else ""}:\n')
                 for mp in sorted(unmounted):
                     message += f'  {printable_bytes(mp)}\n'
-            message += f'Failed to unmount {len(failed_to_unmount)} mount point{"s" if len(failed_to_unmount) != 1 else ""}:\n'
+            message += (f'Failed to unmount {len(failed_to_unmount)} mount '
+                        f'point{"s" if len(failed_to_unmount) != 1 else ""}:\n')
             for mp in sorted(failed_to_unmount):
                 message += f'  {printable_bytes(mp)}\n'
             return CheckResult(CheckResultType.FAILED_TO_FIX, message)
         else:
-            message = f'Unmounted {len(stale_mounts)} stale edenfs mount point{"s" if len(stale_mounts) != 1 else ""}:\n'
+            message = (f'Unmounted {len(stale_mounts)} stale edenfs mount '
+                       f'point{"s" if len(stale_mounts) != 1 else ""}:\n')
             for mp in sorted(unmounted):
                 message += f'  {printable_bytes(mp)}\n'
             return CheckResult(CheckResultType.FIXED, message)
 
-    def get_all_stale_eden_mount_points(self, active_mount_devices: List[int]
-                                       ) -> List[bytes]:
-        me = os.getuid()
-
+    def get_all_stale_eden_mount_points(self) -> List[bytes]:
         stale_eden_mount_points: Set[bytes] = set()
         for mount_point in self.get_all_eden_mount_points():
             try:
-                st = self._mount_table.lstat(mount_point)
+                # All eden mounts should have a .eden directory.
+                # If the edenfs daemon serving this mount point has died we
+                # will get ENOTCONN when trying to access it.  (Simply calling
+                # lstat() on the root directory itself can succeed even in this
+                # case.)
+                eden_dir = os.path.join(mount_point, b'.eden')
+                self._mount_table.lstat(eden_dir)
             except OSError as e:
                 if e.errno == errno.ENOTCONN:
                     stale_eden_mount_points.add(mount_point)
@@ -254,13 +258,6 @@ class StaleMountsCheck(Check):
                         f"Unclear whether {printable_bytes(mount_point)} "
                         f"is stale or not. lstat() failed: {e}"
                     )
-            else:
-                # Exclude any mounts that aren't owned by the current user and whose
-                # device ID matches the device ID of any existing mounts.  Avoid
-                # excluding by path because the same FUSE mount can show up in the
-                # mount table multiple times if it's underneath a bind mount.
-                if st.st_uid == me and st.st_dev not in active_mount_devices:
-                    stale_eden_mount_points.add(mount_point)
 
         return sorted(stale_eden_mount_points)
 
