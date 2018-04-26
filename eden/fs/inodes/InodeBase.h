@@ -42,7 +42,7 @@ class InodeBase {
    */
   InodeBase(
       InodeNumber ino,
-      dtype_t type,
+      mode_t initialMode,
       TreeInodePtr parent,
       PathComponentPiece name);
 
@@ -53,11 +53,11 @@ class InodeBase {
   }
 
   dtype_t getType() const {
-    return type_;
+    return mode_to_dtype(initialMode_);
   }
 
   bool isDir() const {
-    return type_ == dtype_t::Dir;
+    return getType() == dtype_t::Dir;
   }
 
   /**
@@ -417,7 +417,13 @@ class InodeBase {
 
   InodeNumber const ino_;
 
-  dtype_t const type_;
+  /**
+   * The initial mode bits specified when this inode was first created
+   * or instantiated from version control.  Primarily used when lazily
+   * writing metadata into this inode's metadata storage.  The type
+   * bits can never change - they can be accessed via getType().
+   */
+  mode_t const initialMode_;
 
   /**
    * The EdenMount object that this inode belongs to.
@@ -426,7 +432,7 @@ class InodeBase {
    * point.  The EdenMount will always exist longer than any inodes it
    * contains.
    */
-  EdenMount* const mount_{nullptr};
+  EdenMount* const mount_;
 
   /**
    * A reference count tracking the outstanding lookups that the kernel's FUSE

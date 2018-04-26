@@ -142,19 +142,22 @@ TreeInode::TreeInode(
     InodeNumber ino,
     TreeInodePtr parent,
     PathComponentPiece name,
+    mode_t initialMode,
     std::shared_ptr<const Tree>&& tree)
     : TreeInode(
           ino,
           parent,
           name,
+          initialMode,
           saveDirFromTree(ino, tree.get(), parent->getMount())) {}
 
 TreeInode::TreeInode(
     InodeNumber ino,
     TreeInodePtr parent,
     PathComponentPiece name,
+    mode_t initialMode,
     Dir&& dir)
-    : InodeBase(ino, dtype_t::Dir, parent, name), contents_(std::move(dir)) {
+    : InodeBase(ino, initialMode, parent, name), contents_(std::move(dir)) {
   DCHECK_NE(ino, kRootNodeId);
 }
 
@@ -359,7 +362,7 @@ void TreeInode::loadUnlinkedChildInode(
       }
 
       auto tree = std::make_unique<TreeInode>(
-          number, inodePtrFromThis(), name, std::move(dir));
+          number, inodePtrFromThis(), name, mode, std::move(dir));
       promises = getInodeMap()->inodeLoadComplete(tree.get());
       inodePtr = InodePtr::takeOwnership(std::move(tree));
     }
@@ -566,6 +569,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},
              treeHash = entry.getHash(),
+             entryMode = entry.getMode(),
              number = entry.getInodeNumber()](
                 std::shared_ptr<const Tree> tree) mutable
             -> unique_ptr<InodeBase> {
@@ -597,11 +601,12 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     number,
                     std::move(self),
                     childName,
+                    entryMode,
                     std::move(overlayDir.value()));
               }
 
               return make_unique<TreeInode>(
-                  number, self, childName, std::move(tree));
+                  number, self, childName, entryMode, std::move(tree));
             });
   }
 
@@ -616,6 +621,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
       entry.getInodeNumber(),
       inodePtrFromThis(),
       name,
+      entry.getMode(),
       std::move(overlayDir.value()));
 }
 
@@ -1032,7 +1038,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
 
     // Create the TreeInode
     newChild = TreeInodePtr::makeNew(
-        childNumber, this->inodePtrFromThis(), name, std::move(emptyDir));
+        childNumber, this->inodePtrFromThis(), name, mode, std::move(emptyDir));
     entry.setInode(newChild.get());
     inodeMap->inodeCreated(newChild);
 
@@ -1989,7 +1995,11 @@ Future<Unit> TreeInode::computeDiff(
                 ignore.get(),
                 entryIgnored));
       } else if (
-          inodeEntry->getMode() == modeFromTreeEntryType(scmEntry.getType()) &&
+          // Eventually the mode will come from inode metadata storage,
+          // not from the directory entry.  However, any source-control-visible
+          // metadata changes will cause the inode to be materialized, and
+          // the previous path will be taken.
+          treeEntryTypeFromMode(inodeEntry->getMode()) == scmEntry.getType() &&
           inodeEntry->getHash() == scmEntry.getHash()) {
         // This file or directory is unchanged.  We can skip it.
         XLOG(DBG9) << "diff: unchanged unloaded file: " << entryPath;
@@ -2036,8 +2046,8 @@ Future<Unit> TreeInode::computeDiff(
         // TODO: Once we build a new backing store and can replace our
         // janky hashing scheme for mercurial data, we should be able just
         // immediately assume the file is different here, without checking.
-        if (inodeEntry->getMode() !=
-            modeFromTreeEntryType(scmEntry.getType())) {
+        if (treeEntryTypeFromMode(inodeEntry->getMode()) !=
+            scmEntry.getType()) {
           // The mode is definitely modified
           XLOG(DBG5) << "diff: file modified due to mode change: " << entryPath;
           context->callback->modifiedFile(entryPath, scmEntry);

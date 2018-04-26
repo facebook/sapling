@@ -40,6 +40,8 @@ class FileInode : public InodeBase {
    * The FUSE create request wants both the inode and a file handle.  This
    * constructor simultaneously allocates a FileInode given the File and
    * returns a new EdenFileHandle to it.
+   *
+   * The given timestamp populates all three timestamp fields.
    */
   static std::tuple<FileInodePtr, FileHandlePtr> create(
       InodeNumber ino,

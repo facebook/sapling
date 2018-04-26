@@ -287,6 +287,7 @@ class TreeInode : public InodeBase {
       InodeNumber ino,
       TreeInodePtr parent,
       PathComponentPiece name,
+      mode_t initialMode,
       std::shared_ptr<const Tree>&& tree);
 
   /**
@@ -296,6 +297,7 @@ class TreeInode : public InodeBase {
       InodeNumber ino,
       TreeInodePtr parent,
       PathComponentPiece name,
+      mode_t initialMode,
       Dir&& dir);
 
   /**

@@ -543,13 +543,13 @@ FileInode::FileInode(
     InodeNumber ino,
     TreeInodePtr parentInode,
     PathComponentPiece name,
-    mode_t mode,
+    mode_t initialMode,
     const folly::Optional<Hash>& hash)
-    : InodeBase(ino, mode_to_dtype(mode), std::move(parentInode), name),
+    : InodeBase(ino, initialMode, std::move(parentInode), name),
       state_(
           folly::in_place,
           this,
-          mode,
+          initialMode,
           hash,
           getMount()->getLastCheckoutTime()) {}
 
@@ -558,10 +558,10 @@ FileInode::FileInode(
     InodeNumber ino,
     TreeInodePtr parentInode,
     PathComponentPiece name,
-    mode_t mode,
+    mode_t initialMode,
     timespec timestamp)
-    : InodeBase(ino, mode_to_dtype(mode), std::move(parentInode), name),
-      state_(folly::in_place, this, mode, timestamp) {}
+    : InodeBase(ino, initialMode, std::move(parentInode), name),
+      state_(folly::in_place, this, initialMode, timestamp) {}
 
 folly::Future<Dispatcher::Attr> FileInode::getattr() {
   // Future optimization opportunity: right now, if we have not already

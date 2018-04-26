@@ -30,7 +30,7 @@ InodeBase::~InodeBase() {
 
 InodeBase::InodeBase(EdenMount* mount)
     : ino_{kRootNodeId},
-      type_{dtype_t::Dir},
+      initialMode_{S_IFDIR | 0755},
       mount_{mount},
       location_{
           LocationInfo{nullptr,
@@ -43,11 +43,11 @@ InodeBase::InodeBase(EdenMount* mount)
 
 InodeBase::InodeBase(
     InodeNumber ino,
-    dtype_t type,
+    mode_t initialMode,
     TreeInodePtr parent,
     PathComponentPiece name)
     : ino_{ino},
-      type_{type},
+      initialMode_{initialMode},
       mount_{parent->mount_},
       location_{LocationInfo{std::move(parent), name}} {
   // Inode numbers generally shouldn't be 0.
