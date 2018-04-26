@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import unittest
 from facebook.eden.ttypes import EdenError
 from .lib import testcase
 
@@ -17,8 +18,19 @@ class GlobTest(testcase.EdenRepoTest):
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('adir/file', 'foo!\n')
         self.repo.write_file('bdir/file', 'bar!\n')
+        self.repo.write_file('bdir/otherfile', 'foo!\n')
         self.repo.symlink('slink', 'hello')
         self.repo.write_file('cdir/subdir/new.txt', 'and improved')
+        self.repo.write_file('ddir/notdotfile', '')
+        self.repo.write_file('ddir/subdir/notdotfile', '')
+        self.repo.write_file('ddir/subdir/.dotfile', '')
+
+        self.repo.write_file('java/com/example/package.html', '')
+        self.repo.write_file('java/com/example/Example.java', '')
+        self.repo.write_file('java/com/example/foo/Foo.java', '')
+        self.repo.write_file('java/com/example/foo/bar/Bar.java', '')
+        self.repo.write_file('java/com/example/foo/bar/baz/Baz.java', '')
+
         self.repo.commit('Commit 1.')
 
     def setUp(self) -> None:
@@ -29,6 +41,10 @@ class GlobTest(testcase.EdenRepoTest):
 
     def test_exact_path_component_match(self) -> None:
         self.assertEqual(['hello'], self.client.glob(self.mount, ['hello']))
+        self.assertEqual(
+            ['ddir/subdir/.dotfile'],
+            self.client.glob(self.mount, ['ddir/subdir/.dotfile'])
+        )
 
     def test_wildcard_path_component_match(self) -> None:
         self.assertEqual(['hello'], self.client.glob(self.mount, ['hel*']))
@@ -46,7 +62,15 @@ class GlobTest(testcase.EdenRepoTest):
 
     def test_match_all_files_in_directory(self) -> None:
         self.assertEqual(
-            ['adir/file'], self.client.glob(self.mount, ['adir/*'])
+            ['bdir/file', 'bdir/otherfile'],
+            self.client.glob(self.mount, ['bdir/*'])
+        )
+
+    @unittest.skip('TDD: This does not pass yet.')
+    def test_match_all_files_in_directory_with_dotfile(self) -> None:
+        self.assertEqual(
+            ['ddir/subdir/notdotfile'],
+            self.client.glob(self.mount, ['ddir/subdir/*'])
         )
 
     def test_overlapping_globs(self) -> None:
@@ -68,6 +92,32 @@ class GlobTest(testcase.EdenRepoTest):
         )
         self.assertEqual(
             ['adir/file'], self.client.glob(self.mount, ['adir/**/*'])
+        )
+
+    @unittest.skip('TDD: This does not pass yet.')
+    def test_recursive_wildcard_suffix_with_dotfile(self) -> None:
+        self.assertCountEqual(
+            ['ddir/notdotfile', 'ddir/subdir/notdotfile'],
+            self.client.glob(self.mount, ['ddir/**'])
+        )
+        self.assertCountEqual(
+            ['ddir/notdotfile', 'ddir/subdir/notdotfile'],
+            self.client.glob(self.mount, ['ddir/**/*'])
+        )
+
+    def test_qualified_recursive_wildcard(self) -> None:
+        self.assertCountEqual(
+            [
+                'java/com/example/Example.java',
+                'java/com/example/foo/Foo.java',
+                'java/com/example/foo/bar/Bar.java',
+                'java/com/example/foo/bar/baz/Baz.java',
+            ], self.client.glob(self.mount, ['java/com/**/*.java'])
+        )
+        self.assertCountEqual(
+            [
+                'java/com/example/foo/Foo.java',
+            ], self.client.glob(self.mount, ['java/com/example/*/*.java'])
         )
 
     def test_malformed_query(self) -> None:
