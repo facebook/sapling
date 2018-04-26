@@ -760,7 +760,14 @@ where
         Ok(self.root.get(store, name)?)
     }
 
-    pub fn visit<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
+    pub fn visit_advanced<F>(
+        &mut self,
+        store: &StoreView,
+        visitor: &mut F,
+        visit_flags: VisitFlags,
+        state_required_all: StateFlags,
+        state_required_any: StateFlags,
+    ) -> Result<()>
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
@@ -768,6 +775,19 @@ where
         self.root.visit(
             store,
             &mut path,
+            visitor,
+            visit_flags,
+            state_required_all,
+            state_required_any,
+        )
+    }
+
+    pub fn visit<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
+    where
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+    {
+        self.visit_advanced(
+            store,
             visitor,
             VisitFlags::empty(),
             StateFlags::empty(),
@@ -779,10 +799,8 @@ where
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
-        let mut path = Vec::new();
-        self.root.visit(
+        self.visit_advanced(
             store,
-            &mut path,
             visitor,
             VisitFlags::CHANGED_ONLY,
             StateFlags::empty(),
