@@ -227,6 +227,8 @@ class CloneCmd(Subcmd):
                              f'{args.path}: {ex}')
                 return 1
 
+        args.path = os.path.realpath(args.path)
+
         # Find the repository information
         try:
             repo, repo_type, repo_config = self._get_repo_info(

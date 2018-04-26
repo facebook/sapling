@@ -14,6 +14,7 @@ import os
 import subprocess
 import stat
 import tempfile
+from typing import Optional, Set
 
 from eden.cli import util
 from .lib import edenclient, testcase
@@ -37,6 +38,32 @@ class CloneTest(testcase.EdenRepoTest):
         self.eden.run_cmd('clone', repo_name, non_existent_dir)
         self.assertTrue(os.path.isfile(os.path.join(non_existent_dir, 'hello')),
                         msg='clone should succeed in non-existent directory')
+
+    def test_clone_to_dir_under_symlink(self) -> None:
+        tmp = self._new_tmp_dir()
+        empty_dir = os.path.join(tmp, 'foo/bar')
+        os.makedirs(empty_dir)
+
+        symlink_dir = os.path.join(tmp, 'food')
+        os.symlink(os.path.join(tmp, 'foo'), symlink_dir)
+
+        symlinked_target = os.path.join(symlink_dir, 'bar')
+
+        self.eden.run_cmd('clone', repo_name, symlinked_target)
+        self.assertTrue(os.path.isfile(os.path.join(empty_dir, 'hello')),
+                        msg='clone should succeed in empty directory')
+
+        with self.get_thrift_client() as client:
+            active_mount_points: Set[Optional[str]] = {
+                mount.mountPoint
+                for mount in client.listMounts()
+            }
+            self.assertIn(
+                empty_dir,
+                active_mount_points,
+                msg='mounted using the realpath')
+
+        self.eden.run_cmd('unmount', '--destroy', symlinked_target)
 
     def test_clone_to_existing_empty_directory(self) -> None:
         tmp = self._new_tmp_dir()
