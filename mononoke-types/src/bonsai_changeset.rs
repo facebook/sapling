@@ -266,18 +266,18 @@ mod test {
             extra: BTreeMap::new(),
             file_changes: btreemap![
                 MPath::new("a/b").unwrap() => Some(FileChange::new(
-                    ContentId::new(Blake2::from_byte_array([1; 32])),
+                    ContentId::from_byte_array([1; 32]),
                     FileType::Regular,
                     42,
                     None,
                 )),
                 MPath::new("c/d").unwrap() => Some(FileChange::new(
-                    ContentId::new(Blake2::from_byte_array([2; 32])),
+                    ContentId::from_byte_array([2; 32]),
                     FileType::Executable,
                     84,
                     Some((
                         MPath::new("e/f").unwrap(),
-                        ChangesetId::new(Blake2::from_byte_array([3; 32])),
+                        ChangesetId::from_byte_array([3; 32]),
                     )),
                 )),
                 MPath::new("g/h").unwrap() => None,

@@ -59,6 +59,11 @@ macro_rules! impl_typed_hash {
                 Ok($typed(Blake2::from_thrift(h.0)?))
             }
 
+            /// This is private because the outside should treat this ID as opaque.
+            pub(crate) fn from_byte_array(arr: [u8; 32]) -> Self {
+                $typed(Blake2::from_byte_array(arr))
+            }
+
             #[inline]
             pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
                 Blake2::from_bytes(bytes).map(Self::new)
