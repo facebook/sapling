@@ -983,7 +983,7 @@ def streamoption(repo, proto, options):
         options.get('fullclone', False) != 'True'):
         # For large repositories, we want to block accidental full clones.
         repo.ui.warn(_("unable to perform an implicit streaming clone - "
-                       "make sure remotefilelog is enabled"))
+                       "make sure remotefilelog is enabled\n"))
         return '1\n'
 
     return stream(repo, proto)
