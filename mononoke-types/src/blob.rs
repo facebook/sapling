@@ -23,6 +23,11 @@ impl<Id> Blob<Id> {
         Self { id, data }
     }
 
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
     pub fn id(&self) -> &Id {
         &self.id
     }
