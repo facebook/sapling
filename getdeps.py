@@ -27,7 +27,6 @@ except ImportError:
 class BuildOptions(object):
     def __init__(self, external_dir, num_jobs=None):
         self.external_dir = external_dir
-        self.update = False
         self.num_jobs = num_jobs
         if not self.num_jobs:
             import multiprocessing
@@ -48,8 +47,14 @@ class Project(object):
     def update(self):
         self.updater.update(self)
 
+    def ensure_checkedout(self):
+        self.updater.ensure_checkedout(self)
+
     def build(self):
         self.builder.build(self)
+
+    def clean(self):
+        self.updater.clean(self)
 
 
 class GitUpdater(object):
@@ -57,18 +62,26 @@ class GitUpdater(object):
         self.origin_repo = repo
         self.branch = branch
 
+    def ensure_checkedout(self, project):
+        if not os.path.exists(project.path):
+            self._checkout(project)
+
     def update(self, project):
         if os.path.exists(project.path):
-            if not project.opts.update:
-                return
             print('Updating %s...' % project.name)
             run_cmd(['git', '-C', project.path, 'fetch', 'origin'])
             run_cmd(['git', '-C', project.path, 'merge', '--ff-only',
                      'origin/%s' % self.branch])
         else:
-            print('Cloning %s...' % project.name)
-            run_cmd(['git', 'clone', self.origin_repo, project.path,
-                     '--branch', self.branch])
+            self._checkout(project)
+
+    def _checkout(self, project):
+        print('Cloning %s...' % project.name)
+        run_cmd(['git', 'clone', self.origin_repo, project.path,
+                 '--branch', self.branch])
+
+    def clean(self, project):
+        run_cmd(['git', '-C', project.path, 'clean', '-fxd'])
 
 
 class MakeBuilder(object):
@@ -286,6 +299,17 @@ def main():
                     default=False,
                     help='Updates the external projects repositories before '
                     'building them')
+    ap.add_argument('-C', '--clean',
+                    action='store_true',
+                    default=None,
+                    help='Cleans the external project repositories before '
+                    'building them (defaults to on when updating projects)')
+    ap.add_argument('--no-clean',
+                    action='store_false',
+                    default=None,
+                    dest='clean',
+                    help='Do not clean the external project repositories '
+                    'even after updating them.')
     ap.add_argument('-j', '--jobs',
                     dest='num_jobs',
                     type=int,
@@ -301,8 +325,10 @@ def main():
     if args.external_dir is None:
         script_dir = os.path.abspath(os.path.dirname(__file__))
         args.external_dir = os.path.join(script_dir, 'external')
+    if args.clean is None:
+        args.clean = args.update
+
     opts = BuildOptions(args.external_dir, args.num_jobs)
-    opts.update = args.update
 
     if args.install_deps:
         install_platform_deps()
@@ -312,7 +338,15 @@ def main():
 
     projects = get_projects(opts)
     for project in projects:
-        project.update()
+        if args.update:
+            project.update()
+        else:
+            project.ensure_checkedout()
+
+    if args.clean:
+        for project in projects:
+            project.clean()
+
     for project in projects:
         project.build()
 
