@@ -38,14 +38,11 @@ extern crate dbbookmarks;
 extern crate delayblob;
 extern crate dieselfilenodes;
 extern crate fileblob;
-extern crate fileheads;
 extern crate filenodes;
 #[macro_use]
 extern crate futures_ext;
-extern crate heads;
 extern crate manifoldblob;
 extern crate memblob;
-extern crate memheads;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate mononoke_types;

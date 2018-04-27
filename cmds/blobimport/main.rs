@@ -27,13 +27,10 @@ extern crate changesets;
 extern crate db;
 extern crate dieselfilenodes;
 extern crate fileblob;
-extern crate fileheads;
 extern crate filekv;
 extern crate filenodes;
 extern crate futures_ext;
-extern crate heads;
 extern crate manifoldblob;
-extern crate memheads;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate mononoke_types;
@@ -80,7 +77,6 @@ const DEFAULT_MANIFOLD_BUCKET: &str = "mononoke_prod";
 define_stats! {
     prefix = "blobimport";
     changesets: timeseries(RATE, SUM),
-    heads: timeseries(RATE, SUM),
     duplicates: timeseries(RATE, SUM),
     failures: timeseries(RATE, SUM),
     successes: timeseries(RATE, SUM),
@@ -127,8 +123,6 @@ where
     let cpupool = Arc::new(CpuPool::new_num_cpus());
     // TODO(stash): real repo id
     let repo_id = RepositoryId::new(0);
-    info!(logger, "Opening headstore: {:?}", output);
-    let headstore = open_headstore(output.clone(), &cpupool)?;
     let xdb_tier = xdb_tier.map(|tier| tier.into());
 
     if let BlobstoreType::Manifold(ref bucket) = blobtype {
@@ -212,7 +206,6 @@ where
     info!(logger, "Converting: {}", input.display());
     let mut convert_context = convert::ConvertContext {
         repo: repo.clone(),
-        headstore,
         core,
         cpupool: cpupool.clone(),
         logger: logger.clone(),
@@ -312,14 +305,6 @@ fn open_repo<P: Into<PathBuf>>(
     };
 
     Ok(revlog)
-}
-
-fn open_headstore<P: Into<PathBuf>>(path: P, pool: &Arc<CpuPool>) -> Result<Box<heads::Heads>> {
-    let mut heads = path.into();
-
-    heads.push("heads");
-    let headstore = fileheads::FileHeads::create_with_pool(heads, pool.clone())?;
-    Ok(Box::new(headstore))
 }
 
 fn open_blobstore<P: Into<PathBuf>>(

@@ -41,17 +41,16 @@ if __name__ == '__main__':
 
 #![deny(warnings)]
 
+extern crate bookmarks;
 extern crate changesets;
 extern crate memblob;
 extern crate dbbookmarks;
 extern crate dieselfilenodes;
 extern crate mercurial_types;
 extern crate mononoke_types;
-extern crate memheads;
 extern crate blobrepo;
 extern crate blobstore;
 extern crate ascii;
-extern crate heads;
 extern crate futures;
 extern crate bytes;
 #[macro_use]
@@ -59,17 +58,16 @@ extern crate slog;
 
 use std::str::FromStr;
 
+use bookmarks::Bookmarks;
 use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use memblob::EagerMemblob;
 use dbbookmarks::SqliteDbBookmarks;
 use dieselfilenodes::SqliteFilenodes;
 use mercurial_types::{DChangesetId, DNodeHash, RepositoryId};
 use mononoke_types::BlobstoreBytes;
-use memheads::MemHeads;
 use blobrepo::BlobRepo;
 use ascii::AsciiString;
 use blobstore::Blobstore;
-use heads::Heads;
 use futures::future::Future;
 use slog::{Discard, Drain, Logger};
 use std::sync::Arc;
@@ -77,13 +75,13 @@ use std::sync::Arc;
 pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
     let bookmarks = Arc::new(SqliteDbBookmarks::in_memory()
         .expect("cannot create in-memory bookmarks table"));
-    let heads = Arc::new(MemHeads::new());
     let blobs = Arc::new(EagerMemblob::new());
     let filenodes = Arc::new(SqliteFilenodes::in_memory()
         .expect("cannot create in-memory filenodes"));
     let changesets = Arc::new(SqliteChangesets::in_memory()
         .expect("cannot create in-memory changeset table"));
     let repo_id = RepositoryId::new(0);
+    let mut book_txn = bookmarks.create_transaction(&repo_id);
 
 """
         )
@@ -141,8 +139,12 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
         for head in glob.glob(os.path.join(args.source, "heads", "head-*")):
             head = head[-40:]
             writeline(
-                'heads.add(&DNodeHash::from_ascii_str(&AsciiString::from_ascii("{}").unwrap()).unwrap()).wait().expect("Head put failed");'.
-                format(head)
+                '''book_txn.create(
+                    &AsciiString::from_ascii("head-{0}").unwrap(),
+                    &DChangesetId::new(DNodeHash::from_ascii_str(
+                        &AsciiString::from_ascii("{0}").unwrap(),
+                    ).unwrap()),
+                ).expect("Bookmark creation failed");'''.format(head)
             )
         writeline("")
         blob_prefix_len = len(os.path.join(args.source, "blobs", "blob-"))
@@ -156,8 +158,9 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                 )
         rs.writelines(
             """
+    book_txn.commit().wait().expect("Bookmark heads creation failed");
     let logger = logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!()));
-    BlobRepo::new(logger, heads, bookmarks, blobs, filenodes, changesets, repo_id)
+    BlobRepo::new(logger, bookmarks, blobs, filenodes, changesets, repo_id)
 }
 """
         )

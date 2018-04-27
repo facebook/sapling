@@ -22,7 +22,6 @@ extern crate changesets;
 extern crate dbbookmarks;
 extern crate many_files_dirs;
 extern crate memblob;
-extern crate memheads;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate mononoke_types;

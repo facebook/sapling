@@ -31,12 +31,9 @@ use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets,
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use delayblob::DelayBlob;
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
-use fileheads::FileHeads;
 use filenodes::Filenodes;
-use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
-use memheads::MemHeads;
 use mercurial::{HgBlobNode, HgNodeHash, HgParents};
 use mercurial_types::{Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry, HgBlob,
                       Manifest, RepoPath, RepositoryId};
@@ -58,7 +55,6 @@ pub struct BlobRepo {
     logger: Logger,
     blobstore: Arc<Blobstore>,
     bookmarks: Arc<Bookmarks>,
-    heads: Arc<Heads>,
     filenodes: Arc<Filenodes>,
     changesets: Arc<Changesets>,
     repoid: RepositoryId,
@@ -67,7 +63,6 @@ pub struct BlobRepo {
 impl BlobRepo {
     pub fn new(
         logger: Logger,
-        heads: Arc<Heads>,
         bookmarks: Arc<Bookmarks>,
         blobstore: Arc<Blobstore>,
         filenodes: Arc<Filenodes>,
@@ -76,7 +71,6 @@ impl BlobRepo {
     ) -> Self {
         BlobRepo {
             logger,
-            heads,
             bookmarks,
             blobstore,
             filenodes,
@@ -86,8 +80,6 @@ impl BlobRepo {
     }
 
     pub fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
-        let heads = FileHeads::open(path.join("heads"))
-            .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
         let bookmarks = SqliteDbBookmarks::open_or_create(path.join("books").to_string_lossy())
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
@@ -104,7 +96,6 @@ impl BlobRepo {
 
         Ok(Self::new(
             logger,
-            Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
             Arc::new(filenodes),
@@ -127,8 +118,6 @@ impl BlobRepo {
     where
         F: FnMut(()) -> Duration + 'static + Send + Sync,
     {
-        let heads = FileHeads::open(path.join("heads"))
-            .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
         let bookmarks = SqliteDbBookmarks::open_or_create(path.join("books").to_string_lossy())
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
@@ -155,7 +144,6 @@ impl BlobRepo {
 
         Ok(Self::new(
             logger,
-            Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
             Arc::new(filenodes),
@@ -172,7 +160,6 @@ impl BlobRepo {
     ) -> Result<Self> {
         Ok(Self::new(
             logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
-            Arc::new(MemHeads::new()),
             Arc::new(SqliteDbBookmarks::in_memory()?),
             blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
             Arc::new(SqliteFilenodes::in_memory()
@@ -193,7 +180,6 @@ impl BlobRepo {
         blobstore_cache_size: usize,
         changesets_cache_size: usize,
     ) -> Result<Self> {
-        let heads = MemHeads::new();
         let blobstore = ManifoldBlob::new_with_prefix(bucket.to_string(), prefix, remote);
         let blobstore =
             CachingBlobstore::new(Arc::new(blobstore), usize::MAX, blobstore_cache_size);
@@ -216,7 +202,6 @@ impl BlobRepo {
 
         Ok(Self::new(
             logger,
-            Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
             Arc::new(filenodes),
@@ -276,8 +261,8 @@ impl BlobRepo {
     pub fn get_changesets(&self) -> BoxStream<DNodeHash, Error> {
         BlobChangesetStream {
             repo: self.clone(),
-            heads: self.heads.heads().boxify(),
             state: BCState::Idle,
+            heads: self.get_heads().boxify(),
             seen: HashSet::new(),
         }.boxify()
     }
@@ -575,7 +560,6 @@ impl CreateChangeset {
                 .and_then({
                     let filenodes = repo.filenodes.clone();
                     let blobstore = repo.blobstore.clone();
-                    let heads = repo.heads.clone();
                     let logger = repo.logger.clone();
                     let user = self.user;
                     let time = self.time;
@@ -608,7 +592,6 @@ impl CreateChangeset {
 
                                 blobcs
                                     .save(blobstore)
-                                    .join(heads.add(&cs_id))
                                     .join(entry_processor.finalize(filenodes, cs_id))
                                     .map(move |_| {
                                         // We deliberately eat this error - this is only so that
@@ -679,7 +662,6 @@ impl Clone for BlobRepo {
     fn clone(&self) -> Self {
         Self {
             logger: self.logger.clone(),
-            heads: self.heads.clone(),
             bookmarks: self.bookmarks.clone(),
             blobstore: self.blobstore.clone(),
             filenodes: self.filenodes.clone(),

@@ -9,7 +9,6 @@
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 
-use failure::StreamFailureErrorExt;
 use futures::{Future, IntoFuture, Stream};
 use futures_cpupool::CpuPool;
 use slog::Logger;
@@ -21,7 +20,6 @@ use failure::{Error, Result};
 use filenodes::FilenodeInfo;
 use futures::sync::mpsc::UnboundedSender;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use heads::Heads;
 use mercurial::{self, HgChangesetId, HgEntryId, HgNodeHash, HgParents, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
@@ -33,9 +31,8 @@ use BlobstoreEntry;
 use STATS;
 use manifest;
 
-pub(crate) struct ConvertContext<H> {
+pub(crate) struct ConvertContext {
     pub repo: RevlogRepo,
-    pub headstore: H,
     pub core: Core,
     pub cpupool: Arc<CpuPool>,
     pub logger: Logger,
@@ -43,10 +40,7 @@ pub(crate) struct ConvertContext<H> {
     pub commits_limit: Option<u64>,
 }
 
-impl<H> ConvertContext<H>
-where
-    H: Heads,
-{
+impl ConvertContext {
     pub fn convert(
         &mut self,
         changesets: BoxStream<HgNodeHash, mercurial::Error>,
@@ -56,7 +50,6 @@ where
         let core = &mut self.core;
         let logger = &self.logger.clone();
         let cpupool = self.cpupool.clone();
-        let headstore = &self.headstore;
 
         // Generate stream of changesets. For each changeset, save the cs blob, and the manifest
         // blob, and the files.
@@ -80,24 +73,7 @@ where
             .map(|copy| cpupool.spawn(copy))
             .buffer_unordered(100);
 
-        let heads = self.repo
-            .get_heads()
-            .context("Failed get heads")
-            .from_err()
-            .map(|h| {
-                debug!(logger, "head {}", h);
-                STATS::heads.add_value(1);
-                let h = h.into_mononoke();
-                headstore.add(&h).map_err({
-                    move |err| {
-                        err.context(format_err!("Failed to create head {}", h))
-                            .into()
-                    }
-                })
-            })
-            .buffer_unordered(100);
-
-        let convert = changesets.select(heads).for_each(|_| Ok(()));
+        let convert = changesets.for_each(|_| Ok(()));
 
         core.run(convert)?;
 
