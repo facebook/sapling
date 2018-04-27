@@ -478,6 +478,30 @@ class StartCmd(Subcmd):
                             foreground=args.foreground)
 
 
+def stop_aux_processes(client) -> None:
+    '''Tear down processes that will hold onto file handles and prevent shutdown'''
+
+    # TODO: This is linux specific.  We need a mercurial command that
+    # does the right thing so that this will operate correctly on macos
+    print(f'Stopping chg...')
+    uid = os.getuid()
+    subprocess.run(f'rm /run/user/{uid}/chg/server*', shell=True)
+
+    active_mount_points: Set[Optional[str]] = {
+        mount.mountPoint
+        for mount in client.listMounts()
+    }
+
+    for repo in active_mount_points:
+        print(f'Stopping buck in {repo}...')
+        subprocess.run(
+            ["env", "BUCKVERSION=last", "buck", "kill"],
+            cwd=repo)
+
+    # TODO: intelligently stop nuclide-server associated with eden
+    # print('Stopping nuclide-server...')
+    # subprocess.run(['pkill', '-f', 'nuclide-main'])
+
 RESTART_MODE_FULL = 'full'
 RESTART_MODE_GRACEFUL = 'graceful'
 
@@ -528,6 +552,7 @@ class RestartCmd(Subcmd):
             with self.config.get_thrift_client() as client:
                 pid = client.getPid()
                 if self.args.restart_type == RESTART_MODE_FULL:
+                    stop_aux_processes(client)
                     # Ask the old edenfs daemon to shutdown
                     self.msg(
                         'Stopping the existing edenfs daemon (pid {})...', pid
@@ -693,7 +718,9 @@ class StopCmd(Subcmd):
         try:
             with config.get_thrift_client() as client:
                 pid = client.getPid()
+                stop_aux_processes(client)
                 # Ask the client to shutdown
+                print(f'Stopping edenfs daemon (pid {pid})...')
                 client.shutdown()
         except EdenNotRunningError:
             print_stderr('error: edenfs is not running')
