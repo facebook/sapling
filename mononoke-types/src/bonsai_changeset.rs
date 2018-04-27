@@ -32,16 +32,38 @@ pub struct BonsaiChangesetMut {
     pub committer_date: Option<DateTime>,
     pub message: String,
     pub extra: BTreeMap<String, String>,
-    // XXX consider adding checks that:
     // * file_changes is ppf
-    // * changeset IDs inside copy info in FileChange are all members of parents
     pub file_changes: BTreeMap<MPath, Option<FileChange>>,
 }
 
 impl BonsaiChangesetMut {
     /// Freeze this instance and turn it into a `BonsaiChangeset`.
     pub fn freeze(self) -> Result<BonsaiChangeset> {
+        self.verify()?;
         Ok(BonsaiChangeset { inner: self })
+    }
+
+    /// Verify that this will form a valid `BonsaiChangeset`.
+    ///
+    /// Note that this doesn't (and can't) make any checks that require referring to data
+    /// that's external to this changeset. For example, a changeset that deletes a file that
+    /// doesn't exist in its parent is invalid. Instead, it only checks for internal consistency.
+    pub fn verify(&self) -> Result<()> {
+        // Check that the copy info ID refers to a parent in the parent set.
+        for (path, fc_opt) in &self.file_changes {
+            if let &Some(ref fc) = fc_opt {
+                if let Some(&(ref copy_from_path, ref copy_from_id)) = fc.copy_from() {
+                    if !self.parents.contains(copy_from_id) {
+                        bail_err!(ErrorKind::InvalidBonsaiChangeset(format!(
+                            "copy information for path '{}' (from '{}') has parent {} which isn't \
+                             recognized",
+                            path, copy_from_path, copy_from_id
+                        )));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -187,13 +209,27 @@ impl Arbitrary for BonsaiChangeset {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // In the future Mononoke would like to support changesets with more parents than 2.
         // Start testing that now.
+        let size = g.size();
         let num_parents = g.gen_range(0, 8);
-        let parents = (0..num_parents)
+        let parents: Vec<_> = (0..num_parents)
             .map(|_| ChangesetId::arbitrary(g))
             .collect();
+
+        let num_changes = g.gen_range(0, size);
+        let file_changes: BTreeMap<_, _> = (0..num_changes)
+            .map(|_| {
+                let fc_opt = if g.gen_weighted_bool(3) {
+                    Some(FileChange::arbitrary_from_parents(g, &parents))
+                } else {
+                    None
+                };
+                (MPath::arbitrary(g), fc_opt)
+            })
+            .collect();
+
         BonsaiChangesetMut {
             parents,
-            file_changes: BTreeMap::arbitrary(g),
+            file_changes,
             author: String::arbitrary(g),
             author_date: DateTime::arbitrary(g),
             committer: Option::<String>::arbitrary(g),
@@ -257,7 +293,7 @@ mod test {
     #[test]
     fn fixed_blob() {
         let tc = BonsaiChangesetMut {
-            parents: vec![],
+            parents: vec![ChangesetId::from_byte_array([3; 32])],
             author: "foo".into(),
             author_date: DateTime::from_timestamp(1234567890, 36800).unwrap(),
             committer: Some("bar".into()),
@@ -291,7 +327,7 @@ mod test {
             blob.id(),
             &ChangesetId::new(
                 Blake2::from_str(
-                    "dfb3d7163d601880458752efcaf158e66178a2f29223b2a918a697faaeee8159"
+                    "f5e838886e7112f39eeebbe0c8d723f7001698ccc4fc6e0965a869453f664e17"
                 ).unwrap()
             )
         );

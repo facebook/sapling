@@ -16,6 +16,7 @@ pub enum ErrorKind {
     #[fail(display = "error while deserializing blob for '{}'", _0)] BlobDeserializeError(String),
     #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)] InvalidThrift(String, String),
     #[fail(display = "invalid changeset date: {}", _0)] InvalidDateTime(String),
+    #[fail(display = "invalid bonsai changeset: {}", _0)] InvalidBonsaiChangeset(String),
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;

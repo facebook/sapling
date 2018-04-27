@@ -102,6 +102,23 @@ impl FileChange {
             }),
         }
     }
+
+    /// Generate a random FileChange which picks copy-from parents from the list of parents
+    /// provided.
+    pub(crate) fn arbitrary_from_parents<G: Gen>(g: &mut G, parents: &[ChangesetId]) -> Self {
+        let copy_from = if g.gen_weighted_bool(5) {
+            g.choose(parents)
+                .map(|parent| (MPath::arbitrary(g), *parent))
+        } else {
+            None
+        };
+        FileChange {
+            content_id: ContentId::arbitrary(g),
+            file_type: FileType::arbitrary(g),
+            size: u64::arbitrary(g),
+            copy_from,
+        }
+    }
 }
 
 impl Arbitrary for FileChange {
