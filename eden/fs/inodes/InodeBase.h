@@ -108,8 +108,9 @@ class InodeBase {
   setxattr(folly::StringPiece name, folly::StringPiece value, int flags);
   virtual folly::Future<std::string> getxattr(folly::StringPiece name);
   virtual folly::Future<std::vector<std::string>> listxattr();
-  virtual folly::Future<folly::Unit> removexattr(folly::StringPiece name);
-  virtual folly::Future<folly::Unit> access(int mask);
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> removexattr(
+      folly::StringPiece name);
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> access(int mask);
 
   /**
    * Called when this Inode is retrieved so it has a chance to prefetch and

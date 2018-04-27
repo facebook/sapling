@@ -620,7 +620,7 @@ class TreeInode : public InodeBase {
    */
   void materialize(const RenameLock* renameLock = nullptr);
 
-  folly::Future<folly::Unit> doRename(
+  FOLLY_NODISCARD folly::Future<folly::Unit> doRename(
       TreeRenameLocks&& locks,
       PathComponentPiece srcName,
       PathMap<Entry>::iterator srcIter,
@@ -697,7 +697,7 @@ class TreeInode : public InodeBase {
    * retry the remove again (hence the attemptNum parameter).
    */
   template <typename InodePtrType>
-  folly::Future<folly::Unit>
+  FOLLY_NODISCARD folly::Future<folly::Unit>
   removeImpl(PathComponent name, InodePtr child, unsigned int attemptNum);
 
   /**
@@ -765,7 +765,7 @@ class TreeInode : public InodeBase {
    * Load the .gitignore file for this directory, then call computeDiff() once
    * it is loaded.
    */
-  folly::Future<folly::Unit> loadGitIgnoreThenDiff(
+  FOLLY_NODISCARD folly::Future<folly::Unit> loadGitIgnoreThenDiff(
       InodePtr gitignoreInode,
       const DiffContext* context,
       RelativePathPiece currentPath,
@@ -781,7 +781,7 @@ class TreeInode : public InodeBase {
    * for the current directory and then invokes computeDiff() to perform the
    * diff once all .gitignore data is loaded.
    */
-  folly::Future<folly::Unit> computeDiff(
+  FOLLY_NODISCARD folly::Future<folly::Unit> computeDiff(
       folly::Synchronized<Dir>::LockedPtr contentsLock,
       const DiffContext* context,
       RelativePathPiece currentPath,

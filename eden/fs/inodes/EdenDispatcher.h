@@ -40,8 +40,7 @@ class EdenDispatcher : public Dispatcher {
       InodeNumber parent,
       PathComponentPiece name) override;
 
-  folly::Future<folly::Unit> forget(InodeNumber ino, unsigned long nlookup)
-      override;
+  void forget(InodeNumber ino, unsigned long nlookup) override;
   folly::Future<std::shared_ptr<FileHandle>> open(InodeNumber ino, int flags)
       override;
   folly::Future<std::string> readlink(InodeNumber ino) override;

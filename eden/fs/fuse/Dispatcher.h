@@ -95,15 +95,13 @@ class Dispatcher {
    * The filesystem may ignore forget calls, if the inodes don't
    * need to have a limited lifetime.
    *
-   * On unmount it is not guaranteed, that all referenced inodes
+   * On unmount, it is not guaranteed that all referenced inodes
    * will receive a forget message.
    *
    * @param ino the inode number
    * @param nlookup the number of lookups to forget
    */
-  virtual folly::Future<folly::Unit> forget(
-      InodeNumber ino,
-      unsigned long nlookup);
+  virtual void forget(InodeNumber ino, unsigned long nlookup);
 
   /**
    * The stat information and the cache TTL for the kernel
@@ -185,7 +183,7 @@ class Dispatcher {
    * @param parent inode number of the parent directory
    * @param name to remove
    */
-  virtual folly::Future<folly::Unit> unlink(
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> unlink(
       InodeNumber parent,
       PathComponentPiece name);
 
@@ -195,7 +193,7 @@ class Dispatcher {
    * @param parent inode number of the parent directory
    * @param name to remove
    */
-  virtual folly::Future<folly::Unit> rmdir(
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> rmdir(
       InodeNumber parent,
       PathComponentPiece name);
 
@@ -217,7 +215,7 @@ class Dispatcher {
    * @param newparent inode number of the new parent directory
    * @param newname new name
    */
-  virtual folly::Future<folly::Unit> rename(
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> rename(
       InodeNumber parent,
       PathComponentPiece name,
       InodeNumber newparent,
@@ -262,7 +260,7 @@ class Dispatcher {
   /**
    * Set an extended attribute
    */
-  virtual folly::Future<folly::Unit> setxattr(
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> setxattr(
       InodeNumber ino,
       folly::StringPiece name,
       folly::StringPiece value,
@@ -286,7 +284,7 @@ class Dispatcher {
    * @param ino the inode number
    * @param name of the extended attribute
    */
-  virtual folly::Future<folly::Unit> removexattr(
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> removexattr(
       InodeNumber ino,
       folly::StringPiece name);
 
@@ -304,7 +302,9 @@ class Dispatcher {
    * @param ino the inode number
    * @param mask requested access mode
    */
-  virtual folly::Future<folly::Unit> access(InodeNumber ino, int mask);
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> access(
+      InodeNumber ino,
+      int mask);
 
   struct Create {
     fuse_entry_out entry;

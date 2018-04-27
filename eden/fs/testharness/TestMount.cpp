@@ -45,6 +45,7 @@ using folly::StringPiece;
 using folly::Unit;
 using folly::test::TemporaryDirectory;
 using folly::test::TemporaryFile;
+using namespace std::literals::chrono_literals;
 using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
@@ -286,9 +287,9 @@ void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
                               relativePath.basename(),
                               /*mode*/ 0644,
                               /*flags*/ 0)
-                          .get();
-  createResult.fh->write(contents, /*off*/ 0);
-  createResult.fh->fsync(/*datasync*/ true);
+                          .get(0ms);
+  createResult.fh->write(contents, /*off*/ 0).get(0ms);
+  createResult.fh->fsync(/*datasync*/ true).get(0ms);
 }
 
 void TestMount::addSymlink(
@@ -307,8 +308,8 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   auto file = getFileInode(path);
   auto fileHandle = file->open(O_RDWR | O_TRUNC).get();
   off_t offset = 0;
-  fileHandle->write(contents, offset);
-  fileHandle->fsync(/*datasync*/ true);
+  fileHandle->write(contents, offset).get(0ms);
+  fileHandle->fsync(/*datasync*/ true).get(0ms);
 }
 
 std::string TestMount::readFile(folly::StringPiece path) {

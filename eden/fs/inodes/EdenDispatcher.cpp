@@ -120,12 +120,9 @@ folly::Future<Dispatcher::Attr> EdenDispatcher::setattr(
       [attr](const InodePtr& inode) { return inode->setattr(attr); });
 }
 
-folly::Future<folly::Unit> EdenDispatcher::forget(
-    InodeNumber ino,
-    unsigned long nlookup) {
+void EdenDispatcher::forget(InodeNumber ino, unsigned long nlookup) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "forget({}, {})", ino, nlookup);
   inodeMap_->decFuseRefcount(ino, nlookup);
-  return Unit{};
 }
 
 folly::Future<std::shared_ptr<FileHandle>> EdenDispatcher::open(

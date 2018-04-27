@@ -1289,8 +1289,9 @@ folly::Future<folly::Unit> FuseChannel::fuseForget(
     const uint8_t* arg) {
   auto forget = reinterpret_cast<const fuse_forget_in*>(arg);
   XLOG(DBG7) << "FUSE_FORGET";
-  return dispatcher_->forget(InodeNumber{header->nodeid}, forget->nlookup)
-      .then([]() { RequestData::get().replyNone(); });
+  dispatcher_->forget(InodeNumber{header->nodeid}, forget->nlookup);
+  RequestData::get().replyNone();
+  return folly::Unit{};
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseGetAttr(

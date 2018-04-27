@@ -54,8 +54,12 @@ class FileHandle : public FileHandleBase {
    * of the write system call will reflect the return value of this
    * operation.
    */
-  virtual folly::Future<size_t> write(BufVec&& buf, off_t off) = 0;
-  virtual folly::Future<size_t> write(folly::StringPiece data, off_t off) = 0;
+  FOLLY_NODISCARD virtual folly::Future<size_t> write(
+      BufVec&& buf,
+      off_t off) = 0;
+  FOLLY_NODISCARD virtual folly::Future<size_t> write(
+      folly::StringPiece data,
+      off_t off) = 0;
 
   /**
    * Flush method
@@ -76,7 +80,8 @@ class FileHandle : public FileHandleBase {
    * If the filesystem supports file locking operations (setlk,
    * getlk) it should remove all locks belonging to 'lock_owner'.
    */
-  virtual folly::Future<folly::Unit> flush(uint64_t lock_owner) = 0;
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> flush(
+      uint64_t lock_owner) = 0;
 
   /**
    * Synchronize file contents
@@ -87,7 +92,7 @@ class FileHandle : public FileHandleBase {
    * @param datasync flag indicating if only data should be flushed
    * @param fi file information
    */
-  virtual folly::Future<folly::Unit> fsync(bool datasync) = 0;
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fsync(bool datasync) = 0;
 };
 
 } // namespace eden

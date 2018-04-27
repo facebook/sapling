@@ -85,11 +85,7 @@ folly::Future<fuse_entry_out> Dispatcher::lookup(
   throwSystemErrorExplicit(ENOENT);
 }
 
-folly::Future<folly::Unit> Dispatcher::forget(
-    InodeNumber /*ino*/,
-    unsigned long /*nlookup*/) {
-  return Unit{};
-}
+void Dispatcher::forget(InodeNumber /*ino*/, unsigned long /*nlookup*/) {}
 
 folly::Future<Dispatcher::Attr> Dispatcher::getattr(InodeNumber /*ino*/) {
   throwSystemErrorExplicit(ENOENT);

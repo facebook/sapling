@@ -90,7 +90,9 @@ class CheckoutAction {
 
   PathComponentPiece getEntryName() const;
 
-  folly::Future<folly::Unit> run(CheckoutContext* ctx, ObjectStore* store);
+  FOLLY_NODISCARD folly::Future<folly::Unit> run(
+      CheckoutContext* ctx,
+      ObjectStore* store);
 
  private:
   class LoadingRefcount;
@@ -115,7 +117,7 @@ class CheckoutAction {
   void allLoadsComplete() noexcept;
   bool ensureDataReady() noexcept;
   bool hasConflict();
-  folly::Future<folly::Unit> doAction();
+  FOLLY_NODISCARD folly::Future<folly::Unit> doAction();
 
   /**
    * The context for the in-progress checkout operation.

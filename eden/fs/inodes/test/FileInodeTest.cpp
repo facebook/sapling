@@ -564,7 +564,7 @@ TEST(FileInode, truncateDuringLoad) {
   EXPECT_EQ("", dataFuture.get().copyData());
 
   // For good measure, test reading and writing some more.
-  truncHandle->write("foobar\n"_sp, 5);
+  truncHandle->write("foobar\n"_sp, 5).get(0ms);
 
   dataFuture = handle->read(4096, 0);
   ASSERT_TRUE(dataFuture.isReady());

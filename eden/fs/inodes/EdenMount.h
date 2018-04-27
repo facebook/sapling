@@ -525,7 +525,7 @@ class EdenMount {
 
   folly::Future<TreeInodePtr> createRootInode(
       const ParentCommits& parentCommits);
-  folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
+  FOLLY_NODISCARD folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
   folly::Future<std::tuple<SerializedFileHandleMap, SerializedInodeMap>>
   shutdownImpl(bool doTakeover);
 

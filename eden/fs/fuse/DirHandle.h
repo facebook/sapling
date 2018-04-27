@@ -33,7 +33,8 @@ class DirHandle : public FileHandleBase {
    *
    * @param datasync flag indicating if only data should be flushed
    */
-  virtual folly::Future<folly::Unit> fsyncdir(bool datasync) = 0;
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fsyncdir(
+      bool datasync) = 0;
 };
 
 } // namespace eden
