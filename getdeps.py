@@ -14,7 +14,9 @@ from __future__ import unicode_literals
 
 import argparse
 import os
+import shlex
 import subprocess
+import sys
 
 try:
     from shlex import quote as shellquote
@@ -219,18 +221,59 @@ def get_projects(opts):
     ]
 
 
+def get_linux_type():
+    try:
+        with open('/etc/os-release') as f:
+            data = f.read()
+    except EnvironmentError:
+        return (None, None)
+
+    os_vars = {}
+    for line in data.splitlines():
+        parts = line.split('=', 1)
+        if len(parts) != 2:
+            continue
+        key = parts[0].strip()
+        value_parts = shlex.split(parts[1].strip())
+        if not value_parts:
+            value = ''
+        else:
+            value = value_parts[0]
+        os_vars[key] = value
+
+    return os_vars.get('NAME'), os_vars.get('VERSION_ID')
+
+
+def get_os_type():
+    if sys.platform.startswith('linux'):
+        return get_linux_type()
+    elif sys.platform.startswith('darwin'):
+        return ('darwin', None)
+    elif sys.platform == 'windows':
+        return ('windows', sys.getwindowsversion().major)
+    else:
+        return (None, None)
+
+
 def install_platform_deps():
-    # TODO: Handle distributions other than Ubuntu.
-    # These dependencies have been tested on Ubuntu 16.04
-    print('Installing necessary Ubuntu packages...')
-    ubuntu_pkgs = (
-        'autoconf automake libdouble-conversion-dev '
-        'libssl-dev make zip git libtool g++ libboost-all-dev '
-        'libevent-dev flex bison libgoogle-glog-dev libkrb5-dev '
-        'libsnappy-dev libsasl2-dev libnuma-dev libcurl4-gnutls-dev '
-        'libpcap-dev libdb5.3-dev cmake libfuse-dev libgit2-dev mercurial '
-    ).split()
-    install_apt(ubuntu_pkgs)
+    os_name, os_version = get_os_type()
+    if os_name is None:
+        raise Exception('unable to detect OS type')
+    elif os_name == 'Ubuntu':
+        # These dependencies have been tested on Ubuntu 16.04
+        print('Installing necessary Ubuntu packages...')
+        ubuntu_pkgs = (
+            'autoconf automake libdouble-conversion-dev '
+            'libssl-dev make zip git libtool g++ libboost-all-dev '
+            'libevent-dev flex bison libgoogle-glog-dev libkrb5-dev '
+            'libsnappy-dev libsasl2-dev libnuma-dev libcurl4-gnutls-dev '
+            'libpcap-dev libdb5.3-dev cmake libfuse-dev libgit2-dev mercurial '
+        ).split()
+        install_apt(ubuntu_pkgs)
+    else:
+        # TODO: Handle distributions other than Ubuntu.
+        raise Exception('installing OS dependencies on %s is not '
+                        'supported yet' % (os_name,))
 
 
 def main():
