@@ -822,6 +822,12 @@ FileInodePtr TreeInode::createImpl(
     mode_t mode,
     ByteRange fileContents,
     std::shared_ptr<EdenFileHandle>* outHandle) {
+  // This relies on the fact that the dotEdenInodeNumber field of EdenMount is
+  // not defined until after EdenMount finishes configuring the .eden directory.
+  if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
+    throw InodeError(EPERM, inodePtrFromThis(), name);
+  }
+
   FileInodePtr inode;
   RelativePath targetName;
 
@@ -986,6 +992,10 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
 }
 
 TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
+  if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
+    throw InodeError(EPERM, inodePtrFromThis(), name);
+  }
+
   RelativePath targetName;
   // Compute the effective name of the node they want to create.
   materialize();
@@ -1357,6 +1367,13 @@ Future<Unit> TreeInode::rename(
     PathComponentPiece name,
     TreeInodePtr destParent,
     PathComponentPiece destName) {
+  if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
+    return makeFuture<Unit>(InodeError(EPERM, inodePtrFromThis(), name));
+  }
+  if (destParent->getNodeId() == getMount()->getDotEdenInodeNumber()) {
+    return makeFuture<Unit>(InodeError(EPERM, destParent, destName));
+  }
+
   bool needSrc = false;
   bool needDest = false;
   {

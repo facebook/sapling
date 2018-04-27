@@ -242,7 +242,6 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
       .onError([=](const InodeError& /*err*/) {
         auto dotEdenInode =
             getRootInode()->mkdir(PathComponentPiece{kDotEdenName}, 0744);
-        dotEdenInodeNumber_ = dotEdenInode->getNodeId();
         dotEdenInode->symlink(
             PathComponentPiece{"root"}, config_->getMountPath().stringPiece());
         dotEdenInode->symlink(
@@ -251,6 +250,7 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         dotEdenInode->symlink(
             PathComponentPiece{"client"},
             config_->getClientDirectory().stringPiece());
+        dotEdenInodeNumber_ = dotEdenInode->getNodeId();
       });
 }
 

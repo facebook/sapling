@@ -23,6 +23,7 @@
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/Bug.h"
 
+using namespace std::literals::chrono_literals;
 using namespace facebook::eden;
 using folly::StringPiece;
 
@@ -295,14 +296,14 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   auto dir1ino = dir1->getNodeId();
   auto dir2ino = dir2->getNodeId();
 
-  dir1->unlink(PathComponentPiece{"file.txt"}).get();
-  dir2->unlink(PathComponentPiece{"file.txt"}).get();
+  dir1->unlink(PathComponentPiece{"file.txt"}).get(0ms);
+  dir2->unlink(PathComponentPiece{"file.txt"}).get(0ms);
 
   // Test both having a positive and zero fuse reference counts.
   dir2->incFuseRefcount();
 
-  root->rmdir(PathComponentPiece{"dir1"});
-  root->rmdir(PathComponentPiece{"dir2"});
+  root->rmdir(PathComponentPiece{"dir1"}).get(0ms);
+  root->rmdir(PathComponentPiece{"dir2"}).get(0ms);
 
   dir1.reset();
   dir2.reset();

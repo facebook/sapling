@@ -574,6 +574,14 @@ folly::Future<Dispatcher::Attr> FileInode::getattr() {
 
 folly::Future<Dispatcher::Attr> FileInode::setInodeAttr(
     const fuse_setattr_in& attr) {
+  // If this file is inside of .eden it cannot be reparented, so getParentRacy()
+  // is okay.
+  auto parent = getParentRacy();
+  if (parent && parent->getNodeId() == getMount()->getDotEdenInodeNumber()) {
+    return folly::makeFuture<Dispatcher::Attr>(
+        InodeError(EPERM, inodePtrFromThis()));
+  }
+
   auto setAttrs = [self = inodePtrFromThis(), attr](LockedState&& state) {
     auto result = Dispatcher::Attr{self->getMount()->initStatData()};
 

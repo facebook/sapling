@@ -336,7 +336,7 @@ class TreeInode : public InodeBase {
   InodeNumber getChildInodeNumber(PathComponentPiece name);
 
   std::shared_ptr<DirHandle> opendir();
-  folly::Future<folly::Unit> rename(
+  FOLLY_NODISCARD folly::Future<folly::Unit> rename(
       PathComponentPiece name,
       TreeInodePtr newParent,
       PathComponentPiece newName);
@@ -364,20 +364,21 @@ class TreeInode : public InodeBase {
    */
   ObjectStore* getStore() const;
 
-  folly::Future<CreateResult>
+  FOLLY_NODISCARD folly::Future<CreateResult>
   create(PathComponentPiece name, mode_t mode, int flags);
   FileInodePtr symlink(PathComponentPiece name, folly::StringPiece contents);
 
   TreeInodePtr mkdir(PathComponentPiece name, mode_t mode);
-  folly::Future<folly::Unit> unlink(PathComponentPiece name);
-  folly::Future<folly::Unit> rmdir(PathComponentPiece name);
+  FOLLY_NODISCARD folly::Future<folly::Unit> unlink(PathComponentPiece name);
+  FOLLY_NODISCARD folly::Future<folly::Unit> rmdir(PathComponentPiece name);
 
   /**
    * Create a special filesystem node.
    * Only unix domain sockets are supported; attempting to create any
    * other kind of node will fail.
    */
-  FileInodePtr mknod(PathComponentPiece name, mode_t mode, dev_t rdev);
+  FOLLY_NODISCARD FileInodePtr
+  mknod(PathComponentPiece name, mode_t mode, dev_t rdev);
 
   /**
    * Compute differences between a source control Tree and the current inode
@@ -437,7 +438,7 @@ class TreeInode : public InodeBase {
    * @return Returns a future that will be fulfilled once this tree and all of
    *     its children have been updated.
    */
-  folly::Future<folly::Unit> checkout(
+  FOLLY_NODISCARD folly::Future<folly::Unit> checkout(
       CheckoutContext* ctx,
       std::shared_ptr<const Tree> fromTree,
       std::shared_ptr<const Tree> toTree);
@@ -535,7 +536,7 @@ class TreeInode : public InodeBase {
    * Returns a Future that completes once all materialized inodes have been
    * loaded.
    */
-  folly::Future<folly::Unit> loadMaterializedChildren(
+  FOLLY_NODISCARD folly::Future<folly::Unit> loadMaterializedChildren(
       Recurse recurse = Recurse::DEEP);
 
   /*
@@ -562,7 +563,7 @@ class TreeInode : public InodeBase {
    *     This entry will refer to a tree if and only if the newTree parameter
    *     is non-null.
    */
-  folly::Future<folly::Unit> checkoutUpdateEntry(
+  FOLLY_NODISCARD folly::Future<folly::Unit> checkoutUpdateEntry(
       CheckoutContext* ctx,
       PathComponentPiece name,
       InodePtr inode,

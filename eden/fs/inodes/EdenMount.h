@@ -229,7 +229,10 @@ class EdenMount {
   /** Get the TreeInode for the root of the mount. */
   TreeInodePtr getRootInode() const;
 
-  /** Get the inode number for the .eden dir */
+  /**
+   * Get the inode number for the .eden dir.  Returns an empty InodeNumber
+   * prior to the .eden directory being set up.
+   */
   InodeNumber getDotEdenInodeNumber() const;
 
   /** Convenience method for getting the Tree for the root of the mount. */

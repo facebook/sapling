@@ -220,7 +220,7 @@ folly::Future<folly::Unit> EdenDispatcher::unlink(
   FB_LOGF(mount_->getStraceLogger(), DBG7, "unlink({}, {})", parent, name);
   return inodeMap_->lookupTreeInode(parent).then(
       [this, childName = PathComponent{name}](const TreeInodePtr& inode) {
-        inode->unlink(childName);
+        return inode->unlink(childName);
       });
 }
 
@@ -274,7 +274,7 @@ folly::Future<folly::Unit> EdenDispatcher::rename(
                                const TreeInodePtr& parent) mutable {
     return npFuture.then(
         [parent, name, newName](const TreeInodePtr& newParent) {
-          parent->rename(name, newParent, newName);
+          return parent->rename(name, newParent, newName);
         });
   });
 }
