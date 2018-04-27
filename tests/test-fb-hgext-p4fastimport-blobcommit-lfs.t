@@ -92,7 +92,8 @@ Sync Commit
   incremental import from changelist: 3, node: * (glob)
   2 (current client) 3 (requested client) 2 (latest imported)
   latest change list number 3
-  4 p4 filelogs to read
+  2 added files
+  0 removed files
   committing files:
   Outside/anotherlargefile
   file: //depot/Outside/anotherlargefile, src: * (glob)

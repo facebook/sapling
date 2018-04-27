@@ -12,32 +12,40 @@ from . import importer, lfs, p4
 SYNC_COMMIT_MSG = 'p4fastimport synchronizing client view'
 P4_ADMIN_USER = 'p4admin'
 
-def get_filelogs_to_sync(ui, client, repo, p1ctx, cl, p4filelogs):
-    p1 = repo[p1ctx.node()]
-    hgfilelogs = p1.manifest().copy()
-    p4flmapping = {p4fl.depotfile: p4fl for p4fl in p4filelogs}
+def get_filelogs_to_sync(ui, oldclient, oldcl, newclient, newcl):
+    newp4filelogs = p4.get_filelogs_at_cl(newclient, newcl)
+    newp4flmapping = {p4fl.depotfile: p4fl for p4fl in newp4filelogs}
+    newp4filepaths = set(newp4flmapping.keys())
+
+    oldp4filelogs = p4.get_filelogs_at_cl(oldclient, oldcl)
+    oldp4filepaths = set(p4fl.depotfile for p4fl in oldp4filelogs)
+
+    addp4filepaths = newp4filepaths - oldp4filepaths
+    delp4filepaths = oldp4filepaths - newp4filepaths
+
+    num_addfiles = len(addp4filepaths)
+    num_delfiles = len(delp4filepaths)
+    ui.debug(
+        '%d added files\n%d removed files\n' % (num_addfiles, num_delfiles)
+    )
+
     headcl_to_origcl = {}
     # {hgpath: (p4filelog, p4cl)}
     files_add = {}
-    # a list of hg paths
-    files_del = []
-    ui.debug('%d p4 filelogs to read\n' % (len(p4filelogs)))
-
-    mapping = p4.parse_where_multiple(client, p4flmapping.keys())
-    for p4file, hgfile in mapping.items():
-        if hgfile not in hgfilelogs:
-            p4fl = p4flmapping[p4file]
-            headcl = p4fl.getheadchangelist(cl)
-            origcl = headcl_to_origcl.get(headcl)
-            if origcl is None:
-                origcl = p4.getorigcl(client, headcl)
-                headcl_to_origcl[headcl] = origcl
-            p4cl = p4.P4Changelist(int(origcl), int(headcl), None, None)
-            files_add[hgfile] = (p4fl, p4cl)
-
-    files_del = list(set(hgfilelogs) - set(mapping.values()))
-
+    addfilesmapping = p4.parse_where_multiple(newclient, addp4filepaths)
+    for p4path, hgpath in addfilesmapping.items():
+        p4fl = newp4flmapping[p4path]
+        headcl = p4fl.getheadchangelist(newcl)
+        origcl = headcl_to_origcl.get(headcl)
+        if origcl is None:
+            origcl = p4.getorigcl(newclient, headcl)
+            headcl_to_origcl[headcl] = origcl
+        p4cl = p4.P4Changelist(int(origcl), int(headcl), None, None)
+        files_add[hgpath] = (p4fl, p4cl)
+    delfilesmapping = p4.parse_where_multiple(oldclient, delp4filepaths)
+    files_del = delfilesmapping.values()
     return files_add, files_del
+
 
 class SyncImporter(object):
     def __init__(self, ui, repo, ctx, storepath, cl, filesadd, filesdel):

@@ -78,7 +78,8 @@ Sync Import
   incremental import from changelist: 3, node: * (glob)
   2 (current client) 4 (requested client) 2 (latest imported)
   latest change list number 4
-  4 p4 filelogs to read
+  1 added files
+  0 removed files
   committing files:
   Main/Outside/a
   file: //depot/Main/Outside/a, src: * (glob)
@@ -143,7 +144,8 @@ Remove stuff
   incremental import from changelist: 6, node: * (glob)
   5 (current client) 2 (requested client) 5 (latest imported)
   latest change list number 2
-  3 p4 filelogs to read
+  0 added files
+  1 removed files
   committing files:
   committing manifest
   committing changelog
