@@ -63,7 +63,7 @@ impl Delta {
                         "fragment {}: previous end {} overlaps with start {}",
                         i, prev.end, frag.start
                     );
-                    bail!(ErrorKind::InvalidFragmentList(msg));
+                    bail_err!(ErrorKind::InvalidFragmentList(msg));
                 }
             }
             prev_frag = Some(frag);
@@ -141,7 +141,7 @@ impl Fragment {
 
     fn verify(&self) -> Result<()> {
         if self.start > self.end {
-            bail!("invalid fragment: start {} > end {}", self.start, self.end);
+            bail_msg!("invalid fragment: start {} > end {}", self.start, self.end);
         }
         Ok(())
     }

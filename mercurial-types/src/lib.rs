@@ -53,6 +53,8 @@ extern crate bincode;
 extern crate bytes;
 #[macro_use]
 extern crate diesel;
+#[macro_use]
+extern crate failure_ext as failure;
 extern crate itertools;
 extern crate rand;
 extern crate rust_crypto;
@@ -60,9 +62,6 @@ extern crate rust_crypto;
 extern crate url;
 
 extern crate futures;
-
-#[macro_use]
-extern crate failure;
 
 #[cfg_attr(test, macro_use)]
 extern crate quickcheck;

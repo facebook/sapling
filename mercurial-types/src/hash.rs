@@ -32,7 +32,7 @@ impl Sha1 {
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Sha1> {
         let bytes = bytes.as_ref();
         if bytes.len() != 20 {
-            bail!(ErrorKind::InvalidSha1Input("need exactly 20 bytes".into()));
+            bail_err!(ErrorKind::InvalidSha1Input("need exactly 20 bytes".into()));
         } else {
             let mut ret = Sha1([0; 20]);
             &mut ret.0[..].copy_from_slice(bytes);
@@ -94,7 +94,7 @@ impl FromStr for Sha1 {
 
     fn from_str(s: &str) -> Result<Sha1> {
         if s.len() < 40 {
-            bail!(ErrorKind::InvalidSha1Input(
+            bail_err!(ErrorKind::InvalidSha1Input(
                 "need at least 40 hex digits".into()
             ));
         }
@@ -104,7 +104,7 @@ impl FromStr for Sha1 {
         for idx in 0..ret.0.len() {
             ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
                 Ok(v) => v,
-                Err(_) => bail!(ErrorKind::InvalidSha1Input("bad digit".into())),
+                Err(_) => bail_err!(ErrorKind::InvalidSha1Input("bad digit".into())),
             }
         }
 
