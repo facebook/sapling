@@ -66,7 +66,7 @@ typedef list<MPathElement> MPath (hs.newtype)
 //   model. Note that Thrift does allow changing "required" to unqualified.
 // * MPath, Id and DateTime fields do not have a reasonable default value, so
 //   they must always be either "required" or "optional".
-// * The set of keys in file_changes is path-prefix-free (ppf): no path is a
+// * The set of keys in file_changes is path-conflict-free (pcf): no path is a
 //   directory prefix of another path. So file_changes can never have
 //   "foo" and "foo/bar" together, but "foo" and "foo1" are OK.
 //   * If a directory is replaced by a file, the bonsai changeset will only

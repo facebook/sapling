@@ -15,7 +15,7 @@ use blob::{Blob, ChangesetBlob};
 use datetime::DateTime;
 use errors::*;
 use file_change::FileChange;
-use path::MPath;
+use path::{self, MPath};
 use thrift;
 use typed_hash::{ChangesetId, ChangesetIdContext};
 
@@ -32,7 +32,6 @@ pub struct BonsaiChangesetMut {
     pub committer_date: Option<DateTime>,
     pub message: String,
     pub extra: BTreeMap<String, String>,
-    // * file_changes is ppf
     pub file_changes: BTreeMap<MPath, Option<FileChange>>,
 }
 
@@ -63,6 +62,12 @@ impl BonsaiChangesetMut {
                 }
             }
         }
+
+        // Check that the list of file changes doesn't have any path conflicts.
+        path::check_pcf(self.file_changes.keys()).with_context(|_| {
+            ErrorKind::InvalidBonsaiChangeset("invalid file change list".into())
+        })?;
+
         Ok(())
     }
 }
@@ -223,21 +228,27 @@ impl Arbitrary for BonsaiChangeset {
                 } else {
                     None
                 };
+                // XXX be smarter about generating paths here?
                 (MPath::arbitrary(g), fc_opt)
             })
             .collect();
 
-        BonsaiChangesetMut {
-            parents,
-            file_changes,
-            author: String::arbitrary(g),
-            author_date: DateTime::arbitrary(g),
-            committer: Option::<String>::arbitrary(g),
-            committer_date: Option::<DateTime>::arbitrary(g),
-            message: String::arbitrary(g),
-            extra: BTreeMap::arbitrary(g),
-        }.freeze()
-            .expect("generated bonsai changeset must be valid")
+        if path::check_pcf(file_changes.keys()).is_err() {
+            // This is rare but is definitely possible. Retry in this case.
+            Self::arbitrary(g)
+        } else {
+            BonsaiChangesetMut {
+                parents,
+                file_changes,
+                author: String::arbitrary(g),
+                author_date: DateTime::arbitrary(g),
+                committer: Option::<String>::arbitrary(g),
+                committer_date: Option::<DateTime>::arbitrary(g),
+                message: String::arbitrary(g),
+                extra: BTreeMap::arbitrary(g),
+            }.freeze()
+                .expect("generated bonsai changeset must be valid")
+        }
     }
 
     fn shrink(&self) -> Box<Iterator<Item = Self>> {

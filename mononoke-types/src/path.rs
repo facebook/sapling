@@ -355,6 +355,13 @@ impl MPath {
             .count()
     }
 
+    /// Whether this path is a path prefix of the given path.
+    /// `foo` is a prefix of `foo/bar`, but not of `foo1`.
+    #[inline]
+    pub fn is_prefix_of<'a, E: IntoIterator<Item = &'a MPathElement>>(&self, other: E) -> bool {
+        self.common_components(other.into_iter()) == self.num_components()
+    }
+
     /// The final component of this path.
     pub fn basename(&self) -> &MPathElement {
         self.elements
@@ -402,6 +409,31 @@ impl MPath {
                 .collect(),
         )
     }
+}
+
+/// Check that a sorted list of MPaths is path-conflict-free. This means that
+/// no path in the list is a directory of another path.
+pub(crate) fn check_pcf<'a, I>(sorted_paths: I) -> Result<()>
+where
+    I: IntoIterator<Item = &'a MPath>,
+{
+    let mut last_path: Option<&MPath> = None;
+    // The key observation to make here is that in a sorted list, "foo" will always appear before
+    // "foo/bar", which in turn will always appear before "foo1".
+    // The loop invariant is that last_path at any point has no prefixes in the list.
+    for path in sorted_paths {
+        if let Some(last_path) = last_path {
+            if last_path.is_prefix_of(path) {
+                bail_err!(ErrorKind::NotPathPrefixFree(
+                    last_path.clone(),
+                    path.clone(),
+                ));
+            }
+        }
+        last_path = Some(path);
+    }
+
+    Ok(())
 }
 
 impl IntoIterator for MPath {
@@ -671,5 +703,29 @@ mod test {
         assert!(b == b);
         assert!(a <= a);
         assert!(a <= b);
+    }
+
+    #[test]
+    fn ppf() {
+        check_pcf(&paths(vec!["foo", "bar"])).expect("unexpected Err - no directories");
+        check_pcf(&paths(vec!["foo", "foo/bar"]))
+            .expect_err("unexpected OK - foo is a prefix of foo/bar");
+        check_pcf(&paths(vec!["foo", "foo1"]))
+            .expect("unexpected Err - foo is not a path prefix of foo1");
+        check_pcf(&vec![]).expect("unexpected Err - empty path list has no prefixes");
+        // '/' is ASCII 0x2f
+        let mut multi_paths = paths(vec!["foo/bar", "foo/bar\x2e", "foo/bar/baz", "foo/bar\x30"]);
+        // The input calls for a *sorted* list -- this is important.
+        multi_paths.sort_unstable();
+        check_pcf(&multi_paths).expect_err("unexpected OK - other paths and prefixes");
+    }
+
+    fn paths<I, T>(paths: I) -> Vec<MPath>
+    where
+        I: IntoIterator<Item = T>,
+        MPath: TryFrom<T, Error = Error>,
+    {
+        let res: Result<Vec<_>> = paths.into_iter().map(|path| path.try_into()).collect();
+        res.expect("invalid input path")
     }
 }
