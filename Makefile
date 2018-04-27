@@ -5,7 +5,15 @@
 # % make PREFIX=/opt/ install
 
 export PREFIX=/usr/local
-PYTHON=python
+
+# FB OSX development is against the homebrew python. The line below is a
+# makefile way of checking if a file exists.
+ifneq ("$(wildcard /opt/homebrew/opt/python27/bin/python2.7)","")
+	PYTHON := /opt/homebrew/opt/python27/bin/python2.7
+else
+	PYTHON := python
+endif
+
 $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
