@@ -4,3 +4,4 @@
 /.buckjavaargs
 /.nobuckcheck
 /buck-out
+/external
