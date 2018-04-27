@@ -35,6 +35,10 @@ typedef Blake2 UnodeId (hs.newtype)
 typedef Blake2 ChangesetId (hs.newtype)
 typedef Blake2 ContentId (hs.newtype)
 
+// mercurial_types defines Sha1, and it's most convenient to stick this in here.
+// This can be moved away in the future if necessary.
+typedef binary Sha1 (hs.newtype)
+
 // A path in a repo is stored as a list of elements. This is so that the sort
 // order of paths is the same as that of a tree traversal, so that deltas on
 // manifests can be applied in a streaming way.

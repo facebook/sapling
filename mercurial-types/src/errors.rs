@@ -10,6 +10,7 @@ pub use failure::{Error, ResultExt};
 pub enum ErrorKind {
     #[fail(display = "invalid sha-1 input: {}", _0)] InvalidSha1Input(String),
     #[fail(display = "invalid fragment list: {}", _0)] InvalidFragmentList(String),
+    #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)] InvalidThrift(String, String),
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;

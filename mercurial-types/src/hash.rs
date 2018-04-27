@@ -12,6 +12,8 @@ use quickcheck::{single_shrinker, Arbitrary, Gen};
 use rust_crypto::digest::Digest;
 use rust_crypto::sha1;
 
+use thrift;
+
 use errors::*;
 
 pub const NULL: Sha1 = Sha1([0; 20]);
@@ -40,6 +42,20 @@ impl Sha1 {
         }
     }
 
+    pub fn from_thrift(h: thrift::Sha1) -> Result<Self> {
+        // Currently this doesn't require consuming b, but hopefully with T26959816 this
+        // code will be able to convert a SmallVec directly into an array.
+        if h.0.len() != 20 {
+            bail_err!(ErrorKind::InvalidThrift(
+                "Sha1".into(),
+                format!("wrong length: expected 20, got {}", h.0.len())
+            ));
+        }
+        let mut arr = [0u8; 20];
+        arr.copy_from_slice(&h.0[..]);
+        Ok(Sha1(arr))
+    }
+
     /// Construct a `Sha1` from an array of 20 bytes.
     #[inline]
     pub const fn from_byte_array(arr: [u8; 20]) -> Sha1 {
@@ -63,6 +79,12 @@ impl Sha1 {
             // A hex string is always a pure ASCII string.
             AsciiString::from_ascii_unchecked(v)
         }
+    }
+
+    pub fn into_thrift(self) -> thrift::Sha1 {
+        // This doesn't need to consume self today, but once T26959816 is implemented it
+        // should be possible to do that without copying.
+        thrift::Sha1(self.0.to_vec())
     }
 }
 
@@ -163,9 +185,10 @@ impl Context {
 
 #[cfg(test)]
 mod test {
-    use super::{Sha1, NULL};
     use quickcheck::TestResult;
     use std::str::FromStr;
+
+    use super::*;
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     const NILHASH: Sha1 = Sha1([0xda, 0x39, 0xa3, 0xee,
@@ -241,6 +264,24 @@ mod test {
         };
     }
 
+    #[test]
+    fn parse_thrift() {
+        let null_thrift = thrift::Sha1(vec![0; 20]);
+        assert_eq!(NULL, Sha1::from_thrift(null_thrift.clone()).unwrap());
+        assert_eq!(NULL.into_thrift(), null_thrift);
+
+        let nil_thrift = thrift::Sha1(NILHASH.0.to_vec());
+        assert_eq!(NILHASH, Sha1::from_thrift(nil_thrift.clone()).unwrap());
+        assert_eq!(NILHASH.into_thrift(), nil_thrift);
+    }
+
+    #[test]
+    fn parse_thrift_bad() {
+        Sha1::from_thrift(thrift::Sha1(vec![])).expect_err("unexpected OK - zero len");
+        Sha1::from_thrift(thrift::Sha1(vec![0; 19])).expect_err("unexpected OK - too short");
+        Sha1::from_thrift(thrift::Sha1(vec![0; 21])).expect_err("unexpected OK - too long");
+    }
+
     quickcheck! {
         fn parse_roundtrip(v: Vec<u8>) -> TestResult {
             if v.len() != 20 {
@@ -251,6 +292,13 @@ mod test {
             let sh = s.parse().unwrap();
 
             TestResult::from_bool(h == sh)
+        }
+
+        fn thrift_roundtrip(h: Sha1) -> bool {
+            let v = h.into_thrift();
+            let sh = Sha1::from_thrift(v)
+                .expect("converting a valid Thrift structure should always work");
+            h == sh
         }
 
         fn to_hex_roundtrip(h: Sha1) -> bool {

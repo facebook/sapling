@@ -76,6 +76,7 @@ extern crate serde_derive;
 
 extern crate futures_ext;
 extern crate mononoke_types;
+extern crate mononoke_types_thrift;
 extern crate storage_types;
 
 pub mod bdiff;
@@ -113,6 +114,10 @@ pub use errors::{Error, ErrorKind};
 
 #[cfg(test)]
 mod test;
+
+mod thrift {
+    pub use mononoke_types_thrift::*;
+}
 
 impl asyncmemo::Weight for RepositoryId {
     fn get_weight(&self) -> usize {
