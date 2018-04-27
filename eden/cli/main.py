@@ -51,7 +51,7 @@ def infer_client_from_cwd(config: config_mod.Config, clientname: str) -> str:
         path = os.path.dirname(path)
 
     print_stderr(
-        'cwd is not an eden mount point, and no client name was specified.')
+        'cwd is not an eden mount point, and no checkout name was specified.')
     sys.exit(2)
 
 
@@ -76,14 +76,14 @@ class VersionCmd(Subcmd):
         return do_version(args)
 
 
-@subcmd('info', 'Get details about a client')
+@subcmd('info', 'Get details about a checkout')
 class InfoCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             'client',
             default=None,
             nargs='?',
-            help='Name of the client')
+            help='Name of the checkout')
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
@@ -114,14 +114,14 @@ class RepositoryCmd(Subcmd):
         parser.add_argument(
             'name',
             nargs='?', default=None,
-            help='Name of the client to mount')
+            help='Name of the checkout to mount')
         parser.add_argument(
             'path',
             nargs='?', default=None,
             help='Path to the repository to import')
         parser.add_argument(
             '--with-buck', '-b', action='store_true',
-            help='Client should create a bind mount for buck-out/.')
+            help='Checkout should create a bind mount for buck-out/.')
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
@@ -149,7 +149,7 @@ class RepositoryCmd(Subcmd):
         return 0
 
 
-@subcmd('list', 'List available clients')
+@subcmd('list', 'List available checkouts')
 class ListCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
@@ -180,7 +180,7 @@ class RepoError(Exception):
     pass
 
 
-@subcmd('clone', 'Create a clone of a specific repo')
+@subcmd('clone', 'Create a clone of a specific repo and check it out')
 class CloneCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -188,7 +188,7 @@ class CloneCmd(Subcmd):
             help='The path to an existing repo to clone, or the name of a '
             'known repository configuration')
         parser.add_argument(
-            'path', help='Path where the client should be mounted')
+            'path', help='Path where the checkout should be mounted')
         parser.add_argument(
             '--rev', '-r', type=str, help='The initial revision to check out')
         parser.add_argument(
@@ -394,14 +394,14 @@ class DoctorCmd(Subcmd):
 
 @subcmd(
     'mount', (
-        'Remount an existing client (for instance, after it was '
+        'Remount an existing checkout (for instance, after it was '
         'unmounted with "unmount")'
     )
 )
 class MountCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'paths', nargs='+', metavar='path', help='The client mount path')
+            'paths', nargs='+', metavar='path', help='The checkout mount path')
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
@@ -416,16 +416,16 @@ class MountCmd(Subcmd):
         return 0
 
 
-@subcmd('unmount', 'Unmount a specific client')
+@subcmd('unmount', 'Unmount a specific checkout')
 class UnmountCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             '--destroy',
             action='store_true',
-            help='Permanently delete all state associated with the client.')
+            help='Permanently delete all state associated with the checkout.')
         parser.add_argument(
             'paths', nargs='+', metavar='path',
-            help='Path where client should be unmounted from')
+            help='Path where checkout should be unmounted from')
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
@@ -787,10 +787,10 @@ def wait_for_shutdown(
 
 def create_parser() -> argparse.ArgumentParser:
     '''Returns a parser'''
-    parser = argparse.ArgumentParser(description='Manage Eden clients.')
+    parser = argparse.ArgumentParser(description='Manage Eden checkouts.')
     parser.add_argument(
         '--config-dir',
-        help='Path to directory where client data is stored.')
+        help='Path to directory where internal data is stored.')
     parser.add_argument(
         '--etc-eden-dir',
         help='Path to directory that holds the system configuration files.')
