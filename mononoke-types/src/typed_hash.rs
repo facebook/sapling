@@ -56,7 +56,13 @@ macro_rules! impl_typed_hash {
             pub(crate) fn from_thrift(h: thrift::$typed) -> Result<Self> {
                 // This assumes that a null hash is never serialized. This should always be the
                 // case.
-                Ok($typed(Blake2::from_thrift(h.0)?))
+                match h.0 {
+                    thrift::IdType::Blake2(blake2) => Ok($typed(Blake2::from_thrift(blake2)?)),
+                    thrift::IdType::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
+                        stringify!($typed).into(),
+                        format!("unknown id type field: {}", x)
+                    )),
+                }
             }
 
             /// This is private because the outside should treat this ID as opaque.
@@ -89,7 +95,7 @@ macro_rules! impl_typed_hash {
             }
 
             pub(crate) fn into_thrift(self) -> thrift::$typed {
-                thrift::$typed(self.0.into_thrift())
+                thrift::$typed(thrift::IdType::Blake2(self.0.into_thrift()))
             }
         }
 

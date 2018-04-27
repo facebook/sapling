@@ -232,7 +232,7 @@ mod test {
     #[test]
     fn bad_filechange_thrift() {
         let thrift_fc = thrift::FileChange {
-            content_id: thrift::ContentId(thrift::Blake2(vec![0; 16])),
+            content_id: thrift::ContentId(thrift::IdType::Blake2(thrift::Blake2(vec![0; 16]))),
             file_type: thrift::FileType::Regular,
             size: 0,
             copy_from: None,

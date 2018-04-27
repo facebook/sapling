@@ -31,9 +31,14 @@
 // TODO (T26959816): add support to represent these as SmallVecs.
 typedef binary Blake2 (hs.newtype)
 
-typedef Blake2 UnodeId (hs.newtype)
-typedef Blake2 ChangesetId (hs.newtype)
-typedef Blake2 ContentId (hs.newtype)
+// Allow the hash type to change in the future.
+union IdType {
+  1: Blake2 Blake2,
+}
+
+typedef IdType UnodeId (hs.newtype)
+typedef IdType ChangesetId (hs.newtype)
+typedef IdType ContentId (hs.newtype)
 
 // mercurial_types defines Sha1, and it's most convenient to stick this in here.
 // This can be moved away in the future if necessary.

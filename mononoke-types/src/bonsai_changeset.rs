@@ -338,7 +338,7 @@ mod test {
             blob.id(),
             &ChangesetId::new(
                 Blake2::from_str(
-                    "f5e838886e7112f39eeebbe0c8d723f7001698ccc4fc6e0965a869453f664e17"
+                    "189e67041363f9dc7d10de57aaf0fbd202dec989357e76cada7fa940936c712a"
                 ).unwrap()
             )
         );
