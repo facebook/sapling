@@ -37,8 +37,9 @@ Block full streaming clones
   > EOF
   $ hg clone --stream -U ssh://user@dummy/server blockedclone
   streaming all changes
-  remote: unable to perform an implicit streaming clone - make sure remotefilelog is enabled
+  remote: unable to perform an implicit streaming clone - make sure remotefilelog is enabled (?)
   abort: locking the remote repository failed
+  remote: unable to perform an implicit streaming clone - make sure remotefilelog is enabled (?)
   [255]
   $ hg clone --stream --config clone.requestfullclone=True -U ssh://user@dummy/server blockedclone
   streaming all changes
