@@ -18,6 +18,7 @@ use mercurial_types::{DNodeHash, RepoPath};
 use mercurial_types::hash::{self, Sha1};
 use serde;
 use sql_types::{HgChangesetIdSql, HgManifestIdSql};
+use thrift;
 
 pub const NULL_HASH: HgNodeHash = HgNodeHash(hash::NULL);
 
@@ -33,6 +34,19 @@ impl HgNodeHash {
     /// Constructor to be used to parse 20 raw bytes that represent a sha1 hash into HgNodeHash
     pub fn from_bytes(bytes: &[u8]) -> Result<HgNodeHash> {
         Sha1::from_bytes(bytes).map(HgNodeHash)
+    }
+
+    pub(crate) fn from_thrift(thrift_hash: thrift::HgNodeHash) -> Result<HgNodeHash> {
+        Ok(HgNodeHash(Sha1::from_thrift(thrift_hash.0)?))
+    }
+
+    pub(crate) fn from_thrift_opt(
+        thrift_hash_opt: Option<thrift::HgNodeHash>,
+    ) -> Result<Option<Self>> {
+        match thrift_hash_opt {
+            Some(h) => Ok(Some(Self::from_thrift(h)?)),
+            None => Ok(None),
+        }
     }
 
     /// Returns the underlying 20 raw bytes that represent a sha1 hash
@@ -70,6 +84,10 @@ impl HgNodeHash {
     pub fn into_mononoke(self) -> DNodeHash {
         #![allow(deprecated)]
         DNodeHash::new(self.0)
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::HgNodeHash {
+        thrift::HgNodeHash(self.0.into_thrift())
     }
 
     /// Returns true if self Mercurial hash is equal to Mononoke Sha1 based hash

@@ -53,7 +53,8 @@ macro_rules! impl_typed_hash {
                 $typed(blake2)
             }
 
-            pub(crate) fn from_thrift(h: thrift::$typed) -> Result<Self> {
+            // (this is public because downstream code wants to be able to deserialize these nodes)
+            pub fn from_thrift(h: thrift::$typed) -> Result<Self> {
                 // This assumes that a null hash is never serialized. This should always be the
                 // case.
                 match h.0 {
@@ -94,7 +95,8 @@ macro_rules! impl_typed_hash {
                 self.0.to_hex()
             }
 
-            pub(crate) fn into_thrift(self) -> thrift::$typed {
+            // (this is public because downstream code wants to be able to serialize these nodes)
+            pub fn into_thrift(self) -> thrift::$typed {
                 thrift::$typed(thrift::IdType::Blake2(self.0.into_thrift()))
             }
         }

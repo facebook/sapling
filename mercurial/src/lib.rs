@@ -50,10 +50,13 @@ extern crate serde;
 extern crate serde_derive;
 
 extern crate asyncmemo;
+extern crate mercurial_thrift;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate mononoke_types;
+extern crate mononoke_types_thrift;
 extern crate pylz4;
+extern crate rust_thrift;
 extern crate storage_types;
 
 mod blobnode;
@@ -63,6 +66,7 @@ pub mod mocks;
 mod nodehash;
 pub mod changeset;
 pub mod revlogrepo;
+mod envelope;
 pub mod file;
 pub mod sql_types;
 pub mod stockbookmarks;
@@ -72,7 +76,13 @@ pub use errors::*;
 
 pub use blobnode::{HgBlobNode, HgParents};
 pub use changeset::RevlogChangeset;
+pub use envelope::{HgFileEnvelope, HgFileEnvelopeMut};
 pub use manifest::{EntryContent, RevlogEntry};
 pub use nodehash::{HgChangesetId, HgEntryId, HgManifestId, HgNodeHash, HgNodeKey,
                    NodeHashConversion, NULL_HASH};
 pub use revlogrepo::{RevlogManifest, RevlogRepo, RevlogRepoOptions};
+
+mod thrift {
+    pub use mercurial_thrift::*;
+    pub use mononoke_types_thrift::*;
+}
