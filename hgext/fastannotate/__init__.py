@@ -82,8 +82,8 @@ annotate cache greatly. Run "debugbuildlinkrevcache" before
     # this is a BC with the original command but will reduced the space needed
     # for annotate cache, and is useful for client-server setup since the
     # server will only provide annotate cache with default options (i.e. with
-    # follow). do not affect "fastannotate" mode. (default: True)
-    forcefollow = True
+    # follow). do not affect "fastannotate" mode. (default: False)
+    forcefollow = False
 
     # for "fctx" mode, always treat file as text files, to skip the "isbinary"
     # check. this is consistent with the "fastannotate" command and could help
@@ -122,7 +122,7 @@ def _flockavailable():
     try:
         import fcntl
         fcntl.flock
-    except StandardError:
+    except Exception:
         return False
     else:
         return True

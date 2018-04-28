@@ -8,7 +8,6 @@
   > fastannotate=
   > [fastannotate]
   > modes=fctx
-  > forcefollow=False
   > mainbranch=.
   > EOF
 

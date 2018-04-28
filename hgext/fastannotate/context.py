@@ -809,7 +809,7 @@ def fctxannotatecontext(fctx, follow=True, diffopts=None, rebuild=False):
     """
     repo = fctx._repo
     path = fctx._path
-    if repo.ui.configbool('fastannotate', 'forcefollow', True):
+    if repo.ui.configbool('fastannotate', 'forcefollow', False):
         follow = True
     aopts = annotateopts(diffopts=diffopts, followrename=follow)
     return annotatecontext(repo, path, aopts, rebuild)
