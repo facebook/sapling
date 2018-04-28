@@ -441,9 +441,7 @@ impl RevlogInner {
             }
         }
 
-        data = delta::compat::apply_deltas(data.as_ref(), chain);
-
-        Ok(data)
+        delta::compat::apply_deltas(data.as_ref(), chain)
     }
 
     fn construct_general(&self, tgtidx: RevIdx) -> Result<Vec<u8>> {
@@ -453,8 +451,7 @@ impl RevlogInner {
         let mut idx = tgtidx;
 
         // general delta - walk backwards until we hit a literal, collecting chunks on the way
-        let mut data;
-        loop {
+        let data = loop {
             chunks.push(idx);
 
             let entry = self.get_entry(idx)?;
@@ -472,12 +469,11 @@ impl RevlogInner {
                     format_err!("construct_general tgtidx {:?} idx {:?}", tgtidx, idx)
                 })?;
                 match chunk {
-                    Chunk::Literal(v) => data = v,
+                    Chunk::Literal(v) => break v,
                     _ => panic!("Non-literal chunk with no baserev."),
                 }
-                break;
             }
-        }
+        };
 
         // XXX: Fix this to use delta::Delta instead of bdiff::Delta.
         let chain = chunks.into_iter().rev().map(|idx| {
@@ -489,9 +485,7 @@ impl RevlogInner {
             }
         });
 
-        data = delta::compat::apply_deltas(data.as_ref(), chain);
-
-        Ok(data)
+        delta::compat::apply_deltas(data.as_ref(), chain)
     }
 
     fn make_node(&self, entry: &Entry, blob: HgBlob) -> Result<HgBlobNode> {

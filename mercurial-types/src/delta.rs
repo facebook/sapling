@@ -197,14 +197,25 @@ fn arbitrary_frag_content<G: Gen>(g: &mut G) -> Vec<u8> {
 }
 
 /// Apply a Delta to an input text, returning the result.
-pub fn apply(text: &[u8], delta: &Delta) -> Vec<u8> {
+pub fn apply(text: &[u8], delta: &Delta) -> Result<Vec<u8>> {
     let mut chunks = Vec::with_capacity(delta.frags.len() * 2);
     let mut off = 0;
 
     for frag in &delta.frags {
-        assert!(off <= frag.start);
+        ensure_msg!(
+            off <= frag.start,
+            "Invalid delta, fragment start is less than current offset ({} < {})",
+            frag.start,
+            off
+        );
         if off < frag.start {
-            chunks.push(&text[off..frag.start]);
+            chunks.push(text.get(off..frag.start).ok_or_else(|| {
+                format_err!(
+                    "Invalid delta, the range {}..{} is out of bounds for provided text",
+                    off,
+                    frag.start
+                )
+            })?);
         }
         if frag.content.len() > 0 {
             chunks.push(frag.content.as_ref())
@@ -213,6 +224,12 @@ pub fn apply(text: &[u8], delta: &Delta) -> Vec<u8> {
     }
     if off < text.len() {
         chunks.push(&text[off..text.len()]);
+    } else if off > text.len() {
+        bail_msg!(format!(
+            "Invalid delta, fragment is referencing out of bounds content: {} > {}",
+            off,
+            text.len()
+        ));
     }
 
     let size = chunks.iter().map(|c| c.len()).sum::<usize>();
@@ -220,16 +237,16 @@ pub fn apply(text: &[u8], delta: &Delta) -> Vec<u8> {
     for c in chunks {
         output.extend_from_slice(c);
     }
-    output
+    Ok(output)
 }
 
 /// Apply a chain of Deltas to an input text, returning the result.
-pub fn apply_chain<I: IntoIterator<Item = Delta>>(text: &[u8], deltas: I) -> Vec<u8> {
+pub fn apply_chain<I: IntoIterator<Item = Delta>>(text: &[u8], deltas: I) -> Result<Vec<u8>> {
     let mut res = Vec::from(text);
     for delta in deltas {
-        res = apply(&res, &delta);
+        res = apply(&res, &delta)?;
     }
-    res
+    Ok(res)
 }
 
 /// XXX: Compatibility functions for the old bdiff module for testing purposes. The delta
@@ -255,7 +272,7 @@ pub mod compat {
         }
     }
 
-    pub fn apply_deltas<T>(text: &[u8], deltas: T) -> Vec<u8>
+    pub fn apply_deltas<T>(text: &[u8], deltas: T) -> Result<Vec<u8>>
     where
         T: IntoIterator<Item = Vec<bdiff::Delta>>,
     {
@@ -350,7 +367,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, &delta);
+        let res = apply(text, &delta).unwrap();
         assert_eq!(&res[..], b"aaaa\nxxxx\ncccc\n");
     }
 
@@ -372,7 +389,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, &delta);
+        let res = apply(text, &delta).unwrap();
         assert_eq!(&res[..], b"aaaabbbb\ncccc\ndddd\n");
     }
 
@@ -389,7 +406,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, &delta);
+        let res = apply(text, &delta).unwrap();
         assert_eq!(&res[..], b"zzzz\nyyyy\nxxxx\n");
     }
 
@@ -416,7 +433,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, &delta);
+        let res = apply(text, &delta).unwrap();
         assert_eq!(&res[..], b"zzzz\nyyyy\nxxxx\n");
     }
 
@@ -433,7 +450,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, &delta);
+        let res = apply(text, &delta).unwrap();
         assert_eq!(&res[..], b"aaaa\nbbbbcccc");
     }
 
@@ -450,7 +467,45 @@ mod tests {
             ],
         };
 
-        let res = apply(text, &delta);
+        let res = apply(text, &delta).unwrap();
         assert_eq!(&res[..], b"aaaa\ncccc\n");
+    }
+
+    #[test]
+    fn test_malformed_1() {
+        let text = b"aaaa";
+        let delta = Delta {
+            frags: vec![
+                Fragment {
+                    start: 5,
+                    end: 10,
+                    content: (&b""[..]).into(),
+                },
+            ],
+        };
+
+        match apply(text, &delta) {
+            Err(_) => (),
+            Ok(res) => panic!("Unexpected success: {:?}", res),
+        }
+    }
+
+    #[test]
+    fn test_malformed_2() {
+        let text = b"aaaa";
+        let delta = Delta {
+            frags: vec![
+                Fragment {
+                    start: 0,
+                    end: 10,
+                    content: (&b""[..]).into(),
+                },
+            ],
+        };
+
+        match apply(text, &delta) {
+            Err(_) => (),
+            Ok(res) => panic!("Unexpected success: {:?}", res),
+        }
     }
 }

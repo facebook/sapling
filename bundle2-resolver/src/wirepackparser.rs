@@ -175,7 +175,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
             path: unwrap_field(&mut self.path, "path")?,
             hash: unwrap_field(&mut self.node, "node")?,
         };
-        let bytes = Bytes::from(delta::apply("".as_bytes(), &data_entry.delta));
+        let bytes = Bytes::from(delta::apply("".as_bytes(), &data_entry.delta)?);
         let p1 = unwrap_field(&mut self.p1, "p1")?;
         let p2 = unwrap_field(&mut self.p2, "p2")?;
 

@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use failure::Compat;
-use futures::{Future, Stream};
-use futures::future::{ok, Shared};
+use futures::{Future, IntoFuture, Stream};
+use futures::future::Shared;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
@@ -166,17 +166,35 @@ impl DeltaCache {
                 STATS::deltacache_dsize_large.add_value(dsize);
 
                 let vec = match base {
-                    None => ok(delta::apply(b"", &delta)).boxify(),
+                    None => delta::apply(b"", &delta)
+                        .with_context(|_| format!("File content empty, delta: {:?}", delta))
+                        .map_err(Error::from)
+                        .map_err(Error::compat)
+                        .into_future()
+                        .boxify(),
                     Some(base) => {
                         let fut = match self.bytes_cache.get(&base) {
                             Some(bytes) => bytes
                                 .clone()
-                                .map(move |bytes| delta::apply(&bytes, &delta))
                                 .map_err(Error::from)
+                                .and_then(move |bytes| {
+                                    delta::apply(&bytes, &delta)
+                                        .with_context(|_| {
+                                            format!("File content: {:?} delta: {:?}", bytes, delta)
+                                        })
+                                        .map_err(Error::from)
+                                })
                                 .boxify(),
                             None => self.repo
                                 .get_file_content(&base.into_mononoke())
-                                .map(move |bytes| delta::apply(bytes.into_bytes().as_ref(), &delta))
+                                .and_then(move |bytes| {
+                                    let bytes = bytes.into_bytes();
+                                    delta::apply(bytes.as_ref(), &delta)
+                                        .with_context(|_| {
+                                            format!("File content: {:?} delta: {:?}", bytes, delta)
+                                        })
+                                        .map_err(Error::from)
+                                })
                                 .boxify(),
                         };
                         fut.map_err(move |err| {
@@ -476,7 +494,7 @@ mod tests {
 
     quickcheck! {
         fn sanitycheck_delta_computation(b1: Vec<u8>, b2: Vec<u8>) -> bool {
-            assert_equal(&b2, &delta::apply(&b1, &compute_delta(&b1, &b2)));
+            assert_equal(&b2, &delta::apply(&b1, &compute_delta(&b1, &b2)).unwrap());
             true
         }
 
