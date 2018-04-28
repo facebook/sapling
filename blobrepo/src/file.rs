@@ -32,6 +32,24 @@ pub struct HgBlobEntry {
     ty: Type,
 }
 
+pub fn fetch_raw_filenode_bytes(
+    blobstore: &Arc<Blobstore>,
+    nodeid: DNodeHash,
+) -> BoxFuture<BlobstoreBytes, Error> {
+    get_node(blobstore, nodeid)
+        .and_then({
+            let blobstore = blobstore.clone();
+            move |node| {
+                let key = format!("sha1-{}", node.blob.sha1());
+
+                blobstore.get(key).and_then(move |blob| {
+                    blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
+                })
+            }
+        })
+        .boxify()
+}
+
 pub fn fetch_file_content_and_renames_from_blobstore(
     blobstore: &Arc<Blobstore>,
     nodeid: DNodeHash,
@@ -94,21 +112,7 @@ impl HgBlobEntry {
     }
 
     fn get_raw_content_inner(&self) -> BoxFuture<BlobstoreBytes, Error> {
-        let nodeid = self.id.into_nodehash();
-        let blobstore = self.blobstore.clone();
-
-        self.get_node()
-            .and_then({
-                let blobstore = blobstore.clone();
-                move |node| {
-                    let key = format!("sha1-{}", node.blob.sha1());
-
-                    blobstore.get(key).and_then(move |blob| {
-                        blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
-                    })
-                }
-            })
-            .boxify()
+        fetch_raw_filenode_bytes(&self.blobstore, self.id.into_nodehash())
     }
 }
 
@@ -159,13 +163,11 @@ impl Entry for HgBlobEntry {
 
     fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         self.get_content()
-            .and_then(|content| {
-                match content {
+            .and_then(|content| match content {
                 Content::File(data) | Content::Executable(data) | Content::Symlink(data) => {
                     Ok(Some(data.size()))
                 }
                 Content::Tree(_) => Ok(None),
-            }
             })
             .boxify()
     }

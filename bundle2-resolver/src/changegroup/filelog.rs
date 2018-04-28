@@ -186,7 +186,7 @@ impl DeltaCache {
                                 })
                                 .boxify(),
                             None => self.repo
-                                .get_file_content(&base.into_mononoke())
+                                .get_raw_filenode_content(&base.into_mononoke())
                                 .and_then(move |bytes| {
                                     let bytes = bytes.into_bytes();
                                     delta::apply(bytes.as_ref(), &delta)

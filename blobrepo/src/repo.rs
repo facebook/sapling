@@ -39,7 +39,7 @@ use mercurial_types::{Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents,
                       Manifest, RepoPath, RepositoryId};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::DManifestId;
-use mononoke_types::{Blob, ContentId, DateTime, FileContents, MPath, MononokeId};
+use mononoke_types::{Blob, BlobstoreBytes, ContentId, DateTime, FileContents, MPath, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Remote;
@@ -47,7 +47,7 @@ use tokio_core::reactor::Remote;
 use BlobChangeset;
 use BlobManifest;
 use errors::*;
-use file::{fetch_file_content_and_renames_from_blobstore, HgBlobEntry};
+use file::{fetch_file_content_and_renames_from_blobstore, fetch_raw_filenode_bytes, HgBlobEntry};
 use repo_commit::*;
 use utils::{get_node_key, RawNodeBlob};
 
@@ -214,6 +214,12 @@ impl BlobRepo {
         fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
             .map(|contentrename| contentrename.0)
             .boxify()
+    }
+
+    /// The raw filenode content is crucial for operation like delta application. It is stored in
+    /// untouched represenation that came from Mercurial client
+    pub fn get_raw_filenode_content(&self, key: &DNodeHash) -> BoxFuture<BlobstoreBytes, Error> {
+        fetch_raw_filenode_bytes(&self.blobstore, *key)
     }
 
     pub fn get_parents(&self, path: &RepoPath, node: &DNodeHash) -> BoxFuture<DParents, Error> {
