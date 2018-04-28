@@ -232,7 +232,7 @@ class CloneCmd(Subcmd):
         # Find the repository information
         try:
             repo, repo_type, repo_config = self._get_repo_info(
-                config, args.repo
+                config, args.repo, args.rev
             )
         except RepoError as ex:
             print_stderr('error: {}', ex)
@@ -296,7 +296,7 @@ re-run `eden clone` with --allow-empty-repo'''
             return 1
 
     def _get_repo_info(
-        self, config: config_mod.Config, repo_arg: str
+        self, config: config_mod.Config, repo_arg: str, rev: Optional[str]
     ) -> Tuple[util.Repo, Optional[str], config_mod.ClientConfig]:
         # Check to see if repo_arg points to an existing Eden mount
         eden_config = config.get_client_config_for_path(repo_arg)
@@ -330,7 +330,7 @@ re-run `eden clone` with --allow-empty-repo'''
         # This is a valid repository path.
         # Try to identify what type of repository this is, so we can find
         # the proper configuration to use.
-        project_id = util.get_project_id(repo)
+        project_id = util.get_project_id(repo, rev)
 
         project_config = None
         if project_id is not None:

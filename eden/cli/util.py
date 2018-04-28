@@ -371,13 +371,22 @@ def get_repo(path: str) -> Optional[Repo]:
         path = parent
 
 
-def get_project_id(repo: Repo) -> Optional[str]:
-    try:
-        contents = repo.cat_file(repo.HEAD, '.arcconfig')
-    except subprocess.CalledProcessError:
-        # Most likely .arcconfig does not exist.
-        # We cannot determine the project ID.
-        return None
+def get_project_id(repo: Repo, rev: Optional[str]) -> Optional[str]:
+    contents = None
+    if rev is not None:
+        try:
+            contents = repo.cat_file(rev, '.arcconfig')
+        except subprocess.CalledProcessError:
+            # Most likely .arcconfig does not exist.
+            pass
+
+    if contents is None:
+        try:
+            contents = repo.cat_file(repo.HEAD, '.arcconfig')
+        except subprocess.CalledProcessError:
+            # Most likely .arcconfig does not exist.
+            # We cannot determine the project ID.
+            return None
 
     try:
         data = json.loads(contents)

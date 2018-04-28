@@ -84,6 +84,10 @@ class CloneTest(testcase.EdenRepoTest):
 
     def test_clone_with_arcconfig(self) -> None:
         project_id = 'special_project'
+
+        # Remember this state for later
+        before_arcconfig = self.repo.get_head_hash()
+
         # Add an .arcconfig file to the repository
         arcconfig_data = {
             'project_id': project_id,
@@ -125,6 +129,32 @@ class CloneTest(testcase.EdenRepoTest):
             os.path.isdir(os.path.join(eden_clone, 'node_modules')),
             msg='clone should create bind mounts'
         )
+
+        # Let's also check that passing in a rev is effective when
+        # the repo is "bare".  We're not actually making it bare here
+        # as I'm not sure if we support that concept with git also,
+        # so instead I'm moving the repo back to before the arcconfig
+        # exists to simulate a similar situation.  The problem that we're
+        # testing here is (for mercurial at least), since the default head
+        # rev is '.', if the source repo doesn't have an arcconfig we'd
+        # never set up the bindmounts, even if the --rev option was passed in.
+
+        # TODO: GitRepository doesn't yet have an update() method, so make
+        # this hg specific for now.
+        if self.repo.get_type() == 'hg':
+            head_rev = self.repo.get_head_hash()
+            self.repo.update(before_arcconfig)
+            alt_eden_clone = self._new_tmp_dir()
+            self.eden.run_cmd('clone', '-r', head_rev, self.repo.path, alt_eden_clone)
+            self.assertTrue(
+                os.path.isdir(os.path.join(alt_eden_clone, 'foo/stuff/build_output')),
+                msg='clone should create bind mounts'
+            )
+            self.assertTrue(
+                os.path.isdir(os.path.join(alt_eden_clone, 'node_modules')),
+                msg='clone should create bind mounts'
+            )
+
 
     def test_clone_from_eden_repo(self) -> None:
         # Add a config alias for a repo with some bind mounts.
