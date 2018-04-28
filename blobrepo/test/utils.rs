@@ -172,6 +172,7 @@ pub fn create_changeset_no_parents(
     other_nodes: Vec<BoxFuture<(HgBlobEntry, RepoPath), Error>>,
 ) -> ChangesetHandle {
     let create_changeset = CreateChangeset {
+        expected_nodeid: None,
         p1: None,
         p2: None,
         root_manifest,
@@ -191,6 +192,7 @@ pub fn create_changeset_one_parent(
     p1: ChangesetHandle,
 ) -> ChangesetHandle {
     let create_changeset = CreateChangeset {
+        expected_nodeid: None,
         p1: Some(p1),
         p2: None,
         root_manifest,

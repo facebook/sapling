@@ -34,7 +34,7 @@ use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE
 use filenodes::Filenodes;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
-use mercurial::{HgBlobNode, HgNodeHash, HgParents};
+use mercurial::{HgBlobNode, HgNodeHash, HgParents, NodeHashConversion};
 use mercurial_types::{Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry, HgBlob,
                       Manifest, RepoPath, RepositoryId};
 use mercurial_types::manifest;
@@ -528,6 +528,8 @@ pub struct ContentBlobMeta {
 }
 
 pub struct CreateChangeset {
+    /// This should always be provided, keeping it an Option for tests
+    pub expected_nodeid: Option<HgNodeHash>,
     pub p1: Option<ChangesetHandle>,
     pub p2: Option<ChangesetHandle>,
     // root_manifest can be None f.e. when commit removes all the content of the repo
@@ -567,6 +569,7 @@ impl CreateChangeset {
                     let filenodes = repo.filenodes.clone();
                     let blobstore = repo.blobstore.clone();
                     let logger = repo.logger.clone();
+                    let expected_nodeid = self.expected_nodeid;
                     let user = self.user;
                     let time = self.time;
                     let extra = self.extra;
@@ -591,6 +594,16 @@ impl CreateChangeset {
 
                                 let cs_id = blobcs.get_changeset_id().into_nodehash();
                                 let manifest_id = *blobcs.manifestid();
+
+                                if let Some(expected_nodeid) = expected_nodeid {
+                                    let cs_id = cs_id.into_mercurial();
+                                    if cs_id != expected_nodeid {
+                                        try_boxfuture!(Err(ErrorKind::InconsistentChangesetHash(
+                                            expected_nodeid,
+                                            cs_id
+                                        )));
+                                    }
+                                }
 
                                 debug!(logger, "Changeset uuid to hash mapping";
                                     "changeset_uuid" => format!("{}", uuid),

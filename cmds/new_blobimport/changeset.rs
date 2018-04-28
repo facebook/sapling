@@ -249,6 +249,7 @@ pub fn upload_changesets(
             };
 
             let create_changeset = CreateChangeset {
+                expected_nodeid: Some(csid),
                 p1: p1handle,
                 p2: p2handle,
                 root_manifest: rootmf,

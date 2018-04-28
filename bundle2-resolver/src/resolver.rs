@@ -361,6 +361,7 @@ impl Bundle2Resolver {
             p1.join3(p2, content_blob_fut)
                 .and_then(move |(p1, p2, _content_blob_result)| {
                     let create_changeset = CreateChangeset {
+                        expected_nodeid: Some(node),
                         p1,
                         p2,
                         root_manifest,

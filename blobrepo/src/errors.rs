@@ -66,4 +66,6 @@ pub enum ErrorKind {
     #[fail(display = "Inconsistent node hash for entry: path {}, provided: {}, computed: {}", _0,
            _1, _2)]
     InconsistentEntryHash(RepoPath, HgNodeHash, HgNodeHash),
+    #[fail(display = "Inconsistent node hash for changeset: provided: {}, computed: {}", _0, _1)]
+    InconsistentChangesetHash(HgNodeHash, HgNodeHash),
 }
