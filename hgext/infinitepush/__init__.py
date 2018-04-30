@@ -85,6 +85,9 @@
     # Server-side option.  Maximum acceptable bundle size in megabytes.
     maxbundlesize = 500
 
+    # Which compression algorithm to use for infinitepush bundles.
+    bundlecompression = ZS
+
     [remotenames]
     # Client-side option
     # This option should be set only if remotenames extension is enabled.
@@ -1177,6 +1180,8 @@ def processparts(orig, repo, op, unbundler):
         pass
 
     bundler = bundle2.bundle20(repo.ui)
+    compress = repo.ui.config('infinitepush', 'bundlecompression', 'UN')
+    bundler.setcompression(compress)
     cgparams = None
     scratchbookpart = None
     with bundle2.partiterator(repo, op, unbundler) as parts:

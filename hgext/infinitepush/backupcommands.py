@@ -1046,6 +1046,8 @@ def _getbookmarkstobackup(repo, newbookmarks, removedbookmarks,
 
 def _createbundler(ui, repo, other):
     bundler = bundle2.bundle20(ui, bundle2.bundle2caps(other))
+    compress = ui.config('infinitepush', 'bundlecompression', 'UN')
+    bundler.setcompression(compress)
     # Disallow pushback because we want to avoid taking repo locks.
     # And we don't need pushback anyway
     capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo,
