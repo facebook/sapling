@@ -95,6 +95,9 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping hgext/extlib/ctreemanifest/manifest_ptr.h it has no-che?k-code (glob)
   Skipping hgext/extlib/ctreemanifest/treemanifest.cpp it has no-che?k-code (glob)
   Skipping hgext/extlib/ctreemanifest/treemanifest.h it has no-che?k-code (glob)
+  hgext/fbsparse.py:1371:
+   >     return lambda p: all(t(dict(p, path=p.path)) for t in tests)
+   dict() is different in Py2 and 3 and is slower than {}
   Skipping hgext/hgsql.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/__init__.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/compathacks.py it has no-che?k-code (glob)

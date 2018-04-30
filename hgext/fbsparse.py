@@ -1358,9 +1358,15 @@ def _build_profile_filter(filters):
         # set.isdisjoint returns true when the iterable (dictionary keys)
         # doesn't have any names in common
         'without': lambda fields: fields.isdisjoint,
+        'filter': lambda field_values: lambda md: (
+            # all fields to test and all values for those fields are present
+            all(f in md and all(v in md[f].lower() for v in vs)
+                for f, vs in field_values.items())
+        )
     }
     tests = [predicates[k](v) for k, v in sorted(filters.items()) if v]
-    return lambda p: all(t(p) for t in tests)
+    # pass in a dictionary with all metadata and the path as an extra key
+    return lambda p: all(t(dict(p, path=p.path)) for t in tests)
 
 @subcmd('list', [
     ('r', 'rev', '', _('explain the profile(s) against the specified revision'),
@@ -1371,6 +1377,10 @@ def _build_profile_filter(filters):
     ('', 'without-field', [],
      _('Only show profiles that do have not defined the named metadata field'),
      _('FIELD')),
+    ('', 'filter', [],
+     _('Only show profiles that contain the given value as a substring in a '
+      'specific metadata field.'),
+     _('FIELD:VALUE'))
     ] + commands.templateopts,
     '[OPTION]...')
 def _listprofiles(cmd, ui, repo, *pats, **opts):
@@ -1378,9 +1388,18 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
 
     Show all available sparse profiles, with the active profiles marked.
 
-    You can filter profiles with `--with-field [FIELD]` and `--without-field
-    [FIELD]`; you can specify these options more than once to set multiple
-    criteria, which all must match for a profile to be listed.
+    You can filter profiles with `--with-field [FIELD]`, `--without-field
+    [FIELD]` and `--filter [FIELD:VALUE]`; you can specify these options more
+    than once to set multiple criteria, which all must match for a profile to be
+    listed. The field `path` is always available, and is the path of the profile
+    file in the repository.
+
+    `--filter` takes a fieldname and value to look for, separated by a colon.
+    The field must be present in the metadata, and the value present in the
+    value for that field, to match; testing is done case-insensitively.
+    Multiple filters for the same fieldname are accepted and must all match;
+    e.g. --filter path:foo --filter path:bar only matches profile paths with the
+    substrings foo and bar both present.
 
     By default, `--without-field hidden` is implied unless you use the --verbose
     switch to include hidden profiles.
@@ -1389,7 +1408,13 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
     filters = {
         'with': set(opts.get('with_field', ())),
         'without': set(opts.get('without_field', ())),
+        'filter': {},  # dictionary of fieldnames to sets of values
     }
+    for fieldvalue in opts.get('filter', ()):
+        fieldname, __, value = fieldvalue.partition(':')
+        if not value:
+            raise error.Abort(_('Missing value for filter on %s') % fieldname)
+        filters['filter'].setdefault(fieldname, set()).add(value.lower())
 
     # It's an error to put a field both in the 'with' and 'without' buckets
     if filters['with'] & filters['without']:

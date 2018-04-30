@@ -316,7 +316,7 @@ Test profile discovery
   > EOF
   $ cat > profiles/bar/eggs <<EOF
   > [metadata]
-  > title: Base profile including the profiles directory
+  > title: Profile including the profiles directory
   > description: This is a base profile, you really want to include this one
   >  if you want to be able to edit profiles. In addition, this profiles has
   >  some metadata.
@@ -353,13 +353,13 @@ Test profile discovery
   $ hg sparse enableprofile profiles/foo/spam
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs - Base profile including the profiles directory
+  ~ profiles/bar/eggs - Profile including the profiles directory
   * profiles/foo/spam - Profile that only includes another
   $ hg sparse list -T json
   [
    {
     "active": "included",
-    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
+    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Profile including the profiles directory"},
     "path": "profiles/bar/eggs"
    },
    {
@@ -376,7 +376,7 @@ Test profile discovery
   > EOF
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs   - Base profile including the profiles directory
+  ~ profiles/bar/eggs   - Profile including the profiles directory
     profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
   * profiles/foo/spam   - Profile that only includes another
@@ -385,7 +385,7 @@ Test profile discovery
   [
    {
     "active": "included",
-    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
+    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Profile including the profiles directory"},
     "path": "profiles/bar/eggs"
    },
    {
@@ -412,7 +412,7 @@ The current working directory plays no role in listing profiles:
   $ cd otherdir
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs   - Base profile including the profiles directory
+  ~ profiles/bar/eggs   - Profile including the profiles directory
     profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
   * profiles/foo/spam   - Profile that only includes another
@@ -425,7 +425,7 @@ not hamper listing.
   $ hg sparse exclude profiles/bar
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs   - Base profile including the profiles directory
+  ~ profiles/bar/eggs   - Profile including the profiles directory
     profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
   * profiles/foo/spam   - Profile that only includes another
@@ -435,7 +435,7 @@ Hidden profiles only show up when we use the --verbose switch:
 
   $ hg sparse list --verbose
   symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs   - Base profile including the profiles directory
+  ~ profiles/bar/eggs   - Profile including the profiles directory
     profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
     profiles/foo/monty 
@@ -471,13 +471,19 @@ and inclusion
 
   $ hg sparse list --with-field description --with-field title
   symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs - Base profile including the profiles directory
+  ~ profiles/bar/eggs - Profile including the profiles directory
 
 Naming the same field in without- and with- filters is an error:
 
   $ hg sparse list --with-field bar --without-field bar
   abort: You can't specify fields in both --with-field and --without-field, please use only one or the other, for bar
   [255]
+We can filter on the contents of a field or the path, case-insensitively:
+
+  $ hg sparse list --filter path:/bar/ --filter title:profile
+  symbols: * = active profile, ~ = transitively included
+  ~ profiles/bar/eggs - Profile including the profiles directory
+    profiles/bar/ham  - An extended profile including some interesting files
 
 You can specify a revision to list profiles for; in this case the current
 sparse configuration is ignored; no profile can be 'active' or 'included':
@@ -491,7 +497,7 @@ sparse configuration is ignored; no profile can be 'active' or 'included':
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg sparse list -r tip
   symbols: * = active profile, ~ = transitively included
-    profiles/bar/eggs                  - Base profile including the profiles directory
+    profiles/bar/eggs                  - Profile including the profiles directory
     profiles/bar/ham                   - An extended profile including some interesting files
     profiles/bar/python               
     profiles/foo/new_in_later_revision - this profile is only available in a later revision, not the current.
@@ -512,7 +518,7 @@ warnings:
   symbols: * = active profile, ~ = transitively included
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
-  ~ profiles/bar/eggs   - Base profile including the profiles directory
+  ~ profiles/bar/eggs   - Profile including the profiles directory
     profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
     profiles/foo/errors
@@ -522,27 +528,27 @@ The .hg/sparse file could list non-existing profiles, these should be ignored
 when listing:
 
   $ hg sparse enableprofile nonesuch
-  warning: sparse profile 'nonesuch' not found in rev 12ab4b2484dc - ignoring it
+  warning: sparse profile 'nonesuch' not found in rev 07b307002dae - ignoring it
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
-  warning: sparse profile 'nonesuch' not found in rev 12ab4b2484dc - ignoring it
+  warning: sparse profile 'nonesuch' not found in rev 07b307002dae - ignoring it
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
-  ~ profiles/bar/eggs   - Base profile including the profiles directory
+  ~ profiles/bar/eggs   - Profile including the profiles directory
     profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
     profiles/foo/errors
   * profiles/foo/spam   - Profile that only includes another
   $ hg sparse disableprofile nonesuch
-  warning: sparse profile 'nonesuch' not found in rev 12ab4b2484dc - ignoring it
+  warning: sparse profile 'nonesuch' not found in rev 07b307002dae - ignoring it
 
 We can look at invididual profiles:
 
   $ hg sparse explain profiles/bar/eggs
   profiles/bar/eggs
   
-  Base profile including the profiles directory
-  """""""""""""""""""""""""""""""""""""""""""""
+  Profile including the profiles directory
+  """"""""""""""""""""""""""""""""""""""""
   
   This is a base profile, you really want to include this one if you want to be
   able to edit profiles. In addition, this profiles has some metadata.
@@ -584,7 +590,7 @@ We can look at invididual profiles:
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
     "profiles": ["profiles/bar/eggs"],
-    "stats": {"filecount": 9, "filecountpercentage": 90.0, "totalsize": 4145880}
+    "stats": {"filecount": 9, "filecountpercentage": 90.0, "totalsize": 4145875}
    }
   ]
   $ cat >> .hg/hgrc << EOF  # enough hints now
@@ -594,8 +600,8 @@ We can look at invididual profiles:
   $ hg sparse explain profiles/bar/eggs
   profiles/bar/eggs
   
-  Base profile including the profiles directory
-  """""""""""""""""""""""""""""""""""""""""""""
+  Profile including the profiles directory
+  """"""""""""""""""""""""""""""""""""""""
   
   This is a base profile, you really want to include this one if you want to be
   able to edit profiles. In addition, this profiles has some metadata.
@@ -619,8 +625,8 @@ We can look at invididual profiles:
   $ hg sparse explain profiles/bar/eggs --verbose
   profiles/bar/eggs
   
-  Base profile including the profiles directory
-  """""""""""""""""""""""""""""""""""""""""""""
+  Profile including the profiles directory
+  """"""""""""""""""""""""""""""""""""""""
   
   This is a base profile, you really want to include this one if you want to be
   able to edit profiles. In addition, this profiles has some metadata.
@@ -629,7 +635,7 @@ We can look at invididual profiles:
   =======================================
   
   file count    8 (80.00%)
-  total size    728 bytes
+  total size    723 bytes
   
   Additional metadata
   ===================
@@ -646,8 +652,8 @@ We can look at invididual profiles:
   The profile profiles/nonsuch was not found
   profiles/bar/eggs
   
-  Base profile including the profiles directory
-  """""""""""""""""""""""""""""""""""""""""""""
+  Profile including the profiles directory
+  """"""""""""""""""""""""""""""""""""""""
   
   This is a base profile, you really want to include this one if you want to be
   able to edit profiles. In addition, this profiles has some metadata.
@@ -656,7 +662,7 @@ We can look at invididual profiles:
   =======================================
   
   file count    8 (80.00%)
-  total size    728 bytes
+  total size    723 bytes
   
   Additional metadata
   ===================
@@ -692,7 +698,7 @@ We can look at invididual profiles:
 
   $ hg sparse explain profiles/bar/eggs -T "{path}\n{metadata.title}\n{stats.filecount}\n"
   profiles/bar/eggs
-  Base profile including the profiles directory
+  Profile including the profiles directory
   8
 
 The -r switch tells hg sparse explain to look at something other than the
@@ -736,8 +742,8 @@ File count and size data for hg explain is cached in the simplecache extension:
   > EOF
   $ hg sparse explain profiles/bar/eggs profiles/bar/ham > /dev/null
   $ ls -1 $TESTTMP/cache
-  sparseprofile:profiles__bar__eggs:12ab4b2484dc06085b793b6f7c65b9f7679a7557:* (glob)
-  sparseprofile:profiles__bar__ham:12ab4b2484dc06085b793b6f7c65b9f7679a7557:* (glob)
-  sparseprofilestats:sparseprofiles:profiles__bar__eggs:ec6899e6d01f48f63f31c356ab861523b19afa6d:0:12ab4b2484dc06085b793b6f7c65b9f7679a7557:False:* (glob)
-  sparseprofilestats:sparseprofiles:profiles__bar__ham:07b4880e6fcb1f6b13998b0c6bc47f256a0f6d33:0:12ab4b2484dc06085b793b6f7c65b9f7679a7557:False:* (glob)
-  sparseprofilestats:sparseprofiles:unfiltered:12ab4b2484dc06085b793b6f7c65b9f7679a7557:* (glob)
+  sparseprofile:profiles__bar__eggs:07b307002dae98240fe64a42df9598263f69d925:v1
+  sparseprofile:profiles__bar__ham:07b307002dae98240fe64a42df9598263f69d925:v1
+  sparseprofilestats:sparseprofiles:profiles__bar__eggs:ab56132ffe9320163b73f769a0a32d84c6869949:0:07b307002dae98240fe64a42df9598263f69d925:False:v1
+  sparseprofilestats:sparseprofiles:profiles__bar__ham:07b4880e6fcb1f6b13998b0c6bc47f256a0f6d33:0:07b307002dae98240fe64a42df9598263f69d925:False:v1
+  sparseprofilestats:sparseprofiles:unfiltered:07b307002dae98240fe64a42df9598263f69d925:v1
