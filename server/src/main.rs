@@ -22,6 +22,7 @@ extern crate tokio_timer;
 extern crate tokio_uds;
 
 extern crate rand;
+extern crate uuid;
 
 extern crate clap;
 
@@ -308,6 +309,7 @@ fn repo_listen(
                 stderr,
             } = ssh_server_mux(sock, &handle);
 
+            let session_uuid = uuid::Uuid::new_v4();
             let stderr_write = SenderBytesWrite {
                 chan: stderr.clone().wait(),
             };
@@ -319,10 +321,11 @@ fn repo_listen(
             let drain = slog::Duplicate::new(drain, listen_log.clone()).fuse();
             let conn_log = Logger::root(drain, o![]);
 
+            let client_log = conn_log.new(o!("session_uuid" => format!("{}", session_uuid)));
             // Construct a hg protocol handler
             let proto_handler = HgProtoHandler::new(
                 stdin,
-                repo::RepoClient::new(repo.clone(), &conn_log),
+                repo::RepoClient::new(repo.clone(), client_log),
                 sshproto::HgSshCommandDecode,
                 sshproto::HgSshCommandEncode,
                 &conn_log,

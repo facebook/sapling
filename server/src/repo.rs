@@ -320,10 +320,10 @@ pub struct RepoClient {
 }
 
 impl RepoClient {
-    pub fn new(repo: Arc<MononokeRepo>, parent_logger: &Logger) -> Self {
+    pub fn new(repo: Arc<MononokeRepo>, parent_logger: Logger) -> Self {
         RepoClient {
             repo: repo,
-            logger: parent_logger.new(o!()), // connection details?
+            logger: parent_logger,
         }
     }
 
