@@ -134,14 +134,11 @@ CONFIG
   hg ci -ma
   hg bookmark test-config
   hg backfilltree
-  hg backfilltree
   mkdir "$config_repo-rocks"
 
   $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb "$config_repo"/.hg "$config_repo"-rocks >> "$REPO_PATH/blobimport.out" 2>&1
 
-  mkdir -p "$repos_path/repo/.hg" \
-           "$repos_path/repo/heads" \
-           "$repos_path/repo/books" \
+  mkdir -p "$repos_path/repo/.hg"
 
   echo "Scuba table is $scuba_table and repo in that table is $repos_path/repo"
 }

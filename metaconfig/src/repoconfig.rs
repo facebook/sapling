@@ -217,7 +217,7 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
                     "manifold bucket must be specified".into(),
                 ))?;
                 let db_address = this.db_address.expect("xdb tier was not specified");
-                RepoType::TestBlobManifold{
+                RepoType::TestBlobManifold {
                     manifold_bucket,
                     prefix: this.manifold_prefix.unwrap_or("".into()),
                     path: this.path,
