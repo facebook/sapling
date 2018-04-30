@@ -66,11 +66,14 @@ mod repo;
 mod listener;
 
 use std::io;
+use std::mem;
+use std::ops::DerefMut;
 use std::panic;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
+use std::time::Instant;
 
 use failure::SlogKVError;
 use futures::{Future, Sink, Stream};
@@ -83,6 +86,8 @@ use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_kvfilter::KVFilter;
 use slog_logview::LogViewDrain;
+
+use scuba::{ScubaClient, ScubaSample};
 
 use blobrepo::BlobRepo;
 use bytes::Bytes;
@@ -283,7 +288,7 @@ fn repo_listen(
         cache_size,
         &core.remote(),
         repoid,
-        scuba_table,
+        scuba_table.clone(),
     ).expect("failed to initialize repo");
 
     let listen_log = root_log.new(o!("repo" => repo.path().clone()));
@@ -310,6 +315,9 @@ fn repo_listen(
             } = ssh_server_mux(sock, &handle);
 
             let session_uuid = uuid::Uuid::new_v4();
+            let connect_time = Instant::now();
+            let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
+
             let stderr_write = SenderBytesWrite {
                 chan: stderr.clone().wait(),
             };
@@ -329,6 +337,7 @@ fn repo_listen(
                 sshproto::HgSshCommandDecode,
                 sshproto::HgSshCommandEncode,
                 &conn_log,
+                wireproto_calls.clone(),
             );
 
             // send responses back
@@ -349,7 +358,30 @@ fn repo_listen(
             });
 
             // Run the whole future asynchronously to allow new connections
-            handle.spawn(endres);
+            match scuba_table {
+                None => handle.spawn(endres),
+                Some(ref scuba_table) => {
+                    let scuba_table = scuba_table.clone();
+                    let repo_path = repo.path().clone();
+                    handle.spawn(endres.map(move |_| {
+                        let scuba_client = ScubaClient::new(scuba_table);
+
+                        let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
+                        let wireproto_calls = mem::replace(wireproto_calls.deref_mut(), Vec::new());
+
+                        let mut sample = ScubaSample::new();
+                        sample.add("session_uuid", format!("{}", session_uuid));
+                        let elapsed_time = connect_time.elapsed();
+                        let elapsed_ms = elapsed_time.as_secs() * 1000
+                            + elapsed_time.subsec_nanos() as u64 / 1000000;
+                        sample.add("time_elapsed_ms", elapsed_ms);
+                        sample.add("wireproto_commands", wireproto_calls);
+                        sample.add("repo", repo_path);
+
+                        scuba_client.log(&sample);
+                    }))
+                }
+            };
 
             Ok(())
         });

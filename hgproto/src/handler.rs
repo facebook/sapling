@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::io;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use futures::{stream, Future, Poll, Stream};
 use futures::future::{err, ok, Either};
@@ -36,6 +36,7 @@ struct HgProtoHandlerInner<H, Dec, Enc> {
     reqdec: Dec,
     respenc: Enc,
     _logger: Logger,
+    wireproto_calls: Arc<Mutex<Vec<String>>>,
 }
 
 impl HgProtoHandler {
@@ -45,6 +46,7 @@ impl HgProtoHandler {
         reqdec: Dec,
         respenc: Enc,
         logger: L,
+        wireproto_calls: Arc<Mutex<Vec<String>>>,
     ) -> Self
     where
         In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
@@ -65,6 +67,7 @@ impl HgProtoHandler {
             reqdec,
             respenc,
             _logger: logger,
+            wireproto_calls,
         });
 
         HgProtoHandler {
@@ -168,6 +171,7 @@ where
     Enc: ResponseEncoder + Clone + Send + Sync + 'static,
     Error: From<Dec::Error>,
 {
+    req.record_request(&handler.wireproto_calls);
     match req {
         Request::Batch(reqs) => {
             let (send, recv) = oneshot::channel();

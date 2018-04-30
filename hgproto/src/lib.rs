@@ -45,6 +45,7 @@ extern crate quickcheck;
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Debug};
+use std::sync::Mutex;
 
 use bytes::Bytes;
 
@@ -61,6 +62,18 @@ pub mod sshproto;
 pub enum Request {
     Batch(Vec<SingleRequest>),
     Single(SingleRequest),
+}
+
+impl Request {
+    pub fn record_request(&self, record: &Mutex<Vec<String>>) {
+        let mut record = record.lock().expect("lock poisoned");
+        match self {
+            &Request::Batch(ref batch) => {
+                batch.iter().for_each(|req| record.push(req.name().into()))
+            }
+            &Request::Single(ref req) => record.push(req.name().into()),
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -92,6 +105,26 @@ pub enum SingleRequest {
     },
     Gettreepack(GettreepackArgs),
     Getfiles,
+}
+
+impl SingleRequest {
+    pub fn name(&self) -> &'static str {
+        match self {
+            &SingleRequest::Between { .. } => "between",
+            &SingleRequest::Branchmap => "branchmap",
+            &SingleRequest::Capabilities => "capabilities",
+            &SingleRequest::Debugwireargs { .. } => "debugwireargs",
+            &SingleRequest::Getbundle(_) => "getbundle",
+            &SingleRequest::Heads => "heads",
+            &SingleRequest::Hello => "hello",
+            &SingleRequest::Listkeys { .. } => "listkeys",
+            &SingleRequest::Lookup { .. } => "lookup",
+            &SingleRequest::Known { .. } => "known",
+            &SingleRequest::Unbundle { .. } => "unbundle",
+            &SingleRequest::Gettreepack(_) => "gettreepack",
+            &SingleRequest::Getfiles => "getfiles",
+        }
+    }
 }
 
 /// The arguments that `getbundle` accepts, in a separate struct for
