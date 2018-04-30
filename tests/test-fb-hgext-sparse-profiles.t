@@ -380,6 +380,7 @@ Test profile discovery
     profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
   * profiles/foo/spam   - Profile that only includes another
+  hint[sparse-list-verbose]: 1 hidden profiles not shown; add '--verbose' to include these
   $ hg sparse list -T json
   [
    {
@@ -403,6 +404,7 @@ Test profile discovery
     "path": "profiles/foo/spam"
    }
   ]
+  hint[sparse-list-verbose]: 1 hidden profiles not shown; add '--verbose' to include these
 
 The current working directory plays no role in listing profiles:
 
@@ -414,6 +416,7 @@ The current working directory plays no role in listing profiles:
     profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
   * profiles/foo/spam   - Profile that only includes another
+  hint[sparse-list-verbose]: 1 hidden profiles not shown; add '--verbose' to include these
   $ cd ..
 
 Profiles are loaded from the manifest, so excluding a profile directory should
@@ -426,6 +429,7 @@ not hamper listing.
     profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
   * profiles/foo/spam   - Profile that only includes another
+  hint[sparse-list-verbose]: 1 hidden profiles not shown; add '--verbose' to include these
 
 Hidden profiles only show up when we use the --verbose switch:
 
@@ -436,6 +440,10 @@ Hidden profiles only show up when we use the --verbose switch:
     profiles/bar/python
     profiles/foo/monty 
   * profiles/foo/spam   - Profile that only includes another
+  $ cat >> .hg/hgrc << EOF  # enough hints now
+  > [hint]
+  > ack-sparse-list-verbose = true
+  > EOF
 
 We can filter on fields being present or absent. This is how the --verbose
 switch is implemented. We can invert that test by filtering on the presence

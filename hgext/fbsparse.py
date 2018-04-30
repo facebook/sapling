@@ -1152,8 +1152,20 @@ hint = registrar.hint()
 
 @hint('sparse-explain-verbose')
 def hintexplainverbose(*profiles):
-    return _("use 'hg sparse explain --verbose {}' to include the total file "
-             "size for a give profile".format(' '.join(profiles)))
+    return _("use 'hg sparse explain --verbose %s' to include the total file "
+             "size for a give profile") % ' '.join(profiles)
+
+@hint('sparse-list-verbose')
+def hintlistverbose(profiles, filters):
+    # move the hidden flag from the without to the with pile and count
+    # the matches
+    filters['with'].add('hidden')
+    filters['without'].remove('hidden')
+    pred = _build_profile_filter(filters)
+    hidden_count = sum(1 for p in filter(pred, profiles))
+    if hidden_count:
+        return _("%d hidden profiles not shown; "
+                 "add '--verbose' to include these") % hidden_count
 
 _deprecate = lambda o, l=_('(DEPRECATED)'): (
     o[:3] + (' '.join([o[4], l]),) + o[4:]) if l not in o[4] else l
@@ -1406,16 +1418,17 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
                 label='sparse.profile.legend')
 
         predicate = _build_profile_filter(filters)
-        profiles = list(filter(predicate, _discover(
-            ui, repo, rev=opts.get('rev'))))
-        if not profiles:
+        profiles = list(_discover(ui, repo, rev=opts.get('rev')))
+        filtered = list(filter(predicate, profiles))
+        max_width = 0
+        if not filtered:
             if fm.isplain():
                 ui.write_err(
                     _('No profiles matched the filter criteria\n'))
-            return
-        max_width = max(len(p.path) for p in profiles)
+        else:
+            max_width = max(len(p.path) for p in filtered)
 
-        for info in profiles:
+        for info in filtered:
             fm.startitem()
             label = 'sparse.profile.' + labels[info.active]
             fm.plain('%-1s ' % chars[info.active], label=label)
@@ -1424,6 +1437,9 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
             if 'title' in info:
                 fm.plain(' - %s' % info.get('title', b''), label=label)
             fm.plain('\n')
+
+    if not (ui.verbose or 'hidden' in filters['with']):
+        hintutil.trigger('sparse-list-verbose', profiles, filters)
 
 @subcmd('explain', [
     ('r', 'rev', '', _('explain the profile(s) against the specified revision'),
