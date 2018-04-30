@@ -25,12 +25,16 @@ except ImportError:
 
 
 class BuildOptions(object):
-    def __init__(self, external_dir, num_jobs=None):
-        self.external_dir = external_dir
+    def __init__(self, num_jobs, external_dir, install_dir):
         self.num_jobs = num_jobs
         if not self.num_jobs:
             import multiprocessing
             self.num_jobs = multiprocessing.cpu_count()
+
+        self.external_dir = external_dir
+        if install_dir is None:
+            install_dir = os.path.join(self.external_dir, 'install')
+        self.install_dir = install_dir
 
     def project_dir(self, name, *paths):
         return os.path.join(self.external_dir, name, *paths)
@@ -84,76 +88,89 @@ class GitUpdater(object):
         run_cmd(['git', '-C', project.path, 'clean', '-fxd'])
 
 
-class MakeBuilder(object):
-    def __init__(self, subdir=None, env=None, args=None):
+class BuilderBase(object):
+    def __init__(self, subdir=None, env=None, build_dir=None):
+        if env:
+            self.env = os.environ.copy()
+            self.env.update(env)
+        else:
+            self.env = None
+
         self.subdir = subdir
-        self.env = env
-        self.args = args
-        self.is_autoconf = False
+        self.build_dir = build_dir
+        self._build_path = None
+
+    def _run_cmd(self, cmd):
+        run_cmd(cmd=cmd, env=self.env, cwd=self._build_path)
 
     def build(self, project):
         print('Building %s...' % project.name)
-        if self.env:
-            env = os.environ.copy()
-            env.update(self.env)
-        else:
-            env = None
-
         if self.subdir:
             build_path = os.path.join(project.path, self.subdir)
         else:
             build_path = project.path
 
-        if self.is_autoconf:
-            configure_path = os.path.join(build_path, 'configure')
-            if not os.path.exists(configure_path):
-                run_cmd(['autoreconf', '--install'], env=env, cwd=build_path)
-            run_cmd([os.path.join(build_path, 'configure')],
-                    env=env, cwd=build_path)
+        if self.build_dir is not None:
+            build_path = os.path.join(build_path, self.build_dir)
+            if not os.path.isdir(build_path):
+                os.mkdir(build_path)
 
-        cmd = ['make', '-j%s' % project.opts.num_jobs]
-        if self.args:
-            cmd.extend(self.args)
-        run_cmd(cmd, env=env, cwd=build_path)
+        self._build_path = build_path
+        try:
+            self._build(project)
+        finally:
+            self._build_path = None
 
 
-class AutoconfBuilder(MakeBuilder):
+class MakeBuilder(BuilderBase):
     def __init__(self, subdir=None, env=None, args=None):
-        super(AutoconfBuilder, self).__init__(subdir=subdir, env=env, args=args)
-        self.is_autoconf = True
+        super(MakeBuilder, self).__init__(subdir=subdir, env=env)
+        self.args = args or []
+
+    def _build(self, project):
+        cmd = ['make', '-j%s' % project.opts.num_jobs] + self.args
+        self._run_cmd(cmd)
+
+        install_cmd = ['make', 'install', 'PREFIX=' + project.opts.install_dir]
+        self._run_cmd(install_cmd)
 
 
-class CMakeBuilder(object):
+class AutoconfBuilder(BuilderBase):
+    def __init__(self, subdir=None, env=None, args=None):
+        super(BuilderBase, self).__init__(subdir=subdir, env=env)
+        self.args = args or []
+
+    def _build(self, project):
+        configure_path = os.path.join(self._build_path, 'configure')
+        if not os.path.exists(configure_path):
+            self._run_cmd(['autoreconf', '--install'])
+        configure_cmd = [
+            configure_path,
+            '--prefix=' + project.ops.install_dir,
+        ] + self.args
+        self._run_cmd(configure_cmd)
+        self._run_cmd(['make', '-j%s' % project.opts.num_jobs])
+        self._run_cmd(['make', 'install'])
+
+
+class CMakeBuilder(BuilderBase):
     def __init__(self, subdir=None, env=None, defines=None):
-        self.subdir = subdir
-        self.env = env
-        self.defines = defines
+        super(CMakeBuilder, self).__init__(subdir=subdir, env=env,
+                                           build_dir='_build')
+        self.defines = defines or {}
 
-    def build(self, project):
-        print('Building %s...' % project.name)
+    def _build(self, project):
+        defines = {
+            'CMAKE_INSTALL_PREFIX': project.opts.install_dir,
+            'BUILD_SHARED_LIBS': 'OFF',
+            'BUILD_TESTS': 'OFF',
+        }
+        defines.update(self.defines)
+        define_args = ['-D%s=%s' % (k, v) for (k, v) in defines.items()]
 
-        if self.env:
-            env = os.environ.copy()
-            env.update(self.env)
-        else:
-            env = None
-
-        if self.subdir:
-            build_path = os.path.join(project.path, self.subdir, 'build')
-        else:
-            build_path = os.path.join(project.path, 'build')
-
-        if not os.path.isdir(build_path):
-            os.mkdir(build_path)
-
-        cmd = ['cmake', '..']
-        if self.defines:
-            define_args = ['-D%s=%s' % (k, v)
-                           for (k, v) in self.defines.items()]
-            cmd.extend(define_args)
-        run_cmd(cmd, env=env, cwd=build_path)
-
-        run_cmd(['make'], env=env, cwd=build_path)
+        self._run_cmd(['cmake', 'configure', '..'] + define_args)
+        self._run_cmd(['make', '-j%s' % project.opts.num_jobs])
+        self._run_cmd(['make', 'install'])
 
 
 def run_cmd(cmd, env=None, cwd=None):
@@ -165,33 +182,6 @@ def run_cmd(cmd, env=None, cwd=None):
 def install_apt(pkgs):
     cmd = ['sudo', 'apt-get', 'install', '-yq'] + pkgs
     run_cmd(cmd)
-
-
-def WangleBuilder(opts):
-    cmake_defs = {
-        'FOLLY_INCLUDE_DIR': opts.project_dir('folly'),
-        'FOLLY_LIBRARY': opts.project_dir('folly', 'folly/.libs/libfolly.a'),
-        'BUILD_TESTS': 'OFF',
-    }
-    return CMakeBuilder(subdir='wangle', defines=cmake_defs)
-
-
-def FbthriftBuilder(opts):
-    lib_dirs = [
-        opts.project_dir('folly', 'folly/.libs'),
-        opts.project_dir('wangle', 'wangle/build/lib'),
-        opts.project_dir('mstch', 'build/src'),
-        opts.project_dir('zstd', 'lib'),
-    ]
-    libdir_flags = [shellquote('-L' + path) for path in lib_dirs]
-    cmake_env = {
-        'FOLLY_INCLUDE_DIR': opts.project_dir('folly'),
-        'MSTCH_INCLUDE_DIRS': opts.project_dir('mstch', 'include'),
-        'WANGLE_INCLUDE_DIRS': opts.project_dir('wangle'),
-        'ZSTD_INCLUDE_DIRS': opts.project_dir('zstd', 'lib'),
-        'LDFLAGS': ' '.join(libdir_flags),
-    }
-    return CMakeBuilder(subdir='thrift', env=cmake_env)
 
 
 def get_projects(opts):
@@ -209,7 +199,7 @@ def get_projects(opts):
         Project(
             'rocksdb', opts,
             GitUpdater('https://github.com/facebook/rocksdb.git'),
-            MakeBuilder(args=['static_lib']),
+            CMakeBuilder(defines={'WITH_TESTS': 'OFF'}),
         ),
         Project(
             'googletest', opts,
@@ -219,17 +209,17 @@ def get_projects(opts):
         Project(
             'folly', opts,
             GitUpdater('https://github.com/facebook/folly.git'),
-            AutoconfBuilder(subdir='folly')
+            CMakeBuilder(),
         ),
         Project(
             'wangle', opts,
             GitUpdater('https://github.com/facebook/wangle.git'),
-            WangleBuilder(opts),
+            CMakeBuilder(subdir='wangle'),
         ),
         Project(
             'fbthrift', opts,
             GitUpdater('https://github.com/facebook/fbthrift.git'),
-            FbthriftBuilder(opts),
+            CMakeBuilder(),
         ),
     ]
 
@@ -315,6 +305,9 @@ def main():
                     type=int,
                     default=None,
                     help='The number of jobs to run in parallel when building')
+    ap.add_argument('--install-dir',
+                    help='Directory where external projects should be '
+                    'installed (default=<external-dir>/install)')
     ap.add_argument('--install-deps',
                     action='store_true',
                     default=False,
@@ -328,7 +321,7 @@ def main():
     if args.clean is None:
         args.clean = args.update
 
-    opts = BuildOptions(args.external_dir, args.num_jobs)
+    opts = BuildOptions(args.num_jobs, args.external_dir, args.install_dir)
 
     if args.install_deps:
         install_platform_deps()
