@@ -1,0 +1,38 @@
+add_thrift_cpp2_library(
+  eden_service_thrift
+  eden.thrift
+  SERVICES
+    EdenService
+  DEPENDS
+    fb303_thrift_cpp2
+)
+add_thrift_cpp2_library(
+  streamingeden_thrift
+  streamingeden.thrift
+  SERVICES
+    StreamingEdenService
+  DEPENDS
+    eden_service_thrift
+)
+
+file(GLOB SERVICE_SRCS "*.cpp")
+add_library(
+  eden_service STATIC
+    ${SERVICE_SRCS}
+    oss/RunServer.cpp
+)
+target_link_libraries(
+  eden_service
+  PUBLIC
+    eden_service_thrift
+    streamingeden_thrift
+    eden_config
+    eden_fuse
+    eden_inodes
+    eden_model
+    eden_model_git
+    eden_store_hg
+    eden_store_git
+    eden_takeover
+    Folly::folly
+)

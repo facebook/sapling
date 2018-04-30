@@ -123,6 +123,7 @@ void importTreeRecursive(
   }
 }
 
+#if EDEN_HAVE_HG_TREEMANIFEST
 int importTree(
     LocalStore* store,
     AbsolutePathPiece repoPath,
@@ -159,6 +160,7 @@ int importTree(
 
   return EX_OK;
 }
+#endif // EDEN_HAVE_HG_TREEMANIFEST
 } // namespace
 
 int main(int argc, char* argv[]) {
@@ -205,8 +207,14 @@ int main(int argc, char* argv[]) {
     auto rootHash = importer.importFlatManifest(revName);
     printf("Imported root tree: %s\n", rootHash.toString().c_str());
   } else if (FLAGS_import_type == "tree") {
+#if EDEN_HAVE_HG_TREEMANIFEST
     RelativePath path{FLAGS_subdir};
     returnCode = importTree(&store, repoPath, revName, path);
+#else // !EDEN_HAVE_HG_TREEMANIFEST
+    fprintf(
+        stderr, "error: treemanifest import is not supported by this build\n");
+    return EX_UNAVAILABLE;
+#endif // EDEN_HAVE_HG_TREEMANIFEST
   } else {
     fprintf(
         stderr,

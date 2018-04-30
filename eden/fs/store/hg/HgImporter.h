@@ -12,6 +12,7 @@
 #include <folly/Range.h>
 #include <folly/Subprocess.h>
 
+#include "eden/fs/eden-config.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -22,9 +23,11 @@ class Cursor;
 }
 } // namespace folly
 
+#if EDEN_HAVE_HG_TREEMANIFEST
 /* forward declare support classes from mercurial */
 class DatapackStore;
 class UnionDatapackStore;
+#endif // EDEN_HAVE_HG_TREEMANIFEST
 
 namespace facebook {
 namespace eden {
@@ -66,6 +69,7 @@ class HgImporter {
    */
   Hash importManifest(folly::StringPiece revName);
 
+#if EDEN_HAVE_HG_TREEMANIFEST
   /**
    * Import the manifest for the specified revision using mercurial
    * treemanifest data.
@@ -75,6 +79,7 @@ class HgImporter {
    * This method is exposed publicly primarily for testing purposes.
    */
   Hash importTreeManifest(folly::StringPiece revName);
+#endif // EDEN_HAVE_HG_TREEMANIFEST
 
   /**
    * Import the manifest for the specified revision using mercurial
@@ -262,11 +267,13 @@ class HgImporter {
    */
   void sendFetchTreeRequest(RelativePathPiece path, Hash pathManifestNode);
 
+#if EDEN_HAVE_HG_TREEMANIFEST
   std::unique_ptr<Tree> importTreeImpl(
       const Hash& manifestNode,
       const Hash& edenTreeID,
       RelativePathPiece path,
       LocalStore::WriteBatch* writeBatch);
+#endif
 
   folly::Subprocess helper_;
   const AbsolutePath repoPath_;
@@ -283,8 +290,10 @@ class HgImporter {
   int helperIn_{-1};
   int helperOut_{-1};
 
+#if EDEN_HAVE_HG_TREEMANIFEST
   std::vector<std::unique_ptr<DatapackStore>> dataPackStores_;
   std::unique_ptr<UnionDatapackStore> unionStore_;
+#endif // EDEN_HAVE_HG_TREEMANIFEST
 };
 } // namespace eden
 } // namespace facebook

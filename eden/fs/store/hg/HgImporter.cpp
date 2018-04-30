@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "HgImporter.h"
+#include "eden/fs/store/hg/HgImporter.h"
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
@@ -24,17 +24,19 @@
 #include <unistd.h>
 #include <mutex>
 
-#include "HgManifestImporter.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
+#include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
 
+#if EDEN_HAVE_HG_TREEMANIFEST
 #include "hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
 #include "hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
+#endif // EDEN_HAVE_HG_TREEMANIFEST
 
 using folly::ByteRange;
 using folly::Endian;
@@ -452,6 +454,7 @@ HgImporter::Options HgImporter::waitForHelperStart() {
 }
 
 void HgImporter::initializeTreeManifestImport(const Options& options) {
+#if EDEN_HAVE_HG_TREEMANIFEST
   if (!FLAGS_use_hg_tree_manifest) {
     XLOG(DBG2) << "treemanifest import disabled via command line flags "
                   "for repository "
@@ -477,6 +480,7 @@ void HgImporter::initializeTreeManifestImport(const Options& options) {
 
   unionStore_ = std::make_unique<UnionDatapackStore>(storePtrs);
   XLOG(DBG2) << "treemanifest import enabled in repository " << repoPath_;
+#endif // EDEN_HAVE_HG_TREEMANIFEST
 }
 
 HgImporter::~HgImporter() {
@@ -485,6 +489,7 @@ HgImporter::~HgImporter() {
 }
 
 std::unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
+#if EDEN_HAVE_HG_TREEMANIFEST
   // importTree() only works with treemanifest.
   // This can only be called if the root tree was imported with treemanifest,
   // and we are now trying to import data for some subdirectory.
@@ -509,8 +514,15 @@ std::unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
       writeBatch.get());
   writeBatch->flush();
   return tree;
+#else // !EDEN_HAVE_HG_TREEMANIFEST
+  throw std::domain_error(folly::to<string>(
+      "requested to import subtree ",
+      id.toString(),
+      " but flatmanifest import should have already imported all subtrees"));
+#endif // EDEN_HAVE_HG_TREEMANIFEST
 }
 
+#if EDEN_HAVE_HG_TREEMANIFEST
 std::unique_ptr<Tree> HgImporter::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenTreeID,
@@ -679,24 +691,6 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
   return tree;
 }
 
-Hash HgImporter::importManifest(StringPiece revName) {
-  if (unionStore_) {
-    try {
-      return importTreeManifest(revName);
-    } catch (const MissingKeyError&) {
-      if (!FLAGS_allow_flatmanifest_fallback) {
-        throw;
-      }
-      // We don't have a tree manifest available for the target rev,
-      // so let's fall through to the full flat manifest importer.
-      XLOG(INFO) << "no treemanifest data available for revision " << revName
-                 << ": falling back to slower flatmanifest import";
-    }
-  }
-
-  return importFlatManifest(revName);
-}
-
 Hash HgImporter::importTreeManifest(StringPiece revName) {
   auto manifestNode = resolveManifestNode(revName);
   XLOG(DBG2) << "revision " << revName << " has manifest node " << manifestNode;
@@ -713,6 +707,27 @@ Hash HgImporter::importTreeManifest(StringPiece revName) {
   writeBatch->flush();
 
   return tree->getHash();
+}
+#endif // EDEN_HAVE_HG_TREEMANIFEST
+
+Hash HgImporter::importManifest(StringPiece revName) {
+#if EDEN_HAVE_HG_TREEMANIFEST
+  if (unionStore_) {
+    try {
+      return importTreeManifest(revName);
+    } catch (const MissingKeyError&) {
+      if (!FLAGS_allow_flatmanifest_fallback) {
+        throw;
+      }
+      // We don't have a tree manifest available for the target rev,
+      // so let's fall through to the full flat manifest importer.
+      XLOG(INFO) << "no treemanifest data available for revision " << revName
+                 << ": falling back to slower flatmanifest import";
+    }
+  }
+#endif // EDEN_HAVE_HG_TREEMANIFEST
+
+  return importFlatManifest(revName);
 }
 
 Hash HgImporter::importFlatManifest(StringPiece revName) {

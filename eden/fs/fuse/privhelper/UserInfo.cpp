@@ -9,14 +9,17 @@
  */
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 
-#include <grp.h>
-#include <pwd.h>
-#include <selinux/selinux.h>
-#include <sys/prctl.h>
-#include <vector>
-
 #include <folly/Exception.h>
 #include <folly/experimental/logging/xlog.h>
+#include <grp.h>
+#include <pwd.h>
+#include <sys/prctl.h>
+#include <vector>
+#include "eden/fs/eden-config.h"
+
+#ifdef EDEN_HAVE_SELINUX
+#include <selinux/selinux.h>
+#endif // EDEN_HAVE_SELINUX
 
 using folly::checkUnixError;
 using folly::throwSystemError;
@@ -30,6 +33,7 @@ struct UserInfo::PasswdEntry {
 };
 
 static void dropToBasicSELinuxPrivileges() {
+#ifdef EDEN_HAVE_SELINUX
   const char* baseContext = "user_u:base_r:base_t";
 
   XLOG(DBG2) << "Dropping SELinux context..." << [&] {
@@ -48,6 +52,7 @@ static void dropToBasicSELinuxPrivileges() {
   if (setcon(const_cast<char*>(baseContext))) {
     XLOG(WARN) << "setcon() failed when dropping SELinux context";
   }
+#endif // EDEN_HAVE_SELINUX
 }
 
 void UserInfo::dropPrivileges() {
