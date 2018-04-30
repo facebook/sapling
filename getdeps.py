@@ -192,6 +192,11 @@ def get_projects(opts):
             CMakeBuilder(),
         ),
         Project(
+            'cpptoml', opts,
+            GitUpdater('https://github.com/skystrife/cpptoml.git'),
+            CMakeBuilder(),
+        ),
+        Project(
             'zstd', opts,
             GitUpdater('https://github.com/facebook/zstd.git'),
             MakeBuilder(),
