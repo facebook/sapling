@@ -45,14 +45,17 @@ test sparse subcommands (help, verbose)
   $ hg help sparse --verbose | subcmds
   subcommands:
   
-   list [OPTION]                     List available sparse profiles - Show all
+   list [OPTION]...                  List available sparse profiles - Show all
                                      available sparse profiles, with the active
-                                     profiles marked. However, if a profile has
-                                     a key named `hidden` in it's metadata, the
-                                     profile is excluded from this list unless
-                                     explicitly active or included in an active
-                                     profile, or when the `--verbose` switch is
-                                     used.
+                                     profiles marked.  You can filter profiles
+                                     with `--with-field [FIELD]` and `--without-
+                                     field [FIELD]`; you can specify these
+                                     options more than once to set multiple
+                                     criteria, which all must match for a
+                                     profile to be listed.  By default,
+                                     `--without-field hidden` is implied unless
+                                     you use the --verbose switch to include
+                                     hidden profiles.
    explain [OPTION]... [PROFILE]...  Show information on individual profiles -
                                      If --verbose is given, calculates the file
                                      size impact of a profile (slow).
@@ -156,19 +159,28 @@ test sparse subcommands (help, verbose)
   (use 'hg sparse -h' to show more help)
 
   $ hg help sparse list
-  hg sparse list [OPTION]
+  hg sparse list [OPTION]...
   
   List available sparse profiles
   
       Show all available sparse profiles, with the active profiles marked.
-      However, if a profile has a key named 'hidden' in it's metadata, the
-      profile is excluded from this list unless explicitly active or included in
-      an active profile, or when the '--verbose' switch is used.
   
-  options:
+      You can filter profiles with '--with-field [FIELD]' and '--without-field
+      [FIELD]'; you can specify these options more than once to set multiple
+      criteria, which all must match for a profile to be listed.
   
-   -r --rev REV           explain the profile(s) against the specified revision
-   -T --template TEMPLATE display with template
+      By default, '--without-field hidden' is implied unless you use the
+      --verbose switch to include hidden profiles.
+  
+  options ([+] can be repeated):
+  
+   -r --rev REV                 explain the profile(s) against the specified
+                                revision
+      --with-field FIELD [+]    Only show profiles that have defined the named
+                                metadata field
+      --without-field FIELD [+] Only show profiles that do have not defined the
+                                named metadata field
+   -T --template TEMPLATE       display with template
   
   subcommands:
   

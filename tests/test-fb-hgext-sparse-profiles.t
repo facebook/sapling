@@ -437,6 +437,40 @@ Hidden profiles only show up when we use the --verbose switch:
     profiles/foo/monty 
   * profiles/foo/spam   - Profile that only includes another
 
+We can filter on fields being present or absent. This is how the --verbose
+switch is implemented. We can invert that test by filtering on the presence
+of the hidden field:
+
+  $ hg sparse list --with-field hidden
+  symbols: * = active profile, ~ = transitively included
+    profiles/foo/monty
+
+or we can filter on other fields, like missing description:
+
+  $ hg sparse list --without-field description
+  symbols: * = active profile, ~ = transitively included
+    profiles/bar/ham    - An extended profile including some interesting files
+    profiles/bar/python
+  * profiles/foo/spam   - Profile that only includes another
+
+multiple tests are cumulative, like a boolean AND operation; both for exclusion
+
+  $ hg sparse list --without-field description --without-field title
+  symbols: * = active profile, ~ = transitively included
+    profiles/bar/python
+
+and inclusion
+
+  $ hg sparse list --with-field description --with-field title
+  symbols: * = active profile, ~ = transitively included
+  ~ profiles/bar/eggs - Base profile including the profiles directory
+
+Naming the same field in without- and with- filters is an error:
+
+  $ hg sparse list --with-field bar --without-field bar
+  abort: You can't specify fields in both --with-field and --without-field, please use only one or the other, for bar
+  [255]
+
 You can specify a revision to list profiles for; in this case the current
 sparse configuration is ignored; no profile can be 'active' or 'included':
 

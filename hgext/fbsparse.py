@@ -982,7 +982,7 @@ class ProfileInfo(collections.Mapping):
     def __len__(self):
         return len(self._metadata)
 
-def _discover(ui, repo, include_hidden=False, rev=None):
+def _discover(ui, repo, rev=None):
     """Generate a list of available profiles with metadata
 
     Returns a generator yielding ProfileInfo objects, paths are relative to the
@@ -992,9 +992,6 @@ def _discover(ui, repo, include_hidden=False, rev=None):
     yield active and included profiles.
 
     README(.*) files are filtered out.
-
-    If `include_hidden` is False, we filter out any profile with a 'hidden'
-    entry in the profile metadata (unless it is currently active).
 
     If rev is given, show profiles available at that revision. The working copy
     sparse configuration is ignored and no active profile information is
@@ -1042,12 +1039,11 @@ def _discover(ui, repo, include_hidden=False, rev=None):
                 raise
             continue
         md = repo.readsparseconfig(raw, filename=p).metadata
-        if 'hidden' not in md or include_hidden or p in active or p in included:
-            yield ProfileInfo(
-                p, (PROFILE_ACTIVE if p in active else
-                    PROFILE_INCLUDED if p in included else
-                    PROFILE_INACTIVE),
-                md)
+        yield ProfileInfo(
+            p, (PROFILE_ACTIVE if p in active else
+                PROFILE_INCLUDED if p in included else
+                PROFILE_INACTIVE),
+            md)
 
 def _profilesizeinfo(ui, repo, *config, **kwargs):
     """Get size stats for a given set of profiles
@@ -1341,20 +1337,60 @@ class subcmdfunc(registrar._funcregistrarbase):
 subcmdtable = util.sortdict()
 subcmd = subcmdfunc(subcmdtable)
 
+def _build_profile_filter(filters):
+    """Create a callable function to filter a profile, returning a boolean"""
+    predicates = {
+         # we need *all* fields in a with filter to be present, so with
+         # should be a subset
+        'with': lambda fields: fields.issubset,
+        # set.isdisjoint returns true when the iterable (dictionary keys)
+        # doesn't have any names in common
+        'without': lambda fields: fields.isdisjoint,
+    }
+    tests = [predicates[k](v) for k, v in sorted(filters.items()) if v]
+    return lambda p: all(t(p) for t in tests)
+
 @subcmd('list', [
     ('r', 'rev', '', _('explain the profile(s) against the specified revision'),
      _('REV')),
+    ('', 'with-field', [],
+     _('Only show profiles that have defined the named metadata field'),
+     _('FIELD')),
+    ('', 'without-field', [],
+     _('Only show profiles that do have not defined the named metadata field'),
+     _('FIELD')),
     ] + commands.templateopts,
-    '[OPTION]')
+    '[OPTION]...')
 def _listprofiles(cmd, ui, repo, *pats, **opts):
     """List available sparse profiles
 
     Show all available sparse profiles, with the active profiles marked.
-    However, if a profile has a key named `hidden` in it's metadata, the profile
-    is excluded from this list unless explicitly active or included in an active
-    profile, or when the `--verbose` switch is used.
+
+    You can filter profiles with `--with-field [FIELD]` and `--without-field
+    [FIELD]`; you can specify these options more than once to set multiple
+    criteria, which all must match for a profile to be listed.
+
+    By default, `--without-field hidden` is implied unless you use the --verbose
+    switch to include hidden profiles.
 
     """
+    filters = {
+        'with': set(opts.get('with_field', ())),
+        'without': set(opts.get('without_field', ())),
+    }
+
+    # It's an error to put a field both in the 'with' and 'without' buckets
+    if filters['with'] & filters['without']:
+        raise error.Abort(
+            _("You can't specify fields in both --with-field and "
+              "--without-field, please use only one or the other, for "
+              "%s") % ','.join(filters['with'] & filters['without']))
+
+    if not (ui.verbose or 'hidden' in filters['with']):
+        # without the -v switch, hide profiles that have 'hidden' set. Unless,
+        # of course, we specifically are filtering on hidden profiles!
+        filters['without'].add('hidden')
+
     chars = {PROFILE_INACTIVE: '', PROFILE_INCLUDED: '~', PROFILE_ACTIVE: '*'}
     labels = {
         PROFILE_INACTIVE: 'inactive',
@@ -1369,8 +1405,14 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
                   'included\n'),
                 label='sparse.profile.legend')
 
-        profiles = list(_discover(
-            ui, repo, include_hidden=ui.verbose, rev=opts.get('rev')))
+        predicate = _build_profile_filter(filters)
+        profiles = list(filter(predicate, _discover(
+            ui, repo, rev=opts.get('rev'))))
+        if not profiles:
+            if fm.isplain():
+                ui.write_err(
+                    _('No profiles matched the filter criteria\n'))
+            return
         max_width = max(len(p.path) for p in profiles)
 
         for info in profiles:
