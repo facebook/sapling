@@ -16,8 +16,12 @@ extern crate futures;
 
 extern crate filenodes;
 extern crate futures_ext;
+#[macro_use]
+extern crate lazy_static;
 extern crate mercurial_types;
 extern crate mononoke_types;
+#[macro_use]
+extern crate stats;
 extern crate tokio;
 
 use db::ConnectionParams;
@@ -33,6 +37,7 @@ use futures::{Future, Stream};
 use futures_ext::{asynchronize, BoxFuture, BoxStream};
 use mercurial_types::{DFileNodeId, RepoPath, RepositoryId};
 use mercurial_types::sql_types::DFileNodeIdSql;
+use stats::Timeseries;
 
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -44,6 +49,12 @@ mod schema;
 use errors::ErrorKind;
 
 pub const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
+
+define_stats! {
+    prefix = "filenodes";
+    gets: timeseries(RATE, SUM),
+    adds: timeseries(RATE, SUM),
+}
 
 #[derive(Clone)]
 pub struct SqliteFilenodes {
@@ -155,6 +166,7 @@ macro_rules! impl_filenodes {
 
                 asynchronize(move || {
                     filenodes.chunks(insert_chunk_size).and_then(move |filenodes| {
+                        STATS::adds.add_value(filenodes.len() as i64);
                         let connection = db.get_conn()?;
                         Self::do_insert(&connection, &filenodes, &repo_id)
                     })
@@ -169,6 +181,7 @@ macro_rules! impl_filenodes {
                 filenode: &DFileNodeId,
                 repo_id: &RepositoryId,
             ) -> BoxFuture<Option<FilenodeInfo>, Error> {
+                STATS::gets.add_value(1);
                 let db = self.clone();
                 let path = path.clone();
                 let filenode = *filenode;

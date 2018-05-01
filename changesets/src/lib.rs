@@ -20,7 +20,11 @@ extern crate tokio;
 
 extern crate db;
 extern crate futures_ext;
+#[macro_use]
+extern crate lazy_static;
 extern crate mercurial_types;
+#[macro_use]
+extern crate stats;
 
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
@@ -42,6 +46,7 @@ use futures::Future;
 use futures_ext::{asynchronize, BoxFuture, FutureExt};
 use mercurial_types::{DChangesetId, RepositoryId};
 use mercurial_types::sql_types::DChangesetIdSql;
+use stats::Timeseries;
 
 mod errors;
 mod schema;
@@ -51,6 +56,12 @@ mod wrappers;
 pub use errors::*;
 use models::{ChangesetInsertRow, ChangesetParentRow, ChangesetRow};
 use schema::{changesets, csparents};
+
+define_stats! {
+    prefix = "changesets";
+    gets: timeseries(RATE, SUM),
+    adds: timeseries(RATE, SUM),
+}
 
 #[derive(Clone, Debug, Eq, Hash, HeapSizeOf, PartialEq)]
 pub struct ChangesetEntry {
@@ -252,6 +263,7 @@ macro_rules! impl_changesets {
                 repo_id: RepositoryId,
                 cs_id: DChangesetId,
             ) -> BoxFuture<Option<ChangesetEntry>, Error> {
+                STATS::gets.add_value(1);
                 let db = self.clone();
 
                 asynchronize(move || {
@@ -294,6 +306,7 @@ macro_rules! impl_changesets {
             /// Insert a new changeset into this table. Checks that all parents are already in
             /// storage.
             fn add(&self, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
+                STATS::adds.add_value(1);
                 let db = self.clone();
 
                 asynchronize(move || {
