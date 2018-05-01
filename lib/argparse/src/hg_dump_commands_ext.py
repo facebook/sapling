@@ -8,7 +8,7 @@
 can be done outside of python code
 """
 
-from mercurial import cmdutil, commands, registrar
+from mercurial import commands, registrar
 
 cmdtable = {}
 command = registrar.command(cmdtable)
