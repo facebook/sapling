@@ -48,4 +48,25 @@ impl TreeState {
             }
         }
     }
+
+    /// Create or replace the existing entry.
+    pub fn insert<K: AsRef<[u8]>>(&mut self, path: K, state: &FileStateV2) -> Result<()> {
+        self.tree.add(&self.store, path.as_ref(), state)
+    }
+
+    pub fn remove<K: AsRef<[u8]>>(&mut self, path: K) -> Result<bool> {
+        self.tree.remove(&self.store, path.as_ref())
+    }
+
+    pub fn get<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<&FileStateV2>> {
+        self.tree.get(&self.store, path.as_ref())
+    }
+
+    pub fn get_mut<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<&mut FileStateV2>> {
+        self.tree.get_mut(&self.store, path.as_ref())
+    }
+
+    pub fn len(&self) -> usize {
+        self.tree.file_count() as usize
+    }
 }
