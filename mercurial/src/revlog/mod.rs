@@ -304,18 +304,12 @@ impl RevlogInner {
 
     /// Return an `Entry` entry from the `RevIdx`.
     fn get_entry(&self, idx: RevIdx) -> Result<Entry> {
-        let mut entry = if let Some(off) = self.offset_for_idx(idx) {
+        if let Some(off) = self.offset_for_idx(idx) {
             // cache hit or computed
-            self.parse_entry(off)?
+            self.parse_entry(off)
         } else {
-            return Err(ErrorKind::Revlog(format!("rev {:?} not found", idx)).into());
-        };
-
-        // Some index entries refer to themselves as their base when they're literal data
-        if entry.baserev.map(Into::into) == Some(idx) {
-            entry.baserev = None;
+            Err(ErrorKind::Revlog(format!("rev {:?} not found", idx)).into())
         }
-        Ok(entry)
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
@@ -362,47 +356,36 @@ impl RevlogInner {
         };
         let end = start + (entry.compressed_len as usize);
         let chunkdata = &chunkdata[start..end];
-        //println!("{:?}: {:?} chunk {}-{}", idx, entry, start, end);
 
-        // If the entry has no baserev then the chunk is literal data, Otherwise
-        // its 0 or more deltas against the baserev. If its general delta, then the
+        // If the entry has baserev that is equal to it's idx, then the chunk is literal data.
+        // Otherwise its 0 or more deltas against the baserev. If its general delta, then the
         // baserev itself might also be delta, otherwise its all the deltas from baserev..idx.
-        if let Some(_baserev) = entry.baserev {
-            let delta = match parser::deltachunk(chunkdata) {
-                IResult::Done(rest, _) if rest.len() != 0 => {
-                    return Err(ErrorKind::Revlog(format!(
-                        "Failed to unpack details: {} remains, {:?}",
-                        rest.len(),
-                        &rest[..16]
-                    )).into());
-                }
-                IResult::Done(_, deltas) => Chunk::Deltas(deltas),
-                err => {
-                    return Err(
-                        ErrorKind::Revlog(format!("Failed to unpack deltas: {:?}", err)).into(),
-                    )
-                }
-            };
-            Ok(delta)
-        } else if chunkdata.len() == 0 {
-            Ok(Chunk::Literal(vec![]))
-        } else {
-            let literal = match parser::literal(chunkdata) {
-                IResult::Done(rest, _) if rest.len() != 0 => {
-                    return Err(ErrorKind::Revlog(format!(
+        if Some(idx) == entry.baserev {
+            if chunkdata.is_empty() {
+                Ok(Chunk::Literal(vec![]))
+            } else {
+                match parser::literal(chunkdata) {
+                    IResult::Done(rest, _) if rest.len() != 0 => Err(ErrorKind::Revlog(format!(
                         "Failed to unpack literal: {} remains, {:?}",
                         rest.len(),
                         &rest[..16]
-                    )).into());
-                }
-                IResult::Done(_, literal) => Chunk::Literal(literal),
-                err => {
-                    return Err(
+                    )).into()),
+                    IResult::Done(_, literal) => Ok(Chunk::Literal(literal)),
+                    err => Err(
                         ErrorKind::Revlog(format!("Failed to unpack literal: {:?}", err)).into(),
-                    )
+                    ),
                 }
-            };
-            Ok(literal)
+            }
+        } else {
+            match parser::deltachunk(chunkdata) {
+                IResult::Done(rest, _) if rest.len() != 0 => Err(ErrorKind::Revlog(format!(
+                    "Failed to unpack details: {} remains, {:?}",
+                    rest.len(),
+                    &rest[..16]
+                )).into()),
+                IResult::Done(_, deltas) => Ok(Chunk::Deltas(deltas)),
+                err => Err(ErrorKind::Revlog(format!("Failed to unpack deltas: {:?}", err)).into()),
+            }
         }
     }
 
@@ -454,24 +437,48 @@ impl RevlogInner {
         let data = loop {
             chunks.push(idx);
 
-            let entry = self.get_entry(idx)?;
-            if let Some(baserev) = entry.baserev.map(Into::into) {
-                if baserev >= idx {
+            let chunk = self.get_chunk(idx).with_context(|_| {
+                format_err!("construct_general tgtidx {:?} idx {:?}", tgtidx, idx)
+            })?;
+
+            // We have three valid cases:
+            // 1) Literal chunk - this is possible only if baserev == idx
+            // 2) Delta against empty string - this is possible only if baserev is None.
+            //    In core hg it matches a case where baserev == -1.
+            // 3) Delta against non-empty string. Only if baserev is Some(...) and baserev < idx.
+            match self.get_entry(idx)?.baserev {
+                Some(baseidx) if idx == baseidx => {
+                    // This is a literal
+                    match chunk {
+                        Chunk::Literal(v) => {
+                            chunks.pop();
+                            break v;
+                        }
+                        _ => {
+                            Err(ErrorKind::Revlog(format!("expected a literal")))?;
+                        }
+                    }
+                }
+                Some(baseidx) if idx > baseidx => {
+                    idx = baseidx;
+                }
+                Some(baseidx) => {
                     Err(ErrorKind::Revlog(format!(
                         "baserev {:?} >= idx {:?}",
-                        baserev, idx
+                        baseidx, idx
                     )))?;
                 }
-                idx = baserev;
-            } else {
-                let idx = chunks.pop().unwrap();
-                let chunk = self.get_chunk(idx).with_context(|_| {
-                    format_err!("construct_general tgtidx {:?} idx {:?}", tgtidx, idx)
-                })?;
-                match chunk {
-                    Chunk::Literal(v) => break v,
-                    _ => panic!("Non-literal chunk with no baserev."),
-                }
+                None => match chunk {
+                    // This is a delta against "-1" revision i.e. empty revision
+                    Chunk::Deltas(_) => {
+                        break vec![];
+                    }
+                    _ => {
+                        Err(ErrorKind::Revlog(format!(
+                            "expected a delta against empty string"
+                        )))?;
+                    }
+                },
             }
         };
 
