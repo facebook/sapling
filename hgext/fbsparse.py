@@ -1366,7 +1366,8 @@ def _build_profile_filter(filters):
     }
     tests = [predicates[k](v) for k, v in sorted(filters.items()) if v]
     # pass in a dictionary with all metadata and the path as an extra key
-    return lambda p: all(t(dict(p, path=p.path)) for t in tests)
+    return lambda p: all(t(dict(p, path=p.path)) # dict-from-generator
+                         for t in tests)
 
 @subcmd('list', [
     ('r', 'rev', '', _('explain the profile(s) against the specified revision'),
