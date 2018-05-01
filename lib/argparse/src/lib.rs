@@ -4,3 +4,4 @@
 extern crate libc;
 
 pub mod argparse;
+pub mod hg_python_commands;

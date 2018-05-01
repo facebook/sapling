@@ -1,7 +1,8 @@
 // a demo of commandline argument parsing to-be-used in future hg binary
 extern crate argparse;
 
-use argparse::argparse::{Arg, Command as ArgParseCommand, ParsedArgs};
+use argparse::argparse::{Command as ArgParseCommand, ParsedArgs};
+use argparse::hg_python_commands::add_hg_python_commands;
 use std::collections::HashMap;
 use std::env;
 
@@ -12,54 +13,43 @@ trait Command {
     fn argparser(&self) -> ArgParseCommand;
 }
 
-/// move commit (and descendats)
-struct RebaseCommand {}
-impl Command for RebaseCommand {
+/// This command is defined solely in the hg rust binary
+struct WhereAmICommand {}
+impl Command for WhereAmICommand {
     fn name(&self) -> String {
-        format!("rebase")
+        format!("whereami")
     }
     fn argparser(&self) -> ArgParseCommand {
-        ArgParseCommand::with_name("rebase").arg(Arg::with_name("rev"))
+        ArgParseCommand::with_name("whereami")
     }
     fn run(&self, args: &ParsedArgs) -> () {
-        println!("Running rebase with args {:?}....", args);
-    }
-}
-
-/// amend the current commit with more changes
-struct AmendCommand {}
-impl Command for AmendCommand {
-    fn name(&self) -> String {
-        format!("amend")
-    }
-    fn argparser(&self) -> ArgParseCommand {
-        ArgParseCommand::with_name("amend").arg(Arg::with_name("e"))
-    }
-    fn run(&self, args: &ParsedArgs) -> () {
-        println!("Running amend with args {:?}....", args);
+        println!("Running whereami with args {:?}....", args);
     }
 }
 
 fn build_command_table() -> (HashMap<String, Box<Command>>) {
-    let commands: Vec<Box<Command>> = vec![Box::new(RebaseCommand {}), Box::new(AmendCommand {})];
+    let commands: Vec<Box<Command>> = vec![Box::new(WhereAmICommand {})];
     commands.into_iter().map(|c| (c.name(), c)).collect()
 }
 
 fn dispatch(args: Vec<String>) -> () {
     let commands = build_command_table();
-    let argparser = commands
+    let mut argparser = commands
         .values()
         .fold(ArgParseCommand::with_name("hg"), |a, c| {
             a.subcommand(c.argparser())
         });
+    // here we're loading other commands definitions so we can parse their arguments
+    argparser = add_hg_python_commands(argparser);
 
     let cmd = argparser.parse(&args);
     match cmd.subcommand {
         Some(ref subcommand) => {
             commands.get(&subcommand.name).map(|c| c.run(&subcommand));
         }
-        None => println!("{:?}", cmd),
+        None => (),
     }
+    println!("{:?}", cmd);
 }
 
 fn main() {
