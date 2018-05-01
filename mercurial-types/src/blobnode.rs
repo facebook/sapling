@@ -23,7 +23,6 @@ impl DParents {
             (None, None) => DParents::None,
             (Some(p1), None) => DParents::One(*p1),
             (None, Some(p2)) => DParents::One(*p2),
-            (Some(p1), Some(p2)) if p1 == p2 => DParents::One(*p1),
             (Some(p1), Some(p2)) => DParents::Two(*p1, *p2),
         }
     }
@@ -167,7 +166,7 @@ mod test {
         {
             let pid: Option<DNodeHash> = p.nodeid();
             let n = DBlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
-            assert_eq!(n.parents, DParents::One(pid.unwrap()));
+            assert_eq!(n.parents, DParents::Two(pid.unwrap(), pid.unwrap()));
             assert!(!n.maybe_copied);
         }
     }

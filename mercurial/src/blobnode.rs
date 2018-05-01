@@ -23,7 +23,6 @@ impl HgParents {
             (None, None) => HgParents::None,
             (Some(p1), None) => HgParents::One(*p1),
             (None, Some(p2)) => HgParents::One(*p2),
-            (Some(p1), Some(p2)) if p1 == p2 => HgParents::One(*p1),
             (Some(p1), Some(p2)) => HgParents::Two(*p1, *p2),
         }
     }
@@ -175,7 +174,7 @@ mod test {
         {
             let pid: Option<HgNodeHash> = p.nodeid();
             let n = HgBlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
-            assert_eq!(n.parents, HgParents::One(pid.unwrap()));
+            assert_eq!(n.parents, HgParents::Two(pid.unwrap(), pid.unwrap()));
             assert!(!n.maybe_copied);
         }
     }
