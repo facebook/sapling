@@ -367,7 +367,7 @@ impl RevlogInner {
         // If the entry has no baserev then the chunk is literal data, Otherwise
         // its 0 or more deltas against the baserev. If its general delta, then the
         // baserev itself might also be delta, otherwise its all the deltas from baserev..idx.
-        if let Some(baserev) = entry.baserev {
+        if let Some(_baserev) = entry.baserev {
             let delta = match parser::deltachunk(chunkdata) {
                 IResult::Done(rest, _) if rest.len() != 0 => {
                     return Err(ErrorKind::Revlog(format!(
@@ -376,7 +376,7 @@ impl RevlogInner {
                         &rest[..16]
                     )).into());
                 }
-                IResult::Done(_, deltas) => Chunk::Deltas(baserev, deltas),
+                IResult::Done(_, deltas) => Chunk::Deltas(deltas),
                 err => {
                     return Err(
                         ErrorKind::Revlog(format!("Failed to unpack deltas: {:?}", err)).into(),
@@ -435,7 +435,7 @@ impl RevlogInner {
                     data = v;
                     chain.clear();
                 }
-                Chunk::Deltas(_, deltas) => {
+                Chunk::Deltas(deltas) => {
                     chain.push(deltas);
                 }
             }
@@ -480,7 +480,7 @@ impl RevlogInner {
             let chunk = self.get_chunk(idx);
 
             match chunk {
-                Ok(Chunk::Deltas(_, deltas)) => deltas,
+                Ok(Chunk::Deltas(deltas)) => deltas,
                 _ => panic!("Literal text found in delta chain."),
             }
         });
@@ -555,7 +555,7 @@ pub enum Chunk {
     /// Literal text of the revision
     Literal(Vec<u8>),
     /// Vector of `Delta`s against a previous version
-    Deltas(RevIdx, Vec<Delta>),
+    Deltas(Vec<Delta>),
 }
 
 struct RevlogInnerIter<'a>(&'a RevlogInner, RevIdx);
