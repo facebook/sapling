@@ -362,6 +362,7 @@ impl Bundle2Resolver {
                 .and_then(move |(p1, p2, _content_blob_result)| {
                     let create_changeset = CreateChangeset {
                         expected_nodeid: Some(node),
+                        expected_files: None,
                         p1,
                         p2,
                         root_manifest,

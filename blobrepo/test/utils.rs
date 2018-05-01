@@ -173,6 +173,7 @@ pub fn create_changeset_no_parents(
 ) -> ChangesetHandle {
     let create_changeset = CreateChangeset {
         expected_nodeid: None,
+        expected_files: None,
         p1: None,
         p2: None,
         root_manifest,
@@ -193,6 +194,7 @@ pub fn create_changeset_one_parent(
 ) -> ChangesetHandle {
     let create_changeset = CreateChangeset {
         expected_nodeid: None,
+        expected_files: None,
         p1: Some(p1),
         p2: None,
         root_manifest,

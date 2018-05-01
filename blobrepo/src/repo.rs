@@ -15,7 +15,7 @@ use ascii::AsciiString;
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
 use failure::{Fail, ResultExt};
 use futures::{Async, Poll};
-use futures::future::Future;
+use futures::future::{self, Future};
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -530,6 +530,7 @@ pub struct ContentBlobMeta {
 pub struct CreateChangeset {
     /// This should always be provided, keeping it an Option for tests
     pub expected_nodeid: Option<HgNodeHash>,
+    pub expected_files: Option<Vec<MPath>>,
     pub p1: Option<ChangesetHandle>,
     pub p2: Option<ChangesetHandle>,
     // root_manifest can be None f.e. when commit removes all the content of the repo
@@ -570,17 +571,26 @@ impl CreateChangeset {
                     let blobstore = repo.blobstore.clone();
                     let logger = repo.logger.clone();
                     let expected_nodeid = self.expected_nodeid;
+                    let expected_files = self.expected_files;
                     let user = self.user;
                     let time = self.time;
                     let extra = self.extra;
                     let comments = self.comments;
 
                     move |((root_manifest, root_hash), (parents, p1_manifest, p2_manifest))| {
-                        compute_changed_files(
-                            &root_manifest,
-                            p1_manifest.as_ref(),
-                            p2_manifest.as_ref(),
-                        ).and_then({
+                        let files = if let Some(expected_files) = expected_files {
+                            // We are trusting the callee to provide a list of changed files, used
+                            // by the import job
+                            future::ok(expected_files).boxify()
+                        } else {
+                            compute_changed_files(
+                                &root_manifest,
+                                p1_manifest.as_ref(),
+                                p2_manifest.as_ref(),
+                            )
+                        };
+
+                        files.and_then({
                             move |files| {
                                 let blobcs = try_boxfuture!(make_new_changeset(
                                     parents,
