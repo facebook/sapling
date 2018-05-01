@@ -10,7 +10,7 @@
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 
 #include <folly/Exception.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include <grp.h>
 #include <pwd.h>
 #include <sys/prctl.h>

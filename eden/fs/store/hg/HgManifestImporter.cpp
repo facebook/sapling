@@ -9,9 +9,9 @@
  */
 #include "HgManifestImporter.h"
 
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 
 #include "eden/fs/model/Tree.h"

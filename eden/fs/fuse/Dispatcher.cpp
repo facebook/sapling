@@ -13,8 +13,8 @@
 #include <folly/Format.h>
 #include <folly/MoveWrapper.h>
 #include <folly/executors/GlobalExecutor.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/logging/xlog.h>
 
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"

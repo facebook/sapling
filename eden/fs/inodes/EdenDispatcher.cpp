@@ -12,7 +12,7 @@
 #include <folly/Format.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/GlobalExecutor.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <shared_mutex>
 

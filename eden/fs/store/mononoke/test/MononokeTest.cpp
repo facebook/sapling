@@ -10,8 +10,8 @@
 
 #include <boost/regex.hpp>
 #include <folly/experimental/TestUtil.h>
-#include <folly/experimental/logging/Init.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/Init.h>
+#include <folly/logging/xlog.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

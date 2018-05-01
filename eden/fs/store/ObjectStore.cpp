@@ -11,9 +11,9 @@
 
 #include <folly/Conv.h>
 #include <folly/Optional.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
+#include <folly/logging/xlog.h>
 #include <stdexcept>
 
 #include "eden/fs/model/Blob.h"

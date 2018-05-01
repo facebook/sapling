@@ -11,10 +11,10 @@
 #include <folly/Format.h>
 #include <folly/Optional.h>
 #include <folly/String.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>
+#include <folly/logging/xlog.h>
 #include <rocksdb/db.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>

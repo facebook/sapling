@@ -12,9 +12,9 @@
 #include <boost/polymorphic_cast.hpp>
 #include <folly/FileUtil.h>
 #include <folly/chrono/Conv.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/logging/xlog.h>
 #include <vector>
 
 #include "eden/fs/fuse/FuseChannel.h"

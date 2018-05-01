@@ -10,7 +10,7 @@
 #include "HgCommand.h"
 
 #include <folly/dynamic.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <thread>
 

@@ -13,9 +13,9 @@
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/logging/xlog.h>
 #include <folly/test/TestUtils.h>
 
 using namespace facebook::eden;

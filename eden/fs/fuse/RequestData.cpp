@@ -9,7 +9,7 @@
  */
 #include "eden/fs/fuse/RequestData.h"
 
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/utils/SystemError.h"

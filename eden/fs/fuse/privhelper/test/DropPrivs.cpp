@@ -12,9 +12,9 @@
 #include <unistd.h>
 #include <array>
 
-#include <folly/experimental/logging/Init.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/init/Init.h>
+#include <folly/logging/Init.h>
+#include <folly/logging/xlog.h>
 
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 

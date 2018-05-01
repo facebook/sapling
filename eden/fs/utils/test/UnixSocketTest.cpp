@@ -16,10 +16,10 @@
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/experimental/TestUtil.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/logging/xlog.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include <random>

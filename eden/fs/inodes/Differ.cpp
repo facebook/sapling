@@ -10,8 +10,8 @@
 #include "eden/fs/inodes/Differ.h"
 #include <folly/Optional.h>
 #include <folly/Synchronized.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/model/Tree.h"

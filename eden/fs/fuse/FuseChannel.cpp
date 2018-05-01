@@ -10,9 +10,9 @@
 #include "eden/fs/fuse/FuseChannel.h"
 
 #include <boost/cast.hpp>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/helpers.h>
 #include <folly/io/async/Request.h>
+#include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 #include <signal.h>
 #include <type_traits>

@@ -12,10 +12,10 @@
 #include <folly/Format.h>
 #include <folly/Optional.h>
 #include <folly/String.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>
+#include <folly/logging/xlog.h>
 #include <array>
 
 #include "eden/fs/model/Blob.h"

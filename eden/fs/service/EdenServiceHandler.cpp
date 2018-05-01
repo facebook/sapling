@@ -13,10 +13,10 @@
 #include <folly/String.h>
 #include <folly/chrono/Conv.h>
 #include <folly/container/Access.h>
-#include <folly/experimental/logging/Logger.h>
-#include <folly/experimental/logging/LoggerDB.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/logging/Logger.h>
+#include <folly/logging/LoggerDB.h>
+#include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 #include "common/stats/ServiceData.h"
 #include "eden/fs/config/ClientConfig.h"

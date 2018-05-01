@@ -16,10 +16,10 @@
 #include <folly/File.h>
 #include <folly/Subprocess.h>
 #include <folly/chrono/Conv.h>
-#include <folly/experimental/logging/Logger.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/logging/Logger.h>
+#include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 
 #include "eden/fs/config/ClientConfig.h"

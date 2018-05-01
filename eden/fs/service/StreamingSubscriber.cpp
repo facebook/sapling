@@ -9,7 +9,7 @@
  */
 #include "StreamingSubscriber.h"
 
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 
 using folly::StringPiece;
 

@@ -13,9 +13,9 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/utils/PathFuncs.h"

@@ -8,7 +8,7 @@
  *
  */
 #include "JournalDelta.h"
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 
 namespace facebook {
 namespace eden {

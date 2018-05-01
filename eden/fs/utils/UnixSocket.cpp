@@ -11,11 +11,11 @@
 
 #include <folly/Exception.h>
 #include <folly/SocketAddress.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/logging/xlog.h>
 #include <folly/portability/Fcntl.h>
 #include <folly/portability/Sockets.h>
 #include <folly/portability/SysUio.h>

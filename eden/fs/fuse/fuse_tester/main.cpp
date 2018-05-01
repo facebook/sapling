@@ -9,10 +9,10 @@
  */
 #include <boost/filesystem.hpp>
 #include <folly/Exception.h>
-#include <folly/experimental/logging/Init.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/init/Init.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/logging/Init.h>
+#include <folly/logging/xlog.h>
 #include <signal.h>
 #include <sysexits.h>
 #include "eden/fs/fuse/Dispatcher.h"

@@ -11,10 +11,10 @@
 
 #include <folly/Optional.h>
 #include <folly/experimental/TestUtil.h>
-#include <folly/experimental/logging/Init.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/init/Init.h>
 #include <folly/io/Cursor.h>
+#include <folly/logging/Init.h>
+#include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/options_util.h>

@@ -10,8 +10,8 @@
 #include "eden/fs/utils/FutureUnixSocket.h"
 
 #include <folly/SocketAddress.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/AsyncTimeout.h>
+#include <folly/logging/xlog.h>
 
 using folly::exception_wrapper;
 using folly::Future;

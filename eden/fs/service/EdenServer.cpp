@@ -14,8 +14,8 @@
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <folly/chrono/Conv.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/AsyncSignalHandler.h>
+#include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>

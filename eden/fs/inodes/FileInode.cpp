@@ -10,10 +10,10 @@
 #include "eden/fs/inodes/FileInode.h"
 
 #include <folly/FileUtil.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/logging/xlog.h>
 #include <openssl/sha.h>
 #include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/EdenMount.h"

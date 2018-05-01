@@ -9,9 +9,9 @@
  */
 #include "eden/fs/takeover/TakeoverClient.h"
 
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"

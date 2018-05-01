@@ -14,7 +14,7 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/Subprocess.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include <sys/stat.h>
 #include <unistd.h>
 

@@ -11,7 +11,7 @@
 
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 
 namespace {
 static std::atomic<int> edenBugDisabledCount{0};

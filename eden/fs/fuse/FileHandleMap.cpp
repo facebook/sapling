@@ -12,7 +12,7 @@
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/Random.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/fs/fuse/DirHandle.h"

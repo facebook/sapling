@@ -7,8 +7,8 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include <folly/experimental/logging/Init.h>
 #include <folly/init/Init.h>
+#include <folly/logging/Init.h>
 #include <gtest/gtest.h>
 
 DEFINE_string(logging, "", "folly::logging configuration");

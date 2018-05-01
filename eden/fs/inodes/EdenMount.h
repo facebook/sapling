@@ -13,9 +13,9 @@
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
-#include <folly/experimental/logging/Logger.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
+#include <folly/logging/Logger.h>
 #include <chrono>
 #include <memory>
 #include <mutex>

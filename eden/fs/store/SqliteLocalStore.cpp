@@ -10,7 +10,7 @@
 #include "eden/fs/store/SqliteLocalStore.h"
 #include <folly/String.h>
 #include <folly/container/Array.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include "eden/fs/sqlite/Sqlite.h"
 #include "eden/fs/store/StoreResult.h"
 namespace facebook {

@@ -15,9 +15,9 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/ScopeGuard.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <sys/socket.h>
 #include <sys/types.h>

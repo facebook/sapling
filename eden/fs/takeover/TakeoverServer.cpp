@@ -14,12 +14,12 @@
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventHandler.h>
+#include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/fs/takeover/TakeoverData.h"

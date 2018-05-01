@@ -9,7 +9,7 @@
  */
 #include "eden/fs/model/git/GlobMatcher.h"
 
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 
 using folly::ByteRange;
 using folly::Expected;

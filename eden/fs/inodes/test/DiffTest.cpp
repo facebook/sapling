@@ -8,7 +8,7 @@
  *
  */
 #include <folly/ExceptionWrapper.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

@@ -9,7 +9,7 @@
  */
 #include "eden/fs/inodes/EdenFileHandle.h"
 
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"

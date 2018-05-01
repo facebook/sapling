@@ -10,8 +10,8 @@
 #include "GitBackingStore.h"
 
 #include <folly/Conv.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/logging/xlog.h>
 #include <git2.h>
 
 #include "eden/fs/model/Blob.h"

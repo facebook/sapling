@@ -17,7 +17,7 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 
 namespace facebook {
 namespace eden {

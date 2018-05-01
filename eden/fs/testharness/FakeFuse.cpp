@@ -12,7 +12,7 @@
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/chrono/Conv.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include "eden/third-party/fuse_kernel_linux.h"

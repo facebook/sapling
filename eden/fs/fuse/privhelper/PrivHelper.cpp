@@ -13,7 +13,7 @@
 #include <folly/Expected.h>
 #include <folly/File.h>
 #include <folly/String.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>

@@ -11,8 +11,8 @@
 
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/logging/xlog.h>
 #include <memory>
 #include <vector>
 

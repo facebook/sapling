@@ -15,10 +15,10 @@
 #include <folly/FileUtil.h>
 #include <folly/container/Array.h>
 #include <folly/experimental/EnvUtil.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>
+#include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <unistd.h>

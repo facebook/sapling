@@ -10,7 +10,7 @@
 #include "eden/fs/testharness/TestDispatcher.h"
 
 #include <folly/Conv.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 
 #include "eden/fs/fuse/RequestData.h"
 

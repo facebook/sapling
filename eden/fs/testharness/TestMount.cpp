@@ -11,8 +11,8 @@
 
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/io/IOBuf.h>
+#include <folly/logging/xlog.h>
 #include <gtest/gtest.h>
 #include <sys/stat.h>
 #include <sys/types.h>

@@ -10,8 +10,8 @@
 #include "FakeBackingStore.h"
 
 #include <folly/Format.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/logging/xlog.h>
 #include <folly/ssl/OpenSSLHash.h>
 
 #include "eden/fs/model/Blob.h"

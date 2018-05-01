@@ -10,9 +10,9 @@
 
 #include <folly/Conv.h>
 #include <folly/experimental/FunctionScheduler.h>
-#include <folly/experimental/logging/Init.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/init/Init.h>
+#include <folly/logging/Init.h>
+#include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <pwd.h>
 #include <sysexits.h>

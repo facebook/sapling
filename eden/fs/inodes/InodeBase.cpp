@@ -10,7 +10,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 
 #include <folly/Likely.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"

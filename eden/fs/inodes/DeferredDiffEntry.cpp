@@ -11,8 +11,8 @@
 
 #include <folly/Optional.h>
 #include <folly/Unit.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/logging/xlog.h>
 #include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"

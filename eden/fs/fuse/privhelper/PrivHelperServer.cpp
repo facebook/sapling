@@ -17,11 +17,11 @@
 #include <folly/FileUtil.h>
 #include <folly/Format.h>
 #include <folly/String.h>
-#include <folly/experimental/logging/GlogStyleFormatter.h>
-#include <folly/experimental/logging/ImmediateFileWriter.h>
-#include <folly/experimental/logging/LogHandlerConfig.h>
-#include <folly/experimental/logging/StandardLogHandler.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/GlogStyleFormatter.h>
+#include <folly/logging/ImmediateFileWriter.h>
+#include <folly/logging/LogHandlerConfig.h>
+#include <folly/logging/StandardLogHandler.h>
+#include <folly/logging/xlog.h>
 #include <signal.h>
 #include <sys/mount.h>
 #include <sys/stat.h>

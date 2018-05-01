@@ -11,7 +11,7 @@
 
 #include <folly/Conv.h>
 #include <folly/Range.h>
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 #include <sys/stat.h>
 #include <ostream>
 

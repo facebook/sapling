@@ -9,7 +9,7 @@
  */
 #include "eden/fs/inodes/CheckoutAction.h"
 
-#include <folly/experimental/logging/xlog.h>
+#include <folly/logging/xlog.h>
 
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/FileInode.h"

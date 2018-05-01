@@ -12,8 +12,8 @@
 #include <folly/ThreadLocal.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
-#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/logging/xlog.h>
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
