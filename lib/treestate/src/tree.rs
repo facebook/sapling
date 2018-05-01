@@ -763,14 +763,14 @@ where
         self.file_count
     }
 
-    pub fn write_full(&mut self, store: &mut Store, old_store: &StoreView) -> Result<()> {
+    pub fn write_full(&mut self, store: &mut Store, old_store: &StoreView) -> Result<BlockId> {
         self.root.write_full(store, old_store)?;
-        Ok(())
+        Ok(self.root.id.unwrap())
     }
 
-    pub fn write_delta(&mut self, store: &mut Store) -> Result<()> {
+    pub fn write_delta(&mut self, store: &mut Store) -> Result<BlockId> {
         self.root.write_delta(store)?;
-        Ok(())
+        Ok(self.root.id.unwrap())
     }
 
     pub fn get<'a>(&'a mut self, store: &StoreView, name: KeyRef) -> Result<Option<&'a T>> {
