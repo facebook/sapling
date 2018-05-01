@@ -114,6 +114,7 @@
   hgext/stat.py not using absolute_import
   hgext/upgradegeneraldelta.py not using absolute_import
   hgext/whereami.py not using absolute_import
+  lib/argparse/src/hg_dump_commands_ext.py not using absolute_import
   tests/bundlerepologger.py not using absolute_import
   tests/comprehensive/test-hgsubversion-custom-layout.py not using absolute_import
   tests/comprehensive/test-hgsubversion-obsstore-on.py not using absolute_import

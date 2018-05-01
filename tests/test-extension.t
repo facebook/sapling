@@ -874,6 +874,7 @@ Show extensions:
   $ hg debugextensions | egrep -v "(default)"
   mq
   strip
+  treedirstate (untested!)
 
 For extensions, which name matches one of its commands, help
 message should ask '-v -e' to get list of built-in aliases
