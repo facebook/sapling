@@ -664,8 +664,16 @@ folly::Optional<bool> FileInode::isSameAsFast(
   }
 
   if (state->hash.hasValue()) {
-    // This file is not materialized, so we can just compare hashes
-    return state->hash.value() == blobID;
+    // This file is not materialized, so we can compare blob hashes.
+    // If the hashes are the same then assume the contents are the same.
+    //
+    // Unfortunately we cannot assume that the file contents are different if
+    // the hashes are different: Mercurial's blob hashes also include history
+    // metadata, so there may be multiple different blob hashes for the same
+    // file contents.
+    if (state->hash.value() == blobID) {
+      return true;
+    }
   }
   return folly::none;
 }
