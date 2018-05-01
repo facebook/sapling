@@ -5,6 +5,7 @@ use filestate::FileStateV2;
 use filestore::FileStore;
 use serialization::Serializable;
 use std::io::Cursor;
+use std::ops::Deref;
 use std::path::Path;
 use store::{BlockId, Store, StoreView};
 use tree::Tree;
@@ -94,5 +95,13 @@ impl TreeState {
 
     pub fn len(&self) -> usize {
         self.tree.file_count() as usize
+    }
+
+    pub fn set_watchman_clock<T: AsRef<[u8]>>(&mut self, clock: T) {
+        self.root.watchman_clock = Vec::from(clock.as_ref()).into_boxed_slice();
+    }
+
+    pub fn get_watchman_clock(&self) -> &[u8] {
+        self.root.watchman_clock.deref()
     }
 }
