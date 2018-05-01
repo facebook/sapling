@@ -4,10 +4,13 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use errors::*;
 use filestate::{FileState, FileStateV2, StateFlags};
-use std::io::{Read, Write};
+use std::hash::Hasher;
+use std::io::{Cursor, Read, Write};
 use store::BlockId;
 use tree::{Key, Node, NodeEntry, NodeEntryMap};
 use treedirstate::TreeDirstateRoot;
+use treestate::TreeStateRoot;
+use twox_hash::XxHash;
 use vlqencoding::{VLQDecode, VLQEncode};
 
 pub trait Serializable
@@ -203,6 +206,53 @@ impl Serializable for TreeDirstateRoot {
         w.write_u32::<BigEndian>(self.tracked_file_count)?;
         w.write_u64::<BigEndian>(self.removed_root_id.0)?;
         w.write_u32::<BigEndian>(self.removed_file_count)?;
+        Ok(())
+    }
+}
+
+#[inline]
+fn xxhash<T: AsRef<[u8]>>(buf: T) -> u64 {
+    let mut xx = XxHash::default();
+    xx.write(buf.as_ref());
+    xx.finish()
+}
+
+impl Serializable for TreeStateRoot {
+    fn deserialize(r: &mut Read) -> Result<Self> {
+        let checksum = r.read_u64::<BigEndian>()?;
+        let mut buf = Vec::new();
+        r.read_to_end(&mut buf)?;
+
+        if xxhash(&buf) != checksum {
+            bail!(ErrorKind::CorruptTree);
+        }
+
+        let mut cur = Cursor::new(buf);
+        let version = cur.read_vlq()?;
+        if version != 0 {
+            bail!(ErrorKind::UnsupportedTreeVersion(version));
+        }
+
+        let tree_block_id = BlockId(cur.read_vlq()?);
+        let file_count = cur.read_vlq()?;
+        let watchman_clock = Box::<[u8]>::deserialize(&mut cur)?;
+
+        Ok(TreeStateRoot {
+            version,
+            tree_block_id,
+            file_count,
+            watchman_clock,
+        })
+    }
+
+    fn serialize(&self, w: &mut Write) -> Result<()> {
+        let mut buf = Vec::new();
+        buf.write_vlq(self.version)?;
+        buf.write_vlq(self.tree_block_id.0)?;
+        buf.write_vlq(self.file_count)?;
+        self.watchman_clock.serialize(&mut buf)?;
+        w.write_u64::<BigEndian>(xxhash(&buf))?;
+        w.write_all(&buf)?;
         Ok(())
     }
 }

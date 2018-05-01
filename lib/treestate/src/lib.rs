@@ -24,6 +24,8 @@ extern crate quickcheck;
 #[cfg(test)]
 extern crate tempdir;
 
+extern crate twox_hash;
+
 extern crate vlqencoding;
 
 pub mod errors;
@@ -33,6 +35,7 @@ pub mod serialization;
 pub mod store;
 pub mod tree;
 pub mod treedirstate;
+pub mod treestate;
 pub mod vecmap;
 
 pub use errors::*;

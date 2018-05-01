@@ -6,6 +6,10 @@ error_chain! {
         NotAStoreFile {
             description("the provided store file is not a valid store file"),
         }
+        UnsupportedTreeVersion(v: u32) {
+            description("tree version not supported"),
+            display("tree version not supported: {}", v),
+        }
         UnsupportedVersion(v: u32) {
             description("store file version not supported"),
             display("store file version not supported: {}", v),
