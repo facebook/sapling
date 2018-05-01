@@ -26,6 +26,12 @@ pub struct Arg {
     requires_value: bool,
 }
 
+#[derive(Copy, Clone)]
+pub enum HelpVisibility {
+    Always,
+    VerboseOnly,
+}
+
 /// Define a command or subcommand.
 /// A command may have a list of arguments and, for subcommands,
 /// be aliased to alternative names.
@@ -39,6 +45,8 @@ pub struct Command {
     subcommands: Vec<Command>,
     /// boring commands are intended not to be logged
     boring: bool,
+    // We hide some commands in non-verbose help output
+    help_visibility: HelpVisibility,
 }
 
 /// Holds the result of a successfully recognized argument
@@ -182,6 +190,7 @@ impl Command {
             args: Vec::new(),
             subcommands: Vec::new(),
             boring: false,
+            help_visibility: HelpVisibility::VerboseOnly,
         }
     }
 
@@ -211,6 +220,11 @@ impl Command {
     /// Boring commands will not be logged.
     pub fn boring(mut self) -> Self {
         self.boring = true;
+        self
+    }
+
+    pub fn help_visibility(mut self, value: HelpVisibility) -> Self {
+        self.help_visibility = value;
         self
     }
 

@@ -1,7 +1,8 @@
-use argparse::{Arg, Command};
+use argparse::{Arg, Command, HelpVisibility};
 pub fn add_hg_python_commands(c: Command) -> Command {
     c.subcommand(
         Command::with_name("undo")
+            .help_visibility(HelpVisibility::Always)
             .arg(Arg::with_name("absolute").short(b'a'))
             .arg(Arg::with_name("branch").short(b'b').requires_value())
             .arg(Arg::with_name("force").short(b'f'))
@@ -11,19 +12,26 @@ pub fn add_hg_python_commands(c: Command) -> Command {
             .arg(Arg::with_name("preview").short(b'p')),
     ).subcommand(
             Command::with_name("debuggentrees")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("skip-allowed-roots").short(b's'))
                 .arg(Arg::with_name("verify")),
         )
         .subcommand(
             Command::with_name("debugcrdump")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("unified").short(b'U').requires_value())
                 .arg(Arg::with_name("lfs").short(b'l'))
                 .arg(Arg::with_name("obsolete")),
         )
-        .subcommand(Command::with_name("debugsuccessorssets").arg(Arg::with_name("closest")))
+        .subcommand(
+            Command::with_name("debugsuccessorssets")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("closest")),
+        )
         .subcommand(
             Command::with_name("help")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("extension").short(b'e'))
                 .arg(Arg::with_name("command").short(b'c'))
                 .arg(Arg::with_name("keyword").short(b'k'))
@@ -50,6 +58,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("tip")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("patch").short(b'p'))
                 .arg(Arg::with_name("git").short(b'g'))
                 .arg(Arg::with_name("style").requires_value())
@@ -65,20 +74,26 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("move-bookmark").short(b'B'))
                 .arg(Arg::with_name("merge")),
         )
-        .subcommand(Command::with_name("gc"))
+        .subcommand(Command::with_name("gc").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("config")
                 .alias("%s")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("untrusted").short(b'u'))
                 .arg(Arg::with_name("edit").short(b'e'))
                 .arg(Arg::with_name("local").short(b'l'))
                 .arg(Arg::with_name("global").short(b'g'))
                 .arg(Arg::with_name("template").short(b'T').requires_value()),
         )
-        .subcommand(Command::with_name("debugdate").arg(Arg::with_name("extended").short(b'e')))
+        .subcommand(
+            Command::with_name("debugdate")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("extended").short(b'e')),
+        )
         .subcommand(
             Command::with_name("debugfileset")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value()),
         )
         .subcommand(
@@ -87,28 +102,38 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugdata")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("changelog").short(b'c'))
                 .arg(Arg::with_name("manifest").short(b'm'))
                 .arg(Arg::with_name("dir").requires_value()),
         )
-        .subcommand(Command::with_name("debugwaitonrepack"))
+        .subcommand(Command::with_name("debugwaitonrepack").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("debugundohistory")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("index").short(b'n').requires_value())
                 .arg(Arg::with_name("list").short(b'l')),
         )
         .subcommand(
             Command::with_name("debugprogress")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("spinner").short(b's'))
                 .arg(Arg::with_name("nototal").short(b'n'))
                 .arg(Arg::with_name("bytes").short(b'b')),
         )
-        .subcommand(Command::with_name("hint").arg(Arg::with_name("ack")))
         .subcommand(
-            Command::with_name("verifyremotefilelog").arg(Arg::with_name("decompress").short(b'd')),
+            Command::with_name("hint")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("ack")),
+        )
+        .subcommand(
+            Command::with_name("verifyremotefilelog")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("decompress").short(b'd')),
         )
         .subcommand(
             Command::with_name("addremove")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("similarity").short(b's').requires_value())
                 .arg(Arg::with_name("subrepos").short(b'S'))
                 .arg(Arg::with_name("include").short(b'I').requires_value())
@@ -117,6 +142,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("parents")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("style").requires_value())
                 .arg(Arg::with_name("template").short(b'T').requires_value())
@@ -124,12 +150,14 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugfilerevision")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("include").short(b'I').requires_value())
                 .arg(Arg::with_name("exclude").short(b'X').requires_value()),
         )
         .subcommand(
             Command::with_name("debugcheckbackup")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("all"))
                 .arg(Arg::with_name("reporoot").requires_value())
                 .arg(Arg::with_name("user").requires_value())
@@ -137,6 +165,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("reflog")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("all"))
                 .arg(Arg::with_name("commits").short(b'c'))
                 .arg(Arg::with_name("patch").short(b'p'))
@@ -148,16 +177,18 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("reset")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("clean").short(b'C'))
                 .arg(Arg::with_name("keep").short(b'k'))
                 .arg(Arg::with_name("rev").short(b'r').requires_value()),
         )
         .subcommand(
             Command::with_name("rollback")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("dry-run").short(b'n'))
                 .arg(Arg::with_name("force").short(b'f')),
         )
-        .subcommand(Command::with_name("debugmergestate"))
+        .subcommand(Command::with_name("debugmergestate").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("amend")
                 .arg(Arg::with_name("addremove").short(b'A'))
@@ -175,13 +206,15 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("no-move-detection"))
                 .arg(Arg::with_name("stack")),
         )
-        .subcommand(Command::with_name("debughistorypack"))
+        .subcommand(Command::with_name("debughistorypack").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("debugformat")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("template").short(b'T').requires_value()),
         )
         .subcommand(
             Command::with_name("debugrevspec")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("optimize"))
                 .arg(Arg::with_name("show-revs"))
                 .arg(Arg::with_name("show-set").short(b's'))
@@ -191,11 +224,13 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugwalk")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("include").short(b'I').requires_value())
                 .arg(Arg::with_name("exclude").short(b'X').requires_value()),
         )
         .subcommand(
             Command::with_name("ssl")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("master").requires_value())
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("all"))
@@ -211,6 +246,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         .subcommand(Command::with_name("debugcheckpartialindex"))
         .subcommand(
             Command::with_name("cherry-pick")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("continue").short(b'c'))
                 .arg(Arg::with_name("abort"))
@@ -224,7 +260,9 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("tool").short(b't').requires_value())
                 .arg(Arg::with_name("dry-run").short(b'n')),
         )
-        .subcommand(Command::with_name("debugcommitmessage"))
+        .subcommand(
+            Command::with_name("debugcommitmessage").help_visibility(HelpVisibility::Always),
+        )
         .subcommand(
             Command::with_name("forget")
                 .arg(Arg::with_name("include").short(b'I').requires_value())
@@ -232,6 +270,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("resolve")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("all").short(b'a'))
                 .arg(Arg::with_name("list").short(b'l'))
                 .arg(Arg::with_name("mark").short(b'm'))
@@ -269,6 +308,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         .subcommand(
             Command::with_name("incoming")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("force").short(b'f'))
                 .arg(Arg::with_name("newest-first").short(b'n'))
                 .arg(Arg::with_name("bundle").requires_value())
@@ -291,6 +331,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugdag")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("tags").short(b't'))
                 .arg(Arg::with_name("branches").short(b'b'))
                 .arg(Arg::with_name("dots"))
@@ -298,6 +339,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("bisect")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("reset").short(b'r'))
                 .arg(Arg::with_name("good").short(b'g'))
                 .arg(Arg::with_name("bad").short(b'b'))
@@ -308,6 +350,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("rebase")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("source").short(b's').requires_value())
                 .arg(Arg::with_name("base").short(b'b').requires_value())
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
@@ -329,6 +372,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("revert")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("all").short(b'a'))
                 .arg(Arg::with_name("date").short(b'd').requires_value())
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
@@ -340,6 +384,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("manifest")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("all"))
                 .arg(Arg::with_name("template").short(b'T').requires_value()),
@@ -348,6 +393,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         .subcommand(
             Command::with_name("outgoing")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("force").short(b'f'))
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("newest-first").short(b'n'))
@@ -368,11 +414,13 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugdatapack")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("long"))
                 .arg(Arg::with_name("node").requires_value()),
         )
         .subcommand(
             Command::with_name("restack")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("source").short(b's').requires_value())
                 .arg(Arg::with_name("base").short(b'b').requires_value())
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
@@ -394,13 +442,16 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugfillinfinitepushmetadata")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("node").requires_value()),
         )
         .subcommand(
-            Command::with_name("debugwaitbackup").arg(Arg::with_name("timeout").requires_value()),
+            Command::with_name("debugwaitbackup")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("timeout").requires_value()),
         )
-        .subcommand(Command::with_name("debugnamecomplete"))
-        .subcommand(Command::with_name("debugdrawdag"))
+        .subcommand(Command::with_name("debugnamecomplete").help_visibility(HelpVisibility::Always))
+        .subcommand(Command::with_name("debugdrawdag").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("smartlog")
                 .alias("%s")
@@ -418,6 +469,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("odiff")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("change").short(b'c').requires_value())
                 .arg(Arg::with_name("text").short(b'a'))
@@ -445,6 +497,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debuglocks")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("force-lock").short(b'L'))
                 .arg(Arg::with_name("force-wlock").short(b'W'))
                 .arg(Arg::with_name("force-undolog-lock").short(b'U'))
@@ -453,11 +506,16 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debuggetbundle")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("head").short(b'H').requires_value())
                 .arg(Arg::with_name("common").short(b'C').requires_value())
                 .arg(Arg::with_name("type").short(b't').requires_value()),
         )
-        .subcommand(Command::with_name("debugshell").alias("%s"))
+        .subcommand(
+            Command::with_name("debugshell")
+                .alias("%s")
+                .help_visibility(HelpVisibility::Always),
+        )
         .subcommand(
             Command::with_name("fold")
                 .alias("%s")
@@ -473,6 +531,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("backfilltree")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("limit").short(b'l').requires_value()),
         )
         .subcommand(
@@ -484,9 +543,10 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("include").short(b'I').requires_value())
                 .arg(Arg::with_name("exclude").short(b'X').requires_value()),
         )
-        .subcommand(Command::with_name("debugpushkey"))
+        .subcommand(Command::with_name("debugpushkey").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("debugupgraderepo")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("optimize").short(b'o').requires_value())
                 .arg(Arg::with_name("run")),
         )
@@ -508,16 +568,18 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("version")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("template").short(b'T').requires_value())
                 .arg(Arg::with_name("svn")),
         )
         .subcommand(
             Command::with_name("debugrebuilddirstate")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("minimal")),
         )
-        .subcommand(Command::with_name("debugancestor"))
+        .subcommand(Command::with_name("debugancestor").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("status")
                 .alias("%s")
@@ -543,6 +605,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("locate")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("print0").short(b'0'))
                 .arg(Arg::with_name("fullpath").short(b'f'))
@@ -551,16 +614,24 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("uncommit")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("keep"))
                 .arg(Arg::with_name("include").short(b'I').requires_value())
                 .arg(Arg::with_name("exclude").short(b'X').requires_value()),
         )
         .subcommand(
-            Command::with_name("tags").arg(Arg::with_name("template").short(b'T').requires_value()),
+            Command::with_name("tags")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("template").short(b'T').requires_value()),
         )
-        .subcommand(Command::with_name("debugcolor").arg(Arg::with_name("style")))
+        .subcommand(
+            Command::with_name("debugcolor")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("style")),
+        )
         .subcommand(
             Command::with_name("journal")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("all"))
                 .arg(Arg::with_name("commits").short(b'c'))
                 .arg(Arg::with_name("patch").short(b'p'))
@@ -572,6 +643,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugpathcomplete")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("full").short(b'f'))
                 .arg(Arg::with_name("normal").short(b'n'))
                 .arg(Arg::with_name("added").short(b'a'))
@@ -580,6 +652,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         .subcommand(
             Command::with_name("purge")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("abort-on-err").short(b'a'))
                 .arg(Arg::with_name("all"))
                 .arg(Arg::with_name("dirs"))
@@ -605,9 +678,10 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("stupid")),
         )
         .subcommand(Command::with_name("debugresolvepartialhash"))
-        .subcommand(Command::with_name("debugcheckstate"))
+        .subcommand(Command::with_name("debugcheckstate").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("sba")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("follow").short(b'f'))
                 .arg(Arg::with_name("follow-first"))
                 .arg(Arg::with_name("date").short(b'd').requires_value())
@@ -635,10 +709,11 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("remote"))
                 .arg(Arg::with_name("sparse")),
         )
-        .subcommand(Command::with_name("debugpvec"))
+        .subcommand(Command::with_name("debugpvec").help_visibility(HelpVisibility::Always))
         .subcommand(Command::with_name("githelp").alias("%s"))
         .subcommand(
             Command::with_name("wgrep")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("after-context").short(b'A').requires_value())
                 .arg(
                     Arg::with_name("before-context")
@@ -664,14 +739,18 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("pullbackup")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("reporoot").requires_value())
                 .arg(Arg::with_name("user").requires_value())
                 .arg(Arg::with_name("hostname").requires_value()),
         )
-        .subcommand(Command::with_name("backfillmanifestrevlog"))
-        .subcommand(Command::with_name("qrecord"))
+        .subcommand(
+            Command::with_name("backfillmanifestrevlog").help_visibility(HelpVisibility::Always),
+        )
+        .subcommand(Command::with_name("qrecord").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("prefetch")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("repack"))
                 .arg(Arg::with_name("base").short(b'b').requires_value())
@@ -731,6 +810,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugdeltachain")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("changelog").short(b'c'))
                 .arg(Arg::with_name("manifest").short(b'm'))
                 .arg(Arg::with_name("dir").requires_value())
@@ -738,6 +818,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("backout")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("merge"))
                 .arg(Arg::with_name("commit"))
                 .arg(Arg::with_name("no-commit"))
@@ -759,15 +840,18 @@ pub fn add_hg_python_commands(c: Command) -> Command {
             Command::with_name("rename")
                 .alias("%s")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("after").short(b'A'))
                 .arg(Arg::with_name("force").short(b'f'))
                 .arg(Arg::with_name("include").short(b'I').requires_value())
                 .arg(Arg::with_name("exclude").short(b'X').requires_value())
                 .arg(Arg::with_name("dry-run").short(b'n')),
         )
-        .subcommand(Command::with_name("debugcapabilities"))
+        .subcommand(Command::with_name("debugcapabilities").help_visibility(HelpVisibility::Always))
         .subcommand(
-            Command::with_name("backupdisable").arg(Arg::with_name("hours").requires_value()),
+            Command::with_name("backupdisable")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("hours").requires_value()),
         )
         .subcommand(
             Command::with_name("split")
@@ -784,9 +868,14 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("remotecmd").requires_value())
                 .arg(Arg::with_name("insecure")),
         )
-        .subcommand(Command::with_name("redo").arg(Arg::with_name("preview").short(b'p')))
+        .subcommand(
+            Command::with_name("redo")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("preview").short(b'p')),
+        )
         .subcommand(
             Command::with_name("strip")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("force").short(b'f'))
                 .arg(Arg::with_name("no-backup"))
@@ -797,6 +886,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("unshelve")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("abort").short(b'a'))
                 .arg(Arg::with_name("continue").short(b'c'))
                 .arg(Arg::with_name("keep").short(b'k'))
@@ -804,10 +894,14 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("tool").short(b't').requires_value())
                 .arg(Arg::with_name("date").requires_value()),
         )
-        .subcommand(Command::with_name("debugapplystreamclonebundle"))
+        .subcommand(
+            Command::with_name("debugapplystreamclonebundle")
+                .help_visibility(HelpVisibility::Always),
+        )
         .subcommand(
             Command::with_name("identify")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("num").short(b'n'))
                 .arg(Arg::with_name("id").short(b'i'))
@@ -829,10 +923,13 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("user").short(b'u').requires_value()),
         )
         .subcommand(
-            Command::with_name("debugremotefilelog").arg(Arg::with_name("decompress").short(b'd')),
+            Command::with_name("debugremotefilelog")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("decompress").short(b'd')),
         )
         .subcommand(
             Command::with_name("heads")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("topo").short(b't'))
                 .arg(Arg::with_name("active").short(b'a'))
@@ -840,9 +937,10 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("style").requires_value())
                 .arg(Arg::with_name("template").short(b'T').requires_value()),
         )
-        .subcommand(Command::with_name("debugsetparents"))
+        .subcommand(Command::with_name("debugsetparents").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("top")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("clean"))
                 .arg(Arg::with_name("newest"))
                 .arg(Arg::with_name("rebase"))
@@ -855,6 +953,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("crecord")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("addremove").short(b'A'))
                 .arg(Arg::with_name("close-branch"))
                 .arg(Arg::with_name("amend"))
@@ -886,9 +985,10 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("move-bookmark").short(b'B'))
                 .arg(Arg::with_name("merge")),
         )
-        .subcommand(Command::with_name("debugignore"))
+        .subcommand(Command::with_name("debugignore").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("debugobsolete")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("flags").requires_value())
                 .arg(Arg::with_name("record-parents"))
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
@@ -899,14 +999,18 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("user").short(b'u').requires_value())
                 .arg(Arg::with_name("template").short(b'T').requires_value()),
         )
-        .subcommand(Command::with_name("debugupdatecaches"))
+        .subcommand(Command::with_name("debugupdatecaches").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("debugrename")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value()),
         )
-        .subcommand(Command::with_name("debugwaitonprefetch"))
+        .subcommand(
+            Command::with_name("debugwaitonprefetch").help_visibility(HelpVisibility::Always),
+        )
         .subcommand(
             Command::with_name("files")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("print0").short(b'0'))
                 .arg(Arg::with_name("include").short(b'I').requires_value())
@@ -917,6 +1021,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         .subcommand(
             Command::with_name("import")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("strip").short(b'p').requires_value())
                 .arg(Arg::with_name("base").short(b'b').requires_value())
                 .arg(Arg::with_name("edit").short(b'e'))
@@ -933,8 +1038,14 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("user").short(b'u').requires_value())
                 .arg(Arg::with_name("similarity").short(b's').requires_value()),
         )
-        .subcommand(Command::with_name("pasterage").arg(Arg::with_name("preview").short(b'p')))
-        .subcommand(Command::with_name("debugrebuildfncache"))
+        .subcommand(
+            Command::with_name("pasterage")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("preview").short(b'p')),
+        )
+        .subcommand(
+            Command::with_name("debugrebuildfncache").help_visibility(HelpVisibility::Always),
+        )
         .subcommand(
             Command::with_name("sparse")
                 .arg(Arg::with_name("force").short(b'f'))
@@ -953,6 +1064,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugdiscovery")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("old"))
                 .arg(Arg::with_name("nonheads"))
                 .arg(Arg::with_name("rev").requires_value())
@@ -962,6 +1074,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugwireargs")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("three").requires_value())
                 .arg(Arg::with_name("four").requires_value())
                 .arg(Arg::with_name("five").requires_value())
@@ -971,6 +1084,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugpickmergetool")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("changedelete"))
                 .arg(Arg::with_name("include").short(b'I').requires_value())
@@ -979,19 +1093,26 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("branch")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("force").short(b'f'))
                 .arg(Arg::with_name("clean").short(b'C'))
                 .arg(Arg::with_name("new")),
         )
-        .subcommand(Command::with_name("unbundle").arg(Arg::with_name("update").short(b'u')))
+        .subcommand(
+            Command::with_name("unbundle")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("update").short(b'u')),
+        )
         .subcommand(
             Command::with_name("debugbuildannotatecache")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("include").short(b'I').requires_value())
                 .arg(Arg::with_name("exclude").short(b'X').requires_value()),
         )
         .subcommand(
             Command::with_name("isbackedup")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("remote")),
         )
@@ -1025,7 +1146,11 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("remote"))
                 .arg(Arg::with_name("sparse")),
         )
-        .subcommand(Command::with_name("debugcomplete").arg(Arg::with_name("options").short(b'o')))
+        .subcommand(
+            Command::with_name("debugcomplete")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("options").short(b'o')),
+        )
         .subcommand(
             Command::with_name("clone")
                 .arg(Arg::with_name("noupdate").short(b'U'))
@@ -1057,6 +1182,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("grep")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("after-context").short(b'A').requires_value())
                 .arg(
                     Arg::with_name("before-context")
@@ -1077,12 +1203,14 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("getavailablebackups")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("all").short(b'a'))
                 .arg(Arg::with_name("user").requires_value())
                 .arg(Arg::with_name("json")),
         )
         .subcommand(
             Command::with_name("repack")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("background"))
                 .arg(Arg::with_name("incremental"))
                 .arg(Arg::with_name("packsonly"))
@@ -1091,6 +1219,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         .subcommand(Command::with_name("unamend"))
         .subcommand(
             Command::with_name("cat")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("output").short(b'o').requires_value())
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("decode"))
@@ -1100,6 +1229,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("record")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("addremove").short(b'A'))
                 .arg(Arg::with_name("close-branch"))
                 .arg(Arg::with_name("amend"))
@@ -1131,6 +1261,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugrevlog")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("changelog").short(b'c'))
                 .arg(Arg::with_name("manifest").short(b'm'))
                 .arg(Arg::with_name("dir").requires_value())
@@ -1138,6 +1269,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("shelve")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("addremove").short(b'A'))
                 .arg(Arg::with_name("unknown").short(b'u'))
                 .arg(Arg::with_name("cleanup"))
@@ -1153,13 +1285,17 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("include").short(b'I').requires_value())
                 .arg(Arg::with_name("exclude").short(b'X').requires_value()),
         )
-        .subcommand(Command::with_name("debugcommands"))
-        .subcommand(Command::with_name("root"))
+        .subcommand(Command::with_name("debugcommands").help_visibility(HelpVisibility::Always))
+        .subcommand(Command::with_name("root").help_visibility(HelpVisibility::Always))
         .subcommand(
-            Command::with_name("debugsub").arg(Arg::with_name("rev").short(b'r').requires_value()),
+            Command::with_name("debugsub")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("rev").short(b'r').requires_value()),
         )
-        .subcommand(Command::with_name("debugtreedirstate"))
-        .subcommand(Command::with_name("debuglabelcomplete"))
+        .subcommand(Command::with_name("debugtreedirstate").help_visibility(HelpVisibility::Always))
+        .subcommand(
+            Command::with_name("debuglabelcomplete").help_visibility(HelpVisibility::Always),
+        )
         .subcommand(
             Command::with_name("summary")
                 .alias("%s")
@@ -1190,6 +1326,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("fsl")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("master").requires_value())
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("all"))
@@ -1204,6 +1341,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("tag")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("force").short(b'f'))
                 .arg(Arg::with_name("local").short(b'l'))
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
@@ -1216,6 +1354,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         .subcommand(Command::with_name("debugrebuildpartialindex"))
         .subcommand(
             Command::with_name("debugtemplate")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("define").short(b'D').requires_value()),
         )
@@ -1240,6 +1379,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("archive")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("no-decode"))
                 .arg(Arg::with_name("prefix").short(b'p').requires_value())
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
@@ -1250,6 +1390,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("graft")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("continue").short(b'c'))
                 .arg(Arg::with_name("abort"))
@@ -1265,23 +1406,32 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("paths")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("template").short(b'T').requires_value())
                 .arg(Arg::with_name("delete").short(b'd').requires_value())
                 .arg(Arg::with_name("add").short(b'a').requires_value()),
         )
-        .subcommand(Command::with_name("recover"))
+        .subcommand(Command::with_name("recover").help_visibility(HelpVisibility::Always))
         .subcommand(
-            Command::with_name("verify").arg(Arg::with_name("rev").short(b'r').requires_value()),
+            Command::with_name("verify")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("rev").short(b'r').requires_value()),
         )
         .subcommand(
             Command::with_name("debugextensions")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("excludedefault"))
                 .arg(Arg::with_name("template").short(b'T').requires_value()),
         )
-        .subcommand(Command::with_name("pushbackup").arg(Arg::with_name("background")))
-        .subcommand(Command::with_name("debugfsinfo"))
+        .subcommand(
+            Command::with_name("pushbackup")
+                .help_visibility(HelpVisibility::Always)
+                .arg(Arg::with_name("background")),
+        )
+        .subcommand(Command::with_name("debugfsinfo").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("histedit")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("commands").requires_value())
                 .arg(Arg::with_name("continue").short(b'c'))
                 .arg(Arg::with_name("edit-plan"))
@@ -1296,11 +1446,13 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debuginstall")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("template").short(b'T').requires_value()),
         )
         .subcommand(
             Command::with_name("copy")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("after").short(b'A'))
                 .arg(Arg::with_name("force").short(b'f'))
                 .arg(Arg::with_name("include").short(b'I').requires_value())
@@ -1309,6 +1461,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("fssl")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("master").requires_value())
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("all"))
@@ -1323,6 +1476,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("histgrep")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("print0").short(b'0'))
                 .arg(Arg::with_name("all"))
                 .arg(Arg::with_name("text").short(b'a'))
@@ -1338,7 +1492,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("exclude").short(b'X').requires_value()),
         )
         .subcommand(Command::with_name("cachemanifest"))
-        .subcommand(Command::with_name("debugkeepset"))
+        .subcommand(Command::with_name("debugkeepset").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("serve")
                 .arg(Arg::with_name("accesslog").short(b'A').requires_value())
@@ -1364,6 +1518,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("sl")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("master").requires_value())
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("all"))
@@ -1376,9 +1531,10 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("style").requires_value())
                 .arg(Arg::with_name("template").short(b'T').requires_value()),
         )
-        .subcommand(Command::with_name("dump_commands"))
+        .subcommand(Command::with_name("dump_commands").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("bundle")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("force").short(b'f'))
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("branch").short(b'b').requires_value())
@@ -1389,10 +1545,11 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("remotecmd").requires_value())
                 .arg(Arg::with_name("insecure")),
         )
-        .subcommand(Command::with_name("debugknown"))
+        .subcommand(Command::with_name("debugknown").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("bookmarks")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("force").short(b'f'))
                 .arg(Arg::with_name("rev").short(b'r').requires_value())
                 .arg(Arg::with_name("delete").short(b'd'))
@@ -1409,12 +1566,14 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugbuilddag")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("mergeable-file").short(b'm'))
                 .arg(Arg::with_name("overwritten-file").short(b'o'))
                 .arg(Arg::with_name("new-file").short(b'n')),
         )
         .subcommand(
             Command::with_name("debugindex")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("changelog").short(b'c'))
                 .arg(Arg::with_name("manifest").short(b'm'))
                 .arg(Arg::with_name("dir").requires_value())
@@ -1422,6 +1581,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("phase")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("public").short(b'p'))
                 .arg(Arg::with_name("draft").short(b'd'))
                 .arg(Arg::with_name("secret").short(b's'))
@@ -1430,6 +1590,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("backupdelete")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("reporoot").requires_value())
                 .arg(Arg::with_name("hostname").requires_value()),
         )
@@ -1443,6 +1604,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("svn")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("svn-url").short(b'u').requires_value())
                 .arg(Arg::with_name("stupid"))
                 .arg(Arg::with_name("authors").short(b'A').requires_value())
@@ -1455,6 +1617,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("branches")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("active").short(b'a'))
                 .arg(Arg::with_name("closed").short(b'c'))
                 .arg(Arg::with_name("template").short(b'T').requires_value())
@@ -1464,6 +1627,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         .subcommand(Command::with_name("debugfastpartialmatchstat"))
         .subcommand(
             Command::with_name("bottom")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("clean"))
                 .arg(Arg::with_name("newest"))
                 .arg(Arg::with_name("bottom"))
@@ -1472,7 +1636,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("move-bookmark").short(b'B'))
                 .arg(Arg::with_name("merge")),
         )
-        .subcommand(Command::with_name("debugssl"))
+        .subcommand(Command::with_name("debugssl").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("merge")
                 .arg(Arg::with_name("force").short(b'f'))
@@ -1480,14 +1644,16 @@ pub fn add_hg_python_commands(c: Command) -> Command {
                 .arg(Arg::with_name("preview").short(b'P'))
                 .arg(Arg::with_name("tool").short(b't').requires_value()),
         )
-        .subcommand(Command::with_name("backupenable"))
+        .subcommand(Command::with_name("backupenable").help_visibility(HelpVisibility::Always))
         .subcommand(
             Command::with_name("chistedit")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("keep").short(b'k'))
                 .arg(Arg::with_name("rev").short(b'r').requires_value()),
         )
         .subcommand(
             Command::with_name("debugindexdot")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("changelog").short(b'c'))
                 .arg(Arg::with_name("manifest").short(b'm'))
                 .arg(Arg::with_name("dir").requires_value()),
@@ -1495,12 +1661,17 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         .subcommand(
             Command::with_name("debugdirstate")
                 .alias("%s")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("nodates"))
                 .arg(Arg::with_name("datesort")),
         )
-        .subcommand(Command::with_name("debugcreatestreamclonebundle"))
+        .subcommand(
+            Command::with_name("debugcreatestreamclonebundle")
+                .help_visibility(HelpVisibility::Always),
+        )
         .subcommand(
             Command::with_name("sb")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("follow").short(b'f'))
                 .arg(Arg::with_name("follow-first"))
                 .arg(Arg::with_name("date").short(b'd').requires_value())
@@ -1530,6 +1701,7 @@ pub fn add_hg_python_commands(c: Command) -> Command {
         )
         .subcommand(
             Command::with_name("debugbundle")
+                .help_visibility(HelpVisibility::Always)
                 .arg(Arg::with_name("all").short(b'a'))
                 .arg(Arg::with_name("part-type").requires_value())
                 .arg(Arg::with_name("spec")),

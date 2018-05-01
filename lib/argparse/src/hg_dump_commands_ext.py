@@ -26,17 +26,20 @@ def gen_args(args):
         yield '.arg(%s)' % ''.join(gen_arg(*arg))
 
 def gen_subcommand(cmd, impl, args, h=None):
-    # ^ is for short help - we'll use it in the future
     # aliases are separated with |
     names = cmd.lstrip("^").split("|")
     yield 'Command::with_name("%s")' % names[0]
 
     for name in names[1:]:
         yield '.alias("%s")'
+
+    # ^ is for hiding in short help
+    if not cmd.startswith('^'):
+        yield '.help_visibility(HelpVisibility::Always)'
     yield ''.join(gen_args(args))
 
 def gen_module(cmdtable):
-    yield 'use argparse::{Arg, Command};\n' \
+    yield 'use argparse::{Arg, Command, HelpVisibility};\n' \
           'pub fn add_hg_python_commands(c: Command) -> Command{\n' \
           'c'
     for name, rest in cmdtable.iteritems():
