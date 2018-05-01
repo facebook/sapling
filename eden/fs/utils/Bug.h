@@ -88,6 +88,17 @@ class EdenBug : public folly::ColdClass {
   folly::exception_wrapper toException();
 
   /**
+   * A wrapper for toException().throw_exception(). A typical use of EDEN_BUG()
+   * where the bug is captured is actually noreturn, but the compiler can't see
+   * that because moved-from EdenBug doesn't throw.
+   *
+   * To avoid compiler warnings, write:
+   *   auto bug = EDEN_BUG() << "...";
+   *   bug.throwException();
+   */
+  [[noreturn]] void throwException();
+
+  /**
    * Prevent EDEN_BUG() from crashing the program, even in debug builds.
    *
    * This is intended to allow unit tests to disable crashing.

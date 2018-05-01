@@ -41,7 +41,7 @@ EdenBug::~EdenBug() noexcept(false) {
   // Callers should only ever store EdenBug objects if they plan to call
   // toException() on them.
   if (throwOnDestruction_) {
-    toException().throw_exception();
+    throwException();
   }
 }
 
@@ -49,6 +49,10 @@ folly::exception_wrapper EdenBug::toException() {
   logError();
   throwOnDestruction_ = false;
   return folly::exception_wrapper(std::runtime_error(message_));
+}
+
+void EdenBug::throwException() {
+  toException().throw_exception();
 }
 
 void EdenBug::logError() {

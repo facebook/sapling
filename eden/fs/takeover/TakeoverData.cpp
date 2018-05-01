@@ -56,7 +56,7 @@ IOBuf TakeoverData::serialize(int32_t protocolVersion) {
       auto bug = EDEN_BUG()
           << "only kTakeoverProtocolVersionOne is supported, but somehow "
           << "we were asked to handle version " << protocolVersion;
-      bug.toException().throw_exception();
+      bug.throwException();
     }
   }
 }
@@ -77,7 +77,7 @@ folly::IOBuf TakeoverData::serializeError(
       auto bug = EDEN_BUG()
           << "only kTakeoverProtocolVersionOne is supported, but somehow "
           << "we were asked to handle version " << protocolVersion;
-      bug.toException().throw_exception();
+      bug.throwException();
     }
   }
 }
