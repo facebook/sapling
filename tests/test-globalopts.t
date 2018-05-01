@@ -357,6 +357,7 @@ Testing -h/--help:
    progressfile  allows users to have JSON progress bar information written to a
                  path
    simplecache
+   treedirstate  tree-based dirstate implementation
   
   additional help topics:
   
@@ -455,6 +456,7 @@ Testing -h/--help:
    progressfile  allows users to have JSON progress bar information written to a
                  path
    simplecache
+   treedirstate  tree-based dirstate implementation
   
   additional help topics:
   

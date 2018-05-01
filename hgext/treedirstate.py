@@ -566,7 +566,11 @@ class treedirstatemap(object):
         return w.buffer.getvalue()
 
 def istreedirstate(repo):
-    return 'treedirstate' in getattr(repo, 'requirements', set())
+    requirements = getattr(repo, 'requirements', ())
+    # Eden has its own dirstate implementation
+    if 'eden' in requirements:
+        return False
+    return 'treedirstate' in requirements
 
 def activealternativedirstates(repo):
     """

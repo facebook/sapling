@@ -114,6 +114,7 @@ Short help:
    progressfile  allows users to have JSON progress bar information written to a
                  path
    simplecache
+   treedirstate  tree-based dirstate implementation
   
   additional help topics:
   
@@ -206,6 +207,7 @@ Short help:
    progressfile  allows users to have JSON progress bar information written to a
                  path
    simplecache
+   treedirstate  tree-based dirstate implementation
   
   additional help topics:
   
@@ -284,6 +286,7 @@ Test extension help:
                      to a path
        rebase        command to move sets of revisions to a different ancestor
        simplecache
+       treedirstate  tree-based dirstate implementation
   
       disabled extensions:
   
@@ -407,7 +410,6 @@ Test extension help:
        stat          (no help text available)
        strip         strip changesets and their descendants from history
        transplant    command to transplant changesets from another branch
-       treedirstate  tree-based dirstate implementation
        treemanifest
        tweakdefaults
                      user friendly defaults
@@ -1031,6 +1033,7 @@ Test that default list of commands omits extension commands
    progressfile  allows users to have JSON progress bar information written to a
                  path
    simplecache
+   treedirstate  tree-based dirstate implementation
   
   additional help topics:
   
@@ -1145,6 +1148,8 @@ Test list of internal help commands
                  show set of successors for revision
    debugtemplate
                  parse and apply a template
+   debugtreedirstate
+                 manage treedirstate
    debugupdatecaches
                  warm all known caches in the repository
    debugupgraderepo

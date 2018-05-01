@@ -1,4 +1,5 @@
   $ hg debugextensions --excludedefault
+  treedirstate (untested!)
 
   $ debugpath=`pwd`/extwithoutinfos.py
 
@@ -26,6 +27,7 @@
   mq
   patchbomb
   rebase
+  treedirstate (untested!)
 
   $ hg debugextensions -v --excludedefault
   ext1
@@ -48,6 +50,9 @@
   rebase
     location: */hgext/rebase.py* (glob)
     bundled: yes
+  treedirstate
+    location: */treedirstate.py* (glob)
+    bundled: no
 
   $ hg debugextensions --excludedefault -Tjson | sed 's|\\\\|/|g'
   [
@@ -91,6 +96,13 @@
     "bundled": true,
     "name": "rebase",
     "source": "*/hgext/rebase.py*", (glob)
+    "testedwith": []
+   },
+   {
+    "buglink": "",
+    "bundled": false,
+    "name": "treedirstate",
+    "source": "*/hgext/treedirstate.py*", (glob)
     "testedwith": []
    }
   ]

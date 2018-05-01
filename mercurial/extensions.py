@@ -52,7 +52,7 @@ _sysroot = os.path.abspath(os.path.join(os.__file__, '../'))
 # This allows us to integrate extensions into the codebase while leaving them in
 # hgext/ -- useful for extensions that need cleaning up, or significant
 # integration work, to be brought into mercurial/.
-DEFAULT_EXTENSIONS = [
+DEFAULT_EXTENSIONS = {
     'conflictinfo',
     'debugshell',
     'errorredirect',
@@ -60,13 +60,20 @@ DEFAULT_EXTENSIONS = [
     'mergedriver',
     'progressfile',
     'simplecache',
-]
+}
+
+# Similar to DEFAULT_EXTENSIONS. But cannot be disabled.
+ALWAYS_ON_EXTENSIONS = {
+    'treedirstate',
+}
 
 def extensions(ui=None):
     if ui:
         def enabled(name):
             for format in ['%s', 'hgext.%s']:
                 conf = ui.config('extensions', format % name)
+                if name in ALWAYS_ON_EXTENSIONS:
+                    return True
                 if conf is not None and not conf.startswith('!'):
                     return True
                 # Check DEFAULT_EXTENSIONS if no config for this extension was
@@ -303,11 +310,16 @@ def loadall(ui, whitelist=None):
 
     # Add all extensions in `DEFAULT_EXTENSIONS` that were not defined by
     # extensions.
-    result += [(name, '') for name in DEFAULT_EXTENSIONS
+    result += [(name, '') for name in sorted(DEFAULT_EXTENSIONS)
                if name not in resultkeys]
+
+    # Always enable `ALWAYS_ON_EXTENSIONS`
+    result = [(k, v) for (k, v) in result if k not in ALWAYS_ON_EXTENSIONS]
+    result += [(name, '') for name in sorted(ALWAYS_ON_EXTENSIONS)]
 
     if whitelist is not None:
         result = [(k, v) for (k, v) in result if k in whitelist]
+
     newindex = len(_order)
     for (name, path) in result:
         if path:
