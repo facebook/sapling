@@ -49,6 +49,32 @@ impl TreeState {
         }
     }
 
+    /// Flush dirty entries. Return new `root_id` that can be passed to `open`.
+    pub fn flush(&mut self) -> Result<BlockId> {
+        let tree_block_id = { self.tree.write_delta(&mut self.store)? };
+        self.write_root(tree_block_id)
+    }
+
+    /// Save as a new file.
+    pub fn write_as<P: AsRef<Path>>(&mut self, path: P) -> Result<BlockId> {
+        let mut new_store = FileStore::create(path)?;
+        let tree_block_id = self.tree.write_full(&mut new_store, &self.store)?;
+        self.store = new_store;
+        let root_id = self.write_root(tree_block_id)?;
+        Ok(root_id)
+    }
+
+    fn write_root(&mut self, tree_block_id: BlockId) -> Result<BlockId> {
+        self.root.tree_block_id = tree_block_id;
+        self.root.file_count = self.len() as u32;
+
+        let mut root_buf = Vec::new();
+        self.root.serialize(&mut root_buf)?;
+        let result = self.store.append(&root_buf)?;
+        self.store.flush()?;
+        Ok(result)
+    }
+
     /// Create or replace the existing entry.
     pub fn insert<K: AsRef<[u8]>>(&mut self, path: K, state: &FileStateV2) -> Result<()> {
         self.tree.add(&self.store, path.as_ref(), state)
