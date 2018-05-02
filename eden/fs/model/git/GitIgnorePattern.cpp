@@ -133,8 +133,10 @@ Optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
     }
   }
 
-  // Create the GlobMatcher
-  auto matcher = GlobMatcher::create(line);
+  // Create the GlobMatcher. Note in gitignore(5), a '**' should include path
+  // components that start with '.', so we do not enable the IGNORE_DOTFILES
+  // option.
+  auto matcher = GlobMatcher::create(line, GlobOptions::DEFAULT);
   if (!matcher.hasValue()) {
     return folly::none;
   }

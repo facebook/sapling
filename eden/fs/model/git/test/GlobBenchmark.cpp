@@ -76,7 +76,7 @@ class GlobMatcherImpl {
  public:
   GlobMatcherImpl() {}
   void init(folly::StringPiece glob) {
-    matcher_ = GlobMatcher::create(glob).value();
+    matcher_ = GlobMatcher::create(glob, GlobOptions::DEFAULT).value();
   }
 
   bool match(folly::StringPiece input) {

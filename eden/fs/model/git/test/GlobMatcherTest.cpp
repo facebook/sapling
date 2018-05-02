@@ -19,9 +19,9 @@ using folly::StringPiece;
 // due to a gcc / gtest bug: https://github.com/google/googletest/issues/322
 // We have to explicitly break this out in to separate EXPECT_TRUE /
 // EXPECT_FALSE checks.
-#define EXPECT_MATCH_IMPL(text, glob, expected)            \
+#define EXPECT_MATCH_IMPL(text, glob, options, expected)   \
   do {                                                     \
-    auto matcher = GlobMatcher::create(glob);              \
+    auto matcher = GlobMatcher::create(glob, options);     \
     if (!matcher.hasValue()) {                             \
       ADD_FAILURE() << "failed to compile glob \"" << glob \
                     << "\": " << matcher.error();          \
@@ -31,9 +31,16 @@ using folly::StringPiece;
       EXPECT_FALSE(matcher.value().match(text));           \
     }                                                      \
   } while (0)
-#define EXPECT_MATCH(text, glob) EXPECT_MATCH_IMPL(text, glob, true)
-#define EXPECT_NOMATCH(text, glob) EXPECT_MATCH_IMPL(text, glob, false)
-#define EXPECT_BADGLOB(glob) EXPECT_TRUE(GlobMatcher::create(glob).hasError())
+#define EXPECT_MATCH(text, glob) \
+  EXPECT_MATCH_IMPL(text, glob, GlobOptions::DEFAULT, true)
+#define EXPECT_NOMATCH(text, glob) \
+  EXPECT_MATCH_IMPL(text, glob, GlobOptions::DEFAULT, false)
+#define EXPECT_IGNORE_DOTFILES_MATCH(text, glob) \
+  EXPECT_MATCH_IMPL(text, glob, GlobOptions::IGNORE_DOTFILES, true)
+#define EXPECT_IGNORE_DOTFILES_NOMATCH(text, glob) \
+  EXPECT_MATCH_IMPL(text, glob, GlobOptions::IGNORE_DOTFILES, false)
+#define EXPECT_BADGLOB(glob) \
+  EXPECT_TRUE(GlobMatcher::create(glob, GlobOptions::DEFAULT).hasError())
 
 TEST(Glob, testsFromGit) {
   // Patterns taken from git's test cases,
@@ -246,9 +253,76 @@ TEST(Glob, testsFromGit) {
   EXPECT_MATCH("Z", "[Z-y]");
 }
 
+TEST(Glob, testIgnoreDotfiles) {
+  // Test '*' glob followed by a literal at the start of a pattern.
+  EXPECT_IGNORE_DOTFILES_MATCH("Foo.cpp", "*.cpp");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".Foo.cpp", "*.cpp");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".cpp", "*.cpp");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".cpp.cpp", "*.cpp");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("..cpp", "*.cpp");
+
+  // Test '*' glob followed by a literal that follows a '/'.
+  EXPECT_IGNORE_DOTFILES_MATCH("/Foo.cpp", "/*.cpp");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("/.Foo.cpp", "/*.cpp");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("/.cpp", "/*.cpp");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("/.cpp.cpp", "/*.cpp");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("/..cpp", "/*.cpp");
+
+  // Test '*.' does not do a zero-length match when at the start of a pattern.
+  EXPECT_IGNORE_DOTFILES_MATCH("foo.dir/bar.txt", "*.dir/*.txt");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".dir/bar.txt", "*.dir/*.txt");
+
+  // Test '*' glob followed by a literal that follows a non-'/'.
+  EXPECT_IGNORE_DOTFILES_MATCH("XFoo.cpp", "X*.cpp");
+  EXPECT_IGNORE_DOTFILES_MATCH("X.Foo.cpp", "X*.cpp");
+  EXPECT_IGNORE_DOTFILES_MATCH("X.cpp", "X*.cpp");
+  EXPECT_IGNORE_DOTFILES_MATCH("X.cpp.cpp", "X*.cpp");
+  EXPECT_IGNORE_DOTFILES_MATCH("X..cpp", "X*.cpp");
+
+  // Test '*' glob with no patterns after it that follows a '/'.
+  EXPECT_IGNORE_DOTFILES_MATCH("foo/bar", "foo/*");
+  EXPECT_IGNORE_DOTFILES_MATCH("foo/b.ar", "foo/*");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("foo/.bar", "foo/*");
+
+  // Test '*' glob with no patterns after it that follows a non-'/'.
+  EXPECT_IGNORE_DOTFILES_MATCH("foo/bar", "foo/b*");
+  EXPECT_IGNORE_DOTFILES_MATCH("foo/b.", "foo/b*");
+  EXPECT_IGNORE_DOTFILES_MATCH("foo/b.ar", "foo/b*");
+
+  // Test '*' followed by a glob special.
+  EXPECT_IGNORE_DOTFILES_NOMATCH("foo/.bar", "foo/*[\\.a-z]*");
+  EXPECT_IGNORE_DOTFILES_MATCH("foo/b.", "foo/b*[\\.]");
+  EXPECT_IGNORE_DOTFILES_MATCH("foo/b..", "foo/b*[\\.]");
+
+  // Test '**/' prefix.
+  EXPECT_IGNORE_DOTFILES_MATCH("foo/bar", "**/bar");
+  EXPECT_IGNORE_DOTFILES_MATCH("baz/foo/bar", "**/bar");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".foo/bar", "**/bar");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("baz/.foo/bar", "**/bar");
+
+  // Test '/**' suffix as the entire pattern.
+  EXPECT_IGNORE_DOTFILES_MATCH("/bar", "/**");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("/.bar", "/**");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".bar", "/**");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("", "/**");
+
+  // Test '/**' suffix matching in its own directory.
+  EXPECT_IGNORE_DOTFILES_MATCH("foo/bar", "foo/**");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("foo/.bar", "foo/**");
+
+  // Test '/**' suffix matching in a descendant directory.
+  EXPECT_IGNORE_DOTFILES_MATCH("foo/bar/baz", "foo/**");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("foo/bar/.baz", "foo/**");
+}
+
 TEST(Glob, testOther) {
   // Test parsing "**" by itself
   EXPECT_BADGLOB("**");
+
+  // Currently, we reject "**/" if it does not follow a slash or appear at the
+  // start of a pattern because that's what Git's matcher code does. It would
+  // be reasonable to support this if we have a valid use case in the future.
+  EXPECT_BADGLOB("foo**/");
 
   // Test a range expression using non-ASCII byte values
   EXPECT_MATCH("foo\xaatest", "foo[\xa0-\xaf]test");
@@ -257,7 +331,9 @@ TEST(Glob, testOther) {
 }
 
 void testCharClass(StringPiece name, int (*libcFn)(int)) {
-  auto matcher = GlobMatcher::create("[[:" + name.str() + ":]]").value();
+  auto matcher =
+      GlobMatcher::create("[[:" + name.str() + ":]]", GlobOptions::DEFAULT)
+          .value();
 
   uint8_t ch = 0;
   StringPiece text{ByteRange(&ch, 1)};

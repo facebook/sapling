@@ -28,15 +28,21 @@ enum : uint8_t {
   // literal opcodes with a max length of 255 bytes each.
   GLOB_LITERAL = 'S',
   // GLOB_STAR matches 0 or more characters.
+  // This is followed by a bool byte. If true, the pattern can match text
+  // that starts with a '.'.
   // Any character except '/' can be matched.
   GLOB_STAR = '*',
   // GLOB_STAR_STAR_END matches all remaining text.
+  // This is followed by a bool byte. If true, a path component in the pattern
+  // can start with a '.'.
   // If GLOB_STAR_STAR_END appears it is always the very last opcode in the
   // pattern buffer.
   GLOB_STAR_STAR_END = '>',
   // GLOB_STAR_STAR_SLASH matches either:
   // - 0 characters
   // - 1 or more characters followed by a slash
+  // This is followed by a bool byte. If true, a path component in the pattern
+  // can start with a '.'.
   GLOB_STAR_STAR_SLASH = 'X',
   // GLOB_CHAR_CLASS matches a character class.
   // This is followed by a list of characters to match.
@@ -50,6 +56,8 @@ enum : uint8_t {
   GLOB_CHAR_CLASS = '[',
   // GLOB_CHAR_CLASS_NEGATED is like GLOB_CHAR_CLASS, but matches
   // only if the character does not match the character class.
+  // TODO: Do not let a negated character class pattern match a "." at the start
+  // of a file name, as specified in the POSIX docs.
   GLOB_CHAR_CLASS_NEGATED = ']',
   GLOB_CHAR_CLASS_END = '\x00',
   GLOB_CHAR_CLASS_RANGE = '\x01',
@@ -57,13 +65,33 @@ enum : uint8_t {
   GLOB_QMARK = '?',
   // GLOB_ENDS_WITH matches a literal section at the end of the string.
   // We optimize GLOB_STAR+GLOB_LITERAL at the end of the pattern into
-  // GLOB_ENDS_WITH.
+  // GLOB_ENDS_WITH, so it is composed of the bool byte from GLOB_STAR followed
+  // by the data from GLOB_LITERAL.
   GLOB_ENDS_WITH = '$',
+  // Used to represent boolean values associated with an opcode.
+  GLOB_TRUE = 'T',
+  GLOB_FALSE = 'F',
 };
+
 } // namespace
 
 namespace facebook {
 namespace eden {
+
+GlobOptions operator|(GlobOptions a, GlobOptions b) {
+  return static_cast<GlobOptions>(
+      static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+GlobOptions& operator|=(GlobOptions& a, GlobOptions b) {
+  a = (a | b);
+  return a;
+}
+
+bool operator&(GlobOptions a, GlobOptions b) {
+  return (static_cast<uint32_t>(a) & static_cast<uint32_t>(b)) != 0;
+}
+
 GlobMatcher::GlobMatcher(vector<uint8_t> pattern)
     : pattern_(std::move(pattern)) {}
 
@@ -86,7 +114,9 @@ GlobMatcher::~GlobMatcher() {}
  * - About 60% are simple fixed strings, with no wildcards
  * - About 27% are simple "ends with" patterns (e.g., "*.txt")
  */
-Expected<GlobMatcher, string> GlobMatcher::create(StringPiece glob) {
+Expected<GlobMatcher, string> GlobMatcher::create(
+    StringPiece glob,
+    GlobOptions options) {
   vector<uint8_t> result;
   // Make a guess at how big the pattern buffer will be.
   // We require 2 extra bytes for each literal chunk.  We save a byte for "**"
@@ -117,6 +147,10 @@ Expected<GlobMatcher, string> GlobMatcher::create(StringPiece glob) {
     }
   };
 
+  auto appendBool = [&](bool b) {
+    result.push_back(b ? GLOB_TRUE : GLOB_FALSE);
+  };
+
   // Note: watchman's wildcard matching code treats '/' slightly specially:
   // it can match 1 or more '/' characters.  For example, "foo/bar" would match
   // "foo///bar".
@@ -125,6 +159,7 @@ Expected<GlobMatcher, string> GlobMatcher::create(StringPiece glob) {
   // already have been normalized, so we should never have repeated slashes in
   // the text being matched.
 
+  auto includeDotfiles = !(options & GlobOptions::IGNORE_DOTFILES);
   for (size_t idx = 0; idx < glob.size(); ++idx) {
     char c = glob[idx];
     if (c == '\\') {
@@ -158,9 +193,16 @@ Expected<GlobMatcher, string> GlobMatcher::create(StringPiece glob) {
                 "invalid \"**\" sequence at end of pattern without slash");
           }
           addOpcode(GLOB_STAR_STAR_END);
+          appendBool(includeDotfiles);
         } else if (glob[idx + 1] == '/') {
+          if (idx >= 2 && glob[idx - 2] != '/') {
+            return folly::makeUnexpected<string>(
+                "\"**/\" must follow a slash or appear at the start of a pattern");
+          }
+
           ++idx;
           addOpcode(GLOB_STAR_STAR_SLASH);
+          appendBool(includeDotfiles);
         } else {
           // Reject the pattern if "**" isn't followed by the end of the
           // pattern or a "/"
@@ -168,6 +210,10 @@ Expected<GlobMatcher, string> GlobMatcher::create(StringPiece glob) {
         }
       } else {
         addOpcode(GLOB_STAR);
+        // If includeDotfiles is false, then "*.cpp" should not match
+        // ".bak.cpp", but "My*.cpp" should match "My.foo.cpp", so we must check
+        // the preceding character.
+        appendBool(includeDotfiles || (idx != 0 && glob[idx - 1] != '/'));
       }
     } else if (c == '[') {
       // Translate a bracket expression
@@ -188,8 +234,19 @@ Expected<GlobMatcher, string> GlobMatcher::create(StringPiece glob) {
   // translate this into GLOB_ENDS_WITH.
   if (prevOpcodeIdx >= 0 && result[prevOpcodeIdx] == GLOB_STAR &&
       result[curOpcodeIdx] == GLOB_LITERAL) {
-    result.erase(result.begin() + prevOpcodeIdx);
-    DCHECK(result[prevOpcodeIdx] == GLOB_LITERAL);
+    // Currently, the end of the result vector contains:
+    //
+    // [prevOpcodeIdx] GLOB_STAR
+    //                 GLOB_STAR matchCanStartWithDot bool
+    // [curOpcodeIdx]  GLOB_LITERAL
+    //                 GLOB_LITERAL data
+    //
+    // We modify it so it becomes:
+    //
+    // [prevOpcodeIdx] GLOB_ENDS_WITH
+    //                 GLOB_STAR matchCanStartWithDot bool
+    // [curOpcodeIdx]  GLOB_LITERAL data
+    result.erase(result.begin() + curOpcodeIdx);
     result[prevOpcodeIdx] = GLOB_ENDS_WITH;
   }
 
@@ -459,6 +516,16 @@ bool GlobMatcher::tryMatchAt(
     } else if (pattern_[patternIdx] == GLOB_STAR) {
       // '*' matches 0 or more characters, excluding '/'
       ++patternIdx;
+      auto matchCanStartWithDot = pattern_[patternIdx] == GLOB_TRUE;
+      ++patternIdx;
+
+      // If the glob cannot match text starting with a dot, but the text
+      // has a dot here, then it cannot match.
+      if (!matchCanStartWithDot && textIdx < text.size() &&
+          text[textIdx] == '.') {
+        return false;
+      }
+
       if (patternIdx >= pattern_.size()) {
         // This '*' is at the end of the pattern.
         // We match as long as there are no more '/' characters
@@ -506,6 +573,22 @@ bool GlobMatcher::tryMatchAt(
         return false;
       }
     } else if (pattern_[patternIdx] == GLOB_ENDS_WITH) {
+      // Advance patternIdx to read the bool from the original GLOB_STAR.
+      ++patternIdx;
+      auto matchCanStartWithDot = pattern_[patternIdx] == GLOB_TRUE;
+
+      // If the glob match is not allowed to start with a dot then we also
+      // reject cases where it matches the empty string followed by a dot.
+      // We intentionally do not allow `*.cpp` to match `.cpp`
+      // This matches the behavior of the POSIX fnmatch() function.
+      // Because any match of '*' will start from the current textIdx, we
+      // can return right away if we know any match would start with an
+      // illegal dot.
+      if (!matchCanStartWithDot && textIdx < text.size() &&
+          text[textIdx] == '.') {
+        return false;
+      }
+
       // An "ends-with" section
       uint8_t length = pattern_[patternIdx + 1];
       const uint8_t* literal = pattern_.data() + patternIdx + 2;
@@ -524,9 +607,26 @@ bool GlobMatcher::tryMatchAt(
                  text.size() - (textIdx + length)) == nullptr;
     } else if (pattern_[patternIdx] == GLOB_STAR_STAR_END) {
       // This is '**' at the end of a pattern.  It matches everything else in
-      // the text.
-      return true;
+      // the text. However, if this matcher was created with
+      // GlobOptions::IGNORE_DOTFILES, then we must ensure that none of the path
+      // components in the remaining text start with a '.'.
+      ++patternIdx;
+      auto pathComponentInMatchCanStartWithDot =
+          pattern_[patternIdx] == GLOB_TRUE;
+      if (pathComponentInMatchCanStartWithDot) {
+        return true;
+      }
+
+      // By construction, we know that GLOB_STAR_STAR_END is preceded by a
+      // slash, so we can start from the previous character and scan the
+      // remaining text for "/." If we find one, then this is not a match.
+      auto searchIndex = textIdx == 0 ? 0 : textIdx - 1;
+      return text.find("/.", searchIndex) == StringPiece::npos;
     } else if (pattern_[patternIdx] == GLOB_STAR_STAR_SLASH) {
+      ++patternIdx;
+      auto pathComponentInMatchCannotStartWithDot =
+          pattern_[patternIdx] == GLOB_FALSE;
+
       // This is "**/"
       // It may match nothing at all, or it may match some arbitrary number of
       // characters followed by a slash.
@@ -535,11 +635,20 @@ bool GlobMatcher::tryMatchAt(
         if (tryMatchAt(text, textIdx, patternIdx)) {
           return true;
         }
-        textIdx = text.find('/', textIdx + 1);
+
+        auto prevTextIdx = textIdx;
+        textIdx = text.find('/', prevTextIdx + 1);
         if (textIdx == StringPiece::npos) {
           // No match.
           return false;
+        } else if (
+            pathComponentInMatchCannotStartWithDot &&
+            text[prevTextIdx] == '.') {
+          // Verify the path component does not start with an illegal dot
+          // before proceeding.
+          return false;
         }
+
         ++textIdx;
       }
     } else {

@@ -28,7 +28,7 @@ GlobNode::GlobNode(StringPiece pattern, bool hasSpecials)
   if (pattern_ == "**" || pattern_ == "*") {
     alwaysMatch_ = true;
   } else {
-    auto compiled = GlobMatcher::create(pattern);
+    auto compiled = GlobMatcher::create(pattern, GlobOptions::DEFAULT);
     if (compiled.hasError()) {
       throw newEdenError(
           EINVAL,

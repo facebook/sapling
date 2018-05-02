@@ -18,6 +18,19 @@ namespace facebook {
 namespace eden {
 
 /**
+ * Options type for GlobMatcher::create(). Multiple values can be OR'd together.
+ * DEFAULT should be used to signal no options should be enabled.
+ */
+enum class GlobOptions : uint32_t {
+  DEFAULT = 0x00,
+  IGNORE_DOTFILES = 0x01,
+};
+
+GlobOptions operator|(GlobOptions a, GlobOptions b);
+GlobOptions& operator|=(GlobOptions& a, GlobOptions b);
+bool operator&(GlobOptions a, GlobOptions b);
+
+/**
  * GlobMatcher performs matching of filename glob patterns.
  *
  * This aims to be 100% compatible with the syntax used in gitignore files.
@@ -51,7 +64,8 @@ class GlobMatcher {
    * fails.
    */
   static folly::Expected<GlobMatcher, std::string> create(
-      folly::StringPiece glob);
+      folly::StringPiece glob,
+      GlobOptions options);
 
   /**
    * Match a string against this glob pattern.
