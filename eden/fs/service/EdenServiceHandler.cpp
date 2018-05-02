@@ -452,6 +452,30 @@ void EdenServiceHandler::glob(
   }
 }
 
+void EdenServiceHandler::globFiles(
+    Glob& out,
+    std::unique_ptr<GlobParams> params) {
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3,
+      params->mountPoint,
+      "[" + folly::join(", ", params->globs) + "]",
+      params->includeDotfiles);
+  auto edenMount = server_->getMount(params->mountPoint);
+  auto rootInode = edenMount->getRootInode();
+
+  // Compile the list of globs into a tree
+  GlobNode globRoot(params->includeDotfiles);
+  for (auto& globString : params->globs) {
+    globRoot.parse(globString);
+  }
+
+  // and evaluate it against the root
+  auto matches = globRoot.evaluate(RelativePathPiece(), rootInode).get();
+  for (auto& fileName : matches) {
+    out.matchingFiles.emplace_back(fileName.stringPiece().toString());
+  }
+}
+
 void EdenServiceHandler::getManifestEntry(
     ManifestEntry& out,
     std::unique_ptr<std::string> mountPoint,

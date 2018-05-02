@@ -334,6 +334,21 @@ struct FuseCall {
   7: i32 pid
 }
 
+/** Params for globFiles(). */
+struct GlobParams {
+  1: string mountPoint,
+  2: list<string> globs,
+  3: bool includeDotfiles,
+}
+
+struct Glob {
+  /**
+   * This list cannot contain duplicate values and is not guaranteed to be
+   * sorted.
+   */
+  1: list<string> matchingFiles,
+}
+
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
@@ -425,15 +440,24 @@ service EdenService extends fb303.FacebookService {
     2: list<string> paths)
       throws (1: EdenError ex)
 
-  /** Returns a list of files that match the input globs.
+  /**
+   * DEPRECATED: Prefer globFiles().
+   * Returns a list of files that match the input globs.
    * There are no duplicate values in the result.
-   * wildMatchFlags can hold various WildMatchFlags values OR'd together.
    */
   list<string> glob(
     1: string mountPoint,
     2: list<string> globs)
       throws (1: EdenError ex)
 
+  /**
+   * Returns a list of files that match the GlobParams, notably,
+   * the list of glob patterns.
+   * There are no duplicate values in the result.
+   */
+  Glob globFiles(
+    1: GlobParams params,
+  ) throws (1: EdenError ex)
 
   /**
    * Get the status of the working directory against the specified commit.

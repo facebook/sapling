@@ -7,8 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import unittest
-from facebook.eden.ttypes import EdenError
+from facebook.eden.ttypes import EdenError, GlobParams
 from .lib import testcase
 from typing import List, Optional
 
@@ -55,7 +54,6 @@ class GlobTest(testcase.EdenRepoTest):
     def test_match_all_files_in_directory(self) -> None:
         self.assert_glob(['bdir/*'], ['bdir/file', 'bdir/otherfile'])
 
-    @unittest.skip('TDD: This does not pass yet.')
     def test_match_all_files_in_directory_with_dotfile(self) -> None:
         self.assert_glob(['ddir/subdir/*'], ['ddir/subdir/notdotfile'])
 
@@ -72,13 +70,29 @@ class GlobTest(testcase.EdenRepoTest):
         self.assert_glob(['adir/**'], ['adir/file'])
         self.assert_glob(['adir/**/*'], ['adir/file'])
 
-    @unittest.skip('TDD: This does not pass yet.')
     def test_recursive_wildcard_suffix_with_dotfile(self) -> None:
         self.assert_glob(
-            ['ddir/**'], ['ddir/notdotfile', 'ddir/subdir/notdotfile']
+            ['ddir/**'],
+            ['ddir/notdotfile', 'ddir/subdir', 'ddir/subdir/notdotfile']
         )
         self.assert_glob(
-            ['ddir/**/*'], ['ddir/notdotfile', 'ddir/subdir/notdotfile']
+            ['ddir/**'], [
+                'ddir/subdir', 'ddir/subdir/.dotfile', 'ddir/notdotfile',
+                'ddir/subdir/notdotfile'
+            ],
+            include_dotfiles=True
+        )
+
+        self.assert_glob(
+            ['ddir/**/*'],
+            ['ddir/notdotfile', 'ddir/subdir', 'ddir/subdir/notdotfile'],
+        )
+        self.assert_glob(
+            ['ddir/**/*'], [
+                'ddir/subdir', 'ddir/subdir/.dotfile', 'ddir/notdotfile',
+                'ddir/subdir/notdotfile'
+            ],
+            include_dotfiles=True
         )
 
     def test_qualified_recursive_wildcard(self) -> None:
@@ -105,8 +119,18 @@ class GlobTest(testcase.EdenRepoTest):
         self,
         globs: List[str],
         expected_matches: List[str],
+        include_dotfiles: bool = False,
         msg: Optional[str] = None
     ) -> None:
+        params = GlobParams(self.mount, globs, include_dotfiles)
         self.assertCountEqual(
-            expected_matches, self.client.glob(self.mount, globs), msg=msg
+            expected_matches,
+            self.client.globFiles(params).matchingFiles,
+            msg=msg
         )
+
+        # Also verify behavior of legacy Thrift API.
+        if include_dotfiles:
+            self.assertCountEqual(
+                expected_matches, self.client.glob(self.mount, globs), msg=msg
+            )
