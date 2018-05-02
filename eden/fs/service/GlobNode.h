@@ -74,7 +74,7 @@ class GlobNode {
       RelativePathPiece rootPath,
       TreeInodePtr root);
   // The pattern fragment for this node
-  folly::StringPiece pattern_;
+  std::string pattern_;
   // The compiled pattern
   GlobMatcher matcher_;
   // List of non-** child rules

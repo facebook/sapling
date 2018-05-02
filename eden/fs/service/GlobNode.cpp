@@ -24,8 +24,8 @@ namespace facebook {
 namespace eden {
 
 GlobNode::GlobNode(StringPiece pattern, bool hasSpecials)
-    : pattern_(pattern), hasSpecials_(hasSpecials) {
-  if (pattern_ == "**" || pattern_ == "*") {
+    : pattern_(pattern.str()), hasSpecials_(hasSpecials) {
+  if (pattern == "**" || pattern == "*") {
     alwaysMatch_ = true;
   } else {
     auto compiled = GlobMatcher::create(pattern, GlobOptions::DEFAULT);
