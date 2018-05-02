@@ -73,6 +73,7 @@ new directories are setgid
   00660 ./.hg/cache/rbc-revs-v1
   00660 ./.hg/dirstate
   00660 ./.hg/fsmonitor.state (fsmonitor !)
+  00600 ./.hg/dirstate.tree.* (glob)
   00660 ./.hg/last-message.txt
   00600 ./.hg/requires
   00770 ./.hg/store/
@@ -120,6 +121,7 @@ group can still write everything
   00770 ../push/.hg/cache/
   00660 ../push/.hg/cache/branch2-base
   00660 ../push/.hg/dirstate
+  00600 ../push/.hg/dirstate.tree.* (glob)
   00660 ../push/.hg/requires
   00770 ../push/.hg/store/
   00660 ../push/.hg/store/00changelog.i

@@ -30,6 +30,7 @@ creating 'local'
   generaldelta
   revlogv1
   store
+  treedirstate
   $ echo this > local/foo
   $ hg ci --cwd local -A -m "init"
   adding foo
@@ -65,6 +66,7 @@ creating repo with format.usestore=false
   $ checknewrepo old
   generaldelta
   revlogv1
+  treedirstate
 
 creating repo with format.usefncache=false
 
@@ -75,6 +77,7 @@ creating repo with format.usefncache=false
   generaldelta
   revlogv1
   store
+  treedirstate
 
 creating repo with format.dotencode=false
 
@@ -86,6 +89,7 @@ creating repo with format.dotencode=false
   generaldelta
   revlogv1
   store
+  treedirstate
 
 creating repo with format.dotencode=false
 
@@ -97,6 +101,7 @@ creating repo with format.dotencode=false
   fncache
   revlogv1
   store
+  treedirstate
 
 test failure
 
@@ -210,6 +215,7 @@ creating 'local/sub/repo'
   generaldelta
   revlogv1
   store
+  treedirstate
 
 prepare test of init of url configured from paths
 
@@ -228,6 +234,7 @@ init should (for consistency with clone) expand the url
   generaldelta
   revlogv1
   store
+  treedirstate
 
 verify that clone also expand urls
 
@@ -242,6 +249,7 @@ verify that clone also expand urls
   generaldelta
   revlogv1
   store
+  treedirstate
 
 clone bookmarks
 

@@ -1,6 +1,8 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > share =
+  > [treedirstate]
+  > useinnewrepos = False
   > EOF
 
 store and revlogv1 are required in source

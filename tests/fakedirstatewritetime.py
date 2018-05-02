@@ -15,6 +15,9 @@ from mercurial import (
     registrar,
     util,
 )
+from hgext import (
+    treedirstate,
+)
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -71,8 +74,17 @@ def markcommitted(orig, committablectx, node):
     ui = committablectx.repo().ui
     return fakewrite(ui, lambda : orig(committablectx, node))
 
+def treedirstatewrite(orig, self, st, now):
+    ui = self._ui
+    fakenow = ui.config('fakedirstatewritetime', 'fakenow')
+    if fakenow:
+        now = util.parsedate(fakenow, ['%Y%m%d%H%M'])[0]
+    return orig(self, st, now)
+
 def extsetup(ui):
     extensions.wrapfunction(context.workingctx, '_poststatusfixup',
                             _poststatusfixup)
     extensions.wrapfunction(context.committablectx, 'markcommitted',
                             markcommitted)
+    extensions.wrapfunction(treedirstate.treedirstatemap, 'write',
+                            treedirstatewrite)

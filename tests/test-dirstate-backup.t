@@ -15,4 +15,5 @@ No dirstate backups are left behind
 
   $ ls .hg/dirstate* | sort
   .hg/dirstate
+  .hg/dirstate.tree.* (glob)
 

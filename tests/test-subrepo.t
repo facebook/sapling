@@ -3,6 +3,10 @@ Let commit recurse into subrepos by default to match pre-2.0 behavior:
   $ echo "[ui]" >> $HGRCPATH
   $ echo "commitsubrepos = Yes" >> $HGRCPATH
 
+Treedirstate has issues with subrepos
+
+  $ setconfig treedirstate.useinnewrepos=0
+
   $ hg init t
   $ cd t
 

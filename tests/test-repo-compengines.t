@@ -8,6 +8,7 @@ A new repository uses zlib storage, which doesn't need a requirement
   generaldelta
   revlogv1
   store
+  treedirstate
 
   $ touch foo
   $ hg -q commit -A -m 'initial commit with a lot of repeated repeated repeated text to trigger compression'
@@ -47,6 +48,7 @@ A requirement specifying an unknown compression engine results in bail
   generaldelta
   revlogv1
   store
+  treedirstate
 
   $ touch foo
   $ hg -q commit -A -m 'initial commit with a lot of repeated repeated repeated text'
@@ -70,6 +72,7 @@ with that engine or a requirement
   generaldelta
   revlogv1
   store
+  treedirstate
 
   $ hg debugrevlog -c | grep 0x78
       0x78 (x)  :   2 (100.00%)

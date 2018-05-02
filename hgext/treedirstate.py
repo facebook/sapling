@@ -69,7 +69,7 @@ treefileprefix = 'dirstate.tree.'
 
 configtable = {}
 configitem = registrar.configitem(configtable)
-configitem('treedirstate', 'useinnewrepos', default=False)
+configitem('treedirstate', 'useinnewrepos', default=True)
 configitem('treedirstate', 'upgradeonpull', default=False)
 configitem('treedirstate', 'downgradeonpull', default=False)
 configitem('treedirstate', 'cleanuppercent', default=1)
