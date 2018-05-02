@@ -64,9 +64,6 @@ def which(name):
 
 rageopts = [('p', 'preview', None,
              _('print diagnostic information without doing arc paste'))]
-if which('oncalls'):
-    rageopts.append(('', 'oncall', None,
-                     _('file a task for source control oncall')))
 
 def localconfig(ui):
     result = []
@@ -182,9 +179,6 @@ def _makerage(ui, repo, **opts):
             return srcrepo.vfs(filename).read()
         else:
             return "File not found: %s" % srcrepo.vfs.join(filename)
-
-    if opts.get('oncall') and opts.get('preview'):
-        raise error.Abort('--preview and --oncall cannot be used together')
 
     basic = [
         ('date', time.ctime()),
