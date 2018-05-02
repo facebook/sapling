@@ -295,7 +295,7 @@ def _raiseoserror(name):
     raise OSError(err.errno, '%s: %s' % (name,
                                          encoding.strtolocal(err.strerror)))
 
-def _getfileinfo(name):
+def getfileinfo(name):
     fh = _kernel32.CreateFileA(name, 0,
             _FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE,
             None, _OPEN_EXISTING, _FILE_FLAG_BACKUP_SEMANTICS, None)
@@ -397,20 +397,20 @@ def oslink(src, dst):
 
 def nlinks(name):
     '''return number of hardlinks for the given file'''
-    return _getfileinfo(name).nNumberOfLinks
+    return getfileinfo(name).nNumberOfLinks
 
 def samefile(path1, path2):
     '''Returns whether path1 and path2 refer to the same file or directory.'''
-    res1 = _getfileinfo(path1)
-    res2 = _getfileinfo(path2)
+    res1 = getfileinfo(path1)
+    res2 = getfileinfo(path2)
     return (res1.dwVolumeSerialNumber == res2.dwVolumeSerialNumber
         and res1.nFileIndexHigh == res2.nFileIndexHigh
         and res1.nFileIndexLow == res2.nFileIndexLow)
 
 def samedevice(path1, path2):
     '''Returns whether path1 and path2 are on the same device.'''
-    res1 = _getfileinfo(path1)
-    res2 = _getfileinfo(path2)
+    res1 = getfileinfo(path1)
+    res2 = getfileinfo(path2)
     return res1.dwVolumeSerialNumber == res2.dwVolumeSerialNumber
 
 def peekpipe(pipe):
