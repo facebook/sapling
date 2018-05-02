@@ -286,6 +286,18 @@ impl BlobRepo {
             .boxify()
     }
 
+    pub fn get_changeset_parents(
+        &self,
+        changesetid: &DChangesetId,
+    ) -> BoxFuture<Vec<DChangesetId>, Error> {
+        let changesetid = *changesetid;
+        self.changesets
+            .get(self.repoid, changesetid.clone())
+            .and_then(move |res| res.ok_or(ErrorKind::ChangesetMissing(changesetid).into()))
+            .map(|res| res.parents)
+            .boxify()
+    }
+
     pub fn get_changeset_by_changesetid(
         &self,
         changesetid: &DChangesetId,

@@ -8,7 +8,9 @@ extern crate asyncmemo;
 extern crate blobrepo;
 #[macro_use]
 extern crate failure_ext as failure;
+#[macro_use]
 extern crate futures;
+extern crate futures_ext;
 #[macro_use]
 extern crate maplit;
 extern crate mercurial_types;
@@ -41,6 +43,9 @@ pub use validation::ValidateNodeStream;
 
 mod ancestors;
 pub use ancestors::{common_ancestors, greatest_common_ancestor, AncestorsNodeStream};
+
+mod ancestorscombinators;
+pub use ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
 
 mod range;
 pub use range::RangeNodeStream;

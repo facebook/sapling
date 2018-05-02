@@ -9,9 +9,9 @@
 //! A generation number for a changeset is 1 + max(parents, 0). This number is computed for each
 //! changeset and memoized for efficiency.
 
+use std::{usize, u64};
 use std::mem;
 use std::sync::Arc;
-use std::usize;
 
 use failure::{err_msg, Error};
 use futures::IntoFuture;
@@ -35,6 +35,18 @@ pub struct Generation(u64);
 impl Weight for Generation {
     fn get_weight(&self) -> usize {
         mem::size_of::<Self>()
+    }
+}
+
+impl Generation {
+    /// Creates new generation number
+    pub fn new(gen: u64) -> Self {
+        Generation(gen)
+    }
+
+    /// Create a maximum possible generation number
+    pub fn max_gen() -> Self {
+        Generation(u64::MAX)
     }
 }
 

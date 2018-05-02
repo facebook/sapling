@@ -50,7 +50,7 @@ use blobrepo::BlobRepo;
 use errors::*;
 
 use repoinfo::RepoGenCache;
-use revset::{AncestorsNodeStream, NodeStream, SetDifferenceNodeStream, UnionNodeStream};
+use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
@@ -343,28 +343,31 @@ impl RepoClient {
         let repo_generation = &self.repo.repo_generation;
         let blobrepo = &self.repo.blobrepo;
 
-        let ancestors_stream = |nodes: &Vec<DNodeHash>| -> Box<NodeStream> {
-            let heads_ancestors = nodes.iter().map(|head| {
-                AncestorsNodeStream::new(&blobrepo, repo_generation.clone(), *head).boxed()
-            });
-            Box::new(UnionNodeStream::new(
-                &blobrepo,
-                repo_generation.clone(),
-                heads_ancestors,
-            ))
-        };
+        let common_heads: HashSet<_> = HashSet::from_iter(args.common.iter());
 
-        let heads_ancestors =
-            ancestors_stream(&args.heads.into_iter().map(|h| h.into_mononoke()).collect());
-        let common_ancestors =
-            ancestors_stream(&args.common.into_iter().map(|h| h.into_mononoke()).collect());
+        let heads: Vec<_> = args.heads
+            .iter()
+            .filter(|head| !common_heads.contains(head))
+            .cloned()
+            .map(|head| head.into_mononoke())
+            .collect();
 
-        let nodestosend = Box::new(SetDifferenceNodeStream::new(
-            blobrepo,
+        info!(self.logger, "{} heads requested", heads.len());
+        for head in heads.iter() {
+            debug!(self.logger, "{}", head);
+        }
+
+        let excludes: Vec<_> = args.common
+            .iter()
+            .map(|node| node.clone().into_mononoke().into_option())
+            .filter_map(|maybe_node| maybe_node)
+            .collect();
+        let nodestosend = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+            &blobrepo,
             repo_generation.clone(),
-            heads_ancestors,
-            common_ancestors,
-        ));
+            heads,
+            excludes,
+        ).boxify();
 
         // TODO(stash): avoid collecting all the changelogs in the vector - T25767311
         let nodestosend = nodestosend

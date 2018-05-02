@@ -73,7 +73,7 @@ pub fn assert_node_sequence<I>(
 
     assert!(
         received_hashes.is_empty(),
-        "Too many nodes received: {:?}",
+        "Too few nodes received: {:?}",
         received_hashes
     );
 
