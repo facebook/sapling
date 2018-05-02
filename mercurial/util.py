@@ -1438,7 +1438,12 @@ try:
     re2._re2.escape  # the C module might be missing
     _re2 = None
 except ImportError:
-    _re2 = False
+    try:
+        import re2
+        re2._re2.escape  # the C module might be missing
+        _re2 = None
+    except ImportError:
+        _re2 = False
 
 class _re(object):
     def _checkre2(self):
