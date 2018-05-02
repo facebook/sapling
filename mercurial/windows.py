@@ -427,10 +427,39 @@ def isexec(f):
 
 class cachestat(object):
     def __init__(self, path):
-        pass
+        self.fi = win32.getfileinfo(path)
 
     def cacheable(self):
-        return False
+        return True
+
+    __hash__ = object.__hash__
+
+    def __eq__(self, other):
+        try:
+            lhs = self.fi
+            rhs = other.fi
+            return (
+                lhs.dwFileAttributes == rhs.dwFileAttributes and
+                lhs.ftCreationTime.dwLowDateTime ==
+                    rhs.ftCreationTime.dwLowDateTime and
+                lhs.ftCreationTime.dwHighDateTime ==
+                    rhs.ftCreationTime.dwHighDateTime and
+                lhs.ftLastWriteTime.dwLowDateTime ==
+                    rhs.ftLastWriteTime.dwLowDateTime and
+                lhs.ftLastWriteTime.dwHighDateTime ==
+                    rhs.ftLastWriteTime.dwHighDateTime and
+                lhs.dwVolumeSerialNumber ==
+                    rhs.dwVolumeSerialNumber and
+                lhs.nFileSizeHigh == rhs.nFileSizeHigh and
+                lhs.nFileSizeLow == rhs.nFileSizeLow and
+                lhs.nFileIndexHigh == rhs.nFileIndexHigh and
+                lhs.nFileIndexLow == rhs.nFileIndexLow
+            )
+        except AttributeError:
+            return False
+
+    def __ne__(self, other):
+        return not self == other
 
 def lookupreg(key, valname=None, scope=None):
     ''' Look up a key/value name in the Windows registry.
