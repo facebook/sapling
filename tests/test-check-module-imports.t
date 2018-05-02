@@ -41,9 +41,8 @@ outputs, which should be fixed later.
   > -X tests/test-imports-checker.t \
   > -X tests/test-lock.py \
   > -X tests/test-verify-repo-operations.py \
+  > -X fb \
   > | sed 's-\\-/-g' | $PYTHON "$import_checker" -
-  fb/packaging/nupkg_templates.py:7: relative import of stdlib module
-  fb/packaging/nupkg_templates.py:7: direct symbol import Template from string
   hgext/age.py:21: imports not lexically sorted: re < time
   hgext/cleanobsstore.py:37: symbol import follows non-symbol import: mercurial.i18n
   hgext/conflictinfo.py:30: direct symbol import absentfilectx from mercurial.filemerge

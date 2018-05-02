@@ -6,6 +6,7 @@
   $ testrepohg files 'set:(**.py)' \
   > -X hgdemandimport/demandimportpy2.py \
   > -X hg-git \
+  > -X fb \
   > | sed 's|\\|/|g' | xargs $PYTHON contrib/check-py3-compat.py
   contrib/hggitperf.py not using absolute_import
   contrib/python-zstandard/setup.py not using absolute_import
@@ -21,9 +22,6 @@
   contrib/python-zstandard/tests/test_estimate_sizes.py not using absolute_import
   contrib/python-zstandard/tests/test_module_attributes.py not using absolute_import
   contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
-  fb/packaging/build_deb.py not using absolute_import
-  fb/tests/sqldirstate_benchmark.py not using absolute_import
-  fb/tests/sqldirstate_benchmark.py requires print_function
   hgext/arcdiff.py not using absolute_import
   hgext/backups.py not using absolute_import
   hgext/catnotate.py not using absolute_import

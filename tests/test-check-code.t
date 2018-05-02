@@ -14,21 +14,8 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X lib/cdatapack \
   > -X lib/third-party \
   > -X mercurial/thirdparty \
-  > -X fb-hgext \
-  > -X fb/packaging \
+  > -X fb \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
-  fb/tests/sqldirstate_benchmark.py:100:
-   >             hg.next()
-   don't use .next(), use next(...)
-  fb/tests/test-fbclone-fbsource.t:1:
-   >   $ FBCLONE=$TESTDIR/../staticfiles/opt/facebook/bin/fbclone
-   don't use explicit paths for tools
-  fb/tests/test-hg-rsh.t:2:
-   >   $ HGRSH=$TESTDIR/../staticfiles/bin/hg-rsh
-   don't use explicit paths for tools
-  fb/tests/test-hg-rsh.t:35:
-   >   > %include /bin/../etc/mercurial/repo-specific/common.rc
-   don't use explicit paths for tools
   Skipping hgext/extlib/cfastmanifest.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.h it has no-che?k-code (glob)

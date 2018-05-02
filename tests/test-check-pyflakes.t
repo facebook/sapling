@@ -18,7 +18,7 @@ run pyflakes on all tracked files ending in .py or without a file ending
   > -X hgext/fsmonitor/pywatchman \
   > -X mercurial/pycompat.py -X contrib/python-zstandard \
   > -X hg-git \
-  > -X fb/packaging \
+  > -X fb \
   > 2>/dev/null \
   > | xargs "$PYFLAKES" 2>/dev/null | "$TESTDIR/filterpyflakes.py"
   
