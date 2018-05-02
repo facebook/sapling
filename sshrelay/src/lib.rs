@@ -198,7 +198,6 @@ mod test {
             Ok(Some(ref res)) if res == &SshMsg::new(Stdin, b"ls -l".bytes()) => (),
             bad => panic!("decode failed: {:?}", bad.as_ref()),
         }
-
     }
 
     #[test]
