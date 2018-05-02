@@ -440,7 +440,7 @@ void EdenServiceHandler::glob(
   auto rootInode = edenMount->getRootInode();
 
   // Compile the list of globs into a tree
-  GlobNode globRoot;
+  GlobNode globRoot(/*includeDotfiles=*/true);
   for (auto& globString : *globs) {
     globRoot.parse(globString);
   }

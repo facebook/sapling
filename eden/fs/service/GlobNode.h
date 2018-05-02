@@ -27,11 +27,11 @@ namespace eden {
  */
 class GlobNode {
  public:
-  // Default constructor is intended to create the root of a set of globs
-  // that will be parsed into the overall glob tree.
-  GlobNode() = default;
+  // Single parameter constructor is intended to create the root of a set of
+  // globs that will be parsed into the overall glob tree.
+  explicit GlobNode(bool includeDotfiles) : includeDotfiles_(includeDotfiles) {}
 
-  GlobNode(folly::StringPiece pattern, bool hasSpecials);
+  GlobNode(folly::StringPiece pattern, bool includeDotfiles, bool hasSpecials);
 
   // Compile and add a new glob pattern to the tree.
   // Compilation splits the pattern into nodes, with one node for each
@@ -82,13 +82,19 @@ class GlobNode {
   // List of ** child rules
   std::vector<std::unique_ptr<GlobNode>> recursiveChildren_;
 
+  // For a child GlobNode that is added to this GlobNode (presumably via
+  // parse()), the GlobMatcher pattern associated with the child node should use
+  // this value for its includeDotfiles parameter.
+  bool includeDotfiles_;
   // If true, generate results for matches.  Only applies
   // to non-recursive glob patterns.
   bool isLeaf_{false};
   // If false we can try a name lookup of pattern rather
   // than walking the children and applying the matcher
   bool hasSpecials_{false};
-  // If true, this node is **
+  // true when both of the following hold:
+  // - this node is "**" or "*"
+  // - it was created with includeDotfiles=true.
   bool alwaysMatch_{false};
 };
 } // namespace eden

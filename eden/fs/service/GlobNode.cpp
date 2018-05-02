@@ -23,12 +23,16 @@ using std::vector;
 namespace facebook {
 namespace eden {
 
-GlobNode::GlobNode(StringPiece pattern, bool hasSpecials)
-    : pattern_(pattern.str()), hasSpecials_(hasSpecials) {
-  if (pattern == "**" || pattern == "*") {
+GlobNode::GlobNode(StringPiece pattern, bool includeDotfiles, bool hasSpecials)
+    : pattern_(pattern.str()),
+      includeDotfiles_(includeDotfiles),
+      hasSpecials_(hasSpecials) {
+  if (includeDotfiles && (pattern == "**" || pattern == "*")) {
     alwaysMatch_ = true;
   } else {
-    auto compiled = GlobMatcher::create(pattern, GlobOptions::DEFAULT);
+    auto options =
+        includeDotfiles ? GlobOptions::DEFAULT : GlobOptions::IGNORE_DOTFILES;
+    auto compiled = GlobMatcher::create(pattern, options);
     if (compiled.hasError()) {
       throw newEdenError(
           EINVAL,
@@ -42,6 +46,7 @@ GlobNode::GlobNode(StringPiece pattern, bool hasSpecials)
 
 void GlobNode::parse(StringPiece pattern) {
   GlobNode* parent = this;
+  string normalizedPattern;
 
   while (!pattern.empty()) {
     StringPiece token;
@@ -51,7 +56,19 @@ void GlobNode::parse(StringPiece pattern) {
     if (pattern.startsWith("**")) {
       // Recursive match defeats most optimizations; we have to stop
       // tokenizing here.
-      token = pattern;
+
+      // HACK: We special-case "**" if includeDotfiles=false. In this case, we
+      // need to create a GlobMatcher for this pattern, but GlobMatcher is
+      // designed to reject "**". As a workaround, we use "**/*", which is
+      // functionally equivalent in this case because there are no other
+      // "tokens" in the pattern following the "**" at this point.
+      if (pattern == "**" && !includeDotfiles_) {
+        normalizedPattern = "**/*";
+        token = normalizedPattern;
+      } else {
+        token = pattern;
+      }
+
       pattern = StringPiece();
       container = &parent->recursiveChildren_;
       hasSpecials = true;
@@ -61,7 +78,8 @@ void GlobNode::parse(StringPiece pattern) {
 
     auto node = lookupToken(container, token);
     if (!node) {
-      container->emplace_back(std::make_unique<GlobNode>(token, hasSpecials));
+      container->emplace_back(
+          std::make_unique<GlobNode>(token, includeDotfiles_, hasSpecials));
       node = container->back().get();
     }
 
