@@ -297,7 +297,7 @@ def rage(ui, repo, *pats, **opts):
                 shell=pycompat.iswindows)
             out, err = p.communicate(input=msg + '\n')
             ret = p.returncode
-        except (WindowsError, OSError):
+        except OSError:
             ui.write(_('Failed calling arc. (is it in your PATH?)\n'))
             ret = 1
 
