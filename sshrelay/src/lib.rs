@@ -22,14 +22,14 @@ pub struct SshDecoder(NetstringDecoder);
 #[derive(Debug)]
 pub struct SshEncoder(NetstringEncoder<Bytes>);
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SshStream {
     Stdin,
     Stdout,
     Stderr,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SshMsg(SshStream, Bytes);
 
 impl SshMsg {
@@ -45,7 +45,7 @@ impl SshMsg {
     }
 
     pub fn stream(&self) -> SshStream {
-        self.0
+        self.0.clone()
     }
     pub fn data(self) -> Bytes {
         self.1
