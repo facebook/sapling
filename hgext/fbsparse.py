@@ -110,11 +110,9 @@ from mercurial import (
     context,
     dirstate,
     commands,
-    fancyopts,
     progress,
     localrepo,
     error,
-    help,
     hg,
     hintutil,
     minirst,
@@ -148,7 +146,6 @@ def extsetup(ui):
     _setupadd(ui)
     _setupdirstate(ui)
     _setupdiff(ui)
-    _setupsubcommands(ui)
     # if fsmonitor is enabled, tell it to use our hash function
     try:
         fsmonitor = extensions.find('fsmonitor')
@@ -526,55 +523,6 @@ def _setupdiff(ui):
             if issparse:
                 extensions.unwrapfunction(patch, 'trydiff', trydiff)
     extensions.wrapcommand(commands.table, 'diff', diff)
-
-def _setupsubcommands(ui):
-    # hg help sparse <subcommand> needs to be acceptable
-    def helpacceptmultiplenames(orig, ui, *names, **opts):
-        name = '::'.join(names) if names else None
-        return orig(ui, name, **opts)
-
-    # hg help should include subcommands
-    def helpsubcommands(orig, self, name, subtopic=None):
-        rst = orig(self, name, subtopic)
-
-        cmd, hassub, sub = name.partition('::')
-        if cmd == 'sparse':
-            if hassub and rst[0] == 'hg %s\n' % sub:
-                    # subcommand help, patch first line
-                    rst[0] = 'hg %s\n' % name
-
-            if not self.ui.quiet:
-                subcmdsrst = subcmd.subcmdsrst(self.ui.verbose, self.ui.quiet)
-                # in verbose mode there is an extra line we want to keep at the
-                # end.
-                pos = len(rst) if self.ui.verbose else -1
-                rst[pos:pos] = [subcmdsrst]
-
-        return rst
-
-    # when looking for subcommands, have cmdutil.findpossible find them
-    def findpossible(orig, cmd, table, strict=False):
-        maincmd, hassub, subcmd = cmd.partition('::')
-        if hassub and maincmd == 'sparse':
-            res = orig(subcmd, subcmdtable, strict)
-            if subcmd in res[0]:
-                # reslot as the full command, including the first alias
-                res[0][cmd] = res[0].pop(subcmd)
-                res[0][cmd][0][0] = cmd
-            return res
-        return orig(cmd, table, strict)
-
-    # when parsing shelve command options, add the switches from subcommands
-    def subcommandopts(orig, args, options, *posargs, **kwargs):
-        sparseopts = cmdtable['^sparse'][1]
-        if options[:len(sparseopts)] == sparseopts:  # parsing sparse options
-            return subcmd.parseargs(orig, args, options, *posargs, **kwargs)
-        return orig(args, options, *posargs, **kwargs)
-
-    extensions.wrapcommand(commands.table, 'help', helpacceptmultiplenames)
-    extensions.wrapfunction(help._helpdispatch, 'helpcmd', helpsubcommands)
-    extensions.wrapfunction(cmdutil, 'findpossible', findpossible)
-    extensions.wrapfunction(fancyopts, 'fancyopts', subcommandopts)
 
 @attr.s(frozen=True, slots=True, cmp=False)
 class SparseConfig(object):
@@ -1198,7 +1146,7 @@ _deprecate = lambda o, l=_('(DEPRECATED)'): (
     ('', 'cwd-list', False, _('list the full contents of the current '
                               'directory (DEPRECATED)')),
     ] + [_deprecate(o) for o in commands.templateopts],
-    _('[OPTION] SUBCOMMAND ...'))
+    _('SUBCOMMAND ...'))
 def sparse(ui, repo, *pats, **opts):
     """make the current checkout sparse, or edit the existing checkout
 
@@ -1214,7 +1162,7 @@ def sparse(ui, repo, *pats, **opts):
     from the sparse checkout, while delete removes an existing include/exclude
     rule.
 
-    Sparse profiles can also be shared with other users of te repository by
+    Sparse profiles can also be shared with other users of the repository by
     committing a file with include and exclude rules in a separate file. Use the
     `enableprofile` and `disableprofile` subcommands to enable or disable
     such profiles. Changes to shared profiles are not applied until they have
@@ -1225,10 +1173,6 @@ def sparse(ui, repo, *pats, **opts):
     """
     if not util.safehasattr(repo, 'sparsematch'):
         raise error.Abort(_('this is not a sparse repository'))
-
-    cmd = subcmd.parse(pats, opts)
-    if cmd is not None:
-        return cmd(ui, repo)
 
     include = opts.get('include')
     exclude = opts.get('exclude')
@@ -1277,85 +1221,7 @@ def sparse(ui, repo, *pats, **opts):
     if cwdlist:
         _cwdlist(repo)
 
-# subcommands for the hg sparse command line
-class subcmdfunc(registrar._funcregistrarbase):
-    """Register a function to be invoked for "hg sparse <thing>" subcommands
-
-    Help info is taken from the function docstring, or can be set explicitly
-    with the help='...' keyword argument.
-
-    Per-subcommand options are specified with the options keyword, which
-    takes the same format as the options table for commands.
-    """
-
-    def __init__(self, table=None):
-        if table is None:
-            # List commands in registration order
-            table = util.sortdict()
-        super(subcmdfunc, self).__init__(table)
-
-    def _doregister(self, func, name, options=(), synopsis=None, help=None):
-        if name in self._table:
-            msg = 'duplicate registration for name: "%s"' % name
-            raise error.ProgrammingError(msg)
-
-        @functools.wraps(func)
-        def dispatch(*args, **kwargs):
-            return func(name, *args, **kwargs)
-
-        if help is not None:
-            dispatch.__doc__ = help
-        dispatch.subcommands = None
-
-        registration = dispatch, tuple(options)
-        if synopsis:
-            registration += (synopsis,)
-
-        self._table[name] = registration
-
-        return func
-
-    def subcmdsrst(self, verbose=False, quiet=False):
-        """Produce a table of subcommands"""
-        def cmdhelp():
-            for name, entry in self._table.items():
-                doc = pycompat.getdoc(entry[0])
-                doc, __, rest = doc.strip().partition('\n')
-                if verbose and rest.strip():
-                    if len(entry) > 2:  # synopsis
-                        name = '{} {}'.format(name, entry[2])
-                    doc = '{} - {}'.format(doc, rest.strip())
-                yield (name, doc)
-        rst = ['\n%s:\n\n' % _('subcommands')]
-        rst += minirst.maketable(list(cmdhelp()), 1)
-        if not quiet:
-            rst.append(_('\n(Use hg help sparse [subcommand] '
-                         'to show complete subcommand help)\n'))
-        return ''.join(rst)
-
-    def parseargs(self, parser, args, options, *posargs, **kwargs):
-        subcmd = args[0] if args else None
-        if subcmd in self._table:
-            options = options + list(self._table[subcmd][1])
-        try:
-            return parser(args, options, *posargs, **kwargs)
-        except pycompat.getopt.GetoptError as ex:
-            if subcmd in self._table:
-                raise error.CommandError('sparse {}'.format(subcmd), ex)
-            raise
-
-    def parse(self, args, opts):
-        if not args or args[0] not in self._table:
-            return
-
-        name, args = args[0], args[1:]
-        def callsubcmd(ui, repo, *moreargs, **kw):
-            opts.update(kw)
-            return self._table[name][0](ui, repo, *(moreargs + args), **opts)
-        return callsubcmd
-
-subcmdtable = util.sortdict()
-subcmd = subcmdfunc(subcmdtable)
+subcmd = sparse.subcommand()
 
 def _build_profile_filter(filters):
     """Create a callable function to filter a profile, returning a boolean"""
@@ -1392,8 +1258,8 @@ def _build_profile_filter(filters):
      _('FIELD:VALUE'))
     ] + commands.templateopts,
     '[OPTION]...')
-def _listprofiles(cmd, ui, repo, *pats, **opts):
-    """List available sparse profiles
+def _listprofiles(ui, repo, *pats, **opts):
+    """list available sparse profiles
 
     Show all available sparse profiles, with the active profiles marked.
 
@@ -1480,8 +1346,8 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
      _('REV')),
     ] + commands.templateopts,
     _('[OPTION]... [PROFILE]...'))
-def _explainprofile(cmd, ui, repo, *profiles, **opts):
-    """Show information on individual profiles
+def _explainprofile(ui, repo, *profiles, **opts):
+    """show information on individual profiles
 
     If --verbose is given, calculates the file size impact of a profile (slow).
     """
@@ -1599,8 +1465,8 @@ def _explainprofile(cmd, ui, repo, *profiles, **opts):
     return exitcode
 
 @subcmd('files', commands.templateopts, _('[OPTION]...'))
-def _listfilessubcmd(cmd, ui, repo, *profiles, **opts):
-    """List all files included in a profiles
+def _listfilessubcmd(ui, repo, *profiles, **opts):
+    """list all files included in a profiles
 
     If files are given to match, this command only prints the names of the
     files in a profile that match those patterns.
@@ -1631,7 +1497,41 @@ def _listfilessubcmd(cmd, ui, repo, *profiles, **opts):
             exitcode = 0
     return exitcode
 
-_details = '''\n
+_common_config_opts = [
+    ('f', 'force', False, _('allow changing rules even with pending changes')),
+]
+@subcmd('reset', _common_config_opts + commands.templateopts)
+def resetsubcmd(ui, repo, **opts):
+    """makes the repo full again"""
+    _config(ui, repo, [], opts, force=opts.get('force'), reset=True)
+
+@subcmd('disableprofile', _common_config_opts, '[PROFILE]...')
+def disableprofilesubcmd(ui, repo, *pats, **opts):
+    """disables the specified profile"""
+    _config(ui, repo, pats, opts, force=opts.get('force'), disableprofile=True)
+
+@subcmd('enableprofile', _common_config_opts, '[PROFILE]...')
+def enableprofilesubcmd(ui, repo, *pats, **opts):
+    """enables the specified profile"""
+    _config(ui, repo, pats, opts, force=opts.get('force'), enableprofile=True)
+
+@subcmd('delete', _common_config_opts, '[RULE]...')
+def deletesubcmd(ui, repo, *pats, **opts):
+    """delete an include/exclude rule"""
+    _config(ui, repo, pats, opts, force=opts.get('force'), delete=True)
+
+@subcmd('exclude', _common_config_opts, '[RULE]...')
+def excludesubcmd(ui, repo, *pats, **opts):
+    """exclude files in the sparse checkout"""
+    _config(ui, repo, pats, opts, force=opts.get('force'), exclude=True)
+
+@subcmd('include', _common_config_opts, '[RULE]...')
+def includesubcmd(ui, repo, *pats, **opts):
+    """include files in the sparse checkout"""
+    _config(ui, repo, pats, opts, force=opts.get('force'), include=True)
+
+for c in deletesubcmd, excludesubcmd, includesubcmd:
+    c.__doc__ += '''\n
 The effects of adding or deleting an include or exclude rule are applied
 immediately. If applying the new rule would cause a file with pending
 changes to be added or removed, the command will fail. Pass --force to
@@ -1639,28 +1539,9 @@ force a rule change even with pending changes (the changes on disk will
 be preserved).
 '''
 
-_common_config_opts = [
-    ('f', 'force', False, _('allow changing rules even with pending changes')),
-]
-@subcmd('reset', _common_config_opts, help=_('makes the repo full again'))
-@subcmd('disableprofile', _common_config_opts, '[PROFILE]...',
-        help=_('disables the specified profile'))
-@subcmd('enableprofile', _common_config_opts, '[PROFILE]...',
-        help=_('enables the specified profile'))
-@subcmd('delete', _common_config_opts, '[RULE]...',
-        help=_('delete an include/exclude rule' + _details))
-@subcmd('exclude', _common_config_opts, '[RULE]...',
-        help=_('exclude files in the sparse checkout' + _details))
-@subcmd('include', _common_config_opts, '[RULE]...',
-        help=_('include files in the sparse checkout' + _details))
-def _configsubcmd(cmd, ui, repo, *pats, **opts):
-    if cmd == 'reset' and pats:
-        raise error.CommandError('sparse ' + cmd, 'invalid arguments')
-    _config(ui, repo, pats, opts, force=opts.get('force'), **{cmd: True})
-
 @subcmd('importrules', _common_config_opts, _('[OPTION]... [FILE]...'))
-def _importsubcmd(cmd, ui, repo, *pats, **opts):
-    """Directly import sparse profile rules
+def _importsubcmd(ui, repo, *pats, **opts):
+    """directly import sparse profile rules
 
     Accepts a path to a file containing rules in the .hgsparse format.
 
@@ -1672,8 +1553,8 @@ def _importsubcmd(cmd, ui, repo, *pats, **opts):
     _import(ui, repo, pats, opts, force=opts.get('force'))
 
 @subcmd('clear', _common_config_opts, _('[OPTION]...'))
-def _clearsubcmd(cmd, ui, repo, *pats, **opts):
-    """Clear local sparse rules
+def _clearsubcmd(ui, repo, *pats, **opts):
+    """clear local sparse rules
 
     Removes all local include and exclude rules, while leaving
     any enabled profiles in place.
@@ -1682,8 +1563,8 @@ def _clearsubcmd(cmd, ui, repo, *pats, **opts):
     _clear(ui, repo, pats, force=opts.get('force'))
 
 @subcmd('refresh', _common_config_opts, _('[OPTION]...'))
-def _refreshsubcmd(cmd, ui, repo, *pats, **opts):
-    """Refreshes the files on disk based on the sparse rules
+def _refreshsubcmd(ui, repo, *pats, **opts):
+    """refreshes the files on disk based on the sparse rules
 
     This is only necessary if .hg/sparse was changed by hand.
 
@@ -1695,8 +1576,8 @@ def _refreshsubcmd(cmd, ui, repo, *pats, **opts):
         _verbose_output(ui, opts, 0, 0, 0, *fcounts)
 
 @subcmd('cwd')
-def _cwdsubcmd(cmd, ui, repo, *pats, **opts):
-    """List all names in this directory
+def _cwdsubcmd(ui, repo, *pats, **opts):
+    """list all names in this directory
 
     The list includes any names that are excluded by the current sparse
     checkout; these are annotated with a hyphen ('-') before the name.
