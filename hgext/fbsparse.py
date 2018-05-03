@@ -530,14 +530,14 @@ def _setupdiff(ui):
 def _setupsubcommands(ui):
     # hg help sparse <subcommand> needs to be acceptable
     def helpacceptmultiplenames(orig, ui, *names, **opts):
-        name = ' '.join(names) if names else None
+        name = '::'.join(names) if names else None
         return orig(ui, name, **opts)
 
     # hg help should include subcommands
     def helpsubcommands(orig, self, name, subtopic=None):
         rst = orig(self, name, subtopic)
 
-        cmd, hassub, sub = name.partition(' ')
+        cmd, hassub, sub = name.partition('::')
         if cmd == 'sparse':
             if hassub and rst[0] == 'hg %s\n' % sub:
                     # subcommand help, patch first line
@@ -554,7 +554,7 @@ def _setupsubcommands(ui):
 
     # when looking for subcommands, have cmdutil.findpossible find them
     def findpossible(orig, cmd, table, strict=False):
-        maincmd, hassub, subcmd = cmd.partition(' ')
+        maincmd, hassub, subcmd = cmd.partition('::')
         if hassub and maincmd == 'sparse':
             res = orig(subcmd, subcmdtable, strict)
             if subcmd in res[0]:
@@ -1305,6 +1305,7 @@ class subcmdfunc(registrar._funcregistrarbase):
 
         if help is not None:
             dispatch.__doc__ = help
+        dispatch.subcommands = None
 
         registration = dispatch, tuple(options)
         if synopsis:

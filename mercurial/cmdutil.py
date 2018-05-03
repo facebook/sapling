@@ -743,6 +743,26 @@ def findcmd(cmd, table, strict=True):
 
     raise error.UnknownCommand(cmd, allcmds)
 
+def findsubcmd(args, table, strict=True, partial=False):
+    cmd, args = args[0], args[1:]
+    aliases, entry = findcmd(cmd, table, strict)
+    cmd = aliases[0]
+    while args and entry[0].subcommands:
+        try:
+            subaliases, subentry = findcmd(args[0], entry[0].subcommands,
+                                           strict)
+        except error.UnknownCommand as e:
+            if entry[0].subonly:
+                raise error.UnknownSubcommand(cmd, *e.args)
+            else:
+                break
+        else:
+            aliases, entry = subaliases, subentry
+            cmd, args = '%s %s' % (cmd, aliases[0]), args[1:]
+    if not partial and entry[0].subonly:
+        raise error.UnknownSubcommand(cmd, None, None)
+    return cmd, args, aliases, entry
+
 def findrepo(p):
     while not os.path.isdir(os.path.join(p, ".hg")):
         oldp, p = p, os.path.dirname(p)

@@ -1390,15 +1390,11 @@ test advanced, deprecated and experimental options are hidden in command help
   
   (no help text available)
   
-  options:
-  
   (some details hidden, use --verbose to show complete help)
   $ hg help debugoptDEP
   hg debugoptDEP
   
   (no help text available)
-  
-  options:
   
   (some details hidden, use --verbose to show complete help)
 
@@ -1406,8 +1402,6 @@ test advanced, deprecated and experimental options are hidden in command help
   hg debugoptEXP
   
   (no help text available)
-  
-  options:
   
   (some details hidden, use --verbose to show complete help)
 
@@ -1426,8 +1420,6 @@ test deprecated option is hidden with translation with untranslated description
   hg debugoptDEP
   
   (*) (glob)
-  
-  options:
   
   (some details hidden, use --verbose to show complete help)
 #endif

@@ -393,6 +393,23 @@ def _callcatch(ui, func):
                 ui.pager('help')
                 ui.warn(nocmdmsg)
                 commands.help_(ui, 'shortlist')
+    except error.UnknownSubcommand as inst:
+        cmd, subcmd, allsubcmds = inst.args
+        suggested = False
+        if subcmd is not None:
+            nosubcmdmsg = (_("hg %s: unknown subcommand '%s'\n") %
+                           (cmd, subcmd))
+            sim = _getsimilar(allsubcmds, subcmd)
+            if sim:
+                ui.warn(nosubcmdmsg)
+                _reportsimilar(ui.warn, sim)
+                suggested = True
+        else:
+            nosubcmdmsg = _("hg %s: subcommand required\n") % cmd
+        if not suggested:
+            ui.pager('help')
+            ui.warn(nosubcmdmsg)
+            commands.help_(ui, cmd)
     except IOError:
         raise
     except KeyboardInterrupt:
@@ -505,15 +522,18 @@ class cmdalias(object):
                                "only be given on the command line")
                              % (self.name, '/'.join(zip(*earlyopts)[0])))
             return
-        self.cmdname = cmd = args.pop(0)
-        self.givenargs = args
 
+        self.cmdname = cmd = args[0]
         try:
-            tableentry = cmdutil.findcmd(cmd, cmdtable, False)[1]
-            if len(tableentry) > 2:
-                self.fn, self.opts, self.help = tableentry
+            cmd, args, aliases, entry = cmdutil.findsubcmd(args, cmdtable,
+                                                           strict=False,
+                                                           partial=True)
+            self.cmdname = cmd
+            self.givenargs = args
+            if len(entry) > 2:
+                self.fn, self.opts, self.help = entry
             else:
-                self.fn, self.opts = tableentry
+                self.fn, self.opts = entry
 
             if self.help.startswith("hg " + cmd):
                 # drop prefix in old-style help lines so hg shows the alias
@@ -528,6 +548,11 @@ class cmdalias(object):
         except error.AmbiguousCommand:
             self.badalias = (_("alias '%s' resolves to ambiguous command '%s'")
                              % (self.name, cmd))
+        except error.UnknownSubcommand as e:
+            cmd, subcmd, __ = e.args
+            self.badalias = (_("alias '%s' resolves to unknown subcommand "
+                               "'%s %s'")
+                             % (self.name, cmd, subcmd))
 
     @property
     def args(self):
@@ -536,7 +561,8 @@ class cmdalias(object):
 
     def __getattr__(self, name):
         adefaults = {r'norepo': True, r'cmdtype': unrecoverablewrite,
-                     r'optionalrepo': False, r'inferrepo': False}
+                     r'optionalrepo': False, r'inferrepo': False,
+                     r'subcommands': {}, r'subonly': False}
         if name not in adefaults:
             raise AttributeError(name)
         if self.badalias or util.safehasattr(self, 'shell'):
@@ -621,10 +647,9 @@ def _parse(ui, args):
         raise error.CommandError(None, inst)
 
     if args:
-        cmd, args = args[0], args[1:]
-        aliases, entry = cmdutil.findcmd(cmd, commands.table,
-                                         ui.configbool("ui", "strict"))
-        cmd = aliases[0]
+        strict = ui.configbool("ui", "strict")
+        cmd, args, aliases, entry = cmdutil.findsubcmd(args, commands.table,
+                                                       strict)
         args = aliasargs(entry[0], args)
         defaults = ui.config("defaults", cmd)
         if defaults:

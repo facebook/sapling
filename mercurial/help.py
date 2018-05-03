@@ -98,6 +98,9 @@ def optrst(header, options, verbose):
 
         data.append((so, lo, desc))
 
+    if not data:
+        return ''
+
     if multioccur:
         header += (_(" ([+] can be repeated)"))
 
@@ -293,6 +296,24 @@ def makeitemsdoc(ui, topic, doc, marker, items, dedent=False):
     entries = '\n\n'.join(entries)
     return doc.replace(marker, entries)
 
+def makesubcmdlist(cmd, subcommands, verbose, quiet):
+    cmdhelp = []
+    for name, entry in subcommands.items():
+        aliases = cmdutil.parsealiases(name)
+        name = ', '.join(aliases) if verbose else aliases[0]
+        doc = pycompat.getdoc(entry[0]) or ''
+        doc, __, rest = doc.strip().partition('\n')
+        if verbose and rest.strip():
+            if len(entry) > 2:  # synopsis
+                name = '{} {}'.format(name, entry[2])
+        cmdhelp.append(" :%s: %s\n" % (name, doc))
+    rst = ['\n%s:\n\n' % _('subcommands')]
+    rst.extend(sorted(cmdhelp))
+    if not quiet:
+        rst.append(_("\n(use 'hg help %s [subcommand]' "
+                     "to show complete subcommand help)\n") % cmd)
+    return rst
+
 def addtopicsymbols(topic, marker, symbols, dedent=False):
     def add(ui, topic, doc):
         return makeitemsdoc(ui, topic, doc, marker, symbols, dedent=dedent)
@@ -347,8 +368,9 @@ class _helpdispatch(object):
 
     def helpcmd(self, name, subtopic=None):
         try:
-            aliases, entry = cmdutil.findcmd(name, self.commands.table,
-                                             strict=self.unknowncmd)
+            cmd, args, aliases, entry = (
+                cmdutil.findsubcmd(name.split(), self.commands.table,
+                                   strict=self.unknowncmd, partial=True))
         except error.AmbiguousCommand as inst:
             # py3k fix: except vars can't be used outside the scope of the
             # except block, nor can be used inside a lambda. python issue4617
@@ -356,6 +378,11 @@ class _helpdispatch(object):
             select = lambda c: c.lstrip('^').startswith(prefix)
             rst = self.helplist(name, select)
             return rst
+        except error.UnknownSubcommand as inst:
+            cmd, subcmd, __ = inst
+            msg = _("'%s' has no such subcommand: %s") % (cmd, subcmd)
+            hint = _("run 'hg help %s' to see available subcommands") % cmd
+            raise error.Abort(msg, hint=hint)
 
         rst = []
 
@@ -374,9 +401,9 @@ class _helpdispatch(object):
             if entry[2].startswith('hg'):
                 rst.append("%s\n" % entry[2])
             else:
-                rst.append('hg %s %s\n' % (aliases[0], entry[2]))
+                rst.append('hg %s %s\n' % (cmd, entry[2]))
         else:
-            rst.append('hg %s\n' % aliases[0])
+            rst.append('hg %s\n' % cmd)
         # aliases
         if self.full and not self.ui.quiet and len(aliases) > 1:
             rst.append(_("\naliases: %s\n") % ', '.join(aliases[1:]))
@@ -420,6 +447,11 @@ class _helpdispatch(object):
         if self.ui.verbose:
             rst.append(optrst(_("global options"),
                               self.commands.globalopts, self.ui.verbose))
+
+        # subcommands
+        if entry[0].subcommands:
+            rst.extend(makesubcmdlist(cmd, entry[0].subcommands,
+                                      self.ui.verbose, self.ui.quiet))
 
         if not self.ui.verbose:
             if not self.full:

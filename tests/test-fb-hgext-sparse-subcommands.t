@@ -172,7 +172,7 @@ test sparse subcommands (help, verbose)
   (use 'hg sparse -h' to show more help)
 
   $ hg help sparse list
-  hg sparse list [OPTION]...
+  hg sparse::list [OPTION]...
   
   List available sparse profiles
   
@@ -227,7 +227,7 @@ test sparse subcommands (help, verbose)
   (some details hidden, use --verbose to show complete help)
 
   $ hg help sparse explain
-  hg sparse explain [OPTION]... [PROFILE]...
+  hg sparse::explain [OPTION]... [PROFILE]...
   
   Show information on individual profiles
   
@@ -260,32 +260,9 @@ test sparse subcommands (help, verbose)
   (some details hidden, use --verbose to show complete help)
   $ hg sparse explain --nonesuch
   hg sparse explain: option --nonesuch not recognized
-  hg sparse explain [OPTION]... [PROFILE]...
+  hg sparse [OPTION] SUBCOMMAND ...
   
-  Show information on individual profiles
-  
-  options:
-  
-   -r --rev REV           explain the profile(s) against the specified revision
-   -T --template TEMPLATE display with template
-  
-  subcommands:
-  
-   list           List available sparse profiles
-   explain        Show information on individual profiles
-   files          List all files included in a profiles
-   include        include files in the sparse checkout
-   exclude        exclude files in the sparse checkout
-   delete         delete an include/exclude rule
-   enableprofile  enables the specified profile
-   disableprofile disables the specified profile
-   reset          makes the repo full again
-   importrules    Directly import sparse profile rules
-   clear          Clear local sparse rules
-   refresh        Refreshes the files on disk based on the sparse rules
-   cwd            List all names in this directory
-  
-  (Use hg help sparse [subcommand] to show complete subcommand help)
+  make the current checkout sparse, or edit the existing checkout
   
   (use 'hg sparse explain -h' to show more help)
   [255]

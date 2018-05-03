@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import functools
+
 from . import (
     configitems,
     error,
@@ -167,9 +169,14 @@ class command(_funcregistrarbase):
 
     possiblecmdtypes = {unrecoverablewrite, recoverablewrite, readonly}
 
+    def __init__(self, table=None, parentcommand=None):
+        super(command, self).__init__(table)
+        if parentcommand is not None:
+            parentcommand.subcommands = self._table
+
     def _doregister(self, func, name, options=(), synopsis=None,
                     norepo=False, optionalrepo=False, inferrepo=False,
-                    cmdtype=unrecoverablewrite):
+                    cmdtype=unrecoverablewrite, subonly=False):
 
         if cmdtype not in self.possiblecmdtypes:
             raise error.ProgrammingError("unknown cmdtype value '%s' for "
@@ -178,6 +185,9 @@ class command(_funcregistrarbase):
         func.optionalrepo = optionalrepo
         func.inferrepo = inferrepo
         func.cmdtype = cmdtype
+        func.subcommand = functools.partial(command, parentcommand=func)
+        func.subcommands = {}
+        func.subonly = subonly
         if synopsis:
             self._table[name] = func, list(options), synopsis
         else:

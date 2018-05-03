@@ -2660,7 +2660,7 @@ def heads(ui, repo, *branchrevs, **opts):
      ],
     _('[-ecks] [TOPIC]'),
     norepo=True, cmdtype=readonly)
-def help_(ui, name=None, **opts):
+def help_(ui, *names, **opts):
     """show help for a given topic or a help overview
 
     With no arguments, print a list of commands with short help messages.
@@ -2671,6 +2671,7 @@ def help_(ui, name=None, **opts):
     Returns 0 if successful.
     """
 
+    name = ' '.join(names) if names and names != (None,) else None
     keep = opts.get(r'system') or []
     if len(keep) == 0:
         if pycompat.sysplatform.startswith('win'):

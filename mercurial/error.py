@@ -210,6 +210,11 @@ class AmbiguousCommand(Exception):
     """Exception raised if command shortcut matches more than one command."""
     __bytes__ = _tobytes
 
+class UnknownSubcommand(Exception):
+    """Exception raised if a subcommand is not in the subcommand table of a
+    command that requires subcommands."""
+    __bytes__ = _tobytes
+
 # derived from KeyboardInterrupt to simplify some breakout code
 class SignalInterrupt(KeyboardInterrupt):
     """Exception raised on SIGTERM and SIGHUP."""
