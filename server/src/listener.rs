@@ -8,17 +8,19 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use futures::Stream;
+use failure::Error;
+use futures::{Future, Stream};
 use futures::sync::mpsc;
-use futures_ext::{BoxStream, FutureExt, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use bytes::Bytes;
-use tokio_core::reactor::Handle;
+use errors::*;
+use tokio_core::reactor::{Handle, Remote};
 use tokio_io::{AsyncRead, AsyncWrite, IoStream};
 use tokio_io::codec::{FramedRead, FramedWrite};
 use tokio_uds::{UnixListener, UnixStream};
 
-use sshrelay::{SshDecoder, SshEncoder, SshMsg, SshStream};
+use sshrelay::{Preamble, SshDecoder, SshEncoder, SshMsg, SshStream};
 
 pub fn listener<P>(sockname: P, handle: &Handle) -> io::Result<IoStream<UnixStream>>
 where
@@ -58,6 +60,7 @@ where
 }
 
 pub struct Stdio {
+    pub preamble: Preamble,
     pub stdin: BoxStream<Bytes, io::Error>,
     pub stdout: mpsc::Sender<Bytes>,
     pub stderr: mpsc::Sender<Bytes>,
@@ -65,7 +68,7 @@ pub struct Stdio {
 
 // As a server, given a stream to a client, return an Io pair with stdin/stdout, and an
 // auxillary sink for stderr.
-pub fn ssh_server_mux<S>(s: S, handle: &Handle) -> Stdio
+pub fn ssh_server_mux<S>(s: S, remote: Remote) -> BoxFuture<Stdio, Error>
 where
     S: AsyncRead + AsyncWrite + Send + 'static,
 {
@@ -73,35 +76,54 @@ where
     let wr = FramedWrite::new(tx, SshEncoder::new());
     let rd = FramedRead::new(rx, SshDecoder::new());
 
-    let stdin = rd.filter_map(|s| {
-        if s.stream() == SshStream::Stdin {
-            Some(s.data())
-        } else {
-            None
-        }
-    }).boxify();
+    rd.into_future()
+        .map_err(|_err| ErrorKind::ConnectionError.into())
+        .and_then(move |(maybe_preamble, rd)| {
+            let preamble = match maybe_preamble {
+                Some(maybe_preamble) => {
+                    if let SshStream::Preamble(preamble) = maybe_preamble.stream() {
+                        preamble
+                    } else {
+                        return Err(ErrorKind::NoConnectionPreamble.into());
+                    }
+                }
+                None => {
+                    return Err(ErrorKind::NoConnectionPreamble.into());
+                }
+            };
 
-    let (stdout, stderr) = {
-        let (otx, orx) = mpsc::channel(1);
-        let (etx, erx) = mpsc::channel(1);
+            let stdin = rd.filter_map(|s| {
+                if s.stream() == SshStream::Stdin {
+                    Some(s.data())
+                } else {
+                    None
+                }
+            }).boxify();
 
-        let orx = orx.map(|v| SshMsg::new(SshStream::Stdout, v));
-        let erx = erx.map(|v| SshMsg::new(SshStream::Stderr, v));
+            let (stdout, stderr) = {
+                let (otx, orx) = mpsc::channel(1);
+                let (etx, erx) = mpsc::channel(1);
 
-        // Glue them together
-        let fwd = orx.select(erx)
-            .map_err(|()| io::Error::new(io::ErrorKind::Other, "huh?"))
-            .forward(wr);
+                let orx = orx.map(|v| SshMsg::new(SshStream::Stdout, v));
+                let erx = erx.map(|v| SshMsg::new(SshStream::Stderr, v));
 
-        // spawn a task for forwarding stdout/err into stream
-        handle.spawn(fwd.discard());
+                // Glue them together
+                let fwd = orx.select(erx)
+                    .map_err(|()| io::Error::new(io::ErrorKind::Other, "huh?"))
+                    .forward(wr);
 
-        (otx, etx)
-    };
+                // spawn a task for forwarding stdout/err into stream
+                remote.spawn(|_handle| fwd.discard());
 
-    Stdio {
-        stdin: stdin,
-        stdout: stdout,
-        stderr: stderr,
-    }
+                (otx, etx)
+            };
+
+            Ok(Stdio {
+                preamble,
+                stdin,
+                stdout,
+                stderr,
+            })
+        })
+        .boxify()
 }

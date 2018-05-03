@@ -294,25 +294,32 @@ fn repo_listen(
     let listen_log = root_log.new(o!("repo" => repo.path().clone()));
 
     let handle = core.handle();
+    let remote = core.remote();
     let repo = Arc::new(repo);
 
     let server = listener::listener(sockname, &handle)
         .expect("failed to create listener")
         .map_err(Error::from)
-        .for_each(move |sock| {
-            match sock.peer_addr() {
-                Ok(addr) => info!(listen_log, "New connection from {:?}", addr),
-                Err(err) => {
-                    error!(listen_log, "Failed to get peer addr"; SlogKVError(Error::from(err)))
-                }
-            };
-
+        .and_then({
+            let listen_log = listen_log.clone();
+            move |sock| {
+                match sock.peer_addr() {
+                    Ok(addr) => info!(listen_log, "New connection from {:?}", addr),
+                    Err(err) => {
+                        error!(listen_log, "Failed to get peer addr"; SlogKVError(Error::from(err)))
+                    }
+                };
+                ssh_server_mux(sock, remote.clone())
+            }
+        })
+        .for_each(move |stdio| {
             // Have a connection. Extract std{in,out,err} streams for socket
             let Stdio {
                 stdin,
                 stdout,
                 stderr,
-            } = ssh_server_mux(sock, &handle);
+                ..
+            } = stdio;
 
             let session_uuid = uuid::Uuid::new_v4();
             let connect_time = Instant::now();

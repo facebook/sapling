@@ -6,8 +6,9 @@
 
 use std::path::{Path, PathBuf};
 
+use bytes::Bytes;
 use failure::ResultExt;
-use futures::{future, Future, Sink, Stream};
+use futures::{future, stream, Future, Sink, Stream};
 
 use tokio_core::reactor::Core;
 use tokio_io::AsyncRead;
@@ -20,7 +21,7 @@ use clap::ArgMatches;
 use errors::*;
 
 use futures_ext::StreamExt;
-use sshrelay::{SshDecoder, SshEncoder, SshMsg, SshStream};
+use sshrelay::{Preamble, SshDecoder, SshEncoder, SshMsg, SshStream};
 
 mod fdio;
 
@@ -31,14 +32,14 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> Result<()> {
             path.push(".hg");
             path.push("mononoke.sock");
 
-            return ssh_relay(path);
+            return ssh_relay(path, repo);
         }
         bail_msg!("Missing repository");
     }
     bail_msg!("Only stdio server is supported");
 }
 
-fn ssh_relay<P: AsRef<Path>>(path: P) -> Result<()> {
+fn ssh_relay<P: AsRef<Path>>(path: P, repo: &str) -> Result<()> {
     let path = path.as_ref();
 
     let mut reactor = Core::new()?;
@@ -59,9 +60,12 @@ fn ssh_relay<P: AsRef<Path>>(path: P) -> Result<()> {
     let rx = FramedRead::new(socket_read, SshDecoder::new());
     let tx = FramedWrite::new(socket_write, SshEncoder::new());
 
+    let preamble = Preamble::new(String::from(repo));
+    let preamble = stream::once(Ok(SshMsg::new(SshStream::Preamble(preamble), Bytes::new())));
+
     // Start a task to copy from stdin to the socket
-    let stdin_future = stdin
-        .map(|buf| SshMsg::new(SshStream::Stdin, buf))
+    let stdin_future = preamble
+        .chain(stdin.map(|buf| SshMsg::new(SshStream::Stdin, buf)))
         .forward(tx)
         .map_err(Error::from)
         .map(|_| ());

@@ -13,4 +13,6 @@ pub enum ErrorKind {
     #[fail(display = "failed to initialize server: {}", _0)] Initialization(&'static str),
     #[fail(display = "internal error: file {} copied from directory {}", _0, _1)]
     InconsistenCopyInfo(RepoPath, RepoPath),
+    #[fail(display = "connection does not start with preamble")] NoConnectionPreamble,
+    #[fail(display = "connection error while reading preamble")] ConnectionError,
 }
