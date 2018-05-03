@@ -784,20 +784,8 @@ class fixupstate(object):
     def _moveworkingdirectoryparent(self):
         ctx = self.repo[self.finalnode]
         dirstate = self.repo.dirstate
-        # dirstate.rebuild invalidates fsmonitorstate, causing "hg status" to
-        # be slow. in absorb's case, no need to invalidate fsmonitorstate.
-        noop = lambda: 0
-        restore = noop
-        if util.safehasattr(dirstate, '_fsmonitorstate'):
-            bak = dirstate._fsmonitorstate.invalidate
-            def restore():
-                dirstate._fsmonitorstate.invalidate = bak
-            dirstate._fsmonitorstate.invalidate = noop
-        try:
-            with dirstate.parentchange():
-                dirstate.rebuild(ctx.node(), ctx.manifest(), self.paths)
-        finally:
-            restore()
+        with dirstate.parentchange():
+            dirstate.rebuild(ctx.node(), ctx.manifest(), self.paths, exact=True)
 
     @staticmethod
     def _willbecomenoop(memworkingcopy, ctx, pctx=None):

@@ -654,7 +654,8 @@ def makedirstate(repo, dirstate):
                 return overridewalk(orig, self, *args, **kwargs)
 
         def rebuild(self, *args, **kwargs):
-            self._fsmonitorstate.invalidate()
+            if not kwargs.get('exact'):
+                self._fsmonitorstate.invalidate()
             return super(fsmonitordirstate, self).rebuild(*args, **kwargs)
 
         def invalidate(self, *args, **kwargs):
