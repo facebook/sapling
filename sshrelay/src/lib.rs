@@ -6,8 +6,13 @@
 
 extern crate bytes;
 extern crate netstring;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 extern crate tokio_io;
 
+use std::collections::HashMap;
 use std::io;
 
 use bytes::{BufMut, Bytes, BytesMut};
@@ -22,11 +27,30 @@ pub struct SshDecoder(NetstringDecoder);
 #[derive(Debug)]
 pub struct SshEncoder(NetstringEncoder<Bytes>);
 
+// Common information for a connection
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct Preamble {
+    // Name of the repo to connect to
+    reponame: String,
+    // Additional information that will be send to the server. Examples: user/host identity.
+    misc: HashMap<String, String>,
+}
+
+impl Preamble {
+    pub fn new(reponame: String) -> Self {
+        Self {
+            reponame,
+            misc: HashMap::new(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SshStream {
     Stdin,
     Stdout,
     Stderr,
+    Preamble(Preamble),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -77,6 +101,20 @@ impl Decoder for SshDecoder {
                 0 => Ok(Some(SshMsg(SshStream::Stdin, data.freeze()))),
                 1 => Ok(Some(SshMsg(SshStream::Stdout, data.freeze()))),
                 2 => Ok(Some(SshMsg(SshStream::Stderr, data.freeze()))),
+                3 => {
+                    let data = data.freeze();
+                    let strdata = match std::str::from_utf8(&data) {
+                        Ok(data) => data,
+                        Err(err) => {
+                            return Err(io::Error::new(
+                                io::ErrorKind::InvalidInput,
+                                format!("expected valid utf8 input for preamble: {}", err),
+                            ));
+                        }
+                    };
+                    let preamble: Preamble = serde_json::from_str(strdata)?;
+                    Ok(Some(SshMsg(SshStream::Preamble(preamble), Bytes::new())))
+                }
                 _ => {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
@@ -116,6 +154,14 @@ impl Encoder for SshEncoder {
             SshStream::Stderr => {
                 v.put_u8(2);
                 v.put_slice(&msg.1);
+                Ok(self.0.encode(v.freeze(), buf)?)
+            }
+            SshStream::Preamble(preamble) => {
+                // msg.1 is ignored in preamble
+                debug_assert!(msg.1.len() == 0, "preamble ignores additional bytes");
+                v.put_u8(3);
+                let preamble = serde_json::to_vec(&preamble)?;
+                v.put_slice(&preamble);
                 Ok(self.0.encode(v.freeze(), buf)?)
             }
         }
