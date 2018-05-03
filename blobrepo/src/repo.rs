@@ -31,7 +31,7 @@ use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets,
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use delayblob::DelayBlob;
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
-use filenodes::Filenodes;
+use filenodes::{CachingFilenodes, Filenodes};
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use mercurial::{HgBlobNode, HgNodeHash, HgParents, NodeHashConversion};
@@ -179,6 +179,7 @@ impl BlobRepo {
         db_address: &str,
         blobstore_cache_size: usize,
         changesets_cache_size: usize,
+        filenodes_cache_size: usize,
     ) -> Result<Self> {
         let blobstore = ManifoldBlob::new_with_prefix(bucket.to_string(), prefix, remote);
         let blobstore =
@@ -193,8 +194,11 @@ impl BlobRepo {
         )?;
         let bookmarks = MysqlDbBookmarks::open(connection_params.clone())
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
+
         let filenodes = MysqlFilenodes::open(connection_params.clone(), DEFAULT_INSERT_CHUNK_SIZE)
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
+        let filenodes = CachingFilenodes::new(Arc::new(filenodes), filenodes_cache_size);
+
         let changesets = MysqlChangesets::open(connection_params)
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 

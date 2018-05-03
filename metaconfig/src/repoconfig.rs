@@ -64,6 +64,9 @@ pub enum RepoType {
         /// Size of the changesets cache. If not set in the config, then cache size is set to
         /// a default value.
         changesets_cache_size: usize,
+        /// Size of the filenodes cache. If not set in the config, then cache size is set to
+        /// a default value.
+        filenodes_cache_size: usize,
     },
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database, and a log-normal delay is applied to access to simulate a remote store
@@ -192,6 +195,7 @@ struct RawRepoConfig {
     delay_stddev: Option<u64>,
     blobstore_cache_size: Option<usize>,
     changesets_cache_size: Option<usize>,
+    filenodes_cache_size: Option<usize>,
 }
 
 /// Types of repositories supported
@@ -224,6 +228,7 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
                     db_address,
                     blobstore_cache_size: this.blobstore_cache_size.unwrap_or(100_000_000),
                     changesets_cache_size: this.changesets_cache_size.unwrap_or(100_000_000),
+                    filenodes_cache_size: this.changesets_cache_size.unwrap_or(100_000_000),
                 }
             }
             TestBlobDelayRocks => RepoType::TestBlobDelayRocks(

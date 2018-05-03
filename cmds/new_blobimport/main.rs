@@ -55,6 +55,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --db-address [address]     'address of a db. Used only for manifold blobstore'
             --blobstore-cache-size [SIZE] 'size of the blobstore cache'
             --changesets-cache-size [SIZE] 'size of the changesets cache'
+            --filenodes-cache-size [SIZE] 'size of the filenodes cache'
             [OUTPUT]                   'Blobstore output'
         "#,
         )
@@ -146,6 +147,10 @@ fn open_blobrepo<'a>(logger: &Logger, remote: Remote, matches: &ArgMatches<'a>) 
                     .unwrap_or(100_000_000),
                 matches
                     .value_of("changesets-cache-size")
+                    .map(|val| val.parse::<usize>().expect("cache size must be integer"))
+                    .unwrap_or(100_000_000),
+                matches
+                    .value_of("filenodes-cache-size")
                     .map(|val| val.parse::<usize>().expect("cache size must be integer"))
                     .unwrap_or(100_000_000),
             ).expect("failed to create manifold blobrepo")

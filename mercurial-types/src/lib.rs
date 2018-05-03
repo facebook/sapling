@@ -119,14 +119,20 @@ mod thrift {
     pub use mononoke_types_thrift::*;
 }
 
-impl asyncmemo::Weight for RepositoryId {
-    fn get_weight(&self) -> usize {
-        std::mem::size_of::<RepositoryId>()
-    }
-}
-
 impl asyncmemo::Weight for DChangesetId {
     fn get_weight(&self) -> usize {
         std::mem::size_of::<DChangesetId>()
+    }
+}
+
+impl asyncmemo::Weight for DFileNodeId {
+    fn get_weight(&self) -> usize {
+        std::mem::size_of::<DFileNodeId>()
+    }
+}
+
+impl asyncmemo::Weight for RepositoryId {
+    fn get_weight(&self) -> usize {
+        std::mem::size_of::<RepositoryId>()
     }
 }

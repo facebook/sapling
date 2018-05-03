@@ -70,3 +70,29 @@ where
         self.0.get_weight() + self.1.get_weight()
     }
 }
+
+impl<A, B, C> Weight for (A, B, C)
+where
+    A: Weight,
+    B: Weight,
+    C: Weight,
+{
+    #[inline]
+    fn get_weight(&self) -> usize {
+        self.0.get_weight() + self.1.get_weight() + self.2.get_weight()
+    }
+}
+
+impl<A> Weight for Option<A>
+where
+    A: Weight,
+{
+    #[inline]
+    fn get_weight(&self) -> usize {
+        let inner_size = self.as_ref()
+            .map(Weight::get_weight)
+            .unwrap_or(0);
+
+        mem::size_of::<Self>() - mem::size_of::<A>() + inner_size
+    }
+}

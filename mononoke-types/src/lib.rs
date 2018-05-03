@@ -14,6 +14,7 @@
 #![feature(const_fn)]
 
 extern crate ascii;
+extern crate asyncmemo;
 extern crate bincode;
 extern crate blake2;
 extern crate bytes;
@@ -34,7 +35,6 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
-extern crate asyncmemo;
 extern crate rust_thrift;
 
 extern crate mononoke_types_thrift;

@@ -9,9 +9,12 @@ use std::convert::{From, TryFrom, TryInto};
 use std::fmt::{self, Display};
 use std::io::{self, Write};
 use std::iter::{once, Once};
+use std::mem;
 use std::slice::Iter;
 
+use asyncmemo::Weight;
 use bincode;
+use heapsize::HeapSizeOf;
 
 use quickcheck::{Arbitrary, Gen};
 
@@ -21,6 +24,12 @@ use thrift;
 lazy_static! {
     pub static ref DOT: MPathElement = MPathElement(b".".to_vec());
     pub static ref DOTDOT: MPathElement = MPathElement(b"..".to_vec());
+}
+
+impl Weight for RepoPath {
+    fn get_weight(&self) -> usize {
+        self.heap_size_of_children() + mem::size_of::<Self>()
+    }
 }
 
 /// A path or filename within Mononoke, with information about whether
