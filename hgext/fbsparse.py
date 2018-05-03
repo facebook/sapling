@@ -445,6 +445,12 @@ def _setupdirstate(ui):
 
     # dirstate.rebuild should not add non-matching files
     def _rebuild(orig, self, parent, allfiles, changedfiles=None, exact=False):
+        if exact:
+            # If exact=True, files outside "changedfiles" are assumed unchanged.
+            # In this case, do not check files outside sparse profile. This
+            # skips O(working copy) scans, and affect absorb perf.
+            return orig(self, parent, allfiles, changedfiles, exact=exact)
+
         if util.safehasattr(self.repo, 'sparsematch'):
             matcher = self.repo.sparsematch()
             allfiles = allfiles.matches(matcher)
@@ -454,6 +460,7 @@ def _setupdirstate(ui):
             if changedfiles is not None:
                 # In _rebuild, these files will be deleted from the dirstate
                 # when they are not found to be in allfiles
+                # This is O(working copy) and is expensive.
                 dirstatefilestoremove = set(f for f in self if not matcher(f))
                 changedfiles = dirstatefilestoremove.union(changedfiles)
 
