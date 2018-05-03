@@ -73,18 +73,17 @@ impl Decoder for SshDecoder {
             if data.len() == 0 {
                 return Ok(None);
             }
-            let stream = match data.split_to(1)[0] {
-                0 => SshStream::Stdin,
-                1 => SshStream::Stdout,
-                2 => SshStream::Stderr,
+            match data.split_to(1)[0] {
+                0 => Ok(Some(SshMsg(SshStream::Stdin, data.freeze()))),
+                1 => Ok(Some(SshMsg(SshStream::Stdout, data.freeze()))),
+                2 => Ok(Some(SshMsg(SshStream::Stderr, data.freeze()))),
                 _ => {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
                         "bad ssh stream",
                     ))
                 }
-            };
-            Ok(Some(SshMsg(stream, data.freeze())))
+            }
         } else {
             Ok(None)
         }
@@ -104,12 +103,22 @@ impl Encoder for SshEncoder {
     fn encode(&mut self, msg: SshMsg, buf: &mut BytesMut) -> io::Result<()> {
         let mut v = BytesMut::with_capacity(1 + msg.1.len());
         match msg.0 {
-            SshStream::Stdin => v.put_u8(0),
-            SshStream::Stdout => v.put_u8(1),
-            SshStream::Stderr => v.put_u8(2),
-        };
-        v.put_slice(&msg.1);
-        Ok(self.0.encode(v.freeze(), buf)?)
+            SshStream::Stdin => {
+                v.put_u8(0);
+                v.put_slice(&msg.1);
+                Ok(self.0.encode(v.freeze(), buf)?)
+            }
+            SshStream::Stdout => {
+                v.put_u8(1);
+                v.put_slice(&msg.1);
+                Ok(self.0.encode(v.freeze(), buf)?)
+            }
+            SshStream::Stderr => {
+                v.put_u8(2);
+                v.put_slice(&msg.1);
+                Ok(self.0.encode(v.freeze(), buf)?)
+            }
+        }
     }
 }
 
