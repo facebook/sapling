@@ -55,13 +55,11 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
-use tokio_core::reactor::Core;
 
 use blobrepo::BlobRepo;
 use bytes::Bytes;
 use clap::App;
 use futures::{Future, IntoFuture, Stream};
-use futures::sync::oneshot;
 use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
@@ -548,26 +546,11 @@ fn main() {
                 .manifold_bucket
                 .expect("manifold bucket is not specified");
             let repo_logger = root_logger.new(o!("repo" => format!("{}", bucket)));
-            let (sender, receiver) = oneshot::channel();
-            // manifold requires a separate detached thread to do the IO, that's why we create a
-            // separate thread to handle it.
-            std::thread::spawn(move || {
-                let mut core = Core::new().expect("cannot create core for manifold");
-                sender
-                    .send(core.remote())
-                    .expect("cannot send remote handle for manifold");
-                loop {
-                    // loop infinitely; it will be stopped when the whole server is stopped
-                    core.turn(None);
-                }
-            });
-            let remote = receiver
-                .wait()
-                .expect("cannot get remote handle for manifold");
             // TODO(stash): bump it when we need it
             let blobstore_cache_size = 100_000_000;
             let changesets_cache_size = 100_000_000;
             let filenodes_cache_size = 100_000_000;
+            let io_thread_num = 5;
             start_server(
                 &config.addr,
                 config.reponame,
@@ -575,12 +558,12 @@ fn main() {
                     repo_logger,
                     bucket,
                     &config.manifold_prefix.unwrap_or("".into()),
-                    &remote,
                     RepositoryId::new(config.repoid),
                     &config.db_address.expect("db tier needs to be specified"),
                     blobstore_cache_size,
                     changesets_cache_size,
                     filenodes_cache_size,
+                    io_thread_num,
                 ).expect("couldn't open blob state"),
                 root_logger.clone(),
                 config.ssl,

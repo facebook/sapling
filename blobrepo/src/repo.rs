@@ -7,7 +7,8 @@
 use std::collections::{BTreeMap, HashSet};
 use std::mem;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{mpsc, Arc};
+use std::thread;
 use std::time::Duration;
 use std::usize;
 
@@ -42,7 +43,7 @@ use mercurial_types::nodehash::DManifestId;
 use mononoke_types::{Blob, BlobstoreBytes, ContentId, DateTime, FileContents, MPath, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
-use tokio_core::reactor::Remote;
+use tokio_core::reactor::Core;
 
 use BlobChangeset;
 use BlobManifest;
@@ -174,17 +175,13 @@ impl BlobRepo {
         logger: Logger,
         bucket: T,
         prefix: &str,
-        remote: &Remote,
         repoid: RepositoryId,
         db_address: &str,
         blobstore_cache_size: usize,
         changesets_cache_size: usize,
         filenodes_cache_size: usize,
+        thread_num: usize,
     ) -> Result<Self> {
-        let blobstore = ManifoldBlob::new_with_prefix(bucket.to_string(), prefix, remote);
-        let blobstore =
-            CachingBlobstore::new(Arc::new(blobstore), usize::MAX, blobstore_cache_size);
-
         // TODO(stash): T28429403 use local region first, fallback to master if not found
         let connection_params = get_connection_params(
             db_address.to_string(),
@@ -194,6 +191,32 @@ impl BlobRepo {
         )?;
         let bookmarks = MysqlDbBookmarks::open(connection_params.clone())
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
+
+        let mut io_remotes = vec![];
+        for i in 0..thread_num {
+            let (sender, recv) = mpsc::channel();
+            let builder = thread::Builder::new().name(format!("blobstore_io_{}", i));
+            builder
+                .spawn(move || {
+                    let mut core = Core::new()
+                        .expect("failed to create manifold blobrepo: failed to create core");
+                    sender
+                        .send(core.remote())
+                        .expect("failed to create manifold blobrepo: sending remote failed");
+                    loop {
+                        core.turn(None);
+                    }
+                })
+                .expect("failed to start blobstore io thread");
+
+            let remote = recv.recv()
+                .expect("failed to create manifold blobrepo: recv remote failed");
+            io_remotes.push(remote);
+        }
+        let blobstore =
+            ManifoldBlob::new_with_prefix(bucket.to_string(), prefix, io_remotes.iter().collect());
+        let blobstore =
+            CachingBlobstore::new(Arc::new(blobstore), usize::MAX, blobstore_cache_size);
 
         let filenodes = MysqlFilenodes::open(connection_params.clone(), DEFAULT_INSERT_CHUNK_SIZE)
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;

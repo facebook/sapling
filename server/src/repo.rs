@@ -104,7 +104,7 @@ pub trait OpenableRepoType {
 }
 
 impl OpenableRepoType for RepoType {
-    fn open(&self, logger: Logger, remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo> {
+    fn open(&self, logger: Logger, _remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo> {
         use hgproto::ErrorKind;
         use metaconfig::repoconfig::RepoType::*;
 
@@ -118,17 +118,18 @@ impl OpenableRepoType for RepoType {
                 ref blobstore_cache_size,
                 ref changesets_cache_size,
                 ref filenodes_cache_size,
+                ref io_thread_num,
                 ..
             } => BlobRepo::new_test_manifold(
                 logger,
                 manifold_bucket,
                 &prefix,
-                remote,
                 repoid,
                 &db_address,
                 *blobstore_cache_size,
                 *changesets_cache_size,
                 *filenodes_cache_size,
+                *io_thread_num,
             )?,
             TestBlobDelayRocks(ref path, mean, stddev) => {
                 // We take in an arithmetic mean and stddev, and deduce a log normal

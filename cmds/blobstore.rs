@@ -57,7 +57,7 @@ fn main() {
     let mut core = Core::new().unwrap();
     let remote = core.remote();
 
-    let blobstore = ManifoldBlob::new_with_prefix(bucket, prefix, &remote);
+    let blobstore = ManifoldBlob::new_with_prefix(bucket, prefix, vec![&remote]);
 
     let future = match matches.subcommand() {
         ("fetch", Some(sub_m)) => {

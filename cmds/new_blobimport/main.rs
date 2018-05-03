@@ -36,7 +36,7 @@ use failure::err_msg;
 use futures::{Future, Stream};
 use slog::{Drain, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
-use tokio_core::reactor::{Core, Remote};
+use tokio_core::reactor::Core;
 
 use blobrepo::BlobRepo;
 use changesets::SqliteChangesets;
@@ -56,6 +56,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --blobstore-cache-size [SIZE] 'size of the blobstore cache'
             --changesets-cache-size [SIZE] 'size of the changesets cache'
             --filenodes-cache-size [SIZE] 'size of the filenodes cache'
+            --io-thread-num [NUM] 'num of the io threads to use'
             [OUTPUT]                   'Blobstore output'
         "#,
         )
@@ -69,7 +70,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn open_blobrepo<'a>(logger: &Logger, remote: Remote, matches: &ArgMatches<'a>) -> BlobRepo {
+fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
     let repo_id = RepositoryId::new(matches.value_of("repo_id").unwrap().parse().unwrap());
 
     match matches.value_of("blobstore").unwrap() {
@@ -136,7 +137,6 @@ fn open_blobrepo<'a>(logger: &Logger, remote: Remote, matches: &ArgMatches<'a>) 
                 logger.new(o!["BlobRepo:TestManifold" => manifold_bucket.to_owned()]),
                 manifold_bucket,
                 "new_blobimport_test",
-                &remote,
                 repo_id,
                 matches
                     .value_of("db-address")
@@ -153,6 +153,10 @@ fn open_blobrepo<'a>(logger: &Logger, remote: Remote, matches: &ArgMatches<'a>) 
                     .value_of("filenodes-cache-size")
                     .map(|val| val.parse::<usize>().expect("cache size must be integer"))
                     .unwrap_or(100_000_000),
+                matches
+                    .value_of("io-thread-num")
+                    .map(|val| val.parse::<usize>().expect("cache size must be integer"))
+                    .unwrap_or(5),
             ).expect("failed to create manifold blobrepo")
         }
         bad => panic!("unexpected blobstore type: {}", bad),
@@ -172,7 +176,7 @@ fn main() {
     let drain = glog_drain().fuse();
     let logger = Logger::root(drain, o![]);
 
-    let blobrepo = Arc::new(open_blobrepo(&logger, core.remote(), &matches));
+    let blobrepo = Arc::new(open_blobrepo(&logger, &matches));
 
     let upload_changesets = changeset::upload_changesets(revlogrepo.clone(), blobrepo.clone())
         .for_each(|cs| {
