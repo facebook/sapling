@@ -31,9 +31,9 @@ pub struct SshEncoder(NetstringEncoder<Bytes>);
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Preamble {
     // Name of the repo to connect to
-    reponame: String,
+    pub reponame: String,
     // Additional information that will be send to the server. Examples: user/host identity.
-    misc: HashMap<String, String>,
+    pub misc: HashMap<String, String>,
 }
 
 impl Preamble {

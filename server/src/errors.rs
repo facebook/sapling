@@ -15,4 +15,5 @@ pub enum ErrorKind {
     InconsistenCopyInfo(RepoPath, RepoPath),
     #[fail(display = "connection does not start with preamble")] NoConnectionPreamble,
     #[fail(display = "connection error while reading preamble")] ConnectionError,
+    #[fail(display = "incorrect reponame: {}", _0)] IncorrectRepoName(String),
 }

@@ -76,9 +76,10 @@ use std::thread::{self, JoinHandle};
 use std::time::Instant;
 
 use failure::SlogKVError;
-use futures::{Future, Sink, Stream};
+use futures::{Future, IntoFuture, Sink, Stream};
 use futures::sink::Wait;
 use futures::sync::mpsc;
+use futures_ext::FutureExt;
 
 use clap::{App, ArgMatches};
 
@@ -229,7 +230,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
 
 fn start_repo_listeners<I>(repos: I, root_log: &Logger) -> Result<Vec<JoinHandle<!>>>
 where
-    I: IntoIterator<Item = (RepoType, usize, i32, Option<String>)>,
+    I: IntoIterator<Item = (String, RepoType, usize, i32, Option<String>)>,
 {
     // Given the list of paths to repos:
     // - create a thread for it
@@ -238,27 +239,30 @@ where
 
     let handles: Vec<_> = repos
         .into_iter()
-        .map(move |(repotype, cache_size, repoid, scuba_table)| {
-            info!(root_log, "Start listening for repo {:?}", repotype);
+        .map(
+            move |(reponame, repotype, cache_size, repoid, scuba_table)| {
+                info!(root_log, "Start listening for repo {:?}", repotype);
 
-            // start a thread for each repo to own the reactor and start listening for
-            // connections and detach it
-            thread::Builder::new()
-                .name(format!("listener_{:?}", repotype))
-                .spawn({
-                    let root_log = root_log.clone();
-                    move || {
-                        repo_listen(
-                            repotype,
-                            cache_size,
-                            root_log.clone(),
-                            RepositoryId::new(repoid),
-                            scuba_table,
-                        )
-                    }
-                })
-                .map_err(Error::from)
-        })
+                // start a thread for each repo to own the reactor and start listening for
+                // connections and detach it
+                thread::Builder::new()
+                    .name(format!("listener_{:?}", repotype))
+                    .spawn({
+                        let root_log = root_log.clone();
+                        move || {
+                            repo_listen(
+                                reponame,
+                                repotype,
+                                cache_size,
+                                root_log.clone(),
+                                RepositoryId::new(repoid),
+                                scuba_table,
+                            )
+                        }
+                    })
+                    .map_err(Error::from)
+            },
+        )
         .collect();
 
     if handles.iter().any(Result::is_err) {
@@ -275,6 +279,7 @@ where
 
 // Listener thread for a specific repo
 fn repo_listen(
+    reponame: String,
     repotype: RepoType,
     cache_size: usize,
     root_log: Logger,
@@ -318,7 +323,7 @@ fn repo_listen(
                 stdin,
                 stdout,
                 stderr,
-                ..
+                preamble,
             } = stdio;
 
             let session_uuid = uuid::Uuid::new_v4();
@@ -348,10 +353,17 @@ fn repo_listen(
             );
 
             // send responses back
-            let endres = proto_handler
-                .map_err(Error::from)
-                .forward(stdout)
-                .map(|_| ());
+            let endres = if preamble.reponame == reponame {
+                proto_handler
+                    .map_err(Error::from)
+                    .forward(stdout)
+                    .map(|_| ())
+                    .boxify()
+            } else {
+                Err(ErrorKind::IncorrectRepoName(preamble.reponame).into())
+                    .into_future()
+                    .boxify()
+            };
 
             // If we got an error at this point, then catch it, print a message and return
             // Ok (if we allow the Error to propagate further it will shutdown the listener
@@ -416,10 +428,15 @@ fn main() {
 
         let config = get_config(root_log, &matches)?;
         let repo_listeners = start_repo_listeners(
-            config
-                .repos
-                .into_iter()
-                .map(|(_, c)| (c.repotype, c.generation_cache_size, c.repoid, c.scuba_table)),
+            config.repos.into_iter().map(|(reponame, c)| {
+                (
+                    reponame,
+                    c.repotype,
+                    c.generation_cache_size,
+                    c.repoid,
+                    c.scuba_table,
+                )
+            }),
             root_log,
         )?;
 
