@@ -423,7 +423,7 @@ fn main() {
         {
             let thread_name = handle.thread().name().unwrap_or("unknown").to_owned();
             match handle.join() {
-                Err(panic) => crit!(root_log, "Thread {} paniced with: {:?}", thread_name, panic),
+                Err(panic) => crit!(root_log, "Thread {} panicked with: {:?}", thread_name, panic),
             }
         }
 
