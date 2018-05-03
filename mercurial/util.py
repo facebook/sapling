@@ -1442,7 +1442,7 @@ except ImportError:
         import re2
         re2._re2.escape  # the C module might be missing
         _re2 = None
-    except ImportError:
+    except (AttributeError, ImportError):
         _re2 = False
 
 class _re(object):
