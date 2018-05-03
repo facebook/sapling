@@ -29,19 +29,21 @@
   > def othertestalphabeta(ui, repo):
   >     """other test subcommand alpha subcommand beta"""
   >     ui.status("other test command alpha/beta called\n")
+  > def uisetup(ui):
+  >     for alias, cmd in [
+  >             (b'xt', b'test'),
+  >             (b'xt1', b'test one'),
+  >             (b'xt0', b'test nonexistent'),
+  >             (b'yt', b'othertest'),
+  >             (b'yta', b'othertest alpha'),
+  >             (b'ytf', b'othertest foo')]:
+  >         ui.setconfig(b'alias', alias, cmd, b'testcommandsext')
   > EOF
 
   $ hg init
   $ cat >> .hg/hgrc << EOF
   > [extensions]
   > testcommands=$TESTTMP/testcommands.py
-  > [alias]
-  > xt = test
-  > xt1 = test one
-  > xt0 = test nonexistent
-  > yt = othertest
-  > yta = othertest alpha
-  > ytf = othertest foo
   > EOF
 
   $ hg test
@@ -90,7 +92,7 @@
   
   test command
   
-  defined by: $TESTTMP/.hg/hgrc:4
+  defined by: testcommandsext
   
   subcommands:
   
@@ -278,7 +280,7 @@
   
   test command
   
-  defined by: $TESTTMP/.hg/hgrc:4
+  defined by: testcommandsext
   
   subcommands:
   
@@ -301,7 +303,7 @@
   
   first test subcommand
   
-  defined by: $TESTTMP/.hg/hgrc:5
+  defined by: testcommandsext
   
   (some details hidden, use --verbose to show complete help)
   $ hg othertest alpha beta --help
