@@ -583,8 +583,13 @@ class dirstate(object):
         self._updatedfiles.clear()
         self._dirty = True
 
-    def rebuild(self, parent, allfiles, changedfiles=None):
+    def rebuild(self, parent, allfiles, changedfiles=None, exact=False):
+        # If exact is True, then assume only changedfiles can be changed, and
+        # other files cannot be possibly changed. This is used by "absorb" as
+        # a hint to perform a fast path for fsmonitor and sparse.
         if changedfiles is None:
+            if exact:
+                raise error.ProgrammingError('exact requires changedfiles')
             # Rebuild entire dirstate
             changedfiles = allfiles
             lastnormaltime = self._lastnormaltime

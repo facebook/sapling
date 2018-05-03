@@ -444,7 +444,7 @@ def _setupdirstate(ui):
     replacefilecache(dirstate.dirstate, '_ignore', ignorewrapper)
 
     # dirstate.rebuild should not add non-matching files
-    def _rebuild(orig, self, parent, allfiles, changedfiles=None):
+    def _rebuild(orig, self, parent, allfiles, changedfiles=None, exact=False):
         if util.safehasattr(self.repo, 'sparsematch'):
             matcher = self.repo.sparsematch()
             allfiles = allfiles.matches(matcher)
