@@ -351,6 +351,11 @@ impl BlobRepo {
         Box::new(HgBlobEntry::new_root(self.blobstore.clone(), *manifestid))
     }
 
+    pub fn get_bookmark(&self, name: &AsciiString) -> BoxFuture<Option<DChangesetId>, Error> {
+        self.bookmarks.get(name, &self.repoid)
+    }
+
+    // TODO(stash): rename to get_all_bookmarks()?
     pub fn get_bookmarks(&self) -> BoxStream<(AsciiString, DChangesetId), Error> {
         let empty_prefix = AsciiString::new();
         self.bookmarks.list_by_prefix(&empty_prefix, &self.repoid)

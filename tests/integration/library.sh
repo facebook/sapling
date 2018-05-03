@@ -2,7 +2,7 @@
 # Library routines and initial setup for Mononoke-related tests.
 
 function mononoke {
-  $MONONOKE_SERVER "$@" --debug -P $TESTTMP/mononoke-config-rocks -C $(cd $TESTTMP/mononoke-config; hg log -r 'tip' -T'{node}') >> "$TESTTMP/mononoke.out" 2>&1 &
+  $MONONOKE_SERVER "$@" --debug -P "$TESTTMP/mononoke-config-rocks" --configrepo_book local_master >> "$TESTTMP/mononoke.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 
@@ -55,6 +55,7 @@ CONFIG
   hg add -q repos
   hg ci -ma
   hg backfilltree
+  hg book local_master
   cd ..
 
   # We need to have a RocksDb version of config repo

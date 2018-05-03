@@ -8,6 +8,7 @@
 #![feature(never_type)]
 #![feature(try_from)]
 
+extern crate ascii;
 #[macro_use]
 extern crate failure_ext as failure;
 #[macro_use]
@@ -75,6 +76,8 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Instant;
 
+use ascii::AsciiString;
+
 use failure::SlogKVError;
 use futures::{Future, IntoFuture, Sink, Stream};
 use futures::sink::Wait;
@@ -138,7 +141,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             r#"
             <crpath>      -P, --configrepo_path [PATH]           'path to the config repo in rocksdb form'
 
-            <crhash>      -C, --configrepo_hash [HASH]           'config repo commit hash'
+            -C, --configrepo_hash [HASH]                         'config repo commit hash'
+
+            <crbook>      -C, --configrepo_book [BOOK]           'config repo bookmark'
 
             -p, --thrift_port [PORT] 'if provided the thrift server will start on this port'
 
@@ -215,8 +220,20 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         RepositoryId::new(0),
     )?;
 
-    let changesetid =
-        mercurial_types::nodehash::DChangesetId::from_str(matches.value_of("crhash").unwrap())?;
+    let changesetid = match matches.value_of("crbook") {
+        Some(book) => {
+            let book = AsciiString::from_ascii(book).expect("book must be ascii");
+            config_repo
+                .get_bookmark(&book)
+                .wait()?
+                .expect("bookmark not found")
+        }
+        None => mercurial_types::nodehash::DChangesetId::from_str(
+            matches
+                .value_of("crhash")
+                .expect("crhash and crbook are not specified"),
+        )?,
+    };
 
     info!(
         logger,
