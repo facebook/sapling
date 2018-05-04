@@ -10,6 +10,7 @@
 import argparse
 from eden.thrift import EdenNotRunningError
 import errno
+import glob
 import json
 import os
 import signal
@@ -478,14 +479,49 @@ class StartCmd(Subcmd):
                             foreground=args.foreground)
 
 
+def find_buck_projects_in_repo(path: str) -> List[str]:
+    # While fbsource has a top level buckconfig, we don't really use
+    # it in our projects today.  Instead, our projects tend to have
+    # their own configuration files one level down.  This glob()
+    # finds those directories for us.
+    buck_configs = glob.glob(f'{path}/*/.buckconfig')
+    projects = [os.path.dirname(config) for config in buck_configs]
+    if os.path.isfile(f'{path}/.buckconfig'):
+        projects.append(path)
+    return projects
+
+
+def stop_buckd_for_path(path: str) -> None:
+    print(f'Stopping buck in {path}...')
+    subprocess.run(
+        # Using BUCKVERSION=last here to avoid triggering a download
+        # of a new version of buck just to kill off buck
+        ['env', 'BUCKVERSION=last', 'buck', 'kill'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        cwd=path)
+
+
+def stop_buckd_for_repo(path: str) -> None:
+    '''Stop the major buckd instances that are likely to be running for path'''
+    for project in find_buck_projects_in_repo(path):
+        stop_buckd_for_path(project)
+
+
+def buck_clean_repo(path: str) -> None:
+    for project in find_buck_projects_in_repo(path):
+        print(f'Cleaning buck in {project}...')
+        subprocess.run(
+            # Using BUCKVERSION=last here to avoid triggering a download
+            # of a new version of buck just to remove some dirs
+            ['env', 'NO_BUCKD=true', 'BUCKVERSION=last', 'buck', 'clean'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            cwd=project)
+
+
 def stop_aux_processes(client) -> None:
     '''Tear down processes that will hold onto file handles and prevent shutdown'''
-
-    # TODO: This is linux specific.  We need a mercurial command that
-    # does the right thing so that this will operate correctly on macos
-    print(f'Stopping chg...')
-    uid = os.getuid()
-    subprocess.run(f'rm /run/user/{uid}/chg/server*', shell=True)
 
     active_mount_points: Set[Optional[str]] = {
         mount.mountPoint
@@ -493,10 +529,8 @@ def stop_aux_processes(client) -> None:
     }
 
     for repo in active_mount_points:
-        print(f'Stopping buck in {repo}...')
-        subprocess.run(
-            ["env", "BUCKVERSION=last", "buck", "kill"],
-            cwd=repo)
+        if repo is not None:
+            stop_buckd_for_repo(repo)
 
     # TODO: intelligently stop nuclide-server associated with eden
     # print('Stopping nuclide-server...')
