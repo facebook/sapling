@@ -83,6 +83,7 @@ use futures::{Future, IntoFuture, Sink, Stream};
 use futures::sink::Wait;
 use futures::sync::mpsc;
 use futures_ext::FutureExt;
+use futures_ext::asynchronize;
 
 use clap::{App, ArgMatches};
 
@@ -390,32 +391,41 @@ fn repo_listen(
             let conn_log = conn_log.clone();
             let endres = endres.or_else(move |err| {
                 error!(conn_log, "Command failed"; SlogKVError(err), "remote" => "true");
-                Ok(())
+                let res: Result<()> = Ok(());
+                res
             });
 
             // Run the whole future asynchronously to allow new connections
             match scuba_table {
-                None => handle.spawn(endres),
+                None => {
+                    handle.spawn(asynchronize(move || endres).map_err(|_| ()));
+                }
                 Some(ref scuba_table) => {
                     let scuba_table = scuba_table.clone();
                     let repo_path = repo.path().clone();
-                    handle.spawn(endres.map(move |_| {
-                        let scuba_client = ScubaClient::new(scuba_table);
+                    handle.spawn(
+                        asynchronize(move || {
+                            endres.map(move |_| {
+                                let scuba_client = ScubaClient::new(scuba_table);
 
-                        let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
-                        let wireproto_calls = mem::replace(wireproto_calls.deref_mut(), Vec::new());
+                                let mut wireproto_calls =
+                                    wireproto_calls.lock().expect("lock poisoned");
+                                let wireproto_calls =
+                                    mem::replace(wireproto_calls.deref_mut(), Vec::new());
 
-                        let mut sample = ScubaSample::new();
-                        sample.add("session_uuid", format!("{}", session_uuid));
-                        let elapsed_time = connect_time.elapsed();
-                        let elapsed_ms = elapsed_time.as_secs() * 1000
-                            + elapsed_time.subsec_nanos() as u64 / 1000000;
-                        sample.add("time_elapsed_ms", elapsed_ms);
-                        sample.add("wireproto_commands", wireproto_calls);
-                        sample.add("repo", repo_path);
+                                let mut sample = ScubaSample::new();
+                                sample.add("session_uuid", format!("{}", session_uuid));
+                                let elapsed_time = connect_time.elapsed();
+                                let elapsed_ms = elapsed_time.as_secs() * 1000
+                                    + elapsed_time.subsec_nanos() as u64 / 1000000;
+                                sample.add("time_elapsed_ms", elapsed_ms);
+                                sample.add("wireproto_commands", wireproto_calls);
+                                sample.add("repo", repo_path);
 
-                        scuba_client.log(&sample);
-                    }))
+                                scuba_client.log(&sample);
+                            })
+                        }).map_err(|_| ()),
+                    )
                 }
             };
 
