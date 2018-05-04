@@ -10,6 +10,8 @@ from mercurial import (
 
 from . import importer, lfs, p4
 
+IMPORTER_IGNORE_REORG = '@IMPORTER_IGNORE_REORG@'
+
 class ChangelistImporter(object):
     def __init__(self, ui, repo, ctx, client, storepath):
         self.ui = ui
@@ -37,12 +39,36 @@ class ChangelistImporter(object):
         p4flogs = {}
         p4paths = [info['depotFile'] for info in fstat]
         hgpaths = p4.parse_where_multiple(self.client, p4paths)
+        ignore_reorg = IMPORTER_IGNORE_REORG in p4cl.description
+        if ignore_reorg:
+            self.ui.debug(
+                '%s found in CL desc, ignoring no-op moves\n' %
+                (IMPORTER_IGNORE_REORG, )
+            )
         for info in fstat:
             action = info['action']
             p4path = info['depotFile']
             hgpath = hgpaths[p4path]
             data = {p4cl.cl: {'action': action, 'type': info['type']}}
-            p4flogs[hgpath] = p4.P4Filelog(p4path, data)
+
+            if not ignore_reorg:
+                p4flogs[hgpath] = p4.P4Filelog(p4path, data)
+            else:
+                flog = p4flogs.get(hgpath)
+                if flog is None:
+                    p4flogs[hgpath] = p4.P4Filelog(p4path, data)
+                else:
+                    other_action = flog._data[p4cl.cl]['action']
+                    if {action, other_action} == {'move/add', 'move/delete'}:
+                        if action == 'move/add':
+                            src, dst = flog.depotfile, p4path
+                        else:
+                            src, dst = p4path, flog.depotfile
+                        self.ui.debug(
+                            'Ignoring %s => %s, same path in hg: %s\n' %
+                                (src, dst, hgpath),
+                        )
+                        del p4flogs[hgpath]
 
             if action in p4.ACTION_DELETE + p4.ACTION_ARCHIVE:
                 removed.add(hgpath)
