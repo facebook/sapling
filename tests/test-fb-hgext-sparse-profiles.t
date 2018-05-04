@@ -478,12 +478,20 @@ Naming the same field in without- and with- filters is an error:
   $ hg sparse list --with-field bar --without-field bar
   abort: You can't specify fields in both --with-field and --without-field, please use only one or the other, for bar
   [255]
+
 We can filter on the contents of a field or the path, case-insensitively:
 
   $ hg sparse list --filter path:/bar/ --filter title:profile
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs - Profile including the profiles directory
     profiles/bar/ham  - An extended profile including some interesting files
+
+We can filter on specific files being included in a sparse profile:
+
+  $ hg sparse list --contains-file interesting/sizeable
+  symbols: * = active profile, ~ = transitively included
+    profiles/bar/ham    - An extended profile including some interesting files
+    profiles/bar/python
 
 You can specify a revision to list profiles for; in this case the current
 sparse configuration is ignored; no profile can be 'active' or 'included':
@@ -711,6 +719,20 @@ current working copy:
   9
   $ hg sparse explain profiles/bar/ham -T "{stats.filecount}\n" -r .
   10
+  $ hg sparse list --contains-file interesting/later_revision -r ".^"
+  symbols: * = active profile, ~ = transitively included
+  warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
+  warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
+    profiles/bar/ham    - An extended profile including some interesting files
+    profiles/bar/python
+    profiles/foo/errors
+  $ hg sparse list --contains-file interesting/later_revision -r .
+  symbols: * = active profile, ~ = transitively included
+  warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
+  warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
+    profiles/bar/ham    - An extended profile including some interesting files
+    profiles/bar/python
+    profiles/foo/errors
   $ hg up -q ".^"
 
 We can list the files in a profile with the hg sparse files command:

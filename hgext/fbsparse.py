@@ -542,13 +542,14 @@ def _wraprepo(ui, repo):
     metadata_key_value = re.compile(r'(?P<key>.*)\s*[:=]\s*(?P<value>.*)')
 
     class SparseRepo(repo.__class__):
-        def readsparseconfig(self, raw, filename=None):
+        def readsparseconfig(self, raw, filename=None, warn=True):
             """Takes a string sparse config and returns a SparseConfig
 
             This object contains the includes, excludes, and profiles from the
             raw profile.
 
-            The filename is used to report errors and warnings.
+            The filename is used to report errors and warnings, unless warn is
+            set to False.
 
             """
             filename = filename or '<sparse profile>'
@@ -565,6 +566,7 @@ def _wraprepo(ui, repo):
             current = includes  # no sections == includes
 
             profiles = []
+            uiwarn = self.ui.warn if warn else (lambda *ignored: None)
 
             for i, line in enumerate(raw.splitlines(), start=1):
                 stripped = line.strip()
@@ -591,7 +593,7 @@ def _wraprepo(ui, repo):
                     # Metadata parsing, INI-style format
                     if line.startswith((' ', '\t')):  # continuation
                         if last_key is None:
-                            self.ui.warn(_(
+                            uiwarn(_(
                                 'warning: sparse profile [metadata] section '
                                 'indented lines that do not belong to a '
                                 'multi-line entry, ignoring, in %s:%i\n') % (
@@ -601,7 +603,7 @@ def _wraprepo(ui, repo):
                     else:
                         match = metadata_key_value.match(stripped)
                         if match is None:
-                            self.ui.warn(_(
+                            uiwarn(_(
                                 'warning: sparse profile [metadata] section '
                                 'does not appear to have a valid option '
                                 'definition, ignoring, in %s:%i\n') % (
@@ -964,6 +966,7 @@ def _discover(ui, repo, rev=None):
 
     profile_directory = ui.config('sparse', 'profile_directory')
     available = set()
+    ctx = scmutil.revsingle(repo, rev)
     if profile_directory is not None:
         if (os.path.isabs(profile_directory) or
                 profile_directory.startswith('../')):
@@ -973,7 +976,6 @@ def _discover(ui, repo, rev=None):
         if not profile_directory.endswith('/'):
             profile_directory += '/'
 
-        ctx = scmutil.revsingle(repo, rev)
         mf = ctx.manifest()
 
         matcher = matchmod.match(
@@ -985,7 +987,7 @@ def _discover(ui, repo, rev=None):
     # sort profiles and read profile metadata as we iterate
     for p in sorted(available | included):
         try:
-            raw = repo.getrawprofile(p, rev)
+            raw = repo.getrawprofile(p, ctx.hex())
         except error.ManifestLookupError:
             # ignore a missing profile; this should only happen for 'included'
             # profiles, however. repo.getactiveprofiles() above will already
@@ -1111,12 +1113,12 @@ def hintexplainverbose(*profiles):
              "size for a give profile") % ' '.join(profiles)
 
 @hint('sparse-list-verbose')
-def hintlistverbose(profiles, filters):
+def hintlistverbose(profiles, filters, load_matcher):
     # move the hidden flag from the without to the with pile and count
     # the matches
     filters['with'].add('hidden')
     filters['without'].remove('hidden')
-    pred = _build_profile_filter(filters)
+    pred = _build_profile_filter(filters, load_matcher)
     hidden_count = sum(1 for p in filter(pred, profiles))
     if hidden_count:
         return _("%d hidden profiles not shown; "
@@ -1223,7 +1225,11 @@ def sparse(ui, repo, *pats, **opts):
 
 subcmd = sparse.subcommand()
 
-def _build_profile_filter(filters):
+def _contains_files(load_matcher, profile, files):
+    matcher = load_matcher(profile)
+    return all(matcher(f) for f in files)
+
+def _build_profile_filter(filters, load_matcher):
     """Create a callable function to filter a profile, returning a boolean"""
     predicates = {
          # we need *all* fields in a with filter to be present, so with
@@ -1235,8 +1241,9 @@ def _build_profile_filter(filters):
         'filter': lambda field_values: lambda md: (
             # all fields to test and all values for those fields are present
             all(f in md and all(v in md[f].lower() for v in vs)
-                for f, vs in field_values.items())
-        )
+                for f, vs in field_values.items())),
+        'contains_file': lambda files: lambda md: _contains_files(
+            load_matcher, md['path'], files),
     }
     tests = [predicates[k](v) for k, v in sorted(filters.items()) if v]
     # pass in a dictionary with all metadata and the path as an extra key
@@ -1255,7 +1262,10 @@ def _build_profile_filter(filters):
     ('', 'filter', [],
      _('Only show profiles that contain the given value as a substring in a '
       'specific metadata field.'),
-     _('FIELD:VALUE'))
+     _('FIELD:VALUE')),
+    ('', 'contains-file', [],
+     _('Only show profiles that would include the named file if enabled.'),
+     _('FILE')),
     ] + commands.templateopts,
     '[OPTION]...')
 def _listprofiles(ui, repo, *pats, **opts):
@@ -1264,10 +1274,10 @@ def _listprofiles(ui, repo, *pats, **opts):
     Show all available sparse profiles, with the active profiles marked.
 
     You can filter profiles with `--with-field [FIELD]`, `--without-field
-    [FIELD]` and `--filter [FIELD:VALUE]`; you can specify these options more
-    than once to set multiple criteria, which all must match for a profile to be
-    listed. The field `path` is always available, and is the path of the profile
-    file in the repository.
+    [FIELD]`, `--filter [FIELD:VALUE]` and `--contains-file [FILENAME]`; you can
+    specify these options more than once to set multiple criteria, which all
+    must match for a profile to be listed. The field `path` is always available,
+    and is the path of the profile file in the repository.
 
     `--filter` takes a fieldname and value to look for, separated by a colon.
     The field must be present in the metadata, and the value present in the
@@ -1276,14 +1286,21 @@ def _listprofiles(ui, repo, *pats, **opts):
     e.g. --filter path:foo --filter path:bar only matches profile paths with the
     substrings foo and bar both present.
 
+    `--contains-file` takes a file path relative to the current directory. No
+    check is made if the file actually exists; any profile that would include
+    the file if it did exist will match.
+
     By default, `--without-field hidden` is implied unless you use the --verbose
     switch to include hidden profiles.
 
     """
+    rev = scmutil.revsingle(repo, opts.get('rev')).hex()
+    tocanon = functools.partial(pathutil.canonpath, repo.root, repo.getcwd())
     filters = {
         'with': set(opts.get('with_field', ())),
         'without': set(opts.get('without_field', ())),
         'filter': {},  # dictionary of fieldnames to sets of values
+        'contains_file': {tocanon(f) for f in opts.get('contains_file', ())},
     }
     for fieldvalue in opts.get('filter', ()):
         fieldname, __, value = fieldvalue.partition(':')
@@ -1317,7 +1334,11 @@ def _listprofiles(ui, repo, *pats, **opts):
                   'included\n'),
                 label='sparse.profile.legend')
 
-        predicate = _build_profile_filter(filters)
+        load_matcher = lambda p: repo.sparsematch(
+            rev=rev, config=repo.readsparseconfig(
+                repo.getrawprofile(p, rev), filename=p, warn=False))
+
+        predicate = _build_profile_filter(filters, load_matcher)
         profiles = list(_discover(ui, repo, rev=opts.get('rev')))
         filtered = list(filter(predicate, profiles))
         max_width = 0
@@ -1339,7 +1360,7 @@ def _listprofiles(ui, repo, *pats, **opts):
             fm.plain('\n')
 
     if not (ui.verbose or 'hidden' in filters['with']):
-        hintutil.trigger('sparse-list-verbose', profiles, filters)
+        hintutil.trigger('sparse-list-verbose', profiles, filters, load_matcher)
 
 @subcmd('explain', [
     ('r', 'rev', '', _('explain the profile(s) against the specified revision'),
