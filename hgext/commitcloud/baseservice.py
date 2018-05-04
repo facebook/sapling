@@ -65,8 +65,16 @@ class BaseService(object):
             for m in obsmarkers]
 
     @abstractmethod
-    def updatereferences(self, version, oldheads, newheads, oldbookmarks,
-                         newbookmarks, newobsmarkers):
+    def requiresauthentication(self):
+        """Returns True if the service requires authentication tokens"""
+
+    @abstractmethod
+    def check(self):
+        """Returns True if the connection to the service is ok"""
+
+    @abstractmethod
+    def updatereferences(self, reponame, workspace, version, oldheads, newheads,
+                         oldbookmarks, newbookmarks, newobsmarkers):
         """Updates the references to a new version.
 
         If the update was successful, returns `(True, references)`, where
@@ -78,6 +86,6 @@ class BaseService(object):
         """
 
     @abstractmethod
-    def getreferences(self, baseversion):
+    def getreferences(self, reponame, workspace, baseversion):
         """Gets the current references if they differ from the base version
         """

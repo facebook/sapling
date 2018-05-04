@@ -41,67 +41,142 @@ highlightdebug = commitcloudcommon.highlightdebug
 highlightstatus = commitcloudcommon.highlightstatus
 infinitepush = None
 
-@command('cloudjoin')
+@command('cloud', [], 'SUBCOMMAND ...', subonly=True)
+def cloud(ui, repo, **opts):
+    """synchronise commits via commit cloud
+
+    Commit cloud lets you synchronize commits and bookmarks between
+    different copies of the same repository.  This may be useful, for
+    example, to keep your laptop and desktop computers in sync.
+
+    Use 'hg cloud join' to connect your repository to the commit cloud
+    service and begin synchronizing commits.
+
+    Use 'hg cloud sync' to trigger a new synchronization.  Synchronizations
+    also happen automatically in the background as you create and modify
+    commits.
+
+    Use 'hg cloud leave' to disconnect your repository from commit cloud.
+    """
+    pass
+
+subcmd = cloud.subcommand()
+
+@subcmd('join|connect', [])
 def cloudjoin(ui, repo, **opts):
-    """joins the local repository to a cloud workspace
+    """connect the local repository to commit cloud
 
-    This will keep all commits, bookmarks, and working copy parents
-    the same across all the repositories that are part of the same workspace.
+    Commits and bookmarks will be synchronized between all repositories that
+    have been connected to the service.
 
-    For instance, a common use case is keeping laptop and desktop repos in sync.
-
-    Currently only a single default workspace for the user is supported.
+    Use `hg cloud sync` to trigger a new synchronization.
     """
 
-    if not commitcloudutil.TokenLocator(ui).token:
-        raise commitcloudcommon.RegistrationError(
-            ui, _('please run `hg cloudregister` before joining a workspace'))
+    tokenlocator = commitcloudutil.TokenLocator(ui)
+    checkauthenticated(ui, repo, tokenlocator)
 
     workspacemanager = commitcloudutil.WorkspaceManager(repo)
     workspacemanager.setworkspace()
 
     highlightstatus(
-        ui, _("this repository is now part of the '%s' "
+        ui, _("this repository is now connected to the '%s' "
               "workspace for the '%s' repo\n") %
         (workspacemanager.workspace, workspacemanager.reponame))
+    cloudsync(ui, repo, **opts)
 
-@command('cloudleave')
+@subcmd('leave|disconnect')
 def cloudleave(ui, repo, **opts):
-    """leave Commit Cloud synchronization
+    """disconnect the local repository from commit cloud
 
-    The command disconnect this local repo from any of Commit Cloud workspaces
+    Commits and bookmarks will no londer be synchronized with other
+    repositories.
     """
     commitcloudutil.WorkspaceManager(repo).clearworkspace()
-    highlightstatus(ui, _('you are no longer connected to a workspace\n'))
+    highlightstatus(
+            ui,
+            _('this repository is now disconnected from commit cloud\n'))
 
-@command('cloudregister', [('t', 'token', '', 'set secret access token')])
-def cloudregister(ui, repo, **opts):
-    """register your private access token with Commit Cloud for this host
-
-    This can be done in any hg repo with Commit Cloud enabled on the host
+@subcmd('authenticate', [('t', 'token', '', 'set or update token')])
+def cloudauth(ui, repo, **opts):
+    """authenticate this host with the commit cloud service
     """
     tokenlocator = commitcloudutil.TokenLocator(ui)
-    highlightstatus(ui, _('welcome to registration!\n'))
 
     token = opts.get('token')
-    if not token:
-        token = tokenlocator.token
-        if not token:
-            msg = _('token is not provided and not found')
-            raise commitcloudcommon.RegistrationError(ui, msg)
-        else:
-            ui.status(_('you have been already registered\n'))
-            return
-    else:
+    if token:
+        # The user has provided a token, so just store it.
         if tokenlocator.token:
-            ui.status(_('your token will be updated\n'))
+            ui.status(_('updating authentication token\n'))
+        else:
+            ui.status(_('setting authentication token\n'))
+        # check token actually works
+        service.get(ui, token).check()
         tokenlocator.settoken(token)
-    ui.status(_('registration successful\n'))
+        ui.status(_('authentication successful\n'))
+    else:
+        token = tokenlocator.token
+        if token:
+            try:
+                service.get(ui, token).check()
+            except commitcloudcommon.RegistrationError:
+                token = None
+            else:
+                ui.status(_('using existing authentication token\n'))
+        if token:
+            ui.status(_('authentication successful\n'))
+        else:
+            # Run through interactive authentication
+            authenticate(ui, repo, tokenlocator)
 
-@command('cloudsync')
-def cloudsync(ui, repo, dest=None, **opts):
+def authenticate(ui, repo, tokenlocator):
+    """interactive authentication"""
+    if not ui.interactive():
+        msg = _('authentication with commit cloud required')
+        hint = _("use 'hg cloud auth --token TOKEN' to set a token")
+        raise commitcloudcommon.RegistrationError(ui, msg, hint=hint)
+
+    authhelp = ui.config('commitcloud', 'auth_help')
+    if authhelp:
+        ui.status(authhelp + '\n')
+    # ui.prompt doesn't set up the prompt correctly, so pasting long lines
+    # wraps incorrectly in the terminal.  Print the prompt on its own line
+    # to avoid this.
+    prompt = _('paste your commit cloud authentication token below:\n')
+    ui.write(ui.label(prompt, 'ui.prompt'))
+    token = ui.prompt('', default='').strip()
+    if token:
+        service.get(ui, token).check()
+        tokenlocator.settoken(token)
+        ui.status(_('authentication successful\n'))
+
+def checkauthenticated(ui, repo, tokenlocator):
+    """check if authentication is needed"""
+    token = tokenlocator.token
+    if token:
+        try:
+            service.get(ui, token).check()
+        except commitcloudcommon.RegistrationError:
+            pass
+        else:
+            return
+    authenticate(ui, repo, tokenlocator)
+
+def getrepoworkspace(ui, repo):
+    """get the workspace identity for the currently joined workspace"""
+    workspacemanager = commitcloudutil.WorkspaceManager(repo)
+    reponame = workspacemanager.reponame
+    if not reponame:
+        raise commitcloudcommon.ConfigurationError(ui, _('unknown repo'))
+
+    workspace = workspacemanager.workspace
+    if not workspace:
+        raise commitcloudcommon.WorkspaceError(ui, _('undefined workspace'))
+
+    return reponame, workspace
+
+@subcmd('sync')
+def cloudsync(ui, repo, **opts):
     """synchronize commits with the commit cloud service"""
-
     try:
         # Wait at most 30 seconds, because that's the average backup time
         timeout = 30
@@ -110,7 +185,7 @@ def cloudsync(ui, repo, dest=None, **opts):
                           infinitepush.backupcommands._backuplockname,
                           timeout=timeout):
             currentnode = repo['.'].node()
-            _docloudsync(ui, repo, dest, **opts)
+            _docloudsync(ui, repo, **opts)
             return _maybeupdateworkingcopy(ui, repo, currentnode)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
@@ -119,13 +194,16 @@ def cloudsync(ui, repo, dest=None, **opts):
         else:
             raise
 
-def _docloudsync(ui, repo, dest=None, **opts):
+def _docloudsync(ui, repo, **opts):
     start = time.time()
-    serv = service.get(ui, repo)
+    tokenlocator = commitcloudutil.TokenLocator(ui)
+    reponame, workspace = getrepoworkspace(ui, repo)
+    serv = service.get(ui, tokenlocator.token)
+    highlightstatus(ui, _("synchronizing '%s' with '%s'\n")
+                    % (reponame, workspace))
 
     lastsyncstate = state.SyncState(repo)
-    cloudrefs = serv.getreferences(lastsyncstate.version)
-    highlightstatus(ui, 'start synchronization\n')
+    cloudrefs = serv.getreferences(reponame, workspace, lastsyncstate.version)
 
     synced = False
     while not synced:
@@ -146,7 +224,7 @@ def _docloudsync(ui, repo, dest=None, **opts):
 
             # First, push commits that the server doesn't have.
             newheads = list(set(localheads) - set(lastsyncstate.heads))
-            pushbackup(ui, repo, newheads, localheads, localbookmarks, dest,
+            pushbackup(ui, repo, newheads, localheads, localbookmarks, None,
                        **opts)
 
             # Next, update the cloud heads, bookmarks and obsmarkers.
@@ -155,8 +233,9 @@ def _docloudsync(ui, repo, dest=None, **opts):
                 with repo.svfs.open('commitcloudpendingobsmarkers') as f:
                     _version, obsmarkers = obsolete._readmarkers(f.read())
             synced, cloudrefs = serv.updatereferences(
-                lastsyncstate.version, lastsyncstate.heads, localheads,
-                lastsyncstate.bookmarks.keys(), localbookmarks, obsmarkers)
+                    reponame, workspace, lastsyncstate.version,
+                    lastsyncstate.heads, localheads,
+                    lastsyncstate.bookmarks.keys(), localbookmarks, obsmarkers)
             if synced:
                 lastsyncstate.update(cloudrefs.version, localheads,
                                      localbookmarks)
@@ -164,8 +243,8 @@ def _docloudsync(ui, repo, dest=None, **opts):
                     repo.svfs.unlink('commitcloudpendingobsmarkers')
 
     elapsed = time.time() - start
-    highlightdebug(ui, _('cloudsync is done in %0.2f sec\n') % elapsed)
-    highlightstatus(ui, _('cloudsync done\n'))
+    highlightdebug(ui, _('cloudsync completed in %0.2f sec\n') % elapsed)
+    highlightstatus(ui, _('commits synchronized\n'))
 
 def _maybeupdateworkingcopy(ui, repo, currentnode):
     if repo['.'].node() != currentnode:
@@ -193,14 +272,14 @@ def _maybeupdateworkingcopy(ui, repo, currentnode):
             node.short(currentnode))
         return 0
 
-@command('cloudrecover')
+@subcmd('recover')
 def cloudrecover(ui, repo, **opts):
-    """recover Commit Cloud State
+    """perform recovery for commit cloud
 
-    It cleans up Commit Cloud internal files in the repo
-    and synchronize it from scratch
+    Clear the local cache of commit cloud service state, and resynchronize
+    the repository from scratch.
     """
-    highlightstatus(ui, 'start recovering\n')
+    highlightstatus(ui, 'clearing local commit cloud cache\n')
     state.SyncState.erasestate(repo)
     cloudsync(ui, repo, **opts)
 

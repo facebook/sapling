@@ -20,33 +20,21 @@
     # host of commitcloud proxy
     host = interngraph.intern.facebook.com
 
-    # use oauth authentication
-    oauth = true
-
     # user token
-    # private user token for Commit Cloud generated on
-    # https://our.intern.facebook.com/intern/oauth/
-    # to be used with oauth = true
+    # private user token to access the commit cloud service
     user_token = *****************************
 
     # application id that identifies commit cloud in interngraph
-    # to be used with  oauth = false
     app_id = 361121054385388
-
-    # app token (temporarily, will be moved to another place)
-    # secret token for interngraph (valid for commit cloud service only)
-    # to be used with  oauth = false
-    app_token = **********
 
     # SSL certificates
     certs = /etc/pki/tls/certs/fb_certs.pem
 
     # help message to provide instruction on registration process
-    auth_help = for register your private OAuth access token with Commit Cloud:
-                visit https://example.com/oauth/
+    auth_help = please obtain an authentication token from https://example.com/
 
-    # custom path to store authentication token (maybe used for testing)
-    # the path should exists
+    # custom path to store authentication token (may be used for testing)
+    # the path should exist
     user_token_path = /tmp
 
     # owner team, used for help messages
@@ -95,14 +83,14 @@ def _smartlogbackupmessagemap(orig, ui, repo):
 
 def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None):
     if commitcloudutil.getworkspacename(repo) is not None:
-        return orig(ui, repo, dest, ['hg', 'cloudsync'])
+        return orig(ui, repo, dest, ['hg', 'cloud', 'sync'])
     else:
         return orig(ui, repo, dest, command)
 
 def _smartlogbackupsuggestion(orig, ui, repo):
     if (commitcloudutil.getworkspacename(repo)):
         commitcloudcommon.highlightstatus(ui,
-            _('Run `hg cloudsync` to synchronize your workspace. '
+            _('Run `hg cloud sync` to synchronize your workspace. '
               'If this fails,\n'
               'please report to %s.\n') % commitcloudcommon.getownerteam(ui))
     else:

@@ -18,7 +18,6 @@ from mercurial import util
 from . import (
     baseservice,
     commitcloudcommon,
-    commitcloudutil,
 )
 
 httplib = util.httplib
@@ -38,9 +37,13 @@ class HttpsCommitCloudService(baseservice.BaseService):
        Commit Cloud Service
     """
 
-    def __init__(self, ui, repo):
+    def __init__(self, ui, token=None):
         self.ui = ui
-        self.repo = repo
+        self.token = token
+        if token is None:
+            raise commitcloudcommon.RegistrationError(
+                    ui, _('valid user token is required'))
+
         self.host = ui.config('commitcloud', 'host')
 
         # optional, but needed for using a sandbox
@@ -49,38 +52,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         # debug option
         self.debugrequests = ui.config('commitcloud', 'debugrequests')
 
-        def getauthparams():
-            oauth = ui.configbool('commitcloud', 'oauth')
-            """ If OAuth authentication is enabled we require
-                user specific unique token
-            """
-            if oauth:
-                user_token = commitcloudutil.TokenLocator(self.ui).token
-                if not user_token:
-                    raise commitcloudcommon.RegistrationError(
-                        ui, _('valid user token is required'))
-
-                highlightdebug(self.ui, 'OAuth based authentication is used\n')
-                return {'access_token': user_token}
-            else:
-                """ If app-based authentication is used
-                    app id and secret token (app specific) are required
-                    (this was is for testing purposes, to be deprecated)
-                """
-                app_id = ui.config('commitcloud', 'app_id')
-                app_access_token = ui.config('commitcloud', 'app_token')
-
-                if not app_access_token or not app_id:
-                    raise commitcloudcommon.ConfigurationError(
-                        self.ui, _('app_id and app_token are required'))
-
-                highlightdebug(self.ui, 'app-based authentication is used\n')
-                return {
-                    'app': app_id,
-                    'token': app_access_token,
-                }
-
-        self.auth_params = util.urlreq.urlencode(getauthparams())
+        self.auth_params = util.urlreq.urlencode({'access_token': token})
 
         # we have control on compression here
         # on both client side and server side compression
@@ -101,21 +73,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
             raise commitcloudcommon.ConfigurationError(
                 self.ui, _('host is required'))
 
-        workspacemanager = commitcloudutil.WorkspaceManager(self.repo)
-        self.repo_name = workspacemanager.reponame
-
-        if not self.repo_name:
-            raise commitcloudcommon.ConfigurationError(
-                self.ui, _('unknown repo'))
-
-        self.workspace = workspacemanager.workspace
-        if not self.workspace:
-            raise commitcloudcommon.WorkspaceError(
-                self.ui, _('undefined workspace'))
-
-        self.ui.status(
-            _("current workspace is '%s'\n") %
-            self.workspace)
+    def requiresauthentication(self):
+        return True
 
     def _getheader(self, s):
         return self.headers.get(s)
@@ -156,15 +115,26 @@ class HttpsCommitCloudService(baseservice.BaseService):
         if e:
             raise commitcloudcommon.ServiceError(self.ui, str(e))
 
-    def getreferences(self, baseversion):
+    def check(self):
+        # send a check request.  Currently this is an empty 'get_references'
+        # request, which asks for the latest version of workspace '' for repo
+        # ''.  That always returns a valid response indicating there is no
+        # workspace with that name for that repo.
+        # TODO: Make this a dedicated request
+        path = '/commit_cloud/get_references?' + self.auth_params
+        response = self._send(path, {})
+        if 'error' in response:
+            raise commitcloudcommon.ServiceError(self.ui, response['error'])
+
+    def getreferences(self, reponame, workspace, baseversion):
         highlightdebug(self.ui, "sending 'get_references' request\n")
 
         # send request
         path = '/commit_cloud/get_references?' + self.auth_params
         data = {
             'base_version': baseversion,
-            'repo_name': self.repo_name,
-            'workspace': self.workspace,
+            'repo_name': reponame,
+            'workspace': workspace,
         }
         start = time.time()
         response = self._send(path, data)
@@ -177,10 +147,10 @@ class HttpsCommitCloudService(baseservice.BaseService):
         version = response['ref']['version']
 
         if version == 0:
-            highlightstatus(self.ui, _(
+            highlightdebug(self.ui, _(
                 "'get_references' "
-                "informs the workspace '%s' is not known by server\n")
-                % self.workspace)
+                "returns that workspace '%s' is not known by server\n")
+                % workspace)
             return baseservice.References(version, None, None, None)
 
         if version == baseversion:
@@ -196,8 +166,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
                        % (version, baseversion))
         return self._makereferences(response['ref'])
 
-    def updatereferences(self, version, oldheads, newheads, oldbookmarks,
-                         newbookmarks, newobsmarkers):
+    def updatereferences(self, reponame, workspace, version, oldheads, newheads,
+                         oldbookmarks, newbookmarks, newobsmarkers):
         highlightdebug(self.ui, "sending 'update_references' request\n")
 
         # remove duplicates, must preserve order in the newheads list
@@ -212,8 +182,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
 
         data = {
             'version': version,
-            'repo_name': self.repo_name,
-            'workspace': self.workspace,
+            'repo_name': reponame,
+            'workspace': workspace,
             'removed_heads': oldheads,
             'new_heads': newheads,
             'removed_bookmarks': oldbookmarks,

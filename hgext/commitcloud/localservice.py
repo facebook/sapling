@@ -53,7 +53,13 @@ class LocalService(baseservice.BaseService):
         del data['obsmarkers']
         return data
 
-    def getreferences(self, baseversion):
+    def requiresauthentication(self):
+        return False
+
+    def check(self):
+        return True
+
+    def getreferences(self, reponame, workspace, baseversion):
         data = self._load()
         version = data['version']
         if version == baseversion:
@@ -70,8 +76,8 @@ class LocalService(baseservice.BaseService):
             return self._makereferences(
                 self._filteredobsmarkers(data, baseversion))
 
-    def updatereferences(self, version, oldheads, newheads, oldbookmarks,
-                         newbookmarks, newobsmarkers):
+    def updatereferences(self, reponame, workspace, version, oldheads, newheads,
+                         oldbookmarks, newbookmarks, newobsmarkers):
         data = self._load()
         if version != data['version']:
             return False, self._makereferences(

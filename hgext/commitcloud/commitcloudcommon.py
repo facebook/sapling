@@ -34,16 +34,16 @@ Commit Cloud error wrappers
 class UnexpectedError(error.Abort):
     def __init__(self, ui, message, *args):
         tb = sys.exc_info()[-1]
-        funtionname = traceback.extract_tb(tb, 1)[0][3]
+        functionname = traceback.extract_tb(tb, 1)[0][3]
 
         topic = highlightmsg(ui, _('unexpected error'))
-        details = _('the failing function was %s') % funtionname
+        details = _('the failing function was %s') % functionname
         contact = _('please contact %s to report the error') % getownerteam(ui)
         message = "%s: %s\n%s\n%s" % (topic, message, details, contact)
         super(UnexpectedError, self).__init__(message, *args)
 
 class RegistrationError(error.Abort):
-    def __init__(self, ui, message, *args):
+    def __init__(self, ui, message, *args, **kwargs):
         authenticationhelp = ui.config('commitcloud', 'auth_help')
         if authenticationhelp:
             topic = highlightmsg(ui, _('registration error'))
@@ -52,13 +52,13 @@ class RegistrationError(error.Abort):
             contact = _(
                 'please contact %s for more information') % getownerteam(ui)
             message = "%s: %s\n%s\n%s" % (topic, message, details, contact)
-        super(RegistrationError, self).__init__(message, *args)
+        super(RegistrationError, self).__init__(message, *args, **kwargs)
 
 class WorkspaceError(error.Abort):
     def __init__(self, ui, message, *args):
         topic = highlightmsg(ui, _('workspace error'))
-        details = _('your repo is not connected to any workspace\n'
-                    'please run `hg cloudjoin --help` for more details')
+        details = _("your repo is not connected to any workspace\n"
+                    "use 'hg cloud join --help' for more details")
         message = "%s: %s\n%s" % (topic, message, details)
         super(WorkspaceError, self).__init__(message, *args)
 
@@ -84,7 +84,7 @@ class ServiceError(error.Abort):
 class InvalidWorkspaceDataError(error.Abort):
     def __init__(self, ui, message, *args):
         topic = highlightmsg(ui, _('invalid workspace data'))
-        details = _('please run `hg cloudrecover`')
+        details = _("please run 'hg cloud recover'")
         message = "%s: '%s'\n%s" % (topic, message, details)
         super(InvalidWorkspaceDataError, self).__init__(message, *args)
 

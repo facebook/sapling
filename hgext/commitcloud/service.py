@@ -13,12 +13,12 @@ from . import (
     localservice,
 )
 
-def get(ui, repo):
+def get(ui, token=None):
     servicetype = ui.config('commitcloud', 'servicetype')
     if servicetype == 'local':
         return localservice.LocalService(ui)
     elif servicetype == 'interngraph':
-        return httpsservice.HttpsCommitCloudService(ui, repo)
+        return httpsservice.HttpsCommitCloudService(ui, token)
     else:
         msg = 'Unrecognized commitcloud.servicetype: %s' % servicetype
         raise error.Abort(msg)
