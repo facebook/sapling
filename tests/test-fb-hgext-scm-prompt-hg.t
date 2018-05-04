@@ -179,10 +179,10 @@ Test unshared bookmarks
   $ cmd hg book unshared
   (unshared)
   $ cmd hg up -q ".^"
-  (4b6cc7d)
+  (4b6cc7d|remote/@)
   $ echo unshared > .hg/bookmarks.current
   $ cmd
-  (unshared|UPDATE_NEEDED)
+  (unshared|remote/@|UPDATE_NEEDED)
   $ cd ../repo
 
 Test branches
