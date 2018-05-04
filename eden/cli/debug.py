@@ -67,12 +67,14 @@ def escape_path(value: bytes) -> str:
     Take a binary path value, and return a printable string, with special
     characters escaped.
     '''
+
     def human_readable_byte(b: int) -> str:
         if b < 0x20 or b >= 0x7f:
             return '\\x{:02x}'.format(b)
         elif b == ord(b'\\'):
             return '\\\\'
         return chr(b)
+
     return ''.join(human_readable_byte(b) for b in value)
 
 
@@ -102,9 +104,12 @@ def parse_object_id(value: str) -> bytes:
 class TreeCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            '-L', '--load',
-            action='store_true', default=False,
-            help='Load data from the backing store if necessary')
+            '-L',
+            '--load',
+            action='store_true',
+            default=False,
+            help='Load data from the backing store if necessary'
+        )
         parser.add_argument('mount', help='The eden mount point path.')
         parser.add_argument('id', help='The tree ID')
 
@@ -115,14 +120,18 @@ class TreeCmd(Subcmd):
 
         local_only = not args.load
         with config.get_thrift_client() as client:
-            entries = client.debugGetScmTree(mount, tree_id,
-                                             localStoreOnly=local_only)
+            entries = client.debugGetScmTree(
+                mount, tree_id, localStoreOnly=local_only
+            )
 
         for entry in entries:
             file_type_flags, perms = _parse_mode(entry.mode)
-            print('{} {:4o} {:40} {}'.format(
-                file_type_flags, perms, hash_str(entry.id),
-                escape_path(entry.name)))
+            print(
+                '{} {:4o} {:40} {}'.format(
+                    file_type_flags, perms, hash_str(entry.id),
+                    escape_path(entry.name)
+                )
+            )
 
         return 0
 
@@ -131,9 +140,12 @@ class TreeCmd(Subcmd):
 class BlobCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            '-L', '--load',
-            action='store_true', default=False,
-            help='Load data from the backing store if necessary')
+            '-L',
+            '--load',
+            action='store_true',
+            default=False,
+            help='Load data from the backing store if necessary'
+        )
         parser.add_argument('mount', help='The eden mount point path.')
         parser.add_argument('id', help='The blob ID')
 
@@ -144,8 +156,9 @@ class BlobCmd(Subcmd):
 
         local_only = not args.load
         with config.get_thrift_client() as client:
-            data = client.debugGetScmBlob(mount, blob_id,
-                                          localStoreOnly=local_only)
+            data = client.debugGetScmBlob(
+                mount, blob_id, localStoreOnly=local_only
+            )
 
         sys.stdout.buffer.write(data)
         return 0
@@ -155,9 +168,12 @@ class BlobCmd(Subcmd):
 class BlobMetaCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            '-L', '--load',
-            action='store_true', default=False,
-            help='Load data from the backing store if necessary')
+            '-L',
+            '--load',
+            action='store_true',
+            default=False,
+            help='Load data from the backing store if necessary'
+        )
         parser.add_argument('mount', help='The eden mount point path.')
         parser.add_argument('id', help='The blob ID')
 
@@ -168,8 +184,9 @@ class BlobMetaCmd(Subcmd):
 
         local_only = not args.load
         with config.get_thrift_client() as client:
-            info = client.debugGetScmBlobMetadata(mount, blob_id,
-                                                  localStoreOnly=local_only)
+            info = client.debugGetScmBlobMetadata(
+                mount, blob_id, localStoreOnly=local_only
+            )
 
         print('Blob ID: {}'.format(args.id))
         print('Size:    {}'.format(info.size))
@@ -236,8 +253,11 @@ def do_uptime(config: config_mod.Config,
 class HgCopyMapGetAllCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'path', nargs='?', default=os.getcwd(),
-            help='The path to an Eden mount point. Uses `pwd` by default.')
+            'path',
+            nargs='?',
+            default=os.getcwd(),
+            help='The path to an Eden mount point. Uses `pwd` by default.'
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         mount, _ = get_mount_path(args.path)
@@ -257,8 +277,11 @@ def _print_copymap(copy_map: Dict[str, str]) -> None:
 class HgDirstateCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'path', nargs='?', default=os.getcwd(),
-            help='The path to an Eden mount point. Uses `pwd` by default.')
+            'path',
+            nargs='?',
+            default=os.getcwd(),
+            help='The path to an Eden mount point. Uses `pwd` by default.'
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         mount, _ = get_mount_path(args.path)
@@ -279,8 +302,8 @@ class HgDirstateCmd(Subcmd):
 class HgGetDirstateTupleCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'path',
-            help='The path to the file whose status should be queried.')
+            'path', help='The path to the file whose status should be queried.'
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         mount, rel_path = get_mount_path(args.path)
@@ -304,8 +327,7 @@ class HgGetDirstateTupleCmd(Subcmd):
 
 
 def _print_hg_nonnormal_file(
-    rel_path: str,
-    dirstate_tuple: Tuple[str, Any, int],
+    rel_path: str, dirstate_tuple: Tuple[str, Any, int],
     printer: 'StdoutPrinter'
 ) -> None:
     status = _dirstate_char_to_name(dirstate_tuple[0])
@@ -349,9 +371,8 @@ def _dirstate_merge_state_to_name(merge_state: int) -> str:
 
 def _get_dirstate_data(
     mount: str
-) -> Tuple[
-    Tuple[bytes, bytes], Dict[str, Tuple[str, Any, int]], Dict[str, str]
-]:
+) -> Tuple[Tuple[bytes, bytes], Dict[str, Tuple[str, Any, int]], Dict[str, str]
+          ]:
     '''Returns a tuple of (parents, dirstate_tuples, copymap).
     On error, returns None.
     '''
@@ -367,7 +388,8 @@ class InodeCmd(Subcmd):
             'path',
             help='The path to the eden mount point.  If a subdirectory inside '
             'a mount point is specified, only data about inodes under the '
-            'specified subdirectory will be reported.')
+            'specified subdirectory will be reported.'
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
@@ -385,9 +407,7 @@ class InodeCmd(Subcmd):
 @debug_cmd('fuse_calls', 'Show data about outstanding fuse calls')
 class FuseCallsCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            'path',
-            help='The path to the eden mount point.')
+        parser.add_argument('path', help='The path to the eden mount point.')
 
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
@@ -426,7 +446,8 @@ def _print_inode_info(inode_info: TreeInodeDebugInfo, out: IO[bytes]) -> None:
         file_type_str, perms = _parse_mode(entry.mode)
         line = '    {:9} {} {:4o} {} {:40} {}\n'.format(
             entry.inodeNumber, file_type_str, perms, loaded_flag,
-            hash_str(entry.hash), escape_path(entry.name))
+            hash_str(entry.hash), escape_path(entry.name)
+        )
         out.write(line.encode())
 
 
@@ -471,15 +492,21 @@ def _print_overlay_tree(inode_number: int, path: str, tree_data: OverlayDir):
         else:
             file_type_flag = '?'
 
-        print('    {:{name_width}s} : {:12d} {} {:04o} {}'.format(
-            name, entry.inodeNumber, file_type_flag, perms, hex(entry.hash),
-            name_width=name_width))
+        print(
+            '    {:{name_width}s} : {:12d} {} {:04o} {}'.format(
+                name,
+                entry.inodeNumber,
+                file_type_flag,
+                perms,
+                hex(entry.hash),
+                name_width=name_width
+            )
+        )
 
 
 def _find_overlay_tree_rel(
-        overlay_dir: str,
-        root: OverlayDir,
-        path_parts: List[str]) -> int:
+    overlay_dir: str, root: OverlayDir, path_parts: List[str]
+) -> int:
     desired = path_parts[0]
     rest = path_parts[1:]
     entries = [] if root.entries is None else root.entries.items()
@@ -512,11 +539,12 @@ def _find_overlay_tree(overlay_dir: str, path: str) -> int:
 
 
 def _display_overlay(
-        args: argparse.Namespace,
-        overlay_dir: str,
-        inode_number: int,
-        path: str,
-        level: int = 0):
+    args: argparse.Namespace,
+    overlay_dir: str,
+    inode_number: int,
+    path: str,
+    level: int = 0
+):
     data = _load_overlay_tree(overlay_dir, inode_number)
     _print_overlay_tree(inode_number, path, data)
 
@@ -536,28 +564,39 @@ def _display_overlay(
             continue
         print()
         entry_path = os.path.join(path, name)
-        _display_overlay(args, overlay_dir, entry.inodeNumber,
-                         entry_path, level + 1)
+        _display_overlay(
+            args, overlay_dir, entry.inodeNumber, entry_path, level + 1
+        )
 
 
 @debug_cmd('overlay', 'Show data about the overlay')
 class OverlayCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            '-n', '--number',
+            '-n',
+            '--number',
             type=int,
-            help='Display information for the specified inode number.')
+            help='Display information for the specified inode number.'
+        )
         parser.add_argument(
-            '-d', '--depth',
-            type=int, default=0,
-            help='Recurse to the specified depth.')
+            '-d',
+            '--depth',
+            type=int,
+            default=0,
+            help='Recurse to the specified depth.'
+        )
         parser.add_argument(
-            '-r', '--recurse',
-            action='store_const', const=-1, dest='depth', default=0,
-            help='Recursively print child entries.')
+            '-r',
+            '--recurse',
+            action='store_const',
+            const=-1,
+            dest='depth',
+            default=0,
+            help='Recursively print child entries.'
+        )
         parser.add_argument(
-            'path', nargs='?',
-            help='The path to the eden mount point.')
+            'path', nargs='?', help='The path to the eden mount point.'
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = cmd_util.create_config(args)
@@ -583,12 +622,15 @@ class OverlayCmd(Subcmd):
 class GetPathCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'path', nargs='?',
-            help='The path to an Eden mount point. Uses `pwd` by default.')
+            'path',
+            nargs='?',
+            help='The path to an Eden mount point. Uses `pwd` by default.'
+        )
         parser.add_argument(
             'number',
             type=int,
-            help='Display information for the specified inode number.')
+            help='Display information for the specified inode number.'
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = cmd_util.create_config(args)
@@ -596,10 +638,13 @@ class GetPathCmd(Subcmd):
 
         with config.get_thrift_client() as client:
             inodePathInfo = client.debugGetInodePath(mount, args.number)
-        print('%s %s' %
-              ('loaded' if inodePathInfo.loaded else 'unloaded',
-               os.path.normpath(os.path.join(mount, inodePathInfo.path)) if
-                   inodePathInfo.linked else 'unlinked'))
+        print(
+            '%s %s' % (
+                'loaded' if inodePathInfo.loaded else 'unloaded',
+                os.path.normpath(os.path.join(mount, inodePathInfo.path))
+                if inodePathInfo.linked else 'unlinked'
+            )
+        )
         return 0
 
 
@@ -610,7 +655,8 @@ class UnloadInodesCmd(Subcmd):
             'path',
             help='The path to the eden mount point.  If a subdirectory inside '
             'a mount point is specified, only inodes under the '
-            'specified subdirectory will be unloaded.')
+            'specified subdirectory will be unloaded.'
+        )
         parser.add_argument(
             'age',
             type=float,
@@ -637,8 +683,8 @@ class UnloadInodesCmd(Subcmd):
 class FlushCacheCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'path',
-            help='Path to a directory/file inside an eden mount.')
+            'path', help='Path to a directory/file inside an eden mount.'
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = cmd_util.create_config(args)
@@ -680,9 +726,8 @@ class LogCmd(Subcmd):
 class SetLogLevelCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'category',
-            type=str,
-            help='Period-separated log category.')
+            'category', type=str, help='Period-separated log category.'
+        )
         parser.add_argument(
             'level',
             type=str,
