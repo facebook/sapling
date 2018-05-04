@@ -5,10 +5,10 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(conservative_impl_trait)]
 
 extern crate failure_ext as failure;
-extern crate futures;
-extern crate tokio_timer;
+extern crate tokio;
 
 extern crate futures_ext;
 
@@ -17,13 +17,13 @@ extern crate mononoke_types;
 
 use std::iter::{repeat, Map, Repeat};
 use std::sync::Mutex;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use failure::Error;
-use futures::Future;
-use futures::future::lazy;
+use future::lazy;
 use futures_ext::{BoxFuture, FutureExt};
-use tokio_timer::Timer;
+use tokio::prelude::*;
+use tokio::timer::Delay;
 
 use blobstore::Blobstore;
 use mononoke_types::BlobstoreBytes;
@@ -35,7 +35,6 @@ where
     F: FnMut(()) -> Duration + 'static + Send + Sync,
 {
     blobstore: Box<Blobstore>,
-    timer: Timer,
     delay: Mutex<Map<Repeat<()>, F>>,
     get_roundtrips: usize,
     put_roundtrips: usize,
@@ -50,7 +49,6 @@ where
     pub fn new(
         blobstore: Box<Blobstore>,
         delay_gen: F,
-        timer: Timer,
         get_roundtrips: usize,
         put_roundtrips: usize,
         is_present_roundtrips: usize,
@@ -58,7 +56,6 @@ where
     ) -> Self {
         Self {
             blobstore: blobstore,
-            timer,
             delay: Mutex::new(repeat(()).map(delay_gen)),
             get_roundtrips,
             put_roundtrips,
@@ -67,11 +64,10 @@ where
         }
     }
 
-    fn sleep(&self, roundtrips: usize) -> BoxFuture<(), Error> {
+    fn sleep(&self, roundtrips: usize) -> impl Future<Item = (), Error = Error> + 'static {
         let mut locked_delay = self.delay.lock().expect("lock poisoned");
         let delay = locked_delay.by_ref().take(roundtrips).sum();
-        let timer = self.timer.clone();
-        lazy({ move || timer.sleep(delay).from_err() }).boxify()
+        lazy(move || Delay::new(Instant::now() + delay)).map_err(Error::from)
     }
 }
 

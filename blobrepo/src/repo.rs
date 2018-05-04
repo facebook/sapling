@@ -23,7 +23,6 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use slog::{Discard, Drain, Logger};
 use time_ext::DurationExt;
-use tokio_timer::Timer;
 use uuid::Uuid;
 
 use blobstore::{Blobstore, CachingBlobstore};
@@ -110,7 +109,6 @@ impl BlobRepo {
         path: &Path,
         repoid: RepositoryId,
         delay_gen: F,
-        timer: Timer,
         get_roundtrips: usize,
         put_roundtrips: usize,
         is_present_roundtrips: usize,
@@ -136,7 +134,6 @@ impl BlobRepo {
         let blobstore = DelayBlob::new(
             Box::new(blobstore),
             delay_gen,
-            timer,
             get_roundtrips,
             put_roundtrips,
             is_present_roundtrips,

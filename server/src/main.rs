@@ -19,7 +19,6 @@ extern crate futures_stats;
 extern crate futures_trace;
 extern crate tokio_core;
 extern crate tokio_io;
-extern crate tokio_timer;
 extern crate tokio_uds;
 
 extern crate rand;
@@ -474,7 +473,12 @@ fn main() {
         {
             let thread_name = handle.thread().name().unwrap_or("unknown").to_owned();
             match handle.join() {
-                Err(panic) => crit!(root_log, "Thread {} panicked with: {:?}", thread_name, panic),
+                Err(panic) => crit!(
+                    root_log,
+                    "Thread {} panicked with: {:?}",
+                    thread_name,
+                    panic
+                ),
             }
         }
 

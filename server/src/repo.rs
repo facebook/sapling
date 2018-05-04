@@ -28,7 +28,6 @@ use rand::distributions::{LogNormal, Sample};
 use scuba::{ScubaClient, ScubaSample};
 use time_ext::DurationExt;
 use tokio_core::reactor::Remote;
-use tokio_timer;
 
 use slog::{self, Drain, Logger};
 use slog_scuba::ScubaDrain;
@@ -159,20 +158,11 @@ impl OpenableRepoType for RepoType {
                     let nanos = ((delay - seconds as f64) * 1_000_000_000.0) as u32;
                     Duration::new(seconds, nanos)
                 };
-                let timer = {
-                    tokio_timer::wheel()
-                        .tick_duration(Duration::from_millis(1))
-                        // Timeouts above num_slots * tick_duration cause a panic
-                        .num_slots(16384)
-                        .thread_name("Blobstore Delay Timer")
-                        .build()
-                };
                 BlobRepo::new_rocksdb_delayed(
                     logger,
                     &path,
                     repoid,
                     delay_gen,
-                    timer,
                     // Roundtrips to the server - i.e. how many delays to apply
                     2, // get
                     3, // put
