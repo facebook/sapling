@@ -190,7 +190,7 @@ def cloudsync(ui, repo, **opts):
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
             ui.warn(_('timeout waiting on backup lock\n'))
-            return 0
+            return 2
         else:
             raise
 
