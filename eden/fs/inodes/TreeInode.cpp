@@ -1531,7 +1531,8 @@ Future<Unit> TreeInode::doRename(
   // it happens to be set).
   std::unique_ptr<InodeBase> deletedInode;
   auto* childInode = srcEntry.getInode();
-  if (locks.destChildExists()) {
+  bool destChildExists = locks.destChildExists();
+  if (destChildExists) {
     deletedInode = locks.destChild()->markUnlinked(
         destParent.get(), destName, locks.renameLock());
 
@@ -1575,10 +1576,17 @@ Future<Unit> TreeInode::doRename(
   auto srcPath = getPath();
   auto destPath = destParent->getPath();
   if (srcPath.hasValue() && destPath.hasValue()) {
-    getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
-        srcPath.value() + srcName,
-        destPath.value() + destName,
-        JournalDelta::RENAME));
+    if (destChildExists) {
+      getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
+          srcPath.value() + srcName,
+          destPath.value() + destName,
+          JournalDelta::REPLACE));
+    } else {
+      getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
+          srcPath.value() + srcName,
+          destPath.value() + destName,
+          JournalDelta::RENAME));
+    }
   }
 
   // Release the rename lock before we destroy the deleted destination child
@@ -1766,21 +1774,20 @@ Future<Unit> TreeInode::diff(
   }
 
   if (!inode) {
-    return inodeFuture.then(
-        [self = inodePtrFromThis(),
-         context,
-         currentPath = RelativePath{currentPath},
-         tree = std::move(tree),
-         parentIgnore,
-         isIgnored](InodePtr&& loadedInode) mutable {
-          return self->loadGitIgnoreThenDiff(
-              std::move(loadedInode),
-              context,
-              currentPath,
-              std::move(tree),
-              parentIgnore,
-              isIgnored);
-        });
+    return inodeFuture.then([self = inodePtrFromThis(),
+                             context,
+                             currentPath = RelativePath{currentPath},
+                             tree = std::move(tree),
+                             parentIgnore,
+                             isIgnored](InodePtr&& loadedInode) mutable {
+      return self->loadGitIgnoreThenDiff(
+          std::move(loadedInode),
+          context,
+          currentPath,
+          std::move(tree),
+          parentIgnore,
+          isIgnored);
+    });
   } else {
     return loadGitIgnoreThenDiff(
         std::move(inode),

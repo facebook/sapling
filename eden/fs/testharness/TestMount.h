@@ -199,6 +199,9 @@ class TestMount {
   /** Overwrites the contents of an existing file. */
   void overwriteFile(folly::StringPiece path, std::string contents);
 
+  /** Does the equivalent of mv(1). */
+  void move(folly::StringPiece src, folly::StringPiece dest);
+
   std::string readFile(folly::StringPiece path);
 
   /** Returns true if path identifies a regular file in the tree. */

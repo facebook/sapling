@@ -312,6 +312,17 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   fileHandle->fsync(/*datasync*/ true).get(0ms);
 }
 
+void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
+  RelativePathPiece srcPath{src};
+  RelativePathPiece destPath{dest};
+  auto future = getTreeInode(srcPath.dirname())
+                    ->rename(
+                        srcPath.basename(),
+                        getTreeInode(destPath.dirname()),
+                        destPath.basename());
+  future.get();
+}
+
 std::string TestMount::readFile(folly::StringPiece path) {
   return getFileInode(path)->readAll().get();
 }

@@ -23,6 +23,7 @@ class JournalDelta {
   enum Created { CREATED };
   enum Removed { REMOVED };
   enum Renamed { RENAME };
+  enum Replaced { REPLACE };
   JournalDelta() = default;
   JournalDelta(JournalDelta&&) = default;
   JournalDelta& operator=(JournalDelta&&) = default;
@@ -31,7 +32,16 @@ class JournalDelta {
   JournalDelta(std::initializer_list<RelativePath> overlayFileNames);
   JournalDelta(RelativePathPiece fileName, Created);
   JournalDelta(RelativePathPiece fileName, Removed);
+  /**
+   * "Renamed" means that that newName was created as a result of the mv(1).
+   */
   JournalDelta(RelativePathPiece oldName, RelativePathPiece newName, Renamed);
+
+  /**
+   * "Replaced" means that that newName was overwritten by oldName as a result
+   * of the mv(1).
+   */
+  JournalDelta(RelativePathPiece oldName, RelativePathPiece newName, Replaced);
 
   /** the prior delta and its chain */
   std::shared_ptr<const JournalDelta> previous;

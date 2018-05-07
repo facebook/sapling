@@ -29,6 +29,13 @@ JournalDelta::JournalDelta(
     : createdFilesInOverlay({newName.copy()}),
       removedFilesInOverlay({oldName.copy()}) {}
 
+JournalDelta::JournalDelta(
+    RelativePathPiece oldName,
+    RelativePathPiece newName,
+    JournalDelta::Replaced)
+    : changedFilesInOverlay({newName.copy()}),
+      removedFilesInOverlay({oldName.copy()}) {}
+
 std::unique_ptr<JournalDelta> JournalDelta::merge(
     Journal::SequenceNumber limitSequence,
     bool pruneAfterLimit) const {
