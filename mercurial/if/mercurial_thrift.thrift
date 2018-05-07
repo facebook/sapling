@@ -8,6 +8,16 @@ include "scm/mononoke/mononoke-types/if/mononoke_types_thrift.thrift"
 
 typedef mononoke_types_thrift.Sha1 HgNodeHash (hs.newtype)
 
+// Changeset contents are stored inline.
+struct HgChangesetEnvelope {
+  // The node ID is expected to match the contents exactly.
+  1: required HgNodeHash node_id,
+  2: optional HgNodeHash p1,
+  3: optional HgNodeHash p2,
+  // These contents are exactly as they would be serialized by Mercurial.
+  4: optional binary contents,
+}
+
 // Manifest contents are expected to generally be small, so they're stored
 // inline in the envelope. There's also no real dedup possible between native
 // Mononoke data structures and these ones.

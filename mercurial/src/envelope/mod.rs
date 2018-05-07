@@ -6,9 +6,11 @@
 
 // Containers for Mercurial data, stored in the blob store.
 
+mod changeset_envelope;
 mod file_envelope;
 mod manifest_envelope;
 
+pub use self::changeset_envelope::{HgChangesetEnvelope, HgChangesetEnvelopeMut};
 pub use self::file_envelope::{HgFileEnvelope, HgFileEnvelopeMut};
 pub use self::manifest_envelope::{HgManifestEnvelope, HgManifestEnvelopeMut};
 
