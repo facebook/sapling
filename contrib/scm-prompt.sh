@@ -102,9 +102,6 @@ _hg_prompt() {
   local dirstate="$( \
     ( [[ -f "$hg/dirstate" ]] && \
     command hexdump -vn 20 -e '1/1 "%02x"' "$hg/dirstate") || \
-    ( [[ -f "$hg/../.eden/client/SNAPSHOT" ]] && \
-    command hexdump -s 8 -vn 20 -e '1/1 "%02x"' \
-      "$hg/../.eden/client/SNAPSHOT") || \
     builtin echo "empty")"
 
   local remote="$hg/remotenames"
