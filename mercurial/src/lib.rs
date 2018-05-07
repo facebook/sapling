@@ -76,7 +76,7 @@ pub use errors::*;
 
 pub use blobnode::{HgBlobNode, HgParents};
 pub use changeset::RevlogChangeset;
-pub use envelope::{HgFileEnvelope, HgFileEnvelopeMut};
+pub use envelope::{HgFileEnvelope, HgFileEnvelopeMut, HgManifestEnvelope, HgManifestEnvelopeMut};
 pub use manifest::{EntryContent, RevlogEntry};
 pub use nodehash::{HgChangesetId, HgEntryId, HgManifestId, HgNodeHash, HgNodeKey,
                    NodeHashConversion, NULL_HASH};

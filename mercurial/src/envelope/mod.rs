@@ -7,8 +7,10 @@
 // Containers for Mercurial data, stored in the blob store.
 
 mod file_envelope;
+mod manifest_envelope;
 
 pub use self::file_envelope::{HgFileEnvelope, HgFileEnvelopeMut};
+pub use self::manifest_envelope::{HgManifestEnvelope, HgManifestEnvelopeMut};
 
 use mononoke_types::BlobstoreBytes;
 

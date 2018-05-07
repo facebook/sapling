@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-// Envelopes used for manifest and file nodes.
+//! Envelopes used for file nodes.
 
 use bytes::Bytes;
 use failure::{err_msg, SyncFailure};
@@ -74,22 +74,26 @@ impl HgFileEnvelope {
     }
 
     /// The ID for this file version.
+    #[inline]
     pub fn node_id(&self) -> &HgNodeHash {
         &self.inner.node_id
     }
 
-    /// The parent hashes for this node. The order matters: the parents aren't
+    /// The parent hashes for this node. The order matters.
+    #[inline]
     pub fn parents(&self) -> (Option<&HgNodeHash>, Option<&HgNodeHash>) {
         (self.inner.p1.as_ref(), self.inner.p2.as_ref())
     }
 
     /// The content ID -- this can be used to retrieve the contents.
+    #[inline]
     pub fn content_id(&self) -> &ContentId {
         &self.inner.content_id
     }
 
     /// The metadata for this node, exactly as provided to Mercurial. This is extracted from
     /// and prepended to the content for Mercurial.
+    #[inline]
     pub fn metadata(&self) -> &Bytes {
         &self.inner.metadata
     }
