@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Set, TextIO, Union
 from . import config as config_mod
 from . import version
 from . import mtab
+from .stdout_printer import StdoutPrinter
 
 log = logging.getLogger('eden.cli.doctor')
 
@@ -53,7 +54,11 @@ def cure_what_ails_you(
     dry_run: bool,
     out: TextIO,
     mount_table: mtab.MountTable,
+    printer: Optional[StdoutPrinter] = None,
 ) -> int:
+    if printer is None:
+        printer = StdoutPrinter()
+
     is_healthy = config.check_health().is_healthy()
     if not is_healthy:
         out.write(
@@ -145,20 +150,21 @@ def cure_what_ails_you(
         out.write(result.message)
 
     if num_not_fixed_because_dry_run:
-        out.write(
-            'Number of issues discovered during --dry-run: '
-            f'{num_not_fixed_because_dry_run}.\n'
-        )
+        msg = ('Number of issues discovered during --dry-run: '
+               f'{num_not_fixed_because_dry_run}.')
+        out.write(f'{printer.yellow(msg)}\n')
     if num_fixes:
-        out.write(f'Number of fixes made: {num_fixes}.\n')
+        msg = f'Number of fixes made: {num_fixes}.'
+        out.write(f'{printer.yellow(msg)}\n')
     if num_failed_fixes:
-        out.write(
+        msg = (
             'Number of issues that '
-            f'could not be fixed: {num_failed_fixes}.\n'
+            f'could not be fixed: {num_failed_fixes}.'
         )
+        out.write(f'{printer.red(msg)}\n')
 
     if num_failed_fixes == 0 and num_not_fixed_because_dry_run == 0:
-        out.write('All is well.\n')
+        out.write(f'{printer.green("All is well.")}\n')
 
     if num_failed_fixes:
         return 1

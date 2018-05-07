@@ -21,9 +21,15 @@ import eden.cli.doctor as doctor
 import eden.cli.config as config_mod
 from eden.cli.doctor import CheckResult, CheckResultType
 from eden.cli import mtab
+from eden.cli.stdout_printer import AnsiEscapeCodes, StdoutPrinter
 from fb303.ttypes import fb_status
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
+
+escape_codes = AnsiEscapeCodes(
+    bold='<bold>', red='<red>', green='<green>', yellow='<yellow>', reset='<reset>'
+)
+printer = StdoutPrinter(escape_codes)
 
 
 class DoctorTest(unittest.TestCase):
@@ -118,7 +124,7 @@ class DoctorTest(unittest.TestCase):
                 st_uid=os.getuid(), st_dev=12
             )
             exit_code = doctor.cure_what_ails_you(
-                config, dry_run, out, mount_table
+                config, dry_run, out, mount_table, printer=printer,
             )
         finally:
             shutil.rmtree(tmp_dir)
@@ -143,8 +149,8 @@ This can cause file changes to fail to show up in Nuclide.
 Currently, the only workaround for this is to run
 "Nuclide Remote Projects: Kill And Restart" from the
 command palette in Atom.
-Number of fixes made: 1.
-Number of issues that could not be fixed: 2.
+<yellow>Number of fixes made: 1.<reset>
+<red>Number of issues that could not be fixed: 2.<reset>
 ''', out.getvalue()
         )
         mock_watchman.assert_has_calls(calls)
@@ -196,13 +202,13 @@ Number of issues that could not be fixed: 2.
             st_uid=os.getuid(), st_dev=11
         )
         exit_code = doctor.cure_what_ails_you(
-            config, dry_run, out, mount_table=mount_table
+            config, dry_run, out, mount_table=mount_table, printer=printer
         )
 
         self.assertEqual(
             'Performing 2 checks for /path/to/eden-mount.\n'
             'Performing 2 checks for /path/to/eden-mount-not-watched.\n'
-            'All is well.\n', out.getvalue()
+            '<green>All is well.<reset>\n', out.getvalue()
         )
         mock_watchman.assert_has_calls(calls)
         self.assertEqual(0, exit_code)
@@ -240,7 +246,7 @@ Number of issues that could not be fixed: 2.
         }
         config = FakeConfig(mount_paths, is_healthy=False)
         exit_code = doctor.cure_what_ails_you(
-            config, dry_run, out, FakeMountTable()
+            config, dry_run, out, FakeMountTable(), printer=printer,
         )
 
         self.assertEqual(
@@ -252,7 +258,7 @@ To start Eden, run:
     eden daemon
 
 Cannot check if running latest edenfs because the daemon is not running.
-All is well.
+<green>All is well.<reset>
 '''
             ), out.getvalue()
         )
@@ -581,7 +587,7 @@ command palette in Atom.
             dry_run = False
             out = io.StringIO()
             exit_code = doctor.cure_what_ails_you(
-                config, dry_run, out, mount_table
+                config, dry_run, out, mount_table, printer=printer,
             )
         finally:
             shutil.rmtree(tmp_dir)
@@ -589,7 +595,7 @@ command palette in Atom.
         self.assertEqual(
             f'''\
 Performing 3 checks for {edenfs_path1}.
-All is well.
+<green>All is well.<reset>
 ''', out.getvalue()
         )
         self.assertEqual(0, exit_code)

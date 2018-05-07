@@ -26,6 +26,7 @@ from . import cmd_util
 from . import config as config_mod
 from . import subcmd as subcmd_mod
 from . import util
+from .stdout_printer import StdoutPrinter
 from .subcmd import Subcmd
 
 debug_cmd = subcmd_mod.Decorator()
@@ -746,33 +747,6 @@ class SetLogLevelCmd(Subcmd):
                 )
 
         return 0
-
-
-class StdoutPrinter:
-    def __init__(self) -> None:
-        if sys.stdout.isatty():
-            import curses
-            curses.setupterm()
-            self._bold = (curses.tigetstr('bold') or b'').decode()
-            set_foreground = curses.tigetstr('setaf') or b''
-            self._red = curses.tparm(set_foreground, curses.COLOR_RED).decode()
-            self._green = curses.tparm(set_foreground,
-                                       curses.COLOR_GREEN).decode()
-            self._reset = (curses.tigetstr('sgr0') or b'').decode()
-        else:
-            self._bold = ''
-            self._red = ''
-            self._green = ''
-            self._reset = ''
-
-    def bold(self, text: str) -> str:
-        return self._bold + text + self._reset
-
-    def green(self, text: str) -> str:
-        return self._green + text + self._reset
-
-    def red(self, text: str) -> str:
-        return self._red + text + self._reset
 
 
 # We intentionally do not specify a help option for debug, so it
