@@ -541,7 +541,9 @@ def _check_json_output(args: List[str]) -> Dict:
     try:
         output = subprocess.check_output(args)
         return json.loads(output)
-    except OSError as e:
+    except (subprocess.CalledProcessError, ValueError) as e:
+        # CalledProcessError if check_output() fails.
+        # ValueError if `output` is not valid JSON.
         sys.stderr.write(
             f'Calling `{" ".join(args)}`'
             f' failed with: {str(e) if e.strerror is None else e.strerror}\n'
