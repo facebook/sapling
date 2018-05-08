@@ -25,6 +25,7 @@ from . import (
     util,
 )
 
+_preimported = {}
 _extensions = {}
 _disabledextensions = {}
 _aftercallbacks = {}
@@ -124,8 +125,17 @@ def loadpath(path, module_name):
                 exc.filename = path # python does not fill this
             raise
 
+def preimport(name):
+    """preimport an hgext module"""
+    mod = getattr(__import__('hgext.%s' % name), name)
+    # use a dict explicitly - "dict.get" is much faster than "import" again.
+    _preimported[name] = mod
+
 def loaddefault(name, reportfunc=None):
     """load extensions without a specified path"""
+    mod = _preimported.get(name)
+    if mod:
+        return mod
     try:
         mod = _importh("hgext.%s" % name)
     except ImportError as err:

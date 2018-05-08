@@ -105,6 +105,49 @@ def run(entrypoint='hg'):
         req.ui.ferr.flush()
     sys.exit(status & 255)
 
+def _preimportmodules():
+    """pre-import modules that are side-effect free (used by chg server)"""
+    coremods = ['ancestor', 'archival', 'bookmarks', 'branchmap', 'bundle2',
+                'bundlerepo', 'byterange', 'changegroup', 'changelog', 'color',
+                'config', 'configitems', 'connectionpool', 'context', 'copies',
+                'crecord', 'dagop', 'dagparser', 'dagutil', 'debugcommands',
+                'destutil', 'dirstate', 'dirstateguard', 'discovery',
+                'exchange', 'filelog', 'filemerge', 'fileset', 'formatter',
+                'graphmod', 'hbisect', 'httpclient', 'httpconnection',
+                'httppeer', 'localrepo', 'lock', 'logexchange', 'mail',
+                'manifest', 'match', 'mdiff', 'merge', 'mergeutil', 'minirst',
+                'namespaces', 'node', 'obsolete', 'obsutil', 'parser', 'patch',
+                'pathutil', 'peer', 'phases', 'policy', 'progress', 'pushkey',
+                'rcutil', 'repository', 'repoview', 'revlog', 'revset',
+                'revsetlang', 'rewriteutil', 'rust', 'scmposix', 'scmutil',
+                'server', 'setdiscovery', 'similar', 'simplemerge', 'smartset',
+                'sshpeer', 'sshserver', 'sslutil', 'store', 'streamclone',
+                'subrepo', 'tags', 'templatefilters', 'templatekw',
+                'templater', 'transaction', 'treediscovery', 'txnutil', 'url',
+                'urllibcompat', 'vfs', 'wireproto', 'worker']
+    extmods = ['absorb', 'age', 'arcdiff', 'automv', 'blackbox',
+               'checkmessagehook', 'chistedit', 'clienttelemetry', 'clindex',
+               'configwarn', 'conflictinfo', 'convert', 'copytrace', 'crdump',
+               'debugcommitmessage', 'debugshell', 'dialect', 'directaccess',
+               'dirsync', 'extlib', 'extorder', 'extutil', 'fastannotate',
+               'fastlog', 'fastmanifest', 'fbamend', 'fbconduit', 'fbhistedit',
+               'fbshow', 'fbsparse', 'fixcorrupt', 'fsmonitor', 'githelp',
+               'gitlookup', 'grpcheck', 'hgsubversion', 'hiddenerror',
+               'histedit', 'infinitepush', 'inhibit', 'journal', 'lfs',
+               'logginghelper', 'lz4revlog', 'mergedriver', 'morecolors',
+               'morestatus', 'obsshelve', 'pager', 'patchbomb', 'patchrmdir',
+               'perftweaks', 'phabdiff', 'phabstatus', 'phrevset',
+               'progressfile', 'pullcreatemarkers', 'purge', 'pushrebase',
+               'rage', 'rebase', 'record', 'remotefilelog', 'remotenames',
+               'reset', 'sampling', 'schemes', 'share', 'shareutil',
+               'sigtrace', 'simplecache', 'smartlog', 'sshaskpass', 'stat',
+               'strip', 'traceprof', 'treedirstate', 'treemanifest',
+               'tweakdefaults', 'undo']
+    for name in coremods:
+        __import__('mercurial.%s' % name)
+    for extname in extmods:
+        extensions.preimport(extname)
+
 def runchgserver():
     """start the chg server, pre-import bundled extensions"""
     # Clean server - do not load any config files or repos.
@@ -119,6 +162,7 @@ def runchgserver():
         chgserver,
         server,
     )
+    _preimportmodules()
     service = chgserver.chgunixservice(ui, repo, cmdopts)
     server.runservice(cmdopts, initfn=service.init, runfn=service.run)
 
