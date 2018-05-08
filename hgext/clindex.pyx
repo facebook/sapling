@@ -32,7 +32,6 @@ import os
 
 from mercurial import (
     changelog,
-    chgserver,
     error,
     extensions,
     localrepo,
@@ -461,10 +460,6 @@ def reposetup(ui, repo):
     repo.__class__ = clindexrepo
 
 def uisetup(ui):
-    # uisetup has side effects depending on configs. Mark [clindex] config
-    # section sensitive so chg works correctly.
-    chgserver._configsections.append('clindex')
-
     # global logpath config
     global _logpath
     _logpath = ui.config('clindex', 'logpath')

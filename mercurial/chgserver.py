@@ -65,10 +65,6 @@ def _hashlist(items):
     """return sha1 hexdigest for a list"""
     return hashlib.sha1(str(items)).hexdigest()
 
-# not used - kept before extensions stop writing to it
-_configsections = [
-]
-
 # sensitive environment variables affecting confighash
 _envre = re.compile(r'''\A(?:
                     CHGHG

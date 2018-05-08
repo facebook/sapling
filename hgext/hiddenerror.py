@@ -19,23 +19,18 @@ with the hash of the hidden changeset.
 """
 from __future__ import absolute_import
 
+from mercurial.node import short
+from mercurial.i18n import _
 from mercurial import (
-    chgserver,
     context,
     error,
     extensions,
 )
-from mercurial.i18n import _
-from mercurial.node import short
 
 testedwith = 'ships-with-fb-hgext'
 
 def uisetup(ui):
     """Wrap context.changectx to catch FilteredRepoLookupError."""
-    # uisetup has side effects depending on config. chg only runs uisetup once.
-    # Tell chg to reload if [hiddenerror] config section changes.
-    chgserver._configsections.append('hiddenerror')
-
     # Get the error messages from the user's configuration and substitute the
     # hash in.
     msgfmt, hintfmt = _getstrings(ui)

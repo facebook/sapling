@@ -83,8 +83,6 @@ outputs, which should be fixed later.
   hgext/fbamend/unamend.py:17: symbol import follows non-symbol import: mercurial.i18n
   hgext/gitrevset.py:25: symbol import follows non-symbol import: mercurial.i18n
   hgext/gitrevset.py:26: stdlib import "re" follows local import: mercurial.i18n
-  hgext/hiddenerror.py:28: symbol import follows non-symbol import: mercurial.i18n
-  hgext/hiddenerror.py:29: symbol import follows non-symbol import: mercurial.node
   hgext/lz4revlog.py:76: relative import of stdlib module
   hgext/p4fastimport/__init__.py:41: direct symbol import decodefileflags, getcl, lastcl, runworker from hgext.p4fastimport.util
   hgext/p4fastimport/__init__.py:41: symbol import follows non-symbol import: hgext.p4fastimport.util
