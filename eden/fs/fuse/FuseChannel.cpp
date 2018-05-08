@@ -1291,7 +1291,7 @@ folly::Future<folly::Unit> FuseChannel::fuseForget(
   XLOG(DBG7) << "FUSE_FORGET";
   dispatcher_->forget(InodeNumber{header->nodeid}, forget->nlookup);
   RequestData::get().replyNone();
-  return folly::Unit{};
+  return folly::unit;
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseGetAttr(

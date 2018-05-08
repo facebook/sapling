@@ -107,7 +107,7 @@ folly::Future<folly::Unit> EdenFileHandle::flush(uint64_t lock_owner) {
       "flush({})",
       inode_->getNodeId());
   inode_->flush(lock_owner);
-  return folly::Unit{};
+  return folly::unit;
 }
 
 folly::Future<folly::Unit> EdenFileHandle::fsync(bool datasync) {
@@ -117,7 +117,7 @@ folly::Future<folly::Unit> EdenFileHandle::fsync(bool datasync) {
       "fsync({})",
       inode_->getNodeId());
   inode_->fsync(datasync);
-  return folly::Unit{};
+  return folly::unit;
 }
 } // namespace eden
 } // namespace facebook

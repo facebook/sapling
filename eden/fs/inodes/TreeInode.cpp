@@ -1131,7 +1131,7 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
     getMount()->getJournal().addDelta(
         std::make_unique<JournalDelta>(targetName, JournalDelta::REMOVED));
 
-    return folly::Unit{};
+    return folly::unit;
   }
 
   // EBADF means that the child in question has been replaced since we looked
@@ -1503,7 +1503,7 @@ Future<Unit> TreeInode::doRename(
   // If the source and destination refer to exactly the same file,
   // then just succeed immediately.  Nothing needs to be done in this case.
   if (locks.destChildExists() && srcEntry.getInode() == locks.destChild()) {
-    return folly::Unit{};
+    return folly::unit;
   }
 
   // If we are doing a directory rename, sanity check that the destination
@@ -1594,7 +1594,7 @@ Future<Unit> TreeInode::doRename(
   locks.reset();
   deletedInode.reset();
 
-  return folly::Unit{};
+  return folly::unit;
 }
 
 /**

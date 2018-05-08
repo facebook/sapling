@@ -129,7 +129,7 @@ folly::Future<Dispatcher::Attr> TreeInodeDirHandle::setattr(
 
 folly::Future<folly::Unit> TreeInodeDirHandle::fsyncdir(bool /*datasync*/) {
   // We're read-only here, so there is nothing to sync
-  return folly::Unit{};
+  return folly::unit;
 }
 
 folly::Future<Dispatcher::Attr> TreeInodeDirHandle::getattr() {

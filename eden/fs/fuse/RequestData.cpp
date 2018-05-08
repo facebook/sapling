@@ -73,7 +73,7 @@ Future<folly::Unit> RequestData::startRequest(
   DCHECK(latencyHistogram_ == nullptr);
   latencyHistogram_ = histogram;
   stats_ = stats;
-  return folly::Unit{};
+  return folly::unit;
 }
 
 void RequestData::finishRequest() {
