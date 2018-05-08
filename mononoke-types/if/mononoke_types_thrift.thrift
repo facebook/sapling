@@ -8,7 +8,7 @@
 //! IMPORTANT!!!
 //! ------------
 //! Do not change the order of the fields! Changing the order of the fields
-//! results in compatible but *not* identical serialiations, so hashes will
+//! results in compatible but *not* identical serializations, so hashes will
 //! change.
 //! ------------
 //! IMPORTANT!!!
