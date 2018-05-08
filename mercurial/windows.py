@@ -531,6 +531,7 @@ def makelock(info, pathname):
                                  prefix='%s.%i.' % (basename, os.getpid()),
                                  dir=dirname)
     os.write(fd, info)
+    os.fsync(fd)
     os.close(fd)
     try:
         os.rename(tname, pathname)
