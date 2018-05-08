@@ -97,14 +97,24 @@ def gettext(message):
             cache[message] = message
     return cache[message]
 
-def _plain():
+_plain = True
+
+def _getplain():
     if ('HGPLAIN' not in encoding.environ
         and 'HGPLAINEXCEPT' not in encoding.environ):
         return False
     exceptions = encoding.environ.get('HGPLAINEXCEPT', '').strip().split(',')
     return 'i18n' not in exceptions
 
-if _plain():
-    _ = lambda message: message
-else:
-    _ = gettext
+def _(message):
+    if _plain:
+        return message
+    else:
+        return gettext(message)
+
+def init():
+    """inline _plain() so it's faster. called by dispatch._dispatch"""
+    global _encoding, _plain
+    _encoding = encoding.encoding
+    _plain = _getplain()
+    _msgcache.clear()

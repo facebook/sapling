@@ -33,6 +33,7 @@ from . import (
     hg,
     hintutil,
     hook,
+    i18n,
     profiling,
     pycompat,
     registrar,
@@ -895,6 +896,12 @@ def _dispatch(req):
         fullargs = args
         cmd, func, args, options, cmdoptions = _parse(lui, args)
 
+        if options["encoding"]:
+            encoding.encoding = options["encoding"]
+        if options["encodingmode"]:
+            encoding.encodingmode = options["encodingmode"]
+        i18n.init()
+
         if options["config"] != req.earlyoptions["config"]:
             raise error.Abort(_("option --config may not be abbreviated!"))
         if options["configfile"] != req.earlyoptions["configfile"]:
@@ -909,10 +916,6 @@ def _dispatch(req):
             raise error.Abort(_("option --debugger may not be abbreviated!"))
         # don't validate --profile/--traceback, which can be enabled from now
 
-        if options["encoding"]:
-            encoding.encoding = options["encoding"]
-        if options["encodingmode"]:
-            encoding.encodingmode = options["encodingmode"]
         if options["time"]:
             def get_times():
                 t = os.times()
