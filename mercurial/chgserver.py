@@ -46,7 +46,6 @@ import os
 import re
 import socket
 import struct
-import sys
 import time
 
 from .i18n import _
@@ -477,10 +476,6 @@ class chgunixservicehandler(object):
     def __init__(self, ui):
         self.ui = ui
         self._idletimeout = ui.configint('chgserver', 'idletimeout')
-        if (pycompat.isdarwin and self._idletimeout and
-            (any(s.startswith('--config') for s in sys.argv) or ui.plain())):
-            # Not the common end-user case - exit earlier
-            self._idletimeout = max(self._idletimeout, 30)
         self._lastactive = time.time()
 
     def bindsocket(self, sock, address):
