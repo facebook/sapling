@@ -14,9 +14,11 @@
 //! rather than restricting all codec operations to `AsyncRead`/`AsyncWrite` operations on
 //! an underlying transport.
 
+#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
+
+use bytes::{Bytes, BytesMut};
 use futures::{Async, Poll, Stream};
 use tokio_io::codec::Encoder;
-use bytes::{Bytes, BytesMut};
 
 const INITIAL_CAPACITY: usize = 8192;
 const HEADROOM: usize = 512;
@@ -36,9 +38,9 @@ where
 }
 
 pub struct LayeredEncoder<In, Enc> {
-    inp: In, // source
-    enc: Enc, // encoder
-    eof: bool, // source finished
+    inp: In,       // source
+    enc: Enc,      // encoder
+    eof: bool,     // source finished
     buf: BytesMut, // accumulated output
 }
 
@@ -95,9 +97,9 @@ mod test {
     use super::*;
     use bytes::{BigEndian, BufMut, ByteOrder};
     use futures::Future;
+    use std::io;
     use std::iter::Iterator;
     use std::vec;
-    use std::io;
 
     struct EncU16;
 
@@ -119,7 +121,9 @@ mod test {
 
     impl<T> TestStream<T> {
         fn new(v: Vec<Option<T>>) -> Self {
-            TestStream { iter: v.into_iter() }
+            TestStream {
+                iter: v.into_iter(),
+            }
         }
     }
 

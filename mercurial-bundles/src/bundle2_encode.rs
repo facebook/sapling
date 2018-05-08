@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
+
 use std::collections::HashMap;
 use std::io::{self, Cursor};
 use std::mem;

@@ -6,6 +6,8 @@
 
 //! Code to deal with deltas received or sent over the wire.
 
+#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
+
 use bytes::{BigEndian, BufMut, BytesMut};
 
 use bytes_ext::SizeCounter;
@@ -39,8 +41,7 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
         if remaining < delta_len {
             bail_err!(ErrorKind::InvalidDelta(format!(
                 "expected {} bytes, {} remaining",
-                delta_len,
-                remaining
+                delta_len, remaining
             )));
         }
 
@@ -55,9 +56,10 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
     }
 
     if remaining != 0 {
-        bail_err!(ErrorKind::InvalidDelta(
-            format!("{} trailing bytes in encoded delta", remaining),
-        ));
+        bail_err!(ErrorKind::InvalidDelta(format!(
+            "{} trailing bytes in encoded delta",
+            remaining
+        ),));
     }
 
     Delta::new(frags)

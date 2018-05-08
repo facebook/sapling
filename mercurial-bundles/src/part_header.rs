@@ -6,6 +6,8 @@
 
 //! Construct and serialize headers for bundle2 parts.
 
+#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
+
 use std::collections::HashMap;
 
 use bytes::{BigEndian, BufMut, Bytes};

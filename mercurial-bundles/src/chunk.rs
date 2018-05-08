@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
+
 use bytes::{BigEndian, BufMut, Bytes, BytesMut};
 use tokio_io::codec::{Decoder, Encoder};
 
@@ -133,9 +135,10 @@ impl Decoder for ChunkDecoder {
             return Ok(Some(Chunk::error()));
         }
         if len < 0 {
-            bail_err!(ErrorKind::Bundle2Chunk(
-                format!("chunk length must be >= -1, found {}", len),
-            ));
+            bail_err!(ErrorKind::Bundle2Chunk(format!(
+                "chunk length must be >= -1, found {}",
+                len
+            ),));
         }
 
         let len = len as usize;

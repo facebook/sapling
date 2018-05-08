@@ -6,6 +6,8 @@
 
 //! Wire packs. The format is currently undocumented.
 
+#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
+
 use std::fmt;
 
 use byteorder::{BigEndian, ByteOrder};
