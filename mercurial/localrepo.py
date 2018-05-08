@@ -2095,13 +2095,16 @@ class localrepository(object):
         return self[node1].status(node2, match, ignored, clean, unknown,
                                   listsubrepos)
 
-    def addpostdsstatus(self, ps):
+    def addpostdsstatus(self, ps, afterdirstatewrite=True):
         """Add a callback to run within the wlock, at the point at which status
         fixups happen.
 
         On status completion, callback(wctx, status) will be called with the
         wlock held, unless the dirstate has changed from underneath or the wlock
         couldn't be grabbed.
+
+        If afterdirstatewrite is True, it runs after writing dirstate,
+        otherwise it runs before writing dirstate.
 
         Callbacks should not capture and use a cached copy of the dirstate --
         it might change in the meanwhile. Instead, they should access the
@@ -2115,11 +2118,13 @@ class localrepository(object):
 
         # The list is located here for uniqueness reasons -- it is actually
         # managed by the workingctx, but that isn't unique per-repo.
-        self._postdsstatus.append(ps)
+        self._postdsstatus.append((ps, afterdirstatewrite))
 
-    def postdsstatus(self):
+    def postdsstatus(self, afterdirstatewrite=True):
         """Used by workingctx to get the list of post-dirstate-status hooks."""
-        return self._postdsstatus
+        return [ps
+                for (ps, after) in self._postdsstatus
+                if after == afterdirstatewrite]
 
     def clearpostdsstatus(self):
         """Used by workingctx to clear post-dirstate-status hooks."""

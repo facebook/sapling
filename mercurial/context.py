@@ -1718,8 +1718,9 @@ class workingctx(committablectx):
 
     def _poststatusfixup(self, status, fixup):
         """update dirstate for files that are actually clean"""
-        poststatus = self._repo.postdsstatus()
-        if fixup or poststatus:
+        poststatusbefore = self._repo.postdsstatus(afterdirstatewrite=False)
+        poststatusafter = self._repo.postdsstatus(afterdirstatewrite=True)
+        if fixup or poststatusbefore or poststatusafter:
             try:
                 oldid = self._repo.dirstate.identity()
 
@@ -1729,6 +1730,10 @@ class workingctx(committablectx):
                 # taking the lock
                 with self._repo.wlock(False):
                     if self._repo.dirstate.identity() == oldid:
+                        if poststatusbefore:
+                            for ps in poststatusbefore:
+                                ps(self, status)
+
                         if fixup:
                             normal = self._repo.dirstate.normal
                             for f in fixup:
@@ -1740,8 +1745,8 @@ class workingctx(committablectx):
                             tr = self._repo.currenttransaction()
                             self._repo.dirstate.write(tr)
 
-                        if poststatus:
-                            for ps in poststatus:
+                        if poststatusafter:
+                            for ps in poststatusafter:
                                 ps(self, status)
                     else:
                         # in this case, writing changes out breaks

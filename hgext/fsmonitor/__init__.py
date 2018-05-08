@@ -587,8 +587,19 @@ def overridestatus(
         stateunknown = listunknown
 
     if updatestate:
-        ps = poststatus(startclock)
-        self.addpostdsstatus(ps)
+        # Invalidate fsmonitor.state if dirstate changes. This avoids the
+        # following issue:
+        # 1. pid 11 writes dirstate
+        # 2. pid 22 reads dirstate and inconsistent fsmonitor.state
+        # 3. pid 22 calculates a wrong state
+        # 4. pid 11 writes fsmonitor.state
+        # Because before 1,
+        # 0. pid 11 invalidates fsmonitor.state
+        # will happen.
+        psbefore = lambda *args, **kwds: self._fsmonitorstate.invalidate()
+        self.addpostdsstatus(psbefore, afterdirstatewrite=False)
+        psafter = poststatus(startclock)
+        self.addpostdsstatus(psafter, afterdirstatewrite=True)
 
     r = orig(node1, node2, match, listignored, listclean, stateunknown,
              listsubrepos)
