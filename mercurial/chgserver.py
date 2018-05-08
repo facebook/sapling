@@ -66,30 +66,20 @@ def _hashlist(items):
     """return sha1 hexdigest for a list"""
     return hashlib.sha1(str(items)).hexdigest()
 
-# sensitive config sections affecting confighash
+# not used - kept before extensions stop writing to it
 _configsections = [
-    'alias',  # affects global state commands.table
-    'eol',    # uses setconfig('eol', ...)
-    'extdiff',  # uisetup will register new commands
-    'extensions',
-]
-
-_configsectionitems = [
-    ('commands', 'show.aliasprefix'), # show.py reads it in extsetup
 ]
 
 # sensitive environment variables affecting confighash
 _envre = re.compile(r'''\A(?:
                     CHGHG
-                    |HG(?:DEMANDIMPORT|EMITWARNINGS|MODULEPOLICY|PROF|RCPATH)?
+                    |HG(?:EMITWARNINGS|MODULEPOLICY)?
                     |HG(?:ENCODING|PLAIN).*
                     |LANG(?:UAGE)?
                     |LC_.*
                     |LD_.*
                     |PATH
                     |PYTHON.*
-                    |TERM(?:INFO)?
-                    |TZ
                     )\Z''', re.X)
 
 def _confighash(ui):
@@ -103,12 +93,7 @@ def _confighash(ui):
     server outdated and exit since the user can have different configs at the
     same time.
     """
-    sectionitems = []
-    for section in _configsections:
-        sectionitems.append(ui.configitems(section))
-    for section, item in _configsectionitems:
-        sectionitems.append(ui.config(section, item))
-    sectionhash = _hashlist(sectionitems)
+    # no more sensitive config sections with dispatch.runchgserver()
     # If $CHGHG is set, the change to $HG should not trigger a new chg server
     if 'CHGHG' in encoding.environ:
         ignored = {'HG'}
@@ -117,17 +102,16 @@ def _confighash(ui):
     envitems = [(k, v) for k, v in encoding.environ.iteritems()
                 if _envre.match(k) and k not in ignored]
     envhash = _hashlist(sorted(envitems))
-    return sectionhash[:6] + envhash[:6]
+    return envhash[:6]
 
 def _getmtimepaths(ui):
     """get a list of paths that should be checked to detect change
 
     The list will include:
-    - extensions (will not cover all files for complex extensions)
     - mercurial/__version__.py
     - python binary
     """
-    modules = [m for n, m in extensions.extensions(ui)]
+    modules = []
     try:
         from . import __version__
         modules.append(__version__)

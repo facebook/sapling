@@ -27,15 +27,21 @@ if libdir != '@' 'LIBDIR' '@':
         libdir = os.path.abspath(libdir)
     sys.path.insert(0, libdir)
 
-# enable importing on demand to reduce startup time
-try:
-    if sys.version_info[0] < 3 or sys.version_info >= (3, 6):
-        import hgdemandimport; hgdemandimport.enable()
-except ImportError:
-    sys.stderr.write("abort: couldn't find mercurial libraries in [%s]\n" %
-                     ' '.join(sys.path))
-    sys.stderr.write("(check your install and PYTHONPATH)\n")
-    sys.exit(-1)
-
-from mercurial import dispatch
-dispatch.run()
+if (sys.argv[1:5] == ['serve', '--cmdserver', 'chgunix', '--address']
+    and sys.argv[6:8] == ['--daemon-postexec', 'chdir:/']
+    and 'CHGINTERNALMARK' in os.environ):
+    # Shortcut path for chg server
+    from mercurial import dispatch
+    dispatch.runchgserver()
+else:
+    # Non-chg path
+    try:
+        if sys.version_info[0] < 3 or sys.version_info >= (3, 6):
+            import hgdemandimport; hgdemandimport.enable()
+    except ImportError:
+        sys.stderr.write("abort: couldn't find mercurial libraries in [%s]\n" %
+                         ' '.join(sys.path))
+        sys.stderr.write("(check your install and PYTHONPATH)\n")
+        sys.exit(-1)
+    from mercurial import dispatch
+    dispatch.run()

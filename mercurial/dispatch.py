@@ -105,6 +105,23 @@ def run(entrypoint='hg'):
         req.ui.ferr.flush()
     sys.exit(status & 255)
 
+def runchgserver():
+    """start the chg server, pre-import bundled extensions"""
+    # Clean server - do not load any config files or repos.
+    _initstdio()
+    ui = uimod.ui()
+    repo = None
+    args = sys.argv[1:]
+    cmd, func, args, globalopts, cmdopts = _parse(ui, args)
+    if not (cmd == 'serve' and cmdopts['cmdserver'] == 'chgunix'):
+        raise error.ProgrammingError('runchgserver called without chg command')
+    from . import (
+        chgserver,
+        server,
+    )
+    service = chgserver.chgunixservice(ui, repo, cmdopts)
+    server.runservice(cmdopts, initfn=service.init, runfn=service.run)
+
 def getentrypoint():
     global _entrypoint
     return _entrypoint
