@@ -12,6 +12,7 @@ import re
 from .i18n import _
 from . import (
     error,
+    progress,
     pycompat,
     util,
     wireproto,
@@ -150,7 +151,7 @@ class sshpeer(wireproto.wirepeer):
             if res != 0:
                 self._abort(error.RepoError(_("could not create remote repo")))
 
-        with self.ui.timeblockedsection('sshsetup'):
+        with self.ui.timeblockedsection('sshsetup'), progress.suspend():
             self._validaterepo(sshcmd, args, remotecmd, sshenv)
 
     # Begin of _basepeer interface.
