@@ -98,7 +98,7 @@ use bytes::Bytes;
 use hgproto::{sshproto, HgProtoHandler};
 use mercurial_types::RepositoryId;
 use metaconfig::RepoConfigs;
-use metaconfig::repoconfig::RepoType;
+use metaconfig::repoconfig::RepoConfig;
 
 use errors::*;
 
@@ -247,7 +247,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
 
 fn start_repo_listeners<I>(repos: I, root_log: &Logger) -> Result<Vec<JoinHandle<!>>>
 where
-    I: IntoIterator<Item = (String, RepoType, usize, i32, Option<String>)>,
+    I: IntoIterator<Item = (String, RepoConfig)>,
 {
     // Given the list of paths to repos:
     // - create a thread for it
@@ -256,30 +256,19 @@ where
 
     let handles: Vec<_> = repos
         .into_iter()
-        .map(
-            move |(reponame, repotype, cache_size, repoid, scuba_table)| {
-                info!(root_log, "Start listening for repo {:?}", repotype);
+        .map(move |(reponame, config)| {
+            info!(root_log, "Start listening for repo {:?}", config.repotype);
 
-                // start a thread for each repo to own the reactor and start listening for
-                // connections and detach it
-                thread::Builder::new()
-                    .name(format!("listener_{:?}", repotype))
-                    .spawn({
-                        let root_log = root_log.clone();
-                        move || {
-                            repo_listen(
-                                reponame,
-                                repotype,
-                                cache_size,
-                                root_log.clone(),
-                                RepositoryId::new(repoid),
-                                scuba_table,
-                            )
-                        }
-                    })
-                    .map_err(Error::from)
-            },
-        )
+            // start a thread for each repo to own the reactor and start listening for
+            // connections and detach it
+            thread::Builder::new()
+                .name(format!("listener_{:?}", config.repotype))
+                .spawn({
+                    let root_log = root_log.clone();
+                    move || repo_listen(reponame, config, root_log.clone())
+                })
+                .map_err(Error::from)
+        })
         .collect();
 
     if handles.iter().any(Result::is_err) {
@@ -295,22 +284,16 @@ where
 }
 
 // Listener thread for a specific repo
-fn repo_listen(
-    reponame: String,
-    repotype: RepoType,
-    cache_size: usize,
-    root_log: Logger,
-    repoid: RepositoryId,
-    scuba_table: Option<String>,
-) -> ! {
+fn repo_listen(reponame: String, config: RepoConfig, root_log: Logger) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
+    let scuba_table = config.scuba_table.clone();
     let (sockname, repo) = repo::init_repo(
         &root_log,
-        &repotype,
-        cache_size,
+        &config.repotype,
+        config.generation_cache_size,
         &core.remote(),
-        repoid,
-        scuba_table.clone(),
+        RepositoryId::new(config.repoid),
+        config.scuba_table.clone(),
     ).expect("failed to initialize repo");
 
     let listen_log = root_log.new(o!("repo" => repo.path().clone()));
@@ -453,18 +436,7 @@ fn main() {
         };
 
         let config = get_config(root_log, &matches)?;
-        let repo_listeners = start_repo_listeners(
-            config.repos.into_iter().map(|(reponame, c)| {
-                (
-                    reponame,
-                    c.repotype,
-                    c.generation_cache_size,
-                    c.repoid,
-                    c.scuba_table,
-                )
-            }),
-            root_log,
-        )?;
+        let repo_listeners = start_repo_listeners(config.repos.into_iter(), root_log)?;
 
         for handle in vec![stats_aggregation]
             .into_iter()
