@@ -548,6 +548,9 @@ class chgunixservicehandler(object):
         return False
 
     def newconnection(self):
+        # change process name early so it won't be affected by `pkill -f`
+        if util.safehasattr(util, 'setprocname'):
+            util.setprocname('chg[worker]')
         self._lastactive = time.time()
 
     def createcmdserver(self, repo, conn, fin, fout):
