@@ -49,14 +49,14 @@ class EdenTimestamp {
    * Constructs an EdenTimestamp given a raw uint64_t in nanoseconds since
    * the earliest representable ext4 timestamp.
    */
-  explicit EdenTimestamp(uint64_t nsec) : nsec_(nsec) {}
+  explicit EdenTimestamp(uint64_t nsec) noexcept : nsec_(nsec) {}
 
   /**
    * Converts a timespec to an EdenTimestamp.
    *
    * If the timespec is out of range, it is clamped.
    */
-  explicit EdenTimestamp(timespec ts, Clamp = clamp);
+  explicit EdenTimestamp(timespec ts, Clamp = clamp) noexcept;
 
   /**
    * Converts a timespec to an EdenTimestamp.
@@ -68,7 +68,7 @@ class EdenTimestamp {
 
   EdenTimestamp& operator=(const EdenTimestamp&) = default;
 
-  EdenTimestamp& operator=(timespec ts) {
+  EdenTimestamp& operator=(timespec ts) noexcept {
     return *this = EdenTimestamp{ts};
   }
 
@@ -83,12 +83,12 @@ class EdenTimestamp {
   /**
    * Returns a timespec representing duration since the unix epoch.
    */
-  timespec toTimespec() const;
+  timespec toTimespec() const noexcept;
 
   /**
    * Returns the raw representation -- should be for testing only.  :)
    */
-  uint64_t asRawRepresentation() const {
+  uint64_t asRawRepresentation() const noexcept {
     return nsec_;
   }
 
@@ -107,18 +107,18 @@ struct InodeTimestamps {
   /**
    * Initializes all timestamps to zero.
    */
-  InodeTimestamps() {}
+  InodeTimestamps() = default;
 
   /**
    * Initializes all timestamps from the same value.
    */
-  explicit InodeTimestamps(const timespec& ts)
-      : atime(ts), mtime(ts), ctime(ts) {}
+  explicit InodeTimestamps(const timespec& ts) noexcept
+      : atime{ts}, mtime{ts}, ctime{ts} {}
 
   /**
    * Assigns the specified ts to atime, mtime, and ctime.
    */
-  void setAll(const timespec& ts) {
+  void setAll(const timespec& ts) noexcept {
     atime = ts;
     mtime = ts;
     ctime = ts;
@@ -137,6 +137,13 @@ struct InodeTimestamps {
    */
   void applyToStat(struct stat& st) const;
 };
+
+static_assert(noexcept(EdenTimestamp{}), "");
+static_assert(noexcept(EdenTimestamp{timespec{}}), "");
+static_assert(noexcept(EdenTimestamp{uint64_t{}}), "");
+
+static_assert(noexcept(InodeTimestamps{}), "");
+static_assert(noexcept(InodeTimestamps{timespec{}}), "");
 
 } // namespace eden
 } // namespace facebook

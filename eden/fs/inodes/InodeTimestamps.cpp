@@ -39,15 +39,17 @@ constexpr int64_t kLargestRepresentableSec = 16299260425ll;
 constexpr uint32_t kLargestRepresentableNsec = 709551615u;
 
 struct ClampPolicy {
-  static uint64_t minimum(timespec /*ts*/) {
+  static constexpr bool is_noexcept = true;
+  static uint64_t minimum(timespec /*ts*/) noexcept {
     return 0;
   }
-  static uint64_t maximum(timespec /*ts*/) {
+  static uint64_t maximum(timespec /*ts*/) noexcept {
     return ~0ull;
   }
 };
 
 struct ThrowPolicy {
+  static constexpr bool is_noexcept = false;
   static uint64_t minimum(timespec ts) {
     throw std::underflow_error(folly::to<std::string>(
         "underflow converting timespec (",
@@ -67,7 +69,7 @@ struct ThrowPolicy {
 };
 
 template <typename OutOfRangePolicy>
-uint64_t repFromTimespec(timespec ts) {
+uint64_t repFromTimespec(timespec ts) noexcept(OutOfRangePolicy::is_noexcept) {
   if (ts.tv_sec < -kEpochOffsetSeconds) {
     return OutOfRangePolicy::minimum(ts);
   } else if (
@@ -105,13 +107,13 @@ timespec repToTimespec(uint64_t nsec) {
 
 } // namespace
 
-EdenTimestamp::EdenTimestamp(timespec ts, Clamp)
+EdenTimestamp::EdenTimestamp(timespec ts, Clamp) noexcept
     : nsec_{repFromTimespec<ClampPolicy>(ts)} {}
 
 EdenTimestamp::EdenTimestamp(timespec ts, ThrowIfOutOfRange)
     : nsec_{repFromTimespec<ThrowPolicy>(ts)} {}
 
-timespec EdenTimestamp::toTimespec() const {
+timespec EdenTimestamp::toTimespec() const noexcept {
   return repToTimespec(nsec_);
 }
 
