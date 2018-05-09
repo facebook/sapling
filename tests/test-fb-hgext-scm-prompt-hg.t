@@ -254,10 +254,3 @@ Test many remotenames
   $ echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/@ >> .hg/remotenames
   $ cmd
   (97af35b|remote/@...)
-
-Test eden snapshots
-  $ mkdir -p .eden/client/
-  $ python -c 'print("eden\x00\x00\x00\x01\xde\xad\xbe\xef\xca\xfe\xfa\xce\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")' > .eden/client/SNAPSHOT
-  $ rm .hg/dirstate
-  $ cmd
-  (deadbee)
