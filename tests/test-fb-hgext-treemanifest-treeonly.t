@@ -1,10 +1,5 @@
   $ . "$TESTDIR/library.sh"
 
-  $ cat >> $HGRCPATH <<EOF
-  > [treemanifest]
-  > sendtrees=True
-  > EOF
-
 Setup the server
 
   $ hginit master
@@ -91,6 +86,24 @@ Make a local hybrid flat+tree draft commit
   -r--r--r--     211 3c68632603fbc30bd6ee720bd43c0f0940930cc8.datapack
   -r--r--r--    1196 a5c12ff082e94f0aabc66725c89bcb2e624310bf.histidx
   -r--r--r--     183 a5c12ff082e94f0aabc66725c89bcb2e624310bf.histpack
+
+Enable sendtrees and verify flat is converted to tree on demand
+  $ cat >> $HGRCPATH <<EOF
+  > [treemanifest]
+  > sendtrees=True
+  > EOF
+  $ hg log -r 1 --stat
+  changeset:   1:638af8a2d15f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     flat only commit
+  
+   subdir/x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  $ ls_l .hg/store/packs/manifests | wc -l
+  \s*8 (re)
+  $ hg repack
 
 Transition to tree-only client
   $ cat >> .hg/hgrc <<EOF

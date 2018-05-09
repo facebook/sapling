@@ -409,7 +409,8 @@ def setuptreestores(repo, mfl):
                                                  PACK_CATEGORY)
 
     demanddownload = ui.configbool('treemanifest', 'demanddownload', True)
-    demandgenerate = (ui.configbool('treemanifest', 'treeonly') and
+    demandgenerate = ((ui.configbool('treemanifest', 'treeonly') or
+                       ui.configbool('treemanifest', 'sendtrees')) and
                       ui.configbool('treemanifest', 'demandgenerate', True))
     remotestore = remotetreestore(repo)
     ondemandstore = ondemandtreedatastore(repo)
