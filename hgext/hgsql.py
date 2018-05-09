@@ -121,6 +121,7 @@ def uisetup(ui):
 
     wrapcommand(commands.table, 'bookmark', bookmarkcommand)
     wrapfunction(exchange, '_localphasemove', _localphasemove)
+    wrapfunction(exchange.pulloperation, '__init__', pullop_init)
     wrapfunction(exchange, 'push', push)
 
     # Enable SQL for remote commands that write to the repository
@@ -251,6 +252,11 @@ def pull(orig, *args, **kwargs):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
+
+def pullop_init(orig, self, repo, *args, **kwargs):
+    if issqlrepo(repo) or 'hgsql' in repo.requirements:
+        kwargs['exactbyteclone'] = True
+    return orig(self, repo, *args, **kwargs)
 
 def push(orig, *args, **kwargs):
     repo = args[0]

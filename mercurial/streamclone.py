@@ -115,11 +115,13 @@ def maybeperformlegacystreamclone(pullop):
 
     A legacy stream clone will not be performed if a bundle2 stream clone is
     supported.
+
+    Returns True if a clone was performed.
     """
     supported, requirements = canperformstreamclone(pullop)
 
     if not supported:
-        return
+        return False
 
     repo = pullop.repo
     remote = pullop.remote
@@ -168,6 +170,8 @@ def maybeperformlegacystreamclone(pullop):
             branchmap.replacecache(repo, rbranchmap)
 
         repo.invalidate()
+
+    return True
 
 def allowservergeneration(repo):
     """Whether streaming clones are allowed from the server."""

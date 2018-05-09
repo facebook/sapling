@@ -1194,7 +1194,8 @@ class pulloperation(object):
     """
 
     def __init__(self, repo, remote, heads=None, force=False, bookmarks=(),
-                 remotebookmarks=None, streamclonerequested=None):
+                 remotebookmarks=None, streamclonerequested=None,
+                 exactbyteclone=False):
         # repo we pull into
         self.repo = repo
         # repo we pull from
@@ -1224,6 +1225,9 @@ class pulloperation(object):
         self.stepsdone = set()
         # Whether we attempted a clone from pre-generated bundles.
         self.clonebundleattempted = False
+        # Whether clones should do an exact byte clone. This is used for hgsql
+        # to avoid the extra semantic pull after a streaming clone.
+        self.exactbyteclone = exactbyteclone
 
     @util.propertycache
     def pulledsubset(self):
@@ -1336,14 +1340,19 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
         # This should ideally be in _pullbundle2(). However, it needs to run
         # before discovery to avoid extra work.
         _maybeapplyclonebundle(pullop)
-        streamclone.maybeperformlegacystreamclone(pullop)
-        _pulldiscovery(pullop)
-        if pullop.canusebundle2:
-            _pullbundle2(pullop)
-        _pullchangeset(pullop)
-        _pullphase(pullop)
-        _pullbookmarks(pullop)
-        _pullobsolete(pullop)
+        cloned = streamclone.maybeperformlegacystreamclone(pullop)
+
+        # hgsql needs byte-for-byte identical clones, so let's skip the semantic
+        # pull stage since it can result in different bytes (different deltas,
+        # etc).
+        if not (cloned and pullop.exactbyteclone):
+            _pulldiscovery(pullop)
+            if pullop.canusebundle2:
+                _pullbundle2(pullop)
+            _pullchangeset(pullop)
+            _pullphase(pullop)
+            _pullbookmarks(pullop)
+            _pullobsolete(pullop)
         pullop.trmanager.close()
     finally:
         lockmod.release(pullop.trmanager, lock, wlock)
