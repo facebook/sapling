@@ -35,7 +35,7 @@ use std::sync::Arc;
 use clap::{App, Arg, ArgMatches};
 use failure::err_msg;
 use futures::{Future, Stream};
-use slog::{Drain, Logger};
+use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
 
@@ -51,6 +51,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .args_from_usage(
             r#"
             <INPUT>                    'input revlog repo'
+            --debug                    'print debug logs'
             --repo_id <repo_id>        'ID of the newly imported repo'
             --manifold-bucket [BUCKET] 'manifold bucket'
             --db-address [address]     'address of a db. Used only for manifold blobstore'
@@ -174,8 +175,16 @@ fn main() {
 
     let mut core = Core::new().expect("cannot create tokio core");
 
-    let drain = glog_drain().fuse();
-    let logger = Logger::root(drain, o![]);
+    let logger = {
+        let level = if matches.is_present("debug") {
+            Level::Debug
+        } else {
+            Level::Info
+        };
+
+        let drain = glog_drain().filter_level(level).fuse();
+        slog::Logger::root(drain, o![])
+    };
 
     let blobrepo = Arc::new(open_blobrepo(&logger, &matches));
 
