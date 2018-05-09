@@ -789,11 +789,11 @@ def _rebase(orig, ui, repo, **opts):
 
     # 'hg rebase' can fast-forward bookmark
     prev = repo['.']
-    dest = scmutil.revsingle(repo, opts.get('dest'))
 
     # Only fast-forward the bookmark if no source nodes were explicitly
     # specified.
     if not (opts.get('base') or opts.get('source') or opts.get('rev')):
+        dest = scmutil.revsingle(repo, opts.get('dest'))
         common = dest.ancestor(prev)
         if prev == common:
             result = hg.update(repo, dest.node())
