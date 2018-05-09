@@ -4,9 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
-
-use bytes::{BigEndian, BufMut, Bytes, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use tokio_io::codec::{Decoder, Encoder};
 
 use errors::*;
@@ -104,12 +102,12 @@ impl Encoder for ChunkEncoder {
         match item.0 {
             ChunkInner::Normal(bytes) => {
                 dst.reserve(4 + bytes.len());
-                dst.put_i32::<BigEndian>(bytes.len() as i32);
+                dst.put_i32_be(bytes.len() as i32);
                 dst.put_slice(&bytes);
             }
             ChunkInner::Error => {
                 dst.reserve(4);
-                dst.put_i32::<BigEndian>(-1);
+                dst.put_i32_be(-1);
             }
         }
         Ok(())
@@ -166,7 +164,7 @@ mod test {
     #[test]
     fn test_empty_chunk() {
         let mut buf = BytesMut::with_capacity(4);
-        buf.put_i32::<BigEndian>(0);
+        buf.put_i32_be(0);
 
         let mut decoder = ChunkDecoder;
         let chunk = decoder.decode(&mut buf).unwrap().unwrap();
@@ -180,7 +178,7 @@ mod test {
     #[test]
     fn test_error_chunk() {
         let mut buf = BytesMut::with_capacity(4);
-        buf.put_i32::<BigEndian>(-1);
+        buf.put_i32_be(-1);
 
         let mut decoder = ChunkDecoder;
         let chunk = decoder.decode(&mut buf).unwrap().unwrap();
@@ -194,7 +192,7 @@ mod test {
     #[test]
     fn test_invalid_chunk() {
         let mut buf = BytesMut::with_capacity(4);
-        buf.put_i32::<BigEndian>(-2);
+        buf.put_i32_be(-2);
 
         let mut decoder = ChunkDecoder;
         let chunk_err = decoder.decode(&mut buf);

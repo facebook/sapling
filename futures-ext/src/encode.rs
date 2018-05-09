@@ -14,8 +14,6 @@
 //! rather than restricting all codec operations to `AsyncRead`/`AsyncWrite` operations on
 //! an underlying transport.
 
-#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
-
 use bytes::{Bytes, BytesMut};
 use futures::{Async, Poll, Stream};
 use tokio_io::codec::Encoder;
@@ -109,7 +107,7 @@ mod test {
 
         fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
             dst.reserve(2);
-            dst.put_u16::<BigEndian>(item);
+            dst.put_u16_be(item);
 
             Ok(())
         }

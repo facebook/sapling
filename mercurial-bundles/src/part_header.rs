@@ -6,11 +6,9 @@
 
 //! Construct and serialize headers for bundle2 parts.
 
-#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
-
 use std::collections::HashMap;
 
-use bytes::{BigEndian, BufMut, Bytes};
+use bytes::{BufMut, Bytes};
 use quickcheck::{Arbitrary, Gen};
 
 use chunk::Chunk;
@@ -153,7 +151,7 @@ impl PartHeader {
         out_buf.put_slice(part_type);
 
         // part id
-        out_buf.put_u32::<BigEndian>(self.part_id);
+        out_buf.put_u32_be(self.part_id);
 
         // mandatory/advisory params
         let num_mparams = self.mparams.len() as u8;

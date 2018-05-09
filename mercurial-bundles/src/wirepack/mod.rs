@@ -6,8 +6,6 @@
 
 //! Wire packs. The format is currently undocumented.
 
-#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
-
 use std::fmt;
 
 use byteorder::{BigEndian, ByteOrder};
@@ -174,7 +172,7 @@ impl HistoryEntry {
         } else {
             vec![]
         };
-        buf.put_u16::<BigEndian>(path_vec.len() as u16);
+        buf.put_u16_be(path_vec.len() as u16);
         buf.put_slice(&path_vec);
         Ok(())
     }
@@ -277,10 +275,10 @@ impl DataEntry {
             let fulltext = self.delta
                 .maybe_fulltext()
                 .expect("verify will have already checked that the delta is a fulltext");
-            buf.put_u64::<BigEndian>(fulltext.len() as u64);
+            buf.put_u64_be(fulltext.len() as u64);
             buf.put_slice(fulltext);
         } else {
-            buf.put_u64::<BigEndian>(delta::encoded_len(&self.delta) as u64);
+            buf.put_u64_be(delta::encoded_len(&self.delta) as u64);
             delta::encode_delta(&self.delta, buf);
         }
         Ok(())

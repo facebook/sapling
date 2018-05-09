@@ -6,9 +6,7 @@
 
 //! Code to deal with deltas received or sent over the wire.
 
-#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
-
-use bytes::{BigEndian, BufMut, BytesMut};
+use bytes::{BufMut, BytesMut};
 
 use bytes_ext::SizeCounter;
 use mercurial_types::delta::{Delta, Fragment};
@@ -76,9 +74,9 @@ pub fn encoded_len(delta: &Delta) -> usize {
 
 pub fn encode_delta<B: BufMut>(delta: &Delta, out: &mut B) {
     for fragment in delta.fragments() {
-        out.put_i32::<BigEndian>(fragment.start as i32);
-        out.put_i32::<BigEndian>(fragment.end as i32);
-        out.put_i32::<BigEndian>(fragment.content.len() as i32);
+        out.put_i32_be(fragment.start as i32);
+        out.put_i32_be(fragment.end as i32);
+        out.put_i32_be(fragment.content.len() as i32);
         out.put_slice(&fragment.content[..]);
     }
 }

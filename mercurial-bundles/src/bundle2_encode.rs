@@ -4,8 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
-
 use std::collections::HashMap;
 use std::io::{self, Cursor};
 use std::mem;
@@ -116,7 +114,7 @@ where
 
         header_buf.put_slice(b"HG20");
         // Reserve 4 bytes for the length.
-        header_buf.put_u32::<BigEndian>(0);
+        header_buf.put_u32_be(0);
         // Now write out the stream header.
 
         let params = mparams
