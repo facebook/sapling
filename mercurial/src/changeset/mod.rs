@@ -55,7 +55,6 @@ where
     }
 }
 
-#[allow(dead_code)]
 fn escape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
     let mut ret = Vec::new();
 
@@ -63,6 +62,7 @@ fn escape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
         match *c {
             b'\0' => ret.extend_from_slice(&b"\\0"[..]),
             b'\n' => ret.extend_from_slice(&b"\\n"[..]),
+            b'\r' => ret.extend_from_slice(&b"\\r"[..]),
             b'\\' => ret.extend_from_slice(&b"\\\\"[..]),
             c => ret.push(c),
         }
@@ -77,13 +77,17 @@ fn unescape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
 
     for c in s.into_iter() {
         match *c {
+            b'0' if quote => {
+                quote = false;
+                ret.push(b'\0');
+            }
             b'n' if quote => {
                 quote = false;
                 ret.push(b'\n');
             }
-            b'0' if quote => {
+            b'r' if quote => {
                 quote = false;
-                ret.push(b'\0');
+                ret.push(b'\r');
             }
             b'\\' if quote => {
                 quote = false;
@@ -367,4 +371,23 @@ pub fn serialize_extras<W: Write>(extras: &Extra, out: &mut W) -> io::Result<()>
         })
         .collect();
     out.write_all(kv.join(&b'\0').as_slice())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    quickcheck! {
+        fn escape_roundtrip(input: Vec<u8>) -> bool {
+            let result = escape(input.iter());
+            unescape(result.iter()) == input
+        }
+    }
+
+    #[test]
+    fn unescape_example_roundtrip() {
+        let input = b"\x0c\\r\x90\x0c\x01\\n";
+        let result = unescape(input.iter());
+        assert_eq!(escape(result.iter()), input);
+    }
 }
