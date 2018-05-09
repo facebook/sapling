@@ -13,6 +13,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 
 use blobrepo::BlobRepo;
+use bookmarks::Bookmark;
 use mercurial::RevlogRepo;
 use mercurial_types::DChangesetId;
 
@@ -40,7 +41,7 @@ pub fn upload_bookmarks(
             let mut transaction = blobrepo.update_bookmark_transaction();
 
             for (key, value) in vec {
-                let key = try_boxfuture!(AsciiString::from_ascii(key));
+                let key = Bookmark::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
                 let value = DChangesetId::new(value.into_nodehash().into_mononoke());
                 try_boxfuture!(transaction.create(&key, &value))
             }

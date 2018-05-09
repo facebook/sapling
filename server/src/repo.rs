@@ -418,7 +418,7 @@ impl RepoClient {
             let blobrepo = self.repo.blobrepo.clone();
             let items = blobrepo.get_bookmarks().map(|(name, cs)| {
                 let hash: Vec<u8> = cs.into_nodehash().into_mercurial().to_hex().into();
-                (name, hash)
+                (name.to_string(), hash)
             });
             bundle.add_part(parts::listkey_part("bookmarks", items)?);
         }
@@ -704,8 +704,7 @@ impl HgCommands for RepoClient {
                 .collect()
                 .map(|bookmarks| {
                     let bookiter = bookmarks.into_iter().map(|(name, value)| {
-                        let name: &[u8] = name.as_ref();
-                        (Vec::from(name), value)
+                        (Vec::from(name.to_string()), value)
                     });
                     HashMap::from_iter(bookiter)
                 })

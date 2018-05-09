@@ -131,7 +131,7 @@ struct ChangegroupPush {
 
 struct BookmarkPush {
     part_id: PartId,
-    name: AsciiString,
+    name: bookmarks::Bookmark,
     old: Option<DChangesetId>,
     new: Option<DChangesetId>,
 }
@@ -241,6 +241,7 @@ impl Bundle2Resolver {
                     );
 
                     let name = try_boxfuture!(get_ascii_param(mparams, "key"));
+                    let name = bookmarks::Bookmark::new_ascii(name);
                     let old = try_boxfuture!(get_optional_changeset_param(mparams, "old"));
                     let new = try_boxfuture!(get_optional_changeset_param(mparams, "new"));
 

@@ -58,7 +58,8 @@ extern crate slog;
 
 use std::str::FromStr;
 
-use bookmarks::Bookmarks;
+use ascii::AsciiString;
+use bookmarks::{Bookmark, Bookmarks};
 use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use memblob::EagerMemblob;
 use dbbookmarks::SqliteDbBookmarks;
@@ -66,7 +67,6 @@ use dieselfilenodes::SqliteFilenodes;
 use mercurial_types::{DChangesetId, DNodeHash, RepositoryId};
 use mononoke_types::BlobstoreBytes;
 use blobrepo::BlobRepo;
-use ascii::AsciiString;
 use blobstore::Blobstore;
 use futures::future::Future;
 use slog::{Discard, Drain, Logger};
@@ -140,7 +140,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
             head = head[-40:]
             writeline(
                 '''book_txn.create(
-                    &AsciiString::from_ascii("head-{0}").unwrap(),
+                    &Bookmark::new("head-{0}".to_string()).unwrap(),
                     &DChangesetId::new(DNodeHash::from_ascii_str(
                         &AsciiString::from_ascii("{0}").unwrap(),
                     ).unwrap()),

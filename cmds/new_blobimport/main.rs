@@ -9,6 +9,7 @@
 
 extern crate ascii;
 extern crate blobrepo;
+extern crate bookmarks;
 extern crate bytes;
 extern crate changesets;
 extern crate clap;

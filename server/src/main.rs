@@ -8,7 +8,7 @@
 #![feature(never_type)]
 #![feature(try_from)]
 
-extern crate ascii;
+extern crate bookmarks;
 #[macro_use]
 extern crate failure_ext as failure;
 #[macro_use]
@@ -74,8 +74,6 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Instant;
-
-use ascii::AsciiString;
 
 use failure::SlogKVError;
 use futures::{Future, IntoFuture, Sink, Stream};
@@ -222,7 +220,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
 
     let changesetid = match matches.value_of("crbook") {
         Some(book) => {
-            let book = AsciiString::from_ascii(book).expect("book must be ascii");
+            let book = bookmarks::Bookmark::new(book).expect("book must be ascii");
             config_repo
                 .get_bookmark(&book)
                 .wait()?

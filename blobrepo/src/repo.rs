@@ -12,7 +12,6 @@ use std::thread;
 use std::time::Duration;
 use std::usize;
 
-use ascii::AsciiString;
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
 use failure::{Fail, ResultExt};
 use futures::{Async, Poll};
@@ -26,7 +25,7 @@ use time_ext::DurationExt;
 use uuid::Uuid;
 
 use blobstore::{Blobstore, CachingBlobstore};
-use bookmarks::{self, Bookmarks};
+use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use delayblob::DelayBlob;
@@ -299,7 +298,7 @@ impl BlobRepo {
 
     pub fn get_heads(&self) -> impl Stream<Item = DNodeHash, Error = Error> {
         self.bookmarks
-            .list_by_prefix(&AsciiString::default(), &self.repoid)
+            .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
             .map(|(_, cs)| cs.into_nodehash())
     }
 
@@ -348,14 +347,14 @@ impl BlobRepo {
         Box::new(HgBlobEntry::new_root(self.blobstore.clone(), *manifestid))
     }
 
-    pub fn get_bookmark(&self, name: &AsciiString) -> BoxFuture<Option<DChangesetId>, Error> {
+    pub fn get_bookmark(&self, name: &Bookmark) -> BoxFuture<Option<DChangesetId>, Error> {
         self.bookmarks.get(name, &self.repoid)
     }
 
     // TODO(stash): rename to get_all_bookmarks()?
-    pub fn get_bookmarks(&self) -> BoxStream<(AsciiString, DChangesetId), Error> {
-        let empty_prefix = AsciiString::new();
-        self.bookmarks.list_by_prefix(&empty_prefix, &self.repoid)
+    pub fn get_bookmarks(&self) -> BoxStream<(Bookmark, DChangesetId), Error> {
+        self.bookmarks
+            .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
     }
 
     pub fn update_bookmark_transaction(&self) -> Box<bookmarks::Transaction> {

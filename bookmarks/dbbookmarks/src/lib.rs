@@ -25,8 +25,7 @@ extern crate storage_types;
 mod schema;
 mod models;
 
-use ascii::AsciiString;
-use bookmarks::{Bookmarks, Transaction};
+use bookmarks::{Bookmark, BookmarkPrefix, Bookmarks, Transaction};
 use diesel::{delete, insert_into, replace_into, update, MysqlConnection, SqliteConnection};
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
@@ -136,16 +135,15 @@ macro_rules! impl_bookmarks {
         impl Bookmarks for $struct {
             fn get(
                 &self,
-                name: &AsciiString,
+                name: &Bookmark,
                 repo_id: &RepositoryId,
             ) -> BoxFuture<Option<DChangesetId>, Error> {
                 #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
                 let connection = try_boxfuture!(self.get_conn());
 
-                let name = name.as_str().to_string();
                 schema::bookmarks::table
                     .filter(schema::bookmarks::repo_id.eq(repo_id))
-                    .filter(schema::bookmarks::name.eq(name))
+                    .filter(schema::bookmarks::name.eq(name.to_string()))
                     .select(schema::bookmarks::changeset_id)
                     .first::<DChangesetId>(&*connection)
                     .optional()
@@ -156,9 +154,9 @@ macro_rules! impl_bookmarks {
 
             fn list_by_prefix(
                 &self,
-                prefix: &AsciiString,
+                prefix: &BookmarkPrefix,
                 repo_id: &RepositoryId,
-            ) -> BoxStream<(AsciiString, DChangesetId), Error> {
+            ) -> BoxStream<(Bookmark, DChangesetId), Error> {
                 #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
                 let connection = match self.get_conn() {
                     Ok(conn) => conn,
@@ -167,10 +165,9 @@ macro_rules! impl_bookmarks {
                     },
                 };
 
-                let prefix = prefix.as_str().to_string();
                 let query = schema::bookmarks::table
                     .filter(schema::bookmarks::repo_id.eq(repo_id))
-                    .filter(schema::bookmarks::name.like(format!("{}%", prefix)));
+                    .filter(schema::bookmarks::name.like(format!("{}%", prefix.to_string())));
 
                 query
                     .get_results::<models::BookmarkRow>(&*connection)
@@ -183,7 +180,7 @@ macro_rules! impl_bookmarks {
                     })
                     .from_err()
                     .flatten_stream()
-                    .and_then(|entry| Ok((AsciiString::from_ascii(entry.0)?, entry.1)))
+                    .and_then(|entry| Ok((Bookmark::new(entry.0)?, entry.1)))
                     .boxify()
             }
 
@@ -197,11 +194,11 @@ macro_rules! impl_bookmarks {
 
         struct $transaction_struct {
             db: $struct,
-            force_sets: HashMap<AsciiString, DChangesetId>,
-            creates: HashMap<AsciiString, DChangesetId>,
-            sets: HashMap<AsciiString, BookmarkSetData>,
-            force_deletes: HashSet<AsciiString>,
-            deletes: HashMap<AsciiString, DChangesetId>,
+            force_sets: HashMap<Bookmark, DChangesetId>,
+            creates: HashMap<Bookmark, DChangesetId>,
+            sets: HashMap<Bookmark, BookmarkSetData>,
+            force_deletes: HashSet<Bookmark>,
+            deletes: HashMap<Bookmark, DChangesetId>,
             repo_id: RepositoryId,
         }
 
@@ -218,7 +215,7 @@ macro_rules! impl_bookmarks {
                 }
             }
 
-            fn check_if_bookmark_already_used(&self, key: &AsciiString) -> Result<()> {
+            fn check_if_bookmark_already_used(&self, key: &Bookmark) -> Result<()> {
                 if self.creates.contains_key(key) || self.force_sets.contains_key(key)
                     || self.sets.contains_key(key) || self.force_deletes.contains(key)
                     || self.deletes.contains_key(key)
@@ -232,7 +229,7 @@ macro_rules! impl_bookmarks {
         impl Transaction for $transaction_struct {
             fn update(
                 &mut self,
-                key: &AsciiString,
+                key: &Bookmark,
                 new_cs: &DChangesetId,
                 old_cs: &DChangesetId,
             ) -> Result<()> {
@@ -247,25 +244,25 @@ macro_rules! impl_bookmarks {
                 Ok(())
             }
 
-            fn create(&mut self, key: &AsciiString, new_cs: &DChangesetId) -> Result<()> {
+            fn create(&mut self, key: &Bookmark, new_cs: &DChangesetId) -> Result<()> {
                 self.check_if_bookmark_already_used(key)?;
                 self.creates.insert(key.clone(), *new_cs);
                 Ok(())
             }
 
-            fn force_set(&mut self, key: &AsciiString, new_cs: &DChangesetId) -> Result<()> {
+            fn force_set(&mut self, key: &Bookmark, new_cs: &DChangesetId) -> Result<()> {
                 self.check_if_bookmark_already_used(key)?;
                 self.force_sets.insert(key.clone(), *new_cs);
                 Ok(())
             }
 
-            fn delete(&mut self, key: &AsciiString, old_cs: &DChangesetId) -> Result<()> {
+            fn delete(&mut self, key: &Bookmark, old_cs: &DChangesetId) -> Result<()> {
                 self.check_if_bookmark_already_used(key)?;
                 self.deletes.insert(key.clone(), *old_cs);
                 Ok(())
             }
 
-            fn force_delete(&mut self, key: &AsciiString) -> Result<()> {
+            fn force_delete(&mut self, key: &Bookmark) -> Result<()> {
                 self.check_if_bookmark_already_used(key)?;
                 self.force_deletes.insert(key.clone());
                 Ok(())
@@ -285,7 +282,7 @@ macro_rules! impl_bookmarks {
                         .execute(&*connection)?;
 
                     for (key, &BookmarkSetData { new_cs, old_cs }) in self.sets.iter() {
-                        let key = key.as_str().to_string();
+                        let key = key.to_string();
                         let num_affected_rows = update(
                             schema::bookmarks::table
                                 .filter(schema::bookmarks::name.eq(key.clone()))
@@ -298,13 +295,13 @@ macro_rules! impl_bookmarks {
                     }
 
                     for key in self.force_deletes.iter() {
-                        let key = key.as_str().to_string();
+                        let key = key.to_string();
                         delete(schema::bookmarks::table.filter(schema::bookmarks::name.eq(key)))
                             .execute(&*connection)?;
                     }
 
                     for (key, old_cs) in self.deletes.iter() {
-                        let key = key.as_str().to_string();
+                        let key = key.to_string();
                         let num_deleted_rows = delete(
                             schema::bookmarks::table
                                 .filter(schema::bookmarks::name.eq(key.clone()))
@@ -332,12 +329,12 @@ struct BookmarkSetData {
 
 fn create_bookmarks_rows(
     repo_id: RepositoryId,
-    map: &HashMap<AsciiString, DChangesetId>,
+    map: &HashMap<Bookmark, DChangesetId>,
 ) -> Vec<models::BookmarkRow> {
     map.iter()
         .map(|(name, changeset_id)| models::BookmarkRow {
             repo_id,
-            name: name.as_str().to_string(),
+            name: name.to_string(),
             changeset_id: *changeset_id,
         })
         .collect()

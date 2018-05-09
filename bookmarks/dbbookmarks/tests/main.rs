@@ -20,10 +20,18 @@ extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate tokio;
 
-use ascii::AsciiString;
+use bookmarks::{Bookmark, BookmarkPrefix};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use mercurial_types_mocks::nodehash::{ONES_CSID, TWOS_CSID};
 use mercurial_types_mocks::repo::REPO_ZERO;
+
+fn create_bookmark(book: &str) -> Bookmark {
+    Bookmark::new(book.to_string()).unwrap()
+}
+
+fn create_prefix(book: &str) -> BookmarkPrefix {
+    BookmarkPrefix::new(book.to_string()).unwrap()
+}
 
 macro_rules! bookmarks_test_impl {
     ($mod_name: ident => {
@@ -39,8 +47,8 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_simple_unconditional_set_get() {
                 let bookmarks = $new_cb();
-                let name_correct = AsciiString::from_ascii("book".to_string()).unwrap();
-                let name_incorrect = AsciiString::from_ascii("book2".to_string()).unwrap();
+                let name_correct = create_bookmark("book");
+                let name_incorrect = create_bookmark("book2");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.force_set(&name_correct, &ONES_CSID).unwrap();
@@ -59,8 +67,8 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_multi_unconditional_set_get() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
-                let name_2 = AsciiString::from_ascii("book2".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
+                let name_2 = create_bookmark("book2");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.force_set(&name_1, &ONES_CSID).unwrap();
@@ -80,7 +88,7 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_unconditional_set_same_bookmark() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.force_set(&name_1, &ONES_CSID).unwrap();
@@ -99,7 +107,7 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_simple_create() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
@@ -114,7 +122,7 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_create_already_existing() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
@@ -128,7 +136,7 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_create_change_same_bookmark() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
@@ -166,7 +174,7 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_simple_update_bookmark() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
@@ -185,7 +193,7 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_update_non_existent_bookmark() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.update(&name_1, &TWOS_CSID, &ONES_CSID).unwrap();
@@ -195,7 +203,7 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_update_existing_bookmark_with_incorrect_commit() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
@@ -209,7 +217,7 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_force_delete() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.force_delete(&name_1).unwrap();
@@ -232,7 +240,7 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_delete() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.delete(&name_1, &ONES_CSID).unwrap();
@@ -251,7 +259,7 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_delete_incorrect_hash() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book".to_string()).unwrap();
+                let name_1 = create_bookmark("book");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
@@ -266,15 +274,17 @@ macro_rules! bookmarks_test_impl {
             #[test]
             fn test_list_by_prefix() {
                 let bookmarks = $new_cb();
-                let name_1 = AsciiString::from_ascii("book1".to_string()).unwrap();
-                let name_2 = AsciiString::from_ascii("book2".to_string()).unwrap();
+                let name_1 = create_bookmark("book1");
+                let name_2 = create_bookmark("book2");
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
                 txn.create(&name_2, &ONES_CSID).unwrap();
                 txn.commit().wait().unwrap();
 
-                let prefix = AsciiString::from_ascii("book".to_string()).unwrap();
+                let prefix = create_prefix("book");
+                let name_1_prefix = create_prefix("book1");
+                let name_2_prefix = create_prefix("book2");
                 assert_eq!(
                     bookmarks
                         .list_by_prefix(&prefix, &REPO_ZERO)
@@ -286,7 +296,7 @@ macro_rules! bookmarks_test_impl {
 
                 assert_eq!(
                     bookmarks
-                        .list_by_prefix(&name_1, &REPO_ZERO)
+                        .list_by_prefix(&name_1_prefix, &REPO_ZERO)
                         .collect()
                         .wait()
                         .unwrap(),
@@ -295,7 +305,7 @@ macro_rules! bookmarks_test_impl {
 
                 assert_eq!(
                     bookmarks
-                        .list_by_prefix(&name_2, &REPO_ZERO)
+                        .list_by_prefix(&name_2_prefix, &REPO_ZERO)
                         .collect()
                         .wait()
                         .unwrap(),
