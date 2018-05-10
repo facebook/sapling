@@ -54,7 +54,7 @@ from mercurial.i18n import _
 from mercurial import (
     error,
     extensions,
-    obsolete,
+    localrepo,
     util,
 )
 
@@ -109,6 +109,9 @@ def extsetup(ui):
     extensions.wrapfunction(infinitepush.backupcommands,
         '_smartlogbackupmessagemap', _smartlogbackupmessagemap)
     commitcloudcommands.infinitepush = infinitepush
+    localrepo.localrepository._wlockfreeprefix.update([
+        commitcloudutil._obsmarkerssyncing
+    ])
 
 def reposetup(ui, repo):
     def finalize(tr):
@@ -116,16 +119,7 @@ def reposetup(ui, repo):
             return
         markers = tr.changes['obsmarkers']
         if markers:
-            f = tr.opener('commitcloudpendingobsmarkers', 'ab')
-            try:
-                offset = f.tell()
-                tr.add('commitcloudpendingobsmarkers', offset)
-                # offset == 0: new file - add the version header
-                data = b''.join(obsolete.encodemarkers(markers, offset == 0,
-                                                       obsolete._fm1version))
-                f.write(data)
-            finally:
-                f.close()
+            commitcloudutil.addpendingobsmarkers(repo, markers)
 
     class commitcloudrepo(repo.__class__):
         def transaction(self, *args, **kwargs):

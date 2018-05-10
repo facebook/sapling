@@ -21,7 +21,6 @@ from mercurial import (
     hg,
     lock as lockmod,
     node,
-    obsolete,
     obsutil,
     registrar,
 )
@@ -228,10 +227,7 @@ def _docloudsync(ui, repo, **opts):
                        **opts)
 
             # Next, update the cloud heads, bookmarks and obsmarkers.
-            obsmarkers = []
-            if repo.svfs.exists('commitcloudpendingobsmarkers'):
-                with repo.svfs.open('commitcloudpendingobsmarkers') as f:
-                    _version, obsmarkers = obsolete._readmarkers(f.read())
+            obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
             synced, cloudrefs = serv.updatereferences(
                     reponame, workspace, lastsyncstate.version,
                     lastsyncstate.heads, localheads,
@@ -240,7 +236,7 @@ def _docloudsync(ui, repo, **opts):
                 lastsyncstate.update(cloudrefs.version, localheads,
                                      localbookmarks)
                 if obsmarkers:
-                    repo.svfs.unlink('commitcloudpendingobsmarkers')
+                    commitcloudutil.clearsyncingobsmarkers(repo)
 
     elapsed = time.time() - start
     highlightdebug(ui, _('cloudsync completed in %0.2f sec\n') % elapsed)

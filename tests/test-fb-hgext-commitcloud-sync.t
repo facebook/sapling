@@ -605,13 +605,9 @@ Create an extension that runs a restack command while we're syncing
   $ cd client2
   $ hg cloud sync -q
   $ hg tglog
-  o  715c1454ae33 'stack commit 2'
+  @  715c1454ae33 'stack commit 2'
   |
   o  4b4f26511f8b 'race attempt'
   |
-  | @  f2ccc2716735 'stack commit 2'
-  | |
-  | x  74473a0f136f 'stack commit 1'
-  |/
   o  d20a80d4def3 'base'
   
