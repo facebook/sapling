@@ -10,25 +10,25 @@
 import argparse
 import os
 
-from . import config as config_mod
-from . import util
+from . import config as config_mod, util
+
 
 # Relative to the user's $HOME/%USERPROFILE% directory.
 # TODO: This value should be .eden outside of Facebook devservers.
-DEFAULT_CONFIG_DIR = 'local/.eden'
+DEFAULT_CONFIG_DIR = "local/.eden"
 
 # Environment variable that can be used instead of specifying --config-dir.
-CONFIG_DIR_ENVIRONMENT_VARIABLE = 'EDEN_CONFIG_DIR'
+CONFIG_DIR_ENVIRONMENT_VARIABLE = "EDEN_CONFIG_DIR"
 
 
 def find_default_config_dir(home_dir: str) -> str:
-    '''Returns the path to default Eden config directory.
+    """Returns the path to default Eden config directory.
 
     If the environment variable $EDEN_CONFIG_DIR is set, it takes precedence
     over the default, which is "$HOME/.eden".
 
     Note that the path is not guaranteed to correspond to an existing directory.
-    '''
+    """
     config_dir = os.getenv(CONFIG_DIR_ENVIRONMENT_VARIABLE)
     if config_dir:
         return config_dir

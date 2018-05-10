@@ -29,23 +29,21 @@ class Subcmd(abc.ABC):
         # If get_help() returns None, do not pass in a help argument at all.
         # This will prevent the command from appearing in the help output at
         # all.
-        kwargs = {
-            'aliases': self.get_aliases(),
-        }
+        kwargs = {"aliases": self.get_aliases()}
         help = self.get_help()
         if help is not None:
             # The add_parser() code checks if 'help' is present in the keyword
             # arguments.  Not being present is handled differently than if it
             # is present and None.  It only hides the command from the help
             # output if the 'help' argument is not present at all.
-            kwargs['help'] = help
+            kwargs["help"] = help
         parser = subparsers.add_parser(self.get_name(), **kwargs)
         parser.set_defaults(func=self.run)
         self.setup_parser(parser)
 
     def get_name(self) -> str:
         if self.NAME is None:
-            raise NotImplementedError('Subcmd subclasses must set NAME')
+            raise NotImplementedError("Subcmd subclasses must set NAME")
         return self.NAME
 
     def get_help(self) -> Optional[str]:
@@ -62,7 +60,7 @@ class Subcmd(abc.ABC):
         pass
 
     def add_subcommands(
-        self, parser: argparse.ArgumentParser, cmds: List[Type['Subcmd']]
+        self, parser: argparse.ArgumentParser, cmds: List[Type["Subcmd"]]
     ) -> argparse._SubParsersAction:
         return add_subcommands(parser, cmds)
 
@@ -78,9 +76,9 @@ def subcmd(
     name: str,
     help: Optional[str] = None,
     aliases: Optional[List[str]] = None,
-    cmd_table: Optional[CmdTable] = None
+    cmd_table: Optional[CmdTable] = None,
 ) -> Callable[[Type[Subcmd]], Type[Subcmd]]:
-    '''
+    """
     @subcmd() is a decorator that can be used to help define Subcmd instances
 
     If the cmd_table argument is non-None the new Subcmd class will
@@ -93,8 +91,10 @@ def subcmd(
             def run(self, args: argparse.Namespace) -> int:
                 # Perform the command actions here...
                 pass
-    '''
+    """
+
     def wrapper(cls: Type[Subcmd]) -> Type[Subcmd]:
+
         class SubclassedCmd(cls):
             NAME = name
             HELP = help
@@ -108,14 +108,15 @@ def subcmd(
 
 
 class Decorator(object):
-    '''
+    """
     decorator() creates a new object that can act as a decorator function to
     help define Subcmd instances.
 
     This decorator object also maintains a list of all commands that have been
     defined using it.  This command list can later be passed to
     add_subcommands() to register these commands.
-    '''
+    """
+
     def __init__(self) -> None:
         self.commands: CmdTable = []
 
@@ -125,15 +126,16 @@ class Decorator(object):
         return subcmd(name, help, aliases=aliases, cmd_table=self.commands)
 
 
-def add_subcommands(parser: argparse.ArgumentParser,
-                   cmds: List[Type[Subcmd]]) -> argparse._SubParsersAction:
+def add_subcommands(
+    parser: argparse.ArgumentParser, cmds: List[Type[Subcmd]]
+) -> argparse._SubParsersAction:
     # Sort the commands alphabetically.
     # The order they are added here is the order they will be displayed
     # in the --help output.
     # metavar suppresses the long and ugly default list of subcommands on a
     # single line.  We still render the nicer list below where we would
     # have shown the nasty one.
-    subparsers = parser.add_subparsers(metavar='')
+    subparsers = parser.add_subparsers(metavar="")
     for cmd_class in sorted(cmds, key=lambda c: c.NAME):
         cmd_instance = cmd_class(parser)
         cmd_instance.add_parser(subparsers)
@@ -158,15 +160,12 @@ def _get_subparsers(
     return None
 
 
-def do_help(
-    parser: argparse.ArgumentParser,
-    help_args: List[str],
-) -> int:
+def do_help(parser: argparse.ArgumentParser, help_args: List[str]) -> int:
     # Figure out what subcommand we have been asked to show the help for.
     for idx, arg in enumerate(help_args):
         subcmds = _get_subparsers(parser)
         if subcmds is None:
-            cmd_so_far = ' '.join(help_args[:idx])
+            cmd_so_far = " ".join(help_args[:idx])
             # The remaining arguments may be positional arguments
             # to this command.  Stop processing arguments here and show help
             # for the command we have processed so far.
@@ -177,9 +176,10 @@ def do_help(
             if idx == 0:
                 util.print_stderr('error: unknown command "{}"', arg)
             else:
-                cmd_so_far = ' '.join(help_args[:idx])
-                util.print_stderr('error: "{}" does not have a subcommand "{}"',
-                                  cmd_so_far, arg)
+                cmd_so_far = " ".join(help_args[:idx])
+                util.print_stderr(
+                    'error: "{}" does not have a subcommand "{}"', cmd_so_far, arg
+                )
             return 2
 
         parser = subparser
@@ -188,10 +188,11 @@ def do_help(
     return 0
 
 
-@subcmd('help', 'Display command line usage information')
+@subcmd("help", "Display command line usage information")
 class HelpCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument('args', nargs='*')
+        parser.add_argument("args", nargs="*")
 
     def run(self, args: argparse.Namespace) -> int:
         return do_help(self.parent_parser, args.args)

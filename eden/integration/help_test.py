@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import unittest
+
 from .lib import edenclient
 
 
@@ -17,7 +18,8 @@ class HelpTest(unittest.TestCase):
     It can be removed when the remaining integration tests are enabled
     on sandcastle.
     """
+
     def test_eden_cli_help_returns_without_error(self) -> None:
         with edenclient.EdenFS() as client:
-            return_code = client.run_unchecked('help')
+            return_code = client.run_unchecked("help")
             self.assertEqual(0, return_code)

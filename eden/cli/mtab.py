@@ -13,23 +13,19 @@ import subprocess
 from typing import List, NamedTuple, Union
 
 
-log = logging.getLogger('eden.cli.mtab')
+log = logging.getLogger("eden.cli.mtab")
 
 
-MountInfo = NamedTuple('MountInfo', [
-    ('device', bytes),
-    ('mount_point', bytes),
-    ('vfstype', bytes),
-])
+MountInfo = NamedTuple(
+    "MountInfo", [("device", bytes), ("mount_point", bytes), ("vfstype", bytes)]
+)
 
 
-MTStat = NamedTuple('MTStat', [
-    ('st_uid', int),
-    ('st_dev', int),
-])
+MTStat = NamedTuple("MTStat", [("st_uid", int), ("st_dev", int)])
 
 
 class MountTable(abc.ABC):
+
     @abc.abstractmethod
     def read(self) -> List[MountInfo]:
         "Returns the list of system mounts."
@@ -53,36 +49,33 @@ def parse_mtab(contents: bytes) -> List[MountInfo]:
         # columns split by space or tab per man page
         entries = line.split()
         if len(entries) != 6:
-            log.warning(f'mount table line has {len(entries)} entries instead of 6')
+            log.warning(f"mount table line has {len(entries)} entries instead of 6")
             continue
         device, mount_point, vfstype, opts, freq, passno = entries
-        mounts.append(MountInfo(
-            device=device,
-            mount_point=mount_point,
-            vfstype=vfstype,
-        ))
+        mounts.append(
+            MountInfo(device=device, mount_point=mount_point, vfstype=vfstype)
+        )
     return mounts
 
 
 class LinuxMountTable(MountTable):
+
     def read(self) -> List[MountInfo]:
         # What's the most portable mtab path? I've seen both /etc/mtab and
         # /proc/self/mounts.  CentOS 6 in particular does not symlink /etc/mtab
         # to /proc/self/mounts so go directly to /proc/self/mounts.
         # This code could eventually fall back to /proc/mounts and /etc/mtab.
-        with open('/proc/self/mounts', 'rb') as f:
+        with open("/proc/self/mounts", "rb") as f:
             return parse_mtab(f.read())
 
     def unmount_lazy(self, mount_point: bytes) -> bool:
         # MNT_DETACH
-        return 0 == subprocess.call(['sudo', 'umount', '-l', mount_point])
+        return 0 == subprocess.call(["sudo", "umount", "-l", mount_point])
 
     def unmount_force(self, mount_point: bytes) -> bool:
         # MNT_FORCE
-        return 0 == subprocess.call(['sudo', 'umount', '-f', mount_point])
+        return 0 == subprocess.call(["sudo", "umount", "-f", mount_point])
 
     def lstat(self, path: Union[bytes, str]) -> MTStat:
         st = os.lstat(path)
-        return MTStat(
-            st_uid=st.st_uid,
-            st_dev=st.st_dev)
+        return MTStat(st_uid=st.st_uid, st_dev=st.st_dev)

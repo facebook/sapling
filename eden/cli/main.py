@@ -8,7 +8,6 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import argparse
-from eden.thrift import EdenNotRunningError
 import errno
 import glob
 import json
@@ -19,19 +18,24 @@ import sys
 import typing
 from typing import Any, List, Optional, Set, Tuple
 
-from . import config as config_mod
-from . import debug as debug_mod
-from . import doctor as doctor_mod
-from . import mtab
-from . import rage as rage_mod
-from . import stats as stats_mod
-from . import subcmd as subcmd_mod
-from . import version as version_mod
-from . import util
+from eden.thrift import EdenNotRunningError
+from facebook.eden import EdenService
+
+from . import (
+    config as config_mod,
+    debug as debug_mod,
+    doctor as doctor_mod,
+    mtab,
+    rage as rage_mod,
+    stats as stats_mod,
+    subcmd as subcmd_mod,
+    util,
+    version as version_mod,
+)
 from .cmd_util import create_config
 from .subcmd import Subcmd
 from .util import print_stderr
-from facebook.eden import EdenService
+
 
 subcmd = subcmd_mod.Decorator()
 
@@ -47,101 +51,102 @@ def infer_client_from_cwd(config: config_mod.Config, clientname: str) -> str:
     # and we can keep iterating forever.
     while len(path) > 1:
         for _, info in all_clients.items():
-            if info['mount'] == path:
-                return typing.cast(str, info['mount'])
+            if info["mount"] == path:
+                return typing.cast(str, info["mount"])
         path = os.path.dirname(path)
 
-    print_stderr(
-        'cwd is not an eden mount point, and no checkout name was specified.')
+    print_stderr("cwd is not an eden mount point, and no checkout name was specified.")
     sys.exit(2)
 
 
 def do_version(args: argparse.Namespace) -> int:
     config = create_config(args)
-    print('Installed: %s' %
-            version_mod.get_installed_eden_rpm_version())
+    print("Installed: %s" % version_mod.get_installed_eden_rpm_version())
     import eden
+
     try:
         rv = version_mod.get_running_eden_version(config)
-        print('Running:   %s' % rv)
-        if rv.startswith('-') or rv.endswith('-'):
-            print('(Dev version of eden seems to be running)')
+        print("Running:   %s" % rv)
+        if rv.startswith("-") or rv.endswith("-"):
+            print("(Dev version of eden seems to be running)")
     except eden.thrift.client.EdenNotRunningError:
-        print('Running:   Unknown (edenfs does not appear to be running)')
+        print("Running:   Unknown (edenfs does not appear to be running)")
     return 0
 
 
-@subcmd('version', "Print Eden's version information.")
+@subcmd("version", "Print Eden's version information.")
 class VersionCmd(Subcmd):
+
     def run(self, args: argparse.Namespace) -> int:
         return do_version(args)
 
 
-@subcmd('info', 'Get details about a checkout')
+@subcmd("info", "Get details about a checkout")
 class InfoCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'client',
-            default=None,
-            nargs='?',
-            help='Name of the checkout')
+            "client", default=None, nargs="?", help="Name of the checkout"
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
-        info = config.get_client_info(
-            infer_client_from_cwd(config, args.client)
-        )
+        info = config.get_client_info(infer_client_from_cwd(config, args.client))
         json.dump(info, sys.stdout, indent=2)
-        sys.stdout.write('\n')
+        sys.stdout.write("\n")
         return 0
 
 
-@subcmd('status', 'Check the health of the Eden service', aliases=['health'])
+@subcmd("status", "Check the health of the Eden service", aliases=["health"])
 class StatusCmd(Subcmd):
+
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
         health_info = config.check_health()
         if health_info.is_healthy():
-            print('eden running normally (pid {})'.format(health_info.pid))
+            print("eden running normally (pid {})".format(health_info.pid))
             return 0
 
-        print('edenfs not healthy: {}'.format(health_info.detail))
+        print("edenfs not healthy: {}".format(health_info.detail))
         return 1
 
 
-@subcmd('repository', 'List all repositories')
+@subcmd("repository", "List all repositories")
 class RepositoryCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'name',
-            nargs='?', default=None,
-            help='Name of the checkout to mount')
+            "name", nargs="?", default=None, help="Name of the checkout to mount"
+        )
         parser.add_argument(
-            'path',
-            nargs='?', default=None,
-            help='Path to the repository to import')
+            "path", nargs="?", default=None, help="Path to the repository to import"
+        )
         parser.add_argument(
-            '--with-buck', '-b', action='store_true',
-            help='Checkout should create a bind mount for buck-out/.')
+            "--with-buck",
+            "-b",
+            action="store_true",
+            help="Checkout should create a bind mount for buck-out/.",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
-        if (args.name and args.path):
+        if args.name and args.path:
             repo = util.get_repo(args.path)
             if repo is None:
-                print_stderr(
-                    '%s does not look like a git or hg repository' % args.path)
+                print_stderr("%s does not look like a git or hg repository" % args.path)
                 return 1
             try:
-                config.add_repository(args.name,
-                                      repo_type=repo.type,
-                                      source=repo.source,
-                                      with_buck=args.with_buck)
+                config.add_repository(
+                    args.name,
+                    repo_type=repo.type,
+                    source=repo.source,
+                    with_buck=args.with_buck,
+                )
             except config_mod.UsageError as ex:
-                print_stderr('error: {}', ex)
+                print_stderr("error: {}", ex)
                 return 1
         elif (args.name or args.path):
-            print_stderr('repository command called with incorrect arguments')
+            print_stderr("repository command called with incorrect arguments")
             return 1
         else:
             repo_list = config.get_repository_list()
@@ -150,16 +155,16 @@ class RepositoryCmd(Subcmd):
         return 0
 
 
-@subcmd('list', 'List available checkouts')
+@subcmd("list", "List available checkouts")
 class ListCmd(Subcmd):
+
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
 
         try:
             with config.get_thrift_client() as client:
                 active_mount_points: Set[Optional[str]] = {
-                    mount.mountPoint
-                    for mount in client.listMounts()
+                    mount.mountPoint for mount in client.listMounts()
                 }
         except EdenNotRunningError:
             active_mount_points = set()
@@ -169,9 +174,9 @@ class ListCmd(Subcmd):
         for path in sorted(active_mount_points | config_mount_points):
             assert path is not None
             if path not in config_mount_points:
-                print(path + ' (unconfigured)')
+                print(path + " (unconfigured)")
             elif path in active_mount_points:
-                print(path + ' (active)')
+                print(path + " (active)")
             else:
                 print(path)
         return 0
@@ -181,31 +186,35 @@ class RepoError(Exception):
     pass
 
 
-@subcmd('clone', 'Create a clone of a specific repo and check it out')
+@subcmd("clone", "Create a clone of a specific repo and check it out")
 class CloneCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'repo',
-            help='The path to an existing repo to clone, or the name of a '
-            'known repository configuration')
+            "repo",
+            help="The path to an existing repo to clone, or the name of a "
+            "known repository configuration",
+        )
+        parser.add_argument("path", help="Path where the checkout should be mounted")
         parser.add_argument(
-            'path', help='Path where the checkout should be mounted')
+            "--rev", "-r", type=str, help="The initial revision to check out"
+        )
         parser.add_argument(
-            '--rev', '-r', type=str, help='The initial revision to check out')
-        parser.add_argument(
-            '--allow-empty-repo', '-e', action='store_true',
-            help='Allow repo with null revision (no revisions)')
+            "--allow-empty-repo",
+            "-e",
+            action="store_true",
+            help="Allow repo with null revision (no revisions)",
+        )
         # Optional arguments to control how to start the daemon if clone needs
         # to start edenfs.  We do not show these in --help by default These
         # behave identically to the daemon arguments with the same name.
+        parser.add_argument("--daemon-binary", help=argparse.SUPPRESS)
         parser.add_argument(
-            '--daemon-binary',
-            help=argparse.SUPPRESS)
-        parser.add_argument(
-            '--daemon-args',
-            dest='edenfs_args',
+            "--daemon-args",
+            dest="edenfs_args",
             nargs=argparse.REMAINDER,
-            help=argparse.SUPPRESS)
+            help=argparse.SUPPRESS,
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
@@ -215,17 +224,18 @@ class CloneCmd(Subcmd):
         # mount, but check this here just to fail early if things look wrong.)
         try:
             for _ in os.listdir(args.path):
-                print_stderr(f'error: destination path {args.path} '
-                             'is not empty')
+                print_stderr(f"error: destination path {args.path} " "is not empty")
                 return 1
         except OSError as ex:
             if ex.errno == errno.ENOTDIR:
-                print_stderr(f'error: destination path {args.path} '
-                             'is not a directory')
+                print_stderr(
+                    f"error: destination path {args.path} " "is not a directory"
+                )
                 return 1
             elif ex.errno != errno.ENOENT:
-                print_stderr(f'error: unable to access destination path '
-                             f'{args.path}: {ex}')
+                print_stderr(
+                    f"error: unable to access destination path " f"{args.path}: {ex}"
+                )
                 return 1
 
         args.path = os.path.realpath(args.path)
@@ -236,7 +246,7 @@ class CloneCmd(Subcmd):
                 config, args.repo, args.rev
             )
         except RepoError as ex:
-            print_stderr('error: {}', ex)
+            print_stderr("error: {}", ex)
             return 1
 
         # Find the commit to check out
@@ -244,56 +254,57 @@ class CloneCmd(Subcmd):
             try:
                 commit = repo.get_commit_hash(args.rev)
             except Exception as ex:
-                print_stderr(f'error: unable to find hash for commit '
-                             f'{args.rev!r}: {ex}')
+                print_stderr(
+                    f"error: unable to find hash for commit " f"{args.rev!r}: {ex}"
+                )
                 return 1
         else:
             try:
                 commit = repo.get_commit_hash(repo_config.default_revision)
             except Exception as ex:
-                print_stderr(f'error: unable to find hash for commit '
-                             f'{repo_config.default_revision!r}: {ex}')
+                print_stderr(
+                    f"error: unable to find hash for commit "
+                    f"{repo_config.default_revision!r}: {ex}"
+                )
                 return 1
 
-            NULL_REVISION = '0' * 40
+            NULL_REVISION = "0" * 40
             if commit == NULL_REVISION and not args.allow_empty_repo:
                 print_stderr(
-                    f'''\
+                    f"""\
 error: the initial revision that would be checked out is the empty commit
 
 The repository at {repo.source} may still be cloning.
 Please make sure cloning completes before running `eden clone`
 If you do want to check out the empty commit,
-re-run `eden clone` with --allow-empty-repo'''
+re-run `eden clone` with --allow-empty-repo"""
                 )
                 return 1
 
         # Attempt to start the daemon if it is not already running.
         health_info = config.check_health()
         if not health_info.is_healthy():
-            print('edenfs daemon is not currently running.  Starting edenfs...')
+            print("edenfs daemon is not currently running.  Starting edenfs...")
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
-            exit_code = start_daemon(
-                config, args.daemon_binary, args.edenfs_args
-            )
+            exit_code = start_daemon(config, args.daemon_binary, args.edenfs_args)
             if exit_code != 0:
                 return exit_code
 
         if repo_type is not None:
-            print(f'Cloning new {repo_type} repository at {args.path}...')
+            print(f"Cloning new {repo_type} repository at {args.path}...")
         else:
-            print(f'Cloning new repository at {args.path}...')
+            print(f"Cloning new repository at {args.path}...")
 
         try:
             config.clone(repo_config, args.path, commit)
-            print(f'Success.  Checked out commit {commit:.8}')
+            print(f"Success.  Checked out commit {commit:.8}")
             # In the future it would probably be nice to fork a background
             # process here to prefetch files that we think the user is likely
             # to want to access soon.
             return 0
         except Exception as ex:
-            print_stderr('error: {}', ex)
+            print_stderr("error: {}", ex)
             return 1
 
     def _get_repo_info(
@@ -304,9 +315,11 @@ re-run `eden clone` with --allow-empty-repo'''
         if eden_config is not None:
             repo = util.get_repo(eden_config.path)
             if repo is None:
-                raise RepoError('eden mount is configured to use repository '
-                                f'{eden_config.path} but unable to find a '
-                                'repository at that location')
+                raise RepoError(
+                    "eden mount is configured to use repository "
+                    f"{eden_config.path} but unable to find a "
+                    "repository at that location"
+                )
             return repo, None, eden_config
 
         # Check to see if repo_arg looks like an existing repository path.
@@ -316,15 +329,19 @@ re-run `eden clone` with --allow-empty-repo'''
             # Check to see if this is a repository config name instead.
             repo_config = config.find_config_for_alias(repo_arg)
             if repo_config is None:
-                raise RepoError(f'{repo_arg!r} does not look like a valid '
-                                'hg or git repository or a well-known '
-                                'repository name')
+                raise RepoError(
+                    f"{repo_arg!r} does not look like a valid "
+                    "hg or git repository or a well-known "
+                    "repository name"
+                )
 
             repo = util.get_repo(repo_config.path)
             if repo is None:
-                raise RepoError(f'cloning {repo_arg} requires an existing '
-                                f'repository to be present at '
-                                f'{repo_config.path}')
+                raise RepoError(
+                    f"cloning {repo_arg} requires an existing "
+                    f"repository to be present at "
+                    f"{repo_config.path}"
+                )
 
             return repo, repo_arg, repo_config
 
@@ -343,7 +360,8 @@ re-run `eden clone` with --allow-empty-repo'''
                 scm_type=repo.type,
                 hooks_path=config.get_default_hooks_path(),
                 bind_mounts={},
-                default_revision=config_mod.DEFAULT_REVISION[repo.type])
+                default_revision=config_mod.DEFAULT_REVISION[repo.type],
+            )
         else:
             # Build our own ClientConfig object, using our source repository
             # path and type, but the hooks, bind-mount, and revision
@@ -353,15 +371,17 @@ re-run `eden clone` with --allow-empty-repo'''
                 scm_type=repo.type,
                 hooks_path=project_config.hooks_path,
                 bind_mounts=project_config.bind_mounts,
-                default_revision=project_config.default_revision)
+                default_revision=project_config.default_revision,
+            )
 
         return repo, repo_type, repo_config
 
 
-@subcmd('config', 'Query Eden configuration')
+@subcmd("config", "Query Eden configuration")
 class ConfigCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument('--get', help='Name of value to get')
+        parser.add_argument("--get", help="Name of value to get")
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
@@ -376,33 +396,37 @@ class ConfigCmd(Subcmd):
         return 0
 
 
-@subcmd('doctor', 'Debug and fix issues with Eden')
+@subcmd("doctor", "Debug and fix issues with Eden")
 class DoctorCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            '--dry-run', '-n', action='store_true',
-            help='Do not try to fix any issues: only report them.')
+            "--dry-run",
+            "-n",
+            action="store_true",
+            help="Do not try to fix any issues: only report them.",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
         return doctor_mod.cure_what_ails_you(
-            config,
-            args.dry_run,
-            out=sys.stdout,
-            mount_table=mtab.LinuxMountTable()
+            config, args.dry_run, out=sys.stdout, mount_table=mtab.LinuxMountTable()
         )
 
 
 @subcmd(
-    'mount', (
-        'Remount an existing checkout (for instance, after it was '
+    "mount",
+    (
+        "Remount an existing checkout (for instance, after it was "
         'unmounted with "unmount")'
-    )
+    ),
 )
 class MountCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            'paths', nargs='+', metavar='path', help='The checkout mount path')
+            "paths", nargs="+", metavar="path", help="The checkout mount path"
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
@@ -412,21 +436,26 @@ class MountCmd(Subcmd):
                 if exitcode:
                     return exitcode
             except EdenNotRunningError as ex:
-                print_stderr('error: {}', ex)
+                print_stderr("error: {}", ex)
                 return 1
         return 0
 
 
-@subcmd('unmount', 'Unmount a specific checkout')
+@subcmd("unmount", "Unmount a specific checkout")
 class UnmountCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            '--destroy',
-            action='store_true',
-            help='Permanently delete all state associated with the checkout.')
+            "--destroy",
+            action="store_true",
+            help="Permanently delete all state associated with the checkout.",
+        )
         parser.add_argument(
-            'paths', nargs='+', metavar='path',
-            help='Path where checkout should be unmounted from')
+            "paths",
+            nargs="+",
+            metavar="path",
+            help="Path where checkout should be unmounted from",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
@@ -435,48 +464,63 @@ class UnmountCmd(Subcmd):
             try:
                 config.unmount(path, delete_config=args.destroy)
             except EdenService.EdenError as ex:
-                print_stderr('error: {}', ex)
+                print_stderr("error: {}", ex)
                 return 1
         return 0
 
 
-@subcmd('start', 'Start the edenfs daemon', aliases=['daemon'])
+@subcmd("start", "Start the edenfs daemon", aliases=["daemon"])
 class StartCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            '--daemon-binary',
-            help='Path to the binary for the Eden daemon.')
+            "--daemon-binary", help="Path to the binary for the Eden daemon."
+        )
         parser.add_argument(
-            '--foreground', '-F', action='store_true',
-            help='Run eden in the foreground, rather than daemonizing')
+            "--foreground",
+            "-F",
+            action="store_true",
+            help="Run eden in the foreground, rather than daemonizing",
+        )
         parser.add_argument(
-            '--takeover', '-t', action='store_true',
-            help='If an existing edenfs daemon is running, gracefully take '
-            'over its mount points.')
+            "--takeover",
+            "-t",
+            action="store_true",
+            help="If an existing edenfs daemon is running, gracefully take "
+            "over its mount points.",
+        )
+        parser.add_argument("--gdb", "-g", action="store_true", help="Run under gdb")
         parser.add_argument(
-            '--gdb', '-g', action='store_true', help='Run under gdb')
+            "--gdb-arg",
+            action="append",
+            default=[],
+            help="Extra arguments to pass to gdb",
+        )
         parser.add_argument(
-            '--gdb-arg', action='append', default=[],
-            help='Extra arguments to pass to gdb')
+            "--strace",
+            "-s",
+            metavar="FILE",
+            help="Run eden under strace, and write strace output to FILE",
+        )
         parser.add_argument(
-            '--strace', '-s',
-            metavar='FILE',
-            help='Run eden under strace, and write strace output to FILE')
-        parser.add_argument(
-            'edenfs_args', nargs=argparse.REMAINDER,
+            "edenfs_args",
+            nargs=argparse.REMAINDER,
             help='Any extra arguments after an "--" argument will be passed '
-            'to the edenfs daemon.')
+            "to the edenfs daemon.",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
-        return start_daemon(config,
-                            args.daemon_binary,
-                            args.edenfs_args,
-                            takeover=args.takeover,
-                            gdb=args.gdb,
-                            gdb_args=args.gdb_arg,
-                            strace_file=args.strace,
-                            foreground=args.foreground)
+        return start_daemon(
+            config,
+            args.daemon_binary,
+            args.edenfs_args,
+            takeover=args.takeover,
+            gdb=args.gdb,
+            gdb_args=args.gdb_arg,
+            strace_file=args.strace,
+            foreground=args.foreground,
+        )
 
 
 def find_buck_projects_in_repo(path: str) -> List[str]:
@@ -484,48 +528,49 @@ def find_buck_projects_in_repo(path: str) -> List[str]:
     # it in our projects today.  Instead, our projects tend to have
     # their own configuration files one level down.  This glob()
     # finds those directories for us.
-    buck_configs = glob.glob(f'{path}/*/.buckconfig')
+    buck_configs = glob.glob(f"{path}/*/.buckconfig")
     projects = [os.path.dirname(config) for config in buck_configs]
-    if os.path.isfile(f'{path}/.buckconfig'):
+    if os.path.isfile(f"{path}/.buckconfig"):
         projects.append(path)
     return projects
 
 
 def stop_buckd_for_path(path: str) -> None:
-    print(f'Stopping buck in {path}...')
+    print(f"Stopping buck in {path}...")
     subprocess.run(
         # Using BUCKVERSION=last here to avoid triggering a download
         # of a new version of buck just to kill off buck
-        ['env', 'BUCKVERSION=last', 'buck', 'kill'],
+        ["env", "BUCKVERSION=last", "buck", "kill"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        cwd=path)
+        cwd=path,
+    )
 
 
 def stop_buckd_for_repo(path: str) -> None:
-    '''Stop the major buckd instances that are likely to be running for path'''
+    """Stop the major buckd instances that are likely to be running for path"""
     for project in find_buck_projects_in_repo(path):
         stop_buckd_for_path(project)
 
 
 def buck_clean_repo(path: str) -> None:
     for project in find_buck_projects_in_repo(path):
-        print(f'Cleaning buck in {project}...')
+        print(f"Cleaning buck in {project}...")
         subprocess.run(
             # Using BUCKVERSION=last here to avoid triggering a download
             # of a new version of buck just to remove some dirs
-            ['env', 'NO_BUCKD=true', 'BUCKVERSION=last', 'buck', 'clean'],
+            ["env", "NO_BUCKD=true", "BUCKVERSION=last", "buck", "clean"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            cwd=project)
+            cwd=project,
+        )
 
 
 def stop_aux_processes(client) -> None:
-    '''Tear down processes that will hold onto file handles and prevent shutdown'''
+    """Tear down processes that will hold onto file handles and prevent shutdown"""
 
     active_mount_points: Set[Optional[str]] = {
-        mount.mountPoint
-        for mount in client.listMounts()
+        mount.mountPoint for mount in client.listMounts()
     }
 
     for repo in active_mount_points:
@@ -536,40 +581,42 @@ def stop_aux_processes(client) -> None:
     # print('Stopping nuclide-server...')
     # subprocess.run(['pkill', '-f', 'nuclide-main'])
 
-RESTART_MODE_FULL = 'full'
-RESTART_MODE_GRACEFUL = 'graceful'
+
+RESTART_MODE_FULL = "full"
+RESTART_MODE_GRACEFUL = "graceful"
 
 
-@subcmd('restart', 'Restart the edenfs daemon')
+@subcmd("restart", "Restart the edenfs daemon")
 class RestartCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         mode_group = parser.add_mutually_exclusive_group()
         mode_group.add_argument(
-            '--full',
-            action='store_const',
+            "--full",
+            action="store_const",
             const=RESTART_MODE_FULL,
-            dest='restart_type',
-            help='Completely shut down edenfs before restarting it.  This '
-            'will unmount and remount the edenfs mounts, requiring processes '
-            'using them to re-open any files and directories they are using.'
+            dest="restart_type",
+            help="Completely shut down edenfs before restarting it.  This "
+            "will unmount and remount the edenfs mounts, requiring processes "
+            "using them to re-open any files and directories they are using.",
         )
         mode_group.add_argument(
-            '--graceful',
-            action='store_const',
+            "--graceful",
+            action="store_const",
             const=RESTART_MODE_GRACEFUL,
-            dest='restart_type',
-            help='Perform a graceful restart.  The new edenfs daemon will '
-            'take over the existing edenfs mount points with minimal '
-            'disruption to clients.  Open file handles will continue to work '
-            'across the restart.'
+            dest="restart_type",
+            help="Perform a graceful restart.  The new edenfs daemon will "
+            "take over the existing edenfs mount points with minimal "
+            "disruption to clients.  Open file handles will continue to work "
+            "across the restart.",
         )
 
         parser.add_argument(
-            '--shutdown-timeout',
+            "--shutdown-timeout",
             type=float,
             default=30,
-            help='How long to wait for the old edenfs process to exit when '
-            'performing a full restart.'
+            help="How long to wait for the old edenfs process to exit when "
+            "performing a full restart.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -588,9 +635,7 @@ class RestartCmd(Subcmd):
                 if self.args.restart_type == RESTART_MODE_FULL:
                     stop_aux_processes(client)
                     # Ask the old edenfs daemon to shutdown
-                    self.msg(
-                        'Stopping the existing edenfs daemon (pid {})...', pid
-                    )
+                    self.msg("Stopping the existing edenfs daemon (pid {})...", pid)
                     client.shutdown()
                     stopping = True
         except EdenNotRunningError:
@@ -598,12 +643,10 @@ class RestartCmd(Subcmd):
 
         if stopping:
             assert isinstance(pid, int)
-            wait_for_shutdown(
-                self.config, pid, timeout=self.args.shutdown_timeout
-            )
+            wait_for_shutdown(self.config, pid, timeout=self.args.shutdown_timeout)
             self._start()
         elif pid is None:
-            self.msg('edenfs is not currently running.')
+            self.msg("edenfs is not currently running.")
             self._start()
         else:
             self._graceful_start()
@@ -615,24 +658,24 @@ class RestartCmd(Subcmd):
         print(msg)
 
     def _start(self) -> None:
-        self.msg('Starting edenfs...')
+        self.msg("Starting edenfs...")
         start_daemon(self.config)
 
     def _graceful_start(self) -> None:
-        self.msg('Performing a graceful restart...')
+        self.msg("Performing a graceful restart...")
         start_daemon(self.config, takeover=True)
 
 
 def start_daemon(
     config: config_mod.Config,
-    daemon_binary: Optional[str]=None,
-    edenfs_args: Optional[List[str]]=None,
-    takeover: bool=False,
-    gdb: bool=False,
-    gdb_args: Optional[List[str]]=None,
-    strace_file: Optional[str]=None,
-    foreground: bool=False,
-    timeout: Optional[float]=None,
+    daemon_binary: Optional[str] = None,
+    edenfs_args: Optional[List[str]] = None,
+    takeover: bool = False,
+    gdb: bool = False,
+    gdb_args: Optional[List[str]] = None,
+    strace_file: Optional[str] = None,
+    foreground: bool = False,
+    timeout: Optional[float] = None,
 ) -> int:
     # If this is the first time running the daemon, the ~/.eden directory
     # structure needs to be set up.
@@ -643,51 +686,59 @@ def start_daemon(
     if daemon_binary is None:
         valid_daemon_binary = _find_default_daemon_binary()
         if valid_daemon_binary is None:
-            print_stderr('error: unable to find edenfs executable')
+            print_stderr("error: unable to find edenfs executable")
             return 1
     else:
         valid_daemon_binary = daemon_binary
 
     # If the user put an "--" argument before the edenfs args, argparse passes
     # that through to us.  Strip it out.
-    if edenfs_args and edenfs_args[0] == '--':
+    if edenfs_args and edenfs_args[0] == "--":
         edenfs_args = edenfs_args[1:]
 
     try:
-        health_info = config.spawn(valid_daemon_binary, edenfs_args,
-                                   takeover=takeover, gdb=gdb,
-                                   gdb_args=gdb_args, strace_file=strace_file,
-                                   foreground=foreground,
-                                   timeout=timeout)
+        health_info = config.spawn(
+            valid_daemon_binary,
+            edenfs_args,
+            takeover=takeover,
+            gdb=gdb,
+            gdb_args=gdb_args,
+            strace_file=strace_file,
+            foreground=foreground,
+            timeout=timeout,
+        )
     except config_mod.EdenStartError as ex:
-        print_stderr('error: {}', ex)
+        print_stderr("error: {}", ex)
         return 1
-    print('Started edenfs (pid {}). Logs available at {}'.format(
-        health_info.pid, config.get_log_path()))
+    print(
+        "Started edenfs (pid {}). Logs available at {}".format(
+            health_info.pid, config.get_log_path()
+        )
+    )
     return 0
 
 
-@subcmd('rage', 'Prints diagnostic information about eden')
+@subcmd("rage", "Prints diagnostic information about eden")
 class RageCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            '--stdout',
-            action='store_true',
-            help='Print the rage report to stdout: ignore reporter.')
+            "--stdout",
+            action="store_true",
+            help="Print the rage report to stdout: ignore reporter.",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         rage_processor = None
         config = create_config(args)
         try:
-            rage_processor = config.get_config_value('rage.reporter')
+            rage_processor = config.get_config_value("rage.reporter")
         except KeyError:
             pass
 
         proc: Optional[subprocess.Popen] = None
         if rage_processor and not args.stdout:
-            proc = subprocess.Popen(
-                ['sh', '-c', rage_processor], stdin=subprocess.PIPE
-            )
+            proc = subprocess.Popen(["sh", "-c", rage_processor], stdin=subprocess.PIPE)
             sink = proc.stdin
         else:
             proc = None
@@ -703,16 +754,14 @@ class RageCmd(Subcmd):
 def _find_default_daemon_binary() -> Optional[str]:
     # By default, we look for the daemon executable alongside this file.
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    candidate = os.path.join(script_dir, 'edenfs')
+    candidate = os.path.join(script_dir, "edenfs")
     permissions = os.R_OK | os.X_OK
     if os.access(candidate, permissions):
         return candidate
 
     # This is where the binary will be found relative to this file when it is
     # run out of buck-out in debug mode.
-    candidate = os.path.normpath(
-        os.path.join(script_dir, '../fs/service/edenfs')
-    )
+    candidate = os.path.normpath(os.path.join(script_dir, "../fs/service/edenfs"))
     if os.access(candidate, permissions):
         return candidate
     else:
@@ -720,9 +769,9 @@ def _find_default_daemon_binary() -> Optional[str]:
 
 
 def _ensure_dot_eden_folder_exists(config: config_mod.Config) -> None:
-    '''Creates the ~/.eden folder as specified by --config-dir/$EDEN_CONFIG_DIR.
+    """Creates the ~/.eden folder as specified by --config-dir/$EDEN_CONFIG_DIR.
     If the ~/.eden folder already exists, it will be left alone.
-    '''
+    """
     config.get_or_create_path_to_rocks_db()
 
 
@@ -737,15 +786,20 @@ class ShutdownError(Exception):
     pass
 
 
-@subcmd('stop', 'Shutdown the daemon', aliases=['shutdown'])
+@subcmd("stop", "Shutdown the daemon", aliases=["shutdown"])
 class StopCmd(Subcmd):
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            '-t', '--timeout', type=float, default=15.0,
-            help='Wait up to TIMEOUT seconds for the daemon to exit '
-            '(default=%(default)s). If it does not exit within the timeout, '
-            'then SIGKILL will be sent. If timeout is 0, then do not wait at '
-            'all and do not send SIGKILL.')
+            "-t",
+            "--timeout",
+            type=float,
+            default=15.0,
+            help="Wait up to TIMEOUT seconds for the daemon to exit "
+            "(default=%(default)s). If it does not exit within the timeout, "
+            "then SIGKILL will be sent. If timeout is 0, then do not wait at "
+            "all and do not send SIGKILL.",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
@@ -754,35 +808,32 @@ class StopCmd(Subcmd):
                 pid = client.getPid()
                 stop_aux_processes(client)
                 # Ask the client to shutdown
-                print(f'Stopping edenfs daemon (pid {pid})...')
+                print(f"Stopping edenfs daemon (pid {pid})...")
                 client.shutdown()
         except EdenNotRunningError:
-            print_stderr('error: edenfs is not running')
+            print_stderr("error: edenfs is not running")
             return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
 
         if args.timeout == 0:
-            print_stderr('Sent async shutdown request to edenfs.')
+            print_stderr("Sent async shutdown request to edenfs.")
             return SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
 
         try:
             if wait_for_shutdown(config, pid, timeout=args.timeout):
-                print_stderr('edenfs exited cleanly.')
+                print_stderr("edenfs exited cleanly.")
                 return SHUTDOWN_EXIT_CODE_NORMAL
             else:
-                print_stderr('Terminated edenfs with SIGKILL.')
+                print_stderr("Terminated edenfs with SIGKILL.")
                 return SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
         except ShutdownError as ex:
-            print_stderr('Error: ' + str(ex))
+            print_stderr("Error: " + str(ex))
             return SHUTDOWN_EXIT_CODE_ERROR
 
 
 def wait_for_shutdown(
-    config: config_mod.Config,
-    pid: int,
-    timeout: float,
-    kill_timeout: float = 5.0
+    config: config_mod.Config, pid: int, timeout: float, kill_timeout: float = 5.0
 ) -> bool:
-    '''
+    """
     Wait for a process to exit.
 
     If it does not exit within `timeout` seconds kill it with SIGKILL.
@@ -792,7 +843,7 @@ def wait_for_shutdown(
     Throws a ShutdownError if we failed to kill the process with SIGKILL
     (either because we failed to send the signal, or if the process still did
     not exit within kill_timeout seconds after sending SIGKILL).
-    '''
+    """
     # Wait until the process exits on its own.
     def process_exited() -> Optional[bool]:
         try:
@@ -817,8 +868,9 @@ def wait_for_shutdown(
     # client.shutdown() failed to terminate the process within the specified
     # timeout.  Take a more aggressive approach by sending SIGKILL.
     print_stderr(
-        'error: sent shutdown request, but edenfs did not exit '
-        'within {} seconds. Attempting SIGKILL.', timeout
+        "error: sent shutdown request, but edenfs did not exit "
+        "within {} seconds. Attempting SIGKILL.",
+        timeout,
     )
     try:
         os.kill(pid, signal.SIGKILL)
@@ -830,8 +882,8 @@ def wait_for_shutdown(
             return True
         elif ex.errno == errno.EPERM:
             raise ShutdownError(
-                'Received EPERM when sending SIGKILL. '
-                'Perhaps edenfs failed to drop root privileges properly?'
+                "Received EPERM when sending SIGKILL. "
+                "Perhaps edenfs failed to drop root privileges properly?"
             )
         else:
             raise
@@ -841,31 +893,32 @@ def wait_for_shutdown(
         return False
     except util.TimeoutError:
         raise ShutdownError(
-            'edenfs process {} did not terminate within {} seconds of '
-            'sending SIGKILL.'.format(pid, kill_timeout)
+            "edenfs process {} did not terminate within {} seconds of "
+            "sending SIGKILL.".format(pid, kill_timeout)
         )
 
 
 def create_parser() -> argparse.ArgumentParser:
-    '''Returns a parser'''
-    parser = argparse.ArgumentParser(description='Manage Eden checkouts.')
+    """Returns a parser"""
+    parser = argparse.ArgumentParser(description="Manage Eden checkouts.")
     parser.add_argument(
-        '--config-dir',
-        help='Path to directory where internal data is stored.')
+        "--config-dir", help="Path to directory where internal data is stored."
+    )
     parser.add_argument(
-        '--etc-eden-dir',
-        help='Path to directory that holds the system configuration files.')
+        "--etc-eden-dir",
+        help="Path to directory that holds the system configuration files.",
+    )
     parser.add_argument(
-        '--home-dir',
-        help='Path to directory where .edenrc config file is stored.')
-    parser.add_argument('--version', '-v', action='store_true',
-                        help='Print eden version.')
+        "--home-dir", help="Path to directory where .edenrc config file is stored."
+    )
+    parser.add_argument(
+        "--version", "-v", action="store_true", help="Print eden version."
+    )
 
-    subcmd_mod.add_subcommands(parser, subcmd.commands + [
-        debug_mod.DebugCmd,
-        subcmd_mod.HelpCmd,
-        stats_mod.StatsCmd,
-    ])
+    subcmd_mod.add_subcommands(
+        parser,
+        subcmd.commands + [debug_mod.DebugCmd, subcmd_mod.HelpCmd, stats_mod.StatsCmd],
+    )
 
     return parser
 
@@ -875,22 +928,20 @@ def main() -> int:
     args = parser.parse_args()
     if args.version:
         return do_version(args)
-    if getattr(args, 'func', None) is None:
+    if getattr(args, "func", None) is None:
         parser.print_help()
         return 0
     return_code: int = args.func(args)
     return return_code
 
 
-def normalize_path_arg(
-    path_arg: str, may_need_tilde_expansion: bool = False
-) -> str:
-    '''Normalizes a path by using os.path.realpath().
+def normalize_path_arg(path_arg: str, may_need_tilde_expansion: bool = False) -> str:
+    """Normalizes a path by using os.path.realpath().
 
     Note that this function is expected to be used with command-line arguments.
     If the argument comes from a config file or GUI where tilde expansion is not
     done by the shell, then may_need_tilde_expansion=True should be specified.
-    '''
+    """
     if path_arg:
         if may_need_tilde_expansion:
             path_arg = os.path.expanduser(path_arg)
@@ -900,6 +951,6 @@ def normalize_path_arg(
     return path_arg
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     retcode = main()
     sys.exit(retcode)

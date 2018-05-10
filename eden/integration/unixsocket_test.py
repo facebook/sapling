@@ -7,28 +7,31 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from .lib import testcase
 import os
 import select
 import socket
 import stat
 import threading
 
-PAYLOAD = b'W00t\n'
+from .lib import testcase
+
+
+PAYLOAD = b"W00t\n"
 
 
 @testcase.eden_repo_test
 class UnixSocketTest(testcase.EdenRepoTest):
+
     def populate_repo(self) -> None:
-        self.repo.write_file('hello', 'hola\n')
-        self.repo.commit('Initial commit.')
+        self.repo.write_file("hello", "hola\n")
+        self.repo.commit("Initial commit.")
 
     def test_unixsock(self) -> None:
-        '''Create a UNIX domain socket in EdenFS and verify that a client
+        """Create a UNIX domain socket in EdenFS and verify that a client
            can connect and write, and that the server side can accept
-           and read data from it.'''
+           and read data from it."""
 
-        filename = os.path.join(self.mount, 'example.sock')
+        filename = os.path.join(self.mount, "example.sock")
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.setblocking(False)  # ensure that we don't block unexpectedly
         try:
@@ -38,6 +41,7 @@ class UnixSocketTest(testcase.EdenRepoTest):
             sock.listen(1)
 
             class Client(threading.Thread):
+
                 def run(self) -> None:
                     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     try:
@@ -53,9 +57,7 @@ class UnixSocketTest(testcase.EdenRepoTest):
             client_thread.start()
 
             readable, _, _ = select.select([sock], [], [], 2)
-            self.assertTrue(
-                sock in readable, msg='sock should be ready for accept'
-            )
+            self.assertTrue(sock in readable, msg="sock should be ready for accept")
             conn, addr = sock.accept()
             data = conn.recv(len(PAYLOAD))
             self.assertEqual(PAYLOAD, data)

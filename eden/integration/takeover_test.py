@@ -18,46 +18,47 @@ from .lib import testcase
 
 @testcase.eden_repo_test
 class TakeoverTest(testcase.EdenRepoTest):
+
     def populate_repo(self) -> None:
         self.pagesize = resource.getpagesize()
         self.page1 = "1" * self.pagesize
         self.page2 = "2" * self.pagesize
-        self.repo.write_file('tree/hello', self.page1 + self.page2)
-        self.repo.write_file('tree/deleted', self.page1 + self.page2)
-        self.repo.write_file('src/main.c', 'hello world')
-        self.commit1 = self.repo.commit('Initial commit.')
+        self.repo.write_file("tree/hello", self.page1 + self.page2)
+        self.repo.write_file("tree/deleted", self.page1 + self.page2)
+        self.repo.write_file("src/main.c", "hello world")
+        self.commit1 = self.repo.commit("Initial commit.")
 
-        self.repo.write_file('src/main.c', 'hello world v2')
-        self.repo.write_file('src/test/test1.py', 'test1')
-        self.repo.write_file('src/test/test2.py', 'test2')
-        self.commit2 = self.repo.commit('Initial commit.')
+        self.repo.write_file("src/main.c", "hello world v2")
+        self.repo.write_file("src/test/test1.py", "test1")
+        self.repo.write_file("src/test/test2.py", "test2")
+        self.commit2 = self.repo.commit("Initial commit.")
 
     def select_storage_engine(self) -> str:
-        ''' we need to persist data across restarts '''
-        return 'sqlite'
+        """ we need to persist data across restarts """
+        return "sqlite"
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
-        if self._testMethodName == 'test_takeover_with_io':
+        if self._testMethodName == "test_takeover_with_io":
             # test_takeover_with_io causes lots of I/O, so do not enable
             # verbose logging of I/O operations in this test.
             return {}
         return {
-            'eden.strace': 'DBG7',
-            'eden.fs.fuse': 'DBG7',
-            'eden.fs.inodes.InodeMap': 'DBG6',
+            "eden.strace": "DBG7",
+            "eden.fs.fuse": "DBG7",
+            "eden.fs.inodes.InodeMap": "DBG6",
         }
 
     def do_takeover_test(self) -> None:
-        hello = os.path.join(self.mount, 'tree/hello')
-        deleted = os.path.join(self.mount, 'tree/deleted')
-        deleted_local = os.path.join(self.mount, 'deleted-local')
+        hello = os.path.join(self.mount, "tree/hello")
+        deleted = os.path.join(self.mount, "tree/deleted")
+        deleted_local = os.path.join(self.mount, "deleted-local")
 
         # To test our handling of unlinked inodes, in addition
         # to unlinking something that is in the manifest we
         # need to check that we handle the case of a local
         # file being deleted to make sure that we cover both
         # code paths for FileInode.
-        with open(deleted_local, 'w') as dl:
+        with open(deleted_local, "w") as dl:
             dl.write(self.page1)
             dl.write(self.page2)
 
@@ -71,14 +72,14 @@ class TakeoverTest(testcase.EdenRepoTest):
         # to stat() it after the restart.  Since the directory
         # has to be empty in order to be unlinked, a readdir
         # from it wouldn't return any interesting results anyway.
-        deleted_dir = os.path.join(self.mount, 'deleted-dir')
+        deleted_dir = os.path.join(self.mount, "deleted-dir")
         os.mkdir(deleted_dir)
         deleted_dir_fd = os.open(deleted_dir, 0)
         os.rmdir(deleted_dir)
 
-        with open(hello, 'r') as f, \
-             open(deleted, 'r') as d, \
-             open(deleted_local, 'r') as dl:
+        with open(hello, "r") as f, open(deleted, "r") as d, open(
+            deleted_local, "r"
+        ) as dl:
             # Read the first page only (rather than the whole file)
             # before we restart the process.
             # This is so that we can check that the kernel really
@@ -94,9 +95,9 @@ class TakeoverTest(testcase.EdenRepoTest):
             os.unlink(deleted)
             os.unlink(deleted_local)
 
-            print('=== beginning restart ===', file=sys.stderr)
+            print("=== beginning restart ===", file=sys.stderr)
             self.eden.graceful_restart()
-            print('=== restart complete ===', file=sys.stderr)
+            print("=== restart complete ===", file=sys.stderr)
 
             # Ensure that our file handle is still live across
             # the restart boundary
@@ -127,7 +128,7 @@ class TakeoverTest(testcase.EdenRepoTest):
         # Let's also test opening the same file up again,
         # just to make sure that that is still working after
         # the graceful restart.
-        with open(hello, 'r') as f:
+        with open(hello, "r") as f:
             self.assertEqual(self.page1, f.read(self.pagesize))
             self.assertEqual(self.page2, f.read(self.pagesize))
 
@@ -140,9 +141,7 @@ class TakeoverTest(testcase.EdenRepoTest):
         # objects outside of the normal root inode tree, and this would cause
         # Eden to crash when shutting down afterwards.
         with self.get_thrift_client() as client:
-            client.getScmStatusBetweenRevisions(
-                self.mount, self.commit1, self.commit2
-            )
+            client.getScmStatusBetweenRevisions(self.mount, self.commit1, self.commit2)
 
         return self.do_takeover_test()
 
@@ -158,13 +157,11 @@ class TakeoverTest(testcase.EdenRepoTest):
         num_restarts = 1
 
         stop = threading.Event()
-        bufs = [b'x' * write_chunk_size, b'y' * write_chunk_size]
+        bufs = [b"x" * write_chunk_size, b"y" * write_chunk_size]
 
         def do_io(thread_id: int, running_event: threading.Event) -> None:
-            path = os.path.join(
-                self.mount, 'src', 'test', 'data%d.log' % thread_id
-            )
-            with open(path, 'wb') as f:
+            path = os.path.join(self.mount, "src", "test", "data%d.log" % thread_id)
+            with open(path, "wb") as f:
                 # Use raw file descriptors to avoid going through python's I/O
                 # buffering code.
                 fd = f.fileno()
@@ -174,7 +171,7 @@ class TakeoverTest(testcase.EdenRepoTest):
                 offset = 0
 
                 # Repeatedly write and rewrite the same file,
-                #jalternating between two different data buffers.
+                # jalternating between two different data buffers.
                 running_event.set()
                 while True:
                     os.pwrite(fd, buf, offset)
@@ -190,7 +187,7 @@ class TakeoverTest(testcase.EdenRepoTest):
         # (Just in case anything hangs and we need to abort the mount
         # using /sys/fs/fuse/connections/<dev>/)
         st = os.lstat(self.mount)
-        print('=== eden mount device=%d ===' % st.st_dev, file=sys.stderr)
+        print("=== eden mount device=%d ===" % st.st_dev, file=sys.stderr)
 
         # Start several threads doing I/O while we we perform a takeover
         threads = []
@@ -209,9 +206,9 @@ class TakeoverTest(testcase.EdenRepoTest):
 
             # Restart edenfs
             for n in range(num_restarts):
-                print('=== beginning restart %d ===' % n, file=sys.stderr)
+                print("=== beginning restart %d ===" % n, file=sys.stderr)
                 self.eden.graceful_restart()
-                print('=== restart %d complete ===' % n, file=sys.stderr)
+                print("=== restart %d complete ===" % n, file=sys.stderr)
         finally:
             stop.set()
             for thread in threads:
@@ -220,7 +217,7 @@ class TakeoverTest(testcase.EdenRepoTest):
     def test_takeover_preserves_inode_numbers_for_open_nonmaterialized_files(
         self
     ) -> None:
-        hello = os.path.join(self.mount, 'tree/hello')
+        hello = os.path.join(self.mount, "tree/hello")
 
         fd = os.open(hello, os.O_RDONLY)
         try:

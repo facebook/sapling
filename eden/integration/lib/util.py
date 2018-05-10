@@ -15,9 +15,9 @@ def gen_tree(
     path: str,
     fanouts: List[int],
     leaf_function: Callable[[str], None],
-    internal_function: Optional[Callable[[str], None]] = None
+    internal_function: Optional[Callable[[str], None]] = None,
 ) -> None:
-    '''
+    """
     Helper function for recursively building a large branching directory
     tree.
 
@@ -31,9 +31,9 @@ def gen_tree(
 
     Calls leaf_function on all leaf directories.
     Calls internal_function on all internal (non-leaf) directories.
-    '''
+    """
     for n in range(fanouts[0]):
-        subdir = os.path.join(path, 'dir{:02}'.format(n + 1))
+        subdir = os.path.join(path, "dir{:02}".format(n + 1))
         sub_fanouts = fanouts[1:]
         if sub_fanouts:
             if internal_function is not None:

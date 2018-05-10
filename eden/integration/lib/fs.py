@@ -16,7 +16,7 @@ from .find_executables import FindExe
 
 def getxattr(abspath: str, attr: str) -> str:
     raw_stdout = subprocess.check_output(
-        [FindExe.FSATTR, '--attrName', attr, '--fileName', abspath]
+        [FindExe.FSATTR, "--attrName", attr, "--fileName", abspath]
     )
     result = json.loads(raw_stdout)
     # fsattr should always return a string here.  We just cast the result,
@@ -25,9 +25,7 @@ def getxattr(abspath: str, attr: str) -> str:
 
 
 def listxattr(abspath: str) -> typing.Dict[str, str]:
-    raw_stdout = subprocess.check_output(
-        [FindExe.FSATTR, '--fileName', abspath]
-    )
+    raw_stdout = subprocess.check_output([FindExe.FSATTR, "--fileName", abspath])
     result = json.loads(raw_stdout)
     # fsattr should always return a dictionary here.  We just cast the
     # result, without actually validating it for now.

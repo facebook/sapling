@@ -12,16 +12,17 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class BranchTest(EdenHgTestCase):
+
     def populate_backing_repo(self, repo):
-        repo.write_file('a_file.txt', '')
-        repo.commit('first commit')
+        repo.write_file("a_file.txt", "")
+        repo.commit("first commit")
 
     def test_set_branch(self):
-        original_branch = self.hg('branch')
-        self.assertEqual('default', original_branch.rstrip())
+        original_branch = self.hg("branch")
+        self.assertEqual("default", original_branch.rstrip())
 
         # Note that with tweakdefaults, we discourage the user from creating a
         # branch, so we require them to specify `--new`.
-        self.hg('branch', '--new', 'foo-bar')
-        new_branch = self.hg('branch')
-        self.assertEqual('foo-bar', new_branch.rstrip())
+        self.hg("branch", "--new", "foo-bar")
+        new_branch = self.hg("branch")
+        self.assertEqual("foo-bar", new_branch.rstrip())

@@ -25,17 +25,15 @@ class GitError(CommandError):
 
 
 class GitRepository(repobase.Repository):
+
     def __init__(self, path: str) -> None:
         super().__init__(path)
         self.git_bin = FindExe.GIT
 
     def git(
-        self,
-        *args: str,
-        encoding: str = 'utf-8',
-        env: Optional[Dict[str, str]] = None
+        self, *args: str, encoding: str = "utf-8", env: Optional[Dict[str, str]] = None
     ) -> Optional[str]:
-        '''
+        """
         Invoke a git command inside the repository.
 
         All non-keyword arguments are treated as arguments to git.
@@ -50,7 +48,7 @@ class GitRepository(repobase.Repository):
 
           repo.git('commit', '-m', 'my new commit',
                    env={'GIT_AUTHOR_NAME': 'John Doe'})
-        '''
+        """
         cmd = [self.git_bin] + list(args)
 
         git_env = None
@@ -59,10 +57,14 @@ class GitRepository(repobase.Repository):
             git_env.update(env)
 
         try:
-            completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                               stderr=subprocess.PIPE,
-                                               check=True, cwd=self.path,
-                                               env=git_env)
+            completed_process = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+                cwd=self.path,
+                env=git_env,
+            )
         except subprocess.CalledProcessError as ex:
             raise GitError(ex) from ex
         if completed_process.stdout is not None:
@@ -71,25 +73,25 @@ class GitRepository(repobase.Repository):
             return None
 
     def init(self) -> None:
-        self.git('init')
+        self.git("init")
 
     def get_type(self) -> str:
-        return 'git'
+        return "git"
 
     def get_head_hash(self) -> str:
-        return self.git('rev-parse', 'HEAD').rstrip()
+        return self.git("rev-parse", "HEAD").rstrip()
 
     def get_canonical_root(self) -> str:
-        return os.path.join(self.path, '.git')
+        return os.path.join(self.path, ".git")
 
     def add_files(self, paths: List[str]) -> None:
-        self.git('add', *paths)
+        self.git("add", *paths)
 
     def remove_files(self, paths: List[str], force: bool = False) -> None:
         if force:
-            self.git('rm', '--force', *paths)
+            self.git("rm", "--force", *paths)
         else:
-            self.git('rm', *paths)
+            self.git("rm", *paths)
 
     def commit(
         self,
@@ -100,7 +102,7 @@ class GitRepository(repobase.Repository):
         committer_name: Optional[str] = None,
         committer_email: Optional[str] = None,
         committer_date: Optional[datetime.datetime] = None,
-        amend: bool = False
+        amend: bool = False,
     ) -> str:
         if author_name is None:
             author_name = self.author_name
@@ -108,38 +110,38 @@ class GitRepository(repobase.Repository):
             author_email = self.author_email
         if date is None:
             date = self.get_commit_time()
-            date_str = time.strftime('%Y-%m-%dT%H:%M:%S%z',
-                                     date.utctimetuple())
+            date_str = time.strftime("%Y-%m-%dT%H:%M:%S%z", date.utctimetuple())
         if committer_name is None:
             committer_name = author_name
         if committer_email is None:
             committer_email = author_email
         if committer_date is None:
             committer_date = date
-            committer_date_str = time.strftime('%Y-%m-%dT%H:%M:%S%z',
-                                               committer_date.utctimetuple())
+            committer_date_str = time.strftime(
+                "%Y-%m-%dT%H:%M:%S%z", committer_date.utctimetuple()
+            )
 
         # Specify all arguments to `git commit` to ensure the resulting hashes
         # are the same every time this test is run.
         git_commit_env = {
-            'GIT_AUTHOR_NAME': author_name,
-            'GIT_AUTHOR_EMAIL': author_email,
-            'GIT_AUTHOR_DATE': date_str,
-            'GIT_COMMITTER_NAME': committer_name,
-            'GIT_COMMITTER_EMAIL': committer_email,
-            'GIT_COMMITTER_DATE': committer_date_str,
+            "GIT_AUTHOR_NAME": author_name,
+            "GIT_AUTHOR_EMAIL": author_email,
+            "GIT_AUTHOR_DATE": date_str,
+            "GIT_COMMITTER_NAME": committer_name,
+            "GIT_COMMITTER_EMAIL": committer_email,
+            "GIT_COMMITTER_DATE": committer_date_str,
         }
 
-        with tempfile.NamedTemporaryFile(prefix='eden_commit_msg.',
-                                         mode='w',
-                                         encoding='utf-8') as msgf:
+        with tempfile.NamedTemporaryFile(
+            prefix="eden_commit_msg.", mode="w", encoding="utf-8"
+        ) as msgf:
             msgf.write(message)
             msgf.flush()
 
-            args = ['commit', '-F', msgf.name]
+            args = ["commit", "-F", msgf.name]
             if amend:
-                args.append('--amend')
+                args.append("--amend")
             self.git(*args, env=git_commit_env)
 
         # Get the commit ID and return it
-        return self.git('rev-parse', 'HEAD').strip()
+        return self.git("rev-parse", "HEAD").strip()

@@ -5,16 +5,14 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import binascii
 import hashlib
 import struct
 
 from six import iteritems
+
 
 # Version number for the format of the .hg/dirstate file that is read/written by
 # this library.
@@ -71,17 +69,17 @@ def write(file, parents, tuples_dict, copymap):
 
     hashing_write(parents[0])
     hashing_write(parents[1])
-    hashing_write(struct.pack('>I', CURRENT_DIRSTATE_VERSION))
+    hashing_write(struct.pack(">I", CURRENT_DIRSTATE_VERSION))
     for path, dirstate_tuple in iteritems(tuples_dict):
         status, mode, merge_state = dirstate_tuple
-        hashing_write(b'\x01')
-        hashing_write(struct.pack('>BIb', ord(status), mode, merge_state))
+        hashing_write(b"\x01")
+        hashing_write(struct.pack(">BIb", ord(status), mode, merge_state))
         _write_path(hashing_write, path)
     for dest, source in iteritems(copymap):
-        hashing_write(b'\x02')
+        hashing_write(b"\x02")
         _write_path(hashing_write, dest)
         _write_path(hashing_write, source)
-    hashing_write(b'\xFF')
+    hashing_write(b"\xFF")
 
     # Write the checksum, so we use file.write() instead of hashing_write().
     file.write(sha.digest())
@@ -90,14 +88,14 @@ def write(file, parents, tuples_dict, copymap):
 def read(fp, filename):  # noqa: C901
     # type(IO[bytes], string) -> ([bytes, bytes], Dict[str, [...]],
     #                             Dict[str, str])
-    '''Returns a tuple of (parents, tuples_dict, copymap) if successful.
+    """Returns a tuple of (parents, tuples_dict, copymap) if successful.
 
     Any exception from create_file(), such as IOError with errno == ENOENT, will
     be bubbled up to the caller.
 
     If contents of the dirstate file do not match the expected format, then a
     DirstateParseException will be thrown.
-    '''
+    """
     parents = None
     tuples_dict = {}
     copymap = {}
@@ -113,22 +111,21 @@ def read(fp, filename):  # noqa: C901
     num_parents_bytes = len(parent_bytes)
     if num_parents_bytes != 40:
         raise DirstateParseException(
-            'Reached EOF while reading dirstate parents in {}.\n'.
-            format(filename)
+            "Reached EOF while reading dirstate parents in {}.\n".format(filename)
         )
     parents = parent_bytes[:20], parent_bytes[20:40]
 
     binary_version = hashing_read(4)
     if len(binary_version) != 4:
         raise DirstateParseException(
-            'Reached EOF while reading the version number in {}.\n'.
-            format(filename)
+            "Reached EOF while reading the version number in {}.\n".format(filename)
         )
-    version = struct.unpack('>I', binary_version)[0]
+    version = struct.unpack(">I", binary_version)[0]
     if version != CURRENT_DIRSTATE_VERSION:
         raise DirstateParseException(
-            'Unknown dirstate version in {}. Found {} but expected {}.\n'.
-            format(filename, version, CURRENT_DIRSTATE_VERSION)
+            "Unknown dirstate version in {}. Found {} but expected {}.\n".format(
+                filename, version, CURRENT_DIRSTATE_VERSION
+            )
         )
 
     while True:
@@ -136,55 +133,53 @@ def read(fp, filename):  # noqa: C901
         if not header:
             # We have reached the end of the file.
             break
-        elif header == b'\x01':
+        elif header == b"\x01":
             scalars = hashing_read(6)
             if len(scalars) != 6:
                 raise DirstateParseException(
-                    'Malformed dirstate tuple in '.format(filename) +
-                    '. Aborting read().\n'
+                    "Malformed dirstate tuple in ".format(filename)
+                    + ". Aborting read().\n"
                 )
             path = _read_path(hashing_read, filename)
-            status, mode, merge = struct.unpack('>BIb', scalars)
+            status, mode, merge = struct.unpack(">BIb", scalars)
             # TODO(mbolin): Verify status and merge?
             tuples_dict[path] = (chr(status), mode, merge)
-        elif header == b'\x02':
+        elif header == b"\x02":
             dest = _read_path(hashing_read, filename)
             source = _read_path(hashing_read, filename)
             copymap[dest] = source
-        elif header == b'\xFF':
+        elif header == b"\xFF":
             # Reading the checksum, so we use fp.read() instead of
             # hashing_read().
             binary_checksum = fp.read(32)
             if len(binary_checksum) != 32:
                 raise DirstateParseException(
-                    'Reached EOF while reading checksum hash in {}.\n'.
-                    format(filename)
+                    "Reached EOF while reading checksum hash in {}.\n".format(filename)
                 )
             digest = sha.digest()
             if binary_checksum == digest:
-                if fp.read(1) == b'':
+                if fp.read(1) == b"":
                     # There is no more data, as expected.
                     break
                 else:
                     raise DirstateParseException(
-                        'Suspicious data is present after '
-                        'the end of the valid checksum in {}.\n'.
-                        format(filename)
+                        "Suspicious data is present after "
+                        "the end of the valid checksum in {}.\n".format(filename)
                     )
             else:
                 raise DirstateParseException(
-                    'Checksum mismatch when reading {}. Observed checksum is '
-                    '{}, but the checksum in the file is {}.\n'.format(
+                    "Checksum mismatch when reading {}. Observed checksum is "
+                    "{}, but the checksum in the file is {}.\n".format(
                         filename,
                         binascii.hexlify(digest),
-                        binascii.hexlify(binary_checksum)
+                        binascii.hexlify(binary_checksum),
                     )
                 )
         else:
             raise DirstateParseException(
-                'Unexpected header byte '
-                'when reading {}: 0x{0:x}.'.format(filename, header) +
-                ' Ignoring remaining dirstate data.\n'
+                "Unexpected header byte "
+                "when reading {}: 0x{0:x}.".format(filename, header)
+                + " Ignoring remaining dirstate data.\n"
             )
 
     return parents, tuples_dict, copymap
@@ -192,7 +187,7 @@ def read(fp, filename):  # noqa: C901
 
 def _write_path(writer, path):
     # type(Callable[[bytes], None], bytes) -> None
-    writer(struct.pack('>H', len(path)))
+    writer(struct.pack(">H", len(path)))
     writer(path)
 
 
@@ -201,10 +196,10 @@ def _read_path(reader, filename):
     binary_path_len = reader(2)
     if len(binary_path_len) != 2:
         raise DirstateParseException(
-            'Reached EOF while reading path length in {}.\n'.format(filename)
+            "Reached EOF while reading path length in {}.\n".format(filename)
         )
 
-    path_len = struct.unpack('>H', binary_path_len)[0]
+    path_len = struct.unpack(">H", binary_path_len)[0]
     path = reader(path_len)
     if len(path) == path_len:
         if isinstance(path, str):
@@ -212,10 +207,10 @@ def _read_path(reader, filename):
             return path
         else:
             # Python 3
-            return str(path, 'utf8')
+            return str(path, "utf8")
     else:
         raise DirstateParseException(
-            'Reached EOF while reading path in {}.\n'.format(filename)
+            "Reached EOF while reading path in {}.\n".format(filename)
         )
 
 

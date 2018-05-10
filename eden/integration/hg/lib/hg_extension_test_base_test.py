@@ -7,24 +7,26 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from .hg_extension_test_base import EdenHgTestCase, hg_test
 import os
+
+from .hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class HgExtensionTestBaseTest(EdenHgTestCase):
-    '''Test to make sure that HgExtensionTestBase creates Eden mounts that are
+    """Test to make sure that HgExtensionTestBase creates Eden mounts that are
     properly configured with the Hg extension.
-    '''
+    """
+
     def populate_backing_repo(self, repo):
-        repo.write_file('hello.txt', 'hola')
-        repo.commit('Initial commit.')
+        repo.write_file("hello.txt", "hola")
+        repo.commit("Initial commit.")
 
     def test_setup(self):
-        hg_dir = os.path.join(self.mount, '.hg')
+        hg_dir = os.path.join(self.mount, ".hg")
         self.assertTrue(os.path.isdir(hg_dir))
 
-        eden_extension = self.hg('config', 'extensions.eden').rstrip()
-        self.assertEqual('', eden_extension)
+        eden_extension = self.hg("config", "extensions.eden").rstrip()
+        self.assertEqual("", eden_extension)
 
-        self.assertTrue(os.path.isfile(self.get_path('hello.txt')))
+        self.assertTrue(os.path.isfile(self.get_path("hello.txt")))

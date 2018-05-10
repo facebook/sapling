@@ -11,6 +11,7 @@ from .lib import edenclient, testcase
 
 
 class HealthTest(testcase.EdenTestCase):
+
     def test_is_healthy(self) -> None:
         self.assertTrue(self.eden.is_healthy())
         self.eden.shutdown()

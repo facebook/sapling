@@ -9,20 +9,22 @@
 
 import os
 import stat
+
 import hypothesis
+
 from .lib import testcase
 
 
 @testcase.eden_repo_test
 class HypothesisSimpleTest(testcase.EdenRepoTest):
+
     def populate_repo(self):
-        self.repo.write_file('hello', 'hola\n')
-        self.repo.write_file('adir/file', 'foo!\n')
-        self.repo.write_file('bdir/test.sh', '#!/bin/bash\necho test\n',
-                             mode=0o755)
-        self.repo.write_file('bdir/noexec.sh', '#!/bin/bash\necho test\n')
-        self.repo.symlink('slink', 'hello')
-        self.repo.commit('Initial commit.')
+        self.repo.write_file("hello", "hola\n")
+        self.repo.write_file("adir/file", "foo!\n")
+        self.repo.write_file("bdir/test.sh", "#!/bin/bash\necho test\n", mode=0o755)
+        self.repo.write_file("bdir/noexec.sh", "#!/bin/bash\necho test\n")
+        self.repo.symlink("slink", "hello")
+        self.repo.commit("Initial commit.")
 
     @hypothesis.given(testcase.FILENAME_STRATEGY)
     def test_create(self, basename):
@@ -32,16 +34,16 @@ class HypothesisSimpleTest(testcase.EdenRepoTest):
         # conflicts with the names we generated in the repo.
         hypothesis.assume(not os.path.exists(filename))
 
-        with open(filename, 'w') as f:
-            f.write('created\n')
+        with open(filename, "w") as f:
+            f.write("created\n")
 
         entries = sorted(os.listdir(self.mount))
         self.assertEqual(
-            sorted(['.eden', 'adir', 'bdir', 'hello', basename, 'slink']),
-            entries)
+            sorted([".eden", "adir", "bdir", "hello", basename, "slink"]), entries
+        )
 
-        with open(filename, 'r') as f:
-            self.assertEqual(f.read(), 'created\n')
+        with open(filename, "r") as f:
+            self.assertEqual(f.read(), "created\n")
 
         st = os.lstat(filename)
         self.assertEqual(st.st_size, 8)

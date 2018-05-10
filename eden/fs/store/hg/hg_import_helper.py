@@ -7,10 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
 import binascii
@@ -26,8 +23,9 @@ import mercurial.hg
 import mercurial.node
 import mercurial.scmutil
 import mercurial.txnutil
-import mercurial.util
 import mercurial.ui
+import mercurial.util
+
 
 # remotefilelog is available just as "remotefilelog" in older mercurial
 # releases, but "hgext.remotefilelog" moving forwards.
@@ -61,7 +59,7 @@ except ImportError:
 #   This lists the number of body bytes sent with this request/response.
 #   The body is sent immediately after the header data.
 #
-HEADER_FORMAT = b'>IIII'
+HEADER_FORMAT = b">IIII"
 HEADER_SIZE = 16
 
 # The length of a SHA-1 hash
@@ -117,6 +115,7 @@ FLAG_MORE_CHUNKS = 0x02
 
 
 class Request(object):
+
     def __init__(self, txn_id, command, flags, body):
         self.txn_id = txn_id
         self.command = command
@@ -125,16 +124,19 @@ class Request(object):
 
 
 def cmd(command_id):
-    '''
+    """
     A helper function for identifying command functions
-    '''
+    """
+
     def decorator(func):
         func.__COMMAND_ID__ = command_id
         return func
+
     return decorator
 
 
 class HgUI(mercurial.ui.ui):
+
     def __init__(self, src=None):
         super(HgUI, self).__init__(src=src)
         # Always print to stderr, never to stdout.
@@ -151,8 +153,9 @@ class HgUI(mercurial.ui.ui):
 
 
 class HgServer(object):
+
     def __init__(self, repo_path, config_overrides, in_fd=None, out_fd=None):
-        '''
+        """
         Create an HgServer.
 
         repo_path:
@@ -168,17 +171,17 @@ class HgServer(object):
         out_fd:
           A file descriptor to use for sending responses.
           If in_fd is None, stdout will be used.
-        '''
+        """
         self.repo_path = repo_path
         self.config_overrides = config_overrides
         if in_fd is None:
             self.in_file = sys.stdin
         else:
-            self.in_file = os.fdopen(in_fd, 'rb')
+            self.in_file = os.fdopen(in_fd, "rb")
         if out_fd is None:
             self.out_file = sys.stdout
         else:
-            self.out_file = os.fdopen(out_fd, 'wb')
+            self.out_file = os.fdopen(out_fd, "wb")
 
         # The repository will be set during initialized()
         self.repo = None
@@ -188,15 +191,14 @@ class HgServer(object):
         self._commands = {}
         for member_name in dir(self):
             value = getattr(self, member_name)
-            if not hasattr(value, '__COMMAND_ID__'):
+            if not hasattr(value, "__COMMAND_ID__"):
                 continue
             self._commands[value.__COMMAND_ID__] = value
 
     def initialize(self):
         self.ui = HgUI.load()
         for opt in self.config_overrides:
-            self.ui.setconfig(opt.section, opt.name, opt.value,
-                              source='--config')
+            self.ui.setconfig(opt.section, opt.name, opt.value, source="--config")
 
         # Create a fresh copy of the UI object, and load the repository's
         # config into it.  Then load extensions specified by this config.
@@ -208,7 +210,7 @@ class HgServer(object):
         self.repo = self._open_repo()
 
         try:
-            self.treemanifest = mercurial.extensions.find('treemanifest')
+            self.treemanifest = mercurial.extensions.find("treemanifest")
         except KeyError:
             # The treemanifest extension is not present
             self.treemanifest = None
@@ -239,28 +241,28 @@ class HgServer(object):
         # Send a CMD_STARTED response to indicate we have started,
         # and include some information about the repository configuration.
         options_chunk = self._gen_options()
-        self._send_chunk(txn_id=0, command=CMD_STARTED,
-                         flags=0, data=options_chunk)
+        self._send_chunk(txn_id=0, command=CMD_STARTED, flags=0, data=options_chunk)
 
         while self.process_request():
             pass
 
-        logging.debug('hg_import_helper shutting down normally')
+        logging.debug("hg_import_helper shutting down normally")
         return 0
 
     def _gen_options(self):
-        use_treemanifest = ((self.treemanifest is not None) and
-                            bool(getattr(self.repo, 'name', None)))
+        use_treemanifest = (
+            (self.treemanifest is not None) and bool(getattr(self.repo, "name", None))
+        )
 
         flags = 0
         treemanifest_paths = []
         if use_treemanifest:
             flags |= START_FLAGS_TREEMANIFEST_SUPPORTED
             treemanifest_paths = [
-                shallowutil.getlocalpackpath(self.repo.svfs.vfs.base,
-                                             constants.TREEPACK_CATEGORY),
-                shallowutil.getcachepackpath(self.repo,
-                                             constants.TREEPACK_CATEGORY),
+                shallowutil.getlocalpackpath(
+                    self.repo.svfs.vfs.base, constants.TREEPACK_CATEGORY
+                ),
+                shallowutil.getcachepackpath(self.repo, constants.TREEPACK_CATEGORY),
             ]
 
         # Options format:
@@ -269,13 +271,14 @@ class HgServer(object):
         # - Number of treemanifest paths
         #   - treemanifest paths, encoded as (length, string_data)
         parts = []
-        parts.append(struct.pack(b'>III', PROTOCOL_VERSION, flags,
-                                 len(treemanifest_paths)))
+        parts.append(
+            struct.pack(b">III", PROTOCOL_VERSION, flags, len(treemanifest_paths))
+        )
         for path in treemanifest_paths:
-            parts.append(struct.pack(b'>I', len(path)))
+            parts.append(struct.pack(b">I", len(path)))
             parts.append(path)
 
-        return ''.join(parts)
+        return "".join(parts)
 
     def debug(self, msg, *args, **kwargs):
         logging.debug(msg, *args, **kwargs)
@@ -288,7 +291,7 @@ class HgServer(object):
             return False
 
         if len(header_data) < HEADER_SIZE:
-            raise Exception('received EOF after partial request header')
+            raise Exception("received EOF after partial request header")
 
         header_fields = struct.unpack(HEADER_FORMAT, header_data)
         txn_id, command, flags, data_len = header_fields
@@ -296,20 +299,19 @@ class HgServer(object):
         # Read the request body
         body = self.in_file.read(data_len)
         if len(body) < data_len:
-            raise Exception('received EOF after partial request')
+            raise Exception("received EOF after partial request")
         req = Request(txn_id, command, flags, body)
 
         cmd_function = self._commands.get(command)
         if cmd_function is None:
-            logging.warning('unknown command %r', command)
-            self.send_error(req, 'CommandError',
-                            'unknown command %r' % (command,))
+            logging.warning("unknown command %r", command)
+            self.send_error(req, "CommandError", "unknown command %r" % (command,))
             return True
 
         try:
             cmd_function(req)
         except Exception as ex:
-            logging.exception('error processing command %r', command)
+            logging.exception("error processing command %r", command)
             self.send_exception(req, ex)
 
         # Return True to indicate that we should continue serving
@@ -317,7 +319,7 @@ class HgServer(object):
 
     @cmd(CMD_MANIFEST)
     def cmd_manifest(self, request):
-        '''
+        """
         Handler for CMD_MANIFEST requests.
 
         This request asks for the full mercurial manifest contents for a given
@@ -346,14 +348,14 @@ class HgServer(object):
                     '':  a regular file
           - <path>: The full file path, relative to the root of the repository
           - <nul>: a nul byte ('\0')
-        '''
+        """
         rev_name = request.body
-        self.debug('sending manifest for revision %r', rev_name)
+        self.debug("sending manifest for revision %r", rev_name)
         self.dump_manifest(rev_name, request)
 
     @cmd(CMD_CAT_FILE)
     def cmd_cat_file(self, request):
-        '''
+        """
         Handler for CMD_CAT_FILE requests.
 
         This requests the contents for a given file.
@@ -367,23 +369,25 @@ class HgServer(object):
         Response body format:
         - <file_contents>
           The body consists solely of the raw file contents.
-        '''
+        """
         if len(request.body) < SHA1_NUM_BYTES + 1:
-            raise Exception('cat_file request data too short')
+            raise Exception("cat_file request data too short")
 
         rev_hash = request.body[:SHA1_NUM_BYTES]
         path = request.body[SHA1_NUM_BYTES:]
-        self.debug('(pid:%s) getting contents of file %r revision %s',
-                   os.getpid(),
-                   path,
-                   binascii.hexlify(rev_hash))
+        self.debug(
+            "(pid:%s) getting contents of file %r revision %s",
+            os.getpid(),
+            path,
+            binascii.hexlify(rev_hash),
+        )
 
         contents = self.get_file(path, rev_hash)
         self.send_chunk(request, contents)
 
     @cmd(CMD_MANIFEST_NODE_FOR_COMMIT)
     def cmd_manifest_node_for_commit(self, request):
-        '''
+        """
         Handler for CMD_MANIFEST_NODE_FOR_COMMIT requests.
 
         Given a commit hash, resolve the manifest node.
@@ -397,9 +401,9 @@ class HgServer(object):
 
         Response body format:
           The response body is the manifest node, a 20-byte binary value.
-        '''
+        """
         rev_name = request.body
-        self.debug('resolving manifest node for revision %r', rev_name)
+        self.debug("resolving manifest node for revision %r", rev_name)
         try:
             node = self.get_manifest_node(rev_name)
         except mercurial.error.RepoError as ex:
@@ -414,20 +418,24 @@ class HgServer(object):
     @cmd(CMD_FETCH_TREE)
     def cmd_fetch_tree(self, request):
         if len(request.body) < SHA1_NUM_BYTES:
-            raise Exception('fetch_tree request data too short: len=%d' %
-                            len(request.body))
+            raise Exception(
+                "fetch_tree request data too short: len=%d" % len(request.body)
+            )
 
         manifest_node = request.body[:SHA1_NUM_BYTES]
         path = request.body[SHA1_NUM_BYTES:]
-        self.debug('fetching tree for path %r manifest node %s',
-                   path, binascii.hexlify(manifest_node))
+        self.debug(
+            "fetching tree for path %r manifest node %s",
+            path,
+            binascii.hexlify(manifest_node),
+        )
 
         self.fetch_tree(path, manifest_node)
-        self.send_chunk(request, b'')
+        self.send_chunk(request, b"")
 
     def fetch_tree(self, path, manifest_node):
         if self.treemanifest is None:
-            raise Exception('treemanifest not enabled in this repository')
+            raise Exception("treemanifest not enabled in this repository")
 
         try:
             self._fetch_tree_impl(path, manifest_node)
@@ -458,19 +466,19 @@ class HgServer(object):
 
         # Newer mercurial releases have self.repo.prefetchtrees()
         # Older mercurial releases have self.treemanifest._prefetchtrees()
-        if mercurial.util.safehasattr(self.repo, 'prefetchtrees'):
+        if mercurial.util.safehasattr(self.repo, "prefetchtrees"):
             # TODO: repo.prefetchtrees() does not accept a path
             self.repo.prefetchtrees(mfnodes)
         else:
-            self.treemanifest._prefetchtrees(self.repo, path, mfnodes,
-                                             base_mfnodes, directories)
+            self.treemanifest._prefetchtrees(
+                self.repo, path, mfnodes, base_mfnodes, directories
+            )
 
     def send_chunk(self, request, data, is_last=True):
         flags = 0
         if not is_last:
             flags |= FLAG_MORE_CHUNKS
-        self._send_chunk(request.txn_id, command=CMD_RESPONSE,
-                         flags=flags, data=data)
+        self._send_chunk(request.txn_id, command=CMD_RESPONSE, flags=flags, data=data)
 
     def send_exception(self, request, exc):
         self.send_error(request, type(exc).__name__, str(exc))
@@ -480,26 +488,26 @@ class HgServer(object):
         if request is not None:
             txn_id = request.txn_id
 
-        data = b''.join([
-            struct.pack(b'>I', len(error_type)),
-            error_type,
-            struct.pack(b'>I', len(message)),
-            message,
-        ])
-        self._send_chunk(txn_id, command=CMD_RESPONSE,
-                         flags=FLAG_ERROR, data=data)
+        data = b"".join(
+            [
+                struct.pack(b">I", len(error_type)),
+                error_type,
+                struct.pack(b">I", len(message)),
+                message,
+            ]
+        )
+        self._send_chunk(txn_id, command=CMD_RESPONSE, flags=FLAG_ERROR, data=data)
 
     def _send_chunk(self, txn_id, command, flags, data):
-        header = struct.pack(HEADER_FORMAT, txn_id, command, flags,
-                             len(data))
+        header = struct.pack(HEADER_FORMAT, txn_id, command, flags, len(data))
         self.out_file.write(header)
         self.out_file.write(data)
         self.out_file.flush()
 
     def dump_manifest(self, rev, request):
-        '''
+        """
         Send the manifest data.
-        '''
+        """
         start = time.time()
         try:
             ctx = mercurial.scmutil.revsingle(self.repo, rev)
@@ -527,19 +535,19 @@ class HgServer(object):
         for path, hashval, flags in mf.iterentries():
             # Construct the chunk data using join(), since that is relatively
             # fast compared to other ways of constructing python strings.
-            entry = b'\t'.join((hashval, flags, path + b'\0'))
+            entry = b"\t".join((hashval, flags, path + b"\0"))
             if len(chunked_paths) >= MANIFEST_PATHS_PER_CHUNK:
                 num_paths += len(chunked_paths)
-                self.send_chunk(request, b''.join(chunked_paths),
-                                is_last=False)
+                self.send_chunk(request, b"".join(chunked_paths), is_last=False)
                 chunked_paths = [entry]
             else:
                 chunked_paths.append(entry)
 
         num_paths += len(chunked_paths)
-        self.send_chunk(request, b''.join(chunked_paths), is_last=True)
-        self.debug('sent manifest with %d paths in %s seconds',
-                   num_paths, time.time() - start)
+        self.send_chunk(request, b"".join(chunked_paths), is_last=True)
+        self.debug(
+            "sent manifest with %d paths in %s seconds", num_paths, time.time() - start
+        )
 
     def _get_manifest_node_impl(self, rev):
         ctx = mercurial.scmutil.revsingle(self.repo, rev)
@@ -551,8 +559,10 @@ class HgServer(object):
             # process.  Ideally this broken behavior in mercurial should be
             # fixed. For now translate this into an exception so we will retry
             # after invalidating the cache.
-            raise Exception('mercurial bug: ctx.manifestnode() returned an '
-                            'empty string for commit %s' % (rev,))
+            raise Exception(
+                "mercurial bug: ctx.manifestnode() returned an "
+                "empty string for commit %s" % (rev,)
+            )
         return node_hash
 
     def get_manifest_node(self, rev):
@@ -594,7 +604,7 @@ class HgServer(object):
             return fctx.data()
 
     def prefetch(self, rev):
-        if not hasattr(self.repo, 'prefetch'):
+        if not hasattr(self.repo, "prefetch"):
             # This repo isn't using remotefilelog, so nothing to do.
             return
 
@@ -604,81 +614,98 @@ class HgServer(object):
             self.repo.invalidate()
             rev_range = mercurial.scmutil.revrange(self.repo, rev)
 
-        self.debug('prefetching')
+        self.debug("prefetching")
         self.repo.prefetch(rev_range)
-        self.debug('done prefetching')
+        self.debug("done prefetching")
 
 
 def always_allow_pending(root):
     return True
 
 
-ConfigOption = collections.namedtuple('ConfigOption',
-                                      ['section', 'name', 'value'])
+ConfigOption = collections.namedtuple("ConfigOption", ["section", "name", "value"])
 
 
 def parse_config_options(argparser, options):
-    '''
+    """
     Parse config options specified using --config arguments.
 
     The options parameter should be the list of --config option values.
     Each option value should be of the form "section.name=value"
 
     This function returns a list of ConfigOption objects.
-    '''
+    """
     results = []
     for option in options:
         try:
-            name, value = [element.strip() for element in option.split('=', 1)]
-            section, name = name.split('.', 1)
+            name, value = [element.strip() for element in option.split("=", 1)]
+            section, name = name.split(".", 1)
             results.append(ConfigOption(section, name, value))
         except (IndexError, ValueError):
-            argparser.error('bad --config argument %r: must be of the form '
-                            'SECTION.NAME=VALUE' % (option,))
+            argparser.error(
+                "bad --config argument %r: must be of the form "
+                "SECTION.NAME=VALUE" % (option,)
+            )
     return results
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('repo', help='The repository path')
-    parser.add_argument('--config',
-                        metavar='SECTION.NAME=VALUE', action='append',
-                        default=[],
-                        help='Specify mercurial configuration options')
-    parser.add_argument('--in-fd',
-                        metavar='FILENO', type=int,
-                        help='Use the specified file descriptor to receive '
-                        'commands, rather than reading on stdin')
-    parser.add_argument('--out-fd',
-                        metavar='FILENO', type=int,
-                        help='Use the specified file descriptor to send '
-                        'command output, rather than writing to stdout')
+    parser.add_argument("repo", help="The repository path")
+    parser.add_argument(
+        "--config",
+        metavar="SECTION.NAME=VALUE",
+        action="append",
+        default=[],
+        help="Specify mercurial configuration options",
+    )
+    parser.add_argument(
+        "--in-fd",
+        metavar="FILENO",
+        type=int,
+        help="Use the specified file descriptor to receive "
+        "commands, rather than reading on stdin",
+    )
+    parser.add_argument(
+        "--out-fd",
+        metavar="FILENO",
+        type=int,
+        help="Use the specified file descriptor to send "
+        "command output, rather than writing to stdout",
+    )
 
     # Arguments for testing and debugging.
     # These cause the helper to perform a single operation and exit,
     # rather than running as a server.
-    parser.add_argument('--manifest',
-                        metavar='REVISION',
-                        help='Dump the binary manifest data for the specified '
-                        'revision.')
-    parser.add_argument('--get-manifest-node',
-                        metavar='REVISION',
-                        help='Print the manifest node ID for the specified '
-                        'revision.')
-    parser.add_argument('--cat-file',
-                        metavar='PATH:REV',
-                        help='Dump the file contents for the specified file '
-                        'at the given file revision')
-    parser.add_argument('--fetch-tree',
-                        metavar='PATH:REV',
-                        help='Fetch treemanifest data for the specified path '
-                        'at the given manifest node')
+    parser.add_argument(
+        "--manifest",
+        metavar="REVISION",
+        help="Dump the binary manifest data for the specified " "revision.",
+    )
+    parser.add_argument(
+        "--get-manifest-node",
+        metavar="REVISION",
+        help="Print the manifest node ID for the specified " "revision.",
+    )
+    parser.add_argument(
+        "--cat-file",
+        metavar="PATH:REV",
+        help="Dump the file contents for the specified file "
+        "at the given file revision",
+    )
+    parser.add_argument(
+        "--fetch-tree",
+        metavar="PATH:REV",
+        help="Fetch treemanifest data for the specified path "
+        "at the given manifest node",
+    )
 
     args = parser.parse_args()
     config_overrides = parse_config_options(parser, args.config)
 
-    logging.basicConfig(stream=sys.stderr, level=logging.INFO,
-                        format='%(asctime)s %(message)s')
+    logging.basicConfig(
+        stream=sys.stderr, level=logging.INFO, format="%(asctime)s %(message)s"
+    )
 
     # We always want to be able to access commits being created by pending
     # transactions.
@@ -692,8 +719,7 @@ def main():
     # we use the correct repository (in case of a shared repository).
     mercurial.txnutil.mayhavepending = always_allow_pending
 
-    server = HgServer(args.repo, config_overrides,
-                      in_fd=args.in_fd, out_fd=args.out_fd)
+    server = HgServer(args.repo, config_overrides, in_fd=args.in_fd, out_fd=args.out_fd)
 
     if args.get_manifest_node:
         server.initialize()
@@ -709,7 +735,7 @@ def main():
 
     if args.cat_file is not None:
         server.initialize()
-        path, file_rev_str = args.cat_file.rsplit(':', -1)
+        path, file_rev_str = args.cat_file.rsplit(":", -1)
         path = path.encode(sys.getfilesystemencoding())
         file_rev = binascii.unhexlify(file_rev_str)
         data = server.get_file(path, file_rev)
@@ -718,22 +744,21 @@ def main():
 
     if args.fetch_tree is not None:
         server.initialize()
-        parts = args.fetch_tree.rsplit(':', -1)
+        parts = args.fetch_tree.rsplit(":", -1)
         if len(parts) == 1:
             path = parts[0]
-            if path == '':
-                manifest_node = server.get_manifest_node('.')
+            if path == "":
+                manifest_node = server.get_manifest_node(".")
             else:
                 # TODO: It would be nice to automatically look up the current
                 # manifest node ID for this path and use that here, assuming
                 # we have sufficient data locally for this
-                raise Exception('a manifest node ID is required when '
-                                'using a path')
+                raise Exception("a manifest node ID is required when " "using a path")
         else:
             path, manifest_node_str = parts
             manifest_node = binascii.unhexlify(manifest_node_str)
             if len(manifest_node) != 20:
-                raise Exception('manifest node should be a 40-byte hex string')
+                raise Exception("manifest node should be a 40-byte hex string")
 
         server.fetch_tree(path, manifest_node)
         return 0
@@ -741,9 +766,9 @@ def main():
     try:
         return server.serve()
     except KeyboardInterrupt:
-        logging.debug('hg_import_helper received interrupt; shutting down')
+        logging.debug("hg_import_helper received interrupt; shutting down")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     rc = main()
     sys.exit(rc)

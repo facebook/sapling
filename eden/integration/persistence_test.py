@@ -16,45 +16,51 @@ from .lib import testcase
 
 @testcase.eden_repo_test
 class PersistenceTest(testcase.EdenRepoTest):
+
     def populate_repo(self) -> None:
-        self.repo.write_file('file_in_root', 'contents1')
-        self.repo.write_file('subdir/file_in_subdir', 'contents2')
-        self.repo.write_file('subdir2/file_in_subdir2', 'contents3')
-        self.repo.commit('Initial commit.')
+        self.repo.write_file("file_in_root", "contents1")
+        self.repo.write_file("subdir/file_in_subdir", "contents2")
+        self.repo.write_file("subdir2/file_in_subdir2", "contents3")
+        self.repo.commit("Initial commit.")
 
     # These tests restart Eden and expect data to have persisted.
     def select_storage_engine(self) -> str:
-        return 'sqlite'
+        return "sqlite"
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
-        return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
+        return {"eden.strace": "DBG7", "eden.fs.fuse": "DBG7"}
 
-    @unittest.skip('TODO: this is not fully implemented yet')
+    @unittest.skip("TODO: this is not fully implemented yet")
     def test_preserves_nonmaterialized_inode_numbers(self) -> None:
         inode_paths = [
-            'file_in_root',
-            'subdir',  # we care about trees too
-            'subdir/file_in_subdir',
+            "file_in_root", "subdir", "subdir/file_in_subdir"  # we care about trees too
         ]
 
-        old_stats = [
-            os.lstat(os.path.join(self.mount, path))
-            for path in inode_paths]
+        old_stats = [os.lstat(os.path.join(self.mount, path)) for path in inode_paths]
 
         self.eden.shutdown()
         self.eden.start()
 
-        new_stats = [
-            os.lstat(os.path.join(self.mount, path))
-            for path in inode_paths]
+        new_stats = [os.lstat(os.path.join(self.mount, path)) for path in inode_paths]
 
-        for (path, old_stat,
-             new_stat) in zip(inode_paths, old_stats, new_stats):
-            self.assertEqual(old_stat.st_ino, new_stat.st_ino,
-                             f"inode numbers must line up for path {path}")
-            self.assertEqual(old_stat.st_atime, new_stat.st_atime,
-                             f"atime must line up for path {path}")
-            self.assertEqual(old_stat.st_mtime, new_stat.st_mtime,
-                             f"mtime must line up for path {path}")
-            self.assertEqual(old_stat.st_ctime, new_stat.st_ctime,
-                             f"ctime must line up for path {path}")
+        for (path, old_stat, new_stat) in zip(inode_paths, old_stats, new_stats):
+            self.assertEqual(
+                old_stat.st_ino,
+                new_stat.st_ino,
+                f"inode numbers must line up for path {path}",
+            )
+            self.assertEqual(
+                old_stat.st_atime,
+                new_stat.st_atime,
+                f"atime must line up for path {path}",
+            )
+            self.assertEqual(
+                old_stat.st_mtime,
+                new_stat.st_mtime,
+                f"mtime must line up for path {path}",
+            )
+            self.assertEqual(
+                old_stat.st_ctime,
+                new_stat.st_ctime,
+                f"ctime must line up for path {path}",
+            )

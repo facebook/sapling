@@ -19,9 +19,8 @@ from eden.integration.lib import hgrepo
 
 
 class FlatmanifestFallbackUpdateTest(EdenHgTestCase):
-    def apply_hg_config_variant(
-        self, config: configparser.ConfigParser
-    ) -> None:
+
+    def apply_hg_config_variant(self, config: configparser.ConfigParser) -> None:
         # Do nothing here for now.
         # Keep treemanifest disabled initially during populate_backing_repo()
         pass
@@ -30,50 +29,48 @@ class FlatmanifestFallbackUpdateTest(EdenHgTestCase):
         # Explicitly allow eden to fallback to flatmanifest import
         # if it fails to import treemanifest data, since that is what
         # we are trying to test.
-        return ['--allow_flatmanifest_fallback=yes']
+        return ["--allow_flatmanifest_fallback=yes"]
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         # Create a couple commits in flatmanifest mode
-        repo.write_file('src/main.sh', 'echo hello world\n')
-        repo.write_file('src/test/test.sh', 'echo success\n')
-        repo.write_file('src/.gitignore', '*.o\n')
-        repo.write_file('doc/readme.txt', 'sample repository\n')
-        repo.write_file('.gitignore', 'ignoreme\n')
-        self.commit1 = repo.commit('Initial commit.')
+        repo.write_file("src/main.sh", "echo hello world\n")
+        repo.write_file("src/test/test.sh", "echo success\n")
+        repo.write_file("src/.gitignore", "*.o\n")
+        repo.write_file("doc/readme.txt", "sample repository\n")
+        repo.write_file(".gitignore", "ignoreme\n")
+        self.commit1 = repo.commit("Initial commit.")
 
-        repo.write_file('src/.gitignore', '*.[oa]\n')
-        self.commit2 = repo.commit('Update src/.gitignore')
+        repo.write_file("src/.gitignore", "*.[oa]\n")
+        self.commit2 = repo.commit("Update src/.gitignore")
 
         # Now enable treemanifest
         # Note that we don't set paths.default or remotefilelog.fallbackpath
         # here, so treemanifest prefetching will always fail since it does not
         # have a remote repository to fetch from.
         hgrc = get_default_hgrc()
-        hgrc['extensions']['fastmanifest'] = ''
-        hgrc['extensions']['treemanifest'] = ''
-        hgrc['fastmanifest'] = {
-            'usetree': 'True',
-            'usecache': 'False',
-        }
-        hgrc['remotefilelog'] = {
-            'reponame': 'eden_integration_tests',
-            'cachepath': os.path.join(self.tmp_dir, 'hgcache'),
+        hgrc["extensions"]["fastmanifest"] = ""
+        hgrc["extensions"]["treemanifest"] = ""
+        hgrc["fastmanifest"] = {"usetree": "True", "usecache": "False"}
+        hgrc["remotefilelog"] = {
+            "reponame": "eden_integration_tests",
+            "cachepath": os.path.join(self.tmp_dir, "hgcache"),
         }
         repo.write_hgrc(hgrc)
 
         # Create a couple new commits now that treemanifest is enabled
-        repo.write_file('src/test/test2.sh', 'echo success2\n')
-        self.commit3 = repo.commit('Add test2')
-        repo.write_file('src/test/test2.sh', 'echo success\necho success\n')
-        self.commit4 = repo.commit('Update test2')
+        repo.write_file("src/test/test2.sh", "echo success2\n")
+        self.commit3 = repo.commit("Add test2")
+        repo.write_file("src/test/test2.sh", "echo success\necho success\n")
+        self.commit4 = repo.commit("Update test2")
 
     def test_checkout_flatmanifest(self) -> None:
         # Check our status
         self.assertEqual(self.commit4, self.repo.get_head_hash())
         self.assert_status_empty()
-        self.assertTrue(os.path.exists(self.get_path('src/test/test2.sh')))
-        self.assertEqual('echo success\necho success\n',
-                         self.read_file('src/test/test2.sh'))
+        self.assertTrue(os.path.exists(self.get_path("src/test/test2.sh")))
+        self.assertEqual(
+            "echo success\necho success\n", self.read_file("src/test/test2.sh")
+        )
         self.repo.update(self.commit2)
 
         # Now try checking out self.commit2
@@ -82,4 +79,4 @@ class FlatmanifestFallbackUpdateTest(EdenHgTestCase):
         # treemanifest is enabled in this repository.
         self.assertEqual(self.commit2, self.repo.get_head_hash())
         self.assert_status_empty()
-        self.assertFalse(os.path.exists(self.get_path('src/test/test2.sh')))
+        self.assertFalse(os.path.exists(self.get_path("src/test/test2.sh")))

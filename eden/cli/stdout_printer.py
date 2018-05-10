@@ -12,7 +12,7 @@ from typing import Optional
 
 
 class AnsiEscapeCodes:
-    __slots__ = ('bold', 'red', 'green', 'yellow', 'reset')
+    __slots__ = ("bold", "red", "green", "yellow", "reset")
 
     def __init__(
         self, bold: str, red: str, green: str, yellow: str, reset: str
@@ -37,18 +37,18 @@ class StdoutPrinter:
             import curses
 
             curses.setupterm()
-            self._bold = (curses.tigetstr('bold') or b'').decode()
-            set_foreground = curses.tigetstr('setaf') or b''
+            self._bold = (curses.tigetstr("bold") or b"").decode()
+            set_foreground = curses.tigetstr("setaf") or b""
             self._red = curses.tparm(set_foreground, curses.COLOR_RED).decode()
             self._green = curses.tparm(set_foreground, curses.COLOR_GREEN).decode()
             self._yellow = curses.tparm(set_foreground, curses.COLOR_YELLOW).decode()
-            self._reset = (curses.tigetstr('sgr0') or b'').decode()
+            self._reset = (curses.tigetstr("sgr0") or b"").decode()
         else:
-            self._bold = ''
-            self._red = ''
-            self._green = ''
-            self._yellow = ''
-            self._reset = ''
+            self._bold = ""
+            self._red = ""
+            self._green = ""
+            self._yellow = ""
+            self._reset = ""
 
     def bold(self, text: str) -> str:
         return self._bold + text + self._reset
