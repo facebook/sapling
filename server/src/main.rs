@@ -43,6 +43,7 @@ extern crate async_compression;
 extern crate blobrepo;
 extern crate bundle2_resolver;
 extern crate bytes;
+extern crate cache_warmup;
 extern crate hgproto;
 #[cfg(test)]
 extern crate many_files_dirs;
@@ -300,6 +301,9 @@ fn repo_listen(reponame: String, config: RepoConfig, root_log: Logger) -> ! {
     let remote = core.remote();
     let repo = Arc::new(repo);
 
+    let initial_warmup =
+        cache_warmup::cache_warmup(repo.blobrepo(), config.cache_warmup, listen_log.clone());
+
     let server = listener::listener(sockname, &handle)
         .expect("failed to create listener")
         .map_err(Error::from)
@@ -412,6 +416,7 @@ fn repo_listen(reponame: String, config: RepoConfig, root_log: Logger) -> ! {
             Ok(())
         });
 
+    let server = server.join(initial_warmup);
     core.run(server)
         .expect("failure while running listener on tokio core");
 

@@ -16,6 +16,7 @@ use failure::FutureFailureErrorExt;
 use futures::{future, Future, IntoFuture};
 
 use blobrepo::BlobRepo;
+use bookmarks::Bookmark;
 use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::DChangesetId;
@@ -36,6 +37,18 @@ pub struct RepoConfig {
     pub repoid: i32,
     /// Scuba table for logging performance of operations
     pub scuba_table: Option<String>,
+    /// Parameters of how to warm up the cache
+    pub cache_warmup: Option<CacheWarmupParams>,
+}
+
+/// Configuration of warming up the Mononoke cache. This warmup happens on startup
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct CacheWarmupParams {
+    /// Bookmark to warmup cache for at the startup. If not set then the cache will be cold.
+    pub bookmark: Bookmark,
+    /// Max number to fetch during commit warmup. If not set in the config, then set to a default
+    /// value.
+    pub commit_limit: usize,
 }
 
 /// Types of repositories supported
@@ -199,6 +212,13 @@ struct RawRepoConfig {
     changesets_cache_size: Option<usize>,
     filenodes_cache_size: Option<usize>,
     io_thread_num: Option<usize>,
+    cache_warmup: Option<RawCacheWarmupConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawCacheWarmupConfig {
+    bookmark: String,
+    commit_limit: Option<usize>,
 }
 
 /// Types of repositories supported
@@ -245,12 +265,17 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
         let repoid = this.repoid;
         let scuba_table = this.scuba_table;
+        let cache_warmup = this.cache_warmup.map(|cache_warmup| CacheWarmupParams {
+            bookmark: Bookmark::new(cache_warmup.bookmark).expect("bookmark name must be ascii"),
+            commit_limit: cache_warmup.commit_limit.unwrap_or(200000),
+        });
 
         Ok(RepoConfig {
             repotype,
             generation_cache_size,
             repoid,
             scuba_table,
+            cache_warmup,
         })
     }
 }
@@ -270,6 +295,9 @@ mod test {
             generation_cache_size=1048576
             repoid=0
             scuba_table="scuba_table"
+            [cache_warmup]
+            bookmark="master"
+            commit_limit=100
         "#;
         let www_content = r#"
             path="/tmp/www"
@@ -296,6 +324,10 @@ mod test {
                 generation_cache_size: 1024 * 1024,
                 repoid: 0,
                 scuba_table: Some("scuba_table".to_string()),
+                cache_warmup: Some(CacheWarmupParams {
+                    bookmark: Bookmark::new("master").unwrap(),
+                    commit_limit: 100,
+                }),
             },
         );
         repos.insert(
@@ -305,6 +337,7 @@ mod test {
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: 1,
                 scuba_table: Some("scuba_table".to_string()),
+                cache_warmup: None,
             },
         );
         assert_eq!(

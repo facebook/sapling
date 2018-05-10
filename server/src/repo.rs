@@ -294,6 +294,10 @@ impl MononokeRepo {
         &self.path
     }
 
+    pub fn blobrepo(&self) -> Arc<BlobRepo> {
+        self.blobrepo.clone()
+    }
+
     fn scuba_sample(&self, op: &str) -> ScubaSample {
         let mut sample = ScubaSample::new();
         sample.add("operation", op);

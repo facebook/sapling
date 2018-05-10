@@ -10,6 +10,7 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
+extern crate bookmarks;
 #[cfg(test)]
 extern crate bytes;
 #[macro_use]
@@ -34,6 +35,6 @@ extern crate vfs;
 pub mod errors;
 pub mod repoconfig;
 
-pub use repoconfig::RepoConfigs;
+pub use repoconfig::{CacheWarmupParams, RepoConfigs};
 
 pub use errors::{Error, ErrorKind};

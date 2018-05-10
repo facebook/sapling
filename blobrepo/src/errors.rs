@@ -6,6 +6,7 @@
 
 use std::fmt;
 
+use ascii::AsciiString;
 use bincode;
 
 pub use failure::{Error, ResultExt};
@@ -68,4 +69,5 @@ pub enum ErrorKind {
     InconsistentEntryHash(RepoPath, HgNodeHash, HgNodeHash),
     #[fail(display = "Inconsistent node hash for changeset: provided: {}, computed: {}", _0, _1)]
     InconsistentChangesetHash(HgNodeHash, HgNodeHash),
+    #[fail(display = "Bookmark {} does not exist", _0)] BookmarkNotFound(AsciiString),
 }
