@@ -4,6 +4,7 @@
   > infinitepush =
   > commitcloud =
   > rebase =
+  > share =
   > [ui]
   > ssh = python "$TESTDIR/dummyssh"
   > [infinitepush]
@@ -605,6 +606,73 @@ Create an extension that runs a restack command while we're syncing
   $ cd client2
   $ hg cloud sync -q
   $ hg tglog
+  @  715c1454ae33 'stack commit 2'
+  |
+  o  4b4f26511f8b 'race attempt'
+  |
+  o  d20a80d4def3 'base'
+  
+  $ cd ..
+
+Test interactions with  share extension
+
+Create a shared client directory
+
+  $ hg share client1 client1b
+  updating working directory
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat shared.rc >> client1b/.hg/hgrc
+  $ cd client1b
+  $ hg tglog
+  @  715c1454ae33 'stack commit 2'
+  |
+  o  4b4f26511f8b 'race attempt'
+  |
+  o  d20a80d4def3 'base'
+  
+Make a new commit to be shared
+
+  $ mkcommit "shared commit"
+  $ hg tglog
+  @  2c0ce859e76a 'shared commit'
+  |
+  o  715c1454ae33 'stack commit 2'
+  |
+  o  4b4f26511f8b 'race attempt'
+  |
+  o  d20a80d4def3 'base'
+  
+Check cloud sync backs up the commit
+
+  $ hg isbackedup
+  2c0ce859e76ae60f6f832279c75fae4d61da6be2 not backed up
+  $ hg cloud sync -q
+  $ hg isbackedup
+  2c0ce859e76ae60f6f832279c75fae4d61da6be2 backed up
+
+Check cloud sync in the source repo doesn't need to do anything
+
+  $ cd ../client1
+  $ hg tglog
+  o  2c0ce859e76a 'shared commit'
+  |
+  o  715c1454ae33 'stack commit 2'
+  |
+  @  4b4f26511f8b 'race attempt'
+  |
+  o  d20a80d4def3 'base'
+  
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud commits synchronized
+
+Check cloud sync pulls in the shared commit in the other client
+
+  $ cd ../client2
+  $ hg cloud sync -q
+  $ hg tglog
+  o  2c0ce859e76a 'shared commit'
+  |
   @  715c1454ae33 'stack commit 2'
   |
   o  4b4f26511f8b 'race attempt'

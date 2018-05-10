@@ -440,12 +440,14 @@ def pushbackup(ui, repo, newheads, localheads, localbookmarks, dest, **opts):
                                               infinitepushbookmarks)
 
     # Update the infinitepush local state.
+    srcrepo = shareutil.getsrcrepo(repo)
     infinitepush.backupcommands._writelocalbackupstate(
-            repo.vfs, list(localheads), localbookmarks)
+            srcrepo.vfs, list(localheads), localbookmarks)
 
 def recordbackup(ui, repo, newheads):
     """Record that the given heads are already backed up."""
     backupstate = infinitepush.backupcommands._readlocalbackupstate(ui, repo)
     backupheads = set(backupstate.heads) | set(newheads)
+    srcrepo = shareutil.getsrcrepo(repo)
     infinitepush.backupcommands._writelocalbackupstate(
-            repo.vfs, list(backupheads), backupstate.localbookmarks)
+            srcrepo.vfs, list(backupheads), backupstate.localbookmarks)
