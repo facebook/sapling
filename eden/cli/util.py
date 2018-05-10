@@ -35,6 +35,10 @@ class EdenStartError(Exception):
     pass
 
 
+class ShutdownError(Exception):
+    pass
+
+
 class HealthStatus(object):
 
     def __init__(self, status: int, pid: Optional[int], detail: str) -> None:

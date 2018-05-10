@@ -22,7 +22,9 @@ from eden.thrift import EdenNotRunningError
 from facebook.eden import EdenService
 
 from . import (
+    buck,
     config as config_mod,
+    daemon,
     debug as debug_mod,
     doctor as doctor_mod,
     mtab,
@@ -34,7 +36,7 @@ from . import (
 )
 from .cmd_util import create_config
 from .subcmd import Subcmd
-from .util import print_stderr
+from .util import ShutdownError, print_stderr
 
 
 subcmd = subcmd_mod.Decorator()
@@ -287,7 +289,9 @@ re-run `eden clone` with --allow-empty-repo"""
             print("edenfs daemon is not currently running.  Starting edenfs...")
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
-            exit_code = start_daemon(config, args.daemon_binary, args.edenfs_args)
+            exit_code = daemon.start_daemon(
+                config, args.daemon_binary, args.edenfs_args
+            )
             if exit_code != 0:
                 return exit_code
 
@@ -511,7 +515,7 @@ class StartCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
-        return start_daemon(
+        return daemon.start_daemon(
             config,
             args.daemon_binary,
             args.edenfs_args,
@@ -520,49 +524,6 @@ class StartCmd(Subcmd):
             gdb_args=args.gdb_arg,
             strace_file=args.strace,
             foreground=args.foreground,
-        )
-
-
-def find_buck_projects_in_repo(path: str) -> List[str]:
-    # While fbsource has a top level buckconfig, we don't really use
-    # it in our projects today.  Instead, our projects tend to have
-    # their own configuration files one level down.  This glob()
-    # finds those directories for us.
-    buck_configs = glob.glob(f"{path}/*/.buckconfig")
-    projects = [os.path.dirname(config) for config in buck_configs]
-    if os.path.isfile(f"{path}/.buckconfig"):
-        projects.append(path)
-    return projects
-
-
-def stop_buckd_for_path(path: str) -> None:
-    print(f"Stopping buck in {path}...")
-    subprocess.run(
-        # Using BUCKVERSION=last here to avoid triggering a download
-        # of a new version of buck just to kill off buck
-        ["env", "BUCKVERSION=last", "buck", "kill"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        cwd=path,
-    )
-
-
-def stop_buckd_for_repo(path: str) -> None:
-    """Stop the major buckd instances that are likely to be running for path"""
-    for project in find_buck_projects_in_repo(path):
-        stop_buckd_for_path(project)
-
-
-def buck_clean_repo(path: str) -> None:
-    for project in find_buck_projects_in_repo(path):
-        print(f"Cleaning buck in {project}...")
-        subprocess.run(
-            # Using BUCKVERSION=last here to avoid triggering a download
-            # of a new version of buck just to remove some dirs
-            ["env", "NO_BUCKD=true", "BUCKVERSION=last", "buck", "clean"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            cwd=project,
         )
 
 
@@ -575,7 +536,7 @@ def stop_aux_processes(client) -> None:
 
     for repo in active_mount_points:
         if repo is not None:
-            stop_buckd_for_repo(repo)
+            buck.stop_buckd_for_repo(repo)
 
     # TODO: intelligently stop nuclide-server associated with eden
     # print('Stopping nuclide-server...')
@@ -643,7 +604,9 @@ class RestartCmd(Subcmd):
 
         if stopping:
             assert isinstance(pid, int)
-            wait_for_shutdown(self.config, pid, timeout=self.args.shutdown_timeout)
+            daemon.wait_for_shutdown(
+                self.config, pid, timeout=self.args.shutdown_timeout
+            )
             self._start()
         elif pid is None:
             self.msg("edenfs is not currently running.")
@@ -659,63 +622,11 @@ class RestartCmd(Subcmd):
 
     def _start(self) -> None:
         self.msg("Starting edenfs...")
-        start_daemon(self.config)
+        daemon.start_daemon(self.config)
 
     def _graceful_start(self) -> None:
         self.msg("Performing a graceful restart...")
-        start_daemon(self.config, takeover=True)
-
-
-def start_daemon(
-    config: config_mod.Config,
-    daemon_binary: Optional[str] = None,
-    edenfs_args: Optional[List[str]] = None,
-    takeover: bool = False,
-    gdb: bool = False,
-    gdb_args: Optional[List[str]] = None,
-    strace_file: Optional[str] = None,
-    foreground: bool = False,
-    timeout: Optional[float] = None,
-) -> int:
-    # If this is the first time running the daemon, the ~/.eden directory
-    # structure needs to be set up.
-    # TODO(mbolin): Check whether the user is running as sudo/root. In general,
-    # we want to avoid creating ~/.eden as root.
-    _ensure_dot_eden_folder_exists(config)
-
-    if daemon_binary is None:
-        valid_daemon_binary = _find_default_daemon_binary()
-        if valid_daemon_binary is None:
-            print_stderr("error: unable to find edenfs executable")
-            return 1
-    else:
-        valid_daemon_binary = daemon_binary
-
-    # If the user put an "--" argument before the edenfs args, argparse passes
-    # that through to us.  Strip it out.
-    if edenfs_args and edenfs_args[0] == "--":
-        edenfs_args = edenfs_args[1:]
-
-    try:
-        health_info = config.spawn(
-            valid_daemon_binary,
-            edenfs_args,
-            takeover=takeover,
-            gdb=gdb,
-            gdb_args=gdb_args,
-            strace_file=strace_file,
-            foreground=foreground,
-            timeout=timeout,
-        )
-    except config_mod.EdenStartError as ex:
-        print_stderr("error: {}", ex)
-        return 1
-    print(
-        "Started edenfs (pid {}). Logs available at {}".format(
-            health_info.pid, config.get_log_path()
-        )
-    )
-    return 0
+        daemon.start_daemon(self.config, takeover=True)
 
 
 @subcmd("rage", "Prints diagnostic information about eden")
@@ -751,39 +662,11 @@ class RageCmd(Subcmd):
         return 0
 
 
-def _find_default_daemon_binary() -> Optional[str]:
-    # By default, we look for the daemon executable alongside this file.
-    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    candidate = os.path.join(script_dir, "edenfs")
-    permissions = os.R_OK | os.X_OK
-    if os.access(candidate, permissions):
-        return candidate
-
-    # This is where the binary will be found relative to this file when it is
-    # run out of buck-out in debug mode.
-    candidate = os.path.normpath(os.path.join(script_dir, "../fs/service/edenfs"))
-    if os.access(candidate, permissions):
-        return candidate
-    else:
-        return None
-
-
-def _ensure_dot_eden_folder_exists(config: config_mod.Config) -> None:
-    """Creates the ~/.eden folder as specified by --config-dir/$EDEN_CONFIG_DIR.
-    If the ~/.eden folder already exists, it will be left alone.
-    """
-    config.get_or_create_path_to_rocks_db()
-
-
 SHUTDOWN_EXIT_CODE_NORMAL = 0
 SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN = 0
 SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 SHUTDOWN_EXIT_CODE_ERROR = 4
-
-
-class ShutdownError(Exception):
-    pass
 
 
 @subcmd("stop", "Shutdown the daemon", aliases=["shutdown"])
@@ -819,7 +702,7 @@ class StopCmd(Subcmd):
             return SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
 
         try:
-            if wait_for_shutdown(config, pid, timeout=args.timeout):
+            if daemon.wait_for_shutdown(config, pid, timeout=args.timeout):
                 print_stderr("edenfs exited cleanly.")
                 return SHUTDOWN_EXIT_CODE_NORMAL
             else:
@@ -828,74 +711,6 @@ class StopCmd(Subcmd):
         except ShutdownError as ex:
             print_stderr("Error: " + str(ex))
             return SHUTDOWN_EXIT_CODE_ERROR
-
-
-def wait_for_shutdown(
-    config: config_mod.Config, pid: int, timeout: float, kill_timeout: float = 5.0
-) -> bool:
-    """
-    Wait for a process to exit.
-
-    If it does not exit within `timeout` seconds kill it with SIGKILL.
-    Returns True if the process exited on its own or False if it only exited
-    after SIGKILL.
-
-    Throws a ShutdownError if we failed to kill the process with SIGKILL
-    (either because we failed to send the signal, or if the process still did
-    not exit within kill_timeout seconds after sending SIGKILL).
-    """
-    # Wait until the process exits on its own.
-    def process_exited() -> Optional[bool]:
-        try:
-            os.kill(pid, 0)
-        except OSError as ex:
-            if ex.errno == errno.ESRCH:
-                # The process has exited
-                return True
-            # EPERM is okay (and means the process is still running),
-            # anything else is unexpected
-            elif ex.errno != errno.EPERM:
-                raise
-        # Still running
-        return None
-
-    try:
-        util.poll_until(process_exited, timeout=timeout)
-        return True
-    except util.TimeoutError:
-        pass
-
-    # client.shutdown() failed to terminate the process within the specified
-    # timeout.  Take a more aggressive approach by sending SIGKILL.
-    print_stderr(
-        "error: sent shutdown request, but edenfs did not exit "
-        "within {} seconds. Attempting SIGKILL.",
-        timeout,
-    )
-    try:
-        os.kill(pid, signal.SIGKILL)
-    except OSError as ex:
-        if ex.errno == errno.ESRCH:
-            # The process exited before the SIGKILL was received.
-            # Treat this just like a normal shutdown since it exited on its
-            # own.
-            return True
-        elif ex.errno == errno.EPERM:
-            raise ShutdownError(
-                "Received EPERM when sending SIGKILL. "
-                "Perhaps edenfs failed to drop root privileges properly?"
-            )
-        else:
-            raise
-
-    try:
-        util.poll_until(process_exited, timeout=kill_timeout)
-        return False
-    except util.TimeoutError:
-        raise ShutdownError(
-            "edenfs process {} did not terminate within {} seconds of "
-            "sending SIGKILL.".format(pid, kill_timeout)
-        )
 
 
 def create_parser() -> argparse.ArgumentParser:
