@@ -551,6 +551,7 @@ fn main() {
             let changesets_cache_size = 100_000_000;
             let filenodes_cache_size = 100_000_000;
             let io_thread_num = 5;
+            let max_concurrent_requests_per_io_thread = 4;
             start_server(
                 &config.addr,
                 config.reponame,
@@ -564,6 +565,7 @@ fn main() {
                     changesets_cache_size,
                     filenodes_cache_size,
                     io_thread_num,
+                    max_concurrent_requests_per_io_thread,
                 ).expect("couldn't open blob state"),
                 root_logger.clone(),
                 config.ssl,

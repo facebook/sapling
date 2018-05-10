@@ -118,6 +118,7 @@ impl OpenableRepoType for RepoType {
                 ref changesets_cache_size,
                 ref filenodes_cache_size,
                 ref io_thread_num,
+                ref max_concurrent_requests_per_io_thread,
                 ..
             } => BlobRepo::new_test_manifold(
                 logger,
@@ -129,6 +130,7 @@ impl OpenableRepoType for RepoType {
                 *changesets_cache_size,
                 *filenodes_cache_size,
                 *io_thread_num,
+                *max_concurrent_requests_per_io_thread,
             )?,
             TestBlobDelayRocks(ref path, mean, stddev) => {
                 // We take in an arithmetic mean and stddev, and deduce a log normal
@@ -707,9 +709,9 @@ impl HgCommands for RepoClient {
                 })
                 .collect()
                 .map(|bookmarks| {
-                    let bookiter = bookmarks.into_iter().map(|(name, value)| {
-                        (Vec::from(name.to_string()), value)
-                    });
+                    let bookiter = bookmarks
+                        .into_iter()
+                        .map(|(name, value)| (Vec::from(name.to_string()), value));
                     HashMap::from_iter(bookiter)
                 })
                 .boxify()

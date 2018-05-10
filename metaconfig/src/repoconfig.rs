@@ -82,6 +82,10 @@ pub enum RepoType {
         filenodes_cache_size: usize,
         /// Blobstore io threads to use. Set to a default value if not set in config
         io_thread_num: usize,
+        /// This is a (hopefully) short term hack to overcome the problem of overloading Manifold.
+        /// It limits the number of simultaneous requests that can be sent from a single io thread
+        /// If not set then default value is used.
+        max_concurrent_requests_per_io_thread: usize,
     },
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database, and a log-normal delay is applied to access to simulate a remote store
@@ -213,6 +217,7 @@ struct RawRepoConfig {
     filenodes_cache_size: Option<usize>,
     io_thread_num: Option<usize>,
     cache_warmup: Option<RawCacheWarmupConfig>,
+    max_concurrent_requests_per_io_thread: Option<usize>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -253,6 +258,8 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
                     changesets_cache_size: this.changesets_cache_size.unwrap_or(100_000_000),
                     filenodes_cache_size: this.changesets_cache_size.unwrap_or(100_000_000),
                     io_thread_num: this.io_thread_num.unwrap_or(5),
+                    max_concurrent_requests_per_io_thread:
+                        this.max_concurrent_requests_per_io_thread.unwrap_or(4),
                 }
             }
             TestBlobDelayRocks => RepoType::TestBlobDelayRocks(

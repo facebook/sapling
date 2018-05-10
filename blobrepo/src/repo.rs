@@ -177,6 +177,7 @@ impl BlobRepo {
         changesets_cache_size: usize,
         filenodes_cache_size: usize,
         thread_num: usize,
+        max_concurrent_requests_per_io_thread: usize,
     ) -> Result<Self> {
         // TODO(stash): T28429403 use local region first, fallback to master if not found
         let connection_params = get_connection_params(
@@ -209,8 +210,12 @@ impl BlobRepo {
                 .expect("failed to create manifold blobrepo: recv remote failed");
             io_remotes.push(remote);
         }
-        let blobstore =
-            ManifoldBlob::new_with_prefix(bucket.to_string(), prefix, io_remotes.iter().collect());
+        let blobstore = ManifoldBlob::new_with_prefix(
+            bucket.to_string(),
+            prefix,
+            io_remotes.iter().collect(),
+            max_concurrent_requests_per_io_thread,
+        );
         let blobstore =
             CachingBlobstore::new(Arc::new(blobstore), usize::MAX, blobstore_cache_size);
 

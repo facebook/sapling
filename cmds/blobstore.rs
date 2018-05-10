@@ -57,7 +57,13 @@ fn main() {
     let mut core = Core::new().unwrap();
     let remote = core.remote();
 
-    let blobstore = ManifoldBlob::new_with_prefix(bucket, prefix, vec![&remote]);
+    let max_concurrent_requests_per_io_thread = 4;
+    let blobstore = ManifoldBlob::new_with_prefix(
+        bucket,
+        prefix,
+        vec![&remote],
+        max_concurrent_requests_per_io_thread,
+    );
 
     let future = match matches.subcommand() {
         ("fetch", Some(sub_m)) => {

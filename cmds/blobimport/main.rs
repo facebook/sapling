@@ -333,7 +333,13 @@ fn open_blobstore<P: Into<PathBuf>>(
                 .context("Failed to open rocksdb blob store")?)
         }
         BlobstoreType::Manifold(bucket) => {
-            let mb: ManifoldBlob = ManifoldBlob::new_may_panic(bucket, vec![remote]);
+            // Use default value
+            let max_concurrent_requests_per_io_thread = 4;
+            let mb: ManifoldBlob = ManifoldBlob::new_may_panic(
+                bucket,
+                vec![remote],
+                max_concurrent_requests_per_io_thread,
+            );
             Arc::new(mb)
         }
     };
