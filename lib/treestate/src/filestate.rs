@@ -81,3 +81,28 @@ pub struct FileStateV2 {
     /// Path copied from.
     pub copied: Option<Box<[u8]>>,
 }
+
+#[cfg(test)]
+use rand;
+
+#[cfg(test)]
+impl rand::Rand for FileStateV2 {
+    fn rand<R: rand::Rng>(rng: &mut R) -> Self {
+        let mode = rng.gen();
+        let size = rng.gen();
+        let mtime = rng.gen();
+        let state = StateFlags::from_bits_truncate(rng.gen());
+        let copied = if state.contains(StateFlags::COPIED) {
+            Some(b"copied_source".to_vec().into_boxed_slice())
+        } else {
+            None
+        };
+        FileStateV2 {
+            mode,
+            size,
+            mtime,
+            state,
+            copied,
+        }
+    }
+}

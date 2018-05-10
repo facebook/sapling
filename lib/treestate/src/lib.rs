@@ -22,6 +22,9 @@ extern crate itertools;
 extern crate quickcheck;
 
 #[cfg(test)]
+extern crate rand;
+
+#[cfg(test)]
 extern crate tempdir;
 
 extern crate twox_hash;
