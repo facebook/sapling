@@ -537,3 +537,81 @@ Expected result: client2 should be moved to 68e035cc1996
   @  68e035cc1996 'commit2 amended amended rebased amended rebased amended'
   |
   ~
+
+Clean up by hiding some commits, and create a new stack
+
+  $ hg update d20a80d4def3 -q
+  $ hg hide a7bb357e7299
+  hiding commit a7bb357e7299 "commit1 amended"
+  hiding commit 41f3b9359864 "commit2 amended"
+  hiding commit 8134e74ecdc8 "commit2 amended amended"
+  hiding commit fada67350ab0 "commit2 amended amended amended amended amended"
+  hiding commit 68e035cc1996 "commit2 amended amended rebased amended rebased am"
+  5 changesets hidden
+  removing bookmark "bookmark1 (was at: 8134e74ecdc8)"
+  removing bookmark "bookmark1-testhost (was at: a7bb357e7299)"
+  2 bookmarks removed
+  $ hg cloud sync -q
+  $ mkcommit "stack commit 1"
+  $ mkcommit "stack commit 2"
+  $ hg cloud sync -q
+  $ cd ..
+  $ cd client1
+  $ hg update d20a80d4def3 -q
+  $ hg cloud sync -q
+  $ hg tglog
+  o  f2ccc2716735 'stack commit 2'
+  |
+  o  74473a0f136f 'stack commit 1'
+  |
+  @  d20a80d4def3 'base'
+  
+Test race between syncing obsmarkers and a transaction creating new ones
+
+Create an extension that runs a restack command while we're syncing
+
+  $ cat > $TESTTMP/syncrace.py << EOF
+  > from mercurial import extensions
+  > from hgext.commitcloud import service
+  > def extsetup(ui):
+  >     def wrapget(orig, *args, **kwargs):
+  >         serv = orig(*args, **kwargs)
+  >         class WrappedService(serv.__class__):
+  >             def updatereferences(self, *args, **kwargs):
+  >                 res = super(WrappedService, self).updatereferences(*args, **kwargs)
+  >                 ui.system('hg rebase --restack')
+  >                 return res
+  >         serv.__class__ = WrappedService
+  >         return serv
+  >     extensions.wrapfunction(service, 'get', wrapget)
+  > EOF
+
+  $ hg next -q
+  [74473a] stack commit 1
+  $ hg amend -m "race attempt" --no-rebase
+  hint[amend-restack]: descendants of 74473a0f136f are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
+  $ hg cloud sync -q --config extensions.syncrace=$TESTTMP/syncrace.py
+  rebasing 17:f2ccc2716735 "stack commit 2"
+  $ hg cloud sync -q
+  $ hg tglog
+  o  715c1454ae33 'stack commit 2'
+  |
+  @  4b4f26511f8b 'race attempt'
+  |
+  o  d20a80d4def3 'base'
+  
+  $ cd ..
+  $ cd client2
+  $ hg cloud sync -q
+  $ hg tglog
+  o  715c1454ae33 'stack commit 2'
+  |
+  o  4b4f26511f8b 'race attempt'
+  |
+  | @  f2ccc2716735 'stack commit 2'
+  | |
+  | x  74473a0f136f 'stack commit 1'
+  |/
+  o  d20a80d4def3 'base'
+  
