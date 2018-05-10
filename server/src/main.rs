@@ -327,10 +327,26 @@ fn connection_acceptor(
                     }
                 };
                 ssh_server_mux(sock, remote.clone())
+                    .map(Some)
+                    .or_else({
+                        let root_log = root_log.clone();
+                        move |err| {
+                            error!(
+                                root_log,
+                                "Error while reading preamble: {}", err
+                            );
+                            Ok(None)
+                        }
+                    })
             }
         })
         .for_each(
-            move |stdio| match repo_senders.get(&stdio.preamble.reponame) {
+            move |maybe_stdio| {
+                if maybe_stdio.is_none() {
+                    return Ok(()).into_future().boxify();
+                }
+                let stdio = maybe_stdio.unwrap();
+                match repo_senders.get(&stdio.preamble.reponame) {
                 Some(sender) => sender
                     .clone()
                     .send(stdio)
@@ -350,7 +366,8 @@ fn connection_acceptor(
                     error!(root_log, "Unknown repo: {}", stdio.preamble.reponame);
                     Ok(()).into_future().boxify()
                 }
-            },
+            }
+        },
         );
 
     core.run(connection_acceptor)
