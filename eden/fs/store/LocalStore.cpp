@@ -12,6 +12,7 @@
 #include <folly/Format.h>
 #include <folly/Optional.h>
 #include <folly/String.h>
+#include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>
@@ -92,6 +93,16 @@ StoreResult LocalStore::get(KeySpace keySpace, const Hash& id) const {
   return get(keySpace, id.getBytes());
 }
 
+// This is the fallback implementation for stores that don't have any
+// internal support for asynchronous fetches.  This just performs the
+// fetch and wraps it in a future
+folly::Future<StoreResult> LocalStore::getFuture(
+    KeySpace keySpace,
+    folly::ByteRange key) const {
+  return folly::makeFutureWith(
+      [keySpace, key, this] { return get(keySpace, key); });
+}
+
 // TODO(mbolin): Currently, all objects in our RocksDB are Git objects. We
 // probably want to namespace these by column family going forward, at which
 // point we might want to have a GitLocalStore that delegates to an
@@ -106,6 +117,18 @@ std::unique_ptr<Tree> LocalStore::getTree(const Hash& id) const {
   return deserializeGitTree(id, result.bytes());
 }
 
+folly::Future<std::unique_ptr<Tree>> LocalStore::getTreeFuture(
+    const Hash& id) const {
+  return getFuture(KeySpace::TreeFamily, id.getBytes())
+      .then([id](folly::Try<StoreResult>&& dataTry) {
+        auto& data = dataTry.value();
+        if (!data.isValid()) {
+          return std::unique_ptr<Tree>(nullptr);
+        }
+        return deserializeGitTree(id, data.bytes());
+      });
+}
+
 std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
   // We have to hold this string in scope while we deserialize and build
   // the blob; otherwise, the results are undefined.
@@ -115,6 +138,19 @@ std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
   }
   auto buf = result.extractIOBuf();
   return deserializeGitBlob(id, &buf);
+}
+
+folly::Future<std::unique_ptr<Blob>> LocalStore::getBlobFuture(
+    const Hash& id) const {
+  return getFuture(KeySpace::BlobFamily, id.getBytes())
+      .then([id](folly::Try<StoreResult>&& dataTry) {
+        auto& data = dataTry.value();
+        if (!data.isValid()) {
+          return std::unique_ptr<Blob>(nullptr);
+        }
+        auto buf = data.extractIOBuf();
+        return deserializeGitBlob(id, &buf);
+      });
 }
 
 Optional<BlobMetadata> LocalStore::getBlobMetadata(const Hash& id) const {

@@ -18,6 +18,8 @@
 namespace folly {
 template <typename T>
 class Optional;
+template <typename T>
+class Future;
 }
 
 namespace facebook {
@@ -81,6 +83,10 @@ class LocalStore {
   virtual StoreResult get(KeySpace keySpace, folly::ByteRange key) const = 0;
   StoreResult get(KeySpace keySpace, const Hash& id) const;
 
+  FOLLY_NODISCARD virtual folly::Future<StoreResult> getFuture(
+      KeySpace keySpace,
+      folly::ByteRange key) const;
+
   /**
    * Get a Tree from the store.
    *
@@ -89,6 +95,9 @@ class LocalStore {
    * object).
    */
   std::unique_ptr<Tree> getTree(const Hash& id) const;
+
+  FOLLY_NODISCARD folly::Future<std::unique_ptr<Tree>> getTreeFuture(
+      const Hash& id) const;
 
   /**
    * Get a Blob from the store.
@@ -100,6 +109,9 @@ class LocalStore {
    * object).
    */
   std::unique_ptr<Blob> getBlob(const Hash& id) const;
+
+  FOLLY_NODISCARD folly::Future<std::unique_ptr<Blob>> getBlobFuture(
+      const Hash& id) const;
 
   /**
    * Get the size of a blob and the SHA-1 hash of its contents.
