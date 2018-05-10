@@ -28,10 +28,8 @@ mod fdio;
 pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> Result<()> {
     if sub.is_present("stdio") {
         if let Some(repo) = main.value_of("repository") {
-            let mut path = PathBuf::from(repo);
-            path.push(".hg");
-            path.push("mononoke.sock");
-
+            let mononoke_path = sub.value_of("mononoke-path").unwrap();
+            let mut path = PathBuf::from(mononoke_path);
             return ssh_relay(path, repo);
         }
         bail_msg!("Missing repository");

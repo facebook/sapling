@@ -42,6 +42,9 @@ fn main() {
             SubCommand::with_name("serve")
                 .about("start server")
                 .arg(Arg::from_usage(
+                    "--mononoke-path <PATH> 'path to connect to mononoke server'",
+                ))
+                .arg(Arg::from_usage(
                     "-A, --accesslog [FILE] 'name of access log file'",
                 ))
                 .arg(Arg::from_usage("-d, --daemon 'run server in background'"))

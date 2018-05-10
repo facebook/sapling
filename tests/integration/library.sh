@@ -2,13 +2,13 @@
 # Library routines and initial setup for Mononoke-related tests.
 
 function mononoke {
-  $MONONOKE_SERVER "$@" --debug -P "$TESTTMP/mononoke-config-rocks" --configrepo_book local_master >> "$TESTTMP/mononoke.out" 2>&1 &
+  "$MONONOKE_SERVER" "$@" --debug --listening-path "$TESTTMP"/listening-path -P "$TESTTMP/mononoke-config-rocks" --configrepo_book local_master >> "$TESTTMP/mononoke.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
-  local socket="$1/.hg/mononoke.sock"
+  local socket="$TESTTMP/listening-path"
   local attempts=100
   until [[ -S $socket || $attempts -le 0 ]]; do
     attempts=$((attempts - 1))

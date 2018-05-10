@@ -66,6 +66,7 @@ mod errors;
 mod repo;
 mod listener;
 
+use std::collections::HashMap;
 use std::io;
 use std::mem;
 use std::ops::DerefMut;
@@ -143,6 +144,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             -C, --configrepo_hash [HASH]                         'config repo commit hash'
 
             <crbook>      -C, --configrepo_book [BOOK]           'config repo bookmark'
+
+                          --listening-path <PATH>                'unix domain socket path'
 
             -p, --thrift_port [PORT] 'if provided the thrift server will start on this port'
 
@@ -244,7 +247,11 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         .wait()
 }
 
-fn start_repo_listeners<I>(repos: I, root_log: &Logger) -> Result<Vec<JoinHandle<!>>>
+fn start_repo_listeners<I>(
+    repos: I,
+    root_log: &Logger,
+    sockname: PathBuf,
+) -> Result<Vec<JoinHandle<!>>>
 where
     I: IntoIterator<Item = (String, RepoConfig)>,
 {
@@ -253,23 +260,38 @@ where
     // - initialize the repo
     // - wait for connections in that thread
 
-    let handles: Vec<_> = repos
+    let mut repo_senders = HashMap::new();
+
+    let mut handles: Vec<_> = repos
         .into_iter()
-        .map(move |(reponame, config)| {
+        .map(|(reponame, config)| {
             info!(root_log, "Start listening for repo {:?}", config.repotype);
 
+            // Buffer size doesn't make much sense. `.send()` consumes the sender, so we clone
+            // the sender. However each clone creates one more entry in the channel.
+            let (sender, receiver) = mpsc::channel(1);
+            repo_senders.insert(reponame.clone(), sender);
             // start a thread for each repo to own the reactor and start listening for
             // connections and detach it
             thread::Builder::new()
                 .name(format!("listener_{:?}", config.repotype))
                 .spawn({
                     let root_log = root_log.clone();
-                    move || repo_listen(reponame, config, root_log.clone())
+                    move || repo_listen(reponame, config, root_log, receiver)
                 })
                 .map_err(Error::from)
         })
         .collect();
 
+    let conn_acceptor_handle = thread::Builder::new()
+        .name(format!("connection_acceptor"))
+        .spawn({
+            let root_log = root_log.clone();
+            move || connection_acceptor(sockname, root_log, repo_senders)
+        })
+        .map_err(Error::from);
+
+    handles.push(conn_acceptor_handle);
     if handles.iter().any(Result::is_err) {
         for err in handles.into_iter().filter_map(Result::err) {
             crit!(root_log, "Failed to spawn listener thread"; SlogKVError(err));
@@ -282,11 +304,72 @@ where
     Ok(handles.into_iter().filter_map(Result::ok).collect())
 }
 
+// This function accepts connections, reads Preamble and routes request to a thread responsible for
+// a particular repo
+fn connection_acceptor(
+    sockname: PathBuf,
+    root_log: Logger,
+    repo_senders: HashMap<String, mpsc::Sender<Stdio>>,
+) -> ! {
+    let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
+    let handle = core.handle();
+    let remote = core.remote();
+    let connection_acceptor = listener::listener(sockname, &handle)
+        .expect("failed to create listener")
+        .map_err(Error::from)
+        .and_then({
+            let root_log = root_log.clone();
+            move |sock| {
+                match sock.peer_addr() {
+                    Ok(addr) => info!(root_log, "New connection from {:?}", addr),
+                    Err(err) => {
+                        error!(root_log, "Failed to get peer addr"; SlogKVError(Error::from(err)))
+                    }
+                };
+                ssh_server_mux(sock, remote.clone())
+            }
+        })
+        .for_each(
+            move |stdio| match repo_senders.get(&stdio.preamble.reponame) {
+                Some(sender) => sender
+                    .clone()
+                    .send(stdio)
+                    .map(|_| ())
+                    .or_else({
+                        let root_log = root_log.clone();
+                        move |err| {
+                            error!(
+                                root_log,
+                                "Failed to send request to a repo processing thread: {}", err
+                            );
+                            Ok(())
+                        }
+                    })
+                    .boxify(),
+                None => {
+                    error!(root_log, "Unknown repo: {}", stdio.preamble.reponame);
+                    Ok(()).into_future().boxify()
+                }
+            },
+        );
+
+    core.run(connection_acceptor)
+        .expect("failure while running listener on tokio core");
+
+    // The server is an infinite stream of connections
+    unreachable!();
+}
+
 // Listener thread for a specific repo
-fn repo_listen(reponame: String, config: RepoConfig, root_log: Logger) -> ! {
+fn repo_listen(
+    reponame: String,
+    config: RepoConfig,
+    root_log: Logger,
+    input_stream: mpsc::Receiver<Stdio>,
+) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
     let scuba_table = config.scuba_table.clone();
-    let (sockname, repo) = repo::init_repo(
+    let (_, repo) = repo::init_repo(
         &root_log,
         &config.repotype,
         config.generation_cache_size,
@@ -298,123 +381,113 @@ fn repo_listen(reponame: String, config: RepoConfig, root_log: Logger) -> ! {
     let listen_log = root_log.new(o!("repo" => repo.path().clone()));
 
     let handle = core.handle();
-    let remote = core.remote();
     let repo = Arc::new(repo);
 
     let initial_warmup =
-        cache_warmup::cache_warmup(repo.blobrepo(), config.cache_warmup, listen_log.clone());
-
-    let server = listener::listener(sockname, &handle)
-        .expect("failed to create listener")
-        .map_err(Error::from)
-        .and_then({
-            let listen_log = listen_log.clone();
-            move |sock| {
-                match sock.peer_addr() {
-                    Ok(addr) => info!(listen_log, "New connection from {:?}", addr),
-                    Err(err) => {
-                        error!(listen_log, "Failed to get peer addr"; SlogKVError(Error::from(err)))
-                    }
-                };
-                ssh_server_mux(sock, remote.clone())
-            }
-        })
-        .for_each(move |stdio| {
-            // Have a connection. Extract std{in,out,err} streams for socket
-            let Stdio {
-                stdin,
-                stdout,
-                stderr,
-                preamble,
-            } = stdio;
-
-            let session_uuid = uuid::Uuid::new_v4();
-            let connect_time = Instant::now();
-            let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
-
-            let stderr_write = SenderBytesWrite {
-                chan: stderr.clone().wait(),
-            };
-            let drain = slog_term::PlainSyncDecorator::new(stderr_write);
-            let drain = slog_term::FullFormat::new(drain).build();
-            let drain = KVFilter::new(drain, Level::Critical).only_pass_any_on_all_keys(hashmap! {
-                "remote".into() => hashset!["true".into()],
-            });
-            let drain = slog::Duplicate::new(drain, listen_log.clone()).fuse();
-            let conn_log = Logger::root(drain, o![]);
-
-            let client_log = conn_log.new(o!("session_uuid" => format!("{}", session_uuid)));
-            // Construct a hg protocol handler
-            let proto_handler = HgProtoHandler::new(
-                stdin,
-                repo::RepoClient::new(repo.clone(), client_log),
-                sshproto::HgSshCommandDecode,
-                sshproto::HgSshCommandEncode,
-                &conn_log,
-                wireproto_calls.clone(),
-            );
-
-            // send responses back
-            let endres = if preamble.reponame == reponame {
-                proto_handler
-                    .map_err(Error::from)
-                    .forward(stdout)
-                    .map(|_| ())
-                    .boxify()
-            } else {
-                Err(ErrorKind::IncorrectRepoName(preamble.reponame).into())
-                    .into_future()
-                    .boxify()
-            };
-
-            // If we got an error at this point, then catch it, print a message and return
-            // Ok (if we allow the Error to propagate further it will shutdown the listener
-            // rather than just the connection). Unfortunately there's no way to print what the
-            // actual failing command was.
-            // TODO: seems to leave the client hanging?
-            let conn_log = conn_log.clone();
-            let endres = endres.or_else(move |err| {
-                error!(conn_log, "Command failed"; SlogKVError(err), "remote" => "true");
-                let res: Result<()> = Ok(());
-                res
+        cache_warmup::cache_warmup(repo.blobrepo(), config.cache_warmup, listen_log.clone())
+            .map_err({
+                let listen_log = listen_log.clone();
+                move |err| {
+                    error!(listen_log, "failed to warmup cache: {}", err);
+                    ()
+                }
             });
 
-            // Run the whole future asynchronously to allow new connections
-            match scuba_table {
-                None => {
-                    handle.spawn(asynchronize(move || endres).map_err(|_| ()));
-                }
-                Some(ref scuba_table) => {
-                    let scuba_table = scuba_table.clone();
-                    let repo_path = repo.path().clone();
-                    handle.spawn(
-                        asynchronize(move || {
-                            endres.map(move |_| {
-                                let scuba_client = ScubaClient::new(scuba_table);
+    let server = input_stream.for_each(move |stdio| {
+        // Have a connection. Extract std{in,out,err} streams for socket
+        let Stdio {
+            stdin,
+            stdout,
+            stderr,
+            preamble,
+        } = stdio;
 
-                                let mut wireproto_calls =
-                                    wireproto_calls.lock().expect("lock poisoned");
-                                let wireproto_calls =
-                                    mem::replace(wireproto_calls.deref_mut(), Vec::new());
+        let session_uuid = uuid::Uuid::new_v4();
+        let connect_time = Instant::now();
+        let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
 
-                                let mut sample = ScubaSample::new();
-                                sample.add("session_uuid", format!("{}", session_uuid));
-                                let elapsed_time = connect_time.elapsed();
-                                let elapsed_ms = elapsed_time.as_secs() * 1000
-                                    + elapsed_time.subsec_nanos() as u64 / 1000000;
-                                sample.add("time_elapsed_ms", elapsed_ms);
-                                sample.add("wireproto_commands", wireproto_calls);
-                                sample.add("repo", repo_path);
+        let stderr_write = SenderBytesWrite {
+            chan: stderr.clone().wait(),
+        };
+        let drain = slog_term::PlainSyncDecorator::new(stderr_write);
+        let drain = slog_term::FullFormat::new(drain).build();
+        let drain = KVFilter::new(drain, Level::Critical).only_pass_any_on_all_keys(hashmap! {
+            "remote".into() => hashset!["true".into()],
+        });
+        let drain = slog::Duplicate::new(drain, listen_log.clone()).fuse();
+        let conn_log = Logger::root(drain, o![]);
 
-                                scuba_client.log(&sample);
-                            })
-                        }).map_err(|_| ()),
-                    )
-                }
-            };
+        let client_log = conn_log.new(o!("session_uuid" => format!("{}", session_uuid)));
+        // Construct a hg protocol handler
+        let proto_handler = HgProtoHandler::new(
+            stdin,
+            repo::RepoClient::new(repo.clone(), client_log),
+            sshproto::HgSshCommandDecode,
+            sshproto::HgSshCommandEncode,
+            &conn_log,
+            wireproto_calls.clone(),
+        );
 
+        // send responses back
+        let endres = if preamble.reponame == reponame {
+            proto_handler
+                .map_err(Error::from)
+                .forward(stdout)
+                .map(|_| ())
+                .boxify()
+        } else {
+            Err(ErrorKind::IncorrectRepoName(preamble.reponame).into())
+                .into_future()
+                .boxify()
+        };
+
+        // If we got an error at this point, then catch it, print a message and return
+        // Ok (if we allow the Error to propagate further it will shutdown the listener
+        // rather than just the connection). Unfortunately there's no way to print what the
+        // actual failing command was.
+        // TODO: seems to leave the client hanging?
+        let conn_log = conn_log.clone();
+        let endres = endres.or_else(move |err| {
+            error!(conn_log, "Command failed"; SlogKVError(err), "remote" => "true");
             Ok(())
         });
+
+        // Run the whole future asynchronously to allow new connections
+        match scuba_table {
+            None => {
+                handle.spawn(asynchronize(move || endres).map_err(|_: Error| ()));
+            }
+            Some(ref scuba_table) => {
+                let scuba_table = scuba_table.clone();
+                let repo_path = repo.path().clone();
+                handle.spawn(
+                    asynchronize(move || {
+                        endres.map(move |_| {
+                            let scuba_client = ScubaClient::new(scuba_table);
+
+                            let mut wireproto_calls =
+                                wireproto_calls.lock().expect("lock poisoned");
+                            let wireproto_calls =
+                                mem::replace(wireproto_calls.deref_mut(), Vec::new());
+
+                            let mut sample = ScubaSample::new();
+                            sample.add("session_uuid", format!("{}", session_uuid));
+                            let elapsed_time = connect_time.elapsed();
+                            let elapsed_ms = elapsed_time.as_secs() * 1000
+                                + elapsed_time.subsec_nanos() as u64 / 1000000;
+                            sample.add("time_elapsed_ms", elapsed_ms);
+                            sample.add("wireproto_commands", wireproto_calls);
+                            sample.add("repo", repo_path);
+
+                            scuba_client.log(&sample);
+                        })
+                    }).map_err(|_| ()),
+                )
+            }
+        };
+
+        Ok(())
+    });
 
     let server = server.join(initial_warmup);
     core.run(server)
@@ -439,7 +512,15 @@ fn main() {
         };
 
         let config = get_config(root_log, &matches)?;
-        let repo_listeners = start_repo_listeners(config.repos.into_iter(), root_log)?;
+        let repo_listeners = start_repo_listeners(
+            config.repos.into_iter(),
+            root_log,
+            PathBuf::from(
+                matches
+                    .value_of("listening-path")
+                    .expect("listening path must be specified"),
+            ),
+        )?;
 
         for handle in vec![stats_aggregation]
             .into_iter()

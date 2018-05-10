@@ -22,5 +22,10 @@ hgcmd = sys.argv[2]
 if os.name == 'nt':
     # hack to make simple unix single quote quoting work on windows
     hgcmd = hgcmd.replace("'", '"')
+
+log = open("dummylog", "a+b")
+if 'hgcli' in hgcmd:
+    hgcmd += ' --mononoke-path listening-path'
+
 r = os.system(hgcmd)
 sys.exit(bool(r))
