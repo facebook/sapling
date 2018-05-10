@@ -17,6 +17,7 @@ extern crate futures_ext;
 extern crate futures_stats;
 #[macro_use]
 extern crate futures_trace;
+extern crate tokio;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_uds;
@@ -145,7 +146,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 
             <crbook>      -C, --configrepo_book [BOOK]           'config repo bookmark'
 
-                          --listening-path <PATH>                'unix domain socket path'
+                          --listening-host-port <PATH>           'tcp address to listen to in format `host:port`'
 
             -p, --thrift_port [PORT] 'if provided the thrift server will start on this port'
 
@@ -250,7 +251,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
 fn start_repo_listeners<I>(
     repos: I,
     root_log: &Logger,
-    sockname: PathBuf,
+    sockname: &str,
 ) -> Result<Vec<JoinHandle<!>>>
 where
     I: IntoIterator<Item = (String, RepoConfig)>,
@@ -260,6 +261,7 @@ where
     // - initialize the repo
     // - wait for connections in that thread
 
+    let sockname = String::from(sockname);
     let mut repo_senders = HashMap::new();
 
     let mut handles: Vec<_> = repos
@@ -287,7 +289,7 @@ where
         .name(format!("connection_acceptor"))
         .spawn({
             let root_log = root_log.clone();
-            move || connection_acceptor(sockname, root_log, repo_senders)
+            move || connection_acceptor(&sockname, root_log, repo_senders)
         })
         .map_err(Error::from);
 
@@ -307,14 +309,13 @@ where
 // This function accepts connections, reads Preamble and routes request to a thread responsible for
 // a particular repo
 fn connection_acceptor(
-    sockname: PathBuf,
+    sockname: &str,
     root_log: Logger,
     repo_senders: HashMap<String, mpsc::Sender<Stdio>>,
 ) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
-    let handle = core.handle();
     let remote = core.remote();
-    let connection_acceptor = listener::listener(sockname, &handle)
+    let connection_acceptor = listener::listener(sockname)
         .expect("failed to create listener")
         .map_err(Error::from)
         .and_then({
@@ -326,27 +327,21 @@ fn connection_acceptor(
                         error!(root_log, "Failed to get peer addr"; SlogKVError(Error::from(err)))
                     }
                 };
-                ssh_server_mux(sock, remote.clone())
-                    .map(Some)
-                    .or_else({
-                        let root_log = root_log.clone();
-                        move |err| {
-                            error!(
-                                root_log,
-                                "Error while reading preamble: {}", err
-                            );
-                            Ok(None)
-                        }
-                    })
+                ssh_server_mux(sock, remote.clone()).map(Some).or_else({
+                    let root_log = root_log.clone();
+                    move |err| {
+                        error!(root_log, "Error while reading preamble: {}", err);
+                        Ok(None)
+                    }
+                })
             }
         })
-        .for_each(
-            move |maybe_stdio| {
-                if maybe_stdio.is_none() {
-                    return Ok(()).into_future().boxify();
-                }
-                let stdio = maybe_stdio.unwrap();
-                match repo_senders.get(&stdio.preamble.reponame) {
+        .for_each(move |maybe_stdio| {
+            if maybe_stdio.is_none() {
+                return Ok(()).into_future().boxify();
+            }
+            let stdio = maybe_stdio.unwrap();
+            match repo_senders.get(&stdio.preamble.reponame) {
                 Some(sender) => sender
                     .clone()
                     .send(stdio)
@@ -367,8 +362,7 @@ fn connection_acceptor(
                     Ok(()).into_future().boxify()
                 }
             }
-        },
-        );
+        });
 
     core.run(connection_acceptor)
         .expect("failure while running listener on tokio core");
@@ -532,11 +526,9 @@ fn main() {
         let repo_listeners = start_repo_listeners(
             config.repos.into_iter(),
             root_log,
-            PathBuf::from(
-                matches
-                    .value_of("listening-path")
-                    .expect("listening path must be specified"),
-            ),
+            matches
+                .value_of("listening-host-port")
+                .expect("listening path must be specified"),
         )?;
 
         for handle in vec![stats_aggregation]

@@ -4,9 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::fs;
 use std::io;
-use std::path::Path;
+use std::net::SocketAddr;
 
 use failure::Error;
 use futures::{Future, Stream};
@@ -15,48 +14,37 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use bytes::Bytes;
 use errors::*;
-use tokio_core::reactor::{Handle, Remote};
+use tokio::net::{TcpListener, TcpStream};
+use tokio_core::reactor::Remote;
 use tokio_io::{AsyncRead, AsyncWrite, IoStream};
 use tokio_io::codec::{FramedRead, FramedWrite};
-use tokio_uds::{UnixListener, UnixStream};
 
 use sshrelay::{Preamble, SshDecoder, SshEncoder, SshMsg, SshStream};
 
-pub fn listener<P>(sockname: P, handle: &Handle) -> io::Result<IoStream<UnixStream>>
+pub fn listener<P>(sockname: P) -> io::Result<IoStream<TcpStream>>
 where
-    P: AsRef<Path>,
+    P: AsRef<str>,
 {
     let sockname = sockname.as_ref();
     let listener;
+    let addr: SocketAddr = sockname.parse().unwrap();
 
     // First bind the socket. If the socket already exists then try connecting to it;
     // if there's no connection then replace it with a new one. (This assumes that simply
     // connecting is a no-op).
     loop {
-        match UnixListener::bind(sockname, handle) {
+        match TcpListener::bind(&addr) {
             Ok(l) => {
                 listener = l;
                 break;
             }
             Err(err) => {
-                if err.kind() == io::ErrorKind::AddrInUse {
-                    // socket already exists - try connecting to it, and
-                    // if the connection succeed then there's someone else already
-                    // serving this repo; otherwise delete and try again
-                    if let Ok(_conn) = UnixStream::connect(sockname, &handle) {
-                        // Connect succeeded, so there's someone already serving
-                        return Err(err);
-                    }
-                    fs::remove_file(sockname)?;
-                // try again
-                } else {
-                    return Err(err);
-                }
+                return Err(err);
             }
         }
     }
 
-    Ok(listener.incoming().map(|(socket, _)| socket).boxify())
+    Ok(listener.incoming().boxify())
 }
 
 pub struct Stdio {

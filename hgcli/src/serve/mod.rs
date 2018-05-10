@@ -4,17 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::path::{Path, PathBuf};
+use std::net::SocketAddr;
 
 use bytes::Bytes;
-use failure::ResultExt;
 use futures::{future, stream, Future, Sink, Stream};
 
 use tokio_core::reactor::Core;
 use tokio_io::AsyncRead;
 use tokio_io::codec::{FramedRead, FramedWrite};
 
-use tokio_uds::UnixStream;
+use tokio::net::TcpStream;
 
 use clap::ArgMatches;
 
@@ -29,29 +28,29 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> Result<()> {
     if sub.is_present("stdio") {
         if let Some(repo) = main.value_of("repository") {
             let mononoke_path = sub.value_of("mononoke-path").unwrap();
-            let mut path = PathBuf::from(mononoke_path);
-            return ssh_relay(path, repo);
+            return ssh_relay(mononoke_path, repo);
         }
         bail_msg!("Missing repository");
     }
     bail_msg!("Only stdio server is supported");
 }
 
-fn ssh_relay<P: AsRef<Path>>(path: P, repo: &str) -> Result<()> {
+fn ssh_relay<P: AsRef<str>>(path: P, repo: &str) -> Result<()> {
     let path = path.as_ref();
 
     let mut reactor = Core::new()?;
-    let handle = reactor.handle();
 
     // Get Streams for stdin/out/err
     let stdin = fdio::stdin();
     let stdout = fdio::stdout();
     let stderr = fdio::stderr();
 
+    let addr: SocketAddr = path.parse()?;
     // Open socket
-    let socket = UnixStream::connect(&path, &handle).with_context(|_| {
-        format_err!("connecting to Mononoke socket '{}' failed", path.display())
-    })?;
+    let socket = TcpStream::connect(&addr)
+        .map_err(|err| format_err!("connecting to Mononoke {} socket '{}' failed", path, err));
+
+    let socket = reactor.run(socket)?;
 
     // Wrap the socket with the ssh codec
     let (socket_read, socket_write) = socket.split();

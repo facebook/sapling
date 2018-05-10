@@ -1,21 +1,39 @@
 #!/bin/bash
 # Library routines and initial setup for Mononoke-related tests.
 
+function get_free_socket {
+
+# From https://unix.stackexchange.com/questions/55913/whats-the-easiest-way-to-find-an-unused-local-port
+  cat >> "$TESTTMP/get_free_socket.py" <<EOF
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(('', 0))
+addr = s.getsockname()
+print(addr[1])
+s.close()
+EOF
+
+  python "$TESTTMP/get_free_socket.py"
+}
+
 function mononoke {
-  "$MONONOKE_SERVER" "$@" --debug --listening-path "$TESTTMP"/listening-path -P "$TESTTMP/mononoke-config-rocks" --configrepo_book local_master >> "$TESTTMP/mononoke.out" 2>&1 &
+  export MONONOKE_SOCKET
+  MONONOKE_SOCKET=$(get_free_socket)
+  "$MONONOKE_SERVER" "$@" --debug --listening-host-port 127.0.0.1:"$MONONOKE_SOCKET" -P "$TESTTMP/mononoke-config-rocks" --configrepo_book local_master >> "$TESTTMP/mononoke.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
-  local socket="$TESTTMP/listening-path"
   local attempts=100
-  until [[ -S $socket || $attempts -le 0 ]]; do
-    attempts=$((attempts - 1))
+  for _ in $(seq 1 $attempts); do
+    curl 127.0.0.1:"$MONONOKE_SOCKET" 2>&1 | grep -q 'Empty reply' && break
     sleep 0.1
   done
-  if [[ ! -S "$socket" ]]; then
+
+  if ! curl 127.0.0.1:"$MONONOKE_SOCKET" 2>&1 | grep -q 'Empty reply'; then
     echo "Mononoke did not start" >&2
+    cat "$TESTTMP/mononoke.out"
     exit 1
   fi
 }

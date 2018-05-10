@@ -25,7 +25,7 @@ if os.name == 'nt':
 
 log = open("dummylog", "a+b")
 if 'hgcli' in hgcmd:
-    hgcmd += ' --mononoke-path listening-path'
+    hgcmd += ' --mononoke-path 127.0.0.1:' + os.getenv('MONONOKE_SOCKET')
 
 r = os.system(hgcmd)
 sys.exit(bool(r))
