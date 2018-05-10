@@ -11,6 +11,7 @@
 #include <folly/Format.h>
 #include <folly/Optional.h>
 #include <folly/String.h>
+#include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>
@@ -182,7 +183,8 @@ namespace facebook {
 namespace eden {
 
 RocksDbLocalStore::RocksDbLocalStore(AbsolutePathPiece pathToRocksDb)
-    : dbHandles_(pathToRocksDb.stringPiece(), columnFamilies()) {}
+    : dbHandles_(pathToRocksDb.stringPiece(), columnFamilies()),
+      ioPool_(12, "RocksLocalStore") {}
 
 RocksDbLocalStore::~RocksDbLocalStore() {
 #ifdef FOLLY_SANITIZE_ADDRESS
@@ -227,6 +229,27 @@ StoreResult RocksDbLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)
         status, "failed to get ", folly::hexlify(key), " from local store");
   }
   return StoreResult(std::move(value));
+}
+
+FOLLY_NODISCARD folly::Future<StoreResult> RocksDbLocalStore::getFuture(
+    KeySpace keySpace,
+    folly::ByteRange key) const {
+  // We're really just passing key through to the get() method, but we need to
+  // make a copy of it on the way through.  It will usually be an eden::Hash
+  // but can potentially be an arbitrary length so we can't just use Hash as
+  // the storage here.  std::string is appropriate, but there's some noise
+  // with the conversion from unsigned/signed and back again.
+  return folly::via(
+      &ioPool_,
+      [keySpace,
+       key = std::string(reinterpret_cast<const char*>(key.data()), key.size()),
+       this] {
+        return get(
+            keySpace,
+            folly::ByteRange(
+                reinterpret_cast<const unsigned char*>(key.data()),
+                key.size()));
+      });
 }
 
 bool RocksDbLocalStore::hasKey(

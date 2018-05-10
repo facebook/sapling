@@ -10,6 +10,7 @@
 #pragma once
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 namespace facebook {
 namespace eden {
@@ -24,6 +25,9 @@ class RocksDbLocalStore : public LocalStore {
   void close() override;
   StoreResult get(LocalStore::KeySpace keySpace, folly::ByteRange key)
       const override;
+  FOLLY_NODISCARD folly::Future<StoreResult> getFuture(
+      KeySpace keySpace,
+      folly::ByteRange key) const override;
   bool hasKey(LocalStore::KeySpace keySpace, folly::ByteRange key)
       const override;
   void put(
@@ -34,6 +38,7 @@ class RocksDbLocalStore : public LocalStore {
 
  private:
   RocksHandles dbHandles_;
+  mutable UnboundedQueueThreadPool ioPool_;
 };
 
 } // namespace eden
