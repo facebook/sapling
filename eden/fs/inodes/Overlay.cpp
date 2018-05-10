@@ -37,8 +37,6 @@ using std::string;
 /* Relative to the localDir, the metaFile holds the serialized rendition
  * of the overlay_ data.  We use thrift CompactSerialization for this.
  */
-constexpr StringPiece kMetaDir{"overlay"};
-constexpr StringPiece kMetaFile{"dirdata"};
 constexpr StringPiece kInfoFile{"info"};
 
 /**
@@ -57,11 +55,6 @@ constexpr StringPiece kInfoHeaderMagic{"\xed\xe0\x00\x01"};
 constexpr uint32_t kOverlayVersion = 1;
 constexpr size_t kInfoHeaderSize =
     kInfoHeaderMagic.size() + sizeof(kOverlayVersion);
-
-/* Relative to the localDir, the overlay tree is where we create the
- * materialized directory structure; directories and files are created
- * here. */
-constexpr StringPiece kOverlayTree{"tree"};
 
 namespace {
 /**
@@ -99,19 +92,6 @@ Overlay::~Overlay() {
 }
 
 void Overlay::initOverlay() {
-  // Read the overlay version file.  If it does not exist, create it.
-  //
-  // First check for an old-format overlay directory, before we wrote out
-  // version numbers.  This is only to warn developers if they try to use
-  // eden with an existing older client.  We can probably delete this check in
-  // a few weeks.
-  if (isOldFormatOverlay()) {
-    throw std::runtime_error(
-        "The eden overlay format has been upgraded. "
-        "This version of eden cannot use the old overlay directory at " +
-        localDir_.value());
-  }
-
   // Read the info file.
   auto infoPath = localDir_ + PathComponentPiece{kInfoFile};
   int fd = folly::openNoInt(infoPath.value().c_str(), O_RDONLY | O_CLOEXEC);
@@ -139,15 +119,6 @@ void Overlay::initOverlay() {
   folly::checkUnixError(
       dirFd, "error opening overlay directory handle for ", localDir_.value());
   dirFile_ = File{dirFd, /* ownsFd */ true};
-}
-
-bool Overlay::isOldFormatOverlay() const {
-  auto oldDir = localDir_ + PathComponentPiece{kOverlayTree};
-  struct stat s;
-  if (lstat(oldDir.value().c_str(), &s) == 0) {
-    return true;
-  }
-  return false;
 }
 
 void Overlay::readExistingOverlay(int infoFD) {
