@@ -124,7 +124,6 @@ After the second repack, the tree is replaced by a new tree and then deleted.
   $ hg forget file --config treedirstate.minrepackthreshold=1 --config treedirstate.repackfactor=0 --debug | grep -v 'in use by'
   removing file
   auto-repacking treedirstate
-  dirstate tree * unused, deleting (glob)
   $ ls .hg/dirstate.tree.*
   .hg/dirstate.tree.* (glob)
   .hg/dirstate.tree.* (glob)
@@ -215,7 +214,7 @@ Test upgrade on pull
 Test cleaning up on normal commands
 
   $ echo fakedirstatetree > .hg/dirstate.tree.fake
-  $ hg forget newfile --debug --config treedirstate.cleanuppercent=100 | grep fake
-  dirstate tree fake unused, deleting
+  $ hg forget newfile --debug --config treedirstate.cleanuppercent=100
+  removing newfile
   $ test -f .hg/dirstate.tree.fake
   [1]

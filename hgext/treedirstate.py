@@ -639,7 +639,7 @@ dirstatefiles = [
     'undo.backup.dirstate',
 ]
 
-def cleanup(ui, repo):
+def cleanup(ui, repo, debug=None):
     """Clean up old tree files.
 
     When repacking, we write out the tree data to a new file.  This allows us
@@ -649,6 +649,7 @@ def cleanup(ui, repo):
     This leaves old tree files lying around.  We must periodically clean up
     any tree files that are not referred to by any of the dirstate files.
     """
+    debug = debug or (lambda msg: None)
     with repo.wlock():
         treesinuse = {}
         for f in dirstatefiles:
@@ -662,11 +663,11 @@ def cleanup(ui, repo):
             if f.startswith(treefileprefix):
                 treeid = f[len(treefileprefix):]
                 if treeid not in treesinuse:
-                    ui.debug("dirstate tree %s unused, deleting\n" % treeid)
+                    debug("dirstate tree %s unused, deleting\n" % treeid)
                     repo.vfs.unlink(f)
                 else:
-                    ui.debug("dirstate tree %s in use by %s\n"
-                             % (treeid, ', '.join(treesinuse[treeid])))
+                    debug("dirstate tree %s in use by %s\n"
+                          % (treeid, ', '.join(treesinuse[treeid])))
 
 def wrapdirstate(orig, self):
     ds = orig(self)
@@ -824,12 +825,12 @@ def debugtreedirstate(ui, repo, cmd, **opts):
         upgrade(ui, repo)
     elif cmd == "off":
         downgrade(ui, repo)
-        cleanup(ui, repo)
+        cleanup(ui, repo, debug=ui.debug)
     elif cmd == "repack":
         repack(ui, repo)
-        cleanup(ui, repo)
+        cleanup(ui, repo, debug=ui.debug)
     elif cmd == "cleanup":
-        cleanup(ui, repo)
+        cleanup(ui, repo, debug=ui.debug)
     elif cmd == "status":
         if istreedirstate(repo):
             ui.status(_("treedirstate enabled " +
