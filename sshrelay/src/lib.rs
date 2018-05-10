@@ -161,7 +161,7 @@ impl Encoder for SshEncoder {
                 debug_assert!(msg.1.len() == 0, "preamble ignores additional bytes");
                 v.put_u8(3);
                 let preamble = serde_json::to_vec(&preamble)?;
-                v.put_slice(&preamble);
+                v.extend_from_slice(&preamble);
                 Ok(self.0.encode(v.freeze(), buf)?)
             }
         }
