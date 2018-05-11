@@ -30,6 +30,7 @@ mod changeset;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use clap::{App, Arg, ArgMatches};
 use failure::err_msg;
@@ -192,10 +193,15 @@ fn main() {
 
     let blobrepo = Arc::new(open_blobrepo(&logger, &matches));
 
+    let cs_count = Arc::new(AtomicUsize::new(1));
     let upload_changesets = changeset::upload_changesets(revlogrepo.clone(), blobrepo.clone())
         .for_each(|cs| {
             cs.map(|cs| {
-                info!(logger, "inserted: {}", cs.get_changeset_id());
+                debug!(logger, "inserted: {}", cs.get_changeset_id());
+                let cnt = cs_count.fetch_add(1, Ordering::SeqCst);
+                if cnt % 5000 == 0 {
+                    info!(logger, "inserted commits # {}", cnt);
+                }
                 ()
             }).map_err(|err| {
                 error!(logger, "failed to blobimport: {}", err);
