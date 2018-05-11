@@ -160,7 +160,7 @@ fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
                 get_usize(&matches, "changesets-cache-size", 100_000_000),
                 get_usize(&matches, "filenodes-cache-size", 100_000_000),
                 get_usize(&matches, "io-thread-num", 5),
-                get_usize(&matches, "max-concurrent-requests-per-io-thread", 5),
+                get_usize(&matches, "max-concurrent-request-per-io-thread", 5),
             ).expect("failed to create manifold blobrepo")
         }
         bad => panic!("unexpected blobstore type: {}", bad),
