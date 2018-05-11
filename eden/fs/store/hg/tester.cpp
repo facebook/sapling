@@ -186,8 +186,7 @@ int main(int argc, char* argv[]) {
           "error: --edenDir and --rocksdb_options_file are incompatible\n");
       return EX_USAGE;
     }
-    rocksPath =
-        canonicalPath(FLAGS_edenDir) + RelativePathPiece{"storage/rocks-db"};
+    rocksPath = canonicalPath(FLAGS_edenDir) + "storage/rocks-db"_relpath;
   }
 
   std::string revName = FLAGS_rev;

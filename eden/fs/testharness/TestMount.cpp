@@ -167,10 +167,10 @@ void TestMount::initTestDirectory() {
     ::mkdir(path.stringPiece().str().c_str(), 0755);
   };
   auto testDirPath = AbsolutePath{testDir_->path().string()};
-  auto clientDirectory = testDirPath + PathComponentPiece("eden");
+  auto clientDirectory = testDirPath + "eden"_pc;
   makedir(clientDirectory);
-  makedir(clientDirectory + PathComponentPiece("local"));
-  auto mountPath = testDirPath + PathComponentPiece("mount");
+  makedir(clientDirectory + "local"_pc);
+  auto mountPath = testDirPath + "mount"_pc;
   makedir(mountPath);
 
   // Create the ClientConfig using our newly-populated client directory

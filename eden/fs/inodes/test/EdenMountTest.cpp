@@ -265,7 +265,7 @@ TEST(EdenMount, testCreatingFileSetsTimestampsToNow) {
 
   auto newFile = testMount.getEdenMount()
                      ->getRootInode()
-                     ->create(PathComponentPiece{"newfile.txt"}, 0660, 0)
+                     ->create("newfile.txt"_pc, 0660, 0)
                      .get();
   auto fileInode = testMount.getFileInode("newfile.txt");
   auto timestamps = fileInode->getTimestamps();

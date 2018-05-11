@@ -56,7 +56,7 @@ class HgImportTest : public ::testing::Test {
 
   TemporaryDirectory testDir_{"eden_test"};
   AbsolutePath testPath_{testDir_.path().string()};
-  HgRepo repo_{testPath_ + PathComponentPiece{"repo"}};
+  HgRepo repo_{testPath_ + "repo"_pc};
   MemoryLocalStore localStore_;
 };
 
@@ -70,7 +70,7 @@ void HgImportTest::importTest(bool treemanifest) {
   repo_.mkdir("src");
   repo_.mkdir("src/eden");
   StringPiece somelinkData = "this is the link contents";
-  repo_.symlink(somelinkData, RelativePathPiece{"src/somelink"});
+  repo_.symlink(somelinkData, "src/somelink"_relpath);
   StringPiece mainData = "print('hello world\\n')\n";
   repo_.writeFile("src/eden/main.py", mainData, 0755);
   repo_.hg("add");
@@ -92,7 +92,7 @@ void HgImportTest::importTest(bool treemanifest) {
   // When using flatmanifest, it should have already been imported
   // by importFlatManifest().  When using treemanifest we need to call
   // importer.importTree().
-  auto fooEntry = rootTree->getEntryAt(PathComponentPiece{"foo"});
+  auto fooEntry = rootTree->getEntryAt("foo"_pc);
   ASSERT_EQ(TreeEntryType::TREE, fooEntry.getType());
   auto fooTree = treemanifest ? importer.importTree(fooEntry.getHash())
                               : localStore_.getTree(fooEntry.getHash());
@@ -108,9 +108,9 @@ void HgImportTest::importTest(bool treemanifest) {
     EXPECT_EQ(*fooTree, *fooTree2);
   }
 
-  auto barEntry = fooTree->getEntryAt(PathComponentPiece{"bar.txt"});
+  auto barEntry = fooTree->getEntryAt("bar.txt"_pc);
   ASSERT_EQ(TreeEntryType::REGULAR_FILE, barEntry.getType());
-  auto testEntry = fooTree->getEntryAt(PathComponentPiece{"test.txt"});
+  auto testEntry = fooTree->getEntryAt("test.txt"_pc);
   ASSERT_EQ(TreeEntryType::REGULAR_FILE, testEntry.getType());
 
   // The blobs should not have been imported yet, though
@@ -118,7 +118,7 @@ void HgImportTest::importTest(bool treemanifest) {
   EXPECT_FALSE(localStore_.getBlob(testEntry.getHash()));
 
   // Get the "src" tree from the LocalStore.
-  auto srcEntry = rootTree->getEntryAt(PathComponentPiece{"src"});
+  auto srcEntry = rootTree->getEntryAt("src"_pc);
   ASSERT_EQ(TreeEntryType::TREE, srcEntry.getType());
   auto srcTree = treemanifest ? importer.importTree(srcEntry.getHash())
                               : localStore_.getTree(srcEntry.getHash());
@@ -132,11 +132,11 @@ void HgImportTest::importTest(bool treemanifest) {
     EXPECT_EQ(*srcTree, *srcTree2);
   }
 
-  auto somelinkEntry = srcTree->getEntryAt(PathComponentPiece{"somelink"});
+  auto somelinkEntry = srcTree->getEntryAt("somelink"_pc);
   ASSERT_EQ(TreeEntryType::SYMLINK, somelinkEntry.getType());
 
   // Get the "src/eden" tree from the LocalStore
-  auto edenEntry = srcTree->getEntryAt(PathComponentPiece{"eden"});
+  auto edenEntry = srcTree->getEntryAt("eden"_pc);
   ASSERT_EQ(TreeEntryType::TREE, edenEntry.getType());
   auto edenTree = treemanifest ? importer.importTree(edenEntry.getHash())
                                : localStore_.getTree(edenEntry.getHash());
@@ -149,7 +149,7 @@ void HgImportTest::importTest(bool treemanifest) {
     EXPECT_EQ(*edenTree, *edenTree2);
   }
 
-  auto mainEntry = edenTree->getEntryAt(PathComponentPiece{"main.py"});
+  auto mainEntry = edenTree->getEntryAt("main.py"_pc);
   ASSERT_EQ(TreeEntryType::EXECUTABLE_FILE, mainEntry.getType());
 
   // Import and check the blobs

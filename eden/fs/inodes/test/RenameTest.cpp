@@ -393,8 +393,8 @@ TEST_F(RenameTest, renameIntoUnlinkedDir) {
   rmdirFuture.get();
 
   // Do the rename
-  auto renameFuture = srcDir->rename(
-      srcPath.basename(), destDir, PathComponentPiece{"test.txt"});
+  auto renameFuture =
+      srcDir->rename(srcPath.basename(), destDir, "test.txt"_pc);
 
   // The rename should fail with ENOENT since the destination directory no
   // longer exists
@@ -434,8 +434,7 @@ TEST_F(RenameLoadingTest, renameDirSameDirectory) {
   // parent inode is ready).  File inodes do not wait to load the blob data
   // from the backing store before creating the FileInode object.
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "x"_pc);
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -451,14 +450,12 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
   builder_.setReady("a/b");
 
   // Start a lookup on a/b/c before we start the rename
-  auto inodeFuture =
-      mount_->getEdenMount()->getInode(RelativePathPiece{"a/b/c"});
+  auto inodeFuture = mount_->getEdenMount()->getInode("a/b/c"_relpath);
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Perform a rename on a/b/c before that inode is ready.
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "x"_pc);
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -493,14 +490,12 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
 
   // Perform a rename on a/b/c before that inode is ready.
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "x"_pc);
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Also start a lookup on a/b/c after starting the rename
-  auto inodeFuture =
-      mount_->getEdenMount()->getInode(RelativePathPiece{"a/b/c"});
+  auto inodeFuture = mount_->getEdenMount()->getInode("a/b/c"_relpath);
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Now make a/b/c ready
@@ -534,8 +529,7 @@ TEST_F(RenameLoadingTest, renameLoadFailure) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "x"_pc);
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -554,8 +548,7 @@ TEST_F(RenameLoadingTest, renameLoadDest) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      PathComponentPiece{"c"}, bInode, PathComponentPiece{"empty"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "empty"_pc);
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -577,8 +570,7 @@ TEST_F(RenameLoadingTest, renameLoadDestOtherOrder) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      PathComponentPiece{"c"}, bInode, PathComponentPiece{"empty"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "empty"_pc);
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -602,8 +594,7 @@ TEST_F(RenameLoadingTest, renameLoadDestNonempty) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      PathComponentPiece{"c"}, bInode, PathComponentPiece{"testdir"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "testdir"_pc);
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -626,8 +617,7 @@ TEST_F(RenameLoadingTest, renameLoadDestNonemptyOtherOrder) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      PathComponentPiece{"c"}, bInode, PathComponentPiece{"testdir"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "testdir"_pc);
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -650,8 +640,7 @@ TEST_F(RenameLoadingTest, renameLoadDestFailure) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      PathComponentPiece{"c"}, bInode, PathComponentPiece{"empty"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "empty"_pc);
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -674,8 +663,7 @@ TEST_F(RenameLoadingTest, renameLoadDestFailureOtherOrder) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      PathComponentPiece{"c"}, bInode, PathComponentPiece{"empty"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "empty"_pc);
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -699,8 +687,7 @@ TEST_F(RenameLoadingTest, renameLoadBothFailure) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      PathComponentPiece{"c"}, bInode, PathComponentPiece{"empty"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "empty"_pc);
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 

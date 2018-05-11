@@ -25,8 +25,8 @@ static TreeEntry makeTreeEntry(folly::StringPiece name) {
 
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
   TreeInode::Dir dir;
-  dir.entries.emplace(PathComponentPiece{"one"}, makeDirEntry());
-  dir.entries.emplace(PathComponentPiece{"two"}, makeDirEntry());
+  dir.entries.emplace("one"_pc, makeDirEntry());
+  dir.entries.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one"), makeTreeEntry("two")}};
 
   EXPECT_FALSE(findEntryDifferences(dir, tree));
@@ -34,8 +34,8 @@ TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
 
 TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
   TreeInode::Dir dir;
-  dir.entries.emplace(PathComponentPiece{"one"}, makeDirEntry());
-  dir.entries.emplace(PathComponentPiece{"two"}, makeDirEntry());
+  dir.entries.emplace("one"_pc, makeDirEntry());
+  dir.entries.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one"), makeTreeEntry("three")}};
 
   auto differences = findEntryDifferences(dir, tree);
@@ -45,8 +45,8 @@ TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
 
 TEST(TreeInode, findEntryDifferencesWithOneSubtraction) {
   TreeInode::Dir dir;
-  dir.entries.emplace(PathComponentPiece{"one"}, makeDirEntry());
-  dir.entries.emplace(PathComponentPiece{"two"}, makeDirEntry());
+  dir.entries.emplace("one"_pc, makeDirEntry());
+  dir.entries.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one")}};
 
   auto differences = findEntryDifferences(dir, tree);
@@ -56,8 +56,8 @@ TEST(TreeInode, findEntryDifferencesWithOneSubtraction) {
 
 TEST(TreeInode, findEntryDifferencesWithOneAddition) {
   TreeInode::Dir dir;
-  dir.entries.emplace(PathComponentPiece{"one"}, makeDirEntry());
-  dir.entries.emplace(PathComponentPiece{"two"}, makeDirEntry());
+  dir.entries.emplace("one"_pc, makeDirEntry());
+  dir.entries.emplace("two"_pc, makeDirEntry());
   Tree tree{
       {makeTreeEntry("one"), makeTreeEntry("two"), makeTreeEntry("three")}};
 

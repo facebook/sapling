@@ -119,8 +119,8 @@ folly::Try<TakeoverData> runTakeover(
   // of terminating the program if the remote side has closed the connection.
   signal(SIGPIPE, SIG_IGN);
 
-  AbsolutePath socketPath = AbsolutePathPiece{tmpDir.path().string()} +
-      PathComponentPiece{"takeover"};
+  AbsolutePath socketPath =
+      AbsolutePathPiece{tmpDir.path().string()} + "takeover"_pc;
   EventBase evb;
 
   TakeoverServer server(&evb, socketPath, handler);
@@ -157,17 +157,17 @@ TEST(Takeover, simple) {
   // Build the TakeoverData object to send
   TakeoverData serverData;
 
-  auto lockFilePath = tmpDirPath + PathComponentPiece{"lock"};
+  auto lockFilePath = tmpDirPath + "lock"_pc;
   serverData.lockFile =
       folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
 
-  auto thriftSocketPath = tmpDirPath + PathComponentPiece{"thrift"};
+  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
       folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
 
-  auto mount1Path = tmpDirPath + PathComponentPiece{"mount1"};
-  auto client1Path = tmpDirPath + PathComponentPiece{"client1"};
-  auto mount1FusePath = tmpDirPath + PathComponentPiece{"fuse1"};
+  auto mount1Path = tmpDirPath + "mount1"_pc;
+  auto client1Path = tmpDirPath + "client1"_pc;
+  auto mount1FusePath = tmpDirPath + "fuse1"_pc;
   serverData.mountPoints.emplace_back(
       mount1Path,
       client1Path,
@@ -177,13 +177,13 @@ TEST(Takeover, simple) {
       SerializedFileHandleMap{},
       SerializedInodeMap{});
 
-  auto mount2Path = tmpDirPath + PathComponentPiece{"mount2"};
-  auto client2Path = tmpDirPath + PathComponentPiece{"client2"};
-  auto mount2FusePath = tmpDirPath + PathComponentPiece{"fuse2"};
+  auto mount2Path = tmpDirPath + "mount2"_pc;
+  auto client2Path = tmpDirPath + "client2"_pc;
+  auto mount2FusePath = tmpDirPath + "fuse2"_pc;
   std::vector<AbsolutePath> mount2BindMounts = {
-      mount2Path + RelativePathPiece{"test/test2"},
+      mount2Path + "test/test2"_relpath,
       AbsolutePath{"/foo/bar"},
-      mount2Path + RelativePathPiece{"a/b/c/d/e/f"},
+      mount2Path + "a/b/c/d/e/f"_relpath,
   };
   serverData.mountPoints.emplace_back(
       mount2Path,
@@ -228,10 +228,10 @@ TEST(Takeover, noMounts) {
 
   // Build the TakeoverData object with no mount points
   TakeoverData serverData;
-  auto lockFilePath = tmpDirPath + PathComponentPiece{"lock"};
+  auto lockFilePath = tmpDirPath + "lock"_pc;
   serverData.lockFile =
       folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
-  auto thriftSocketPath = tmpDirPath + PathComponentPiece{"thrift"};
+  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
       folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
 
@@ -258,10 +258,10 @@ TEST(Takeover, manyMounts) {
 
   // Build the TakeoverData object
   TakeoverData serverData;
-  auto lockFilePath = tmpDirPath + PathComponentPiece{"lock"};
+  auto lockFilePath = tmpDirPath + "lock"_pc;
   serverData.lockFile =
       folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
-  auto thriftSocketPath = tmpDirPath + PathComponentPiece{"thrift"};
+  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
       folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
 
@@ -411,10 +411,10 @@ TEST(Takeover, oneToTwo) {
 
   // Build the TakeoverData object with no mount points
   TakeoverData serverData;
-  auto lockFilePath = tmpDirPath + PathComponentPiece{"lock"};
+  auto lockFilePath = tmpDirPath + "lock"_pc;
   serverData.lockFile =
       folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
-  auto thriftSocketPath = tmpDirPath + PathComponentPiece{"thrift"};
+  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
       folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
 

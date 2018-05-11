@@ -53,8 +53,7 @@ class LocalStoreTest : public ::testing::TestWithParam<StoreImpl> {
       case StoreImpl::Sqlite:
         testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
         store_ = std::make_unique<SqliteLocalStore>(
-            AbsolutePathPiece{testDir_->path().string()} +
-            PathComponentPiece("sqlite"));
+            AbsolutePathPiece{testDir_->path().string()} + "sqlite"_pc);
     }
   }
 

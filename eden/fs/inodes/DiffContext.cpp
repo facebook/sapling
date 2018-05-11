@@ -49,7 +49,7 @@ DiffContext::DiffContext(
 
 AbsolutePath DiffContext::constructUserIgnoreFileName(
     const UserInfo& userInfo) {
-  return userInfo.getHomeDirectory() + PathComponentPiece{".gitignore"};
+  return userInfo.getHomeDirectory() + ".gitignore"_pc;
 }
 
 std::string DiffContext::tryIngestFile(AbsolutePathPiece fileName) {

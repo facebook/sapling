@@ -242,14 +242,11 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
       .onError([=](const InodeError& /*err*/) {
         auto dotEdenInode =
             getRootInode()->mkdir(PathComponentPiece{kDotEdenName}, 0744);
+        dotEdenInode->symlink("root"_pc, config_->getMountPath().stringPiece());
         dotEdenInode->symlink(
-            PathComponentPiece{"root"}, config_->getMountPath().stringPiece());
+            "socket"_pc, serverState_->getSocketPath().stringPiece());
         dotEdenInode->symlink(
-            PathComponentPiece{"socket"},
-            serverState_->getSocketPath().stringPiece());
-        dotEdenInode->symlink(
-            PathComponentPiece{"client"},
-            config_->getClientDirectory().stringPiece());
+            "client"_pc, config_->getClientDirectory().stringPiece());
         dotEdenInodeNumber_ = dotEdenInode->getNodeId();
       });
 }

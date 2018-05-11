@@ -336,7 +336,7 @@ void EdenServer::prepare() {
   // If we are gracefully taking over from an existing edenfs process,
   // receive its lock, thrift socket, and mount points now.
   // This will shut down the old process.
-  const auto takeoverPath = edenDir_ + PathComponentPiece{"takeover"};
+  const auto takeoverPath = edenDir_ + "takeover"_pc;
   TakeoverData takeoverData;
   if (doingTakeover) {
     takeoverData = takeoverMounts(takeoverPath);

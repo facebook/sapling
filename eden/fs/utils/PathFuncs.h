@@ -1137,7 +1137,7 @@ class AbsolutePathBase : public ComposedPathBase<
   /**
    * This must be equal to or an ancestor of the specified path.
    * If `this` is "/foo" and `child` is "/foo/bar/baz", then this returns
-   * `RelativePathPiece("bar/baz")`. If `this` and `child` are equal, then this
+   * `"bar/baz"_relpath`. If `this` and `child` are equal, then this
    * returns `RelativePathPiece()`.
    */
   RelativePathPiece relativize(AbsolutePath child) const {
@@ -1635,6 +1635,27 @@ typename std::enable_if<folly::IsSomeString<T>::value, AbsolutePath>::type
 normalizeBestEffort(const T& path) {
   return normalizeBestEffort(path.c_str());
 }
+
+/**
+ * Convenient literals for constructing path types.
+ */
+inline namespace path_literals {
+inline PathComponentPiece operator"" _pc(const char* str, size_t len) noexcept {
+  return PathComponentPiece{folly::StringPiece{str, str + len}};
+}
+
+inline RelativePathPiece operator"" _relpath(
+    const char* str,
+    size_t len) noexcept {
+  return RelativePathPiece{folly::StringPiece{str, str + len}};
+}
+
+inline AbsolutePathPiece operator"" _abspath(
+    const char* str,
+    size_t len) noexcept {
+  return AbsolutePathPiece{folly::StringPiece{str, str + len}};
+}
+} // namespace path_literals
 
 } // namespace eden
 } // namespace facebook

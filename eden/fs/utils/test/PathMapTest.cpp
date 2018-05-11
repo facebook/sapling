@@ -13,6 +13,7 @@
 using facebook::eden::PathComponent;
 using facebook::eden::PathComponentPiece;
 using facebook::eden::PathMap;
+using namespace facebook::eden::path_literals;
 
 TEST(PathMap, insert) {
   PathMap<bool> map;
@@ -21,28 +22,28 @@ TEST(PathMap, insert) {
 
   map.insert(std::make_pair(PathComponent("foo"), true));
   EXPECT_EQ(1, map.size());
-  EXPECT_NE(map.end(), map.find(PathComponentPiece("foo")));
-  EXPECT_TRUE(map.at(PathComponentPiece("foo")));
-  EXPECT_TRUE(map[PathComponentPiece("foo")]);
+  EXPECT_NE(map.end(), map.find("foo"_pc));
+  EXPECT_TRUE(map.at("foo"_pc));
+  EXPECT_TRUE(map["foo"_pc]);
 
   // operator[] creates an entry for missing key
-  map[PathComponentPiece("bar")] = false;
+  map["bar"_pc] = false;
   EXPECT_EQ(2, map.size());
-  EXPECT_NE(map.end(), map.find(PathComponentPiece("bar")));
-  EXPECT_FALSE(map.at(PathComponentPiece("bar")));
-  EXPECT_FALSE(map[PathComponentPiece("bar")]);
+  EXPECT_NE(map.end(), map.find("bar"_pc));
+  EXPECT_FALSE(map.at("bar"_pc));
+  EXPECT_FALSE(map["bar"_pc]);
 
   // at() throws for missing key
-  EXPECT_THROW(map.at(PathComponentPiece("notpresent")), std::out_of_range);
+  EXPECT_THROW(map.at("notpresent"_pc), std::out_of_range);
 
   // Test the const version of find(), at() and operator[]
   const PathMap<bool>& cmap = map;
-  EXPECT_NE(cmap.cend(), cmap.find(PathComponentPiece("bar")));
-  EXPECT_FALSE(cmap.at(PathComponentPiece("bar")));
-  EXPECT_FALSE(cmap[PathComponentPiece("bar")]);
+  EXPECT_NE(cmap.cend(), cmap.find("bar"_pc));
+  EXPECT_FALSE(cmap.at("bar"_pc));
+  EXPECT_FALSE(cmap["bar"_pc]);
 
   // const operator[] throws for missing key
-  EXPECT_THROW(cmap[PathComponentPiece("notpresent")], std::out_of_range);
+  EXPECT_THROW(cmap["notpresent"_pc], std::out_of_range);
 }
 
 TEST(PathMap, iteration_and_erase) {
@@ -59,13 +60,13 @@ TEST(PathMap, iteration_and_erase) {
 
   // Keys have deterministic order
   std::vector<PathComponentPiece> expect{
-      PathComponentPiece("bar"),
-      PathComponentPiece("baz"),
-      PathComponentPiece("foo"),
+      "bar"_pc,
+      "baz"_pc,
+      "foo"_pc,
   };
   EXPECT_EQ(expect, keys);
 
-  auto iter = map.find(PathComponentPiece("baz"));
+  auto iter = map.find("baz"_pc);
   EXPECT_EQ(3, iter->second);
 
   iter = map.erase(iter);
@@ -112,20 +113,19 @@ int EmplaceTest::counter = 0;
 TEST(PathMap, emplace) {
   PathMap<EmplaceTest> map;
 
-  auto result = map.emplace(PathComponentPiece("one"), true, 42);
+  auto result = map.emplace("one"_pc, true, 42);
   EXPECT_EQ(1, EmplaceTest::counter)
       << "construct a single EmplaceTest instance";
   EXPECT_NE(map.end(), result.first);
   EXPECT_TRUE(result.second) << "inserted";
-  EXPECT_TRUE(map.at(PathComponentPiece("one")).dummy);
+  EXPECT_TRUE(map.at("one"_pc).dummy);
 
   // Second emplace with the same key has no effect
-  result = map.emplace(PathComponentPiece("one"), false, 42);
+  result = map.emplace("one"_pc, false, 42);
   EXPECT_EQ(1, EmplaceTest::counter)
       << "did not construct another EmplaceTest instance";
   EXPECT_FALSE(result.second) << "did not insert";
-  EXPECT_TRUE(map.at(PathComponentPiece("one")).dummy)
-      << "didn't change value to false";
+  EXPECT_TRUE(map.at("one"_pc).dummy) << "didn't change value to false";
 }
 
 TEST(PathMap, swap) {
@@ -134,10 +134,10 @@ TEST(PathMap, swap) {
   b.swap(a);
   EXPECT_EQ(0, a.size()) << "a now has 0 elements";
   EXPECT_EQ(1, b.size()) << "b now has 1 element";
-  EXPECT_EQ("foo", b.at(PathComponentPiece("foo")));
+  EXPECT_EQ("foo", b.at("foo"_pc));
 
   a = std::move(b);
   EXPECT_EQ(1, a.size()) << "a now has 1 element";
   EXPECT_EQ(0, b.size()) << "b now has 0 elements";
-  EXPECT_EQ("foo", a.at(PathComponentPiece("foo")));
+  EXPECT_EQ("foo", a.at("foo"_pc));
 }

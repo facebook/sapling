@@ -54,7 +54,7 @@ TEST(TestMount, createSimpleTestMount) {
   {
     auto dir = dirTreeEntry->getContents().rlock();
     auto& rootEntries = dir->entries;
-    auto& path1Entry = rootEntries.at(PathComponentPiece("path1"));
+    auto& path1Entry = rootEntries.at("path1"_pc);
     ASSERT_FALSE(path1Entry.isMaterialized());
     EXPECT_EQ(expectedSha1, path1Entry.getHash())
         << "Getting the Entry from the root Dir should also work.";

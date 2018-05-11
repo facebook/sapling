@@ -40,14 +40,14 @@ class UnlinkTest : public ::testing::Test {
 
 TEST_F(UnlinkTest, enoent) {
   auto dir = mount_.getTreeInode("dir");
-  auto unlinkFuture = dir->unlink(PathComponentPiece{"notpresent.txt"});
+  auto unlinkFuture = dir->unlink("notpresent.txt"_pc);
   ASSERT_TRUE(unlinkFuture.isReady());
   EXPECT_THROW_ERRNO(unlinkFuture.get(), ENOENT);
 }
 
 TEST_F(UnlinkTest, notLoaded) {
   auto dir = mount_.getTreeInode("dir");
-  auto childPath = PathComponentPiece{"a.txt"};
+  auto childPath = "a.txt"_pc;
 
   // Remove the child when it has not been loaded yet.
   auto unlinkFuture = dir->unlink(childPath);
@@ -59,7 +59,7 @@ TEST_F(UnlinkTest, notLoaded) {
 
 TEST_F(UnlinkTest, inodeAssigned) {
   auto dir = mount_.getTreeInode("dir");
-  auto childPath = PathComponentPiece{"a.txt"};
+  auto childPath = "a.txt"_pc;
 
   // Assign an inode number to the child without loading it.
   dir->getChildInodeNumber(childPath);
@@ -72,7 +72,7 @@ TEST_F(UnlinkTest, inodeAssigned) {
 
 TEST_F(UnlinkTest, loaded) {
   auto dir = mount_.getTreeInode("dir");
-  auto childPath = PathComponentPiece{"a.txt"};
+  auto childPath = "a.txt"_pc;
 
   // Load the child before removing it
   auto file = mount_.getFileInode("dir/a.txt");
@@ -88,7 +88,7 @@ TEST_F(UnlinkTest, loaded) {
 
 TEST_F(UnlinkTest, modified) {
   auto dir = mount_.getTreeInode("dir");
-  auto childPath = PathComponentPiece{"a.txt"};
+  auto childPath = "a.txt"_pc;
 
   // Modify the child, so it is materialized before we remove it
   auto file = mount_.getFileInode("dir/a.txt");
@@ -114,7 +114,7 @@ TEST_F(UnlinkTest, modified) {
 
 TEST_F(UnlinkTest, created) {
   auto dir = mount_.getTreeInode("dir");
-  auto childPath = PathComponentPiece{"new.txt"};
+  auto childPath = "new.txt"_pc;
   auto contents =
       StringPiece{"This is a new file that does not exist in source control\n"};
   mount_.addFile("dir/new.txt", contents);

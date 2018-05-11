@@ -132,8 +132,8 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   auto overlay = mount_.getEdenMount()->getOverlay();
 
   TreeInode::Dir dir;
-  dir.entries.emplace(PathComponentPiece{"one"}, S_IFREG | 0644, 11_ino, hash);
-  dir.entries.emplace(PathComponentPiece{"two"}, S_IFDIR | 0755, 12_ino);
+  dir.entries.emplace("one"_pc, S_IFREG | 0644, 11_ino, hash);
+  dir.entries.emplace("two"_pc, S_IFDIR | 0755, 12_ino);
 
   overlay->saveOverlayDir(10_ino, dir);
 
@@ -142,8 +142,8 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   EXPECT_TRUE(newDir);
 
   EXPECT_EQ(2, newDir->entries.size());
-  const auto& one = newDir->entries.find(PathComponentPiece{"one"})->second;
-  const auto& two = newDir->entries.find(PathComponentPiece{"two"})->second;
+  const auto& one = newDir->entries.find("one"_pc)->second;
+  const auto& two = newDir->entries.find("two"_pc)->second;
   EXPECT_EQ(11_ino, one.getInodeNumber());
   EXPECT_FALSE(one.isMaterialized());
   EXPECT_EQ(12_ino, two.getInodeNumber());

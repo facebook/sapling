@@ -20,6 +20,8 @@ DEFINE_string(logging, "", "Logging configuration");
 
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
 
+using namespace facebook::eden::path_literals;
+
 /*
  * This is a small tool for manually exercising the edenfs takover code.
  *
@@ -38,8 +40,7 @@ int main(int argc, char* argv[]) {
   }
 
   auto edenDir = facebook::eden::canonicalPath(FLAGS_edenDir);
-  auto takeoverSocketPath =
-      edenDir + facebook::eden::PathComponentPiece{"takeover"};
+  auto takeoverSocketPath = edenDir + "takeover"_pc;
 
   auto data = facebook::eden::takeoverMounts(takeoverSocketPath);
   for (const auto& mount : data.mountPoints) {

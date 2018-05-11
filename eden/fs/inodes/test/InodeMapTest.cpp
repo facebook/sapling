@@ -49,7 +49,7 @@ TEST(InodeMap, simpleLookups) {
 
   // Look up the tree inode by name first
   auto root = testMount.getEdenMount()->getRootInode();
-  auto srcTree = root->getOrLoadChild(PathComponentPiece{"src"}).get();
+  auto srcTree = root->getOrLoadChild("src"_pc).get();
 
   // Next look up the tree by inode number
   auto tree2 = inodeMap->lookupTreeInode(srcTree->getNodeId()).get();
@@ -57,7 +57,7 @@ TEST(InodeMap, simpleLookups) {
   EXPECT_EQ(RelativePath{"src"}, tree2->getPath());
 
   // Next look up src/noop.c by name
-  auto noop = tree2->getOrLoadChild(PathComponentPiece{"noop.c"}).get();
+  auto noop = tree2->getOrLoadChild("noop.c"_pc).get();
   EXPECT_NE(srcTree->getNodeId(), noop->getNodeId());
 
   // And look up src/noop.c by inode ID
@@ -83,11 +83,11 @@ TEST(InodeMap, asyncLookup) {
   // Look up the "src" tree inode by name
   // The future should only be fulfilled when after we make the tree ready
   auto rootInode = testMount.getEdenMount()->getRootInode();
-  auto srcFuture = rootInode->getOrLoadChild(PathComponentPiece{"src"});
+  auto srcFuture = rootInode->getOrLoadChild("src"_pc);
   EXPECT_FALSE(srcFuture.isReady());
 
   // Start a second lookup before the first is ready
-  auto srcFuture2 = rootInode->getOrLoadChild(PathComponentPiece{"src"});
+  auto srcFuture2 = rootInode->getOrLoadChild("src"_pc);
   EXPECT_FALSE(srcFuture2.isReady());
 
   // Now make the tree ready
@@ -109,11 +109,11 @@ TEST(InodeMap, asyncError) {
   // Look up the "src" tree inode by name
   // The future should only be fulfilled when after we make the tree ready
   auto rootInode = testMount.getEdenMount()->getRootInode();
-  auto srcFuture = rootInode->getOrLoadChild(PathComponentPiece{"src"});
+  auto srcFuture = rootInode->getOrLoadChild("src"_pc);
   EXPECT_FALSE(srcFuture.isReady());
 
   // Start a second lookup before the first is ready
-  auto srcFuture2 = rootInode->getOrLoadChild(PathComponentPiece{"src"});
+  auto srcFuture2 = rootInode->getOrLoadChild("src"_pc);
   EXPECT_FALSE(srcFuture2.isReady());
 
   // Now fail the tree lookup
@@ -132,13 +132,13 @@ TEST(InodeMap, recursiveLookup) {
   const auto& edenMount = testMount.getEdenMount();
 
   // Call EdenMount::getInode() on the root
-  auto rootFuture = edenMount->getInode(RelativePathPiece{""});
+  auto rootFuture = edenMount->getInode(""_relpath);
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = rootFuture.get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode(RelativePathPiece{"a/b/c/d/file.txt"});
+  auto fileFuture = edenMount->getInode("a/b/c/d/file.txt"_relpath);
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a/b/c");
@@ -152,8 +152,7 @@ TEST(InodeMap, recursiveLookup) {
   builder.setReady("a/b/c/d");
   ASSERT_TRUE(fileFuture.isReady());
   auto fileInode = fileFuture.get();
-  EXPECT_EQ(
-      RelativePathPiece{"a/b/c/d/file.txt"}, fileInode->getPath().value());
+  EXPECT_EQ("a/b/c/d/file.txt"_relpath, fileInode->getPath().value());
 }
 
 TEST(InodeMap, recursiveLookupError) {
@@ -163,13 +162,13 @@ TEST(InodeMap, recursiveLookupError) {
   const auto& edenMount = testMount.getEdenMount();
 
   // Call EdenMount::getInode() on the root
-  auto rootFuture = edenMount->getInode(RelativePathPiece{""});
+  auto rootFuture = edenMount->getInode(""_relpath);
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = rootFuture.get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode(RelativePathPiece{"a/b/c/d/file.txt"});
+  auto fileFuture = edenMount->getInode("a/b/c/d/file.txt"_relpath);
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a");
@@ -194,13 +193,13 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   const auto& edenMount = testMount.getEdenMount();
 
   // Call EdenMount::getInode() on the root
-  auto rootFuture = edenMount->getInode(RelativePathPiece{""});
+  auto rootFuture = edenMount->getInode(""_relpath);
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = rootFuture.get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode(RelativePathPiece{"a/b/c/d/file.txt"});
+  auto fileFuture = edenMount->getInode("a/b/c/d/file.txt"_relpath);
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a/b/c");
@@ -210,14 +209,13 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   builder.setReady("a/b");
   EXPECT_FALSE(fileFuture.isReady());
 
-  auto bFuture = edenMount->getInode(RelativePathPiece{"a/b"});
+  auto bFuture = edenMount->getInode("a/b"_relpath);
   ASSERT_TRUE(bFuture.isReady());
   auto bInode = bFuture.get().asTreePtr();
 
   // Rename c to x after the recursive resolution should have
   // already looked it up
-  auto renameFuture =
-      bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "x"_pc);
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(fileFuture.isReady());
 
@@ -229,8 +227,7 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   auto fileInode = fileFuture.get();
   // We should have successfully looked up the inode, but it will report it
   // self (correctly) at its new path now.
-  EXPECT_EQ(
-      RelativePathPiece{"a/b/x/d/file.txt"}, fileInode->getPath().value());
+  EXPECT_EQ("a/b/x/d/file.txt"_relpath, fileInode->getPath().value());
 }
 
 TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
@@ -240,13 +237,13 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   const auto& edenMount = testMount.getEdenMount();
 
   // Call EdenMount::getInode() on the root
-  auto rootFuture = edenMount->getInode(RelativePathPiece{""});
+  auto rootFuture = edenMount->getInode(""_relpath);
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = rootFuture.get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode(RelativePathPiece{"a/b/c/d/file.txt"});
+  auto fileFuture = edenMount->getInode("a/b/c/d/file.txt"_relpath);
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a");
@@ -254,14 +251,13 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   builder.setReady("a/b");
   EXPECT_FALSE(fileFuture.isReady());
 
-  auto bFuture = edenMount->getInode(RelativePathPiece{"a/b"});
+  auto bFuture = edenMount->getInode("a/b"_relpath);
   ASSERT_TRUE(bFuture.isReady());
   auto bInode = bFuture.get().asTreePtr();
 
   // Rename c to x while the recursive resolution is still trying
   // to look it up.
-  auto renameFuture =
-      bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
+  auto renameFuture = bInode->rename("c"_pc, bInode, "x"_pc);
   // The rename will not complete until C becomes ready
   EXPECT_FALSE(renameFuture.isReady());
   EXPECT_FALSE(fileFuture.isReady());
@@ -278,8 +274,7 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   auto fileInode = fileFuture.get();
   // We should have successfully looked up the inode, but it will report it
   // self (correctly) at its new path now.
-  EXPECT_EQ(
-      RelativePathPiece{"a/b/x/d/file.txt"}, fileInode->getPath().value());
+  EXPECT_EQ("a/b/x/d/file.txt"_relpath, fileInode->getPath().value());
 }
 
 TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
@@ -290,20 +285,20 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   auto edenMount = mount.getEdenMount();
 
   auto root = edenMount->getRootInode();
-  auto dir1 = edenMount->getInode(RelativePathPiece{"dir1"}).get().asTreePtr();
-  auto dir2 = edenMount->getInode(RelativePathPiece{"dir2"}).get().asTreePtr();
+  auto dir1 = edenMount->getInode("dir1"_relpath).get().asTreePtr();
+  auto dir2 = edenMount->getInode("dir2"_relpath).get().asTreePtr();
 
   auto dir1ino = dir1->getNodeId();
   auto dir2ino = dir2->getNodeId();
 
-  dir1->unlink(PathComponentPiece{"file.txt"}).get(0ms);
-  dir2->unlink(PathComponentPiece{"file.txt"}).get(0ms);
+  dir1->unlink("file.txt"_pc).get(0ms);
+  dir2->unlink("file.txt"_pc).get(0ms);
 
   // Test both having a positive and zero fuse reference counts.
   dir2->incFuseRefcount();
 
-  root->rmdir(PathComponentPiece{"dir1"}).get(0ms);
-  root->rmdir(PathComponentPiece{"dir2"}).get(0ms);
+  root->rmdir("dir1"_pc).get(0ms);
+  root->rmdir("dir2"_pc).get(0ms);
 
   dir1.reset();
   dir2.reset();
@@ -329,9 +324,9 @@ struct InodePersistenceTakeoverTest : InodePersistenceTreeTest {
   void SetUp() override {
     InodePersistenceTreeTest::SetUp();
 
-    auto tree = edenMount->getInode(RelativePathPiece{"dir"}).get();
-    auto file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
-    auto file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
+    auto tree = edenMount->getInode("dir"_relpath).get();
+    auto file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
+    auto file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
 
     // Pretend FUSE is keeping references to these.
     tree->incFuseRefcount();
@@ -363,9 +358,9 @@ TEST_F(
     InodePersistenceTakeoverTest,
     preservesInodeNumbersForLoadedInodesDuringTakeover_lookupFirstByName) {
   // Look up in a different order to avoid allocating the same numbers.
-  auto tree = edenMount->getInode(RelativePathPiece{"dir"}).get();
-  auto file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
-  auto file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
+  auto tree = edenMount->getInode("dir"_relpath).get();
+  auto file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
+  auto file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
 
   EXPECT_EQ(1, tree->debugGetFuseRefcount());
   EXPECT_EQ(1, file1->debugGetFuseRefcount());
@@ -402,9 +397,9 @@ TEST_F(
       edenMount->getInodeMap()->lookupInode(oldFile2Id).get()->getLogPath());
 
   // Verify the same inodes can be looked up by name too.
-  auto tree = edenMount->getInode(RelativePathPiece{"dir"}).get();
-  auto file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
-  auto file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
+  auto tree = edenMount->getInode("dir"_relpath).get();
+  auto file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
+  auto file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
 
   EXPECT_EQ(1, tree->debugGetFuseRefcount());
   EXPECT_EQ(1, file1->debugGetFuseRefcount());
@@ -428,9 +423,9 @@ TEST_F(
   TestMount testMount{builder};
   auto edenMount = testMount.getEdenMount();
 
-  auto tree = edenMount->getInode(RelativePathPiece{"dir"}).get();
-  auto file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
-  auto file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
+  auto tree = edenMount->getInode("dir"_relpath).get();
+  auto file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
+  auto file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
 
   tree->incFuseRefcount();
   file1->incFuseRefcount();
@@ -453,9 +448,9 @@ TEST_F(
   edenMount = testMount.getEdenMount();
 
   // Look up in a different order.
-  tree = edenMount->getInode(RelativePathPiece{"dir"}).get();
-  file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
-  file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
+  tree = edenMount->getInode("dir"_relpath).get();
+  file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
+  file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
   EXPECT_EQ(oldFile1Id, file1->getNodeId());

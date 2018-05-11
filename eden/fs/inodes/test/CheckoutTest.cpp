@@ -688,9 +688,9 @@ void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
   // the new directory
   auto builder2 = builder1.clone();
   RelativePathPiece newDir{newDirPath};
-  builder2.setFile(newDir + PathComponentPiece{"doc.txt"}, "docs\n");
-  builder2.setFile(newDir + PathComponentPiece{"file1.c"}, "src\n");
-  builder2.setFile(newDir + RelativePathPiece{"include/file1.h"}, "header\n");
+  builder2.setFile(newDir + "doc.txt"_pc, "docs\n");
+  builder2.setFile(newDir + "file1.c"_pc, "src\n");
+  builder2.setFile(newDir + "include/file1.h"_relpath, "header\n");
   builder2.finalize(testMount.getBackingStore(), true);
   auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
   commit2->setReady();
@@ -704,15 +704,11 @@ void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
 
   // Confirm that the tree has been updated correctly.
   EXPECT_FILE_INODE(
-      testMount.getFileInode(newDir + PathComponentPiece{"doc.txt"}),
-      "docs\n",
-      0644);
+      testMount.getFileInode(newDir + "doc.txt"_pc), "docs\n", 0644);
   EXPECT_FILE_INODE(
-      testMount.getFileInode(newDir + PathComponentPiece{"file1.c"}),
-      "src\n",
-      0644);
+      testMount.getFileInode(newDir + "file1.c"_pc), "src\n", 0644);
   EXPECT_FILE_INODE(
-      testMount.getFileInode(newDir + RelativePathPiece{"include/file1.h"}),
+      testMount.getFileInode(newDir + "include/file1.h"_relpath),
       "header\n",
       0644);
 }
@@ -738,9 +734,9 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
   // removed when we checkout from the src to the dest tree).
   auto srcBuilder = destBuilder.clone();
   RelativePathPiece path{"src/todelete"};
-  srcBuilder.setFile(path + PathComponentPiece{"doc.txt"}, "docs\n");
-  srcBuilder.setFile(path + PathComponentPiece{"file1.c"}, "src\n");
-  srcBuilder.setFile(path + RelativePathPiece{"include/file1.h"}, "header\n");
+  srcBuilder.setFile(path + "doc.txt"_pc, "docs\n");
+  srcBuilder.setFile(path + "file1.c"_pc, "src\n");
+  srcBuilder.setFile(path + "include/file1.h"_relpath, "header\n");
 
   TestMount testMount{srcBuilder};
   destBuilder.finalize(testMount.getBackingStore(), true);
@@ -756,16 +752,12 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
 
   // Confirm that the tree no longer exists.
   // None of the files should exist.
+  EXPECT_THROW_ERRNO(testMount.getFileInode(path + "doc.txt"_pc), ENOENT);
+  EXPECT_THROW_ERRNO(testMount.getFileInode(path + "file1.c"_pc), ENOENT);
   EXPECT_THROW_ERRNO(
-      testMount.getFileInode(path + PathComponentPiece{"doc.txt"}), ENOENT);
-  EXPECT_THROW_ERRNO(
-      testMount.getFileInode(path + PathComponentPiece{"file1.c"}), ENOENT);
-  EXPECT_THROW_ERRNO(
-      testMount.getFileInode(path + RelativePathPiece{"include/file1.h"}),
-      ENOENT);
+      testMount.getFileInode(path + "include/file1.h"_relpath), ENOENT);
   // The two directories should have been removed too
-  EXPECT_THROW_ERRNO(
-      testMount.getTreeInode(path + RelativePathPiece{"include"}), ENOENT);
+  EXPECT_THROW_ERRNO(testMount.getTreeInode(path + "include"_relpath), ENOENT);
   EXPECT_THROW_ERRNO(testMount.getTreeInode(path), ENOENT);
 }
 
@@ -792,8 +784,7 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
   commit2->setReady();
 
   // Begin loading "dir/sub".
-  auto inodeFuture =
-      testMount.getEdenMount()->getInode(RelativePathPiece{"dir/sub"});
+  auto inodeFuture = testMount.getEdenMount()->getInode("dir/sub"_relpath);
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Checkout to a revision where the contents of "dir/sub" have changed.
@@ -811,14 +802,9 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
   EXPECT_EQ(0, results.size());
 
   auto inode = inodeFuture.get().asTreePtr();
+  EXPECT_EQ(0, inode->getContents().rlock()->entries.count("file.txt"_pc));
   EXPECT_EQ(
-      0,
-      inode->getContents().rlock()->entries.count(
-          PathComponentPiece{"file.txt"}));
-  EXPECT_EQ(
-      1,
-      inode->getContents().rlock()->entries.count(
-          PathComponentPiece{"differentfile.txt"}));
+      1, inode->getContents().rlock()->entries.count("differentfile.txt"_pc));
 }
 
 TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
@@ -835,7 +821,7 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
 
   // Load "dir/sub".
   auto subTree = testMount.getEdenMount()
-                     ->getInode(RelativePathPiece{"dir/sub"})
+                     ->getInode("dir/sub"_relpath)
                      .get(1ms)
                      .asTreePtr();
   auto subInodeNumber = subTree->getNodeId();
@@ -877,7 +863,7 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
 
   // Load "dir/sub" on behalf of a FUSE connection.
   auto subTree = testMount.getEdenMount()
-                     ->getInode(RelativePathPiece{"dir/sub"})
+                     ->getInode("dir/sub"_relpath)
                      .get(1ms)
                      .asTreePtr();
   auto subInodeNumber = subTree->getNodeId();
@@ -905,10 +891,8 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   // Unlinked inodes are considered materialized?
   EXPECT_TRUE(subTreeContents->isMaterialized());
 
-  auto dirTree = testMount.getEdenMount()
-                     ->getInode(RelativePathPiece{"dir"})
-                     .get(1ms)
-                     .asTreePtr();
+  auto dirTree =
+      testMount.getEdenMount()->getInode("dir"_relpath).get(1ms).asTreePtr();
   auto dirContents = dirTree->getContents().rlock();
   EXPECT_FALSE(dirContents->isMaterialized());
 }
@@ -927,7 +911,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
 
   // Load "dir/sub" on behalf of a FUSE connection.
   auto subTree = testMount.getEdenMount()
-                     ->getInode(RelativePathPiece{"dir/sub"})
+                     ->getInode("dir/sub"_relpath)
                      .get(1ms)
                      .asTreePtr();
   auto dirInodeNumber = subTree->getParentRacy()->getNodeId();
@@ -954,7 +938,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 
   auto subTree2 = testMount.getEdenMount()
-                      ->getInode(RelativePathPiece{"dir/sub"})
+                      ->getInode("dir/sub"_relpath)
                       .get(1ms)
                       .asTreePtr();
   EXPECT_EQ(dirInodeNumber, subTree2->getParentRacy()->getNodeId());
@@ -965,7 +949,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   subTree2.reset();
 
   subTree = testMount.getEdenMount()
-                ->getInode(RelativePathPiece{"dir/sub"})
+                ->getInode("dir/sub"_relpath)
                 .get(1ms)
                 .asTreePtr();
   EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());

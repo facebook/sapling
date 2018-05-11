@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
 
   const std::string configPathStr = FLAGS_configPath;
   const AbsolutePath configPath = configPathStr.empty()
-      ? identity.getHomeDirectory() + PathComponentPiece{".edenrc"}
+      ? identity.getHomeDirectory() + ".edenrc"_pc
       : normalizeBestEffort(configPathStr);
 
   EdenServer server(
