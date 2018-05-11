@@ -207,9 +207,6 @@ std::unique_ptr<InodeBase> InodeBase::markUnlinked(
   // ourself immediately.
   auto* inodeMap = getMount()->getInodeMap();
   auto inodeMapLock = inodeMap->lockForUnload();
-  CHECK(!isPtrAcquireCountZero() || !isDir())
-      << "We must not call unloadInode if we are a tree and our contents lock "
-         "is currently held.";
   if (isPtrAcquireCountZero() && getFuseRefcount() == 0) {
     inodeMap->unloadInode(this, parent, name, true, inodeMapLock);
     // We have to delete ourself now.

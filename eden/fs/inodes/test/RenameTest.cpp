@@ -21,6 +21,7 @@
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/Bug.h"
 
+using namespace std::literals::chrono_literals;
 using namespace facebook::eden;
 using folly::StringPiece;
 
@@ -400,6 +401,38 @@ TEST_F(RenameTest, renameIntoUnlinkedDir) {
   // longer exists
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_THROW_ERRNO(renameFuture.get(), ENOENT);
+}
+
+TEST_F(RenameTest, renameOverEmptyDir) {
+  // Git and Mercurial can't represent empty trees, so use one of the
+  // (materialized) empty directories.
+  auto root = mount_->getRootTree();
+
+  auto x = mount_->getTreeInode("a/x");
+  auto yino = x->getChildInodeNumber("y"_pc);
+  auto newParent = mount_->getTreeInode("a/b");
+
+  (void)x->rename("y"_pc, newParent, "emptydir"_pc).get(0ms);
+
+  EXPECT_EQ(yino, newParent->getChildInodeNumber("emptydir"_pc));
+}
+
+TEST_F(RenameTest, renameOverEmptyDirWithPositiveFuseRefcount) {
+  // Git and Mercurial can't represent empty trees, so use one of the
+  // (materialized) empty directories.
+  auto root = mount_->getRootTree();
+
+  auto x = mount_->getTreeInode("a/x");
+  auto y = x->getOrLoadChildTree("y"_pc).get(0ms);
+  auto yino = y->getNodeId();
+  auto newParent = mount_->getTreeInode("a/b");
+  auto toBeUnlinked = newParent->getOrLoadChildTree("emptydir"_pc).get(0ms);
+  toBeUnlinked->incFuseRefcount();
+  toBeUnlinked.reset();
+
+  (void)x->rename("y"_pc, newParent, "emptydir"_pc).get(0ms);
+
+  EXPECT_EQ(yino, newParent->getChildInodeNumber("emptydir"_pc));
 }
 
 /*

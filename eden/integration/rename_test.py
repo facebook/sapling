@@ -161,3 +161,14 @@ class RenameTest(testcase.EdenRepoTest):
 
         self.assertEqual([], sorted(os.listdir(adir)))
         self.assertEqual(["FILE"], sorted(os.listdir(bdir)))
+
+    def test_rename_dir_over_empty_dir(self) -> None:
+        subdir = os.path.join(self.mount, "sub")
+        dir1 = os.path.join(subdir, "dir1")
+        dir2 = os.path.join(subdir, "dir2")
+        os.mkdir(subdir)
+        os.mkdir(dir1)
+        os.mkdir(dir2)
+
+        os.rename(dir1, dir2)
+        self.assertEqual(["dir2"], os.listdir(subdir))
