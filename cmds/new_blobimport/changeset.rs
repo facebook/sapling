@@ -13,6 +13,7 @@ use failure::prelude::*;
 use futures::{Future, IntoFuture};
 use futures::future::{self, SharedItem};
 use futures::stream::{self, Stream};
+use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry,
@@ -186,25 +187,23 @@ fn upload_entry(
 pub fn upload_changesets(
     revlogrepo: RevlogRepo,
     blobrepo: Arc<BlobRepo>,
+    cpupool_size: usize,
 ) -> BoxStream<BoxFuture<SharedItem<BlobChangeset>, Error>, Error> {
     let mut parent_changeset_handles: HashMap<HgNodeHash, ChangesetHandle> = HashMap::new();
 
     revlogrepo
         .changesets()
-        .and_then({
+        .map({
             let revlogrepo = revlogrepo.clone();
+            let blobrepo = blobrepo.clone();
             move |csid| {
                 let ParseChangeset {
                     revlogcs,
                     rootmf,
                     entries,
                 } = parse_changeset(revlogrepo.clone(), HgChangesetId::new(csid));
-                revlogcs.map(move |cs| (csid, cs, rootmf, entries))
-            }
-        })
-        .map(move |(csid, cs, rootmf, entries)| {
-            let rootmf = rootmf
-                .and_then({
+
+                let rootmf = rootmf.map({
                     let blobrepo = blobrepo.clone();
                     move |rootmf| {
                         match rootmf {
@@ -222,20 +221,34 @@ pub fn upload_changesets(
                                     // compatibility with old repositories.
                                     check_nodeid: false,
                                 };
-                                let (_, entry) = try_boxfuture!(upload.upload(&blobrepo));
-                                entry.map(Some).boxify()
+                                upload
+                                    .upload(&blobrepo)
+                                    .into_future()
+                                    .and_then(|(_, entry)| entry)
+                                    .map(Some)
+                                    .boxify()
                             }
                         }
                     }
-                })
-                .boxify();
+                });
 
-            let entries = entries
-                .and_then({
+                let entries = entries.map({
                     let blobrepo = blobrepo.clone();
                     move |(path, entry)| upload_entry(&blobrepo, entry, path)
-                })
-                .boxify();
+                });
+
+                revlogcs
+                    .join3(rootmf, entries.collect())
+                    .map(move |(cs, rootmf, entries)| (csid, cs, rootmf, entries))
+            }
+        })
+        .map({
+            let cpupool = CpuPool::new(cpupool_size);
+            move |fut| cpupool.spawn(fut)
+        })
+        .buffered(100)
+        .map(move |(csid, cs, rootmf, entries)| {
+            let entries = stream::futures_unordered(entries).boxify();
 
             let (p1handle, p2handle) = {
                 let mut parents = cs.parents().into_iter().map(|p| {

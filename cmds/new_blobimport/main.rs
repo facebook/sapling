@@ -15,6 +15,7 @@ extern crate clap;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate futures_cpupool;
 #[macro_use]
 extern crate futures_ext;
 extern crate mercurial;
@@ -50,17 +51,18 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .about("make blobs")
         .args_from_usage(
             r#"
-            <INPUT>                    'input revlog repo'
-            --debug                    'print debug logs'
-            --repo_id <repo_id>        'ID of the newly imported repo'
-            --manifold-bucket [BUCKET] 'manifold bucket'
-            --db-address [address]     'address of a db. Used only for manifold blobstore'
-            --blobstore-cache-size [SIZE] 'size of the blobstore cache'
-            --changesets-cache-size [SIZE] 'size of the changesets cache'
-            --filenodes-cache-size [SIZE] 'size of the filenodes cache'
-            --io-thread-num [NUM] 'num of the io threads to use'
+            <INPUT>                         'input revlog repo'
+            --debug                         'print debug logs'
+            --repo_id <repo_id>             'ID of the newly imported repo'
+            --manifold-bucket [BUCKET]      'manifold bucket'
+            --db-address [address]          'address of a db. Used only for manifold blobstore'
+            --blobstore-cache-size [SIZE]   'size of the blobstore cache'
+            --changesets-cache-size [SIZE]  'size of the changesets cache'
+            --filenodes-cache-size [SIZE]   'size of the filenodes cache'
+            --io-thread-num [NUM]           'num of the io threads to use'
             --max-concurrent-request-per-io-thread [NUM] 'max requests per io thread'
-            [OUTPUT]                   'Blobstore output'
+            --parsing-cpupool-size [NUM]    'size of cpupool for parsing revlogs'
+            [OUTPUT]                        'Blobstore output'
         "#,
         )
         .arg(
@@ -71,6 +73,16 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(true)
                 .help("blobstore type"),
         )
+}
+
+fn get_usize<'a>(matches: &ArgMatches<'a>, key: &str, default: usize) -> usize {
+    matches
+        .value_of(key)
+        .map(|val| {
+            val.parse::<usize>()
+                .expect(&format!("{} must be integer", key))
+        })
+        .unwrap_or(default)
 }
 
 fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
@@ -144,26 +156,11 @@ fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
                 matches
                     .value_of("db-address")
                     .expect("--db-address is not specified"),
-                matches
-                    .value_of("blobstore-cache-size")
-                    .map(|val| val.parse::<usize>().expect("cache size must be integer"))
-                    .unwrap_or(100_000_000),
-                matches
-                    .value_of("changesets-cache-size")
-                    .map(|val| val.parse::<usize>().expect("cache size must be integer"))
-                    .unwrap_or(100_000_000),
-                matches
-                    .value_of("filenodes-cache-size")
-                    .map(|val| val.parse::<usize>().expect("cache size must be integer"))
-                    .unwrap_or(100_000_000),
-                matches
-                    .value_of("io-thread-num")
-                    .map(|val| val.parse::<usize>().expect("cache size must be integer"))
-                    .unwrap_or(5),
-                matches
-                    .value_of("max-concurrent-requests-per-io-thread")
-                    .map(|val| val.parse::<usize>().expect("cache size must be integer"))
-                    .unwrap_or(5),
+                get_usize(&matches, "blobstore-cache-size", 100_000_000),
+                get_usize(&matches, "changesets-cache-size", 100_000_000),
+                get_usize(&matches, "filenodes-cache-size", 100_000_000),
+                get_usize(&matches, "io-thread-num", 5),
+                get_usize(&matches, "max-concurrent-requests-per-io-thread", 5),
             ).expect("failed to create manifold blobrepo")
         }
         bad => panic!("unexpected blobstore type: {}", bad),
@@ -194,27 +191,30 @@ fn main() {
     let blobrepo = Arc::new(open_blobrepo(&logger, &matches));
 
     let cs_count = Arc::new(AtomicUsize::new(1));
-    let upload_changesets = changeset::upload_changesets(revlogrepo.clone(), blobrepo.clone())
-        .for_each(|cs| {
-            cs.map(|cs| {
-                debug!(logger, "inserted: {}", cs.get_changeset_id());
-                let cnt = cs_count.fetch_add(1, Ordering::SeqCst);
-                if cnt % 5000 == 0 {
-                    info!(logger, "inserted commits # {}", cnt);
-                }
-                ()
-            }).map_err(|err| {
-                error!(logger, "failed to blobimport: {}", err);
+    let upload_changesets = changeset::upload_changesets(
+        revlogrepo.clone(),
+        blobrepo.clone(),
+        get_usize(&matches, "parsing-cpupool-size", 8),
+    ).for_each(|cs| {
+        cs.map(|cs| {
+            debug!(logger, "inserted: {}", cs.get_changeset_id());
+            let cnt = cs_count.fetch_add(1, Ordering::SeqCst);
+            if cnt % 5000 == 0 {
+                info!(logger, "inserted commits # {}", cnt);
+            }
+            ()
+        }).map_err(|err| {
+            error!(logger, "failed to blobimport: {}", err);
 
-                for cause in err.causes() {
-                    info!(logger, "cause: {}", cause);
-                }
-                info!(logger, "root cause: {:?}", err.root_cause());
+            for cause in err.causes() {
+                info!(logger, "cause: {}", cause);
+            }
+            info!(logger, "root cause: {:?}", err.root_cause());
 
-                let msg = format!("failed to blobimport: {}", err);
-                err_msg(msg)
-            })
-        });
+            let msg = format!("failed to blobimport: {}", err);
+            err_msg(msg)
+        })
+    });
 
     let upload_bookmarks = bookmark::upload_bookmarks(&logger, revlogrepo, blobrepo);
 
