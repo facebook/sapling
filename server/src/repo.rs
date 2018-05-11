@@ -230,7 +230,6 @@ fn wireprotocaps() -> Vec<String> {
         "gettreepack".to_string(),
         "remotefilelog".to_string(),
         "pushkey".to_string(),
-        "clienttelemetry".to_string(),
     ]
 }
 
