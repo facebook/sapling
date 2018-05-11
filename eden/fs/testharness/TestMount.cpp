@@ -20,6 +20,7 @@
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
+#include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/Blob.h"
@@ -281,27 +282,19 @@ void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
 void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   RelativePathPiece relativePath(path);
   const auto treeInode = getTreeInode(relativePath.dirname());
-  auto createResult = edenMount_->getDispatcher()
-                          ->create(
-                              treeInode->getNodeId(),
-                              relativePath.basename(),
-                              /*mode*/ 0644,
-                              /*flags*/ 0)
-                          .get(0ms);
-  createResult.fh->write(contents, /*off*/ 0).get(0ms);
-  createResult.fh->fsync(/*datasync*/ true).get(0ms);
+  auto createResult =
+      treeInode->create(relativePath.basename(), /*mode*/ 0644, /*flags*/ 0)
+          .get();
+  createResult.file->write(contents, /*off*/ 0).get(0ms);
+  createResult.file->fsync(/*datasync*/ true).get(0ms);
 }
 
 void TestMount::addSymlink(
     folly::StringPiece path,
     folly::StringPiece pointsTo) {
   const RelativePathPiece relativePath{path};
-  edenMount_->getDispatcher()
-      ->symlink(
-          getTreeInode(relativePath.dirname())->getNodeId(),
-          relativePath.basename(),
-          pointsTo)
-      .get(); // discard the result but throw exception on bad future
+  const auto parent = getTreeInode(relativePath.dirname());
+  (void)parent->symlink(relativePath.basename(), pointsTo).get();
 }
 
 void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
@@ -348,23 +341,19 @@ void TestMount::mkdir(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getTreeInode(relativePath.dirname());
   mode_t mode = 0755;
-  auto dispatcher = edenMount_->getDispatcher();
-  dispatcher->mkdir(treeInode->getNodeId(), relativePath.basename(), mode)
-      .get();
+  (void)treeInode->mkdir(relativePath.basename(), mode).get();
 }
 
 void TestMount::deleteFile(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getTreeInode(relativePath.dirname());
-  auto dispatcher = edenMount_->getDispatcher();
-  dispatcher->unlink(treeInode->getNodeId(), relativePath.basename()).get();
+  treeInode->unlink(relativePath.basename()).get();
 }
 
 void TestMount::rmdir(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getTreeInode(relativePath.dirname());
-  auto dispatcher = edenMount_->getDispatcher();
-  dispatcher->rmdir(treeInode->getNodeId(), relativePath.basename()).get();
+  treeInode->rmdir(relativePath.basename()).get();
 }
 
 void TestMount::chmod(folly::StringPiece path, mode_t permissions) {

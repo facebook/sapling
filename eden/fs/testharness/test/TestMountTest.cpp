@@ -178,3 +178,27 @@ TEST(TestMount, mkdirWithoutParentShouldThrowENOENT) {
     ASSERT_EQ(ENOENT, expected.code().value());
   }
 }
+
+TEST(TestMount, addFileDoesNotLeakFuseRefcount) {
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  testMount.addFile("f", "contents");
+  auto f = testMount.getFileInode("f");
+  EXPECT_EQ(0, f->debugGetFuseRefcount());
+}
+
+TEST(TestMount, addSymlinkDoesNotLeakFuseRefcount) {
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  testMount.addSymlink("l", "targets");
+  auto link = testMount.getFileInode("l");
+  EXPECT_EQ(0, link->debugGetFuseRefcount());
+}
+
+TEST(TestMount, mkdirDoesNotLeakFuseRefcount) {
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  testMount.mkdir("d");
+  auto d = testMount.getTreeInode("d");
+  EXPECT_EQ(0, d->debugGetFuseRefcount());
+}
