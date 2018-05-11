@@ -22,11 +22,8 @@ from mercurial import (
 )
 
 if pycompat.iswindows:
-    # no fork on Windows, but we can create a detached process
-    # https://msdn.microsoft.com/en-us/library/windows/desktop/ms684863.aspx
-    # No stdlib constant exists for this value
-    DETACHED_PROCESS = 0x00000008
-    _creationflags = DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    CREATE_NO_WINDOW = 0x08000000
+    _creationflags = CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
 
     def runbgcommand(script, env, shell=False, stdout=None, stderr=None):
         '''Spawn a command without waiting for it to finish.'''
