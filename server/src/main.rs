@@ -538,6 +538,7 @@ fn main() {
         {
             let thread_name = handle.thread().name().unwrap_or("unknown").to_owned();
             match handle.join() {
+                Ok(_) => panic!("unexpected success"),
                 Err(panic) => crit!(
                     root_log,
                     "Thread {} panicked with: {:?}",
@@ -552,6 +553,7 @@ fn main() {
     }
 
     match run_server(&root_log, matches) {
+        Ok(_) => panic!("unexpected success"),
         Err(e) => {
             crit!(root_log, "Server fatal error"; SlogKVError(e));
             std::process::exit(1);

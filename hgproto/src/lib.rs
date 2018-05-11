@@ -11,7 +11,6 @@
 //! protocols, and a Tokio Service framework for them via a trait.
 
 #![deny(warnings)]
-#![feature(conservative_impl_trait)]
 
 // Tokio/IO
 extern crate bytes;

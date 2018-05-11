@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(conservative_impl_trait)]
 
 extern crate ascii;
 extern crate bytes;

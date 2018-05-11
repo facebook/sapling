@@ -8,7 +8,6 @@
 //! and writes.
 
 #![deny(warnings)]
-#![feature(conservative_impl_trait)]
 
 extern crate bincode;
 #[macro_use]
@@ -160,9 +159,7 @@ where
                     &Ok(ref name) => name.starts_with(&prefix),
                     &Err(_) => true,
                 })
-                .map(move |result| {
-                    result.and_then(|name| Ok(name[prefix_len..].into()))
-                })
+                .map(move |result| result.and_then(|name| Ok(name[prefix_len..].into())))
         });
         match names {
             Ok(v) => stream::iter_ok(v).and_then(|x| x).boxify(),
@@ -199,7 +196,6 @@ where
     ) -> impl Future<Item = Option<Version>, Error = Error> {
         self.set(key, value, &Version::absent(), new_version)
     }
-
 
     pub fn delete<Q: Into<String>>(
         &self,

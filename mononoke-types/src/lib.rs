@@ -9,7 +9,6 @@
 #![deny(warnings)]
 // The allow(dead_code) is temporary until Thrift serialization is done.
 #![allow(dead_code)]
-#![feature(conservative_impl_trait)]
 #![feature(try_from)]
 #![feature(const_fn)]
 
