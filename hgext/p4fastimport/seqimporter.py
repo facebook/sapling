@@ -39,6 +39,7 @@ class ChangelistImporter(object):
         p4flogs = {}
         p4paths = [info['depotFile'] for info in fstat]
         hgpaths = p4.parse_where_multiple(self.client, p4paths)
+        hgpaths = {p4path.lower(): hgpath for p4path, hgpath in hgpaths.items()}
         ignore_reorg = IMPORTER_IGNORE_REORG in p4cl.description
         if ignore_reorg:
             self.ui.debug(
@@ -48,7 +49,7 @@ class ChangelistImporter(object):
         for info in fstat:
             action = info['action']
             p4path = info['depotFile']
-            hgpath = hgpaths[p4path]
+            hgpath = hgpaths[p4path.lower()]
             data = {p4cl.cl: {'action': action, 'type': info['type']}}
 
             if not ignore_reorg:
