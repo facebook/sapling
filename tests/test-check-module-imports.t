@@ -222,4 +222,8 @@ outputs, which should be fixed later.
   tests/test-fb-hgext-remotefilelog-histpack.py:15: direct symbol import historypack, mutablehistorypack from hgext.remotefilelog.historypack
   tests/test-fb-hgext-remotefilelog-histpack.py:23: direct symbol import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF from hgext.remotefilelog.basepack
   tests/test-fb-hgext-remotefilelog-histpack.py:23: symbol import follows non-symbol import: hgext.remotefilelog.basepack
+  tests/test-fb-hgext-revisionstore-datastore.py:*: direct symbol import datastore from hgext.extlib.pyrevisionstore (glob)
+  tests/test-fb-hgext-revisionstore-datastore.py:*: direct symbol import datapackstore, fastdatapack, mutabledatapack from hgext.remotefilelog.datapack (glob)
+  tests/test-fb-hgext-revisionstore-datastore.py:*: direct symbol import unioncontentstore from hgext.remotefilelog.contentstore (glob)
+  tests/test-fb-hgext-revisionstore-datastore.py:*: imports not lexically sorted: mercurial.ui < silenttestrunner (glob)
   [1]

@@ -11,6 +11,8 @@ name = "pyrevisionstore"
 crate-type = ["cdylib"]
 
 [dependencies]
+failure = "*"
+failure_derive = "*"
 revisionstore = { path = "../../../lib/revisionstore" }
 
 [dependencies.cpython]
