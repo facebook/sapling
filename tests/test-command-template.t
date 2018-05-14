@@ -31,6 +31,9 @@
   $ hg merge -q foo
   $ hg commit -m 'merge' -d '1500001 0' -u 'person'
 
+  $ hg log -r . -T '{username}'
+  test (no-eol)
+
 Test arithmetic operators have the right precedence:
 
   $ hg log -l 1 -T '{date(date, "%Y") + 5 * 10} {date(date, "%Y") - 2 * 3}\n'

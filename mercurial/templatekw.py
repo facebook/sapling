@@ -902,6 +902,11 @@ def showtroubles(repo, **args):
 
     return showinstabilities(repo=repo, **args)
 
+@templatekeyword('username')
+def showusername(repo, *args, **kwargs):
+    """String. The current user specified by configs (ex. 'ui.username')."""
+    return repo.ui.username()
+
 @templatekeyword('instabilities')
 def showinstabilities(**args):
     """List of strings. Evolution instabilities affecting the changeset.
