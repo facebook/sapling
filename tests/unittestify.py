@@ -12,7 +12,6 @@ from __future__ import absolute_import
 import contextlib
 import glob
 import os
-import pprint
 import random
 import re
 import shlex
@@ -67,13 +66,7 @@ def gettestmethod(name, port):
                     reason = 'skipped by run-tests.py'
                 raise unittest.SkipTest(reason)
             elif returncode != 0:
-                raise self.failureException(
-                    '\nCommand:\n{}\n'
-                    '\nEnvironment:\n{}\n'
-                    '\nError:\n{}{}'.format(
-                        shlex_quote(args + [name]),
-                        pprint.pformat(env),
-                        err, out))
+                raise self.failureException(err + out)
     return runsingletest
 
 class hgtests(unittest.TestCase):
