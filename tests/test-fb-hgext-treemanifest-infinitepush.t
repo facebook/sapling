@@ -319,3 +319,55 @@ Verify its not on the server
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add x
   
+Test delivering public and draft commits to the client. Verify we don't deliver
+treemanifest data for the public commits.
+  $ cd ../client1
+  $ hg log -G -T '{node|short} {phase} {desc}'
+  @  5a7a7de8a420 draft edit subdir/a
+  |
+  o  02c12aef64ff draft add subdir/a
+  |
+  o  085784c01c08 public add x
+  
+# Strip all the commits so we can pull them again.
+  $ hg strip -q -r 'all()' --no-backup
+
+# Clear out all the tree data, so we can see exactly what is downloaded in the
+# upcoming pull.
+  $ rm -rf .hg/store/packs/*
+  $ clearcache
+
+# Pull one infinitepush commit and one normal commit
+  $ hg pull -r 02c12aef64ffa8bfc
+  pulling from ssh://user@dummy/master
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  new changesets 085784c01c08:02c12aef64ff
+  (run 'hg update' to get a working copy)
+
+  $ hg log -G -T '{node|short} {phase} {desc}'
+  o  02c12aef64ff draft add subdir/a
+  |
+  o  085784c01c08 public add x
+  
+# Verify only the infinitepush commit tree data was downloaded
+  $ hg debugdatapack .hg/store/packs/manifests/*datapack
+  .hg/store/packs/manifests/1eed629c715db092ec5684dbec32765f46279837:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  9eee655b90d1  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  604088751312  000000000000  92            (missing)
+  
+# Verify the non-infinitepush commit tree data is downloaded on demand
+  $ hg manifest -r 0
+  1 trees fetched over * (glob)
+  x
