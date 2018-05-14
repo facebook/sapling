@@ -115,5 +115,27 @@ class datastoretests(unittest.TestCase):
         pymeta = pystore.getmeta(revisions[1][0], revisions[1][1])
         self.assertEquals(pymeta, rustmeta)
 
+    def testGetMissing(self):
+        packdir = self.makeTempDir()
+        revisions = [("foo", self.getFakeHash(), nullid, "content", None)]
+        self.createPack(packdir, revisions=revisions)
+
+        pystore = unioncontentstore(datapackstore(mercurial.ui.ui(), packdir))
+
+        ruststore = datastore(pystore)
+
+        missing = [(revisions[0][0], revisions[0][1])]
+        rustcontent = ruststore.getmissing(missing)
+        pycontent = pystore.getmissing(missing)
+        self.assertEquals(pycontent, rustcontent)
+
+        missing = [
+            (revisions[0][0], revisions[0][1]),
+            ("bar", self.getFakeHash()),
+        ]
+        rustcontent = ruststore.getmissing(missing)
+        pycontent = pystore.getmissing(missing)
+        self.assertEquals(pycontent, rustcontent)
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

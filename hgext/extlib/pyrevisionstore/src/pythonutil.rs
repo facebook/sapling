@@ -51,3 +51,15 @@ pub fn from_delta_to_tuple(py: Python, delta: &Delta) -> PyObject {
     ).into_py_object(py)
         .into_object()
 }
+
+pub fn from_key_to_tuple<'a>(py: Python, key: &'a Key) -> PyTuple {
+    let (py_name, py_node) = from_key(py, key);
+    PyTuple::new(py, &[py_name.into_object(), py_node.into_object()])
+}
+
+pub fn from_tuple_to_key(py: Python, py_tuple: &PyObject) -> PyResult<Key> {
+    let py_tuple = <&PyTuple>::extract(py, &py_tuple)?.as_slice(py);
+    let name = <&PyBytes>::extract(py, &py_tuple[0])?;
+    let node = <&PyBytes>::extract(py, &py_tuple[1])?;
+    Ok(to_key(py, &name, &node))
+}

@@ -1,6 +1,7 @@
-use cpython::{FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python};
+use cpython::{FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python,
+              PythonObject};
 use pyerror::pyerr_to_error;
-use pythonutil::from_tuple_to_delta;
+use pythonutil::{from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key};
 use revisionstore::datastore::{DataStore, Delta, Metadata};
 use revisionstore::error::Result;
 use revisionstore::key::Key;
@@ -72,5 +73,26 @@ impl DataStore for PythonDataStore {
                 None => None,
             },
         })
+    }
+
+    fn getmissing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let py_missing = PyList::new(py, &[]);
+        for key in keys.iter() {
+            let py_key = from_key_to_tuple(py, &key);
+            py_missing.insert_item(py, py_missing.len(py), py_key.into_object());
+        }
+
+        let py_missing = self.py_store
+            .call_method(py, "getmissing", (py_missing,), None)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        let py_list = PyList::extract(py, &py_missing).map_err(|e| pyerr_to_error(py, e))?;
+        let missing = py_list
+            .iter(py)
+            .map(|k| from_tuple_to_key(py, &k).map_err(|e| pyerr_to_error(py, e).into()))
+            .collect::<Result<Vec<Key>>>()?;
+        Ok(missing)
     }
 }

@@ -1,10 +1,11 @@
 // Copyright Facebook, Inc. 2018
 //! Python bindings for a Rust hg store
 
-use cpython::{PyBytes, PyClone, PyDict, PyList, PyObject, PyResult};
+use cpython::{PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult, PythonObject};
 use pythondatastore::PythonDataStore;
-use pythonutil::{from_delta_to_tuple, to_key, to_pyerr};
+use pythonutil::{from_delta_to_tuple, from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr};
 use revisionstore::datastore::DataStore;
+use revisionstore::key::Key;
 
 py_module_initializer!(
     pyrevisionstore,        // module name
@@ -61,5 +62,23 @@ py_class!(class datastore |py| {
         }
 
         Ok(metadict)
+    }
+
+    def getmissing(&self, keys: &PyList) -> PyResult<PyList> {
+        // Copy the PyObjects into a vector so we can get a reference iterator.
+        // This lets us get a Vector of Keys without copying the strings.
+        let keys = keys.iter(py)
+                       .map(|k| from_tuple_to_key(py, &k))
+                       .collect::<Result<Vec<Key>, PyErr>>()?;
+        let missing = self.store(py).getmissing(&keys[..])
+                                    .map_err(|e| to_pyerr(py, &e))?;
+
+        let results = PyList::new(py, &[]);
+        for key in missing {
+            let key_tuple = from_key_to_tuple(py, &key);
+            results.insert_item(py, results.len(py), key_tuple.into_object());
+        }
+
+        Ok(results)
     }
 });

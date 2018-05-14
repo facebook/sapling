@@ -16,4 +16,5 @@ pub trait DataStore {
     fn get(&self, key: &Key) -> Result<Vec<u8>>;
     fn getdeltachain(&self, key: &Key) -> Result<Vec<Delta>>;
     fn getmeta(&self, key: &Key) -> Result<Metadata>;
+    fn getmissing(&self, keys: &[Key]) -> Result<Vec<Key>>;
 }
