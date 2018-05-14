@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+import threading
 
 from eden.integration.lib import eden_server_inspector, hgrepo
 
@@ -248,3 +249,50 @@ class RebaseTest(EdenHgTestCase):
                 + str(num_slow_path)
             ),
         )
+
+    def test_rebase_with_concurrent_status(self):
+        """
+        Test using `hg rebase` to rebase a stack while simultaneously running
+        `hg status`
+        """
+        stop = threading.Event()
+
+        def status_thread():
+            while not stop.is_set():
+                self.hg("status", stdout=None, stderr=None)
+
+        # Spawn several threads to run "hg status" in parallel with the rebase
+        num_threads = 6
+        threads = []
+        for _ in range(num_threads):
+            t = threading.Thread(target=status_thread)
+            threads.append(t)
+            t.start()
+
+        # Run the rebase.  Explicitly disable inmemory rebase so that eden
+        # will need to update the working directory state as tehe rebase progresses
+        self.hg(
+            "--debug",
+            "--config",
+            "rebase.experimental.inmemory=False",
+            "rebase",
+            "-s",
+            self._c11,
+            "-d",
+            self._c25,
+            stdout=None,
+            stderr=None,
+        )
+        new_commit = self.hg("log", "-rtip", "-T{node}")
+
+        stop.set()
+        for t in threads:
+            t.join()
+
+        self.assert_status_empty()
+
+        # Verify that the new commit looks correct
+        self.repo.update(new_commit)
+        self.assert_status_empty()
+        self.assert_file_regex("numbers/1/15", "15\n")
+        self.assert_file_regex("numbers/2/25", "25\n")
