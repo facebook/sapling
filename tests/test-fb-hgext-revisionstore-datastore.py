@@ -13,6 +13,8 @@ from hgext.extlib.pyrevisionstore import (
     datastore,
 )
 
+from hgext.remotefilelog import constants
+
 from hgext.remotefilelog.datapack import (
     datapackstore,
     fastdatapack,
@@ -87,6 +89,31 @@ class datastoretests(unittest.TestCase):
         rustchain = ruststore.getdeltachain(revisions[1][0], revisions[1][1])
         pychain = pystore.getdeltachain(revisions[1][0], revisions[1][1])
         self.assertEquals(pychain, rustchain)
+
+    def testGetMeta(self):
+        packdir = self.makeTempDir()
+        hash1 = self.getFakeHash()
+        meta = {
+            constants.METAKEYFLAG: 1,
+            constants.METAKEYSIZE: len("content1"),
+        }
+        revisions = [
+            ("foo", hash1, nullid, "content1", meta),
+            ("foo", self.getFakeHash(), hash1, "content2", None),
+        ]
+        self.createPack(packdir, revisions=revisions)
+
+        pystore = unioncontentstore(datapackstore(mercurial.ui.ui(), packdir))
+
+        ruststore = datastore(pystore)
+
+        rustmeta = ruststore.getmeta(revisions[0][0], revisions[0][1])
+        pymeta = pystore.getmeta(revisions[0][0], revisions[0][1])
+        self.assertEquals(pymeta, rustmeta)
+
+        rustmeta = ruststore.getmeta(revisions[1][0], revisions[1][1])
+        pymeta = pystore.getmeta(revisions[1][0], revisions[1][1])
+        self.assertEquals(pymeta, rustmeta)
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

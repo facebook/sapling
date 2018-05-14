@@ -1,7 +1,7 @@
-use cpython::{FromPyObject, ObjectProtocol, PyBytes, PyList, PyObject, Python};
+use cpython::{FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python};
 use pyerror::pyerr_to_error;
 use pythonutil::from_tuple_to_delta;
-use revisionstore::datastore::{DataStore, Delta};
+use revisionstore::datastore::{DataStore, Delta, Metadata};
 use revisionstore::error::Result;
 use revisionstore::key::Key;
 
@@ -50,5 +50,27 @@ impl DataStore for PythonDataStore {
             .map(|b| from_tuple_to_delta(py, &b).map_err(|e| pyerr_to_error(py, e).into()))
             .collect::<Result<Vec<Delta>>>()?;
         Ok(deltas)
+    }
+
+    fn getmeta(&self, key: &Key) -> Result<Metadata> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let py_name = PyBytes::new(py, key.name());
+        let py_node = PyBytes::new(py, key.node().as_ref());
+        let py_meta = self.py_store
+            .call_method(py, "getmeta", (py_name, py_node), None)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        let py_dict = PyDict::extract(py, &py_meta).map_err(|e| pyerr_to_error(py, e))?;
+
+        Ok(Metadata {
+            flags: match py_dict.get_item(py, "f") {
+                Some(x) => Some(u16::extract(py, &x).map_err(|e| pyerr_to_error(py, e))?),
+                None => None,
+            },
+            size: match py_dict.get_item(py, "s") {
+                Some(x) => Some(u64::extract(py, &x).map_err(|e| pyerr_to_error(py, e))?),
+                None => None,
+            },
+        })
     }
 }

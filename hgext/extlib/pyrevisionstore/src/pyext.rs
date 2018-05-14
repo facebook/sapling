@@ -1,7 +1,7 @@
 // Copyright Facebook, Inc. 2018
 //! Python bindings for a Rust hg store
 
-use cpython::{PyBytes, PyClone, PyList, PyObject, PyResult};
+use cpython::{PyBytes, PyClone, PyDict, PyList, PyObject, PyResult};
 use pythondatastore::PythonDataStore;
 use pythonutil::{from_delta_to_tuple, to_key, to_pyerr};
 use revisionstore::datastore::DataStore;
@@ -46,5 +46,20 @@ py_class!(class datastore |py| {
                                 .map(|d| from_delta_to_tuple(py, &d))
                                 .collect::<Vec<PyObject>>();
         Ok(PyList::new(py, &pychain[..]))
+    }
+
+    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+        let key = to_key(py, name, node);
+        let metadata = self.store(py).getmeta(&key)
+                                     .map_err(|e| to_pyerr(py, &e))?;
+        let metadict = PyDict::new(py);
+        if let Some(size) = metadata.size {
+            metadict.set_item(py, "s", size)?;
+        }
+        if let Some(flags) = metadata.flags {
+            metadict.set_item(py, "f", flags)?;
+        }
+
+        Ok(metadict)
     }
 });
