@@ -1360,6 +1360,10 @@ rustvendoredcrates = [
 ]
 
 rustextmodules = [
+    RustExtension('pyrevisionstore',
+        package='hgext.extlib',
+        manifest='hgext/extlib/pyrevisionstore/Cargo.toml',
+    ),
     RustExtension('indexes',
         package='hgext.extlib',
         manifest='hgext/extlib/indexes/Cargo.toml',
