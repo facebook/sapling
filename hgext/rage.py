@@ -199,11 +199,12 @@ def _makerage(ui, repo, **opts):
     detailed = [
         ('df -h', _failsafe(lambda: shcmd('df -h', check=False))),
         ('hg sl (filtered)',
-            _failsafe(lambda: hgcmd('smartlog', template='{hsl}'))),
+            _failsafe(lambda: hgcmd('smartlog', template='{sl_debug}'))),
         # unfiltered smartlog for recent hidden changesets, including full
         # node identity
         ('hg sl (unfiltered)', _failsafe(lambda: hgcmd(
-            'smartlog', _repo=repo.unfiltered(), template='{node}\n{hsl}'))),
+            'smartlog', _repo=repo.unfiltered(),
+            template='{node}\n{sl_debug}'))),
         # smartlog as the user sees it
         ('first 20 lines of "hg status"',
             _failsafe(lambda: '\n'.join(hgcmd('status').splitlines()[:20]))),
