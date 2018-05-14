@@ -120,3 +120,45 @@ Create a commit which deletes a file. Make sure it is backed up correctly
   $ scratchbookmarks
   infinitepush/backups/test/*$TESTTMP/client/bookmarks/goodbooktobackup 22ea264ff89d6891c2889f15f338ac9fa2474f8b (glob)
   infinitepush/backups/test/*$TESTTMP/client/heads/507709f4da22941c0471885d8377c48d6dadce21 507709f4da22941c0471885d8377c48d6dadce21 (glob)
+
+Test pullbackups when the client doesn't have the latest public commits. Verify
+the client doesn't receive the public commit file data during the pull.
+  $ cd ../repo
+  $ mkcommit extracommit
+  $ cd ../secondclient
+  $ hg pull -q
+  $ hg up -q tip
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ mkcommit draftcommit
+  $ hg pushbackup
+  starting backup * (glob)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     1c8212bf302f  draftcommit
+  finished in * seconds (glob)
+  $ cd ../client
+  $ clearcache
+  $ hg pullbackup --reporoot $TESTTMP/secondclient
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files (+1 heads)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  new changesets 7644808a0e88:1c8212bf302f
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg log -r 7644808a0e88 --stat
+  changeset:   6:7644808a0e88
+  parent:      0:22ea264ff89d
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     extracommit
+  
+   extracommit |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
