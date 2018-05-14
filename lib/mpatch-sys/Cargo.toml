@@ -1,0 +1,6 @@
+[package]
+name = "mpatch-sys"
+version = "0.1.0"
+
+[build-dependencies]
+cc = "*"

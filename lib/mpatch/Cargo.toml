@@ -1,0 +1,7 @@
+[package]
+name = "mpatch"
+version = "0.1.0"
+
+[dependencies]
+libc = "*"
+mpatch-sys = { path = "../mpatch-sys" }
