@@ -10,10 +10,11 @@
 #include "lib/third-party/xdiff/xdiff.h"
 #include "Python.h"
 
-static int hunk_consumer(long a1, long a2, long b1, long b2, void *priv)
+static int hunk_consumer(int64_t a1, int64_t a2, int64_t b1, int64_t b2,
+                         void *priv)
 {
 	PyObject *rl = (PyObject *)priv;
-	PyObject *m = Py_BuildValue("llll", a1, a2, b1, b2);
+	PyObject *m = Py_BuildValue("LLLL", a1, a2, b1, b2);
 	if (!m)
 		return -1;
 	if (PyList_Append(rl, m) != 0) {
