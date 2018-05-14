@@ -303,8 +303,7 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
 
     # Also update infinitepush state.  These new heads are already backed up,
     # otherwise the server wouldn't have told us about them.
-    if newheads:
-        recordbackup(ui, repo, newheads)
+    recordbackup(ui, repo, cloudrefs.heads)
 
 def _update(ui, repo, destination):
     # update to new head with merging local uncommited changes
