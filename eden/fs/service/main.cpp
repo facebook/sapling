@@ -32,8 +32,6 @@ DEFINE_string(
     "",
     "If set, redirects stdout and stderr to the log file given.");
 
-DEFINE_string(logging, "", "Logging configuration");
-
 using namespace facebook::eden;
 
 // Set the default log level for all eden logs to DBG2
@@ -95,8 +93,6 @@ int main(int argc, char** argv) {
   // been set up and configured based on the command line flags.)
   auto privHelper = startPrivHelper(identity);
   identity.dropPrivileges();
-
-  folly::initLogging(FLAGS_logging);
 
   XLOG(INFO) << "Starting edenfs.  UID=" << identity.getUid()
              << ", GID=" << identity.getGid() << ", PID=" << getpid();

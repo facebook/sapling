@@ -28,7 +28,6 @@ using folly::makeFuture;
 using std::string;
 
 DEFINE_int32(numFuseThreads, 4, "The number of FUSE worker threads");
-DEFINE_string(logging, "", "The logging configuration");
 
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2,eden.fs.fuse=DBG7");
 
@@ -95,8 +94,6 @@ int main(int argc, char** argv) {
   auto identity = UserInfo::lookup();
   auto privHelper = startPrivHelper(identity);
   identity.dropPrivileges();
-
-  folly::initLogging(FLAGS_logging);
 
   auto mountPath = normalizeBestEffort(argv[1]);
   try {

@@ -28,7 +28,6 @@
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(rev, "", "The revision ID to import");
-DEFINE_string(logging, "", "The logging configuration string");
 DEFINE_string(
     import_type,
     "flat",
@@ -165,7 +164,6 @@ int importTree(
 
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
-  folly::initLogging(FLAGS_logging);
 
   if (argc != 2) {
     fprintf(stderr, "usage: hg_import <repository>\n");

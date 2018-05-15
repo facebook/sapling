@@ -18,8 +18,6 @@
 
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 
-DEFINE_string(logging, "", "Logging configuration");
-
 using namespace facebook::eden;
 
 FOLLY_INIT_LOGGING_CONFIG("eden=INFO");
@@ -34,7 +32,6 @@ FOLLY_INIT_LOGGING_CONFIG("eden=INFO");
  */
 int main(int argc, char** argv) {
   folly::init(&argc, &argv);
-  folly::initLogging(FLAGS_logging);
 
   auto info = UserInfo::lookup();
   printf("Username: %s\n", info.getUsername().c_str());

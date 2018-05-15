@@ -16,7 +16,6 @@
 #include "eden/fs/takeover/TakeoverData.h"
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
-DEFINE_string(logging, "", "Logging configuration");
 
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
 
@@ -32,7 +31,6 @@ using namespace facebook::eden::path_literals;
  */
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
-  folly::initLogging(FLAGS_logging);
 
   if (FLAGS_edenDir.empty()) {
     fprintf(stderr, "error: the --edenDir argument is required\n");

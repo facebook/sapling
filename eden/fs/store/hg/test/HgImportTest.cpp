@@ -26,8 +26,6 @@
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-DEFINE_string(logging, "", "folly::logging configuration");
-
 using namespace facebook::eden;
 using folly::StringPiece;
 using folly::test::TemporaryDirectory;
@@ -214,7 +212,6 @@ TEST_F(HgImportTest, importTreeManifest) {
 int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
   folly::init(&argc, &argv);
-  folly::initLogging(FLAGS_logging);
   gflags::SetCommandLineOptionWithMode(
       "use_hg_tree_manifest", "true", gflags::SET_FLAGS_DEFAULT);
 
