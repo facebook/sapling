@@ -1,4 +1,4 @@
-# watchmanclient.py - Watchman client for the fsmonitor extension
+# __init__.py - Watchman client for the fsmonitor extension
 #
 # Copyright 2013-2016 Facebook, Inc.
 #
@@ -14,7 +14,7 @@ from mercurial import (
     util,
 )
 
-from ..extlib import pywatchman
+from .. import pywatchman
 
 class Unavailable(Exception):
     def __init__(self, msg, warn=True, invalidate=False):

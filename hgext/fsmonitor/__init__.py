@@ -136,12 +136,9 @@ from mercurial import (
 )
 from mercurial import match as matchmod
 
-from ..extlib import pywatchman
+from ..extlib import pywatchman, watchmanclient
 
-from . import (
-    state,
-    watchmanclient,
-)
+from . import state
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
