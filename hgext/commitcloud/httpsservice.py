@@ -29,6 +29,16 @@ try:
 except NameError:
     xrange = range
 
+# clean up helper (to use with json.dumps)
+# filter out the fields with None and empty arrays / maps
+def cleandict(d):
+    if not isinstance(d, dict):
+        return d
+    return dict(
+        (k, cleandict(v)) for k, v in d.iteritems()
+            if (v is not None and
+                not (util.safehasattr(v, '__len__') and len(v) == 0)))
+
 DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 2
 
@@ -82,9 +92,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
     def _send(self, path, data):
         e = None
         rdata = None
-        # print all requests if debugrequests and debug are both on
+        # print request if debugrequests and debug are both on
         if self.debugrequests:
-            self.ui.debug('%s\n' % json.dumps(data, indent=4))
+            self.ui.debug('%s\n' % json.dumps(cleandict(data), indent=4))
         if self._getheader('Content-Encoding') == 'gzip':
             buffer = util.stringio()
             with gzip.GzipFile(fileobj=buffer, mode='w') as compressed:
@@ -107,7 +117,12 @@ class HttpsCommitCloudService(baseservice.BaseService):
                     raise commitcloudcommon.ServiceError(self.ui, resp.reason)
                 if resp.getheader('Content-Encoding') == 'gzip':
                     resp = gzip.GzipFile(fileobj=util.stringio(resp.read()))
-                return json.load(resp)
+                data = json.load(resp)
+                # print response if debugrequests and debug are both on
+                if self.debugrequests:
+                    self.ui.debug('%s\n' % json.dumps(
+                        cleandict(data), indent=4))
+                return data
             except httplib.HTTPException as e:
                 self.connection.connect()
             time.sleep(sl)
