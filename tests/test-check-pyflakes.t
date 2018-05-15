@@ -15,7 +15,7 @@ run pyflakes on all tracked files ending in .py or without a file ending
   $ cd "`dirname "$TESTDIR"`"
 
   $ testrepohg locate '**.py' -I '.' \
-  > -X hgext/fsmonitor/pywatchman \
+  > -X hgext/extlib/pywatchman \
   > -X mercurial/pycompat.py -X contrib/python-zstandard \
   > -X hg-git \
   > -X fb \

@@ -38,7 +38,7 @@ if sys.version_info[0] >= 3:
             if fullname.startswith('mercurial.zstd'):
                 return None
             # pywatchman is already dual-version clean, don't try and mangle it
-            if fullname.startswith('hgext.fsmonitor.pywatchman'):
+            if fullname.startswith('hgext.extlib.pywatchman'):
                 return None
 
             # Try to find the module using other registered finders.

@@ -14,7 +14,7 @@ from mercurial import (
     util,
 )
 
-from . import pywatchman
+from ..extlib import pywatchman
 
 class Unavailable(Exception):
     def __init__(self, msg, warn=True, invalidate=False):

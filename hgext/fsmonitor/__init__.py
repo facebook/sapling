@@ -136,8 +136,9 @@ from mercurial import (
 )
 from mercurial import match as matchmod
 
+from ..extlib import pywatchman
+
 from . import (
-    pywatchman,
     state,
     watchmanclient,
 )

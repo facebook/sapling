@@ -121,7 +121,7 @@ hgext/extlib/ctreemanifest/manifest_entry.h
 hgext/extlib/ctreemanifest/manifest_fetcher.h
 hgext/extlib/ctreemanifest/manifest_ptr.h
 hgext/extlib/ctreemanifest/treemanifest.h
-hgext/fsmonitor/pywatchman/bser.c
+hgext/extlib/pywatchman/bser.c
 lib/cdatapack/cdatapack.c
 lib/cdatapack/cdatapack.h
 lib/cdatapack/cdatapack_dump.c

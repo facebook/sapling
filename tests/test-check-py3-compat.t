@@ -174,7 +174,7 @@
 #if py3exe
   $ testrepohg files 'set:(**.py) - grep(pygments)' \
   > -X hgdemandimport/demandimportpy2.py \
-  > -X hgext/fsmonitor/pywatchman \
+  > -X hgext/extlib/pywatchman \
   > -X hg-git \
   > | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py \
   > | sed 's/[0-9][0-9]*)$/*)/'

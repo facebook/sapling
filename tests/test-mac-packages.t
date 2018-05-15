@@ -49,10 +49,10 @@ Spot-check some randomly selected files:
   ./usr/local/share/man/man5/hgignore.5	100644	0/0
   ./usr/local/share/man/man5/hgrc.5	100644	0/0
   $ grep bser boms.txt | cut -d '	' -f 1,2,3
-  ./Library/Python/2.7/site-packages/hgext/fsmonitor/pywatchman/bser.so	100755	0/0
-  ./Library/Python/2.7/site-packages/hgext/fsmonitor/pywatchman/pybser.py	100644	0/0
-  ./Library/Python/2.7/site-packages/hgext/fsmonitor/pywatchman/pybser.pyc	100644	0/0
-  ./Library/Python/2.7/site-packages/hgext/fsmonitor/pywatchman/pybser.pyo	100644	0/0
+  ./Library/Python/2.7/site-packages/hgext/extlib/pywatchman/bser.so	100755	0/0
+  ./Library/Python/2.7/site-packages/hgext/extlib/pywatchman/pybser.py	100644	0/0
+  ./Library/Python/2.7/site-packages/hgext/extlib/pywatchman/pybser.pyc	100644	0/0
+  ./Library/Python/2.7/site-packages/hgext/extlib/pywatchman/pybser.pyo	100644	0/0
   $ grep localrepo boms.txt | cut -d '	' -f 1,2,3
   ./Library/Python/2.7/site-packages/mercurial/localrepo.py	100644	0/0
   ./Library/Python/2.7/site-packages/mercurial/localrepo.pyc	100644	0/0
