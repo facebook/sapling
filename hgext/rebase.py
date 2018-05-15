@@ -1945,6 +1945,9 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
         srcnode = cl.node(srcrev)
         destnode = cl.node(destmap[srcrev])
         # XXX: more advanced APIs are required to handle split correctly
+        # obsutil.allsuccessors can include nodes that aren't present
+        # in the repo and changelog nodemap. This is normal if CommitCloud
+        # extension is enabled.
         successors = list(obsutil.allsuccessors(repo.obsstore, [srcnode]))
         if len(successors) == 1:
             # obsutil.allsuccessors includes node itself. When the list only
@@ -1961,8 +1964,10 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
                 # If 'srcrev' has a successor in rebase set but none in
                 # destination (which would be catched above), we shall skip it
                 # and its descendants to avoid divergence.
+                # obsutil.allsuccessors can include nodes that aren't present
+                # in changelog nodemap.
                 if any(nodemap[s] in destmap
-                       for s in successors if s != srcnode):
+                       for s in successors if s != srcnode and s in nodemap):
                     obsoletewithoutsuccessorindestination.add(srcrev)
 
     return obsoletenotrebased, obsoletewithoutsuccessorindestination
