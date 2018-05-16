@@ -32,3 +32,15 @@ impl AsRef<[u8]> for Node {
         &self.0
     }
 }
+
+#[cfg(test)]
+use quickcheck;
+
+#[cfg(test)]
+impl quickcheck::Arbitrary for Node {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        let mut bytes = [0u8; 20];
+        g.fill_bytes(&mut bytes);
+        Node::from(&bytes)
+    }
+}
