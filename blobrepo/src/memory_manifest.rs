@@ -56,6 +56,25 @@ fn extend_repopath_with_dir(path: &RepoPath, dir: &MPathElement) -> RepoPath {
 }
 
 impl MemoryManifestEntry {
+    fn is_empty(&self) -> bool {
+        match self {
+            &MemoryManifestEntry::MemTree { ref children, .. } => {
+                children.values().all(Self::is_empty)
+            }
+            _ => false,
+        }
+    }
+
+    /// Get an empty tree manifest entry
+    pub fn empty_tree() -> Self {
+        MemoryManifestEntry::MemTree {
+            children: BTreeMap::new(),
+            p1: None,
+            p2: None,
+            modified: false,
+        }
+    }
+
     /// Save all manifests represented here to the blobstore
     pub fn save(
         &self,
@@ -80,6 +99,7 @@ impl MemoryManifestEntry {
                     // 2: Write out a manifest and return its hash.
                     let futures: Vec<_> = children
                         .iter()
+                        .filter(|&(_path, child)| !child.is_empty())
                         .map({
                             let blobstore = blobstore.clone();
                             let path = &path;
@@ -252,15 +272,9 @@ impl MemoryRootManifest {
             mp2.map(|p| p.into_mononoke()).as_ref(),
         );
         match parents {
-            DParents::None => future::ok(Self::create(
-                blobstore,
-                MemoryManifestEntry::MemTree {
-                    children: BTreeMap::new(),
-                    p1: None,
-                    p2: None,
-                    modified: false,
-                },
-            )).boxify(),
+            DParents::None => {
+                future::ok(Self::create(blobstore, MemoryManifestEntry::empty_tree())).boxify()
+            }
             DParents::One(p) => {
                 MemoryManifestEntry::convert_treenode(blobstore.clone(), &DManifestId::new(p))
                     .map(move |root_entry| Self::create(blobstore, root_entry))
@@ -304,7 +318,7 @@ mod test {
     use super::*;
     use async_unit;
     use many_files_dirs;
-    use mercurial_types::DNodeHash;
+    use mercurial_types::{DNodeHash, FileType};
     use slog::Discard;
 
     fn insert_entry(
@@ -404,7 +418,7 @@ mod test {
             let logger = Logger::root(Discard, o![]);
 
             // Create an empty memory manifest
-            let mut memory_manifest = MemoryRootManifest::new(blobstore, None, None)
+            let mut memory_manifest = MemoryRootManifest::new(blobstore.clone(), None, None)
                 .wait()
                 .expect("Could not create empty manifest");
 
@@ -412,8 +426,22 @@ mod test {
             let dir_nodehash = DNodeHash::from_static_str(
                 "b267a6869fcc39b37741408b5823cc044233201d",
             ).expect("Could not get nodehash");
+            let mut children = BTreeMap::new();
+            let file1_mpe = MPathElement::new(b"file1".to_vec())
+                .expect("file1 is no longer a valid MPathElement");
+            children.insert(
+                file1_mpe.clone(),
+                MemoryManifestEntry::Blob(
+                    HgBlobEntry::new(
+                        blobstore.clone(),
+                        Some(file1_mpe),
+                        dir_nodehash,
+                        Type::File(FileType::Regular),
+                    ).expect("Failed to build blob entry"),
+                ),
+            );
             let dir = MemoryManifestEntry::MemTree {
-                children: BTreeMap::new(),
+                children,
                 p1: Some(dir_nodehash.into_mercurial()),
                 p2: None,
                 modified: false,
