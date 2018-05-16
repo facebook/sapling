@@ -1,4 +1,4 @@
-#if no-osx
+#if no-windows no-osx
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
@@ -93,9 +93,9 @@ sleeps should be used to get predictable order
   $ sleep 1
   $ hg pushb -q --config infinitepushbackup.hostname=mydevhost
   $ cd ..
-  $ hg clone -q ssh://user@dummy/server client2
-  $ cd client2 && setupsqlclienthgrc
-  $ mkcommit 'Commit in repo client2'
+  $ hg clone -q ssh://user@dummy/server 'client2\dev'
+  $ cd 'client2\dev' && setupsqlclienthgrc
+  $ mkcommit 'Commit in repo client2\dev'
   $ sleep 1
   $ hg pushb -q --config infinitepushbackup.hostname=devhost
   $ cd ..
@@ -134,16 +134,16 @@ sleeps should be used to get predictable order
   abort: multiple backups found
   (set --hostname and --reporoot to pick a backup)
   [255]
-  $ hg pullbackup --reporoot $TESTTMP/client1 --hostname mydevhost -q # pullbackup should work with reporoot/hostname pair
-  $ hg pullbackup --reporoot $TESTTMP/client2 --hostname devhost -q   # pullbackup should work with reporoot/hostname pair
-  $ hg pullbackup --reporoot $TESTTMP/client3 -q                      # pullbackup should work with reporoot only if it is unambiguous
-  $ hg pullbackup --hostname ourdevhost -q                            # pullbackup should work with hostname only if it is unambiguous
+  $ hg pullbackup --reporoot $TESTTMP/client1 --hostname mydevhost -q       # pullbackup should work with reporoot/hostname pair
+  $ hg pullbackup --reporoot $TESTTMP/'client2\dev' --hostname devhost -q   # pullbackup should work with reporoot/hostname pair
+  $ hg pullbackup --reporoot $TESTTMP/client3 -q                            # pullbackup should work with reporoot only if it is unambiguous
+  $ hg pullbackup --hostname ourdevhost -q                                  # pullbackup should work with hostname only if it is unambiguous
   $ hg log -G --template "{node|short} '{desc}'\n"
   o  3309f3c00117 'Commit in repo client4'
   
   o  8b99f4b01a41 'Commit in repo client3'
   
-  o  c25c4d010d8e 'Commit in repo client2'
+  o  f9fdbb60b59e 'Commit in repo client2\dev'
   
   o  250e5455acab 'Commit in repo client1'
   
@@ -162,7 +162,7 @@ Getavailablebackups should also go in MRU order
       ], 
       "devhost": [
           "$TESTTMP/client3", 
-          "$TESTTMP/client2"
+          "$TESTTMP/client2\\dev"
       ]
   }
   $ hg getavailablebackups
@@ -171,7 +171,7 @@ Getavailablebackups should also go in MRU order
   $TESTTMP/client5 on mydevhost
   $TESTTMP/client4 on ourdevhost
   $TESTTMP/client3 on devhost
-  $TESTTMP/client2 on devhost
+  $TESTTMP/client2\dev on devhost
   $TESTTMP/client1 on mydevhost
 
   $ cd ../

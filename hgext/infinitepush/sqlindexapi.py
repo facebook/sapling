@@ -20,6 +20,10 @@ from indexapi import (
 from mercurial import util
 
 def _convertbookmarkpattern(pattern):
+    # To search for \, specify it as \\
+    # To search for _, specify it as \_
+    # To search for %, specify it as \%
+    pattern = pattern.replace('\\', '\\\\')
     pattern = pattern.replace('_', '\\_')
     pattern = pattern.replace('%', '\\%')
     if pattern.endswith('*'):
