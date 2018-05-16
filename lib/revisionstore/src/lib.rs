@@ -5,6 +5,8 @@
 #[macro_use]
 extern crate failure;
 
+mod unionstore;
+
 pub mod error;
 pub mod datastore;
 pub mod key;
