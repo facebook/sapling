@@ -12,7 +12,7 @@ use bincode;
 pub use failure::{Error, ResultExt};
 
 use mercurial::HgNodeHash;
-use mercurial_types::{DChangesetId, DFileNodeId, DNodeHash, DParents, HgBlob, HgBlobHash,
+use mercurial_types::{DChangesetId, DFileNodeId, DNodeHash, DParents, HgBlob, HgBlobHash, MPath,
                       RepoPath, Type};
 
 #[derive(Debug)]
@@ -74,4 +74,6 @@ pub enum ErrorKind {
     UnresolvedConflicts,
     #[fail(display = "Manifest without parents did not get changed by a BonsaiChangeset")]
     UnchangedManifest,
+    #[fail(display = "Path not found: {}", _0)] PathNotFound(MPath),
+    #[fail(display = "Remove called on non-directory")] NotADirectory,
 }

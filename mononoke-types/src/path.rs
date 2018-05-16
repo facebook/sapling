@@ -410,6 +410,32 @@ impl MPath {
         slashes + elem_len
     }
 
+    // Private because it does not validate elements - you must ensure that it's non-empty
+    fn from_elements<'a, I>(elements: I) -> Self
+    where
+        I: Iterator<Item = &'a MPathElement>,
+    {
+        Self {
+            elements: elements.cloned().collect(),
+        }
+    }
+
+    /// Split an MPath into dirname (if possible) and file name
+    pub fn split_dirname(&self) -> (Option<MPath>, &MPathElement) {
+        let (filename, dirname_elements) = self.elements
+            .split_last()
+            .expect("MPaths should never be empty");
+
+        if dirname_elements.is_empty() {
+            (None, filename)
+        } else {
+            (
+                Some(MPath::from_elements(dirname_elements.iter())),
+                filename,
+            )
+        }
+    }
+
     pub(crate) fn into_thrift(self) -> thrift::MPath {
         thrift::MPath(
             self.elements

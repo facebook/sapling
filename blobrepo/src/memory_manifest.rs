@@ -56,7 +56,7 @@ fn extend_repopath_with_dir(path: &RepoPath, dir: &MPathElement) -> RepoPath {
 }
 
 impl MemoryManifestEntry {
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         match self {
             &MemoryManifestEntry::MemTree { ref children, .. } => {
                 children.values().all(Self::is_empty)
@@ -245,6 +245,66 @@ impl MemoryManifestEntry {
             _ => false,
         }
     }
+
+    /// Creates directories as needed to find the element referred to by path
+    /// This will be a tree if it's been freshly created, or whatever is in the manifest if it
+    /// was present. Returns a None if the path cannot be created (e.g. there's a file part
+    /// way through the path
+    pub fn find_mut<I>(&mut self, mut path: I) -> Option<&mut Self>
+    where
+        I: Iterator<Item = MPathElement>,
+    {
+        match path.next() {
+            None => Some(self),
+            Some(element) => match self {
+                &mut MemoryManifestEntry::MemTree {
+                    ref mut children,
+                    ref mut modified,
+                    ..
+                } => {
+                    *modified = true;
+                    children
+                        .entry(element)
+                        .or_insert_with(Self::empty_tree)
+                        .find_mut(path)
+                }
+                _ => None,
+            },
+        }
+    }
+
+    /// Remove element from this tree manifest
+    pub fn remove(&mut self, element: &MPathElement) -> Result<()> {
+        match self {
+            &mut MemoryManifestEntry::MemTree {
+                ref mut children,
+                ref mut modified,
+                ..
+            } => {
+                *modified = true;
+                children.remove(element);
+                Ok(())
+            }
+            _ => Err(ErrorKind::NotADirectory.into()),
+        }
+    }
+
+    /// Set the given filename to be a known blob that's already in the blob store. No validation
+    /// is done here.
+    pub fn set(&mut self, element: MPathElement, entry: HgBlobEntry) -> Result<()> {
+        match self {
+            &mut MemoryManifestEntry::MemTree {
+                ref mut children,
+                ref mut modified,
+                ..
+            } => {
+                *modified = true;
+                children.insert(element, MemoryManifestEntry::Blob(entry));
+                Ok(())
+            }
+            _ => Err(ErrorKind::NotADirectory.into()),
+        }
+    }
 }
 
 /// An in memory manifest, created from parent manifests (if any)
@@ -310,6 +370,31 @@ impl MemoryRootManifest {
         self.root_entry
             .save(&self.blobstore, logger, RepoPath::root())
             .boxify()
+    }
+
+    /// Remove a leaf entry. For now, this must be a file node, and we will walk backwards to
+    /// remove empty directories. We do not support pruning a whole directory tree at a time.
+    pub fn remove(&mut self, path: &MPath) -> Result<()> {
+        let (possible_path, filename) = path.split_dirname();
+        let target = match possible_path {
+            None => Some(&mut self.root_entry),
+            Some(filepath) => self.root_entry.find_mut(filepath.into_iter()),
+        }.ok_or(ErrorKind::PathNotFound(path.clone()))?;
+
+        target.remove(filename)
+    }
+
+    /// Add an entry, based on a blob you've already created outside this module. Missing
+    /// directories will be created for you, and if the entry already exists, it will be replaced
+    /// unconditionally.
+    pub fn set_entry(&mut self, path: &MPath, entry: HgBlobEntry) -> Result<()> {
+        let (possible_path, filename) = path.split_dirname();
+        let target = match possible_path {
+            None => Some(&mut self.root_entry),
+            Some(filepath) => self.root_entry.find_mut(filepath.into_iter()),
+        }.ok_or(ErrorKind::PathNotFound(path.clone()))?;
+
+        target.set(filename.clone(), entry)
     }
 }
 
@@ -465,6 +550,170 @@ mod test {
                 refound.get_hash().into_nodehash(),
                 dir_nodehash,
                 "directory hash changed"
+            );
+        })
+    }
+
+    #[test]
+    fn remove_item() {
+        async_unit::tokio_unit_test(|| {
+            let repo = many_files_dirs::getrepo(None);
+            let blobstore = repo.get_blobstore();
+            let logger = Logger::root(Discard, o![]);
+
+            let manifest_id = DNodeHash::from_static_str(
+                "b267a6869fcc39b37741408b5823cc044233201d",
+            ).expect("Could not get nodehash")
+                .into_mercurial();
+
+            let dir2 = MPathElement::new(b"dir2".to_vec()).expect("Can't create MPathElement dir2");
+
+            // Load a memory manifest
+            let mut memory_manifest = MemoryRootManifest::new(blobstore, Some(&manifest_id), None)
+                .wait()
+                .expect("Could not load manifest");
+
+            if let MemoryManifestEntry::MemTree { ref children, .. } = memory_manifest.root_entry {
+                assert!(!children.get(&dir2).expect("dir2 is missing").is_empty());
+            } else {
+                panic!("Loaded manifest is not a MemTree");
+            }
+
+            // Remove a file
+            memory_manifest
+                .remove(&MPath::new(b"dir2/file_1_in_dir2").expect("Can't create MPath"))
+                .expect("Remove failed");
+
+            // Assert that dir2 is now empty, since we've removed the item
+            if let MemoryManifestEntry::MemTree { ref children, .. } = memory_manifest.root_entry {
+                assert!(children.get(&dir2).expect("dir2 is missing").is_empty());
+            } else {
+                panic!("Loaded manifest is not a MemTree");
+            }
+
+            // And check that dir2 disappears over a save/reload operation
+            let manifest_entry = memory_manifest
+                .save(&logger)
+                .wait()
+                .expect("Could not save manifest");
+
+            let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
+                .and_then(|m| m.lookup(&dir2))
+                .wait()
+                .expect("Lookup of entry just saved failed");
+
+            assert!(
+                refound.is_none(),
+                "Found dir2 when we should have deleted it on save"
+            );
+        })
+    }
+
+    #[test]
+    fn add_item() {
+        async_unit::tokio_unit_test(|| {
+            let repo = many_files_dirs::getrepo(None);
+            let blobstore = repo.get_blobstore();
+            let logger = Logger::root(Discard, o![]);
+
+            let manifest_id = DNodeHash::from_static_str(
+                "b267a6869fcc39b37741408b5823cc044233201d",
+            ).expect("Could not get nodehash")
+                .into_mercurial();
+
+            let new_file = MPathElement::new(b"new_file".to_vec())
+                .expect("Can't create MPathElement new_file");
+
+            // Load a memory manifest
+            let mut memory_manifest =
+                MemoryRootManifest::new(blobstore.clone(), Some(&manifest_id), None)
+                    .wait()
+                    .expect("Could not load manifest");
+
+            // Add a file
+            let nodehash = DNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+                .expect("Could not get nodehash");
+            memory_manifest
+                .set_entry(
+                    &MPath::new(b"new_file").expect("Could not create MPath"),
+                    HgBlobEntry::new(
+                        blobstore.clone(),
+                        Some(new_file.clone()),
+                        nodehash,
+                        Type::File(FileType::Regular),
+                    ).expect("Failed to build blob entry"),
+                )
+                .expect("Add failed");
+
+            // And check that new_file persists
+            let manifest_entry = memory_manifest
+                .save(&logger)
+                .wait()
+                .expect("Could not save manifest");
+
+            let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
+                .and_then(|m| m.lookup(&new_file))
+                .wait()
+                .expect("Lookup of entry just saved failed")
+                .expect("new_file did not persist");
+            assert_eq!(
+                refound.get_hash().into_nodehash(),
+                nodehash,
+                "nodehash hash changed"
+            );
+        })
+    }
+
+    #[test]
+    fn replace_item() {
+        async_unit::tokio_unit_test(|| {
+            let repo = many_files_dirs::getrepo(None);
+            let blobstore = repo.get_blobstore();
+            let logger = Logger::root(Discard, o![]);
+
+            let manifest_id = DNodeHash::from_static_str(
+                "b267a6869fcc39b37741408b5823cc044233201d",
+            ).expect("Could not get nodehash")
+                .into_mercurial();
+
+            let new_file = MPathElement::new(b"1".to_vec()).expect("Can't create MPathElement 1");
+
+            // Load a memory manifest
+            let mut memory_manifest =
+                MemoryRootManifest::new(blobstore.clone(), Some(&manifest_id), None)
+                    .wait()
+                    .expect("Could not load manifest");
+
+            // Add a file
+            let nodehash = DNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+                .expect("Could not get nodehash");
+            memory_manifest
+                .set_entry(
+                    &MPath::new(b"1").expect("Could not create MPath"),
+                    HgBlobEntry::new(
+                        blobstore.clone(),
+                        Some(new_file.clone()),
+                        nodehash,
+                        Type::File(FileType::Regular),
+                    ).expect("Failed to build blob entry"),
+                )
+                .expect("Change failed");
+
+            // And check that new_file persists
+            let manifest_entry = memory_manifest
+                .save(&logger)
+                .wait()
+                .expect("Could not save manifest");
+
+            let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
+                .and_then(|m| m.lookup(&new_file))
+                .wait()
+                .expect("Lookup of entry just saved failed")
+                .expect("1 did not persist");
+            assert_eq!(
+                refound.get_hash().into_nodehash(),
+                nodehash,
+                "nodehash hash changed"
             );
         })
     }
