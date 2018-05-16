@@ -5,6 +5,10 @@
 #[macro_use]
 extern crate failure;
 
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
+
 mod unionstore;
 
 pub mod error;

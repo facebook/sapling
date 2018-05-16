@@ -9,3 +9,4 @@ lto = true
 [dependencies]
 failure = "*"
 mpatch = { path = "../mpatch" }
+quickcheck = "0.6"
