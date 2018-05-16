@@ -102,6 +102,12 @@ sparse = !
     with open(os.path.join(eden_hg_dir, "bookmarks"), "w") as f:
         pass
 
+    # Create a branch file with the contents "default\n". Even though we do not
+    # use branches, we have seen some users with a function in their .bashrc
+    # that categorically reads the .hg/branch file to include in their prompt.
+    with open(os.path.join(eden_hg_dir, "branch"), "w") as f:
+        f.write("default\n")
+
     # Write the parents to the dirstate file.
     with open(os.path.join(eden_hg_dir, "dirstate"), "wb") as f:
         parents = [binascii.unhexlify(revision), b"\x00" * 20]
