@@ -1,5 +1,6 @@
 use node::Node;
 
+#[derive(Clone, Debug)]
 pub struct Key {
     // Name is usually a file or directory path
     name: Box<[u8]>,

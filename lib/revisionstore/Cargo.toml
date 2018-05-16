@@ -8,3 +8,4 @@ lto = true
 
 [dependencies]
 failure = "*"
+mpatch = { path = "../mpatch" }

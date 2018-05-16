@@ -11,3 +11,4 @@ pub mod error;
 pub mod datastore;
 pub mod key;
 pub mod node;
+pub mod uniondatastore;
