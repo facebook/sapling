@@ -16,7 +16,8 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
-use blobrepo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry, UploadHgEntry};
+use blobrepo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry, UploadHgEntry,
+               UploadHgNodeHash};
 use mercurial::{self, file, HgNodeHash, HgNodeKey};
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, RepoPath};
@@ -51,13 +52,12 @@ impl UploadableHgBlob for Filelog {
     fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let upload = UploadHgEntry {
-            nodeid: node_key.hash,
+            upload_nodeid: UploadHgNodeHash::Checked(node_key.hash),
             raw_content: HgBlob::from(self.data),
             content_type: manifest::Type::File(FileType::Regular),
             p1: self.p1,
             p2: self.p2,
             path: node_key.path.clone(),
-            check_nodeid: true,
         };
         upload
             .upload(repo)

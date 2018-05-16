@@ -419,19 +419,26 @@ impl BlobRepo {
     }
 }
 
-/// Context for uploading a Mercurial entry.
-pub struct UploadHgEntry {
+/// Node hash handling for upload entries
+pub enum UploadHgNodeHash {
+    /// Generate the hash from the uploaded content
+    Generate,
     /// This hash is used as the blobstore key, even if it doesn't match the hash of the
     /// parents and raw content. This is done because in some cases like root tree manifests
     /// in hybrid mode, Mercurial sends fake hashes.
-    pub nodeid: HgNodeHash,
+    Supplied(HgNodeHash),
+    /// As Supplied, but Verify the supplied hash - if it's wrong, you will get an error.
+    Checked(HgNodeHash),
+}
+
+/// Context for uploading a Mercurial entry.
+pub struct UploadHgEntry {
+    pub upload_nodeid: UploadHgNodeHash,
     pub raw_content: HgBlob,
     pub content_type: manifest::Type,
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
     pub path: RepoPath,
-    /// Pass `true` here to verify that the hash actually matches the inputs.
-    pub check_nodeid: bool,
 }
 
 impl UploadHgEntry {
@@ -446,32 +453,46 @@ impl UploadHgEntry {
         self,
         repo: &BlobRepo,
     ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
+        self.upload_to_blobstore(&repo.blobstore, &repo.logger)
+    }
+
+    pub(crate) fn upload_to_blobstore(
+        self,
+        blobstore: &Arc<Blobstore>,
+        logger: &Logger,
+    ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
         let UploadHgEntry {
-            nodeid,
+            upload_nodeid,
             raw_content,
             content_type,
             p1,
             p2,
             path,
-            check_nodeid,
         } = self;
 
         let p1 = p1.as_ref();
         let p2 = p2.as_ref();
         let raw_content = raw_content.clean();
 
-        if check_nodeid {
-            let computed_nodeid = HgBlobNode::new(raw_content.clone(), p1, p2)
+        let nodeid: HgNodeHash = match upload_nodeid {
+            UploadHgNodeHash::Generate => HgBlobNode::new(raw_content.clone(), p1, p2)
                 .nodeid()
-                .expect("raw_content must have data available");
-            if nodeid != computed_nodeid {
-                bail_err!(ErrorKind::InconsistentEntryHash(
-                    path,
-                    nodeid,
-                    computed_nodeid
-                ));
+                .expect("raw_content must have data available"),
+            UploadHgNodeHash::Supplied(nodeid) => nodeid,
+            UploadHgNodeHash::Checked(nodeid) => {
+                let computed_nodeid = HgBlobNode::new(raw_content.clone(), p1, p2)
+                    .nodeid()
+                    .expect("raw_content must have data available");
+                if nodeid != computed_nodeid {
+                    bail_err!(ErrorKind::InconsistentEntryHash(
+                        path,
+                        nodeid,
+                        computed_nodeid
+                    ));
+                }
+                nodeid
             }
-        }
+        };
 
         let parents = HgParents::new(p1, p2);
 
@@ -485,7 +506,7 @@ impl UploadHgEntry {
         };
 
         let blob_entry = HgBlobEntry::new(
-            repo.blobstore.clone(),
+            blobstore.clone(),
             path.mpath()
                 .and_then(|m| m.into_iter().last())
                 .map(|m| m.clone()),
@@ -513,10 +534,10 @@ impl UploadHgEntry {
         }
 
         // Ensure that content is in the blobstore
-        let content_upload = repo.blobstore
+        let content_upload = blobstore
             .put(format!("sha1-{}", blob_hash.sha1()), raw_content.into())
             .timed({
-                let logger = repo.logger.clone();
+                let logger = logger.clone();
                 let path = path.clone();
                 let nodeid = nodeid.clone();
                 move |stats, result| {
@@ -527,7 +548,7 @@ impl UploadHgEntry {
                 }
             });
         // Upload the new node
-        let node_upload = repo.blobstore.put(
+        let node_upload = blobstore.put(
             get_node_key(nodeid.into_mononoke()),
             raw_node.serialize(&nodeid)?.into(),
         );
@@ -541,7 +562,7 @@ impl UploadHgEntry {
                     |_| (blob_entry, path)
                 })
                 .timed({
-                    let logger = repo.logger.clone();
+                    let logger = logger.clone();
                     let path = path.clone();
                     let nodeid = nodeid.clone();
                     move |stats, result| {

@@ -17,7 +17,7 @@ use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry,
-               UploadHgEntry};
+               UploadHgEntry, UploadHgNodeHash};
 use mercurial::{manifest, HgChangesetId, HgManifestId, HgNodeHash, RevlogChangeset, RevlogEntry,
                 RevlogRepo, NULL_HASH};
 use mercurial_types::{HgBlob, MPath, RepoPath, Type};
@@ -170,13 +170,12 @@ fn upload_entry(
         .and_then(move |(content, parents)| {
             let (p1, p2) = parents.get_nodes();
             let upload = UploadHgEntry {
-                nodeid: entry.get_hash().into_nodehash(),
+                upload_nodeid: UploadHgNodeHash::Checked(entry.get_hash().into_nodehash()),
                 raw_content: content,
                 content_type: ty,
                 p1: p1.cloned(),
                 p2: p2.cloned(),
                 path,
-                check_nodeid: true,
             };
             upload.upload(&blobrepo)
         })
@@ -210,16 +209,17 @@ pub fn upload_changesets(
                             None => future::ok(None).boxify(),
                             Some((manifest_id, blob, p1, p2)) => {
                                 let upload = UploadHgEntry {
-                                    nodeid: manifest_id.into_nodehash(),
+                                    // The root tree manifest is expected to have the wrong hash in
+                                    // hybrid mode. This will probably never go away for
+                                    // compatibility with old repositories.
+                                    upload_nodeid: UploadHgNodeHash::Supplied(
+                                        manifest_id.into_nodehash(),
+                                    ),
                                     raw_content: blob,
                                     content_type: Type::Tree,
                                     p1,
                                     p2,
                                     path: RepoPath::root(),
-                                    // The root tree manifest is expected to have the wrong hash in
-                                    // hybrid mode. This will probably never go away for
-                                    // compatibility with old repositories.
-                                    check_nodeid: false,
                                 };
                                 upload
                                     .upload(&blobrepo)
