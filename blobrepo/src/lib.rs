@@ -48,9 +48,15 @@ extern crate rocksblob;
 extern crate rocksdb;
 extern crate time_ext;
 
+#[cfg(test)]
+extern crate async_unit;
+#[cfg(test)]
+extern crate many_files_dirs;
+
 mod repo;
 mod changeset;
 mod manifest;
+mod memory_manifest;
 mod file;
 mod errors;
 mod utils;
@@ -72,3 +78,6 @@ pub use repo_commit::compute_changed_files;
 // TODO: (jsgf) T21597565 This is exposed here for blobimport -- don't use it for anything else.
 
 pub use utils::RawNodeBlob;
+
+// TODO: Temporary, until this code is used for real
+pub use memory_manifest::*;

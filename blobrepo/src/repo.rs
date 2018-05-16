@@ -417,6 +417,11 @@ impl BlobRepo {
                 }
             })
     }
+
+    // These functions are temporary, while memory_manifest.rs isn't yet in full use.
+    pub fn get_blobstore(&self) -> Arc<Blobstore> {
+        self.blobstore.clone()
+    }
 }
 
 /// Node hash handling for upload entries

@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use NodeStream;
-use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
@@ -15,8 +14,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 pub fn string_to_nodehash(hash: &'static str) -> DNodeHash {
-    DNodeHash::from_ascii_str(&AsciiString::from_ascii(hash).expect("Can't turn string to AsciiString"))
-        .expect("Can't turn AsciiString to DNodeHash")
+    DNodeHash::from_static_str(hash).expect("Can't turn string to DNodeHash")
 }
 
 /// Accounting for reordering within generations, ensure that a NodeStream gives the expected

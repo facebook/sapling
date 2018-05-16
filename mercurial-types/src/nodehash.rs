@@ -48,6 +48,14 @@ impl DNodeHash {
         self.0.as_ref()
     }
 
+    pub fn from_static_str(hash: &'static str) -> Result<Self> {
+        Sha1::from_str(hash).map(DNodeHash)
+    }
+
+    pub fn sha1(&self) -> &Sha1 {
+        &self.0
+    }
+
     #[inline]
     pub fn from_ascii_str(s: &AsciiStr) -> Result<Self> {
         Sha1::from_ascii_str(s).map(DNodeHash)

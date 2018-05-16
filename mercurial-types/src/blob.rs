@@ -126,6 +126,12 @@ impl From<Bytes> for HgBlob {
     }
 }
 
+impl From<Vec<u8>> for HgBlob {
+    fn from(data: Vec<u8>) -> Self {
+        HgBlob::Dirty(data.into())
+    }
+}
+
 /// Get a reference to the `HgBlob`'s data.
 impl<'a> Into<Option<&'a [u8]>> for &'a HgBlob {
     fn into(self) -> Option<&'a [u8]> {

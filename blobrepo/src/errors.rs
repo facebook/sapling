@@ -70,4 +70,8 @@ pub enum ErrorKind {
     #[fail(display = "Inconsistent node hash for changeset: provided: {}, computed: {}", _0, _1)]
     InconsistentChangesetHash(HgNodeHash, HgNodeHash),
     #[fail(display = "Bookmark {} does not exist", _0)] BookmarkNotFound(AsciiString),
+    #[fail(display = "Unresolved conflicts when converting BonsaiChangeset to Manifest")]
+    UnresolvedConflicts,
+    #[fail(display = "Manifest without parents did not get changed by a BonsaiChangeset")]
+    UnchangedManifest,
 }
