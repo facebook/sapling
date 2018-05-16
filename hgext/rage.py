@@ -7,6 +7,7 @@
     rpmbin = rpm
 """
 import subprocess
+import struct
 
 from functools import partial
 from mercurial.i18n import _
@@ -148,8 +149,28 @@ def infinitepushbackuplogs(ui, repo):
     return ''.join(reversed(logs))
 
 def readfsmonitorstate(repo):
-    file = repo.vfs('fsmonitor.state', 'rb')
-    return file.read()
+    """
+    Read the fsmonitor.state file and pretty print some information from it.
+    Based on file format version 4. See hgext/fsmonitor/state.py for real
+    implementation.
+    """
+    f = repo.vfs('fsmonitor.state', 'rb')
+    versionbytes = f.read(4)
+    version = struct.unpack('>I', versionbytes)[0]
+    data = f.read()
+    state = data.split('\0')
+    hostname, clock, ignorehash = state[0:3]
+    files = state[3:-1] # discard empty entry after final file
+    numfiles = len(files)
+    prettyfiles = '\n'.join(files[:20])
+    return """\
+version: %d
+hostname: %s
+clock: %s
+ignorehash: %s
+files (first 20 of %d):
+%s
+""" % (version, hostname, clock, ignorehash, numfiles, prettyfiles)
 
 def _makerage(ui, repo, **opts):
     srcrepo = shareutil.getsrcrepo(repo)
