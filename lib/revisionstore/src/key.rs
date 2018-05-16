@@ -21,3 +21,13 @@ impl Key {
         &self.node
     }
 }
+
+#[cfg(test)]
+use quickcheck;
+
+#[cfg(test)]
+impl quickcheck::Arbitrary for Key {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Key::new(Vec::arbitrary(g).into_boxed_slice(), Node::arbitrary(g))
+    }
+}
