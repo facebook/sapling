@@ -549,6 +549,7 @@ def overridestatus(
     # case, or we risk forgetting about changes in the working copy.
     updatestate = (parentworking and match.always() and
                    not isinstance(ctx2, (context.workingcommitctx,
+                                         context.overlayworkingctx,
                                          context.memctx)) and
                    'HG_PENDING' not in encoding.environ)
 
