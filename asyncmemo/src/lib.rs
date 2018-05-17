@@ -37,17 +37,19 @@ extern crate futures;
 extern crate futures_ext;
 extern crate heapsize;
 extern crate linked_hash_map;
+extern crate parking_lot;
 #[cfg(test)]
 extern crate tokio_timer;
 
 use std::fmt::{self, Debug};
 use std::hash::Hash;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread;
 use std::usize;
 
 use futures::{Async, Future, Poll};
 use futures::future::{IntoFuture, Shared, SharedError, SharedItem};
+use parking_lot::Mutex;
 
 #[cfg(test)]
 mod test;
@@ -124,7 +126,7 @@ where
     <<F as Filler>::Value as IntoFuture>::Item: Debug,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let hash = self.hash.lock().expect("poisoned lock");
+        let hash = self.hash.lock();
         fmt.debug_struct("AsyncmemoInner")
             .field("hash", &*hash)
             .finish()
@@ -209,7 +211,7 @@ fn wrap_filler_future<Fut: Future + 'static>(
 
 enum Slot<Item, Error> {
     Waiting(SharedAsyncmemoFuture<Item, Error>), // waiting for entry to become available
-    Complete(Item),     // got value
+    Complete(Item),                              // got value
 }
 
 impl<Item, Error> Debug for Slot<Item, Error> {
@@ -273,7 +275,7 @@ where
 {
     // Return the current state of a slot, if present
     fn slot_present(&self) -> Option<FillerSlot<F>> {
-        let mut hash = self.cache.inner.hash.lock().expect("locked poisoned");
+        let mut hash = self.cache.inner.hash.lock();
 
         if let Some(entry) = hash.get_mut(&self.key) {
             match entry {
@@ -288,12 +290,12 @@ where
     }
 
     fn slot_remove(&self) {
-        let mut hash = self.cache.inner.hash.lock().expect("locked poisoned");
+        let mut hash = self.cache.inner.hash.lock();
         let _ = hash.remove(&self.key);
     }
 
     fn slot_insert(&self, slot: FillerSlot<F>) {
-        let mut hash = self.cache.inner.hash.lock().expect("locked poisoned");
+        let mut hash = self.cache.inner.hash.lock();
 
         match hash.insert(self.key.clone(), slot) {
             Err((_k, _v)) => {
@@ -322,7 +324,7 @@ where
         match real_future.poll() {
             Err(err) => {
                 self.slot_remove();
-                match err.lock().expect("error lock poisoned").take() {
+                match err.lock().take() {
                     Some(err) => SharedAsyncmemoFuturePoll::PollResult(Err(err)),
                     None => SharedAsyncmemoFuturePoll::MovedError,
                 }
@@ -453,7 +455,7 @@ where
 
     /// Invalidate a specific key
     pub fn invalidate<K: Into<F::Key>>(&self, key: K) {
-        let mut locked = self.inner.hash.lock().expect("lock poison");
+        let mut locked = self.inner.hash.lock();
         let key = key.into();
         let _ = locked.remove(&key);
     }
@@ -462,14 +464,14 @@ where
     /// This drops the futures of in-progress entries, which should propagate cancellation
     /// if necessary.
     pub fn clear(&self) {
-        let mut locked = self.inner.hash.lock().expect("lock poison");
+        let mut locked = self.inner.hash.lock();
 
         locked.clear()
     }
 
     /// Trim cache size to limits.
     pub fn trim(&self) {
-        let mut locked = self.inner.hash.lock().expect("lock poison");
+        let mut locked = self.inner.hash.lock();
 
         locked.trim_entries(0);
         locked.trim_weight(0);
@@ -477,19 +479,19 @@ where
 
     /// Return number of entries in cache.
     pub fn len(&self) -> usize {
-        let hash = self.inner.hash.lock().expect("lock poison");
+        let hash = self.inner.hash.lock();
         hash.len()
     }
 
     /// Return current "weight" of the cache entries
     pub fn total_weight(&self) -> usize {
-        let hash = self.inner.hash.lock().expect("lock poison");
+        let hash = self.inner.hash.lock();
         hash.total_weight()
     }
 
     /// Return true if cache is empty.
     pub fn is_empty(&self) -> bool {
-        let hash = self.inner.hash.lock().expect("lock poison");
+        let hash = self.inner.hash.lock();
         hash.is_empty()
     }
 }
