@@ -318,5 +318,18 @@ StoredBlob* FakeBackingStore::getStoredBlob(Hash hash) {
   }
   return it->second.get();
 }
+
+void FakeBackingStore::discardOutstandingRequests() {
+  auto data = data_.wlock();
+  for (const auto& tree : data->trees) {
+    tree.second->discardOutstandingRequests();
+  }
+  for (const auto& blob : data->blobs) {
+    blob.second->discardOutstandingRequests();
+  }
+  for (const auto& commit : data->commits) {
+    commit.second->discardOutstandingRequests();
+  }
+}
 } // namespace eden
 } // namespace facebook

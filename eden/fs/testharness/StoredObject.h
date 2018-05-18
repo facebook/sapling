@@ -115,6 +115,11 @@ class StoredObject {
     }
   }
 
+  void discardOutstandingRequests() {
+    auto data = data_.wlock();
+    data->promises.clear();
+  }
+
  private:
   struct Data {
     bool ready{false};

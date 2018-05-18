@@ -94,7 +94,13 @@ TestMount::TestMount(
   initialize(initialCommitHash, rootBuilder, startReady);
 }
 
-TestMount::~TestMount() {}
+TestMount::~TestMount() {
+  // The ObjectStore's futures can have a strong reference to an Inode which
+  // has a reference to its parent, all the way to the root, which in effect
+  // keeps the EdenMount alive, causing the test to leak.
+  // Manually release the futures in FakeBackingStore.
+  backingStore_->discardOutstandingRequests();
+}
 
 void TestMount::initialize(
     Hash initialCommitHash,

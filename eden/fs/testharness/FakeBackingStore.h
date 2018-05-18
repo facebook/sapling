@@ -124,6 +124,12 @@ class FakeBackingStore : public BackingStore {
    */
   StoredBlob* getStoredBlob(Hash hash);
 
+  /**
+   * Manually clear the list of outstanding requests to avoid cycles during
+   * TestMount destruction.
+   */
+  void discardOutstandingRequests();
+
  private:
   struct Data {
     std::unordered_map<Hash, std::unique_ptr<StoredTree>> trees;
