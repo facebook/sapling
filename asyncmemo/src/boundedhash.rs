@@ -19,27 +19,25 @@ where
     entrylimit: usize,  // max number of entries
     weightlimit: usize, // max weight of entries
 
-    keysizes: usize,   // sum of key weights
     entrysizes: usize, // sum of (completed) entry weights
 }
 
 impl<K, V> BoundedHash<K, V>
 where
-    K: Eq + Hash + Weight,
+    K: Eq + Hash,
     V: Weight,
 {
     pub fn new(entrylimit: usize, weightlimit: usize) -> Self {
         BoundedHash {
             hash: LinkedHashMap::new(),
             entrysizes: 0,
-            keysizes: 0,
             entrylimit,
             weightlimit,
         }
     }
 
     pub fn total_weight(&self) -> usize {
-        self.keysizes + self.entrysizes
+        self.entrysizes
     }
 
     #[inline]
@@ -52,16 +50,15 @@ where
         self.hash.is_empty()
     }
 
-    fn remove_one(&mut self, k: &K, v: &V) {
-        self.keysizes -= k.get_weight();
+    fn remove_one(&mut self, v: &V) {
         self.entrysizes -= v.get_weight();
     }
 
     /// Trim an entry with LRU policy
     fn trim_one(&mut self) -> bool {
         match self.hash.pop_front() {
-            Some((k, v)) => {
-                self.remove_one(&k, &v);
+            Some((_k, v)) => {
+                self.remove_one(&v);
                 true
             }
             None => false,
@@ -111,13 +108,12 @@ where
     pub fn clear(&mut self) {
         self.hash.clear();
         self.entrysizes = 0;
-        self.keysizes = 0;
     }
 
     /// Trim a specific key, returning it if it existed, after updating the weight
     pub fn remove(&mut self, key: &K) -> Option<V> {
         self.hash.remove(key).map(|v| {
-            self.remove_one(key, &v);
+            self.remove_one(&v);
             v
         })
     }
@@ -129,14 +125,6 @@ where
         // Remove the key if it's already in the hash
         let oldv = self.hash.remove(&k);
         if let Some(ref removed) = oldv {
-            // XXX Debug code to try and figure out T27701455.
-            assert!(
-                self.keysizes >= k.get_weight(),
-                "ASSERTION FAILED: keysizes: {}, weight: {}",
-                self.keysizes,
-                k.get_weight(),
-            );
-            self.keysizes -= k.get_weight();
             self.entrysizes -= removed.get_weight();
         }
 
@@ -145,14 +133,12 @@ where
             return Err((k, v));
         }
 
-        let kw = k.get_weight();
         let vw = v.get_weight();
 
-        if !self.trim_weight(kw + vw) {
+        if !self.trim_weight(vw) {
             return Err((k, v));
         }
 
-        self.keysizes += kw;
         self.entrysizes += vw;
 
         self.hash.insert(k, v);
@@ -204,21 +190,20 @@ mod test {
         let mut c = BoundedHash::new(10, 1000);
 
         {
-            let ok = c.insert(Weighted("hello", 10), Weighted("world", 100))
-                .is_ok();
+            let ok = c.insert("hello", Weighted("world", 100)).is_ok();
 
             assert!(ok, "insert failed");
-            assert_eq!(c.total_weight(), 10 + 100);
+            assert_eq!(c.total_weight(), 100);
             assert_eq!(c.len(), 1);
         }
 
         {
-            let v = c.get(&Weighted("hello", 10)).expect("get failed");
+            let v = c.get(&"hello").expect("get failed");
             assert_eq!(v, &Weighted("world", 100));
         }
 
         {
-            let ok = c.remove(&Weighted("hello", 10)).is_some();
+            let ok = c.remove(&"hello").is_some();
 
             assert!(ok, "remove failed");
             assert_eq!(c.total_weight(), 0);
@@ -230,25 +215,22 @@ mod test {
     fn toobig() {
         let mut c = BoundedHash::new(10, 1000);
 
-        let ok = c.insert(Weighted("hello", 10), Weighted("world", 100))
-            .is_ok();
+        let ok = c.insert("hello", Weighted("world", 100)).is_ok();
 
         assert!(ok, "insert failed");
-        assert_eq!(c.total_weight(), 10 + 100);
+        assert_eq!(c.total_weight(), 100);
         assert_eq!(c.len(), 1);
 
-        let err = c.insert(Weighted("bubble", 10), Weighted("lead", 1000))
-            .is_err();
+        let err = c.insert("bubble", Weighted("lead", 1001)).is_err();
         assert!(err, "insert worked?");
 
-        assert_eq!(c.total_weight(), 10 + 100);
+        assert_eq!(c.total_weight(), 100);
         assert_eq!(c.len(), 1);
 
-        let ok = c.insert(Weighted("bubble", 10), Weighted("balloon", 880))
-            .is_ok();
+        let ok = c.insert("bubble", Weighted("balloon", 880)).is_ok();
         assert!(ok, "insert failed?");
 
-        assert_eq!(c.total_weight(), 10 + 100 + 10 + 880);
+        assert_eq!(c.total_weight(), 100 + 880);
         assert_eq!(c.len(), 2);
     }
 }

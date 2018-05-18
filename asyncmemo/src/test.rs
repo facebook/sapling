@@ -117,9 +117,9 @@ fn weight_limit_simple() {
     let v1 = c.get("hello").wait().unwrap();
     assert_eq!(v1, "HELLO", "c={:#?}", c);
     assert_eq!(c.len(), 1, "c={:#?}", c);
-    // Note - this test can fail if "hello" and "HELLO" were allocated differently
+    // Note - this test can fail if "HELLO" was allocated differently
     // inside asyncmemo or in the test. If that the case, then fix the test or disable it.
-    let expected_weight = String::from("hello").get_weight() + String::from("HELLO").get_weight();
+    let expected_weight = String::from("HELLO").get_weight();
     assert_eq!(c.total_weight(), expected_weight, "c={:#?}", c);
 }
 
@@ -133,13 +133,13 @@ fn weight_limit_eviction() {
     let v1 = c.get("hello").wait().unwrap();
     assert_eq!(v1, "HELLO", "c={:#?}", c);
     assert_eq!(c.len(), 1, "c={:#?}", c);
-    let expected_weight = String::from("hello").get_weight() + String::from("HELLO").get_weight();
+    let expected_weight = String::from("HELLO").get_weight();
     assert_eq!(c.total_weight(), expected_weight, "c={:#?}", c);
 
     let v1 = c.get("hell").wait().unwrap();
     assert_eq!(v1, "HELL", "c={:#?}", c);
     assert_eq!(c.len(), 1, "c={:#?}", c);
-    let expected_weight = String::from("hell").get_weight() + String::from("HELL").get_weight();
+    let expected_weight = String::from("HELL").get_weight();
     assert_eq!(c.total_weight(), expected_weight, "c={:#?}", c);
 }
 
