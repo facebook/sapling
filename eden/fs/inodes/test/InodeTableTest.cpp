@@ -159,8 +159,12 @@ TEST_F(InodeTableTest, populateIfNotSet) {
   EXPECT_EQ(101, inodeTable->getOrThrow(2_ino));
 }
 
-// TEST(INodeTable, setDefault) {}
-// TEST(INodeTable, setDefault) {}
+TEST_F(InodeTableTest, setDefault) {
+  auto inodeTable = InodeTable<Int>::open(tablePath);
+  EXPECT_EQ(14, inodeTable->setDefault(1_ino, 14));
+  EXPECT_EQ(14, inodeTable->setDefault(1_ino, 16));
+}
+
 // TEST(INodeTable, set) {}
 // TEST(INodeTable, getOrThrow) {}
 // TEST(INodeTable, getOptional) {}

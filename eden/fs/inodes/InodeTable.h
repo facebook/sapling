@@ -48,13 +48,17 @@ struct InodeTableEntry {
  * It is intended for timestamps and mode bits (and any additional fixed-size
  * per-inode state.)
  *
- * The data is stored in a memory-mapped file and flushed to disk on occasion.
- * Durability on kernel or disk shutdown is not a primary goal. Timestamps and
- * permission bits are easy enough to fix and uncommitted changes are
- * short-lived, and the kernel will flush dirty pages if the process is killed.
+ * The data is stored in a memory-mapped file and flushed to disk on
+ * occasion.  Durability on kernel or disk shutdown is not a primary
+ * goal - while the data should be persisted if the process segfaults,
+ * InodeTable does not attempt to guarantee all changes were flushed
+ * in the case of kernel or disk shutdown. Timestamps and permission
+ * bits are easy enough to fix and uncommitted changes are
+ * short-lived, and the kernel will flush dirty pages if the process
+ * is killed.
  *
- * Rather than using a free list, upon removal of an entry, the last entry is
- * moved to the removed entry's index.
+ * The storage remains dense - rather than using a free list, upon removal of an
+ * entry, the last entry is moved to the removed entry's index.
  *
  * The locking strategy is as follows:
  *
@@ -64,6 +68,12 @@ struct InodeTableEntry {
  *
  * The contents of each record itself is protected by the FileInode and
  * TreeInode's locks.
+ *
+ * (Someday it might be worthwhile to investigate whether a freelist is
+ * beneficial. If records have stable locations within the file and the file
+ * is mapped in chunks, allocated records will have stable pointers, avoiding
+ * the need for metadata reads and writes to acquire a lock on the index data
+ * structure, at the cost of a guaranteed-dense map.)
  */
 template <typename Record>
 class InodeTable {
@@ -92,20 +102,11 @@ class InodeTable {
    * whether it was set to the default or not.
    */
   Record setDefault(InodeNumber ino, const Record& record) {
-    return state_.withULockPtr([&](auto&& ulock) {
-      const auto& indices = ulock->indices;
-      auto iter = indices.find(ino);
-      if (iter != indices.end()) {
-        return ulock->storage[iter->second].record;
-      } else {
-        auto wlock = ulock.moveFromUpgradeToWrite();
-
-        size_t index = wlock->storage.size();
-        wlock->storage.emplace_back(ino, record);
-        wlock->indices.emplace(ino, index);
-        return wlock->storage[index].record;
-      }
-    });
+    return modifyOrInsert<Record>(
+        ino,
+        [&](auto& existing) { return existing; },
+        [&] { return record; },
+        [&](auto& existing) { return existing; });
   }
 
   /**
@@ -113,44 +114,26 @@ class InodeTable {
    * initial data.  This is more efficient than setDefault when computing the
    * default value is nontrivial.
    *
-   * Note that the callback is run while the table's locks are held. Don't
-   * call any other InodeTable methods from it.
+   * populate is called outside of any InodeTable locks. It's safe for
+   * it to be an expensive operation. However, in the case that
+   * populateIfNotSet races with another function that inserts a
+   * record for this inode, it's possible for populate() to be called
+   * but its result not used.
    */
   template <typename PopFn>
-  void populateIfNotSet(InodeNumber ino, PopFn&& pop) {
-    return state_.withULockPtr([&](auto&& ulock) {
-      const auto& indices = ulock->indices;
-      auto iter = indices.find(ino);
-      if (iter != indices.end()) {
-        return;
-      } else {
-        auto wlock = ulock.moveFromUpgradeToWrite();
-
-        size_t index = wlock->storage.size();
-        wlock->storage.emplace_back(ino, pop());
-        wlock->indices.emplace(ino, index);
-      }
-    });
+  void populateIfNotSet(InodeNumber ino, PopFn&& populate) {
+    modifyOrInsert<void>(ino, [&](auto&) {}, populate, [&](auto&) {});
   }
 
   /**
    * Assign or overwrite a value for this inode.
    */
   void set(InodeNumber ino, const Record& record) {
-    return state_.withWLock([&](auto& state) {
-      const auto& indices = state.indices;
-      auto iter = indices.find(ino);
-      size_t index;
-      if (iter != indices.end()) {
-        index = iter->second;
-        assert(ino == state.storage[index].inode);
-        state.storage[index].record = record;
-      } else {
-        index = state.storage.size();
-        state.storage.emplace_back(ino, record);
-        state.indices.emplace(ino, index);
-      }
-    });
+    modifyOrInsert<void>(
+        ino,
+        [&](auto& existing) { existing = record; },
+        [&] { return record; },
+        [&](auto&) {});
   }
 
   /**
@@ -158,8 +141,7 @@ class InodeTable {
    * std::out_of_range.
    */
   Record getOrThrow(InodeNumber ino) {
-    auto rv = getOptional(ino);
-    if (rv) {
+    if (auto rv = getOptional(ino)) {
       return *rv;
     } else {
       throw std::out_of_range(
@@ -193,7 +175,7 @@ class InodeTable {
    */
   template <typename ModFn>
   Record modifyOrThrow(InodeNumber ino, ModFn&& fn) {
-    return state_.withWLock([&](const auto& state) {
+    return state_.withRLock([&](auto& state) {
       auto iter = state.indices.find(ino);
       if (iter == state.indices.end()) {
         throw std::out_of_range(
@@ -239,6 +221,60 @@ class InodeTable {
   explicit InodeTable(MappedDiskVector<Entry>&& storage)
       : state_{folly::in_place, std::move(storage)} {}
 
+  /**
+   * Helper function that, in the common case that this inode number
+   * already has an entry, only acquires an rlock. If it does not
+   * exist, then a write lock is acquired and a new entry is inserted.
+   *
+   * In the common case, the only invoked callback is `modify`. If an
+   * entry does not exist, `create` is called prior to acquiring the
+   * write lock. If an entry has been inserted in the meantime, the
+   * result of `create` is discarded and `modify` is called
+   * instead. If we did use the result of `create`, modifyOrInsert returns
+   * the result of `result` applied to the newly-inserted record.
+   *
+   * `modify` has type Record& -> T
+   * `create` has type () -> Record
+   * `result` has type Record& -> T
+   *
+   * WARNING: `modify` and `result` are called while the state lock is
+   * held. `create` is called while no locks are held.
+   */
+  template <typename T, typename ModifyFn, typename CreateFn, typename ResultFn>
+  T modifyOrInsert(
+      InodeNumber ino,
+      ModifyFn&& modify,
+      CreateFn&& create,
+      ResultFn&& result) {
+    // First, acquire the rlock. If an entry exists for `ino`, we can call
+    // modify immediately.
+    {
+      auto state = state_.rlock();
+      auto iter = state->indices.find(ino);
+      if (LIKELY(iter != state->indices.end())) {
+        auto index = iter->second;
+        return modify(state->storage[index].record);
+      }
+    }
+
+    // Construct the new Record while no lock is held in case it does anything
+    // expensive.
+    Record record = create();
+
+    auto state = state_.wlock();
+    // Check again - something may have raced between the locks.
+    auto iter = state->indices.find(ino);
+    if (UNLIKELY(iter != state->indices.end())) {
+      auto index = iter->second;
+      return modify(state->storage[index].record);
+    }
+
+    size_t index = state->storage.size();
+    state->storage.emplace_back(ino, record);
+    state->indices.emplace(ino, index);
+    return result(state->storage[index].record);
+  }
+
   struct State {
     State(MappedDiskVector<Entry>&& mdv) : storage{std::move(mdv)} {
       for (size_t i = 0; i < storage.size(); ++i) {
@@ -253,18 +289,22 @@ class InodeTable {
     }
 
     /**
-     * Holds the actual records, indexed by the values in indices_.  The
-     * records are stored densely.  Freeing an inode moves the last entry into
+     * Holds the actual records, indexed by the values in indices_. The
+     * records are stored densely. Freeing an inode moves the last entry into
      * the newly-freed hole.
+     *
+     * Mutable because we want the ability to modify entries of the vector
+     * (but not change its size) while only the index's rlock is held. That is,
+     * multiple inodes should be able to update their metadata at the same time.
      */
-    MappedDiskVector<Entry> storage;
+    mutable MappedDiskVector<Entry> storage;
 
     /// Maintains an index from inode number to index in storage_.
     std::unordered_map<InodeNumber, size_t> indices;
   };
 
   folly::Synchronized<State> state_;
-};
+}; // namespace eden
 
 static_assert(
     sizeof(InodeMetadata) == 40,
