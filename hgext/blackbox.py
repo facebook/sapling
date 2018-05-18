@@ -190,6 +190,9 @@ def wrapui(ui):
                 src = ' [%s]' % event
             else:
                 src = ''
+            requestid = ui.environ.get('HGREQUESTID') or ''
+            if requestid:
+                src += '[%s]' % requestid
             try:
                 fmt = '%s %s @%s%s (%s)%s> %s'
                 args = (date, user, rev, changed, pid, src, formattedmsg)

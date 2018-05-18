@@ -370,3 +370,10 @@ blackbox adds "\n" automatically
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> bar2
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> bar3
 
+blackbox writes Request ID if HGREQUESTID is set
+
+  $ newrepo
+  $ setconfig blackbox.track=*
+  $ HGREQUESTID=aabea740-97d8-49e5-8453-14e5ae3d4099 hg root >/dev/null
+  $ hg blackbox | grep aabea740-97d8-49e5-8453-14e5ae3d4099
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)[aabea740-97d8-49e5-8453-14e5ae3d4099]> root
