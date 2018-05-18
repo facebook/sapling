@@ -17,7 +17,7 @@
 #include <sys/types.h>
 #include "eden/third-party/fuse_kernel_linux.h"
 
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 using folly::ByteRange;
 using folly::StringPiece;
 using std::string;

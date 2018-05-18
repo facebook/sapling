@@ -21,7 +21,7 @@
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/Bug.h"
 
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 using namespace facebook::eden;
 using folly::StringPiece;
 

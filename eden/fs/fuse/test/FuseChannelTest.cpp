@@ -21,7 +21,7 @@
 #include "eden/fs/testharness/TestDispatcher.h"
 
 using namespace facebook::eden;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 using folly::ByteRange;
 using folly::Future;
 using folly::Promise;

@@ -19,7 +19,7 @@
 #include <folly/test/TestUtils.h>
 
 using namespace facebook::eden;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 using folly::Future;
 using folly::ScopedEventBaseThread;
 using folly::Unit;

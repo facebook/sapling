@@ -26,7 +26,7 @@
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/utils/FutureUnixSocket.h"
 
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 
 using apache::thrift::CompactSerializer;
 using folly::AsyncServerSocket;

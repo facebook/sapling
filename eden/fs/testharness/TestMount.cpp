@@ -46,7 +46,7 @@ using folly::StringPiece;
 using folly::Unit;
 using folly::test::TemporaryDirectory;
 using folly::test::TemporaryFile;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;

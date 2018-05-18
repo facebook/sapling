@@ -29,7 +29,7 @@ using folly::test::TemporaryDirectory;
 using std::string;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 
 namespace {
 /**

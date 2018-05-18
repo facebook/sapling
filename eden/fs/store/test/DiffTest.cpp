@@ -20,7 +20,7 @@
 #include "eden/fs/testharness/TestUtil.h"
 
 using namespace facebook::eden;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 using folly::Future;
 using folly::StringPiece;
 using std::make_shared;

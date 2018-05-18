@@ -25,7 +25,7 @@
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
 
-using namespace std::literals;
+using namespace std::chrono_literals;
 using folly::Optional;
 
 namespace facebook {
@@ -260,7 +260,6 @@ TEST(EdenMount, testCreatingFileSetsTimestampsToNow) {
 
   testMount.initialize(makeTestHash("1"), lastCheckoutTime);
 
-  using namespace std::literals::chrono_literals;
   clock.advance(10min);
 
   auto newFile = testMount.getEdenMount()
