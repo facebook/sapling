@@ -17,6 +17,6 @@ class metrics(object):
 
 def client(ui):
     """Returns the appropriate metrics module"""
-    # @fb-only: from .fb import fbmetrics
-    # @fb-only: return fbmetrics.facebookmetrics(ui)
+    # @fb-only: from mercurial.fb import fbmetrics 
+    # @fb-only: return fbmetrics(ui)
     return metrics(ui) # @oss-only
