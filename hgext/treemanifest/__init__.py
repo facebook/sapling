@@ -396,6 +396,11 @@ def setuptreestores(repo, mfl):
         )
         _prunesharedpacks(repo, packpath)
         ondemandstore.setshared(mfl.datastore, mfl.historystore)
+
+        mfl.shareddatastores = []
+        mfl.localdatastores = [mfl.datastore]
+        mfl.sharedhistorystores = []
+        mfl.localhistorystores = [mfl.historystore]
         return
 
     usecdatapack = ui.configbool('remotefilelog', 'fastdatapack')
@@ -1616,12 +1621,13 @@ def createtreepackpart(repo, outgoing, partname,
     basemfnodes = []
     directories = []
 
-    alltrees = sendtrees == shallowbundle.AllTrees
+    localtrees = sendtrees == shallowbundle.LocalTrees
+    localmfstore = repo.manifestlog.localdatastores[0]
 
     for node in outgoing.missing:
         ctx = repo[node]
         mfnode = ctx.manifestnode()
-        if alltrees or ctx.phase() != phases.public:
+        if not localtrees or not localmfstore.getmissing([('', mfnode)]):
             mfnodes.append(mfnode)
     basectxs = repo.set('parents(roots(%ln))', outgoing.missing)
     for basectx in basectxs:
@@ -1891,6 +1897,12 @@ def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
     mfnodeset = set(mfnodes)
     basemfnodeset = set(basemfnodes)
 
+    # Helper function for filtering out non-existent base manifests that were
+    # passed. This can happen if the remote client passes a base manifest that
+    # the server doesn't know about yet.
+    def treeexists(mfnode):
+        return bool(not datastore.getmissing([('', mfnode)]))
+
     # Count how many times we will need each comparison node, so we can keep
     # trees in memory the appropriate amount of time.
     trees = treememoizer(datastore)
@@ -1900,9 +1912,10 @@ def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
         if p1node != nullid and (p1node in mfnodeset or
                                  p1node in basemfnodeset):
             trees.adduse(p1node)
-        elif basemfnodes:
+        elif basemfnodes and any(treeexists(mfnode) for mfnode in basemfnodes):
             for basenode in basemfnodes:
-                trees.adduse(basenode)
+                if treeexists(basenode):
+                    trees.adduse(basenode)
         elif prevmfnode:
             # If there are no base nodes and the parent isn't one of the
             # requested mfnodes, then pick another mfnode as a base.
@@ -1923,8 +1936,9 @@ def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
         if p1node != nullid and (p1node in mfnodeset or
                                  p1node in basemfnodeset):
             basetrees = [trees.get(p1node)]
-        elif basemfnodes:
-            basetrees = [trees.get(basenode) for basenode in basemfnodes]
+        elif basemfnodes and any(treeexists(mfnode) for mfnode in basemfnodes):
+            basetrees = [trees.get(basenode) for basenode in basemfnodes
+                         if treeexists(basenode)]
         elif prevmfnode:
             # If there are no base nodes and the parent isn't one of the
             # requested mfnodes, then pick another mfnode as a base.

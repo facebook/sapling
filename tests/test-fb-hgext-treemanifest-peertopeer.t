@@ -139,3 +139,61 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   subdir
   Node          P1 Node       P2 Node       Link Node     Copy From
   143a95c22d77  a18d21674e76  000000000000  b8ff91c925b4  
+
+Pulling between peers should send local trees but not remote trees
+# Strip back one server commit and one draft commit, so we can pull them again
+  $ cd ../client2
+  $ hg strip -r 2 --no-backup
+# Delete the old local tree data from the draft commit, so we can verify it is
+# downloaded again during pull.
+  $ rm -rf .hg/store/packs/*
+# Change this client to use a different cache from the other client, since the
+# other client may populate data that we need to test if this client is
+# downloading.
+  $ cp .hg/hgrc .hg/hgrc.bak
+  $ mkdir $TESTTMP/hgcache2
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > cachepath=$TESTTMP/hgcache2
+  > EOF
+# Force the draft commit to be public so we can ensure it's trees are delivered
+# despite it being public.
+  $ hg -R ../client1 phase -r 3 -p
+  $ rm -rf $TESTTMP/hgcache2/*
+  $ hg pull -q --config treemanifest.sendtrees=True ../client1 --config remotefilelog.fallbackpath=ssh://user@dummy/master
+  2 trees fetched over * (glob)
+# Check that the local commits for the previously-draft-but-now-public commit
+# were downloaded to the local store.
+  $ ls_l .hg/store/packs/manifests
+  -r--r--r--    1273 700fb8a7918068e308a998d338d1689074118d07.histidx
+  -r--r--r--     274 700fb8a7918068e308a998d338d1689074118d07.histpack
+  -r--r--r--    1146 c446da942a8eb5a687e11a12920e4d4526ef765a.dataidx
+  -r--r--r--     402 c446da942a8eb5a687e11a12920e4d4526ef765a.datapack
+  $ hg debugdatapack .hg/store/packs/manifests/*.datapack
+  .hg/store/packs/manifests/c446da942a8eb5a687e11a12920e4d4526ef765a:
+  dir:
+  Node          Delta Base    Delta Length  Blob Size
+  23226e7a252c  000000000000  43            (missing)
+  
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  143a95c22d77  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  3ffa0e0bbc70  000000000000  138           (missing)
+  
+# Verify the real-public commit wasn't received during the pull and therefore
+# has to be downloaded on demand.
+  $ rm -rf $TESTTMP/hgcache2/*
+  $ ls_l $TESTTMP/hgcache2/
+  $ hg manifest -r 'tip^'
+  2 trees fetched over * (glob)
+  subdir/x
+# Verify the fake-public commit was received during the pull and does not
+# require additional ondemand downloads.
+  $ hg manifest -r tip
+  a
+  dir/b
+  subdir/x
+  $ mv .hg/hgrc.bak .hg/hgrc
