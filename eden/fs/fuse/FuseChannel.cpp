@@ -22,6 +22,7 @@
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
@@ -1171,15 +1172,21 @@ void FuseChannel::processSession() {
           break;
         }
 
-        unhandledOpcodes_.withULockPtr([&](auto ulock) {
-          const auto opcode = header->opcode;
-          if (ulock->find(opcode) == ulock->end()) {
-            XLOG(ERR) << "unhandled fuse opcode " << opcode << "("
-                      << fuseOpcodeName(opcode) << ")";
-            auto wlock = ulock.moveFromUpgradeToWrite();
-            wlock->insert(opcode);
-          }
-        });
+        const auto opcode = header->opcode;
+        tryRlockCheckBeforeUpdate<folly::Unit>(
+            unhandledOpcodes_,
+            [&](const auto& unhandledOpcodes) -> folly::Optional<folly::Unit> {
+              if (unhandledOpcodes.find(opcode) != unhandledOpcodes.end()) {
+                return folly::unit;
+              }
+              return folly::none;
+            },
+            [&](auto& unhandledOpcodes) -> folly::Unit {
+              XLOG(ERR) << "unhandled fuse opcode " << opcode << "("
+                        << fuseOpcodeName(opcode) << ")";
+              unhandledOpcodes.insert(opcode);
+              return folly::unit;
+            });
 
         try {
           replyError(*header, ENOSYS);
