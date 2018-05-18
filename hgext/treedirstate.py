@@ -433,6 +433,8 @@ class treedirstatemap(object):
         self._treeid = r.readstr()
         rootid = r.readuint()
         self._packedsize = r.readuint()
+        self._ui.log('treedirstate',
+                     'loading tree %r rootid %r' % (self._treeid, rootid))
         self._rmap.read(treefileprefix + self._treeid, rootid)
         clen = r.readuint()
         copymap = {}

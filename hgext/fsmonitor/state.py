@@ -89,6 +89,10 @@ class state(object):
         finally:
             file.close()
 
+        if 'fsmonitor_details' in getattr(self._ui, 'track', ()):
+            self._ui.log('fsmonitor_details',
+                         'clock, notefiles = %r, %r' % (clock, notefiles))
+
         return clock, ignorehash, notefiles
 
     def set(self, clock, ignorehash, notefiles):
@@ -110,6 +114,10 @@ class state(object):
             self._ui.warn(_("warning: unable to write out fsmonitor state\n"))
             return
 
+        if 'fsmonitor_details' in getattr(self._ui, 'track', ()):
+            self._ui.log('fsmonitor_details',
+                         'set clock, notefiles = %r, %r' % (clock, notefiles))
+
         with file:
             file.write(struct.pack(_versionformat, _version))
             file.write(socket.gethostname() + '\0')
@@ -125,10 +133,17 @@ class state(object):
         except OSError as inst:
             if inst.errno != errno.ENOENT:
                 raise
+        if 'fsmonitor_details' in getattr(self._ui, 'track', ()):
+            self._ui.log('fsmonitor_details', 'fsmonitor state invalidated')
         self._identity = util.filestat(None)
 
     def setlastclock(self, clock):
+        if 'fsmonitor_details' in getattr(self._ui, 'track', ()):
+            self._ui.log('fsmonitor_details', 'setlastclock: %r' % clock)
         self._lastclock = clock
 
     def getlastclock(self):
+        if 'fsmonitor_details' in getattr(self._ui, 'track', ()):
+            self._ui.log('fsmonitor_details',
+                         'getlastclock: %r' % self._lastclock)
         return self._lastclock
