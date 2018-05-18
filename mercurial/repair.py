@@ -203,7 +203,13 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
             for i in xrange(offset, len(tr.entries)):
                 file, troffset, ignore = tr.entries[i]
                 with repo.svfs(file, 'a', checkambig=True) as fp:
-                    fp.truncate(troffset)
+                    # Workaround ftruncate returning 1. See
+                    # https://www.spinics.net/lists/linux-btrfs/msg78417.html
+                    try:
+                        fp.truncate(troffset)
+                    except IOError as ex:
+                        if ex.errno != 0:
+                            raise
                 if troffset == 0:
                     repo.store.markremoved(file)
 
