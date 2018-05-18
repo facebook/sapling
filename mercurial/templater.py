@@ -17,6 +17,7 @@ from . import (
     config,
     encoding,
     error,
+    hintutil,
     minirst,
     obsutil,
     parser,
@@ -1294,6 +1295,16 @@ def word(context, mapping, args):
         return ''
     else:
         return tokens[num]
+
+@templatefunc('triggerhint(name)')
+def triggerhint(context, mapping, args):
+    """Trigger the hint named by the argument.  Expands to the empty string."""
+    if len(args) != 1:
+        raise error.ParseError(_("triggerhint expects one argument, got %s")
+                               % len(args))
+    name = evalstring(context, mapping, args[0])
+    hintutil.trigger(name)
+    return ''
 
 # methods to interpret function arguments or inner expressions (e.g. {_(x)})
 exprmethods = {

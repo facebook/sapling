@@ -21,6 +21,10 @@ def loadhint(ui, extname, registrarobj):
     for name, func in registrarobj._table.iteritems():
         hinttable[name] = func
 
+def loadhintconfig(ui):
+    for name, message in ui.configitems('hint-definitions'):
+        hinttable[name] = lambda *args, **kwargs: message
+
 def trigger(name, *args, **kwargs):
     """Trigger a hint message. It will be shown at the end of the command."""
     func = hinttable.get(name)

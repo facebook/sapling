@@ -778,6 +778,7 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     hook.hook(lui, repo, "pre-%s" % cmd, True, args=" ".join(fullargs),
               pats=cmdpats, opts=cmdoptions)
     try:
+        hintutil.loadhintconfig(lui)
         ui.log('jobid', jobid=encoding.environ.get('HG_JOB_ID', 'unknown'))
         ret = _runcommand(ui, options, cmd, d)
         # run post-hook, passing command result
