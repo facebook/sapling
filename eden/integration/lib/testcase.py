@@ -117,8 +117,8 @@ class EdenTestCase(TestParent):
         test started and the time since the last time report_time() was called.
         """
         now = time.time()
-        since_last = (now - self.last_event)
-        since_start = (now - self.start)
+        since_last = now - self.last_event
+        since_start = now - self.start
         logging.info("=== %s at %.03fs (+%0.3fs)", event, since_start, since_last)
         self.last_event = now
 

@@ -99,9 +99,7 @@ class FindExeClass(object):
     def GIT(self) -> str:
         git = distutils.spawn.find_executable(
             "git.real"
-        ) or distutils.spawn.find_executable(
-            "git"
-        )
+        ) or distutils.spawn.find_executable("git")
         if git is None:
             raise Exception("unable to find git binary")
         return git

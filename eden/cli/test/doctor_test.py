@@ -523,7 +523,8 @@ command palette in Atom.
             mount_paths={},
             is_healthy=True,
             build_info={
-                "build_package_version": "20171213", "build_package_release": "165642"
+                "build_package_version": "20171213",
+                "build_package_release": "165642",
             },
         )
         version_check = doctor.EdenfsIsLatest(config)

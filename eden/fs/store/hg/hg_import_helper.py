@@ -250,8 +250,8 @@ class HgServer(object):
         return 0
 
     def _gen_options(self):
-        use_treemanifest = (
-            (self.treemanifest is not None) and bool(getattr(self.repo, "name", None))
+        use_treemanifest = (self.treemanifest is not None) and bool(
+            getattr(self.repo, "name", None)
         )
 
         flags = 0

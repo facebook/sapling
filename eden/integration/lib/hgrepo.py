@@ -63,9 +63,7 @@ class HgRepository(repobase.Repository):
             [ui]
             merge = :merge
             """
-        ).format(
-            repo_root=FindExe.REPO_ROOT, hgrc_path=hgrc_path
-        )
+        ).format(repo_root=FindExe.REPO_ROOT, hgrc_path=hgrc_path)
         return contents
 
     def run_hg(

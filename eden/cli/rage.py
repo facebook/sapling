@@ -58,7 +58,7 @@ def print_diagnostic_info(config: config_mod.Config, out: IO[bytes]) -> None:
 
 def print_rpm_version(out: IO[bytes]):
     try:
-        queryformat = ("%{VERSION}")
+        queryformat = "%{VERSION}"
         output = subprocess.check_output(["rpm", "-q", "--qf", queryformat, "fb-eden"])
         out.write(b"Rpm Version             : %s\n" % output)
     except Exception as e:

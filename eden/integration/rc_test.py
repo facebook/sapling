@@ -78,11 +78,19 @@ class RCTest(testcase.EdenRepoTest):
         f, path = tempfile.mkstemp(dir=self.system_config_dir)
 
         # Add system_repo to system config file
-        config = """\
-[repository """ + self.repo_name + """]
-path = """ + repo_info.source + """
-type = """ + repo_info.type + """
+        config = (
+            """\
+[repository """
+            + self.repo_name
+            + """]
+path = """
+            + repo_info.source
+            + """
+type = """
+            + repo_info.type
+            + """
 """
+        )
         os.write(f, config.encode("utf-8"))
         os.close(f)
 
@@ -104,11 +112,19 @@ type = """ + repo_info.type + """
         # Add system_repo to system config file with new name
         repo_name = "repo"
         f = os.open(path, os.O_WRONLY)
-        config = """\
-[repository """ + repo_name + """]
-path = """ + repo_info.source + """
-type = """ + repo_info.type + """
+        config = (
+            """\
+[repository """
+            + repo_name
+            + """]
+path = """
+            + repo_info.source
+            + """
+type = """
+            + repo_info.type
+            + """
 """
+        )
         os.write(f, config.encode("utf-8"))
         os.close(f)
 

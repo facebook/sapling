@@ -199,7 +199,7 @@ def _parse_mode(mode: int) -> Tuple[str, int]:
     directory, or symbolic link.
     """
     file_type_str = _FILE_TYPE_FLAGS.get(stat.S_IFMT(mode), "?")
-    perms = (mode & 0o7777)
+    perms = mode & 0o7777
     return file_type_str, perms
 
 

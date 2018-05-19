@@ -282,7 +282,7 @@ def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
 
     def with_microsecond_units(i: int) -> str:
         if i:
-            return str(i) + u" \u03BCs"  # mu for micro
+            return str(i) + " \u03BCs"  # mu for micro
         else:
             return str(i) + "   "
 

@@ -158,7 +158,7 @@ def cure_what_ails_you(
         msg = f"Number of fixes made: {num_fixes}."
         out.write(f"{printer.yellow(msg)}\n")
     if num_failed_fixes:
-        msg = ("Number of issues that " f"could not be fixed: {num_failed_fixes}.")
+        msg = "Number of issues that " f"could not be fixed: {num_failed_fixes}."
         out.write(f"{printer.red(msg)}\n")
 
     if num_failed_fixes == 0 and num_not_fixed_because_dry_run == 0:
@@ -427,7 +427,8 @@ class NuclideHasExpectedWatchmanSubscriptions(Check):
 
     def _report(self, result_type: CheckResultType) -> CheckResult:
         if result_type in [
-            CheckResultType.FAILED_TO_FIX, CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN
+            CheckResultType.FAILED_TO_FIX,
+            CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN,
         ]:
 
             def format_paths(paths):

@@ -21,17 +21,12 @@ from eden.integration.lib import find_executables, hgrepo, testcase
 
 
 def _find_post_clone() -> str:
-    post_clone = (
-        os.environ.get("EDENFS_POST_CLONE_PATH")
-        or os.path.join(
-            find_executables.FindExe.BUCK_OUT, "gen/eden/hooks/hg/post-clone.par"
-        )
+    post_clone = os.environ.get("EDENFS_POST_CLONE_PATH") or os.path.join(
+        find_executables.FindExe.BUCK_OUT, "gen/eden/hooks/hg/post-clone.par"
     )
     if not os.access(post_clone, os.X_OK):
-        msg = (
-            "unable to find post-clone script for integration testing: {!r}".format(
-                post_clone
-            )
+        msg = "unable to find post-clone script for integration testing: {!r}".format(
+            post_clone
         )
         raise Exception(msg)
     return post_clone
@@ -346,7 +341,9 @@ class EdenHgTestCase(testcase.EdenTestCase):
         actual_dirstate = {}
         for path, entry in data.items():
             actual_dirstate[path] = (
-                entry["status"], entry["mode"], entry["merge_state_string"]
+                entry["status"],
+                entry["mode"],
+                entry["merge_state_string"],
             )
 
         self.assertDictEqual(expected, actual_dirstate, msg=msg)
@@ -476,7 +473,9 @@ def _apply_treemanifest_config(test, config):
     config["extensions"]["treemanifest"] = ""
     config["extensions"]["pushrebase"] = ""
     config["fastmanifest"] = {
-        "usetree": "True", "usecache": "False", "cacheonchange": "True"
+        "usetree": "True",
+        "usecache": "False",
+        "cacheonchange": "True",
     }
     config["remotefilelog"] = {
         "reponame": "eden_integration_tests",

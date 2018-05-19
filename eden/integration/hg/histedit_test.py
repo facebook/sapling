@@ -147,9 +147,8 @@ class HisteditTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             histedit.run(self, ancestor=commit4)
         expected_msg = (
-            ("Fix up the change (pick %s)\n" % commit6[:12])
-            + "  (hg histedit --continue to resume)"
-        )
+            "Fix up the change (pick %s)\n" % commit6[:12]
+        ) + "  (hg histedit --continue to resume)"
         self.assertIn(expected_msg, str(context.exception))
         self.assert_status({"will_have_confict.txt": "M"}, op="histedit")
         self.assert_file_regex(

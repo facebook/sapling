@@ -169,7 +169,7 @@ class EdenFS(object):
             # linked builds).
             timeout += 90
 
-        takeover = (takeover_from is not None)
+        takeover = takeover_from is not None
         self._spawn(gdb=use_gdb, takeover=takeover)
 
         util.wait_for_daemon_healthy(
@@ -396,9 +396,10 @@ class EdenCommandError(subprocess.CalledProcessError):
 
     def __str__(self) -> str:
         cmd_str = " ".join(shlex.quote(arg) for arg in self.cmd)
-        return (
-            "eden command [%s] returned non-zero exit status %d\n"
-            "stderr=%s" % (cmd_str, self.returncode, self.stderr)
+        return "eden command [%s] returned non-zero exit status %d\n" "stderr=%s" % (
+            cmd_str,
+            self.returncode,
+            self.stderr,
         )
 
 

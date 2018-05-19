@@ -22,7 +22,10 @@ def write_heading(heading: str, out: TextIO) -> None:
 def write_mem_status_table(fuse_counters, out: TextIO) -> None:
     format_str = "{:>40} {:^1} {:<20}"
     keys = [
-        "memory_free", "memory_free_percent", "memory_usage", "memory_usage_percent"
+        "memory_free",
+        "memory_free_percent",
+        "memory_usage",
+        "memory_usage_percent",
     ]
     for key in keys:
         if key.endswith("_percent"):

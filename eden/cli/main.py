@@ -147,7 +147,7 @@ class RepositoryCmd(Subcmd):
             except config_mod.UsageError as ex:
                 print_stderr("error: {}", ex)
                 return 1
-        elif (args.name or args.path):
+        elif args.name or args.path:
             print_stderr("repository command called with incorrect arguments")
             return 1
         else:

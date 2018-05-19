@@ -37,6 +37,8 @@ class CommandError(subprocess.CalledProcessError):
         stderr_str = stderr_str.replace("\n", "\n  ")
 
         msg = "Command [%s] failed with status %s\nstderr:\n  %s" % (
-            cmd_str, self.returncode, stderr_str
+            cmd_str,
+            self.returncode,
+            stderr_str,
         )
         return msg

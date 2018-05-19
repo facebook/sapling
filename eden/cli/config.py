@@ -56,7 +56,8 @@ SNAPSHOT = "SNAPSHOT"
 SNAPSHOT_MAGIC = b"eden\x00\x00\x00\x01"
 
 DEFAULT_REVISION = {  # supported repo name -> default bookmark
-    "git": "refs/heads/master", "hg": "."
+    "git": "refs/heads/master",
+    "hg": ".",
 }
 
 SUPPORTED_REPOS = DEFAULT_REVISION.keys()
@@ -893,7 +894,7 @@ class ConfigUpdater(object):
 
         try:
             st = os.stat(self.path)
-            perms = (st.st_mode & 0o777)
+            perms = st.st_mode & 0o777
         except OSError as ex:
             if ex.errno != errno.ENOENT:
                 raise

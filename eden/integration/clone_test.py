@@ -380,7 +380,8 @@ echo -n "$1" >> "{scratch_file}"
         )
         self.assertTrue(self.eden.is_healthy(), msg="clone should start Eden.")
         mount_points = {
-            self.mount: self.eden.CLIENT_ACTIVE, tmp: self.eden.CLIENT_ACTIVE
+            self.mount: self.eden.CLIENT_ACTIVE,
+            tmp: self.eden.CLIENT_ACTIVE,
         }
         self.assertEqual(
             mount_points, self.eden.list_cmd(), msg="Eden should have two mounts."

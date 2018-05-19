@@ -33,7 +33,9 @@ class PersistenceTest(testcase.EdenRepoTest):
     @unittest.skip("TODO: this is not fully implemented yet")
     def test_preserves_nonmaterialized_inode_numbers(self) -> None:
         inode_paths = [
-            "file_in_root", "subdir", "subdir/file_in_subdir"  # we care about trees too
+            "file_in_root",
+            "subdir",
+            "subdir/file_in_subdir",  # we care about trees too
         ]
 
         old_stats = [os.lstat(os.path.join(self.mount, path)) for path in inode_paths]

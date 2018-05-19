@@ -259,7 +259,7 @@ class HgRepo(Repo):
         self._env["HGPLAIN"] = "1"
 
     def __repr__(self) -> str:
-        return (f"HgRepo(source={self.source!r}, " f"working_dir={self.working_dir!r})")
+        return f"HgRepo(source={self.source!r}, " f"working_dir={self.working_dir!r})"
 
     def _run_hg(self, args: List[str]) -> bytes:
         cmd = ["hg"] + args
@@ -282,9 +282,7 @@ class GitRepo(Repo):
         super(GitRepo, self).__init__("git", source, working_dir)
 
     def __repr__(self) -> str:
-        return (
-            f"GitRepo(source={self.source!r}, " f"working_dir={self.working_dir!r})"
-        )
+        return f"GitRepo(source={self.source!r}, " f"working_dir={self.working_dir!r})"
 
     def _run_git(self, args: List[str]) -> bytes:
         cmd = ["git"] + args

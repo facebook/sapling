@@ -159,7 +159,8 @@ class AutoconfBuilder(BuilderBase):
         if not os.path.exists(configure_path):
             self._run_cmd(["autoreconf", "--install"])
         configure_cmd = [
-            configure_path, "--prefix=" + project.ops.install_dir
+            configure_path,
+            "--prefix=" + project.ops.install_dir,
         ] + self.args
         self._run_cmd(configure_cmd)
         self._run_cmd(["make", "-j%s" % project.opts.num_jobs])
