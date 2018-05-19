@@ -117,7 +117,7 @@ template <typename T>
 T getFutureResult(folly::Future<T>& future, const char* filename, int line) {
   if (!future.isReady()) {
     ADD_FAILURE_AT(filename, line) << "future not ready";
-    throw folly::TimedOut();
+    throw folly::FutureTimeout();
   }
   if (future.hasException()) {
     ADD_FAILURE_AT(filename, line) << "future failed";
