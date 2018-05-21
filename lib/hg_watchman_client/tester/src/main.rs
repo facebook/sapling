@@ -9,9 +9,9 @@ extern crate watchman_client;
 
 use clap::{App, Arg};
 use watchman_client::protocol::{BserProtocol, JsonProtocol};
-use watchman_client::transport::Transport;
 use watchman_client::transport::command_line_transport::CommandLineTransport;
 use watchman_client::transport::unix_socket_transport::UnixSocketTransport;
+use watchman_client::transport::Transport;
 
 /// Test binary for manual testing
 
@@ -58,8 +58,9 @@ macro_rules! println_result {
 
 mod test_client {
 
-    use hg_watchman_client::{HgWatchmanClient, QueryResponse, StateEnterResponse,
-                             StateLeaveResponse};
+    use hg_watchman_client::{
+        HgWatchmanClient, QueryResponse, StateEnterResponse, StateLeaveResponse,
+    };
     use std::fs::OpenOptions;
     use std::io;
     use std::path::PathBuf;
@@ -132,13 +133,14 @@ mod test_client {
             let now = Instant::now();
             self.client.watch_project()?;
             let mut clock_state = self.read_watchman_state()?;
-            let res = self.client
+            let res = self
+                .client
                 .query_files(None, None, clock_state.query_files_last_clock);
             match res {
                 Ok(ref r) => {
                     clock_state.query_files_last_clock = match r {
-                        &QueryResponse::QueryResponseSimple(ref r) => r.clock.clone(),
-                        &QueryResponse::QueryResponseComplex(ref r) => r.clock.clone(),
+                        &QueryResponse::QueryResponseNamesOnly(ref r) => r.clock.clone(),
+                        &QueryResponse::QueryResponseMultipleFields(ref r) => r.clock.clone(),
                     };
                     self.write_watchman_state(&clock_state)?;
                 }
@@ -158,13 +160,14 @@ mod test_client {
             let now = Instant::now();
             self.client.watch_project()?;
             let mut clock_state = self.read_watchman_state()?;
-            let res = self.client
+            let res = self
+                .client
                 .query_dirs(None, None, clock_state.query_dirs_last_clock);
             match res {
                 Ok(ref r) => {
                     clock_state.query_dirs_last_clock = match r {
-                        &QueryResponse::QueryResponseSimple(ref r) => r.clock.clone(),
-                        &QueryResponse::QueryResponseComplex(ref r) => r.clock.clone(),
+                        &QueryResponse::QueryResponseNamesOnly(ref r) => r.clock.clone(),
+                        &QueryResponse::QueryResponseMultipleFields(ref r) => r.clock.clone(),
                     };
                     self.write_watchman_state(&clock_state)?;
                 }
