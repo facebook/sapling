@@ -10,7 +10,7 @@ use std::io::{Cursor, Read};
 use std::sync::Arc;
 
 use bytes::Bytes;
-use csv::Reader;
+use csv::{ByteRecord, ReaderBuilder};
 use failure::{Error, ResultExt};
 use futures::{future, stream, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -40,7 +40,7 @@ impl MockManifest {
     ///
     /// A description is a CSV file with three fields (path, type and content).
     pub fn from_description<R: Read>(desc: R) -> Result<Self> {
-        let mut reader = Reader::from_reader(desc).has_headers(false);
+        let mut reader = ReaderBuilder::new().has_headers(false).from_reader(desc);
         let result: Result<BTreeMap<_, _>> = reader
             .byte_records()
             .map(|record| {
@@ -149,7 +149,7 @@ impl MockManifest {
     }
 }
 
-fn parse_record(mut record: Vec<Vec<u8>>) -> Result<(MPath, FileType, Bytes)> {
+fn parse_record(mut record: ByteRecord) -> Result<(MPath, FileType, Bytes)> {
     if record.len() != 3 {
         bail_err!(ErrorKind::InvalidManifestDescription(format!(
             "expected CSV record to have 3 entries, found {}",
@@ -158,7 +158,7 @@ fn parse_record(mut record: Vec<Vec<u8>>) -> Result<(MPath, FileType, Bytes)> {
     }
     let path = MPath::new(&record[0])
         .with_context(|_| ErrorKind::InvalidManifestDescription("invalid path".into()))?;
-    let file_type = match record[1].as_slice() {
+    let file_type = match &record[1][..] {
         b"r" => FileType::Regular,
         b"x" => FileType::Executable,
         b"l" => FileType::Symlink,
@@ -167,7 +167,8 @@ fn parse_record(mut record: Vec<Vec<u8>>) -> Result<(MPath, FileType, Bytes)> {
             String::from_utf8_lossy(other)
         ))),
     };
-    let content = record.remove(2).into();
+    let content = record[2].into();
+    record.truncate(2);
     Ok((path, file_type, content))
 }
 
