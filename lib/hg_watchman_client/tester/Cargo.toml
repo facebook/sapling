@@ -1,0 +1,15 @@
+[package]
+name = "tester"
+version = "0.1.0"
+
+[dependencies]
+hg_watchman_client = { version = "*", path = "../" }
+watchman_client = { version = "*", path = "../../watchman_client/" }
+clap = "*"
+serde = "1"
+serde_derive = "1"
+failure = "*"
+
+[features]
+default = []
+debug_bytes = ["hg_watchman_client/debug_bytes"]
