@@ -9,12 +9,34 @@ from __future__ import absolute_import
 
 import getpass
 
+from mercurial.node import (
+    hex,
+)
+
 from mercurial import (
     progress,
     util,
 )
 
 from .. import pywatchman
+
+def createclientforrepo(repo):
+    '''Creates a Watchman client and associates it with the repo if it does
+    not already have one. Note that creating the client may raise an exception.
+
+    To get the client associated with the repo, use getclientforrepo().'''
+    if not util.safehasattr(repo, '_watchmanclient'):
+        repo._watchmanclient = client(repo)
+
+def getclientforrepo(repo):
+    '''Returns the Watchman client associated with the repo or None.
+
+    createclientforrepo() must have be called previously to create the
+    client.'''
+    if util.safehasattr(repo, '_watchmanclient'):
+        return repo._watchmanclient
+    else:
+        return None
 
 class Unavailable(Exception):
     def __init__(self, msg, warn=True, invalidate=False):
@@ -118,3 +140,104 @@ class client(object):
                 # above _command calls
                 self._watchmanclient = None
                 raise
+
+# Estimate the distance between two nodes
+def calcdistance(repo, oldnode, newnode):
+    anc = repo.changelog.ancestor(oldnode, newnode)
+    ancrev = repo[anc].rev()
+    distance = (abs(repo[oldnode].rev() - ancrev)
+        + abs(repo[newnode].rev() - ancrev))
+    return distance
+
+class state_update(object):
+    ''' This context manager is responsible for dispatching the state-enter
+        and state-leave signals to the watchman service. The enter and leave
+        methods can be invoked manually (for scenarios where context manager
+        semantics are not possible). If parameters oldnode and newnode are None,
+        they will be populated based on current working copy in enter and
+        leave, respectively. Similarly, if the distance is none, it will be
+        calculated based on the oldnode and newnode in the leave method.'''
+
+    def __init__(self, repo, name, oldnode=None, newnode=None, distance=None,
+                 partial=False, metadata=None):
+        self.repo = repo.unfiltered()
+        self.name = name
+        self.oldnode = oldnode
+        self.newnode = newnode
+        self.distance = distance
+        self.partial = partial
+        self._lock = None
+        self.need_leave = False
+        self.metadata = metadata or {}
+
+    def __enter__(self):
+        self.enter()
+
+    def enter(self):
+        # Make sure we have a wlock prior to sending notifications to watchman.
+        # We don't want to race with other actors. In the update case,
+        # merge.update is going to take the wlock almost immediately. We are
+        # effectively extending the lock around several short sanity checks.
+        if self.oldnode is None:
+            self.oldnode = self.repo['.'].node()
+
+        if self.repo.currentwlock() is None:
+            if util.safehasattr(self.repo, 'wlocknostateupdate'):
+                self._lock = self.repo.wlocknostateupdate()
+            else:
+                self._lock = self.repo.wlock()
+        self.need_leave = self._state(
+            'state-enter',
+            hex(self.oldnode))
+        return self
+
+    def __exit__(self, type_, value, tb):
+        abort = True if type_ else False
+        self.exit(abort=abort)
+
+    def exit(self, abort=False):
+        try:
+            if self.need_leave:
+                status = 'failed' if abort else 'ok'
+                if self.newnode is None:
+                    self.newnode = self.repo['.'].node()
+                if self.distance is None:
+                    try:
+                        self.distance = calcdistance(
+                            self.repo, self.oldnode, self.newnode)
+                    except Exception:
+                        # this happens in complex cases where oldnode
+                        # or newnode might become unavailable.
+                        pass
+                self._state(
+                    'state-leave',
+                    hex(self.newnode),
+                    status=status)
+        finally:
+            self.need_leave = False
+            if self._lock:
+                self._lock.release()
+
+    def _state(self, cmd, commithash, status='ok'):
+        client = getclientforrepo(self.repo)
+        if not client:
+            return False
+        try:
+            metadata = {
+                # the target revision
+                'rev': commithash,
+                # approximate number of commits between current and target
+                'distance': self.distance if self.distance else 0,
+                # success/failure (only really meaningful for state-leave)
+                'status': status,
+                # whether the working copy parent is changing
+                'partial': self.partial,
+            }
+            metadata.update(self.metadata)
+            client.command(cmd, {'name': self.name, 'metadata': metadata})
+            return True
+        except Exception as e:
+            # Swallow any errors; fire and forget
+            self.repo.ui.log(
+                'watchman', 'Exception %s while running %s\n', e, cmd)
+            return False

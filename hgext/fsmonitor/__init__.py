@@ -115,18 +115,13 @@ import sys
 import weakref
 
 from mercurial.i18n import _
-from mercurial.node import (
-    hex,
-)
 
 from mercurial import (
     context,
     encoding,
     error,
     extensions,
-    filemerge,
     localrepo,
-    merge,
     pathutil,
     progress,
     pycompat,
@@ -657,7 +652,7 @@ def makedirstate(repo, dirstate):
             # _fsmonitordisable is used in paranoid mode
             self._fsmonitordisable = False
             self._fsmonitorstate = repo._fsmonitorstate
-            self._watchmanclient = repo._watchmanclient
+            self._watchmanclient = watchmanclient.getclientforrepo(repo)
             self._repo = weakref.proxy(repo)
 
         def walk(self, *args, **kwargs):
@@ -693,9 +688,6 @@ def extsetup(ui):
         # An assist for avoiding the dangling-symlink fsevents bug
         extensions.wrapfunction(os, 'symlink', wrapsymlink)
 
-    extensions.wrapfunction(merge, 'update', wrapupdate)
-    extensions.wrapfunction(filemerge, '_xmerge', _xmerge)
-
     def purgeloaded(loaded=False):
         if not loaded:
             return
@@ -713,160 +705,6 @@ def wrapsymlink(orig, source, link_name):
             os.utime(os.path.dirname(link_name), None)
         except OSError:
             pass
-
-class state_filemerge(object):
-    """Context manager for single filemerge event"""
-    def __init__(self, repo, path):
-        self.repo = repo
-        self.path = path
-
-    def __enter__(self):
-        self._state('state-enter')
-
-    def __exit__(self, errtype, value, tb):
-        self._state('state-leave')
-
-    def _state(self, name):
-        client = getattr(self.repo, '_watchmanclient', None)
-        if client:
-            metadata = {'path': self.path}
-            client.command(name, {'name': 'hg.filemerge', 'metadata': metadata})
-
-class state_update(object):
-    ''' This context manager is responsible for dispatching the state-enter
-        and state-leave signals to the watchman service. The enter and leave
-        methods can be invoked manually (for scenarios where context manager
-        semantics are not possible). If parameters oldnode and newnode are None,
-        they will be populated based on current working copy in enter and
-        leave, respectively. Similarly, if the distance is none, it will be
-        calculated based on the oldnode and newnode in the leave method.'''
-
-    def __init__(self, repo, name, oldnode=None, newnode=None, distance=None,
-                 partial=False, metadata=None):
-        self.repo = repo.unfiltered()
-        self.name = name
-        self.oldnode = oldnode
-        self.newnode = newnode
-        self.distance = distance
-        self.partial = partial
-        self._lock = None
-        self.need_leave = False
-        self.metadata = metadata or {}
-
-    def __enter__(self):
-        self.enter()
-
-    def enter(self):
-        # Make sure we have a wlock prior to sending notifications to watchman.
-        # We don't want to race with other actors. In the update case,
-        # merge.update is going to take the wlock almost immediately. We are
-        # effectively extending the lock around several short sanity checks.
-        if self.oldnode is None:
-            self.oldnode = self.repo['.'].node()
-
-        if self.repo.currentwlock() is None:
-            if util.safehasattr(self.repo, 'wlocknostateupdate'):
-                self._lock = self.repo.wlocknostateupdate()
-            else:
-                self._lock = self.repo.wlock()
-        self.need_leave = self._state(
-            'state-enter',
-            hex(self.oldnode))
-        return self
-
-    def __exit__(self, type_, value, tb):
-        abort = True if type_ else False
-        self.exit(abort=abort)
-
-    def exit(self, abort=False):
-        try:
-            if self.need_leave:
-                status = 'failed' if abort else 'ok'
-                if self.newnode is None:
-                    self.newnode = self.repo['.'].node()
-                if self.distance is None:
-                    try:
-                        self.distance = calcdistance(
-                            self.repo, self.oldnode, self.newnode)
-                    except Exception:
-                        # this happens in complex cases where oldnode
-                        # or newnode might become unavailable.
-                        pass
-                self._state(
-                    'state-leave',
-                    hex(self.newnode),
-                    status=status)
-        finally:
-            self.need_leave = False
-            if self._lock:
-                self._lock.release()
-
-    def _state(self, cmd, commithash, status='ok'):
-        if not util.safehasattr(self.repo, '_watchmanclient'):
-            return False
-        try:
-            metadata = {
-                # the target revision
-                'rev': commithash,
-                # approximate number of commits between current and target
-                'distance': self.distance if self.distance else 0,
-                # success/failure (only really meaningful for state-leave)
-                'status': status,
-                # whether the working copy parent is changing
-                'partial': self.partial,
-            }
-            metadata.update(self.metadata)
-            self.repo._watchmanclient.command(cmd, {'name': self.name,
-                                                    'metadata': metadata})
-            return True
-        except Exception as e:
-            # Swallow any errors; fire and forget
-            self.repo.ui.log(
-                'watchman', 'Exception %s while running %s\n', e, cmd)
-            return False
-
-# Estimate the distance between two nodes
-def calcdistance(repo, oldnode, newnode):
-    anc = repo.changelog.ancestor(oldnode, newnode)
-    ancrev = repo[anc].rev()
-    distance = (abs(repo[oldnode].rev() - ancrev)
-        + abs(repo[newnode].rev() - ancrev))
-    return distance
-
-# Bracket working copy updates with calls to the watchman state-enter
-# and state-leave commands.  This allows clients to perform more intelligent
-# settling during bulk file change scenarios
-# https://facebook.github.io/watchman/docs/cmd/subscribe.html#advanced-settling
-def wrapupdate(orig, repo, node, branchmerge, force, ancestor=None,
-               mergeancestor=False, labels=None, matcher=None, wc=None,
-               **kwargs):
-    if wc and wc.isinmemory():
-        # If the working context isn't on disk, there's no need to invoke
-        # watchman.
-        return orig(
-            repo, node, branchmerge, force, ancestor, mergeancestor,
-            labels, matcher, wc=wc, **kwargs)
-    distance = 0
-    partial = True
-    oldnode = repo['.'].node()
-    newnode = repo[node].node()
-    if matcher is None or matcher.always():
-        partial = False
-        distance = calcdistance(repo.unfiltered(), oldnode, newnode)
-
-    with state_update(repo, name="hg.update", oldnode=oldnode, newnode=newnode,
-                      distance=distance, partial=partial,
-                      metadata={'merge': branchmerge}):
-        return orig(
-            repo, node, branchmerge, force, ancestor, mergeancestor,
-            labels, matcher, **kwargs)
-
-def _xmerge(origfunc, repo, mynode, orig, fcd, fco, fca, toolconf, files,
-            labels=None):
-    # _xmerge is called when an external merge tool is invoked.
-    with state_filemerge(repo, fcd.path()):
-        return origfunc(repo, mynode, orig, fcd, fco, fca, toolconf, files,
-                        labels)
 
 def reposetup(ui, repo):
     # We don't work with largefiles or inotify
@@ -890,13 +728,12 @@ def reposetup(ui, repo):
             return
 
         try:
-            client = watchmanclient.client(repo)
+            watchmanclient.createclientforrepo(repo)
         except Exception as ex:
             _handleunavailable(ui, fsmonitorstate, ex)
             return
 
         repo._fsmonitorstate = fsmonitorstate
-        repo._watchmanclient = client
 
         dirstate, cached = localrepo.isfilecached(repo, 'dirstate')
         if cached:
@@ -930,7 +767,8 @@ def reposetup(ui, repo):
 
                 try:
                     l.stateupdate = None
-                    l.stateupdate = state_update(self, name="hg.transaction")
+                    l.stateupdate = watchmanclient.state_update(
+                        self, name="hg.transaction")
                     l.stateupdate.enter()
                     l.releasefn = staterelease
                 except Exception as e:

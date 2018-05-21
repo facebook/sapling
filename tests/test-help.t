@@ -349,6 +349,7 @@ Test extension help:
        gpg           commands to sign and verify changesets
        grepdiff      (no help text available)
        grpcheck      check if the user is in specified groups
+       hgevents      publishes state-enter and state-leave events to Watchman
        hggit         push and pull from a Git server
        hgk           browse the repository in a graphical way
        hgsql         (no help text available)
