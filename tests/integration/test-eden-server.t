@@ -116,13 +116,13 @@ Add commit with a directory
   $ echo "ca_pem_file=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
  
   $ newblobimport $TESTTMP/repo/.hg $TESTTMP/blobrepo --debug
-  $ grep 'inserted:' < $TESTTMP/blobimport.out
-  D* inserted: 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
-  D* inserted: 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
-  D* inserted: 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  D* inserted: 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
-  D* inserted: 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
-  D* inserted: 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
+  $ grep -Eo 'inserted: .*' < $TESTTMP/blobimport.out | sort
+  inserted: 3903775176ed42b1458a6281db4a0ccf4d9f287a
+  inserted: 4dabaf45f54add88ca2797dfdeb00a7d55144243
+  inserted: 533267b0e203537fa53d2aec834b062f0b2249cd
+  inserted: 617e87e2aa2fe36508e8d5e15a162bcd2e79808e
+  inserted: 7f48e9c786d1cbab525424e45139585724f84e28
+  inserted: 813c7514ad5e14493de885987c241c14c5cd3153
 
   $ edenserver --config-file $TESTTMP/config
 

@@ -31,7 +31,6 @@ mod changeset;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 use clap::{App, Arg, ArgMatches};
 use failure::err_msg;
@@ -190,20 +189,24 @@ fn main() {
 
     let blobrepo = Arc::new(open_blobrepo(&logger, &matches));
 
-    let cs_count = Arc::new(AtomicUsize::new(1));
     let upload_changesets = changeset::upload_changesets(
         revlogrepo.clone(),
         blobrepo.clone(),
         get_usize(&matches, "parsing-cpupool-size", 8),
-    ).for_each(|cs| {
-        cs.map(|cs| {
-            debug!(logger, "inserted: {}", cs.get_changeset_id());
-            let cnt = cs_count.fetch_add(1, Ordering::SeqCst);
-            if cnt % 5000 == 0 {
-                info!(logger, "inserted commits # {}", cnt);
+    ).buffer_unordered(100)
+        .map({
+            let mut cs_count = 0;
+            let logger = logger.clone();
+            move |cs| {
+                debug!(logger, "inserted: {}", cs.get_changeset_id());
+                cs_count = cs_count + 1;
+                if cs_count % 5000 == 0 {
+                    info!(logger, "inserted commits # {}", cs_count);
+                }
+                ()
             }
-            ()
-        }).map_err(|err| {
+        })
+        .map_err(|err| {
             error!(logger, "failed to blobimport: {}", err);
 
             for cause in err.causes() {
@@ -214,7 +217,7 @@ fn main() {
             let msg = format!("failed to blobimport: {}", err);
             err_msg(msg)
         })
-    });
+        .for_each(|()| Ok(()));
 
     let upload_bookmarks = bookmark::upload_bookmarks(&logger, revlogrepo, blobrepo);
 
