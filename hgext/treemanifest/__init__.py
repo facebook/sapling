@@ -2208,10 +2208,10 @@ def _handlebundle2part(orig, self, bundle, part):
 NODEINFOFORMAT = '!20s20s20sI'
 NODEINFOLEN = struct.calcsize(NODEINFOFORMAT)
 class cachestore(object):
-    def __init__(self, store, vfs, maxcachesize, evictionrate, version=1):
+    def __init__(self, store, vfs, maxcachesize, evictionrate):
         self.store = store
         self.vfs = vfs
-        self.version = version
+        self.version = 2
         self.maxcachesize = maxcachesize
         self.evictionrate = evictionrate
 
@@ -2292,7 +2292,13 @@ class cachestore(object):
             if raw == '':
                 raise IOError("missing file contents: %s" % self.vfs.join(key))
 
-            sha, value = raw[:20], raw[20:]
+            sha = raw[:20]
+            keylen = struct.unpack_from('!I', raw, 20)[0]
+            storedkey = raw[24:24 + keylen]
+            if storedkey != key:
+                raise IOError("cache value has key '%s' but '%s' expected" %
+                              (storedkey, key))
+            value = raw[24 + keylen:]
             realsha = hashlib.sha1(value).digest()
             if sha != realsha:
                 raise IOError("invalid file contents: %s" % self.vfs.join(key))
@@ -2322,6 +2328,8 @@ class cachestore(object):
         with self.vfs(key, 'w+', atomictemp=True) as f:
             sha = hashlib.sha1(value).digest()
             f.write(sha)
+            f.write(struct.pack('!I', len(key)))
+            f.write(key)
             f.write(value)
 
     def getnodeinfo(self, name, node):

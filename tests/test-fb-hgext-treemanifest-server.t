@@ -292,13 +292,14 @@ Test fetching from the server populates the cache
   > sendtrees=True
   > treeonly=True
   > EOF
+  $ rm -rf .hg/store/00manifest*
   $ clearcache
   $ hg status --change tip > /dev/null
   2 trees fetched over * (glob)
   2 trees fetched over * (glob)
-  $ find ../master/.hg/cache/trees/v1/get -type f | wc -l
+  $ find ../master/.hg/cache/trees/v2/get -type f | wc -l
   \s*4 (re)
-  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | wc -l
+  $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | wc -l
   \s*4 (re)
 
 - Move the revlogs away to show that the cache is answering prefetches
@@ -307,7 +308,23 @@ Test fetching from the server populates the cache
   $ hg status --change tip > /dev/null
   2 trees fetched over * (glob)
   2 trees fetched over * (glob)
+
+- Corrupt the cache with the wrong value for a key and verify it notices
+- (by going past the cache and failing to access the revlog)
+  $ cp ../master/.hg/cache/trees/v2/get/0b/0fa4abc415aa6a46e003c61283b182ccc989b6 ../master/.hg/cache/trees/v2/get/d4/395b5ffa18499864439ac2b1a731ff7b7491fa
+  $ clearcache
+  $ hg status --change tip > /dev/null
+  2 trees fetched over * (glob)
+  abort: "unable to find the following nodes locally or on the server: ('', 7e680cec965bd202ea244b3c4869181424ca5fe8)"
+  [255]
+
+- Verify the cache remediates itself from the corruption
+- (now that the revlogs are back)
+  $ clearcache
   $ mv ../master/.hg/store/meta.bak ../master/.hg/store/meta
+  $ hg status --change tip > /dev/null
+  2 trees fetched over * (glob)
+  2 trees fetched over * (glob)
 
 - Ensure the server evicts the cache
   $ cat >> ../master/.hg/hgrc <<EOF
@@ -315,15 +332,15 @@ Test fetching from the server populates the cache
   > servermaxcachesize=0
   > servercacheevictionpercent=90
   > EOF
-  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | xargs -n 1 -I{} cp {} {}2
-  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | xargs -n 1 -I{} cp {} {}3
-  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | xargs -n 1 -I{} mv {} {}4
-  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | wc -l
+  $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} cp {} {}2
+  $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} cp {} {}3
+  $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} mv {} {}4
+  $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | wc -l
   \s*16 (re)
   $ clearcache
   $ hg status --change tip
   2 trees fetched over * (glob)
   2 trees fetched over * (glob)
   A subdir2/z
-  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | wc -l
+  $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | wc -l
   \s*8 (re)
