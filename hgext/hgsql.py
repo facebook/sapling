@@ -1613,6 +1613,75 @@ def sqlrecover(ui, *args, **opts):
     else:
         ui.status(_("local repo now matches SQL\n"))
 
+@command('sqltreestrip', [
+    ('', 'local-only', None, _('only strips the commits locally, and not from sql')),
+    ('', 'i-know-what-i-am-doing', None, _('only run sqltreestrip if you '
+                                           'know exactly what you\'re doing')),
+    ], _('hg sqltreestrip REV'))
+def sqltreestrip(ui, repo, rev, *args, **opts):
+    """Strips trees from local and sql history
+    """
+    try:
+        treemfmod = extensions.find('treemanifest')
+    except KeyError:
+        ui.warn(_("treemanifest is not enabled for this repository\n"))
+        return 1
+
+    if not repo.ui.configbool('treemanifest', 'server'):
+        ui.warn(_("this repository is not configured to be a treemanifest "
+                  "server\n"))
+        return 1
+
+    if not opts.get('i_know_what_i_am_doing'):
+        raise util.Abort("You must pass --i-know-what-i-am-doing to run this " +
+            "command. If you have multiple servers using the database, this " +
+            "command will break your servers until you run it on each one. " +
+            "Only the Mercurial server admins should ever run this.")
+
+    rev = int(rev)
+
+    ui.warn(_("*** YOU ARE ABOUT TO DELETE TREE HISTORY INCLUDING AND AFTER %s "
+              "(MANDATORY 5 SECOND WAIT) ***\n") % rev)
+    import time
+    time.sleep(5)
+
+    if not opts.get('local_only'):
+        # strip from sql
+        reponame = repo.sqlreponame
+        repo.sqlconnect()
+        repo.sqllock(writelock)
+        try:
+            cursor = repo.sqlcursor
+            ui.status(_("mysql: deleting trees with linkrevs >= %s\n") % rev)
+            cursor.execute("""DELETE FROM revisions
+                              WHERE repo = %s AND linkrev >= %s AND
+                                    (path LIKE 'meta/%%' OR
+                                     path = '00manifesttree.i')""",
+                           (reponame, rev))
+            repo.sqlconn.commit()
+        finally:
+            repo.sqlunlock(writelock)
+            repo.sqlclose()
+
+    # strip from local
+    ui.status(_("local: deleting trees with linkrevs >= %s\n") % rev)
+    with repo.wlock(), repo.lock(), repo.transaction('treestrip') as tr:
+        repo.disablesync = True
+
+        # Duplicating some logic from repair.py
+        offset = len(tr.entries)
+        tr.startgroup()
+        files = treemfmod.collectfiles(None, repo, rev)
+        treemfmod.striptrees(None, repo, tr, rev, files)
+        tr.endgroup()
+
+        for i in xrange(offset, len(tr.entries)):
+            file, troffset, ignore = tr.entries[i]
+            with repo.svfs(file, 'a', checkambig=True) as fp:
+                fp.truncate(troffset)
+            if troffset == 0:
+                repo.store.markremoved(file)
+
 @command('^sqlstrip', [
     ('', 'i-know-what-i-am-doing', None, _('only run sqlstrip if you know ' +
         'exactly what you\'re doing')),
