@@ -54,6 +54,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --debug                         'print debug logs'
             --repo_id <repo_id>             'ID of the newly imported repo'
             --manifold-bucket [BUCKET]      'manifold bucket'
+            --manifold-prefix [PREFIX]      'manifold prefix Default: new_blobimport_test'
             --db-address [address]          'address of a db. Used only for manifold blobstore'
             --blobstore-cache-size [SIZE]   'size of the blobstore cache'
             --changesets-cache-size [SIZE]  'size of the changesets cache'
@@ -150,7 +151,9 @@ fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
             BlobRepo::new_test_manifold(
                 logger.new(o!["BlobRepo:TestManifold" => manifold_bucket.to_owned()]),
                 manifold_bucket,
-                "new_blobimport_test",
+                matches
+                    .value_of("manifold-prefix")
+                    .unwrap_or("new_blobimport_test"),
                 repo_id,
                 matches
                     .value_of("db-address")
