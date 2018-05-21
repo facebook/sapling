@@ -897,71 +897,12 @@ def wraprepo(repo):
 
             reponame = self.sqlreponame
             cursor = self.sqlcursor
-            maxcommitsize = self.maxcommitsize
-            maxinsertsize = self.maxinsertsize
-            maxrowsize = self.maxrowsize
 
             if self.pendingrevs:
                 self._validatependingrevs()
 
-            def insert(args, values):
-                argstring = ','.join(args)
-                cursor.execute("INSERT INTO revisions(repo, path, "
-                    "chunk, chunkcount, linkrev, rev, node, entry, "
-                    "data0, data1, createdtime) VALUES %s" %
-                    argstring, values)
-
             try:
-                commitsize = 0
-                insertsize = 0
-                args = []
-                values = []
-                now = time.strftime('%Y-%m-%d %H:%M:%S')
-                for revision in self.pendingrevs:
-                    path, linkrev, rev, node, entry, data0, data1 = revision
-
-                    start = 0
-                    chunk = 0
-                    datalen = len(data1)
-                    chunkcount = datalen / maxrowsize
-                    if datalen % maxrowsize != 0 or datalen == 0:
-                        chunkcount += 1
-
-                    # We keep row size down by breaking large revisions down into
-                    # smaller chunks.
-                    while chunk == 0 or start < len(data1):
-                        end = min(len(data1), start + maxrowsize)
-                        datachunk = data1[start:end]
-                        args.append('(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)')
-                        values.extend((reponame, path, chunk, chunkcount, linkrev, rev,
-                             node, entry, data0, datachunk, now))
-
-                        size = len(datachunk)
-                        commitsize += size
-                        insertsize += size
-
-                        chunk += 1
-                        start = end
-
-                        # Minimize roundtrips by doing bulk inserts
-                        if insertsize > maxinsertsize:
-                            insert(args, values)
-                            del args[:]
-                            del values[:]
-                            insertsize = 0
-
-                        # MySQL transactions can only reach a certain size, so we commit
-                        # every so often.  As long as we don't update the tip pushkey,
-                        # this is ok.
-                        if commitsize > maxcommitsize:
-                            self.sqlconn.commit()
-                            commitsize = 0
-
-                if args:
-                    insert(args, values)
-
-                # commit at the end just to make sure we're clean
-                self.sqlconn.commit()
+                self._addrevstosql(self.pendingrevs)
 
                 # Compute new heads, and delete old heads
                 newheads = set(hex(n) for n in self.heads())
@@ -1049,6 +990,73 @@ def wraprepo(repo):
                 raise
             finally:
                 del self.pendingrevs[:]
+
+        def _addrevstosql(self, revisions):
+            def insert(args, values):
+                argstring = ','.join(args)
+                cursor.execute("INSERT INTO revisions(repo, path, "
+                    "chunk, chunkcount, linkrev, rev, node, entry, "
+                    "data0, data1, createdtime) VALUES %s" %
+                    argstring, values)
+
+            reponame = self.sqlreponame
+            cursor = self.sqlcursor
+
+            maxcommitsize = self.maxcommitsize
+            maxinsertsize = self.maxinsertsize
+            maxrowsize = self.maxrowsize
+            commitsize = 0
+            insertsize = 0
+
+            args = []
+            values = []
+
+            now = time.strftime('%Y-%m-%d %H:%M:%S')
+            for revision in revisions:
+                path, linkrev, rev, node, entry, data0, data1 = revision
+
+                start = 0
+                chunk = 0
+                datalen = len(data1)
+                chunkcount = datalen / maxrowsize
+                if datalen % maxrowsize != 0 or datalen == 0:
+                    chunkcount += 1
+
+                # We keep row size down by breaking large revisions down into
+                # smaller chunks.
+                while chunk == 0 or start < len(data1):
+                    end = min(len(data1), start + maxrowsize)
+                    datachunk = data1[start:end]
+                    args.append('(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)')
+                    values.extend((reponame, path, chunk, chunkcount, linkrev, rev,
+                         node, entry, data0, datachunk, now))
+
+                    size = len(datachunk)
+                    commitsize += size
+                    insertsize += size
+
+                    chunk += 1
+                    start = end
+
+                    # Minimize roundtrips by doing bulk inserts
+                    if insertsize > maxinsertsize:
+                        insert(args, values)
+                        del args[:]
+                        del values[:]
+                        insertsize = 0
+
+                    # MySQL transactions can only reach a certain size, so we commit
+                    # every so often.  As long as we don't update the tip pushkey,
+                    # this is ok.
+                    if commitsize > maxcommitsize:
+                        self.sqlconn.commit()
+                        commitsize = 0
+
+            if args:
+                insert(args, values)
+
+            # commit at the end just to make sure we're clean
+            self.sqlconn.commit()
 
         def _validatependingrevs(self):
             """Validates that the current pending revisions will be valid when
