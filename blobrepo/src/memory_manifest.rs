@@ -27,6 +27,7 @@ use errors::*;
 use manifest::BlobManifest;
 
 /// An in-memory manifest entry
+#[derive(Clone)]
 enum MemoryManifestEntry {
     /// A blob already found in the blob store. This cannot be a Tree blob
     Blob(HgBlobEntry),
@@ -40,7 +41,7 @@ enum MemoryManifestEntry {
         children: BTreeMap<MPathElement, MemoryManifestEntry>,
         p1: Option<HgNodeHash>,
         p2: Option<HgNodeHash>,
-        modified: bool,
+        changes: BTreeMap<MPathElement, Option<MemoryManifestEntry>>,
     },
 }
 
@@ -56,10 +57,20 @@ fn extend_repopath_with_dir(path: &RepoPath, dir: &MPathElement) -> RepoPath {
 }
 
 impl MemoryManifestEntry {
+    /// True if this entry has no children
     pub fn is_empty(&self) -> bool {
         match self {
-            &MemoryManifestEntry::MemTree { ref children, .. } => {
-                children.values().all(Self::is_empty)
+            MemoryManifestEntry::MemTree {
+                children, changes, ..
+            } => {
+                // If all changes are removes or empty, and all children are either changed or empty
+                changes.values().all(|opt| match opt {
+                    None => true,
+                    Some(entry) => entry.is_empty(),
+                })
+                    && children
+                        .iter()
+                        .all(|(path, entry)| changes.contains_key(path) || entry.is_empty())
             }
             _ => false,
         }
@@ -71,7 +82,7 @@ impl MemoryManifestEntry {
             children: BTreeMap::new(),
             p1: None,
             p2: None,
-            modified: false,
+            changes: BTreeMap::new(),
         }
     }
 
@@ -91,13 +102,25 @@ impl MemoryManifestEntry {
                 ref children,
                 p1,
                 p2,
-                modified,
+                ref changes,
             } => {
-                if modified {
+                if !changes.is_empty() {
                     // Two things to do:
                     // 1: join_all() the recursive serialization of all entries
                     // 2: Write out a manifest and return its hash.
-                    let futures: Vec<_> = children
+                    let mut new_children = children.clone();
+                    for (path, opt_replacement) in changes.iter() {
+                        match opt_replacement {
+                            &None => {
+                                new_children.remove(path);
+                            }
+                            &Some(ref replacement) => {
+                                new_children.insert(path.clone(), replacement.clone());
+                            }
+                        }
+                    }
+
+                    let futures: Vec<_> = new_children
                         .iter()
                         .filter(|&(_path, child)| !child.is_empty())
                         .map({
@@ -158,7 +181,7 @@ impl MemoryManifestEntry {
                     // The only way we can end up in this situation is a serious programming error
                     assert!(
                         p2.is_none(),
-                        "Modified bit not set correctly on in-memory manifest"
+                        "Merge manifest claims to be identical to two different parents"
                     );
                     future::result(p1.ok_or(ErrorKind::UnchangedManifest.into()))
                         .and_then({
@@ -231,7 +254,7 @@ impl MemoryManifestEntry {
                     children,
                     p1: Some(manifest_id.into_nodehash().into_mercurial()),
                     p2: None,
-                    modified: false,
+                    changes: BTreeMap::new(),
                 }
             })
             .boxify()
@@ -249,8 +272,8 @@ impl MemoryManifestEntry {
     /// Creates directories as needed to find the element referred to by path
     /// This will be a tree if it's been freshly created, or whatever is in the manifest if it
     /// was present. Returns a None if the path cannot be created (e.g. there's a file part
-    /// way through the path
-    pub fn find_mut<I>(&mut self, mut path: I) -> Option<&mut Self>
+    /// way through the path)
+    pub fn find_mut<'a, I>(&'a mut self, mut path: I) -> Option<&'a mut Self>
     where
         I: Iterator<Item = MPathElement>,
     {
@@ -258,15 +281,19 @@ impl MemoryManifestEntry {
             None => Some(self),
             Some(element) => match self {
                 &mut MemoryManifestEntry::MemTree {
-                    ref mut children,
-                    ref mut modified,
+                    ref children,
+                    ref mut changes,
                     ..
                 } => {
-                    *modified = true;
-                    children
-                        .entry(element)
-                        .or_insert_with(Self::empty_tree)
-                        .find_mut(path)
+                    let existing = children
+                        .get(&element)
+                        .cloned()
+                        .unwrap_or_else(Self::empty_tree);
+                    let new_entry = changes.entry(element).or_insert(Some(existing));
+                    match new_entry {
+                        &mut None => None,
+                        &mut Some(ref mut dir) => dir.find_mut(path),
+                    }
                 }
                 _ => None,
             },
@@ -274,15 +301,12 @@ impl MemoryManifestEntry {
     }
 
     /// Remove element from this tree manifest
-    pub fn remove(&mut self, element: &MPathElement) -> Result<()> {
+    pub fn remove(&mut self, element: MPathElement) -> Result<()> {
         match self {
             &mut MemoryManifestEntry::MemTree {
-                ref mut children,
-                ref mut modified,
-                ..
+                ref mut changes, ..
             } => {
-                *modified = true;
-                children.remove(element);
+                changes.insert(element, None);
                 Ok(())
             }
             _ => Err(ErrorKind::NotADirectory.into()),
@@ -294,12 +318,9 @@ impl MemoryManifestEntry {
     pub fn set(&mut self, element: MPathElement, entry: HgBlobEntry) -> Result<()> {
         match self {
             &mut MemoryManifestEntry::MemTree {
-                ref mut children,
-                ref mut modified,
-                ..
+                ref mut changes, ..
             } => {
-                *modified = true;
-                children.insert(element, MemoryManifestEntry::Blob(entry));
+                changes.insert(element, Some(MemoryManifestEntry::Blob(entry)));
                 Ok(())
             }
             _ => Err(ErrorKind::NotADirectory.into()),
@@ -381,7 +402,7 @@ impl MemoryRootManifest {
             Some(filepath) => self.root_entry.find_mut(filepath.into_iter()),
         }.ok_or(ErrorKind::PathNotFound(path.clone()))?;
 
-        target.remove(filename)
+        target.remove(filename.clone())
     }
 
     /// Add an entry, based on a blob you've already created outside this module. Missing
@@ -413,12 +434,9 @@ mod test {
     ) {
         match tree {
             &mut MemoryManifestEntry::MemTree {
-                ref mut children,
-                ref mut modified,
-                ..
+                ref mut changes, ..
             } => {
-                *modified = true;
-                children.insert(path, entry);
+                changes.insert(path, Some(entry));
             }
             _ => panic!("Inserting into a non-Tree"),
         }
@@ -438,13 +456,13 @@ mod test {
                 children,
                 p1,
                 p2,
-                modified,
+                changes,
             } = memory_manifest.root_entry
             {
                 assert!(children.is_empty(), "Empty manifest had children");
                 assert!(p1.is_none(), "Empty manifest had p1");
                 assert!(p2.is_none(), "Empty manifest had p2");
-                assert!(!modified, "Empty (unaltered) manifest is modified");
+                assert!(changes.is_empty(), "Empty manifest had new entries changed");
             } else {
                 panic!("Empty manifest is not a MemTree");
             }
@@ -470,7 +488,7 @@ mod test {
                 children,
                 p1,
                 p2,
-                modified,
+                changes,
             } = memory_manifest.root_entry
             {
                 for (path, entry) in children {
@@ -488,7 +506,10 @@ mod test {
                     p1
                 );
                 assert!(p2.is_none(), "Loaded manifest had p2");
-                assert!(!modified, "Loaded (unaltered) manifest is modified");
+                assert!(
+                    changes.is_empty(),
+                    "Loaded (unaltered) manifest has had entries changed"
+                );
             } else {
                 panic!("Loaded manifest is not a MemTree");
             }
@@ -529,7 +550,7 @@ mod test {
                 children,
                 p1: Some(dir_nodehash.into_mercurial()),
                 p2: None,
-                modified: false,
+                changes: BTreeMap::new(),
             };
             let path =
                 MPathElement::new(b"dir".to_vec()).expect("dir is no longer a valid MPathElement");
@@ -574,7 +595,10 @@ mod test {
                 .expect("Could not load manifest");
 
             if let MemoryManifestEntry::MemTree { ref children, .. } = memory_manifest.root_entry {
-                assert!(!children.get(&dir2).expect("dir2 is missing").is_empty());
+                assert!(
+                    !children.get(&dir2).expect("dir2 is missing").is_empty(),
+                    "Bad load"
+                );
             } else {
                 panic!("Loaded manifest is not a MemTree");
             }
@@ -585,8 +609,28 @@ mod test {
                 .expect("Remove failed");
 
             // Assert that dir2 is now empty, since we've removed the item
-            if let MemoryManifestEntry::MemTree { ref children, .. } = memory_manifest.root_entry {
-                assert!(children.get(&dir2).expect("dir2 is missing").is_empty());
+            if let MemoryManifestEntry::MemTree { ref changes, .. } = memory_manifest.root_entry {
+                assert!(
+                    changes
+                        .get(&dir2)
+                        .expect("dir2 is missing")
+                        .clone()
+                        .map_or(false, |e| e.is_empty()),
+                    "Bad after remove"
+                );
+                if let &Some(MemoryManifestEntry::MemTree {
+                    ref children,
+                    ref changes,
+                    ..
+                }) = changes.get(&dir2).expect("dir2 is missing")
+                {
+                    assert!(!children.is_empty(), "dir2 has lost its child");
+                    assert!(!changes.is_empty(), "dir2 has no change entries");
+                    assert!(
+                        changes.values().all(Option::is_none),
+                        "dir2 has some add entries"
+                    );
+                }
             } else {
                 panic!("Loaded manifest is not a MemTree");
             }
