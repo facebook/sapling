@@ -173,6 +173,19 @@ class BasicTest(testcase.EdenRepoTest):
         st = os.lstat(deep_file)
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
+    def test_mkdir_umask(self):
+        original_umask = os.umask(0o177)
+        try:
+            dirname = os.path.join(self.mount, "testd1")
+            os.mkdir(dirname)
+            self.assertEqual(0o600, os.lstat(dirname).st_mode & 0o777)
+            dirname = os.path.join(self.mount, "testd2")
+            os.umask(0o777)
+            os.mkdir(dirname)
+            self.assertEqual(0o000, os.lstat(dirname).st_mode & 0o777)
+        finally:
+            os.umask(original_umask)
+
     def test_access(self) -> None:
 
         def check_access(path: str, mode: int) -> bool:
