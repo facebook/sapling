@@ -52,6 +52,8 @@ extern crate time_ext;
 extern crate async_unit;
 #[cfg(test)]
 extern crate many_files_dirs;
+#[cfg(test)]
+extern crate mercurial_types_mocks;
 
 mod repo;
 mod changeset;

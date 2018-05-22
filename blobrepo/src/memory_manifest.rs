@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::io::Write;
 use std::sync::Arc;
 
-use futures::future::{self, Future, IntoFuture};
+use futures::future::{self, Future};
 use futures::stream::Stream;
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -76,6 +76,15 @@ impl MemoryManifestEntry {
         }
     }
 
+    /// True if this entry is a Tree, false otherwise
+    #[cfg(test)]
+    pub fn is_dir(&self) -> bool {
+        match self {
+            &MemoryManifestEntry::MemTree { .. } => true,
+            _ => false,
+        }
+    }
+
     /// Get an empty tree manifest entry
     pub fn empty_tree() -> Self {
         MemoryManifestEntry::MemTree {
@@ -83,6 +92,15 @@ impl MemoryManifestEntry {
             p1: None,
             p2: None,
             changes: BTreeMap::new(),
+        }
+    }
+
+    /// True if there's been any modification to self, false if not a MemTree or unmodified
+    fn is_modified(&self) -> bool {
+        if let &MemoryManifestEntry::MemTree { ref changes, .. } = self {
+            !changes.is_empty()
+        } else {
+            false
         }
     }
 
@@ -104,7 +122,7 @@ impl MemoryManifestEntry {
                 p2,
                 ref changes,
             } => {
-                if !changes.is_empty() {
+                if self.is_modified() {
                     // Two things to do:
                     // 1: join_all() the recursive serialization of all entries
                     // 2: Write out a manifest and return its hash.
@@ -174,28 +192,21 @@ impl MemoryManifestEntry {
                         })
                         .boxify()
                 } else {
-                    // Not modified, so p2 must be None, p1 is manifest
-                    // If this is not true, then we had either a merge that we need to record (p2
-                    // not None), or we didn't have a manifest to base this on (p1 None) and yet
-                    // we neither filled in a new entry at this level, nor left this empty.
-                    // The only way we can end up in this situation is a serious programming error
-                    assert!(
-                        p2.is_none(),
-                        "Merge manifest claims to be identical to two different parents"
-                    );
-                    future::result(p1.ok_or(ErrorKind::UnchangedManifest.into()))
-                        .and_then({
-                            let blobstore = blobstore.clone();
-                            move |p1| {
-                                HgBlobEntry::new(
+                    if p2.is_some() {
+                        future::err(ErrorKind::UnchangedManifest.into()).boxify()
+                    } else {
+                        let blobstore = blobstore.clone();
+                        future::result(p1.ok_or(ErrorKind::UnchangedManifest.into()))
+                            .and_then(move |p1| {
+                                future::result(HgBlobEntry::new(
                                     blobstore,
                                     path.mpath().map(MPath::basename).cloned(),
                                     p1.into_mononoke(),
                                     Type::Tree,
-                                ).into_future()
-                            }
-                        })
-                        .boxify()
+                                ))
+                            })
+                            .boxify()
+                    }
                 }
             }
         }
@@ -260,12 +271,85 @@ impl MemoryManifestEntry {
             .boxify()
     }
 
-    /// True if this entry is a Tree, false otherwise
-    #[cfg(test)]
-    pub fn is_dir(&self) -> bool {
-        match self {
-            &MemoryManifestEntry::MemTree { .. } => true,
-            _ => false,
+    /// Merge two MemoryManifests together, tracking conflicts. Conflicts are put in the data
+    /// structure in strict order, so that first entry is p1, second is p2 etc.
+    pub fn merge_with_conflicts(&self, other: &Self) -> Result<Self> {
+        use self::MemoryManifestEntry::*;
+        // FIXME: Once this code is lazy, we can merge modified manifests with a save/reload cycle
+        assert!(!self.is_modified(), "Cannot merge modified manifests");
+        assert!(!other.is_modified(), "Cannot merge modified manifests");
+
+        match (self, other) {
+            // Conflicts (on either side) must be resolved before you merge
+            (_, Conflict(_)) | (Conflict(_), _) => Err(ErrorKind::UnresolvedConflicts.into()),
+            // Two identical blobs merge to an unchanged blob
+            (Blob(p1), Blob(p2)) if p1 == p2 => Ok(self.clone()),
+            // Otherwise, blobs are in conflict - either another blob, or a tree
+            (Blob(_), _) | (_, Blob(_)) => Ok(Conflict(vec![self.clone(), other.clone()])),
+            // Identical trees are merged as-is
+            (
+                MemTree {
+                    p1: Some(my_id), ..
+                },
+                MemTree {
+                    p1: Some(other_id), ..
+                },
+            ) if my_id == other_id =>
+            {
+                Ok(self.clone())
+            }
+            (
+                MemTree {
+                    children,
+                    p1: my_id,
+                    ..
+                },
+                MemTree {
+                    children: other_children,
+                    p1: other_id,
+                    ..
+                },
+            ) => {
+                // Otherwise, merge on an entry-by-entry basis
+                let mut children = children.clone();
+                for (path, other_entry) in other_children.iter() {
+                    let new_entry = children
+                        .remove(&path)
+                        .map(|mine| mine.merge_with_conflicts(&other_entry))
+                        .unwrap_or(Ok(other_entry.clone()))?;
+                    children.insert(path.clone(), new_entry);
+                }
+                Ok(MemTree {
+                    children,
+                    p1: *my_id,
+                    p2: *other_id,
+                    changes: BTreeMap::new(),
+                })
+            }
+        }
+    }
+
+    /// Convert self from a Conflict to an empty MemTree, or leave unchanged if not a Conflict
+    fn conflict_to_memtree(self) -> Self {
+        if let MemoryManifestEntry::Conflict(conflicts) = self {
+            let mut parents = conflicts
+                .into_iter()
+                .filter_map(|entry| match entry {
+                    MemoryManifestEntry::MemTree { p1, .. } if !entry.is_modified() => p1,
+                    MemoryManifestEntry::Blob(ref blob) if blob.get_type() == Type::Tree => {
+                        Some(blob.get_hash().into_nodehash().into_mercurial())
+                    }
+                    _ => None,
+                })
+                .fuse();
+            MemoryManifestEntry::MemTree {
+                children: BTreeMap::new(),
+                p1: parents.next(),
+                p2: parents.next(),
+                changes: BTreeMap::new(),
+            }
+        } else {
+            self
         }
     }
 
@@ -288,7 +372,8 @@ impl MemoryManifestEntry {
                     let existing = children
                         .get(&element)
                         .cloned()
-                        .unwrap_or_else(Self::empty_tree);
+                        .unwrap_or_else(Self::empty_tree)
+                        .conflict_to_memtree();
                     let new_entry = changes.entry(element).or_insert(Some(existing));
                     match new_entry {
                         &mut None => None,
@@ -342,6 +427,17 @@ impl MemoryRootManifest {
         }
     }
 
+    fn create_conflict(
+        blobstore: Arc<Blobstore>,
+        p1_root: MemoryManifestEntry,
+        p2_root: MemoryManifestEntry,
+    ) -> Result<Self> {
+        Ok(Self::create(
+            blobstore,
+            p1_root.merge_with_conflicts(&p2_root)?,
+        ))
+    }
+
     /// Create an in-memory manifest, backed by the given blobstore, and based on mp1 and mp2
     pub fn new(
         blobstore: Arc<Blobstore>,
@@ -361,23 +457,15 @@ impl MemoryRootManifest {
                     .map(move |root_entry| Self::create(blobstore, root_entry))
                     .boxify()
             }
-            // TODO: This is where the merge case ends up going, when I've worked out
-            // what it looks like. For now, it's all conflicting
-            DParents::Two(p1, p2) => {
-                let p1_conflict =
-                    MemoryManifestEntry::convert_treenode(blobstore.clone(), &DManifestId::new(p1));
-                let p2_conflict =
-                    MemoryManifestEntry::convert_treenode(blobstore.clone(), &DManifestId::new(p2));
-                p1_conflict
-                    .join(p2_conflict)
-                    .map(|conflicts| {
-                        Self::create(
-                            blobstore,
-                            MemoryManifestEntry::Conflict(vec![conflicts.0, conflicts.1]),
-                        )
-                    })
-                    .boxify()
-            }
+            DParents::Two(p1, p2) => MemoryManifestEntry::convert_treenode(
+                blobstore.clone(),
+                &DManifestId::new(p1),
+            ).join(MemoryManifestEntry::convert_treenode(
+                blobstore.clone(),
+                &DManifestId::new(p2),
+            ))
+                .and_then(move |(p1, p2)| future::result(Self::create_conflict(blobstore, p1, p2)))
+                .boxify(),
         }
     }
 
@@ -424,7 +512,8 @@ mod test {
     use super::*;
     use async_unit;
     use many_files_dirs;
-    use mercurial_types::{DNodeHash, FileType};
+    use mercurial_types::{DNodeHash, FileType, nodehash::DEntryId};
+    use mercurial_types_mocks::nodehash;
     use slog::Discard;
 
     fn insert_entry(
@@ -759,6 +848,154 @@ mod test {
                 nodehash,
                 "nodehash hash changed"
             );
+        })
+    }
+
+    #[test]
+    fn merge_manifests() {
+        async_unit::tokio_unit_test(|| {
+            let repo = many_files_dirs::getrepo(None);
+            let blobstore = repo.get_blobstore();
+
+            let base = {
+                let mut children = BTreeMap::new();
+                let shared = MPathElement::new(b"shared".to_vec()).unwrap();
+                let base = MPathElement::new(b"base".to_vec()).unwrap();
+                let conflict = MPathElement::new(b"conflict".to_vec()).unwrap();
+                children.insert(
+                    shared.clone(),
+                    MemoryManifestEntry::Blob(
+                        HgBlobEntry::new(
+                            blobstore.clone(),
+                            Some(shared.clone()),
+                            nodehash::ONES_HASH,
+                            Type::File(FileType::Regular),
+                        ).unwrap(),
+                    ),
+                );
+                children.insert(
+                    base.clone(),
+                    MemoryManifestEntry::Blob(
+                        HgBlobEntry::new(
+                            blobstore.clone(),
+                            Some(base.clone()),
+                            nodehash::ONES_HASH,
+                            Type::File(FileType::Regular),
+                        ).unwrap(),
+                    ),
+                );
+                children.insert(
+                    conflict.clone(),
+                    MemoryManifestEntry::Blob(
+                        HgBlobEntry::new(
+                            blobstore.clone(),
+                            Some(conflict.clone()),
+                            nodehash::ONES_HASH,
+                            Type::File(FileType::Regular),
+                        ).unwrap(),
+                    ),
+                );
+                MemoryManifestEntry::MemTree {
+                    children,
+                    p1: Some(nodehash::ONES_HASH.into_mercurial()),
+                    p2: None,
+                    changes: BTreeMap::new(),
+                }
+            };
+
+            let other = {
+                let mut children = BTreeMap::new();
+                let shared = MPathElement::new(b"shared".to_vec()).unwrap();
+                let other = MPathElement::new(b"other".to_vec()).unwrap();
+                let conflict = MPathElement::new(b"conflict".to_vec()).unwrap();
+                children.insert(
+                    shared.clone(),
+                    MemoryManifestEntry::Blob(
+                        HgBlobEntry::new(
+                            blobstore.clone(),
+                            Some(shared.clone()),
+                            nodehash::ONES_HASH,
+                            Type::File(FileType::Regular),
+                        ).unwrap(),
+                    ),
+                );
+                children.insert(
+                    other.clone(),
+                    MemoryManifestEntry::Blob(
+                        HgBlobEntry::new(
+                            blobstore.clone(),
+                            Some(other.clone()),
+                            nodehash::TWOS_HASH,
+                            Type::File(FileType::Regular),
+                        ).unwrap(),
+                    ),
+                );
+                children.insert(
+                    conflict.clone(),
+                    MemoryManifestEntry::Blob(
+                        HgBlobEntry::new(
+                            blobstore.clone(),
+                            Some(conflict.clone()),
+                            nodehash::TWOS_HASH,
+                            Type::File(FileType::Regular),
+                        ).unwrap(),
+                    ),
+                );
+                MemoryManifestEntry::MemTree {
+                    children,
+                    p1: Some(nodehash::TWOS_HASH.into_mercurial()),
+                    p2: None,
+                    changes: BTreeMap::new(),
+                }
+            };
+
+            let merged = base.merge_with_conflicts(&other).expect("Failed to merge");
+
+            if let MemoryManifestEntry::MemTree { children, .. } = merged {
+                assert_eq!(children.len(), 4, "Should merge to 4 entries");
+                if let Some(&MemoryManifestEntry::Blob(ref blob)) =
+                    children.get(&MPathElement::new(b"shared".to_vec()).unwrap())
+                {
+                    assert_eq!(
+                        blob.get_hash(),
+                        &DEntryId::new(nodehash::ONES_HASH),
+                        "Wrong hash for shared"
+                    );
+                } else {
+                    panic!("shared is not a blob");
+                }
+                if let Some(&MemoryManifestEntry::Blob(ref blob)) =
+                    children.get(&MPathElement::new(b"base".to_vec()).unwrap())
+                {
+                    assert_eq!(
+                        blob.get_hash(),
+                        &DEntryId::new(nodehash::ONES_HASH),
+                        "Wrong hash for base"
+                    );
+                } else {
+                    panic!("base is not a blob");
+                }
+                if let Some(&MemoryManifestEntry::Blob(ref blob)) =
+                    children.get(&MPathElement::new(b"other".to_vec()).unwrap())
+                {
+                    assert_eq!(
+                        blob.get_hash(),
+                        &DEntryId::new(nodehash::TWOS_HASH),
+                        "Wrong hash for other"
+                    );
+                } else {
+                    panic!("other is not a blob");
+                }
+                if let Some(&MemoryManifestEntry::Conflict(ref conflicts)) =
+                    children.get(&MPathElement::new(b"conflict".to_vec()).unwrap())
+                {
+                    assert_eq!(conflicts.len(), 2, "Should have two conflicts");
+                } else {
+                    panic!("conflict did not create a conflict")
+                }
+            } else {
+                panic!("Merge failed to produce a merged tree");
+            }
         })
     }
 }

@@ -32,6 +32,14 @@ pub struct HgBlobEntry {
     ty: Type,
 }
 
+impl PartialEq for HgBlobEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.id == other.id && self.ty == other.ty
+    }
+}
+
+impl Eq for HgBlobEntry {}
+
 pub fn fetch_raw_filenode_bytes(
     blobstore: &Arc<Blobstore>,
     nodeid: DNodeHash,
