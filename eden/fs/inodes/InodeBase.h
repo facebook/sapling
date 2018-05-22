@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+#include <folly/Function.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <atomic>
@@ -15,8 +16,8 @@
 #include <vector>
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodePtr.h"
-#include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -35,7 +36,9 @@ class InodeBase {
    * Constructor for the root TreeInode of an EdenMount.
    * type is set to dtype_t::Dir
    */
-  explicit InodeBase(EdenMount* mount);
+  explicit InodeBase(
+      EdenMount* mount,
+      folly::Optional<InodeTimestamps> initialTimestamps);
 
   /**
    * Constructor for all non-root inodes.
@@ -43,6 +46,20 @@ class InodeBase {
   InodeBase(
       InodeNumber ino,
       mode_t initialMode,
+      folly::Optional<InodeTimestamps> initialTimestamps,
+      TreeInodePtr parent,
+      PathComponentPiece name);
+
+  /**
+   * Constructor for all non-root inodes.
+   *
+   * initialTimestampsFn is called when the InodeMetadataTable's lock is held.
+   * Don't access the InodeMetadataTable from it.
+   */
+  InodeBase(
+      InodeNumber ino,
+      mode_t initialMode,
+      folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
       TreeInodePtr parent,
       PathComponentPiece name);
 
@@ -348,6 +365,27 @@ class InodeBase {
   }
 
  protected:
+  /**
+   * Get this inode's metadata.  The caller is responsible for holding its lock
+   * while calling this method.
+   */
+  InodeMetadata getMetadata() const;
+
+  /**
+   * Helper function to set the atime of this inode.  The caller is responsible
+   * for holding its lock while calling this method.
+   *
+   * Note that FUSE doesn't claim to fully implement atime.
+   * https://sourceforge.net/p/fuse/mailman/message/34448996/
+   */
+  void updateAtime();
+
+  /**
+   * Updates this inode's mtime and ctime to the given timestamp.  The caller is
+   * responsible for holding its lock while calling this method.
+   */
+  InodeTimestamps updateMtimeAndCtime(timespec now);
+
   /**
    * Returns current time from EdenMount's clock.
    */

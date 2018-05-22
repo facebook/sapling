@@ -48,8 +48,8 @@ class FileInode : public InodeBase {
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
-      folly::File&& file,
-      timespec timestamp);
+      InodeTimestamps initialTimestamps,
+      folly::File&& file);
 
   /**
    * If hash is none, this opens the file in the overlay and leaves the inode
@@ -61,6 +61,7 @@ class FileInode : public InodeBase {
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
+      folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
       const folly::Optional<Hash>& hash);
 
   /**
@@ -73,7 +74,7 @@ class FileInode : public InodeBase {
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
-      timespec timestamp);
+      InodeTimestamps initialTimestamps);
 
   folly::Future<Dispatcher::Attr> getattr() override;
 
@@ -122,6 +123,11 @@ class FileInode : public InodeBase {
   mode_t getPermissions() const;
 
   /**
+   * Returns a copy of this inode's metadata.
+   */
+  InodeMetadata getMetadata() const;
+
+  /**
    * If this file is backed by a source control Blob, return the hash of the
    * Blob, or return folly::none if this file is materialized in the overlay.
    *
@@ -141,11 +147,6 @@ class FileInode : public InodeBase {
   FOLLY_NODISCARD folly::Future<std::string> readAll();
 
   folly::Future<size_t> write(folly::StringPiece data, off_t off);
-
-  /**
-   * Get the timestamps of the inode.
-   */
-  InodeTimestamps getTimestamps() const;
 
  private:
   /**
@@ -176,12 +177,8 @@ class FileInode : public InodeBase {
       MATERIALIZED_IN_OVERLAY,
     };
 
-    State(
-        FileInode* inode,
-        mode_t mode,
-        const folly::Optional<Hash>& hash,
-        const timespec& lastCheckoutTime);
-    State(FileInode* inode, mode_t mode, const timespec& creationTime);
+    explicit State(mode_t mode, const folly::Optional<Hash>& hash);
+    explicit State(mode_t mode);
     ~State();
 
     /**
@@ -250,11 +247,6 @@ class FileInode : public InodeBase {
      * Number of open file handles referencing us.
      */
     size_t openCount{0};
-
-    /**
-     * Timestamps for FileInode.
-     */
-    InodeTimestamps timeStamps;
   };
   class LockedState;
 
@@ -445,6 +437,11 @@ class FileInode : public InodeBase {
    */
   folly::Future<Dispatcher::Attr> setInodeAttr(
       const fuse_setattr_in& attr) override;
+
+  /**
+   * Returns a copy of this inode's metadata.
+   */
+  InodeMetadata getMetadataLocked(const State&) const;
 
   folly::Synchronized<State> state_;
 

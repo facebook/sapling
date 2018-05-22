@@ -33,6 +33,7 @@
 #include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -221,8 +222,8 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
   // Load the overlay, if present.
   auto rootOverlayDir = overlay_->loadOverlayDir(kRootNodeId, getInodeMap());
   if (rootOverlayDir) {
-    return folly::makeFuture<TreeInodePtr>(
-        TreeInodePtr::makeNew(this, std::move(rootOverlayDir.value())));
+    return TreeInodePtr::makeNew(
+        this, std::move(rootOverlayDir->first), rootOverlayDir->second);
   }
   return objectStore_->getTreeForCommit(parentCommits.parent1())
       .then([this](std::shared_ptr<const Tree> tree) {
@@ -360,6 +361,10 @@ EdenMount::shutdownImpl(bool doTakeover) {
 }
 const shared_ptr<UnboundedQueueThreadPool>& EdenMount::getThreadPool() const {
   return serverState_->getThreadPool();
+}
+
+InodeMetadataTable* EdenMount::getInodeMetadataTable() const {
+  return overlay_->getInodeMetadataTable();
 }
 
 FuseChannel* EdenMount::getFuseChannel() const {
@@ -613,7 +618,7 @@ void EdenMount::resetParents(const ParentCommits& parents) {
   journal_.addDelta(std::move(journalDelta));
 }
 
-struct timespec EdenMount::getLastCheckoutTime() {
+struct timespec EdenMount::getLastCheckoutTime() const {
   return *lastCheckoutTime_.rlock();
 }
 
@@ -737,6 +742,11 @@ struct stat EdenMount::initStatData() const {
   st.st_blksize = 4096;
 
   return st;
+}
+
+InodeMetadata EdenMount::getInitialInodeMetadata(mode_t mode) const {
+  return InodeMetadata{
+      mode, uid_, gid_, InodeTimestamps{getLastCheckoutTime()}};
 }
 } // namespace eden
 } // namespace facebook

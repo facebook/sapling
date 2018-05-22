@@ -52,6 +52,10 @@ class InodeDiffCallback;
 class InodeMap;
 class Journal;
 class MountPoint;
+struct InodeMetadata;
+template <typename T>
+class InodeTable;
+using InodeMetadataTable = InodeTable<InodeMetadata>;
 class ObjectStore;
 class Overlay;
 class ServerState;
@@ -198,9 +202,11 @@ class EdenMount {
   /**
    * Return the Overlay for this mount.
    */
-  Overlay* getOverlay() {
+  Overlay* getOverlay() const {
     return overlay_.get();
   }
+
+  InodeMetadataTable* getInodeMetadataTable() const;
 
   Journal& getJournal() {
     return journal_;
@@ -372,7 +378,7 @@ class EdenMount {
   /**
    * Returns the last checkout time in the Eden mount.
    */
-  struct timespec getLastCheckoutTime();
+  struct timespec getLastCheckoutTime() const;
 
   /**
    * Set the last checkout time.
@@ -430,6 +436,13 @@ class EdenMount {
    * file mode, size, timestamps, link count, etc).
    */
   struct stat initStatData() const;
+
+  /**
+   * Given a mode_t, return an initial InodeMetadata.  All timestamps are set
+   * to the last checkout time and uid and gid are set to the creator of the
+   * mount.
+   */
+  struct InodeMetadata getInitialInodeMetadata(mode_t mode) const;
 
   /**
    * mount any configured bind mounts.

@@ -248,7 +248,6 @@ class TreeInode : public InodeBase {
   struct Dir {
     /** The direct children of this directory */
     PathMap<Entry> entries;
-    InodeTimestamps timeStamps;
     /**
      * If this TreeInode is unmaterialized (identical to an existing source
      * control Tree), treeHash contains the ID of the source control Tree
@@ -298,20 +297,35 @@ class TreeInode : public InodeBase {
       TreeInodePtr parent,
       PathComponentPiece name,
       mode_t initialMode,
+      folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
+      Dir&& dir);
+
+  /**
+   * Construct an inode that only has backing in the Overlay area.
+   */
+  TreeInode(
+      InodeNumber ino,
+      TreeInodePtr parent,
+      PathComponentPiece name,
+      mode_t initialMode,
+      folly::Optional<InodeTimestamps> initialTimestamps,
       Dir&& dir);
 
   /**
    * Construct the root TreeInode from a source control commit's root.
    */
   TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree);
-  TreeInode(EdenMount* mount, Dir&& tree);
+  TreeInode(
+      EdenMount* mount,
+      Dir&& tree,
+      folly::Optional<InodeTimestamps> initialTimestamps);
 
   ~TreeInode() override;
 
   folly::Future<Dispatcher::Attr> getattr() override;
   folly::Future<folly::Unit> prefetch() override;
   void updateOverlayHeader() override;
-  Dispatcher::Attr getAttrLocked(const Dir* contents);
+  Dispatcher::Attr getAttrLocked(const Dir& contents);
 
   /** Implements the InodeBase method used by the Dispatcher
    * to create the Inode instance for a given name */
@@ -347,22 +361,6 @@ class TreeInode : public InodeBase {
   folly::Synchronized<Dir>& getContents() {
     return contents_;
   }
-
-  /**
-   * Get the InodeMap for this tree's EdenMount.
-   *
-   * The InodeMap is guaranteed to remain valid for at least the lifetime of
-   * the TreeInode object.
-   */
-  InodeMap* getInodeMap() const;
-
-  /**
-   * Get the ObjectStore for this mount point.
-   *
-   * The ObjectStore is guaranteed to remain valid for at least the lifetime of
-   * the TreeInode object.  (The ObjectStore is owned by the EdenMount.)
-   */
-  ObjectStore* getStore() const;
 
   FOLLY_NODISCARD folly::Future<CreateResult>
   create(PathComponentPiece name, mode_t mode, int flags);
@@ -580,21 +578,33 @@ class TreeInode : public InodeBase {
   void getDebugStatus(std::vector<TreeInodeDebugInfo>& results) const;
 
   /**
-   * Get the timestamps of the inode.
+   * Returns a copy of this inode's metadata.
    */
-  InodeTimestamps getTimestamps() const;
+  InodeMetadata getMetadata() const;
 
   /**
-   * Helper function to set the atime of a TreeInode. In order to set atime of a
-   * file in TreeInodeDirHandle::readdir which doesnot  have access to.
-   * TreeInode::contents_ we have this function. This has to be public since we
-   * are using it TreeInodeDirHandle class.
+   * Updates the last-access timestamp.  Public so TreeInodeDirHandle can call
+   * it.
    */
-  void updateAtimeToNow();
+  void updateAtime();
 
  private:
   class TreeRenameLocks;
   class IncompleteInodeLoad;
+
+  InodeMetadata getMetadataLocked(const Dir&) const;
+
+  /**
+   * The InodeMap is guaranteed to remain valid for at least the lifetime of
+   * the TreeInode object.
+   */
+  InodeMap* getInodeMap() const;
+
+  /**
+   * The ObjectStore is guaranteed to remain valid for at least the lifetime of
+   * the TreeInode object.  (The ObjectStore is owned by the EdenMount.)
+   */
+  ObjectStore* getStore() const;
 
   void registerInodeLoadComplete(
       folly::Future<std::unique_ptr<InodeBase>>& future,
@@ -632,7 +642,8 @@ class TreeInode : public InodeBase {
   /**
    * Loads a tree from the overlay given an inode number.
    */
-  folly::Optional<Dir> loadOverlayDir(InodeNumber inodeNumber) const;
+  folly::Optional<std::pair<Dir, InodeTimestamps>> loadOverlayDir(
+      InodeNumber inodeNumber) const;
 
   /**
    * Saves the entries of this inode to the overlay.
@@ -640,25 +651,29 @@ class TreeInode : public InodeBase {
   void saveOverlayDir(const Dir& contents) const;
 
   /**
+   * Saves the entries of this inode to the overlay.
+   */
+  void saveOverlayDir(const Dir& contents, const InodeTimestamps& timestamps)
+      const;
+
+  /**
    * Saves the entries for a specified inode number.
    */
-  void saveOverlayDir(InodeNumber inodeNumber, const Dir& contents) const;
+  void saveOverlayDir(
+      InodeNumber inodeNumber,
+      const Dir& contents,
+      const InodeTimestamps& timestamps) const;
 
   /**
    * Converts a Tree to a Dir and saves it to the Overlay under the given inode
    * number.
    */
-  static Dir saveDirFromTree(
-    InodeNumber inodeNumber,
-    const Tree* tree,
-    EdenMount* mount);
+  static Dir
+  saveDirFromTree(InodeNumber inodeNumber, const Tree* tree, EdenMount* mount);
 
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
-  static Dir buildDirFromTree(
-      const Tree* tree,
-      const struct timespec& lastCheckoutTime,
-      InodeMap* inodeMap);
+  static Dir buildDirFromTree(const Tree* tree, InodeMap* inodeMap);
 
   /**
    * Get a TreeInodePtr to ourself.

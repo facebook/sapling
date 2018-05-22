@@ -22,6 +22,7 @@
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
@@ -267,6 +268,10 @@ void TestMount::resetCommit(
 
 bool TestMount::hasOverlayData(InodeNumber ino) const {
   return edenMount_->getOverlay()->hasOverlayData(ino);
+}
+
+bool TestMount::hasMetadata(InodeNumber ino) const {
+  return edenMount_->getInodeMetadataTable()->getOptional(ino).has_value();
 }
 
 void TestMount::setInitialCommit(Hash commitHash) {

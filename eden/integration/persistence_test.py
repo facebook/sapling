@@ -30,7 +30,26 @@ class PersistenceTest(testcase.EdenRepoTest):
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {"eden.strace": "DBG7", "eden.fs.fuse": "DBG7"}
 
-    @unittest.skip("TODO: this is not fully implemented yet")
+    # It is not a strict requirement that Eden always remember inode numbers
+    # across restart -- we could theoretically drop them whenever we know it's
+    # not sensible for a program to remember them across whatever event.
+    #
+    # However, today we remember metadata keyed on inode, and thus Eden does,
+    # in practice remember them across restarts.
+    def test_preserves_inode_numbers_across_restarts(self):
+        before1 = os.lstat(os.path.join(self.mount, "subdir/file_in_subdir"))
+        before2 = os.lstat(os.path.join(self.mount, "subdir2/file_in_subdir2"))
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        # stat in reverse order
+        after2 = os.lstat(os.path.join(self.mount, "subdir2/file_in_subdir2"))
+        after1 = os.lstat(os.path.join(self.mount, "subdir/file_in_subdir"))
+
+        self.assertEqual(before1.st_ino, after1.st_ino)
+        self.assertEqual(before2.st_ino, after2.st_ino)
+
     def test_preserves_nonmaterialized_inode_numbers(self) -> None:
         inode_paths = [
             "file_in_root",

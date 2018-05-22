@@ -30,6 +30,7 @@
 #include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInodeDirHandle.h"
 #include "eden/fs/journal/JournalDelta.h"
@@ -149,6 +150,7 @@ TreeInode::TreeInode(
           parent,
           name,
           initialMode,
+          folly::none,
           saveDirFromTree(ino, tree.get(), parent->getMount())) {}
 
 TreeInode::TreeInode(
@@ -156,33 +158,52 @@ TreeInode::TreeInode(
     TreeInodePtr parent,
     PathComponentPiece name,
     mode_t initialMode,
+    folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
     Dir&& dir)
-    : InodeBase(ino, initialMode, parent, name), contents_(std::move(dir)) {
+    : InodeBase(ino, initialMode, std::move(initialTimestampsFn), parent, name),
+      contents_(std::move(dir)) {
+  DCHECK_NE(ino, kRootNodeId);
+}
+
+TreeInode::TreeInode(
+    InodeNumber ino,
+    TreeInodePtr parent,
+    PathComponentPiece name,
+    mode_t initialMode,
+    folly::Optional<InodeTimestamps> initialTimestamps,
+    Dir&& dir)
+    : InodeBase(ino, initialMode, initialTimestamps, parent, name),
+      contents_(std::move(dir)) {
   DCHECK_NE(ino, kRootNodeId);
 }
 
 TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
-    : TreeInode(mount, saveDirFromTree(kRootNodeId, tree.get(), mount)) {}
+    : TreeInode(
+          mount,
+          saveDirFromTree(kRootNodeId, tree.get(), mount),
+          folly::none) {}
 
-TreeInode::TreeInode(EdenMount* mount, Dir&& dir)
-    : InodeBase(mount), contents_(std::move(dir)) {}
+TreeInode::TreeInode(
+    EdenMount* mount,
+    Dir&& dir,
+    folly::Optional<InodeTimestamps> initialTimestamps)
+    : InodeBase(mount, initialTimestamps), contents_(std::move(dir)) {}
 
 TreeInode::~TreeInode() {}
 
 folly::Future<Dispatcher::Attr> TreeInode::getattr() {
-  return getAttrLocked(&*contents_.rlock());
+  return getAttrLocked(*contents_.rlock());
 }
 
-Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
+Dispatcher::Attr TreeInode::getAttrLocked(const Dir& contents) {
   Dispatcher::Attr attr(getMount()->initStatData());
 
-  attr.st.st_mode = S_IFDIR | 0755;
   attr.st.st_ino = getNodeId().get();
-  contents->timeStamps.applyToStat(attr.st);
+  getMetadataLocked(contents).applyToStat(attr.st);
 
   // For directories, nlink is the number of entries including the
   // "." and ".." links.
-  attr.st.st_nlink = contents->entries.size() + 2;
+  attr.st.st_nlink = contents.entries.size() + 2;
   return attr;
 }
 
@@ -337,11 +358,34 @@ void TreeInode::loadUnlinkedChildInode(
 
     if (!S_ISDIR(mode)) {
       auto file = std::make_unique<FileInode>(
-          number, inodePtrFromThis(), name, mode, hash);
+          number,
+          inodePtrFromThis(),
+          name,
+          mode,
+          [&]() -> folly::Optional<InodeTimestamps> {
+            // If this inode does not have timestamps in the metadata table but
+            // does in the overlay, migrate.
+            if (hash) {
+              return folly::none;
+            } else {
+              InodeTimestamps fromOverlay;
+              (void)getMount()->getOverlay()->openFile(
+                  number, Overlay::kHeaderIdentifierFile, fromOverlay);
+              return fromOverlay;
+            }
+          },
+          hash);
       promises = getInodeMap()->inodeLoadComplete(file.get());
       inodePtr = InodePtr::takeOwnership(std::move(file));
     } else {
       Dir dir;
+      folly::Optional<InodeTimestamps> fromOverlay;
+
+      auto overlayContents =
+          getOverlay()->loadOverlayDir(number, getMount()->getInodeMap());
+      if (overlayContents) {
+        fromOverlay = overlayContents->second;
+      }
 
       if (hash) {
         // Copy in the hash but we leave dir.entries empty
@@ -352,7 +396,7 @@ void TreeInode::loadUnlinkedChildInode(
         // Note that the .value() call will throw if we couldn't
         // load the dir data; we'll catch and propagate that in
         // the containing try/catch block.
-        dir = loadOverlayDir(number).value();
+        dir = std::move(overlayContents.value().first);
         if (!dir.entries.empty()) {
           // Should be impossible, but worth checking for
           // defensive purposes!
@@ -362,7 +406,7 @@ void TreeInode::loadUnlinkedChildInode(
       }
 
       auto tree = std::make_unique<TreeInode>(
-          number, inodePtrFromThis(), name, mode, std::move(dir));
+          number, inodePtrFromThis(), name, mode, fromOverlay, std::move(dir));
       promises = getInodeMap()->inodeLoadComplete(tree.get());
       inodePtr = InodePtr::takeOwnership(std::move(tree));
     }
@@ -559,6 +603,20 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         inodePtrFromThis(),
         name,
         entry.getMode(),
+        [&]() -> folly::Optional<InodeTimestamps> {
+          // If this inode doesn't have timestamps in the inode metadata table
+          // but does in the overlay, use them.
+          if (entry.getOptionalHash()) {
+            // Only materialized files exist in the overlay.
+            return folly::none;
+          }
+          InodeTimestamps fromOverlay;
+          (void)getMount()->getOverlay()->openFile(
+              entry.getInodeNumber(),
+              Overlay::kHeaderIdentifierFile,
+              fromOverlay);
+          return fromOverlay;
+        },
         entry.getOptionalHash());
   }
 
@@ -577,11 +635,11 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
               // numbers stored in the overlay.
               auto overlayDir = self->loadOverlayDir(number);
               if (overlayDir) {
-                overlayDir->treeHash = treeHash;
+                overlayDir->first.treeHash = treeHash;
                 // Compare the Tree and the Dir from the overlay.  If they
                 // differ, something is wrong, so log the difference.
                 if (auto differences =
-                        findEntryDifferences(*overlayDir, *tree)) {
+                        findEntryDifferences(overlayDir->first, *tree)) {
                   std::string diffString;
                   for (const auto& diff : *differences) {
                     diffString += diff;
@@ -602,7 +660,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     std::move(self),
                     childName,
                     entryMode,
-                    std::move(overlayDir.value()));
+                    overlayDir->second,
+                    std::move(overlayDir->first));
               }
 
               return make_unique<TreeInode>(
@@ -622,8 +681,9 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
       inodePtrFromThis(),
       name,
       entry.getMode(),
-      std::move(overlayDir.value()));
-}
+      overlayDir->second,
+      std::move(overlayDir->first));
+} // namespace eden
 
 std::shared_ptr<DirHandle> TreeInode::opendir() {
   return std::make_shared<TreeInodeDirHandle>(inodePtrFromThis());
@@ -769,34 +829,42 @@ Overlay* TreeInode::getOverlay() const {
   return getMount()->getOverlay();
 }
 
-folly::Optional<TreeInode::Dir> TreeInode::loadOverlayDir(
-    InodeNumber inodeNumber) const {
+folly::Optional<std::pair<TreeInode::Dir, InodeTimestamps>>
+TreeInode::loadOverlayDir(InodeNumber inodeNumber) const {
   return getOverlay()->loadOverlayDir(inodeNumber, getInodeMap());
 }
 
 void TreeInode::saveOverlayDir(const Dir& contents) const {
-  return saveOverlayDir(getNodeId(), contents);
+  return saveOverlayDir(
+      getNodeId(), contents, getMetadataLocked(contents).timestamps);
 }
 
-void TreeInode::saveOverlayDir(InodeNumber inodeNumber, const Dir& contents)
-    const {
-  return getOverlay()->saveOverlayDir(inodeNumber, contents);
+void TreeInode::saveOverlayDir(
+    const Dir& contents,
+    const InodeTimestamps& timestamps) const {
+  return saveOverlayDir(getNodeId(), contents, timestamps);
+}
+
+void TreeInode::saveOverlayDir(
+    InodeNumber inodeNumber,
+    const Dir& contents,
+    const InodeTimestamps& timestamps) const {
+  return getOverlay()->saveOverlayDir(inodeNumber, contents, timestamps);
 }
 
 TreeInode::Dir TreeInode::saveDirFromTree(
     InodeNumber inodeNumber,
     const Tree* tree,
     EdenMount* mount) {
-  auto dir = buildDirFromTree(
-      tree, mount->getLastCheckoutTime(), mount->getInodeMap());
+  auto dir = buildDirFromTree(tree, mount->getInodeMap());
   // buildDirFromTree just allocated inode numbers; they should be saved.
-  mount->getOverlay()->saveOverlayDir(inodeNumber, dir);
+  mount->getOverlay()->saveOverlayDir(
+      inodeNumber, dir, InodeTimestamps{mount->getLastCheckoutTime()});
   return dir;
 }
 
 TreeInode::Dir TreeInode::buildDirFromTree(
     const Tree* tree,
-    const struct timespec& lastCheckoutTime,
     InodeMap* inodeMap) {
   // Now build out the Dir based on what we know.
   Dir dir;
@@ -812,7 +880,6 @@ TreeInode::Dir TreeInode::buildDirFromTree(
         inodeMap->allocateInodeNumber(),
         treeEntry.getHash());
   }
-  dir.timeStamps.setAll(lastCheckoutTime);
   return dir;
 }
 
@@ -879,26 +946,22 @@ FileInodePtr TreeInode::createImpl(
           this->inodePtrFromThis(),
           name,
           mode,
-          std::move(file),
-          currentTime);
+          InodeTimestamps{currentTime},
+          std::move(file));
     } else {
       inode = FileInodePtr::makeNew(
           childNumber,
           this->inodePtrFromThis(),
           name,
           entry.getMode(),
-          currentTime);
+          InodeTimestamps{currentTime});
     }
 
     entry.setInode(inode.get());
     inodeMap->inodeCreated(inode);
 
-    // Update the directory timestamps, and save it to the overlay
-    contents->timeStamps.ctime = currentTime;
-    contents->timeStamps.mtime = currentTime;
-    saveOverlayDir(*contents);
-
-    // Release the contents lock
+    auto timestamps = updateMtimeAndCtime(getNow());
+    saveOverlayDir(*contents, timestamps);
     contents.unlock();
   }
 
@@ -1032,13 +1095,8 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     Dir emptyDir;
     // Update timeStamps of newly created directory and current directory.
     auto now = getNow();
-    emptyDir.timeStamps.atime = now;
-    emptyDir.timeStamps.ctime = now;
-    emptyDir.timeStamps.mtime = now;
-    contents->timeStamps.mtime = now;
-    contents->timeStamps.ctime = now;
-
-    saveOverlayDir(childNumber, emptyDir);
+    InodeTimestamps childTimestamps{now};
+    saveOverlayDir(childNumber, emptyDir, childTimestamps);
 
     // Add a new entry to contents_.entries
     auto emplaceResult = contents->entries.emplace(name, mode, childNumber);
@@ -1048,12 +1106,18 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
 
     // Create the TreeInode
     newChild = TreeInodePtr::makeNew(
-        childNumber, this->inodePtrFromThis(), name, mode, std::move(emptyDir));
+        childNumber,
+        this->inodePtrFromThis(),
+        name,
+        mode,
+        childTimestamps,
+        std::move(emptyDir));
     entry.setInode(newChild.get());
     inodeMap->inodeCreated(newChild);
 
     // Save our updated overlay data
-    saveOverlayDir(*contents);
+    auto timestamps = updateMtimeAndCtime(now);
+    saveOverlayDir(*contents, timestamps);
   }
 
   invalidateFuseCacheIfRequired(name);
@@ -1225,14 +1289,10 @@ int TreeInode::tryRemoveChild(
     // Remove it from our entries list
     contents->entries.erase(entIter);
 
-    // We want to update mtime and ctime of parent directoryafter removing the
+    // We want to update mtime and ctime of parent directory after removing the
     // child.
-    const auto now = getNow();
-    contents->timeStamps.mtime = now;
-    contents->timeStamps.ctime = now;
-
-    // Update the on-disk overlay
-    saveOverlayDir(*contents);
+    auto timestamps = updateMtimeAndCtime(getNow());
+    saveOverlayDir(*contents, timestamps);
   }
   deletedInode.reset();
 
@@ -1558,12 +1618,12 @@ Future<Unit> TreeInode::doRename(
   locks.srcContents()->entries.erase(srcIter);
 
   // Save the overlay data
-  saveOverlayDir(getNodeId(), *locks.srcContents());
+  saveOverlayDir(*locks.srcContents());
   if (destParent.get() != this) {
-    // We have already verified that destParent is not unlinked, and we are
-    // holding the rename lock which prevents it from being renamed or unlinked
-    // while we are operating, so getPath() must have a value here.
-    saveOverlayDir(destParent->getNodeId(), *locks.destContents());
+    saveOverlayDir(
+        destParent->getNodeId(),
+        *locks.destContents(),
+        destParent->getMetadataLocked(*locks.destContents()).timestamps);
   }
 
   // Release the TreeInode locks before we write a journal entry.
@@ -2980,7 +3040,7 @@ uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
       // for whether it's a good idea to unload the inode or not.
       //
       // https://sourceforge.net/p/fuse/mailman/message/34448996/
-      auto atime = inode->getTimestamps().atime;
+      auto atime = inode->getMetadata().timestamps.atime;
       if (atime < cutoff) {
         toUnload.insert(inode.get());
       }
@@ -3127,9 +3187,18 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
   }
 }
 
-// Gets the immemory timestamps of the inode.
-InodeTimestamps TreeInode::getTimestamps() const {
-  return contents_.rlock()->timeStamps;
+InodeMetadata TreeInode::getMetadata() const {
+  auto lock = contents_.rlock();
+  return getMetadataLocked(*lock);
+}
+
+void TreeInode::updateAtime() {
+  auto lock = contents_.wlock();
+  InodeBase::updateAtime();
+}
+
+InodeMetadata TreeInode::getMetadataLocked(const Dir&) const {
+  return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
 }
 
 folly::Future<folly::Unit> TreeInode::prefetch() {
@@ -3144,7 +3213,8 @@ void TreeInode::updateOverlayHeader() {
     InodeTimestamps timeStamps;
     auto file = getOverlay()->openFile(
         getNodeId(), Overlay::kHeaderIdentifierDir, timeStamps);
-    Overlay::updateTimestampToHeader(file.fd(), contents->timeStamps);
+    Overlay::updateTimestampToHeader(
+        file.fd(), getMetadataLocked(*contents).timestamps);
   }
 }
 folly::Future<Dispatcher::Attr> TreeInode::setInodeAttr(
@@ -3161,19 +3231,16 @@ folly::Future<Dispatcher::Attr> TreeInode::setInodeAttr(
   result.st.st_ino = getNodeId().get();
   result.st.st_mode = S_IFDIR | 0755;
   auto contents = contents_.wlock();
-  contents->timeStamps.setattrTimes(getClock(), attr);
-  result.st.st_atim = contents->timeStamps.atime.toTimespec();
-  result.st.st_ctim = contents->timeStamps.ctime.toTimespec();
-  result.st.st_mtim = contents->timeStamps.mtime.toTimespec();
+  auto metadata = getMount()->getInodeMetadataTable()->modifyOrThrow(
+      getNodeId(), [&](InodeMetadata& metadata) {
+        metadata.timestamps.setattrTimes(getClock(), attr);
+      });
+  metadata.applyToStat(result.st);
 
   // Update Journal
   updateJournal();
   return result;
 }
-void TreeInode::updateAtimeToNow() {
-  auto now = getNow();
-  auto contents = contents_.wlock();
-  contents->timeStamps.atime = now;
-}
+
 } // namespace eden
 } // namespace facebook

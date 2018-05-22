@@ -287,7 +287,6 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   auto root = edenMount->getRootInode();
   auto dir1 = edenMount->getInode("dir1"_relpath).get().asTreePtr();
   auto dir2 = edenMount->getInode("dir2"_relpath).get().asTreePtr();
-
   auto dir1ino = dir1->getNodeId();
   auto dir2ino = dir2->getNodeId();
 
@@ -304,8 +303,47 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   dir2.reset();
 
   edenMount->getInodeMap()->decFuseRefcount(dir2ino);
-  EXPECT_FALSE(edenMount->getOverlay()->hasOverlayData(dir1ino));
-  EXPECT_FALSE(edenMount->getOverlay()->hasOverlayData(dir2ino));
+  EXPECT_FALSE(mount.hasOverlayData(dir1ino));
+  EXPECT_FALSE(mount.hasOverlayData(dir2ino));
+  EXPECT_FALSE(mount.hasMetadata(dir1ino));
+  EXPECT_FALSE(mount.hasMetadata(dir2ino));
+}
+
+TEST(InodeMap, unloadedFileMetadataIsForgotten) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir1/file.txt", "contents");
+  builder.setFile("dir2/file.txt", "contents");
+  TestMount mount{builder};
+  auto edenMount = mount.getEdenMount();
+
+  auto root = edenMount->getRootInode();
+  auto dir1 = edenMount->getInode(RelativePathPiece{"dir1"}).get().asTreePtr();
+  auto dir2 = edenMount->getInode(RelativePathPiece{"dir2"}).get().asTreePtr();
+
+  auto file1 =
+      edenMount->getInode(RelativePathPiece{"dir1/file.txt"}).get().asFilePtr();
+  auto file1ino = file1->getNodeId();
+  auto file2 =
+      edenMount->getInode(RelativePathPiece{"dir2/file.txt"}).get().asFilePtr();
+  auto file2ino = file2->getNodeId();
+
+  EXPECT_TRUE(mount.hasMetadata(file1ino));
+  EXPECT_TRUE(mount.hasMetadata(file2ino));
+
+  // Try having both positive and zero FUSE reference counts.
+  file1->incFuseRefcount();
+  file1.reset();
+  file2.reset();
+
+  dir1->unlink(PathComponentPiece{"file.txt"}).get(0ms);
+  dir2->unlink(PathComponentPiece{"file.txt"}).get(0ms);
+
+  EXPECT_TRUE(mount.hasMetadata(file1ino));
+  EXPECT_FALSE(mount.hasMetadata(file2ino));
+
+  edenMount->getInodeMap()->decFuseRefcount(file1ino);
+  EXPECT_FALSE(mount.hasMetadata(file1ino));
+  EXPECT_FALSE(mount.hasMetadata(file2ino));
 }
 
 struct InodePersistenceTreeTest : ::testing::Test {

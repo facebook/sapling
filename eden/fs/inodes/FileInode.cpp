@@ -18,6 +18,7 @@
 #include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeError.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
@@ -410,34 +411,14 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
  * FileInode::State methods
  ********************************************************************/
 
-FileInode::State::State(
-    FileInode* inode,
-    mode_t m,
-    const folly::Optional<Hash>& h,
-    const timespec& lastCheckoutTime)
+FileInode::State::State(mode_t m, const folly::Optional<Hash>& h)
     : mode(m), hash(h) {
-  if (!hash.hasValue()) {
-    // File is materialized; read out the timestamps but don't keep it open.
-    //
-    // TODO: This is inefficient for constructors that just created the inode
-    // and already have timestamp info.
-    (void)inode->getMount()->getOverlay()->openFile(
-        inode->getNodeId(), Overlay::kHeaderIdentifierFile, timeStamps);
-    tag = MATERIALIZED_IN_OVERLAY;
-  } else {
-    timeStamps.setAll(lastCheckoutTime);
-    tag = NOT_LOADED;
-  }
+  tag = hash ? NOT_LOADED : MATERIALIZED_IN_OVERLAY;
 
   checkInvariants();
 }
 
-FileInode::State::State(
-    FileInode* /*inode*/,
-    mode_t m,
-    const timespec& creationTime)
-    : tag(MATERIALIZED_IN_OVERLAY), mode(m) {
-  timeStamps.setAll(creationTime);
+FileInode::State::State(mode_t m) : tag(MATERIALIZED_IN_OVERLAY), mode(m) {
   checkInvariants();
 }
 
@@ -525,10 +506,11 @@ std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t mode,
-    folly::File&& file,
-    timespec timestamp) {
+    InodeTimestamps initialTimestamps,
+    folly::File&& file) {
   // The FileInode is in MATERIALIZED_IN_OVERLAY state.
-  auto inode = FileInodePtr::makeNew(ino, parentInode, name, mode, timestamp);
+  auto inode =
+      FileInodePtr::makeNew(ino, parentInode, name, mode, initialTimestamps);
 
   auto state = LockedState{inode};
   state.incOpenCount();
@@ -544,14 +526,15 @@ FileInode::FileInode(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t initialMode,
+    folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
     const folly::Optional<Hash>& hash)
-    : InodeBase(ino, initialMode, std::move(parentInode), name),
-      state_(
-          folly::in_place,
-          this,
+    : InodeBase(
+          ino,
           initialMode,
-          hash,
-          getMount()->getLastCheckoutTime()) {}
+          std::move(initialTimestampsFn),
+          std::move(parentInode),
+          name),
+      state_(folly::in_place, initialMode, hash) {}
 
 // The FileInode is in MATERIALIZED_IN_OVERLAY state.
 FileInode::FileInode(
@@ -559,9 +542,14 @@ FileInode::FileInode(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t initialMode,
-    timespec timestamp)
-    : InodeBase(ino, initialMode, std::move(parentInode), name),
-      state_(folly::in_place, this, initialMode, timestamp) {}
+    InodeTimestamps initialTimestamps)
+    : InodeBase(
+          ino,
+          initialMode,
+          initialTimestamps,
+          std::move(parentInode),
+          name),
+      state_(folly::in_place, initialMode) {}
 
 folly::Future<Dispatcher::Attr> FileInode::getattr() {
   // Future optimization opportunity: right now, if we have not already
@@ -604,9 +592,14 @@ folly::Future<Dispatcher::Attr> FileInode::setInodeAttr(
       state->mode = (state->mode & S_IFMT) | (07777 & attr.mode);
     }
 
-    // Set in-memory timeStamps
-    state->timeStamps.setattrTimes(self->getClock(), attr);
+    auto metadata = self->getMount()->getInodeMetadataTable()->modifyOrThrow(
+        self->getNodeId(), [&](auto& metadata) {
+          metadata.timestamps.setattrTimes(self->getClock(), attr);
 
+          // Mirror any mode changes into the metadata table until it's the
+          // source of truth.
+          metadata.mode = state->mode;
+        });
     // We need to call fstat function here to get the size of the overlay
     // file. We might update size in the result while truncating the file
     // when FATTR_SIZE flag is set but when the flag is not set we
@@ -616,10 +609,7 @@ folly::Future<Dispatcher::Attr> FileInode::setInodeAttr(
     checkUnixError(fstat(state->file.fd(), &overlayStat));
     result.st.st_ino = self->getNodeId().get();
     result.st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
-    result.st.st_atim = state->timeStamps.atime.toTimespec();
-    result.st.st_ctim = state->timeStamps.ctime.toTimespec();
-    result.st.st_mtim = state->timeStamps.mtime.toTimespec();
-    result.st.st_mode = state->mode;
+    metadata.applyToStat(result.st);
     result.st.st_nlink = 1;
     updateBlockCount(result.st);
 
@@ -707,6 +697,15 @@ mode_t FileInode::getMode() const {
 
 mode_t FileInode::getPermissions() const {
   return (getMode() & 07777);
+}
+
+InodeMetadata FileInode::getMetadata() const {
+  auto lock = state_.rlock();
+  return getMetadataLocked(*lock);
+}
+
+InodeMetadata FileInode::getMetadataLocked(const State&) const {
+  return InodeBase::getMetadata();
 }
 
 folly::Optional<Hash> FileInode::getBlobHash() const {
@@ -841,7 +840,7 @@ folly::Future<struct stat> FileInode::stat() {
           // don't support committing special device nodes.
         }
 
-        state->timeStamps.applyToStat(st);
+        self->getMetadataLocked(*state).applyToStat(st);
         st.st_mode = state->mode;
         updateBlockCount(st);
 
@@ -920,7 +919,7 @@ Future<string> FileInode::readAll() {
         }
 
         // We want to update atime after the read operation.
-        state->timeStamps.atime = self->getNow();
+        self->updateAtime();
         return result;
       });
 }
@@ -930,7 +929,7 @@ Future<BufVec> FileInode::read(size_t size, off_t off) {
       LockedState{this},
       [size, off, self = inodePtrFromThis()](LockedState&& state) {
         SCOPE_SUCCESS {
-          state->timeStamps.atime = self->getNow();
+          self->updateAtime();
         };
 
         if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
@@ -979,10 +978,7 @@ size_t FileInode::writeImpl(
       ::pwritev(state->file.fd(), iov, numIovecs, off + Overlay::kHeaderLength);
   checkUnixError(xfer);
 
-  // Update mtime and ctime on write systemcall.
-  const auto now = getNow();
-  state->timeStamps.mtime = now;
-  state->timeStamps.ctime = now;
+  updateMtimeAndCtime(getNow());
 
   return xfer;
 }
@@ -1100,17 +1096,19 @@ void FileInode::materializeNow(LockedState& state) {
   // Look up the blob metadata so we can get the blob contents SHA1
   // Since this uses state->hash we perform this before calling
   // state.setMaterialized()
-  auto metadata = getObjectStore()->getBlobMetadata(state->hash.value());
+  auto blobMetadata = getObjectStore()->getBlobMetadata(state->hash.value());
+
+  auto timestamps = getMetadataLocked(*state).timestamps;
 
   auto file = getMount()->getOverlay()->createOverlayFile(
-      getNodeId(), state->timeStamps, state->blob->getContents());
+      getNodeId(), timestamps, state->blob->getContents());
   state.setMaterialized(std::move(file));
 
   // If we have a SHA-1 from the metadata, apply it to the new file.  This
   // saves us from recomputing it again in the case that something opens the
   // file read/write and closes it without changing it.
-  if (metadata.isReady()) {
-    storeSha1(state, metadata.value().sha1);
+  if (blobMetadata.isReady()) {
+    storeSha1(state, blobMetadata.value().sha1);
   } else {
     // Leave the SHA-1 attribute dirty - it is not very likely that a file
     // will be opened for writing, closed without changing, and then have
@@ -1123,8 +1121,9 @@ void FileInode::materializeNow(LockedState& state) {
 
 void FileInode::materializeAndTruncate(LockedState& state) {
   CHECK_NE(state->tag, State::MATERIALIZED_IN_OVERLAY);
+  auto timestamps = getMetadataLocked(*state).timestamps;
   auto file = getMount()->getOverlay()->createOverlayFile(
-      getNodeId(), state->timeStamps, ByteRange{});
+      getNodeId(), timestamps, ByteRange{});
   state.setMaterialized(std::move(file));
   storeSha1(state, Hash::sha1(ByteRange{}));
 }
@@ -1191,11 +1190,6 @@ void FileInode::storeSha1(const LockedState& state, Hash sha1) {
   }
 }
 
-// Gets the in-memory timestamps of the inode.
-InodeTimestamps FileInode::getTimestamps() const {
-  return state_.rlock()->timeStamps;
-}
-
 folly::Future<folly::Unit> FileInode::prefetch() {
   // Careful to only hold the lock while fetching a copy of the hash.
   return folly::via(getMount()->getThreadPool().get()).then([this] {
@@ -1209,8 +1203,10 @@ void FileInode::updateOverlayHeader() {
   auto state = LockedState{this};
   if (state->isMaterialized()) {
     state.ensureFileOpen(this);
-    Overlay::updateTimestampToHeader(state->file.fd(), state->timeStamps);
+    auto timestamps = getMetadataLocked(*state).timestamps;
+    Overlay::updateTimestampToHeader(state->file.fd(), timestamps);
   }
 }
+
 } // namespace eden
 } // namespace facebook

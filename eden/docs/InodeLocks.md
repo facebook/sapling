@@ -26,6 +26,13 @@ the map data structures.  Once we need to load an Inode the InodeMap lock is
 released for the duration of the load operation itself.  It is re-acquired when
 the load completes so we can insert the new Inode into the map.
 
+## InodeMetadataTable `state_` lock:
+
+No other locks should be acquired while holding this lock.
+
+In general it should only be held very briefly while doing lookups/inserts on
+InodeTable's index data structures.
+
 ## FileInode lock:
 
 The InodeBase `location_` lock may be acquired while holding a FileInode's

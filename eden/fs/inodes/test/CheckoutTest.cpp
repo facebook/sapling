@@ -825,12 +825,18 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
                      .get(1ms)
                      .asTreePtr();
   auto subInodeNumber = subTree->getNodeId();
+  auto fileInodeNumber = testMount.getEdenMount()
+                             ->getInode(RelativePathPiece{"dir/sub/file.txt"})
+                             .get(1ms)
+                             ->getNodeId();
   subTree.reset();
 
   // Allocated inode numbers are saved during takeover.
   testMount.remountGracefully();
 
   EXPECT_TRUE(testMount.hasOverlayData(subInodeNumber));
+  EXPECT_TRUE(testMount.hasMetadata(subInodeNumber));
+  EXPECT_TRUE(testMount.hasMetadata(fileInodeNumber));
 
   // Checkout to a revision without "dir/sub".
   auto checkoutResult =
@@ -842,6 +848,8 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   testMount.getEdenMount()->getOverlay()->flushPendingAsync().get(60s);
 
   EXPECT_FALSE(testMount.hasOverlayData(subInodeNumber));
+  EXPECT_FALSE(testMount.hasMetadata(subInodeNumber));
+  EXPECT_FALSE(testMount.hasMetadata(fileInodeNumber));
 }
 
 TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {

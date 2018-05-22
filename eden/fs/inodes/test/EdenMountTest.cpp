@@ -226,7 +226,7 @@ TEST(EdenMount, testLastCheckoutTime) {
 
   // Check if FileInode is updating lastCheckoutTime correctly
   auto fileInode = testMount.getFileInode("dir/foo.txt");
-  auto stFile = fileInode->getTimestamps();
+  auto stFile = fileInode->getMetadata().timestamps;
   EXPECT_EQ(sec.count(), stFile.atime.toTimespec().tv_sec);
   EXPECT_EQ(nsec.count(), stFile.atime.toTimespec().tv_nsec);
   EXPECT_EQ(sec.count(), stFile.ctime.toTimespec().tv_sec);
@@ -236,7 +236,7 @@ TEST(EdenMount, testLastCheckoutTime) {
 
   // Check if TreeInode is updating lastCheckoutTime correctly
   auto treeInode = testMount.getTreeInode("dir");
-  auto stDir = treeInode->getTimestamps();
+  auto stDir = treeInode->getMetadata().timestamps;
   EXPECT_EQ(sec.count(), stDir.atime.toTimespec().tv_sec);
   EXPECT_EQ(nsec.count(), stDir.atime.toTimespec().tv_nsec);
   EXPECT_EQ(sec.count(), stDir.ctime.toTimespec().tv_sec);
@@ -267,7 +267,7 @@ TEST(EdenMount, testCreatingFileSetsTimestampsToNow) {
                      ->create("newfile.txt"_pc, 0660, 0)
                      .get();
   auto fileInode = testMount.getFileInode("newfile.txt");
-  auto timestamps = fileInode->getTimestamps();
+  auto timestamps = fileInode->getMetadata().timestamps;
   EXPECT_EQ(
       clock.getTimePoint(),
       folly::to<FakeClock::time_point>(timestamps.atime.toTimespec()));

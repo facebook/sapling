@@ -183,9 +183,9 @@ class InodeTable {
       }
       auto index = iter->second;
       CHECK_LT(index, state.storage.size());
-      fn(state.storage[index]);
+      fn(state.storage[index].record);
       // TODO: maybe trigger a background msync
-      return state.storage[index];
+      return state.storage[index].record;
     });
   }
 
@@ -198,7 +198,11 @@ class InodeTable {
 
       auto iter = indices.find(ino);
       if (iter == indices.end()) {
-        EDEN_BUG() << "tried to deallocate unknown (or already freed) inode";
+        // While transitioning metadata from the overlay to the
+        // InodeMetadataTable, it is common for there to be no metadata for an
+        // inode whose number is known. The Overlay calls freeInode()
+        // unconditionally, so simply do nothing.
+        return;
       }
 
       size_t indexToDelete = iter->second;

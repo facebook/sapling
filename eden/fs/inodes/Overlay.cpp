@@ -18,6 +18,7 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -38,6 +39,7 @@ using std::string;
  * of the overlay_ data.  We use thrift CompactSerialization for this.
  */
 constexpr StringPiece kInfoFile{"info"};
+constexpr StringPiece kMetadataFile{"metadata.table"};
 
 /**
  * 4-byte magic identifier to put at the start of the info file.
@@ -119,6 +121,11 @@ void Overlay::initOverlay() {
   folly::checkUnixError(
       dirFd, "error opening overlay directory handle for ", localDir_.value());
   dirFile_ = File{dirFd, /* ownsFd */ true};
+
+  // Open after infoFile_'s lock is acquired because the InodeTable acquires
+  // its own lock, which should be released prior to infoFile_.
+  inodeMetadataTable_ = InodeMetadataTable::open(
+      (localDir_ + PathComponentPiece{kMetadataFile}).c_str());
 }
 
 void Overlay::readExistingOverlay(int infoFD) {
@@ -192,11 +199,12 @@ void Overlay::initNewOverlay() {
       infoPath.stringPiece(), ByteRange(infoHeader.data(), infoHeader.size()));
 }
 
-Optional<TreeInode::Dir> Overlay::loadOverlayDir(
+Optional<std::pair<TreeInode::Dir, InodeTimestamps>> Overlay::loadOverlayDir(
     InodeNumber inodeNumber,
     InodeMap* inodeMap) {
   TreeInode::Dir result;
-  auto dirData = deserializeOverlayDir(inodeNumber, result.timeStamps);
+  InodeTimestamps timestamps;
+  auto dirData = deserializeOverlayDir(inodeNumber, timestamps);
   if (!dirData.hasValue()) {
     return folly::none;
   }
@@ -226,15 +234,17 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(
   }
 
   if (shouldMigrateToNewFormat) {
-    saveOverlayDir(inodeNumber, result);
+    saveOverlayDir(inodeNumber, result, timestamps);
   }
 
-  return folly::Optional<TreeInode::Dir>(std::move(result));
+  return std::pair<TreeInode::Dir, InodeTimestamps>{std::move(result),
+                                                    timestamps};
 }
 
 void Overlay::saveOverlayDir(
     InodeNumber inodeNumber,
-    const TreeInode::Dir& dir) {
+    const TreeInode::Dir& dir,
+    const InodeTimestamps& timestamps) {
   // TODO: T20282158 clean up access of child inode information.
   //
   // Translate the data to the thrift equivalents
@@ -262,9 +272,8 @@ void Overlay::saveOverlayDir(
   // Ask thrift to serialize it.
   auto serializedData = CompactSerializer::serialize<std::string>(odir);
 
-  // Create the header
-  auto header =
-      createHeader(kHeaderIdentifierDir, kHeaderVersion, dir.timeStamps);
+  // Add header to the overlay directory.
+  auto header = createHeader(kHeaderIdentifierDir, kHeaderVersion, timestamps);
 
   std::array<struct iovec, 2> iov;
   iov[0].iov_base = header.data();
@@ -275,6 +284,9 @@ void Overlay::saveOverlayDir(
 }
 
 void Overlay::removeOverlayData(InodeNumber inodeNumber) {
+  // TODO: batch request during GC
+  getInodeMetadataTable()->freeInode(inodeNumber);
+
   InodePath path;
   getFilePath(inodeNumber, path);
   int result = ::unlinkat(dirFile_.fd(), path.data(), 0);

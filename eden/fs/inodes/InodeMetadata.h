@@ -12,6 +12,8 @@
 #include <sys/stat.h>
 #include "eden/fs/inodes/InodeTimestamps.h"
 
+struct stat;
+
 namespace facebook {
 namespace eden {
 
@@ -40,6 +42,8 @@ struct InodeMetadata {
   uid_t uid{0};
   gid_t gid{0};
   InodeTimestamps timestamps;
+
+  void applyToStat(struct stat& st) const;
 
   // Other potential things to include:
   // nlink_t nlinks;

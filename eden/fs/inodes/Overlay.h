@@ -28,6 +28,10 @@ class OverlayDir;
 }
 
 class InodeMap;
+struct InodeMetadata;
+template <typename T>
+class InodeTable;
+using InodeMetadataTable = InodeTable<InodeMetadata>;
 
 /** Manages the write overlay storage area.
  *
@@ -52,9 +56,15 @@ class Overlay {
   explicit Overlay(AbsolutePathPiece localDir);
   ~Overlay();
 
-  void saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir);
+  InodeMetadataTable* getInodeMetadataTable() const {
+    return inodeMetadataTable_.get();
+  }
 
-  folly::Optional<TreeInode::Dir> loadOverlayDir(
+  void saveOverlayDir(
+      InodeNumber inodeNumber,
+      const TreeInode::Dir& dir,
+      const InodeTimestamps& timestamps);
+  folly::Optional<std::pair<TreeInode::Dir, InodeTimestamps>> loadOverlayDir(
       InodeNumber inodeNumber,
       InodeMap* inodeMap);
 
@@ -173,7 +183,6 @@ class Overlay {
   };
 
   void initOverlay();
-  bool isOldFormatOverlay() const;
   void readExistingOverlay(int infoFD);
   void initNewOverlay();
   folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
@@ -230,6 +239,13 @@ class Overlay {
    * We maintain this so we can use openat(), unlinkat(), etc.
    */
   folly::File dirFile_;
+
+  /**
+   * Disk-backed mapping from inode number to InodeMetadata.
+   * Defined below infoFile_ because it acquires its own file lock, which should
+   * be released first during shutdown.
+   */
+  std::unique_ptr<InodeMetadataTable> inodeMetadataTable_;
 
   /**
    * Thread which recursively removes entries from the overlay underneath the

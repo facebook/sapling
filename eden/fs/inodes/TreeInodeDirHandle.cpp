@@ -117,7 +117,7 @@ folly::Future<DirList> TreeInodeDirHandle::readdir(DirList&& list, off_t off) {
 
     ++entry_iter;
   }
-  inode_->updateAtimeToNow();
+  inode_->updateAtime();
 
   return std::move(list);
 }

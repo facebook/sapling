@@ -14,6 +14,7 @@
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/utils/Clock.h"
@@ -23,12 +24,9 @@ using namespace folly;
 namespace facebook {
 namespace eden {
 
-InodeBase::~InodeBase() {
-  XLOG(DBG5) << "inode " << this << " (" << ino_
-             << ") destroyed: " << getLogPath();
-}
-
-InodeBase::InodeBase(EdenMount* mount)
+InodeBase::InodeBase(
+    EdenMount* mount,
+    folly::Optional<InodeTimestamps> initialTimestamps)
     : ino_{kRootNodeId},
       initialMode_{S_IFDIR | 0755},
       mount_{mount},
@@ -39,11 +37,22 @@ InodeBase::InodeBase(EdenMount* mount)
              << mount_->getPath();
   // The root inode always starts with an implicit reference from FUSE.
   incFuseRefcount();
+
+  mount->getInodeMetadataTable()->populateIfNotSet(ino_, [&] {
+    auto metadata = mount->getInitialInodeMetadata(S_IFDIR | 0755);
+    if (initialTimestamps) {
+      // If this inode had previously-recorded timestamps from another source
+      // (e.g. the overlay), they trump the last checkout time.
+      metadata.timestamps = *initialTimestamps;
+    }
+    return metadata;
+  });
 }
 
 InodeBase::InodeBase(
     InodeNumber ino,
     mode_t initialMode,
+    folly::Optional<InodeTimestamps> initialTimestamps,
     TreeInodePtr parent,
     PathComponentPiece name)
     : ino_{ino},
@@ -55,6 +64,48 @@ InodeBase::InodeBase(
   DCHECK(ino_.hasValue());
   XLOG(DBG5) << "inode " << this << " (" << ino_
              << ") created: " << getLogPath();
+
+  mount_->getInodeMetadataTable()->populateIfNotSet(ino_, [&] {
+    auto metadata = mount_->getInitialInodeMetadata(initialMode);
+    if (initialTimestamps) {
+      metadata.timestamps = *initialTimestamps;
+    }
+    return metadata;
+  });
+}
+
+InodeBase::InodeBase(
+    InodeNumber ino,
+    mode_t initialMode,
+    folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
+    TreeInodePtr parent,
+    PathComponentPiece name)
+    : ino_{ino},
+      initialMode_{initialMode},
+      mount_{parent->mount_},
+      location_{LocationInfo{std::move(parent), name}} {
+  // Inode numbers generally shouldn't be 0.
+  // Older versions of glibc have bugs handling files with an inode number of 0
+  DCHECK(ino_.hasValue());
+  XLOG(DBG5) << "inode " << this << " (" << ino_
+             << ") created: " << getLogPath();
+
+  mount_->getInodeMetadataTable()->populateIfNotSet(ino_, [&] {
+    auto metadata = mount_->getInitialInodeMetadata(initialMode);
+    if (initialTimestampsFn) {
+      if (auto initialTimestamps = initialTimestampsFn()) {
+        // If this inode had previously-recorded timestamps from another source
+        // (e.g. the overlay), they trump the last checkout time.
+        metadata.timestamps = *initialTimestamps;
+      }
+    }
+    return metadata;
+  });
+}
+
+InodeBase::~InodeBase() {
+  XLOG(DBG5) << "inode " << this << " (" << ino_
+             << ") destroyed: " << getLogPath();
 }
 
 // See Dispatcher::getattr
@@ -343,6 +394,29 @@ folly::Future<Dispatcher::Attr> InodeBase::setattr(
 
   // Set FileInode or TreeInode specific data.
   return setInodeAttr(attr);
+}
+
+InodeMetadata InodeBase::getMetadata() const {
+  return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
+}
+
+void InodeBase::updateAtime() {
+  auto now = getNow();
+  getMount()->getInodeMetadataTable()->modifyOrThrow(
+      getNodeId(),
+      [&](InodeMetadata& metadata) { metadata.timestamps.atime = now; });
+}
+
+InodeTimestamps InodeBase::updateMtimeAndCtime(timespec now) {
+  return getMount()
+      ->getInodeMetadataTable()
+      ->modifyOrThrow(
+          getNodeId(),
+          [&](InodeMetadata& record) {
+            record.timestamps.ctime = now;
+            record.timestamps.mtime = now;
+          })
+      .timestamps;
 }
 
 timespec InodeBase::getNow() const {

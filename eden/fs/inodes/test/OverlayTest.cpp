@@ -101,27 +101,27 @@ TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
     // We do not want to keep references to inode in order to remount.
     auto inodeFile = mount_.getFileInode("dir/a.txt");
     EXPECT_FILE_INODE(inodeFile, "contents changed\n", 0644);
-    beforeRemountFile = inodeFile->getTimestamps();
+    beforeRemountFile = inodeFile->getMetadata().timestamps;
   }
 
   {
     // Check for materialized files.
     mount_.remount();
     auto inodeRemount = mount_.getFileInode("dir/a.txt");
-    auto afterRemount = inodeRemount->getTimestamps();
+    auto afterRemount = inodeRemount->getMetadata().timestamps;
     expectTimeStampsEqual(beforeRemountFile, afterRemount);
   }
 
   {
     auto inodeDir = mount_.getTreeInode("dir");
-    beforeRemountDir = inodeDir->getTimestamps();
+    beforeRemountDir = inodeDir->getMetadata().timestamps;
   }
 
   {
     // Check for materialized directory
     mount_.remount();
     auto inodeRemount = mount_.getTreeInode("dir");
-    auto afterRemount = inodeRemount->getTimestamps();
+    auto afterRemount = inodeRemount->getMetadata().timestamps;
     expectTimeStampsEqual(beforeRemountDir, afterRemount);
   }
 }
@@ -135,11 +135,12 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   dir.entries.emplace("one"_pc, S_IFREG | 0644, 11_ino, hash);
   dir.entries.emplace("two"_pc, S_IFDIR | 0755, 12_ino);
 
-  overlay->saveOverlayDir(10_ino, dir);
+  overlay->saveOverlayDir(10_ino, dir, InodeTimestamps{});
 
-  auto newDir =
+  auto result =
       overlay->loadOverlayDir(10_ino, mount_.getEdenMount()->getInodeMap());
-  EXPECT_TRUE(newDir);
+  ASSERT_TRUE(result);
+  const auto* newDir = &result->first;
 
   EXPECT_EQ(2, newDir->entries.size());
   const auto& one = newDir->entries.find("one"_pc)->second;

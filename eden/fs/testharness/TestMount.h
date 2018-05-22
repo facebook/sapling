@@ -268,6 +268,11 @@ class TestMount {
    */
   bool hasOverlayData(InodeNumber inodeNumber) const;
 
+  /**
+   * Returns true if the inode metadata table has an entry for this inode.
+   */
+  bool hasMetadata(InodeNumber inodeNumber) const;
+
  private:
   void initTestDirectory();
   void setInitialCommit(Hash commitHash);
