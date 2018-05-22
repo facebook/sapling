@@ -59,11 +59,18 @@ pub fn resolve(
             let resolver = resolver.clone();
             move |(cg_push, bundle2)| {
                 resolver
-                    .resolve_multiple_parts(
-                        bundle2,
-                        Bundle2Resolver::maybe_resolve_bookmark_pushkey,
-                    )
-                    .map(move |(bookmark_push, bundle2)| (cg_push, bookmark_push, bundle2))
+                    .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+                    .map(move |(pushkeys, bundle2)| {
+                        let bookmark_push: Vec<_> = pushkeys
+                            .into_iter()
+                            .filter_map(|pushkey| match pushkey {
+                                Pushkey::Phases => None,
+                                Pushkey::BookmarkPush(bp) => Some(bp),
+                            })
+                            .collect();
+
+                        (cg_push, bookmark_push, bundle2)
+                    })
             }
         })
         .and_then(move |(cg_push, bookmark_push, bundle2)| {
@@ -127,6 +134,11 @@ struct ChangegroupPush {
     changesets: Changesets,
     filelogs: Filelogs,
     content_blobs: ContentBlobs,
+}
+
+enum Pushkey {
+    BookmarkPush(BookmarkPush),
+    Phases,
 }
 
 struct BookmarkPush {
@@ -215,48 +227,51 @@ impl Bundle2Resolver {
             .boxify()
     }
 
-    /// Parses bookmark pushkey part if it exists
-    /// Errors if `namespace` is not "bookmarks"
-    fn maybe_resolve_bookmark_pushkey(
+    /// Parses pushkey part if it exists
+    /// Returns an error if the pushkey namespace is unknown
+    fn maybe_resolve_pushkey(
         &self,
         bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<(Option<BookmarkPush>, BoxStream<Bundle2Item, Error>), Error> {
+    ) -> BoxFuture<(Option<Pushkey>, BoxStream<Bundle2Item, Error>), Error> {
         next_item(bundle2)
             .and_then(move |(newpart, bundle2)| match newpart {
                 Some(Bundle2Item::Pushkey(header, emptypart)) => {
-                    let part_id = header.part_id();
-                    let mparams = header.mparams();
-                    try_boxfuture!(
-                        mparams
+                    let namespace = try_boxfuture!(
+                        header
+                            .mparams()
                             .get("namespace")
                             .ok_or(format_err!("pushkey: `namespace` parameter is not set"))
-                            .and_then(|namespace| if namespace != "bookmarks".as_bytes() {
-                                Err(format_err!(
-                                    "pushkey: unexpected namespace: {:?}",
-                                    namespace
-                                ))
-                            } else {
-                                Ok(())
-                            })
                     );
 
-                    let name = try_boxfuture!(get_ascii_param(mparams, "key"));
-                    let name = bookmarks::Bookmark::new_ascii(name);
-                    let old = try_boxfuture!(get_optional_changeset_param(mparams, "old"));
-                    let new = try_boxfuture!(get_optional_changeset_param(mparams, "new"));
+                    let pushkey = match &namespace[..] {
+                        b"phases" => Pushkey::Phases,
+                        b"bookmarks" => {
+                            let part_id = header.part_id();
+                            let mparams = header.mparams();
+                            let name = try_boxfuture!(get_ascii_param(mparams, "key"));
+                            let name = bookmarks::Bookmark::new_ascii(name);
+                            let old = try_boxfuture!(get_optional_changeset_param(mparams, "old"));
+                            let new = try_boxfuture!(get_optional_changeset_param(mparams, "new"));
 
-                    let bookmark_push = BookmarkPush {
-                        part_id,
-                        name,
-                        old,
-                        new,
+                            Pushkey::BookmarkPush(BookmarkPush {
+                                part_id,
+                                name,
+                                old,
+                                new,
+                            })
+                        }
+                        _ => {
+                            return err(format_err!(
+                                "pushkey: unexpected namespace: {:?}",
+                                namespace
+                            )).boxify()
+                        }
                     };
-                    emptypart
-                        .map(move |_| (Some(bookmark_push), bundle2.boxify()))
-                        .boxify()
+
+                    emptypart.map(move |_| (Some(pushkey), bundle2)).boxify()
                 }
                 Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
-                None => ok((None, bundle2.boxify())).boxify(),
+                None => ok((None, bundle2)).boxify(),
             })
             .context("While resolving Pushkey")
             .from_err()
