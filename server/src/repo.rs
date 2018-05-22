@@ -474,12 +474,11 @@ impl RepoClient {
             .map(|h| h.into_mononoke())
             .unwrap_or(D_NULL_HASH);
 
-        if params.rootdir.len() != 0 {
-            // For now, only root repo
-            return Err(err_msg("only empty rootdir is supported"))
-                .into_future()
-                .boxify();
-        }
+        let rootpath = if params.rootdir.is_empty() {
+            None
+        } else {
+            Some(try_boxfuture!(MPath::new(params.rootdir)))
+        };
 
         let writer = Cursor::new(Vec::new());
         let mut bundle = Bundle2EncodeBuilder::new(writer);
@@ -493,8 +492,12 @@ impl RepoClient {
         let changed_entries = params.mfnodes.iter().map(|h| h.into_mononoke()).fold(
             stream::empty().boxify(),
             |cur_stream, manifest_id| {
-                let new_stream =
-                    get_changed_entry_stream(self.repo.blobrepo.clone(), &manifest_id, &basemfnode);
+                let new_stream = get_changed_entry_stream(
+                    self.repo.blobrepo.clone(),
+                    &manifest_id,
+                    &basemfnode,
+                    rootpath.clone(),
+                );
                 cur_stream.select(new_stream).boxify()
             },
         );
@@ -845,6 +848,7 @@ fn get_changed_entry_stream(
     repo: Arc<BlobRepo>,
     mfid: &DNodeHash,
     basemfid: &DNodeHash,
+    rootpath: Option<MPath>,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
     let manifest = repo.get_manifest_by_nodeid(mfid)
         .traced_global("fetch rootmf", trace_args!());
@@ -853,7 +857,10 @@ fn get_changed_entry_stream(
 
     let changed_entries = manifest
         .join(basemanifest)
-        .map(|(mf, basemf)| changed_entry_stream(&mf, &basemf, None))
+        .map({
+            let rootpath = rootpath.clone();
+            |(mf, basemf)| changed_entry_stream(&mf, &basemf, rootpath)
+        })
         .flatten_stream();
 
     let changed_entries =
@@ -876,7 +883,10 @@ fn get_changed_entry_stream(
         });
 
     // Append root manifest
-    let root_entry_stream = stream::once(Ok((repo.get_root_entry(&DManifestId::new(*mfid)), None)));
+    let root_entry_stream = stream::once(Ok((
+        repo.get_root_entry(&DManifestId::new(*mfid)),
+        rootpath,
+    )));
 
     changed_entries.chain(root_entry_stream).boxify()
 }

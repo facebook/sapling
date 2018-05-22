@@ -13,6 +13,7 @@ extern crate bookmarks;
 extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
+#[macro_use]
 extern crate futures_ext;
 extern crate futures_stats;
 #[macro_use]
