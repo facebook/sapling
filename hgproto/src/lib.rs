@@ -57,6 +57,8 @@ mod handler;
 mod commands;
 pub mod sshproto;
 
+const MAX_NODES_TO_LOG: usize = 5;
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum Request {
     Batch(Vec<SingleRequest>),
@@ -146,9 +148,11 @@ impl Debug for GetbundleArgs {
             .iter()
             .map(|s| String::from_utf8_lossy(&s))
             .collect();
+        let heads: Vec<_> = self.heads.iter().take(MAX_NODES_TO_LOG).collect();
+        let common: Vec<_> = self.common.iter().take(MAX_NODES_TO_LOG).collect();
         fmt.debug_struct("GetbundleArgs")
-            .field("heads", &self.heads)
-            .field("common", &self.common)
+            .field("heads", &heads)
+            .field("common", &common)
             .field("bundlecaps", &bcaps)
             .field("listkeys", &listkeys)
             .finish()

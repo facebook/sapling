@@ -54,6 +54,7 @@ use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
+const MAX_NODES_TO_LOG: usize = 5;
 
 mod ops {
     pub const HELLO: &str = "hello";
@@ -676,7 +677,11 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<HgNodeHash>) -> HgCommandRes<Vec<bool>> {
-        info!(self.logger, "known: {:?}", nodes);
+        if nodes.len() > MAX_NODES_TO_LOG {
+            info!(self.logger, "known: {:?}...", &nodes[..MAX_NODES_TO_LOG]);
+        } else {
+            info!(self.logger, "known: {:?}", nodes);
+        }
         let blobrepo = self.repo.blobrepo.clone();
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::KNOWN);
