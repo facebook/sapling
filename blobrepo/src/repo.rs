@@ -35,7 +35,7 @@ use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use mercurial::{HgBlobNode, HgNodeHash, HgParents, NodeHashConversion};
 use mercurial_types::{Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry, HgBlob,
-                      Manifest, RepoPath, RepositoryId};
+                      Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::DManifestId;
 use mononoke_types::{Blob, BlobstoreBytes, ContentId, DateTime, FileContents, MPath, MononokeId};
@@ -510,14 +510,25 @@ impl UploadHgEntry {
             blob: blob_hash,
         };
 
-        let blob_entry = HgBlobEntry::new(
-            blobstore.clone(),
-            path.mpath()
-                .and_then(|m| m.into_iter().last())
-                .map(|m| m.clone()),
-            nodeid.into_mononoke(),
-            content_type,
-        )?;
+        let blob_entry = match path.mpath().and_then(|m| m.into_iter().last()) {
+            Some(m) => {
+                let entry_path = m.clone();
+                HgBlobEntry::new(
+                    blobstore.clone(),
+                    entry_path,
+                    nodeid.into_mononoke(),
+                    content_type,
+                )
+            }
+            None => {
+                if content_type != Type::Tree {
+                    return Err(
+                        ErrorKind::NotAManifest(nodeid.into_mononoke(), content_type).into(),
+                    );
+                }
+                HgBlobEntry::new_root(blobstore.clone(), DManifestId::new(nodeid.into_mononoke()))
+            }
+        };
 
         fn log_upload_stats(
             logger: Logger,

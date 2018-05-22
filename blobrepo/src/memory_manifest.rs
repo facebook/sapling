@@ -197,13 +197,17 @@ impl MemoryManifestEntry {
                     } else {
                         let blobstore = blobstore.clone();
                         future::result(p1.ok_or(ErrorKind::UnchangedManifest.into()))
-                            .and_then(move |p1| {
-                                future::result(HgBlobEntry::new(
+                            .and_then(move |p1| match path.mpath().map(MPath::basename) {
+                                None => future::ok(HgBlobEntry::new_root(
                                     blobstore,
-                                    path.mpath().map(MPath::basename).cloned(),
+                                    DManifestId::new(p1.into_mononoke()),
+                                )),
+                                Some(path) => future::ok(HgBlobEntry::new(
+                                    blobstore,
+                                    path.clone(),
                                     p1.into_mononoke(),
                                     Type::Tree,
-                                ))
+                                )),
                             })
                             .boxify()
                     }
@@ -242,13 +246,11 @@ impl MemoryManifestEntry {
                                     &DManifestId::new(entry.get_hash().into_nodehash()),
                                 ).map(move |entry| (name, entry))
                                     .boxify(),
-                                _ => future::ok(MemoryManifestEntry::Blob(try_boxfuture!(
-                                    HgBlobEntry::new(
-                                        blobstore.clone(),
-                                        Some(name.clone()),
-                                        entry.get_hash().into_nodehash(),
-                                        entry.get_type(),
-                                    )
+                                _ => future::ok(MemoryManifestEntry::Blob(HgBlobEntry::new(
+                                    blobstore.clone(),
+                                    name.clone(),
+                                    entry.get_hash().into_nodehash(),
+                                    entry.get_type(),
                                 ))).map(move |entry| (name, entry))
                                     .boxify(),
                             }
@@ -626,14 +628,12 @@ mod test {
                 .expect("file1 is no longer a valid MPathElement");
             children.insert(
                 file1_mpe.clone(),
-                MemoryManifestEntry::Blob(
-                    HgBlobEntry::new(
-                        blobstore.clone(),
-                        Some(file1_mpe),
-                        dir_nodehash,
-                        Type::File(FileType::Regular),
-                    ).expect("Failed to build blob entry"),
-                ),
+                MemoryManifestEntry::Blob(HgBlobEntry::new(
+                    blobstore.clone(),
+                    file1_mpe,
+                    dir_nodehash,
+                    Type::File(FileType::Regular),
+                )),
             );
             let dir = MemoryManifestEntry::MemTree {
                 children,
@@ -771,10 +771,10 @@ mod test {
                     &MPath::new(b"new_file").expect("Could not create MPath"),
                     HgBlobEntry::new(
                         blobstore.clone(),
-                        Some(new_file.clone()),
+                        new_file.clone(),
                         nodehash,
                         Type::File(FileType::Regular),
-                    ).expect("Failed to build blob entry"),
+                    ),
                 )
                 .expect("Add failed");
 
@@ -825,10 +825,10 @@ mod test {
                     &MPath::new(b"1").expect("Could not create MPath"),
                     HgBlobEntry::new(
                         blobstore.clone(),
-                        Some(new_file.clone()),
+                        new_file.clone(),
                         nodehash,
                         Type::File(FileType::Regular),
-                    ).expect("Failed to build blob entry"),
+                    ),
                 )
                 .expect("Change failed");
 
@@ -864,36 +864,30 @@ mod test {
                 let conflict = MPathElement::new(b"conflict".to_vec()).unwrap();
                 children.insert(
                     shared.clone(),
-                    MemoryManifestEntry::Blob(
-                        HgBlobEntry::new(
-                            blobstore.clone(),
-                            Some(shared.clone()),
-                            nodehash::ONES_HASH,
-                            Type::File(FileType::Regular),
-                        ).unwrap(),
-                    ),
+                    MemoryManifestEntry::Blob(HgBlobEntry::new(
+                        blobstore.clone(),
+                        shared.clone(),
+                        nodehash::ONES_HASH,
+                        Type::File(FileType::Regular),
+                    )),
                 );
                 children.insert(
                     base.clone(),
-                    MemoryManifestEntry::Blob(
-                        HgBlobEntry::new(
-                            blobstore.clone(),
-                            Some(base.clone()),
-                            nodehash::ONES_HASH,
-                            Type::File(FileType::Regular),
-                        ).unwrap(),
-                    ),
+                    MemoryManifestEntry::Blob(HgBlobEntry::new(
+                        blobstore.clone(),
+                        base.clone(),
+                        nodehash::ONES_HASH,
+                        Type::File(FileType::Regular),
+                    )),
                 );
                 children.insert(
                     conflict.clone(),
-                    MemoryManifestEntry::Blob(
-                        HgBlobEntry::new(
-                            blobstore.clone(),
-                            Some(conflict.clone()),
-                            nodehash::ONES_HASH,
-                            Type::File(FileType::Regular),
-                        ).unwrap(),
-                    ),
+                    MemoryManifestEntry::Blob(HgBlobEntry::new(
+                        blobstore.clone(),
+                        conflict.clone(),
+                        nodehash::ONES_HASH,
+                        Type::File(FileType::Regular),
+                    )),
                 );
                 MemoryManifestEntry::MemTree {
                     children,
@@ -910,36 +904,30 @@ mod test {
                 let conflict = MPathElement::new(b"conflict".to_vec()).unwrap();
                 children.insert(
                     shared.clone(),
-                    MemoryManifestEntry::Blob(
-                        HgBlobEntry::new(
-                            blobstore.clone(),
-                            Some(shared.clone()),
-                            nodehash::ONES_HASH,
-                            Type::File(FileType::Regular),
-                        ).unwrap(),
-                    ),
+                    MemoryManifestEntry::Blob(HgBlobEntry::new(
+                        blobstore.clone(),
+                        shared.clone(),
+                        nodehash::ONES_HASH,
+                        Type::File(FileType::Regular),
+                    )),
                 );
                 children.insert(
                     other.clone(),
-                    MemoryManifestEntry::Blob(
-                        HgBlobEntry::new(
-                            blobstore.clone(),
-                            Some(other.clone()),
-                            nodehash::TWOS_HASH,
-                            Type::File(FileType::Regular),
-                        ).unwrap(),
-                    ),
+                    MemoryManifestEntry::Blob(HgBlobEntry::new(
+                        blobstore.clone(),
+                        other.clone(),
+                        nodehash::TWOS_HASH,
+                        Type::File(FileType::Regular),
+                    )),
                 );
                 children.insert(
                     conflict.clone(),
-                    MemoryManifestEntry::Blob(
-                        HgBlobEntry::new(
-                            blobstore.clone(),
-                            Some(conflict.clone()),
-                            nodehash::TWOS_HASH,
-                            Type::File(FileType::Regular),
-                        ).unwrap(),
-                    ),
+                    MemoryManifestEntry::Blob(HgBlobEntry::new(
+                        blobstore.clone(),
+                        conflict.clone(),
+                        nodehash::TWOS_HASH,
+                        Type::File(FileType::Regular),
+                    )),
                 );
                 MemoryManifestEntry::MemTree {
                     children,

@@ -11,7 +11,7 @@ use std::str;
 use std::sync::Arc;
 
 use futures::future::{Future, IntoFuture};
-use futures::stream::{self, Stream};
+use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial_types::{Entry, FileType, MPathElement, Manifest, Type};
@@ -135,42 +135,32 @@ impl BlobManifest {
 
 impl Manifest for BlobManifest {
     fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
-        let res = self.content.files.get(path).map({
+        Ok(self.content.files.get(path).map({
             move |d| {
                 HgBlobEntry::new(
                     self.blobstore.clone(),
-                    Some(path.clone()),
+                    path.clone(),
                     d.entryid().into_nodehash(),
                     d.flag(),
-                )
+                ).boxed()
             }
-        });
-
-        match res {
-            Some(e_res) => e_res.map(|e| Some(e.boxed())).into_future().boxify(),
-            None => Ok(None).into_future().boxify(),
-        }
+        })).into_future()
+            .boxify()
     }
 
     fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
-        let entries = self.content
-            .files
-            .clone()
-            .into_iter()
-            .map({
-                let blobstore = self.blobstore.clone();
-                move |(path, d)| {
-                    HgBlobEntry::new(
-                        blobstore.clone(),
-                        Some(path),
-                        d.entryid().into_nodehash(),
-                        d.flag(),
-                    )
-                }
-            })
-            .map(|e_res| e_res.map(|e| e.boxed()));
-        // TODO: (sid0) T23193289 replace with stream::iter_result once that becomes available
-        stream::iter_ok(entries).and_then(|x| x).boxify()
+        let entries = self.content.files.clone().into_iter().map({
+            let blobstore = self.blobstore.clone();
+            move |(path, d)| {
+                HgBlobEntry::new(
+                    blobstore.clone(),
+                    path,
+                    d.entryid().into_nodehash(),
+                    d.flag(),
+                ).boxed()
+            }
+        });
+        stream::iter_ok(entries).boxify()
     }
 }
 

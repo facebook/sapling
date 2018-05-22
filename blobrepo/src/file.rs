@@ -92,18 +92,13 @@ pub fn fetch_file_content_and_renames_from_blobstore(
 }
 
 impl HgBlobEntry {
-    pub fn new(
-        blobstore: Arc<Blobstore>,
-        name: Option<MPathElement>,
-        nodeid: DNodeHash,
-        ty: Type,
-    ) -> Result<Self> {
-        Ok(Self {
+    pub fn new(blobstore: Arc<Blobstore>, name: MPathElement, nodeid: DNodeHash, ty: Type) -> Self {
+        Self {
             blobstore,
-            name,
+            name: Some(name),
             id: DEntryId::new(nodeid),
             ty,
-        })
+        }
     }
 
     pub fn new_root(blobstore: Arc<Blobstore>, manifestid: DManifestId) -> Self {
