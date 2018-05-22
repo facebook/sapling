@@ -47,7 +47,7 @@ class FileInode : public InodeBase {
       InodeNumber ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
-      mode_t mode,
+      mode_t initialMode,
       InodeTimestamps initialTimestamps,
       folly::File&& file);
 
@@ -60,7 +60,7 @@ class FileInode : public InodeBase {
       InodeNumber ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
-      mode_t mode,
+      mode_t initialMode,
       folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
       const folly::Optional<Hash>& hash);
 
@@ -73,7 +73,7 @@ class FileInode : public InodeBase {
       InodeNumber ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
-      mode_t mode,
+      mode_t initialMode,
       InodeTimestamps initialTimestamps);
 
   folly::Future<Dispatcher::Attr> getattr() override;
@@ -177,8 +177,8 @@ class FileInode : public InodeBase {
       MATERIALIZED_IN_OVERLAY,
     };
 
-    explicit State(mode_t mode, const folly::Optional<Hash>& hash);
-    explicit State(mode_t mode);
+    explicit State(const folly::Optional<Hash>& hash);
+    explicit State();
     ~State();
 
     /**
@@ -213,8 +213,6 @@ class FileInode : public InodeBase {
     void incOpenCount();
 
     Tag tag;
-
-    mode_t mode;
 
     /**
      * Set only in 'not loaded', 'loading', and 'loaded' states, none otherwise.

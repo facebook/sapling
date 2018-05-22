@@ -401,10 +401,10 @@ InodeMetadata InodeBase::getMetadata() const {
 }
 
 void InodeBase::updateAtime() {
+  // TODO: Is it worth implementing relatime-like logic?
   auto now = getNow();
   getMount()->getInodeMetadataTable()->modifyOrThrow(
-      getNodeId(),
-      [&](InodeMetadata& metadata) { metadata.timestamps.atime = now; });
+      getNodeId(), [&](auto& metadata) { metadata.timestamps.atime = now; });
 }
 
 InodeTimestamps InodeBase::updateMtimeAndCtime(timespec now) {
@@ -412,7 +412,7 @@ InodeTimestamps InodeBase::updateMtimeAndCtime(timespec now) {
       ->getInodeMetadataTable()
       ->modifyOrThrow(
           getNodeId(),
-          [&](InodeMetadata& record) {
+          [&](auto& record) {
             record.timestamps.ctime = now;
             record.timestamps.mtime = now;
           })

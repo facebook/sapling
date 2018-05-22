@@ -411,14 +411,13 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
  * FileInode::State methods
  ********************************************************************/
 
-FileInode::State::State(mode_t m, const folly::Optional<Hash>& h)
-    : mode(m), hash(h) {
+FileInode::State::State(const folly::Optional<Hash>& h) : hash(h) {
   tag = hash ? NOT_LOADED : MATERIALIZED_IN_OVERLAY;
 
   checkInvariants();
 }
 
-FileInode::State::State(mode_t m) : tag(MATERIALIZED_IN_OVERLAY), mode(m) {
+FileInode::State::State() : tag(MATERIALIZED_IN_OVERLAY) {
   checkInvariants();
 }
 
@@ -534,7 +533,7 @@ FileInode::FileInode(
           std::move(initialTimestampsFn),
           std::move(parentInode),
           name),
-      state_(folly::in_place, initialMode, hash) {}
+      state_(folly::in_place, hash) {}
 
 // The FileInode is in MATERIALIZED_IN_OVERLAY state.
 FileInode::FileInode(
@@ -549,7 +548,7 @@ FileInode::FileInode(
           initialTimestamps,
           std::move(parentInode),
           name),
-      state_(folly::in_place, initialMode) {}
+      state_(folly::in_place) {}
 
 folly::Future<Dispatcher::Attr> FileInode::getattr() {
   // Future optimization opportunity: right now, if we have not already
@@ -583,23 +582,24 @@ folly::Future<Dispatcher::Attr> FileInode::setInodeAttr(
           ftruncate(state->file.fd(), attr.size + Overlay::kHeaderLength));
     }
 
-    if (attr.valid & FATTR_MODE) {
-      // The mode data is stored only in inode_->state_.
-      // (We don't set mode bits on the overlay file as that may incorrectly
-      // prevent us from reading or writing the overlay data).
-      // Make sure we preserve the file type bits, and only update
-      // permissions.
-      state->mode = (state->mode & S_IFMT) | (07777 & attr.mode);
-    }
-
     auto metadata = self->getMount()->getInodeMetadataTable()->modifyOrThrow(
         self->getNodeId(), [&](auto& metadata) {
           metadata.timestamps.setattrTimes(self->getClock(), attr);
-
-          // Mirror any mode changes into the metadata table until it's the
-          // source of truth.
-          metadata.mode = state->mode;
+          if (attr.valid & FATTR_MODE) {
+            // Make sure we preserve the file type bits, and only update
+            // permissions.
+            metadata.mode = (metadata.mode & S_IFMT) | (07777 & attr.mode);
+          }
+#if 0 // TODO
+          if (attr.valid & FATTR_UID) {
+            metadata.uid = attr.uid;
+          }
+          if (attr.valid & FATTR_GID) {
+            metadata.gid = attr.gid;
+          }
+#endif
         });
+
     // We need to call fstat function here to get the size of the overlay
     // file. We might update size in the result while truncating the file
     // when FATTR_SIZE flag is set but when the flag is not set we
@@ -649,7 +649,7 @@ folly::Optional<bool> FileInode::isSameAsFast(
     const Hash& blobID,
     TreeEntryType entryType) {
   auto state = state_.rlock();
-  if (entryType != treeEntryTypeFromMode(state->mode)) {
+  if (entryType != treeEntryTypeFromMode(getMetadataLocked(*state).mode)) {
     return false;
   }
 
@@ -692,7 +692,7 @@ folly::Future<bool> FileInode::isSameAs(
 }
 
 mode_t FileInode::getMode() const {
-  return state_.rlock()->mode;
+  return getMetadata().mode;
 }
 
 mode_t FileInode::getPermissions() const {
@@ -841,7 +841,6 @@ folly::Future<struct stat> FileInode::stat() {
         }
 
         self->getMetadataLocked(*state).applyToStat(st);
-        st.st_mode = state->mode;
         updateBlockCount(st);
 
         return st;

@@ -50,7 +50,7 @@ class PersistenceTest(testcase.EdenRepoTest):
         self.assertEqual(before1.st_ino, after1.st_ino)
         self.assertEqual(before2.st_ino, after2.st_ino)
 
-    def test_preserves_nonmaterialized_inode_numbers(self) -> None:
+    def test_preserves_nonmaterialized_inode_metadata(self) -> None:
         inode_paths = [
             "file_in_root",
             "subdir",
@@ -69,6 +69,9 @@ class PersistenceTest(testcase.EdenRepoTest):
                 old_stat.st_ino,
                 new_stat.st_ino,
                 f"inode numbers must line up for path {path}",
+            )
+            self.assertEqual(
+                old_stat.st_mode, new_stat.st_mode, f"mode must line up for path {path}"
             )
             self.assertEqual(
                 old_stat.st_atime,
