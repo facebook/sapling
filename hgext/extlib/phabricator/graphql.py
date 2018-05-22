@@ -120,6 +120,7 @@ class Client(object):
                 }
                 created_time
                 updated_time
+                is_landing
                 differential_diffs {
                   count
                 }
@@ -151,6 +152,7 @@ class Client(object):
                 info['status'] = status
                 info['created'] = node['created_time']
                 info['updated'] = node['updated_time']
+                info['is_landing'] = node['is_landing']
 
                 if 'latest_active_diff' not in node:
                     continue

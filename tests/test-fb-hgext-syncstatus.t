@@ -99,6 +99,7 @@ Missing hash field is treated as unsync
   >     }
   >   },
   >   "differential_diffs": {"count": 3},
+  >   "is_landing": false,
   >   "created_time": 123,
   >   "updated_time": 222
   > }]}}]}}]
@@ -120,6 +121,7 @@ And finally, the success case
   >     }
   >   },
   >   "differential_diffs": {"count": 3},
+  >   "is_landing": false,
   >   "created_time": 123,
   >   "updated_time": 222
   > }]}}]}}]

@@ -142,7 +142,10 @@ def showphabstatus(repo, ctx, templ, **args):
 
     result = getdiffstatus(repo, diffnum)[0]
     if isinstance(result, dict) and "status" in result:
-        return result.get("status")
+        if result.get('is_landing'):
+            return "Landing"
+        else:
+            return result.get("status")
     else:
         return "Error"
 

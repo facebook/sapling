@@ -116,6 +116,7 @@ Clone fresh repo and try to restore from backup
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 123,
   >   "diff_status_name": "Closed",
+  >   "is_landing": false,
   >   "created_time": 0,
   >   "updated_time": ${NOW}
   > }]}}]}}]

@@ -68,12 +68,23 @@ Missing status field is treated as an error
   Error info: Unexpected graphql response format
   Error
 
+If the diff is landing, show "Landing" in place of the status name
+
+  $ cat > $TESTTMP/mockduit << EOF
+  > [{"data": {"query": [{"results": {"nodes": [
+  >   {"number": 1, "diff_status_name": "Accepted",
+  >    "created_time": 0, "updated_time": 2, "is_landing": true}
+  > ]}}]}}]
+  > EOF
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
+  Landing
+
 And finally, the success case
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [
   >   {"number": 1, "diff_status_name": "Needs Review",
-  >    "created_time": 0, "updated_time": 2}
+  >    "created_time": 0, "updated_time": 2, "is_landing": false}
   > ]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
@@ -84,7 +95,7 @@ Make sure the code works without the smartlog extensions
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [
   >   {"number": 1, "diff_status_name": "Needs Review",
-  >    "created_time": 0, "updated_time": 2}
+  >    "created_time": 0, "updated_time": 2, "is_landing": false}
   > ]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg --config 'extensions.smartlog=!' log -T '{phabstatus}\n' -r .

@@ -45,6 +45,7 @@ Now progressively test the response handling for variations of missing data
   >   "number": 1,
   >   "diff_status_name": "Needs Review",
   >   "differential_diffs": {"count": 3},
+  >   "is_landing": false,
   >   "created_time": 123,
   >   "updated_time": 222
   > }]}}]}}]
@@ -57,6 +58,7 @@ Now progressively test the response handling for variations of missing data
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Needs Review",
+  >   "is_landing": false,
   >   "created_time": 123,
   >   "updated_time": 222
   > }]}}]}}]
@@ -80,6 +82,7 @@ there is no diff since what was landed.
   >     }
   >   },
   >   "differential_diffs": {"count": 1},
+  >   "is_landing": false,
   >   "created_time": 123,
   >   "updated_time": 222
   > }]}}]}}]
@@ -103,6 +106,7 @@ assert that we order the commits consistently based on the time field.
   >     }
   >   },
   >   "differential_diffs": {"count": 1},
+  >   "is_landing": false,
   >   "created_time": 123,
   >   "updated_time": 222
   > }]}}]}}]
