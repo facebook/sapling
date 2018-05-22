@@ -17,6 +17,7 @@ extern crate futures_ext;
 extern crate futures_stats;
 #[macro_use]
 extern crate futures_trace;
+extern crate itertools;
 extern crate tokio;
 extern crate tokio_core;
 extern crate tokio_io;

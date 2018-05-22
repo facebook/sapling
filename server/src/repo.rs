@@ -22,6 +22,7 @@ use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use futures_trace::{self, Traced};
+use itertools::Itertools;
 use pylz4;
 use rand::Isaac64Rng;
 use rand::distributions::{LogNormal, Sample};
@@ -188,11 +189,25 @@ impl OpenableRepoType for RepoType {
     }
 }
 
+fn format_nodes_list(mut nodes: Vec<HgNodeHash>) -> String {
+    nodes.sort();
+    nodes.into_iter().map(|node| format!("{}", node)).join(" ")
+}
+
+fn format_utf8_bytes_list(mut entries: Vec<Bytes>) -> String {
+    entries.sort();
+    entries
+        .into_iter()
+        .map(|entry| String::from_utf8_lossy(&entry).into_owned())
+        .join(" ")
+}
+
 fn add_common_stats_and_send_to_scuba(
     scuba: Option<Arc<ScubaClient>>,
     mut sample: ScubaSample,
     stats: Stats,
     remote: Remote,
+    args: Option<String>,
 ) -> BoxFuture<(), ()> {
     futures_trace::global::context()
         .upload_trace_async(remote)
@@ -206,6 +221,9 @@ fn add_common_stats_and_send_to_scuba(
                 sample.add("poll_time_us", stats.poll_time.as_micros_unchecked());
                 sample.add("poll_count", stats.poll_count);
                 sample.add("trace", trace_id);
+                if let Some(args) = args {
+                    sample.add("args", args);
+                }
                 scuba.log(&sample);
             }
             Ok(())
@@ -586,7 +604,9 @@ impl HgCommands for RepoClient {
                 .collect()
         })
             .collect()
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
+            })
             .boxify()
     }
 
@@ -605,7 +625,9 @@ impl HgCommands for RepoClient {
             .from_err()
             .and_then(|v| Ok(v.into_iter().map(|h| h.into_mercurial()).collect()))
             .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
+            })
             .boxify()
     }
 
@@ -643,7 +665,9 @@ impl HgCommands for RepoClient {
                     Ok(buf.freeze())
                 }
             })
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
+            })
             .boxify()
     }
 
@@ -660,7 +684,9 @@ impl HgCommands for RepoClient {
                 .into_iter()
                 .map(|h| h.into_mononoke())
                 .map(move |node| blobrepo.changeset_exists(&DChangesetId::new(node))),
-        ).timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
+        ).timed(move |stats, _| {
+            add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
+        })
             .boxify()
     }
 
@@ -675,7 +701,9 @@ impl HgCommands for RepoClient {
         match self.create_bundle(args) {
             Ok(res) => res,
             Err(err) => Err(err).into_future().boxify(),
-        }.timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
+        }.timed(move |stats, _| {
+            add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
+        })
             .boxify()
     }
 
@@ -692,7 +720,9 @@ impl HgCommands for RepoClient {
         let sample = self.repo.scuba_sample(ops::HELLO);
         let remote = self.repo.remote.clone();
         future::ok(res)
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
+            })
             .boxify()
     }
 
@@ -743,7 +773,9 @@ impl HgCommands for RepoClient {
         let remote = self.repo.remote.clone();
 
         res.traced_global("unbundle", trace_args!())
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
+            })
             .boxify()
     }
 
@@ -757,13 +789,22 @@ impl HgCommands for RepoClient {
             .traced_global(
                 "gettreepack",
                 trace_args!(
-                    "rootdir" => format!("{:?}", params.rootdir),
-                    "mfnodes" => format!("{:?}", params.mfnodes),
-                    "basemfnodes" => format!("{:?}", params.basemfnodes),
-                    "directories" => format!("{:?}", params.directories),
+                    "rootdir" => String::from_utf8_lossy(&params.rootdir),
+                    "mfnodes" => format_nodes_list(params.mfnodes.clone()),
+                    "basemfnodes" => format_nodes_list(params.basemfnodes.clone()),
+                    "directories" => format_utf8_bytes_list(params.directories.clone()),
                 ),
             )
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
+            .timed(move |stats, _| {
+                let args = format!(
+                    "rootdir: {}, mfnodes: {}, basemfnodes: {}, directories: {}",
+                    String::from_utf8_lossy(&params.rootdir),
+                    format_nodes_list(params.mfnodes),
+                    format_nodes_list(params.basemfnodes),
+                    format_utf8_bytes_list(params.directories),
+                );
+                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, Some(args))
+            })
             .boxify();
     }
 
@@ -785,11 +826,13 @@ impl HgCommands for RepoClient {
                     )
                     .timed(move |stats, _| {
                         let sample = repo.scuba_sample(ops::GETFILES);
+                        let args = format!("node: {}, path: {}", node, path);
                         add_common_stats_and_send_to_scuba(
                             repo.scuba.clone(),
                             sample,
                             stats,
                             repo.remote.clone(),
+                            Some(args),
                         )
                     })
             })
