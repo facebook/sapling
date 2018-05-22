@@ -8,9 +8,31 @@
  *
  */
 #include "eden/fs/inodes/InodeMetadata.h"
+#include "eden/fs/fuse/FuseTypes.h"
 
 namespace facebook {
 namespace eden {
+
+void InodeMetadata::updateFromAttr(
+    const Clock& clock,
+    const fuse_setattr_in& attr) {
+  if (attr.valid & FATTR_MODE) {
+    // Make sure we preserve the file type bits, and only update
+    // permissions.
+    mode = (mode & S_IFMT) | (07777 & attr.mode);
+  }
+
+#if 0 // TODO
+  if (attr.valid & FATTR_UID) {
+    metadata.uid = attr.uid;
+  }
+  if (attr.valid & FATTR_GID) {
+    metadata.gid = attr.gid;
+  }
+#endif
+
+  timestamps.setattrTimes(clock, attr);
+}
 
 void InodeMetadata::applyToStat(struct stat& st) const {
   st.st_mode = mode;

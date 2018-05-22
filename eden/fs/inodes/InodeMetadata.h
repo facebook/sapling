@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include "eden/fs/inodes/InodeTimestamps.h"
 
+struct fuse_setattr_in;
 struct stat;
 
 namespace facebook {
@@ -42,6 +43,8 @@ struct InodeMetadata {
   uid_t uid{0};
   gid_t gid{0};
   InodeTimestamps timestamps;
+
+  void updateFromAttr(const Clock& clock, const fuse_setattr_in& attr);
 
   void applyToStat(struct stat& st) const;
 

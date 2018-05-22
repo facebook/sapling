@@ -27,9 +27,7 @@
 
 using namespace std::chrono_literals;
 using folly::Optional;
-
-namespace facebook {
-namespace eden {
+using namespace facebook::eden;
 
 TEST(EdenMount, initFailure) {
   // Test initializing an EdenMount with a commit hash that does not exist.
@@ -278,5 +276,26 @@ TEST(EdenMount, testCreatingFileSetsTimestampsToNow) {
       clock.getTimePoint(),
       folly::to<FakeClock::time_point>(timestamps.mtime.toTimespec()));
 }
-} // namespace eden
-} // namespace facebook
+
+TEST(EdenMount, testCanModifyPermissionsOnFilesAndDirs) {
+  TestMount testMount;
+  auto builder = FakeTreeBuilder();
+  builder.setFile("dir/file.txt", "contents");
+  testMount.initialize(builder);
+
+  auto treeInode = testMount.getTreeInode("dir");
+  auto fileInode = testMount.getFileInode("dir/file.txt");
+
+  fuse_setattr_in attr{};
+  attr.valid = FATTR_MODE;
+  int modebits = 07673;
+  attr.mode = modebits; // setattr ignores format flags
+
+  auto treeResult = treeInode->setattr(attr).get(0ms);
+  EXPECT_EQ(treeInode->getNodeId().get(), treeResult.st.st_ino);
+  EXPECT_EQ(S_IFDIR | modebits, treeResult.st.st_mode);
+
+  auto fileResult = fileInode->setattr(attr).get(0ms);
+  EXPECT_EQ(fileInode->getNodeId().get(), fileResult.st.st_ino);
+  EXPECT_EQ(S_IFREG | modebits, fileResult.st.st_mode);
+}

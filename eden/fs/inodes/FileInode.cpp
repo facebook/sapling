@@ -584,20 +584,7 @@ folly::Future<Dispatcher::Attr> FileInode::setInodeAttr(
 
     auto metadata = self->getMount()->getInodeMetadataTable()->modifyOrThrow(
         self->getNodeId(), [&](auto& metadata) {
-          metadata.timestamps.setattrTimes(self->getClock(), attr);
-          if (attr.valid & FATTR_MODE) {
-            // Make sure we preserve the file type bits, and only update
-            // permissions.
-            metadata.mode = (metadata.mode & S_IFMT) | (07777 & attr.mode);
-          }
-#if 0 // TODO
-          if (attr.valid & FATTR_UID) {
-            metadata.uid = attr.uid;
-          }
-          if (attr.valid & FATTR_GID) {
-            metadata.gid = attr.gid;
-          }
-#endif
+          metadata.updateFromAttr(self->getClock(), attr);
         });
 
     // We need to call fstat function here to get the size of the overlay

@@ -3229,13 +3229,10 @@ folly::Future<Dispatcher::Attr> TreeInode::setInodeAttr(
 
   // Set InodeNumber, timeStamps, mode in the result.
   result.st.st_ino = getNodeId().get();
-  // TODO: allow modifying mode here
-  result.st.st_mode = S_IFDIR | 0755;
   auto contents = contents_.wlock();
   auto metadata = getMount()->getInodeMetadataTable()->modifyOrThrow(
-      getNodeId(), [&](InodeMetadata& metadata) {
-        metadata.timestamps.setattrTimes(getClock(), attr);
-      });
+      getNodeId(),
+      [&](auto& metadata) { metadata.updateFromAttr(getClock(), attr); });
   metadata.applyToStat(result.st);
 
   // Update Journal
