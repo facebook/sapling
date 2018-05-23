@@ -62,8 +62,6 @@ class HttpsCommitCloudService(baseservice.BaseService):
         # debug option
         self.debugrequests = ui.config('commitcloud', 'debugrequests')
 
-        self.auth_params = util.urlreq.urlencode({'access_token': token})
-
         # we have control on compression here
         # on both client side and server side compression
         self.headers = {
@@ -71,6 +69,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
             'Content-Type': 'application/binary',
             'Accept-encoding': 'none, gzip',
             'Content-Encoding': 'gzip',
+            'Authorization': 'OAuth %s' % token,
         }
         self.connection = httplib.HTTPSConnection(
             self.host,
@@ -136,7 +135,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         # ''.  That always returns a valid response indicating there is no
         # workspace with that name for that repo.
         # TODO: Make this a dedicated request
-        path = '/commit_cloud/get_references?' + self.auth_params
+        path = '/commit_cloud/get_references'
         response = self._send(path, {})
         if 'error' in response:
             raise commitcloudcommon.ServiceError(self.ui, response['error'])
@@ -145,7 +144,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         highlightdebug(self.ui, "sending 'get_references' request\n")
 
         # send request
-        path = '/commit_cloud/get_references?' + self.auth_params
+        path = '/commit_cloud/get_references'
         data = {
             'base_version': baseversion,
             'repo_name': reponame,
@@ -193,7 +192,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         oldheads = filter(lambda h: h not in commonset, oldheads)
 
         # send request
-        path = '/commit_cloud/update_references?' + self.auth_params
+        path = '/commit_cloud/update_references'
 
         data = {
             'version': version,
