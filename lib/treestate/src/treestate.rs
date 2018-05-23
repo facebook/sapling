@@ -104,6 +104,10 @@ impl TreeState {
     pub fn get_watchman_clock(&self) -> &[u8] {
         self.root.watchman_clock.deref()
     }
+
+    pub fn has_dir<P: AsRef<[u8]>>(&mut self, path: P) -> Result<bool> {
+        self.tree.has_dir(&self.store, path.as_ref())
+    }
 }
 
 #[cfg(test)]
@@ -256,5 +260,16 @@ mod tests {
             assert_eq!(state.get(path).unwrap().unwrap(), &file);
         }
         assert_eq!(state.len(), SAMPLE_PATHS.len());
+    }
+
+    #[test]
+    fn test_has_dir() {
+        let dir = TempDir::new("treestate").expect("tempdir");
+        let mut state = new_treestate(dir.path().join("1"));
+        assert!(state.has_dir(b"/").unwrap());
+        assert!(state.has_dir(b"build/").unwrap());
+        assert!(!state.has_dir(b"build2/").unwrap());
+        assert!(state.has_dir(b"rust/radixbuf/.git/objects/").unwrap());
+        assert!(!state.has_dir(b"rust/radixbuf/.git2/objects/").unwrap());
     }
 }

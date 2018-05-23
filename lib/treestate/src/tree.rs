@@ -477,6 +477,10 @@ where
 
     /// Returns true if the given path is a directory.
     fn has_dir(&mut self, store: &StoreView, name: KeyRef) -> Result<bool> {
+        // This directory exists, without checking entries.
+        if name == b"/" {
+            return Ok(true);
+        }
         match self.path_recurse(store, name)? {
             PathRecurse::Directory(_dir, path, node) => node.has_dir(store, path),
             PathRecurse::ExactDirectory(_dir, _node) => Ok(true),
