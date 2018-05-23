@@ -25,7 +25,7 @@ pub(crate) struct TreeStateRoot {
     pub version: u32,
     pub file_count: u32,
     pub tree_block_id: BlockId,
-    pub watchman_clock: Box<[u8]>,
+    pub metadata: Box<[u8]>,
 }
 
 impl TreeState {
@@ -97,12 +97,12 @@ impl TreeState {
         self.tree.file_count() as usize
     }
 
-    pub fn set_watchman_clock<T: AsRef<[u8]>>(&mut self, clock: T) {
-        self.root.watchman_clock = Vec::from(clock.as_ref()).into_boxed_slice();
+    pub fn set_metadata<T: AsRef<[u8]>>(&mut self, metadata: T) {
+        self.root.metadata = Vec::from(metadata.as_ref()).into_boxed_slice();
     }
 
-    pub fn get_watchman_clock(&self) -> &[u8] {
-        self.root.watchman_clock.deref()
+    pub fn get_metadata(&self) -> &[u8] {
+        self.root.metadata.deref()
     }
 
     pub fn has_dir<P: AsRef<[u8]>>(&mut self, path: P) -> Result<bool> {
@@ -164,7 +164,7 @@ mod tests {
     fn test_new() {
         let dir = TempDir::new("treestate").expect("tempdir");
         let state = TreeState::open(dir.path().join("empty"), None).expect("open");
-        assert!(state.get_watchman_clock().is_empty());
+        assert!(state.get_metadata().is_empty());
         assert_eq!(state.len(), 0);
     }
 
@@ -174,7 +174,7 @@ mod tests {
         let mut state = TreeState::open(dir.path().join("empty"), None).expect("open");
         let block_id = state.flush().expect("flush");
         let state = TreeState::open(dir.path().join("empty"), block_id.into()).expect("open");
-        assert!(state.get_watchman_clock().is_empty());
+        assert!(state.get_metadata().is_empty());
         assert_eq!(state.len(), 0);
     }
 
@@ -184,21 +184,21 @@ mod tests {
         let mut state = TreeState::open(dir.path().join("empty"), None).expect("open");
         let block_id = state.write_as(dir.path().join("as")).expect("write_as");
         let state = TreeState::open(dir.path().join("as"), block_id.into()).expect("open");
-        assert!(state.get_watchman_clock().is_empty());
+        assert!(state.get_metadata().is_empty());
         assert_eq!(state.len(), 0);
     }
 
     #[test]
-    fn test_set_watchman_clock() {
+    fn test_set_metadata() {
         let dir = TempDir::new("treestate").expect("tempdir");
         let mut state = TreeState::open(dir.path().join("1"), None).expect("open");
-        state.set_watchman_clock(b"foobar");
+        state.set_metadata(b"foobar");
         let block_id1 = state.flush().expect("flush");
         let block_id2 = state.write_as(dir.path().join("2")).expect("write_as");
         let state = TreeState::open(dir.path().join("1"), block_id1.into()).expect("open");
-        assert_eq!(state.get_watchman_clock()[..], b"foobar"[..]);
+        assert_eq!(state.get_metadata()[..], b"foobar"[..]);
         let state = TreeState::open(dir.path().join("2"), block_id2.into()).expect("open");
-        assert_eq!(state.get_watchman_clock()[..], b"foobar"[..]);
+        assert_eq!(state.get_metadata()[..], b"foobar"[..]);
     }
 
     // Some random paths extracted from fb-hgext, plus some manually added entries, shuffled.

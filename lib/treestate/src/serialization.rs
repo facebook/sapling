@@ -238,13 +238,13 @@ impl Serializable for TreeStateRoot {
 
         let tree_block_id = BlockId(cur.read_vlq()?);
         let file_count = cur.read_vlq()?;
-        let watchman_clock = Box::<[u8]>::deserialize(&mut cur)?;
+        let metadata = Box::<[u8]>::deserialize(&mut cur)?;
 
         Ok(TreeStateRoot {
             version,
             tree_block_id,
             file_count,
-            watchman_clock,
+            metadata,
         })
     }
 
@@ -253,7 +253,7 @@ impl Serializable for TreeStateRoot {
         buf.write_vlq(self.version)?;
         buf.write_vlq(self.tree_block_id.0)?;
         buf.write_vlq(self.file_count)?;
-        self.watchman_clock.serialize(&mut buf)?;
+        self.metadata.serialize(&mut buf)?;
         w.write_u64::<BigEndian>(xxhash(&buf))?;
         w.write_all(&buf)?;
         Ok(())
