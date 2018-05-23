@@ -42,11 +42,20 @@ pub struct Node<T> {
     /// (ex. not computed yet - due to old file format or operations like "remove").
     aggregated_state: Cell<StateFlags>,
 
-    /// A map from keys that have been filtered through a case-folding filter function to the
-    /// original key.  This is used for case-folded look-ups.  Filtered values are cached, so
-    /// only a single filter function can be used with a tree.  Call `clear_filtered_keys` to
-    /// clear the cache in order to use a different filter function.
-    filtered_keys: Option<VecMap<Key, Key>>,
+    /// Optional cache about name filtering result. See `FilteredKeyCache` and `get_filtered_key`
+    /// for details.
+    filtered_keys: Option<FilteredKeyCache>,
+}
+
+/// A map from keys that have been filtered through a case-folding filter function to the
+/// original key.  This is used for case-folded look-ups.  Filtered values are cached here.
+///
+/// The map is associated with an integer, the identity of the filter function used. So the
+/// map could be invalidated correctly if filter function changes.
+#[derive(Debug)]
+struct FilteredKeyCache {
+    filter_id: u64,
+    map: VecMap<Key, Key>,
 }
 
 /// The root of the tree.  The count of files in the tree is maintained for fast size
@@ -582,17 +591,23 @@ where
     ///
     /// Returns a reversed vector of key references for each path element, or None if no file
     /// matches the requested name after filtering.
+    ///
+    /// `filter_id` should be different for logically different `filter` functions. It is used for
+    /// cache invalidation.
     fn get_filtered_key<'a, F>(
         &'a mut self,
         store: &StoreView,
         name: KeyRef,
         filter: &mut F,
+        filter_id: u64,
     ) -> Result<Option<Vec<KeyRef<'a>>>>
     where
         F: FnMut(KeyRef) -> Result<Key>,
     {
         let (elem, path) = split_key(name);
-        if self.filtered_keys.is_none() {
+        if self.filtered_keys.is_none()
+            || self.filtered_keys.as_ref().unwrap().filter_id != filter_id
+        {
             let new_map = {
                 let entries = self.load_entries(store)?;
                 let mut new_map = VecMap::with_capacity(entries.len());
@@ -601,14 +616,19 @@ where
                 }
                 new_map
             };
-            self.filtered_keys = Some(new_map);
+            self.filtered_keys = Some(FilteredKeyCache {
+                filter_id,
+                map: new_map,
+            });
         }
         if let Some(path) = path {
-            if let Some(mapped_elem) = self.filtered_keys.as_ref().unwrap().get(elem) {
+            if let Some(mapped_elem) = self.filtered_keys.as_ref().unwrap().map.get(elem) {
                 if let Some(&mut NodeEntry::Directory(ref mut node)) =
                     self.entries.as_mut().unwrap().get_mut(mapped_elem)
                 {
-                    if let Some(mut mapped_path) = node.get_filtered_key(store, path, filter)? {
+                    if let Some(mut mapped_path) =
+                        node.get_filtered_key(store, path, filter, filter_id)?
+                    {
                         mapped_path.push(mapped_elem);
                         return Ok(Some(mapped_path));
                     }
@@ -619,19 +639,9 @@ where
             Ok(self.filtered_keys
                 .as_ref()
                 .unwrap()
+                .map
                 .get(elem)
                 .map(|e| vec![e.as_ref()]))
-        }
-    }
-
-    fn clear_filtered_keys(&mut self) {
-        self.filtered_keys = None;
-        if let Some(ref mut entries) = self.entries {
-            for (_k, v) in entries.iter_mut() {
-                if let &mut NodeEntry::Directory(ref mut node) = v {
-                    node.clear_filtered_keys();
-                }
-            }
         }
     }
 
@@ -871,20 +881,17 @@ where
         store: &StoreView,
         name: KeyRef,
         filter: &mut F,
+        filter_id: u64,
     ) -> Result<Option<Key>>
     where
         F: FnMut(KeyRef) -> Result<Key>,
     {
         Ok(self.root
-            .get_filtered_key(store, name, filter)?
+            .get_filtered_key(store, name, filter, filter_id)?
             .map(|mut path| {
                 path.reverse();
                 path.concat()
             }))
-    }
-
-    pub fn clear_filtered_keys(&mut self) {
-        self.root.clear_filtered_keys();
     }
 
     pub fn path_complete<FA, FV>(
@@ -1141,18 +1148,30 @@ mod tests {
                 .collect())
         }
 
+        // Another map function that does nothing.
+        fn map_noop(k: KeyRef) -> Result<Key> {
+            Ok(Vec::from(k))
+        }
+
         // Look-up with normalized name should give non-normalized version.
         assert_eq!(
-            t.get_filtered_key(&ms, b"dirA/subdirA/file1", &mut map_upper_a)
+            t.get_filtered_key(&ms, b"dirA/subdirA/file1", &mut map_upper_a, 0)
                 .expect("should succeed"),
             Some(b"dirA/subdira/file1".to_vec())
         );
 
         // Look-up with non-normalized name should match nothing.
         assert_eq!(
-            t.get_filtered_key(&ms, b"dirA/subdira/file1", &mut map_upper_a)
+            t.get_filtered_key(&ms, b"dirA/subdira/file1", &mut map_upper_a, 0)
                 .expect("should succeed"),
             None
+        );
+
+        // Change filter function should invalid existing cache.
+        assert!(
+            t.get_filtered_key(&ms, b"dirA/subdirA/file1", &mut map_noop, 1)
+                .unwrap()
+                .is_none()
         );
     }
 }

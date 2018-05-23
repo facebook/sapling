@@ -196,12 +196,13 @@ impl TreeDirstate {
         &mut self,
         name: KeyRef,
         filter: &mut F,
+        filter_id: u64,
     ) -> Result<Option<Key>>
     where
         F: FnMut(KeyRef) -> Result<Key>,
     {
         self.tracked
-            .get_filtered_key(self.store.store_view(), name, filter)
+            .get_filtered_key(self.store.store_view(), name, filter, filter_id)
     }
 
     /// Visit all tracked files with a visitor.
@@ -268,10 +269,6 @@ impl TreeDirstate {
 
     pub fn has_removed_dir(&mut self, name: KeyRef) -> Result<bool> {
         self.removed.has_dir(self.store.store_view(), name)
-    }
-
-    pub fn clear_filtered_keys(&mut self) {
-        self.tracked.clear_filtered_keys();
     }
 
     /// Visit all completed acceptable paths that match the given prefix.
