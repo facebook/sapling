@@ -4,6 +4,7 @@
 use errors::*;
 use filestate::{FileState, FileStateV2, StateFlags};
 use serialization::Serializable;
+use std::cell::Cell;
 use std::collections::Bound;
 use std::io::{Cursor, Read, Write};
 use store::{BlockId, Store, StoreView};
@@ -39,7 +40,7 @@ pub struct Node<T> {
     /// Aggregated state flags. This is useful for quickly test whether there is a file matching
     /// given state or not in this tree (recursively). An empty value means it cannot be trusted
     /// (ex. not computed yet - due to old file format or operations like "remove").
-    pub(crate) aggregated_state: StateFlags,
+    pub(crate) aggregated_state: Cell<StateFlags>,
 
     /// A map from keys that have been filtered through a case-folding filter function to the
     /// original key.  This is used for case-folded look-ups.  Filtered values are cached, so
@@ -91,16 +92,16 @@ fn split_key_exact<'a>(key: KeyRef<'a>) -> (KeyRef<'a>, Option<KeyRef<'a>>) {
 /// Compatiblity layer - difference between `FileState` and `FileStateV2`
 pub trait CompatExt<T> {
     /// Load extra fields. Extends `load`.
-    fn load_ext(&mut self, data: &mut Read) -> Result<()>;
+    fn load_ext(&self, data: &mut Read) -> Result<()>;
 
     /// Write extra fields. Extends `write_entries`.
-    fn write_ext(&mut self, writer: &mut Write) -> Result<()>;
+    fn write_ext(&self, writer: &mut Write) -> Result<()>;
 
     /// Update extra fields after adding. Extends `add`.
-    fn file_add_ext(&mut self, info: &T) -> Result<()>;
+    fn file_add_ext(&self, info: &T) -> Result<()>;
 
     /// Update extra fields when file state is changed. Extends `remove` and `get_mut`.
-    fn file_mut_ext(&mut self) -> Result<()>;
+    fn file_mut_ext(&self) -> Result<()>;
 
     /// Match file state. Return true if the file state contains all `required_all` bits, and
     /// at least one of `required_any` bits if `required_any` is not empty.
@@ -108,19 +109,19 @@ pub trait CompatExt<T> {
 }
 
 impl CompatExt<FileState> for Node<FileState> {
-    fn load_ext(&mut self, _: &mut Read) -> Result<()> {
+    fn load_ext(&self, _: &mut Read) -> Result<()> {
         Ok(())
     }
 
-    fn write_ext(&mut self, _: &mut Write) -> Result<()> {
+    fn write_ext(&self, _: &mut Write) -> Result<()> {
         Ok(())
     }
 
-    fn file_add_ext(&mut self, _: &FileState) -> Result<()> {
+    fn file_add_ext(&self, _: &FileState) -> Result<()> {
         Ok(())
     }
 
-    fn file_mut_ext(&mut self) -> Result<()> {
+    fn file_mut_ext(&self) -> Result<()> {
         Ok(())
     }
 
@@ -133,36 +134,37 @@ impl CompatExt<FileState> for Node<FileState> {
 }
 
 impl CompatExt<FileStateV2> for Node<FileStateV2> {
-    fn write_ext(&mut self, writer: &mut Write) -> Result<()> {
+    fn write_ext(&self, writer: &mut Write) -> Result<()> {
         // An empty state is invalid and requires re-calcuation.
-        if self.aggregated_state.is_empty() {
+        if self.aggregated_state.get().is_empty() {
             let state = self.entries
                 .as_ref()
                 .expect("entries should exist")
                 .iter()
                 .fold(StateFlags::empty(), |acc, (_, x)| match x {
-                    &NodeEntry::Directory(ref x) => acc | x.aggregated_state,
+                    &NodeEntry::Directory(ref x) => acc | x.aggregated_state.get(),
                     &NodeEntry::File(ref x) => acc | x.state,
                 });
-            self.aggregated_state = state;
+            self.aggregated_state.set(state);
         }
-        self.aggregated_state.serialize(writer)?;
+        self.aggregated_state.get().serialize(writer)?;
         Ok(())
     }
 
-    fn load_ext(&mut self, data: &mut Read) -> Result<()> {
-        self.aggregated_state = StateFlags::deserialize(data)?;
+    fn load_ext(&self, data: &mut Read) -> Result<()> {
+        self.aggregated_state.set(StateFlags::deserialize(data)?);
         Ok(())
     }
 
-    fn file_add_ext(&mut self, info: &FileStateV2) -> Result<()> {
-        self.aggregated_state |= info.state;
+    fn file_add_ext(&self, info: &FileStateV2) -> Result<()> {
+        let aggregated_state = self.aggregated_state.get();
+        self.aggregated_state.set(aggregated_state | info.state);
         Ok(())
     }
 
-    fn file_mut_ext(&mut self) -> Result<()> {
+    fn file_mut_ext(&self) -> Result<()> {
         // Set aggregated_state to empty so it will be re-calculated on write.
-        self.aggregated_state = StateFlags::empty();
+        self.aggregated_state.set(StateFlags::empty());
         Ok(())
     }
 
@@ -189,7 +191,7 @@ impl<T: Serializable + Clone> Node<T> {
             id: None,
             entries: Some(NodeEntryMap::new()),
             filtered_keys: None,
-            aggregated_state: StateFlags::empty(),
+            aggregated_state: Cell::new(StateFlags::empty()),
         }
     }
 
@@ -200,7 +202,7 @@ impl<T: Serializable + Clone> Node<T> {
             id: Some(id),
             entries: None,
             filtered_keys: None,
-            aggregated_state: StateFlags::empty(),
+            aggregated_state: Cell::new(StateFlags::empty()),
         }
     }
 }
@@ -308,13 +310,12 @@ where
         }
 
         // Do not trust empty aggregated_state. Only do filtering if it's non-empty.
-        if !self.aggregated_state.is_empty() {
-            if !self.aggregated_state.contains(state_required_all) {
+        let aggregated_state = self.aggregated_state.get();
+        if !aggregated_state.is_empty() {
+            if !aggregated_state.contains(state_required_all) {
                 return Ok(());
             }
-            if !state_required_any.is_empty()
-                && !self.aggregated_state.intersects(state_required_any)
-            {
+            if !state_required_any.is_empty() && !aggregated_state.intersects(state_required_any) {
                 return Ok(());
             }
         }
