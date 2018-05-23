@@ -70,6 +70,31 @@ class FutureUnixSocket : private UnixSocket::ReceiveCallback {
     return socket_->getEventBase();
   }
 
+  /**
+   * Attach this socket to an EventBase.
+   *
+   * This should only be called to set the EventBase if the UnixSocket
+   * constructor was called with a null EventBase.  If the EventBase was not
+   * set in the constructor then attachEventBase() must be called before any
+   * calls to send() or setReceiveCallback().
+   *
+   * This method may only be called from the EventBase's thread.  If the
+   * EventBase has not been started yet it may be called from another thread if
+   * that thread is the only thread accessing the EventBase.
+   */
+  void attachEventBase(folly::EventBase* eventBase) {
+    socket_->attachEventBase(eventBase);
+  }
+
+  /**
+   * Detach from the EventBase that is being used to drive this socket.
+   *
+   * This may only be called from the EventBase thread.
+   */
+  void detachEventBase() {
+    socket_->detachEventBase();
+  }
+
   void setSendTimeout(std::chrono::milliseconds timeout) {
     return socket_->setSendTimeout(timeout);
   }
@@ -81,6 +106,13 @@ class FutureUnixSocket : private UnixSocket::ReceiveCallback {
   explicit operator bool() const {
     return socket_.get() != nullptr;
   }
+
+  /**
+   * Close the socket immediately.
+   *
+   * This aborts any send() and receive() calls that are in progress.
+   */
+  void closeNow();
 
   /**
    * Get the user ID of the remote peer.

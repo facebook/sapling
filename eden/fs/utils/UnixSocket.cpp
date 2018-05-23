@@ -23,7 +23,6 @@
 #include <new>
 
 #include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/ControlMsg.h"
 
 using folly::ByteRange;
 using folly::EventBase;
@@ -44,6 +43,17 @@ using std::vector;
 
 namespace facebook {
 namespace eden {
+
+namespace {
+/**
+ * The maximum number of file descriptors that can be sent in a SCM_RIGHTS
+ * control message.
+ *
+ * Linux internally defines this to 253 using the SCM_MAX_FD constant in
+ * linux/include/net/scm.h
+ */
+constexpr size_t kMaxFDs = 253;
+} // namespace
 
 class UnixSocket::Connector : private folly::EventHandler, folly::AsyncTimeout {
  public:
@@ -95,7 +105,7 @@ UnixSocket::UnixSocket(EventBase* eventBase, File socket)
       socket_{std::move(socket)},
       // Create recvControlBuffer_ with enough capacity to receive
       // the maximum number of file descriptors that can be sent at once.
-      recvControlBuffer_(CMSG_SPACE(ControlMsg::kMaxFDs * sizeof(int))) {}
+      recvControlBuffer_(CMSG_SPACE(kMaxFDs * sizeof(int))) {}
 
 UnixSocket::~UnixSocket() {
   // The destructor should generally remain empty.
@@ -109,6 +119,20 @@ void UnixSocket::destroy() {
 
   // Call our parent's destroy() implementation
   DelayedDestruction::destroy();
+}
+
+void UnixSocket::attachEventBase(folly::EventBase* eventBase) {
+  DCHECK(!eventBase_);
+  eventBase_ = eventBase;
+  EventHandler::attachEventBase(eventBase);
+  AsyncTimeout::attachEventBase(eventBase);
+}
+
+void UnixSocket::detachEventBase() {
+  DCHECK(eventBase_);
+  eventBase_ = nullptr;
+  EventHandler::detachEventBase();
+  AsyncTimeout::detachEventBase();
 }
 
 void UnixSocket::connect(
@@ -571,7 +595,7 @@ size_t UnixSocket::initializeFirstControlMsg(
   }
 
   // Compute how much space we need for the control data
-  size_t fdsToSend = std::min(ControlMsg::kMaxFDs, message.files.size());
+  size_t fdsToSend = std::min(kMaxFDs, message.files.size());
   size_t cmsgSpace = CMSG_SPACE(fdsToSend * sizeof(int));
 
   // Allocate the buffer
@@ -604,8 +628,7 @@ size_t UnixSocket::initializeAdditionalControlMsg(
   DCHECK(!message.files.empty());
   DCHECK_GT(entry->filesSent, 0);
 
-  size_t fdsToSend =
-      std::min(ControlMsg::kMaxFDs, message.files.size() - entry->filesSent);
+  size_t fdsToSend = std::min(kMaxFDs, message.files.size() - entry->filesSent);
   auto cmsgSpace = CMSG_SPACE(fdsToSend * sizeof(int));
 
   controlBuf.resize(cmsgSpace);

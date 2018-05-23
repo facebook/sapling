@@ -177,6 +177,25 @@ class UnixSocket : public folly::DelayedDestruction,
   }
 
   /**
+   * Attach this socket to an EventBase.
+   *
+   * This should only be called to set the EventBase if the UnixSocket
+   * constructor was called with a null EventBase.  If the EventBase was not
+   * set in the constructor then attachEventBase() must be called before any
+   * calls to send() or setReceiveCallback().
+   *
+   * This method may only be called from the EventBase's thread.
+   */
+  void attachEventBase(folly::EventBase* eventBase);
+
+  /**
+   * Detach from the EventBase that is being used to drive this socket.
+   *
+   * This may only be called from the EventBase thread.
+   */
+  void detachEventBase();
+
+  /**
    * Destroy the UnixSocket object.
    *
    * The UnixSocket destructor is private, so users must use destroy() instead

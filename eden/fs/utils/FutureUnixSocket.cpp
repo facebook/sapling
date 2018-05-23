@@ -162,6 +162,10 @@ uid_t FutureUnixSocket::getRemoteUID() {
   return socket_->getRemoteUID();
 }
 
+void FutureUnixSocket::closeNow() {
+  socket_.reset();
+}
+
 Future<Unit> FutureUnixSocket::send(Message&& msg) {
   if (!socket_) {
     return makeFuture<Unit>(

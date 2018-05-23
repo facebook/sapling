@@ -244,3 +244,53 @@ TEST(FutureUnixSocket, receiveQueue) {
   }
   EXPECT_EQ(sendMessages.size(), receivedMessages.size());
 }
+
+TEST(FutureUnixSocket, attachEventBase) {
+  // A helper function to attach sockets to an EventBase, send a message, then
+  // detach from the EventBase
+  auto test = [&](EventBase* evb, FutureUnixSocket& s1, FutureUnixSocket& s2) {
+    s1.attachEventBase(evb);
+    s2.attachEventBase(evb);
+    SCOPE_EXIT {
+      s1.detachEventBase();
+      s2.detachEventBase();
+    };
+
+    const std::string msgData(100, 'a');
+    s1.send(UnixSocket::Message(IOBuf(IOBuf::COPY_BUFFER, msgData)))
+        .then([] { XLOG(DBG3) << "send complete"; })
+        .onError([](const folly::exception_wrapper& ew) {
+          ADD_FAILURE() << "send error: " << ew.what();
+        });
+    folly::Optional<UnixSocket::Message> receivedMessage;
+    s2.receive(500ms)
+        .then([&receivedMessage](UnixSocket::Message&& msg) {
+          receivedMessage = std::move(msg);
+        })
+        .onError([](const folly::exception_wrapper& ew) {
+          ADD_FAILURE() << "receive error: " << ew.what();
+        })
+        .ensure([&]() { evb->terminateLoopSoon(); });
+
+    evb->loopForever();
+
+    EXPECT_TRUE(receivedMessage.hasValue());
+    EXPECT_EQ(msgData, receivedMessage->data.moveToFbString().toStdString());
+  };
+
+  // Create two sockets that are initially not attached to an EventBase
+  auto sockets = createSocketPair();
+  auto socket1 = FutureUnixSocket(nullptr, std::move(sockets.first));
+  auto socket2 = FutureUnixSocket(nullptr, std::move(sockets.second));
+
+  // Test on one EventBase
+  {
+    EventBase evb1;
+    test(&evb1, socket1, socket2);
+  }
+  // Now test using another EventBase
+  {
+    EventBase evb2;
+    test(&evb2, socket2, socket1);
+  }
+}
