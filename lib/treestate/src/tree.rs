@@ -8,6 +8,7 @@ use std::collections::Bound;
 use std::io::{Cursor, Read, Write};
 use store::{BlockId, Store, StoreView};
 use vecmap::VecMap;
+use vecstack::VecStack;
 
 /// A node entry is an entry in a directory, either a file or another directory.
 #[derive(Debug)]
@@ -293,7 +294,7 @@ where
     fn visit<'a, F>(
         &'a mut self,
         store: &StoreView,
-        path: &mut Vec<KeyRef<'a>>,
+        path: &mut VecStack<'a, [u8]>,
         visitor: &mut F,
         visit_flags: VisitFlags,
         state_required_all: StateFlags,
@@ -318,13 +319,18 @@ where
             }
         }
 
-        for (name, entry) in self.load_entries(store)?.iter_mut() {
-            path.push(name);
+        let entries: &mut NodeEntryMap<T> = {
+            self.load_entries(store)?;
+            self.entries.as_mut().unwrap()
+        };
+
+        for (name, entry) in entries.iter_mut() {
+            let mut path = path.push(name);
             match entry {
                 &mut NodeEntry::Directory(ref mut node) => {
                     node.visit(
                         store,
-                        path,
+                        &mut path,
                         visitor,
                         visit_flags,
                         state_required_all,
@@ -333,11 +339,10 @@ where
                 }
                 &mut NodeEntry::File(ref mut file) => {
                     if Self::file_state_match(file, state_required_all, state_required_any) {
-                        visitor(path, file)?;
+                        visitor(path.as_ref(), file)?;
                     }
                 }
             }
-            path.pop();
         }
         Ok(())
     }
@@ -658,7 +663,7 @@ where
     fn path_complete<'a, FA, FV>(
         &'a mut self,
         store: &StoreView,
-        path: &mut Vec<KeyRef<'a>>,
+        path: &mut VecStack<'a, [u8]>,
         prefix: KeyRef<'a>,
         full_paths: bool,
         acceptable: &FA,
@@ -673,9 +678,8 @@ where
             // Prefix part is for a directory, so look for that directory.
             let entry = self.load_entries(store)?.get_mut(elem);
             if let Some(&mut NodeEntry::Directory(ref mut node)) = entry {
-                path.push(elem);
-                node.path_complete(store, path, subpath, full_paths, acceptable, visitor)?;
-                path.pop();
+                let mut path = path.push(elem);
+                node.path_complete(store, &mut path, subpath, full_paths, acceptable, visitor)?;
             }
         } else {
             // Prefix part is for a entry in this directory.  Iterate across all matching entries.
@@ -689,6 +693,7 @@ where
                 match entry {
                     &mut NodeEntry::Directory(ref mut node) => {
                         if full_paths {
+                            let mut path = path.push(entry_name);
                             // The entry is a directory, and the caller has asked for full paths.
                             // Visit every entry inside the directory.
                             let mut visit_adapter = |filepath: &Vec<KeyRef>, state: &mut T| {
@@ -697,33 +702,29 @@ where
                                 }
                                 Ok(())
                             };
-                            path.push(entry_name);
                             node.visit(
                                 store,
-                                path,
+                                &mut path,
                                 &mut visit_adapter,
                                 VisitFlags::empty(),
                                 StateFlags::empty(),
                                 StateFlags::empty(),
                             )?;
-                            path.pop();
                         } else {
                             // The entry is a directory, and the caller has asked for matching
                             // directories.  Check there is an acceptable file under the
                             // directory.
                             if node.path_complete_check(store, acceptable)? {
-                                path.push(entry_name);
-                                visitor(path)?;
-                                path.pop();
+                                let mut path = path.push(entry_name);
+                                visitor(path.as_ref())?;
                             }
                         }
                     }
                     &mut NodeEntry::File(ref mut file) => {
                         // This entry is a file.
                         if acceptable(file) {
-                            path.push(entry_name);
-                            visitor(path)?;
-                            path.pop();
+                            let path = path.push(entry_name);
+                            visitor(path.as_ref())?;
                         }
                     }
                 }
@@ -797,6 +798,7 @@ where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
         let mut path = Vec::new();
+        let mut path = VecStack::new(&mut path);
         self.root.visit(
             store,
             &mut path,
@@ -905,6 +907,7 @@ where
         FV: FnMut(&Vec<KeyRef>) -> Result<()>,
     {
         let mut path = Vec::new();
+        let mut path = VecStack::new(&mut path);
         self.root
             .path_complete(store, &mut path, prefix, full_paths, acceptable, visitor)
     }
