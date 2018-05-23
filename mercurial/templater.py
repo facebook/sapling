@@ -843,6 +843,26 @@ def ifeq(context, mapping, args):
     elif len(args) == 4:
         yield evalrawexp(context, mapping, args[3])
 
+@templatefunc('ifgt(expr1, expr2, then[, else])')
+def ifgt(context, mapping, args):
+    """Conditionally execute based on whether expr1 is greater than expr2.
+    Both expr1 and expr2 need to be integers."""
+    if not (3 <= len(args) <= 4):
+        # i18n: "ifgt" is a keyword
+        raise error.ParseError(_("ifgt expects three or four arguments"))
+
+    expr1 = evalstring(context, mapping, args[0])
+    expr2 = evalstring(context, mapping, args[1])
+    try:
+        gt = int(expr1) > int(expr2)
+    except ValueError:
+        raise error.ParseError(_("ifgt can only compare integers"))
+
+    if gt:
+        yield evalrawexp(context, mapping, args[2])
+    elif len(args) == 4:
+        yield evalrawexp(context, mapping, args[3])
+
 @templatefunc('join(list, sep)')
 def join(context, mapping, args):
     """Join items in a list with a delimiter."""
