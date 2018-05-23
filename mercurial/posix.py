@@ -310,6 +310,33 @@ def _checklink(path):
                 unlink(name)
             return False
 
+def _checkbrokensymlink(path, msg=None):
+    '''Check if path or one of its parent directory is a broken symlink.  Raise
+    more detailed error about it.
+
+    Subject to filesystem races. ONLY call this when there is already an ENONET
+    error.
+
+    If msg is set, it would be used as extra context in the error message.
+    '''
+    src = path
+    while src not in ('', '/'):
+        src = os.path.dirname(src)
+        errmsg = None
+        try:
+            if os.path.islink(src):
+                dest = os.readlink(src)
+                if not os.path.exists(src):
+                    errmsg = ("Symlink %r points to non-existed destination %r"
+                              % (src, dest))
+                    if msg:
+                        errmsg += ' during %s' % msg
+        except OSError:
+            # Ignore filesystem races (ex. "src" is deleted before readlink)
+            pass
+        if errmsg:
+            raise OSError(errno.ENOENT, errmsg, path)
+
 def checkosfilename(path):
     '''Check that the base-relative path is a valid filename on this platform.
     Returns None if the path is ok, or a UI string describing the problem.'''
@@ -581,7 +608,14 @@ def gethgcmd():
     return sys.argv[:1]
 
 def makedir(path, notindexed):
-    os.mkdir(path)
+    try:
+        os.mkdir(path)
+    except OSError as err:
+        # Spend a little more effort making the error less mysterious in case
+        # there is a broken symlink.
+        if err.errno == errno.ENOENT:
+            _checkbrokensymlink(path, 'makedir')
+        raise
 
 def lookupreg(key, name=None, scope=None):
     return None

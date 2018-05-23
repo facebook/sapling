@@ -5,6 +5,8 @@ from __future__ import absolute_import
 import code
 import sys
 import mercurial
+
+from mercurial.i18n import _
 from mercurial import (
     demandimport,
     registrar,
@@ -35,8 +37,16 @@ def ipdb(ui, repo, msg, **opts):
     _assignobjects(locals(), repo)
     IPython.embed()
 
-@command('debugshell|dbsh', [], optionalrepo=True)
+@command('debugshell|dbsh', [
+    ('c', 'command', '', _('program passed in as string'), _('CMD'))
+], optionalrepo=True)
 def debugshell(ui, repo, **opts):
+    command = opts.get('command')
+    if command:
+        _assignobjects(locals(), repo)
+        exec(command)
+        return 0
+
     bannermsg = "loaded repo : %s\n" \
                 "using source: %s" % (repo and repo.root or '(none)',
                                       mercurial.__path__[0])

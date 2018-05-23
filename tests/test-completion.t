@@ -303,7 +303,7 @@ Show all commands + options
   debugrevlog: changelog, manifest, dir, dump
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugsetparents: 
-  debugshell: 
+  debugshell: command
   debugssl: 
   debugsub: rev
   debugsuccessorssets: closest
