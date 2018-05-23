@@ -813,8 +813,9 @@ Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
   auto header = readChunkHeader();
   if (header.dataLength != 20) {
     throw std::runtime_error(folly::to<string>(
-        "expected a 20-byte hash for the manifest node, "
-        "but got data of length ",
+        "expected a 20-byte hash for the manifest node '",
+        revName,
+        "' but got data of length ",
         header.dataLength));
   }
 
