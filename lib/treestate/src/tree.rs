@@ -106,6 +106,11 @@ pub trait CompatExt<T> {
     /// Match file state. Return true if the file state contains all `required_all` bits, and
     /// at least one of `required_any` bits if `required_any` is not empty.
     fn file_state_match(file: &T, required_all: StateFlags, required_any: StateFlags) -> bool;
+
+    /// Update aggregated_state given a changed file state
+    fn calculate_aggregated_state(_file: &T, _aggregated_state: StateFlags) -> StateFlags {
+        StateFlags::empty()
+    }
 }
 
 impl CompatExt<FileState> for Node<FileState> {
@@ -175,6 +180,10 @@ impl CompatExt<FileStateV2> for Node<FileStateV2> {
     ) -> bool {
         f.state.contains(required_all)
             && (required_any.is_empty() || f.state.intersects(required_any))
+    }
+
+    fn calculate_aggregated_state(file: &FileStateV2, aggregated_state: StateFlags) -> StateFlags {
+        aggregated_state | file.state
     }
 }
 
@@ -293,6 +302,9 @@ where
     // If `visit_flags` contains `CHANGED_ONLY`, unchanged nodes won't be visited.
     // `state_required_all` and `state_required_any` filters file state - must contain all bits
     // from `state_required_all`, and one bit from `state_required_any` (if non-empty).
+    //
+    // Return updated `aggregated_state` for this node, which is then used internally to update
+    // parent `aggregated_state`s.
     fn visit<'a, F>(
         &'a mut self,
         store: &StoreView,
@@ -301,24 +313,27 @@ where
         visit_flags: VisitFlags,
         state_required_all: StateFlags,
         state_required_any: StateFlags,
-    ) -> Result<()>
+    ) -> Result<StateFlags>
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
         if visit_flags.contains(VisitFlags::CHANGED_ONLY) && self.id.is_some() {
-            return Ok(());
+            return Ok(self.aggregated_state.get());
         }
 
         // Do not trust empty aggregated_state. Only do filtering if it's non-empty.
         let aggregated_state = self.aggregated_state.get();
         if !aggregated_state.is_empty() {
             if !aggregated_state.contains(state_required_all) {
-                return Ok(());
+                return Ok(self.aggregated_state.get());
             }
             if !state_required_any.is_empty() && !aggregated_state.intersects(state_required_any) {
-                return Ok(());
+                return Ok(self.aggregated_state.get());
             }
         }
+
+        // Calculate new aggregated_state - None: cannot be calculated now.
+        let mut aggregated_state = Some(StateFlags::empty());
 
         let entries: &mut NodeEntryMap<T> = {
             self.load_entries(store)?;
@@ -329,7 +344,7 @@ where
             let mut path = path.push(name);
             match entry {
                 &mut NodeEntry::Directory(ref mut node) => {
-                    node.visit(
+                    let substate = node.visit(
                         store,
                         &mut path,
                         visitor,
@@ -337,15 +352,31 @@ where
                         state_required_all,
                         state_required_any,
                     )?;
+                    // Propagate aggregated_state from sub-directory.
+                    aggregated_state = if substate.is_empty() || aggregated_state.is_none() {
+                        None
+                    } else {
+                        Some(aggregated_state.unwrap() | substate)
+                    };
                 }
                 &mut NodeEntry::File(ref mut file) => {
                     if Self::file_state_match(file, state_required_all, state_required_any) {
                         visitor(path.as_ref(), file)?;
                     }
+                    // Propagate aggregated_state from file.
+                    if aggregated_state.is_some() {
+                        aggregated_state = Some(Self::calculate_aggregated_state(
+                            file,
+                            aggregated_state.unwrap(),
+                        ));
+                    }
                 }
             }
         }
-        Ok(())
+
+        let aggregated_state = aggregated_state.unwrap_or(StateFlags::empty());
+        self.aggregated_state.set(aggregated_state);
+        Ok(aggregated_state)
     }
 
     /// Get the first file in the subtree under this node.  If the subtree is not empty, returns a
@@ -807,7 +838,8 @@ where
             visit_flags,
             state_required_all,
             state_required_any,
-        )
+        )?;
+        Ok(())
     }
 
     pub fn visit<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
