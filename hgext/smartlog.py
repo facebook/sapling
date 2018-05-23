@@ -577,14 +577,14 @@ def simpledate(context, mapping, args):
                 repo.ui.warn(msg)
     then = datetime.datetime.fromtimestamp(date[0], tz)
     now = datetime.datetime.now(tz)
-    td = now - then
+    td = now.date() - then.date()
     if then > now:
         # Time is in the future, render it in full
         return then.strftime("%Y-%m-%d %H:%M")
-    elif then.date() == now.date():
+    elif td.days == 0:
         # Today ("Today at HH:MM")
         return then.strftime("Today at %H:%M")
-    elif then.date() == now.date() - datetime.timedelta(days=1):
+    elif td.days == 1:
         # Yesterday ("Yesterday at HH:MM")
         return then.strftime("Yesterday at %H:%M")
     elif td.days <= 6:
