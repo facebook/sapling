@@ -8,7 +8,7 @@ use std::io::Cursor;
 use std::ops::Deref;
 use std::path::Path;
 use store::{BlockId, Store, StoreView};
-use tree::{KeyRef, Node, Tree};
+use tree::{Key, KeyRef, Node, Tree};
 
 /// `TreeState` uses a single tree to track an extended state of `TreeDirstate`.
 /// See the comment about `FileStateV2` for the difference.
@@ -122,6 +122,34 @@ impl TreeState {
     {
         self.tree
             .visit_advanced(&self.store, visitor, visit_dir, visit_file)
+    }
+
+    pub fn get_filtered_key<F>(
+        &mut self,
+        name: KeyRef,
+        filter: &mut F,
+        filter_id: u64,
+    ) -> Result<Option<Key>>
+    where
+        F: FnMut(KeyRef) -> Result<Key>,
+    {
+        self.tree
+            .get_filtered_key(&self.store, name, filter, filter_id)
+    }
+
+    pub fn path_complete<FA, FV>(
+        &mut self,
+        prefix: KeyRef,
+        full_paths: bool,
+        acceptable: &FA,
+        visitor: &mut FV,
+    ) -> Result<()>
+    where
+        FA: Fn(&FileStateV2) -> bool,
+        FV: FnMut(&Vec<KeyRef>) -> Result<()>,
+    {
+        self.tree
+            .path_complete(&self.store, prefix, full_paths, acceptable, visitor)
     }
 }
 
