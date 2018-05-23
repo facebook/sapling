@@ -7,7 +7,7 @@ use filestate::{FileState, FileStateV2, StateFlags};
 use std::hash::Hasher;
 use std::io::{Cursor, Read, Write};
 use store::BlockId;
-use tree::{Key, Node, NodeEntry, NodeEntryMap};
+use tree::{AggregatedState, Key, Node, NodeEntry, NodeEntryMap};
 use treedirstate::TreeDirstateRoot;
 use treestate::TreeStateRoot;
 use twox_hash::XxHash;
@@ -45,6 +45,26 @@ impl Serializable for FileState {
             mode,
             size,
             mtime,
+        })
+    }
+}
+
+impl Serializable for AggregatedState {
+    fn serialize(&self, mut w: &mut Write) -> Result<()> {
+        w.write_vlq(self.union.to_bits())?;
+        w.write_vlq(self.intersection.to_bits())?;
+        Ok(())
+    }
+
+    /// Read an entry from the store.
+    fn deserialize(mut r: &mut Read) -> Result<AggregatedState> {
+        let state: u16 = r.read_vlq()?;
+        let union = StateFlags::from_bits_truncate(state);
+        let state: u16 = r.read_vlq()?;
+        let intersection = StateFlags::from_bits_truncate(state);
+        Ok(AggregatedState {
+            union,
+            intersection,
         })
     }
 }

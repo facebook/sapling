@@ -25,6 +25,49 @@ pub type KeyRef<'a> = &'a [u8];
 /// Store the node entries in an ordered map from name to node entry.
 pub(crate) type NodeEntryMap<T> = VecMap<Key, NodeEntry<T>>;
 
+/// The aggregated state. Useful for fast decision about whether to visit a directory recursively
+/// or not.
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct AggregatedState {
+    pub union: StateFlags,
+    pub intersection: StateFlags,
+}
+
+impl AggregatedState {
+    pub fn merge(&self, rhs: AggregatedState) -> AggregatedState {
+        AggregatedState {
+            union: self.union | rhs.union,
+            intersection: self.intersection & rhs.intersection,
+        }
+    }
+
+    /// Adjust `intersection` so it does not have bits outside `union`.
+    pub fn normalized(&self) -> AggregatedState {
+        AggregatedState {
+            union: self.union,
+            intersection: self.intersection & self.union,
+        }
+    }
+}
+
+impl From<StateFlags> for AggregatedState {
+    fn from(state: StateFlags) -> Self {
+        AggregatedState {
+            union: state,
+            intersection: state,
+        }
+    }
+}
+
+impl Default for AggregatedState {
+    fn default() -> Self {
+        AggregatedState {
+            union: StateFlags::empty(),
+            intersection: StateFlags::all(),
+        }
+    }
+}
+
 /// The contents of a directory.
 #[derive(Debug)]
 pub struct Node<T> {
@@ -38,9 +81,8 @@ pub struct Node<T> {
     pub(crate) entries: Option<NodeEntryMap<T>>,
 
     /// Aggregated state flags. This is useful for quickly test whether there is a file matching
-    /// given state or not in this tree (recursively). An empty value means it cannot be trusted
-    /// (ex. not computed yet - due to old file format or operations like "remove").
-    aggregated_state: Cell<StateFlags>,
+    /// given state or not in this tree (recursively). `None` means it is not calculated yet.
+    aggregated_state: Cell<Option<AggregatedState>>,
 
     /// Optional cache about name filtering result. See `FilteredKeyCache` and `get_filtered_key`
     /// for details.
@@ -106,14 +148,8 @@ pub trait CompatExt<T> {
     /// Write extra fields. Extends `write_entries`.
     fn write_ext(&self, writer: &mut Write) -> Result<()>;
 
-    /// Update extra fields after adding. Extends `add`.
-    fn file_add_ext(&self, info: &T) -> Result<()>;
-
-    /// Update extra fields when file state is changed. Extends `remove` and `get_mut`.
-    fn file_mut_ext(&self) -> Result<()>;
-
-    /// Update aggregated_state given a changed file state
-    fn calculate_aggregated_state(_file: &T, _aggregated_state: StateFlags) -> StateFlags {
+    /// Extract StateFlags from a file.
+    fn get_file_state(_file: &T) -> StateFlags {
         StateFlags::empty()
     }
 }
@@ -126,53 +162,35 @@ impl CompatExt<FileState> for Node<FileState> {
     fn write_ext(&self, _: &mut Write) -> Result<()> {
         Ok(())
     }
-
-    fn file_add_ext(&self, _: &FileState) -> Result<()> {
-        Ok(())
-    }
-
-    fn file_mut_ext(&self) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl CompatExt<FileStateV2> for Node<FileStateV2> {
     fn write_ext(&self, writer: &mut Write) -> Result<()> {
-        // An empty state is invalid and requires re-calcuation.
-        if self.aggregated_state.get().is_empty() {
+        if self.aggregated_state.get().is_none() {
             let state = self.entries
                 .as_ref()
                 .expect("entries should exist")
                 .iter()
-                .fold(StateFlags::empty(), |acc, (_, x)| match x {
-                    &NodeEntry::Directory(ref x) => acc | x.aggregated_state.get(),
-                    &NodeEntry::File(ref x) => acc | x.state,
+                .fold(AggregatedState::default(), |acc, (_, entry)| match entry {
+                    &NodeEntry::Directory(ref dir) => {
+                        acc.merge(dir.aggregated_state.get().expect("should be ready now"))
+                    }
+                    &NodeEntry::File(ref file) => acc.merge(file.state.into()),
                 });
-            self.aggregated_state.set(state);
+            self.aggregated_state.set(Some(state));
         }
-        self.aggregated_state.get().serialize(writer)?;
+        self.aggregated_state.get().unwrap().serialize(writer)?;
         Ok(())
     }
 
     fn load_ext(&self, data: &mut Read) -> Result<()> {
-        self.aggregated_state.set(StateFlags::deserialize(data)?);
+        self.aggregated_state
+            .set(Some(AggregatedState::deserialize(data)?));
         Ok(())
     }
 
-    fn file_add_ext(&self, info: &FileStateV2) -> Result<()> {
-        let aggregated_state = self.aggregated_state.get();
-        self.aggregated_state.set(aggregated_state | info.state);
-        Ok(())
-    }
-
-    fn file_mut_ext(&self) -> Result<()> {
-        // Set aggregated_state to empty so it will be re-calculated on write.
-        self.aggregated_state.set(StateFlags::empty());
-        Ok(())
-    }
-
-    fn calculate_aggregated_state(file: &FileStateV2, aggregated_state: StateFlags) -> StateFlags {
-        aggregated_state | file.state
+    fn get_file_state(file: &FileStateV2) -> StateFlags {
+        file.state
     }
 }
 
@@ -183,7 +201,7 @@ impl<T: Serializable + Clone> Node<T> {
             id: None,
             entries: Some(NodeEntryMap::new()),
             filtered_keys: None,
-            aggregated_state: Cell::new(StateFlags::empty()),
+            aggregated_state: Cell::new(None),
         }
     }
 
@@ -194,19 +212,14 @@ impl<T: Serializable + Clone> Node<T> {
             id: Some(id),
             entries: None,
             filtered_keys: None,
-            aggregated_state: Cell::new(StateFlags::empty()),
+            aggregated_state: Cell::new(None),
         }
     }
 
     /// Return the aggregated file state that is the "bitwise-or" of all subentries,
     /// or `None` if it's not calculated.
-    pub fn get_aggregated_state(&self) -> Option<StateFlags> {
-        let aggregated_state = self.aggregated_state.get();
-        if aggregated_state.is_empty() {
-            None
-        } else {
-            Some(aggregated_state)
-        }
+    pub fn get_aggregated_state(&self) -> Option<AggregatedState> {
+        self.aggregated_state.get()
     }
 
     /// Return if the node is changed in memory and is not written to disk yet.
@@ -311,7 +324,7 @@ where
         visitor: &mut F,
         visit_dir: &VD,
         visit_file: &VF,
-    ) -> Result<StateFlags>
+    ) -> Result<Option<AggregatedState>>
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
         VD: Fn(&Vec<KeyRef>, &Node<T>) -> bool,
@@ -322,7 +335,7 @@ where
         }
 
         // Calculate new aggregated_state - None: cannot be calculated now.
-        let mut aggregated_state = Some(StateFlags::empty());
+        let mut aggregated_state = Some(AggregatedState::default());
 
         let entries: &mut NodeEntryMap<T> = {
             self.load_entries(store)?;
@@ -330,33 +343,28 @@ where
         };
 
         for (name, entry) in entries.iter_mut() {
-            let mut path = path.push(name);
-            match entry {
-                &mut NodeEntry::Directory(ref mut node) => {
-                    let substate = node.visit(store, &mut path, visitor, visit_dir, visit_file)?;
-                    // Propagate aggregated_state from sub-directory.
-                    aggregated_state = if substate.is_empty() || aggregated_state.is_none() {
-                        None
-                    } else {
-                        Some(aggregated_state.unwrap() | substate)
-                    };
-                }
-                &mut NodeEntry::File(ref mut file) => {
-                    if visit_file(path.as_ref(), file) {
-                        visitor(path.as_ref(), file)?;
+            let substate = {
+                let mut path = path.push(name);
+                match entry {
+                    &mut NodeEntry::Directory(ref mut node) => {
+                        node.visit(store, &mut path, visitor, visit_dir, visit_file)?
                     }
-                    // Propagate aggregated_state from file.
-                    if aggregated_state.is_some() {
-                        aggregated_state = Some(Self::calculate_aggregated_state(
-                            file,
-                            aggregated_state.unwrap(),
-                        ));
+                    &mut NodeEntry::File(ref mut file) => {
+                        if visit_file(path.as_ref(), file) {
+                            visitor(path.as_ref(), file)?;
+                        }
+                        Some(Self::get_file_state(file).into())
                     }
                 }
-            }
+            };
+            // Propagate aggregated_state from the sub entry.
+            aggregated_state = match substate {
+                None => None,
+                Some(substate) => aggregated_state.map(|state| state.merge(substate)),
+            };
         }
 
-        let aggregated_state = aggregated_state.unwrap_or(StateFlags::empty());
+        aggregated_state = aggregated_state.map(|v| v.normalized());
         self.aggregated_state.set(aggregated_state);
         Ok(aggregated_state)
     }
@@ -483,7 +491,7 @@ where
         name: KeyRef,
     ) -> Result<Option<&'node mut T>> {
         // Invalidate aggregated_state
-        self.file_mut_ext()?;
+        self.aggregated_state.set(None);
         match self.path_recurse(store, name)? {
             PathRecurse::Directory(_dir, path, node) => node.get_mut(store, path),
             PathRecurse::ExactDirectory(_dir, _node) => Ok(None),
@@ -554,11 +562,8 @@ where
             self.load_entries(store)?.insert(new_key, new_entry);
             self.filtered_keys = None;
         }
-        if file_added {
-            self.file_add_ext(info)?;
-        } else {
-            self.file_mut_ext()?;
-        }
+        // Reset aggregated_state so it needs recalculation.
+        self.aggregated_state.set(None);
         self.id = None;
         Ok(file_added)
     }
@@ -586,7 +591,7 @@ where
             self.id = None;
         }
         if file_removed {
-            self.file_mut_ext()?;
+            self.aggregated_state.set(None);
             self.id = None;
         }
         Ok((file_removed, self.load_entries(store)?.is_empty()))

@@ -326,7 +326,7 @@ mod tests {
             },
             &|_, dir| match dir.get_aggregated_state() {
                 None => true,
-                Some(x) => x.intersects(state_required_any),
+                Some(aggregated_state) => aggregated_state.union.intersects(state_required_any),
             },
             &|_, file| file.state.intersects(state_required_any),
         ).expect("visit");
