@@ -69,7 +69,7 @@ def cure_what_ails_you(
         Eden is not running: cannot perform all checks.
         To start Eden, run:
 
-            eden daemon
+            eden start
 
         """
             )

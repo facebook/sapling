@@ -252,7 +252,7 @@ command palette in Atom.
 Eden is not running: cannot perform all checks.
 To start Eden, run:
 
-    eden daemon
+    eden start
 
 Cannot check if running latest edenfs because the daemon is not running.
 <green>All is well.<reset>
