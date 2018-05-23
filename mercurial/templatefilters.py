@@ -197,6 +197,14 @@ def hgdate(text):
     """
     return "%d %d" % text
 
+@templatefilter('hgprefix')
+def hgprefix(text):
+    """Any text. Returns the text, with every line
+    starting with 'HG: '.
+    """
+    from . import cmdutil  # avoid cycles
+    return cmdutil.hgprefix(text)
+
 @templatefilter('isodate')
 def isodate(text):
     """Date. Returns the date in ISO 8601 format: "2009-08-18 13:00
