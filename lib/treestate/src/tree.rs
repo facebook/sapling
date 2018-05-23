@@ -19,7 +19,7 @@ pub(crate) enum NodeEntry<T> {
 }
 
 /// Filenames are buffers of bytes.  They're not stored in Strings as they may not be UTF-8.
-pub type Key = Vec<u8>;
+pub type Key = Box<[u8]>;
 pub type KeyRef<'a> = &'a [u8];
 
 /// Store the node entries in an ordered map from name to node entry.
@@ -404,7 +404,7 @@ where
             match entry {
                 &mut NodeEntry::Directory(ref mut node) => {
                     // The entry is a directory, check inside it.
-                    if elem != entry_name.as_slice() {
+                    if elem != &entry_name[..] {
                         // This directory is not the one we were initially looking inside.  We
                         // have moved on past that directory, so the rest of the path is no
                         // longer relevant.
@@ -424,7 +424,7 @@ where
                 }
                 &mut NodeEntry::File(ref file) => {
                     // This entry is a file.  Skip over it if it is the original file.
-                    if elem != entry_name.as_slice() {
+                    if elem != &entry_name[..] {
                         return Ok(Some((vec![entry_name], file)));
                     }
                 }
@@ -526,7 +526,10 @@ where
                 // The file is in a new subdirectory.  Create the directory and add the file.
                 let mut node = Node::new();
                 let file_added = node.add(store, path, info)?;
-                (Some((dir.to_vec(), NodeEntry::Directory(node))), file_added)
+                (
+                    Some((dir.to_vec().into_boxed_slice(), NodeEntry::Directory(node))),
+                    file_added,
+                )
             }
             PathRecurse::File(_name, file) => {
                 // The file is in this directory.  Update it.
@@ -535,7 +538,13 @@ where
             }
             PathRecurse::MissingFile(ref name) => {
                 // The file should be in this directory.  Add it.
-                (Some((name.to_vec(), NodeEntry::File(info.clone()))), true)
+                (
+                    Some((
+                        name.to_vec().into_boxed_slice(),
+                        NodeEntry::File(info.clone()),
+                    )),
+                    true,
+                )
             }
             PathRecurse::ConflictingFile(_name, _path, _file) => {
                 panic!("Adding file with path prefix that matches the name of a file.")
@@ -612,7 +621,7 @@ where
                 let entries = self.load_entries(store)?;
                 let mut new_map = VecMap::with_capacity(entries.len());
                 for (k, _v) in entries.iter() {
-                    new_map.insert(filter(k)?, k.to_vec());
+                    new_map.insert(filter(k)?, k.to_vec().into_boxed_slice());
                 }
                 new_map
             };
@@ -841,7 +850,7 @@ where
     pub fn get_first<'a>(&'a mut self, store: &StoreView) -> Result<Option<(Key, &'a T)>> {
         Ok(self.root.get_first(store)?.map(|(mut path, file)| {
             path.reverse();
-            (path.concat(), file)
+            (path.concat().into_boxed_slice(), file)
         }))
     }
 
@@ -852,7 +861,7 @@ where
     ) -> Result<Option<(Key, &'a T)>> {
         Ok(self.root.get_next(store, name)?.map(|(mut path, file)| {
             path.reverse();
-            (path.concat(), file)
+            (path.concat().into_boxed_slice(), file)
         }))
     }
 
@@ -890,7 +899,7 @@ where
             .get_filtered_key(store, name, filter, filter_id)?
             .map(|mut path| {
                 path.reverse();
-                path.concat()
+                path.concat().into_boxed_slice()
             }))
     }
 
@@ -990,7 +999,7 @@ mod tests {
         assert_eq!(
             t.get_first(&ms).expect("can get first"),
             Some((
-                filename.clone(),
+                filename.clone().into_boxed_slice(),
                 &FileState::new(b'n', expected.1, expected.2, expected.3)
             ))
         );
@@ -1000,7 +1009,7 @@ mod tests {
             assert_eq!(
                 actual,
                 Some((
-                    filename.clone(),
+                    filename.clone().into_boxed_slice(),
                     &FileState::new(b'n', expected.1, expected.2, expected.3)
                 ))
             );
@@ -1145,19 +1154,20 @@ mod tests {
         fn map_upper_a(k: KeyRef) -> Result<Key> {
             Ok(k.iter()
                 .map(|c| if *c == b'a' { b'A' } else { *c })
-                .collect())
+                .collect::<Vec<u8>>()
+                .into_boxed_slice())
         }
 
         // Another map function that does nothing.
         fn map_noop(k: KeyRef) -> Result<Key> {
-            Ok(Vec::from(k))
+            Ok(Vec::from(k).into_boxed_slice())
         }
 
         // Look-up with normalized name should give non-normalized version.
         assert_eq!(
             t.get_filtered_key(&ms, b"dirA/subdirA/file1", &mut map_upper_a, 0)
                 .expect("should succeed"),
-            Some(b"dirA/subdira/file1".to_vec())
+            Some(b"dirA/subdira/file1".to_vec().into_boxed_slice())
         );
 
         // Look-up with non-normalized name should match nothing.

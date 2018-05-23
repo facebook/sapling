@@ -365,7 +365,7 @@ py_class!(class treedirstatemap |py| {
                                    .map_err(|e| callback_error(py, e))?
                                    .extract::<PyBytes>(py)
                                    .map_err(|e| callback_error(py, e))?;
-            Ok(folded.data(py).to_vec())
+            Ok(folded.data(py).to_vec().into_boxed_slice())
         };
 
         dirstate

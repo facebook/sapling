@@ -121,7 +121,7 @@ where
                 name.set_len(name_len);
             }
             r.read_exact(name.as_mut_slice())?;
-            Ok((name, NodeEntry::File(data)))
+            Ok((name.into_boxed_slice(), NodeEntry::File(data)))
         }
         b'd' => {
             // Directory entry.
@@ -133,7 +133,10 @@ where
                 name.set_len(name_len);
             }
             r.read_exact(name.as_mut_slice())?;
-            Ok((name, NodeEntry::Directory(Node::open(BlockId(id)))))
+            Ok((
+                name.into_boxed_slice(),
+                NodeEntry::Directory(Node::open(BlockId(id))),
+            ))
         }
         _ => {
             bail!(ErrorKind::CorruptTree);
