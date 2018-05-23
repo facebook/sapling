@@ -1,14 +1,14 @@
 // Copyright Facebook, Inc. 2017
 
 use errors::Result;
-use filestate::FileStateV2;
+use filestate::{FileStateV2, StateFlags};
 use filestore::FileStore;
 use serialization::Serializable;
 use std::io::Cursor;
 use std::ops::Deref;
 use std::path::Path;
 use store::{BlockId, Store, StoreView};
-use tree::Tree;
+use tree::{Tree, VisitFlags};
 
 /// `TreeState` uses a single tree to track an extended state of `TreeDirstate`.
 /// See the comment about `FileStateV2` for the difference.
@@ -107,6 +107,25 @@ impl TreeState {
 
     pub fn has_dir<P: AsRef<[u8]>>(&mut self, path: P) -> Result<bool> {
         self.tree.has_dir(&self.store, path.as_ref())
+    }
+
+    pub fn visit<F>(
+        &mut self,
+        visitor: &mut F,
+        visit_flags: VisitFlags,
+        state_required_all: StateFlags,
+        state_required_any: StateFlags,
+    ) -> Result<()>
+    where
+        F: FnMut(&Vec<&[u8]>, &mut FileStateV2) -> Result<()>,
+    {
+        self.tree.visit_advanced(
+            &self.store,
+            visitor,
+            visit_flags,
+            state_required_all,
+            state_required_any,
+        )
     }
 }
 
@@ -271,5 +290,108 @@ mod tests {
         assert!(!state.has_dir(b"build2/").unwrap());
         assert!(state.has_dir(b"rust/radixbuf/.git/objects/").unwrap());
         assert!(!state.has_dir(b"rust/radixbuf/.git2/objects/").unwrap());
+    }
+
+    fn visit_all(
+        tree: &mut TreeState,
+        state_required_all: StateFlags,
+        state_required_any: StateFlags,
+    ) -> Vec<Vec<u8>> {
+        let mut result = Vec::new();
+        tree.visit(
+            &mut |ref path_components, _| {
+                result.push(path_components.concat());
+                Ok(())
+            },
+            VisitFlags::empty(),
+            state_required_all,
+            state_required_any,
+        ).expect("visit");
+        result
+    }
+
+    #[test]
+    fn test_visit_query_by_flags() {
+        let dir = TempDir::new("treestate").expect("tempdir");
+        let mut state = TreeState::open(dir.path().join("1"), None).expect("open");
+        let mut rng = ChaChaRng::new_unseeded();
+        let mut file: FileStateV2 = rng.gen();
+        file.state = StateFlags::IGNORED | StateFlags::NEED_CHECK;
+        state.insert(b"a/b/1", &file).expect("insert");
+        file.state = StateFlags::IGNORED | StateFlags::EXIST_P2;
+        state.insert(b"a/b/2", &file).expect("insert");
+        file.state = StateFlags::COPIED | StateFlags::EXIST_P2;
+        state.insert(b"a/c/3", &file).expect("insert");
+
+        let files = visit_all(&mut state, StateFlags::IGNORED, StateFlags::empty());
+        assert_eq!(files, vec![b"a/b/1", b"a/b/2"]);
+
+        let files = visit_all(&mut state, StateFlags::empty(), StateFlags::EXIST_P2);
+        assert_eq!(files, vec![b"a/b/2", b"a/c/3"]);
+
+        let flags = StateFlags::COPIED | StateFlags::NEED_CHECK;
+        let files = visit_all(&mut state, StateFlags::empty(), flags);
+        assert_eq!(files, vec![b"a/b/1", b"a/c/3"]);
+
+        let files = visit_all(&mut state, flags, StateFlags::empty());
+        assert!(files.is_empty());
+    }
+
+    #[test]
+    fn test_visit_state_change_propagation() {
+        let paths: [&[u8]; 5] = [b"a/b/1", b"a/b/2", b"a/c/d/3", b"b/5", b"c"];
+
+        // Only care about 1 bit (IGNORED), since other bits will propagate to parent trees in a
+        // same way.
+        //
+        // Enumerate transition from all possible start states to end states. Make sure `visit`
+        // querying that bit would return the expected result.
+        //
+        // 2 states for each file - IGNORED is set, or not set. With 5 files, that's (1 << 5 = 32)
+        // start states, and 32 end states. 32 ** 2 = 1024 transitions to test.
+        let bit = StateFlags::IGNORED;
+        for start_bits in 0..(1 << paths.len()) {
+            let dir = TempDir::new("treestate").expect("tempdir");
+            // First, write the start state.
+            let mut state = TreeState::open(dir.path().join("1"), None).expect("open");
+            let mut rng = ChaChaRng::new_unseeded();
+            for (i, path) in paths.iter().enumerate() {
+                let mut file: FileStateV2 = rng.gen();
+                if ((1 << i) & start_bits) == 0 {
+                    file.state -= bit;
+                } else {
+                    file.state |= bit;
+                }
+                state.insert(path, &file).expect("insert");
+            }
+            let block_id = state.flush().expect("flush");
+
+            // Then test end states.
+            for end_bits in 0..(1 << paths.len()) {
+                let mut state =
+                    TreeState::open(dir.path().join("1"), Some(block_id)).expect("open");
+                let mut i: usize = 0;
+                let mut expected = vec![];
+                state
+                    .visit(
+                        &mut |ref _path, ref mut file| {
+                            if ((1 << i) & end_bits) == 0 {
+                                file.state -= bit;
+                            } else {
+                                file.state |= bit;
+                                expected.push(paths[i]);
+                            }
+                            i += 1;
+                            Ok(())
+                        },
+                        VisitFlags::empty(),
+                        StateFlags::empty(),
+                        StateFlags::empty(),
+                    )
+                    .expect("visit");
+                let files = visit_all(&mut state, StateFlags::empty(), bit);
+                assert_eq!(files, expected);
+            }
+        }
     }
 }
