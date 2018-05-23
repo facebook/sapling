@@ -1021,13 +1021,13 @@ void FuseChannel::processSession() {
         // According to comments in the libfuse code:
         // ENOENT means the operation was interrupted; it's safe to restart
         continue;
-      } else if (res == -ENODEV) {
+      } else if (error == ENODEV) {
         // ENODEV means the filesystem was unmounted
         requestSessionExit(StopReason::UNMOUNTED);
         break;
       } else {
         XLOG(WARNING) << "error reading from fuse channel: "
-                      << folly::errnoStr(-res);
+                      << folly::errnoStr(error);
         requestSessionExit(StopReason::FUSE_READ_ERROR);
         break;
       }
