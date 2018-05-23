@@ -25,15 +25,39 @@ pub fn upload_bookmarks(
     let logger = logger.clone();
     let bookmarks = Arc::new(try_boxfuture!(revlogrepo.get_bookmarks()));
 
-    (*bookmarks).keys().and_then({
+    (*bookmarks).keys().map({
         let bookmarks = bookmarks.clone();
+        let blobrepo = blobrepo.clone();
         move |key| {
+            let blobrepo = blobrepo.clone();
             (*bookmarks).get(&key).and_then(move |v| {
-                let (cs_id, _) = v.ok_or_else(|| format_err!("Bookmark value missing: {:?}", key))?;
-                Ok((key, cs_id))
+                v.ok_or_else(|| format_err!("Bookmark value missing: {:?}", key))
+                    .into_future()
+                    .and_then(move |(cs_id, _)| {
+                        blobrepo.changeset_exists(&DChangesetId::new(cs_id.into_nodehash().into_mononoke()))
+                            .map(move |exists| (key, cs_id, exists))
+                    })
             })
         }
-    }).chunks(100) // send 100 bookmarks in a single transaction
+    })
+    .buffer_unordered(100)
+    .filter_map({
+        let logger = logger.clone();
+        move |(key, cs_id, exists)| {
+            if exists {
+                Some((key, cs_id))
+            } else {
+                info!(
+                    logger,
+                    "did not update bookmark {:?}, because cs {:?} was not imported yet",
+                    key,
+                    cs_id,
+                );
+                None
+           }
+        }
+    })
+    .chunks(100) // send 100 bookmarks in a single transaction
     .and_then({
         let blobrepo = blobrepo.clone();
         move |vec| {
