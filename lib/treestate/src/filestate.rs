@@ -32,25 +32,44 @@ impl FileState {
 }
 
 bitflags! {
-    /// Bit flags for a file "state". Certain flags can be used together,
-    /// ex. COPIED | ADDED.
+    /// Bit flags for a file "state". Certain flags can be used together.
+    ///
+    /// Mapping to some Mercurial's concepts:
+    ///
+    /// |           | EXIST_P1 | EXIST_P2 | EXIST_NEXT | IGNORED |
+    /// | added     | no       | no       | yes        | ?       |
+    /// | merge     | yes      | yes      | yes        | ?       |
+    /// | normal    | yes      | no       | yes        | ?       |
+    /// | normal    | no       | yes      | yes        | ?       |
+    /// | removed   | either one is yes   | no         | ?       |
+    /// | untracked | no       | no       | no         | no      |
+    /// | ignored   | no       | no       | no         | yes     |
     pub struct StateFlags: u16 {
-        const ADDED = 1;
-        const NORMAL = 2;
-        const MERGED = 4;
-        const REMOVED = 8;
+        /// Exist in the first working parent.
+        const EXIST_P1 = 1;
 
-        /// Explicitly marked as ignored. This means sub-entries with interesting
-        /// states (ex. "maybe_changed") are missing from the tree. If the state
-        /// changes from "ignored" to not ignored. It requires a plain scan.
-        const IGNORED = 16;
+        /// Exist in a non-first working parent.
+        const EXIST_P2 = 2;
 
-        /// Requires a stat check to figure out the state of the file. Use together
-        /// with other flag bits.
-        const NEED_CHECK = 32;
+        /// Will exist in the next commit.
+        const EXIST_NEXT = 4;
 
-        const COPIED = 64;
-        const OTHERPARENT = 128;
+        /// Explicitly marked as ignored.
+        const IGNORED = 8;
+
+        /// Known possibly changed. Need stat check.
+        ///
+        /// For non-watchman case, this is a quick way to get all mtime < 0 entries. aka. for
+        /// calculating non-normal set quickly.
+        ///
+        /// For watchman case, this also includes untracked files and normal files with mtime >= 0,
+        /// that are known changed during the last watchman check. Combined with a new watchman
+        /// query since the recorded watchman clock, the caller can figure out all files that are
+        /// possibly changed, and ignore files outside that list.
+        const NEED_CHECK = 16;
+
+        /// Marked as copied from another path.
+        const COPIED = 32;
     }
 }
 
