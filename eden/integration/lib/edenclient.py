@@ -361,11 +361,11 @@ class EdenFS(object):
             params.append("--allow-empty-repo")
         self.run_cmd(*params)
 
-    def unmount(self, path: str) -> None:
+    def remove(self, path: str) -> None:
         """
-        Run "eden unmount --destroy <path>"
+        Run "eden remove <path>"
         """
-        self.run_cmd("unmount", "--destroy", path)
+        self.run_cmd("remove", "--yes", path)
 
     def in_proc_mounts(self, mount_path: str) -> bool:
         """Gets all eden mounts found in /proc/mounts, and returns

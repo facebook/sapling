@@ -67,7 +67,7 @@ class CloneTest(testcase.EdenRepoTest):
                 empty_dir, active_mount_points, msg="mounted using the realpath"
             )
 
-        self.eden.run_cmd("unmount", "--destroy", symlinked_target)
+        self.eden.run_cmd("remove", "--yes", symlinked_target)
 
     def test_clone_to_existing_empty_directory(self) -> None:
         tmp = self._new_tmp_dir()

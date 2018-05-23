@@ -27,9 +27,9 @@ class RCTest(testcase.EdenRepoTest):
         mounts = self.eden.list_cmd()
         self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts)
 
-        self.eden.unmount(self.mount)
+        self.eden.remove(self.mount)
         mounts = self.eden.list_cmd()
-        self.assertEqual({}, mounts, msg="There should be 0 mount paths after unmount")
+        self.assertEqual({}, mounts, msg="There should be 0 mount paths after remove")
 
         self.eden.clone(self.repo_name, self.mount)
         mounts = self.eden.list_cmd()
@@ -45,10 +45,10 @@ class RCTest(testcase.EdenRepoTest):
         mounts = self.eden.list_cmd()
         self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts)
 
-        self.eden.unmount(self.mount)
+        self.eden.remove(self.mount)
         self.assertFalse(os.path.isdir(test_client_dir))
 
-        # Check that _remove_path_from_directory_map in unmount is successful
+        # Check that _remove_path_from_directory_map in remove is successful
         mounts = self.eden.list_cmd()
         self.assertEqual({}, mounts, msg="There should be 0 paths in the directory map")
 

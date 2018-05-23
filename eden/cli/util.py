@@ -39,6 +39,15 @@ class ShutdownError(Exception):
     pass
 
 
+class NotAnEdenMountError(Exception):
+
+    def __init__(self, path: str) -> None:
+        self.path = path
+
+    def __str__(self) -> str:
+        return f"{self.path} does not appear to be inside an Eden checkout"
+
+
 class HealthStatus(object):
 
     def __init__(self, status: int, pid: Optional[int], detail: str) -> None:
@@ -423,3 +432,19 @@ def read_all(path: str) -> str:
     """One-liner to read the contents of a file and properly close the fd."""
     with open(path, "r") as f:
         return f.read()
+
+
+def get_eden_mount_name(path_arg: str) -> str:
+    """
+    Get the path to the Eden checkout containing the specified path
+    """
+    path = os.path.join(path_arg, ".eden", "root")
+    try:
+        return os.readlink(path)
+    except OSError as ex:
+        if ex.errno == errno.ENOTDIR:
+            path = os.path.join(os.path.dirname(path_arg), ".eden", "root")
+            return os.readlink(path)
+        elif ex.errno == errno.ENOENT:
+            raise NotAnEdenMountError(path_arg)
+        raise

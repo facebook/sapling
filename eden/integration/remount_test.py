@@ -85,7 +85,7 @@ class RemountTest(testcase.EdenRepoTest):
             self.eden.clone(self.repo_name, self.mount + "-" + str(i))
 
         # Unmount a client
-        self.eden.unmount(self.mount)
+        self.eden.remove(self.mount)
         self.assertFalse(os.path.exists(self.mount))
 
         self.eden.shutdown()
@@ -108,8 +108,8 @@ class RemountTest(testcase.EdenRepoTest):
         self.eden.start()
 
         # Unmount clients
-        self.eden.unmount(self.mount)
-        self.eden.unmount(self.mount + "-3")
+        self.eden.remove(self.mount)
+        self.eden.remove(self.mount + "-3")
 
         self.eden.shutdown()
         self.eden.start()

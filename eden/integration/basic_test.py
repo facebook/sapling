@@ -216,13 +216,17 @@ class BasicTest(testcase.EdenRepoTest):
             msg="attempting to run noexec.sh should fail with " "EACCES",
         )
 
+    def test_remove_invalid_paths(self) -> None:
+        self.eden.run_unchecked("remove", "/tmp")
+        self.eden.run_unchecked("remove", "/root")
+
     def test_unmount(self) -> None:
         entries = set(os.listdir(self.mount))
         self.assertEqual(self.expected_mount_entries, entries)
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
-        self.eden.unmount(self.mount)
+        self.eden.remove(self.mount)
 
         self.assertFalse(self.eden.in_proc_mounts(self.mount))
         self.assertFalse(os.path.exists(self.mount))

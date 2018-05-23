@@ -12,12 +12,14 @@ import errno
 import glob
 import json
 import os
+import readline  # noqa: F401 Importing readline improves the behavior of input()
 import signal
 import subprocess
 import sys
 import typing
 from typing import Any, List, Optional, Set, Tuple
 
+import eden.thrift
 from eden.thrift import EdenNotRunningError
 from facebook.eden import EdenService
 
@@ -71,7 +73,7 @@ def do_version(args: argparse.Namespace) -> int:
         print("Running:   %s" % rv)
         if rv.startswith("-") or rv.endswith("-"):
             print("(Dev version of eden seems to be running)")
-    except eden.thrift.client.EdenNotRunningError:
+    except EdenNotRunningError:
         print("Running:   Unknown (edenfs does not appear to be running)")
     return 0
 
@@ -445,6 +447,66 @@ class MountCmd(Subcmd):
         return 0
 
 
+@subcmd("remove", "Remove an eden checkout", aliases=["rm"])
+class RemoveCmd(Subcmd):
+
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "-y",
+            "--yes",
+            "--no-prompt",
+            dest="prompt",
+            default=True,
+            action="store_false",
+            help="Do not prompt for confirmation before removing the checkouts.",
+        )
+        parser.add_argument(
+            "paths", nargs="+", metavar="path", help="The Eden checkout(s) to remove"
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        config = create_config(args)
+
+        # First translate the list of paths into mount point names
+        mounts = []
+        for path in args.paths:
+            try:
+                mount_path = util.get_eden_mount_name(path)
+            except util.NotAnEdenMountError as ex:
+                print(f"error: {ex}")
+                return 1
+            except Exception as ex:
+                print(f"error: cannot determine moint point for {path}: {ex}")
+                return 1
+            mounts.append(mount_path)
+
+        # Warn the user since this operation permanently destroys data
+        if args.prompt and sys.stdin.isatty():
+            mounts_list = "\n  ".join(mounts)
+            print(
+                f"""\
+Warning: this operation will permanently delete the following checkouts:
+  {mounts_list}
+
+Any uncommitted changes and shelves in this checkout will be lost forever."""
+            )
+            if not prompt_confirmation("Proceed?"):
+                print("Not confirmed")
+                return 2
+
+        # Unmount + destroy everything
+        for mount in mounts:
+            print(f"Removing {mount}...")
+            try:
+                config.unmount(mount, delete_config=True)
+            except EdenService.EdenError as ex:
+                print_stderr("error: {}", ex)
+                return 1
+
+        print(f"Success")
+        return 0
+
+
 @subcmd("unmount", "Unmount a specific checkout")
 class UnmountCmd(Subcmd):
 
@@ -527,7 +589,7 @@ class StartCmd(Subcmd):
         )
 
 
-def stop_aux_processes(client) -> None:
+def stop_aux_processes(client: eden.thrift.EdenClient) -> None:
     """Tear down processes that will hold onto file handles and prevent shutdown"""
 
     active_mount_points: Set[Optional[str]] = {
@@ -738,16 +800,16 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
-    parser = create_parser()
-    args = parser.parse_args()
-    if args.version:
-        return do_version(args)
-    if getattr(args, "func", None) is None:
-        parser.print_help()
-        return 0
-    return_code: int = args.func(args)
-    return return_code
+def prompt_confirmation(prompt: str) -> bool:
+    prompt_str = f"{prompt} [y/N] "
+    while True:
+        response = input(prompt_str)
+        value = response.lower()
+        if value in ("y", "yes"):
+            return True
+        if value in ("", "n", "no"):
+            return False
+        print('Please enter "yes" or "no"')
 
 
 def normalize_path_arg(path_arg: str, may_need_tilde_expansion: bool = False) -> str:
@@ -764,6 +826,18 @@ def normalize_path_arg(path_arg: str, may_need_tilde_expansion: bool = False) ->
         # Use the canonical version of the path.
         path_arg = os.path.realpath(path_arg)
     return path_arg
+
+
+def main() -> int:
+    parser = create_parser()
+    args = parser.parse_args()
+    if args.version:
+        return do_version(args)
+    if getattr(args, "func", None) is None:
+        parser.print_help()
+        return 0
+    return_code: int = args.func(args)
+    return return_code
 
 
 if __name__ == "__main__":
