@@ -73,6 +73,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<JournalPosition> fromPosition) override;
 
+  void debugGetRawJournal(
+      DebugGetRawJournalResponse& out,
+      std::unique_ptr<DebugGetRawJournalParams> params) override;
+
   void getFileInformation(
       std::vector<FileInformationOrError>& out,
       std::unique_ptr<std::string> mountPoint,

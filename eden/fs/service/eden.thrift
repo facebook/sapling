@@ -111,6 +111,16 @@ struct FileDelta {
   6: list<string> uncleanPaths
 }
 
+struct DebugGetRawJournalParams {
+  1: string mountPoint
+  2: JournalPosition fromPosition
+  3: JournalPosition toPosition
+}
+
+struct DebugGetRawJournalResponse {
+  1: list<FileDelta> deltas
+}
+
 /**
  * Classifies the change of the state of a file between and old and new state
  * of the repository. Most commonly, the "old state" is the parent commit while
@@ -427,6 +437,16 @@ service EdenService extends fb303.FacebookService {
     1: string mountPoint,
     2: JournalPosition fromPosition)
       throws (1: EdenError ex)
+
+  /**
+   * Returns the journal entries for the specified params. Useful for auditing
+   * the changes that Eden has sent to Watchman. Note that the most recent
+   * journal entries will be at the front of the list in
+   * DebugGetRawJournalResponse.
+   */
+  DebugGetRawJournalResponse debugGetRawJournal(
+    1: DebugGetRawJournalParams params,
+  ) throws (1: EdenError ex)
 
   /** Returns a subset of the stat() information for a list of paths.
    * The returned list of information corresponds to the input list of

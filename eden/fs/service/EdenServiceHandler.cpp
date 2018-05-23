@@ -9,6 +9,7 @@
  */
 #include "EdenServiceHandler.h"
 #include <folly/Conv.h>
+#include <folly/CppAttributes.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/chrono/Conv.h>
@@ -395,6 +396,99 @@ void EdenServiceHandler::getFilesChangedSince(
     }
   }
 }
+
+namespace {
+/**
+ * Starting from the provided delta, walks the chain backwards until it finds
+ * the delta whose [fromSequence, toSequence] range includes `target`.
+ */
+const JournalDelta* FOLLY_NULLABLE
+findJournalDelta(const JournalDelta* delta, Journal::SequenceNumber target) {
+  // If the tip of the delta chain precedes the target, then do not bother to
+  // search.
+  if (delta == nullptr || delta->toSequence < target) {
+    return nullptr;
+  }
+
+  while (delta) {
+    if (delta->fromSequence <= target && target <= delta->toSequence) {
+      return delta;
+    }
+    delta = delta->previous.get();
+  }
+  return nullptr;
+}
+} // namespace
+
+void EdenServiceHandler::debugGetRawJournal(
+    DebugGetRawJournalResponse& out,
+    std::unique_ptr<DebugGetRawJournalParams> params) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, params->mountPoint);
+  auto edenMount = server_->getMount(params->mountPoint);
+
+  auto mountGeneration = params->fromPosition.mountGeneration;
+  if (mountGeneration != edenMount->getMountGeneration()) {
+    throw newEdenError(
+        ERANGE,
+        "fromPosition.mountGeneration does not match the current "
+        "mountGeneration.  "
+        "You need to compute a new basis for delta queries.");
+  }
+
+  auto journal = edenMount->getJournal();
+  auto latest = journal.getLatest();
+
+  // Walk the journal until we find toPosition.
+  auto toPos =
+      findJournalDelta(latest.get(), params->toPosition.sequenceNumber);
+  if (toPos == nullptr) {
+    throw newEdenError(
+        "no JournalDelta found for toPosition.sequenceNumber ",
+        params->toPosition.sequenceNumber);
+  }
+
+  // Walk the journal until we find a JournalDelta that preceeds fromPosition,
+  // or the beginning of the chain, whichever comes first.
+  auto current = toPos;
+  auto fromPos = params->fromPosition.sequenceNumber;
+  while (current) {
+    if (current->toSequence < fromPos) {
+      break;
+    }
+
+    FileDelta delta;
+    JournalPosition fromPosition;
+    fromPosition.set_mountGeneration(mountGeneration);
+    fromPosition.set_sequenceNumber(current->fromSequence);
+    fromPosition.set_snapshotHash(thriftHash(current->fromHash));
+    delta.set_fromPosition(fromPosition);
+
+    JournalPosition toPosition;
+    toPosition.set_mountGeneration(mountGeneration);
+    toPosition.set_sequenceNumber(current->toSequence);
+    toPosition.set_snapshotHash(thriftHash(current->toHash));
+    delta.set_toPosition(toPosition);
+
+    for (auto& path : current->changedFilesInOverlay) {
+      delta.changedPaths.emplace_back(path.stringPiece().str());
+    }
+
+    for (auto& path : current->createdFilesInOverlay) {
+      delta.createdPaths.emplace_back(path.stringPiece().str());
+    }
+
+    for (auto& path : current->removedFilesInOverlay) {
+      delta.removedPaths.emplace_back(path.stringPiece().str());
+    }
+
+    for (auto& path : current->uncleanPaths) {
+      delta.uncleanPaths.emplace_back(path.stringPiece().str());
+    }
+
+    out.deltas.push_back(delta);
+    current = current->previous.get();
+  }
+};
 
 void EdenServiceHandler::getFileInformation(
     std::vector<FileInformationOrError>& out,

@@ -11,14 +11,22 @@ import argparse
 import binascii
 import collections
 import os
+import re
 import shlex
 import stat
 import sys
-from typing import IO, Any, Dict, List, Optional, Tuple
+from typing import IO, Any, Dict, Iterator, List, Optional, Pattern, Tuple
 
 import eden.dirstate
 from facebook.eden.overlay.ttypes import OverlayDir
-from facebook.eden.ttypes import NoValueForKeyError, TimeSpec, TreeInodeDebugInfo
+from facebook.eden.ttypes import (
+    DebugGetRawJournalParams,
+    FileDelta,
+    JournalPosition,
+    NoValueForKeyError,
+    TimeSpec,
+    TreeInodeDebugInfo,
+)
 
 from . import cmd_util, config as config_mod, subcmd as subcmd_mod, util
 from .stdout_printer import StdoutPrinter
@@ -742,6 +750,103 @@ class SetLogLevelCmd(Subcmd):
                 )
 
         return 0
+
+
+@debug_cmd("journal", "Prints the most recent N entries from the journal")
+class DebugLevelCmd(Subcmd):
+
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "-n",
+            "--limit",
+            type=int,
+            default=1000,
+            help="The number of journal entries to print.",
+        )
+        parser.add_argument(
+            "-e",
+            "--pattern",
+            type=str,
+            help="Show only deltas for paths matching this pattern. "
+            "Specify '^((?!^\\.hg/).)*$' to exclude the .hg/ directory.",
+        )
+        parser.add_argument(
+            "-i",
+            "--ignore-case",
+            action="store_true",
+            default=False,
+            help="Ignore case in the pattern specified by --pattern.",
+        )
+        parser.add_argument(
+            "path",
+            nargs="?",
+            help="The path to an Eden mount point. Uses `pwd` by default.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        config = cmd_util.create_config(args)
+        mount, _ = get_mount_path(args.path or os.getcwd())
+
+        with config.get_thrift_client() as client:
+            to_position = client.getCurrentJournalPosition(mount)
+            from_sequence = max(to_position.sequenceNumber - args.limit, 0)
+            from_position = JournalPosition(
+                mountGeneration=to_position.mountGeneration,
+                sequenceNumber=from_sequence,
+                snapshotHash="",
+            )
+
+            params = DebugGetRawJournalParams(
+                mountPoint=mount, fromPosition=from_position, toPosition=to_position
+            )
+            raw_journal = client.debugGetRawJournal(params)
+            if args.pattern:
+                flags = re.IGNORECASE if args.ignore_case else 0
+                pattern = re.compile(args.pattern, flags)
+            else:
+                pattern = None
+            # debugGetRawJournal() returns the most recent entries first, but
+            # we want to display the oldest entries first, so we pass a reversed
+            # iterator along.
+            print_raw_journal_deltas(reversed(raw_journal.deltas), pattern)
+
+        return 0
+
+
+def print_raw_journal_deltas(
+    deltas: Iterator[FileDelta], pattern: Optional[Pattern]
+) -> None:
+    matcher = (lambda x: True) if pattern is None else pattern.match
+    for delta in deltas:
+        # Note that filter() returns an Iterator not a List.
+        changed_paths = filter(matcher, delta.changedPaths)
+        created_paths = filter(matcher, delta.createdPaths)
+        removed_paths = filter(matcher, delta.removedPaths)
+        unclean_paths = filter(matcher, delta.uncleanPaths)
+
+        # Because we have Iterators, iterate everything and see whether entries
+        # is non-empty before writing to stdout.
+        entries = ""
+        for label, paths in [
+            ("M", changed_paths),
+            ("A", created_paths),
+            ("R", removed_paths),
+            ("X", unclean_paths),
+        ]:
+            for path in paths:
+                entries += f"{label} {path}\n"
+
+        if not entries:
+            continue
+
+        if delta.fromPosition.sequenceNumber != delta.toPosition.sequenceNumber:
+            print(
+                f"MERGE {delta.fromPosition.sequenceNumber}-"
+                f"{delta.toPosition.sequenceNumber}"
+            )
+        else:
+            print(f"DELTA {delta.fromPosition.sequenceNumber}")
+        print(entries, end="")  # entries already contains a trailing newline.
 
 
 # We intentionally do not specify a help option for debug, so it
