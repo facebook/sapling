@@ -40,7 +40,7 @@ pub struct Node<T> {
     /// Aggregated state flags. This is useful for quickly test whether there is a file matching
     /// given state or not in this tree (recursively). An empty value means it cannot be trusted
     /// (ex. not computed yet - due to old file format or operations like "remove").
-    pub(crate) aggregated_state: Cell<StateFlags>,
+    aggregated_state: Cell<StateFlags>,
 
     /// A map from keys that have been filtered through a case-folding filter function to the
     /// original key.  This is used for case-folded look-ups.  Filtered values are cached, so
@@ -103,10 +103,6 @@ pub trait CompatExt<T> {
     /// Update extra fields when file state is changed. Extends `remove` and `get_mut`.
     fn file_mut_ext(&self) -> Result<()>;
 
-    /// Match file state. Return true if the file state contains all `required_all` bits, and
-    /// at least one of `required_any` bits if `required_any` is not empty.
-    fn file_state_match(file: &T, required_all: StateFlags, required_any: StateFlags) -> bool;
-
     /// Update aggregated_state given a changed file state
     fn calculate_aggregated_state(_file: &T, _aggregated_state: StateFlags) -> StateFlags {
         StateFlags::empty()
@@ -128,13 +124,6 @@ impl CompatExt<FileState> for Node<FileState> {
 
     fn file_mut_ext(&self) -> Result<()> {
         Ok(())
-    }
-
-    fn file_state_match(_: &FileState, required_all: StateFlags, required_any: StateFlags) -> bool {
-        if !required_all.is_empty() && !required_any.is_empty() {
-            panic!("FileState does not support filtering by StateFlags")
-        }
-        true
     }
 }
 
@@ -173,23 +162,8 @@ impl CompatExt<FileStateV2> for Node<FileStateV2> {
         Ok(())
     }
 
-    fn file_state_match(
-        f: &FileStateV2,
-        required_all: StateFlags,
-        required_any: StateFlags,
-    ) -> bool {
-        f.state.contains(required_all)
-            && (required_any.is_empty() || f.state.intersects(required_any))
-    }
-
     fn calculate_aggregated_state(file: &FileStateV2, aggregated_state: StateFlags) -> StateFlags {
         aggregated_state | file.state
-    }
-}
-
-bitflags! {
-    pub struct VisitFlags: u8 {
-        const CHANGED_ONLY = 1;
     }
 }
 
@@ -213,6 +187,22 @@ impl<T: Serializable + Clone> Node<T> {
             filtered_keys: None,
             aggregated_state: Cell::new(StateFlags::empty()),
         }
+    }
+
+    /// Return the aggregated file state that is the "bitwise-or" of all subentries,
+    /// or `None` if it's not calculated.
+    pub fn get_aggregated_state(&self) -> Option<StateFlags> {
+        let aggregated_state = self.aggregated_state.get();
+        if aggregated_state.is_empty() {
+            None
+        } else {
+            Some(aggregated_state)
+        }
+    }
+
+    /// Return if the node is changed in memory and is not written to disk yet.
+    pub fn is_changed(&self) -> bool {
+        self.id.is_none()
     }
 }
 
@@ -299,37 +289,27 @@ where
     }
 
     // Visit all of the files in under this node, by calling the visitor function on each one.
-    // If `visit_flags` contains `CHANGED_ONLY`, unchanged nodes won't be visited.
-    // `state_required_all` and `state_required_any` filters file state - must contain all bits
-    // from `state_required_all`, and one bit from `state_required_any` (if non-empty).
+    //
+    // `visit_dir` will be called to test if a directory is worth visiting or not.
+    // `visit_file` will be called to test if a file is worth visiting or not.
     //
     // Return updated `aggregated_state` for this node, which is then used internally to update
     // parent `aggregated_state`s.
-    fn visit<'a, F>(
+    fn visit<'a, F, VD, VF>(
         &'a mut self,
         store: &StoreView,
         path: &mut VecStack<'a, [u8]>,
         visitor: &mut F,
-        visit_flags: VisitFlags,
-        state_required_all: StateFlags,
-        state_required_any: StateFlags,
+        visit_dir: &VD,
+        visit_file: &VF,
     ) -> Result<StateFlags>
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+        VD: Fn(&Vec<KeyRef>, &Node<T>) -> bool,
+        VF: Fn(&Vec<KeyRef>, &T) -> bool,
     {
-        if visit_flags.contains(VisitFlags::CHANGED_ONLY) && self.id.is_some() {
+        if !visit_dir(path.as_ref(), self) {
             return Ok(self.aggregated_state.get());
-        }
-
-        // Do not trust empty aggregated_state. Only do filtering if it's non-empty.
-        let aggregated_state = self.aggregated_state.get();
-        if !aggregated_state.is_empty() {
-            if !aggregated_state.contains(state_required_all) {
-                return Ok(self.aggregated_state.get());
-            }
-            if !state_required_any.is_empty() && !aggregated_state.intersects(state_required_any) {
-                return Ok(self.aggregated_state.get());
-            }
         }
 
         // Calculate new aggregated_state - None: cannot be calculated now.
@@ -344,14 +324,7 @@ where
             let mut path = path.push(name);
             match entry {
                 &mut NodeEntry::Directory(ref mut node) => {
-                    let substate = node.visit(
-                        store,
-                        &mut path,
-                        visitor,
-                        visit_flags,
-                        state_required_all,
-                        state_required_any,
-                    )?;
+                    let substate = node.visit(store, &mut path, visitor, visit_dir, visit_file)?;
                     // Propagate aggregated_state from sub-directory.
                     aggregated_state = if substate.is_empty() || aggregated_state.is_none() {
                         None
@@ -360,7 +333,7 @@ where
                     };
                 }
                 &mut NodeEntry::File(ref mut file) => {
-                    if Self::file_state_match(file, state_required_all, state_required_any) {
+                    if visit_file(path.as_ref(), file) {
                         visitor(path.as_ref(), file)?;
                     }
                     // Propagate aggregated_state from file.
@@ -738,9 +711,8 @@ where
                                 store,
                                 &mut path,
                                 &mut visit_adapter,
-                                VisitFlags::empty(),
-                                StateFlags::empty(),
-                                StateFlags::empty(),
+                                &|_, _| true,
+                                &|_, _| true,
                             )?;
                         } else {
                             // The entry is a directory, and the caller has asked for matching
@@ -818,27 +790,22 @@ where
         Ok(self.root.get_mut(store, name)?)
     }
 
-    pub fn visit_advanced<F>(
+    pub fn visit_advanced<F, VD, VF>(
         &mut self,
         store: &StoreView,
         visitor: &mut F,
-        visit_flags: VisitFlags,
-        state_required_all: StateFlags,
-        state_required_any: StateFlags,
+        visit_dir: &VD,
+        visit_file: &VF,
     ) -> Result<()>
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+        VD: Fn(&Vec<KeyRef>, &Node<T>) -> bool,
+        VF: Fn(&Vec<KeyRef>, &T) -> bool,
     {
         let mut path = Vec::new();
         let mut path = VecStack::new(&mut path);
-        self.root.visit(
-            store,
-            &mut path,
-            visitor,
-            visit_flags,
-            state_required_all,
-            state_required_any,
-        )?;
+        self.root
+            .visit(store, &mut path, visitor, visit_dir, visit_file)?;
         Ok(())
     }
 
@@ -846,13 +813,7 @@ where
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
-        self.visit_advanced(
-            store,
-            visitor,
-            VisitFlags::empty(),
-            StateFlags::empty(),
-            StateFlags::empty(),
-        )
+        self.visit_advanced(store, visitor, &|_, _| true, &|_, _| true)
     }
 
     pub fn visit_changed<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
@@ -862,9 +823,8 @@ where
         self.visit_advanced(
             store,
             visitor,
-            VisitFlags::CHANGED_ONLY,
-            StateFlags::empty(),
-            StateFlags::empty(),
+            &|_, dir: &Node<T>| dir.is_changed(),
+            &|_, _| true,
         )
     }
 

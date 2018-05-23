@@ -1,14 +1,14 @@
 // Copyright Facebook, Inc. 2017
 
 use errors::Result;
-use filestate::{FileStateV2, StateFlags};
+use filestate::FileStateV2;
 use filestore::FileStore;
 use serialization::Serializable;
 use std::io::Cursor;
 use std::ops::Deref;
 use std::path::Path;
 use store::{BlockId, Store, StoreView};
-use tree::{Tree, VisitFlags};
+use tree::{KeyRef, Node, Tree};
 
 /// `TreeState` uses a single tree to track an extended state of `TreeDirstate`.
 /// See the comment about `FileStateV2` for the difference.
@@ -109,29 +109,26 @@ impl TreeState {
         self.tree.has_dir(&self.store, path.as_ref())
     }
 
-    pub fn visit<F>(
+    pub fn visit<F, VD, VF>(
         &mut self,
         visitor: &mut F,
-        visit_flags: VisitFlags,
-        state_required_all: StateFlags,
-        state_required_any: StateFlags,
+        visit_dir: &VD,
+        visit_file: &VF,
     ) -> Result<()>
     where
         F: FnMut(&Vec<&[u8]>, &mut FileStateV2) -> Result<()>,
+        VD: Fn(&Vec<KeyRef>, &Node<FileStateV2>) -> bool,
+        VF: Fn(&Vec<KeyRef>, &FileStateV2) -> bool,
     {
-        self.tree.visit_advanced(
-            &self.store,
-            visitor,
-            visit_flags,
-            state_required_all,
-            state_required_any,
-        )
+        self.tree
+            .visit_advanced(&self.store, visitor, visit_dir, visit_file)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use filestate::StateFlags;
     use rand::{ChaChaRng, Rng};
     use tempdir::TempDir;
 
@@ -292,20 +289,18 @@ mod tests {
         assert!(!state.has_dir(b"rust/radixbuf/.git2/objects/").unwrap());
     }
 
-    fn visit_all(
-        tree: &mut TreeState,
-        state_required_all: StateFlags,
-        state_required_any: StateFlags,
-    ) -> Vec<Vec<u8>> {
+    fn visit_all(tree: &mut TreeState, state_required_any: StateFlags) -> Vec<Vec<u8>> {
         let mut result = Vec::new();
         tree.visit(
             &mut |ref path_components, _| {
                 result.push(path_components.concat());
                 Ok(())
             },
-            VisitFlags::empty(),
-            state_required_all,
-            state_required_any,
+            &|_, dir| match dir.get_aggregated_state() {
+                None => true,
+                Some(x) => x.intersects(state_required_any),
+            },
+            &|_, file| file.state.intersects(state_required_any),
         ).expect("visit");
         result
     }
@@ -323,18 +318,11 @@ mod tests {
         file.state = StateFlags::COPIED | StateFlags::EXIST_P2;
         state.insert(b"a/c/3", &file).expect("insert");
 
-        let files = visit_all(&mut state, StateFlags::IGNORED, StateFlags::empty());
+        let files = visit_all(&mut state, StateFlags::IGNORED);
         assert_eq!(files, vec![b"a/b/1", b"a/b/2"]);
 
-        let files = visit_all(&mut state, StateFlags::empty(), StateFlags::EXIST_P2);
+        let files = visit_all(&mut state, StateFlags::EXIST_P2);
         assert_eq!(files, vec![b"a/b/2", b"a/c/3"]);
-
-        let flags = StateFlags::COPIED | StateFlags::NEED_CHECK;
-        let files = visit_all(&mut state, StateFlags::empty(), flags);
-        assert_eq!(files, vec![b"a/b/1", b"a/c/3"]);
-
-        let files = visit_all(&mut state, flags, StateFlags::empty());
-        assert!(files.is_empty());
     }
 
     #[test]
@@ -384,12 +372,11 @@ mod tests {
                             i += 1;
                             Ok(())
                         },
-                        VisitFlags::empty(),
-                        StateFlags::empty(),
-                        StateFlags::empty(),
+                        &|_, _| true,
+                        &|_, _| true,
                     )
                     .expect("visit");
-                let files = visit_all(&mut state, StateFlags::empty(), bit);
+                let files = visit_all(&mut state, bit);
                 assert_eq!(files, expected);
             }
         }
