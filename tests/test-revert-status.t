@@ -34,12 +34,13 @@ mtime to make it unchanged.
   $ hg revert -r $A A
   $ touch -t 200001010000 A
 
-BUG: dirstate mtime for "A" should probably be "unset"
+dirstate mtime for "A" is changed to "unset"
 
   $ hg debugdirstate
-  n 644          1 2000-01-01 00:00:00 A
+  n   0         -1 unset               A
   n 644          1 2000-01-01 00:00:00 B
 
-BUG: due to the bug above, status cannot detect "A" is modified.
+status can detect "A" is modified
 
   $ hg status
+  M A

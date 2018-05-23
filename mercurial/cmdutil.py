@@ -3802,15 +3802,16 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
         audit_path(f)
         repo.dirstate.remove(f)
 
-    normal = None
-    if node == parent:
+    # By default, use "normallookup" so the file is marked as
+    # "need content check" for the next "status" run. The only fast path is
+    # when reverting to the non-merge working parent, where the file can be
+    # marked as clean.
+    normal = repo.dirstate.normallookup
+    if node == parent and p2 == nullid:
         # We're reverting to our parent. If possible, we'd like status
         # to report the file as clean. We have to use normallookup for
         # merges to avoid losing information about merged/dirty files.
-        if p2 != nullid:
-            normal = repo.dirstate.normallookup
-        else:
-            normal = repo.dirstate.normal
+        normal = repo.dirstate.normal
 
     newlyaddedandmodifiedfiles = set()
     if interactive:
@@ -3866,8 +3867,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
     else:
         for f in actions['revert'][0]:
             checkout(f)
-            if normal:
-                normal(f)
+            normal(f)
 
     for f in actions['add'][0]:
         # Don't checkout modified files, they are already created by the diff
@@ -3875,9 +3875,6 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
             checkout(f)
             repo.dirstate.add(f)
 
-    normal = repo.dirstate.normallookup
-    if node == parent and p2 == nullid:
-        normal = repo.dirstate.normal
     for f in actions['undelete'][0]:
         checkout(f)
         normal(f)
