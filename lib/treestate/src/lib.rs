@@ -40,5 +40,6 @@ pub mod tree;
 pub mod treedirstate;
 pub mod treestate;
 pub mod vecmap;
+pub mod vecstack;
 
 pub use errors::*;
