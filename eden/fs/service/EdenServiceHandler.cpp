@@ -351,7 +351,7 @@ void EdenServiceHandler::getFilesChangedSince(
     FileDelta& out,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<JournalPosition> fromPosition) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
   auto delta = edenMount->getJournal().getLatest();
 
