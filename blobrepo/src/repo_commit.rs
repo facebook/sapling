@@ -82,6 +82,25 @@ impl From<BlobChangeset> for ChangesetHandle {
     }
 }
 
+/// This implementation can be used to convert a result of
+/// BlobRepo::get_changeset_by_changesetid into ChangesetHandle
+impl From<BoxFuture<BlobChangeset, Error>> for ChangesetHandle {
+    fn from(bcs: BoxFuture<BlobChangeset, Error>) -> Self {
+        let (trigger, can_be_parent) = oneshot::channel();
+
+        Self {
+            can_be_parent: can_be_parent.shared(),
+            completion_future: bcs.map_err(Error::compat)
+                .inspect(move |bcs| {
+                    let _ =
+                        trigger.send((bcs.get_changeset_id().into_nodehash(), *bcs.manifestid()));
+                })
+                .boxify()
+                .shared(),
+        }
+    }
+}
+
 /// State used while tracking uploaded entries, to ensure that a changeset ends up with the right
 /// set of blobs uploaded, and all filenodes present.
 struct UploadEntriesState {

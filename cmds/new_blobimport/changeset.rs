@@ -5,9 +5,11 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use bytes::Bytes;
+use clap::ArgMatches;
 use failure::err_msg;
 use failure::prelude::*;
 use futures::{Future, IntoFuture};
@@ -20,7 +22,9 @@ use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, CreateChangeset, HgBlob
                UploadHgEntry, UploadHgNodeHash};
 use mercurial::{manifest, HgChangesetId, HgManifestId, HgNodeHash, RevlogChangeset, RevlogEntry,
                 RevlogRepo, NULL_HASH};
-use mercurial_types::{HgBlob, MPath, RepoPath, Type};
+use mercurial_types::{DChangesetId, HgBlob, MPath, RepoPath, Type};
+
+use super::get_usize;
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
@@ -183,15 +187,38 @@ fn upload_entry(
         .boxify()
 }
 
-pub fn upload_changesets(
+pub fn upload_changesets<'a>(
+    matches: &ArgMatches<'a>,
     revlogrepo: RevlogRepo,
     blobrepo: Arc<BlobRepo>,
     cpupool_size: usize,
 ) -> BoxStream<BoxFuture<SharedItem<BlobChangeset>, Error>, Error> {
+    let changesets = if let Some(hash) = matches.value_of("changeset") {
+        future::result(HgNodeHash::from_str(hash))
+            .into_stream()
+            .boxify()
+    } else {
+        revlogrepo.changesets().boxify()
+    };
+
+    let changesets = if !matches.is_present("skip") {
+        changesets
+    } else {
+        let skip = get_usize(matches, "skip", 0);
+        changesets.skip(skip as u64).boxify()
+    };
+
+    let changesets = if !matches.is_present("commits-limit") {
+        changesets
+    } else {
+        let limit = get_usize(matches, "commits-limit", 0);
+        changesets.take(limit as u64).boxify()
+    };
+
+    let is_import_from_beggining = !matches.is_present("changeset") && !matches.is_present("skip");
     let mut parent_changeset_handles: HashMap<HgNodeHash, ChangesetHandle> = HashMap::new();
 
-    revlogrepo
-        .changesets()
+    changesets
         .map({
             let revlogrepo = revlogrepo.clone();
             let blobrepo = blobrepo.clone();
@@ -252,10 +279,17 @@ pub fn upload_changesets(
 
             let (p1handle, p2handle) = {
                 let mut parents = cs.parents().into_iter().map(|p| {
-                    parent_changeset_handles
-                        .get(&p)
-                        .cloned()
-                        .expect(&format!("parent {} not found for {}", p, csid))
+                    let maybe_handle = parent_changeset_handles.get(&p).cloned();
+
+                    if is_import_from_beggining {
+                        maybe_handle.expect(&format!("parent {} not found for {}", p, csid))
+                    } else {
+                        maybe_handle.unwrap_or_else(|| {
+                            ChangesetHandle::from(blobrepo.get_changeset_by_changesetid(
+                                &DChangesetId::new(p.into_mononoke()),
+                            ))
+                        })
+                    }
                 });
 
                 (parents.next(), parents.next())

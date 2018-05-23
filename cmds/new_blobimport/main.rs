@@ -32,9 +32,10 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, Arg, ArgGroup, ArgMatches};
 use failure::err_msg;
-use futures::{Future, Stream};
+use futures::{future, Future, Stream};
+use futures_ext::FutureExt;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
@@ -62,6 +63,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --io-thread-num [NUM]           'num of the io threads to use'
             --max-concurrent-request-per-io-thread [NUM] 'max requests per io thread'
             --parsing-cpupool-size [NUM]    'size of cpupool for parsing revlogs'
+            --changeset [HASH]              'if provided, the only changeset to be imported'
+            --skip [SKIP]                   'skips commits from the beginning'
+            --commits-limit [LIMIT]         'import only LIMIT first commits from revlog repo'
             [OUTPUT]                        'Blobstore output'
         "#,
         )
@@ -72,6 +76,11 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .possible_values(&["rocksdb", "manifold"])
                 .required(true)
                 .help("blobstore type"),
+        )
+        .group(
+            ArgGroup::with_name("skip-limit")
+                .args(&["skip", "commits-limit"])
+                .conflicts_with("changeset"),
         )
 }
 
@@ -193,6 +202,7 @@ fn main() {
     let blobrepo = Arc::new(open_blobrepo(&logger, &matches));
 
     let upload_changesets = changeset::upload_changesets(
+        &matches,
         revlogrepo.clone(),
         blobrepo.clone(),
         get_usize(&matches, "parsing-cpupool-size", 8),
@@ -222,7 +232,18 @@ fn main() {
         })
         .for_each(|()| Ok(()));
 
-    let upload_bookmarks = bookmark::upload_bookmarks(&logger, revlogrepo, blobrepo);
+    let upload_bookmarks = if matches.is_present("changeset") {
+        let logger = logger.clone();
+        future::lazy(move || {
+            info!(
+                logger,
+                "since --changeset was provided, bookmarks won't be imported"
+            );
+            Ok(())
+        }).boxify()
+    } else {
+        bookmark::upload_bookmarks(&logger, revlogrepo, blobrepo)
+    };
 
     core.run(upload_changesets.and_then(|()| {
         info!(logger, "finished uploading changesets, now doing bookmarks");
