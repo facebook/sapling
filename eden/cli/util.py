@@ -267,11 +267,17 @@ class HgRepo(Repo):
         self._env = os.environ.copy()
         self._env["HGPLAIN"] = "1"
 
+        # Find the path to hg.
+        # The EDEN_HG_BINARY environment variable is normally set when running
+        # Eden's integration tests.  Just find 'hg' from the path when it is
+        # not set.
+        self._hg_binary = os.environ.get("EDEN_HG_BINARY", "hg")
+
     def __repr__(self) -> str:
         return f"HgRepo(source={self.source!r}, " f"working_dir={self.working_dir!r})"
 
     def _run_hg(self, args: List[str]) -> bytes:
-        cmd = ["hg"] + args
+        cmd = [self._hg_binary] + args
         out_bytes = subprocess.check_output(cmd, cwd=self.working_dir, env=self._env)
         out = typing.cast(bytes, out_bytes)
         return out
