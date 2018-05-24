@@ -67,7 +67,7 @@ pub fn upload_bookmarks(
             for (key, value) in vec {
                 let key = Bookmark::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
                 let value = DChangesetId::new(value.into_nodehash().into_mononoke());
-                try_boxfuture!(transaction.create(&key, &value))
+                try_boxfuture!(transaction.force_set(&key, &value))
             }
 
             transaction.commit().map(move |()| count).boxify()
