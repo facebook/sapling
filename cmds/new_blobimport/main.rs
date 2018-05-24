@@ -64,6 +64,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --max-concurrent-request-per-io-thread [NUM] 'max requests per io thread'
             --parsing-cpupool-size [NUM]    'size of cpupool for parsing revlogs'
             --changeset [HASH]              'if provided, the only changeset to be imported'
+            --no-bookmark                   'if provided won't update bookmarks'
             [OUTPUT]                        'Blobstore output'
         "#,
         )
@@ -234,12 +235,12 @@ fn main() {
         })
         .for_each(|()| Ok(()));
 
-    let upload_bookmarks = if matches.is_present("changeset") {
+    let upload_bookmarks = if matches.is_present("no-bookmark") {
         let logger = logger.clone();
         future::lazy(move || {
             info!(
                 logger,
-                "since --changeset was provided, bookmarks won't be imported"
+                "since --no-bookmark was provided, bookmarks won't be imported"
             );
             Ok(())
         }).boxify()
