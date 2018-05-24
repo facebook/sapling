@@ -1,0 +1,156 @@
+use config::CommitCloudConfig;
+use error::*;
+use ini::Ini;
+#[cfg(target_os = "macos")]
+use std::{str, process::Command};
+use std::{fs, io, collections::HashMap, path::{Path, PathBuf}};
+use subscriber::Subscription;
+
+pub fn read_subscriptions(
+    config: &CommitCloudConfig,
+) -> Result<HashMap<Subscription, Vec<PathBuf>>> {
+    let ref joined_pool_path = config.joined_pool_path;
+
+    if joined_pool_path.is_none() {
+        error!("undefined config.joined_pool_path, should never happen as there is a default");
+        bail!("undefined config.joined_pool_path, should never happen as there is a default")
+    }
+
+    info!(
+        "Reading subscription requests from '{}' folder...",
+        joined_pool_path.as_ref().unwrap().display()
+    );
+
+    let paths = fs::read_dir(joined_pool_path.as_ref().unwrap());
+    if let Err(e) = &paths {
+        if e.kind() == io::ErrorKind::NotFound {
+            info!("No active subscribers");
+            return Ok(HashMap::new());
+        }
+        error!("{}", e);
+    }
+
+    let paths = paths?
+        .filter(|result| result.is_ok())
+        .map(|dir| dir.unwrap().path());
+
+    let mut subscriptions: HashMap<Subscription, Vec<PathBuf>> = HashMap::new();
+
+    for ref path in paths {
+        if let Ok(ref mut file) = fs::OpenOptions::new().read(true).open(path) {
+            let ini = Ini::read_from(&mut io::BufReader::new(file))?;
+            let section = ini.section(Some("commitcloud"));
+            if let Some(section) = section {
+                let workspace = section.get("workspace");
+                let repo_name = section.get("repo_name");
+                let repo_root = section
+                    .get("repo_root")
+                    .map(|repo_root| PathBuf::from(repo_root));
+
+                if workspace.is_none() || repo_name.is_none() || repo_root.is_none() {
+                    info!(
+                        "Skipping the file '{}' because format is invalid",
+                        path.display()
+                    );
+                } else {
+                    let workspace = workspace.unwrap();
+                    let repo_name = repo_name.unwrap();
+                    let repo_root = repo_root.unwrap();
+
+                    if !Path::new(&repo_root).exists() || !Path::new(&repo_root).is_dir() {
+                        info!(
+                            "Skipping the file '{}' because 'repo_root' '{}' \
+                             is not an existing directory",
+                            repo_root.display(),
+                            path.display()
+                        );
+                        continue;
+                    }
+                    let subscription = Subscription {
+                        repo_name: repo_name.to_string(),
+                        workspace: workspace.to_string(),
+                    };
+                    {
+                        if let Some(entry) = subscriptions.get_mut(&subscription) {
+                            (*entry).push(repo_root);
+                            continue;
+                        }
+                    }
+                    subscriptions.insert(subscription, vec![repo_root]);
+                }
+            } else {
+                info!(
+                    "Skipping the file '{}' because format is invalid",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    info!("Found {} active subscribers.", subscriptions.len());
+
+    for (key, value) in &subscriptions {
+        info!(
+            "Found {} subscription{} requests for repo '{}' and workspace '{}'",
+            value.len(),
+            if value.len() > 1 { "s" } else { "" },
+            key.repo_name,
+            key.workspace
+        );
+    }
+    return Ok(subscriptions);
+}
+
+pub fn read_access_token(config: &CommitCloudConfig) -> Result<String> {
+    // try to read token from file
+    let token = if let Some(ref user_token_path) = config.user_token_path {
+        info!(
+            "Reading commitcloud OAuth token from a file {}...",
+            user_token_path.display()
+        );
+        match fs::OpenOptions::new().read(true).open(user_token_path) {
+            Ok(ref mut file) => Ini::read_from(&mut io::BufReader::new(file))?
+                .get_from(Some("commitcloud"), "user_token")
+                .map(|s| s.into()),
+            Err(ref e) if e.kind() == io::ErrorKind::NotFound => None,
+            Err(err) => {
+                error!("{}", err);
+                bail!(err)
+            }
+        }
+    } else {
+        None
+    };
+    // try to read token from keychain
+    #[cfg(target_os = "macos")]
+    {
+        if token.is_none() {
+            // security find-generic-password -g -s commitcloud -a commitcloud -w
+            info!("Reading commitcloud OAuth token from keychain...");
+            let output = Command::new("security")
+                .args(vec![
+                    "find-generic-password",
+                    "-g",
+                    "-s",
+                    "commitcloud",
+                    "-a",
+                    "commitcloud",
+                    "-w",
+                ])
+                .output()?;
+            if !output.status.success() {
+                error!("Process exited with: {}", output.status);
+                bail!("Failed to retrieve token from keychain")
+            }
+            let token = str::from_utf8(&output.stdout)?.trim().to_string();
+            if token.is_empty() {
+                error!("Token is not found in the keychain");
+                bail!("Token is not found in the keychain")
+            } else {
+                info!("Token is found in the keychain");
+                return Ok(token);
+            }
+        }
+    }
+    token.ok_or(ErrorKind::CommitCloudUnexpectedError("token not found".into()).into())
+}

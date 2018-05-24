@@ -1,0 +1,14 @@
+[package]
+name = "scm_daemon"
+version = "0.1.0"
+
+[dependencies]
+failure = "*"
+clap = "*"
+log = "*"
+env_logger = "*"
+toml = "*"
+serde = "*"
+serde_derive = "*"
+
+commitcloudsubscriber = { version = "*", path = "../../lib/commitcloudsubscriber" }
