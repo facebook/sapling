@@ -140,15 +140,10 @@ outputs, which should be fixed later.
   hgext/remotefilelog/remotefilelog.py:17: imports from mercurial not lexically sorted: mdiff < revlog
   hgext/remotefilelog/remotefilelog.py:17: imports from mercurial not lexically sorted: ancestor < mdiff
   hgext/remotefilelog/remotefilelog.py:18: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/remotefilelogserver.py:9: imports from mercurial not lexically sorted: changegroup < wireproto
-  hgext/remotefilelog/remotefilelogserver.py:9: imports from mercurial not lexically sorted: changelog < util
-  hgext/remotefilelog/remotefilelogserver.py:10: imports from mercurial not lexically sorted: error < store
-  hgext/remotefilelog/remotefilelogserver.py:11: direct symbol import wrapfunction from mercurial.extensions
-  hgext/remotefilelog/remotefilelogserver.py:11: symbol import follows non-symbol import: mercurial.extensions
-  hgext/remotefilelog/remotefilelogserver.py:13: symbol import follows non-symbol import: mercurial.node
-  hgext/remotefilelog/remotefilelogserver.py:14: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/remotefilelogserver.py:22: multiple imported names: errno, stat, os, time
-  hgext/remotefilelog/remotefilelogserver.py:22: stdlib import "errno" follows local import: hgext.remotefilelog
+  hgext/remotefilelog/remotefilelogserver.py:17: direct symbol import wrapfunction from mercurial.extensions
+  hgext/remotefilelog/remotefilelogserver.py:17: symbol import follows non-symbol import: mercurial.extensions
+  hgext/remotefilelog/remotefilelogserver.py:19: symbol import follows non-symbol import: mercurial.node
+  hgext/remotefilelog/remotefilelogserver.py:20: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/repack.py:4: direct symbol import runshellcommand, flock from hgext.extutil
   hgext/remotefilelog/repack.py:4: imports from hgext.extutil not lexically sorted: flock < runshellcommand
   hgext/remotefilelog/repack.py:16: symbol import follows non-symbol import: mercurial.node

@@ -6,8 +6,14 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-from mercurial import wireproto, changegroup, match, util, changelog, context
-from mercurial import exchange, sshserver, store, error, progress
+import errno
+import json
+import os
+import stat
+import time
+
+from mercurial import changegroup, changelog, context, match, util, wireproto
+from mercurial import error, exchange, progress, sshserver, store
 from mercurial.extensions import wrapfunction
 from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
@@ -19,7 +25,6 @@ from . import (
     shallowutil,
     wirepack,
 )
-import errno, stat, os, time
 
 try:
     xrange(0)
@@ -307,25 +312,44 @@ def getfiles(repo, proto):
         if not cachepath:
             cachepath = os.path.join(repo.path, "remotefilelogcache")
 
+        args = []
+        responselen = 0
+        start_time = time.time()
+
         while True:
             request = fin.readline()[:-1]
             if not request:
                 break
 
-            node = bin(request[:40])
+            hexnode = request[:40]
+            node = bin(hexnode)
             if node == nullid:
                 yield '0\n'
                 continue
 
             path = request[40:]
 
+            args.append([hexnode, path])
+
             text = _loadfileblob(repo, cachepath, path, node)
 
-            yield '%d\n%s' % (len(text), text)
+            response = '%d\n%s' % (len(text), text)
+            responselen += len(response)
+            yield response
 
             # it would be better to only flush after processing a whole batch
             # but currently we don't know if there are more requests coming
             proto.fout.flush()
+
+        if repo.ui.configbool('wireproto', 'loggetfiles'):
+            try:
+                serializedargs = json.dumps(args)
+            except Exception:
+                serializedargs = 'Failed to serialize arguments'
+            repo.ui.log("wireproto_requests", "", command="getfiles",
+                        args=serializedargs, responselen=responselen,
+                        duration=(time.time() - start_time))
+
     return wireproto.streamres(streamer())
 
 def createfileblob(filectx):
