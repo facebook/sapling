@@ -379,23 +379,6 @@ ParentInodeInfo InodeBase::getParentInfo() const {
   }
 }
 
-// See Dispatcher::setattr
-folly::Future<Dispatcher::Attr> InodeBase::setattr(
-    const fuse_setattr_in& attr) {
-  // Check if gid and uid are same or not.
-  if (attr.valid & (FATTR_UID | FATTR_GID)) {
-    if ((attr.valid & FATTR_UID && attr.uid != getMount()->getUid()) ||
-        (attr.valid & FATTR_GID && attr.gid != getMount()->getGid())) {
-      folly::throwSystemErrorExplicit(
-          EACCES, "changing the owner/group is not supported");
-    }
-    // Otherwise: there is no change
-  }
-
-  // Set FileInode or TreeInode specific data.
-  return setInodeAttr(attr);
-}
-
 InodeMetadata InodeBase::getMetadata() const {
   return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
 }

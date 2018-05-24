@@ -304,50 +304,6 @@ TEST_F(FileInodeTest, setattrFileType) {
   EXPECT_FILE_INODE(inode, "This is a.txt.\n", 0755);
 }
 
-TEST_F(FileInodeTest, setattrUid) {
-  auto inode = mount_.getFileInode("dir/a.txt");
-  uid_t uid = inode->getMount()->getUid();
-  fuse_setattr_in desired = {};
-  desired.uid = uid + 1;
-  desired.valid = FATTR_UID;
-
-  // We do not support changing the UID to something else.
-  EXPECT_THROW_ERRNO(setFileAttr(inode, desired), EACCES);
-  auto attr = BASIC_ATTR_CHECKS(inode);
-  EXPECT_EQ(uid, attr.st.st_uid);
-
-  // But setting the UID to the same value should succeed.
-  desired.uid = uid;
-  attr = setFileAttr(inode, desired);
-
-  BASIC_ATTR_CHECKS(inode, attr);
-  EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
-  EXPECT_EQ(15, attr.st.st_size);
-  EXPECT_EQ(uid, attr.st.st_uid);
-}
-
-TEST_F(FileInodeTest, setattrGid) {
-  auto inode = mount_.getFileInode("dir/a.txt");
-  gid_t gid = inode->getMount()->getGid();
-  fuse_setattr_in desired = {};
-  desired.gid = gid + 1;
-  desired.valid = FATTR_GID;
-
-  // We do not support changing the GID to something else.
-  EXPECT_THROW_ERRNO(setFileAttr(inode, desired), EACCES);
-  auto attr = BASIC_ATTR_CHECKS(inode);
-  EXPECT_EQ(gid, attr.st.st_gid);
-
-  // But setting the GID to the same value should succeed.
-  desired.gid = gid;
-  attr = setFileAttr(inode, desired);
-
-  BASIC_ATTR_CHECKS(inode, attr);
-  EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
-  EXPECT_EQ(15, attr.st.st_size);
-  EXPECT_EQ(gid, attr.st.st_gid);
-}
-
 TEST_F(FileInodeTest, setattrAtime) {
   auto inode = mount_.getFileInode("dir/a.txt");
   fuse_setattr_in desired = {};

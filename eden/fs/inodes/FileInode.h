@@ -77,6 +77,7 @@ class FileInode : public InodeBase {
       InodeTimestamps initialTimestamps);
 
   folly::Future<Dispatcher::Attr> getattr() override;
+  folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
 
   /// Throws InodeError EINVAL if inode is not a symbolic node.
   folly::Future<std::string> readlink();
@@ -428,13 +429,6 @@ class FileInode : public InodeBase {
    * Update the st_blocks field in a stat structure based on the st_size value.
    */
   static void updateBlockCount(struct stat& st);
-
-  /**
-   * Helper function used in setattr to perform FileInode specific operations
-   * during setattr.
-   */
-  folly::Future<Dispatcher::Attr> setInodeAttr(
-      const fuse_setattr_in& attr) override;
 
   /**
    * Returns a copy of this inode's metadata.

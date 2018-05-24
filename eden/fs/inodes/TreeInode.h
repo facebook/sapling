@@ -323,6 +323,7 @@ class TreeInode : public InodeBase {
   ~TreeInode() override;
 
   folly::Future<Dispatcher::Attr> getattr() override;
+  folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
   folly::Future<folly::Unit> prefetch() override;
   void updateOverlayHeader() override;
   Dispatcher::Attr getAttrLocked(const Dir& contents);
@@ -865,13 +866,6 @@ class TreeInode : public InodeBase {
    * has already created a new file in a directory made empty by a checkout.
    */
   FOLLY_NODISCARD bool checkoutTryRemoveEmptyDir(CheckoutContext* ctx);
-
-  /**
-   * Helper function called inside InodeBase::setattr to perform TreeInode
-   * specific operation during setattr.
-   */
-  folly::Future<Dispatcher::Attr> setInodeAttr(
-      const fuse_setattr_in& attr) override;
 
   folly::Synchronized<Dir> contents_;
 };

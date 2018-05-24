@@ -299,3 +299,28 @@ TEST(EdenMount, testCanModifyPermissionsOnFilesAndDirs) {
   EXPECT_EQ(fileInode->getNodeId().get(), fileResult.st.st_ino);
   EXPECT_EQ(S_IFREG | modebits, fileResult.st.st_mode);
 }
+
+TEST(EdenMount, testCanChownFilesAndDirs) {
+  TestMount testMount;
+  auto builder = FakeTreeBuilder();
+  builder.setFile("dir/file.txt", "contents");
+  testMount.initialize(builder);
+
+  auto treeInode = testMount.getTreeInode("dir");
+  auto fileInode = testMount.getFileInode("dir/file.txt");
+
+  fuse_setattr_in attr{};
+  attr.valid = FATTR_UID | FATTR_GID;
+  attr.uid = 23;
+  attr.gid = 27;
+
+  auto treeResult = treeInode->setattr(attr).get(0ms);
+  EXPECT_EQ(treeInode->getNodeId().get(), treeResult.st.st_ino);
+  EXPECT_EQ(attr.uid, treeResult.st.st_uid);
+  EXPECT_EQ(attr.gid, treeResult.st.st_gid);
+
+  auto fileResult = fileInode->setattr(attr).get(0ms);
+  EXPECT_EQ(fileInode->getNodeId().get(), fileResult.st.st_ino);
+  EXPECT_EQ(attr.uid, fileResult.st.st_uid);
+  EXPECT_EQ(attr.gid, fileResult.st.st_gid);
+}

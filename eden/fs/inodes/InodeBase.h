@@ -119,7 +119,8 @@ class InodeBase {
   virtual folly::Future<Dispatcher::Attr> getattr();
 
   // See Dispatcher::setattr
-  virtual folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr);
+  virtual folly::Future<Dispatcher::Attr> setattr(
+      const fuse_setattr_in& attr) = 0;
 
   virtual folly::Future<folly::Unit>
   setxattr(folly::StringPiece name, folly::StringPiece value, int flags);
@@ -445,14 +446,6 @@ class InodeBase {
   }
   void onPtrRefZero() const;
   ParentInodeInfo getParentInfo() const;
-
-  /**
-   * Helper function called in setattr function to create overlay entry if not
-   * present and  fills timestamps and other FileInode related fields or
-   * TreeInode related fields.
-   */
-  virtual folly::Future<Dispatcher::Attr> setInodeAttr(
-      const fuse_setattr_in& attr) = 0;
 
   InodeNumber const ino_;
 

@@ -3217,7 +3217,7 @@ void TreeInode::updateOverlayHeader() {
         file.fd(), getMetadataLocked(*contents).timestamps);
   }
 }
-folly::Future<Dispatcher::Attr> TreeInode::setInodeAttr(
+folly::Future<Dispatcher::Attr> TreeInode::setattr(
     const fuse_setattr_in& attr) {
   materialize();
   Dispatcher::Attr result(getMount()->initStatData());

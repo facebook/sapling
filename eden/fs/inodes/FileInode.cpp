@@ -559,7 +559,7 @@ folly::Future<Dispatcher::Attr> FileInode::getattr() {
       [](const struct stat& st) { return Dispatcher::Attr{st}; });
 }
 
-folly::Future<Dispatcher::Attr> FileInode::setInodeAttr(
+folly::Future<Dispatcher::Attr> FileInode::setattr(
     const fuse_setattr_in& attr) {
   // If this file is inside of .eden it cannot be reparented, so getParentRacy()
   // is okay.

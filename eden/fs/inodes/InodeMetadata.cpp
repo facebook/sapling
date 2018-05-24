@@ -22,14 +22,12 @@ void InodeMetadata::updateFromAttr(
     mode = (mode & S_IFMT) | (07777 & attr.mode);
   }
 
-#if 0 // TODO
   if (attr.valid & FATTR_UID) {
-    metadata.uid = attr.uid;
+    uid = attr.uid;
   }
   if (attr.valid & FATTR_GID) {
-    metadata.gid = attr.gid;
+    gid = attr.gid;
   }
-#endif
 
   timestamps.setattrTimes(clock, attr);
 }

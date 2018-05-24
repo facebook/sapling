@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import errno
+import grp
 import os
 import stat
 import subprocess
@@ -37,30 +38,101 @@ class SetAttrTest(testcase.EdenRepoTest):
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
         self.assertEqual(new_st.st_mode, st.st_mode | stat.S_IROTH)
 
-    def test_chown(self) -> None:
+    def test_chown_as_root(self) -> None:
+        if not self._can_always_chown():
+            # Don't skip. Skipped tests show up in the metrics and have tasks
+            # created for them.
+            return
+
+        filename = os.path.join(self.mount, "hello")
+
+        # If root, any ownership change is legal.
+
+        st = os.lstat(filename)
+        os.chown(filename, st.st_uid, st.st_gid)
+
+        os.chown(filename, st.st_uid + 1, st.st_gid)
+
+        newst = os.lstat(filename)
+        self.assertEqual(st.st_uid + 1, newst.st_uid)
+        self.assertEqual(st.st_gid, newst.st_gid)
+
+        os.chown(filename, st.st_uid, st.st_gid + 1)
+
+        newst = os.lstat(filename)
+        self.assertEqual(st.st_uid, newst.st_uid)
+        self.assertEqual(st.st_gid + 1, newst.st_gid)
+
+    def test_chown_uid_as_nonroot_fails(self) -> None:
+        if self._can_always_chown():
+            # Don't skip. Skipped tests show up in the metrics and have tasks
+            # created for them.
+            return
+
         filename = os.path.join(self.mount, "hello")
 
         # Chown should fail with EPERM unless we are setting it
         # to the same current ownership.
-        # If we're running as root, this is EACCES instead.
         st = os.lstat(filename)
         os.chown(filename, st.st_uid, st.st_gid)
 
         with self.assertRaises(OSError) as context:
             os.chown(filename, st.st_uid + 1, st.st_gid)
         self.assertEqual(
-            errno.EACCES if os.geteuid() == 0 else errno.EPERM,
+            errno.EPERM,
             context.exception.errno,
-            msg="changing uid of a file should raise EPERM/EACCES",
+            msg="changing uid of a file should raise EPERM",
         )
 
+    def test_chown_gid_as_nonroot_succeeds_if_member(self) -> None:
+        if self._can_always_chown():
+            # Don't skip. Skipped tests show up in the metrics and have tasks
+            # created for them.
+            return
+
+        filename = os.path.join(self.mount, "hello")
+        st = os.lstat(filename)
+
+        os.chown(filename, st.st_uid, self._get_member_group())
+
+    def test_chown_gid_as_nonroot_fails_if_not_member(self) -> None:
+        if self._can_always_chown():
+            # Don't skip. Skipped tests show up in the metrics and have tasks
+            # created for them.
+            return
+
+        filename = os.path.join(self.mount, "hello")
+        st = os.lstat(filename)
+
         with self.assertRaises(OSError) as context:
-            os.chown(filename, st.st_uid, st.st_gid + 1)
+            os.chown(filename, st.st_uid, self._get_non_member_group())
         self.assertEqual(
-            errno.EACCES if os.geteuid() == 0 else errno.EPERM,
+            errno.EPERM,
             context.exception.errno,
-            msg="changing gid of a file should raise EPERM/EACCES",
+            msg="changing gid of a file should raise EPERM",
         )
+
+    def _can_always_chown(self):
+        # Could instead check if the process doesn't have the CAP_CHOWN capability.
+        return 0 == os.geteuid()
+
+    def _get_member_group(self):
+        """Find a group that this user is a member of."""
+        # This is a bit hard to do: we need to find a group the user is a member
+        # of that's not the effective or real gid. If there are none then we
+        # must skip.
+        groups = os.getgroups()
+        for gid in groups:
+            if gid != os.getgid() and gid != os.getegid():
+                return gid
+        self.skipTest("no usable groups found")
+
+    def _get_non_member_group(self):
+        """Find a group that this user is not a member of."""
+        # All that matters is that we return a gid outside of the set of this
+        # user's groups.
+        user_groups = set(os.getgroups())
+        return max(user_groups) + 1
 
     def test_truncate(self) -> None:
         filename = os.path.join(self.mount, "hello")
