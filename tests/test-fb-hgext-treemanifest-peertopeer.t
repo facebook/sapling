@@ -69,6 +69,7 @@ Create client1 - it will have both server commits
   $ mkdir dir
   $ echo b > dir/b
   $ hg commit -Aqm 'initial commit'
+  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, found via b8ff91c925b4
   2 trees fetched over * (glob)
 
   $ ls .hg/store/packs/manifests
@@ -120,6 +121,7 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 # Push and expect only one bulk download of trees
   $ hg push -q ../client2 --config treemanifest.sendtrees=True --config treemanifest.treeonly=True
+  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 54609f68e211
   2 trees fetched over * (glob)
   $ ls ../client2/.hg/store/packs/manifests
   700fb8a7918068e308a998d338d1689074118d07.histidx
@@ -161,6 +163,7 @@ Pulling between peers should send local trees but not remote trees
   $ hg -R ../client1 phase -r 3 -p
   $ rm -rf $TESTTMP/hgcache2/*
   $ hg pull -q --config treemanifest.sendtrees=True ../client1 --config remotefilelog.fallbackpath=ssh://user@dummy/master
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2937cde31c19
   2 trees fetched over * (glob)
 # Check that the local commits for the previously-draft-but-now-public commit
 # were downloaded to the local store.
@@ -188,6 +191,7 @@ Pulling between peers should send local trees but not remote trees
   $ rm -rf $TESTTMP/hgcache2/*
   $ ls_l $TESTTMP/hgcache2/
   $ hg manifest -r 'tip^'
+  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, based on 3ffa0e0bbc707f62567ec13cb2dd919bef47aa97, found via b8ff91c925b4
   2 trees fetched over * (glob)
   subdir/x
 # Verify the fake-public commit was received during the pull and does not

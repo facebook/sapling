@@ -57,6 +57,7 @@ Transition to hybrid flat+tree client
 
 # Viewing commit from server should download trees
   $ hg log -r . --stat -T "{desc}\n"
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
   add subdir/x
    subdir/x |  1 +
@@ -222,6 +223,7 @@ Test pulling new commits from a hybrid server
        1        51      51     -1       1 c0196aba344d 85b359fdb09e 000000000000
        2       102      51     -1       2 0427baa4e948 85b359fdb09e 000000000000
   $ hg log -r tip --stat --pager=off
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2937cde31c19
   2 trees fetched over * (glob)
   changeset:   5:2937cde31c19
   tag:         tip
@@ -297,6 +299,7 @@ Test peer-to-peer push/pull of tree only commits
   $ cd ..
   $ clearcache
   $ hgcloneshallow ssh://user@dummy/master client2 -q --config treemanifest.treeonly=True --config extensions.treemanifest=
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, found via 2937cde31c19
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client2
@@ -326,6 +329,7 @@ Test peer-to-peer push/pull of tree only commits
   |   y |  1 +
   |   1 files changed, 1 insertions(+), 0 deletions(-)
   |
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, based on d9920715ba88cbc7962c4dac9f20004aafd94ac8, found via 5b483416c8aa
   2 trees fetched over * (glob)
   o  modify subdir/x
   |   subdir/x |  1 +
@@ -449,7 +453,9 @@ Switch back to hybrid mode
 - Test that accessing a public commit doesnt require the flat manifest
   $ clearcache
   $ hg log -r 'last(public())' --stat
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2f8e443c6ba8
   2 trees fetched over * (glob)
   changeset:   4:2937cde31c19
   parent:      0:2278cc8c6ce6
@@ -542,6 +548,7 @@ Test pulling to a flat client from a treeonly server
 Test pushing flat manifests to a treeonly server
 - Update to a commit with a flat manifest
   $ hg up -q 2937cde31
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, found via 2937cde31c19
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ echo unpushable >> subdir/x
@@ -565,7 +572,9 @@ Test pulling to a treeonly client from a treeonly server
   new changesets 4f84204095e0:5b1ec8639460
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -r tip -T '{desc}\n' --stat
+  fetching tree '' 83b03df1c9d62b8a2dedf46629e3262423af655c, based on d9920715ba88cbc7962c4dac9f20004aafd94ac8, found via 5b1ec8639460
   1 trees fetched over * (glob)
+  fetching tree '' bd5ff58fa887770ff0ea29dde0b91f5804cdeff0, based on 83b03df1c9d62b8a2dedf46629e3262423af655c, found via 5b1ec8639460
   2 trees fetched over * (glob)
   modify subdir/x again
    subdir/x |  1 +
@@ -764,5 +773,5 @@ with pullprefetchrevs configured.
   added 3 changesets with 3 changes to 2 files
   new changesets 2278cc8c6ce6:4f84204095e0
   (run 'hg update' to get a working copy)
-  prefetching trees
+  prefetching tree for 4f84204095e0
   2 trees fetched over * (glob)

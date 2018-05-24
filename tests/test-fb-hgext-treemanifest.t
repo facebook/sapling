@@ -43,6 +43,7 @@ Test autocreatetrees
   searching for changes
   adding changesets
   adding manifests
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets e4d61696a942

@@ -66,6 +66,7 @@ Make a draft commit
   $ cd client1
   $ echo f >> subdir/x
   $ hg commit -qm "hybrid commit"
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
   $ hg debugdatapack .hg/store/packs/manifests/*datapack
   .hg/store/packs/manifests/da9af3771b30963e2eb5624a2df366eb989223c1:

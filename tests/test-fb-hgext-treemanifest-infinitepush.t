@@ -44,6 +44,7 @@ Push a non-tree scratch branch from one client
   $ hg push --to scratch/nontree --create
   pushing to ssh://user@dummy/master
   searching for changes
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
   remote: pushing 2 commits:
   remote:     42ec76eb772a  add bar/car
@@ -53,6 +54,7 @@ Push a non-tree scratch branch from one client
 
 Push a tree-only scratch branch from another client
   $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest= --config treemanifest.treeonly=True
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client1
@@ -305,6 +307,7 @@ trees
   $ hg pushbackup
   starting backup * (glob)
   searching for changes
+  fetching tree '' 2d6cb11e074d743e23a163127648257bb4f8fe42, based on bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 7e75be1136c3
   remote: pushing 1 commit:
   remote:     7e75be1136c3  add foo
   finished in * seconds (glob)
@@ -369,5 +372,6 @@ treemanifest data for the public commits.
   
 # Verify the non-infinitepush commit tree data is downloaded on demand
   $ hg manifest -r 0
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 02c12aef64ff
   1 trees fetched over * (glob)
   x

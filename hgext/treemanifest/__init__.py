@@ -96,7 +96,7 @@ import struct
 import time
 
 from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid
+from mercurial.node import bin, hex, nullid, short
 from mercurial import (
     bundle2,
     bundlerepo,
@@ -1695,7 +1695,10 @@ def _postpullprefetch(ui, repo):
         mfnodes = list(c.manifestnode() for c in ctxs)
 
     if mfnodes:
-        ui.status(_("prefetching trees\n"))
+        if len(mfnodes) == 1:
+            ui.status(_("prefetching tree for %s\n") % short(ctxs[0].node()))
+        else:
+            ui.status(_("prefetching trees for %d commits\n") % len(mfnodes))
         # Calculate which parents we already have
         ctxnodes = list(ctx.node() for ctx in ctxs)
         parentctxs = repo.set('parents(%ln) - %ln',
@@ -2040,8 +2043,8 @@ class remotetreestore(generatingdatastore):
     def _generatetrees(self, name, node):
         # Only look at the server if not root or is public
         basemfnodes = []
+        linkrev = None
         if name == '':
-            linkrev = None
             if util.safehasattr(self._repo.manifestlog, '_revlog'):
                 mfrevlog = self._repo.manifestlog._revlog
                 if node in mfrevlog.nodemap:
@@ -2057,6 +2060,15 @@ class remotetreestore(generatingdatastore):
             # Find a recent tree that we already have
             basemfnodes = _findrecenttree(self._repo, linkrev)
 
+        if self._repo.ui.configbool("remotefilelog", "debug"):
+            msg = _("fetching tree %r %s") % (name, hex(node))
+            if len(basemfnodes) >= 1:
+                msg += _(", based on %s") % hex(basemfnodes[0])
+            if len(basemfnodes) > 1:
+                msg += _(" and %d others") % (len(basemfnodes) - 1)
+            if linkrev:
+                msg += _(", found via %s") % short(self._repo[linkrev].node())
+            self._repo.ui.warn(msg + '\n')
         self._repo._prefetchtrees(name, [node], basemfnodes, [])
         self._shareddata.markforrefresh()
         self._sharedhistory.markforrefresh()

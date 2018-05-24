@@ -175,7 +175,9 @@ requires tree manifest for the base commit.
 
   $ hg prefetch -r '2' --base '1'
   2 trees fetched over * (glob)
+  fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via f15c65c6e9bd
   2 trees fetched over * (glob)
+  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
   3 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*.dataidx
@@ -235,7 +237,9 @@ Test prefetching when a draft commit is marked public
 - missing manifest from the server.
   $ clearcache
   $ hg status --change 2 --config extensions.remotenames=
+  fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via f15c65c6e9bd
   3 trees fetched over * (glob)
+  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, based on 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via bd6f9b289c01
   2 trees fetched over * (glob)
   M dir/x
   $ hg strip -r 3
@@ -252,7 +256,9 @@ Test auto prefetch during normal access
   * $ENOENT$ (glob)
   [1]
   $ hg log -r tip --stat --pager=off
+  fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via f15c65c6e9bd
   3 trees fetched over * (glob)
+  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, based on 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via bd6f9b289c01
   2 trees fetched over * (glob)
   changeset:   2:bd6f9b289c01
   tag:         tip
@@ -314,6 +320,7 @@ Test that auto prefetch scans up the changelog for base trees
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
 - Only 2 of the 3 trees from tip^ are downloaded as part of --stat's fetch
   $ hg log -r tip --stat --pager=off > /dev/null
+  fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via f15c65c6e9bd
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
 
@@ -327,7 +334,7 @@ Test auto prefetch during pull
   pulling from ssh://user@dummy/master
   searching for changes
   no changes found
-  prefetching trees
+  prefetching trees for 3 commits
   6 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
@@ -365,7 +372,7 @@ Test auto prefetch during pull
   pulling from ssh://user@dummy/master
   searching for changes
   no changes found
-  prefetching trees
+  prefetching tree for bd6f9b289c01
   3 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
@@ -394,7 +401,7 @@ Test auto prefetch during pull
   pulling from ssh://user@dummy/master
   searching for changes
   no changes found
-  prefetching trees
+  prefetching tree for bd6f9b289c01
   2 trees fetched over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*dataidx
   $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
@@ -430,7 +437,7 @@ Test prefetching certain revs during pull
   added 2 changesets with 2 changes to 1 files (no-remotefilelog.true.shallowrepo.true !)
   new changesets dece825f8add:cfacdcc4cee5
   (run 'hg update' to get a working copy)
-  prefetching trees
+  prefetching tree for bd6f9b289c01
   3 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
@@ -454,7 +461,7 @@ Test prefetching certain revs during pull
   pulling from ssh://user@dummy/master
   searching for changes
   no changes found
-  prefetching trees
+  prefetching tree for cfacdcc4cee5
   2 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/99050e724a9236121684523ba3f4db270e62fb58.dataidx
@@ -475,6 +482,7 @@ Test that prefetch refills just part of a tree when the cache is deleted
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
   $ rm -rf $CACHEDIR/master/*
   $ hg cat subdir/z
+  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
   3 trees fetched over * (glob)
   z
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
@@ -525,6 +533,7 @@ file prefetching code path fetches 1 file for revision 5 and while doing so,
 also fetches 3 trees dealing with the tree manifest of the base revision 2.
 
   $ hg prefetch
+  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
   3 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 #else

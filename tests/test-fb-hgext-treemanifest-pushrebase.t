@@ -63,6 +63,7 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   $ cd ..
 
   $ initclients
+  fetching tree '' 0ca5062b87888558ca097bff2f7511160e2e20f6
   2 trees fetched over * (glob)
   $ pushclients
 
@@ -118,6 +119,7 @@ Test that pushrebase hooks can access the commit data
   $ hg up -q master
   $ echo baz >> subdir/a
   $ hg commit -Aqm 'hook commit'
+  fetching tree * (glob)
   1 trees fetched over * (glob)
 
 - Push without sendtrees
