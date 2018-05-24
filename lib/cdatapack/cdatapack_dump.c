@@ -43,6 +43,10 @@ int main(int argc, char *argv[]) {
       data_path, strlen(data_path));
   free(data_path);
   free(idx_path);
+  if (handle->status != DATAPACK_HANDLE_OK) {
+    fprintf(stderr, "failed to open pack: %d\n", handle->status);
+    return 1;
+  }
 
   const uint8_t *ptr = handle->data_mmap;
   const uint8_t *end = ptr + handle->data_file_sz;
