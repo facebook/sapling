@@ -7,9 +7,12 @@
 
 from __future__ import absolute_import
 
+import functools
 import hashlib
+import json
 import os
 import tempfile
+import time
 
 from .i18n import _
 from .node import (
@@ -578,11 +581,68 @@ def getdispatchrepo(repo, proto, command):
     """
     return repo.filtered('served')
 
+def wrapstreamres(towrap, logger, start_time):
+    if towrap.gen:
+        gen = towrap.gen
+        def logginggen():
+            responselen = 0
+            for chunk in gen:
+                responselen += len(chunk)
+                yield chunk
+            duration = int((time.time() - start_time) * 1000)
+            logger(duration=duration, responselen=responselen)
+        towrap.gen = logginggen()
+    else:
+        towrap.reader.responselen = 0
+        orig = towrap.reader.read
+        def read(self, size):
+            chunk = orig(size)
+            self.reader.responselen += len(chunk)
+            if not chunk:
+                duration = int((time.time() - start_time) * 1000)
+                logger(duration=duration, responselen=self.reader.responselen)
+            return chunk
+
+def logwireprotorequest(ui, start_time, command, serializedargs, res):
+    logger = functools.partial(ui.log, "wireproto_requests",
+                                "", command=command, args=serializedargs)
+    duration = int((time.time() - start_time) * 1000)
+    if isinstance(res, streamres):
+        wrapstreamres(res, logger, start_time)
+    elif isinstance(res, str):
+        logger(duration=duration, responselen=len(res))
+    elif isinstance(res, ooberror):
+        logger(duration=duration, error=res.message)
+    elif isinstance(res, pusherr):
+        logger(duration=duration, error=str(res.res))
+    elif isinstance(res, pushres):
+        logger(duration=duration, responselen=len(str(res.res)))
+    else:
+        logger(duration=duration, error='unknown response')
+
 def dispatch(repo, proto, command):
     repo = getdispatchrepo(repo, proto, command)
     func, spec = commands[command]
     args = proto.getargs(spec)
-    return func(repo, proto, *args)
+
+    try:
+        serializedargs = json.dumps(args)
+    except Exception as e:
+        serializedargs = 'Failed to serialize arguments'
+
+    start_time = time.time()
+    res = func(repo, proto, *args)
+
+    logrequests = repo.ui.configlist('wireproto', 'logrequests')
+    if command in logrequests:
+        ui = repo.ui
+        try:
+            logwireprotorequest(ui, start_time, command, serializedargs, res)
+        except Exception as e:
+            # No logging error should break client-server interaction,
+            # but let's warn about the problem
+            ui.warn(_('error while logging wireproto request: %s') % e)
+    return res
 
 def options(cmd, keys, others):
     opts = {}

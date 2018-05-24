@@ -1,6 +1,7 @@
 from __future__ import absolute_import, print_function
 
 from mercurial import (
+    ui,
     util,
     wireproto,
 )
@@ -54,6 +55,9 @@ class clientpeer(wireproto.wirepeer):
         yield unmangle(f.value)
 
 class serverrepo(object):
+    def __init__(self):
+        self.ui = ui.ui()
+
     def greet(self, name):
         return "Hello, " + name
 

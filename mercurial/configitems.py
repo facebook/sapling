@@ -1257,6 +1257,9 @@ coreconfigitem('web', 'templates',
 coreconfigitem('web', 'view',
     default='served',
 )
+coreconfigitem('wireproto', 'logrequests',
+    default=list,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
