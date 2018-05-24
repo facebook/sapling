@@ -2598,7 +2598,7 @@ Examples::
     bold = s/\*\b(\S+)\b\*/<b>\1<\/b>/
 
 ``wireproto``
---------
+-------------
 
 ``logrequests``
     A list of wireproto requests to log. "sampling.py" extension can be used
