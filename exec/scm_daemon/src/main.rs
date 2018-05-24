@@ -26,7 +26,13 @@ pub struct Config {
     pub commitcloud: Option<CommitCloudConfig>,
 }
 
-fn main() -> Result<()> {
+// To support older than Rust 1.26 on dev servers
+fn main() {
+    run().unwrap();
+}
+
+// fn main() -> Result<()> {
+fn run() -> Result<()> {
     env_logger::init();
     let help: &str = &format!(
         "{}\n{}",

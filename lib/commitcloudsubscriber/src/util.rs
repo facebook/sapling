@@ -22,7 +22,7 @@ pub fn read_subscriptions(
     );
 
     let paths = fs::read_dir(joined_pool_path.as_ref().unwrap());
-    if let Err(e) = &paths {
+    if let &Err(ref e) = &paths {
         if e.kind() == io::ErrorKind::NotFound {
             info!("No active subscribers");
             return Ok(HashMap::new());
