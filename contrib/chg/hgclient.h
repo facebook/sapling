@@ -20,6 +20,7 @@ void hgc_close(hgclient_t *hgc);
 
 pid_t hgc_peerpgid(const hgclient_t *hgc);
 pid_t hgc_peerpid(const hgclient_t *hgc);
+unsigned long long hgc_versionhash(const hgclient_t *hgc);
 
 const char **hgc_validate(hgclient_t *hgc, const char *const args[],
 			  size_t argsize);

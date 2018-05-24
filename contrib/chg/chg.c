@@ -425,10 +425,29 @@ int main(int argc, const char *argv[], const char *envp[])
 		hgc = connectcmdserver(&opts);
 		if (!hgc)
 			abortmsg("cannot open hg client");
-		hgc_setenv(hgc, envp);
-		const char **insts = hgc_validate(hgc, argv + 1, argc - 1);
-		int needreconnect = runinstructions(&opts, insts);
-		free(insts);
+		int needreconnect = 0;
+#ifdef HGVERSIONHASH
+		unsigned long long versionhash = hgc_versionhash(hgc);
+		if (versionhash != HGVERSIONHASH) {
+			debugmsg("version mismatch (client %llu, server %llu)",
+			         HGVERSIONHASH, versionhash);
+			const char *sockname = opts.redirectsockname[0]
+			                           ? opts.redirectsockname
+			                           : opts.sockname;
+			int ret = unlink(sockname);
+			debugmsg("unlink(\"%s\") = %d", sockname, ret);
+			needreconnect = 1;
+		} else {
+			debugmsg("version matched (%llu)", versionhash);
+		}
+#endif
+		if (!needreconnect) {
+			hgc_setenv(hgc, envp);
+			const char **insts =
+			    hgc_validate(hgc, argv + 1, argc - 1);
+			needreconnect = runinstructions(&opts, insts);
+			free(insts);
+		}
 		if (!needreconnect)
 			break;
 		hgc_close(hgc);

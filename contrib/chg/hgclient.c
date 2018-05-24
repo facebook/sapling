@@ -68,6 +68,7 @@ struct hgclient_tag_ {
 	pid_t pid;
 	context_t ctx;
 	unsigned int capflags;
+	unsigned long long versionhash;
 };
 
 static const size_t defaultdatasize = 4096;
@@ -358,6 +359,8 @@ static void readhello(hgclient_t *hgc)
 			hgc->pgid = strtol(t + 2, NULL, 10);
 		} else if (strncmp(s, "pid:", t - s + 1) == 0) {
 			hgc->pid = strtol(t + 2, NULL, 10);
+		} else if (strncmp(s, "versionhash:", t - s + 1) == 0) {
+			hgc->versionhash = strtoull(t + 2, NULL, 10);
 		}
 		s = u + 1;
 	}
@@ -536,6 +539,12 @@ pid_t hgc_peerpid(const hgclient_t *hgc)
 {
 	assert(hgc);
 	return hgc->pid;
+}
+
+unsigned long long hgc_versionhash(const hgclient_t *hgc)
+{
+	assert(hgc);
+	return hgc->versionhash;
 }
 
 /*!

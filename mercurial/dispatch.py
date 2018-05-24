@@ -125,7 +125,7 @@ def _preimportmodules():
                 'sshpeer', 'sshserver', 'sslutil', 'store', 'streamclone',
                 'subrepo', 'tags', 'templatefilters', 'templatekw',
                 'templater', 'transaction', 'treediscovery', 'txnutil', 'url',
-                'urllibcompat', 'vfs', 'wireproto', 'worker']
+                'urllibcompat', 'vfs', 'wireproto', 'worker', '__version__']
     extmods = ['absorb', 'age', 'arcdiff', 'automv', 'blackbox',
                'checkmessagehook', 'chistedit', 'clienttelemetry', 'clindex',
                'configwarn', 'conflictinfo', 'convert', 'copytrace', 'crdump',

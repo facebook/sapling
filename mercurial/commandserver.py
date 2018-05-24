@@ -14,6 +14,7 @@ import random
 import signal
 import socket
 import struct
+import sys
 import traceback
 
 from .i18n import _
@@ -281,6 +282,10 @@ class server(object):
         hellomsg += 'encoding: ' + encoding.encoding
         hellomsg += '\n'
         hellomsg += 'pid: %d' % util.getpid()
+        versionmod = sys.modules.get('mercurial.__version__')
+        if versionmod:
+            hellomsg += '\n'
+            hellomsg += 'versionhash: %s' % versionmod.versionhash
         if util.safehasattr(os, 'getpgid'):
             hellomsg += '\n'
             hellomsg += 'pgid: %d' % os.getpgid(0)
