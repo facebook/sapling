@@ -32,7 +32,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 
-use clap::{App, Arg, ArgGroup, ArgMatches};
+use clap::{App, Arg, ArgMatches};
 use failure::err_msg;
 use futures::{future, Future, Stream};
 use futures_ext::FutureExt;
@@ -64,8 +64,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --max-concurrent-request-per-io-thread [NUM] 'max requests per io thread'
             --parsing-cpupool-size [NUM]    'size of cpupool for parsing revlogs'
             --changeset [HASH]              'if provided, the only changeset to be imported'
-            --skip [SKIP]                   'skips commits from the beginning'
-            --commits-limit [LIMIT]         'import only LIMIT first commits from revlog repo'
             [OUTPUT]                        'Blobstore output'
         "#,
         )
@@ -77,10 +75,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(true)
                 .help("blobstore type"),
         )
-        .group(
-            ArgGroup::with_name("skip-limit")
-                .args(&["skip", "commits-limit"])
+        .arg(
+            Arg::from_usage("--skip [SKIP]  'skips commits from the beginning'")
                 .conflicts_with("changeset"),
+        )
+        .arg(
+            Arg::from_usage(
+                "--commits-limit [LIMIT] 'import only LIMIT first commits from revlog repo'",
+            ).conflicts_with("changeset"),
         )
 }
 
