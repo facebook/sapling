@@ -593,9 +593,25 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
               }
             }
             if (fileBlobsToPrefetch) {
-              return edenMount->getObjectStore()
-                  ->prefetchBlobs(*fileBlobsToPrefetch->rlock())
-                  .then([glob = std::move(out)]() mutable {
+              std::vector<folly::Future<folly::Unit>> futures;
+
+              auto store = edenMount->getObjectStore();
+              auto blobs = fileBlobsToPrefetch->rlock();
+              std::vector<Hash> batch;
+
+              for (auto& hash : *blobs) {
+                if (batch.size() >= 20480) {
+                  futures.emplace_back(store->prefetchBlobs(batch));
+                  batch.clear();
+                }
+                batch.emplace_back(hash);
+              }
+              if (!batch.empty()) {
+                futures.emplace_back(store->prefetchBlobs(batch));
+              }
+
+              return folly::collect(futures).then(
+                  [glob = std::move(out)]() mutable {
                     return makeFuture(std::move(glob));
                   });
             }
