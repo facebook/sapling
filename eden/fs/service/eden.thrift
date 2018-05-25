@@ -349,6 +349,7 @@ struct GlobParams {
   1: string mountPoint,
   2: list<string> globs,
   3: bool includeDotfiles,
+  4: bool prefetchFiles,
 }
 
 struct Glob {

@@ -540,14 +540,19 @@ void EdenServiceHandler::glob(
   }
 
   // and evaluate it against the root
-  auto matches = globRoot.evaluate(RelativePathPiece(), rootInode).get();
+  auto matches = globRoot
+                     .evaluate(
+                         edenMount->getObjectStore(),
+                         RelativePathPiece(),
+                         rootInode,
+                         /*prefetchFiles=*/false)
+                     .get();
   for (auto& fileName : matches) {
     out.emplace_back(fileName.stringPiece().toString());
   }
 }
 
-void EdenServiceHandler::globFiles(
-    Glob& out,
+folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     std::unique_ptr<GlobParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
@@ -558,16 +563,30 @@ void EdenServiceHandler::globFiles(
   auto rootInode = edenMount->getRootInode();
 
   // Compile the list of globs into a tree
-  GlobNode globRoot(params->includeDotfiles);
+  auto globRoot = std::make_shared<GlobNode>(params->includeDotfiles);
   for (auto& globString : params->globs) {
-    globRoot.parse(globString);
+    globRoot->parse(globString);
   }
 
   // and evaluate it against the root
-  auto matches = globRoot.evaluate(RelativePathPiece(), rootInode).get();
-  for (auto& fileName : matches) {
-    out.matchingFiles.emplace_back(fileName.stringPiece().toString());
-  }
+  return helper.wrapFuture(
+      globRoot
+          ->evaluate(
+              edenMount->getObjectStore(),
+              RelativePathPiece(),
+              rootInode,
+              params->prefetchFiles)
+          .then([](std::unordered_set<RelativePath>&& paths) {
+            auto out = std::make_unique<Glob>();
+            for (auto& fileName : paths) {
+              out->matchingFiles.emplace_back(
+                  fileName.stringPiece().toString());
+            }
+            return out;
+          })
+          .ensure([globRoot]() {
+            // keep globRoot alive until the end
+          }));
 }
 
 void EdenServiceHandler::getManifestEntry(

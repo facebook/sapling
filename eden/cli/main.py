@@ -22,6 +22,7 @@ from typing import Any, List, Optional, Set, Tuple
 import eden.thrift
 from eden.thrift import EdenNotRunningError
 from facebook.eden import EdenService
+from facebook.eden.ttypes import GlobParams
 
 from . import (
     buck,
@@ -504,6 +505,73 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                 return 1
 
         print(f"Success")
+        return 0
+
+
+@subcmd("prefetch", "Prefetch content for matching file patterns")
+class PrefetchCmd(Subcmd):
+
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--repo", help="Specify path to repo root (default: root of cwd)"
+        )
+        parser.add_argument(
+            "--pattern-file",
+            help=(
+                "Specify path to a file that lists patterns/files "
+                "to match, one per line"
+            ),
+        )
+        parser.add_argument(
+            "--silent",
+            help="Do not print the names of the matching files",
+            action="store_true",
+        )
+        parser.add_argument(
+            "PATTERN", nargs="+", help="Filename patterns to match via fnmatch"
+        )
+
+    def _repo_root(self, path: str) -> Optional[str]:
+        try:
+            return util.get_eden_mount_name(path)
+        except Exception:
+            # Likely no .eden dir there, so probably not an eden repo
+            return None
+
+    def run(self, args: argparse.Namespace) -> int:
+        config = create_config(args)
+
+        if args.repo:
+            repo_root = self._repo_root(args.repo)
+            if not repo_root:
+                print(f"{args.repo} does not appear to be an eden repo")
+                return 1
+            if repo_root != os.path.realpath(args.repo):
+                print(f"{args.repo} is not the root of an eden repo")
+                return 1
+        else:
+            repo_root = self._repo_root(os.getcwd())
+            if not repo_root:
+                print("current directory does not appear to be an eden repo")
+                return 1
+
+        if args.pattern_file is not None:
+            with open(args.pattern_file) as f:
+                args.PATTERN += [pat.strip() for pat in f.readlines()]
+
+        with config.get_thrift_client() as client:
+            result = client.globFiles(
+                GlobParams(
+                    mountPoint=repo_root,
+                    globs=args.PATTERN,
+                    includeDotfiles=False,
+                    prefetchFiles=True,
+                )
+            )
+            if not args.silent:
+                for name in result.matchingFiles:
+                    print(name)
+
         return 0
 
 

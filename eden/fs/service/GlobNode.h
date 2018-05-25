@@ -10,7 +10,10 @@
 #pragma once
 #include <folly/futures/Future.h>
 #include "eden/fs/inodes/InodePtrFwd.h"
+#include "eden/fs/model/Hash.h"
+#include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GlobMatcher.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -37,14 +40,28 @@ class GlobNode {
   // Compilation splits the pattern into nodes, with one node for each
   // directory separator separated path component.
   void parse(folly::StringPiece pattern);
+
   // This is a recursive function to evaluate the compiled glob against
   // the provided input path and inode.
   // It returns the set of matching file names.
   // Note: the caller is responsible for ensuring that this
   // GlobNode exists until the returned Future is resolved.
+  // If prefetchFiles is true, each matching file will have its content
+  // prefetched via the ObjectStore layer.  This will not change the
+  // materialization or overlay state for children that already have
+  // inodes assigned.
   folly::Future<std::unordered_set<RelativePath>> evaluate(
+      const ObjectStore* store,
       RelativePathPiece rootPath,
-      TreeInodePtr root);
+      TreeInodePtr root,
+      bool prefetchFiles);
+
+  // This is the Tree version of the method above
+  folly::Future<std::unordered_set<RelativePath>> evaluate(
+      const ObjectStore* store,
+      RelativePathPiece rootPath,
+      const std::shared_ptr<const Tree>& tree,
+      bool prefetchFiles);
 
  private:
   // Returns the next glob node token.
@@ -70,9 +87,21 @@ class GlobNode {
   // inode children.
   // The difference is because a pattern like "**/foo" must be recursively
   // matched against all the children of the inode.
-  folly::Future<std::unordered_set<RelativePath>> evaluateRecursiveComponent(
+  template <typename ROOT>
+  folly::Future<std::unordered_set<RelativePath>>
+  evaluateRecursiveComponentImpl(
+      const ObjectStore* store,
       RelativePathPiece rootPath,
-      TreeInodePtr root);
+      ROOT&& root,
+      bool prefetchFiles);
+
+  template <typename ROOT>
+  folly::Future<std::unordered_set<RelativePath>> evaluateImpl(
+      const ObjectStore* store,
+      RelativePathPiece rootPath,
+      ROOT&& root,
+      bool prefetchFiles);
+
   // The pattern fragment for this node
   std::string pattern_;
   // The compiled pattern
