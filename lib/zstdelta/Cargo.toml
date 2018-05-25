@@ -1,0 +1,11 @@
+[package]
+name = "zstdelta"
+version = "0.1.0"
+
+[dependencies]
+libc = "0.2.40" # keep it in sync with zstd-sys
+zstd-sys = "1.4.3"
+
+[dev-dependencies]
+quickcheck = "0.6"
+rand = "0.4"
