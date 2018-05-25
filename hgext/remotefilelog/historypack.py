@@ -46,34 +46,20 @@ class historypackstore(basepack.basepackstore):
         return historypack(path)
 
     def getancestors(self, name, node, known=None):
-        for pack in self.packs:
-            try:
-                return pack.getancestors(name, node, known=known)
-            except KeyError:
-                pass
+        def func(pack):
+            return pack.getancestors(name, node, known=known)
+        for ancestors in self.runonpacks(func):
+            return ancestors
 
-        for pack in self.refresh():
-            try:
-                return pack.getancestors(name, node, known=known)
-            except KeyError:
-                pass
-
-        raise KeyError((name, node))
+        raise KeyError((name, hex(node)))
 
     def getnodeinfo(self, name, node):
-        for pack in self.packs:
-            try:
-                return pack.getnodeinfo(name, node)
-            except KeyError:
-                pass
+        def func(pack):
+            return pack.getnodeinfo(name, node)
+        for nodeinfo in self.runonpacks(func):
+            return nodeinfo
 
-        for pack in self.refresh():
-            try:
-                return pack.getnodeinfo(name, node)
-            except KeyError:
-                pass
-
-        raise KeyError((name, node))
+        raise KeyError((name, hex(node)))
 
     def add(self, filename, node, p1, p2, linknode, copyfrom):
         raise RuntimeError("cannot add to historypackstore (%s:%s)"

@@ -222,17 +222,12 @@ class basepackstore(object):
 
     def getmissing(self, keys):
         missing = keys
-        for pack in self.packs:
-            missing = pack.getmissing(missing)
-
-            # Ensures better performance of the cache by keeping the most
-            # recently accessed pack at the beginning in subsequent iterations.
+        def func(pack):
+            return pack.getmissing(missing)
+        for newmissing in self.runonpacks(func):
+            missing = newmissing
             if not missing:
-                return missing
-
-        if missing:
-            for pack in self.refresh():
-                missing = pack.getmissing(missing)
+                break
 
         return missing
 
@@ -269,6 +264,19 @@ class basepackstore(object):
                     self.packs.add(newpack)
 
         return newpacks
+
+    def runonpacks(self, func):
+        for pack in self.packs:
+            try:
+                yield func(pack)
+            except KeyError:
+                pass
+
+        for pack in self.refresh():
+            try:
+                yield func(pack)
+            except KeyError:
+                pass
 
 class versionmixin(object):
     # Mix-in for classes with multiple supported versions

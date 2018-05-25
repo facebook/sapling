@@ -49,47 +49,26 @@ class datapackstore(basepack.basepackstore):
         raise RuntimeError("must use getdeltachain with datapackstore")
 
     def getmeta(self, name, node):
-        for pack in self.packs:
-            try:
-                return pack.getmeta(name, node)
-            except KeyError:
-                pass
-
-        for pack in self.refresh():
-            try:
-                return pack.getmeta(name, node)
-            except KeyError:
-                pass
+        def func(pack):
+            return pack.getmeta(name, node)
+        for meta in self.runonpacks(func):
+            return meta
 
         raise KeyError((name, hex(node)))
 
     def getdelta(self, name, node):
-        for pack in self.packs:
-            try:
-                return pack.getdelta(name, node)
-            except KeyError:
-                pass
-
-        for pack in self.refresh():
-            try:
-                return pack.getdelta(name, node)
-            except KeyError:
-                pass
+        def func(pack):
+            return pack.getdelta(name, node)
+        for delta in self.runonpacks(func):
+            return delta
 
         raise KeyError((name, hex(node)))
 
     def getdeltachain(self, name, node):
-        for pack in self.packs:
-            try:
-                return pack.getdeltachain(name, node)
-            except KeyError:
-                pass
-
-        for pack in self.refresh():
-            try:
-                return pack.getdeltachain(name, node)
-            except KeyError:
-                pass
+        def func(pack):
+            return pack.getdeltachain(name, node)
+        for deltachain in self.runonpacks(func):
+            return deltachain
 
         raise KeyError((name, hex(node)))
 
