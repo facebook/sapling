@@ -528,6 +528,40 @@ def showfiles(**args):
     args = pycompat.byteskwargs(args)
     return showlist('file', args['ctx'].files(), args)
 
+@templatekeyword('filestat')
+def showfilestat(**args):
+    """List of file status objects. Status information for each file affected.
+
+    Each file status object has the following fields:
+      - 'op' is one of 'A' for added, 'M' for modified, or 'R' for removed.
+      - 'type' is one of 'n' for normal, 'x' for executable, 'l' for link,
+        or 'r' for removed.
+      - 'size' is the size of the file in bytes.  0 for removed files.
+      - 'name' is the name of the file.
+    (EXPERIMENTAL)
+    """
+    repo, ctx, revcache = args[r'repo'], args[r'ctx'], args[r'revcache']
+    files = getfiles(repo, ctx, revcache)
+    filestat = []
+    for op, filelist in zip('MAR', files):
+        for file in filelist:
+            stat = {'name': file, 'op': op}
+            if op == 'R':
+                stat['type'] = 'r'
+                stat['size'] = 0
+            else:
+                filectx = ctx.filectx(file)
+                if filectx.islink():
+                    stat['type'] = 'l'
+                elif filectx.isexec():
+                    stat['type'] = 'x'
+                else:
+                    stat['type'] = 'n'
+                stat['size'] = filectx.size()
+            filestat.append(stat)
+    f = _showlist('filestat', filestat, args)
+    return _hybrid(f, filestat, lambda x: x, lambda x: '%s' % x)
+
 @templatekeyword('graphnode')
 def showgraphnode(repo, ctx, **args):
     """String. The character representing the changeset node in an ASCII
