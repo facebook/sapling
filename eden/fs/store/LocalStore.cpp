@@ -103,6 +103,18 @@ folly::Future<StoreResult> LocalStore::getFuture(
       [keySpace, key, this] { return get(keySpace, key); });
 }
 
+folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
+    KeySpace keySpace,
+    const std::vector<folly::ByteRange>& keys) const {
+  return folly::makeFutureWith([keySpace, keys, this] {
+    std::vector<StoreResult> results;
+    for (auto& key : keys) {
+      results.emplace_back(get(keySpace, key));
+    }
+    return results;
+  });
+}
+
 // TODO(mbolin): Currently, all objects in our RocksDB are Git objects. We
 // probably want to namespace these by column family going forward, at which
 // point we might want to have a GitLocalStore that delegates to an

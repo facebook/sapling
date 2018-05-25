@@ -87,6 +87,10 @@ class LocalStore {
       KeySpace keySpace,
       folly::ByteRange key) const;
 
+  FOLLY_NODISCARD virtual folly::Future<std::vector<StoreResult>> getBatch(
+      KeySpace keySpace,
+      const std::vector<folly::ByteRange>& keys) const;
+
   /**
    * Get a Tree from the store.
    *

@@ -252,6 +252,78 @@ FOLLY_NODISCARD folly::Future<StoreResult> RocksDbLocalStore::getFuture(
       });
 }
 
+FOLLY_NODISCARD folly::Future<std::vector<StoreResult>>
+RocksDbLocalStore::getBatch(
+    KeySpace keySpace,
+    const std::vector<folly::ByteRange>& keys) const {
+  std::vector<folly::Future<std::vector<StoreResult>>> futures;
+
+  std::vector<std::shared_ptr<std::vector<std::string>>> batches;
+  batches.emplace_back(std::make_shared<std::vector<std::string>>());
+
+  for (auto& key : keys) {
+    if (batches.back()->size() >= 2048) {
+      batches.emplace_back(std::make_shared<std::vector<std::string>>());
+    }
+    batches.back()->emplace_back(
+        reinterpret_cast<const char*>(key.data()), key.size());
+  }
+
+  for (auto& batch : batches) {
+    futures.emplace_back(
+        folly::via(&ioPool_, [this, keySpace, keys = std::move(batch)] {
+          std::vector<Slice> keySlices;
+          std::vector<std::string> values;
+          std::vector<rocksdb::ColumnFamilyHandle*> columns;
+          for (auto& key : *keys) {
+            keySlices.emplace_back(key);
+            columns.emplace_back(dbHandles_.columns[keySpace].get());
+          }
+          auto statuses = dbHandles_.db->MultiGet(
+              ReadOptions(), columns, keySlices, &values);
+
+          std::vector<StoreResult> results;
+          for (size_t i = 0; i < keys->size(); ++i) {
+            auto& status = statuses[i];
+            if (!status.ok()) {
+              if (status.IsNotFound()) {
+                // Return an empty StoreResult
+                results.emplace_back(); // StoreResult();
+                continue;
+              }
+
+              // TODO: RocksDB can return a "TryAgain" error.
+              // Should we try again for the user, rather than re-throwing the
+              // error?
+
+              // We don't use RocksException::check(), since we don't want to
+              // waste our time computing the hex string of the key if we
+              // succeeded.
+              throw RocksException::build(
+                  status,
+                  "failed to get ",
+                  folly::hexlify(keys->at(i)),
+                  " from local store");
+            }
+            results.emplace_back(std::move(values[i]));
+          }
+          return results;
+        }));
+  }
+
+  return folly::collect(futures).then(
+      [](std::vector<std::vector<StoreResult>>&& tries) {
+        std::vector<StoreResult> results;
+        for (auto& batch : tries) {
+          results.insert(
+              results.end(),
+              make_move_iterator(batch.begin()),
+              make_move_iterator(batch.end()));
+        }
+        return results;
+      });
+}
+
 bool RocksDbLocalStore::hasKey(
     LocalStore::KeySpace keySpace,
     folly::ByteRange key) const {

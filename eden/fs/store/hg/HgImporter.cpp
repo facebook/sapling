@@ -16,6 +16,7 @@
 #include <folly/container/Array.h>
 #include <folly/dynamic.h>
 #include <folly/experimental/EnvUtil.h>
+#include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/json.h>
@@ -152,6 +153,29 @@ struct HgProxyHash {
     return revHash_;
   }
 
+  static folly::Future<std::vector<std::pair<RelativePath, Hash>>> getBatch(
+      LocalStore* store,
+      const std::vector<Hash>& blobHashes) {
+    auto hashCopies = std::make_shared<std::vector<Hash>>(blobHashes);
+    std::vector<folly::ByteRange> byteRanges;
+    for (auto& hash : *hashCopies) {
+      byteRanges.push_back(hash.getBytes());
+    }
+    return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
+        .then([blobHashes = hashCopies](std::vector<StoreResult>&& data) {
+          std::vector<std::pair<RelativePath, Hash>> results;
+
+          for (size_t i = 0; i < blobHashes->size(); ++i) {
+            HgProxyHash hgInfo(
+                blobHashes->at(i), data[i], "prefetchFiles getBatch");
+
+            results.emplace_back(hgInfo.path().copy(), hgInfo.revHash());
+          }
+
+          return results;
+        });
+  }
+
   /**
    * Store HgProxyHash data in the LocalStore.
    *
@@ -213,6 +237,20 @@ struct HgProxyHash {
   HgProxyHash& operator=(const HgProxyHash&) = delete;
   HgProxyHash(HgProxyHash&&) = delete;
   HgProxyHash& operator=(HgProxyHash&&) = delete;
+
+  HgProxyHash(
+      Hash edenBlobHash,
+      StoreResult& infoResult,
+      folly::StringPiece context) {
+    if (!infoResult.isValid()) {
+      XLOG(ERR) << "received unknown mercurial proxy hash "
+                << edenBlobHash.toString() << " in " << context;
+      // Fall through and let infoResult.extractValue() throw
+    }
+
+    value_ = infoResult.extractValue();
+    parseValue(edenBlobHash);
+  }
 
   /**
    * Serialize the (path, hgRevHash) data into a buffer that will be stored in
@@ -810,15 +848,7 @@ IOBuf HgImporter::importFileContents(Hash blobHash) {
 }
 
 void HgImporter::prefetchFiles(const std::vector<Hash>& blobHashes) {
-  std::vector<std::pair<RelativePath, Hash>> files;
-
-  files.reserve(blobHashes.size());
-
-  for (auto& blobHash : blobHashes) {
-    // TODO: add batch lookup interface to HgProxyHash
-    HgProxyHash hgInfo(store_, blobHash, "prefetchFiles");
-    files.emplace_back(hgInfo.path().copy(), hgInfo.revHash());
-  }
+  auto files = HgProxyHash::getBatch(store_, blobHashes).get();
 
   sendPrefetchFilesRequest(files);
 
