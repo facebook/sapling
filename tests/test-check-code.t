@@ -204,7 +204,6 @@ New errors are not allowed. Warnings are strongly discouraged.
 Prevent adding new files in the root directory accidentally.
 
   $ testrepohg files 'glob:*'
-  .clang-format
   .editorconfig
   .flake8
   .gitignore
