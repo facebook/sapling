@@ -25,6 +25,7 @@ use mononoke_types::DateTime;
 use errors::*;
 use utils::{EnvelopeBlob, RawCSBlob};
 
+#[derive(Debug)]
 pub struct ChangesetContent {
     parents: DParents,
     manifestid: DManifestId,
@@ -123,6 +124,7 @@ impl ChangesetContent {
     }
 }
 
+#[derive(Debug)]
 pub struct BlobChangeset {
     changesetid: DChangesetId, // redundant - can be computed from revlogcs?
     content: ChangesetContent,

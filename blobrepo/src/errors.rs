@@ -15,6 +15,8 @@ use mercurial::HgNodeHash;
 use mercurial_types::{DChangesetId, DFileNodeId, DNodeHash, DParents, HgBlob, HgBlobHash, MPath,
                       RepoPath, Type};
 
+use BlobChangeset;
+
 #[derive(Debug)]
 pub enum StateOpenError {
     Heads,
@@ -67,8 +69,10 @@ pub enum ErrorKind {
     #[fail(display = "Inconsistent node hash for entry: path {}, provided: {}, computed: {}", _0,
            _1, _2)]
     InconsistentEntryHash(RepoPath, HgNodeHash, HgNodeHash),
-    #[fail(display = "Inconsistent node hash for changeset: provided: {}, computed: {}", _0, _1)]
-    InconsistentChangesetHash(HgNodeHash, HgNodeHash),
+    #[fail(display = "Inconsistent node hash for changeset: provided: {}, \
+                      computed: {} for blob: {:#?}",
+           _0, _1, _2)]
+    InconsistentChangesetHash(HgNodeHash, HgNodeHash, BlobChangeset),
     #[fail(display = "Bookmark {} does not exist", _0)] BookmarkNotFound(AsciiString),
     #[fail(display = "Unresolved conflicts when converting BonsaiChangeset to Manifest")]
     UnresolvedConflicts,

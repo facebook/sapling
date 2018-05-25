@@ -690,10 +690,13 @@ impl CreateChangeset {
                                 if let Some(expected_nodeid) = expected_nodeid {
                                     let cs_id = cs_id.into_mercurial();
                                     if cs_id != expected_nodeid {
-                                        try_boxfuture!(Err(ErrorKind::InconsistentChangesetHash(
-                                            expected_nodeid,
-                                            cs_id
-                                        )));
+                                        return future::err(
+                                            ErrorKind::InconsistentChangesetHash(
+                                                expected_nodeid,
+                                                cs_id,
+                                                blobcs,
+                                            ).into(),
+                                        ).boxify();
                                     }
                                 }
 
