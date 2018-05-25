@@ -210,10 +210,18 @@ fn add_common_stats_and_send_to_scuba(
     remote: Remote,
     args: Option<String>,
 ) -> BoxFuture<(), ()> {
-    futures_trace::global::context()
-        .upload_trace_async(remote)
+    let trace_upload = if futures_trace::global::is_enabled() {
+        futures_trace::global::context()
+            .upload_trace_async(remote)
+            .map(|id| Some(id))
+            .boxify()
+    } else {
+        Ok(None).into_future().boxify()
+    };
+
+    trace_upload
         .then(move |res| {
-            let trace_id = res.unwrap_or_else(|_| "upload failed".into());
+            let trace_id = res.unwrap_or_else(|_| Some("upload failed".into()));
             if let Some(ref scuba) = scuba {
                 sample.add(
                     "time_elapsed_ms",
@@ -221,7 +229,9 @@ fn add_common_stats_and_send_to_scuba(
                 );
                 sample.add("poll_time_us", stats.poll_time.as_micros_unchecked());
                 sample.add("poll_count", stats.poll_count);
-                sample.add("trace", trace_id);
+                if let Some(trace_id) = trace_id {
+                    sample.add("trace", trace_id);
+                }
                 if let Some(args) = args {
                     sample.add("args", args);
                 }
