@@ -71,6 +71,6 @@ fn main() {
     };
 
     if let Err(err) = res {
-        println!("Subcommand failed: {:?}", err);
+        eprintln!("Subcommand failed: {:?}", err);
     }
 }
