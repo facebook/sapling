@@ -125,6 +125,19 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
       .via(serverThreadPool_);
 }
 
+folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(
+    const std::vector<Hash>& ids) const {
+  return folly::via(
+             importThreadPool_.get(),
+             [ids] {
+               getThreadLocalImporter().prefetchFiles(ids);
+               return folly::unit;
+             })
+      // Ensure that the control moves back to the main thread pool
+      // to process the caller-attached .then routine.
+      .via(serverThreadPool_);
+}
+
 Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
     const Hash& commitID) {
   return folly::via(

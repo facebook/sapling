@@ -104,6 +104,22 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
       });
 }
 
+folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
+    const std::vector<Hash>& ids) const {
+  // In theory we could/should ask the localStore_ to filter the list
+  // of ids down to just the set that we need to load, but there is no
+  // bulk key existence check in rocksdb, so we would need to cause it
+  // to load all the blocks of those keys into memory.
+  // So for the moment we are committing a layering violation in the
+  // interest of making things faster in practice by just asking the
+  // mercurial backing store to ensure that its local hgcache storage
+  // has entries for all of the requested keys.
+  if (ids.empty()) {
+    return folly::unit;
+  }
+  return backingStore_->prefetchBlobs(ids);
+}
+
 Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
     const Hash& commitID) const {
   XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";

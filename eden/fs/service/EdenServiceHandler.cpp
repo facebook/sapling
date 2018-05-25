@@ -545,7 +545,7 @@ void EdenServiceHandler::glob(
                          edenMount->getObjectStore(),
                          RelativePathPiece(),
                          rootInode,
-                         /*prefetchFiles=*/false)
+                         /*fileBlobsToPrefetch=*/nullptr)
                      .get();
   for (auto& fileName : matches) {
     out.emplace_back(fileName.stringPiece().toString());
@@ -568,6 +568,10 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     globRoot->parse(globString);
   }
 
+  auto fileBlobsToPrefetch = params->prefetchFiles
+      ? std::make_shared<folly::Synchronized<std::vector<Hash>>>()
+      : nullptr;
+
   // and evaluate it against the root
   return helper.wrapFuture(
       globRoot
@@ -575,14 +579,27 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
               edenMount->getObjectStore(),
               RelativePathPiece(),
               rootInode,
-              params->prefetchFiles)
-          .then([](std::unordered_set<RelativePath>&& paths) {
+              fileBlobsToPrefetch)
+          .then([edenMount,
+                 fileBlobsToPrefetch,
+                 suppressFileList = params->suppressFileList](
+                    std::unordered_set<RelativePath>&& paths) {
             auto out = std::make_unique<Glob>();
-            for (auto& fileName : paths) {
-              out->matchingFiles.emplace_back(
-                  fileName.stringPiece().toString());
+
+            if (!suppressFileList) {
+              for (auto& fileName : paths) {
+                out->matchingFiles.emplace_back(
+                    fileName.stringPiece().toString());
+              }
             }
-            return out;
+            if (fileBlobsToPrefetch) {
+              return edenMount->getObjectStore()
+                  ->prefetchBlobs(*fileBlobsToPrefetch->rlock())
+                  .then([glob = std::move(out)]() mutable {
+                    return makeFuture(std::move(glob));
+                  });
+            }
+            return makeFuture(std::move(out));
           })
           .ensure([globRoot]() {
             // keep globRoot alive until the end

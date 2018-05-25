@@ -57,6 +57,8 @@ class ObjectStore : public IObjectStore {
    */
   folly::Future<std::shared_ptr<const Blob>> getBlob(
       const Hash& id) const override;
+  folly::Future<folly::Unit> prefetchBlobs(
+      const std::vector<Hash>& ids) const override;
 
   /**
    * Get a commit's root Tree.

@@ -93,5 +93,9 @@ Future<BlobMetadata> FakeObjectStore::getBlobMetadata(const Hash& id) const {
   }
   return makeFuture(iter->second);
 }
+folly::Future<folly::Unit> FakeObjectStore::prefetchBlobs(
+    const std::vector<Hash>&) const {
+  return folly::unit;
+}
 } // namespace eden
 } // namespace facebook

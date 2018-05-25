@@ -40,6 +40,8 @@ class FakeObjectStore : public IObjectStore {
   folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
       const Hash& commitID) const override;
   folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const override;
+  folly::Future<folly::Unit> prefetchBlobs(
+      const std::vector<Hash>& ids) const override;
 
  private:
   std::unordered_map<Hash, Tree> trees_;

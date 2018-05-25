@@ -10,10 +10,12 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 namespace folly {
 template <typename T>
 class Future;
+struct Unit;
 }
 
 namespace facebook {
@@ -38,6 +40,8 @@ class IObjectStore {
   virtual folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
       const Hash& commitID) const = 0;
   virtual folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const = 0;
+  virtual folly::Future<folly::Unit> prefetchBlobs(
+      const std::vector<Hash>& ids) const = 0;
 };
 } // namespace eden
 } // namespace facebook

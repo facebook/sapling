@@ -123,6 +123,8 @@ class HgImporter {
    */
   folly::IOBuf importFileContents(Hash blobHash);
 
+  void prefetchFiles(const std::vector<Hash>& blobHashes);
+
   /**
    * Resolve the manifest node for the specified revision.
    *
@@ -175,6 +177,7 @@ class HgImporter {
     CMD_CAT_FILE = 3,
     CMD_MANIFEST_NODE_FOR_COMMIT = 4,
     CMD_FETCH_TREE = 5,
+    CMD_PREFETCH_FILES = 6,
   };
   struct ChunkHeader {
     uint32_t requestID;
@@ -266,6 +269,12 @@ class HgImporter {
    * path.
    */
   void sendFetchTreeRequest(RelativePathPiece path, Hash pathManifestNode);
+
+  // Note: intentional RelativePath rather than RelativePathPiece here because
+  // HgProxyHash is not movable and it was less work to make a copy here than
+  // to implement its move constructor :-p
+  void sendPrefetchFilesRequest(
+      const std::vector<std::pair<RelativePath, Hash>>& files);
 
 #if EDEN_HAVE_HG_TREEMANIFEST
   std::unique_ptr<Tree> importTreeImpl(

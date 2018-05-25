@@ -349,7 +349,11 @@ struct GlobParams {
   1: string mountPoint,
   2: list<string> globs,
   3: bool includeDotfiles,
+  // if true, prefetch matching blobs
   4: bool prefetchFiles,
+  // if true, don't populate matchingFiles in the Glob
+  // results.  This only really makes sense with prefetchFiles.
+  5: bool suppressFileList,
 }
 
 struct Glob {

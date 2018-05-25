@@ -525,6 +525,13 @@ class PrefetchCmd(Subcmd):
         parser.add_argument(
             "--silent",
             help="Do not print the names of the matching files",
+            default=False,
+            action="store_true",
+        )
+        parser.add_argument(
+            "--no-prefetch",
+            help="Do not prefetch; only match names",
+            default=False,
             action="store_true",
         )
         parser.add_argument(
@@ -565,7 +572,8 @@ class PrefetchCmd(Subcmd):
                     mountPoint=repo_root,
                     globs=args.PATTERN,
                     includeDotfiles=False,
-                    prefetchFiles=True,
+                    prefetchFiles=not args.no_prefetch,
+                    suppressFileList=args.silent,
                 )
             )
             if not args.silent:

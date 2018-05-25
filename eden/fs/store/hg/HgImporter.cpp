@@ -14,9 +14,11 @@
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
 #include <folly/container/Array.h>
+#include <folly/dynamic.h>
 #include <folly/experimental/EnvUtil.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <folly/json.h>
 #include <folly/lang/Bits.h>
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
@@ -807,6 +809,24 @@ IOBuf HgImporter::importFileContents(Hash blobHash) {
   return buf;
 }
 
+void HgImporter::prefetchFiles(const std::vector<Hash>& blobHashes) {
+  std::vector<std::pair<RelativePath, Hash>> files;
+
+  files.reserve(blobHashes.size());
+
+  for (auto& blobHash : blobHashes) {
+    // TODO: add batch lookup interface to HgProxyHash
+    HgProxyHash hgInfo(store_, blobHash, "prefetchFiles");
+    files.emplace_back(hgInfo.path().copy(), hgInfo.revHash());
+  }
+
+  sendPrefetchFilesRequest(files);
+
+  // Read the response; throws if there was any error.
+  // No payload is returned.
+  readChunkHeader();
+}
+
 Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
   sendManifestNodeRequest(revName);
 
@@ -954,6 +974,35 @@ void HgImporter::sendFileRequest(RelativePathPiece path, Hash revHash) {
   iov[1].iov_len = Hash::RAW_SIZE;
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
+  folly::writevFull(helperIn_, iov.data(), iov.size());
+}
+
+void HgImporter::sendPrefetchFilesRequest(
+    const std::vector<std::pair<RelativePath, Hash>>& files) {
+  ChunkHeader header;
+  header.command = Endian::big<uint32_t>(CMD_PREFETCH_FILES);
+  header.requestID = Endian::big<uint32_t>(nextRequestID_++);
+  header.flags = 0;
+
+  auto items = folly::dynamic::array();
+  for (auto& pair : files) {
+    auto& revHash = pair.second;
+    auto& fileName = pair.first;
+
+    items.push_back(
+        folly::dynamic::array(fileName.stringPiece(), revHash.toString()));
+  }
+
+  auto blob = folly::toJson(items);
+
+  header.dataLength = Endian::big<uint32_t>(blob.size());
+
+  std::array<struct iovec, 2> iov;
+  iov[0].iov_base = &header;
+  iov[0].iov_len = sizeof(header);
+  iov[1].iov_base = &blob[0];
+  iov[1].iov_len = blob.size();
+
   folly::writevFull(helperIn_, iov.data(), iov.size());
 }
 

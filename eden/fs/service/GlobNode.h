@@ -34,6 +34,8 @@ class GlobNode {
   // globs that will be parsed into the overall glob tree.
   explicit GlobNode(bool includeDotfiles) : includeDotfiles_(includeDotfiles) {}
 
+  using PrefetchList = std::shared_ptr<folly::Synchronized<std::vector<Hash>>>;
+
   GlobNode(folly::StringPiece pattern, bool includeDotfiles, bool hasSpecials);
 
   // Compile and add a new glob pattern to the tree.
@@ -54,14 +56,14 @@ class GlobNode {
       const ObjectStore* store,
       RelativePathPiece rootPath,
       TreeInodePtr root,
-      bool prefetchFiles);
+      PrefetchList fileBlobsToPrefetch);
 
   // This is the Tree version of the method above
   folly::Future<std::unordered_set<RelativePath>> evaluate(
       const ObjectStore* store,
       RelativePathPiece rootPath,
       const std::shared_ptr<const Tree>& tree,
-      bool prefetchFiles);
+      PrefetchList fileBlobsToPrefetch);
 
  private:
   // Returns the next glob node token.
@@ -93,14 +95,14 @@ class GlobNode {
       const ObjectStore* store,
       RelativePathPiece rootPath,
       ROOT&& root,
-      bool prefetchFiles);
+      PrefetchList fileBlobsToPrefetch);
 
   template <typename ROOT>
   folly::Future<std::unordered_set<RelativePath>> evaluateImpl(
       const ObjectStore* store,
       RelativePathPiece rootPath,
       ROOT&& root,
-      bool prefetchFiles);
+      PrefetchList fileBlobsToPrefetch);
 
   // The pattern fragment for this node
   std::string pattern_;

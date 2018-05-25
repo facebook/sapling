@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 import binascii
 import collections
+import json
 import logging
 import os
 import struct
@@ -95,6 +96,7 @@ CMD_MANIFEST = 2
 CMD_CAT_FILE = 3
 CMD_MANIFEST_NODE_FOR_COMMIT = 4
 CMD_FETCH_TREE = 5
+CMD_PREFETCH_FILES = 6
 
 #
 # Flag values.
@@ -617,6 +619,15 @@ class HgServer(object):
         self.debug("prefetching")
         self.repo.prefetch(rev_range)
         self.debug("done prefetching")
+
+    @cmd(CMD_PREFETCH_FILES)
+    def prefetch_files(self, request):
+        logging.debug("got prefetch request, parsing")
+        files = json.loads(request.body)
+        logging.debug("will prefetch %d files" % len(files))
+        self.repo.fileservice.prefetch(files)
+
+        self.send_chunk(request, "")
 
 
 def always_allow_pending(root):
