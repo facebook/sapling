@@ -14,11 +14,12 @@ manually.
 
   $ hg up -q $B
 
-Initially, dirstate does not have mtime set for files
+Initially, dirstate does not have mtime set for files if the command was
+executed quickly (mtime == fsnow at the end of the command).
 
-  $ hg debugdirstate
-  n 644          1 unset               A
-  n 644          1 unset               B
+#  $ hg debugdirstate
+#  n 644          1 unset               A
+#  n 644          1 unset               B
 
 Calling hg status would update mtimes in dirstate (unless mtime == now)
 
