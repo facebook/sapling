@@ -159,8 +159,9 @@ def _showlist(name, values, mapping, plural=None, separator=' '):
 
     if values is empty, expand 'no_foos'.
 
-    if 'foo' not in template map, return values as a string,
-    joined by 'separator'.
+    if 'foo' not in template map and values are strings, return a string
+    containing all values joined by 'separator'. if values are not strings,
+    return 'N foos' where N is the length of the list.
 
     expand 'start_foos'.
 
@@ -182,8 +183,8 @@ def _showlist(name, values, mapping, plural=None, separator=' '):
         if isinstance(values[0], bytes):
             yield separator.join(values)
         else:
-            for v in values:
-                yield dict(v, **strmapping)
+            count = len(values)
+            yield "%s %s" % (count, name if count == 1 else plural)
         return
     startname = 'start_' + plural
     if startname in templ:
@@ -788,7 +789,7 @@ def showsuccsandmarkers(repo, ctx, **args):
 
         data.append({'successors': successors, 'markers': finalmarkers})
 
-    f = _showlist('succsandmarkers', data, args)
+    f = _showlist('succsandmarkers', data, args, plural='succsandmarkers')
     return _hybrid(f, data, lambda x: x, pycompat.identity)
 
 @templatekeyword('p1rev')

@@ -2541,11 +2541,11 @@ Check other fatelog implementations
      summary:     ROOT
   
   $ hg fatelogcount --hidden -q
-  @  0d0ef4bdf70e ????????????* (glob)
+  @  0d0ef4bdf70e 1 succsandmarkers
   |
   o  617adc3a144c
   |
-  | x  471597cad322 ????????????* (glob)
+  | x  471597cad322 1 succsandmarkers
   |/
   o  ea207398892e
   
