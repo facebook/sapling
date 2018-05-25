@@ -17,7 +17,7 @@ def get(ui, token=None):
     servicetype = ui.config('commitcloud', 'servicetype')
     if servicetype == 'local':
         return localservice.LocalService(ui)
-    elif servicetype == 'interngraph':
+    elif servicetype == 'remote':
         return httpsservice.HttpsCommitCloudService(ui, token)
     else:
         msg = 'Unrecognized commitcloud.servicetype: %s' % servicetype

@@ -43,7 +43,7 @@ DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 2
 
 class HttpsCommitCloudService(baseservice.BaseService):
-    """Commit Cloud Client uses interngraph proxy to communicate with
+    """Commit Cloud Client uses http endpoint to communicate with
        Commit Cloud Service
     """
 
@@ -54,7 +54,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
             raise commitcloudcommon.RegistrationError(
                     ui, _('valid user token is required'))
 
-        self.host = ui.config('commitcloud', 'host')
+        self.remote_host = ui.config('commitcloud', 'remote_host')
 
         # optional, but needed for using a sandbox
         self.certs = ui.config('commitcloud', 'certs')
@@ -72,15 +72,15 @@ class HttpsCommitCloudService(baseservice.BaseService):
             'Authorization': 'OAuth %s' % token,
         }
         self.connection = httplib.HTTPSConnection(
-            self.host,
+            self.remote_host,
             context=ssl.create_default_context(cafile=self.certs)
             if self.certs else ssl.create_default_context(),
             timeout=DEFAULT_TIMEOUT
         )
 
-        if not self.host:
+        if not self.remote_host:
             raise commitcloudcommon.ConfigurationError(
-                self.ui, _('host is required'))
+                self.ui, _('remote_host is required'))
 
     def requiresauthentication(self):
         return True

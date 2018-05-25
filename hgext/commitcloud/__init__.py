@@ -8,7 +8,7 @@
 
     [commitcloud]
     # type of commit cloud service to connect to
-    # local or interngraph
+    # local or remote
     servicetype = local
 
     # location of the commit cloud service to connect to
@@ -17,15 +17,8 @@
     # hostname to use for the system
     hostname = myhost
 
-    # host of commitcloud proxy
-    host = interngraph.intern.facebook.com
-
-    # user token
-    # private user token to access the commit cloud service
-    user_token = *****************************
-
-    # application id that identifies commit cloud in interngraph
-    app_id = 361121054385388
+    # Http endpoint host serving Commit Cloud requests
+    remote_host = example.commitcloud.com
 
     # SSL certificates
     certs = /etc/pki/tls/certs/fb_certs.pem
@@ -43,7 +36,8 @@
     # update to a new revision if the current revision has been moved
     updateonmove = true
 
-    # option to print requests to Commit Cloud web endpoint (in debug level)
+    # option to print incoming and outgoing requests to
+    # Commit Cloud http endpoint in json format (with --debug option only)
     debugrequests = true
 """
 
