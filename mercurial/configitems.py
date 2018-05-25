@@ -959,6 +959,11 @@ coreconfigitem('ui', 'archivemeta',
 coreconfigitem('ui', 'askusername',
     default=False,
 )
+# TODO: This config should be set to False and removed, once all tests are
+# modified to not rely on checkheads.
+coreconfigitem('ui', 'checkheads',
+    default=True,
+)
 coreconfigitem('ui', 'clonebundlefallback',
     default=False,
 )

@@ -2028,6 +2028,15 @@ User interface controls.
     default ``USER@HOST`` is used instead.
     (default: False)
 
+``checkheads``
+    Whether to forbid pushing new heads to the server.
+
+    The feature is subject to race conditions and conflicts with high-level
+    goal of some extensions (ex. commit cloud). It might be removed in a
+    future release.
+
+    (default: True)
+
 ``clonebundles``
     Whether the "clone bundles" feature is enabled.
 

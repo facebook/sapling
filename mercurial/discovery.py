@@ -324,6 +324,9 @@ def checkheads(pushop):
     newbranch = pushop.newbranch
     inc = bool(pushop.incoming)
 
+    if not repo.ui.configbool('ui', 'checkheads'):
+        return
+
     # Check for each named branch if we're creating new remote heads.
     # To be a remote head after push, node must be either:
     # - unknown locally
