@@ -348,7 +348,7 @@ def getfiles(repo, proto):
                 serializedargs = 'Failed to serialize arguments'
             repo.ui.log("wireproto_requests", "", command="getfiles",
                         args=serializedargs, responselen=responselen,
-                        duration=(time.time() - start_time))
+                        duration=int((time.time() - start_time) * 1000))
 
     return wireproto.streamres(streamer())
 
