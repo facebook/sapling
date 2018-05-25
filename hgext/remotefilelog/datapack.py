@@ -35,9 +35,10 @@ class datapackstore(basepack.basepackstore):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
-    def __init__(self, ui, path, usecdatapack=False):
+    def __init__(self, ui, path, usecdatapack=False, deletecorruptpacks=False):
         self.usecdatapack = usecdatapack
-        super(datapackstore, self).__init__(ui, path)
+        super(datapackstore, self).__init__(ui, path,
+                deletecorruptpacks=deletecorruptpacks)
 
     def getpack(self, path):
         if self.usecdatapack:

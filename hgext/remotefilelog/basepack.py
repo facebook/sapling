@@ -96,6 +96,10 @@ class _cachebackedpacks(object):
         self._movetofront(pack)
         self._packs.add(pack)
 
+    def remove(self, pack):
+        self._packs.remove(pack)
+        del self._lrucache[pack]
+
     def __iter__(self):
         self._registerlastpackusage()
 
@@ -117,9 +121,10 @@ class basepackstore(object):
     # Default cache size limit for the pack files.
     DEFAULTCACHESIZE = 100
 
-    def __init__(self, ui, path):
+    def __init__(self, ui, path, deletecorruptpacks=False):
         self.ui = ui
         self.path = path
+        self.deletecorruptpacks = deletecorruptpacks
 
         # lastrefesh is 0 so we'll immediately check for new packs on the first
         # failure.
@@ -266,17 +271,39 @@ class basepackstore(object):
         return newpacks
 
     def runonpacks(self, func):
+        badpacks = []
         for pack in self.packs:
             try:
                 yield func(pack)
             except KeyError:
                 pass
+            except Exception:
+                # Other exceptions indicate an issue with the pack file, so
+                # remove it.
+                badpacks.append(pack)
 
         for pack in self.refresh():
             try:
                 yield func(pack)
             except KeyError:
                 pass
+            except Exception:
+                # Other exceptions indicate an issue with the pack file, so
+                # remove it.
+                badpacks.append(pack)
+
+        if badpacks:
+            if self.deletecorruptpacks:
+                for pack in badpacks:
+                    self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path)
+                    self.packs.remove(pack)
+                    util.tryunlink(pack.packpath)
+                    util.tryunlink(pack.indexpath)
+            else:
+                for pack in badpacks:
+                    self.ui.warn(
+                        _("detected corrupt pack '%s' - ignoring it\n") %
+                        pack.path)
 
 class versionmixin(object):
     # Mix-in for classes with multiple supported versions

@@ -328,6 +328,74 @@ class datapacktestsbase(object):
 
             self.assertEquals(randomchain.index(revision) + 1, len(chain))
 
+    def testCorruptPackHandling(self):
+        """Test that the pack store deletes corrupt packs."""
+        # There's a bug in cdatapack right now that causes it to return bad data
+        # even if the pack is corrupt. Since we're not getting an exception, we
+        # can't detect the corruption and remediate. Let's wait for the rust
+        # implementation to deprecate the C implementation then this will be
+        # easier to fix.
+        if self.iscdatapack:
+            return
+
+        packdir = self.makeTempDir()
+        deltachains = []
+
+        numpacks = 5
+        revisionsperpack = 100
+
+        firstpack = None
+        for i in range(numpacks):
+            chain = []
+            revision = (str(i), self.getFakeHash(), nullid, "content")
+
+            for _ in range(revisionsperpack):
+                chain.append(revision)
+                revision = (
+                    str(i),
+                    self.getFakeHash(),
+                    revision[1],
+                    self.getFakeHash()
+                )
+
+            pack = self.createPack(chain, packdir)
+            if firstpack is None:
+                firstpack = pack.packpath
+            deltachains.append(chain)
+
+        ui = mercurial.ui.ui()
+        store = datapackstore(ui, packdir, self.iscdatapack,
+                              deletecorruptpacks=True)
+
+        key = (deltachains[0][0][0], deltachains[0][0][1])
+        # Count packs
+        origpackcount = len(os.listdir(packdir))
+
+        # Read key
+        store.getdelta(*key)
+
+        # Corrupt pack
+        os.chmod(firstpack, 0o644)
+        f = open(firstpack, 'w')
+        f.truncate(1)
+        f.close()
+
+        # Look for key again
+        try:
+            ui.pushbuffer(error=True)
+            delta = store.getdelta(*key)
+            raise RuntimeError("getdelta on corrupt key should fail %s" %
+                    repr(delta))
+        except KeyError:
+            pass
+        ui.popbuffer()
+
+        # Count packs
+        newpackcount = len(os.listdir(packdir))
+
+        # Assert the corrupt pack was removed
+        self.assertEquals(origpackcount - 2, newpackcount)
+
     def testReadingMutablePack(self):
         """Tests that the data written into a mutabledatapack can be read out
         before it has been finalized."""

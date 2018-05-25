@@ -76,8 +76,10 @@ def makepackstores(repo):
     packcontentstore = datapackstore(
         repo.ui,
         packpath,
-        usecdatapack=repo.ui.configbool('remotefilelog', 'fastdatapack'))
-    packmetadatastore = historypackstore(repo.ui, packpath)
+        usecdatapack=repo.ui.configbool('remotefilelog', 'fastdatapack'),
+        deletecorruptpacks=True)
+    packmetadatastore = historypackstore(repo.ui, packpath,
+                                         deletecorruptpacks=True)
 
     repo.shareddatastores.append(packcontentstore)
     repo.sharedhistorystores.append(packmetadatastore)

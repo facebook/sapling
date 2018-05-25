@@ -42,6 +42,10 @@ class historypackstore(basepack.basepackstore):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
+    def __init__(self, ui, path, deletecorruptpacks=False):
+        super(historypackstore, self).__init__(ui, path,
+                deletecorruptpacks=deletecorruptpacks)
+
     def getpack(self, path):
         return historypack(path)
 

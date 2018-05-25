@@ -424,7 +424,8 @@ def setuptreestores(repo, mfl):
 
     # Data store
     # TODO: support cstore.uniondatapackstore here
-    datastore = datapackstore(ui, packpath, usecdatapack=usecdatapack)
+    datastore = datapackstore(ui, packpath, usecdatapack=usecdatapack,
+                              deletecorruptpacks=True)
     localdatastore = datapackstore(ui, localpackpath,
                                    usecdatapack=usecdatapack)
     datastores = [datastore, localdatastore, mutablestore]
@@ -441,7 +442,7 @@ def setuptreestores(repo, mfl):
     mfl.localdatastores = [localdatastore]
 
     # History store
-    sharedhistorystore = historypackstore(ui, packpath)
+    sharedhistorystore = historypackstore(ui, packpath, deletecorruptpacks=True)
     localhistorystore = historypackstore(ui, localpackpath)
     mfl.sharedhistorystores = [
         sharedhistorystore
