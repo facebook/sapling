@@ -71,3 +71,17 @@ Test template stat
   $ hg log -r . -T '{stat()}'
    binary |  Bin 
    1 files changed, 0 insertions(+), 0 deletions(-)
+  $ hg log -r . -T '{stat("status")}'
+  added   binary |  Bin 
+   1 files changed, 0 insertions(+), 0 deletions(-)
+
+  $ hg rm -q binary a
+  $ echo 3 >> b
+  $ echo 4 >> c
+  $ hg add c
+  $ hg log -r 'wdir()' -T '{stat(status)}'
+  removed a      |   50 --------------------------------------------------
+  changed b      |    1 +
+  removed binary |  Bin 
+  added   c      |    1 +
+   4 files changed, 2 insertions(+), 50 deletions(-)

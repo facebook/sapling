@@ -2879,7 +2879,10 @@ def diffstatdata(lines):
     addresult()
     return results
 
-def diffstat(lines, width=80):
+def diffstat(lines, width=80, status=None):
+    """If status is not None, it's a tuple (modified, added, removed) and
+    "changed", "added", "removed" will be shown before file names.
+    """
     output = []
     stats = diffstatdata(lines)
     maxname, maxtotal, totaladds, totalremoves, hasbinary = diffstatsum(stats)
@@ -2906,8 +2909,18 @@ def diffstat(lines, width=80):
             count = '%d' % (adds + removes)
         pluses = '+' * scale(adds)
         minuses = '-' * scale(removes)
-        output.append(' %s%s |  %*s %s%s\n' %
-                      (filename, ' ' * (maxname - encoding.colwidth(filename)),
+        if status:
+            if filename in status[0]:
+                prefix = 'changed '
+            elif filename in status[1]:
+                prefix = 'added   '
+            elif filename in status[2]:
+                prefix = 'removed '
+        else:
+            prefix = ' '
+        output.append('%s%s%s |  %*s %s%s\n' %
+                      (prefix,
+                       filename, ' ' * (maxname - encoding.colwidth(filename)),
                        countwidth, count, pluses, minuses))
 
     if stats:
