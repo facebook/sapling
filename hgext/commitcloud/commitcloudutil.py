@@ -134,15 +134,22 @@ class TokenLocator(object):
         """
         if pycompat.isdarwin and not self.ui.config(
                 'commitcloud', 'user_token_path'):
-            return self._gettokenosx()
+            token = self._gettokenosx()
         else:
-            return self._gettokenfromfile()
+            token = self._gettokenfromfile()
+        # Ensure token doesn't have any extraneous whitespace around it.
+        if token is not None:
+            token = token.strip()
+        return token
 
     def settoken(self, token):
         """Public API
             set token
                 it can throw only in case of unexpected error
         """
+        # Ensure token doesn't have any extraneous whitespace around it.
+        if token is not None:
+            token = token.strip()
         if pycompat.isdarwin and not self.ui.config(
                 'commitcloud', 'user_token_path'):
             self._settokenosx(token)
