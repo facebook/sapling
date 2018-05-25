@@ -11,10 +11,12 @@ from mercurial import (
     util,
 )
 
-templatekeyword = registrar.templatekeyword()
+templatefunc = registrar.templatefunc()
 
-@templatekeyword('stat')
-def showdiffstat(repo, ctx, templ, **args):
+@templatefunc('stat()')
+def showdiffstat(context, mapping, args):
     """String. Return diffstat-style summary of changes."""
+    repo = mapping['repo']
+    ctx = mapping['ctx']
     width = repo.ui.termwidth()
     return patch.diffstat(util.iterlines(ctx.diff(noprefix=False)), width=width)
