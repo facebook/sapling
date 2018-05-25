@@ -32,6 +32,7 @@ Global setup
   > fatelog = log -G -T '{node|short}\n{if(succsandmarkers, "  Obsfate: {succsandmarkers % "{obsfatetempl}"} \n" )}'
   > fatelogjson = log -G -T '{node|short}\n{if(succsandmarkers, "  Obsfate: {succsandmarkers|json}\n")}'
   > fatelogkw = log -G -T '{node|short}\n{if(obsfate, "{obsfate % "  Obsfate: {fate}\n"}")}'
+  > fatelogcount = log -G -T '{node|short} {succsandmarkers}'
   > EOF
 
 Test templates on amended commit
@@ -2538,4 +2539,13 @@ Check other fatelog implementations
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     ROOT
+  
+  $ hg fatelogcount --hidden -q
+  @  0d0ef4bdf70e ????????????* (glob)
+  |
+  o  617adc3a144c
+  |
+  | x  471597cad322 ????????????* (glob)
+  |/
+  o  ea207398892e
   
