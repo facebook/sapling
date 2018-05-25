@@ -373,10 +373,13 @@ fn compute_changed_files_pair(
         .boxify()
 }
 
+/// NOTE: To be used only for generating list of files for old, Mercurial format of Changesets.
+///
 /// This function is used to extract any new files that the given root manifest has provided
 /// compared to the provided p1 and p2 parents.
 /// A files is considered new when it was not present in neither of parent manifests or it was
 /// present, but with a different content.
+/// It sorts the returned Vec<MPath> in the order expected by Mercurial.
 ///
 /// TODO(luk): T28626409 this probably deserves a unit tests, but taking into account that Bonsai
 /// Changesets might as well make this function obsolete and that I am not familiar with creating
@@ -402,11 +405,15 @@ pub fn compute_changed_files(
             .boxify(),
     }.map(|files| {
         let mut files: Vec<MPath> = files.into_iter().collect();
-        files.sort_unstable();
+        files.sort_unstable_by(mercurial_mpath_comparator);
 
         files
     })
         .boxify()
+}
+
+fn mercurial_mpath_comparator(a: &MPath, b: &MPath) -> ::std::cmp::Ordering {
+    a.to_vec().cmp(&b.to_vec())
 }
 
 pub fn process_entries(
@@ -566,4 +573,42 @@ pub fn make_new_changeset(
         comments.into_bytes(),
     );
     BlobChangeset::new(changeset)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mercurial_mpath_comparator() {
+        let mut paths = vec![
+            "foo/bar/baz/a.test",
+            "foo/bar/baz-boo/a.test",
+            "foo-faz/bar/baz/a.test",
+        ];
+
+        let mut mpaths: Vec<_> = paths
+            .iter()
+            .map(|path| MPath::new(path).expect("invalid path"))
+            .collect();
+
+        {
+            mpaths.sort_unstable();
+            let result: Vec<_> = mpaths
+                .iter()
+                .map(|mpath| String::from_utf8(mpath.to_vec()).unwrap())
+                .collect();
+            assert!(paths == result);
+        }
+
+        {
+            paths.sort_unstable();
+            mpaths.sort_unstable_by(mercurial_mpath_comparator);
+            let result: Vec<_> = mpaths
+                .iter()
+                .map(|mpath| String::from_utf8(mpath.to_vec()).unwrap())
+                .collect();
+            assert!(paths == result);
+        }
+    }
 }
