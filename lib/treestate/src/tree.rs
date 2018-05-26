@@ -120,6 +120,9 @@ enum PathRecurse<'name, 'node, T: 'node> {
 /// Splits a key into the first path element and the remaining path elements (if any).  Doesn't
 /// split the key if it just contains an exact file or directory name.
 fn split_key<'a>(key: KeyRef<'a>) -> (KeyRef<'a>, Option<KeyRef<'a>>) {
+    if key.len() == 0 {
+        return (key, None);
+    }
     // Skip the last character.  Even if it's a '/' we don't want to split on it.
     for (index, value) in key.iter().take(key.len() - 1).enumerate() {
         if *value == b'/' {
