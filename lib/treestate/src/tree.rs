@@ -549,6 +549,9 @@ where
             }
             PathRecurse::MissingFile(ref name) => {
                 // The file should be in this directory.  Add it.
+                if name.is_empty() || name[name.len() - 1] == b'/' {
+                    panic!("Adding file with tailing slash");
+                }
                 (
                     Some((
                         name.to_vec().into_boxed_slice(),
