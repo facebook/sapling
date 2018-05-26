@@ -264,8 +264,9 @@ datapack_handle_t *open_datapack(
        (sizeof(index_offset_t) * fanout_count));
   disk_index_entry_t *index_end = (disk_index_entry_t *)
       (((const char *) handle->index_mmap) + handle->index_file_sz);
-  if (handle->index_table > index_end) {
-    // ensure the file is at least big enough to include the fanout table.
+  if (handle->index_table + 1 > index_end) {
+    // ensure the file is at least big enough to include the fanout table
+    // plus one entry.
     handle->status = DATAPACK_HANDLE_CORRUPT;
     goto error_cleanup;
   }
