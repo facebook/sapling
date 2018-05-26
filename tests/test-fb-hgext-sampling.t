@@ -84,8 +84,9 @@ Test topdir logging:
   $ setconfig sampling.logtopdir=True
   $ setconfig sampling.key.command_info=command_info
   $ hg st > /dev/null
-  hiatexit handler executed
+  atexit handler executed
+  >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read().strip("\0").split("\0")
-  >>> print([d for d in data if "topdir" in d])
-  ['{"category": "command_info", "data": {"topdir": "a_topdir", "metrics_type": "command_info"}}']
+  >>> print([json.loads(d)["data"]["topdir"] for d in data if "topdir" in d])
+  [u'a_topdir']
