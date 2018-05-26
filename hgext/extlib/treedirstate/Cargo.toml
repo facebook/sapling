@@ -11,6 +11,7 @@ name = "treedirstate"
 crate-type = ["cdylib"]
 
 [dependencies]
+pathencoding = { path = "../../../lib/pathencoding" }
 treestate = { path = "../../../lib/treestate" }
 
 [dependencies.cpython]
