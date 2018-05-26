@@ -1,5 +1,5 @@
 [package]
-name = "treedirstate"
+name = "treestate"
 version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 
@@ -7,7 +7,7 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 lto = true
 
 [lib]
-name = "treedirstate"
+name = "treestate"
 crate-type = ["cdylib"]
 
 [dependencies]

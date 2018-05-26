@@ -7,10 +7,9 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from hgext.extlib import treedirstate
+from mercurial.rust import treestate
 
 
-treestate = treedirstate.treestate
 testtmp = os.getenv("TESTTMP") or tempfile.mkdtemp("test-treestate")
 
 
@@ -57,16 +56,16 @@ def genfiles():
 
         # bits (StateFlags)
         for bit in [
-            treedirstate.EXIST_P1,
-            treedirstate.EXIST_P2,
-            treedirstate.EXIST_NEXT,
-            treedirstate.IGNORED,
-            treedirstate.NEED_CHECK,
+            treestate.EXIST_P1,
+            treestate.EXIST_P2,
+            treestate.EXIST_NEXT,
+            treestate.IGNORED,
+            treestate.NEED_CHECK,
         ]:
             if random.randint(0, 1):
                 bits |= bit
         if random.randint(0, 1):
-            bits |= treedirstate.COPIED
+            bits |= treestate.COPIED
             copied = next(pathgen)
 
         yield (path, bits, mode, size, mtime, copied)
@@ -75,7 +74,7 @@ def genfiles():
 class testtreestate(unittest.TestCase):
 
     def testempty(self):
-        tree = treestate(os.path.join(testtmp, "empty"), 0)
+        tree = treestate.treestate(os.path.join(testtmp, "empty"), 0)
         self.assertEqual(len(tree), 0)
         self.assertEqual(tree.getmetadata(), "")
         self.assertEqual(tree.walk(0, 0), [])
@@ -87,7 +86,7 @@ class testtreestate(unittest.TestCase):
             self.assertIsNone(tree.get(path, None))
 
     def testinsert(self):
-        tree = treestate(os.path.join(testtmp, "insert"), 0)
+        tree = treestate.treestate(os.path.join(testtmp, "insert"), 0)
         count = 5000
         files = list(itertools.islice(genfiles(), count))
         expected = {}
@@ -100,7 +99,7 @@ class testtreestate(unittest.TestCase):
             self.assertEqual(tree.get(path, None), expected[path])
 
     def testremove(self):
-        tree = treestate(os.path.join(testtmp, "remove"), 0)
+        tree = treestate.treestate(os.path.join(testtmp, "remove"), 0)
         count = 5000
         files = list(itertools.islice(genfiles(), count))
         expected = {}
@@ -119,7 +118,7 @@ class testtreestate(unittest.TestCase):
 
     def testwalk(self):
         treepath = os.path.join(testtmp, "walk")
-        tree = treestate(treepath, 0)
+        tree = treestate.treestate(treepath, 0)
         count = 5000
         files = list(itertools.islice(genfiles(), count))
         expected = {}
@@ -140,16 +139,16 @@ class testtreestate(unittest.TestCase):
             )
 
         for i in ["in-memory", "flushed"]:
-            for bit in [treedirstate.IGNORED, treedirstate.COPIED]:
+            for bit in [treestate.IGNORED, treestate.COPIED]:
                 check(0, bit)
                 check(bit, 0)
-            check(treedirstate.EXIST_P1, treedirstate.EXIST_P2)
+            check(treestate.EXIST_P1, treestate.EXIST_P2)
             rootid = tree.flush()
-            tree = treestate(treepath, rootid)
+            tree = treestate.treestate(treepath, rootid)
 
     def testflush(self):
         treepath = os.path.join(testtmp, "flush")
-        tree = treestate(treepath, 0)
+        tree = treestate.treestate(treepath, 0)
         tree.insert("a", 1, 2, 3, 4, None)
         tree.setmetadata("1")
         rootid1 = tree.flush()
@@ -159,19 +158,19 @@ class testtreestate(unittest.TestCase):
         tree.setmetadata("2")
         rootid2 = tree.flush()
 
-        tree = treestate(treepath, rootid1)
+        tree = treestate.treestate(treepath, rootid1)
         self.assertTrue("a" in tree)
         self.assertFalse("b" in tree)
         self.assertEqual(tree.getmetadata(), "1")
 
-        tree = treestate(treepath, rootid2)
+        tree = treestate.treestate(treepath, rootid2)
         self.assertFalse("a" in tree)
         self.assertTrue("b" in tree)
         self.assertEqual(tree.getmetadata(), "2")
 
     def testsaveas(self):
         treepath = os.path.join(testtmp, "saveas")
-        tree = treestate(treepath, 0)
+        tree = treestate.treestate(treepath, 0)
         tree.insert("a", 1, 2, 3, 4, None)
         tree.setmetadata("1")
         tree.flush()
@@ -182,14 +181,14 @@ class testtreestate(unittest.TestCase):
         tree.setmetadata("2")
         rootid = tree.saveas(treepath)
 
-        tree = treestate(treepath, rootid)
+        tree = treestate.treestate(treepath, rootid)
         self.assertFalse("a" in tree)
         self.assertTrue("b" in tree)
         self.assertEqual(tree.getmetadata(), "2")
 
     def testfiltered(self):
         treepath = os.path.join(testtmp, "filtered")
-        tree = treestate(treepath, 0)
+        tree = treestate.treestate(treepath, 0)
         tree.insert("a/B/c", 1, 2, 3, 4, None)
         filtered = tree.getfiltered("A/B/C", lambda x: x.upper(), 1)
         self.assertEqual(filtered, "a/B/c")
@@ -198,7 +197,7 @@ class testtreestate(unittest.TestCase):
 
     def testpathcomplete(self):
         treepath = os.path.join(testtmp, "pathcomplete")
-        tree = treestate(treepath, 0)
+        tree = treestate.treestate(treepath, 0)
         paths = ["a/b/c", "a/b/d", "a/c", "de"]
         for path in paths:
             tree.insert(path, 1, 2, 3, 4, None)

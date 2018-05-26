@@ -60,8 +60,7 @@ from mercurial import (
     util,
 )
 from mercurial.i18n import _
-
-from .extlib import treedirstate as rusttreedirstate
+from mercurial.rust import treestate as rusttreedirstate
 
 
 dirstateheader = b"########################treedirstate####"

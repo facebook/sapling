@@ -1506,9 +1506,9 @@ rustextmodules = [
         manifest="mercurial/rust/matcher/Cargo.toml",
     ),
     RustExtension(
-        "treedirstate",
-        package="hgext.extlib",
-        manifest="hgext/extlib/treedirstate/Cargo.toml",
+        "treestate",
+        package="mercurial.rust",
+        manifest="mercurial/rust/treestate/Cargo.toml",
     ),
 ]
 

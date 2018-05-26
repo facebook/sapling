@@ -1,5 +1,5 @@
 // Copyright Facebook, Inc. 2017
-//! Python bindings for treedirstate.
+//! Python bindings for treedirstate and treestate.
 
 use cpython::*;
 use pathencoding::local_bytes_to_path;
@@ -12,23 +12,18 @@ use treestate::tree::{Key, KeyRef};
 use treestate::treedirstate::TreeDirstate;
 use treestate::treestate::TreeState;
 
-py_module_initializer!(
-    treedirstate,
-    inittreedirstate,
-    PyInit_treedirstate,
-    |py, m| {
-        m.add_class::<treedirstatemap>(py)?;
-        m.add_class::<treestate>(py)?;
-        m.add(py, "EXIST_P1", StateFlags::EXIST_P1.to_bits())?;
-        m.add(py, "EXIST_P2", StateFlags::EXIST_P2.to_bits())?;
-        m.add(py, "EXIST_NEXT", StateFlags::EXIST_NEXT.to_bits())?;
-        m.add(py, "IGNORED", StateFlags::IGNORED.to_bits())?;
-        m.add(py, "NEED_CHECK", StateFlags::NEED_CHECK.to_bits())?;
-        m.add(py, "COPIED", StateFlags::COPIED.to_bits())?;
-        m.add(py, "tohgstate", py_fn!(py, flags_to_hg_state(flags: u16)))?;
-        Ok(())
-    }
-);
+py_module_initializer!(treestate, inittreestate, PyInit_treestate, |py, m| {
+    m.add_class::<treedirstatemap>(py)?;
+    m.add_class::<treestate>(py)?;
+    m.add(py, "EXIST_P1", StateFlags::EXIST_P1.to_bits())?;
+    m.add(py, "EXIST_P2", StateFlags::EXIST_P2.to_bits())?;
+    m.add(py, "EXIST_NEXT", StateFlags::EXIST_NEXT.to_bits())?;
+    m.add(py, "IGNORED", StateFlags::IGNORED.to_bits())?;
+    m.add(py, "NEED_CHECK", StateFlags::NEED_CHECK.to_bits())?;
+    m.add(py, "COPIED", StateFlags::COPIED.to_bits())?;
+    m.add(py, "tohgstate", py_fn!(py, flags_to_hg_state(flags: u16)))?;
+    Ok(())
+});
 
 fn callback_error(py: Python, mut e: PyErr) -> ErrorKind {
     let s = e.instance(py)
