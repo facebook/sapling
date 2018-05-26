@@ -83,7 +83,8 @@ class testtreestate(unittest.TestCase):
             self.assertFalse(path in tree)
             if path and path != "/":
                 self.assertFalse(tree.hasdir(path))
-            self.assertIsNone(tree.get(path, None))
+            if path != "/":
+                self.assertIsNone(tree.get(path, None))
 
     def testinsert(self):
         tree = treestate.treestate(os.path.join(testtmp, "insert"), 0)
@@ -213,6 +214,20 @@ class testtreestate(unittest.TestCase):
         self.assertEqual(complete("a/b/"), ["a/b/c", "a/b/d"])
         self.assertEqual(complete("a/b/c"), ["a/b/c"])
         self.assertEqual(complete("", True), paths)
+
+    def testgetdir(self):
+        treepath = os.path.join(testtmp, "filtered")
+        tree = treestate.treestate(treepath, 0)
+        tree.insert("a/b/c", 3, 0, 0, 0, None)
+        tree.insert("a/d", 5, 0, 0, 0, None)
+        self.assertEqual(tree.get("/", None), (3 | 5, 3 & 5))
+        self.assertEqual(tree.get("a/", None), (3 | 5, 3 & 5))
+        self.assertEqual(tree.get("a/b/", None), (3, 3))
+        self.assertIsNone(tree.get("a/b/c/", None))
+        tree.insert("a/e/f", 10, 0, 0, 0, None)
+        self.assertEqual(tree.get("a/", None), (3 | 5 | 10, 3 & 5 & 10))
+        tree.remove("a/e/f")
+        self.assertEqual(tree.get("a/", None), (3 | 5, 3 & 5))
 
 
 if __name__ == "__main__":

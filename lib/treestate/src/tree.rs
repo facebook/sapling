@@ -328,6 +328,21 @@ where
         }
     }
 
+    /// Calculate `aggregated_state` if it's not calculated yet, recursively.
+    fn calculate_aggregated_state_recursive(
+        &mut self,
+        store: &StoreView,
+    ) -> Result<AggregatedState> {
+        if self.aggregated_state.get().is_none() {
+            for (_name, entry) in self.load_entries(store)?.iter_mut() {
+                if let &mut NodeEntry::Directory(ref mut node) = entry {
+                    node.calculate_aggregated_state_recursive(store)?;
+                }
+            }
+        }
+        Ok(self.calculate_aggregated_state())
+    }
+
     // Visit all of the files in under this node, by calling the visitor function on each one.
     //
     // `visit_dir` will be called to test if a directory is worth visiting or not.
@@ -533,6 +548,22 @@ where
             PathRecurse::File(_name, _file) => Ok(false),
             PathRecurse::MissingFile(_name) => Ok(false),
             PathRecurse::ConflictingFile(_name, _path, _file) => Ok(false),
+        }
+    }
+
+    /// Returns `Some(AggregatedState)` if the given path is a directory, or `None`.
+    fn get_dir(&mut self, store: &StoreView, name: KeyRef) -> Result<Option<AggregatedState>> {
+        if name == b"/" {
+            return Ok(Some(self.calculate_aggregated_state_recursive(store)?));
+        }
+
+        match self.path_recurse(store, name)? {
+            PathRecurse::Directory(_dir, path, node) => node.get_dir(store, path),
+            PathRecurse::ExactDirectory(_dir, node) => node.get_dir(store, b"/"),
+            PathRecurse::MissingDirectory(_dir, _path) => Ok(None),
+            PathRecurse::File(_name, _file) => Ok(None),
+            PathRecurse::MissingFile(_name) => Ok(None),
+            PathRecurse::ConflictingFile(_name, _path, _file) => Ok(None),
         }
     }
 
@@ -893,6 +924,10 @@ where
 
     pub fn has_dir(&mut self, store: &StoreView, name: KeyRef) -> Result<bool> {
         Ok(self.root.has_dir(store, name)?)
+    }
+
+    pub fn get_dir(&mut self, store: &StoreView, name: KeyRef) -> Result<Option<AggregatedState>> {
+        Ok(self.root.get_dir(store, name)?)
     }
 
     pub fn add(&mut self, store: &StoreView, name: KeyRef, file: &T) -> Result<()> {

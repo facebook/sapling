@@ -8,7 +8,7 @@ use std::io::Cursor;
 use std::ops::Deref;
 use std::path::Path;
 use store::{BlockId, Store, StoreView};
-use tree::{Key, KeyRef, Node, Tree};
+use tree::{AggregatedState, Key, KeyRef, Node, Tree};
 
 /// `TreeState` uses a single tree to track an extended state of `TreeDirstate`.
 /// See the comment about `FileStateV2` for the difference.
@@ -87,6 +87,12 @@ impl TreeState {
 
     pub fn get<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<&FileStateV2>> {
         self.tree.get(&self.store, path.as_ref())
+    }
+
+    /// Get the aggregated state of a directory. This is useful, for example, to tell if a
+    /// directory only contains removed files.
+    pub fn get_dir<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<AggregatedState>> {
+        self.tree.get_dir(&self.store, path.as_ref())
     }
 
     pub fn get_mut<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<&mut FileStateV2>> {

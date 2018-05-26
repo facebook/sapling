@@ -471,22 +471,35 @@ py_class!(class treestate |py| {
     def get(&self, path: PyBytes, default: PyObject) -> PyResult<PyObject> {
         let mut state = self.state(py).borrow_mut();
         let path = path.data(py);
-        let file = convert_result(py, state.get(path))?;
-        Ok(match file {
-            // (flags, mode, size, mtime, copied)
-            Some(ref file) => {
-                PyTuple::new(py, &[
-                    file.state.to_bits().to_py_object(py).into_object(),
-                    file.mode.to_py_object(py).into_object(),
-                    file.size.to_py_object(py).into_object(),
-                    file.mtime.to_py_object(py).into_object(),
-                    match file.copied {
-                        Some(ref path) => PyBytes::new(py, &path).into_object(),
-                        None => py.None(),
-                    }
-                ]).into_object()
+
+        Ok(if path.ends_with(b"/") {
+            let dir = convert_result(py, state.get_dir(path))?;
+            match dir {
+                // (union state, intersection state)
+                Some(ref state) =>
+                    PyTuple::new(py, &[
+                                 state.union.to_bits().to_py_object(py).into_object(),
+                                 state.intersection.to_bits().to_py_object(py).into_object(),
+                    ]).into_object(),
+                None => default,
             }
-            None => default,
+        } else {
+            let file = convert_result(py, state.get(path))?;
+            match file {
+                // (flags, mode, size, mtime, copied)
+                Some(ref file) =>
+                    PyTuple::new(py, &[
+                                 file.state.to_bits().to_py_object(py).into_object(),
+                                 file.mode.to_py_object(py).into_object(),
+                                 file.size.to_py_object(py).into_object(),
+                                 file.mtime.to_py_object(py).into_object(),
+                                 match file.copied {
+                                     Some(ref path) => PyBytes::new(py, &path).into_object(),
+                                     None => py.None(),
+                                 }
+                    ]).into_object(),
+                None => default,
+            }
         })
     }
 
