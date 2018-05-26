@@ -14,6 +14,10 @@ be configured if supported by your repo.
 enabled=true
 """
 
+import heapq
+from collections import deque
+from threading import Event, Thread
+
 from mercurial import (
     changelog,
     cmdutil,
@@ -24,20 +28,18 @@ from mercurial import (
     revset,
     scmutil,
     smartset,
-    util
+    util,
 )
 from mercurial.i18n import _
 from mercurial.node import nullrev
 
-import heapq
-from threading import Thread, Event
-from collections import deque
 
 conduit = None
 
 FASTLOG_MAX = 500
 FASTLOG_QUEUE_SIZE = 1000
 FASTLOG_TIMEOUT = 20
+
 
 def extsetup(ui):
     global conduit
@@ -46,16 +48,17 @@ def extsetup(ui):
     except KeyError:
         from . import fbconduit as conduit
     except ImportError:
-        ui.warn(_('Unable to find fbconduit extension\n'))
+        ui.warn(_("Unable to find fbconduit extension\n"))
         return
-    if not util.safehasattr(conduit, 'conduit_config'):
-        ui.warn(_('Incompatible conduit module; disabling fastlog\n'))
+    if not util.safehasattr(conduit, "conduit_config"):
+        ui.warn(_("Incompatible conduit module; disabling fastlog\n"))
         return
     if not conduit.conduit_config(ui):
-        ui.warn(_('No conduit host specified in config; disabling fastlog\n'))
+        ui.warn(_("No conduit host specified in config; disabling fastlog\n"))
         return
 
-    extensions.wrapfunction(cmdutil, 'getlogrevs', getfastlogrevs)
+    extensions.wrapfunction(cmdutil, "getlogrevs", getfastlogrevs)
+
 
 def lazyparents(rev, public, parentfunc):
     """lazyparents(rev, public)
@@ -115,6 +118,7 @@ def lazyparents(rev, public, parentfunc):
                     if published:
                         public.add(p)
 
+
 def dirmatches(files, paths):
     """dirmatches(files, paths)
     Return true if any files match directories in paths
@@ -130,11 +134,12 @@ def dirmatches(files, paths):
     """
     assert paths
     for path in paths:
-        assert path[-1] == '/'
+        assert path[-1] == "/"
         for f in files:
             if f.startswith(path):
                 return True
     return False
+
 
 def originator(parentfunc, rev):
     """originator(repo, rev)
@@ -145,17 +150,18 @@ def originator(parentfunc, rev):
         if rev != p:
             yield p
 
+
 def getfastlogrevs(orig, repo, pats, opts):
-    blacklist = ['all', 'branch', 'rev', 'sparse']
-    if any(opts.get(opt) for opt in blacklist) or not opts.get('follow'):
+    blacklist = ["all", "branch", "rev", "sparse"]
+    if any(opts.get(opt) for opt in blacklist) or not opts.get("follow"):
         return orig(repo, pats, opts)
 
-    reponame = repo.ui.config('fbconduit', 'reponame')
-    if reponame and repo.ui.configbool('fastlog', 'enabled'):
+    reponame = repo.ui.config("fbconduit", "reponame")
+    if reponame and repo.ui.configbool("fastlog", "enabled"):
         wctx = repo[None]
         match, pats = scmutil.matchandpats(wctx, pats, opts)
         files = match.files()
-        if not files or '.' in files:
+        if not files or "." in files:
             # Walking the whole repo - bail on fastlog
             return orig(repo, pats, opts)
 
@@ -163,7 +169,7 @@ def getfastlogrevs(orig, repo, pats, opts):
         wvfs = repo.wvfs
         for path in files:
             if wvfs.isdir(path) and not wvfs.islink(path):
-                dirs.update([path + '/'])
+                dirs.update([path + "/"])
             else:
                 # bail on symlinks, and also bail on files for now
                 # with follow behavior, for files, we are supposed
@@ -171,7 +177,7 @@ def getfastlogrevs(orig, repo, pats, opts):
                 # to do this through scmquery
                 return orig(repo, pats, opts)
 
-        rev = repo['.'].rev()
+        rev = repo["."].rev()
 
         parents = repo.changelog.parentrevs
         public = set()
@@ -204,7 +210,7 @@ def getfastlogrevs(orig, repo, pats, opts):
                 files = filefunc(parent)
                 if dirmatches(files, dirs):
                     yield parent
-            repo.ui.debug('found common parent at %s\n' % repo[parent].hex())
+            repo.ui.debug("found common parent at %s\n" % repo[parent].hex())
             for rev in combinator(repo, parent, dirs, localmatch):
                 yield rev
 
@@ -214,22 +220,20 @@ def getfastlogrevs(orig, repo, pats, opts):
             rev along path and combine results, eliminating duplicates,
             restricting results to those which match dirs
             """
-            LOCAL = 'L'
-            REMOTE = 'R'
+            LOCAL = "L"
+            REMOTE = "R"
             queue = util.queue(FASTLOG_QUEUE_SIZE + 100)
             hash = repo[rev].hex()
 
-            local = LocalIteratorThread(queue, LOCAL, rev,
-                                        dirs, localmatch, repo)
-            remote = FastLogThread(queue, REMOTE, reponame, 'hg', hash, dirs,
-                                   repo)
+            local = LocalIteratorThread(queue, LOCAL, rev, dirs, localmatch, repo)
+            remote = FastLogThread(queue, REMOTE, reponame, "hg", hash, dirs, repo)
 
             # Allow debugging either remote or local path
-            debug = repo.ui.config('fastlog', 'debug')
-            if debug != 'local':
-                repo.ui.debug('starting fastlog at %s\n' % hash)
+            debug = repo.ui.config("fastlog", "debug")
+            if debug != "local":
+                repo.ui.debug("starting fastlog at %s\n" % hash)
                 remote.start()
-            if debug != 'remote':
+            if debug != "remote":
                 local.start()
             seen = set([rev])
 
@@ -253,9 +257,9 @@ def getfastlogrevs(orig, repo, pats, opts):
                     rev = msg
                     if debug:
                         if producer == LOCAL:
-                            repo.ui.debug('LOCAL:: %s\n' % msg)
+                            repo.ui.debug("LOCAL:: %s\n" % msg)
                         elif producer == REMOTE:
-                            repo.ui.debug('REMOTE:: %s\n' % msg)
+                            repo.ui.debug("REMOTE:: %s\n" % msg)
 
                     if rev not in seen:
                         seen.add(rev)
@@ -265,8 +269,16 @@ def getfastlogrevs(orig, repo, pats, opts):
                 remote.stop()
 
         # Complex match - use a revset.
-        complex = ['date', 'exclude', 'include', 'keyword', 'no_merges',
-                   'only_merges', 'prune', 'user']
+        complex = [
+            "date",
+            "exclude",
+            "include",
+            "keyword",
+            "no_merges",
+            "only_merges",
+            "prune",
+            "user",
+        ]
         if match.anypats() or any(opts.get(opt) for opt in complex):
             f = fastlog(repo, rev, dirs, None)
             revs = smartset.generatorset(f, iterasc=False)
@@ -280,12 +292,14 @@ def getfastlogrevs(orig, repo, pats, opts):
         else:
             # Simple match without revset shaves ~0.5 seconds off
             # hg log -l 100 -T ' ' on common directories.
-            expr = 'fastlog(%s)' % ','.join(dirs)
+            expr = "fastlog(%s)" % ",".join(dirs)
             return fastlog(repo, rev, dirs, dirmatches), expr, None
 
     return orig(repo, pats, opts)
 
+
 class readonlychangelog(object):
+
     def __init__(self, opener):
         self._changelog = changelog.changelog(opener)
 
@@ -297,6 +311,7 @@ class readonlychangelog(object):
 
     def rev(self, node):
         return self._changelog.rev(node)
+
 
 class LocalIteratorThread(Thread):
     """Class which reads from an iterator and sends results to a queue.
@@ -366,6 +381,7 @@ class LocalIteratorThread(Thread):
         finally:
             queue.put((self.id, True, None))
 
+
 class FastLogThread(Thread):
     """Class which talks to a remote SCMQuery
 
@@ -425,7 +441,7 @@ class FastLogThread(Thread):
             todo = self.gettodo()
             try:
                 results = conduit.call_conduit(
-                    'scmquery.log_v2',
+                    "scmquery.log_v2",
                     repo=reponame,
                     scm_type=self.scm,
                     rev=start,
@@ -434,27 +450,27 @@ class FastLogThread(Thread):
                     number=todo,
                 )
             except Exception as e:
-                if self.ui.config('fastlog', 'debug'):
+                if self.ui.config("fastlog", "debug"):
                     self.ui.traceback(force=True)
                 self.queue.put((self.id, False, str(e)))
                 self.stop()
                 return
 
             if results is None:
-                self.queue.put((self.id, False, 'Unknown error'))
+                self.queue.put((self.id, False, "Unknown error"))
                 self.stop()
                 return
 
             for result in results:
-                hash = result['hash']
+                hash = result["hash"]
                 try:
                     if len(hash) != 40:
-                        raise ValueError('Received invalid hash %s' % hash)
+                        raise ValueError("Received invalid hash %s" % hash)
                     rev = revfn(node.bin(hash))
                     if rev is None:
-                        raise KeyError('Hash %s not in local repo' % hash)
+                        raise KeyError("Hash %s not in local repo" % hash)
                 except Exception as e:
-                    if self.ui.config('fastlog', 'debug'):
+                    if self.ui.config("fastlog", "debug"):
                         self.ui.traceback(force=True)
                     self.queue.put((self.id, False, str(e)))
                 else:
@@ -495,6 +511,8 @@ class FastLogThread(Thread):
         if not self.stopped():
             self.queue.put((self.id, True, None))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

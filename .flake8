@@ -37,7 +37,8 @@ select =
  E273, # tab after keyword
  E274, # tab before keyword
  E304, # blank lines found after function decorator
- E501, # line too long (82 > 79 characters)
+ # BLACK can make lines longer than 80 characters
+ # E501, # line too long (82 > 79 characters)
  E703, # statement ends with a semicolon
  E704, # multiple statements on one line (def)
  E711, # comparison to None should be ‘if cond is None:’
@@ -56,7 +57,3 @@ select =
  W603, # ‘<>’ is deprecated, use ‘!=’
  W604, # backticks are deprecated, use ‘repr()’
  W605, # invalid escape sequence ‘x’
-
-exclude = tests/test-hgsubversion*
-
-max-line-length = 80

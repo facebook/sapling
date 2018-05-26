@@ -11,26 +11,20 @@ import tempfile
 import unittest
 
 import silenttestrunner
-
+from hgext.remotefilelog.basepack import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF
 from hgext.remotefilelog.historypack import historypack, mutablehistorypack
-
+from mercurial import error, ui as uimod
 from mercurial.node import nullid
-from mercurial import (
-    error,
-    ui as uimod,
-)
 
-from hgext.remotefilelog.basepack import (
-    LARGEFANOUTPREFIX,
-    SMALLFANOUTCUTOFF,
-)
 
 try:
     xrange(0)
 except NameError:
     xrange = range
 
+
 class histpacktests(unittest.TestCase):
+
     def setUp(self):
         self.tempdirs = []
 
@@ -47,7 +41,7 @@ class histpacktests(unittest.TestCase):
         return hashlib.sha1(content).digest()
 
     def getFakeHash(self):
-        return ''.join(chr(random.randint(0, 255)) for _ in range(20))
+        return "".join(chr(random.randint(0, 255)) for _ in range(20))
 
     def createPack(self, revisions=None):
         """Creates and returns a historypack containing the specified revisions.
@@ -56,12 +50,19 @@ class histpacktests(unittest.TestCase):
         node, p1node, p2node, and linknode.
         """
         if revisions is None:
-            revisions = [("filename", self.getFakeHash(), nullid, nullid,
-                          self.getFakeHash(), None)]
+            revisions = [
+                (
+                    "filename",
+                    self.getFakeHash(),
+                    nullid,
+                    nullid,
+                    self.getFakeHash(),
+                    None,
+                )
+            ]
 
         packdir = self.makeTempDir()
-        packer = mutablehistorypack(uimod.ui(), packdir,
-                                    version=1)
+        packer = mutablehistorypack(uimod.ui(), packdir, version=1)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             packer.add(filename, node, p1, p2, linknode, copyfrom)
@@ -167,8 +168,7 @@ class histpacktests(unittest.TestCase):
         # Verify the pack contents
         for (filename, node), (p1, p2, lastnode) in allentries.iteritems():
             ancestors = pack.getancestors(filename, node)
-            self.assertEquals(ancestorcounts[(filename, node)],
-                              len(ancestors))
+            self.assertEquals(ancestorcounts[(filename, node)], len(ancestors))
             for anode, (ap1, ap2, alinknode, copyfrom) in ancestors.iteritems():
                 ep1, ep2, elinknode = allentries[(filename, anode)]
                 self.assertEquals(ap1, ep1)
@@ -212,13 +212,13 @@ class histpacktests(unittest.TestCase):
         missing = pack.getmissing([(filename, revisions[0][1])])
         self.assertFalse(missing)
 
-        missing = pack.getmissing([(filename, revisions[0][1]),
-                                   (filename, revisions[1][1])])
+        missing = pack.getmissing(
+            [(filename, revisions[0][1]), (filename, revisions[1][1])]
+        )
         self.assertFalse(missing)
 
         fakenode = self.getFakeHash()
-        missing = pack.getmissing([(filename, revisions[0][1]),
-                                   (filename, fakenode)])
+        missing = pack.getmissing([(filename, revisions[0][1]), (filename, fakenode)])
         self.assertEquals(missing, [(filename, fakenode)])
 
         # Test getmissing on a non-existant filename
@@ -229,19 +229,19 @@ class histpacktests(unittest.TestCase):
         pack = self.createPack()
 
         try:
-            pack.add('filename', nullid, nullid, nullid, nullid, None)
+            pack.add("filename", nullid, nullid, nullid, nullid, None)
             self.assertTrue(False, "historypack.add should throw")
         except RuntimeError:
             pass
 
     def testBadVersionThrows(self):
         pack = self.createPack()
-        path = pack.path + '.histpack'
+        path = pack.path + ".histpack"
         with open(path) as f:
             raw = f.read()
-        raw = struct.pack('!B', 255) + raw[1:]
+        raw = struct.pack("!B", 255) + raw[1:]
         os.chmod(path, os.stat(path).st_mode | stat.S_IWRITE)
-        with open(path, 'w+') as f:
+        with open(path, "w+") as f:
             f.write(raw)
 
         try:
@@ -285,14 +285,14 @@ class histpacktests(unittest.TestCase):
         lastnode = nullid
         for i in range(5):
             node = self.getFakeHash()
-            revisions.append((filename, node, lastnode, nullid, nullid, ''))
+            revisions.append((filename, node, lastnode, nullid, nullid, ""))
             lastnode = node
 
         filename = "bar"
         lastnode = nullid
         for i in range(5):
             node = self.getFakeHash()
-            revisions.append((filename, node, lastnode, nullid, nullid, ''))
+            revisions.append((filename, node, lastnode, nullid, nullid, ""))
             lastnode = node
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
@@ -304,31 +304,36 @@ class histpacktests(unittest.TestCase):
             self.assertEquals(entry, {node: (p1, p2, linknode, copyfrom)})
 
         # Test getmissing()
-        missingcheck = [(revisions[0][0], revisions[0][1]),
-                        ('foo', self.getFakeHash())]
+        missingcheck = [(revisions[0][0], revisions[0][1]), ("foo", self.getFakeHash())]
         missing = packer.getmissing(missingcheck)
         self.assertEquals(missing, missingcheck[1:])
 
     def testWritingLinkRevs(self):
         """Tests that we can add linkrevs and have them written as linknodes.
         """
+
         class fakerepo(object):
+
             def __init__(self):
                 self.changelog = fakechangelog()
 
         class fakechangelog(object):
+
             def __init__(self):
                 self.commits = []
+
             def __len__(self):
                 return len(self.commits)
+
             def rev(self, node):
                 try:
                     return self.commits.index(node)
                 except Exception:
-                    raise error.LookupError(hex(node), 'x', 'x')
+                    raise error.LookupError(hex(node), "x", "x")
+
             def node(self, rev):
                 if rev >= len(self.commits):
-                    raise error.LookupError(rev, 'x', 'x')
+                    raise error.LookupError(rev, "x", "x")
                 return self.commits[rev]
 
         repo = fakerepo()
@@ -344,19 +349,26 @@ class histpacktests(unittest.TestCase):
             node = self.getFakeHash()
             linknode = self.getFakeHash()
             commits.append(linknode)
-            revisions.append((filename, node, lastnode, nullid, linknode, ''))
+            revisions.append((filename, node, lastnode, nullid, linknode, ""))
             lastnode = node
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
-            packer.add(filename, node, p1, p2, None, copyfrom,
-                       linkrev=commits.index(linknode))
+            packer.add(
+                filename, node, p1, p2, None, copyfrom, linkrev=commits.index(linknode)
+            )
 
         # Test adding linknode and linkrev
         try:
-            packer.add('', self.getFakeHash(), self.getFakeHash(), nullid,
-                    self.getFakeHash(), '', 5)
-            self.assertFalse(True, "Adding linknode and linkrev should've "
-                                   "thrown")
+            packer.add(
+                "",
+                self.getFakeHash(),
+                self.getFakeHash(),
+                nullid,
+                self.getFakeHash(),
+                "",
+                5,
+            )
+            self.assertFalse(True, "Adding linknode and linkrev should've " "thrown")
         except error.ProgrammingError:
             pass
 
@@ -364,8 +376,7 @@ class histpacktests(unittest.TestCase):
         try:
             filename, node = revisions[0][:2]
             packer.getancestors(filename, node)
-            self.assertFalse(True, "Reading data before finalizing should've "
-                                   "thrown")
+            self.assertFalse(True, "Reading data before finalizing should've " "thrown")
         except error.ProgrammingError:
             pass
 
@@ -386,9 +397,10 @@ class histpacktests(unittest.TestCase):
             copyfrom = None if not copyfrom else copyfrom
             self.assertEquals(entry, (p1, p2, linknode, copyfrom))
 
+
 # TODO:
 # histpack store:
 # - repack two packs into one
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     silenttestrunner.main(__name__)

@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''manage a stack of patches
+"""manage a stack of patches
 
 This extension lets you work with a stack of patches in a Mercurial
 repository. It manages two stacks of patches - all known patches, and
@@ -60,7 +60,7 @@ such as -f/--force or --exact are passed, this setting is ignored.
 
 This extension used to provide a strip command. This command now lives
 in the strip extension.
-'''
+"""
 
 from __future__ import absolute_import, print_function
 
@@ -68,14 +68,7 @@ import errno
 import os
 import re
 import shutil
-from mercurial.i18n import _
-from mercurial.node import (
-    bin,
-    hex,
-    nullid,
-    nullrev,
-    short,
-)
+
 from mercurial import (
     cmdutil,
     commands,
@@ -97,9 +90,12 @@ from mercurial import (
     util,
     vfs as vfsmod,
 )
+from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid, nullrev, short
+
 
 release = lockmod.release
-seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
+seriesopts = [("s", "summary", None, _("print first line of patch header"))]
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -107,23 +103,15 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('mq', 'git',
-    default='auto',
-)
-configitem('mq', 'keepchanges',
-    default=False,
-)
-configitem('mq', 'plain',
-    default=False,
-)
-configitem('mq', 'secret',
-    default=False,
-)
+configitem("mq", "git", default="auto")
+configitem("mq", "keepchanges", default=False)
+configitem("mq", "plain", default=False)
+configitem("mq", "secret", default=False)
 
 # force load strip extension formerly included in mq and import some utility
 try:
@@ -132,14 +120,16 @@ except NameError:
     xrange = range
 
 try:
-    stripext = extensions.find('strip')
+    stripext = extensions.find("strip")
 except KeyError:
     # note: load is lazy so we could avoid the try-except,
     # but I (marmoute) prefer this explicit code.
     class dummyui(object):
+
         def debug(self, msg):
             pass
-    stripext = extensions.load(dummyui(), 'strip', '')
+
+    stripext = extensions.load(dummyui(), "strip", "")
 
 strip = stripext.strip
 checksubstate = stripext.checksubstate
@@ -149,28 +139,29 @@ checklocalchanges = stripext.checklocalchanges
 # They must be joinable with queue directory and result in the patch path.
 normname = util.normpath
 
+
 class statusentry(object):
+
     def __init__(self, node, name):
         self.node, self.name = node, name
+
     def __repr__(self):
-        return hex(self.node) + ':' + self.name
+        return hex(self.node) + ":" + self.name
+
 
 # The order of the headers in 'hg export' HG patches:
 HGHEADERS = [
-#   '# HG changeset patch',
-    '# User ',
-    '# Date ',
-    '#      ',
-    '# Branch ',
-    '# Node ID ',
-    '# Parent  ', # can occur twice for merges - but that is not relevant for mq
-    ]
+    #   '# HG changeset patch',
+    "# User ",
+    "# Date ",
+    "#      ",
+    "# Branch ",
+    "# Node ID ",
+    "# Parent  ",  # can occur twice for merges - but that is not relevant for mq
+]
 # The order of headers in plain 'mail style' patches:
-PLAINHEADERS = {
-    'from': 0,
-    'date': 1,
-    'subject': 2,
-    }
+PLAINHEADERS = {"from": 0, "date": 1, "subject": 2}
+
 
 def inserthgheader(lines, header, value):
     """Assuming lines contains a HG patch header, add a header line with value.
@@ -195,12 +186,12 @@ def inserthgheader(lines, header, value):
     ...                b'# Date ', b'z')
     ['# HG changeset patch', '# Date z', '# Parent  y']
     """
-    start = lines.index('# HG changeset patch') + 1
+    start = lines.index("# HG changeset patch") + 1
     newindex = HGHEADERS.index(header)
     bestpos = len(lines)
     for i in range(start, len(lines)):
         line = lines[i]
-        if not line.startswith('# '):
+        if not line.startswith("# "):
             bestpos = min(bestpos, i)
             break
         for lineindex, h in enumerate(HGHEADERS):
@@ -210,9 +201,10 @@ def inserthgheader(lines, header, value):
                     return lines
                 if lineindex > newindex:
                     bestpos = min(bestpos, i)
-                break # next line
+                break  # next line
     lines.insert(bestpos, header + value)
     return lines
+
 
 def insertplainheader(lines, header, value):
     """For lines containing a plain patch header, add a header line with value.
@@ -234,34 +226,40 @@ def insertplainheader(lines, header, value):
     newprio = PLAINHEADERS[header.lower()]
     bestpos = len(lines)
     for i, line in enumerate(lines):
-        if ':' in line:
-            lheader = line.split(':', 1)[0].strip().lower()
+        if ":" in line:
+            lheader = line.split(":", 1)[0].strip().lower()
             lprio = PLAINHEADERS.get(lheader, newprio + 1)
             if lprio == newprio:
-                lines[i] = '%s: %s' % (header, value)
+                lines[i] = "%s: %s" % (header, value)
                 return lines
             if lprio > newprio and i < bestpos:
                 bestpos = i
         else:
             if line:
-                lines.insert(i, '')
+                lines.insert(i, "")
             if i < bestpos:
                 bestpos = i
             break
-    lines.insert(bestpos, '%s: %s' % (header, value))
+    lines.insert(bestpos, "%s: %s" % (header, value))
     return lines
 
+
 class patchheader(object):
+
     def __init__(self, pf, plainmode=False):
+
         def eatdiff(lines):
             while lines:
                 l = lines[-1]
-                if (l.startswith("diff -") or
-                    l.startswith("Index:") or
-                    l.startswith("===========")):
+                if (
+                    l.startswith("diff -")
+                    or l.startswith("Index:")
+                    or l.startswith("===========")
+                ):
                     del lines[-1]
                 else:
                     break
+
         def eatempty(lines):
             while lines:
                 if not lines[-1].strip():
@@ -280,13 +278,12 @@ class patchheader(object):
         nodeid = None
         diffstart = 0
 
-        for line in file(pf): # noqa
+        for line in file(pf):  # noqa
             line = line.rstrip()
-            if (line.startswith('diff --git')
-                or (diffstart and line.startswith('+++ '))):
+            if line.startswith("diff --git") or (diffstart and line.startswith("+++ ")):
                 diffstart = 2
                 break
-            diffstart = 0 # reset
+            diffstart = 0  # reset
             if line.startswith("--- "):
                 diffstart = 1
                 continue
@@ -297,7 +294,7 @@ class patchheader(object):
                 elif line.startswith("# Date "):
                     date = line[7:]
                 elif line.startswith("# Parent "):
-                    parent = line[9:].lstrip() # handle double trailing space
+                    parent = line[9:].lstrip()  # handle double trailing space
                 elif line.startswith("# Branch "):
                     branch = line[9:]
                 elif line.startswith("# Node ID "):
@@ -305,19 +302,22 @@ class patchheader(object):
                 elif not line.startswith("# ") and line:
                     message.append(line)
                     format = None
-            elif line == '# HG changeset patch':
+            elif line == "# HG changeset patch":
                 message = []
                 format = "hgpatch"
-            elif (format != "tagdone" and (line.startswith("Subject: ") or
-                                           line.startswith("subject: "))):
+            elif format != "tagdone" and (
+                line.startswith("Subject: ") or line.startswith("subject: ")
+            ):
                 subject = line[9:]
                 format = "tag"
-            elif (format != "tagdone" and (line.startswith("From: ") or
-                                           line.startswith("from: "))):
+            elif format != "tagdone" and (
+                line.startswith("From: ") or line.startswith("from: ")
+            ):
                 user = line[6:]
                 format = "tag"
-            elif (format != "tagdone" and (line.startswith("Date: ") or
-                                           line.startswith("date: "))):
+            elif format != "tagdone" and (
+                line.startswith("Date: ") or line.startswith("date: ")
+            ):
                 date = line[6:]
                 format = "tag"
             elif format == "tag" and line == "":
@@ -349,40 +349,42 @@ class patchheader(object):
         self.nodeid = nodeid
         self.branch = branch
         self.haspatch = diffstart > 1
-        self.plainmode = (plainmode or
-                          '# HG changeset patch' not in self.comments and
-                          any(c.startswith('Date: ') or
-                                   c.startswith('From: ')
-                                   for c in self.comments))
+        self.plainmode = (
+            plainmode
+            or "# HG changeset patch" not in self.comments
+            and any(
+                c.startswith("Date: ") or c.startswith("From: ") for c in self.comments
+            )
+        )
 
     def setuser(self, user):
         try:
-            inserthgheader(self.comments, '# User ', user)
+            inserthgheader(self.comments, "# User ", user)
         except ValueError:
             if self.plainmode:
-                insertplainheader(self.comments, 'From', user)
+                insertplainheader(self.comments, "From", user)
             else:
-                tmp = ['# HG changeset patch', '# User ' + user]
+                tmp = ["# HG changeset patch", "# User " + user]
                 self.comments = tmp + self.comments
         self.user = user
 
     def setdate(self, date):
         try:
-            inserthgheader(self.comments, '# Date ', date)
+            inserthgheader(self.comments, "# Date ", date)
         except ValueError:
             if self.plainmode:
-                insertplainheader(self.comments, 'Date', date)
+                insertplainheader(self.comments, "Date", date)
             else:
-                tmp = ['# HG changeset patch', '# Date ' + date]
+                tmp = ["# HG changeset patch", "# Date " + date]
                 self.comments = tmp + self.comments
         self.date = date
 
     def setparent(self, parent):
         try:
-            inserthgheader(self.comments, '# Parent  ', parent)
+            inserthgheader(self.comments, "# Parent  ", parent)
         except ValueError:
             if not self.plainmode:
-                tmp = ['# HG changeset patch', '# Parent  ' + parent]
+                tmp = ["# HG changeset patch", "# Parent  " + parent]
                 self.comments = tmp + self.comments
         self.parent = parent
 
@@ -392,21 +394,21 @@ class patchheader(object):
         self.message = [message]
         if message:
             if self.plainmode and self.comments and self.comments[-1]:
-                self.comments.append('')
+                self.comments.append("")
             self.comments.append(message)
 
     def __str__(self):
-        s = '\n'.join(self.comments).rstrip()
+        s = "\n".join(self.comments).rstrip()
         if not s:
-            return ''
-        return s + '\n\n'
+            return ""
+        return s + "\n\n"
 
     def _delmsg(self):
-        '''Remove existing message, keeping the rest of the comments fields.
+        """Remove existing message, keeping the rest of the comments fields.
         If comments contains 'subject: ', message will prepend
-        the field and a blank line.'''
+        the field and a blank line."""
         if self.message:
-            subj = 'subject: ' + self.message[0].lower()
+            subj = "subject: " + self.message[0].lower()
             for i in xrange(len(self.comments)):
                 if subj == self.comments[i].lower():
                     del self.comments[i]
@@ -418,6 +420,7 @@ class patchheader(object):
                 ci += 1
             del self.comments[ci]
 
+
 def newcommit(repo, phase, *args, **kwargs):
     """helper dedicated to ensure a commit respect mq.secret setting
 
@@ -426,31 +429,34 @@ def newcommit(repo, phase, *args, **kwargs):
     """
     repo = repo.unfiltered()
     if phase is None:
-        if repo.ui.configbool('mq', 'secret'):
+        if repo.ui.configbool("mq", "secret"):
             phase = phases.secret
-    overrides = {('ui', 'allowemptycommit'): True}
+    overrides = {("ui", "allowemptycommit"): True}
     if phase is not None:
-        overrides[('phases', 'new-commit')] = phase
-    with repo.ui.configoverride(overrides, 'mq'):
-        repo.ui.setconfig('ui', 'allowemptycommit', True)
+        overrides[("phases", "new-commit")] = phase
+    with repo.ui.configoverride(overrides, "mq"):
+        repo.ui.setconfig("ui", "allowemptycommit", True)
         return repo.commit(*args, **kwargs)
+
 
 class AbortNoCleanup(error.Abort):
     pass
 
+
 class queue(object):
+
     def __init__(self, ui, baseui, path, patchdir=None):
         self.basepath = path
         try:
-            fh = open(os.path.join(path, 'patches.queue'))
+            fh = open(os.path.join(path, "patches.queue"))
             cur = fh.read().rstrip()
             fh.close()
             if not cur:
-                curpath = os.path.join(path, 'patches')
+                curpath = os.path.join(path, "patches")
             else:
-                curpath = os.path.join(path, 'patches-' + cur)
+                curpath = os.path.join(path, "patches-" + cur)
         except IOError:
-            curpath = os.path.join(path, 'patches')
+            curpath = os.path.join(path, "patches")
         self.path = patchdir or curpath
         self.opener = vfsmod.vfs(self.path)
         self.ui = ui
@@ -464,29 +470,31 @@ class queue(object):
         self.activeguards = None
         self.guardsdirty = False
         # Handle mq.git as a bool with extended values
-        gitmode = ui.config('mq', 'git').lower()
+        gitmode = ui.config("mq", "git").lower()
         boolmode = util.parsebool(gitmode)
         if boolmode is not None:
             if boolmode:
-                gitmode = 'yes'
+                gitmode = "yes"
             else:
-                gitmode = 'no'
+                gitmode = "no"
         self.gitmode = gitmode
         # deprecated config: mq.plain
-        self.plainmode = ui.configbool('mq', 'plain')
+        self.plainmode = ui.configbool("mq", "plain")
         self.checkapplied = True
 
     @util.propertycache
     def applied(self):
+
         def parselines(lines):
             for l in lines:
-                entry = l.split(':', 1)
+                entry = l.split(":", 1)
                 if len(entry) > 1:
                     n, name = entry
                     yield statusentry(bin(n), name)
                 elif l.strip():
-                    self.ui.warn(_('malformated mq status line: %s\n') % entry)
+                    self.ui.warn(_("malformated mq status line: %s\n") % entry)
                 # else we ignore empty lines
+
         try:
             lines = self.opener.read(self.statuspath).splitlines()
             return list(parselines(lines))
@@ -515,7 +523,7 @@ class queue(object):
         return self.seriesguards
 
     def invalidate(self):
-        for a in 'applied fullseries series seriesguards'.split():
+        for a in "applied fullseries series seriesguards".split():
             if a in self.__dict__:
                 delattr(self, a)
         self.applieddirty = False
@@ -526,17 +534,19 @@ class queue(object):
     def diffopts(self, opts=None, patchfn=None, plain=False):
         """Return diff options tweaked for this mq use, possibly upgrading to
         git format, and possibly plain and without lossy options."""
-        diffopts = patchmod.difffeatureopts(self.ui, opts,
-            git=True, whitespace=not plain, formatchanging=not plain)
-        if self.gitmode == 'auto':
+        diffopts = patchmod.difffeatureopts(
+            self.ui, opts, git=True, whitespace=not plain, formatchanging=not plain
+        )
+        if self.gitmode == "auto":
             diffopts.upgrade = True
-        elif self.gitmode == 'keep':
+        elif self.gitmode == "keep":
             pass
-        elif self.gitmode in ('yes', 'no'):
-            diffopts.git = self.gitmode == 'yes'
+        elif self.gitmode in ("yes", "no"):
+            diffopts.git = self.gitmode == "yes"
         else:
-            raise error.Abort(_('mq.git option can be auto/keep/yes/no'
-                               ' got %s') % self.gitmode)
+            raise error.Abort(
+                _("mq.git option can be auto/keep/yes/no" " got %s") % self.gitmode
+            )
         if patchfn:
             diffopts = self.patchopts(diffopts, patchfn)
         return diffopts
@@ -546,12 +556,12 @@ class queue(object):
         referenced patch is a git patch and should be preserved as such.
         """
         diffopts = diffopts.copy()
-        if not diffopts.git and self.gitmode == 'keep':
+        if not diffopts.git and self.gitmode == "keep":
             for patchfn in patches:
-                patchf = self.opener(patchfn, 'r')
+                patchf = self.opener(patchfn, "r")
                 # if the patch was a git patch, refresh it as a git patch
                 for line in patchf:
-                    if line.startswith('diff --git'):
+                    if line.startswith("diff --git"):
                         diffopts.git = True
                         break
                 patchf.close()
@@ -561,24 +571,26 @@ class queue(object):
         return os.path.join(self.path, *p)
 
     def findseries(self, patch):
+
         def matchpatch(l):
-            l = l.split('#', 1)[0]
+            l = l.split("#", 1)[0]
             return l.strip() == patch
+
         for index, l in enumerate(self.fullseries):
             if matchpatch(l):
                 return index
         return None
 
-    guard_re = re.compile(br'\s?#([-+][^-+# \t\r\n\f][^# \t\r\n\f]*)')
+    guard_re = re.compile(br"\s?#([-+][^-+# \t\r\n\f][^# \t\r\n\f]*)")
 
     def parseseries(self):
         self.series = []
         self.seriesguards = []
         for l in self.fullseries:
-            h = l.find('#')
+            h = l.find("#")
             if h == -1:
                 patch = l
-                comment = ''
+                comment = ""
             elif h == 0:
                 continue
             else:
@@ -587,22 +599,23 @@ class queue(object):
             patch = patch.strip()
             if patch:
                 if patch in self.series:
-                    raise error.Abort(_('%s appears more than once in %s') %
-                                     (patch, self.join(self.seriespath)))
+                    raise error.Abort(
+                        _("%s appears more than once in %s")
+                        % (patch, self.join(self.seriespath))
+                    )
                 self.series.append(patch)
                 self.seriesguards.append(self.guard_re.findall(comment))
 
     def checkguard(self, guard):
         if not guard:
-            return _('guard cannot be an empty string')
-        bad_chars = '# \t\r\n\f'
+            return _("guard cannot be an empty string")
+        bad_chars = "# \t\r\n\f"
         first = guard[0]
-        if first in '-+':
-            return (_('guard %r starts with invalid character: %r') %
-                      (guard, first))
+        if first in "-+":
+            return _("guard %r starts with invalid character: %r") % (guard, first)
         for c in bad_chars:
             if c in guard:
-                return _('invalid character in guard %r: %r') % (guard, c)
+                return _("invalid character in guard %r: %r") % (guard, c)
 
     def setactive(self, guards):
         for guard in guards:
@@ -610,7 +623,7 @@ class queue(object):
             if bad:
                 raise error.Abort(bad)
         guards = sorted(set(guards))
-        self.ui.debug('active guards: %s\n' % ' '.join(guards))
+        self.ui.debug("active guards: %s\n" % " ".join(guards))
         self.activeguards = guards
         self.guardsdirty = True
 
@@ -626,8 +639,9 @@ class queue(object):
             for i, guard in enumerate(guards):
                 bad = self.checkguard(guard)
                 if bad:
-                    self.ui.warn('%s:%d: %s\n' %
-                                 (self.join(self.guardspath), i + 1, bad))
+                    self.ui.warn(
+                        "%s:%d: %s\n" % (self.join(self.guardspath), i + 1, bad)
+                    )
                 else:
                     self.activeguards.append(guard)
         return self.activeguards
@@ -635,14 +649,14 @@ class queue(object):
     def setguards(self, idx, guards):
         for g in guards:
             if len(g) < 2:
-                raise error.Abort(_('guard %r too short') % g)
-            if g[0] not in '-+':
-                raise error.Abort(_('guard %r starts with invalid char') % g)
+                raise error.Abort(_("guard %r too short") % g)
+            if g[0] not in "-+":
+                raise error.Abort(_("guard %r starts with invalid char") % g)
             bad = self.checkguard(g[1:])
             if bad:
                 raise error.Abort(bad)
-        drop = self.guard_re.sub('', self.fullseries[idx])
-        self.fullseries[idx] = drop + ''.join([' #' + g for g in guards])
+        drop = self.guard_re.sub("", self.fullseries[idx])
+        self.fullseries[idx] = drop + "".join([" #" + g for g in guards])
         self.parseseries()
         self.seriesdirty = True
 
@@ -653,16 +667,16 @@ class queue(object):
         if not patchguards:
             return True, None
         guards = self.active()
-        exactneg = [g for g in patchguards if g[0] == '-' and g[1:] in guards]
+        exactneg = [g for g in patchguards if g[0] == "-" and g[1:] in guards]
         if exactneg:
             return False, repr(exactneg[0])
-        pos = [g for g in patchguards if g[0] == '+']
+        pos = [g for g in patchguards if g[0] == "+"]
         exactpos = [g for g in pos if g[1:] in guards]
         if pos:
             if exactpos:
                 return True, repr(exactpos[0])
-            return False, ' '.join(map(repr, pos))
-        return True, ''
+            return False, " ".join(map(repr, pos))
+        return True, ""
 
     def explainpushable(self, idx, all_patches=False):
         if all_patches:
@@ -676,29 +690,31 @@ class queue(object):
             pushable, why = self.pushable(idx)
             if all_patches and pushable:
                 if why is None:
-                    write(_('allowing %s - no guards in effect\n') %
-                          self.series[idx])
+                    write(_("allowing %s - no guards in effect\n") % self.series[idx])
                 else:
                     if not why:
-                        write(_('allowing %s - no matching negative guards\n') %
-                              self.series[idx])
+                        write(
+                            _("allowing %s - no matching negative guards\n")
+                            % self.series[idx]
+                        )
                     else:
-                        write(_('allowing %s - guarded by %s\n') %
-                              (self.series[idx], why))
+                        write(
+                            _("allowing %s - guarded by %s\n") % (self.series[idx], why)
+                        )
             if not pushable:
                 if why:
-                    write(_('skipping %s - guarded by %s\n') %
-                          (self.series[idx], why))
+                    write(_("skipping %s - guarded by %s\n") % (self.series[idx], why))
                 else:
-                    write(_('skipping %s - no matching guards\n') %
-                          self.series[idx])
+                    write(_("skipping %s - no matching guards\n") % self.series[idx])
 
     def savedirty(self):
+
         def writelist(items, path):
-            fp = self.opener(path, 'w')
+            fp = self.opener(path, "w")
             for i in items:
                 fp.write("%s\n" % i)
             fp.close()
+
         if self.applieddirty:
             writelist(map(str, self.applied), self.statuspath)
             self.applieddirty = False
@@ -715,21 +731,23 @@ class queue(object):
             self.added = []
 
     def removeundo(self, repo):
-        undo = repo.sjoin('undo')
+        undo = repo.sjoin("undo")
         if not os.path.exists(undo):
             return
         try:
             os.unlink(undo)
         except OSError as inst:
-            self.ui.warn(_('error removing undo: %s\n') % str(inst))
+            self.ui.warn(_("error removing undo: %s\n") % str(inst))
 
     def backup(self, repo, files, copy=False):
         # backup local changes in --force case
         for f in sorted(files):
             absf = repo.wjoin(f)
             if os.path.lexists(absf):
-                self.ui.note(_('saving current version of %s as %s\n') %
-                             (f, scmutil.origpath(self.ui, repo, f)))
+                self.ui.note(
+                    _("saving current version of %s as %s\n")
+                    % (f, scmutil.origpath(self.ui, repo, f))
+                )
 
                 absorig = scmutil.origpath(self.ui, repo, absf)
                 if copy:
@@ -737,19 +755,30 @@ class queue(object):
                 else:
                     util.rename(absf, absorig)
 
-    def printdiff(self, repo, diffopts, node1, node2=None, files=None,
-                  fp=None, changes=None, opts=None):
+    def printdiff(
+        self,
+        repo,
+        diffopts,
+        node1,
+        node2=None,
+        files=None,
+        fp=None,
+        changes=None,
+        opts=None,
+    ):
         if opts is None:
             opts = {}
-        stat = opts.get('stat')
+        stat = opts.get("stat")
         m = scmutil.match(repo[node1], files, opts)
-        cmdutil.diffordiffstat(self.ui, repo, diffopts, node1, node2,  m,
-                               changes, stat, fp)
+        cmdutil.diffordiffstat(
+            self.ui, repo, diffopts, node1, node2, m, changes, stat, fp
+        )
 
     def mergeone(self, repo, mergeq, head, patch, rev, diffopts):
         # first try just applying the patch
-        (err, n) = self.apply(repo, [patch], update_status=False,
-                              strict=True, merge=rev)
+        (err, n) = self.apply(
+            repo, [patch], update_status=False, strict=True, merge=rev
+        )
 
         if err == 0:
             return (err, n)
@@ -815,7 +844,7 @@ class queue(object):
             # the first patch in the queue is never a merge patch
             #
             pname = ".hg.patches.merge.marker"
-            n = newcommit(repo, None, '[mq]: merge marker', force=True)
+            n = newcommit(repo, None, "[mq]: merge marker", force=True)
             self.removeundo(repo)
             self.applied.append(statusentry(n, pname))
             self.applieddirty = True
@@ -846,32 +875,52 @@ class queue(object):
         return (0, head)
 
     def patch(self, repo, patchfile):
-        '''Apply patchfile  to the working directory.
-        patchfile: name of patch file'''
+        """Apply patchfile  to the working directory.
+        patchfile: name of patch file"""
         files = set()
         try:
-            fuzz = patchmod.patch(self.ui, repo, patchfile, strip=1,
-                                  files=files, eolmode=None)
+            fuzz = patchmod.patch(
+                self.ui, repo, patchfile, strip=1, files=files, eolmode=None
+            )
             return (True, list(files), fuzz)
         except Exception as inst:
-            self.ui.note(str(inst) + '\n')
+            self.ui.note(str(inst) + "\n")
             if not self.ui.verbose:
                 self.ui.warn(_("patch failed, unable to continue (try -v)\n"))
             self.ui.traceback()
             return (False, list(files), False)
 
-    def apply(self, repo, series, list=False, update_status=True,
-              strict=False, patchdir=None, merge=None, all_files=None,
-              tobackup=None, keepchanges=False):
+    def apply(
+        self,
+        repo,
+        series,
+        list=False,
+        update_status=True,
+        strict=False,
+        patchdir=None,
+        merge=None,
+        all_files=None,
+        tobackup=None,
+        keepchanges=False,
+    ):
         wlock = lock = tr = None
         try:
             wlock = repo.wlock()
             lock = repo.lock()
             tr = repo.transaction("qpush")
             try:
-                ret = self._apply(repo, series, list, update_status,
-                                  strict, patchdir, merge, all_files=all_files,
-                                  tobackup=tobackup, keepchanges=keepchanges)
+                ret = self._apply(
+                    repo,
+                    series,
+                    list,
+                    update_status,
+                    strict,
+                    patchdir,
+                    merge,
+                    all_files=all_files,
+                    tobackup=tobackup,
+                    keepchanges=keepchanges,
+                )
                 tr.close()
                 self.savedirty()
                 return ret
@@ -879,7 +928,7 @@ class queue(object):
                 tr.close()
                 self.savedirty()
                 raise
-            except: # re-raises
+            except:  # re-raises
                 try:
                     tr.abort()
                 finally:
@@ -889,9 +938,19 @@ class queue(object):
             release(tr, lock, wlock)
             self.removeundo(repo)
 
-    def _apply(self, repo, series, list=False, update_status=True,
-               strict=False, patchdir=None, merge=None, all_files=None,
-               tobackup=None, keepchanges=False):
+    def _apply(
+        self,
+        repo,
+        series,
+        list=False,
+        update_status=True,
+        strict=False,
+        patchdir=None,
+        merge=None,
+        all_files=None,
+        tobackup=None,
+        keepchanges=False,
+    ):
         """returns (error, hash)
 
         error = 1 for unable to read, 2 for patch failed, 3 for patch
@@ -926,7 +985,7 @@ class queue(object):
                 if list:
                     # The commit message should not be translated
                     message.append("\nimported patch %s" % patchname)
-                message = '\n'.join(message)
+                message = "\n".join(message)
 
             if ph.haspatch:
                 if tobackup:
@@ -935,7 +994,8 @@ class queue(object):
                     if touched and keepchanges:
                         raise AbortNoCleanup(
                             _("conflicting local changes found"),
-                            hint=_("did you forget to qrefresh?"))
+                            hint=_("did you forget to qrefresh?"),
+                        )
                     self.backup(repo, touched, copy=True)
                     tobackup = tobackup - touched
                 (patcherr, files, fuzz) = self.patch(repo, pf)
@@ -963,19 +1023,19 @@ class queue(object):
                     p1, p2 = repo.dirstate.parents()
                     repo.setparents(p1, merge)
 
-            if all_files and '.hgsubstate' in all_files:
+            if all_files and ".hgsubstate" in all_files:
                 wctx = repo[None]
-                pctx = repo['.']
+                pctx = repo["."]
                 overwrite = False
-                mergedsubstate = subrepo.submerge(repo, pctx, wctx, wctx,
-                    overwrite)
+                mergedsubstate = subrepo.submerge(repo, pctx, wctx, wctx, overwrite)
                 files += mergedsubstate.keys()
 
             match = scmutil.matchfiles(repo, files or [])
-            oldtip = repo['tip']
-            n = newcommit(repo, None, message, ph.user, ph.date, match=match,
-                          force=True)
-            if repo['tip'] == oldtip:
+            oldtip = repo["tip"]
+            n = newcommit(
+                repo, None, message, ph.user, ph.date, match=match, force=True
+            )
+            if repo["tip"] == oldtip:
                 raise error.Abort(_("qpush exactly duplicates child changeset"))
             if n is None:
                 raise error.Abort(_("repository commit failed"))
@@ -984,8 +1044,7 @@ class queue(object):
                 self.applied.append(statusentry(n, patchname))
 
             if patcherr:
-                self.ui.warn(_("patch failed, rejects left in working "
-                               "directory\n"))
+                self.ui.warn(_("patch failed, rejects left in working " "directory\n"))
                 err = 2
                 break
 
@@ -1015,8 +1074,7 @@ class queue(object):
 
         unknown = []
 
-        for (i, p) in sorted([(self.findseries(p), p) for p in patches],
-                             reverse=True):
+        for (i, p) in sorted([(self.findseries(p), p) for p in patches], reverse=True):
             if i is not None:
                 del self.fullseries[i]
             else:
@@ -1024,13 +1082,13 @@ class queue(object):
 
         if unknown:
             if numrevs:
-                rev  = dict((entry.name, entry.node) for entry in qfinished)
+                rev = dict((entry.name, entry.node) for entry in qfinished)
                 for p in unknown:
-                    msg = _('revision %s refers to unknown patches: %s\n')
+                    msg = _("revision %s refers to unknown patches: %s\n")
                     self.ui.warn(msg % (short(rev[p]), p))
             else:
-                msg = _('unknown patches: %s\n')
-                raise error.Abort(''.join(msg % p for p in unknown))
+                msg = _("unknown patches: %s\n")
+                raise error.Abort("".join(msg % p for p in unknown))
 
         self.parseseries()
         self.seriesdirty = True
@@ -1042,18 +1100,18 @@ class queue(object):
         for i, rev in enumerate(revs):
 
             if rev < firstrev:
-                raise error.Abort(_('revision %d is not managed') % rev)
+                raise error.Abort(_("revision %d is not managed") % rev)
 
             ctx = repo[rev]
             base = self.applied[i].node
             if ctx.node() != base:
-                msg = _('cannot delete revision %d above applied patches')
+                msg = _("cannot delete revision %d above applied patches")
                 raise error.Abort(msg % rev)
 
             patch = self.applied[i].name
-            for fmt in ('[mq]: %s', 'imported patch %s'):
+            for fmt in ("[mq]: %s", "imported patch %s"):
                 if ctx.description() == fmt % patch:
-                    msg = _('patch %s finalized without changeset message\n')
+                    msg = _("patch %s finalized without changeset message\n")
                     repo.ui.status(msg % patch)
                     break
 
@@ -1066,18 +1124,19 @@ class queue(object):
         repo._phasecache
         patches = self._revpatches(repo, sorted(revs))
         qfinished = self._cleanup(patches, len(patches))
-        if qfinished and repo.ui.configbool('mq', 'secret'):
+        if qfinished and repo.ui.configbool("mq", "secret"):
             # only use this logic when the secret option is added
             oldqbase = repo[qfinished[0]]
             tphase = phases.newcommitphase(repo.ui)
             if oldqbase.phase() > tphase and oldqbase.p1().phase() <= tphase:
-                with repo.transaction('qfinish') as tr:
+                with repo.transaction("qfinish") as tr:
                     phases.advanceboundary(repo, tr, tphase, qfinished)
 
     def delete(self, repo, patches, opts):
-        if not patches and not opts.get('rev'):
-            raise error.Abort(_('qdelete requires at least one revision or '
-                               'patch name'))
+        if not patches and not opts.get("rev"):
+            raise error.Abort(
+                _("qdelete requires at least one revision or " "patch name")
+            )
 
         realpatches = []
         for patch in patches:
@@ -1091,19 +1150,19 @@ class queue(object):
                 realpatches.append(patch)
 
         numrevs = 0
-        if opts.get('rev'):
+        if opts.get("rev"):
             if not self.applied:
-                raise error.Abort(_('no patches applied'))
-            revs = scmutil.revrange(repo, opts.get('rev'))
+                raise error.Abort(_("no patches applied"))
+            revs = scmutil.revrange(repo, opts.get("rev"))
             revs.sort()
             revpatches = self._revpatches(repo, revs)
             realpatches += revpatches
             numrevs = len(revpatches)
 
-        self._cleanup(realpatches, numrevs, opts.get('keep'))
+        self._cleanup(realpatches, numrevs, opts.get("keep"))
 
     def checktoppatch(self, repo):
-        '''check that working directory is at qtip'''
+        """check that working directory is at qtip"""
         if self.applied:
             top = self.applied[-1].node
             patch = self.applied[-1].name
@@ -1114,57 +1173,53 @@ class queue(object):
 
     def putsubstate2changes(self, substatestate, changes):
         for files in changes[:3]:
-            if '.hgsubstate' in files:
-                return # already listed up
+            if ".hgsubstate" in files:
+                return  # already listed up
         # not yet listed up
-        if substatestate in 'a?':
-            changes[1].append('.hgsubstate')
-        elif substatestate in 'r':
-            changes[2].append('.hgsubstate')
-        else: # modified
-            changes[0].append('.hgsubstate')
+        if substatestate in "a?":
+            changes[1].append(".hgsubstate")
+        elif substatestate in "r":
+            changes[2].append(".hgsubstate")
+        else:  # modified
+            changes[0].append(".hgsubstate")
 
     def checklocalchanges(self, repo, force=False, refresh=True):
-        excsuffix = ''
+        excsuffix = ""
         if refresh:
-            excsuffix = ', qrefresh first'
+            excsuffix = ", qrefresh first"
             # plain versions for i18n tool to detect them
             _("local changes found, qrefresh first")
             _("local changed subrepos found, qrefresh first")
         return checklocalchanges(repo, force, excsuffix)
 
-    _reserved = ('series', 'status', 'guards', '.', '..')
+    _reserved = ("series", "status", "guards", ".", "..")
+
     def checkreservedname(self, name):
         if name in self._reserved:
-            raise error.Abort(_('"%s" cannot be used as the name of a patch')
-                             % name)
+            raise error.Abort(_('"%s" cannot be used as the name of a patch') % name)
         if name != name.strip():
             # whitespace is stripped by parseseries()
-            raise error.Abort(_('patch name cannot begin or end with '
-                                'whitespace'))
-        for prefix in ('.hg', '.mq'):
+            raise error.Abort(_("patch name cannot begin or end with " "whitespace"))
+        for prefix in (".hg", ".mq"):
             if name.startswith(prefix):
-                raise error.Abort(_('patch name cannot begin with "%s"')
-                                 % prefix)
-        for c in ('#', ':', '\r', '\n'):
+                raise error.Abort(_('patch name cannot begin with "%s"') % prefix)
+        for c in ("#", ":", "\r", "\n"):
             if c in name:
-                raise error.Abort(_('%r cannot be used in the name of a patch')
-                                 % c)
+                raise error.Abort(_("%r cannot be used in the name of a patch") % c)
 
     def checkpatchname(self, name, force=False):
         self.checkreservedname(name)
         if not force and os.path.exists(self.join(name)):
             if os.path.isdir(self.join(name)):
-                raise error.Abort(_('"%s" already exists as a directory')
-                                 % name)
+                raise error.Abort(_('"%s" already exists as a directory') % name)
             else:
                 raise error.Abort(_('patch "%s" already exists') % name)
 
     def makepatchname(self, title, fallbackname):
         """Return a suitable filename for title, adding a suffix to make
         it unique in the existing list"""
-        namebase = re.sub('[\s\W_]+', '_', title.lower()).strip('_')
-        namebase = namebase[:75] # avoid too long name (issue5117)
+        namebase = re.sub("[\s\W_]+", "_", title.lower()).strip("_")
+        namebase = namebase[:75]  # avoid too long name (issue5117)
         if namebase:
             try:
                 self.checkreservedname(namebase)
@@ -1182,35 +1237,36 @@ class queue(object):
                 except error.Abort:
                     pass
             i += 1
-            name = '%s__%s' % (namebase, i)
+            name = "%s__%s" % (namebase, i)
         return name
 
     def checkkeepchanges(self, keepchanges, force):
         if force and keepchanges:
-            raise error.Abort(_('cannot use both --force and --keep-changes'))
+            raise error.Abort(_("cannot use both --force and --keep-changes"))
 
     def new(self, repo, patchfn, *pats, **opts):
         """options:
            msg: a string or a no-argument function returning a string
         """
-        msg = opts.get('msg')
-        edit = opts.get('edit')
-        editform = opts.get('editform', 'mq.qnew')
-        user = opts.get('user')
-        date = opts.get('date')
+        msg = opts.get("msg")
+        edit = opts.get("edit")
+        editform = opts.get("editform", "mq.qnew")
+        user = opts.get("user")
+        date = opts.get("date")
         if date:
             date = util.parsedate(date)
-        diffopts = self.diffopts({'git': opts.get('git')}, plain=True)
-        if opts.get('checkname', True):
+        diffopts = self.diffopts({"git": opts.get("git")}, plain=True)
+        if opts.get("checkname", True):
             self.checkpatchname(patchfn)
         inclsubs = checksubstate(repo)
         if inclsubs:
-            substatestate = repo.dirstate['.hgsubstate']
-        if opts.get('include') or opts.get('exclude') or pats:
+            substatestate = repo.dirstate[".hgsubstate"]
+        if opts.get("include") or opts.get("exclude") or pats:
             # detect missing files in pats
             def badfn(f, msg):
-                if f != '.hgsubstate': # .hgsubstate is auto-created
-                    raise error.Abort('%s: %s' % (f, msg))
+                if f != ".hgsubstate":  # .hgsubstate is auto-created
+                    raise error.Abort("%s: %s" % (f, msg))
+
             match = scmutil.match(repo[None], pats, opts, badfn=badfn)
             changes = repo.status(match=match)
         else:
@@ -1220,7 +1276,7 @@ class queue(object):
             commitfiles.extend(files)
         match = scmutil.matchfiles(repo, commitfiles)
         if len(repo[None].parents()) > 1:
-            raise error.Abort(_('cannot manage merge changesets'))
+            raise error.Abort(_("cannot manage merge changesets"))
         self.checktoppatch(repo)
         insert = self.fullseriesend()
         with repo.wlock():
@@ -1228,28 +1284,40 @@ class queue(object):
                 # if patch file write fails, abort early
                 p = self.opener(patchfn, "w")
             except IOError as e:
-                raise error.Abort(_('cannot write patch "%s": %s')
-                                 % (patchfn, encoding.strtolocal(e.strerror)))
+                raise error.Abort(
+                    _('cannot write patch "%s": %s')
+                    % (patchfn, encoding.strtolocal(e.strerror))
+                )
             try:
                 defaultmsg = "[mq]: %s" % patchfn
                 editor = cmdutil.getcommiteditor(editform=editform)
                 if edit:
+
                     def finishdesc(desc):
                         if desc.rstrip():
                             return desc
                         else:
                             return defaultmsg
+
                     # i18n: this message is shown in editor with "HG: " prefix
-                    extramsg = _('Leave message empty to use default message.')
-                    editor = cmdutil.getcommiteditor(finishdesc=finishdesc,
-                                                     extramsg=extramsg,
-                                                     editform=editform)
+                    extramsg = _("Leave message empty to use default message.")
+                    editor = cmdutil.getcommiteditor(
+                        finishdesc=finishdesc, extramsg=extramsg, editform=editform
+                    )
                     commitmsg = msg
                 else:
                     commitmsg = msg or defaultmsg
 
-                n = newcommit(repo, None, commitmsg, user, date, match=match,
-                              force=True, editor=editor)
+                n = newcommit(
+                    repo,
+                    None,
+                    commitmsg,
+                    user,
+                    date,
+                    match=match,
+                    force=True,
+                    editor=editor,
+                )
                 if n is None:
                     raise error.Abort(_("repo commit failed"))
                 try:
@@ -1263,26 +1331,27 @@ class queue(object):
                     if user:
                         ph.setuser(user)
                     if date:
-                        ph.setdate('%s %s' % date)
+                        ph.setdate("%s %s" % date)
                     ph.setparent(hex(nctx.p1().node()))
                     msg = nctx.description().strip()
                     if msg == defaultmsg.strip():
-                        msg = ''
+                        msg = ""
                     ph.setmessage(msg)
                     p.write(str(ph))
                     if commitfiles:
                         parent = self.qparents(repo, n)
                         if inclsubs:
                             self.putsubstate2changes(substatestate, changes)
-                        chunks = patchmod.diff(repo, node1=parent, node2=n,
-                                               changes=changes, opts=diffopts)
+                        chunks = patchmod.diff(
+                            repo, node1=parent, node2=n, changes=changes, opts=diffopts
+                        )
                         for chunk in chunks:
                             p.write(chunk)
                     p.close()
                     r = self.qrepo()
                     if r:
                         r[None].add([patchfn])
-                except: # re-raises
+                except:  # re-raises
                     repo.rollback()
                     raise
             except Exception:
@@ -1290,7 +1359,7 @@ class queue(object):
                 try:
                     os.unlink(patchpath)
                 except OSError:
-                    self.ui.warn(_('error unlinking %s\n') % patchpath)
+                    self.ui.warn(_("error unlinking %s\n") % patchpath)
                 raise
             self.removeundo(repo)
 
@@ -1308,6 +1377,7 @@ class queue(object):
     # 2) a unique substring of the patch name was given
     # 3) patchname[-+]num to indicate an offset in the series file
     def lookup(self, patch, strict=False):
+
         def partialname(s):
             if s in self.series:
                 return s
@@ -1315,14 +1385,14 @@ class queue(object):
             if len(matches) > 1:
                 self.ui.warn(_('patch name "%s" is ambiguous:\n') % s)
                 for m in matches:
-                    self.ui.warn('  %s\n' % m)
+                    self.ui.warn("  %s\n" % m)
                 return None
             if matches:
                 return matches[0]
             if self.series and self.applied:
-                if s == 'qtip':
+                if s == "qtip":
                     return self.series[self.seriesend(True) - 1]
-                if s == 'qbase':
+                if s == "qbase":
                     return self.series[0]
             return None
 
@@ -1342,25 +1412,25 @@ class queue(object):
                 res = partialname(patch)
                 if res:
                     return res
-                minus = patch.rfind('-')
+                minus = patch.rfind("-")
                 if minus >= 0:
                     res = partialname(patch[:minus])
                     if res:
                         i = self.series.index(res)
                         try:
-                            off = int(patch[minus + 1:] or 1)
+                            off = int(patch[minus + 1 :] or 1)
                         except (ValueError, OverflowError):
                             pass
                         else:
                             if i - off >= 0:
                                 return self.series[i - off]
-                plus = patch.rfind('+')
+                plus = patch.rfind("+")
                 if plus >= 0:
                     res = partialname(patch[:plus])
                     if res:
                         i = self.series.index(res)
                         try:
-                            off = int(patch[plus + 1:] or 1)
+                            off = int(patch[plus + 1 :] or 1)
                         except (ValueError, OverflowError):
                             pass
                         else:
@@ -1368,9 +1438,19 @@ class queue(object):
                                 return self.series[i + off]
         raise error.Abort(_("patch %s not in series") % patch)
 
-    def push(self, repo, patch=None, force=False, list=False, mergeq=None,
-             all=False, move=False, exact=False, nobackup=False,
-             keepchanges=False):
+    def push(
+        self,
+        repo,
+        patch=None,
+        force=False,
+        list=False,
+        mergeq=None,
+        all=False,
+        move=False,
+        exact=False,
+        nobackup=False,
+        keepchanges=False,
+    ):
         self.checkkeepchanges(keepchanges, force)
         diffopts = self.diffopts()
         with repo.wlock():
@@ -1383,7 +1463,7 @@ class queue(object):
                 self.ui.status(_("(working directory not at a head)\n"))
 
             if not self.series:
-                self.ui.warn(_('no patches in series\n'))
+                self.ui.warn(_("no patches in series\n"))
                 return 0
 
             # Suppose our series file is: A B C and the current 'top'
@@ -1394,26 +1474,26 @@ class queue(object):
                 patch = self.lookup(patch)
                 info = self.isapplied(patch)
                 if info and info[0] >= len(self.applied) - 1:
-                    self.ui.warn(
-                        _('qpush: %s is already at the top\n') % patch)
+                    self.ui.warn(_("qpush: %s is already at the top\n") % patch)
                     return 0
 
                 pushable, reason = self.pushable(patch)
                 if pushable:
                     if self.series.index(patch) < self.seriesend():
                         raise error.Abort(
-                            _("cannot push to a previous patch: %s") % patch)
+                            _("cannot push to a previous patch: %s") % patch
+                        )
                 else:
                     if reason:
-                        reason = _('guarded by %s') % reason
+                        reason = _("guarded by %s") % reason
                     else:
-                        reason = _('no matching guards')
+                        reason = _("no matching guards")
                     self.ui.warn(_("cannot push '%s' - %s\n") % (patch, reason))
                     return 1
             elif all:
                 patch = self.series[-1]
                 if self.isapplied(patch):
-                    self.ui.warn(_('all patches are currently applied\n'))
+                    self.ui.warn(_("all patches are currently applied\n"))
                     return 0
 
             # Following the above example, starting at 'top' of B:
@@ -1423,7 +1503,7 @@ class queue(object):
             # work as it detects an error when done
             start = self.seriesend()
             if start == len(self.series):
-                self.ui.warn(_('patch series already fully applied\n'))
+                self.ui.warn(_("patch series already fully applied\n"))
                 return 1
             if not force and not keepchanges:
                 self.checklocalchanges(repo, refresh=self.applied)
@@ -1431,19 +1511,17 @@ class queue(object):
             if exact:
                 if keepchanges:
                     raise error.Abort(
-                        _("cannot use --exact and --keep-changes together"))
+                        _("cannot use --exact and --keep-changes together")
+                    )
                 if move:
-                    raise error.Abort(_('cannot use --exact and --move '
-                                       'together'))
+                    raise error.Abort(_("cannot use --exact and --move " "together"))
                 if self.applied:
-                    raise error.Abort(_('cannot push --exact with applied '
-                                       'patches'))
+                    raise error.Abort(_("cannot push --exact with applied " "patches"))
                 root = self.series[start]
                 target = patchheader(self.join(root), self.plainmode).parent
                 if not target:
-                    raise error.Abort(
-                        _("%s does not have a parent recorded") % root)
-                if not repo[target] == repo['.']:
+                    raise error.Abort(_("%s does not have a parent recorded") % root)
+                if not repo[target] == repo["."]:
                     hg.update(repo, target)
 
             if move:
@@ -1478,8 +1556,9 @@ class queue(object):
             if (not nobackup and force) or keepchanges:
                 status = self.checklocalchanges(repo, force=True)
                 if keepchanges:
-                    tobackup.update(status.modified + status.added +
-                                    status.removed + status.deleted)
+                    tobackup.update(
+                        status.modified + status.added + status.removed + status.deleted
+                    )
                 else:
                     tobackup.update(status.modified + status.added)
 
@@ -1489,20 +1568,27 @@ class queue(object):
                 if mergeq:
                     ret = self.mergepatch(repo, mergeq, s, diffopts)
                 else:
-                    ret = self.apply(repo, s, list, all_files=all_files,
-                                     tobackup=tobackup, keepchanges=keepchanges)
+                    ret = self.apply(
+                        repo,
+                        s,
+                        list,
+                        all_files=all_files,
+                        tobackup=tobackup,
+                        keepchanges=keepchanges,
+                    )
             except AbortNoCleanup:
                 raise
-            except: # re-raises
-                self.ui.warn(_('cleaning up working directory...\n'))
-                cmdutil.revert(self.ui, repo, repo['.'],
-                               repo.dirstate.parents(), no_backup=True)
+            except:  # re-raises
+                self.ui.warn(_("cleaning up working directory...\n"))
+                cmdutil.revert(
+                    self.ui, repo, repo["."], repo.dirstate.parents(), no_backup=True
+                )
                 # only remove unknown files that we know we touched or
                 # created while patching
                 for f in all_files:
                     if f not in repo.dirstate:
                         repo.wvfs.unlinkpath(f, ignoremissing=True)
-                self.ui.warn(_('done\n'))
+                self.ui.warn(_("done\n"))
                 raise
 
             if not self.applied:
@@ -1515,8 +1601,16 @@ class queue(object):
                 self.ui.write(_("now at: %s\n") % top)
             return ret[0]
 
-    def pop(self, repo, patch=None, force=False, update=True, all=False,
-            nobackup=False, keepchanges=False):
+    def pop(
+        self,
+        repo,
+        patch=None,
+        force=False,
+        update=True,
+        all=False,
+        nobackup=False,
+        keepchanges=False,
+    ):
         self.checkkeepchanges(keepchanges, force)
         with repo.wlock():
             if patch:
@@ -1568,8 +1662,7 @@ class queue(object):
                     if not nobackup:
                         tobackup.update(s.modified + s.added)
                 elif keepchanges:
-                    tobackup.update(s.modified + s.added +
-                                    s.removed + s.deleted)
+                    tobackup.update(s.modified + s.added + s.removed + s.deleted)
 
             self.applieddirty = True
             end = len(self.applied)
@@ -1579,22 +1672,27 @@ class queue(object):
                 heads = repo.changelog.heads(rev)
             except error.LookupError:
                 node = short(rev)
-                raise error.Abort(_('trying to pop unknown node %s') % node)
+                raise error.Abort(_("trying to pop unknown node %s") % node)
 
             if heads != [self.applied[-1].node]:
-                raise error.Abort(_("popping would remove a revision not "
-                                   "managed by this patch queue"))
+                raise error.Abort(
+                    _(
+                        "popping would remove a revision not "
+                        "managed by this patch queue"
+                    )
+                )
             if not repo[self.applied[-1].node].mutable():
                 raise error.Abort(
                     _("popping would remove a public revision"),
-                    hint=_("see 'hg help phases' for details"))
+                    hint=_("see 'hg help phases' for details"),
+                )
 
             # we know there are no local changes, so we can make a simplified
             # form of hg.update.
             if update:
                 qp = self.qparents(repo, rev)
                 ctx = repo[qp]
-                m, a, r, d = repo.status(qp, '.')[:4]
+                m, a, r, d = repo.status(qp, ".")[:4]
                 if d:
                     raise error.Abort(_("deletions found between repo revs"))
 
@@ -1615,8 +1713,8 @@ class queue(object):
                 self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
             strip(self.ui, repo, [rev], update=False, backup=False)
-            for s, state in repo['.'].substate.items():
-                repo['.'].sub(s).get(state)
+            for s, state in repo["."].substate.items():
+                repo["."].sub(s).get(state)
             if self.applied:
                 self.ui.write(_("now at: %s\n") % self.applied[-1].name)
             else:
@@ -1628,7 +1726,7 @@ class queue(object):
             self.ui.write(_("no patches applied\n"))
             return
         qp = self.qparents(repo, top)
-        if opts.get('reverse'):
+        if opts.get("reverse"):
             node1, node2 = None, qp
         else:
             node1, node2 = qp, None
@@ -1639,13 +1737,13 @@ class queue(object):
         if not self.applied:
             self.ui.write(_("no patches applied\n"))
             return 1
-        msg = opts.get('msg', '').rstrip()
-        edit = opts.get('edit')
-        editform = opts.get('editform', 'mq.qrefresh')
-        newuser = opts.get('user')
-        newdate = opts.get('date')
+        msg = opts.get("msg", "").rstrip()
+        edit = opts.get("edit")
+        editform = opts.get("editform", "mq.qrefresh")
+        newuser = opts.get("user")
+        newdate = opts.get("date")
         if newdate:
-            newdate = '%d %d' % util.parsedate(newdate)
+            newdate = "%d %d" % util.parsedate(newdate)
         wlock = repo.wlock()
 
         try:
@@ -1654,19 +1752,20 @@ class queue(object):
             if repo.changelog.heads(top) != [top]:
                 raise error.Abort(_("cannot qrefresh a revision with children"))
             if not repo[top].mutable():
-                raise error.Abort(_("cannot qrefresh public revision"),
-                                 hint=_("see 'hg help phases' for details"))
+                raise error.Abort(
+                    _("cannot qrefresh public revision"),
+                    hint=_("see 'hg help phases' for details"),
+                )
 
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
 
             inclsubs = checksubstate(repo, hex(patchparent))
             if inclsubs:
-                substatestate = repo.dirstate['.hgsubstate']
+                substatestate = repo.dirstate[".hgsubstate"]
 
             ph = patchheader(self.join(patchfn), self.plainmode)
-            diffopts = self.diffopts({'git': opts.get('git')}, patchfn,
-                                     plain=True)
+            diffopts = self.diffopts({"git": opts.get("git")}, patchfn, plain=True)
             if newuser:
                 ph.setuser(newuser)
             if newdate:
@@ -1674,7 +1773,7 @@ class queue(object):
             ph.setparent(hex(patchparent))
 
             # only commit new patch when write is complete
-            patchf = self.opener(patchfn, 'w', atomictemp=True)
+            patchf = self.opener(patchfn, "w", atomictemp=True)
 
             # update the dirstate in place, strip off the qtip commit
             # and then commit.
@@ -1690,7 +1789,7 @@ class queue(object):
             match1 = scmutil.match(repo[None], pats, opts)
             # in short mode, we only diff the files included in the
             # patch already plus specified files
-            if opts.get('short'):
+            if opts.get("short"):
                 # if amending a patch, we start with existing
                 # files plus specified files - unfiltered
                 match = scmutil.matchfiles(repo, mm + aa + dd + match1.files())
@@ -1750,7 +1849,7 @@ class queue(object):
 
             dsguard = None
             try:
-                dsguard = dirstateguard.dirstateguard(repo, 'mq.refresh')
+                dsguard = dirstateguard.dirstateguard(repo, "mq.refresh")
                 if diffopts.git or diffopts.upgrade:
                     copies = {}
                     for dst in a:
@@ -1765,8 +1864,7 @@ class queue(object):
                         f = repo.file(dst)
                         src = f.renamed(man[dst])
                         if src:
-                            copies.setdefault(src[0], []).extend(
-                                copies.get(dst, []))
+                            copies.setdefault(src[0], []).extend(copies.get(dst, []))
                             if dst in a:
                                 copies[src[0]].append(dst)
                         # we can't copy a file created by the patch itself
@@ -1816,16 +1914,18 @@ class queue(object):
                 defaultmsg = "[mq]: %s" % patchfn
                 editor = cmdutil.getcommiteditor(editform=editform)
                 if edit:
+
                     def finishdesc(desc):
                         if desc.rstrip():
                             ph.setmessage(desc)
                             return desc
                         return defaultmsg
+
                     # i18n: this message is shown in editor with "HG: " prefix
-                    extramsg = _('Leave message empty to use default message.')
-                    editor = cmdutil.getcommiteditor(finishdesc=finishdesc,
-                                                     extramsg=extramsg,
-                                                     editform=editform)
+                    extramsg = _("Leave message empty to use default message.")
+                    editor = cmdutil.getcommiteditor(
+                        finishdesc=finishdesc, extramsg=extramsg, editform=editform
+                    )
                     message = msg or "\n".join(ph.message)
                 elif not msg:
                     if not ph.message:
@@ -1841,15 +1941,22 @@ class queue(object):
                 lock = tr = None
                 try:
                     lock = repo.lock()
-                    tr = repo.transaction('mq')
-                    n = newcommit(repo, oldphase, message, user, ph.date,
-                              match=match, force=True, editor=editor)
+                    tr = repo.transaction("mq")
+                    n = newcommit(
+                        repo,
+                        oldphase,
+                        message,
+                        user,
+                        ph.date,
+                        match=match,
+                        force=True,
+                        editor=editor,
+                    )
                     # only write patch after a successful commit
                     c = [list(x) for x in refreshchanges]
                     if inclsubs:
                         self.putsubstate2changes(substatestate, c)
-                    chunks = patchmod.diff(repo, patchparent,
-                                           changes=c, opts=diffopts)
+                    chunks = patchmod.diff(repo, patchparent, changes=c, opts=diffopts)
                     comments = str(ph)
                     if comments:
                         patchf.write(comments)
@@ -1864,12 +1971,16 @@ class queue(object):
                     self.applied.append(statusentry(n, patchfn))
                 finally:
                     lockmod.release(tr, lock)
-            except: # re-raises
+            except:  # re-raises
                 ctx = repo[cparents[0]]
                 repo.dirstate.rebuild(ctx.node(), ctx.manifest())
                 self.savedirty()
-                self.ui.warn(_('qrefresh interrupted while patch was popped! '
-                               '(revert --all, qpush to recover)\n'))
+                self.ui.warn(
+                    _(
+                        "qrefresh interrupted while patch was popped! "
+                        "(revert --all, qpush to recover)\n"
+                    )
+                )
                 raise
         finally:
             wlock.release()
@@ -1901,8 +2012,10 @@ class queue(object):
             self.explainpushable(i)
         return unapplied
 
-    def qseries(self, repo, missing=None, start=0, length=None, status=None,
-                summary=False):
+    def qseries(
+        self, repo, missing=None, start=0, length=None, status=None, summary=False
+    ):
+
         def displayname(pfx, patchname, state):
             if pfx:
                 self.ui.write(pfx)
@@ -1911,20 +2024,20 @@ class queue(object):
                 if ph.message:
                     msg = ph.message[0]
                 else:
-                    msg = ''
+                    msg = ""
 
                 if self.ui.formatted():
                     width = self.ui.termwidth() - len(pfx) - len(patchname) - 2
                     if width > 0:
                         msg = util.ellipsis(msg, width)
                     else:
-                        msg = ''
-                self.ui.write(patchname, label='qseries.' + state)
-                self.ui.write(': ')
-                self.ui.write(msg, label='qseries.message.' + state)
+                        msg = ""
+                self.ui.write(patchname, label="qseries." + state)
+                self.ui.write(": ")
+                self.ui.write(msg, label="qseries.message." + state)
             else:
-                self.ui.write(patchname, label='qseries.' + state)
-            self.ui.write('\n')
+                self.ui.write(patchname, label="qseries." + state)
+            self.ui.write("\n")
 
         applied = set([p.name for p in self.applied])
         if length is None:
@@ -1935,34 +2048,36 @@ class queue(object):
             for i in xrange(start, start + length):
                 patch = self.series[i]
                 if patch in applied:
-                    char, state = 'A', 'applied'
+                    char, state = "A", "applied"
                 elif self.pushable(i)[0]:
-                    char, state = 'U', 'unapplied'
+                    char, state = "U", "unapplied"
                 else:
-                    char, state = 'G', 'guarded'
-                pfx = ''
+                    char, state = "G", "guarded"
+                pfx = ""
                 if self.ui.verbose:
-                    pfx = '%*d %s ' % (idxwidth, i, char)
+                    pfx = "%*d %s " % (idxwidth, i, char)
                 elif status and status != char:
                     continue
                 displayname(pfx, patch, state)
         else:
             msng_list = []
             for root, dirs, files in os.walk(self.path):
-                d = root[len(self.path) + 1:]
+                d = root[len(self.path) + 1 :]
                 for f in files:
                     fl = os.path.join(d, f)
-                    if (fl not in self.series and
-                        fl not in (self.statuspath, self.seriespath,
-                                   self.guardspath)
-                        and not fl.startswith('.')):
+                    if (
+                        fl not in self.series
+                        and fl
+                        not in (self.statuspath, self.seriespath, self.guardspath)
+                        and not fl.startswith(".")
+                    ):
                         msng_list.append(fl)
             for x in sorted(msng_list):
-                pfx = self.ui.verbose and ('D ') or ''
-                displayname(pfx, x, 'missing')
+                pfx = self.ui.verbose and ("D ") or ""
+                displayname(pfx, x, "missing")
 
     def issaveline(self, l):
-        if l.name == '.hg.patches.save.line':
+        if l.name == ".hg.patches.save.line":
             return True
 
     def qrepo(self, create=False):
@@ -1971,10 +2086,12 @@ class queue(object):
         if self.ui.pageractive and not ui.pageractive:
             ui.pageractive = self.ui.pageractive
             # internal config: ui.formatted
-            ui.setconfig('ui', 'formatted',
-                         self.ui.config('ui', 'formatted'), 'mqpager')
-            ui.setconfig('ui', 'interactive',
-                         self.ui.config('ui', 'interactive'), 'mqpager')
+            ui.setconfig(
+                "ui", "formatted", self.ui.config("ui", "formatted"), "mqpager"
+            )
+            ui.setconfig(
+                "ui", "interactive", self.ui.config("ui", "interactive"), "mqpager"
+            )
         if create or os.path.isdir(self.join(".hg")):
             return hg.repository(ui, path=self.path, create=create)
 
@@ -1987,15 +2104,15 @@ class queue(object):
         applied = []
         qpp = None
         for i, line in enumerate(lines):
-            if line == 'Patch Data:':
+            if line == "Patch Data:":
                 datastart = i + 1
-            elif line.startswith('Dirstate:'):
+            elif line.startswith("Dirstate:"):
                 l = line.rstrip()
-                l = l[10:].split(' ')
+                l = l[10:].split(" ")
                 qpp = [bin(x) for x in l]
             elif datastart is not None:
                 l = line.rstrip()
-                n, name = l.split(':', 1)
+                n, name = l.split(":", 1)
                 if n:
                     applied.append(statusentry(bin(n), name))
                 else:
@@ -2022,8 +2139,10 @@ class queue(object):
                     update = False
                 strip(self.ui, repo, [rev], update=update, backup=False)
         if qpp:
-            self.ui.warn(_("saved queue repository parents: %s %s\n") %
-                         (short(qpp[0]), short(qpp[1])))
+            self.ui.warn(
+                _("saved queue repository parents: %s %s\n")
+                % (short(qpp[0]), short(qpp[1]))
+            )
             if qupdate:
                 self.ui.status(_("updating queue directory\n"))
                 r = self.qrepo()
@@ -2043,19 +2162,19 @@ class queue(object):
         if not msg:
             msg = _("hg patches saved state")
         else:
-            msg = "hg patches: " + msg.rstrip('\r\n')
+            msg = "hg patches: " + msg.rstrip("\r\n")
         r = self.qrepo()
         if r:
             pp = r.dirstate.parents()
             msg += "\nDirstate: %s %s" % (hex(pp[0]), hex(pp[1]))
         msg += "\n\nPatch Data:\n"
-        msg += ''.join('%s\n' % x for x in self.applied)
-        msg += ''.join(':%s\n' % x for x in self.fullseries)
+        msg += "".join("%s\n" % x for x in self.applied)
+        msg += "".join(":%s\n" % x for x in self.fullseries)
         n = repo.commit(msg, force=True)
         if not n:
             self.ui.warn(_("repo commit failed\n"))
             return 1
-        self.applied.append(statusentry(n, '.hg.patches.save.line'))
+        self.applied.append(statusentry(n, ".hg.patches.save.line"))
         self.applieddirty = True
         self.removeundo(repo)
 
@@ -2074,6 +2193,7 @@ class queue(object):
         index of the first patch past the last applied one.
         """
         end = 0
+
         def nextpatch(start):
             if all_patches or start >= len(self.series):
                 return start
@@ -2083,6 +2203,7 @@ class queue(object):
                     return i
                 self.explainpushable(i)
             return len(self.series)
+
         if self.applied:
             p = self.applied[-1].name
             try:
@@ -2100,24 +2221,34 @@ class queue(object):
             p = str(self.series.index(pname)) + " " + pname
         return p
 
-    def qimport(self, repo, files, patchname=None, rev=None, existing=None,
-                force=None, git=False):
+    def qimport(
+        self,
+        repo,
+        files,
+        patchname=None,
+        rev=None,
+        existing=None,
+        force=None,
+        git=False,
+    ):
+
         def checkseries(patchname):
             if patchname in self.series:
-                raise error.Abort(_('patch %s is already in the series file')
-                                 % patchname)
+                raise error.Abort(
+                    _("patch %s is already in the series file") % patchname
+                )
 
         if rev:
             if files:
-                raise error.Abort(_('option "-r" not valid when importing '
-                                   'files'))
+                raise error.Abort(_('option "-r" not valid when importing ' "files"))
             rev = scmutil.revrange(repo, rev)
             rev.sort(reverse=True)
         elif not files:
-            raise error.Abort(_('no files or revisions specified'))
+            raise error.Abort(_("no files or revisions specified"))
         if (len(files) > 1 or len(rev) > 1) and patchname:
-            raise error.Abort(_('option "-n" not valid when importing multiple '
-                               'patches'))
+            raise error.Abort(
+                _('option "-n" not valid when importing multiple ' "patches")
+            )
         imported = []
         if rev:
             # If mq patches are applied, we can only import revisions
@@ -2125,46 +2256,49 @@ class queue(object):
             # Otherwise, they should form a linear path to a head.
             heads = repo.changelog.heads(repo.changelog.node(rev.first()))
             if len(heads) > 1:
-                raise error.Abort(_('revision %d is the root of more than one '
-                                   'branch') % rev.last())
+                raise error.Abort(
+                    _("revision %d is the root of more than one " "branch") % rev.last()
+                )
             if self.applied:
                 base = repo.changelog.node(rev.first())
                 if base in [n.node for n in self.applied]:
-                    raise error.Abort(_('revision %d is already managed')
-                                     % rev.first())
+                    raise error.Abort(_("revision %d is already managed") % rev.first())
                 if heads != [self.applied[-1].node]:
-                    raise error.Abort(_('revision %d is not the parent of '
-                                       'the queue') % rev.first())
+                    raise error.Abort(
+                        _("revision %d is not the parent of " "the queue") % rev.first()
+                    )
                 base = repo.changelog.rev(self.applied[0].node)
                 lastparent = repo.changelog.parentrevs(base)[0]
             else:
                 if heads != [repo.changelog.node(rev.first())]:
-                    raise error.Abort(_('revision %d has unmanaged children')
-                                     % rev.first())
+                    raise error.Abort(
+                        _("revision %d has unmanaged children") % rev.first()
+                    )
                 lastparent = None
 
-            diffopts = self.diffopts({'git': git})
-            with repo.transaction('qimport') as tr:
+            diffopts = self.diffopts({"git": git})
+            with repo.transaction("qimport") as tr:
                 for r in rev:
                     if not repo[r].mutable():
-                        raise error.Abort(_('revision %d is not mutable') % r,
-                                         hint=_("see 'hg help phases' "
-                                                'for details'))
+                        raise error.Abort(
+                            _("revision %d is not mutable") % r,
+                            hint=_("see 'hg help phases' " "for details"),
+                        )
                     p1, p2 = repo.changelog.parentrevs(r)
                     n = repo.changelog.node(r)
                     if p2 != nullrev:
-                        raise error.Abort(_('cannot import merge revision %d')
-                                         % r)
+                        raise error.Abort(_("cannot import merge revision %d") % r)
                     if lastparent and lastparent != r:
-                        raise error.Abort(_('revision %d is not the parent of '
-                                           '%d')
-                                         % (r, lastparent))
+                        raise error.Abort(
+                            _("revision %d is not the parent of " "%d")
+                            % (r, lastparent)
+                        )
                     lastparent = p1
 
                     if not patchname:
                         patchname = self.makepatchname(
-                            repo[r].description().split('\n', 1)[0],
-                            '%d.diff' % r)
+                            repo[r].description().split("\n", 1)[0], "%d.diff" % r
+                        )
                     checkseries(patchname)
                     self.checkpatchname(patchname, force)
                     self.fullseries.insert(0, patchname)
@@ -2179,7 +2313,7 @@ class queue(object):
                     self.added.append(patchname)
                     imported.append(patchname)
                     patchname = None
-                    if rev and repo.ui.configbool('mq', 'secret'):
+                    if rev and repo.ui.configbool("mq", "secret"):
                         # if we added anything with --rev, move the secret root
                         phases.retractboundary(repo, tr, phases.secret, [n])
                     self.parseseries()
@@ -2188,34 +2322,31 @@ class queue(object):
 
         for i, filename in enumerate(files):
             if existing:
-                if filename == '-':
-                    raise error.Abort(_('-e is incompatible with import from -')
-                                     )
+                if filename == "-":
+                    raise error.Abort(_("-e is incompatible with import from -"))
                 filename = normname(filename)
                 self.checkreservedname(filename)
                 if util.url(filename).islocal():
                     originpath = self.join(filename)
                     if not os.path.isfile(originpath):
-                        raise error.Abort(
-                            _("patch %s does not exist") % filename)
+                        raise error.Abort(_("patch %s does not exist") % filename)
 
                 if patchname:
                     self.checkpatchname(patchname, force)
 
-                    self.ui.write(_('renaming %s to %s\n')
-                                        % (filename, patchname))
+                    self.ui.write(_("renaming %s to %s\n") % (filename, patchname))
                     util.rename(originpath, self.join(patchname))
                 else:
                     patchname = filename
 
             else:
-                if filename == '-' and not patchname:
-                    raise error.Abort(_('need --name to import a patch from -'))
+                if filename == "-" and not patchname:
+                    raise error.Abort(_("need --name to import a patch from -"))
                 elif not patchname:
-                    patchname = normname(os.path.basename(filename.rstrip('/')))
+                    patchname = normname(os.path.basename(filename.rstrip("/")))
                 self.checkpatchname(patchname, force)
                 try:
-                    if filename == '-':
+                    if filename == "-":
                         text = self.ui.fin.read()
                     else:
                         fp = hg.openpath(self.ui, filename)
@@ -2241,19 +2372,23 @@ class queue(object):
         self.removeundo(repo)
         return imported
 
+
 def fixkeepchangesopts(ui, opts):
-    if (not ui.configbool('mq', 'keepchanges') or opts.get('force')
-        or opts.get('exact')):
+    if not ui.configbool("mq", "keepchanges") or opts.get("force") or opts.get("exact"):
         return opts
     opts = dict(opts)
-    opts['keep_changes'] = True
+    opts["keep_changes"] = True
     return opts
 
-@command("qdelete|qremove|qrm",
-         [('k', 'keep', None, _('keep patch file')),
-          ('r', 'rev', [],
-           _('stop managing a revision (DEPRECATED)'), _('REV'))],
-         _('hg qdelete [-k] [PATCH]...'))
+
+@command(
+    "qdelete|qremove|qrm",
+    [
+        ("k", "keep", None, _("keep patch file")),
+        ("r", "rev", [], _("stop managing a revision (DEPRECATED)"), _("REV")),
+    ],
+    _("hg qdelete [-k] [PATCH]..."),
+)
 def delete(ui, repo, *patches, **opts):
     """remove patches from queue
 
@@ -2268,10 +2403,12 @@ def delete(ui, repo, *patches, **opts):
     q.savedirty()
     return 0
 
-@command("qapplied",
-         [('1', 'last', None, _('show only the preceding applied patch'))
-          ] + seriesopts,
-         _('hg qapplied [-1] [-s] [PATCH]'))
+
+@command(
+    "qapplied",
+    [("1", "last", None, _("show only the preceding applied patch"))] + seriesopts,
+    _("hg qapplied [-1] [-s] [PATCH]"),
+)
 def applied(ui, repo, patch=None, **opts):
     """print the patches already applied
 
@@ -2287,24 +2424,26 @@ def applied(ui, repo, patch=None, **opts):
     else:
         end = q.seriesend(True)
 
-    if opts.get('last') and not end:
+    if opts.get("last") and not end:
         ui.write(_("no patches applied\n"))
         return 1
-    elif opts.get('last') and end == 1:
+    elif opts.get("last") and end == 1:
         ui.write(_("only one patch applied\n"))
         return 1
-    elif opts.get('last'):
+    elif opts.get("last"):
         start = end - 2
         end = 1
     else:
         start = 0
 
-    q.qseries(repo, length=end, start=start, status='A',
-              summary=opts.get('summary'))
+    q.qseries(repo, length=end, start=start, status="A", summary=opts.get("summary"))
 
-@command("qunapplied",
-         [('1', 'first', None, _('show only the first patch'))] + seriesopts,
-         _('hg qunapplied [-1] [-s] [PATCH]'))
+
+@command(
+    "qunapplied",
+    [("1", "first", None, _("show only the first patch"))] + seriesopts,
+    _("hg qunapplied [-1] [-s] [PATCH]"),
+)
 def unapplied(ui, repo, patch=None, **opts):
     """print the patches not yet applied
 
@@ -2319,27 +2458,29 @@ def unapplied(ui, repo, patch=None, **opts):
     else:
         start = q.seriesend(True)
 
-    if start == len(q.series) and opts.get('first'):
+    if start == len(q.series) and opts.get("first"):
         ui.write(_("all patches applied\n"))
         return 1
 
-    if opts.get('first'):
+    if opts.get("first"):
         length = 1
     else:
         length = None
-    q.qseries(repo, start=start, length=length, status='U',
-              summary=opts.get('summary'))
+    q.qseries(repo, start=start, length=length, status="U", summary=opts.get("summary"))
 
-@command("qimport",
-         [('e', 'existing', None, _('import file in patch directory')),
-          ('n', 'name', '',
-           _('name of patch file'), _('NAME')),
-          ('f', 'force', None, _('overwrite existing files')),
-          ('r', 'rev', [],
-           _('place existing revisions under mq control'), _('REV')),
-          ('g', 'git', None, _('use git extended diff format')),
-          ('P', 'push', None, _('qpush after importing'))],
-         _('hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... [FILE]...'))
+
+@command(
+    "qimport",
+    [
+        ("e", "existing", None, _("import file in patch directory")),
+        ("n", "name", "", _("name of patch file"), _("NAME")),
+        ("f", "force", None, _("overwrite existing files")),
+        ("r", "rev", [], _("place existing revisions under mq control"), _("REV")),
+        ("g", "git", None, _("use git extended diff format")),
+        ("P", "push", None, _("qpush after importing")),
+    ],
+    _("hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... [FILE]..."),
+)
 def qimport(ui, repo, *filename, **opts):
     """import a patch or existing changeset
 
@@ -2375,19 +2516,25 @@ def qimport(ui, repo, *filename, **opts):
     Returns 0 if import succeeded.
     """
     opts = pycompat.byteskwargs(opts)
-    with repo.lock(): # cause this may move phase
+    with repo.lock():  # cause this may move phase
         q = repo.mq
         try:
             imported = q.qimport(
-                repo, filename, patchname=opts.get('name'),
-                existing=opts.get('existing'), force=opts.get('force'),
-                rev=opts.get('rev'), git=opts.get('git'))
+                repo,
+                filename,
+                patchname=opts.get("name"),
+                existing=opts.get("existing"),
+                force=opts.get("force"),
+                rev=opts.get("rev"),
+                git=opts.get("git"),
+            )
         finally:
             q.savedirty()
 
-    if imported and opts.get('push') and not opts.get('rev'):
+    if imported and opts.get("push") and not opts.get("rev"):
         return q.push(repo, imported[-1])
     return 0
+
 
 def qinit(ui, repo, create):
     """initialize a new queue repository
@@ -2401,23 +2548,26 @@ def qinit(ui, repo, create):
     r = q.init(repo, create)
     q.savedirty()
     if r:
-        if not os.path.exists(r.wjoin('.hgignore')):
-            fp = r.wvfs('.hgignore', 'w')
-            fp.write('^\\.hg\n')
-            fp.write('^\\.mq\n')
-            fp.write('syntax: glob\n')
-            fp.write('status\n')
-            fp.write('guards\n')
+        if not os.path.exists(r.wjoin(".hgignore")):
+            fp = r.wvfs(".hgignore", "w")
+            fp.write("^\\.hg\n")
+            fp.write("^\\.mq\n")
+            fp.write("syntax: glob\n")
+            fp.write("status\n")
+            fp.write("guards\n")
             fp.close()
-        if not os.path.exists(r.wjoin('series')):
-            r.wvfs('series', 'w').close()
-        r[None].add(['.hgignore', 'series'])
+        if not os.path.exists(r.wjoin("series")):
+            r.wvfs("series", "w").close()
+        r[None].add([".hgignore", "series"])
         commands.add(ui, r)
     return 0
 
-@command("^qinit",
-         [('c', 'create-repo', None, _('create queue repository'))],
-         _('hg qinit [-c]'))
+
+@command(
+    "^qinit",
+    [("c", "create-repo", None, _("create queue repository"))],
+    _("hg qinit [-c]"),
+)
 def init(ui, repo, **opts):
     """init a new queue repository (DEPRECATED)
 
@@ -2429,21 +2579,23 @@ def init(ui, repo, **opts):
 
     This command is deprecated. Without -c, it's implied by other relevant
     commands. With -c, use :hg:`init --mq` instead."""
-    return qinit(ui, repo, create=opts.get(r'create_repo'))
+    return qinit(ui, repo, create=opts.get(r"create_repo"))
 
-@command("qclone",
-         [('', 'pull', None, _('use pull protocol to copy metadata')),
-          ('U', 'noupdate', None,
-           _('do not update the new working directories')),
-          ('', 'uncompressed', None,
-           _('use uncompressed transfer (fast over LAN)')),
-          ('p', 'patches', '',
-           _('location of source patch repository'), _('REPO')),
-         ] + cmdutil.remoteopts,
-         _('hg qclone [OPTION]... SOURCE [DEST]'),
-         norepo=True)
+
+@command(
+    "qclone",
+    [
+        ("", "pull", None, _("use pull protocol to copy metadata")),
+        ("U", "noupdate", None, _("do not update the new working directories")),
+        ("", "uncompressed", None, _("use uncompressed transfer (fast over LAN)")),
+        ("p", "patches", "", _("location of source patch repository"), _("REPO")),
+    ]
+    + cmdutil.remoteopts,
+    _("hg qclone [OPTION]... SOURCE [DEST]"),
+    norepo=True,
+)
 def clone(ui, source, dest=None, **opts):
-    '''clone main and patch repository at same time
+    """clone main and patch repository at same time
 
     If source is local, destination will have no patches applied. If
     source is remote, this command can not check if patches are
@@ -2458,14 +2610,15 @@ def clone(ui, source, dest=None, **opts):
     would be created by :hg:`init --mq`.
 
     Return 0 on success.
-    '''
+    """
     opts = pycompat.byteskwargs(opts)
+
     def patchdir(repo):
         """compute a patch repo url from a repo object"""
         url = repo.url()
-        if url.endswith('/'):
+        if url.endswith("/"):
             url = url[:-1]
-        return url + '/.hg/patches'
+        return url + "/.hg/patches"
 
     # main repo (destination and sources)
     if dest is None:
@@ -2473,15 +2626,14 @@ def clone(ui, source, dest=None, **opts):
     sr = hg.peer(ui, opts, ui.expandpath(source))
 
     # patches repo (source only)
-    if opts.get('patches'):
-        patchespath = ui.expandpath(opts.get('patches'))
+    if opts.get("patches"):
+        patchespath = ui.expandpath(opts.get("patches"))
     else:
         patchespath = patchdir(sr)
     try:
         hg.peer(ui, opts, patchespath)
     except error.RepoError:
-        raise error.Abort(_('versioned patch repository not found'
-                           ' (see init --mq)'))
+        raise error.Abort(_("versioned patch repository not found" " (see init --mq)"))
     qbase, destrev = None, None
     if sr.local():
         repo = sr.local()
@@ -2491,38 +2643,51 @@ def clone(ui, source, dest=None, **opts):
                 heads = set(repo.heads())
                 destrev = list(heads.difference(repo.heads(qbase)))
                 destrev.append(repo.changelog.parents(qbase)[0])
-    elif sr.capable('lookup'):
+    elif sr.capable("lookup"):
         try:
-            qbase = sr.lookup('qbase')
+            qbase = sr.lookup("qbase")
         except error.RepoError:
             pass
 
-    ui.note(_('cloning main repository\n'))
-    sr, dr = hg.clone(ui, opts, sr.url(), dest,
-                      pull=opts.get('pull'),
-                      rev=destrev,
-                      update=False,
-                      stream=opts.get('uncompressed'))
+    ui.note(_("cloning main repository\n"))
+    sr, dr = hg.clone(
+        ui,
+        opts,
+        sr.url(),
+        dest,
+        pull=opts.get("pull"),
+        rev=destrev,
+        update=False,
+        stream=opts.get("uncompressed"),
+    )
 
-    ui.note(_('cloning patch repository\n'))
-    hg.clone(ui, opts, opts.get('patches') or patchdir(sr), patchdir(dr),
-             pull=opts.get('pull'), update=not opts.get('noupdate'),
-             stream=opts.get('uncompressed'))
+    ui.note(_("cloning patch repository\n"))
+    hg.clone(
+        ui,
+        opts,
+        opts.get("patches") or patchdir(sr),
+        patchdir(dr),
+        pull=opts.get("pull"),
+        update=not opts.get("noupdate"),
+        stream=opts.get("uncompressed"),
+    )
 
     if dr.local():
         repo = dr.local()
         if qbase:
-            ui.note(_('stripping applied patches from destination '
-                      'repository\n'))
+            ui.note(_("stripping applied patches from destination " "repository\n"))
             strip(ui, repo, [qbase], update=False, backup=None)
-        if not opts.get('noupdate'):
-            ui.note(_('updating destination repository\n'))
+        if not opts.get("noupdate"):
+            ui.note(_("updating destination repository\n"))
             hg.update(repo, repo.changelog.tip())
 
-@command("qcommit|qci",
-         commands.table["^commit|ci"][1],
-         _('hg qcommit [OPTION]... [FILE]...'),
-         inferrepo=True)
+
+@command(
+    "qcommit|qci",
+    commands.table["^commit|ci"][1],
+    _("hg qcommit [OPTION]... [FILE]..."),
+    inferrepo=True,
+)
 def commit(ui, repo, *pats, **opts):
     """commit changes in the queue repository (DEPRECATED)
 
@@ -2530,22 +2695,24 @@ def commit(ui, repo, *pats, **opts):
     q = repo.mq
     r = q.qrepo()
     if not r:
-        raise error.Abort('no queue repository')
+        raise error.Abort("no queue repository")
     commands.commit(r.ui, r, *pats, **opts)
 
-@command("qseries",
-         [('m', 'missing', None, _('print patches not in series')),
-         ] + seriesopts,
-          _('hg qseries [-ms]'))
+
+@command(
+    "qseries",
+    [("m", "missing", None, _("print patches not in series"))] + seriesopts,
+    _("hg qseries [-ms]"),
+)
 def series(ui, repo, **opts):
     """print the entire series file
 
     Returns 0 on success."""
-    repo.mq.qseries(repo, missing=opts.get(r'missing'),
-                    summary=opts.get(r'summary'))
+    repo.mq.qseries(repo, missing=opts.get(r"missing"), summary=opts.get(r"summary"))
     return 0
 
-@command("qtop", seriesopts, _('hg qtop [-s]'))
+
+@command("qtop", seriesopts, _("hg qtop [-s]"))
 def top(ui, repo, **opts):
     """print the name of the current patch
 
@@ -2557,13 +2724,13 @@ def top(ui, repo, **opts):
         t = 0
 
     if t:
-        q.qseries(repo, start=t - 1, length=1, status='A',
-                  summary=opts.get(r'summary'))
+        q.qseries(repo, start=t - 1, length=1, status="A", summary=opts.get(r"summary"))
     else:
         ui.write(_("no patches applied\n"))
         return 1
 
-@command("qnext", seriesopts, _('hg qnext [-s]'))
+
+@command("qnext", seriesopts, _("hg qnext [-s]"))
 def next(ui, repo, **opts):
     """print the name of the next pushable patch
 
@@ -2573,9 +2740,10 @@ def next(ui, repo, **opts):
     if end == len(q.series):
         ui.write(_("all patches applied\n"))
         return 1
-    q.qseries(repo, start=end, length=1, summary=opts.get(r'summary'))
+    q.qseries(repo, start=end, length=1, summary=opts.get(r"summary"))
 
-@command("qprev", seriesopts, _('hg qprev [-s]'))
+
+@command("qprev", seriesopts, _("hg qprev [-s]"))
 def prev(ui, repo, **opts):
     """print the name of the preceding applied patch
 
@@ -2589,28 +2757,32 @@ def prev(ui, repo, **opts):
         ui.write(_("no patches applied\n"))
         return 1
     idx = q.series.index(q.applied[-2].name)
-    q.qseries(repo, start=idx, length=1, status='A',
-              summary=opts.get(r'summary'))
+    q.qseries(repo, start=idx, length=1, status="A", summary=opts.get(r"summary"))
+
 
 def setupheaderopts(ui, opts):
-    if not opts.get('user') and opts.get('currentuser'):
-        opts['user'] = ui.username()
-    if not opts.get('date') and opts.get('currentdate'):
-        opts['date'] = "%d %d" % util.makedate()
+    if not opts.get("user") and opts.get("currentuser"):
+        opts["user"] = ui.username()
+    if not opts.get("date") and opts.get("currentdate"):
+        opts["date"] = "%d %d" % util.makedate()
 
-@command("^qnew",
-         [('e', 'edit', None, _('invoke editor on commit messages')),
-          ('f', 'force', None, _('import uncommitted changes (DEPRECATED)')),
-          ('g', 'git', None, _('use git extended diff format')),
-          ('U', 'currentuser', None, _('add "From: <current user>" to patch')),
-          ('u', 'user', '',
-           _('add "From: <USER>" to patch'), _('USER')),
-          ('D', 'currentdate', None, _('add "Date: <current date>" to patch')),
-          ('d', 'date', '',
-           _('add "Date: <DATE>" to patch'), _('DATE'))
-          ] + cmdutil.walkopts + cmdutil.commitopts,
-         _('hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]...'),
-         inferrepo=True)
+
+@command(
+    "^qnew",
+    [
+        ("e", "edit", None, _("invoke editor on commit messages")),
+        ("f", "force", None, _("import uncommitted changes (DEPRECATED)")),
+        ("g", "git", None, _("use git extended diff format")),
+        ("U", "currentuser", None, _('add "From: <current user>" to patch')),
+        ("u", "user", "", _('add "From: <USER>" to patch'), _("USER")),
+        ("D", "currentdate", None, _('add "Date: <current date>" to patch')),
+        ("d", "date", "", _('add "Date: <DATE>" to patch'), _("DATE")),
+    ]
+    + cmdutil.walkopts
+    + cmdutil.commitopts,
+    _("hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]..."),
+    inferrepo=True,
+)
 def new(ui, repo, patch, *args, **opts):
     """create a new patch
 
@@ -2639,28 +2811,56 @@ def new(ui, repo, patch, *args, **opts):
     opts = pycompat.byteskwargs(opts)
     msg = cmdutil.logmessage(ui, opts)
     q = repo.mq
-    opts['msg'] = msg
+    opts["msg"] = msg
     setupheaderopts(ui, opts)
     q.new(repo, patch, *args, **pycompat.strkwargs(opts))
     q.savedirty()
     return 0
 
-@command("^qrefresh",
-         [('e', 'edit', None, _('invoke editor on commit messages')),
-          ('g', 'git', None, _('use git extended diff format')),
-          ('s', 'short', None,
-           _('refresh only files already in the patch and specified files')),
-          ('U', 'currentuser', None,
-           _('add/update author field in patch with current user')),
-          ('u', 'user', '',
-           _('add/update author field in patch with given user'), _('USER')),
-          ('D', 'currentdate', None,
-           _('add/update date field in patch with current date')),
-          ('d', 'date', '',
-           _('add/update date field in patch with given date'), _('DATE'))
-          ] + cmdutil.walkopts + cmdutil.commitopts,
-         _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...'),
-         inferrepo=True)
+
+@command(
+    "^qrefresh",
+    [
+        ("e", "edit", None, _("invoke editor on commit messages")),
+        ("g", "git", None, _("use git extended diff format")),
+        (
+            "s",
+            "short",
+            None,
+            _("refresh only files already in the patch and specified files"),
+        ),
+        (
+            "U",
+            "currentuser",
+            None,
+            _("add/update author field in patch with current user"),
+        ),
+        (
+            "u",
+            "user",
+            "",
+            _("add/update author field in patch with given user"),
+            _("USER"),
+        ),
+        (
+            "D",
+            "currentdate",
+            None,
+            _("add/update date field in patch with current date"),
+        ),
+        (
+            "d",
+            "date",
+            "",
+            _("add/update date field in patch with given date"),
+            _("DATE"),
+        ),
+    ]
+    + cmdutil.walkopts
+    + cmdutil.commitopts,
+    _("hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]..."),
+    inferrepo=True,
+)
 def refresh(ui, repo, *pats, **opts):
     """update the current patch
 
@@ -2691,10 +2891,13 @@ def refresh(ui, repo, *pats, **opts):
         q.savedirty()
         return ret
 
-@command("^qdiff",
-         cmdutil.diffopts + cmdutil.diffopts2 + cmdutil.walkopts,
-         _('hg qdiff [OPTION]... [FILE]...'),
-         inferrepo=True)
+
+@command(
+    "^qdiff",
+    cmdutil.diffopts + cmdutil.diffopts2 + cmdutil.walkopts,
+    _("hg qdiff [OPTION]... [FILE]..."),
+    inferrepo=True,
+)
 def diff(ui, repo, *pats, **opts):
     """diff of the current patch and subsequent modifications
 
@@ -2710,15 +2913,20 @@ def diff(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
-    ui.pager('qdiff')
+    ui.pager("qdiff")
     repo.mq.diff(repo, pats, pycompat.byteskwargs(opts))
     return 0
 
-@command('qfold',
-         [('e', 'edit', None, _('invoke editor on commit messages')),
-          ('k', 'keep', None, _('keep folded patch files')),
-         ] + cmdutil.commitopts,
-         _('hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH...'))
+
+@command(
+    "qfold",
+    [
+        ("e", "edit", None, _("invoke editor on commit messages")),
+        ("k", "keep", None, _("keep folded patch files")),
+    ]
+    + cmdutil.commitopts,
+    _("hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."),
+)
 def fold(ui, repo, *files, **opts):
     """fold the named patches into the current patch
 
@@ -2736,23 +2944,22 @@ def fold(ui, repo, *files, **opts):
     opts = pycompat.byteskwargs(opts)
     q = repo.mq
     if not files:
-        raise error.Abort(_('qfold requires at least one patch name'))
+        raise error.Abort(_("qfold requires at least one patch name"))
     if not q.checktoppatch(repo)[0]:
-        raise error.Abort(_('no patches applied'))
+        raise error.Abort(_("no patches applied"))
     q.checklocalchanges(repo)
 
     message = cmdutil.logmessage(ui, opts)
 
-    parent = q.lookup('qtip')
+    parent = q.lookup("qtip")
     patches = []
     messages = []
     for f in files:
         p = q.lookup(f)
         if p in patches or p == parent:
-            ui.warn(_('skipping already folded patch %s\n') % p)
+            ui.warn(_("skipping already folded patch %s\n") % p)
         if q.isapplied(p):
-            raise error.Abort(_('qfold cannot fold already applied patch %s')
-                             % p)
+            raise error.Abort(_("qfold cannot fold already applied patch %s") % p)
         patches.append(p)
 
     for p in patches:
@@ -2763,7 +2970,7 @@ def fold(ui, repo, *files, **opts):
         pf = q.join(p)
         (patchsuccess, files, fuzz) = q.patch(repo, pf)
         if not patchsuccess:
-            raise error.Abort(_('error folding patch %s') % p)
+            raise error.Abort(_("error folding patch %s") % p)
 
     if not message:
         ph = patchheader(q.join(parent), q.plainmode)
@@ -2771,48 +2978,72 @@ def fold(ui, repo, *files, **opts):
         for msg in messages:
             if msg:
                 if message:
-                    message.append('* * *')
+                    message.append("* * *")
                 message.extend(msg)
-        message = '\n'.join(message)
+        message = "\n".join(message)
 
     diffopts = q.patchopts(q.diffopts(), *patches)
     with repo.wlock():
-        q.refresh(repo, msg=message, git=diffopts.git, edit=opts.get('edit'),
-                  editform='mq.qfold')
+        q.refresh(
+            repo,
+            msg=message,
+            git=diffopts.git,
+            edit=opts.get("edit"),
+            editform="mq.qfold",
+        )
         q.delete(repo, patches, opts)
         q.savedirty()
 
-@command("qgoto",
-         [('', 'keep-changes', None,
-           _('tolerate non-conflicting local changes')),
-          ('f', 'force', None, _('overwrite any local changes')),
-          ('', 'no-backup', None, _('do not save backup copies of files'))],
-         _('hg qgoto [OPTION]... PATCH'))
-def goto(ui, repo, patch, **opts):
-    '''push or pop patches until named patch is at top of stack
 
-    Returns 0 on success.'''
+@command(
+    "qgoto",
+    [
+        ("", "keep-changes", None, _("tolerate non-conflicting local changes")),
+        ("f", "force", None, _("overwrite any local changes")),
+        ("", "no-backup", None, _("do not save backup copies of files")),
+    ],
+    _("hg qgoto [OPTION]... PATCH"),
+)
+def goto(ui, repo, patch, **opts):
+    """push or pop patches until named patch is at top of stack
+
+    Returns 0 on success."""
     opts = pycompat.byteskwargs(opts)
     opts = fixkeepchangesopts(ui, opts)
     q = repo.mq
     patch = q.lookup(patch)
-    nobackup = opts.get('no_backup')
-    keepchanges = opts.get('keep_changes')
+    nobackup = opts.get("no_backup")
+    keepchanges = opts.get("keep_changes")
     if q.isapplied(patch):
-        ret = q.pop(repo, patch, force=opts.get('force'), nobackup=nobackup,
-                    keepchanges=keepchanges)
+        ret = q.pop(
+            repo,
+            patch,
+            force=opts.get("force"),
+            nobackup=nobackup,
+            keepchanges=keepchanges,
+        )
     else:
-        ret = q.push(repo, patch, force=opts.get('force'), nobackup=nobackup,
-                     keepchanges=keepchanges)
+        ret = q.push(
+            repo,
+            patch,
+            force=opts.get("force"),
+            nobackup=nobackup,
+            keepchanges=keepchanges,
+        )
     q.savedirty()
     return ret
 
-@command("qguard",
-         [('l', 'list', None, _('list all patches and guards')),
-          ('n', 'none', None, _('drop all guards'))],
-         _('hg qguard [-l] [-n] [PATCH] [-- [+GUARD]... [-GUARD]...]'))
+
+@command(
+    "qguard",
+    [
+        ("l", "list", None, _("list all patches and guards")),
+        ("n", "none", None, _("drop all guards")),
+    ],
+    _("hg qguard [-l] [-n] [PATCH] [-- [+GUARD]... [-GUARD]...]"),
+)
 def guard(ui, repo, *args, **opts):
-    '''set or print guards for a patch
+    """set or print guards for a patch
 
     Guards control whether a patch can be pushed. A patch with no
     guards is always pushed. A patch with a positive guard ("+foo") is
@@ -2832,57 +3063,59 @@ def guard(ui, repo, *args, **opts):
       hg qguard other.patch -- +2.6.17 -stable
 
     Returns 0 on success.
-    '''
+    """
+
     def status(idx):
-        guards = q.seriesguards[idx] or ['unguarded']
+        guards = q.seriesguards[idx] or ["unguarded"]
         if q.series[idx] in applied:
-            state = 'applied'
+            state = "applied"
         elif q.pushable(idx)[0]:
-            state = 'unapplied'
+            state = "unapplied"
         else:
-            state = 'guarded'
-        label = 'qguard.patch qguard.%s qseries.%s' % (state, state)
-        ui.write('%s: ' % ui.label(q.series[idx], label))
+            state = "guarded"
+        label = "qguard.patch qguard.%s qseries.%s" % (state, state)
+        ui.write("%s: " % ui.label(q.series[idx], label))
 
         for i, guard in enumerate(guards):
-            if guard.startswith('+'):
-                ui.write(guard, label='qguard.positive')
-            elif guard.startswith('-'):
-                ui.write(guard, label='qguard.negative')
+            if guard.startswith("+"):
+                ui.write(guard, label="qguard.positive")
+            elif guard.startswith("-"):
+                ui.write(guard, label="qguard.negative")
             else:
-                ui.write(guard, label='qguard.unguarded')
+                ui.write(guard, label="qguard.unguarded")
             if i != len(guards) - 1:
-                ui.write(' ')
-        ui.write('\n')
+                ui.write(" ")
+        ui.write("\n")
+
     q = repo.mq
     applied = set(p.name for p in q.applied)
     patch = None
     args = list(args)
-    if opts.get(r'list'):
-        if args or opts.get('none'):
-            raise error.Abort(_('cannot mix -l/--list with options or '
-                               'arguments'))
+    if opts.get(r"list"):
+        if args or opts.get("none"):
+            raise error.Abort(_("cannot mix -l/--list with options or " "arguments"))
         for i in xrange(len(q.series)):
             status(i)
         return
-    if not args or args[0][0:1] in '-+':
+    if not args or args[0][0:1] in "-+":
         if not q.applied:
-            raise error.Abort(_('no patches applied'))
+            raise error.Abort(_("no patches applied"))
         patch = q.applied[-1].name
-    if patch is None and args[0][0:1] not in '-+':
+    if patch is None and args[0][0:1] not in "-+":
         patch = args.pop(0)
     if patch is None:
-        raise error.Abort(_('no patch to work with'))
-    if args or opts.get('none'):
+        raise error.Abort(_("no patch to work with"))
+    if args or opts.get("none"):
         idx = q.findseries(patch)
         if idx is None:
-            raise error.Abort(_('no patch named %s') % patch)
+            raise error.Abort(_("no patch named %s") % patch)
         q.setguards(idx, args)
         q.savedirty()
     else:
         status(q.series.index(q.lookup(patch)))
 
-@command("qheader", [], _('hg qheader [PATCH]'))
+
+@command("qheader", [], _("hg qheader [PATCH]"))
 def header(ui, repo, patch=None):
     """print the header of the topmost or specified patch
 
@@ -2893,12 +3126,13 @@ def header(ui, repo, patch=None):
         patch = q.lookup(patch)
     else:
         if not q.applied:
-            ui.write(_('no patches applied\n'))
+            ui.write(_("no patches applied\n"))
             return 1
-        patch = q.lookup('qtip')
+        patch = q.lookup("qtip")
     ph = patchheader(q.join(patch), q.plainmode)
 
-    ui.write('\n'.join(ph.message) + '\n')
+    ui.write("\n".join(ph.message) + "\n")
+
 
 def lastsavename(path):
     (directory, base) = os.path.split(path)
@@ -2917,6 +3151,7 @@ def lastsavename(path):
         return (os.path.join(directory, maxname), maxindex)
     return (None, None)
 
+
 def savename(path):
     (last, index) = lastsavename(path)
     if last is None:
@@ -2924,21 +3159,22 @@ def savename(path):
     newpath = path + ".%d" % (index + 1)
     return newpath
 
-@command("^qpush",
-         [('', 'keep-changes', None,
-           _('tolerate non-conflicting local changes')),
-          ('f', 'force', None, _('apply on top of local changes')),
-          ('e', 'exact', None,
-           _('apply the target patch to its recorded parent')),
-          ('l', 'list', None, _('list patch name in commit text')),
-          ('a', 'all', None, _('apply all patches')),
-          ('m', 'merge', None, _('merge from another queue (DEPRECATED)')),
-          ('n', 'name', '',
-           _('merge queue name (DEPRECATED)'), _('NAME')),
-          ('', 'move', None,
-           _('reorder patch series and apply only the patch')),
-          ('', 'no-backup', None, _('do not save backup copies of files'))],
-         _('hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]'))
+
+@command(
+    "^qpush",
+    [
+        ("", "keep-changes", None, _("tolerate non-conflicting local changes")),
+        ("f", "force", None, _("apply on top of local changes")),
+        ("e", "exact", None, _("apply the target patch to its recorded parent")),
+        ("l", "list", None, _("list patch name in commit text")),
+        ("a", "all", None, _("apply all patches")),
+        ("m", "merge", None, _("merge from another queue (DEPRECATED)")),
+        ("n", "name", "", _("merge queue name (DEPRECATED)"), _("NAME")),
+        ("", "move", None, _("reorder patch series and apply only the patch")),
+        ("", "no-backup", None, _("do not save backup copies of files")),
+    ],
+    _("hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]"),
+)
 def push(ui, repo, patch=None, **opts):
     """push the next patch onto the stack
 
@@ -2954,9 +3190,9 @@ def push(ui, repo, patch=None, **opts):
 
     opts = pycompat.byteskwargs(opts)
     opts = fixkeepchangesopts(ui, opts)
-    if opts.get('merge'):
-        if opts.get('name'):
-            newpath = repo.vfs.join(opts.get('name'))
+    if opts.get("merge"):
+        if opts.get("name"):
+            newpath = repo.vfs.join(opts.get("name"))
         else:
             newpath, i = lastsavename(q.path)
         if not newpath:
@@ -2964,21 +3200,32 @@ def push(ui, repo, patch=None, **opts):
             return 1
         mergeq = queue(ui, repo.baseui, repo.path, newpath)
         ui.warn(_("merging with queue at: %s\n") % mergeq.path)
-    ret = q.push(repo, patch, force=opts.get('force'), list=opts.get('list'),
-                 mergeq=mergeq, all=opts.get('all'), move=opts.get('move'),
-                 exact=opts.get('exact'), nobackup=opts.get('no_backup'),
-                 keepchanges=opts.get('keep_changes'))
+    ret = q.push(
+        repo,
+        patch,
+        force=opts.get("force"),
+        list=opts.get("list"),
+        mergeq=mergeq,
+        all=opts.get("all"),
+        move=opts.get("move"),
+        exact=opts.get("exact"),
+        nobackup=opts.get("no_backup"),
+        keepchanges=opts.get("keep_changes"),
+    )
     return ret
 
-@command("^qpop",
-         [('a', 'all', None, _('pop all patches')),
-          ('n', 'name', '',
-           _('queue name to pop (DEPRECATED)'), _('NAME')),
-          ('', 'keep-changes', None,
-           _('tolerate non-conflicting local changes')),
-          ('f', 'force', None, _('forget any local changes to patched files')),
-          ('', 'no-backup', None, _('do not save backup copies of files'))],
-         _('hg qpop [-a] [-f] [PATCH | INDEX]'))
+
+@command(
+    "^qpop",
+    [
+        ("a", "all", None, _("pop all patches")),
+        ("n", "name", "", _("queue name to pop (DEPRECATED)"), _("NAME")),
+        ("", "keep-changes", None, _("tolerate non-conflicting local changes")),
+        ("f", "force", None, _("forget any local changes to patched files")),
+        ("", "no-backup", None, _("do not save backup copies of files")),
+    ],
+    _("hg qpop [-a] [-f] [PATCH | INDEX]"),
+)
 def pop(ui, repo, patch=None, **opts):
     """pop the current patch off the stack
 
@@ -2996,19 +3243,26 @@ def pop(ui, repo, patch=None, **opts):
     opts = pycompat.byteskwargs(opts)
     opts = fixkeepchangesopts(ui, opts)
     localupdate = True
-    if opts.get('name'):
-        q = queue(ui, repo.baseui, repo.path, repo.vfs.join(opts.get('name')))
-        ui.warn(_('using patch queue: %s\n') % q.path)
+    if opts.get("name"):
+        q = queue(ui, repo.baseui, repo.path, repo.vfs.join(opts.get("name")))
+        ui.warn(_("using patch queue: %s\n") % q.path)
         localupdate = False
     else:
         q = repo.mq
-    ret = q.pop(repo, patch, force=opts.get('force'), update=localupdate,
-                all=opts.get('all'), nobackup=opts.get('no_backup'),
-                keepchanges=opts.get('keep_changes'))
+    ret = q.pop(
+        repo,
+        patch,
+        force=opts.get("force"),
+        update=localupdate,
+        all=opts.get("all"),
+        nobackup=opts.get("no_backup"),
+        keepchanges=opts.get("keep_changes"),
+    )
     q.savedirty()
     return ret
 
-@command("qrename|qmv", [], _('hg qrename PATCH1 [PATCH2]'))
+
+@command("qrename|qmv", [], _("hg qrename PATCH1 [PATCH2]"))
 def rename(ui, repo, patch, name=None, **opts):
     """rename a patch
 
@@ -3025,19 +3279,19 @@ def rename(ui, repo, patch, name=None, **opts):
         patch = q.lookup(patch)
     else:
         if not q.applied:
-            ui.write(_('no patches applied\n'))
+            ui.write(_("no patches applied\n"))
             return
-        patch = q.lookup('qtip')
+        patch = q.lookup("qtip")
     absdest = q.join(name)
     if os.path.isdir(absdest):
         name = normname(os.path.join(name, os.path.basename(patch)))
         absdest = q.join(name)
     q.checkpatchname(name)
 
-    ui.note(_('renaming %s to %s\n') % (patch, name))
+    ui.note(_("renaming %s to %s\n") % (patch, name))
     i = q.findseries(patch)
     guards = q.guard_re.findall(q.fullseries[i])
-    q.fullseries[i] = name + ''.join([' #' + g for g in guards])
+    q.fullseries[i] = name + "".join([" #" + g for g in guards])
     q.parseseries()
     q.seriesdirty = True
 
@@ -3054,7 +3308,7 @@ def rename(ui, repo, patch, name=None, **opts):
     if r and patch in r.dirstate:
         wctx = r[None]
         with r.wlock():
-            if r.dirstate[patch] == 'a':
+            if r.dirstate[patch] == "a":
                 r.dirstate.drop(patch)
                 r.dirstate.add(name)
             else:
@@ -3063,28 +3317,37 @@ def rename(ui, repo, patch, name=None, **opts):
 
     q.savedirty()
 
-@command("qrestore",
-         [('d', 'delete', None, _('delete save entry')),
-          ('u', 'update', None, _('update queue working directory'))],
-         _('hg qrestore [-d] [-u] REV'))
+
+@command(
+    "qrestore",
+    [
+        ("d", "delete", None, _("delete save entry")),
+        ("u", "update", None, _("update queue working directory")),
+    ],
+    _("hg qrestore [-d] [-u] REV"),
+)
 def restore(ui, repo, rev, **opts):
     """restore the queue state saved by a revision (DEPRECATED)
 
     This command is deprecated, use :hg:`rebase` instead."""
     rev = repo.lookup(rev)
     q = repo.mq
-    q.restore(repo, rev, delete=opts.get(r'delete'),
-              qupdate=opts.get(r'update'))
+    q.restore(repo, rev, delete=opts.get(r"delete"), qupdate=opts.get(r"update"))
     q.savedirty()
     return 0
 
-@command("qsave",
-         [('c', 'copy', None, _('copy patch directory')),
-          ('n', 'name', '',
-           _('copy directory name'), _('NAME')),
-          ('e', 'empty', None, _('clear queue status file')),
-          ('f', 'force', None, _('force copy'))] + cmdutil.commitopts,
-         _('hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]'))
+
+@command(
+    "qsave",
+    [
+        ("c", "copy", None, _("copy patch directory")),
+        ("n", "name", "", _("copy directory name"), _("NAME")),
+        ("e", "empty", None, _("clear queue status file")),
+        ("f", "force", None, _("force copy")),
+    ]
+    + cmdutil.commitopts,
+    _("hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]"),
+)
 def save(ui, repo, **opts):
     """save current queue state (DEPRECATED)
 
@@ -3095,36 +3358,43 @@ def save(ui, repo, **opts):
     ret = q.save(repo, msg=message)
     if ret:
         return ret
-    q.savedirty() # save to .hg/patches before copying
-    if opts.get('copy'):
+    q.savedirty()  # save to .hg/patches before copying
+    if opts.get("copy"):
         path = q.path
-        if opts.get('name'):
-            newpath = os.path.join(q.basepath, opts.get('name'))
+        if opts.get("name"):
+            newpath = os.path.join(q.basepath, opts.get("name"))
             if os.path.exists(newpath):
                 if not os.path.isdir(newpath):
-                    raise error.Abort(_('destination %s exists and is not '
-                                       'a directory') % newpath)
-                if not opts.get('force'):
-                    raise error.Abort(_('destination %s exists, '
-                                       'use -f to force') % newpath)
+                    raise error.Abort(
+                        _("destination %s exists and is not " "a directory") % newpath
+                    )
+                if not opts.get("force"):
+                    raise error.Abort(
+                        _("destination %s exists, " "use -f to force") % newpath
+                    )
         else:
             newpath = savename(path)
         ui.warn(_("copy %s to %s\n") % (path, newpath))
         util.copyfiles(path, newpath)
-    if opts.get('empty'):
+    if opts.get("empty"):
         del q.applied[:]
         q.applieddirty = True
         q.savedirty()
     return 0
 
-@command("qselect",
-         [('n', 'none', None, _('disable all guards')),
-          ('s', 'series', None, _('list all guards in series file')),
-          ('', 'pop', None, _('pop to before first guarded applied patch')),
-          ('', 'reapply', None, _('pop, then reapply patches'))],
-         _('hg qselect [OPTION]... [GUARD]...'))
+
+@command(
+    "qselect",
+    [
+        ("n", "none", None, _("disable all guards")),
+        ("s", "series", None, _("list all guards in series file")),
+        ("", "pop", None, _("pop to before first guarded applied patch")),
+        ("", "reapply", None, _("pop, then reapply patches")),
+    ],
+    _("hg qselect [OPTION]... [GUARD]..."),
+)
 def select(ui, repo, *args, **opts):
-    '''set or print guarded patches to push
+    """set or print guarded patches to push
 
     Use the :hg:`qguard` command to set or print guards on patch, then use
     qselect to tell mq which guards to use. A patch will be pushed if
@@ -3156,31 +3426,39 @@ def select(ui, repo, *args, **opts):
     Use -s/--series to print a list of all guards in the series file
     (no other arguments needed). Use -v for more information.
 
-    Returns 0 on success.'''
+    Returns 0 on success."""
 
     q = repo.mq
     opts = pycompat.byteskwargs(opts)
     guards = q.active()
     pushable = lambda i: q.pushable(q.applied[i].name)[0]
-    if args or opts.get('none'):
+    if args or opts.get("none"):
         old_unapplied = q.unapplied(repo)
         old_guarded = [i for i in xrange(len(q.applied)) if not pushable(i)]
         q.setactive(args)
         q.savedirty()
         if not args:
-            ui.status(_('guards deactivated\n'))
-        if not opts.get('pop') and not opts.get('reapply'):
+            ui.status(_("guards deactivated\n"))
+        if not opts.get("pop") and not opts.get("reapply"):
             unapplied = q.unapplied(repo)
             guarded = [i for i in xrange(len(q.applied)) if not pushable(i)]
             if len(unapplied) != len(old_unapplied):
-                ui.status(_('number of unguarded, unapplied patches has '
-                            'changed from %d to %d\n') %
-                          (len(old_unapplied), len(unapplied)))
+                ui.status(
+                    _(
+                        "number of unguarded, unapplied patches has "
+                        "changed from %d to %d\n"
+                    )
+                    % (len(old_unapplied), len(unapplied))
+                )
             if len(guarded) != len(old_guarded):
-                ui.status(_('number of guarded, applied patches has changed '
-                            'from %d to %d\n') %
-                          (len(old_guarded), len(guarded)))
-    elif opts.get('series'):
+                ui.status(
+                    _(
+                        "number of guarded, applied patches has changed "
+                        "from %d to %d\n"
+                    )
+                    % (len(old_guarded), len(guarded))
+                )
+    elif opts.get("series"):
         guards = {}
         noguards = 0
         for gs in q.seriesguards:
@@ -3190,29 +3468,29 @@ def select(ui, repo, *args, **opts):
                 guards.setdefault(g, 0)
                 guards[g] += 1
         if ui.verbose:
-            guards['NONE'] = noguards
+            guards["NONE"] = noguards
         guards = guards.items()
         guards.sort(key=lambda x: x[0][1:])
         if guards:
-            ui.note(_('guards in series file:\n'))
+            ui.note(_("guards in series file:\n"))
             for guard, count in guards:
-                ui.note('%2d  ' % count)
-                ui.write(guard, '\n')
+                ui.note("%2d  " % count)
+                ui.write(guard, "\n")
         else:
-            ui.note(_('no guards in series file\n'))
+            ui.note(_("no guards in series file\n"))
     else:
         if guards:
-            ui.note(_('active guards:\n'))
+            ui.note(_("active guards:\n"))
             for g in guards:
-                ui.write(g, '\n')
+                ui.write(g, "\n")
         else:
-            ui.write(_('no active guards\n'))
-    reapply = opts.get('reapply') and q.applied and q.applied[-1].name
+            ui.write(_("no active guards\n"))
+    reapply = opts.get("reapply") and q.applied and q.applied[-1].name
     popped = False
-    if opts.get('pop') or opts.get('reapply'):
+    if opts.get("pop") or opts.get("reapply"):
         for i in xrange(len(q.applied)):
             if not pushable(i):
-                ui.status(_('popping guarded patches\n'))
+                ui.status(_("popping guarded patches\n"))
                 popped = True
                 if i == 0:
                     q.pop(repo, all=True)
@@ -3222,14 +3500,17 @@ def select(ui, repo, *args, **opts):
     if popped:
         try:
             if reapply:
-                ui.status(_('reapplying unguarded patches\n'))
+                ui.status(_("reapplying unguarded patches\n"))
                 q.push(repo, reapply)
         finally:
             q.savedirty()
 
-@command("qfinish",
-         [('a', 'applied', None, _('finish all applied changesets'))],
-         _('hg qfinish [-a] [REV]...'))
+
+@command(
+    "qfinish",
+    [("a", "applied", None, _("finish all applied changesets"))],
+    _("hg qfinish [-a] [REV]..."),
+)
 def finish(ui, repo, *revrange, **opts):
     """move applied patches into repository history
 
@@ -3248,19 +3529,19 @@ def finish(ui, repo, *revrange, **opts):
 
     Returns 0 on success.
     """
-    if not opts.get(r'applied') and not revrange:
-        raise error.Abort(_('no revisions specified'))
-    elif opts.get(r'applied'):
-        revrange = ('qbase::qtip',) + revrange
+    if not opts.get(r"applied") and not revrange:
+        raise error.Abort(_("no revisions specified"))
+    elif opts.get(r"applied"):
+        revrange = ("qbase::qtip",) + revrange
 
     q = repo.mq
     if not q.applied:
-        ui.status(_('no patches applied\n'))
+        ui.status(_("no patches applied\n"))
         return 0
 
     revs = scmutil.revrange(repo, revrange)
-    if repo['.'].rev() in revs and repo[None].files():
-        ui.warn(_('warning: uncommitted changes in the working directory\n'))
+    if repo["."].rev() in revs and repo[None].files():
+        ui.warn(_("warning: uncommitted changes in the working directory\n"))
     # queue.finish may changes phases but leave the responsibility to lock the
     # repo to the caller to avoid deadlock with wlock. This command code is
     # responsibility for this locking.
@@ -3269,17 +3550,21 @@ def finish(ui, repo, *revrange, **opts):
         q.savedirty()
     return 0
 
-@command("qqueue",
-         [('l', 'list', False, _('list all available queues')),
-          ('', 'active', False, _('print name of active queue')),
-          ('c', 'create', False, _('create new queue')),
-          ('', 'rename', False, _('rename active queue')),
-          ('', 'delete', False, _('delete reference to queue')),
-          ('', 'purge', False, _('delete queue, and remove patch dir')),
-         ],
-         _('[OPTION] [QUEUE]'))
+
+@command(
+    "qqueue",
+    [
+        ("l", "list", False, _("list all available queues")),
+        ("", "active", False, _("print name of active queue")),
+        ("c", "create", False, _("create new queue")),
+        ("", "rename", False, _("rename active queue")),
+        ("", "delete", False, _("delete reference to queue")),
+        ("", "purge", False, _("delete queue, and remove patch dir")),
+    ],
+    _("[OPTION] [QUEUE]"),
+)
 def qqueue(ui, repo, name=None, **opts):
-    '''manage multiple patch queues
+    """manage multiple patch queues
 
     Supports switching between different patch queues, as well as creating
     new patch queues and deleting existing ones.
@@ -3298,21 +3583,21 @@ def qqueue(ui, repo, name=None, **opts):
     active queue.
 
     Returns 0 on success.
-    '''
+    """
     q = repo.mq
-    _defaultqueue = 'patches'
-    _allqueues = 'patches.queues'
-    _activequeue = 'patches.queue'
+    _defaultqueue = "patches"
+    _allqueues = "patches.queues"
+    _activequeue = "patches.queue"
 
     def _getcurrent():
         cur = os.path.basename(q.path)
-        if cur.startswith('patches-'):
+        if cur.startswith("patches-"):
             cur = cur[8:]
         return cur
 
     def _noqueues():
         try:
-            fh = repo.vfs(_allqueues, 'r')
+            fh = repo.vfs(_allqueues, "r")
             fh.close()
         except IOError:
             return True
@@ -3323,7 +3608,7 @@ def qqueue(ui, repo, name=None, **opts):
         current = _getcurrent()
 
         try:
-            fh = repo.vfs(_allqueues, 'r')
+            fh = repo.vfs(_allqueues, "r")
             queues = [queue.strip() for queue in fh if queue.strip()]
             fh.close()
             if current not in queues:
@@ -3335,83 +3620,84 @@ def qqueue(ui, repo, name=None, **opts):
 
     def _setactive(name):
         if q.applied:
-            raise error.Abort(_('new queue created, but cannot make active '
-                               'as patches are applied'))
+            raise error.Abort(
+                _("new queue created, but cannot make active " "as patches are applied")
+            )
         _setactivenocheck(name)
 
     def _setactivenocheck(name):
-        fh = repo.vfs(_activequeue, 'w')
-        if name != 'patches':
+        fh = repo.vfs(_activequeue, "w")
+        if name != "patches":
             fh.write(name)
         fh.close()
 
     def _addqueue(name):
-        fh = repo.vfs(_allqueues, 'a')
-        fh.write('%s\n' % (name,))
+        fh = repo.vfs(_allqueues, "a")
+        fh.write("%s\n" % (name,))
         fh.close()
 
     def _queuedir(name):
-        if name == 'patches':
-            return repo.vfs.join('patches')
+        if name == "patches":
+            return repo.vfs.join("patches")
         else:
-            return repo.vfs.join('patches-' + name)
+            return repo.vfs.join("patches-" + name)
 
     def _validname(name):
         for n in name:
-            if n in ':\\/.':
+            if n in ":\\/.":
                 return False
         return True
 
     def _delete(name):
         if name not in existing:
-            raise error.Abort(_('cannot delete queue that does not exist'))
+            raise error.Abort(_("cannot delete queue that does not exist"))
 
         current = _getcurrent()
 
         if name == current:
-            raise error.Abort(_('cannot delete currently active queue'))
+            raise error.Abort(_("cannot delete currently active queue"))
 
-        fh = repo.vfs('patches.queues.new', 'w')
+        fh = repo.vfs("patches.queues.new", "w")
         for queue in existing:
             if queue == name:
                 continue
-            fh.write('%s\n' % (queue,))
+            fh.write("%s\n" % (queue,))
         fh.close()
-        repo.vfs.rename('patches.queues.new', _allqueues)
+        repo.vfs.rename("patches.queues.new", _allqueues)
 
     opts = pycompat.byteskwargs(opts)
-    if not name or opts.get('list') or opts.get('active'):
+    if not name or opts.get("list") or opts.get("active"):
         current = _getcurrent()
-        if opts.get('active'):
-            ui.write('%s\n' % (current,))
+        if opts.get("active"):
+            ui.write("%s\n" % (current,))
             return
         for queue in _getqueues():
-            ui.write('%s' % (queue,))
+            ui.write("%s" % (queue,))
             if queue == current and not ui.quiet:
-                ui.write(_(' (active)\n'))
+                ui.write(_(" (active)\n"))
             else:
-                ui.write('\n')
+                ui.write("\n")
         return
 
     if not _validname(name):
         raise error.Abort(
-                _('invalid queue name, may not contain the characters ":\\/."'))
+            _('invalid queue name, may not contain the characters ":\\/."')
+        )
 
     with repo.wlock():
         existing = _getqueues()
 
-        if opts.get('create'):
+        if opts.get("create"):
             if name in existing:
                 raise error.Abort(_('queue "%s" already exists') % name)
             if _noqueues():
                 _addqueue(_defaultqueue)
             _addqueue(name)
             _setactive(name)
-        elif opts.get('rename'):
+        elif opts.get("rename"):
             current = _getcurrent()
             if name == current:
-                raise error.Abort(_('can\'t rename "%s" to its current name')
-                                  % name)
+                raise error.Abort(_('can\'t rename "%s" to its current name') % name)
             if name in existing:
                 raise error.Abort(_('queue "%s" already exists') % name)
 
@@ -3419,23 +3705,22 @@ def qqueue(ui, repo, name=None, **opts):
             newdir = _queuedir(name)
 
             if os.path.exists(newdir):
-                raise error.Abort(_('non-queue directory "%s" already exists') %
-                        newdir)
+                raise error.Abort(_('non-queue directory "%s" already exists') % newdir)
 
-            fh = repo.vfs('patches.queues.new', 'w')
+            fh = repo.vfs("patches.queues.new", "w")
             for queue in existing:
                 if queue == current:
-                    fh.write('%s\n' % (name,))
+                    fh.write("%s\n" % (name,))
                     if os.path.exists(olddir):
                         util.rename(olddir, newdir)
                 else:
-                    fh.write('%s\n' % (queue,))
+                    fh.write("%s\n" % (queue,))
             fh.close()
-            repo.vfs.rename('patches.queues.new', _allqueues)
+            repo.vfs.rename("patches.queues.new", _allqueues)
             _setactivenocheck(name)
-        elif opts.get('delete'):
+        elif opts.get("delete"):
             _delete(name)
-        elif opts.get('purge'):
+        elif opts.get("purge"):
             if name in existing:
                 _delete(name)
             qdir = _queuedir(name)
@@ -3443,13 +3728,14 @@ def qqueue(ui, repo, name=None, **opts):
                 shutil.rmtree(qdir)
         else:
             if name not in existing:
-                raise error.Abort(_('use --create to create a new queue'))
+                raise error.Abort(_("use --create to create a new queue"))
             _setactive(name)
+
 
 def mqphasedefaults(repo, roots):
     """callback used to set mq changeset as secret when no phase data exists"""
     if repo.mq.applied:
-        if repo.ui.configbool('mq', 'secret'):
+        if repo.ui.configbool("mq", "secret"):
             mqphase = phases.secret
         else:
             mqphase = phases.draft
@@ -3457,17 +3743,20 @@ def mqphasedefaults(repo, roots):
         roots[mqphase].add(qbase.node())
     return roots
 
+
 def reposetup(ui, repo):
+
     class mqrepo(repo.__class__):
+
         @localrepo.unfilteredpropertycache
         def mq(self):
             return queue(self.ui, self.baseui, self.path)
 
         def invalidateall(self):
             super(mqrepo, self).invalidateall()
-            if localrepo.hasunfilteredcache(self, 'mq'):
+            if localrepo.hasunfilteredcache(self, "mq"):
                 # recreate mq in case queue path was changed
-                delattr(self.unfiltered(), 'mq')
+                delattr(self.unfiltered(), "mq")
 
         def abortifwdirpatched(self, errmsg, force=False):
             if self.mq.applied and self.mq.checkapplied and not force:
@@ -3476,16 +3765,23 @@ def reposetup(ui, repo):
                 if parents[0] in patches or parents[1] in patches:
                     raise error.Abort(errmsg)
 
-        def commit(self, text="", user=None, date=None, match=None,
-                   force=False, editor=False, extra=None):
+        def commit(
+            self,
+            text="",
+            user=None,
+            date=None,
+            match=None,
+            force=False,
+            editor=False,
+            extra=None,
+        ):
             if extra is None:
                 extra = {}
-            self.abortifwdirpatched(
-                _('cannot commit over an applied mq patch'),
-                force)
+            self.abortifwdirpatched(_("cannot commit over an applied mq patch"), force)
 
-            return super(mqrepo, self).commit(text, user, date, match, force,
-                                              editor, extra)
+            return super(mqrepo, self).commit(
+                text, user, date, match, force, editor, extra
+            )
 
         def checkpush(self, pushop):
             if self.mq.applied and self.mq.checkapplied and not pushop.force:
@@ -3503,12 +3799,12 @@ def reposetup(ui, repo):
                 # looking for pushed and shared changeset
                 for node in outapplied:
                     if self[node].phase() < phases.secret:
-                        raise error.Abort(_('source has mq patches applied'))
+                        raise error.Abort(_("source has mq patches applied"))
                 # no non-secret patches pushed
             super(mqrepo, self).checkpush(pushop)
 
         def _findtags(self):
-            '''augment tags from base class with patch tags'''
+            """augment tags from base class with patch tags"""
             result = super(mqrepo, self)._findtags()
 
             q = self.mq
@@ -3521,8 +3817,10 @@ def reposetup(ui, repo):
                 # for now ignore filtering business
                 self.unfiltered().changelog.rev(mqtags[-1][0])
             except error.LookupError:
-                self.ui.warn(_('mq status file refers to unknown node %s\n')
-                             % short(mqtags[-1][0]))
+                self.ui.warn(
+                    _("mq status file refers to unknown node %s\n")
+                    % short(mqtags[-1][0])
+                )
                 return result
 
             # do not add fake tags for filtered revisions
@@ -3531,14 +3829,15 @@ def reposetup(ui, repo):
             if not mqtags:
                 return result
 
-            mqtags.append((mqtags[-1][0], 'qtip'))
-            mqtags.append((mqtags[0][0], 'qbase'))
-            mqtags.append((self.changelog.parents(mqtags[0][0])[0], 'qparent'))
+            mqtags.append((mqtags[-1][0], "qtip"))
+            mqtags.append((mqtags[0][0], "qbase"))
+            mqtags.append((self.changelog.parents(mqtags[0][0])[0], "qparent"))
             tags = result[0]
             for patch in mqtags:
                 if patch[1] in tags:
-                    self.ui.warn(_('tag %s overrides mq patch of the same '
-                                   'name\n') % patch[1])
+                    self.ui.warn(
+                        _("tag %s overrides mq patch of the same " "name\n") % patch[1]
+                    )
                 else:
                     tags[patch[1]] = patch[0]
 
@@ -3549,15 +3848,19 @@ def reposetup(ui, repo):
 
         repo._phasedefaults.append(mqphasedefaults)
 
+
 def mqimport(orig, ui, repo, *args, **kwargs):
-    if (util.safehasattr(repo, 'abortifwdirpatched')
-        and not kwargs.get(r'no_commit', False)):
-        repo.abortifwdirpatched(_('cannot import over an applied patch'),
-                                   kwargs.get(r'force'))
+    if util.safehasattr(repo, "abortifwdirpatched") and not kwargs.get(
+        r"no_commit", False
+    ):
+        repo.abortifwdirpatched(
+            _("cannot import over an applied patch"), kwargs.get(r"force")
+        )
     return orig(ui, repo, *args, **kwargs)
 
+
 def mqinit(orig, ui, *args, **kwargs):
-    mq = kwargs.pop(r'mq', None)
+    mq = kwargs.pop(r"mq", None)
 
     if not mq:
         return orig(ui, *args, **kwargs)
@@ -3565,21 +3868,22 @@ def mqinit(orig, ui, *args, **kwargs):
     if args:
         repopath = args[0]
         if not hg.islocal(repopath):
-            raise error.Abort(_('only a local queue repository '
-                               'may be initialized'))
+            raise error.Abort(_("only a local queue repository " "may be initialized"))
     else:
         repopath = cmdutil.findrepo(pycompat.getcwd())
         if not repopath:
-            raise error.Abort(_('there is no Mercurial repository here '
-                               '(.hg not found)'))
+            raise error.Abort(
+                _("there is no Mercurial repository here " "(.hg not found)")
+            )
     repo = hg.repository(ui, repopath)
     return qinit(ui, repo, True)
+
 
 def mqcommand(orig, ui, repo, *args, **kwargs):
     """Add --mq option to operate on patch repository instead of main"""
 
     # some commands do not like getting unknown options
-    mq = kwargs.pop(r'mq', None)
+    mq = kwargs.pop(r"mq", None)
 
     if not mq:
         return orig(ui, repo, *args, **kwargs)
@@ -3587,27 +3891,30 @@ def mqcommand(orig, ui, repo, *args, **kwargs):
     q = repo.mq
     r = q.qrepo()
     if not r:
-        raise error.Abort(_('no queue repository'))
+        raise error.Abort(_("no queue repository"))
     return orig(r.ui, r, *args, **kwargs)
+
 
 def summaryhook(ui, repo):
     q = repo.mq
     m = []
     a, u = len(q.applied), len(q.unapplied(repo))
     if a:
-        m.append(ui.label(_("%d applied"), 'qseries.applied') % a)
+        m.append(ui.label(_("%d applied"), "qseries.applied") % a)
     if u:
-        m.append(ui.label(_("%d unapplied"), 'qseries.unapplied') % u)
+        m.append(ui.label(_("%d unapplied"), "qseries.unapplied") % u)
     if m:
         # i18n: column positioning for "hg summary"
-        ui.write(_("mq:     %s\n") % ', '.join(m))
+        ui.write(_("mq:     %s\n") % ", ".join(m))
     else:
         # i18n: column positioning for "hg summary"
         ui.note(_("mq:     (empty queue)\n"))
 
+
 revsetpredicate = registrar.revsetpredicate()
 
-@revsetpredicate('mq()')
+
+@revsetpredicate("mq()")
 def revsetmq(repo, subset, x):
     """Changesets managed by MQ.
     """
@@ -3615,18 +3922,20 @@ def revsetmq(repo, subset, x):
     applied = set([repo[r.node].rev() for r in repo.mq.applied])
     return smartset.baseset([r for r in subset if r in applied])
 
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = [revsetmq]
+
 
 def extsetup(ui):
     # Ensure mq wrappers are called first, regardless of extension load order by
     # NOT wrapping in uisetup() and instead deferring to init stage two here.
-    mqopt = [('', 'mq', None, _("operate on patch repository"))]
+    mqopt = [("", "mq", None, _("operate on patch repository"))]
 
-    extensions.wrapcommand(commands.table, 'import', mqimport)
-    cmdutil.summaryhooks.add('mq', summaryhook)
+    extensions.wrapcommand(commands.table, "import", mqimport)
+    cmdutil.summaryhooks.add("mq", summaryhook)
 
-    entry = extensions.wrapcommand(commands.table, 'init', mqinit)
+    entry = extensions.wrapcommand(commands.table, "init", mqinit)
     entry[1].extend(mqopt)
 
     def dotable(cmdtable):
@@ -3642,12 +3951,15 @@ def extsetup(ui):
 
     for extname, extmodule in extensions.extensions():
         if extmodule.__file__ != __file__:
-            dotable(getattr(extmodule, 'cmdtable', {}))
+            dotable(getattr(extmodule, "cmdtable", {}))
 
-colortable = {'qguard.negative': 'red',
-              'qguard.positive': 'yellow',
-              'qguard.unguarded': 'green',
-              'qseries.applied': 'blue bold underline',
-              'qseries.guarded': 'black bold',
-              'qseries.missing': 'red bold',
-              'qseries.unapplied': 'black bold'}
+
+colortable = {
+    "qguard.negative": "red",
+    "qguard.positive": "yellow",
+    "qguard.unguarded": "green",
+    "qseries.applied": "blue bold underline",
+    "qseries.guarded": "black bold",
+    "qseries.missing": "red bold",
+    "qseries.unapplied": "black bold",
+}

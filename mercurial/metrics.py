@@ -7,16 +7,20 @@
 
 from __future__ import absolute_import
 
+
 class metrics(object):
     """Abstract base class for metrics"""
+
     def __init__(self, ui):
         self.ui = ui
 
     def gauge(self, entity, key, value):
         pass
 
+
 def client(ui):
     """Returns the appropriate metrics module"""
-    # @fb-only: from . import fb
-    # @fb-only: return fb.fbmetrics(ui)
+    # @fb-only: from . import fb 
+
+    # @fb-only: return fb.fbmetrics(ui) 
     return metrics(ui) # @oss-only

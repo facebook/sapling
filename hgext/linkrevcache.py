@@ -53,18 +53,11 @@ import os
 import shutil
 import sys
 
-from mercurial import (
-    context,
-    extensions,
-    filelog,
-    node,
-    progress,
-    registrar,
-    util,
-)
+from mercurial import context, extensions, filelog, node, progress, registrar, util
 from mercurial.i18n import _
 
-testedwith = 'ships-with-fb-hgext'
+
+testedwith = "ships-with-fb-hgext"
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -76,16 +69,24 @@ try:
 except NameError:
     xrange = range
 
+
 def _choosedbm():
     """return (name, module)"""
     global _chosendbm
     if not _chosendbm:
         if sys.version_info >= (3, 0):
-            candidates = [('gdbm', 'dbm.gnu'), ('ndbm', 'dbm.ndbm'),
-                          ('dumb', 'dbm.dumb')]
+            candidates = [
+                ("gdbm", "dbm.gnu"),
+                ("ndbm", "dbm.ndbm"),
+                ("dumb", "dbm.dumb"),
+            ]
         else:
-            candidates = [('gdbm', 'gdbm'), ('bsd', 'dbhash'),
-                          ('ndbm', 'dbm'), ('dumb', 'dumbdbm')]
+            candidates = [
+                ("gdbm", "gdbm"),
+                ("bsd", "dbhash"),
+                ("ndbm", "dbm"),
+                ("dumb", "dumbdbm"),
+            ]
         for name, modname in candidates:
             try:
                 mod = __import__(modname)
@@ -96,21 +97,24 @@ def _choosedbm():
                 pass
     return _chosendbm
 
+
 # dbm is a bytes -> bytes map, so we need to convert integers to bytes.
 # the conversion functions are optimized for space usage.
 # not using struct.(un)pack is because we may have things > 4 bytes (revlog
 # defines the revision number to be 6 bytes) and 8-byte is wasteful.
 
+
 def _strinc(s):
     """return the "next" string. useful as an incremental "ID"."""
     if not s:
         # avoid '\0' so '\0' could be used as a separator
-        return '\x01'
+        return "\x01"
     n = ord(s[-1])
     if n == 255:
-        return _strinc(s[:-1]) + '\x01'
+        return _strinc(s[:-1]) + "\x01"
     else:
         return s[:-1] + chr(n + 1)
+
 
 def _str2int(s):
     # this is faster than "bytearray().extend(map(ord, s))"
@@ -120,15 +124,17 @@ def _str2int(s):
         x += ord(ch)
     return x
 
+
 def _int2str(x):
-    s = ''
+    s = ""
     while x:
         s = chr(x & 255) + s
         x >>= 8
     return s
 
+
 def _intlist2str(intlist):
-    result = ''
+    result = ""
     for n in intlist:
         s = _int2str(n)
         l = len(s)
@@ -137,6 +143,7 @@ def _intlist2str(intlist):
         result += chr(l) + s
     return result
 
+
 def _str2intlist(s):
     result = []
     i = 0
@@ -144,21 +151,22 @@ def _str2intlist(s):
     while i < end:
         l = ord(s[i])
         i += 1
-        result.append(_str2int(s[i:i + l]))
+        result.append(_str2int(s[i : i + l]))
         i += l
     return result
 
+
 class linkrevdbreadonly(object):
-    _openflag = 'r'
+    _openflag = "r"
 
     # numbers are useful in the atomic replace case: they can be sorted
     # and replaced in a safer order. however, atomic caller should always
     # use repo lock so the order only protects things when the repo lock
     # does not work.
-    _metadbname = '0meta'
-    _pathdbname = '1path'
-    _nodedbname = '2node'
-    _linkrevdbname = '3linkrev'
+    _metadbname = "0meta"
+    _pathdbname = "1path"
+    _nodedbname = "2node"
+    _linkrevdbname = "3linkrev"
 
     def __init__(self, dirname):
         dbmname, self._dbm = _choosedbm()
@@ -174,19 +182,19 @@ class linkrevdbreadonly(object):
         try:
             pathid = pathdb[path]
             nodeid = nodedb[fnode]
-            v = lrevdb[pathid + '\0' + nodeid]
+            v = lrevdb[pathid + "\0" + nodeid]
             return _str2intlist(v)
         except KeyError:
             return []
 
     def getlastrev(self):
-        return _str2int(self._getmeta('lastrev'))
+        return _str2int(self._getmeta("lastrev"))
 
     def close(self):
         # the check is necessary if __init__ fails - the caller may call
         # "close" in a "finally" block and it probably does not want close() to
         # raise an exception there.
-        if util.safehasattr(self, '_dbs'):
+        if util.safehasattr(self, "_dbs"):
             for db in self._dbs.itervalues():
                 db.close()
             self._dbs.clear()
@@ -195,15 +203,16 @@ class linkrevdbreadonly(object):
         try:
             return self._getdb(self._metadbname)[name]
         except KeyError:
-            return ''
+            return ""
 
     def _getdb(self, name):
         if name not in self._dbs:
             self._dbs[name] = self._dbm.open(self._path + name, self._openflag)
         return self._dbs[name]
 
+
 class linkrevdbreadwrite(linkrevdbreadonly):
-    _openflag = 'c'
+    _openflag = "c"
 
     def __init__(self, dirname):
         util.makedirs(dirname)
@@ -217,16 +226,16 @@ class linkrevdbreadwrite(linkrevdbreadonly):
         try:
             pathid = pathdb[path]
         except KeyError:
-            pathid = _strinc(self._getmeta('pathid'))
+            pathid = _strinc(self._getmeta("pathid"))
             pathdb[path] = pathid
-            metadb['pathid'] = pathid
+            metadb["pathid"] = pathid
         try:
             nodeid = nodedb[fnode]
         except KeyError:
-            nodeid = _strinc(self._getmeta('nodeid'))
+            nodeid = _strinc(self._getmeta("nodeid"))
             nodedb[fnode] = nodeid
-            metadb['nodeid'] = nodeid
-        k = pathid + '\0' + nodeid
+            metadb["nodeid"] = nodeid
+        k = pathid + "\0" + nodeid
         try:
             v = _str2intlist(lrevdb[k])
         except KeyError:
@@ -237,7 +246,8 @@ class linkrevdbreadwrite(linkrevdbreadonly):
         lrevdb[k] = _intlist2str(v)
 
     def setlastrev(self, rev):
-        self._getdb(self._metadbname)['lastrev'] = _int2str(rev)
+        self._getdb(self._metadbname)["lastrev"] = _int2str(rev)
+
 
 class linkrevdbwritewithtemprename(linkrevdbreadwrite):
     # Some dbm (ex. gdbm) disallows writer and reader to co-exist. This is
@@ -253,7 +263,7 @@ class linkrevdbwritewithtemprename(linkrevdbreadwrite):
     def __init__(self, dirname):
         self._origpath = dirname
         head, tail = os.path.split(dirname)
-        tempdir = '%s-%s' % (dirname, os.getpid())
+        tempdir = "%s-%s" % (dirname, os.getpid())
         self._tempdir = tempdir
         try:
             shutil.copytree(dirname, tempdir)
@@ -264,12 +274,13 @@ class linkrevdbwritewithtemprename(linkrevdbreadwrite):
 
     def close(self):
         super(linkrevdbwritewithtemprename, self).close()
-        if util.safehasattr(self, '_tempdir'):
+        if util.safehasattr(self, "_tempdir"):
             for name in sorted(os.listdir(self._tempdir)):
                 oldpath = os.path.join(self._tempdir, name)
                 newpath = os.path.join(self._origpath, name)
                 os.rename(oldpath, newpath)
             os.rmdir(self._tempdir)
+
 
 def linkrevdb(dirname, write=False, copyonwrite=False):
     # As commented in the "linkrevdbwritewithtemprename" above, these flags
@@ -284,33 +295,46 @@ def linkrevdb(dirname, write=False, copyonwrite=False):
         else:
             return linkrevdbreadwrite(dirname)
 
-_linkrevdbpath = 'cache/linkrevdb'
+
+_linkrevdbpath = "cache/linkrevdb"
+
 
 def reposetup(ui, repo):
     if repo.local():
         # if the repo is single headed, adjustlinkrev can just return linkrev
-        repo._singleheaded = (len(repo.unfiltered().changelog.headrevs()) == 1)
+        repo._singleheaded = len(repo.unfiltered().changelog.headrevs()) == 1
 
         dbpath = repo.vfs.join(_linkrevdbpath)
-        setattr(repo, '_linkrevcache', linkrevdb(dbpath, write=False))
+        setattr(repo, "_linkrevcache", linkrevdb(dbpath, write=False))
 
-@command('debugbuildlinkrevcache',
-         [('e', 'end', '', _('end revision')),
-          ('', 'copy', False, _('copy the database files to modify them '
-                                'lock-free (EXPERIMENTAL)'))])
+
+@command(
+    "debugbuildlinkrevcache",
+    [
+        ("e", "end", "", _("end revision")),
+        (
+            "",
+            "copy",
+            False,
+            _("copy the database files to modify them " "lock-free (EXPERIMENTAL)"),
+        ),
+    ],
+)
 def debugbuildlinkrevcache(ui, repo, *pats, **opts):
     """build the linkrev database from filelogs"""
-    db = linkrevdb(repo.vfs.join(_linkrevdbpath), write=True,
-                   copyonwrite=opts.get('atomic_temp'))
-    end = int(opts.get('end') or (len(repo) - 1))
+    db = linkrevdb(
+        repo.vfs.join(_linkrevdbpath), write=True, copyonwrite=opts.get("atomic_temp")
+    )
+    end = int(opts.get("end") or (len(repo) - 1))
     try:
         _buildlinkrevcache(ui, repo, db, end)
     finally:
         db.close()
 
+
 def _buildlinkrevcache(ui, repo, db, end):
-    checkancestor = ui.configbool('linkrevcache', 'checkancestor', True)
-    readfilelog = ui.configbool('linkrevcache', 'readfilelog', True)
+    checkancestor = ui.configbool("linkrevcache", "checkancestor", True)
+    readfilelog = ui.configbool("linkrevcache", "readfilelog", True)
 
     repo = repo.unfiltered()
     cl = repo.changelog
@@ -331,7 +355,7 @@ def _buildlinkrevcache(ui, repo, db, end):
     # the changelog index every time) algorithm.
     ancestorcountthreshold = 10
 
-    with progress.bar(ui, _('building'), _('changesets'), end) as prog:
+    with progress.bar(ui, _("building"), _("changesets"), end) as prog:
         for rev in xrange(start, end + 1):
             prog.value = rev
             clr = cl.changelogrevision(rev)
@@ -345,6 +369,7 @@ def _buildlinkrevcache(ui, repo, db, end):
 
                     def isancestor(x):
                         return x in ancestors
+
                 else:
                     # the C index ancestor testing is faster than Python's
                     # lazyancestors.
@@ -377,19 +402,19 @@ def _buildlinkrevcache(ui, repo, db, end):
 
                 # found a new linkrev!
                 if ui.debugflag:
-                    ui.debug('%s@%s: new linkrev %s\n'
-                             % (path, node.hex(fnode), rev))
+                    ui.debug("%s@%s: new linkrev %s\n" % (path, node.hex(fnode), rev))
 
                 db.appendlinkrev(path, fnode, rev)
 
             db.setlastrev(rev)
 
-@command('debugverifylinkrevcache', [])
+
+@command("debugverifylinkrevcache", [])
 def debugverifylinkrevcache(ui, repo, *pats, **opts):
     """read the linkrevs from the database and verify if they are correct"""
     # restore to the original _adjustlinkrev implementation
     c = context.basefilectx
-    extensions.unwrapfunction(c, '_adjustlinkrev', _adjustlinkrev)
+    extensions.unwrapfunction(c, "_adjustlinkrev", _adjustlinkrev)
 
     paths = {}  # {id: name}
     nodes = {}  # {id: name}
@@ -404,13 +429,13 @@ def debugverifylinkrevcache(ui, repo, *pats, **opts):
     nodesrev = dict((v, k) for k, v in nodes.iteritems())
     lrevs = dict(db._getdb(db._linkrevdbname))
 
-    readfilelog = ui.configbool('linkrevcache', 'readfilelog', True)
+    readfilelog = ui.configbool("linkrevcache", "readfilelog", True)
 
     total = len(lrevs)
-    with progress.bar(ui, _('verifying'), total=total) as prog:
+    with progress.bar(ui, _("verifying"), total=total) as prog:
         for i, (k, v) in enumerate(lrevs.iteritems()):
             prog.value = i
-            pathid, nodeid = k.split('\0')
+            pathid, nodeid = k.split("\0")
             path = pathsrev[pathid]
             fnode = nodesrev[nodeid]
             linkrevs = _str2intlist(v)
@@ -426,28 +451,31 @@ def debugverifylinkrevcache(ui, repo, *pats, **opts):
                     flinkrev = None
                 if introrev == linkrev:
                     continue
-                if (introrev in idx.commonancestorsheads(introrev, linkrev) and
-                    (introrev in linkrevs or introrev == flinkrev)):
-                    adjective = _('unnecessary')
+                if introrev in idx.commonancestorsheads(introrev, linkrev) and (
+                    introrev in linkrevs or introrev == flinkrev
+                ):
+                    adjective = _("unnecessary")
                 else:
-                    adjective = _('incorrect')
-                ui.warn(_('%s linkrev %s for %s @ %s (expected: %s)\n')
-                        % (adjective, linkrev, path, node.hex(fnode),
-                           introrev))
+                    adjective = _("incorrect")
+                ui.warn(
+                    _("%s linkrev %s for %s @ %s (expected: %s)\n")
+                    % (adjective, linkrev, path, node.hex(fnode), introrev)
+                )
 
-    ui.write(_('%d entries verified\n') % total)
+    ui.write(_("%d entries verified\n") % total)
+
 
 def _adjustlinkrev(orig, self, *args, **kwds):
     lkr = self.linkrev()
     repo = self._repo
 
     # for a repo with only a single head, linkrev is accurate
-    if getattr(repo, '_singleheaded', False):
+    if getattr(repo, "_singleheaded", False):
         return lkr
 
     # argv can be "path, flog, fnode, srcrev", or "srcrev" - see e81d72b4b0ae
     srcrev = args[-1]
-    cache = getattr(self._repo, '_linkrevcache', None)
+    cache = getattr(self._repo, "_linkrevcache", None)
     if cache is not None and srcrev is not None:
         index = repo.unfiltered().changelog.index
         try:
@@ -462,13 +490,14 @@ def _adjustlinkrev(orig, self, *args, **kwds):
             # a dbm engine that locks differently, we don't need this.
             cache.close()
         linkrevs.add(lkr)
-        for rev in sorted(linkrevs): # sorted filters out unnecessary linkrevs
+        for rev in sorted(linkrevs):  # sorted filters out unnecessary linkrevs
             if rev in index.commonancestorsheads(rev, srcrev):
                 return rev
 
     # fallback to the possibly slow implementation
     return orig(self, *args, **kwds)
 
+
 def uisetup(ui):
     c = context.basefilectx
-    extensions.wrapfunction(c, '_adjustlinkrev', _adjustlinkrev)
+    extensions.wrapfunction(c, "_adjustlinkrev", _adjustlinkrev)

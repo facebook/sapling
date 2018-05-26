@@ -6,9 +6,11 @@
 from mercurial import bundlerepo, extensions
 from mercurial.i18n import _
 
+
 def extsetup(ui):
-    extensions.wrapfunction(bundlerepo.bundlerepository, '__init__', _init)
+    extensions.wrapfunction(bundlerepo.bundlerepository, "__init__", _init)
+
 
 def _init(orig, self, ui, *args, **kwargs):
-    ui.warn(_('creating bundlerepo'))
+    ui.warn(_("creating bundlerepo"))
     return orig(self, ui, *args, **kwargs)

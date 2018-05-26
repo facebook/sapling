@@ -1,76 +1,88 @@
 # no-check-code -- see T24862348
 
-import test_hgsubversion_util
-
 import urllib
 
-from hgext.hgsubversion.svnwrap import parse_url
+import test_hgsubversion_util
 from hgext.hgsubversion import svnrepo
+from hgext.hgsubversion.svnwrap import parse_url
+
 
 class TestSubversionUrls(test_hgsubversion_util.TestBase):
+
     def test_standard_url(self):
-        self.check_parse_url((None, None, 'file:///var/svn/repo'),
-                             ('file:///var/svn/repo', ))
+        self.check_parse_url(
+            (None, None, "file:///var/svn/repo"), ("file:///var/svn/repo",)
+        )
 
     def test_user_url(self):
         self.check_parse_url(
-            ('joe', None, 'https://svn.testurl.com/repo'),
-            ('https://joe@svn.testurl.com/repo', ))
+            ("joe", None, "https://svn.testurl.com/repo"),
+            ("https://joe@svn.testurl.com/repo",),
+        )
         self.check_parse_url(
-            ('bob', None, 'https://svn.testurl.com/repo'),
-            ('https://joe@svn.testurl.com/repo', 'bob', ))
+            ("bob", None, "https://svn.testurl.com/repo"),
+            ("https://joe@svn.testurl.com/repo", "bob"),
+        )
 
     def test_password_url(self):
         self.check_parse_url(
-            (None, 't3stpw', 'svn+ssh://svn.testurl.com/repo'),
-            ('svn+ssh://:t3stpw@svn.testurl.com/repo', ))
+            (None, "t3stpw", "svn+ssh://svn.testurl.com/repo"),
+            ("svn+ssh://:t3stpw@svn.testurl.com/repo",),
+        )
         self.check_parse_url(
-            (None, '123abc', 'svn+ssh://svn.testurl.com/repo'),
-            ('svn+ssh://:t3stpw@svn.testurl.com/repo', None, '123abc', ))
+            (None, "123abc", "svn+ssh://svn.testurl.com/repo"),
+            ("svn+ssh://:t3stpw@svn.testurl.com/repo", None, "123abc"),
+        )
 
     def test_svnssh_preserve_user(self):
         self.check_parse_url(
-            ('user', 't3stpw', 'svn+ssh://user@svn.testurl.com/repo',),
-            ('svn+ssh://user:t3stpw@svn.testurl.com/repo', ))
+            ("user", "t3stpw", "svn+ssh://user@svn.testurl.com/repo"),
+            ("svn+ssh://user:t3stpw@svn.testurl.com/repo",),
+        )
         self.check_parse_url(
-            ('bob', '123abc', 'svn+ssh://bob@svn.testurl.com/repo',),
-            ('svn+ssh://user:t3stpw@svn.testurl.com/repo', 'bob', '123abc', ))
+            ("bob", "123abc", "svn+ssh://bob@svn.testurl.com/repo"),
+            ("svn+ssh://user:t3stpw@svn.testurl.com/repo", "bob", "123abc"),
+        )
         self.check_parse_url(
-            ('user2', None, 'svn+ssh://user2@svn.testurl.com/repo',),
-            ('svn+ssh://user2@svn.testurl.com/repo', ))
+            ("user2", None, "svn+ssh://user2@svn.testurl.com/repo"),
+            ("svn+ssh://user2@svn.testurl.com/repo",),
+        )
         self.check_parse_url(
-            ('bob', None, 'svn+ssh://bob@svn.testurl.com/repo',),
-            ('svn+ssh://user2@svn.testurl.com/repo', 'bob', ))
+            ("bob", None, "svn+ssh://bob@svn.testurl.com/repo"),
+            ("svn+ssh://user2@svn.testurl.com/repo", "bob"),
+        )
 
     def test_user_password_url(self):
         self.check_parse_url(
-            ('joe', 't3stpw', 'https://svn.testurl.com/repo'),
-            ('https://joe:t3stpw@svn.testurl.com/repo', ))
+            ("joe", "t3stpw", "https://svn.testurl.com/repo"),
+            ("https://joe:t3stpw@svn.testurl.com/repo",),
+        )
         self.check_parse_url(
-            ('bob', '123abc', 'https://svn.testurl.com/repo'),
-            ('https://joe:t3stpw@svn.testurl.com/repo', 'bob', '123abc', ))
+            ("bob", "123abc", "https://svn.testurl.com/repo"),
+            ("https://joe:t3stpw@svn.testurl.com/repo", "bob", "123abc"),
+        )
 
     def test_url_rewriting(self):
         ui = test_hgsubversion_util.testui()
-        ui.setconfig('hgsubversion', 'username', 'bob')
-        repo = svnrepo.svnremoterepo(ui, 'svn+ssh://joe@foo/bar')
-        self.assertEqual('svn+ssh://bob@foo/bar', repo.svnauth[0])
-        self.assertEqual('svn+ssh://bob@foo/bar', repo.svnurl)
+        ui.setconfig("hgsubversion", "username", "bob")
+        repo = svnrepo.svnremoterepo(ui, "svn+ssh://joe@foo/bar")
+        self.assertEqual("svn+ssh://bob@foo/bar", repo.svnauth[0])
+        self.assertEqual("svn+ssh://bob@foo/bar", repo.svnurl)
 
-        repo = svnrepo.svnremoterepo(ui, 'svn+http://joe@foo/bar')
-        self.assertEqual(('http://foo/bar', 'bob', None), repo.svnauth)
-        self.assertEqual('http://foo/bar', repo.svnurl)
+        repo = svnrepo.svnremoterepo(ui, "svn+http://joe@foo/bar")
+        self.assertEqual(("http://foo/bar", "bob", None), repo.svnauth)
+        self.assertEqual("http://foo/bar", repo.svnurl)
 
-        repo = svnrepo.svnremoterepo(ui, 'svn+https://joe@foo/bar')
-        self.assertEqual(('https://foo/bar', 'bob', None), repo.svnauth)
-        self.assertEqual('https://foo/bar', repo.svnurl)
+        repo = svnrepo.svnremoterepo(ui, "svn+https://joe@foo/bar")
+        self.assertEqual(("https://foo/bar", "bob", None), repo.svnauth)
+        self.assertEqual("https://foo/bar", repo.svnurl)
 
     def test_quoting(self):
         ui = self.ui()
-        repo_path = self.load_svndump('non_ascii_path_1.svndump')
+        repo_path = self.load_svndump("non_ascii_path_1.svndump")
 
         repo_url = test_hgsubversion_util.fileurl(repo_path)
-        subdir = '/b\xC3\xB8b'
+        subdir = "/b\xC3\xB8b"
         quoted_subdir = urllib.quote(subdir)
 
         repo1 = svnrepo.svnremoterepo(ui, repo_url + subdir)
@@ -84,7 +96,8 @@ class TestSubversionUrls(test_hgsubversion_util.TestBase):
             self.assertEqual(expected[2], repo.svnauth[0])
             self.assertEqual(expected[2], repo.svnurl)
 
-if __name__ == '__main__':
-    import silenttestrunner
-    silenttestrunner.main(__name__)
 
+if __name__ == "__main__":
+    import silenttestrunner
+
+    silenttestrunner.main(__name__)

@@ -5,19 +5,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import cmdutil, extensions, registrar
-from mercurial import util as hgutil
-from mercurial.i18n import _
-from mercurial import obsutil
 import os
 
-from .extlib.phabricator import (
-    arcconfig,
-    diffprops,
-    graphql,
-)
+from mercurial import cmdutil, extensions, obsutil, registrar, util as hgutil
+from mercurial.i18n import _
 
-COMMITTEDSTATUS = 'Committed'
+from .extlib.phabricator import arcconfig, diffprops, graphql
+
+
+COMMITTEDSTATUS = "Committed"
+
 
 def memoize(f):
     """
@@ -45,9 +42,10 @@ def memoize(f):
     >>> pp(three._phabstatuscache)
     {(3, 1): [4], (3, 1, 2, 3): [4, 5, 6], (3, 2): [5], (3, 3): [6]}
     """
+
     def helper(*args):
         repo = args[0]
-        if not hgutil.safehasattr(repo, '_phabstatuscache'):
+        if not hgutil.safehasattr(repo, "_phabstatuscache"):
             repo._phabstatuscache = {}
         if args not in repo._phabstatuscache:
             u = f(*args)
@@ -57,12 +55,15 @@ def memoize(f):
                 for x, r in enumerate(revs):
                     repo._phabstatuscache[(repo, r)] = [u[x]]
         return repo._phabstatuscache[args]
+
     return helper
+
 
 def _fail(repo, diffids, *msgs):
     for msg in msgs:
         repo.ui.warn(msg)
     return ["Error"] * len(diffids)
+
 
 @memoize
 def getdiffstatus(repo, *diffid):
@@ -72,22 +73,23 @@ def getdiffstatus(repo, *diffid):
 
     if not diffid:
         return []
-    timeout = repo.ui.configint('ssl', 'timeout', 5)
-    ca_certs = repo.ui.configpath('web', 'cacerts')
+    timeout = repo.ui.configint("ssl", "timeout", 5)
+    ca_certs = repo.ui.configpath("web", "cacerts")
 
     try:
-        client = graphql.Client(
-            repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
+        client = graphql.Client(repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
         statuses = client.getrevisioninfo(timeout, diffid)
     except arcconfig.ArcConfigError as ex:
-        msg = _('arcconfig configuration problem. No diff information can be '
-                'provided.\n')
+        msg = _(
+            "arcconfig configuration problem. No diff information can be " "provided.\n"
+        )
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
         return ret
     except graphql.ClientError as ex:
-        msg = _('Error talking to phabricator. No diff information can be '
-                'provided.\n')
+        msg = _(
+            "Error talking to phabricator. No diff information can be " "provided.\n"
+        )
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
         return ret
@@ -103,15 +105,18 @@ def getdiffstatus(repo, *diffid):
             result.append(matchingresponse)
     return result
 
+
 def populateresponseforphab(repo, diffnum):
     """:populateresponse: Runs the memoization function
         for use of phabstatus and sync status
     """
-    if not hgutil.safehasattr(repo, '_phabstatusrevs'):
+    if not hgutil.safehasattr(repo, "_phabstatusrevs"):
         return
 
-    if (hgutil.safehasattr(repo, '_phabstatuscache') and
-            (repo, diffnum) in repo._phabstatuscache):
+    if (
+        hgutil.safehasattr(repo, "_phabstatuscache")
+        and (repo, diffnum) in repo._phabstatuscache
+    ):
         # We already have cached data for this diff
         return
 
@@ -121,17 +126,18 @@ def populateresponseforphab(repo, diffnum):
         # Remove it so we will bail out earlier next time.
         del repo._phabstatusrevs
 
-    alldiffnumbers = [getdiffnum(repo, repo[rev])
-                      for rev in next_revs]
+    alldiffnumbers = [getdiffnum(repo, repo[rev]) for rev in next_revs]
     okdiffnumbers = set(d for d in alldiffnumbers if d is not None)
     # Make sure we always include the requested diff number
     okdiffnumbers.add(diffnum)
     # To populate the cache, the result will be used by the templater
     getdiffstatus(repo, *okdiffnumbers)
 
+
 templatekeyword = registrar.templatekeyword()
 
-@templatekeyword('phabstatus')
+
+@templatekeyword("phabstatus")
 def showphabstatus(repo, ctx, templ, **args):
     """String. Return the diff approval status for a given hg rev
     """
@@ -142,12 +148,13 @@ def showphabstatus(repo, ctx, templ, **args):
 
     result = getdiffstatus(repo, diffnum)[0]
     if isinstance(result, dict) and "status" in result:
-        if result.get('is_landing'):
+        if result.get("is_landing"):
             return "Landing"
         else:
             return result.get("status")
     else:
         return "Error"
+
 
 """
 in order to determine whether the local changeset is in sync with the
@@ -163,7 +170,9 @@ sent to phabricator.
 don't say anything. All good.
 3) If this is a middle revision: Then we compare the hashes as regular.
 """
-@templatekeyword('syncstatus')
+
+
+@templatekeyword("syncstatus")
 def showsyncstatus(repo, ctx, templ, **args):
     """String. Return whether the local revision is in sync
         with the remote (phabricator) revision
@@ -188,8 +197,9 @@ def showsyncstatus(repo, ctx, templ, **args):
         return "sync"
     elif count == 1:
         precursors = list(obsutil.allpredecessors(repo.obsstore, [ctx.node()]))
-        hashes = [repo.unfiltered()[h].hex()
-                  for h in precursors if h in repo.unfiltered()]
+        hashes = [
+            repo.unfiltered()[h].hex() for h in precursors if h in repo.unfiltered()
+        ]
         # hashes[0] is the current
         # hashes[1] is the previous
         if len(hashes) > 1 and hashes[1] == remote:
@@ -201,8 +211,10 @@ def showsyncstatus(repo, ctx, templ, **args):
     else:
         return "unsync"
 
+
 def getdiffnum(repo, ctx):
     return diffprops.parserevfromcommitmsg(ctx.description())
+
 
 class PeekaheadRevsetIter(object):
     """
@@ -217,6 +229,7 @@ class PeekaheadRevsetIter(object):
     can query information for multiple revisions at once, rather than only
     processing them one at a time as the logging code requests them.
     """
+
     def __init__(self, revs, chunksize=30):
         self.mainiter = iter(revs)
         # done is set to true once mainiter has thrown StopIteration
@@ -258,6 +271,7 @@ class PeekaheadRevsetIter(object):
 
         return self.chunk
 
+
 def _getlogrevs(orig, repo, pats, opts):
     # Call the original function
     revs, expr, filematcher = orig(repo, pats, opts)
@@ -266,22 +280,25 @@ def _getlogrevs(orig, repo, pats, opts):
     # the first time it is invoked, and sets repo._phabstatusrevs so that the
     # phabstatus code will be able to peek ahead at the revs to be logged.
     orig_type = revs.__class__
+
     class wrapped_class(type(revs)):
+
         def __iter__(self):
             # The first time __iter__() is called, return a
             # PeekaheadRevsetIter(), and assign it to repo._phabstatusrevs
             revs.__class__ = orig_type
             # By default, peek ahead 30 revisions at a time
-            peekahead = repo.ui.configint('phabstatus', 'logpeekahead', 30)
+            peekahead = repo.ui.configint("phabstatus", "logpeekahead", 30)
             repo._phabstatusrevs = PeekaheadRevsetIter(revs, peekahead)
             return repo._phabstatusrevs
 
         _is_phabstatus_wrapped = True
 
-    if not hgutil.safehasattr(revs, '_is_phabstatus_wrapped'):
+    if not hgutil.safehasattr(revs, "_is_phabstatus_wrapped"):
         revs.__class__ = wrapped_class
 
     return revs, expr, filematcher
+
 
 class PeekaheadList(object):
     """
@@ -289,6 +306,7 @@ class PeekaheadList(object):
     but wraps a simple list instead of a revset generator.  peekahead() returns
     the full list.
     """
+
     def __init__(self, revs):
         self.revs = revs
         self.done = False
@@ -297,27 +315,29 @@ class PeekaheadList(object):
         self.done = True
         return self.revs
 
+
 def _getsmartlogdag(orig, ui, repo, revs, *args):
     # smartlog just uses a plain list for its revisions, and not an
     # abstractsmartset type.  We just save a copy of it.
     repo._phabstatusrevs = PeekaheadList(revs)
     return orig(ui, repo, revs, *args)
 
+
 def extsetup(ui):
     # Wrap the APIs used to get the revisions for "hg log" so we
     # can peekahead into the rev list and query phabricator for multiple diffs
     # at once.
-    extensions.wrapfunction(cmdutil, 'getlogrevs', _getlogrevs)
-    extensions.wrapfunction(cmdutil, 'getgraphlogrevs', _getlogrevs)
+    extensions.wrapfunction(cmdutil, "getlogrevs", _getlogrevs)
+    extensions.wrapfunction(cmdutil, "getgraphlogrevs", _getlogrevs)
 
     # Also wrap the APIs used by smartlog
     def _smartlogloaded(loaded):
         smartlog = None
         try:
-            smartlog = extensions.find('smartlog')
+            smartlog = extensions.find("smartlog")
         except KeyError:
             pass
         if smartlog:
-            extensions.wrapfunction(smartlog, 'getdag', _getsmartlogdag)
+            extensions.wrapfunction(smartlog, "getdag", _getsmartlogdag)
 
-    extensions.afterloaded('smartlog', _smartlogloaded)
+    extensions.afterloaded("smartlog", _smartlogloaded)

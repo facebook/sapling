@@ -8,17 +8,21 @@ from __future__ import absolute_import, print_function
 import doctest
 import os
 import re
+
+
 # this is hack to make sure no escape characters are inserted into the output
-if 'TERM' in os.environ:
-    del os.environ['TERM']
-run_tests = __import__('run-tests')
+if "TERM" in os.environ:
+    del os.environ["TERM"]
+run_tests = __import__("run-tests")
+
 
 def prn(ex):
     m = ex.args[0]
     if isinstance(m, str):
         print(m)
     else:
-        print(m.decode('utf-8'))
+        print(m.decode("utf-8"))
+
 
 def lm(expected, output):
     r"""check if output matches expected
@@ -35,18 +39,19 @@ def lm(expected, output):
         ... except AssertionError as ex: prn(ex)
         single backslash or unknown char
     """
-    assert (expected.endswith(b'\n')
-            and output.endswith(b'\n')), 'missing newline'
-    assert not re.search(br'[^ \w\\/\r\n()*?]', expected + output), \
-           b'single backslash or unknown char'
-    test = run_tests.TTest(b'test-run-test.t', b'.', b'.')
+    assert expected.endswith(b"\n") and output.endswith(b"\n"), "missing newline"
+    assert not re.search(
+        br"[^ \w\\/\r\n()*?]", expected + output
+    ), b"single backslash or unknown char"
+    test = run_tests.TTest(b"test-run-test.t", b".", b".")
     match = test.linematch(expected, output)
     if isinstance(match, str):
-        return 'special: ' + match
+        return "special: " + match
     elif isinstance(match, bytes):
-        return 'special: ' + match.decode('utf-8')
+        return "special: " + match.decode("utf-8")
     else:
-        return bool(match) # do not return match object
+        return bool(match)  # do not return match object
+
 
 def wintests():
     r"""test matching like running on windows
@@ -77,6 +82,7 @@ def wintests():
     """
     pass
 
+
 def otherostests():
     r"""test matching like running on non-windows os
 
@@ -104,5 +110,6 @@ def otherostests():
     """
     pass
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     doctest.testmod()

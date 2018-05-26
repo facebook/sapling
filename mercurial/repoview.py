@@ -11,18 +11,15 @@ from __future__ import absolute_import
 import copy
 import weakref
 
+from . import obsolete, phases, pycompat, tags as tagsmod
 from .node import nullrev
-from . import (
-    obsolete,
-    phases,
-    pycompat,
-    tags as tagsmod,
-)
+
 
 try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 def hideablerevs(repo):
     """Revision candidates to be hidden
@@ -33,7 +30,8 @@ def hideablerevs(repo):
     branchmap (see mercurial.branchmap.subsettable), you cannot set "public"
     changesets as "hideable". Doing so would break multiple code assertions and
     lead to crashes."""
-    return obsolete.getrevs(repo, 'obsolete')
+    return obsolete.getrevs(repo, "obsolete")
+
 
 def pinnedrevs(repo):
     """revisions blocking hidden changesets from being filtered
@@ -50,6 +48,7 @@ def pinnedrevs(repo):
         rev, nodemap = cl.rev, cl.nodemap
         pinned.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
     return pinned
+
 
 def _revealancestors(pfunc, hidden, revs):
     """reveals contiguous chains of hidden ancestors of 'revs' by removing them
@@ -69,6 +68,7 @@ def _revealancestors(pfunc, hidden, revs):
                 hidden.remove(p)
                 stack.append(p)
 
+
 def computehidden(repo):
     """compute the set of hidden revision to filter
 
@@ -86,13 +86,14 @@ def computehidden(repo):
         _revealancestors(pfunc, hidden, visible)
     return frozenset(hidden)
 
+
 def computeunserved(repo):
     """compute the set of revision that should be filtered when used a server
 
     Secret and hidden changeset should not pretend to be here."""
     assert not repo.changelog.filteredrevs
     # fast path in simple case to avoid impact of non optimised code
-    hiddens = filterrevs(repo, 'visible')
+    hiddens = filterrevs(repo, "visible")
     if phases.hassecret(repo):
         cl = repo.changelog
         secret = phases.secret
@@ -104,14 +105,16 @@ def computeunserved(repo):
     else:
         return hiddens
 
+
 def computemutable(repo):
     assert not repo.changelog.filteredrevs
     # fast check to avoid revset call on huge repo
     if any(repo._phasecache.phaseroots[1:]):
         getphase = repo._phasecache.phase
-        maymutable = filterrevs(repo, 'base')
+        maymutable = filterrevs(repo, "base")
         return frozenset(r for r in maymutable if getphase(repo, r))
     return frozenset()
+
 
 def computeimpactable(repo):
     """Everything impactable by mutable revision
@@ -138,16 +141,20 @@ def computeimpactable(repo):
     firstmutable = max(0, firstmutable)
     return frozenset(xrange(firstmutable, len(cl)))
 
+
 # function to compute filtered set
 #
 # When adding a new filter you MUST update the table at:
 #     mercurial.branchmap.subsettable
 # Otherwise your filter will have to recompute all its branches cache
 # from scratch (very slow).
-filtertable = {'visible': computehidden,
-               'served': computeunserved,
-               'immutable':  computemutable,
-               'base':  computeimpactable}
+filtertable = {
+    "visible": computehidden,
+    "served": computeunserved,
+    "immutable": computemutable,
+    "base": computeimpactable,
+}
+
 
 def filterrevs(repo, filtername):
     """returns set of filtered revision for this filter name"""
@@ -155,6 +162,7 @@ def filterrevs(repo, filtername):
         func = filtertable[filtername]
         repo.filteredrevcache[filtername] = func(repo.unfiltered())
     return repo.filteredrevcache[filtername]
+
 
 class repoview(object):
     """Provide a read/write view of a repo through a filtered changelog
@@ -192,10 +200,10 @@ class repoview(object):
     """
 
     def __init__(self, repo, filtername):
-        object.__setattr__(self, r'_unfilteredrepo', repo)
-        object.__setattr__(self, r'filtername', filtername)
-        object.__setattr__(self, r'_clcachekey', None)
-        object.__setattr__(self, r'_clcache', None)
+        object.__setattr__(self, r"_unfilteredrepo", repo)
+        object.__setattr__(self, r"filtername", filtername)
+        object.__setattr__(self, r"_clcachekey", None)
+        object.__setattr__(self, r"_clcache", None)
 
     # not a propertycache on purpose we shall implement a proper cache later
     @property
@@ -216,15 +224,14 @@ class repoview(object):
         newkey = (unfilen, unfinode, hash(revs), unfichangelog._delayed)
         # if cl.index is not unfiindex, unfi.changelog would be
         # recreated, and our clcache refers to garbage object
-        if (cl is not None and
-            (cl.index is not unfiindex or newkey != self._clcachekey)):
+        if cl is not None and (cl.index is not unfiindex or newkey != self._clcachekey):
             cl = None
         # could have been made None by the previous if
         if cl is None:
             cl = copy.copy(unfichangelog)
             cl.filteredrevs = revs
-            object.__setattr__(self, r'_clcache', cl)
-            object.__setattr__(self, r'_clcachekey', newkey)
+            object.__setattr__(self, r"_clcache", cl)
+            object.__setattr__(self, r"_clcachekey", newkey)
         return cl
 
     def unfiltered(self):
@@ -238,9 +245,11 @@ class repoview(object):
         return self.unfiltered().filtered(name)
 
     def __repr__(self):
-        return r'<%s:%s %r>' % (self.__class__.__name__,
-                                pycompat.sysstr(self.filtername),
-                                self.unfiltered())
+        return r"<%s:%s %r>" % (
+            self.__class__.__name__,
+            pycompat.sysstr(self.filtername),
+            self.unfiltered(),
+        )
 
     # everything access are forwarded to the proxied repo
     def __getattr__(self, attr):
@@ -252,15 +261,19 @@ class repoview(object):
     def __delattr__(self, attr):
         return delattr(self._unfilteredrepo, attr)
 
+
 # Python <3.4 easily leaks types via __mro__. See
 # https://bugs.python.org/issue17950. We cache dynamically created types
 # so they won't be leaked on every invocation of repo.filtered().
 _filteredrepotypes = weakref.WeakKeyDictionary()
 
+
 def newtype(base):
     """Create a new type with the repoview mixin and the given base class"""
     if base not in _filteredrepotypes:
+
         class filteredrepo(repoview, base):
             pass
+
         _filteredrepotypes[base] = filteredrepo
     return _filteredrepotypes[base]

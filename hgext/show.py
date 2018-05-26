@@ -27,8 +27,6 @@ The following config options can influence operation.
 
 from __future__ import absolute_import
 
-from mercurial.i18n import _
-from mercurial.node import nullrev
 from mercurial import (
     cmdutil,
     commands,
@@ -42,23 +40,27 @@ from mercurial import (
     revset,
     revsetlang,
 )
+from mercurial.i18n import _
+from mercurial.node import nullrev
+
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 
 revsetpredicate = registrar.revsetpredicate()
 
+
 class showcmdfunc(registrar._funcregistrarbase):
     """Register a function to be invoked for an `hg show <thing>`."""
 
     # Used by _formatdoc().
-    _docformat = '%s -- %s'
+    _docformat = "%s -- %s"
 
     def _extrasetup(self, name, func, fmtopic=None, csettopic=None):
         """Called with decorator arguments to register a show view.
@@ -80,16 +82,22 @@ class showcmdfunc(registrar._funcregistrarbase):
         func._fmtopic = fmtopic
         func._csettopic = csettopic
 
+
 showview = showcmdfunc()
 
-@command('show', [
-    # TODO: Switch this template flag to use cmdutil.formatteropts if
-    # 'hg show' becomes stable before --template/-T is stable. For now,
-    # we are putting it here without the '(EXPERIMENTAL)' flag because it
-    # is an important part of the 'hg show' user experience and the entire
-    # 'hg show' experience is experimental.
-    ('T', 'template', '', ('display with template'), _('TEMPLATE')),
-    ], _('VIEW'))
+
+@command(
+    "show",
+    [
+        # TODO: Switch this template flag to use cmdutil.formatteropts if
+        # 'hg show' becomes stable before --template/-T is stable. For now,
+        # we are putting it here without the '(EXPERIMENTAL)' flag because it
+        # is an important part of the 'hg show' user experience and the entire
+        # 'hg show' experience is experimental.
+        ("T", "template", "", ("display with template"), _("TEMPLATE"))
+    ],
+    _("VIEW"),
+)
 def show(ui, repo, view=None, template=None):
     """show various repository information
 
@@ -109,48 +117,51 @@ def show(ui, repo, view=None, template=None):
     List of available views:
     """
     if ui.plain() and not template:
-        hint = _('invoke with -T/--template to control output format')
-        raise error.Abort(_('must specify a template in plain mode'), hint=hint)
+        hint = _("invoke with -T/--template to control output format")
+        raise error.Abort(_("must specify a template in plain mode"), hint=hint)
 
     views = showview._table
 
     if not view:
-        ui.pager('show')
+        ui.pager("show")
         # TODO consider using formatter here so available views can be
         # rendered to custom format.
-        ui.write(_('available views:\n'))
-        ui.write('\n')
+        ui.write(_("available views:\n"))
+        ui.write("\n")
 
         for name, func in sorted(views.items()):
-            ui.write(('%s\n') % func.__doc__)
+            ui.write(("%s\n") % func.__doc__)
 
-        ui.write('\n')
-        raise error.Abort(_('no view requested'),
-                          hint=_('use "hg show VIEW" to choose a view'))
+        ui.write("\n")
+        raise error.Abort(
+            _("no view requested"), hint=_('use "hg show VIEW" to choose a view')
+        )
 
     # TODO use same logic as dispatch to perform prefix matching.
     if view not in views:
-        raise error.Abort(_('unknown view: %s') % view,
-                          hint=_('run "hg show" to see available views'))
+        raise error.Abort(
+            _("unknown view: %s") % view, hint=_('run "hg show" to see available views')
+        )
 
-    template = template or 'show'
+    template = template or "show"
 
     fn = views[view]
-    ui.pager('show')
+    ui.pager("show")
 
     if fn._fmtopic:
-        fmtopic = 'show%s' % fn._fmtopic
-        with ui.formatter(fmtopic, {'template': template}) as fm:
+        fmtopic = "show%s" % fn._fmtopic
+        with ui.formatter(fmtopic, {"template": template}) as fm:
             return fn(ui, repo, fm)
     elif fn._csettopic:
-        ref = 'show%s' % fn._csettopic
+        ref = "show%s" % fn._csettopic
         spec = formatter.lookuptemplate(ui, ref, template)
         displayer = cmdutil.changeset_templater(ui, repo, spec, buffered=True)
         return fn(ui, repo, displayer)
     else:
         return fn(ui, repo)
 
-@showview('bookmarks', fmtopic='bookmarks')
+
+@showview("bookmarks", fmtopic="bookmarks")
 def showbookmarks(ui, repo, fm):
     """bookmarks and their associated changeset"""
     marks = repo._bookmarks
@@ -159,7 +170,7 @@ def showbookmarks(ui, repo, fm):
         # specify an empty output, but we shouldn't corrupt JSON while
         # waiting for this functionality.
         if not isinstance(fm, formatter.jsonformatter):
-            ui.write(_('(no bookmarks set)\n'))
+            ui.write(_("(no bookmarks set)\n"))
         return
 
     revs = [repo[node].rev() for node in marks.values()]
@@ -170,23 +181,24 @@ def showbookmarks(ui, repo, fm):
     for bm, node in sorted(marks.items()):
         fm.startitem()
         fm.context(ctx=repo[node])
-        fm.write('bookmark', '%s', bm)
-        fm.write('node', fm.hexfunc(node), fm.hexfunc(node))
-        fm.data(active=bm == active,
-                longestbookmarklen=longestname,
-                nodelen=nodelen)
+        fm.write("bookmark", "%s", bm)
+        fm.write("node", fm.hexfunc(node), fm.hexfunc(node))
+        fm.data(active=bm == active, longestbookmarklen=longestname, nodelen=nodelen)
 
-@showview('stack', csettopic='stack')
+
+@showview("stack", csettopic="stack")
 def showstack(ui, repo, displayer):
     """current line of work"""
-    wdirctx = repo['.']
+    wdirctx = repo["."]
     if wdirctx.rev() == nullrev:
-        raise error.Abort(_('stack view only available when there is a '
-                            'working directory'))
+        raise error.Abort(
+            _("stack view only available when there is a " "working directory")
+        )
 
     if wdirctx.phase() == phases.public:
-        ui.write(_('(empty stack; working directory parent is a published '
-                   'changeset)\n'))
+        ui.write(
+            _("(empty stack; working directory parent is a published " "changeset)\n")
+        )
         return
 
     # TODO extract "find stack" into a function to facilitate
@@ -199,7 +211,7 @@ def showstack(ui, repo, displayer):
         baserev = wdirctx.rev()
         stackrevs = {wdirctx.rev()}
     else:
-        stackrevs = set(repo.revs('%d::.', baserev))
+        stackrevs = set(repo.revs("%d::.", baserev))
 
     ctx = repo[baserev]
     if ctx.p1().rev() != nullrev:
@@ -233,8 +245,9 @@ def showstack(ui, repo, displayer):
     # merge or rebase targets.
     if basectx:
         # TODO make this customizable?
-        newheads = set(repo.revs('heads(%d::) - %ld - not public()',
-                                 basectx.rev(), stackrevs))
+        newheads = set(
+            repo.revs("heads(%d::) - %ld - not public()", basectx.rev(), stackrevs)
+        )
     else:
         newheads = set()
 
@@ -242,7 +255,7 @@ def showstack(ui, repo, displayer):
     nodelen = longestshortest(repo, allrevs)
 
     try:
-        cmdutil.findcmd('rebase', commands.table)
+        cmdutil.findcmd("rebase", commands.table)
         haverebase = True
     except (error.AmbiguousCommand, error.UnknownCommand):
         haverebase = False
@@ -252,9 +265,10 @@ def showstack(ui, repo, displayer):
     # our simplicity and the customizations required.
     # TODO use proper graph symbols from graphmod
 
-    shortesttmpl = formatter.maketemplater(ui, '{shortest(node, %d)}' % nodelen)
+    shortesttmpl = formatter.maketemplater(ui, "{shortest(node, %d)}" % nodelen)
+
     def shortest(ctx):
-        return shortesttmpl.render({'ctx': ctx, 'node': ctx.hex()})
+        return shortesttmpl.render({"ctx": ctx, "node": ctx.hex()})
 
     # We write out new heads to aid in DAG awareness and to help with decision
     # making on how the stack should be reconciled with commits made since the
@@ -271,61 +285,65 @@ def showstack(ui, repo, displayer):
 
         sourcectx = repo[stackrevs[-1]]
 
-        sortedheads = sorted(newheads, key=lambda x: revdistance[x],
-                             reverse=True)
+        sortedheads = sorted(newheads, key=lambda x: revdistance[x], reverse=True)
 
         for i, rev in enumerate(sortedheads):
             ctx = repo[rev]
 
             if i:
-                ui.write(': ')
+                ui.write(": ")
             else:
-                ui.write('  ')
+                ui.write("  ")
 
-            ui.write(('o  '))
+            ui.write(("o  "))
             displayer.show(ctx, nodelen=nodelen)
             displayer.flush(ctx)
-            ui.write('\n')
+            ui.write("\n")
 
             if i:
-                ui.write(':/')
+                ui.write(":/")
             else:
-                ui.write(' /')
+                ui.write(" /")
 
-            ui.write('    (')
-            ui.write(_('%d commits ahead') % revdistance[rev],
-                     label='stack.commitdistance')
+            ui.write("    (")
+            ui.write(
+                _("%d commits ahead") % revdistance[rev], label="stack.commitdistance"
+            )
 
             if haverebase:
                 # TODO may be able to omit --source in some scenarios
-                ui.write('; ')
-                ui.write(('hg rebase --source %s --dest %s' % (
-                         shortest(sourcectx), shortest(ctx))),
-                         label='stack.rebasehint')
+                ui.write("; ")
+                ui.write(
+                    (
+                        "hg rebase --source %s --dest %s"
+                        % (shortest(sourcectx), shortest(ctx))
+                    ),
+                    label="stack.rebasehint",
+                )
 
-            ui.write(')\n')
+            ui.write(")\n")
 
-        ui.write(':\n:    ')
-        ui.write(_('(stack head)\n'), label='stack.label')
+        ui.write(":\n:    ")
+        ui.write(_("(stack head)\n"), label="stack.label")
 
     if branchpointattip:
-        ui.write(' \\ /  ')
-        ui.write(_('(multiple children)\n'), label='stack.label')
-        ui.write('  |\n')
+        ui.write(" \\ /  ")
+        ui.write(_("(multiple children)\n"), label="stack.label")
+        ui.write("  |\n")
 
     for rev in stackrevs:
         ctx = repo[rev]
-        symbol = '@' if rev == wdirctx.rev() else 'o'
+        symbol = "@" if rev == wdirctx.rev() else "o"
 
         if newheads:
-            ui.write(': ')
+            ui.write(": ")
         else:
-            ui.write('  ')
+            ui.write("  ")
 
-        ui.write(symbol, '  ')
+        ui.write(symbol, "  ")
         displayer.show(ctx, nodelen=nodelen)
         displayer.flush(ctx)
-        ui.write('\n')
+        ui.write("\n")
 
     # TODO display histedit hint?
 
@@ -333,24 +351,25 @@ def showstack(ui, repo, displayer):
         # Vertically and horizontally separate stack base from parent
         # to reinforce stack boundary.
         if newheads:
-            ui.write(':/   ')
+            ui.write(":/   ")
         else:
-            ui.write(' /   ')
+            ui.write(" /   ")
 
-        ui.write(_('(stack base)'), '\n', label='stack.label')
-        ui.write(('o  '))
+        ui.write(_("(stack base)"), "\n", label="stack.label")
+        ui.write(("o  "))
 
         displayer.show(basectx, nodelen=nodelen)
         displayer.flush(basectx)
-        ui.write('\n')
+        ui.write("\n")
 
-@revsetpredicate('_underway([commitage[, headage]])')
+
+@revsetpredicate("_underway([commitage[, headage]])")
 def underwayrevset(repo, subset, x):
-    args = revset.getargsdict(x, 'underway', 'commitage headage')
-    if 'commitage' not in args:
-        args['commitage'] = None
-    if 'headage' not in args:
-        args['headage'] = None
+    args = revset.getargsdict(x, "underway", "commitage headage")
+    if "commitage" not in args:
+        args["commitage"] = None
+    if "headage" not in args:
+        args["headage"] = None
 
     # We assume callers of this revset add a topographical sort on the
     # result. This means there is no benefit to making the revset lazy
@@ -363,68 +382,75 @@ def underwayrevset(repo, subset, x):
     # to return. ``not public()`` will also pull in obsolete changesets if
     # there is a non-obsolete changeset with obsolete ancestors. This is
     # why we exclude obsolete changesets from this query.
-    rs = 'not public() and not obsolete()'
+    rs = "not public() and not obsolete()"
     rsargs = []
-    if args['commitage']:
-        rs += ' and date(%s)'
-        rsargs.append(revsetlang.getstring(args['commitage'],
-                                           _('commitage requires a string')))
+    if args["commitage"]:
+        rs += " and date(%s)"
+        rsargs.append(
+            revsetlang.getstring(args["commitage"], _("commitage requires a string"))
+        )
 
     mutable = repo.revs(rs, *rsargs)
     relevant = revset.baseset(mutable)
 
     # Add parents of mutable changesets to provide context.
-    relevant += repo.revs('parents(%ld)', mutable)
+    relevant += repo.revs("parents(%ld)", mutable)
 
     # We also pull in (public) heads if they a) aren't closing a branch
     # b) are recent.
-    rs = 'head() and not closed()'
+    rs = "head() and not closed()"
     rsargs = []
-    if args['headage']:
-        rs += ' and date(%s)'
-        rsargs.append(revsetlang.getstring(args['headage'],
-                                           _('headage requires a string')))
+    if args["headage"]:
+        rs += " and date(%s)"
+        rsargs.append(
+            revsetlang.getstring(args["headage"], _("headage requires a string"))
+        )
 
     relevant += repo.revs(rs, *rsargs)
 
     # Add working directory parent.
-    wdirrev = repo['.'].rev()
+    wdirrev = repo["."].rev()
     if wdirrev != nullrev:
         relevant += revset.baseset({wdirrev})
 
     return subset & relevant
 
-@showview('work', csettopic='work')
+
+@showview("work", csettopic="work")
 def showwork(ui, repo, displayer):
     """changesets that aren't finished"""
     # TODO support date-based limiting when calling revset.
-    revs = repo.revs('sort(_underway(), topo)')
+    revs = repo.revs("sort(_underway(), topo)")
     nodelen = longestshortest(repo, revs)
 
     revdag = graphmod.dagwalker(repo, revs)
 
-    ui.setconfig('experimental', 'graphshorten', True)
-    cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges,
-                         props={'nodelen': nodelen})
+    ui.setconfig("experimental", "graphshorten", True)
+    cmdutil.displaygraph(
+        ui, repo, revdag, displayer, graphmod.asciiedges, props={"nodelen": nodelen}
+    )
+
 
 def extsetup(ui):
     # Alias `hg <prefix><view>` to `hg show <view>`.
-    for prefix in ui.configlist('commands', 'show.aliasprefix'):
+    for prefix in ui.configlist("commands", "show.aliasprefix"):
         for view in showview._table:
-            name = '%s%s' % (prefix, view)
+            name = "%s%s" % (prefix, view)
 
-            choice, allcommands = cmdutil.findpossible(name, commands.table,
-                                                       strict=True)
+            choice, allcommands = cmdutil.findpossible(
+                name, commands.table, strict=True
+            )
 
             # This alias is already a command name. Don't set it.
             if name in choice:
                 continue
 
             # Same for aliases.
-            if ui.config('alias', name):
+            if ui.config("alias", name):
                 continue
 
-            ui.setconfig('alias', name, 'show %s' % view, source='show')
+            ui.setconfig("alias", name, "show %s" % view, source="show")
+
 
 def longestshortest(repo, revs, minlen=4):
     """Return the length of the longest shortest node to identify revisions.
@@ -438,14 +464,15 @@ def longestshortest(repo, revs, minlen=4):
     If we fail to do this, a value of e.g. ``10023`` could mean either
     revision 10023 or node ``10023abc...``.
     """
-    tmpl = formatter.maketemplater(repo.ui, '{shortest(node, %d)}' % minlen)
+    tmpl = formatter.maketemplater(repo.ui, "{shortest(node, %d)}" % minlen)
     lens = [minlen]
     for rev in revs:
         ctx = repo[rev]
-        shortest = tmpl.render({'ctx': ctx, 'node': ctx.hex()})
+        shortest = tmpl.render({"ctx": ctx, "node": ctx.hex()})
         lens.append(len(shortest))
 
     return max(lens)
+
 
 # Adjust the docstring of the show command so it shows all registered views.
 # This is a bit hacky because it runs at the end of module load. When moved
@@ -456,11 +483,16 @@ def _updatedocstring():
     longest = max(map(len, showview._table.keys()))
     entries = []
     for key in sorted(showview._table.keys()):
-        entries.append(pycompat.sysstr('    %s   %s' % (
-            key.ljust(longest), showview._table[key]._origdoc)))
+        entries.append(
+            pycompat.sysstr(
+                "    %s   %s" % (key.ljust(longest), showview._table[key]._origdoc)
+            )
+        )
 
-    cmdtable['show'][0].__doc__ = pycompat.sysstr('%s\n\n%s\n    ') % (
-        cmdtable['show'][0].__doc__.rstrip(),
-        pycompat.sysstr('\n\n').join(entries))
+    cmdtable["show"][0].__doc__ = pycompat.sysstr("%s\n\n%s\n    ") % (
+        cmdtable["show"][0].__doc__.rstrip(),
+        pycompat.sysstr("\n\n").join(entries),
+    )
+
 
 _updatedocstring()

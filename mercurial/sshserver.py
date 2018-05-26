@@ -10,28 +10,25 @@ from __future__ import absolute_import
 
 import sys
 
+from . import encoding, error, hook, util, wireproto
 from .i18n import _
-from . import (
-    encoding,
-    error,
-    hook,
-    util,
-    wireproto,
-)
+
 
 try:
     xrange(0)
 except NameError:
     xrange = range
 
+
 class sshserver(wireproto.abstractserverproto):
+
     def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
         self.lock = None
         self.fin = ui.fin
         self.fout = ui.fout
-        self.name = 'ssh'
+        self.name = "ssh"
 
         hook.redirect(True)
         ui.fout = repo.ui.fout = ui.ferr
@@ -48,14 +45,14 @@ class sshserver(wireproto.abstractserverproto):
             arg, l = argline.split()
             if arg not in keys:
                 raise error.Abort(_("unexpected parameter %r") % arg)
-            if arg == '*':
+            if arg == "*":
                 star = {}
                 for k in xrange(int(l)):
                     argline = self.fin.readline()[:-1]
                     arg, l = argline.split()
                     val = self.fin.read(int(l))
                     star[arg] = val
-                data['*'] = star
+                data["*"] = star
             else:
                 val = self.fin.read(int(l))
                 data[arg] = val
@@ -65,7 +62,7 @@ class sshserver(wireproto.abstractserverproto):
         return self.getargs(name)[0]
 
     def getfile(self, fpout):
-        self.sendresponse('')
+        self.sendresponse("")
         count = int(self.fin.readline())
         while count:
             fpout.write(self.fin.read(count))
@@ -83,7 +80,7 @@ class sshserver(wireproto.abstractserverproto):
         write = self.fout.write
 
         if source.reader:
-            gen = iter(lambda: source.reader.read(4096), '')
+            gen = iter(lambda: source.reader.read(4096), "")
         else:
             gen = source.gen
 
@@ -92,16 +89,16 @@ class sshserver(wireproto.abstractserverproto):
         self.fout.flush()
 
     def sendpushresponse(self, rsp):
-        self.sendresponse('')
+        self.sendresponse("")
         self.sendresponse(str(rsp.res))
 
     def sendpusherror(self, rsp):
         self.sendresponse(rsp.res)
 
     def sendooberror(self, rsp):
-        self.ui.ferr.write('%s\n-\n' % rsp.message)
+        self.ui.ferr.write("%s\n-\n" % rsp.message)
         self.ui.ferr.flush()
-        self.fout.write('\n')
+        self.fout.write("\n")
         self.fout.flush()
 
     def serve_forever(self):
@@ -127,15 +124,15 @@ class sshserver(wireproto.abstractserverproto):
             rsp = wireproto.dispatch(self.repo, self, cmd)
             self.handlers[rsp.__class__](self, rsp)
         elif cmd:
-            impl = getattr(self, 'do_' + cmd, None)
+            impl = getattr(self, "do_" + cmd, None)
             if impl:
                 r = impl()
                 if r is not None:
                     self.sendresponse(r)
             else:
                 self.sendresponse("")
-        return cmd != ''
+        return cmd != ""
 
     def _client(self):
-        client = encoding.environ.get('SSH_CLIENT', '').split(' ', 1)[0]
-        return 'remote:ssh:' + client
+        client = encoding.environ.get("SSH_CLIENT", "").split(" ", 1)[0]
+        return "remote:ssh:" + client

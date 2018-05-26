@@ -6,15 +6,17 @@ import sys
 
 from hgext.extlib import linelog
 
+
 randint = random.randint
 
-vecratio = 3 # number of replacelines / number of replacelines_vec
+vecratio = 3  # number of replacelines / number of replacelines_vec
 maxlinenum = 0xffffff
 maxb1 = 0xffffff
-maxdeltaa = 10 # max(a2 - b1)
-maxdeltab = 10 # max(b2 - b1)
+maxdeltaa = 10  # max(a2 - b1)
+maxdeltab = 10  # max(b2 - b1)
 
-def generator(seed=None, endrev=None): # generate test cases
+
+def generator(seed=None, endrev=None):  # generate test cases
     lines = []
     random.seed(seed)
     rev = 0
@@ -27,16 +29,17 @@ def generator(seed=None, endrev=None): # generate test cases
         b2 = randint(b1, b1 + maxdeltab)
         usevec = not bool(randint(0, vecratio))
         if usevec:
-            blines = [(randint(0, rev), randint(0, maxlinenum))
-                      for _ in range(b1, b2)]
+            blines = [(randint(0, rev), randint(0, maxlinenum)) for _ in range(b1, b2)]
         else:
             blines = [(rev, bidx) for bidx in range(b1, b2)]
         lines[a1:a2] = blines
         yield lines, rev, a1, a2, b1, b2, blines, usevec
 
+
 def ensure(condition):
     if not condition:
-        raise RuntimeError('Unexpected')
+        raise RuntimeError("Unexpected")
+
 
 # init
 seed = random.random()

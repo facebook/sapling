@@ -9,10 +9,9 @@ from __future__ import absolute_import
 
 import abc
 
+from . import error
 from .i18n import _
-from . import (
-    error,
-)
+
 
 class _basepeer(object):
     """Represents a "connection" to a repository.
@@ -68,6 +67,7 @@ class _basepeer(object):
         This is called when the peer will no longer be used. Resources
         associated with the peer should be cleaned up.
         """
+
 
 class _basewirecommands(object):
     """Client-side interface for communicating over the wire protocol.
@@ -164,6 +164,7 @@ class _basewirecommands(object):
         Returns the integer number of heads added to the peer.
         """
 
+
 class _baselegacywirecommands(object):
     """Interface for implementing support for legacy wire protocol commands.
 
@@ -200,6 +201,7 @@ class _baselegacywirecommands(object):
     @abc.abstractmethod
     def changegroupsubset(self, bases, heads, kind):
         pass
+
 
 class peer(_basepeer, _basewirecommands):
     """Unified interface and base class for peer repositories.
@@ -245,10 +247,10 @@ class peer(_basepeer, _basewirecommands):
         if name in caps:
             return True
 
-        name = '%s=' % name
+        name = "%s=" % name
         for cap in caps:
             if cap.startswith(name):
-                return cap[len(name):]
+                return cap[len(name) :]
 
         return False
 
@@ -261,8 +263,10 @@ class peer(_basepeer, _basewirecommands):
             return
 
         raise error.CapabilityError(
-            _('cannot %s; remote repository does not support the %r '
-              'capability') % (purpose, name))
+            _("cannot %s; remote repository does not support the %r " "capability")
+            % (purpose, name)
+        )
+
 
 class legacypeer(peer, _baselegacywirecommands):
     """peer but with support for legacy wire protocol commands."""

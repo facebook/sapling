@@ -45,17 +45,10 @@ from __future__ import absolute_import
 import collections
 import random
 
+from . import dagutil, error, progress, util
 from .i18n import _
-from .node import (
-    nullid,
-    nullrev,
-)
-from . import (
-    dagutil,
-    error,
-    progress,
-    util,
-)
+from .node import nullid, nullrev
+
 
 def _updatesample(dag, nodes, sample, quicksamplesize=0):
     """update an existing sample to match the expected size
@@ -97,6 +90,7 @@ def _updatesample(dag, nodes, sample, quicksamplesize=0):
                 dist.setdefault(p, d + 1)
                 visit.append(p)
 
+
 def _takequicksample(dag, nodes, size):
     """takes a quick sample of size <size>
 
@@ -112,6 +106,7 @@ def _takequicksample(dag, nodes, size):
     _updatesample(dag, None, sample, quicksamplesize=size)
     return sample
 
+
 def _takefullsample(dag, nodes, size):
     sample = dag.headsetofconnecteds(nodes)
     # update from heads
@@ -125,20 +120,26 @@ def _takefullsample(dag, nodes, size):
         sample.update(random.sample(list(nodes - sample), more))
     return sample
 
+
 def _limitsample(sample, desiredlen):
     """return a random subset of sample of at most desiredlen item"""
     if len(sample) > desiredlen:
         sample = set(random.sample(sample, desiredlen))
     return sample
 
-def findcommonheads(ui, local, remote,
-                    initialsamplesize=100,
-                    fullsamplesize=200,
-                    abortwhenunrelated=True,
-                    ancestorsof=None):
-    '''Return a tuple (common, anyincoming, remoteheads) used to identify
+
+def findcommonheads(
+    ui,
+    local,
+    remote,
+    initialsamplesize=100,
+    fullsamplesize=200,
+    abortwhenunrelated=True,
+    ancestorsof=None,
+):
+    """Return a tuple (common, anyincoming, remoteheads) used to identify
     missing nodes from or in remote.
-    '''
+    """
     start = util.timer()
 
     roundtrips = 0
@@ -174,12 +175,12 @@ def findcommonheads(ui, local, remote,
     srvheads = dag.internalizeall(srvheadhashes, filterunknown=True)
     if len(srvheads) == len(srvheadhashes):
         ui.debug("all remote heads known locally\n")
-        return (srvheadhashes, False, srvheadhashes,)
+        return (srvheadhashes, False, srvheadhashes)
 
     if sample and len(ownheads) <= initialsamplesize and all(yesno):
         ui.note(_("all local heads known remotely\n"))
         ownheadhashes = dag.externalizeall(ownheads)
-        return (ownheadhashes, True, srvheadhashes,)
+        return (ownheadhashes, True, srvheadhashes)
 
     # full blown discovery
 
@@ -195,12 +196,11 @@ def findcommonheads(ui, local, remote,
     missing = set()
 
     full = False
-    with progress.bar(ui, _('searching'), _('queries')) as prog:
+    with progress.bar(ui, _("searching"), _("queries")) as prog:
         while undecided:
 
             if sample:
-                missinginsample = [n for i, n in enumerate(sample)
-                                   if not yesno[i]]
+                missinginsample = [n for i, n in enumerate(sample) if not yesno[i]]
                 missing.update(dag.descendantset(missinginsample, missing))
 
                 undecided.difference_update(missing)
@@ -228,16 +228,17 @@ def findcommonheads(ui, local, remote,
 
             roundtrips += 1
             prog.value = roundtrips
-            ui.debug("query %i; still undecided: %i, sample size is: %i\n"
-                     % (roundtrips, len(undecided), len(sample)))
+            ui.debug(
+                "query %i; still undecided: %i, sample size is: %i\n"
+                % (roundtrips, len(undecided), len(sample))
+            )
             # indices between sample and externalized version must match
             sample = list(sample)
             yesno = remote.known(dag.externalizeall(sample))
             full = True
 
             if sample:
-                commoninsample = set(n for i, n in enumerate(sample)
-                                     if yesno[i])
+                commoninsample = set(n for i, n in enumerate(sample) if yesno[i])
                 common.addbases(commoninsample)
                 common.removeancestorsfrom(undecided)
 
@@ -249,18 +250,16 @@ def findcommonheads(ui, local, remote,
     result.discard(nullrev)
     elapsed = util.timer() - start
     ui.debug("%d total queries in %.4fs\n" % (roundtrips, elapsed))
-    msg = ('found %d common and %d unknown server heads,'
-           ' %d roundtrips in %.4fs\n')
+    msg = "found %d common and %d unknown server heads," " %d roundtrips in %.4fs\n"
     missing = set(result) - set(srvheads)
-    ui.log('discovery', msg, len(result), len(missing), roundtrips,
-           elapsed)
+    ui.log("discovery", msg, len(result), len(missing), roundtrips, elapsed)
 
     if not result and srvheadhashes != [nullid]:
         if abortwhenunrelated:
             raise error.Abort(_("repository is unrelated"))
         else:
             ui.warn(_("warning: repository is unrelated\n"))
-        return ({nullid}, True, srvheadhashes,)
+        return ({nullid}, True, srvheadhashes)
 
-    anyincoming = (srvheadhashes != [nullid])
+    anyincoming = srvheadhashes != [nullid]
     return dag.externalizeall(result), anyincoming, srvheadhashes

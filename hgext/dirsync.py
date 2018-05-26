@@ -34,6 +34,7 @@ arbitrary number of directories::
 from __future__ import absolute_import
 
 import errno
+
 from mercurial import (
     cmdutil,
     error,
@@ -45,24 +46,26 @@ from mercurial import (
 )
 from mercurial.i18n import _
 
-testedwith = 'ships-with-fb-hgext'
+
+testedwith = "ships-with-fb-hgext"
 
 _disabled = [False]
 
+
 def extsetup(ui):
-    extensions.wrapfunction(cmdutil, 'amend', _amend)
-    extensions.wrapfunction(localrepo.localrepository, 'commit', _commit)
+    extensions.wrapfunction(cmdutil, "amend", _amend)
+    extensions.wrapfunction(localrepo.localrepository, "commit", _commit)
 
     def wrapshelve(loaded=False):
         try:
-            shelvemod = extensions.find('shelve')
-            extensions.wrapcommand(shelvemod.cmdtable, 'shelve',
-                                   _bypassdirsync)
-            extensions.wrapcommand(shelvemod.cmdtable, 'unshelve',
-                                   _bypassdirsync)
+            shelvemod = extensions.find("shelve")
+            extensions.wrapcommand(shelvemod.cmdtable, "shelve", _bypassdirsync)
+            extensions.wrapcommand(shelvemod.cmdtable, "unshelve", _bypassdirsync)
         except KeyError:
             pass
-    extensions.afterloaded('shelve', wrapshelve)
+
+    extensions.afterloaded("shelve", wrapshelve)
+
 
 def _bypassdirsync(orig, ui, repo, *args, **kwargs):
     _disabled[0] = True
@@ -71,28 +74,30 @@ def _bypassdirsync(orig, ui, repo, *args, **kwargs):
     finally:
         _disabled[0] = False
 
+
 def getconfigs(repo):
     # bypass "repoui.copy = baseui.copy # prevent copying repo configuration"
     ui = repo.ui.__class__.copy(repo.ui)
 
     # also read from wvfs/.hgdirsync
-    filename = '.hgdirsync'
+    filename = ".hgdirsync"
     content = repo.wvfs.tryread(filename)
     if content:
-        ui._tcfg.parse(filename, '[dirsync]\n%s' % content, ['dirsync'])
+        ui._tcfg.parse(filename, "[dirsync]\n%s" % content, ["dirsync"])
 
     maps = util.sortdict()
-    for key, value in ui.configitems('dirsync'):
-        if '.' not in key:
+    for key, value in ui.configitems("dirsync"):
+        if "." not in key:
             continue
-        name, disambig = key.split('.', 1)
+        name, disambig = key.split(".", 1)
         # Normalize paths to have / at the end. For easy concatenation later.
-        if value[-1] != '/':
-            value = value + '/'
+        if value[-1] != "/":
+            value = value + "/"
         if name not in maps:
             maps[name] = []
         maps[name].append(value)
     return maps
+
 
 def getmirrors(maps, filename):
     for key, mirrordirs in maps.iteritems():
@@ -101,6 +106,7 @@ def getmirrors(maps, filename):
                 return mirrordirs
 
     return []
+
 
 def _updateworkingcopy(repo, matcher):
     maps = getconfigs(repo)
@@ -111,22 +117,24 @@ def _updateworkingcopy(repo, matcher):
         for added in status.added:
             mirrors = getmirrors(maps, added)
             if mirrors and matcher(added):
-                mirroredfiles.update(applytomirrors(repo, status, added,
-                    mirrors, 'a'))
+                mirroredfiles.update(applytomirrors(repo, status, added, mirrors, "a"))
 
         for modified in status.modified:
             mirrors = getmirrors(maps, modified)
             if mirrors and matcher(modified):
-                mirroredfiles.update(applytomirrors(repo, status, modified,
-                    mirrors, 'm'))
+                mirroredfiles.update(
+                    applytomirrors(repo, status, modified, mirrors, "m")
+                )
 
         for removed in status.removed:
             mirrors = getmirrors(maps, removed)
             if mirrors and matcher(removed):
-                mirroredfiles.update(applytomirrors(repo, status, removed,
-                    mirrors, 'r'))
+                mirroredfiles.update(
+                    applytomirrors(repo, status, removed, mirrors, "r")
+                )
 
     return mirroredfiles
+
 
 def _amend(orig, ui, repo, old, extra, pats, opts):
     # Only wrap if not disabled and repo is instance of
@@ -134,13 +142,13 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
     if _disabled[0] or not isinstance(repo, localrepo.localrepository):
         return orig(ui, repo, old, extra, pats, opts)
 
-    with repo.wlock(), repo.lock(), repo.transaction('dirsyncamend'):
+    with repo.wlock(), repo.lock(), repo.transaction("dirsyncamend"):
         wctx = repo[None]
         matcher = scmutil.match(wctx, pats, opts)
-        if (opts.get('addremove')
-            and scmutil.addremove(repo, matcher, "", opts)):
+        if opts.get("addremove") and scmutil.addremove(repo, matcher, "", opts):
             raise error.Abort(
-                _("failed to mark all new/missing files as added/removed"))
+                _("failed to mark all new/missing files as added/removed")
+            )
 
         mirroredfiles = _updateworkingcopy(repo, matcher)
         if mirroredfiles and not matcher.always():
@@ -149,29 +157,34 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
             # setting the value against 'include' key in opts as the only source
             # of truth.
             pats = ()
-            opts['include'] = [
-                f for f in wctx.files() if matcher(f)] + list(mirroredfiles)
+            opts["include"] = [f for f in wctx.files() if matcher(f)] + list(
+                mirroredfiles
+            )
 
         return orig(ui, repo, old, extra, pats, opts)
+
 
 def _commit(orig, self, *args, **kwargs):
     if _disabled[0]:
         return orig(self, *args, **kwargs)
 
-    with self.wlock(), self.lock(), self.transaction('dirsynccommit'):
-        matcher = args[3] if len(args) >= 4 else kwargs.get('match')
-        matcher = matcher or matchmod.always(self.root, '')
+    with self.wlock(), self.lock(), self.transaction("dirsynccommit"):
+        matcher = args[3] if len(args) >= 4 else kwargs.get("match")
+        matcher = matcher or matchmod.always(self.root, "")
 
         mirroredfiles = _updateworkingcopy(self, matcher)
         if mirroredfiles and not matcher.always():
             origmatch = matcher.matchfn
+
             def extramatches(path):
                 return path in mirroredfiles or origmatch(path)
+
             matcher.matchfn = extramatches
             matcher._files.extend(mirroredfiles)
             matcher._fileset.update(mirroredfiles)
 
         return orig(self, *args, **kwargs)
+
 
 def applytomirrors(repo, status, sourcepath, mirrors, action):
     """Applies the changes that are in the sourcepath to all the mirrors."""
@@ -184,10 +197,9 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             sourcemirror = mirror
             break
     if not sourcemirror:
-        raise error.Abort(_("unable to detect source mirror of '%s'") %
-                          (sourcepath,))
+        raise error.Abort(_("unable to detect source mirror of '%s'") % (sourcepath,))
 
-    relpath = sourcepath[len(sourcemirror):]
+    relpath = sourcepath[len(sourcemirror) :]
 
     # Apply the change to each mirror one by one
     allchanges = set(status.modified + status.removed + status.added)
@@ -199,63 +211,85 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
         mirroredfiles.add(mirrorpath)
         if mirrorpath in allchanges:
             wctx = repo[None]
-            if (sourcepath not in wctx and mirrorpath not in wctx and
-                sourcepath in status.removed and mirrorpath in status.removed):
+            if (
+                sourcepath not in wctx
+                and mirrorpath not in wctx
+                and sourcepath in status.removed
+                and mirrorpath in status.removed
+            ):
                 if repo.ui.verbose:
-                    repo.ui.status(_("not mirroring remove of '%s' to '%s';"
-                                     " it is already removed\n")
-                                   % (sourcepath, mirrorpath))
+                    repo.ui.status(
+                        _(
+                            "not mirroring remove of '%s' to '%s';"
+                            " it is already removed\n"
+                        )
+                        % (sourcepath, mirrorpath)
+                    )
                 continue
 
             if wctx[sourcepath].data() == wctx[mirrorpath].data():
                 if repo.ui.verbose:
-                    repo.ui.status(_("not mirroring '%s' to '%s'; it already "
-                                     "matches\n") % (sourcepath, mirrorpath))
+                    repo.ui.status(
+                        _("not mirroring '%s' to '%s'; it already " "matches\n")
+                        % (sourcepath, mirrorpath)
+                    )
                 continue
-            raise error.Abort(_("path '%s' needs to be mirrored to '%s', but "
-                                "the target already has pending changes") %
-                              (sourcepath, mirrorpath))
+            raise error.Abort(
+                _(
+                    "path '%s' needs to be mirrored to '%s', but "
+                    "the target already has pending changes"
+                )
+                % (sourcepath, mirrorpath)
+            )
 
         fullsource = repo.wjoin(sourcepath)
         fulltarget = repo.wjoin(mirrorpath)
 
         dirstate = repo.dirstate
-        if action == 'm' or action == 'a':
+        if action == "m" or action == "a":
             mirrorpathdir, unused = util.split(mirrorpath)
             util.makedirs(repo.wjoin(mirrorpathdir))
 
             util.copyfile(fullsource, fulltarget)
-            if dirstate[mirrorpath] in '?r':
+            if dirstate[mirrorpath] in "?r":
                 dirstate.add(mirrorpath)
 
-            if action == 'a':
+            if action == "a":
                 # For adds, detect copy data as well
                 copysource = dirstate.copied(sourcepath)
                 if copysource and copysource.startswith(sourcemirror):
-                    mirrorcopysource = mirror + copysource[len(sourcemirror):]
+                    mirrorcopysource = mirror + copysource[len(sourcemirror) :]
                     dirstate.copy(mirrorcopysource, mirrorpath)
-                    repo.ui.status(_("mirrored copy '%s -> %s' to '%s -> %s'\n")
-                                   % (copysource, sourcepath,
-                                      mirrorcopysource, mirrorpath))
+                    repo.ui.status(
+                        _("mirrored copy '%s -> %s' to '%s -> %s'\n")
+                        % (copysource, sourcepath, mirrorcopysource, mirrorpath)
+                    )
                 else:
-                    repo.ui.status(_("mirrored adding '%s' to '%s'\n") %
-                                   (sourcepath, mirrorpath))
+                    repo.ui.status(
+                        _("mirrored adding '%s' to '%s'\n") % (sourcepath, mirrorpath)
+                    )
             else:
-                repo.ui.status(_("mirrored changes in '%s' to '%s'\n") %
-                               (sourcepath, mirrorpath))
-        elif action == 'r':
+                repo.ui.status(
+                    _("mirrored changes in '%s' to '%s'\n") % (sourcepath, mirrorpath)
+                )
+        elif action == "r":
             try:
                 util.unlink(fulltarget)
             except OSError as e:
                 if e.errno == errno.ENOENT:
-                    repo.ui.status(_("not mirroring remove of '%s' to '%s'; it "
-                                     "is already removed\n") %
-                                   (sourcepath, mirrorpath))
+                    repo.ui.status(
+                        _(
+                            "not mirroring remove of '%s' to '%s'; it "
+                            "is already removed\n"
+                        )
+                        % (sourcepath, mirrorpath)
+                    )
                 else:
                     raise
             else:
                 dirstate.remove(mirrorpath)
-                repo.ui.status(_("mirrored remove of '%s' to '%s'\n") %
-                               (sourcepath, mirrorpath))
+                repo.ui.status(
+                    _("mirrored remove of '%s' to '%s'\n") % (sourcepath, mirrorpath)
+                )
 
     return mirroredfiles

@@ -2,39 +2,37 @@
 #
 from __future__ import absolute_import
 
-import json, re, shutil, tempfile
+import json
+import re
+import shutil
+import tempfile
 from os import path
 
-from mercurial import (
-    error,
-    extensions,
-    obsutil,
-    phases,
-    registrar,
-    scmutil,
-)
-
+from mercurial import error, extensions, obsutil, phases, registrar, scmutil
 from mercurial.i18n import _
 from mercurial.node import hex
 
+
 DIFFERENTIAL_REGEX = re.compile(
-    'Differential Revision: http.+?/'  # Line start, URL
-    'D(?P<id>[0-9]+)',  # Differential ID, just numeric part
-    flags = re.LOCALE
+    "Differential Revision: http.+?/"  # Line start, URL
+    "D(?P<id>[0-9]+)",  # Differential ID, just numeric part
+    flags=re.LOCALE,
 )
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-@command('debugcrdump', [
-         ('r', 'rev', [], _("revisions to dump")),
-         # We use 1<<15 for "as much context as possible"
-         ('U', 'unified',
-          1 << 15, _('number of lines of context to show'), _('NUM')),
-         ('l', 'lfs', False, 'Provide sha256 for lfs files instead of dumping'),
-         ('', 'obsolete', False,
-          'add obsolete markers related to the given revisions'),
-         ],
-         _('hg debugcrdump [OPTION]... [-r] [REV]'))
+
+@command(
+    "debugcrdump",
+    [
+        ("r", "rev", [], _("revisions to dump")),
+        # We use 1<<15 for "as much context as possible"
+        ("U", "unified", 1 << 15, _("number of lines of context to show"), _("NUM")),
+        ("l", "lfs", False, "Provide sha256 for lfs files instead of dumping"),
+        ("", "obsolete", False, "add obsolete markers related to the given revisions"),
+    ],
+    _("hg debugcrdump [OPTION]... [-r] [REV]"),
+)
 def crdump(ui, repo, *revs, **opts):
     """
     Dump the info about the revisions in format that's friendly for sending the
@@ -93,90 +91,95 @@ def crdump(ui, repo, *revs, **opts):
     """
 
     revs = list(revs)
-    revs.extend(opts['rev'])
+    revs.extend(opts["rev"])
 
     if not revs:
-        raise error.Abort(_('revisions must be specified'))
+        raise error.Abort(_("revisions must be specified"))
     revs = scmutil.revrange(repo, revs)
 
-    if 'unified' in opts:
-        contextlines = opts['unified']
+    if "unified" in opts:
+        contextlines = opts["unified"]
 
     cdata = []
-    outdir = tempfile.mkdtemp(suffix='hg.crdump')
+    outdir = tempfile.mkdtemp(suffix="hg.crdump")
     try:
         lfs = None
-        if opts['lfs']:
+        if opts["lfs"]:
             try:
-                lfs = extensions.find('lfs')
+                lfs = extensions.find("lfs")
             except KeyError:
-                pass # lfs extension is not enabled
+                pass  # lfs extension is not enabled
         for rev in revs:
             ctx = repo[rev]
             rdata = {
-                'node': hex(ctx.node()),
-                'date': map(int, ctx.date()),
-                'desc': ctx.description(),
-                'files': ctx.files(),
-                'p1': {
-                    'node': ctx.parents()[0].hex(),
-                },
-                'user': ctx.user(),
-                'bookmarks': ctx.bookmarks(),
+                "node": hex(ctx.node()),
+                "date": map(int, ctx.date()),
+                "desc": ctx.description(),
+                "files": ctx.files(),
+                "p1": {"node": ctx.parents()[0].hex()},
+                "user": ctx.user(),
+                "bookmarks": ctx.bookmarks(),
             }
             if ctx.parents()[0].phase() != phases.public:
                 # we need this only if parent is in the same draft stack
-                rdata['p1']['differential_revision'] = \
-                    phabricatorrevision(ctx.parents()[0])
+                rdata["p1"]["differential_revision"] = phabricatorrevision(
+                    ctx.parents()[0]
+                )
 
-            if opts['obsolete']:
+            if opts["obsolete"]:
                 markers = obsutil.getmarkers(repo, [ctx.node()])
                 obsolete = dumpmarkers(markers)
                 if obsolete:
-                    rdata['obsolete'] = obsolete
+                    rdata["obsolete"] = obsolete
 
             pbctx = publicbase(repo, ctx)
             if pbctx:
-                rdata['public_base'] = {
-                    'node': hex(pbctx.node()),
-                }
+                rdata["public_base"] = {"node": hex(pbctx.node())}
                 try:
-                    hgsubversion = extensions.find('hgsubversion')
+                    hgsubversion = extensions.find("hgsubversion")
                     svnrev = hgsubversion.util.getsvnrev(pbctx)
                     # There are no abstractions in hgsubversion for doing
                     # it see hgsubversion/svncommands.py:267
-                    rdata['public_base']['svnrev'] = \
-                        svnrev.split('@')[1] if svnrev else None
+                    rdata["public_base"]["svnrev"] = (
+                        svnrev.split("@")[1] if svnrev else None
+                    )
                 except KeyError:
                     pass
-            rdata['patch_file'] = dumppatch(ui, repo, ctx, outdir, contextlines)
-            rdata['binary_files'] = dumpbinaryfiles(ui, repo, ctx, outdir, lfs)
+            rdata["patch_file"] = dumppatch(ui, repo, ctx, outdir, contextlines)
+            rdata["binary_files"] = dumpbinaryfiles(ui, repo, ctx, outdir, lfs)
             cdata.append(rdata)
 
-        ui.write(json.dumps({
-            'output_directory': outdir,
-            'commits': cdata,
-        }, sort_keys=True, indent=4, separators=(',', ': ')))
-        ui.write('\n')
+        ui.write(
+            json.dumps(
+                {"output_directory": outdir, "commits": cdata},
+                sort_keys=True,
+                indent=4,
+                separators=(",", ": "),
+            )
+        )
+        ui.write("\n")
     except Exception as e:
         shutil.rmtree(outdir)
         raise e
 
+
 def dumppatch(ui, repo, ctx, outdir, contextlines):
     chunks = ctx.diff(git=True, unified=contextlines, binary=False)
-    patchfile = '%s.patch' % hex(ctx.node())
-    with open(path.join(outdir, patchfile), 'wb') as f:
+    patchfile = "%s.patch" % hex(ctx.node())
+    with open(path.join(outdir, patchfile), "wb") as f:
         for chunk in chunks:
             f.write(chunk)
     return patchfile
 
+
 def dumpfctx(outdir, fctx):
-    outfile = '%s' % hex(fctx.filenode())
+    outfile = "%s" % hex(fctx.filenode())
     writepath = path.join(outdir, outfile)
     if not path.isfile(writepath):
-        with open(writepath, 'wb') as f:
+        with open(writepath, "wb") as f:
             f.write(fctx.data())
     return outfile
+
 
 def _getfilesizeandsha256(flog, ctx, fname, lfs):
     try:
@@ -184,7 +187,7 @@ def _getfilesizeandsha256(flog, ctx, fname, lfs):
     except error.ManifestLookupError:
         return None, None
 
-    if lfs.wrapper._islfs(flog, node=fnode): # if file was uploaded to lfs
+    if lfs.wrapper._islfs(flog, node=fnode):  # if file was uploaded to lfs
         rawtext = flog.revision(fnode, raw=True)
         gitlfspointer = lfs.pointer.deserialize(rawtext)
         sha256_hash = gitlfspointer.oid()
@@ -192,10 +195,11 @@ def _getfilesizeandsha256(flog, ctx, fname, lfs):
         return sha256_hash, filesize
     return None, None
 
+
 def dumpbinaryfiles(ui, repo, ctx, outdir, lfs):
     binaryfiles = []
     pctx = ctx.parents()[0]
-    with ui.configoverride({('remotefilelog', 'dolfsprefetch'): False}):
+    with ui.configoverride({("remotefilelog", "dolfsprefetch"): False}):
         for fname in ctx.files():
             oldfile = newfile = None
             dump = False
@@ -203,10 +207,12 @@ def dumpbinaryfiles(ui, repo, ctx, outdir, lfs):
             oldfilesize = newfilesize = None
             if lfs is not None:
                 flog = repo.file(fname)
-                newfilesha256, newfilesize = _getfilesizeandsha256(flog, ctx,
-                                                                    fname, lfs)
-                oldfilesha256, oldfilesize = _getfilesizeandsha256(flog, pctx,
-                                                                    fname, lfs)
+                newfilesha256, newfilesize = _getfilesizeandsha256(
+                    flog, ctx, fname, lfs
+                )
+                oldfilesha256, oldfilesize = _getfilesizeandsha256(
+                    flog, pctx, fname, lfs
+                )
             # if one of the versions is binary file which is not in lfs
             # the whole change will show up as binary in diff output
             if not newfilesha256:
@@ -226,47 +232,50 @@ def dumpbinaryfiles(ui, repo, ctx, outdir, lfs):
                     oldfile = dumpfctx(outdir, pfctx)
 
             if lfs is None and dump:
-                binaryfiles.append({
-                    'file_name': fname,
-                    'old_file': oldfile,
-                    'new_file': newfile,
-                })
+                binaryfiles.append(
+                    {"file_name": fname, "old_file": oldfile, "new_file": newfile}
+                )
             elif newfile or newfilesha256 or oldfile or oldfilesha256:
-                binaryfiles.append({
-                    'file_name': fname,
-                    'old_file': oldfile,
-                    'new_file': newfile,
-                    'new_file_sha256': newfilesha256,
-                    'old_file_sha256': oldfilesha256,
-                    'new_file_size': newfilesize,
-                    'old_file_size': oldfilesize,
-                })
+                binaryfiles.append(
+                    {
+                        "file_name": fname,
+                        "old_file": oldfile,
+                        "new_file": newfile,
+                        "new_file_sha256": newfilesha256,
+                        "old_file_sha256": oldfilesha256,
+                        "new_file_size": newfilesize,
+                        "old_file_size": oldfilesize,
+                    }
+                )
 
     return binaryfiles
 
+
 def phabricatorrevision(ctx):
     match = DIFFERENTIAL_REGEX.search(ctx.description())
-    return match.group(1) if match else ''
+    return match.group(1) if match else ""
+
 
 def publicbase(repo, ctx):
-    base = repo.revs('last(::%d & public())', ctx.rev())
+    base = repo.revs("last(::%d & public())", ctx.rev())
     if len(base):
         return repo[base.first()]
     return None
+
 
 def dumpmarkers(rawmarkers):
     markers = []
     for rm in rawmarkers:
         marker = {
-            'date': rm.date(),
-            'flag': rm.flags(),
-            'metadata': rm.metadata(),
-            'prednode': hex(rm.prednode())
+            "date": rm.date(),
+            "flag": rm.flags(),
+            "metadata": rm.metadata(),
+            "prednode": hex(rm.prednode()),
         }
         if rm.succnodes():
-            marker['succnodes'] = map(hex, rm.succnodes())
+            marker["succnodes"] = map(hex, rm.succnodes())
         if rm.parentnodes():
-            marker['parents'] = map(hex, rm.parentnodes())
+            marker["parents"] = map(hex, rm.parentnodes())
 
         markers.append(marker)
 

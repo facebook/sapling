@@ -11,19 +11,20 @@
 # relationship between a draft commit and its landed counterpart.
 # Thanks to these markers, less information is displayed and rebases can have
 # less irrelevant conflicts.
-from mercurial import commands
-from mercurial import obsolete
-from mercurial import phases
-from mercurial import extensions
+from mercurial import commands, extensions, obsolete, phases
+
 from .extlib.phabricator import diffprops
 from .phabstatus import COMMITTEDSTATUS, getdiffstatus
+
 
 def getdiff(rev):
     phabrev = diffprops.parserevfromcommitmsg(rev.description())
     return int(phabrev) if phabrev else None
 
+
 def extsetup(ui):
-    extensions.wrapcommand(commands.table, 'pull', _pull)
+    extensions.wrapcommand(commands.table, "pull", _pull)
+
 
 def _pull(orig, ui, repo, *args, **opts):
     if not obsolete.isenabled(repo, obsolete.createmarkersopt):
@@ -36,22 +37,27 @@ def _pull(orig, ui, repo, *args, **opts):
     createmarkers(r, repo, maxrevbeforepull, maxrevafterpull)
     return r
 
+
 def createmarkers(pullres, repo, start, stop, fromdrafts=True):
     landeddiffs = getlandeddiffs(repo, start, stop, onlypublic=fromdrafts)
 
     if not landeddiffs:
         return
 
-    tocreate = getmarkersfromdrafts(repo, landeddiffs) if fromdrafts else \
-        getmarkers(repo, landeddiffs)
+    tocreate = (
+        getmarkersfromdrafts(repo, landeddiffs)
+        if fromdrafts
+        else getmarkers(repo, landeddiffs)
+    )
 
     if not tocreate:
         return
 
     unfiltered = repo.unfiltered()
 
-    with unfiltered.lock(), unfiltered.transaction('pullcreatemarkers'):
+    with unfiltered.lock(), unfiltered.transaction("pullcreatemarkers"):
         obsolete.createmarkers(unfiltered, tocreate)
+
 
 def getlandeddiffs(repo, start, stop, onlypublic=True):
     landeddiffs = {}
@@ -64,9 +70,10 @@ def getlandeddiffs(repo, start, stop, onlypublic=True):
                 landeddiffs[diff] = rev
     return landeddiffs
 
+
 def getmarkers(repo, landeddiffs):
-    return [(landeddiffs[rev], tuple())
-            for rev in getlandedrevsiter(repo, landeddiffs)]
+    return [(landeddiffs[rev], tuple()) for rev in getlandedrevsiter(repo, landeddiffs)]
+
 
 def getmarkersfromdrafts(repo, landeddiffs):
     tocreate = []
@@ -81,9 +88,16 @@ def getmarkersfromdrafts(repo, landeddiffs):
             tocreate.append(marker)
     return tocreate
 
-def getlandedrevsiter(repo, landeddiffs):
-    statuses = (status for status in getdiffstatus(repo, *landeddiffs.keys())
-                if status != 'Error')
 
-    return (diff for status, diff in zip(statuses, landeddiffs.keys())
-            if status['status'] == COMMITTEDSTATUS)
+def getlandedrevsiter(repo, landeddiffs):
+    statuses = (
+        status
+        for status in getdiffstatus(repo, *landeddiffs.keys())
+        if status != "Error"
+    )
+
+    return (
+        diff
+        for status, diff in zip(statuses, landeddiffs.keys())
+        if status["status"] == COMMITTEDSTATUS
+    )

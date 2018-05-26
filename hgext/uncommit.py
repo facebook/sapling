@@ -19,8 +19,6 @@ added and removed in the working directory.
 
 from __future__ import absolute_import
 
-from mercurial.i18n import _
-
 from mercurial import (
     cmdutil,
     commands,
@@ -34,6 +32,8 @@ from mercurial import (
     rewriteutil,
     scmutil,
 )
+from mercurial.i18n import _
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -41,15 +41,14 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('experimental', 'uncommitondirtywdir',
-    default=False,
-)
+configitem("experimental", "uncommitondirtywdir", default=False)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
+
 
 def _commitfiltered(repo, ctx, match, allowempty):
     """Recommit ctx with changed files not in match. Return the new
@@ -64,39 +63,47 @@ def _commitfiltered(repo, ctx, match, allowempty):
     if not exclude:
         return None
 
-    files = (initialfiles - exclude)
+    files = initialfiles - exclude
     # return the p1 so that we don't create an obsmarker later
     if not files and not allowempty:
         return ctx.parents()[0].node()
 
     # Filter copies
     copied = copies.pathcopies(base, ctx)
-    copied = dict((dst, src) for dst, src in copied.iteritems()
-                  if dst in files)
+    copied = dict((dst, src) for dst, src in copied.iteritems() if dst in files)
+
     def filectxfn(repo, memctx, path, contentctx=ctx, redirect=()):
         if path not in contentctx:
             return None
         fctx = contentctx[path]
-        mctx = context.memfilectx(repo, memctx, fctx.path(), fctx.data(),
-                                  fctx.islink(),
-                                  fctx.isexec(),
-                                  copied=copied.get(path))
+        mctx = context.memfilectx(
+            repo,
+            memctx,
+            fctx.path(),
+            fctx.data(),
+            fctx.islink(),
+            fctx.isexec(),
+            copied=copied.get(path),
+        )
         return mctx
 
-    new = context.memctx(repo,
-                         parents=[base.node(), node.nullid],
-                         text=ctx.description(),
-                         files=files,
-                         filectxfn=filectxfn,
-                         user=ctx.user(),
-                         date=ctx.date(),
-                         extra=ctx.extra())
+    new = context.memctx(
+        repo,
+        parents=[base.node(), node.nullid],
+        text=ctx.description(),
+        files=files,
+        filectxfn=filectxfn,
+        user=ctx.user(),
+        date=ctx.date(),
+        extra=ctx.extra(),
+    )
     # phase handling
     commitphase = ctx.phase()
-    overrides = {('phases', 'new-commit'): commitphase}
-    with repo.ui.configoverride(overrides, 'uncommit'):
+    overrides = {("phases", "new-commit"): commitphase}
+    with repo.ui.configoverride(overrides, "uncommit"):
         newid = repo.commitctx(new)
     return newid
+
 
 def _fixdirstate(repo, oldctx, newctx, status):
     """ fix the dirstate after switching the working directory from oldctx to
@@ -106,44 +113,46 @@ def _fixdirstate(repo, oldctx, newctx, status):
     copies = dict(ds.copies())
     s = status
     for f in s.modified:
-        if ds[f] == 'r':
+        if ds[f] == "r":
             # modified + removed -> removed
             continue
         ds.normallookup(f)
 
     for f in s.added:
-        if ds[f] == 'r':
+        if ds[f] == "r":
             # added + removed -> unknown
             ds.drop(f)
-        elif ds[f] != 'a':
+        elif ds[f] != "a":
             ds.add(f)
 
     for f in s.removed:
-        if ds[f] == 'a':
+        if ds[f] == "a":
             # removed + added -> normal
             ds.normallookup(f)
-        elif ds[f] != 'r':
+        elif ds[f] != "r":
             ds.remove(f)
 
     # Merge old parent and old working dir copies
     oldcopies = {}
-    for f in (s.modified + s.added):
+    for f in s.modified + s.added:
         src = oldctx[f].renamed()
         if src:
             oldcopies[f] = src[0]
     oldcopies.update(copies)
-    copies = dict((dst, oldcopies.get(src, src))
-                  for dst, src in oldcopies.iteritems())
+    copies = dict((dst, oldcopies.get(src, src)) for dst, src in oldcopies.iteritems())
     # Adjust the dirstate copies
     for dst, src in copies.iteritems():
-        if (src not in newctx or dst in newctx or ds[dst] != 'a'):
+        if src not in newctx or dst in newctx or ds[dst] != "a":
             src = None
         ds.copy(src, dst)
 
-@command('uncommit',
-    [('', 'keep', False, _('allow an empty commit after uncommiting')),
-    ] + commands.walkopts,
-    _('[OPTION]... [FILE]...'))
+
+@command(
+    "uncommit",
+    [("", "keep", False, _("allow an empty commit after uncommiting"))]
+    + commands.walkopts,
+    _("[OPTION]... [FILE]..."),
+)
 def uncommit(ui, repo, *pats, **opts):
     """uncommit part or all of a local changeset
 
@@ -156,17 +165,16 @@ def uncommit(ui, repo, *pats, **opts):
 
     with repo.wlock(), repo.lock():
 
-        if not pats and not repo.ui.configbool('experimental',
-                                                'uncommitondirtywdir'):
+        if not pats and not repo.ui.configbool("experimental", "uncommitondirtywdir"):
             cmdutil.bailifchanged(repo)
-        old = repo['.']
-        rewriteutil.precheck(repo, [old.rev()], 'uncommit')
+        old = repo["."]
+        rewriteutil.precheck(repo, [old.rev()], "uncommit")
         if len(old.parents()) > 1:
             raise error.Abort(_("cannot uncommit merge changeset"))
 
-        with repo.transaction('uncommit'):
+        with repo.transaction("uncommit"):
             match = scmutil.match(old, pats, opts)
-            newid = _commitfiltered(repo, old, match, opts.get('keep'))
+            newid = _commitfiltered(repo, old, match, opts.get("keep"))
             if newid is None:
                 ui.status(_("nothing to uncommit\n"))
                 return 1
@@ -179,12 +187,13 @@ def uncommit(ui, repo, *pats, **opts):
                 # Fully removed the old commit
                 mapping[old.node()] = ()
 
-            scmutil.cleanupnodes(repo, mapping, 'uncommit')
+            scmutil.cleanupnodes(repo, mapping, "uncommit")
 
             with repo.dirstate.parentchange():
                 repo.dirstate.setparents(newid, node.nullid)
                 s = repo.status(old.p1(), old, match=match)
                 _fixdirstate(repo, old, repo[newid], s)
+
 
 def predecessormarkers(ctx):
     """yields the obsolete markers marking the given changeset as a successor"""

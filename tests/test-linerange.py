@@ -1,10 +1,12 @@
 from __future__ import absolute_import
 
 import unittest
+
 from mercurial import error, mdiff
 
+
 # for readability, line numbers are 0-origin
-text1 = '''
+text1 = """
            00 at OLD
            01 at OLD
            02 at OLD
@@ -17,9 +19,11 @@ text1 = '''
            09 at OLD
            10 at OLD
            11 at OLD
-'''[1:] # strip initial LF
+"""[
+    1:
+]  # strip initial LF
 
-text2 = '''
+text2 = """
 00 at NEW
 01 at NEW
 02 at NEW, 03 at OLD
@@ -32,7 +36,10 @@ text2 = '''
 09 at NEW
 10 at NEW
 11 at NEW
-'''[1:] # strip initial LF
+"""[
+    1:
+]  # strip initial LF
+
 
 def filteredblocks(blocks, rangeb):
     """return `rangea` extracted from `blocks` coming from
@@ -42,15 +49,16 @@ def filteredblocks(blocks, rangeb):
     skipped = [b not in filtered for b in blocks]
     return rangea, skipped
 
+
 class blocksinrangetests(unittest.TestCase):
 
     def setUp(self):
         self.blocks = list(mdiff.allblocks(text1, text2))
         assert self.blocks == [
-            ([0, 3, 0, 2], '!'),
-            ((3, 7, 2, 6), '='),
-            ([7, 12, 6, 12], '!'),
-            ((12, 12, 12, 12), '='),
+            ([0, 3, 0, 2], "!"),
+            ((3, 7, 2, 6), "="),
+            ([7, 12, 6, 12], "!"),
+            ((12, 12, 12, 12), "="),
         ], self.blocks
 
     def testWithinEqual(self):
@@ -128,12 +136,7 @@ class blocksinrangetests(unittest.TestCase):
         #      |           (empty)
         #      ^
         #     ^^
-        for linerange2 in [
-            (0, 1),
-            (1, 1),
-            (1, 2),
-            (0, 2),
-        ]:
+        for linerange2 in [(0, 1), (1, 1), (1, 2), (0, 2)]:
             linerange1, skipped = filteredblocks(self.blocks, linerange2)
             self.assertEqual(linerange1, (0, 3))
             self.assertEqual(skipped, [False, True, True, True])
@@ -148,13 +151,7 @@ class blocksinrangetests(unittest.TestCase):
         #           |      (empty)
         #           ^^^^^^
         #                ^
-        for linerange2 in [
-            (6, 7),
-            (7, 8),
-            (7, 7),
-            (6, 12),
-            (11, 12),
-        ]:
+        for linerange2 in [(6, 7), (7, 8), (7, 7), (6, 12), (11, 12)]:
             linerange1, skipped = filteredblocks(self.blocks, linerange2)
             self.assertEqual(linerange1, (7, 12))
             self.assertEqual(skipped, [True, True, False, True])
@@ -188,10 +185,7 @@ class blocksinrangetests(unittest.TestCase):
         # SRC NNOOOONNNNNN (New/Old)
         #          ^^^^
         #         ^^^^^^^
-        for linerange2, expectedlinerange1 in [
-            ((5, 9), (6, 12)),
-            ((4, 11), (5, 12)),
-        ]:
+        for linerange2, expectedlinerange1 in [((5, 9), (6, 12)), ((4, 11), (5, 12))]:
             linerange1, skipped = filteredblocks(self.blocks, linerange2)
             self.assertEqual(linerange1, expectedlinerange1)
             self.assertEqual(skipped, [True, False, False, True])
@@ -203,10 +197,7 @@ class blocksinrangetests(unittest.TestCase):
         # SRC NNOOOONNNNNN (New/Old)
         #      ^^
         #     ^^^^^
-        for linerange2, expectedlinerange1 in [
-            ((1, 3), (0, 4)),
-            ((0, 4), (0, 5)),
-        ]:
+        for linerange2, expectedlinerange1 in [((1, 3), (0, 4)), ((0, 4), (0, 5))]:
             linerange1, skipped = filteredblocks(self.blocks, linerange2)
             self.assertEqual(linerange1, expectedlinerange1)
             self.assertEqual(skipped, [False, False, True, True])
@@ -214,19 +205,18 @@ class blocksinrangetests(unittest.TestCase):
     def testOutOfRange(self):
         """linerange exceeding file size"""
         exctype = error.Abort
-        for linerange2 in [
-            (0, 34),
-            (15, 12),
-        ]:
+        for linerange2 in [(0, 34), (15, 12)]:
             # Could be `with self.assertRaises(error.Abort)` but python2.6
             # does not have assertRaises context manager.
             try:
                 mdiff.blocksinrange(self.blocks, linerange2)
             except exctype as exc:
-                self.assertTrue('line range exceeds file size' in str(exc))
+                self.assertTrue("line range exceeds file size" in str(exc))
             else:
-                self.fail('%s not raised' % exctype.__name__)
+                self.fail("%s not raised" % exctype.__name__)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import silenttestrunner
+
     silenttestrunner.main(__name__)

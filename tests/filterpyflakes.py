@@ -7,6 +7,7 @@ from __future__ import absolute_import, print_function
 import re
 import sys
 
+
 lines = []
 for line in sys.stdin:
     # We blacklist tests that are too noisy for us
@@ -22,13 +23,13 @@ for line in sys.stdin:
     for pat in pats:
         if re.search(pat, line):
             keep = False
-            break # pattern matches
+            break  # pattern matches
     if keep:
-        fn = line.split(':', 1)[0]
+        fn = line.split(":", 1)[0]
         f = open(fn)
         data = f.read()
         f.close()
-        if 'no-' 'check-code' in data:
+        if "no-" "check-code" in data:
             continue
         lines.append(line)
 

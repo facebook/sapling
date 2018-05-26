@@ -12,8 +12,10 @@ import hashlib
 import os
 import sys
 
+
 try:
     import msvcrt
+
     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 except ImportError:
@@ -21,18 +23,18 @@ except ImportError:
 
 for filename in sys.argv[1:]:
     try:
-        fp = open(filename, 'rb')
+        fp = open(filename, "rb")
     except IOError as msg:
-        sys.stderr.write('%s: Can\'t open: %s\n' % (filename, msg))
+        sys.stderr.write("%s: Can't open: %s\n" % (filename, msg))
         sys.exit(1)
 
     m = hashlib.md5()
     try:
-        for data in iter(lambda: fp.read(8192), b''):
+        for data in iter(lambda: fp.read(8192), b""):
             m.update(data)
     except IOError as msg:
-        sys.stderr.write('%s: I/O error: %s\n' % (filename, msg))
+        sys.stderr.write("%s: I/O error: %s\n" % (filename, msg))
         sys.exit(1)
-    sys.stdout.write('%s  %s\n' % (m.hexdigest(), filename))
+    sys.stdout.write("%s  %s\n" % (m.hexdigest(), filename))
 
 sys.exit(0)

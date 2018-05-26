@@ -9,56 +9,57 @@ import json
 import os
 import sys
 
-from mercurial import (
-    util,
-)
+from mercurial import util
+
 
 httplib = util.httplib
 
 try:
     import msvcrt
+
     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 except ImportError:
     pass
 
 twice = False
-if '--twice' in sys.argv:
-    sys.argv.remove('--twice')
+if "--twice" in sys.argv:
+    sys.argv.remove("--twice")
     twice = True
 headeronly = False
-if '--headeronly' in sys.argv:
-    sys.argv.remove('--headeronly')
+if "--headeronly" in sys.argv:
+    sys.argv.remove("--headeronly")
     headeronly = True
 formatjson = False
-if '--json' in sys.argv:
-    sys.argv.remove('--json')
+if "--json" in sys.argv:
+    sys.argv.remove("--json")
     formatjson = True
 
 hgproto = None
-if '--hgproto' in sys.argv:
-    idx = sys.argv.index('--hgproto')
+if "--hgproto" in sys.argv:
+    idx = sys.argv.index("--hgproto")
     hgproto = sys.argv[idx + 1]
     sys.argv.pop(idx)
     sys.argv.pop(idx)
 
 tag = None
+
+
 def request(host, path, show):
-    assert not path.startswith('/'), path
+    assert not path.startswith("/"), path
     global tag
     headers = {}
     if tag:
-        headers['If-None-Match'] = tag
+        headers["If-None-Match"] = tag
     if hgproto:
-        headers['X-HgProto-1'] = hgproto
+        headers["X-HgProto-1"] = hgproto
 
     conn = httplib.HTTPConnection(host)
-    conn.request("GET", '/' + path, None, headers)
+    conn.request("GET", "/" + path, None, headers)
     response = conn.getresponse()
     print(response.status, response.reason)
-    if show[:1] == ['-']:
-        show = sorted(h for h, v in response.getheaders()
-                      if h.lower() not in show)
+    if show[:1] == ["-"]:
+        show = sorted(h for h, v in response.getheaders() if h.lower() not in show)
     for h in [h.lower() for h in show]:
         if response.getheader(h, None) is not None:
             print("%s: %s" % (h, response.getheader(h)))
@@ -78,10 +79,11 @@ def request(host, path, show):
         else:
             sys.stdout.write(data)
 
-    if twice and response.getheader('ETag', None):
-        tag = response.getheader('ETag')
+    if twice and response.getheader("ETag", None):
+        tag = response.getheader("ETag")
 
     return response.status
+
 
 status = request(sys.argv[1], sys.argv[2], sys.argv[3:])
 if twice:

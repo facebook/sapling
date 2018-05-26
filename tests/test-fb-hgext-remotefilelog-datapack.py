@@ -11,30 +11,31 @@ import tempfile
 import time
 import unittest
 
+import mercurial.ui
 import silenttestrunner
-
+from hgext.remotefilelog import constants
+from hgext.remotefilelog.basepack import (
+    LARGEFANOUTPREFIX,
+    SMALLFANOUTCUTOFF,
+    SMALLFANOUTPREFIX,
+)
 from hgext.remotefilelog.datapack import (
     datapack,
     datapackstore,
     fastdatapack,
     mutabledatapack,
 )
-from hgext.remotefilelog.basepack import (
-    SMALLFANOUTCUTOFF,
-    SMALLFANOUTPREFIX,
-    LARGEFANOUTPREFIX,
-)
-from hgext.remotefilelog import constants
-
 from mercurial.node import nullid
-import mercurial.ui
+
 
 try:
     xrange(0)
 except NameError:
     xrange = range
 
+
 class datapacktestsbase(object):
+
     def __init__(self, datapackreader, paramsavailable, iscdatapack):
         self.datapackreader = datapackreader
         self.iscdatapack = iscdatapack
@@ -56,7 +57,7 @@ class datapacktestsbase(object):
         return hashlib.sha1(content).digest()
 
     def getFakeHash(self):
-        return ''.join(chr(random.randint(0, 255)) for _ in range(20))
+        return "".join(chr(random.randint(0, 255)) for _ in range(20))
 
     def createPack(self, revisions=None, packdir=None, version=0):
         if revisions is None:
@@ -93,10 +94,10 @@ class datapacktestsbase(object):
         self.assertEquals(content, chain[0][4])
 
     def testAddSingle(self):
-        self._testAddSingle('')
+        self._testAddSingle("")
 
     def testAddSingleEmpty(self):
-        self._testAddSingle('abcdef')
+        self._testAddSingle("abcdef")
 
     def testAddMultiple(self):
         """Test putting multiple unrelated blobs into a pack and reading them
@@ -174,13 +175,15 @@ class datapacktestsbase(object):
     def testPackMetadata(self):
         revisions = []
         for i in range(100):
-            filename = '%s.txt' % i
-            content = 'put-something-here \n' * i
+            filename = "%s.txt" % i
+            content = "put-something-here \n" * i
             node = self.getHash(content)
-            meta = {constants.METAKEYFLAG: i ** 4,
-                    constants.METAKEYSIZE: len(content),
-                    'Z': 'random_string',
-                    '_': '\0' * i}
+            meta = {
+                constants.METAKEYFLAG: i ** 4,
+                constants.METAKEYSIZE: len(content),
+                "Z": "random_string",
+                "_": "\0" * i,
+            }
             revisions.append((filename, node, nullid, content, meta))
         pack = self.createPack(revisions, version=1)
         for name, node, x, content, origmeta in revisions:
@@ -191,8 +194,8 @@ class datapacktestsbase(object):
             self.assertEquals(parsedmeta, origmeta)
 
     def testPackMetadataThrows(self):
-        filename = '1'
-        content = '2'
+        filename = "1"
+        content = "2"
         node = self.getHash(content)
         meta = {constants.METAKEYFLAG: 3}
         revisions = [(filename, node, nullid, content, meta)]
@@ -219,8 +222,7 @@ class datapacktestsbase(object):
         missing = pack.getmissing([("foo", revisions[0][1])])
         self.assertFalse(missing)
 
-        missing = pack.getmissing([("foo", revisions[0][1]),
-                                   ("foo", revisions[1][1])])
+        missing = pack.getmissing([("foo", revisions[0][1]), ("foo", revisions[1][1])])
         self.assertFalse(missing)
 
         fakenode = self.getFakeHash()
@@ -231,19 +233,19 @@ class datapacktestsbase(object):
         pack = self.createPack()
 
         try:
-            pack.add('filename', nullid, 'contents')
+            pack.add("filename", nullid, "contents")
             self.assertTrue(False, "datapack.add should throw")
         except RuntimeError:
             pass
 
     def testBadVersionThrows(self):
         pack = self.createPack()
-        path = pack.path + '.datapack'
+        path = pack.path + ".datapack"
         with open(path) as f:
             raw = f.read()
-        raw = struct.pack('!B', 255) + raw[1:]
+        raw = struct.pack("!B", 255) + raw[1:]
         os.chmod(path, os.stat(path).st_mode | stat.S_IWRITE)
-        with open(path, 'w+') as f:
+        with open(path, "w+") as f:
             f.write(raw)
 
         try:
@@ -299,12 +301,7 @@ class datapacktestsbase(object):
 
             for _ in range(revisionsperpack):
                 chain.append(revision)
-                revision = (
-                    str(i),
-                    self.getFakeHash(),
-                    revision[1],
-                    self.getFakeHash()
-                )
+                revision = (str(i), self.getFakeHash(), revision[1], self.getFakeHash())
 
             self.createPack(chain, packdir)
             deltachains.append(chain)
@@ -322,8 +319,7 @@ class datapacktestsbase(object):
 
             mostrecentpack = next(iter(store.packs), None)
             self.assertEquals(
-                mostrecentpack.getdeltachain(revision[0], revision[1]),
-                chain
+                mostrecentpack.getdeltachain(revision[0], revision[1]), chain
             )
 
             self.assertEquals(randomchain.index(revision) + 1, len(chain))
@@ -351,12 +347,7 @@ class datapacktestsbase(object):
 
             for _ in range(revisionsperpack):
                 chain.append(revision)
-                revision = (
-                    str(i),
-                    self.getFakeHash(),
-                    revision[1],
-                    self.getFakeHash()
-                )
+                revision = (str(i), self.getFakeHash(), revision[1], self.getFakeHash())
 
             pack = self.createPack(chain, packdir)
             if firstpack is None:
@@ -364,8 +355,7 @@ class datapacktestsbase(object):
             deltachains.append(chain)
 
         ui = mercurial.ui.ui()
-        store = datapackstore(ui, packdir, self.iscdatapack,
-                              deletecorruptpacks=True)
+        store = datapackstore(ui, packdir, self.iscdatapack, deletecorruptpacks=True)
 
         key = (deltachains[0][0][0], deltachains[0][0][1])
         # Count packs
@@ -376,7 +366,7 @@ class datapacktestsbase(object):
 
         # Corrupt pack
         os.chmod(firstpack, 0o644)
-        f = open(firstpack, 'w')
+        f = open(firstpack, "w")
         f.truncate(1)
         f.close()
 
@@ -384,8 +374,7 @@ class datapacktestsbase(object):
         try:
             ui.pushbuffer(error=True)
             delta = store.getdelta(*key)
-            raise RuntimeError("getdelta on corrupt key should fail %s" %
-                    repr(delta))
+            raise RuntimeError("getdelta on corrupt key should fail %s" % repr(delta))
         except KeyError:
             pass
         ui.popbuffer()
@@ -403,25 +392,25 @@ class datapacktestsbase(object):
         packer = mutabledatapack(mercurial.ui.ui(), packdir, version=1)
 
         # Add some unused first revision for noise
-        packer.add('qwert', self.getFakeHash(), self.getFakeHash(),
-                'qwertcontent')
+        packer.add("qwert", self.getFakeHash(), self.getFakeHash(), "qwertcontent")
 
-        filename = 'filename1'
+        filename = "filename1"
         node = self.getFakeHash()
         base = self.getFakeHash()
-        content = 'asdf'
-        meta = {constants.METAKEYFLAG: 1,
-                constants.METAKEYSIZE: len(content),
-                'Z': 'random_string',
-                '_': '\0' * 40}
+        content = "asdf"
+        meta = {
+            constants.METAKEYFLAG: 1,
+            constants.METAKEYSIZE: len(content),
+            "Z": "random_string",
+            "_": "\0" * 40,
+        }
         packer.add(filename, node, base, content, metadata=meta)
 
         # Add some unused third revision for noise
-        packer.add('zxcv', self.getFakeHash(), self.getFakeHash(),
-                'zcxvcontent')
+        packer.add("zxcv", self.getFakeHash(), self.getFakeHash(), "zcxvcontent")
 
         # Test getmissing
-        missing = ('', self.getFakeHash())
+        missing = ("", self.getFakeHash())
         value = packer.getmissing([missing, (filename, node)])
         self.assertEquals(value, [missing])
 
@@ -441,22 +430,8 @@ class datapacktestsbase(object):
     def _testIndexPerf(self):
         random.seed(0)
         print("Multi-get perf test")
-        packsizes = [
-            100,
-            10000,
-            100000,
-            500000,
-            1000000,
-            3000000,
-        ]
-        lookupsizes = [
-            10,
-            100,
-            1000,
-            10000,
-            100000,
-            1000000,
-        ]
+        packsizes = [100, 10000, 100000, 500000, 1000000, 3000000]
+        lookupsizes = [10, 100, 1000, 10000, 100000, 1000000]
         for packsize in packsizes:
             revisions = []
             for i in xrange(packsize):
@@ -469,6 +444,7 @@ class datapacktestsbase(object):
 
             # Perf of large multi-get
             import gc
+
             gc.disable()
             pack = self.datapackreader(path)
             for lookupsize in lookupsizes:
@@ -480,10 +456,14 @@ class datapacktestsbase(object):
                 start = time.time()
                 pack.getmissing(findnodes[:lookupsize])
                 elapsed = time.time() - start
-                print ("%s pack %s lookups = %0.04f" %
-                       (('%s' % packsize).rjust(7),
-                        ('%s' % lookupsize).rjust(7),
-                        elapsed))
+                print(
+                    "%s pack %s lookups = %0.04f"
+                    % (
+                        ("%s" % packsize).rjust(7),
+                        ("%s" % lookupsize).rjust(7),
+                        elapsed,
+                    )
+                )
 
             print("")
             gc.enable()
@@ -492,21 +472,25 @@ class datapacktestsbase(object):
         # so the user sees the output.
         raise RuntimeError("perf test always fails")
 
+
 class datapacktests(datapacktestsbase, unittest.TestCase):
+
     def __init__(self, *args, **kwargs):
         datapacktestsbase.__init__(self, datapack, True, False)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
+
 class fastdatapacktests(datapacktestsbase, unittest.TestCase):
+
     def __init__(self, *args, **kwargs):
         datapacktestsbase.__init__(self, fastdatapack, False, True)
         unittest.TestCase.__init__(self, *args, **kwargs)
+
 
 # TODO:
 # datapack store:
 # - getmissing
 # - GC two packs into one
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     silenttestrunner.main(__name__)
-

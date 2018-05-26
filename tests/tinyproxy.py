@@ -1,6 +1,16 @@
 #!/usr/bin/env python
+# @lint-ignore-every FBPYTHON4
 
 from __future__ import absolute_import, print_function
+
+import optparse
+import os
+import select
+import socket
+import sys
+
+from mercurial import util
+
 
 __doc__ = """Tiny HTTP Proxy.
 
@@ -14,33 +24,27 @@ Any help will be greatly appreciated.           SUZUKI Hisao
 
 __version__ = "0.2.1"
 
-import optparse
-import os
-import select
-import socket
-import sys
-
-from mercurial import util
 
 httpserver = util.httpserver
 socketserver = util.socketserver
 urlreq = util.urlreq
 
-if os.environ.get('HGIPV6', '0') == '1':
+if os.environ.get("HGIPV6", "0") == "1":
     family = socket.AF_INET6
 else:
     family = socket.AF_INET
 
-class ProxyHandler (httpserver.basehttprequesthandler):
+
+class ProxyHandler(httpserver.basehttprequesthandler):
     __base = httpserver.basehttprequesthandler
     __base_handle = __base.handle
 
     server_version = "TinyHTTPProxy/" + __version__
-    rbufsize = 0                        # self.rfile Be unbuffered
+    rbufsize = 0  # self.rfile Be unbuffered
 
     def handle(self):
         (ip, port) = self.client_address
-        allowed = getattr(self, 'allowed_clients', None)
+        allowed = getattr(self, "allowed_clients", None)
         if allowed is not None and ip not in allowed:
             self.raw_requestline = self.rfile.readline()
             if self.parse_request():
@@ -48,26 +52,33 @@ class ProxyHandler (httpserver.basehttprequesthandler):
         else:
             self.__base_handle()
 
-    def log_request(self, code='-', size='-'):
-        xheaders = [h for h in self.headers.items() if h[0].startswith('x-')]
-        self.log_message('"%s" %s %s%s',
-                         self.requestline, str(code), str(size),
-                         ''.join([' %s:%s' % h for h in sorted(xheaders)]))
+    def log_request(self, code="-", size="-"):
+        xheaders = [h for h in self.headers.items() if h[0].startswith("x-")]
+        self.log_message(
+            '"%s" %s %s%s',
+            self.requestline,
+            str(code),
+            str(size),
+            "".join([" %s:%s" % h for h in sorted(xheaders)]),
+        )
         # Flush for Windows, so output isn't lost on TerminateProcess()
         sys.stdout.flush()
         sys.stderr.flush()
 
     def _connect_to(self, netloc, soc):
-        i = netloc.find(':')
+        i = netloc.find(":")
         if i >= 0:
-            host_port = netloc[:i], int(netloc[i + 1:])
+            host_port = netloc[:i], int(netloc[i + 1 :])
         else:
             host_port = netloc, 80
         print("\t" "connect to %s:%d" % host_port)
-        try: soc.connect(host_port)
+        try:
+            soc.connect(host_port)
         except socket.error as arg:
-            try: msg = arg[1]
-            except (IndexError, TypeError): msg = arg
+            try:
+                msg = arg[1]
+            except (IndexError, TypeError):
+                msg = arg
             self.send_error(404, msg)
             return 0
         return 1
@@ -77,8 +88,9 @@ class ProxyHandler (httpserver.basehttprequesthandler):
         try:
             if self._connect_to(self.path, soc):
                 self.log_request(200)
-                self.wfile.write(self.protocol_version +
-                                 " 200 Connection established\r\n")
+                self.wfile.write(
+                    self.protocol_version + " 200 Connection established\r\n"
+                )
                 self.wfile.write("Proxy-agent: %s\r\n" % self.version_string())
                 self.wfile.write("\r\n")
                 self._read_write(soc, 300)
@@ -89,20 +101,25 @@ class ProxyHandler (httpserver.basehttprequesthandler):
 
     def do_GET(self):
         (scm, netloc, path, params, query, fragment) = urlreq.urlparse(
-            self.path, 'http')
-        if scm != 'http' or fragment or not netloc:
+            self.path, "http"
+        )
+        if scm != "http" or fragment or not netloc:
             self.send_error(400, "bad url %s" % self.path)
             return
         soc = socket.socket(family, socket.SOCK_STREAM)
         try:
             if self._connect_to(netloc, soc):
                 self.log_request()
-                soc.send("%s %s %s\r\n" % (
-                    self.command,
-                    urlreq.urlunparse(('', '', path, params, query, '')),
-                    self.request_version))
-                self.headers['Connection'] = 'close'
-                del self.headers['Proxy-Connection']
+                soc.send(
+                    "%s %s %s\r\n"
+                    % (
+                        self.command,
+                        urlreq.urlunparse(("", "", path, params, query, "")),
+                        self.request_version,
+                    )
+                )
+                self.headers["Connection"] = "close"
+                del self.headers["Proxy-Connection"]
                 for key_val in self.headers.items():
                     soc.send("%s: %s\r\n" % key_val)
                 soc.send("\r\n")
@@ -141,16 +158,18 @@ class ProxyHandler (httpserver.basehttprequesthandler):
 
     do_HEAD = do_GET
     do_POST = do_GET
-    do_PUT  = do_GET
+    do_PUT = do_GET
     do_DELETE = do_GET
 
-class ThreadingHTTPServer (socketserver.ThreadingMixIn,
-                           httpserver.httpserver):
+
+class ThreadingHTTPServer(socketserver.ThreadingMixIn, httpserver.httpserver):
+
     def __init__(self, *args, **kwargs):
         httpserver.httpserver.__init__(self, *args, **kwargs)
         a = open("proxy.pid", "w")
         a.write(str(os.getpid()) + "\n")
         a.close()
+
 
 def runserver(port=8000, bind=""):
     server_address = (bind, port)
@@ -165,9 +184,10 @@ def runserver(port=8000, bind=""):
         httpd.server_close()
         sys.exit(0)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     argv = sys.argv
-    if argv[1:] and argv[1] in ('-h', '--help'):
+    if argv[1:] and argv[1] in ("-h", "--help"):
         print(argv[0], "[port [allowed_client_name ...]]")
     else:
         if argv[2:]:
@@ -182,9 +202,13 @@ if __name__ == '__main__':
             print("Any clients will be served...")
 
         parser = optparse.OptionParser()
-        parser.add_option('-b', '--bind', metavar='ADDRESS',
-                          help='Specify alternate bind address '
-                               '[default: all interfaces]', default='')
+        parser.add_option(
+            "-b",
+            "--bind",
+            metavar="ADDRESS",
+            help="Specify alternate bind address " "[default: all interfaces]",
+            default="",
+        )
         (options, args) = parser.parse_args()
         port = 8000
         if len(args) == 1:

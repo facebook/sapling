@@ -12,9 +12,11 @@ Suitable for fixing files bdist_mpkg output:
 """
 
 from __future__ import absolute_import, print_function
+
 import gzip
 import os
 import sys
+
 
 def fixpax(iname, oname):
     i = gzip.GzipFile(iname)
@@ -25,8 +27,8 @@ def fixpax(iname, oname):
         dev = i.read(6)
         ino = i.read(6)
         mode = i.read(6)
-        i.read(6) # uid
-        i.read(6) # gid
+        i.read(6)  # uid
+        i.read(6)  # gid
         nlink = i.read(6)
         rdev = i.read(6)
         mtime = i.read(11)
@@ -56,9 +58,10 @@ def fixpax(iname, oname):
     o.close()
     i.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     for iname in sys.argv[1:]:
-        print('fixing file ownership in %s' % iname)
-        oname = sys.argv[1] + '.tmp'
+        print("fixing file ownership in %s" % iname)
+        oname = sys.argv[1] + ".tmp"
         fixpax(iname, oname)
         os.rename(oname, iname)

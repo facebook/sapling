@@ -10,17 +10,15 @@ from __future__ import absolute_import
 import re
 import string
 
+from . import error, pycompat, util
 from .i18n import _
-from . import (
-    error,
-    pycompat,
-    util,
-)
+
 
 try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 def parsedag(desc):
     '''parses a DAG from a concise textual description; generates events
@@ -189,17 +187,17 @@ def parsedag(desc):
     chiter = pycompat.iterbytestr(desc)
 
     def nextch():
-        return next(chiter, '\0')
+        return next(chiter, "\0")
 
     def nextrun(c, allow):
-        s = ''
+        s = ""
         while c in allow:
             s += c
             c = nextch()
         return c, s
 
     def nextdelimited(c, limit, escape):
-        s = ''
+        s = ""
         while c != limit:
             if c == escape:
                 c = nextch()
@@ -209,92 +207,94 @@ def parsedag(desc):
 
     def nextstring(c):
         if c == '"':
-            return nextdelimited(nextch(), '"', '\\')
+            return nextdelimited(nextch(), '"', "\\")
         else:
             return nextrun(c, wordchars)
 
     c = nextch()
-    while c != '\0':
+    while c != "\0":
         while c in pycompat.bytestr(string.whitespace):
             c = nextch()
-        if c == '.':
-            yield 'n', (r, [p1])
+        if c == ".":
+            yield "n", (r, [p1])
             p1 = r
             r += 1
             c = nextch()
-        elif c == '+':
+        elif c == "+":
             c, digs = nextrun(nextch(), pycompat.bytestr(string.digits))
             n = int(digs)
             for i in xrange(0, n):
-                yield 'n', (r, [p1])
+                yield "n", (r, [p1])
                 p1 = r
                 r += 1
-        elif c in '*/':
-            if c == '*':
+        elif c in "*/":
+            if c == "*":
                 c = nextch()
             c, pref = nextstring(c)
             prefs = [pref]
-            while c == '/':
+            while c == "/":
                 c, pref = nextstring(nextch())
                 prefs.append(pref)
             ps = [resolve(ref) for ref in prefs]
-            yield 'n', (r, ps)
+            yield "n", (r, ps)
             p1 = r
             r += 1
-        elif c == '<':
+        elif c == "<":
             c, ref = nextstring(nextch())
             p1 = resolve(ref)
-        elif c == ':':
+        elif c == ":":
             c, name = nextstring(nextch())
             labels[name] = p1
-            yield 'l', (p1, name)
-        elif c == '@':
+            yield "l", (p1, name)
+        elif c == "@":
             c, text = nextstring(nextch())
-            yield 'a', text
-        elif c == '!':
+            yield "a", text
+        elif c == "!":
             c = nextch()
-            if c == '!':
-                cmd = ''
+            if c == "!":
+                cmd = ""
                 c = nextch()
-                while c not in '\n\r\0':
+                while c not in "\n\r\0":
                     cmd += c
                     c = nextch()
-                yield 'C', cmd
+                yield "C", cmd
             else:
                 c, cmd = nextstring(c)
-                yield 'c', cmd
-        elif c == '#':
-            while c not in '\n\r\0':
+                yield "c", cmd
+        elif c == "#":
+            while c not in "\n\r\0":
                 c = nextch()
-        elif c == '$':
+        elif c == "$":
             p1 = -1
             c = nextch()
-        elif c == '\0':
-            return # in case it was preceded by whitespace
+        elif c == "\0":
+            return  # in case it was preceded by whitespace
         else:
-            s = ''
+            s = ""
             i = 0
-            while c != '\0' and i < 10:
+            while c != "\0" and i < 10:
                 s += c
                 i += 1
                 c = nextch()
-            raise error.Abort(_('invalid character in dag description: '
-                               '%s...') % s)
+            raise error.Abort(_("invalid character in dag description: " "%s...") % s)
 
-def dagtextlines(events,
-                 addspaces=True,
-                 wraplabels=False,
-                 wrapannotations=False,
-                 wrapcommands=False,
-                 wrapnonlinear=False,
-                 usedots=False,
-                 maxlinewidth=70):
-    '''generates single lines for dagtext()'''
+
+def dagtextlines(
+    events,
+    addspaces=True,
+    wraplabels=False,
+    wrapannotations=False,
+    wrapcommands=False,
+    wrapnonlinear=False,
+    usedots=False,
+    maxlinewidth=70,
+):
+    """generates single lines for dagtext()"""
 
     def wrapstring(text):
         if re.match("^[0-9a-z]*$", text):
             return text
-        return '"' + text.replace('\\', '\\\\').replace('"', '\"') + '"'
+        return '"' + text.replace("\\", "\\\\").replace('"', '"') + '"'
 
     def gen():
         labels = {}
@@ -302,7 +302,7 @@ def dagtextlines(events,
         wantr = 0
         needroot = False
         for kind, data in events:
-            if kind == 'n':
+            if kind == "n":
                 r, ps = data
 
                 # sanity check
@@ -313,8 +313,10 @@ def dagtextlines(events,
                 else:
                     for p in ps:
                         if p >= r:
-                            raise error.Abort(_("parent id %i is larger than "
-                                               "current id %i") % (p, r))
+                            raise error.Abort(
+                                _("parent id %i is larger than " "current id %i")
+                                % (p, r)
+                            )
                 wantr += 1
 
                 # new root?
@@ -322,11 +324,11 @@ def dagtextlines(events,
                 if len(ps) == 1 and ps[0] == -1:
                     if needroot:
                         if run:
-                            yield '+%d' % run
+                            yield "+%d" % run
                             run = 0
                         if wrapnonlinear:
-                            yield '\n'
-                        yield '$'
+                            yield "\n"
+                        yield "$"
                         p1 = -1
                     else:
                         needroot = True
@@ -337,76 +339,79 @@ def dagtextlines(events,
                         run += 1
                 else:
                     if run:
-                        yield '+%d' % run
+                        yield "+%d" % run
                         run = 0
                     if wrapnonlinear:
-                        yield '\n'
+                        yield "\n"
                     prefs = []
                     for p in ps:
                         if p == p1:
-                            prefs.append('')
+                            prefs.append("")
                         elif p in labels:
                             prefs.append(labels[p])
                         else:
-                            prefs.append('%d' % (r - p))
-                    yield '*' + '/'.join(prefs)
+                            prefs.append("%d" % (r - p))
+                    yield "*" + "/".join(prefs)
             else:
                 if run:
-                    yield '+%d' % run
+                    yield "+%d" % run
                     run = 0
-                if kind == 'l':
+                if kind == "l":
                     rid, name = data
                     labels[rid] = name
-                    yield ':' + name
+                    yield ":" + name
                     if wraplabels:
-                        yield '\n'
-                elif kind == 'c':
-                    yield '!' + wrapstring(data)
+                        yield "\n"
+                elif kind == "c":
+                    yield "!" + wrapstring(data)
                     if wrapcommands:
-                        yield '\n'
-                elif kind == 'C':
-                    yield '!!' + data
-                    yield '\n'
-                elif kind == 'a':
+                        yield "\n"
+                elif kind == "C":
+                    yield "!!" + data
+                    yield "\n"
+                elif kind == "a":
                     if wrapannotations:
-                        yield '\n'
-                    yield '@' + wrapstring(data)
-                elif kind == '#':
-                    yield '#' + data
-                    yield '\n'
+                        yield "\n"
+                    yield "@" + wrapstring(data)
+                elif kind == "#":
+                    yield "#" + data
+                    yield "\n"
                 else:
-                    raise error.Abort(_("invalid event type in dag: "
-                                        "('%s', '%s')")
-                                      % (util.escapestr(kind),
-                                         util.escapestr(data)))
+                    raise error.Abort(
+                        _("invalid event type in dag: " "('%s', '%s')")
+                        % (util.escapestr(kind), util.escapestr(data))
+                    )
         if run:
-            yield '+%d' % run
+            yield "+%d" % run
 
-    line = ''
+    line = ""
     for part in gen():
-        if part == '\n':
+        if part == "\n":
             if line:
                 yield line
-                line = ''
+                line = ""
         else:
             if len(line) + len(part) >= maxlinewidth:
                 yield line
-                line = ''
-            elif addspaces and line and part != '.':
-                line += ' '
+                line = ""
+            elif addspaces and line and part != ".":
+                line += " "
             line += part
     if line:
         yield line
 
-def dagtext(dag,
-            addspaces=True,
-            wraplabels=False,
-            wrapannotations=False,
-            wrapcommands=False,
-            wrapnonlinear=False,
-            usedots=False,
-            maxlinewidth=70):
-    '''generates lines of a textual representation for a dag event stream
+
+def dagtext(
+    dag,
+    addspaces=True,
+    wraplabels=False,
+    wrapannotations=False,
+    wrapcommands=False,
+    wrapnonlinear=False,
+    usedots=False,
+    maxlinewidth=70,
+):
+    """generates lines of a textual representation for a dag event stream
 
     events should generate what parsedag() does, so:
 
@@ -482,12 +487,16 @@ def dagtext(dag,
         >>> dagtext(parsedag(b'+1 :f +1 :p2 *f */p2'))
         '+1 :f +1 :p2 *f */p2'
 
-    '''
-    return "\n".join(dagtextlines(dag,
-                                  addspaces,
-                                  wraplabels,
-                                  wrapannotations,
-                                  wrapcommands,
-                                  wrapnonlinear,
-                                  usedots,
-                                  maxlinewidth))
+    """
+    return "\n".join(
+        dagtextlines(
+            dag,
+            addspaces,
+            wraplabels,
+            wrapannotations,
+            wrapcommands,
+            wrapnonlinear,
+            usedots,
+            maxlinewidth,
+        )
+    )

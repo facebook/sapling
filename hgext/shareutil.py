@@ -7,13 +7,12 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
-    hg,
-)
+from mercurial import hg
+
 
 def getsrcrepo(repo):
-    '''returns main repo in case of shared woking copy
-    '''
+    """returns main repo in case of shared woking copy
+    """
     if repo.sharedpath == repo.path:
         return repo
 

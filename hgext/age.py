@@ -17,21 +17,19 @@ The built-in `date()` predicate does provide full day resolution, so
 """
 
 from __future__ import absolute_import
-import time
-import re
 
-from mercurial import (
-    error,
-    registrar,
-    revsetlang,
-)
+import re
+import time
+
+from mercurial import error, registrar, revsetlang
+
 
 revsetpredicate = registrar.revsetpredicate()
 
-_rangeparser = re.compile(
-        r'^([<>])(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$')
+_rangeparser = re.compile(r"^([<>])(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$")
 
-@revsetpredicate('age(string)')
+
+@revsetpredicate("age(string)")
 def age(repo, subset, x):
     """Changesets that are older or newer than a specific age.
 
@@ -43,10 +41,10 @@ def age(repo, subset, x):
 
     If no unit is specified, seconds are assumed.
     """
-    agerange = revsetlang.getstring(x, 'age requires an age range')
+    agerange = revsetlang.getstring(x, "age requires an age range")
     m = _rangeparser.match(agerange)
     if not m:
-        raise error.ParseError('invalid age range for age predicate')
+        raise error.ParseError("invalid age range for age predicate")
     dirn, days, hours, minutes, seconds = m.groups()
     cutoff = time.time()
     cutoff -= int(days or 0) * 60 * 60 * 24
@@ -60,7 +58,7 @@ def age(repo, subset, x):
     def older(x):
         return repo[x].date()[0] < cutoff
 
-    if dirn == '<':
-        return subset.filter(newer, condrepr=('<age %r>', agerange))
+    if dirn == "<":
+        return subset.filter(newer, condrepr=("<age %r>", agerange))
     else:
-        return subset.filter(older, condrepr=('<age %r>', agerange))
+        return subset.filter(older, condrepr=("<age %r>", agerange))

@@ -103,32 +103,22 @@ from __future__ import absolute_import
 import errno
 import struct
 
+from . import error, pycompat, smartset, txnutil, util
 from .i18n import _
-from .node import (
-    bin,
-    hex,
-    nullid,
-    nullrev,
-    short,
-)
-from . import (
-    error,
-    pycompat,
-    smartset,
-    txnutil,
-    util,
-)
+from .node import bin, hex, nullid, nullrev, short
 
-_fphasesentry = struct.Struct('>i20s')
+
+_fphasesentry = struct.Struct(">i20s")
 
 allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
-phasenames = ['public', 'draft', 'secret']
+phasenames = ["public", "draft", "secret"]
 
 try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 def _readroots(repo, phasedefaults=None):
     """Read phase roots from disk
@@ -145,7 +135,7 @@ def _readroots(repo, phasedefaults=None):
     dirty = False
     roots = [set() for i in allphases]
     try:
-        f, pending = txnutil.trypending(repo.root, repo.svfs, 'phaseroots')
+        f, pending = txnutil.trypending(repo.root, repo.svfs, "phaseroots")
         try:
             for line in f:
                 phase, nh = line.split()
@@ -161,6 +151,7 @@ def _readroots(repo, phasedefaults=None):
         dirty = True
     return roots, dirty
 
+
 def binaryencode(phasemapping):
     """encode a 'phase -> nodes' mapping into a binary stream
 
@@ -171,7 +162,8 @@ def binaryencode(phasemapping):
     for phase, nodes in enumerate(phasemapping):
         for head in nodes:
             binarydata.append(_fphasesentry.pack(phase, head))
-    return ''.join(binarydata)
+    return "".join(binarydata)
+
 
 def binarydecode(stream):
     """decode a binary stream into a 'phase -> nodes' mapping
@@ -183,11 +175,12 @@ def binarydecode(stream):
         entry = stream.read(entrysize)
         if len(entry) < entrysize:
             if entry:
-                raise error.Abort(_('bad phase-heads stream'))
+                raise error.Abort(_("bad phase-heads stream"))
             break
         phase, node = _fphasesentry.unpack(entry)
         headsbyphase[phase].append(node)
     return headsbyphase
+
 
 def _trackphasechange(data, rev, old, new):
     """add a phase move the <data> dictionnary
@@ -201,7 +194,9 @@ def _trackphasechange(data, rev, old, new):
         old = existing[0]
     data[rev] = (old, new)
 
+
 class phasecache(object):
+
     def __init__(self, repo, phasedefaults, _load=True):
         if _load:
             # Cheap trick to allow shallow-copy without copy module
@@ -213,7 +208,7 @@ class phasecache(object):
 
     def getrevset(self, repo, phases, subset=None):
         """return a smartset for the given phases"""
-        self.loadphaserevs(repo) # ensure phase's sets are loaded
+        self.loadphaserevs(repo)  # ensure phase's sets are loaded
         phases = set(phases)
         if public not in phases:
             # fast path: _phasesets contains the interesting sets,
@@ -257,8 +252,7 @@ class phasecache(object):
 
     def replace(self, phcache):
         """replace all values in 'self' with content of phcache"""
-        for a in ('phaseroots', 'dirty', 'opener', '_loadedrevslen',
-                  '_phasesets'):
+        for a in ("phaseroots", "dirty", "opener", "_loadedrevslen", "_phasesets"):
             setattr(self, a, getattr(phcache, a))
 
     def _getphaserevsnative(self, repo):
@@ -309,7 +303,7 @@ class phasecache(object):
         if rev == nullrev:
             return public
         if rev < nullrev:
-            raise ValueError(_('cannot lookup negative revision'))
+            raise ValueError(_("cannot lookup negative revision"))
         if rev >= self._loadedrevslen:
             self.invalidate()
             self.loadphaserevs(repo)
@@ -321,7 +315,7 @@ class phasecache(object):
     def write(self):
         if not self.dirty:
             return
-        f = self.opener('phaseroots', 'w', atomictemp=True, checkambig=True)
+        f = self.opener("phaseroots", "w", atomictemp=True, checkambig=True)
         try:
             self._write(f)
         finally:
@@ -330,7 +324,7 @@ class phasecache(object):
     def _write(self, fp):
         for phase, roots in enumerate(self.phaseroots):
             for h in roots:
-                fp.write('%i %s\n' % (phase, hex(h)))
+                fp.write("%i %s\n" % (phase, hex(h)))
         self.dirty = False
 
     def _updateroots(self, phase, newroots, tr):
@@ -338,14 +332,14 @@ class phasecache(object):
         self.invalidate()
         self.dirty = True
 
-        tr.addfilegenerator('phase', ('phaseroots',), self._write)
-        tr.hookargs['phases_moved'] = '1'
+        tr.addfilegenerator("phase", ("phaseroots",), self._write)
+        tr.hookargs["phases_moved"] = "1"
 
     def registernew(self, repo, tr, targetphase, nodes):
         repo = repo.unfiltered()
         self._retractboundary(repo, tr, targetphase, nodes)
-        if tr is not None and 'phases' in tr.changes:
-            phasetracking = tr.changes['phases']
+        if tr is not None and "phases" in tr.changes:
+            phasetracking = tr.changes["phases"]
             torev = repo.changelog.rev
             phase = self.phase
             for n in nodes:
@@ -364,27 +358,26 @@ class phasecache(object):
         if tr is None:
             phasetracking = None
         else:
-            phasetracking = tr.changes.get('phases')
+            phasetracking = tr.changes.get("phases")
 
         repo = repo.unfiltered()
 
-        delroots = [] # set of root deleted by this path
+        delroots = []  # set of root deleted by this path
         for phase in xrange(targetphase + 1, len(allphases)):
             # filter nodes that are not in a compatible phase already
-            nodes = [n for n in nodes
-                     if self.phase(repo, repo[n].rev()) >= phase]
+            nodes = [n for n in nodes if self.phase(repo, repo[n].rev()) >= phase]
             if not nodes:
-                break # no roots to move anymore
+                break  # no roots to move anymore
 
             olds = self.phaseroots[phase]
 
-            affected = repo.revs('%ln::%ln', olds, nodes)
+            affected = repo.revs("%ln::%ln", olds, nodes)
             for r in affected:
-                _trackphasechange(phasetracking, r, self.phase(repo, r),
-                                  targetphase)
+                _trackphasechange(phasetracking, r, self.phase(repo, r), targetphase)
 
-            roots = set(ctx.node() for ctx in repo.set(
-                    'roots((%ln::) - %ld)', olds, affected))
+            roots = set(
+                ctx.node() for ctx in repo.set("roots((%ln::) - %ld)", olds, affected)
+            )
             if olds != roots:
                 self._updateroots(phase, roots, tr)
                 # some roots may need to be declared for lower phases
@@ -395,27 +388,29 @@ class phasecache(object):
         repo.invalidatevolatilesets()
 
     def retractboundary(self, repo, tr, targetphase, nodes):
-        oldroots = self.phaseroots[:targetphase + 1]
+        oldroots = self.phaseroots[: targetphase + 1]
         if tr is None:
             phasetracking = None
         else:
-            phasetracking = tr.changes.get('phases')
+            phasetracking = tr.changes.get("phases")
         repo = repo.unfiltered()
-        if (self._retractboundary(repo, tr, targetphase, nodes)
-            and phasetracking is not None):
+        if (
+            self._retractboundary(repo, tr, targetphase, nodes)
+            and phasetracking is not None
+        ):
 
             # find the affected revisions
             new = self.phaseroots[targetphase]
             old = oldroots[targetphase]
-            affected = set(repo.revs('(%ln::) - (%ln::)', new, old))
+            affected = set(repo.revs("(%ln::) - (%ln::)", new, old))
 
             # find the phase of the affected revision
             for phase in xrange(targetphase, -1, -1):
                 if phase:
                     roots = oldroots[phase]
-                    revs = set(repo.revs('%ln::%ld', roots, affected))
+                    revs = set(repo.revs("%ln::%ld", roots, affected))
                     affected -= revs
-                else: # public phase
+                else:  # public phase
                     revs = affected
                 for r in revs:
                     _trackphasechange(phasetracking, r, phase, targetphase)
@@ -428,24 +423,21 @@ class phasecache(object):
         repo = repo.unfiltered()
         currentroots = self.phaseroots[targetphase]
         finalroots = oldroots = set(currentroots)
-        newroots = [n for n in nodes
-                    if self.phase(repo, repo[n].rev()) < targetphase]
+        newroots = [n for n in nodes if self.phase(repo, repo[n].rev()) < targetphase]
         if newroots:
 
             if nullid in newroots:
-                raise error.Abort(_('cannot change null revision phase'))
+                raise error.Abort(_("cannot change null revision phase"))
             currentroots = currentroots.copy()
             currentroots.update(newroots)
 
             # Only compute new roots for revs above the roots that are being
             # retracted.
             minnewroot = min(repo[n].rev() for n in newroots)
-            aboveroots = [n for n in currentroots
-                          if repo[n].rev() >= minnewroot]
-            updatedroots = repo.set('roots(%ln::)', aboveroots)
+            aboveroots = [n for n in currentroots if repo[n].rev() >= minnewroot]
+            updatedroots = repo.set("roots(%ln::)", aboveroots)
 
-            finalroots = set(n for n in currentroots if repo[n].rev() <
-                             minnewroot)
+            finalroots = set(n for n in currentroots if repo[n].rev() < minnewroot)
             finalroots.update(ctx.node() for ctx in updatedroots)
         if finalroots != oldroots:
             self._updateroots(targetphase, finalroots, tr)
@@ -458,14 +450,15 @@ class phasecache(object):
         Nothing is lost as unknown nodes only hold data for their descendants.
         """
         filtered = False
-        nodemap = repo.changelog.nodemap # to filter unknown nodes
+        nodemap = repo.changelog.nodemap  # to filter unknown nodes
         for phase, nodes in enumerate(self.phaseroots):
             missing = sorted(node for node in nodes if node not in nodemap)
             if missing:
                 for mnode in missing:
                     repo.ui.debug(
-                        'removing unknown node %s from %i-phase boundary\n'
-                        % (short(mnode), phase))
+                        "removing unknown node %s from %i-phase boundary\n"
+                        % (short(mnode), phase)
+                    )
                 nodes.symmetric_difference_update(missing)
                 filtered = True
         if filtered:
@@ -480,6 +473,7 @@ class phasecache(object):
         # (see branchmap one)
         self.invalidate()
 
+
 def advanceboundary(repo, tr, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
 
@@ -490,6 +484,7 @@ def advanceboundary(repo, tr, targetphase, nodes):
     phcache = repo._phasecache.copy()
     phcache.advanceboundary(repo, tr, targetphase, nodes)
     repo._phasecache.replace(phcache)
+
 
 def retractboundary(repo, tr, targetphase, nodes):
     """Set nodes back to a phase changing other nodes phases if
@@ -503,6 +498,7 @@ def retractboundary(repo, tr, targetphase, nodes):
     phcache.retractboundary(repo, tr, targetphase, nodes)
     repo._phasecache.replace(phcache)
 
+
 def registernew(repo, tr, targetphase, nodes):
     """register a new revision and its phase
 
@@ -513,11 +509,12 @@ def registernew(repo, tr, targetphase, nodes):
     phcache.registernew(repo, tr, targetphase, nodes)
     repo._phasecache.replace(phcache)
 
+
 def listphases(repo):
     """List phases root for serialization over pushkey"""
     # Use ordered dictionary so behavior is deterministic.
     keys = util.sortdict()
-    value = '%i' % draft
+    value = "%i" % draft
     cl = repo.unfiltered().changelog
     for root in repo._phasecache.phaseroots[draft]:
         if repo._phasecache.phase(repo, cl.rev(root)) <= draft:
@@ -540,18 +537,19 @@ def listphases(repo):
         #
         # The server can't handle it on it's own as it has no idea of
         # client phase data.
-        keys['publishing'] = 'True'
+        keys["publishing"] = "True"
     return keys
+
 
 def pushphase(repo, nhex, oldphasestr, newphasestr):
     """List phases root for serialization over pushkey"""
     repo = repo.unfiltered()
     with repo.lock():
         currentphase = repo[nhex].phase()
-        newphase = abs(int(newphasestr)) # let's avoid negative index surprise
-        oldphase = abs(int(oldphasestr)) # let's avoid negative index surprise
+        newphase = abs(int(newphasestr))  # let's avoid negative index surprise
+        oldphase = abs(int(oldphasestr))  # let's avoid negative index surprise
         if currentphase == oldphase and newphase < oldphase:
-            with repo.transaction('pushkey-phase') as tr:
+            with repo.transaction("pushkey-phase") as tr:
                 advanceboundary(repo, tr, newphase, [bin(nhex)])
             return True
         elif currentphase == newphase:
@@ -559,6 +557,7 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
             return True
         else:
             return False
+
 
 def subsetphaseheads(repo, subset):
     """Finds the phase heads for a subset of a history
@@ -576,6 +575,7 @@ def subsetphaseheads(repo, subset):
         headsbyphase[phase] = [cl.node(r) for r in repo.revs(revset, subset)]
     return headsbyphase
 
+
 def updatephases(repo, trgetter, headsbyphase):
     """Updates the repo with the given phase heads"""
     # Now advance phase boundaries of all but secret phase
@@ -584,10 +584,11 @@ def updatephases(repo, trgetter, headsbyphase):
     # to update. This avoid creating empty transaction during no-op operation.
 
     for phase in allphases[:-1]:
-        revset = '%%ln - %s()' % phasenames[phase]
+        revset = "%%ln - %s()" % phasenames[phase]
         heads = [c.node() for c in repo.set(revset, headsbyphase[phase])]
         if heads:
             advanceboundary(repo, trgetter(), phase, heads)
+
 
 def analyzeremotephases(repo, subset, roots):
     """Compute phases heads and root in a subset of node from root dict
@@ -600,25 +601,28 @@ def analyzeremotephases(repo, subset, roots):
     repo = repo.unfiltered()
     # build list from dictionary
     draftroots = []
-    nodemap = repo.changelog.nodemap # to filter unknown nodes
+    nodemap = repo.changelog.nodemap  # to filter unknown nodes
     for nhex, phase in roots.iteritems():
-        if nhex == 'publishing': # ignore data related to publish option
+        if nhex == "publishing":  # ignore data related to publish option
             continue
         node = bin(nhex)
         phase = int(phase)
         if phase == public:
             if node != nullid:
-                repo.ui.warn(_('ignoring inconsistent public root'
-                               ' from remote: %s\n') % nhex)
+                repo.ui.warn(
+                    _("ignoring inconsistent public root" " from remote: %s\n") % nhex
+                )
         elif phase == draft:
             if node in nodemap:
                 draftroots.append(node)
         else:
-            repo.ui.warn(_('ignoring unexpected root from remote: %i %s\n')
-                         % (phase, nhex))
+            repo.ui.warn(
+                _("ignoring unexpected root from remote: %i %s\n") % (phase, nhex)
+            )
     # compute heads
     publicheads = newheads(repo, subset, draftroots)
     return publicheads, draftroots
+
 
 class remotephasessummary(object):
     """summarize phase information on the remote side
@@ -633,13 +637,14 @@ class remotephasessummary(object):
         unfi = repo.unfiltered()
         self._allremoteroots = remoteroots
 
-        self.publishing = remoteroots.get('publishing', False)
+        self.publishing = remoteroots.get("publishing", False)
 
         ana = analyzeremotephases(repo, remotesubset, remoteroots)
         self.publicheads, self.draftroots = ana
         # Get the list of all "heads" revs draft on remote
-        dheads = unfi.set('heads(%ln::%ln)', self.draftroots, remotesubset)
+        dheads = unfi.set("heads(%ln::%ln)", self.draftroots, remotesubset)
         self.draftheads = [c.node() for c in dheads]
+
 
 def newheads(repo, heads, roots):
     """compute new head of a subset minus another
@@ -647,9 +652,11 @@ def newheads(repo, heads, roots):
     * `heads`: define the first subset
     * `roots`: define the second we subtract from the first"""
     repo = repo.unfiltered()
-    revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
-                      heads, roots, roots, heads)
+    revset = repo.set(
+        "heads((%ln + parents(%ln)) - (%ln::%ln))", heads, roots, roots, heads
+    )
     return [c.node() for c in revset]
+
 
 def newcommitphase(ui):
     """helper to get the target phase of new commit
@@ -657,7 +664,7 @@ def newcommitphase(ui):
     Handle all possible values for the phases.new-commit options.
 
     """
-    v = ui.config('phases', 'new-commit')
+    v = ui.config("phases", "new-commit")
     try:
         return phasenames.index(v)
     except ValueError:
@@ -667,15 +674,15 @@ def newcommitphase(ui):
             msg = _("phases.new-commit: not a valid phase name ('%s')")
             raise error.ConfigError(msg % v)
 
+
 def hassecret(repo):
     """utility function that check if a repo have any secret changeset."""
     return bool(repo._phasecache.phaseroots[2])
 
+
 def preparehookargs(node, old, new):
     if old is None:
-        old = ''
+        old = ""
     else:
         old = phasenames[old]
-    return {'node': node,
-            'oldphase': old,
-            'phase': phasenames[new]}
+    return {"node": node, "oldphase": old, "phase": phasenames[new]}

@@ -7,13 +7,9 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
-    error,
-    registrar,
-    revsetlang,
-)
-
 from hgext import rebase
+from mercurial import error, registrar, revsetlang
+
 
 try:
     xrange
@@ -23,7 +19,8 @@ except NameError:
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-@command(b'debugbruterebase')
+
+@command(b"debugbruterebase")
 def debugbruterebase(ui, repo, source, dest):
     """for every non-empty subset of source, run rebase -r subset -d dest
 
@@ -43,32 +40,32 @@ def debugbruterebase(ui, repo, source, dest):
 
         for i in xrange(1, 2 ** len(srevs)):
             subset = [rev for j, rev in enumerate(srevs) if i & (1 << j) != 0]
-            spec = revsetlang.formatspec(b'%ld', subset)
-            tr = repo.transaction(b'rebase')
-            tr.report = lambda x: 0 # hide "transaction abort"
+            spec = revsetlang.formatspec(b"%ld", subset)
+            tr = repo.transaction(b"rebase")
+            tr.report = lambda x: 0  # hide "transaction abort"
 
             ui.pushbuffer()
             try:
                 rebase.rebase(ui, repo, dest=dest, rev=[spec])
             except error.Abort as ex:
-                summary = b'ABORT: %s' % ex
+                summary = b"ABORT: %s" % ex
             except Exception as ex:
-                summary = b'CRASH: %s' % ex
+                summary = b"CRASH: %s" % ex
             else:
                 # short summary about new nodes
                 cl = repo.changelog
                 descs = []
                 for rev in xrange(repolen, len(repo)):
-                    desc = b'%s:' % getdesc(rev)
+                    desc = b"%s:" % getdesc(rev)
                     for prev in cl.parentrevs(rev):
                         if prev > -1:
                             desc += getdesc(prev)
                     descs.append(desc)
                 descs.sort()
-                summary = ' '.join(descs)
+                summary = " ".join(descs)
             ui.popbuffer()
-            repo.vfs.tryunlink(b'rebasestate')
+            repo.vfs.tryunlink(b"rebasestate")
 
-            subsetdesc = b''.join(getdesc(rev) for rev in subset)
-            ui.write((b'%s: %s\n') % (subsetdesc.rjust(len(srevs)), summary))
+            subsetdesc = b"".join(getdesc(rev) for rev in subset)
+            ui.write((b"%s: %s\n") % (subsetdesc.rjust(len(srevs)), summary))
             tr.abort()

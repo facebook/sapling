@@ -4,72 +4,77 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from mercurial import (
-    encoding,
-    node,
-    revlog,
-    transaction,
-    vfs,
-)
+from mercurial import encoding, node, revlog, transaction, vfs
+
 
 # TESTTMP is optional. This makes it convenient to run without run-tests.py
-tvfs = vfs.vfs(encoding.environ.get('TESTTMP', b'/tmp'))
+tvfs = vfs.vfs(encoding.environ.get("TESTTMP", b"/tmp"))
 
 # Enable generaldelta otherwise revlog won't use delta as expected by the test
-tvfs.options = {'generaldelta': True, 'revlogv1': True}
+tvfs.options = {"generaldelta": True, "revlogv1": True}
 
 # The test wants to control whether to use delta explicitly, based on
 # "storedeltachains".
 revlog.revlog._isgooddelta = lambda self, d, tlen: d and self.storedeltachains
 
+
 def abort(msg):
-    print('abort: %s' % msg)
+    print("abort: %s" % msg)
     # Return 0 so run-tests.py could compare the output.
     sys.exit()
+
 
 # Register a revlog processor for flag EXTSTORED.
 #
 # It simply prepends a fixed header, and replaces '1' to 'i'. So it has
 # insertion and replacement, and may be interesting to test revlog's line-based
 # deltas.
-_extheader = b'E\n'
+_extheader = b"E\n"
+
 
 def readprocessor(self, rawtext):
     # True: the returned text could be used to verify hash
-    text = rawtext[len(_extheader):].replace(b'i', b'1')
+    text = rawtext[len(_extheader) :].replace(b"i", b"1")
     return text, True
+
 
 def writeprocessor(self, text):
     # False: the returned rawtext shouldn't be used to verify hash
-    rawtext = _extheader + text.replace(b'1', b'i')
+    rawtext = _extheader + text.replace(b"1", b"i")
     return rawtext, False
+
 
 def rawprocessor(self, rawtext):
     # False: do not verify hash. Only the content returned by "readprocessor"
     # can be used to verify hash.
     return False
 
-revlog.addflagprocessor(revlog.REVIDX_EXTSTORED,
-                        (readprocessor, writeprocessor, rawprocessor))
+
+revlog.addflagprocessor(
+    revlog.REVIDX_EXTSTORED, (readprocessor, writeprocessor, rawprocessor)
+)
 
 # Utilities about reading and appending revlog
+
 
 def newtransaction():
     # A transaction is required to write revlogs
     report = lambda msg: None
-    return transaction.transaction(report, tvfs, {'plain': tvfs}, b'journal')
+    return transaction.transaction(report, tvfs, {"plain": tvfs}, b"journal")
 
-def newrevlog(name=b'_testrevlog.i', recreate=False):
+
+def newrevlog(name=b"_testrevlog.i", recreate=False):
     if recreate:
         tvfs.tryunlink(name)
     rlog = revlog.revlog(tvfs, name)
     return rlog
 
+
 def appendrev(rlog, text, tr, isext=False, isdelta=True):
-    '''Append a revision. If isext is True, set the EXTSTORED flag so flag
+    """Append a revision. If isext is True, set the EXTSTORED flag so flag
     processor will be used (and rawtext is different from text). If isdelta is
     True, force the revision to be a delta, otherwise it's full text.
-    '''
+    """
     nextrev = len(rlog)
     p1 = rlog.node(nextrev - 1)
     p2 = node.nullid
@@ -83,13 +88,14 @@ def appendrev(rlog, text, tr, isext=False, isdelta=True):
         rlog.addrevision(text, tr, nextrev, p1, p2, flags=flags)
         return nextrev
     except Exception as ex:
-        abort('rev %d: failed to append: %s' % (nextrev, ex))
+        abort("rev %d: failed to append: %s" % (nextrev, ex))
     finally:
         # Restore storedeltachains. It is always True, see revlog.__init__
         rlog.storedeltachains = True
 
-def addgroupcopy(rlog, tr, destname=b'_destrevlog.i', optimaldelta=True):
-    '''Copy revlog to destname using revlog.addgroup. Return the copied revlog.
+
+def addgroupcopy(rlog, tr, destname=b"_destrevlog.i", optimaldelta=True):
+    """Copy revlog to destname using revlog.addgroup. Return the copied revlog.
 
     This emulates push or pull. They use changegroup. Changegroup requires
     repo to work. We don't have a repo, so a dummy changegroup is used.
@@ -100,8 +106,10 @@ def addgroupcopy(rlog, tr, destname=b'_destrevlog.i', optimaldelta=True):
 
     This exercises some revlog.addgroup (and revlog._addrevision(text=None))
     code path, which is not covered by "appendrev" alone.
-    '''
+    """
+
     class dummychangegroup(object):
+
         @staticmethod
         def deltachunk(pnode):
             pnode = pnode or node.nullid
@@ -116,21 +124,26 @@ def addgroupcopy(rlog, tr, destname=b'_destrevlog.i', optimaldelta=True):
                 deltaparent = min(0, parentrev)
             if not rlog.candelta(deltaparent, r):
                 deltaparent = -1
-            return {'node': rlog.node(r), 'p1': pnode, 'p2': node.nullid,
-                    'cs': rlog.node(rlog.linkrev(r)), 'flags': rlog.flags(r),
-                    'deltabase': rlog.node(deltaparent),
-                    'delta': rlog.revdiff(deltaparent, r)}
+            return {
+                "node": rlog.node(r),
+                "p1": pnode,
+                "p2": node.nullid,
+                "cs": rlog.node(rlog.linkrev(r)),
+                "flags": rlog.flags(r),
+                "deltabase": rlog.node(deltaparent),
+                "delta": rlog.revdiff(deltaparent, r),
+            }
 
         def deltaiter(self):
             chain = None
             for chunkdata in iter(lambda: self.deltachunk(chain), {}):
-                node = chunkdata['node']
-                p1 = chunkdata['p1']
-                p2 = chunkdata['p2']
-                cs = chunkdata['cs']
-                deltabase = chunkdata['deltabase']
-                delta = chunkdata['delta']
-                flags = chunkdata['flags']
+                node = chunkdata["node"]
+                p1 = chunkdata["p1"]
+                p2 = chunkdata["p2"]
+                cs = chunkdata["cs"]
+                deltabase = chunkdata["deltabase"]
+                delta = chunkdata["delta"]
+                flags = chunkdata["flags"]
 
                 chain = node
 
@@ -144,11 +157,12 @@ def addgroupcopy(rlog, tr, destname=b'_destrevlog.i', optimaldelta=True):
     dlog.addgroup(dummydeltas, linkmap, tr)
     return dlog
 
-def lowlevelcopy(rlog, tr, destname=b'_destrevlog.i'):
-    '''Like addgroupcopy, but use the low level revlog._addrevision directly.
+
+def lowlevelcopy(rlog, tr, destname=b"_destrevlog.i"):
+    """Like addgroupcopy, but use the low level revlog._addrevision directly.
 
     It exercises some code paths that are hard to reach easily otherwise.
-    '''
+    """
     dlog = newrevlog(destname, recreate=True)
     for r in rlog:
         p1 = rlog.node(r - 1)
@@ -164,11 +178,12 @@ def lowlevelcopy(rlog, tr, destname=b'_destrevlog.i'):
         flags = rlog.flags(r)
         ifh = dfh = None
         try:
-            ifh = dlog.opener(dlog.indexfile, 'a+')
+            ifh = dlog.opener(dlog.indexfile, "a+")
             if not dlog._inline:
-                dfh = dlog.opener(dlog.datafile, 'a+')
-            dlog._addrevision(rlog.node(r), text, tr, r, p1, p2, flags,
-                              cachedelta, ifh, dfh)
+                dfh = dlog.opener(dlog.datafile, "a+")
+            dlog._addrevision(
+                rlog.node(r), text, tr, r, p1, p2, flags, cachedelta, ifh, dfh
+            )
         finally:
             if dfh is not None:
                 dfh.close()
@@ -176,16 +191,18 @@ def lowlevelcopy(rlog, tr, destname=b'_destrevlog.i'):
                 ifh.close()
     return dlog
 
+
 # Utilities to generate revisions for testing
 
+
 def genbits(n):
-    '''Given a number n, generate (2 ** (n * 2) + 1) numbers in range(2 ** n).
+    """Given a number n, generate (2 ** (n * 2) + 1) numbers in range(2 ** n).
     i.e. the generated numbers have a width of n bits.
 
     The combination of two adjacent numbers will cover all possible cases.
     That is to say, given any x, y where both x, and y are in range(2 ** n),
     there is an x followed immediately by y in the generated sequence.
-    '''
+    """
     m = 2 ** n
 
     # Gray Code. See https://en.wikipedia.org/wiki/Gray_code
@@ -209,12 +226,14 @@ def genbits(n):
         x = y
         yield x
 
+
 def gentext(rev):
-    '''Given a revision number, generate dummy text'''
-    return b''.join(b'%d\n' % j for j in range(-1, rev % 5))
+    """Given a revision number, generate dummy text"""
+    return b"".join(b"%d\n" % j for j in range(-1, rev % 5))
+
 
 def writecases(rlog, tr):
-    '''Write some revisions interested to the test.
+    """Write some revisions interested to the test.
 
     The test is interested in 3 properties of a revision:
 
@@ -240,12 +259,12 @@ def writecases(rlog, tr):
     mentioned above.
 
     Return expected [(text, rawtext)].
-    '''
+    """
     result = []
     for i, x in enumerate(genbits(3)):
         isdelta, isext, isempty = bool(x & 1), bool(x & 2), bool(x & 4)
         if isempty:
-            text = b''
+            text = b""
         else:
             text = gentext(i)
         rev = appendrev(rlog, text, tr, isext=isext, isdelta=isdelta)
@@ -256,25 +275,27 @@ def writecases(rlog, tr):
         else:
             rawtext = text
         if rlog.rawsize(rev) != len(rawtext):
-            abort('rev %d: wrong rawsize' % rev)
+            abort("rev %d: wrong rawsize" % rev)
         if rlog.revision(rev, raw=False) != text:
-            abort('rev %d: wrong text' % rev)
+            abort("rev %d: wrong text" % rev)
         if rlog.revision(rev, raw=True) != rawtext:
-            abort('rev %d: wrong rawtext' % rev)
+            abort("rev %d: wrong rawtext" % rev)
         result.append((text, rawtext))
 
         # Verify flags like isdelta, isext work as expected
         # isdelta can be overridden to False if this or p1 has isext set
         if bool(rlog.deltaparent(rev) > -1) and not isdelta:
-            abort('rev %d: isdelta is unexpected' % rev)
+            abort("rev %d: isdelta is unexpected" % rev)
         if bool(rlog.flags(rev)) != isext:
-            abort('rev %d: isext is ineffective' % rev)
+            abort("rev %d: isext is ineffective" % rev)
     return result
+
 
 # Main test and checking
 
+
 def checkrevlog(rlog, expected):
-    '''Check if revlog has expected contents. expected is [(text, rawtext)]'''
+    """Check if revlog has expected contents. expected is [(text, rawtext)]"""
     # Test using different access orders. This could expose some issues
     # depending on revlog caching (see revlog._cache).
     for r0 in range(len(rlog) - 1):
@@ -286,8 +307,10 @@ def checkrevlog(rlog, expected):
                     for raw in raworder:
                         t = nlog.revision(rev, raw=raw)
                         if t != expected[rev][int(raw)]:
-                            abort('rev %d: corrupted %stext'
-                                  % (rev, raw and 'raw' or ''))
+                            abort(
+                                "rev %d: corrupted %stext" % (rev, raw and "raw" or "")
+                            )
+
 
 def maintest():
     expected = rl = None
@@ -295,24 +318,25 @@ def maintest():
         rl = newrevlog(recreate=True)
         expected = writecases(rl, tr)
         checkrevlog(rl, expected)
-        print('local test passed')
+        print("local test passed")
         # Copy via revlog.addgroup
         rl1 = addgroupcopy(rl, tr)
         checkrevlog(rl1, expected)
         rl2 = addgroupcopy(rl, tr, optimaldelta=False)
         checkrevlog(rl2, expected)
-        print('addgroupcopy test passed')
+        print("addgroupcopy test passed")
         # Copy via revlog.clone
-        rl3 = newrevlog(name='_destrevlog3.i', recreate=True)
+        rl3 = newrevlog(name="_destrevlog3.i", recreate=True)
         rl.clone(tr, rl3)
         checkrevlog(rl3, expected)
-        print('clone test passed')
+        print("clone test passed")
         # Copy via low-level revlog._addrevision
         rl4 = lowlevelcopy(rl, tr)
         checkrevlog(rl4, expected)
-        print('lowlevelcopy test passed')
+        print("lowlevelcopy test passed")
+
 
 try:
     maintest()
 except Exception as ex:
-    abort('crashed: %s' % ex)
+    abort("crashed: %s" % ex)

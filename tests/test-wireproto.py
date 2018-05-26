@@ -1,22 +1,25 @@
 from __future__ import absolute_import, print_function
 
-from mercurial import (
-    ui,
-    util,
-    wireproto,
-)
+from mercurial import ui, util, wireproto
+
+
 stringio = util.stringio
 
+
 class proto(object):
+
     def __init__(self, args):
         self.args = args
+
     def getargs(self, spec):
         args = self.args
-        args.setdefault('*', {})
+        args.setdefault("*", {})
         names = spec.split()
         return [args[n] for n in names]
 
+
 class clientpeer(wireproto.wirepeer):
+
     def __init__(self, serverrepo):
         self.serverrepo = serverrepo
 
@@ -25,7 +28,7 @@ class clientpeer(wireproto.wirepeer):
         return self.serverrepo.ui
 
     def url(self):
-        return 'test'
+        return "test"
 
     def local(self):
         return None
@@ -40,7 +43,7 @@ class clientpeer(wireproto.wirepeer):
         pass
 
     def capabilities(self):
-        return ['batch']
+        return ["batch"]
 
     def _call(self, cmd, **args):
         return wireproto.dispatch(self.serverrepo, proto(args), cmd)
@@ -51,10 +54,12 @@ class clientpeer(wireproto.wirepeer):
     @wireproto.batchable
     def greet(self, name):
         f = wireproto.future()
-        yield {'name': mangle(name)}, f
+        yield {"name": mangle(name)}, f
         yield unmangle(f.value)
 
+
 class serverrepo(object):
+
     def __init__(self):
         self.ui = ui.ui()
 
@@ -64,21 +69,26 @@ class serverrepo(object):
     def filtered(self, name):
         return self
 
+
 def mangle(s):
-    return ''.join(chr(ord(c) + 1) for c in s)
+    return "".join(chr(ord(c) + 1) for c in s)
+
+
 def unmangle(s):
-    return ''.join(chr(ord(c) - 1) for c in s)
+    return "".join(chr(ord(c) - 1) for c in s)
+
 
 def greet(repo, proto, name):
     return mangle(repo.greet(unmangle(name)))
 
-wireproto.commands['greet'] = (greet, 'name',)
+
+wireproto.commands["greet"] = (greet, "name")
 
 srv = serverrepo()
 clt = clientpeer(srv)
 
 print(clt.greet("Foobar"))
 b = clt.iterbatch()
-map(b.greet, ('Fo, =;:<o', 'Bar'))
+map(b.greet, ("Fo, =;:<o", "Bar"))
 b.submit()
 print([r for r in b.results()])

@@ -1,14 +1,13 @@
-from __future__ import (
-    absolute_import,
-    print_function,
-)
+from __future__ import absolute_import, print_function
 
 import argparse
 import os
 
+
 ap = argparse.ArgumentParser()
-ap.add_argument('path', nargs='+')
+ap.add_argument("path", nargs="+")
 opts = ap.parse_args()
+
 
 def gather():
     for p in opts.path:
@@ -24,4 +23,5 @@ def gather():
         else:
             yield p
 
-print('\n'.join(sorted(gather(), key=lambda x: x.replace(os.path.sep, '/'))))
+
+print("\n".join(sorted(gather(), key=lambda x: x.replace(os.path.sep, "/"))))

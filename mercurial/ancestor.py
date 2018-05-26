@@ -12,10 +12,12 @@ import heapq
 
 from .node import nullrev
 
+
 try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 def commonancestorsheads(pfunc, *nodes):
     """Returns a set with the heads of all common ancestors of all nodes,
@@ -73,6 +75,7 @@ def commonancestorsheads(pfunc, *nodes):
                 seen[p] = sv
     return gca
 
+
 def ancestors(pfunc, *orignodes):
     """
     Returns the common ancestors of a and b that are furthest from a
@@ -80,6 +83,7 @@ def ancestors(pfunc, *orignodes):
 
     pfunc must return a list of parent vertices for a given vertex.
     """
+
     def deepest(nodes):
         interesting = {}
         count = max(nodes) + 1
@@ -142,12 +146,14 @@ def ancestors(pfunc, *orignodes):
         return gca
     return deepest(gca)
 
+
 class incrementalmissingancestors(object):
-    '''persistent state used to calculate missing ancestors incrementally
+    """persistent state used to calculate missing ancestors incrementally
 
     Although similar in spirit to lazyancestors below, this is a separate class
     because trying to support contains and missingancestors operations with the
-    same internal data structures adds needless complexity.'''
+    same internal data structures adds needless complexity."""
+
     def __init__(self, pfunc, bases):
         self.bases = set(bases)
         if not self.bases:
@@ -155,15 +161,15 @@ class incrementalmissingancestors(object):
         self.pfunc = pfunc
 
     def hasbases(self):
-        '''whether the common set has any non-trivial bases'''
+        """whether the common set has any non-trivial bases"""
         return self.bases and self.bases != {nullrev}
 
     def addbases(self, newbases):
-        '''grow the ancestor set by adding new bases'''
+        """grow the ancestor set by adding new bases"""
         self.bases.update(newbases)
 
     def removeancestorsfrom(self, revs):
-        '''remove all ancestors of bases from the set revs (in place)'''
+        """remove all ancestors of bases from the set revs (in place)"""
         bases = self.bases
         pfunc = self.pfunc
         revs.difference_update(bases)
@@ -189,12 +195,12 @@ class incrementalmissingancestors(object):
                 break
 
     def missingancestors(self, revs):
-        '''return all the ancestors of revs that are not ancestors of self.bases
+        """return all the ancestors of revs that are not ancestors of self.bases
 
         This may include elements from revs.
 
         Equivalent to the revset (::revs - ::self.bases). Revs are returned in
-        revision number order, which is a topological order.'''
+        revision number order, which is a topological order."""
         revsvisit = set(revs)
         basesvisit = self.bases
         pfunc = self.pfunc
@@ -262,7 +268,9 @@ class incrementalmissingancestors(object):
         missing.reverse()
         return missing
 
+
 class lazyancestors(object):
+
     def __init__(self, pfunc, revs, stoprev=0, inclusive=False):
         """Create a new object generating ancestors for the given revs. Does
         not generate revs lower than stoprev.

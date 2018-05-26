@@ -25,29 +25,25 @@ Also note that this extension will run only once.
     obsstoresizelimit = 500000
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from mercurial import (
-    obsutil,
-    repair,
-)
+from mercurial import obsutil, repair
 from mercurial.i18n import _
 
-_cleanedobsstorefile = b'cleanedobsstore'
+
+_cleanedobsstorefile = b"cleanedobsstore"
+
 
 def reposetup(ui, repo):
     if repo.obsstore:
         indicestodelete = []
         if _needtoclean(ui, repo):
             repo._wlockfreeprefix.add(_cleanedobsstorefile)
-            _write(ui, 'your obsstore is big, checking if we can clean it')
-            badusernames = ui.configlist('cleanobsstore', 'badusernames')
+            _write(ui, "your obsstore is big, checking if we can clean it")
+            badusernames = ui.configlist("cleanobsstore", "badusernames")
             for index, data in enumerate(repo.obsstore._all):
                 marker = obsutil.marker(repo, data)
-                username = marker.metadata().get('user')
+                username = marker.metadata().get("user")
                 if username:
                     if username in badusernames:
                         indicestodelete.append(index)
@@ -57,21 +53,29 @@ def reposetup(ui, repo):
                 _markcleaned(repo)
 
         if indicestodelete:
-            _write(ui, _('cleaning your obsstore to make hg faster; ' +
-                         'it is a one-time operation, please wait...'))
+            _write(
+                ui,
+                _(
+                    "cleaning your obsstore to make hg faster; "
+                    + "it is a one-time operation, please wait..."
+                ),
+            )
             with repo.lock():
                 repair.deleteobsmarkers(repo.obsstore, indicestodelete)
 
+
 def _needtoclean(ui, repo):
-    obsstoresizelimit = ui.configint('cleanobsstore', 'obsstoresizelimit',
-                                     500000)
-    return (repo.svfs.stat('obsstore').st_size >= obsstoresizelimit and
-            not repo.vfs.exists(_cleanedobsstorefile))
+    obsstoresizelimit = ui.configint("cleanobsstore", "obsstoresizelimit", 500000)
+    return repo.svfs.stat(
+        "obsstore"
+    ).st_size >= obsstoresizelimit and not repo.vfs.exists(_cleanedobsstorefile)
+
 
 def _markcleaned(repo):
-    with repo.vfs(_cleanedobsstorefile, 'w') as f:
-        f.write('1')  # any text will do
+    with repo.vfs(_cleanedobsstorefile, "w") as f:
+        f.write("1")  # any text will do
+
 
 def _write(ui, msg):
-    if ui.interactive() and not ui.plain('cleanobsstore'):
-        ui.warn(_('%s\n') % msg)
+    if ui.interactive() and not ui.plain("cleanobsstore"):
+        ui.warn(_("%s\n") % msg)

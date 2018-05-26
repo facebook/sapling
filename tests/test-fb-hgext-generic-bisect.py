@@ -1,7 +1,10 @@
 import unittest
+
 import silenttestrunner
 
+
 class BisectTests(unittest.TestCase):
+
     def testSimple(self):
         self._assertBisect([1], 1, 0)
         self._assertBisect([1, 2], 1, 0)
@@ -48,6 +51,8 @@ class BisectTests(unittest.TestCase):
 
         self.assertEqual(bisect(0, len(array) - 1, comp, value), result)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     from hgext.generic_bisect import bisect
+
     silenttestrunner.main(__name__)

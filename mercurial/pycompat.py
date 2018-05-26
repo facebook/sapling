@@ -16,8 +16,9 @@ import os
 import shlex
 import sys
 
-ispy3 = (sys.version_info[0] >= 3)
-ispypy = (r'__pypy__' in sys.builtin_module_names)
+
+ispy3 = sys.version_info[0] >= 3
+ispypy = r"__pypy__" in sys.builtin_module_names
 
 if not ispy3:
     import cookielib
@@ -27,18 +28,20 @@ if not ispy3:
     import SocketServer as socketserver
     import xmlrpclib
 else:
-    import http.cookiejar as cookielib # noqa: F401
-    import http.client as httplib # noqa: F401
-    import pickle # noqa: F401
+    import http.cookiejar as cookielib  # noqa: F401
+    import http.client as httplib  # noqa: F401
+    import pickle  # noqa: F401
     import queue as _queue
-    import socketserver # noqa: F401
-    import xmlrpc.client as xmlrpclib # noqa: F401
+    import socketserver  # noqa: F401
+    import xmlrpc.client as xmlrpclib  # noqa: F401
 
 empty = _queue.Empty
 queue = _queue.Queue
 
+
 def identity(a):
     return a
+
 
 if ispy3:
     import builtins
@@ -48,17 +51,17 @@ if ispy3:
 
     fsencode = os.fsencode
     fsdecode = os.fsdecode
-    oslinesep = os.linesep.encode('ascii')
-    osname = os.name.encode('ascii')
-    ospathsep = os.pathsep.encode('ascii')
-    ossep = os.sep.encode('ascii')
+    oslinesep = os.linesep.encode("ascii")
+    osname = os.name.encode("ascii")
+    ospathsep = os.pathsep.encode("ascii")
+    ossep = os.sep.encode("ascii")
     osaltsep = os.altsep
     if osaltsep:
-        osaltsep = osaltsep.encode('ascii')
+        osaltsep = osaltsep.encode("ascii")
     # os.getcwd() on Python 3 returns string, but it has os.getcwdb() which
     # returns bytes.
     getcwd = os.getcwdb
-    sysplatform = sys.platform.encode('ascii')
+    sysplatform = sys.platform.encode("ascii")
     sysexecutable = sys.executable
     if sysexecutable:
         sysexecutable = os.fsencode(sysexecutable)
@@ -80,10 +83,10 @@ if ispy3:
     #
     # TODO: On Windows, the native argv is wchar_t, so we'll need a different
     # workaround to simulate the Python 2 (i.e. ANSI Win32 API) behavior.
-    if getattr(sys, 'argv', None) is not None:
+    if getattr(sys, "argv", None) is not None:
         sysargv = list(map(os.fsencode, sys.argv))
 
-    bytechr = struct.Struct('>B').pack
+    bytechr = struct.Struct(">B").pack
 
     class bytestr(bytes):
         """A bytes which mostly acts as a Python 2 str
@@ -138,13 +141,13 @@ if ispy3:
         >>> assert type(t) is bytes
         """
 
-        def __new__(cls, s=b''):
+        def __new__(cls, s=b""):
             if isinstance(s, bytestr):
                 return s
-            if (not isinstance(s, (bytes, bytearray))
-                and not hasattr(s, u'__bytes__')):  # hasattr-py3-only
-                s = str(s).encode(u'ascii')
-            return bytes.__new__(cls, s)
+            if not isinstance(s, (bytes, bytearray)):
+                if not hasattr(s, u"__bytes__"):  # hasattr-py3-only
+                    s = str(s).encode(u"ascii")
+                    return bytes.__new__(cls, s)
 
         def __getitem__(self, key):
             s = bytes.__getitem__(self, key)
@@ -165,7 +168,7 @@ if ispy3:
         This never raises UnicodeEncodeError, but only ASCII characters
         can be round-trip by sysstr(sysbytes(s)).
         """
-        return s.encode(u'utf-8')
+        return s.encode(u"utf-8")
 
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
@@ -177,15 +180,15 @@ if ispy3:
         """
         if isinstance(s, builtins.str):
             return s
-        return s.decode(u'latin-1')
+        return s.decode(u"latin-1")
 
     def strurl(url):
         """Converts a bytes url back to str"""
-        return url.decode(u'ascii')
+        return url.decode(u"ascii")
 
     def bytesurl(url):
         """Converts a str url to bytes by encoding in ascii"""
-        return url.encode(u'ascii')
+        return url.encode(u"ascii")
 
     def raisewithtb(exc, tb):
         """Raise exception with the given traceback"""
@@ -194,15 +197,17 @@ if ispy3:
     def getdoc(obj):
         """Get docstring as bytes; may be None so gettext() won't confuse it
         with _('')"""
-        doc = getattr(obj, u'__doc__', None)
+        doc = getattr(obj, u"__doc__", None)
         if doc is None:
             return doc
         return sysbytes(doc)
 
     def _wrapattrfunc(f):
+
         @functools.wraps(f)
         def w(object, name, *args):
             return f(object, sysstr(name), *args)
+
         return w
 
     # these wrappers are automagically imported by hgloader
@@ -213,7 +218,7 @@ if ispy3:
     xrange = builtins.range
     unicode = str
 
-    def open(name, mode='r', buffering=-1):
+    def open(name, mode="r", buffering=-1):
         return builtins.open(name, sysstr(mode), buffering)
 
     def _getoptbwrapper(orig, args, shortlist, namelist):
@@ -223,13 +228,12 @@ if ispy3:
         return them for Python 3 compatibility as getopt.getopt() don't accepts
         bytes on Python 3.
         """
-        args = [a.decode('latin-1') for a in args]
-        shortlist = shortlist.decode('latin-1')
-        namelist = [a.decode('latin-1') for a in namelist]
+        args = [a.decode("latin-1") for a in args]
+        shortlist = shortlist.decode("latin-1")
+        namelist = [a.decode("latin-1") for a in namelist]
         opts, args = orig(args, shortlist, namelist)
-        opts = [(a[0].encode('latin-1'), a[1].encode('latin-1'))
-                for a in opts]
-        args = [a.encode('latin-1') for a in args]
+        opts = [(a[0].encode("latin-1"), a[1].encode("latin-1")) for a in opts]
+        args = [a.encode("latin-1") for a in args]
         return opts, args
 
     def strkwargs(dic):
@@ -238,7 +242,7 @@ if ispy3:
         they can be passed as keyword arguments as dictonaries with bytes keys
         can't be passed as keyword arguments to functions on Python 3.
         """
-        dic = dict((k.decode('latin-1'), v) for k, v in dic.iteritems())
+        dic = dict((k.decode("latin-1"), v) for k, v in dic.iteritems())
         return dic
 
     def byteskwargs(dic):
@@ -246,7 +250,7 @@ if ispy3:
         Converts keys of python dictonaries to bytes as they were converted to
         str to pass that dictonary as a keyword argument on Python 3.
         """
-        dic = dict((k.encode('latin-1'), v) for k, v in dic.iteritems())
+        dic = dict((k.encode("latin-1"), v) for k, v in dic.iteritems())
         return dic
 
     # TODO: handle shlex.shlex().
@@ -256,8 +260,9 @@ if ispy3:
         shlex.split(), convert the returned value to bytes and return that for
         Python 3 compatibility as shelx.split() don't accept bytes on Python 3.
         """
-        ret = shlex.split(s.decode('latin-1'))
-        return [a.encode('latin-1') for a in ret]
+        ret = shlex.split(s.decode("latin-1"))
+        return [a.encode("latin-1") for a in ret]
+
 
 else:
     import cStringIO
@@ -271,8 +276,7 @@ else:
     bytesurl = identity
 
     # this can't be parsed on Python 3
-    exec('def raisewithtb(exc, tb):\n'
-         '    raise exc, None, tb\n')
+    exec("def raisewithtb(exc, tb):\n" "    raise exc, None, tb\n")
 
     def fsencode(filename):
         """
@@ -283,15 +287,14 @@ else:
         if isinstance(filename, str):
             return filename
         else:
-            raise TypeError(
-                "expect str, not %s" % type(filename).__name__)
+            raise TypeError("expect str, not %s" % type(filename).__name__)
 
     # In Python 2, fsdecode() has a very chance to receive bytes. So it's
     # better not to touch Python 2 part as it's already working fine.
     fsdecode = identity
 
     def getdoc(obj):
-        return getattr(obj, '__doc__', None)
+        return getattr(obj, "__doc__", None)
 
     def _getoptbwrapper(orig, args, shortlist, namelist):
         return orig(args, shortlist, namelist)
@@ -307,7 +310,7 @@ else:
     stdin = sys.stdin
     stdout = sys.stdout
     stderr = sys.stderr
-    if getattr(sys, 'argv', None) is not None:
+    if getattr(sys, "argv", None) is not None:
         sysargv = sys.argv
     sysplatform = sys.platform
     getcwd = os.getcwd
@@ -316,19 +319,22 @@ else:
     stringio = cStringIO.StringIO
     maplist = map
     ziplist = zip
-    rawinput = raw_input # noqa
+    rawinput = raw_input  # noqa
 
-isjython = sysplatform.startswith('java')
+isjython = sysplatform.startswith("java")
 
-isdarwin = sysplatform == 'darwin'
-isposix = osname == 'posix'
-iswindows = osname == 'nt'
+isdarwin = sysplatform == "darwin"
+isposix = osname == "posix"
+iswindows = osname == "nt"
+
 
 def getoptb(args, shortlist, namelist):
     return _getoptbwrapper(getopt.getopt, args, shortlist, namelist)
 
+
 def gnugetoptb(args, shortlist, namelist):
     return _getoptbwrapper(getopt.gnu_getopt, args, shortlist, namelist)
+
 
 def getcwdsafe():
     """Returns the current working dir, or None if it has been deleted"""

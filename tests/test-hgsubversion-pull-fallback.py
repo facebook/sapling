@@ -1,10 +1,11 @@
-import test_hgsubversion_util
-
 import mercurial
-from mercurial import commands
+import test_hgsubversion_util
 from hgext.hgsubversion import stupid
+from mercurial import commands
+
 
 class TestPullFallback(test_hgsubversion_util.TestBase):
+
     def setUp(self):
         super(TestPullFallback, self).setUp()
 
@@ -17,40 +18,42 @@ class TestPullFallback(test_hgsubversion_util.TestBase):
     def test_stupid_fallback_to_stupid_fullrevs(self):
         return
         to_patch = {
-            'mercurial.patch.patchbackend': _patchbackend_raise,
-            'stupid.diff_branchrev': stupid.diff_branchrev,
-            'stupid.fetch_branchrev': stupid.fetch_branchrev,
+            "mercurial.patch.patchbackend": _patchbackend_raise,
+            "stupid.diff_branchrev": stupid.diff_branchrev,
+            "stupid.fetch_branchrev": stupid.fetch_branchrev,
         }
 
         expected_calls = {
-            'mercurial.patch.patchbackend': 1,
-            'stupid.diff_branchrev': 1,
-            'stupid.fetch_branchrev': 1,
+            "mercurial.patch.patchbackend": 1,
+            "stupid.diff_branchrev": 1,
+            "stupid.fetch_branchrev": 1,
         }
 
         self.stupid = True
-        repo, repo_path = self._loadupdate('single_rev.svndump')
+        repo, repo_path = self._loadupdate("single_rev.svndump")
         self.stupid = False
 
         # Passing stupid=True doesn't seem to be working - force it
-        repo.ui.setconfig('hgsubversion', 'stupid', "true")
+        repo.ui.setconfig("hgsubversion", "stupid", "true")
         state = repo[None].parents()
 
         calls, replaced = _monkey_patch(to_patch)
 
         try:
-            self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
+            self.add_svn_rev(repo_path, {"trunk/alpha": "Changed"})
             commands.pull(self.repo.ui, repo, update=True)
             self.failIfEqual(state, repo[None].parents())
-            self.assertTrue('tip' in repo[None].tags())
+            self.assertTrue("tip" in repo[None].tags())
             self.assertEqual(expected_calls, calls)
 
         finally:
             _monkey_unpatch(replaced)
 
+
 def _monkey_patch(to_patch, start=None):
     if start is None:
         import sys
+
         start = sys.modules[__name__]
 
     calls = {}
@@ -58,15 +61,16 @@ def _monkey_patch(to_patch, start=None):
 
     for path, replacement in to_patch.iteritems():
         obj = start
-        owner, attr = path.rsplit('.', 1)
+        owner, attr = path.rsplit(".", 1)
 
-        for a in owner.split('.', -1):
+        for a in owner.split(".", -1):
             obj = getattr(obj, a)
 
         replaced[path] = getattr(obj, attr)
         calls[path] = 0
 
         def outer(path=path, calls=calls, replacement=replacement):
+
             def wrapper(*p, **kw):
                 calls[path] += 1
                 return replacement(*p, **kw)
@@ -77,18 +81,20 @@ def _monkey_patch(to_patch, start=None):
 
     return calls, replaced
 
+
 def _monkey_unpatch(to_patch, start=None):
     if start is None:
         import sys
+
         start = sys.modules[__name__]
 
     replaced = {}
 
     for path, replacement in to_patch.iteritems():
         obj = start
-        owner, attr = path.rsplit('.', 1)
+        owner, attr = path.rsplit(".", 1)
 
-        for a in owner.split('.', -1):
+        for a in owner.split(".", -1):
             obj = getattr(obj, a)
 
         replaced[path] = getattr(obj, attr)
@@ -96,10 +102,12 @@ def _monkey_unpatch(to_patch, start=None):
 
     return replaced
 
+
 def _patchbackend_raise(*p, **kw):
     raise mercurial.patch.PatchError("patch failed")
 
-if __name__ == '__main__':
-    import silenttestrunner
-    silenttestrunner.main(__name__)
 
+if __name__ == "__main__":
+    import silenttestrunner
+
+    silenttestrunner.main(__name__)

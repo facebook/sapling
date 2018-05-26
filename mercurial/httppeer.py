@@ -15,8 +15,6 @@ import socket
 import struct
 import tempfile
 
-from .i18n import _
-from .node import nullid
 from . import (
     bundle2,
     error,
@@ -27,6 +25,9 @@ from . import (
     util,
     wireproto,
 )
+from .i18n import _
+from .node import nullid
+
 
 httplib = util.httplib
 urlerr = util.urlerr
@@ -36,6 +37,7 @@ try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 def encodevalueinheaders(value, header, limit):
     """Encode a string value into multiple HTTP headers.
@@ -49,21 +51,22 @@ def encodevalueinheaders(value, header, limit):
     """
     # HTTP Headers are ASCII. Python 3 requires them to be unicodes,
     # not bytes. This function always takes bytes in as arguments.
-    fmt = pycompat.strurl(header) + r'-%s'
+    fmt = pycompat.strurl(header) + r"-%s"
     # Note: it is *NOT* a bug that the last bit here is a bytestring
     # and not a unicode: we're just getting the encoded length anyway,
     # and using an r-string to make it portable between Python 2 and 3
     # doesn't work because then the \r is a literal backslash-r
     # instead of a carriage return.
-    valuelen = limit - len(fmt % r'000') - len(': \r\n')
+    valuelen = limit - len(fmt % r"000") - len(": \r\n")
     result = []
 
     n = 0
     for i in xrange(0, len(value), valuelen):
         n += 1
-        result.append((fmt % str(n), pycompat.strurl(value[i:i + valuelen])))
+        result.append((fmt % str(n), pycompat.strurl(value[i : i + valuelen])))
 
     return result
+
 
 def _wraphttpresponse(resp):
     """Wrap an HTTPResponse with common error handlers.
@@ -74,39 +77,52 @@ def _wraphttpresponse(resp):
     origread = resp.read
 
     class readerproxy(resp.__class__):
+
         def read(self, size=None):
             try:
                 return origread(size)
             except httplib.IncompleteRead as e:
                 # e.expected is an integer if length known or None otherwise.
                 if e.expected:
-                    msg = _('HTTP request error (incomplete response; '
-                            'expected %d bytes got %d)') % (e.expected,
-                                                           len(e.partial))
+                    msg = _(
+                        "HTTP request error (incomplete response; "
+                        "expected %d bytes got %d)"
+                    ) % (e.expected, len(e.partial))
                 else:
-                    msg = _('HTTP request error (incomplete response)')
+                    msg = _("HTTP request error (incomplete response)")
 
                 raise error.PeerTransportError(
                     msg,
-                    hint=_('this may be an intermittent network failure; '
-                           'if the error persists, consider contacting the '
-                           'network or server operator'))
+                    hint=_(
+                        "this may be an intermittent network failure; "
+                        "if the error persists, consider contacting the "
+                        "network or server operator"
+                    ),
+                )
             except httplib.HTTPException as e:
                 raise error.PeerTransportError(
-                    _('HTTP request error (%s)') % e,
-                    hint=_('this may be an intermittent network failure; '
-                           'if the error persists, consider contacting the '
-                           'network or server operator'))
+                    _("HTTP request error (%s)") % e,
+                    hint=_(
+                        "this may be an intermittent network failure; "
+                        "if the error persists, consider contacting the "
+                        "network or server operator"
+                    ),
+                )
 
     resp.__class__ = readerproxy
 
+
 class _multifile(object):
+
     def __init__(self, *fileobjs):
         for f in fileobjs:
-            if not util.safehasattr(f, 'length'):
+            if not util.safehasattr(f, "length"):
                 raise ValueError(
-                    '_multifile only supports file objects that '
-                    'have a length but this one does not:', type(f), f)
+                    "_multifile only supports file objects that "
+                    "have a length but this one does not:",
+                    type(f),
+                    f,
+                )
         self._fileobjs = fileobjs
         self._index = 0
 
@@ -116,7 +132,7 @@ class _multifile(object):
 
     def read(self, amt=None):
         if amt <= 0:
-            return ''.join(f.read() for f in self._fileobjs)
+            return "".join(f.read() for f in self._fileobjs)
         parts = []
         while amt and self._index < len(self._fileobjs):
             parts.append(self._fileobjs[self._index].read(amt))
@@ -124,22 +140,26 @@ class _multifile(object):
             if got < amt:
                 self._index += 1
             amt -= got
-        return ''.join(parts)
+        return "".join(parts)
 
     def seek(self, offset, whence=os.SEEK_SET):
         if whence != os.SEEK_SET:
             raise NotImplementedError(
-                '_multifile does not support anything other'
-                ' than os.SEEK_SET for whence on seek()')
+                "_multifile does not support anything other"
+                " than os.SEEK_SET for whence on seek()"
+            )
         if offset != 0:
             raise NotImplementedError(
-                '_multifile only supports seeking to start, but that '
-                'could be fixed if you need it')
+                "_multifile only supports seeking to start, but that "
+                "could be fixed if you need it"
+            )
         for f in self._fileobjs:
             f.seek(0)
         self._index = 0
 
+
 class httppeer(wireproto.wirepeer):
+
     def __init__(self, ui, path):
         self._path = path
         self._caps = None
@@ -147,20 +167,21 @@ class httppeer(wireproto.wirepeer):
         self._requestbuilder = None
         u = util.url(path)
         if u.query or u.fragment:
-            raise error.Abort(_('unsupported URL component: "%s"') %
-                             (u.query or u.fragment))
+            raise error.Abort(
+                _('unsupported URL component: "%s"') % (u.query or u.fragment)
+            )
 
         # urllib cannot handle URLs with embedded user or passwd
         self._url, authinfo = u.authinfo()
 
         self._ui = ui
-        ui.debug('using %s\n' % self._url)
+        ui.debug("using %s\n" % self._url)
 
         self._urlopener = url.opener(ui, authinfo)
         self._requestbuilder = urlreq.request
 
     def __del__(self):
-        urlopener = getattr(self, '_urlopener', None)
+        urlopener = getattr(self, "_urlopener", None)
         if urlopener:
             for h in urlopener.handlers:
                 h.close()
@@ -197,8 +218,7 @@ class httppeer(wireproto.wirepeer):
                 self._fetchcaps()
             except error.RepoError:
                 self._caps = set()
-            self.ui.debug('capabilities: %s\n' %
-                          (' '.join(self._caps or ['none'])))
+            self.ui.debug("capabilities: %s\n" % (" ".join(self._caps or ["none"])))
         return self._caps
 
     # End of _basewirepeer interface.
@@ -206,23 +226,23 @@ class httppeer(wireproto.wirepeer):
     # look up capabilities only when needed
 
     def _fetchcaps(self):
-        self._caps = set(self._call('capabilities').split())
+        self._caps = set(self._call("capabilities").split())
 
     def _callstream(self, cmd, _compressible=False, **args):
         args = pycompat.byteskwargs(args)
-        if cmd == 'pushkey':
-            args['data'] = ''
-        data = args.pop('data', None)
-        headers = args.pop('headers', {})
+        if cmd == "pushkey":
+            args["data"] = ""
+        data = args.pop("data", None)
+        headers = args.pop("headers", {})
 
         self.ui.debug("sending %s command\n" % cmd)
-        q = [('cmd', cmd)]
+        q = [("cmd", cmd)]
         headersize = 0
         varyheaders = []
         # Important: don't use self.capable() here or else you end up
         # with infinite recursion when trying to look up capabilities
         # for the first time.
-        postargsok = self._caps is not None and 'httppostargs' in self._caps
+        postargsok = self._caps is not None and "httppostargs" in self._caps
         if postargsok and args:
             strargs = urlreq.urlencode(sorted(args.items()))
             if not data:
@@ -235,33 +255,34 @@ class httppeer(wireproto.wirepeer):
                 argsio = io.BytesIO(strargs)
                 argsio.length = len(strargs)
                 data = _multifile(argsio, data)
-            headers[r'X-HgArgs-Post'] = len(strargs)
+            headers[r"X-HgArgs-Post"] = len(strargs)
         else:
             if len(args) > 0:
-                httpheader = self.capable('httpheader')
+                httpheader = self.capable("httpheader")
                 if httpheader:
-                    headersize = int(httpheader.split(',', 1)[0])
+                    headersize = int(httpheader.split(",", 1)[0])
             if headersize > 0:
                 # The headers can typically carry more data than the URL.
                 encargs = urlreq.urlencode(sorted(args.items()))
-                for header, value in encodevalueinheaders(encargs, 'X-HgArg',
-                                                          headersize):
+                for header, value in encodevalueinheaders(
+                    encargs, "X-HgArg", headersize
+                ):
                     headers[header] = value
                     varyheaders.append(header)
             else:
                 q += sorted(args.items())
-        qs = '?%s' % urlreq.urlencode(q)
+        qs = "?%s" % urlreq.urlencode(q)
         cu = "%s%s" % (self._url, qs)
         size = 0
-        if util.safehasattr(data, 'length'):
+        if util.safehasattr(data, "length"):
             size = data.length
         elif data is not None:
             size = len(data)
-        if size and self.ui.configbool('ui', 'usehttp2'):
-            headers[r'Expect'] = r'100-Continue'
-            headers[r'X-HgHttp2'] = r'1'
-        if data is not None and r'Content-Type' not in headers:
-            headers[r'Content-Type'] = r'application/mercurial-0.1'
+        if size and self.ui.configbool("ui", "usehttp2"):
+            headers[r"Expect"] = r"100-Continue"
+            headers[r"X-HgHttp2"] = r"1"
+        if data is not None and r"Content-Type" not in headers:
+            headers[r"Content-Type"] = r"application/mercurial-0.1"
 
         # Tell the server we accept application/mercurial-0.2 and multiple
         # compression formats if the server is capable of emitting those
@@ -270,46 +291,48 @@ class httppeer(wireproto.wirepeer):
 
         mediatypes = set()
         if self._caps is not None:
-            mt = self.capable('httpmediatype')
+            mt = self.capable("httpmediatype")
             if mt:
-                protoparams.append('0.1')
-                mediatypes = set(mt.split(','))
+                protoparams.append("0.1")
+                mediatypes = set(mt.split(","))
 
-        if '0.2tx' in mediatypes:
-            protoparams.append('0.2')
+        if "0.2tx" in mediatypes:
+            protoparams.append("0.2")
 
-        if '0.2tx' in mediatypes and self.capable('compression'):
+        if "0.2tx" in mediatypes and self.capable("compression"):
             # We /could/ compare supported compression formats and prune
             # non-mutually supported or error if nothing is mutually supported.
             # For now, send the full list to the server and have it error.
-            comps = [e.wireprotosupport().name for e in
-                     util.compengines.supportedwireengines(util.CLIENTROLE)]
-            protoparams.append('comp=%s' % ','.join(comps))
+            comps = [
+                e.wireprotosupport().name
+                for e in util.compengines.supportedwireengines(util.CLIENTROLE)
+            ]
+            protoparams.append("comp=%s" % ",".join(comps))
 
         if protoparams:
-            protoheaders = encodevalueinheaders(' '.join(protoparams),
-                                                'X-HgProto',
-                                                headersize or 1024)
+            protoheaders = encodevalueinheaders(
+                " ".join(protoparams), "X-HgProto", headersize or 1024
+            )
             for header, value in protoheaders:
                 headers[header] = value
                 varyheaders.append(header)
 
         if varyheaders:
-            headers[r'Vary'] = r','.join(varyheaders)
+            headers[r"Vary"] = r",".join(varyheaders)
 
         req = self._requestbuilder(pycompat.strurl(cu), data, headers)
 
         if data is not None:
             self.ui.debug("sending %s bytes\n" % size)
-            req.add_unredirected_header('Content-Length', '%d' % size)
+            req.add_unredirected_header("Content-Length", "%d" % size)
         try:
             resp = self._urlopener.open(req)
         except urlerr.httperror as inst:
             if inst.code == 401:
-                raise error.Abort(_('authorization failed'))
+                raise error.Abort(_("authorization failed"))
             raise
         except httplib.HTTPException as inst:
-            self.ui.debug('http error while sending %s command\n' % cmd)
+            self.ui.debug("http error while sending %s command\n" % cmd)
             self.ui.traceback()
             raise IOError(None, inst)
 
@@ -319,57 +342,67 @@ class httppeer(wireproto.wirepeer):
         # record the url we got redirected to
         resp_url = pycompat.bytesurl(resp.geturl())
         if resp_url.endswith(qs):
-            resp_url = resp_url[:-len(qs)]
-        if self._url.rstrip('/') != resp_url.rstrip('/'):
+            resp_url = resp_url[: -len(qs)]
+        if self._url.rstrip("/") != resp_url.rstrip("/"):
             if not self.ui.quiet:
-                self.ui.warn(_('real URL is %s\n') % resp_url)
+                self.ui.warn(_("real URL is %s\n") % resp_url)
         self._url = resp_url
         try:
-            proto = pycompat.bytesurl(resp.getheader(r'content-type', r''))
+            proto = pycompat.bytesurl(resp.getheader(r"content-type", r""))
         except AttributeError:
-            proto = pycompat.bytesurl(resp.headers.get(r'content-type', r''))
+            proto = pycompat.bytesurl(resp.headers.get(r"content-type", r""))
 
         safeurl = util.hidepassword(self._url)
-        if proto.startswith('application/hg-error'):
+        if proto.startswith("application/hg-error"):
             raise error.OutOfBandError(resp.read())
         # accept old "text/plain" and "application/hg-changegroup" for now
-        if not (proto.startswith('application/mercurial-') or
-                (proto.startswith('text/plain')
-                 and not resp.headers.get('content-length')) or
-                proto.startswith('application/hg-changegroup')):
+        if not (
+            proto.startswith("application/mercurial-")
+            or (
+                proto.startswith("text/plain")
+                and not resp.headers.get("content-length")
+            )
+            or proto.startswith("application/hg-changegroup")
+        ):
             self.ui.debug("requested URL: '%s'\n" % util.hidepassword(cu))
             raise error.RepoError(
-                _("'%s' does not appear to be an hg repository:\n"
-                  "---%%<--- (%s)\n%s\n---%%<---\n")
-                % (safeurl, proto or 'no content-type', resp.read(1024)))
+                _(
+                    "'%s' does not appear to be an hg repository:\n"
+                    "---%%<--- (%s)\n%s\n---%%<---\n"
+                )
+                % (safeurl, proto or "no content-type", resp.read(1024))
+            )
 
-        if proto.startswith('application/mercurial-'):
+        if proto.startswith("application/mercurial-"):
             try:
-                version = proto.split('-', 1)[1]
-                version_info = tuple([int(n) for n in version.split('.')])
+                version = proto.split("-", 1)[1]
+                version_info = tuple([int(n) for n in version.split(".")])
             except ValueError:
-                raise error.RepoError(_("'%s' sent a broken Content-Type "
-                                        "header (%s)") % (safeurl, proto))
+                raise error.RepoError(
+                    _("'%s' sent a broken Content-Type " "header (%s)")
+                    % (safeurl, proto)
+                )
 
             # TODO consider switching to a decompression reader that uses
             # generators.
             if version_info == (0, 1):
                 if _compressible:
-                    return util.compengines['zlib'].decompressorreader(resp)
+                    return util.compengines["zlib"].decompressorreader(resp)
                 return resp
             elif version_info == (0, 2):
                 # application/mercurial-0.2 always identifies the compression
                 # engine in the payload header.
-                elen = struct.unpack('B', resp.read(1))[0]
+                elen = struct.unpack("B", resp.read(1))[0]
                 ename = resp.read(elen)
                 engine = util.compengines.forwiretype(ename)
                 return engine.decompressorreader(resp)
             else:
-                raise error.RepoError(_("'%s' uses newer protocol %s") %
-                                      (safeurl, version))
+                raise error.RepoError(
+                    _("'%s' uses newer protocol %s") % (safeurl, version)
+                )
 
         if _compressible:
-            return util.compengines['zlib'].decompressorreader(resp)
+            return util.compengines["zlib"].decompressorreader(resp)
 
         return resp
 
@@ -385,9 +418,9 @@ class httppeer(wireproto.wirepeer):
         # have to stream bundle to a temp file because we do not have
         # http 1.1 chunked transfer.
 
-        types = self.capable('unbundle')
+        types = self.capable("unbundle")
         try:
-            types = types.split(',')
+            types = types.split(",")
         except AttributeError:
             # servers older than d1b16a746db6 will send 'unbundle' as a
             # boolean capability. They only support headerless/uncompressed
@@ -400,17 +433,17 @@ class httppeer(wireproto.wirepeer):
 
         tempname = bundle2.writebundle(self.ui, cg, None, type)
         fp = httpconnection.httpsendfile(self.ui, tempname, "rb")
-        headers = {'Content-Type': 'application/mercurial-0.1'}
+        headers = {"Content-Type": "application/mercurial-0.1"}
 
         try:
             r = self._call(cmd, data=fp, headers=headers, **args)
-            vals = r.split('\n', 1)
+            vals = r.split("\n", 1)
             if len(vals) < 2:
                 raise error.ResponseError(_("unexpected response:"), r)
             return vals
         except socket.error as err:
             if err.args[0] in (errno.ECONNRESET, errno.EPIPE):
-                raise error.Abort(_('push failed: %s') % err.args[1])
+                raise error.Abort(_("push failed: %s") % err.args[1])
             raise error.Abort(err.args[1])
         finally:
             fp.close()
@@ -431,7 +464,7 @@ class httppeer(wireproto.wirepeer):
             fh.close()
             # start http push
             fp_ = httpconnection.httpsendfile(self.ui, filename, "rb")
-            headers = {'Content-Type': 'application/mercurial-0.1'}
+            headers = {"Content-Type": "application/mercurial-0.1"}
             return self._callstream(cmd, data=fp_, headers=headers, **args)
         finally:
             if fp_ is not None:
@@ -446,18 +479,20 @@ class httppeer(wireproto.wirepeer):
     def _abort(self, exception):
         raise exception
 
+
 class httpspeer(httppeer):
+
     def __init__(self, ui, path):
         if not url.has_https:
-            raise error.Abort(_('Python support for SSL and HTTPS '
-                               'is not installed'))
+            raise error.Abort(_("Python support for SSL and HTTPS " "is not installed"))
         httppeer.__init__(self, ui, path)
+
 
 def instance(ui, path, create):
     if create:
-        raise error.Abort(_('cannot create new http repository'))
+        raise error.Abort(_("cannot create new http repository"))
     try:
-        if path.startswith('https:'):
+        if path.startswith("https:"):
             inst = httpspeer(ui, path)
         else:
             inst = httppeer(ui, path)
@@ -472,7 +507,7 @@ def instance(ui, path, create):
     except error.RepoError as httpexception:
         try:
             r = statichttprepo.instance(ui, "static-" + path, create)
-            ui.note(_('(falling back to static-http)\n'))
+            ui.note(_("(falling back to static-http)\n"))
             return r
         except error.RepoError:
-            raise httpexception # use the original http RepoError instead
+            raise httpexception  # use the original http RepoError instead

@@ -7,29 +7,33 @@ hidden or not as we assume that the user knows what he is doing when referring
 to xxx.
 """
 
-from mercurial import extensions
-from mercurial import repoview
-from mercurial import branchmap
-from mercurial import registrar
-from mercurial import revset
-from mercurial import error
-from mercurial import commands
-from mercurial import hg
-from mercurial import util
+from mercurial import (
+    branchmap,
+    commands,
+    error,
+    extensions,
+    hg,
+    registrar,
+    repoview,
+    revset,
+    util,
+)
 from mercurial.i18n import _
+
 
 cmdtable = {}
 
-if util.safehasattr(registrar, 'command'):
+if util.safehasattr(registrar, "command"):
     command = registrar.command(cmdtable)
-else: # compat with hg < 4.3
+else:  # compat with hg < 4.3
     from mercurial import cmdutil
+
     command = cmdutil.command(cmdtable)
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('directaccess', 'loadsafter', default=[])
+configitem("directaccess", "loadsafter", default=[])
 
 # By default, all the commands have directaccess with warnings
 # List of commands that have no directaccess and directaccess with no warning
@@ -49,32 +53,34 @@ directaccesslevel = [
     # - no direct access for commands with consequences outside of the repo
     # - leave directaccess warnings for all the other commands
     #
-    ('nowarning', None, 'annotate'),
-    ('nowarning', None, 'archive'),
-    ('nowarning', None, 'bisect'),
-    ('nowarning', None, 'bookmarks'),
-    ('nowarning', None, 'bundle'),
-    ('nowarning', None, 'cat'),
-    ('nowarning', None, 'diff'),
-    ('nowarning', None, 'export'),
-    ('nowarning', None, 'identify'),
-    ('nowarning', None, 'incoming'),
-    ('nowarning', None, 'log'),
-    ('nowarning', None, 'manifest'),
-    ('error', None, 'outgoing'), # confusing if push errors and not outgoing
-    ('error', None, 'push'), # destructive
-    ('nowarning', None, 'revert'),
-    ('error', None, 'serve'),
-    ('nowarning', None, 'tags'),
-    ('nowarning', None, 'unbundle'),
-    ('nowarning', None, 'update'),
+    ("nowarning", None, "annotate"),
+    ("nowarning", None, "archive"),
+    ("nowarning", None, "bisect"),
+    ("nowarning", None, "bookmarks"),
+    ("nowarning", None, "bundle"),
+    ("nowarning", None, "cat"),
+    ("nowarning", None, "diff"),
+    ("nowarning", None, "export"),
+    ("nowarning", None, "identify"),
+    ("nowarning", None, "incoming"),
+    ("nowarning", None, "log"),
+    ("nowarning", None, "manifest"),
+    ("error", None, "outgoing"),  # confusing if push errors and not outgoing
+    ("error", None, "push"),  # destructive
+    ("nowarning", None, "revert"),
+    ("error", None, "serve"),
+    ("nowarning", None, "tags"),
+    ("nowarning", None, "unbundle"),
+    ("nowarning", None, "update"),
 ]
+
 
 def reposetup(ui, repo):
     repo._explicitaccess = set()
 
+
 def _computehidden(repo):
-    hidden = repoview.filterrevs(repo, 'visible')
+    hidden = repoview.filterrevs(repo, "visible")
     cl = repo.changelog
     dynamic = hidden & repo._explicitaccess
     if dynamic:
@@ -82,40 +88,44 @@ def _computehidden(repo):
         hidden = frozenset(r for r in hidden if r not in blocked)
     return hidden
 
+
 def setupdirectaccess():
     """ Add two new filtername that behave like visible to provide direct access
     and direct access with warning. Wraps the commands to setup direct access
     """
-    repoview.filtertable.update({'visible-directaccess-nowarn': _computehidden})
-    repoview.filtertable.update({'visible-directaccess-warn': _computehidden})
-    branchmap.subsettable['visible-directaccess-nowarn'] = 'visible'
-    branchmap.subsettable['visible-directaccess-warn'] = 'visible'
+    repoview.filtertable.update({"visible-directaccess-nowarn": _computehidden})
+    repoview.filtertable.update({"visible-directaccess-warn": _computehidden})
+    branchmap.subsettable["visible-directaccess-nowarn"] = "visible"
+    branchmap.subsettable["visible-directaccess-warn"] = "visible"
 
     for warn, ext, cmd in directaccesslevel:
         try:
             cmdtable = extensions.find(ext).cmdtable if ext else commands.table
-            wrapper = wrapwitherror if warn == 'error' else wrapwithoutwarning
+            wrapper = wrapwitherror if warn == "error" else wrapwithoutwarning
             extensions.wrapcommand(cmdtable, cmd, wrapper)
         except (error.UnknownCommand, KeyError):
             pass
 
+
 def wrapwitherror(orig, ui, repo, *args, **kwargs):
-    if repo and repo.filtername == 'visible-directaccess-warn':
-        repo = repo.filtered('visible')
+    if repo and repo.filtername == "visible-directaccess-warn":
+        repo = repo.filtered("visible")
     return orig(ui, repo, *args, **kwargs)
 
+
 def wrapwithoutwarning(orig, ui, repo, *args, **kwargs):
-    if repo and repo.filtername == 'visible-directaccess-warn':
+    if repo and repo.filtername == "visible-directaccess-warn":
         repo = repo.filtered("visible-directaccess-nowarn")
     return orig(ui, repo, *args, **kwargs)
+
 
 def uisetup(ui):
     """ Change ordering of extensions to ensure that directaccess extsetup comes
     after the one of the extensions in the loadsafter list """
     # internal config: directaccess.loadsafter
-    loadsafter = ui.configlist('directaccess', 'loadsafter')
+    loadsafter = ui.configlist("directaccess", "loadsafter")
     order = list(extensions._order)
-    directaccesidx = order.index('directaccess')
+    directaccesidx = order.index("directaccess")
 
     # The min idx for directaccess to load after all the extensions in loadafter
     minidxdirectaccess = directaccesidx
@@ -124,26 +134,30 @@ def uisetup(ui):
         try:
             minidxdirectaccess = max(minidxdirectaccess, order.index(ext))
         except ValueError:
-            pass # extension not loaded
+            pass  # extension not loaded
 
     if minidxdirectaccess > directaccesidx:
-        order.insert(minidxdirectaccess + 1, 'directaccess')
-        order.remove('directaccess')
+        order.insert(minidxdirectaccess + 1, "directaccess")
+        order.remove("directaccess")
         extensions._order = order
+
 
 def _repository(orig, *args, **kwargs):
     """Make visible-directaccess-warn the default filter for new repos"""
     repo = orig(*args, **kwargs)
     return repo.filtered("visible-directaccess-warn")
 
+
 def extsetup(ui):
-    extensions.wrapfunction(revset, 'posttreebuilthook', _posttreebuilthook)
-    extensions.wrapfunction(hg, 'repository', _repository)
+    extensions.wrapfunction(revset, "posttreebuilthook", _posttreebuilthook)
+    extensions.wrapfunction(hg, "repository", _repository)
     setupdirectaccess()
 
-hashre = util.re.compile('[0-9a-fA-F]{1,40}')
 
-_listtuple = ('symbol', '_list')
+hashre = util.re.compile("[0-9a-fA-F]{1,40}")
+
+_listtuple = ("symbol", "_list")
+
 
 def _ishashsymbol(symbol, maxrev):
     # Returns true if symbol looks like a hash
@@ -156,6 +170,7 @@ def _ishashsymbol(symbol, maxrev):
         pass
     return hashre.match(symbol)
 
+
 def gethashsymbols(tree, maxrev):
     # Returns the list of symbols of the tree that look like hashes
     # for example for the revset 3::abe3ff it will return ('abe3ff')
@@ -167,13 +182,14 @@ def gethashsymbols(tree, maxrev):
         results.append(tree[1])
     elif tree[0] == "func" and tree[1] == _listtuple:
         # the optimiser will group sequence of hash request
-        results += tree[2][1].split('\0')
+        results += tree[2][1].split("\0")
     elif len(tree) >= 3:
         for subtree in tree[1:]:
             results += gethashsymbols(subtree, maxrev)
         # return directly, we don't need to filter symbols again
         return results
     return [s for s in results if _ishashsymbol(s, maxrev)]
+
 
 def _posttreebuilthook(orig, tree, repo):
     # This is use to enabled direct hash access
@@ -183,7 +199,7 @@ def _posttreebuilthook(orig, tree, repo):
     filternm = ""
     if repo is not None:
         filternm = repo.filtername
-    if filternm is not None and filternm.startswith('visible-directaccess'):
+    if filternm is not None and filternm.startswith("visible-directaccess"):
         prelength = len(repo._explicitaccess)
         accessbefore = set(repo._explicitaccess)
         cl = repo.unfiltered().changelog
@@ -198,10 +214,13 @@ def _posttreebuilthook(orig, tree, repo):
                 if rev not in repo.changelog:
                     repo._explicitaccess.add(rev)
         if prelength != len(repo._explicitaccess):
-            if repo.filtername != 'visible-directaccess-nowarn':
+            if repo.filtername != "visible-directaccess-nowarn":
                 unhiddencommits = repo._explicitaccess - accessbefore
-                repo.ui.warn(_("Warning: accessing hidden changesets %s "
-                               "for write operation\n") %
-                             (",".join([str(repo.unfiltered()[l])
-                              for l in unhiddencommits])))
+                repo.ui.warn(
+                    _(
+                        "Warning: accessing hidden changesets %s "
+                        "for write operation\n"
+                    )
+                    % (",".join([str(repo.unfiltered()[l]) for l in unhiddencommits]))
+                )
             repo.invalidatevolatilesets()

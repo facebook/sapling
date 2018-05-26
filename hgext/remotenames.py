@@ -12,40 +12,44 @@ This extension is the work of Sean Farley forked from Augie Fackler's seminal
 remotebranches extension. Ryan McElroy of Facebook also contributed.
 """
 
+import errno
 import os
 import re
-import errno
 import shutil
 import sys
 import UserDict
 
-from mercurial import bookmarks
-from mercurial import commands
-from mercurial import discovery
-from mercurial import encoding
-from mercurial import error
-from mercurial import exchange
-from mercurial import extensions
-from mercurial import hg
-from mercurial import localrepo
-from mercurial import lock as lockmod
-from mercurial import namespaces
-from mercurial import obsutil
-from mercurial import registrar
-from mercurial import repair
-from mercurial import repoview
-from mercurial import revset
-from mercurial import scmutil
-from mercurial import setdiscovery
-from mercurial import templatekw
-from mercurial import ui as uimod
-from mercurial import url
-from mercurial import util
-from mercurial import vfs as vfsmod
+from mercurial import (
+    bookmarks,
+    commands,
+    discovery,
+    encoding,
+    error,
+    exchange,
+    extensions,
+    hg,
+    localrepo,
+    lock as lockmod,
+    namespaces,
+    obsutil,
+    registrar,
+    repair,
+    repoview,
+    revset,
+    scmutil,
+    setdiscovery,
+    templatekw,
+    ui as uimod,
+    url,
+    util,
+    vfs as vfsmod,
+)
 from mercurial.i18n import _
-from mercurial.node import hex, short, bin, nullid
+from mercurial.node import bin, hex, nullid, short
+
 from . import schemes
 from .convert import hg as converthg
+
 
 try:
     from mercurial import smartset
@@ -54,7 +58,7 @@ except ImportError:
 
 configtable = {}
 try:
-    if not util.safehasattr(registrar, 'configitem'):
+    if not util.safehasattr(registrar, "configitem"):
         raise ImportError()
     # Supported in 4.3+
     configitem = registrar.configitem(configtable)
@@ -63,54 +67,56 @@ except ImportError:
     def configitem(section, name, default=None):
         configtable[(section, name)] = default
 
-    def configdefault(orig, self, section, name, default=None,
-                      untrusted=False):
+    def configdefault(orig, self, section, name, default=None, untrusted=False):
         if default is None:
             default = configtable.get((section, name))
         return orig(self, section, name, default=default, untrusted=untrusted)
 
-configitem('remotenames', 'alias.default', default=False)
-configitem('remotenames', 'allownonfastforward', default=False)
-configitem('remotenames', 'bookmarks', default=True)
-configitem('remotenames', 'branches', default=True)
-configitem('remotenames', 'calculatedistance', default=True)
-configitem('remotenames', 'disallowedbookmarks', default=[])
-configitem('remotenames', 'disallowedhint', default=None)
-configitem('remotenames', 'disallowedto', default=None)
-configitem('remotenames', 'fastheaddiscovery', default=True)
-configitem('remotenames', 'forcecompat', default=False)
-configitem('remotenames', 'forceto', default=False)
-configitem('remotenames', 'hoist', default='default')
-configitem('remotenames', 'precachecurrent', default=True)
-configitem('remotenames', 'precachedistance', default=True)
-configitem('remotenames', 'pushanonheads', default=False)
-configitem('remotenames', 'pushrev', default=None)
-configitem('remotenames', 'resolvenodes', default=True)
-configitem('remotenames', 'selectivepull', default=False)
-configitem('remotenames', 'selectivepulldefault', default=[])
-configitem('remotenames', 'suppressbranches', default=False)
-configitem('remotenames', 'syncbookmarks', default=False)
-configitem('remotenames', 'tracking', default=True)
-configitem('remotenames', 'transitionbookmarks', default=[])
-configitem('remotenames', 'transitionmessage', default=None)
-configitem('remotenames', 'upstream', default=[])
+
+configitem("remotenames", "alias.default", default=False)
+configitem("remotenames", "allownonfastforward", default=False)
+configitem("remotenames", "bookmarks", default=True)
+configitem("remotenames", "branches", default=True)
+configitem("remotenames", "calculatedistance", default=True)
+configitem("remotenames", "disallowedbookmarks", default=[])
+configitem("remotenames", "disallowedhint", default=None)
+configitem("remotenames", "disallowedto", default=None)
+configitem("remotenames", "fastheaddiscovery", default=True)
+configitem("remotenames", "forcecompat", default=False)
+configitem("remotenames", "forceto", default=False)
+configitem("remotenames", "hoist", default="default")
+configitem("remotenames", "precachecurrent", default=True)
+configitem("remotenames", "precachedistance", default=True)
+configitem("remotenames", "pushanonheads", default=False)
+configitem("remotenames", "pushrev", default=None)
+configitem("remotenames", "resolvenodes", default=True)
+configitem("remotenames", "selectivepull", default=False)
+configitem("remotenames", "selectivepulldefault", default=[])
+configitem("remotenames", "suppressbranches", default=False)
+configitem("remotenames", "syncbookmarks", default=False)
+configitem("remotenames", "tracking", default=True)
+configitem("remotenames", "transitionbookmarks", default=[])
+configitem("remotenames", "transitionmessage", default=None)
+configitem("remotenames", "upstream", default=[])
 
 # namespace to use when recording an hg journal entry
-journalremotebookmarktype = 'remotebookmark'
+journalremotebookmarktype = "remotebookmark"
 # name of the file that is used to mark that transition to selectivepull has
 # happened
-_selectivepullenabledfile = 'selectivepullenabled'
+_selectivepullenabledfile = "selectivepullenabled"
+
 
 def uisetup(ui):
     if registrar is None:
-        if util.safehasattr(uimod.ui, '_config'):
-            extensions.wrapfunction(uimod.ui, '_config', configdefault)
+        if util.safehasattr(uimod.ui, "_config"):
+            extensions.wrapfunction(uimod.ui, "_config", configdefault)
         else:
-            extensions.wrapfunction(uimod.ui, 'config', configdefault)
+            extensions.wrapfunction(uimod.ui, "config", configdefault)
+
 
 def exbookcalcupdate(orig, ui, repo, checkout):
-    '''Return a tuple (targetrev, movemarkfrom) indicating the rev to
-    check out and where to move the active bookmark from, if needed.'''
+    """Return a tuple (targetrev, movemarkfrom) indicating the rev to
+    check out and where to move the active bookmark from, if needed."""
     movemarkfrom = None
     if checkout is None:
         activemark = bmactive(repo)
@@ -118,60 +124,79 @@ def exbookcalcupdate(orig, ui, repo, checkout):
             # if no active bookmark then keep using the old code path for now
             return orig(ui, repo, checkout)
         if bookmarks.isactivewdirparent(repo):
-            movemarkfrom = repo['.'].node()
+            movemarkfrom = repo["."].node()
         ui.status(_("updating to active bookmark %s\n") % activemark)
         checkout = activemark
     return (checkout, movemarkfrom)
 
+
 def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
-    pullremotenames(repo, remote, remote.listkeys('bookmarks'))
+    pullremotenames(repo, remote, remote.listkeys("bookmarks"))
     return res
 
-def expushop(orig, pushop, repo, remote, force=False, revs=None,
-             newbranch=False, bookmarks=(), pushvars=None, **kwargs):
+
+def expushop(
+    orig,
+    pushop,
+    repo,
+    remote,
+    force=False,
+    revs=None,
+    newbranch=False,
+    bookmarks=(),
+    pushvars=None,
+    **kwargs
+):
     orig(pushop, repo, remote, force, revs, newbranch, bookmarks, pushvars)
 
-    for flag in ['to', 'delete', 'create', 'allowanon', 'nonforwardmove']:
+    for flag in ["to", "delete", "create", "allowanon", "nonforwardmove"]:
         setattr(pushop, flag, kwargs.pop(flag, None))
 
+
 def _isselectivepull(ui):
-    return ui.configbool('remotenames', 'selectivepull')
+    return ui.configbool("remotenames", "selectivepull")
+
 
 def _getselectivepulldefaultbookmarks(ui):
-    default_books = ui.configlist('remotenames', 'selectivepulldefault')
+    default_books = ui.configlist("remotenames", "selectivepulldefault")
     if not default_books:
-        raise error.Abort(_('no default bookmarks specified for selectivepull'))
+        raise error.Abort(_("no default bookmarks specified for selectivepull"))
     return default_books
 
+
 def _listremotebookmarks(remote, bookmarks):
-    remotebookmarks = remote.listkeys('bookmarks')
+    remotebookmarks = remote.listkeys("bookmarks")
     result = {}
     for book in bookmarks:
         if book in remotebookmarks:
             result[book] = remotebookmarks[book]
     return result
 
+
 def _trypullremotebookmark(mayberemotebookmark, repo, ui):
-    ui.warn(_('`%s` not found: assuming it is a remote bookmark '
-              'and trying to pull it\n') % mayberemotebookmark)
+    ui.warn(
+        _("`%s` not found: assuming it is a remote bookmark " "and trying to pull it\n")
+        % mayberemotebookmark
+    )
     sourcerenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
     remote, bookmarkname = splitremotename(mayberemotebookmark)
-    paths = dict((path, url) for path, url in ui.configitems('paths'))
+    paths = dict((path, url) for path, url in ui.configitems("paths"))
     if remote in sourcerenames:
         source = sourcerenames[remote]
     elif remote in paths:
         source = remote
     else:
-        source = 'default'
+        source = "default"
         bookmarkname = mayberemotebookmark
 
     try:
         commands.pull(ui, repo, source=source, bookmark=[bookmarkname])
     except Exception:
-        ui.warn(_('pull failed: %s\n') % sys.exc_info()[1])
+        ui.warn(_("pull failed: %s\n") % sys.exc_info()[1])
     else:
-        ui.warn(_('`%s` found remotely\n') % mayberemotebookmark)
+        ui.warn(_("`%s` found remotely\n") % mayberemotebookmark)
+
 
 def expull(orig, repo, remote, *args, **kwargs):
     if _isselectivepull(repo.ui):
@@ -196,12 +221,12 @@ def expull(orig, repo, remote, *args, **kwargs):
         if not remotebookmarkslist:
             remotebookmarkslist = _getselectivepulldefaultbookmarks(repo.ui)
 
-        if kwargs.get('bookmarks'):
-            remotebookmarkslist.extend(kwargs['bookmarks'])
+        if kwargs.get("bookmarks"):
+            remotebookmarkslist.extend(kwargs["bookmarks"])
             bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
         else:
             bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
-            heads = kwargs.get('heads') or []
+            heads = kwargs.get("heads") or []
             # heads may be passed as positional args
             if len(args) > 0:
                 if args[0]:
@@ -209,10 +234,10 @@ def expull(orig, repo, remote, *args, **kwargs):
                 args = args[1:]
             for node in bookmarks.values():
                 heads.append(bin(node))
-            kwargs['bookmarks'] = bookmarks
-            kwargs['heads'] = heads
+            kwargs["bookmarks"] = bookmarks
+            kwargs["heads"] = heads
     else:
-        bookmarks = remote.listkeys('bookmarks')
+        bookmarks = remote.listkeys("bookmarks")
 
     res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote, bookmarks)
@@ -222,14 +247,15 @@ def expull(orig, repo, remote, *args, **kwargs):
                 repo.vfs.unlink(_selectivepullenabledfile)
     else:
         if _isselectivepull(repo.ui):
-            with repo.wlock(), repo.vfs(_selectivepullenabledfile, 'w') as f:
-                f.write('enabled') # content doesn't matter
+            with repo.wlock(), repo.vfs(_selectivepullenabledfile, "w") as f:
+                f.write("enabled")  # content doesn't matter
     return res
 
+
 def exfindcommonheads(orig, ui, local, remote, **kwargs):
-    '''Return a tuple (common, anyincoming, remoteheads) used to identify
+    """Return a tuple (common, anyincoming, remoteheads) used to identify
     missing nodes from or in remote.
-    '''
+    """
     # The normal findcommonheads implementation tries to find the exact boundary
     # between what the client has and what the server has. With remotenames, we
     # have pretty good knowledge about what local commits already exist on the
@@ -237,7 +263,7 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
     # the current remotenames are representative of what's on the server. In the
     # worst case the data might be slightly out of sync and the server sends us
     # more data than necessary, but this should be rare.
-    if not ui.configbool('remotenames', 'fastheaddiscovery'):
+    if not ui.configbool("remotenames", "fastheaddiscovery"):
         return orig(ui, local, remote, **kwargs)
 
     cl = local.changelog
@@ -273,8 +299,12 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
         # which is weird. This should be very rare though, since it only happens
         # if the client has remote names, but none of those names exist on the
         # server (i.e. the server has been completely replaced, or stripped).
-        ui.status(_("server has changed since last pull - falling back to the "
-                    "default search strategy\n"))
+        ui.status(
+            _(
+                "server has changed since last pull - falling back to the "
+                "default search strategy\n"
+            )
+        )
         return orig(ui, local, remote, **kwargs)
 
     if cl.tip() == nullid:
@@ -292,10 +322,11 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
 
     return (common, True, srvheadhashes)
 
+
 def pullremotenames(repo, remote, bookmarks):
     # when working between multiple local repos which do not all have
     # remotenames enabled, do this work only for those with it enabled
-    if not util.safehasattr(repo, '_remotenames'):
+    if not util.safehasattr(repo, "_remotenames"):
         return
 
     path = activepath(repo.ui, remote)
@@ -315,17 +346,18 @@ def pullremotenames(repo, remote, bookmarks):
 
     precachedistance(repo)
 
+
 def blockerhook(orig, repo, *args, **kwargs):
     blockers = orig(repo)
 
-    unblock = util.safehasattr(repo, '_unblockhiddenremotenames')
+    unblock = util.safehasattr(repo, "_unblockhiddenremotenames")
     if not unblock:
         return blockers
 
     # add remotenames to blockers by looping over all names in our own cache
     cl = repo.changelog
     for remotename in repo._remotenames.keys():
-        rname = 'remote' + remotename
+        rname = "remote" + remotename
         try:
             ns = repo.names[rname]
         except KeyError:
@@ -335,11 +367,13 @@ def blockerhook(orig, repo, *args, **kwargs):
 
     return blockers
 
+
 def exupdatefromremote(orig, ui, repo, remotemarks, path, trfunc, explicit=()):
-    if ui.configbool('remotenames', 'syncbookmarks'):
+    if ui.configbool("remotenames", "syncbookmarks"):
         return orig(ui, repo, remotemarks, path, trfunc, explicit)
 
-    ui.debug('remotenames: skipped syncing local bookmarks\n')
+    ui.debug("remotenames: skipped syncing local bookmarks\n")
+
 
 def exclone(orig, ui, *args, **opts):
     """
@@ -347,16 +381,16 @@ def exclone(orig, ui, *args, **opts):
     """
     srcpeer, dstpeer = orig(ui, *args, **opts)
 
-    pullremotenames(dstpeer.local(), srcpeer, srcpeer.listkeys('bookmarks'))
+    pullremotenames(dstpeer.local(), srcpeer, srcpeer.listkeys("bookmarks"))
 
-    if not ui.configbool('remotenames', 'syncbookmarks'):
-        ui.debug('remotenames: removing cloned bookmarks\n')
+    if not ui.configbool("remotenames", "syncbookmarks"):
+        ui.debug("remotenames: removing cloned bookmarks\n")
         repo = dstpeer.local()
         wlock = repo.wlock()
         try:
             try:
                 vfs = shareawarevfs(repo)
-                vfs.unlink('bookmarks')
+                vfs.unlink("bookmarks")
             except OSError as inst:
                 if inst.errno != errno.ENOENT:
                     raise
@@ -365,20 +399,24 @@ def exclone(orig, ui, *args, **opts):
 
     return (srcpeer, dstpeer)
 
+
 def excommit(orig, repo, *args, **opts):
     res = orig(repo, *args, **opts)
     precachedistance(repo)
     return res
+
 
 def exupdate(orig, repo, *args, **opts):
     res = orig(repo, *args, **opts)
     precachedistance(repo)
     return res
 
+
 def exactivate(orig, repo, mark):
     res = orig(repo, mark)
     precachedistance(repo)
     return res
+
 
 def exconvertbookmarks(orig, source):
     """Make hg convert map remote bookmarks in the source to normal bookmarks in
@@ -391,7 +429,7 @@ def exconvertbookmarks(orig, source):
     bookmarks = orig(source)
 
     repo = source.repo
-    n = 'remotebookmarks'
+    n = "remotebookmarks"
     if n in repo.names:
         ns = repo.names[n]
         for name in ns.listnames(repo):
@@ -401,11 +439,12 @@ def exconvertbookmarks(orig, source):
 
     return bookmarks
 
+
 def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
 
-    if _isselectivepull(repo.ui) and not kwargs.get('date'):
+    if _isselectivepull(repo.ui) and not kwargs.get("date"):
         # Make sure that rev or node is present in the repo.
         # Otherwise pull it from remote
         try:
@@ -413,9 +452,9 @@ def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
         except (error.RepoLookupError, error.Abort):
             _trypullremotebookmark(rev or node, repo, ui)
 
-    book = kwargs.get('bookmark')
+    book = kwargs.get("bookmark")
     if book:
-        del kwargs['bookmark']
+        del kwargs["bookmark"]
         if book in repo._bookmarks:
             raise error.Abort("bookmark '%s' already exists" % book)
         ret = orig(ui, repo, node=node, rev=rev, **kwargs)
@@ -437,9 +476,10 @@ def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
             # update the cache
             precachedistance(repo)
         return ret
-    if 'bookmark' in kwargs:
-        del kwargs['bookmark']
+    if "bookmark" in kwargs:
+        del kwargs["bookmark"]
     return orig(ui, repo, node=node, rev=rev, **kwargs)
+
 
 class lazyremotenamedict(UserDict.DictMixin):
     """Read-only dict-like Class to lazily resolve remotename entries
@@ -451,10 +491,11 @@ class lazyremotenamedict(UserDict.DictMixin):
     is in self.potentialentries we resolve it and store the result in
     self.cache. We cannot be lazy is when asked all the entries (keys).
     """
+
     def __init__(self, kind, repo):
         self.cache = {}
         self.potentialentries = {}
-        self._kind = kind # bookmarks or branches
+        self._kind = kind  # bookmarks or branches
         self._repo = repo
         self.loaded = False
 
@@ -462,7 +503,7 @@ class lazyremotenamedict(UserDict.DictMixin):
         """Read the remotenames file, store entries matching selected kind"""
         self.loaded = True
         repo = self._repo
-        alias_default = repo.ui.configbool('remotenames', 'alias.default')
+        alias_default = repo.ui.configbool("remotenames", "alias.default")
         for node, nametype, remote, rname in readremotenames(repo):
             if nametype != self._kind:
                 continue
@@ -486,8 +527,11 @@ class lazyremotenamedict(UserDict.DictMixin):
         except LookupError:
             return None
         # Skip closed branches
-        if (nametype == 'branches' and _branchesenabled(repo.ui) and
-                repo[binnode].closesbranch()):
+        if (
+            nametype == "branches"
+            and _branchesenabled(repo.ui)
+            and repo[binnode].closesbranch()
+        ):
             return None
         return [binnode]
 
@@ -520,8 +564,7 @@ class lazyremotenamedict(UserDict.DictMixin):
               defaulting to True, as the behavior before this fix
             - is not None: the bool value of resolvenodes is used"""
         if resolvenodes is None:
-            resolvenodes = self._repo.ui.configbool("remotenames",
-                                                   "resolvenodes")
+            resolvenodes = self._repo.ui.configbool("remotenames", "resolvenodes")
         if not self.loaded:
             self._load()
         if resolvenodes:
@@ -537,12 +580,12 @@ class lazyremotenamedict(UserDict.DictMixin):
         if not self.loaded:
             self._load()
         if resolvenodes is None:
-            resolvenodes = self._repo.ui.configbool("remotenames",
-                                                   "resolvenodes")
+            resolvenodes = self._repo.ui.configbool("remotenames", "resolvenodes")
         for k, vtup in self.potentialentries.iteritems():
             if resolvenodes:
                 self._fetchandcache(k)
             yield (k, [bin(vtup[0])])
+
 
 class remotenames(dict):
     """This class encapsulates all the remotenames state. It also contains
@@ -558,8 +601,8 @@ class remotenames(dict):
 
     def clearnames(self):
         """Clear all remote names state"""
-        self['bookmarks'] = lazyremotenamedict("bookmarks", self._repo)
-        self['branches'] = lazyremotenamedict("branches", self._repo)
+        self["bookmarks"] = lazyremotenamedict("bookmarks", self._repo)
+        self["branches"] = lazyremotenamedict("branches", self._repo)
         self._invalidatecache()
         self._loadednames = False
 
@@ -570,7 +613,7 @@ class remotenames(dict):
         self._node2branch = None
 
     def mark2nodes(self):
-        return self['bookmarks']
+        return self["bookmarks"]
 
     def node2marks(self):
         if not self._node2marks:
@@ -584,10 +627,10 @@ class remotenames(dict):
         if not self._hoist2nodes:
             mark2nodes = self.mark2nodes()
             self._hoist2nodes = {}
-            hoist += '/'
+            hoist += "/"
             for name, node in mark2nodes.iteritems():
                 if name.startswith(hoist):
-                    name = name[len(hoist):]
+                    name = name[len(hoist) :]
                     self._hoist2nodes[name] = node
         return self._hoist2nodes
 
@@ -595,15 +638,15 @@ class remotenames(dict):
         if not self._node2hoists:
             mark2nodes = self.mark2nodes()
             self._node2hoists = {}
-            hoist += '/'
+            hoist += "/"
             for name, node in mark2nodes.iteritems():
                 if name.startswith(hoist):
-                    name = name[len(hoist):]
+                    name = name[len(hoist) :]
                     self._node2hoists.setdefault(node[0], []).append(name)
         return self._node2hoists
 
     def branch2nodes(self):
-        return self['branches']
+        return self["branches"]
 
     def node2branch(self):
         if not self._node2branch:
@@ -614,6 +657,7 @@ class remotenames(dict):
                     self._node2branch[node] = [name]
         return self._node2branch
 
+
 def reposetup(ui, repo):
     if not repo.local():
         return
@@ -621,83 +665,89 @@ def reposetup(ui, repo):
     repo._remotenames = remotenames(repo)
     ns = namespaces.namespace
 
-    if ui.configbool('remotenames', 'bookmarks'):
+    if ui.configbool("remotenames", "bookmarks"):
         remotebookmarkns = ns(
-            'remotebookmarks',
-            templatename='remotebookmarks',
-            logname='bookmark',
-            colorname='remotebookmark',
+            "remotebookmarks",
+            templatename="remotebookmarks",
+            logname="bookmark",
+            colorname="remotebookmark",
             listnames=lambda repo: repo._remotenames.mark2nodes().keys(),
-            namemap=lambda repo, name:
-                repo._remotenames.mark2nodes().get(name, []),
-            nodemap=lambda repo, node:
-                repo._remotenames.node2marks().get(node, []))
+            namemap=lambda repo, name: repo._remotenames.mark2nodes().get(name, []),
+            nodemap=lambda repo, node: repo._remotenames.node2marks().get(node, []),
+        )
         repo.names.addnamespace(remotebookmarkns)
 
         # hoisting only works if there are remote bookmarks
-        hoist = ui.config('remotenames', 'hoist')
+        hoist = ui.config("remotenames", "hoist")
         if hoist:
             hoistednamens = ns(
-                'hoistednames',
-                templatename='hoistednames',
-                logname='hoistedname',
-                colorname='hoistedname',
-                listnames = lambda repo:
-                    repo._remotenames.hoist2nodes(hoist).keys(),
-                namemap = lambda repo, name:
-                    repo._remotenames.hoist2nodes(hoist).get(name, []),
-                nodemap = lambda repo, node:
-                    repo._remotenames.node2hoists(hoist).get(node, []))
+                "hoistednames",
+                templatename="hoistednames",
+                logname="hoistedname",
+                colorname="hoistedname",
+                listnames=lambda repo: repo._remotenames.hoist2nodes(hoist).keys(),
+                namemap=lambda repo, name: repo._remotenames.hoist2nodes(hoist).get(
+                    name, []
+                ),
+                nodemap=lambda repo, node: repo._remotenames.node2hoists(hoist).get(
+                    node, []
+                ),
+            )
             repo.names.addnamespace(hoistednamens)
 
     if _branchesenabled(ui):
         remotebranchns = ns(
-            'remotebranches',
-            templatename='remotebranches',
-            logname='branch',
-            colorname='remotebranch',
-            listnames = lambda repo: repo._remotenames.branch2nodes().keys(),
-            namemap = lambda repo, name:
-                repo._remotenames.branch2nodes().get(name, []),
-            nodemap = lambda repo, node:
-                repo._remotenames.node2branch().get(node, []))
+            "remotebranches",
+            templatename="remotebranches",
+            logname="branch",
+            colorname="remotebranch",
+            listnames=lambda repo: repo._remotenames.branch2nodes().keys(),
+            namemap=lambda repo, name: repo._remotenames.branch2nodes().get(name, []),
+            nodemap=lambda repo, node: repo._remotenames.node2branch().get(node, []),
+        )
         repo.names.addnamespace(remotebranchns)
+
 
 def _tracking(ui):
     # omg default true
-    return ui.configbool('remotenames', 'tracking')
+    return ui.configbool("remotenames", "tracking")
+
 
 def _branchesenabled(ui):
-    return ui.configbool('remotenames', 'branches')
+    return ui.configbool("remotenames", "branches")
+
 
 def exrebasecmd(orig, ui, repo, **opts):
-    dest = opts['dest']
-    source = opts['source']
-    revs = opts['rev']
-    base = opts['base']
-    cont = opts['continue']
-    abort = opts['abort']
+    dest = opts["dest"]
+    source = opts["source"]
+    revs = opts["rev"]
+    base = opts["base"]
+    cont = opts["continue"]
+    abort = opts["abort"]
 
     current = bmactive(repo)
 
     if not (cont or abort or dest or source or revs or base) and current:
         tracking = _readtracking(repo)
         if current in tracking:
-            opts['dest'] = tracking[current]
+            opts["dest"] = tracking[current]
 
     ret = orig(ui, repo, **opts)
     precachedistance(repo)
     return ret
+
 
 def exstrip(orig, ui, repo, *args, **opts):
     ret = orig(ui, repo, *args, **opts)
     precachedistance(repo)
     return ret
 
+
 def exhistedit(orig, ui, repo, *args, **opts):
     ret = orig(ui, repo, *args, **opts)
     precachedistance(repo)
     return ret
+
 
 def expaths(orig, ui, repo, *args, **opts):
     """allow adding and removing remote paths
@@ -705,17 +755,17 @@ def expaths(orig, ui, repo, *args, **opts):
     This is very hacky and only exists as an experimentation.
 
     """
-    delete = opts.get('delete')
-    add = opts.get('add')
+    delete = opts.get("delete")
+    add = opts.get("add")
     if delete:
         # find the first section and remote path that matches, and delete that
         foundpaths = False
-        if not repo.vfs.isfile('hgrc'):
+        if not repo.vfs.isfile("hgrc"):
             raise error.Abort(_("could not find hgrc file"))
-        oldhgrc = repo.vfs.read('hgrc').splitlines(True)
-        f = repo.vfs('hgrc', 'w', atomictemp=True)
+        oldhgrc = repo.vfs.read("hgrc").splitlines(True)
+        f = repo.vfs("hgrc", "w", atomictemp=True)
         for line in oldhgrc:
-            if '[paths]' in line:
+            if "[paths]" in line:
                 foundpaths = True
             if not (foundpaths and line.strip().startswith(delete)):
                 f.write(line)
@@ -730,15 +780,15 @@ def expaths(orig, ui, repo, *args, **opts):
         foundpaths = False
         oldhgrc = []
         if repo.vfs.isfile("hgrc"):
-            oldhgrc = repo.vfs.read('hgrc').splitlines(True)
-        f = repo.vfs('hgrc', 'w', atomictemp=True)
+            oldhgrc = repo.vfs.read("hgrc").splitlines(True)
+        f = repo.vfs("hgrc", "w", atomictemp=True)
         done = False
         for line in oldhgrc:
-            if '[paths]' in line:
+            if "[paths]" in line:
                 foundpaths = True
             if foundpaths and line.strip().startswith(add):
                 done = True
-                line = '%s = %s\n' % (add, args[0])
+                line = "%s = %s\n" % (add, args[0])
             f.write(line)
 
         # did we not find an existing path?
@@ -752,6 +802,7 @@ def expaths(orig, ui, repo, *args, **opts):
 
     return orig(ui, repo, *args)
 
+
 def exnowarnheads(orig, pushop):
     heads = orig(pushop)
     if pushop.to:
@@ -760,79 +811,83 @@ def exnowarnheads(orig, pushop):
         heads.add(repo[rev].node())
     return heads
 
+
 def exstripbmrevset(orig, repo, mark):
-    return orig(repo, mark) - repo.revs("ancestors(remotenames() and "
-                                        "not bookmark(%s))", mark)
+    return orig(repo, mark) - repo.revs(
+        "ancestors(remotenames() and " "not bookmark(%s))", mark
+    )
+
 
 def extsetup(ui):
-    extensions.wrapfunction(bookmarks, 'calculateupdate', exbookcalcupdate)
-    extensions.wrapfunction(exchange.pushoperation, '__init__', expushop)
-    extensions.wrapfunction(exchange, 'push', expush)
-    extensions.wrapfunction(exchange, 'pull', expull)
-    extensions.wrapfunction(setdiscovery, 'findcommonheads', exfindcommonheads)
+    extensions.wrapfunction(bookmarks, "calculateupdate", exbookcalcupdate)
+    extensions.wrapfunction(exchange.pushoperation, "__init__", expushop)
+    extensions.wrapfunction(exchange, "push", expush)
+    extensions.wrapfunction(exchange, "pull", expull)
+    extensions.wrapfunction(setdiscovery, "findcommonheads", exfindcommonheads)
     # _getdynamicblockers was renamed to pinnedrevs in 4.3
-    blockername = 'pinnedrevs'
+    blockername = "pinnedrevs"
     if not util.safehasattr(repoview, blockername):
         # but there was a temporary name of revealedrevs, remove after 4.3
-        blockername = 'revealedrevs'
+        blockername = "revealedrevs"
         if not util.safehasattr(repoview, blockername):
-            blockername = '_getdynamicblockers'
+            blockername = "_getdynamicblockers"
     extensions.wrapfunction(repoview, blockername, blockerhook)
-    extensions.wrapfunction(bookmarks, 'updatefromremote', exupdatefromremote)
-    extensions.wrapfunction(repair, 'stripbmrevset', exstripbmrevset)
-    if util.safehasattr(bookmarks, 'activate'):
-        extensions.wrapfunction(bookmarks, 'activate', exactivate)
+    extensions.wrapfunction(bookmarks, "updatefromremote", exupdatefromremote)
+    extensions.wrapfunction(repair, "stripbmrevset", exstripbmrevset)
+    if util.safehasattr(bookmarks, "activate"):
+        extensions.wrapfunction(bookmarks, "activate", exactivate)
     else:
-        extensions.wrapfunction(bookmarks, 'setcurrent', exactivate)
-    extensions.wrapfunction(hg, 'clone', exclone)
-    extensions.wrapfunction(hg, 'updaterepo', exupdate)
-    extensions.wrapfunction(localrepo.localrepository, 'commit', excommit)
+        extensions.wrapfunction(bookmarks, "setcurrent", exactivate)
+    extensions.wrapfunction(hg, "clone", exclone)
+    extensions.wrapfunction(hg, "updaterepo", exupdate)
+    extensions.wrapfunction(localrepo.localrepository, "commit", excommit)
 
-    extensions.wrapfunction(converthg.mercurial_source, 'getbookmarks',
-                            exconvertbookmarks)
+    extensions.wrapfunction(
+        converthg.mercurial_source, "getbookmarks", exconvertbookmarks
+    )
 
-    if util.safehasattr(discovery, '_nowarnheads'):
-        extensions.wrapfunction(discovery, '_nowarnheads', exnowarnheads)
+    if util.safehasattr(discovery, "_nowarnheads"):
+        extensions.wrapfunction(discovery, "_nowarnheads", exnowarnheads)
 
     if _tracking(ui):
         try:
-            rebase = extensions.find('rebase')
-            extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebasecmd)
+            rebase = extensions.find("rebase")
+            extensions.wrapcommand(rebase.cmdtable, "rebase", exrebasecmd)
         except KeyError:
             # rebase isn't on, that's fine
             pass
 
-    entry = extensions.wrapcommand(commands.table, 'log', exlog)
-    entry[1].append(('', 'remote', None, 'show remote names even if hidden'))
+    entry = extensions.wrapcommand(commands.table, "log", exlog)
+    entry[1].append(("", "remote", None, "show remote names even if hidden"))
 
-    entry = extensions.wrapcommand(commands.table, 'paths', expaths)
-    entry[1].append(('d', 'delete', '', 'delete remote path', 'NAME'))
-    entry[1].append(('a', 'add', '', 'add remote path', 'NAME PATH'))
+    entry = extensions.wrapcommand(commands.table, "paths", expaths)
+    entry[1].append(("d", "delete", "", "delete remote path", "NAME"))
+    entry[1].append(("a", "add", "", "add remote path", "NAME PATH"))
 
-    extensions.wrapcommand(commands.table, 'pull', expullcmd)
+    extensions.wrapcommand(commands.table, "pull", expullcmd)
 
-    entry = extensions.wrapcommand(commands.table, 'clone', exclonecmd)
-    entry[1].append(('', 'mirror', None, 'sync all bookmarks'))
+    entry = extensions.wrapcommand(commands.table, "clone", exclonecmd)
+    entry[1].append(("", "mirror", None, "sync all bookmarks"))
 
-    entry = extensions.wrapcommand(commands.table, 'update', updatecmd)
-    entry[1].append(('B', 'bookmark', '', 'create new bookmark'))
+    entry = extensions.wrapcommand(commands.table, "update", updatecmd)
+    entry[1].append(("B", "bookmark", "", "create new bookmark"))
 
-    exchange.pushdiscoverymapping['bookmarks'] = expushdiscoverybookmarks
+    exchange.pushdiscoverymapping["bookmarks"] = expushdiscoverybookmarks
 
-    templatekw.keywords['remotenames'] = remotenameskw
+    templatekw.keywords["remotenames"] = remotenameskw
 
     try:
-        strip = extensions.find('strip')
+        strip = extensions.find("strip")
         if strip:
-            extensions.wrapcommand(strip.cmdtable, 'strip', exstrip)
+            extensions.wrapcommand(strip.cmdtable, "strip", exstrip)
     except KeyError:
         # strip isn't on
         pass
 
     try:
-        histedit = extensions.find('histedit')
+        histedit = extensions.find("histedit")
         if histedit:
-            extensions.wrapcommand(histedit.cmdtable, 'histedit', exhistedit)
+            extensions.wrapcommand(histedit.cmdtable, "histedit", exhistedit)
     except KeyError:
         # histedit isn't on
         pass
@@ -841,38 +896,46 @@ def extsetup(ui):
         if not loaded:
             return
         # register our namespace as 'shared' when bookmarks are shared
-        journal = extensions.find('journal')
-        journal.sharednamespaces[journalremotebookmarktype] = (
-            hg.sharedbookmarks)
+        journal = extensions.find("journal")
+        journal.sharednamespaces[journalremotebookmarktype] = hg.sharedbookmarks
 
-    extensions.afterloaded('journal', hasjournal)
+    extensions.afterloaded("journal", hasjournal)
 
-    bookcmd = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
-    branchcmd = extensions.wrapcommand(commands.table, 'branches', exbranches)
-    pushcmd = extensions.wrapcommand(commands.table, 'push', expushcmd)
+    bookcmd = extensions.wrapcommand(commands.table, "bookmarks", exbookmarks)
+    branchcmd = extensions.wrapcommand(commands.table, "branches", exbranches)
+    pushcmd = extensions.wrapcommand(commands.table, "push", expushcmd)
 
     if _tracking(ui):
-        bookcmd[1].append(('t', 'track', '',
-                          'track this bookmark or remote name', 'BOOKMARK'))
-        bookcmd[1].append(('u', 'untrack', None,
-                           'remove tracking for this bookmark', 'BOOKMARK'))
+        bookcmd[1].append(
+            ("t", "track", "", "track this bookmark or remote name", "BOOKMARK")
+        )
+        bookcmd[1].append(
+            ("u", "untrack", None, "remove tracking for this bookmark", "BOOKMARK")
+        )
 
     newopts = [
-        (bookcmd, ('a', 'all', None, 'show both remote and local bookmarks')),
-        (bookcmd, ('', 'remote', None, 'show only remote bookmarks')),
-        (branchcmd, ('a', 'all', None, 'show both remote and local branches')),
-        (branchcmd, ('', 'remote', None, 'show only remote branches')),
-        (pushcmd, ('t', 'to', '', 'push revs to this bookmark', 'BOOKMARK')),
-        (pushcmd, ('d', 'delete', '', 'delete remote bookmark', 'BOOKMARK')),
-        (pushcmd, ('', 'create', None, 'create a new remote bookmark')),
-        (pushcmd, ('', 'allow-anon', None, 'allow a new unbookmarked head')),
-        (pushcmd, ('', 'non-forward-move', None,
-                   'allows moving a remote bookmark to an arbitrary place')),
+        (bookcmd, ("a", "all", None, "show both remote and local bookmarks")),
+        (bookcmd, ("", "remote", None, "show only remote bookmarks")),
+        (branchcmd, ("a", "all", None, "show both remote and local branches")),
+        (branchcmd, ("", "remote", None, "show only remote branches")),
+        (pushcmd, ("t", "to", "", "push revs to this bookmark", "BOOKMARK")),
+        (pushcmd, ("d", "delete", "", "delete remote bookmark", "BOOKMARK")),
+        (pushcmd, ("", "create", None, "create a new remote bookmark")),
+        (pushcmd, ("", "allow-anon", None, "allow a new unbookmarked head")),
+        (
+            pushcmd,
+            (
+                "",
+                "non-forward-move",
+                None,
+                "allows moving a remote bookmark to an arbitrary place",
+            ),
+        ),
     ]
 
     def afterload(loaded):
         if loaded:
-            raise ValueError('nonexistant extension should not be loaded')
+            raise ValueError("nonexistant extension should not be loaded")
 
         for cmd, newopt in newopts:
             # avoid adding duplicate optionms
@@ -883,27 +946,27 @@ def extsetup(ui):
             if not skip:
                 cmd[1].append(newopt)
 
-    extensions.afterloaded('nonexistant', afterload)
+    extensions.afterloaded("nonexistant", afterload)
+
 
 def exlog(orig, ui, repo, *args, **opts):
     # hack for logging that turns on the dynamic blockerhook
-    if opts.get('remote'):
-        repo.__setattr__('_unblockhiddenremotenames', True)
+    if opts.get("remote"):
+        repo.__setattr__("_unblockhiddenremotenames", True)
     res = orig(ui, repo, *args, **opts)
-    if opts.get('remote'):
-        repo.__setattr__('_unblockhiddenremotenames', False)
+    if opts.get("remote"):
+        repo.__setattr__("_unblockhiddenremotenames", False)
     return res
+
 
 def expushdiscoverybookmarks(pushop):
     repo = pushop.repo.unfiltered()
-    remotemarks = pushop.remote.listkeys('bookmarks')
+    remotemarks = pushop.remote.listkeys("bookmarks")
 
     if pushop.delete:
         if pushop.delete not in remotemarks:
-            raise error.Abort(_('remote bookmark %s does not exist') %
-                             pushop.delete)
-        pushop.outbookmarks.append([pushop.delete, remotemarks[pushop.delete],
-                                    ''])
+            raise error.Abort(_("remote bookmark %s does not exist") % pushop.delete)
+        pushop.outbookmarks.append([pushop.delete, remotemarks[pushop.delete], ""])
         return exchange._pushdiscoverybookmarks(pushop)
 
     if not pushop.to:
@@ -913,7 +976,7 @@ def expushdiscoverybookmarks(pushop):
             if pushop.revs:
                 revs = set(pushop.revs)
             else:
-                revs = set(repo.lookup(r) for r in repo.revs('head()'))
+                revs = set(repo.lookup(r) for r in repo.revs("head()"))
             revs -= set(pushop.remoteheads)
             # find heads that don't have a bookmark going with them
             for bookmark in pushop.bookmarks:
@@ -932,60 +995,64 @@ def expushdiscoverybookmarks(pushop):
             knownlist = pushop.remote.known(revs)
             for node, known in zip(revs, knownlist):
                 ctx = repo[node]
-                if (known or
-                    ctx.obsolete() or
-                    ctx.closesbranch() or
+                if (
+                    known
+                    or ctx.obsolete()
+                    or ctx.closesbranch()
+                    or
                     # if there is a topic, let's just skip it for now
-                    (ctx.mutable() and 'topic' in ctx.extra())):
+                    (ctx.mutable() and "topic" in ctx.extra())
+                ):
                     continue
                 anonheads.append(short(node))
 
             if anonheads:
                 msg = _("push would create new anonymous heads (%s)")
                 hint = _("use --allow-anon to override this warning")
-                raise error.Abort(msg % ', '.join(sorted(anonheads)), hint=hint)
+                raise error.Abort(msg % ", ".join(sorted(anonheads)), hint=hint)
         return ret
 
     # in this path, we have a push --to command
     if not len(pushop.bookmarks):
         # if there are no bookmarks, something went wrong. bail gracefully.
-        raise error.Abort('no bookmark found to push')
+        raise error.Abort("no bookmark found to push")
 
     bookmark = pushop.bookmarks[0]
     rev = pushop.revs[0]
 
     # allow new bookmark only if --create is specified
-    old = ''
+    old = ""
     if bookmark in remotemarks:
         old = remotemarks[bookmark]
     elif not pushop.create:
-        msg = _('not creating new remote bookmark')
-        hint = _('use --create to create a new bookmark')
+        msg = _("not creating new remote bookmark")
+        hint = _("use --create to create a new bookmark")
         raise error.Abort(msg, hint=hint)
 
     # allow non-fg bookmark move only if --non-forward-move is specified
-    if not pushop.nonforwardmove and old != '':
+    if not pushop.nonforwardmove and old != "":
         # the first check isn't technically about non-fg moves, but the non-fg
         # check relies on the old bm location being in the local repo
         if old not in repo:
-            msg = _('remote bookmark revision is not in local repo')
-            hint = _('pull and merge or rebase or use --non-forward-move')
+            msg = _("remote bookmark revision is not in local repo")
+            hint = _("pull and merge or rebase or use --non-forward-move")
             raise error.Abort(msg, hint=hint)
         foreground = obsutil.foreground(repo, [repo.lookup(old)])
         if repo[rev].node() not in foreground:
-            msg = _('pushed rev is not in the foreground of remote bookmark')
-            hint = _('use --non-forward-move flag to complete arbitrary moves')
+            msg = _("pushed rev is not in the foreground of remote bookmark")
+            hint = _("use --non-forward-move flag to complete arbitrary moves")
             raise error.Abort(msg, hint=hint)
         if repo[old] == repo[rev]:
-            repo.ui.status(_('remote bookmark already points at pushed rev\n'))
+            repo.ui.status(_("remote bookmark already points at pushed rev\n"))
             return
 
     pushop.outbookmarks.append((bookmark, old, hex(rev)))
 
+
 def _pushrevs(repo, ui, rev):
     """Given configuration and default rev, return the revs to be pushed"""
-    pushrev = ui.config('remotenames', 'pushrev')
-    if pushrev == '!':
+    pushrev = ui.config("remotenames", "pushrev")
+    if pushrev == "!":
         return []
     elif pushrev:
         return [repo[pushrev].rev()]
@@ -993,17 +1060,18 @@ def _pushrevs(repo, ui, rev):
         return [repo[rev].rev()]
     return []
 
+
 def expullcmd(orig, ui, repo, source="default", **opts):
     revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
     source = revrenames.get(source, source)
 
-    if opts.get('update') and opts.get('rebase'):
-        raise error.Abort(_('specify either rebase or update, not both'))
+    if opts.get("update") and opts.get("rebase"):
+        raise error.Abort(_("specify either rebase or update, not both"))
 
-    if not opts.get('rebase'):
+    if not opts.get("rebase"):
         return orig(ui, repo, source, **opts)
 
-    rebasemodule = extensions.find('rebase')
+    rebasemodule = extensions.find("rebase")
 
     if not rebasemodule:
         return orig(ui, repo, source, **opts)
@@ -1015,12 +1083,13 @@ def expullcmd(orig, ui, repo, source="default", **opts):
 
     if dest:
         # Let `pull` do its thing without `rebase.py->pullrebase()`
-        del opts['rebase']
-        tool = opts.pop('tool', '')
+        del opts["rebase"]
+        tool = opts.pop("tool", "")
         ret = orig(ui, repo, source, **opts)
         return ret or rebasemodule.rebase(ui, repo, dest=dest, tool=tool)
     else:
         return orig(ui, repo, source, **opts)
+
 
 def _getrebasedest(repo, opts):
     """opts is passed in for extensibility"""
@@ -1028,46 +1097,46 @@ def _getrebasedest(repo, opts):
     active = bmactive(repo)
     return tracking.get(active)
 
+
 def expushcmd(orig, ui, repo, dest=None, **opts):
     # during the upgrade from old to new remotenames, tooling that uses --force
     # will continue working if remotenames.forcecompat is enabled
-    forcecompat = ui.configbool('remotenames', 'forcecompat')
+    forcecompat = ui.configbool("remotenames", "forcecompat")
 
     # needed for discovery method
     opargs = {
-        'delete': opts.get('delete'),
-        'to': opts.get('to'),
-        'create': opts.get('create') or (opts.get('force') and forcecompat),
-        'allowanon': opts.get('allow_anon') or
-                     repo.ui.configbool('remotenames', 'pushanonheads') or
-                     (opts.get('force') and forcecompat),
-        'nonforwardmove': opts.get('non_forward_move') or
-                repo.ui.configbool('remotenames', 'allownonfastforward') or
-                (opts.get('force') and forcecompat),
+        "delete": opts.get("delete"),
+        "to": opts.get("to"),
+        "create": opts.get("create") or (opts.get("force") and forcecompat),
+        "allowanon": opts.get("allow_anon")
+        or repo.ui.configbool("remotenames", "pushanonheads")
+        or (opts.get("force") and forcecompat),
+        "nonforwardmove": opts.get("non_forward_move")
+        or repo.ui.configbool("remotenames", "allownonfastforward")
+        or (opts.get("force") and forcecompat),
     }
 
-    if opargs['delete']:
+    if opargs["delete"]:
         flag = None
-        for f in ('to', 'bookmark', 'branch', 'rev'):
+        for f in ("to", "bookmark", "branch", "rev"):
             if opts.get(f):
                 flag = f
                 break
         if flag:
-            msg = _('do not specify --delete and '
-                    '--%s at the same time') % flag
+            msg = _("do not specify --delete and " "--%s at the same time") % flag
             raise error.Abort(msg)
         # we want to skip pushing any changesets while deleting a remote
         # bookmark, so we send the null revision
-        opts['rev'] = ['null']
+        opts["rev"] = ["null"]
         return orig(ui, repo, dest, opargs=opargs, **opts)
 
-    revs = opts.get('rev')
+    revs = opts.get("rev")
 
-    paths = dict((path, url) for path, url in ui.configitems('paths'))
+    paths = dict((path, url) for path, url in ui.configitems("paths"))
     revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
 
     origdest = dest
-    if not dest and not opargs['to'] and not revs and _tracking(ui):
+    if not dest and not opargs["to"] and not revs and _tracking(ui):
         current = bmactive(repo)
         tracking = _readtracking(repo)
         # print "tracking on %s %s" % (current, tracking)
@@ -1078,22 +1147,22 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             path = revrenames.get(path, path)
             if book and path in paths:
                 dest = path
-                opargs['to'] = book
+                opargs["to"] = book
 
     # un-rename passed path
     dest = revrenames.get(dest, dest)
 
     # if dest was renamed to default but we aren't specifically requesting
     # to push to default, change dest to default-push, if available
-    if not origdest and dest == 'default' and 'default-push' in paths:
-        dest = 'default-push'
+    if not origdest and dest == "default" and "default-push" in paths:
+        dest = "default-push"
 
     # get the actual path we will push to so we can do some url sniffing
-    for check in [dest, 'default-push', 'default']:
+    for check in [dest, "default-push", "default"]:
         if check in paths:
             path = paths[check]
             # hgsubversion and hggit do funky things on push. Just call direct.
-            if path.startswith('svn+') or path.startswith('git+'):
+            if path.startswith("svn+") or path.startswith("git+"):
                 return orig(ui, repo, dest, opargs=opargs, **opts)
             # Once we have found the path where we are pushing, do not continue
             # checking for places we are not pushing.
@@ -1102,71 +1171,74 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             # If an explicit destination was checked, also stop checking here.
             break
 
-    if not opargs['to']:
-        if ui.configbool('remotenames', 'forceto'):
-            msg = _('must specify --to when pushing')
-            hint = _('see configuration option %s') % 'remotenames.forceto'
+    if not opargs["to"]:
+        if ui.configbool("remotenames", "forceto"):
+            msg = _("must specify --to when pushing")
+            hint = _("see configuration option %s") % "remotenames.forceto"
             raise error.Abort(msg, hint=hint)
 
         if not revs:
-            opts['rev'] = _pushrevs(repo, ui, None)
+            opts["rev"] = _pushrevs(repo, ui, None)
 
         return orig(ui, repo, dest, opargs=opargs, **opts)
 
-    if opts.get('bookmark'):
-        msg = _('do not specify --to/-t and --bookmark/-B at the same time')
+    if opts.get("bookmark"):
+        msg = _("do not specify --to/-t and --bookmark/-B at the same time")
         raise error.Abort(msg)
-    if opts.get('branch'):
-        msg = _('do not specify --to/-t and --branch/-b at the same time')
+    if opts.get("branch"):
+        msg = _("do not specify --to/-t and --branch/-b at the same time")
         raise error.Abort(msg)
 
     # if we are not using the original push command implementation, make sure
     # pushvars is included in opargs
-    pushvars = opts.get('pushvars')
+    pushvars = opts.get("pushvars")
     if pushvars:
-        opargs['pushvars'] = pushvars
+        opargs["pushvars"] = pushvars
 
     if revs:
         revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
     else:
-        revs = _pushrevs(repo, ui, '.')
+        revs = _pushrevs(repo, ui, ".")
     if len(revs) != 1:
-        msg = _('--to requires exactly one rev to push')
-        hint = _('use --rev BOOKMARK or omit --rev for current commit (.)')
+        msg = _("--to requires exactly one rev to push")
+        hint = _("use --rev BOOKMARK or omit --rev for current commit (.)")
         raise error.Abort(msg, hint=hint)
     rev = revs[0]
 
     # big can o' copypasta from commands.push
-    dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    dest, branches = hg.parseurl(dest, opts.get('branch'))
+    dest = ui.expandpath(dest or "default-push", dest or "default")
+    dest, branches = hg.parseurl(dest, opts.get("branch"))
     try:
         other = hg.peer(repo, opts, dest)
     except error.RepoError:
         if dest == "default-push":
             hint = _('see the "path" section in "hg help config"')
-            raise error.Abort(_("default repository not configured!"),
-                             hint=hint)
+            raise error.Abort(_("default repository not configured!"), hint=hint)
         else:
             raise
 
     # all checks pass, go for it!
     node = repo.lookup(rev)
-    ui.status(_('pushing rev %s to destination %s bookmark %s\n') % (
-              short(node), dest, opargs['to']))
+    ui.status(
+        _("pushing rev %s to destination %s bookmark %s\n")
+        % (short(node), dest, opargs["to"])
+    )
 
     # TODO: subrepo stuff
 
-    force = opts.get('force')
-    bookmark = opargs['to']
+    force = opts.get("force")
+    bookmark = opargs["to"]
     pattern = ui.config("remotenames", "disallowedto")
     if pattern and re.match(pattern, bookmark):
         msg = _("this remote bookmark name is not allowed")
-        hint = ui.config("remotenames", "disallowedhint") or \
-                       _("use another bookmark name")
+        hint = ui.config("remotenames", "disallowedhint") or _(
+            "use another bookmark name"
+        )
         raise error.Abort(msg, hint=hint)
     # NB: despite the name, 'revs' doesn't work if it's a numeric rev
-    pushop = exchange.push(repo, other, force, revs=[node],
-                           bookmarks=(opargs['to'],), opargs=opargs)
+    pushop = exchange.push(
+        repo, other, force, revs=[node], bookmarks=(opargs["to"],), opargs=opargs
+    )
 
     result = not pushop.cgresult
     if pushop.bkresult is not None:
@@ -1177,24 +1249,26 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     return result
 
+
 def exclonecmd(orig, ui, *args, **opts):
-    if opts['mirror']:
-        ui.setconfig('remotenames', 'syncbookmarks', True, 'mirror-clone')
+    if opts["mirror"]:
+        ui.setconfig("remotenames", "syncbookmarks", True, "mirror-clone")
     orig(ui, *args, **opts)
 
+
 def exbranches(orig, ui, repo, *args, **opts):
-    if not opts.get('remote'):
+    if not opts.get("remote"):
         orig(ui, repo, *args, **opts)
 
-    if opts.get('all') or opts.get('remote'):
+    if opts.get("all") or opts.get("remote"):
         # exit early if namespace doesn't even exist
-        namespace = 'remotebranches'
+        namespace = "remotebranches"
         if namespace not in repo.names:
             return
 
         ns = repo.names[namespace]
-        label = 'log.' + ns.colorname
-        fm = ui.formatter('branches', opts)
+        label = "log." + ns.colorname
+        fm = ui.formatter("branches", opts)
 
         # it seems overkill to hide displaying hidden remote branches
         repo = repo.unfiltered()
@@ -1213,21 +1287,28 @@ def exbranches(orig, ui, repo, *args, **opts):
 
                 tmplabel = label
                 if ctx.obsolete():
-                    tmplabel = tmplabel + ' changeset.obsolete'
-                fm.write(ns.colorname, '%s', name, label=label)
-                fmt = ' ' * padsize + ' %d:%s'
-                fm.condwrite(not ui.quiet, 'rev node', fmt, r,
-                             fm.hexfunc(ctx.node()), label=tmplabel)
-                fm.plain('\n')
+                    tmplabel = tmplabel + " changeset.obsolete"
+                fm.write(ns.colorname, "%s", name, label=label)
+                fmt = " " * padsize + " %d:%s"
+                fm.condwrite(
+                    not ui.quiet,
+                    "rev node",
+                    fmt,
+                    r,
+                    fm.hexfunc(ctx.node()),
+                    label=tmplabel,
+                )
+                fm.plain("\n")
         fm.end()
+
 
 def _readtracking(repo):
     tracking = {}
     try:
         vfs = shareawarevfs(repo)
-        for line in vfs.read('bookmarks.tracking').strip().split('\n'):
+        for line in vfs.read("bookmarks.tracking").strip().split("\n"):
             try:
-                book, track = line.strip().split(' ', 1)
+                book, track = line.strip().split(" ", 1)
                 tracking[book] = track
             except ValueError:
                 # corrupt file, ignore entry
@@ -1236,13 +1317,15 @@ def _readtracking(repo):
         pass
     return tracking
 
+
 def _writetracking(repo, tracking):
     with repo.wlock():
-        data = ''
+        data = ""
         for book, track in tracking.iteritems():
-            data += '%s %s\n' % (book, track)
+            data += "%s %s\n" % (book, track)
         vfs = shareawarevfs(repo)
-        vfs.write('bookmarks.tracking', data)
+        vfs.write("bookmarks.tracking", data)
+
 
 def _removetracking(repo, bookmarks):
     tracking = _readtracking(repo)
@@ -1256,20 +1339,21 @@ def _removetracking(repo, bookmarks):
     if needwrite:
         _writetracking(repo, tracking)
 
+
 def exbookmarks(orig, ui, repo, *args, **opts):
     """Bookmark output is sorted by bookmark name.
 
     This has the side benefit of grouping all remote bookmarks by remote name.
 
     """
-    delete = opts.get('delete')
-    rename = opts.get('rename')
-    inactive = opts.get('inactive')
-    remote = opts.get('remote')
-    track = opts.get('track')
-    untrack = opts.get('untrack')
+    delete = opts.get("delete")
+    rename = opts.get("rename")
+    inactive = opts.get("inactive")
+    remote = opts.get("remote")
+    track = opts.get("track")
+    untrack = opts.get("untrack")
 
-    disallowed = set(ui.configlist('remotenames', 'disallowedbookmarks'))
+    disallowed = set(ui.configlist("remotenames", "disallowedbookmarks"))
     # Adds local bookmark if one of the options is called and args is empty
     if not args and (track or untrack):
         book = repo._bookmarks.active
@@ -1284,14 +1368,14 @@ def exbookmarks(orig, ui, repo, *args, **opts):
 
     if untrack:
         if track:
-            msg = _('do not specify --untrack and --track at the same time')
+            msg = _("do not specify --untrack and --track at the same time")
             raise error.Abort(msg)
         _removetracking(repo, args)
         return
 
     if delete or rename or args or inactive:
         if delete and track:
-            msg = _('do not specifiy --track and --delete at the same time')
+            msg = _("do not specifiy --track and --delete at the same time")
             raise error.Abort(msg)
 
         ret = orig(ui, repo, *args, **opts)
@@ -1322,20 +1406,21 @@ def exbookmarks(orig, ui, repo, *args, **opts):
 
         return ret
 
-    fm = ui.formatter('bookmarks', opts)
+    fm = ui.formatter("bookmarks", opts)
     if not remote:
         displaylocalbookmarks(ui, repo, opts, fm)
 
-    if remote or opts.get('all'):
+    if remote or opts.get("all"):
         displayremotebookmarks(ui, repo, opts, fm)
 
     fm.end()
+
 
 def displaylocalbookmarks(ui, repo, opts, fm):
     # copy pasta from commands.py; need to patch core
     hexfn = fm.hexfunc
     marks = repo._bookmarks
-    if len(marks) == 0 and (not fm or fm.isplain()) :
+    if len(marks) == 0 and (not fm or fm.isplain()):
         ui.status(_("no bookmarks set\n"))
 
     tracking = _readtracking(repo)
@@ -1345,18 +1430,18 @@ def displaylocalbookmarks(ui, repo, opts, fm):
     for bmark, n in sorted(marks.iteritems()):
         current = bmactive(repo)
         if bmark == current:
-            prefix, label = '*', 'bookmarks.current bookmarks.active'
+            prefix, label = "*", "bookmarks.current bookmarks.active"
         else:
-            prefix, label = ' ', ''
+            prefix, label = " ", ""
 
         fm.startitem()
         if nq:
-            fm.plain(' %s ' % prefix, label=label)
-        fm.write('bookmark', '%s', bmark, label=label)
+            fm.plain(" %s " % prefix, label=label)
+        fm.write("bookmark", "%s", bmark, label=label)
         pad = " " * (25 - encoding.colwidth(bmark))
         rev = repo.changelog.rev(n)
         h = hexfn(n)
-        fm.condwrite(nq, 'rev node', pad + ' %d:%s', rev, h, label=label)
+        fm.condwrite(nq, "rev node", pad + " %d:%s", rev, h, label=label)
         if ui.verbose and bmark in tracking:
             tracked = tracking[bmark]
             if bmark in distances:
@@ -1364,33 +1449,34 @@ def displaylocalbookmarks(ui, repo, opts, fm):
             else:
                 distance = calculatenamedistance(repo, bmark, tracked)
             if tracked:
-                fmt = '%s'
+                fmt = "%s"
                 args = (tracked,)
-                fields = ['tracking']
+                fields = ["tracking"]
                 if distance != (0, 0) and distance != (None, None):
                     ahead, behind = distance
-                    fmt += ': %s ahead, %s behind'
+                    fmt += ": %s ahead, %s behind"
                     args += ahead, behind
-                    fields += ['ahead', 'behind']
-                pad = " " * (25 - encoding.colwidth(str(rev)) -
-                             encoding.colwidth(str(h)))
-                fm.write(' '.join(fields), '%s[%s]' % (pad, fmt), *args,
-                    label=label)
+                    fields += ["ahead", "behind"]
+                pad = " " * (
+                    25 - encoding.colwidth(str(rev)) - encoding.colwidth(str(h))
+                )
+                fm.write(" ".join(fields), "%s[%s]" % (pad, fmt), *args, label=label)
                 if distance != (None, None):
                     distances[bmark] = distance
         fm.data(active=(bmark == current))
-        fm.plain('\n')
+        fm.plain("\n")
 
     # write distance cache
     writedistancecache(repo, distances)
 
+
 def displayremotebookmarks(ui, repo, opts, fm):
-    n = 'remotebookmarks'
+    n = "remotebookmarks"
     if n not in repo.names:
         return
     ns = repo.names[n]
     color = ns.colorname
-    label = 'log.' + color
+    label = "log." + color
 
     # it seems overkill to hide displaying hidden remote bookmarks
     repo = repo.unfiltered()
@@ -1406,18 +1492,20 @@ def displayremotebookmarks(ui, repo, opts, fm):
         fm.startitem()
 
         if not ui.quiet:
-            fm.plain('   ')
+            fm.plain("   ")
 
         padsize = max(25 - encoding.colwidth(name), 0)
-        fmt = ' ' * padsize + ' %d:%s'
+        fmt = " " * padsize + " %d:%s"
 
         tmplabel = label
         if useformatted and ctx.obsolete():
-            tmplabel = tmplabel + ' changeset.obsolete'
-        fm.write(color, '%s', name, label=label)
-        fm.condwrite(not ui.quiet, 'rev node', fmt, ctx.rev(),
-                     fm.hexfunc(node), label=tmplabel)
-        fm.plain('\n')
+            tmplabel = tmplabel + " changeset.obsolete"
+        fm.write(color, "%s", name, label=label)
+        fm.condwrite(
+            not ui.quiet, "rev node", fmt, ctx.rev(), fm.hexfunc(node), label=tmplabel
+        )
+        fm.plain("\n")
+
 
 def activepath(ui, remote):
     local = None
@@ -1430,11 +1518,10 @@ def activepath(ui, remote):
     # use the string given to us
     rpath = remote
     if local:
-        rpath = getattr(remote, 'root', None)
+        rpath = getattr(remote, "root", None)
         if rpath is None:
             # Maybe a localpeer? (hg@1ac628cd7113, 2.3)
-            rpath = getattr(getattr(remote, '_repo', None),
-                            'root', None)
+            rpath = getattr(getattr(remote, "_repo", None), "root", None)
     elif not isinstance(remote, str):
         try:
             rpath = remote._url
@@ -1442,37 +1529,37 @@ def activepath(ui, remote):
             rpath = remote.url
 
     candidates = []
-    for path, uri in ui.configitems('paths'):
+    for path, uri in ui.configitems("paths"):
         uri = ui.expandpath(expandscheme(ui, uri))
         if local:
             uri = os.path.realpath(uri)
         else:
-            if uri.startswith('http'):
+            if uri.startswith("http"):
                 try:
                     uri = util.url(uri).authinfo()[0]
                 except AttributeError:
                     uri = url.getauthinfo(uri)[0]
-        uri = uri.rstrip('/')
+        uri = uri.rstrip("/")
         # guard against hgsubversion nonsense
-        if not isinstance(rpath, basestring): # noqa
+        if not isinstance(rpath, basestring):  # noqa
             continue
-        rpath = rpath.rstrip('/')
+        rpath = rpath.rstrip("/")
         if uri == rpath:
             candidates.append(path)
 
     if not candidates:
-        return ''
+        return ""
 
     # be stable under different orderings of paths in config files
     # prefer any name other than 'default' and 'default-push' if available
     # prefer shortest name of remaining names, and break ties by alphabetizing
     cset = set(candidates)
-    cset.discard('default')
-    cset.discard('default-push')
+    cset.discard("default")
+    cset.discard("default-push")
     if cset:
         candidates = list(cset)
 
-    candidates.sort()         # alphabetical
+    candidates.sort()  # alphabetical
     candidates.sort(key=len)  # sort is stable so first will be the correct one
     bestpath = candidates[0]
 
@@ -1480,47 +1567,52 @@ def activepath(ui, remote):
     realpath = renames.get(bestpath, bestpath)
     return realpath
 
+
 # memoization
 _renames = None
+
+
 def _getrenames(ui):
     global _renames
     if _renames is None:
         _renames = {}
-        for k, v in ui.configitems('remotenames'):
-            if k.startswith('rename.'):
+        for k, v in ui.configitems("remotenames"):
+            if k.startswith("rename."):
                 _renames[k[7:]] = v
     return _renames
 
+
 def expandscheme(ui, uri):
-    '''For a given uri, expand the scheme for it'''
-    urischemes = [s for s in schemes.schemes.iterkeys()
-                  if uri.startswith('%s://' % s)]
+    """For a given uri, expand the scheme for it"""
+    urischemes = [s for s in schemes.schemes.iterkeys() if uri.startswith("%s://" % s)]
     for s in urischemes:
         # TODO: refactor schemes so we don't
         # duplicate this logic
-        ui.note(_('performing schemes expansion with '
-                  'scheme %s\n') % s)
+        ui.note(_("performing schemes expansion with " "scheme %s\n") % s)
         scheme = hg.schemes[s]
-        parts = uri.split('://', 1)[1].split('/', scheme.parts)
+        parts = uri.split("://", 1)[1].split("/", scheme.parts)
         if len(parts) > scheme.parts:
             tail = parts[-1]
             parts = parts[:-1]
         else:
-            tail = ''
+            tail = ""
         ctx = dict((str(i + 1), v) for i, v in enumerate(parts))
-        uri = ''.join(scheme.templater.process(scheme.url, ctx)) + tail
+        uri = "".join(scheme.templater.process(scheme.url, ctx)) + tail
     return uri
 
+
 def splitremotename(remote):
-    name = ''
-    if '/' in remote:
-        remote, name = remote.split('/', 1)
+    name = ""
+    if "/" in remote:
+        remote, name = remote.split("/", 1)
     return remote, name
+
 
 def joinremotename(remote, ref):
     if ref:
-        remote += '/' + ref
+        remote += "/" + ref
     return remote
+
 
 def shareawarevfs(repo):
     if repo.shared():
@@ -1528,24 +1620,27 @@ def shareawarevfs(repo):
     else:
         return repo.vfs
 
+
 def shareawarecachevfs(repo):
     if repo.shared():
-        return vfsmod.vfs(os.path.join(repo.sharedpath, 'cache'))
+        return vfsmod.vfs(os.path.join(repo.sharedpath, "cache"))
     else:
         return repo.cachevfs
 
+
 def readbookmarknames(repo, remote):
     for node, nametype, remotename, rname in readremotenames(repo):
-        if nametype == 'bookmarks' and remotename == remote:
+        if nametype == "bookmarks" and remotename == remote:
             yield rname
+
 
 def readremotenames(repo):
     vfs = shareawarevfs(repo)
     # exit early if there is nothing to do
-    if not vfs.exists('remotenames'):
+    if not vfs.exists("remotenames"):
         return
 
-    f = vfs('remotenames')
+    f = vfs("remotenames")
     for line in f:
         nametype = None
         line = line.strip()
@@ -1554,11 +1649,11 @@ def readremotenames(repo):
         nametype = None
         remote, rname = None, None
 
-        node, name = line.split(' ', 1)
+        node, name = line.split(" ", 1)
 
         # check for nametype being written into the file format
-        if ' ' in name:
-            nametype, name = name.split(' ', 1)
+        if " " in name:
+            nametype, name = name.split(" ", 1)
 
         remote, rname = splitremotename(name)
 
@@ -1570,6 +1665,7 @@ def readremotenames(repo):
 
     f.close()
 
+
 def transition(repo, ui):
     """
     Help with transitioning to using a remotenames workflow.
@@ -1580,12 +1676,12 @@ def transition(repo, ui):
     transitionbookmarks = master
         stable
     """
-    transmarks = ui.configlist('remotenames', 'transitionbookmarks')
+    transmarks = ui.configlist("remotenames", "transitionbookmarks")
     localmarks = repo._bookmarks
     changes = []
     for mark in transmarks:
         if mark in localmarks:
-            changes.append((mark, None)) # delete this bookmark
+            changes.append((mark, None))  # delete this bookmark
     lock = tr = None
     try:
         lock = repo.lock()
@@ -1595,9 +1691,10 @@ def transition(repo, ui):
     finally:
         lockmod.release(lock, tr)
 
-    message = ui.config('remotenames', 'transitionmessage')
+    message = ui.config("remotenames", "transitionmessage")
     if message:
-        ui.warn(message + '\n')
+        ui.warn(message + "\n")
+
 
 def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
     vfs = shareawarevfs(repo)
@@ -1609,43 +1706,46 @@ def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
     try:
         # delete old files
         try:
-            vfs.unlink('remotedistance')
+            vfs.unlink("remotedistance")
         except OSError as inst:
             if inst.errno != errno.ENOENT:
                 raise
 
-        if not vfs.exists('remotenames'):
+        if not vfs.exists("remotenames"):
             transition(repo, repo.ui)
 
         # read in all data first before opening file to write
         olddata = set(readremotenames(repo))
         oldbooks = {}
 
-        f = vfs('remotenames', 'w', atomictemp=True)
+        f = vfs("remotenames", "w", atomictemp=True)
 
         # only update the given 'remote path'; iterate over
         # old data and re-save it
         for node, nametype, oldremote, rname in olddata:
             if oldremote != remotepath:
                 n = joinremotename(oldremote, rname)
-                f.write('%s %s %s\n' % (node, nametype, n))
-            elif nametype == 'bookmarks':
+                f.write("%s %s %s\n" % (node, nametype, n))
+            elif nametype == "bookmarks":
                 oldbooks[rname] = node
 
         # record a journal entry if journal is loaded
-        if util.safehasattr(repo, 'journal'):
+        if util.safehasattr(repo, "journal"):
             for rmbookmark, newnode in bookmarks.iteritems():
                 oldnode = oldbooks.get(rmbookmark, hex(nullid))
                 if oldnode != newnode:
                     joinedremotename = joinremotename(remotepath, rmbookmark)
                     repo.journal.record(
-                        journalremotebookmarktype, joinedremotename,
-                        bin(oldnode), bin(newnode))
+                        journalremotebookmarktype,
+                        joinedremotename,
+                        bin(oldnode),
+                        bin(newnode),
+                    )
 
         for branch, nodes in branches.iteritems():
             for n in nodes:
                 rname = joinremotename(remotepath, branch)
-                f.write('%s branches %s\n' % (hex(n), rname))
+                f.write("%s branches %s\n" % (hex(n), rname))
 
         nm = repo.unfiltered().changelog.nodemap
         for bookmark, n in bookmarks.iteritems():
@@ -1654,8 +1754,10 @@ def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
                 # node is unknown locally, don't change the bookmark
                 bookhex = oldbooks.get(bookmark)
             if bookhex:
-                f.write('%s bookmarks %s\n' %
-                    (bookhex, joinremotename(remotepath, bookmark)))
+                f.write(
+                    "%s bookmarks %s\n"
+                    % (bookhex, joinremotename(remotepath, bookmark))
+                )
         f.close()
 
         # Old paths have been deleted, refresh remotenames
@@ -1664,18 +1766,20 @@ def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
     finally:
         wlock.release()
 
+
 def calculatedistance(repo, fromrev, torev):
     """
     Return the (ahead, behind) distance between `fromrev` and `torev`.
     The returned tuple will contain ints if calculated, Nones otherwise.
     """
-    if not repo.ui.configbool('remotenames', 'calculatedistance'):
+    if not repo.ui.configbool("remotenames", "calculatedistance"):
         return (None, None)
 
-    ahead = len(repo.revs('only(%d, %d)' % (fromrev, torev)))
-    behind = len(repo.revs('only(%d, %d)' % (torev, fromrev)))
+    ahead = len(repo.revs("only(%d, %d)" % (fromrev, torev)))
+    behind = len(repo.revs("only(%d, %d)" % (torev, fromrev)))
 
     return (ahead, behind)
+
 
 def calculatenamedistance(repo, fromname, toname):
     """
@@ -1690,21 +1794,23 @@ def calculatenamedistance(repo, fromname, toname):
         distance = calculatedistance(repo, rev1, rev2)
     return distance
 
+
 def writedistancecache(repo, distance):
     try:
         cachevfs = shareawarecachevfs(repo)
-        f = cachevfs('distance', 'w', atomictemp=True)
+        f = cachevfs("distance", "w", atomictemp=True)
         for k, v in distance.iteritems():
-            f.write('%s %d %d\n' % (k, v[0], v[1]))
+            f.write("%s %d %d\n" % (k, v[0], v[1]))
     except (IOError, OSError):
         pass
+
 
 def readdistancecache(repo):
     distances = {}
     try:
         cachevfs = shareawarecachevfs(repo)
-        for line in cachevfs.read('distance').splitlines():
-            line = line.rsplit(' ', 2)
+        for line in cachevfs.read("distance").splitlines():
+            line = line.rsplit(" ", 2)
             try:
                 d = (int(line[1]), int(line[2]))
                 distances[line[0]] = d
@@ -1716,27 +1822,33 @@ def readdistancecache(repo):
 
     return distances
 
+
 def invalidatedistancecache(repo):
     """Try to invalidate any existing distance caches"""
     error = False
     cachevfs = shareawarecachevfs(repo)
     try:
-        if cachevfs.isdir('distance'):
-            shutil.rmtree(cachevfs.join('distance'))
+        if cachevfs.isdir("distance"):
+            shutil.rmtree(cachevfs.join("distance"))
         else:
-            cachevfs.unlink('distance')
+            cachevfs.unlink("distance")
     except (OSError, IOError) as inst:
         if inst.errno != errno.ENOENT:
             error = True
     try:
-        cachevfs.unlink('distance.current')
+        cachevfs.unlink("distance.current")
     except (OSError, IOError) as inst:
         if inst.errno != errno.ENOENT:
             error = True
 
     if error:
-        repo.ui.warn(_('Unable to invalidate tracking cache; ' +
-                       'distance displayed may be incorrect\n'))
+        repo.ui.warn(
+            _(
+                "Unable to invalidate tracking cache; "
+                + "distance displayed may be incorrect\n"
+            )
+        )
+
 
 def precachedistance(repo):
     """
@@ -1751,7 +1863,7 @@ def precachedistance(repo):
     """
     # when working between multiple local repos which do not all have
     # remotenames enabled, do this work only for those with it enabled
-    if not util.safehasattr(repo, '_remotenames'):
+    if not util.safehasattr(repo, "_remotenames"):
         return
 
     # to avoid stale namespaces, let's reload
@@ -1762,7 +1874,7 @@ def precachedistance(repo):
         invalidatedistancecache(repo)
 
         distances = {}
-        if repo.ui.configbool('remotenames', 'precachedistance'):
+        if repo.ui.configbool("remotenames", "precachedistance"):
             distances = {}
             for bmark, tracked in _readtracking(repo).iteritems():
                 distance = calculatenamedistance(repo, bmark, tracked)
@@ -1770,29 +1882,31 @@ def precachedistance(repo):
                     distances[bmark] = distance
             writedistancecache(repo, distances)
 
-        if repo.ui.configbool('remotenames', 'precachecurrent'):
+        if repo.ui.configbool("remotenames", "precachecurrent"):
             # are we on a 'branch' but not at the head?
             # i.e. is there a bookmark that we are heading towards?
-            revs = list(repo.revs('limit(.:: and bookmark() - ., 1)'))
+            revs = list(repo.revs("limit(.:: and bookmark() - ., 1)"))
             if revs:
                 # if we are here then we have one or more bookmarks
                 # and we'll pick the first one for now
                 bmark = repo[revs[0]].bookmarks()[0]
-                distance = len(repo.revs('only(%d, .)' % revs[0]))
+                distance = len(repo.revs("only(%d, .)" % revs[0]))
                 cachevfs = shareawarecachevfs(repo)
-                cachevfs.write('distance.current', '%s %d' % (bmark, distance))
+                cachevfs.write("distance.current", "%s %d" % (bmark, distance))
 
     finally:
         wlock.release()
+
 
 #########
 # revsets
 #########
 
+
 def upstream_revs(filt, repo, subset, x):
     upstream_tips = set()
     for remotename in repo._remotenames.keys():
-        rname = 'remote' + remotename
+        rname = "remote" + remotename
         try:
             ns = repo.names[rname]
         except KeyError:
@@ -1804,22 +1918,24 @@ def upstream_revs(filt, repo, subset, x):
     if not upstream_tips:
         return smartset.baseset([])
 
-    tipancestors = repo.revs('::%ln', upstream_tips)
+    tipancestors = repo.revs("::%ln", upstream_tips)
     return smartset.filteredset(subset, lambda n: n in tipancestors)
 
+
 def upstream(repo, subset, x):
-    '''``upstream()``
+    """``upstream()``
     Select changesets in an upstream repository according to remotenames.
-    '''
+    """
     repo = repo.unfiltered()
-    upstream_names = repo.ui.configlist('remotenames', 'upstream')
+    upstream_names = repo.ui.configlist("remotenames", "upstream")
     # override default args from hgrc with args passed in on the command line
     if x:
-        upstream_names = [revset.getstring(symbol,
-                                           "remote path must be a string")
-                          for symbol in revset.getlist(x)]
+        upstream_names = [
+            revset.getstring(symbol, "remote path must be a string")
+            for symbol in revset.getlist(x)
+        ]
 
-    default_path = dict(repo.ui.configitems('paths')).get('default')
+    default_path = dict(repo.ui.configitems("paths")).get("default")
     if not upstream_names and default_path:
         default_path = expandscheme(repo.ui, default_path)
         upstream_names = [activepath(repo.ui, default_path)]
@@ -1831,12 +1947,14 @@ def upstream(repo, subset, x):
 
     return upstream_revs(filt, repo, subset, x)
 
+
 def pushed(repo, subset, x):
-    '''``pushed()``
+    """``pushed()``
     Select changesets in any remote repository according to remotenames.
-    '''
+    """
     revset.getargs(x, 0, 0, "pushed takes no arguments")
     return upstream_revs(lambda x: True, repo, subset, x)
+
 
 def remotenamesrevset(repo, subset, x):
     """``remotenames()``
@@ -1846,7 +1964,7 @@ def remotenamesrevset(repo, subset, x):
     remoterevs = set()
     cl = repo.changelog
     for remotename in repo._remotenames.keys():
-        rname = 'remote' + remotename
+        rname = "remote" + remotename
         try:
             ns = repo.names[rname]
         except KeyError:
@@ -1857,13 +1975,15 @@ def remotenamesrevset(repo, subset, x):
     results = (cl.rev(n) for n in remoterevs if n in repo)
     return subset & smartset.baseset(sorted(results))
 
-revset.symbols.update({'upstream': upstream,
-                       'pushed': pushed,
-                       'remotenames': remotenamesrevset})
+
+revset.symbols.update(
+    {"upstream": upstream, "pushed": pushed, "remotenames": remotenamesrevset}
+)
 
 ###########
 # templates
 ###########
+
 
 def remotenameskw(**args):
     """:remotenames: List of strings. List of remote names associated with the
@@ -1871,18 +1991,18 @@ def remotenameskw(**args):
     be hidden if there is a bookmark at the same changeset.
 
     """
-    repo, ctx = args['repo'], args['ctx']
+    repo, ctx = args["repo"], args["ctx"]
 
     remotenames = []
-    if 'remotebookmarks' in repo.names:
-        remotenames = repo.names['remotebookmarks'].names(repo, ctx.node())
+    if "remotebookmarks" in repo.names:
+        remotenames = repo.names["remotebookmarks"].names(repo, ctx.node())
 
-    suppress = repo.ui.configbool('remotenames', 'suppressbranches')
-    if (not remotenames or not suppress) and 'remotebranches' in repo.names:
-        remotenames += repo.names['remotebranches'].names(repo, ctx.node())
+    suppress = repo.ui.configbool("remotenames", "suppressbranches")
+    if (not remotenames or not suppress) and "remotebranches" in repo.names:
+        remotenames += repo.names["remotebranches"].names(repo, ctx.node())
 
-    return templatekw.showlist('remotename', remotenames, args,
-                               plural='remotenames')
+    return templatekw.showlist("remotename", remotenames, args, plural="remotenames")
+
 
 #############################
 # bookmarks api compatibility

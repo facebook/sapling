@@ -1,15 +1,21 @@
+import os
+
 from mercurial import cmdutil, registrar, scmutil, util
 from mercurial.i18n import _
-import os
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-testedwith = 'ships-with-fb-hgext'
+testedwith = "ships-with-fb-hgext"
 
-@command('^catnotate', [
-    ('r', 'rev', '', _('print the given revision'), _('REV')),
-    ('a', 'text', None, _('treat all files as text')),
-    ], _('[OPTION]... FILE...'),
+
+@command(
+    "^catnotate",
+    [
+        ("r", "rev", "", _("print the given revision"), _("REV")),
+        ("a", "text", None, _("treat all files as text")),
+    ],
+    _("[OPTION]... FILE..."),
 )
 def catnotate(ui, repo, file1, *args, **opts):
     """output the current or given revision of files annotated with filename
@@ -20,17 +26,18 @@ def catnotate(ui, repo, file1, *args, **opts):
 
     Binary files are skipped unless -a/--text option is provided.
     """
-    ctx = scmutil.revsingle(repo, opts.get('rev'))
+    ctx = scmutil.revsingle(repo, opts.get("rev"))
     matcher = scmutil.match(ctx, (file1,) + args, opts)
-    prefix = ''
+    prefix = ""
 
     err = 1
     # modified and stripped mercurial.cmdutil.cat follows
     def write(path):
-        fp = cmdutil.makefileobj(repo, opts.get('output'), ctx.node(),
-                         pathname=os.path.join(prefix, path))
+        fp = cmdutil.makefileobj(
+            repo, opts.get("output"), ctx.node(), pathname=os.path.join(prefix, path)
+        )
         data = ctx[path].data()
-        if not opts.get('text') and util.binary(data):
+        if not opts.get("text") and util.binary(data):
             fp.write("%s: binary file\n" % path)
             return
 

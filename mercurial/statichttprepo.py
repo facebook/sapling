@@ -11,7 +11,6 @@ from __future__ import absolute_import
 
 import errno
 
-from .i18n import _
 from . import (
     byterange,
     changelog,
@@ -26,11 +25,15 @@ from . import (
     util,
     vfs as vfsmod,
 )
+from .i18n import _
+
 
 urlerr = util.urlerr
 urlreq = util.urlreq
 
+
 class httprangereader(object):
+
     def __init__(self, url, opener):
         # we assume opener has HTTPRangeHandler
         self.url = url
@@ -46,13 +49,14 @@ class httprangereader(object):
 
     def seek(self, pos):
         self.pos = pos
+
     def read(self, bytes=None):
         req = urlreq.request(self.url)
-        end = ''
+        end = ""
         if bytes:
             end = self.pos + bytes - 1
         if self.pos or end:
-            req.add_header('Range', 'bytes=%d-%s' % (self.pos, end))
+            req.add_header("Range", "bytes=%d-%s" % (self.pos, end))
 
         try:
             f = self.opener.open(req)
@@ -68,19 +72,23 @@ class httprangereader(object):
             # HTTPRangeHandler does nothing if remote does not support
             # Range headers and returns the full entity. Let's slice it.
             if bytes:
-                data = data[self.pos:self.pos + bytes]
+                data = data[self.pos : self.pos + bytes]
             else:
-                data = data[self.pos:]
+                data = data[self.pos :]
         elif bytes:
             data = data[:bytes]
         self.pos += len(data)
         return data
+
     def readlines(self):
         return self.read().splitlines(True)
+
     def __iter__(self):
         return iter(self.readlines())
+
     def close(self):
         pass
+
 
 def build_opener(ui, authinfo):
     # urllib cannot handle URLs with embedded user or passwd
@@ -88,12 +96,13 @@ def build_opener(ui, authinfo):
     urlopener.add_handler(byterange.HTTPRangeHandler())
 
     class statichttpvfs(vfsmod.abstractvfs):
+
         def __init__(self, base):
             self.base = base
 
-        def __call__(self, path, mode='r', *args, **kw):
-            if mode not in ('r', 'rb'):
-                raise IOError('Permission denied')
+        def __call__(self, path, mode="r", *args, **kw):
+            if mode not in ("r", "rb"):
+                raise IOError("Permission denied")
             f = "/".join((self.base, urlreq.quote(path)))
             return httprangereader(f, urlopener)
 
@@ -105,11 +114,15 @@ def build_opener(ui, authinfo):
 
     return statichttpvfs
 
+
 class statichttppeer(localrepo.localpeer):
+
     def local(self):
         return None
+
     def canpush(self):
         return False
+
 
 class statichttprepository(localrepo.localrepository):
     supported = localrepo.localrepository._basesupported
@@ -119,12 +132,12 @@ class statichttprepository(localrepo.localrepository):
         self.ui = ui
 
         self.root = path
-        u = util.url(path.rstrip('/') + "/.hg")
+        u = util.url(path.rstrip("/") + "/.hg")
         self.path, authinfo = u.authinfo()
 
         vfsclass = build_opener(ui, authinfo)
         self.vfs = vfsclass(self.path)
-        self.cachevfs = vfsclass(self.vfs.join('cache'))
+        self.cachevfs = vfsclass(self.vfs.join("cache"))
         self._phasedefaults = []
 
         self.names = namespaces.namespaces()
@@ -181,16 +194,18 @@ class statichttprepository(localrepo.localrepository):
         return statichttppeer(self)
 
     def wlock(self, wait=True):
-        raise error.LockUnavailable(0, _('lock not available'), 'lock',
-                                    _('cannot lock static-http repository'))
+        raise error.LockUnavailable(
+            0, _("lock not available"), "lock", _("cannot lock static-http repository")
+        )
 
     def lock(self, wait=True):
-        raise error.Abort(_('cannot lock static-http repository'))
+        raise error.Abort(_("cannot lock static-http repository"))
 
     def _writecaches(self):
-        pass # statichttprepository are read only
+        pass  # statichttprepository are read only
+
 
 def instance(ui, path, create):
     if create:
-        raise error.Abort(_('cannot create new static-http repository'))
+        raise error.Abort(_("cannot create new static-http repository"))
     return statichttprepository(ui, path[7:])

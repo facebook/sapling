@@ -9,22 +9,18 @@ from __future__ import absolute_import
 
 import re
 
+from . import error, progress, pycompat, util, wireproto
 from .i18n import _
-from . import (
-    error,
-    progress,
-    pycompat,
-    util,
-    wireproto,
-)
+
 
 def _serverquote(s):
     if not s:
         return s
-    '''quote a string for the remote shell ... which we assume is sh'''
-    if re.match('[a-zA-Z0-9@%_+=:,./-]*$', s):
+    """quote a string for the remote shell ... which we assume is sh"""
+    if re.match("[a-zA-Z0-9@%_+=:,./-]*$", s):
         return s
     return "'%s'" % s.replace("'", "'\\''")
+
 
 def _forwardoutput(ui, pipe):
     """display all data currently available on pipe as remote output.
@@ -33,7 +29,8 @@ def _forwardoutput(ui, pipe):
     s = util.readpipe(pipe)
     if s:
         for l in s.splitlines():
-            ui.status(_("remote: "), l, '\n')
+            ui.status(_("remote: "), l, "\n")
+
 
 class doublepipe(object):
     """Operate a side-channel pipe in addition of a main one
@@ -64,8 +61,8 @@ class doublepipe(object):
 
         (This will only wait for data if the setup is supported by `util.poll`)
         """
-        if getattr(self._main, 'hasbuffer', False): # getattr for classic pipe
-            return (True, True) # main has data, assume side is worth poking at.
+        if getattr(self._main, "hasbuffer", False):  # getattr for classic pipe
+            return (True, True)  # main has data, assume side is worth poking at.
         fds = [self._main.fileno(), self._side.fileno()]
         try:
             act = util.poll(fds)
@@ -75,10 +72,10 @@ class doublepipe(object):
         return (self._main.fileno() in act, self._side.fileno() in act)
 
     def write(self, data):
-        return self._call('write', data)
+        return self._call("write", data)
 
     def read(self, size):
-        r = self._call('read', size)
+        r = self._call("read", size)
         if size != 0 and not r:
             # We've observed a condition that indicates the
             # stdout closed unexpectedly. Check stderr one
@@ -89,7 +86,7 @@ class doublepipe(object):
         return r
 
     def readline(self):
-        return self._call('readline')
+        return self._call("readline")
 
     def _call(self, methname, data=None):
         """call <methname> on "main", forward output of "side" while blocking
@@ -97,7 +94,7 @@ class doublepipe(object):
         # data can be '' or 0
         if (data is not None and not data) or self._main.closed:
             _forwardoutput(self._ui, self._side)
-            return ''
+            return ""
         while True:
             mainready, sideready = self._wait()
             if sideready:
@@ -115,14 +112,16 @@ class doublepipe(object):
     def flush(self):
         return self._main.flush()
 
+
 class sshpeer(wireproto.wirepeer):
+
     def __init__(self, ui, path, create=False):
         self._url = path
         self._ui = ui
         self._pipeo = self._pipei = self._pipee = None
 
         u = util.url(path, parsequery=False, parsefragment=False)
-        if u.scheme != 'ssh' or not u.host or u.path is None:
+        if u.scheme != "ssh" or not u.host or u.path is None:
             self._abort(error.RepoError(_("couldn't parse location %s") % path))
 
         util.checksafessh(path)
@@ -133,7 +132,7 @@ class sshpeer(wireproto.wirepeer):
         self._user = u.user
         self._host = u.host
         self._port = u.port
-        self._path = u.path or '.'
+        self._path = u.path or "."
 
         sshcmd = self.ui.config("ui", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd")
@@ -143,15 +142,19 @@ class sshpeer(wireproto.wirepeer):
         args = util.sshargs(sshcmd, self._host, self._user, self._port)
 
         if create:
-            cmd = '%s %s %s' % (sshcmd, args,
-                util.shellquote("%s init %s" %
-                    (_serverquote(remotecmd), _serverquote(self._path))))
-            ui.debug('running %s\n' % cmd)
-            res = ui.system(cmd, blockedtag='sshpeer', environ=sshenv)
+            cmd = "%s %s %s" % (
+                sshcmd,
+                args,
+                util.shellquote(
+                    "%s init %s" % (_serverquote(remotecmd), _serverquote(self._path))
+                ),
+            )
+            ui.debug("running %s\n" % cmd)
+            res = ui.system(cmd, blockedtag="sshpeer", environ=sshenv)
             if res != 0:
                 self._abort(error.RepoError(_("could not create remote repo")))
 
-        with self.ui.timeblockedsection('sshsetup'), progress.suspend():
+        with self.ui.timeblockedsection("sshsetup"), progress.suspend():
             self._validaterepo(sshcmd, args, remotecmd, sshenv)
 
     # Begin of _basepeer interface.
@@ -188,10 +191,15 @@ class sshpeer(wireproto.wirepeer):
         # cleanup up previous run
         self._cleanup()
 
-        cmd = '%s %s %s' % (sshcmd, args,
-            util.shellquote("%s -R %s serve --stdio" %
-                (_serverquote(remotecmd), _serverquote(self._path))))
-        self.ui.debug('running %s\n' % cmd)
+        cmd = "%s %s %s" % (
+            sshcmd,
+            args,
+            util.shellquote(
+                "%s -R %s serve --stdio"
+                % (_serverquote(remotecmd), _serverquote(self._path))
+            ),
+        )
+        self.ui.debug("running %s\n" % cmd)
         cmd = util.quotecommand(cmd)
 
         # while self._subprocess isn't used, having it allows the subprocess to
@@ -215,7 +223,7 @@ class sshpeer(wireproto.wirepeer):
         try:
             # skip any noise generated by remote shell
             self._callstream("hello")
-            r = self._callstream("between", pairs=("%s-%s" % ("0"*40, "0"*40)))
+            r = self._callstream("between", pairs=("%s-%s" % ("0" * 40, "0" * 40)))
         except IOError:
             badresponse()
 
@@ -274,8 +282,8 @@ class sshpeer(wireproto.wirepeer):
         available -= toread
         chunk = work
         while chunk:
-            while ';' in work:
-                one, work = work.split(';', 1)
+            while ";" in work:
+                one, work = work.split(";", 1)
                 yield wireproto.unescapearg(one)
             toread = min(available, 1024)
             chunk = rsp.read(toread)
@@ -291,8 +299,8 @@ class sshpeer(wireproto.wirepeer):
         keys = names.split()
         wireargs = {}
         for k in keys:
-            if k == '*':
-                wireargs['*'] = args
+            if k == "*":
+                wireargs["*"] = args
                 break
             else:
                 wireargs[k] = args[k]
@@ -319,30 +327,30 @@ class sshpeer(wireproto.wirepeer):
     def _callpush(self, cmd, fp, **args):
         r = self._call(cmd, **args)
         if r:
-            return '', r
-        for d in iter(lambda: fp.read(4096), ''):
+            return "", r
+        for d in iter(lambda: fp.read(4096), ""):
             self._send(d)
         self._send("", flush=True)
         r = self._recv()
         if r:
-            return '', r
-        return self._recv(), ''
+            return "", r
+        return self._recv(), ""
 
     def _calltwowaystream(self, cmd, fp, **args):
         r = self._call(cmd, **args)
         if r:
             # XXX needs to be made better
-            raise error.Abort(_('unexpected remote reply: %s') % r)
-        for d in iter(lambda: fp.read(4096), ''):
+            raise error.Abort(_("unexpected remote reply: %s") % r)
+        for d in iter(lambda: fp.read(4096), ""):
             self._send(d)
         self._send("", flush=True)
         return self._pipei
 
     def _getamount(self):
         l = self._pipei.readline()
-        if l == '\n':
+        if l == "\n":
             self._readerr()
-            msg = _('check previous remote output')
+            msg = _("check previous remote output")
             self._abort(error.OutOfBandError(hint=msg))
         self._readerr()
         try:
@@ -360,5 +368,6 @@ class sshpeer(wireproto.wirepeer):
         if flush:
             self._pipeo.flush()
         self._readerr()
+
 
 instance = sshpeer

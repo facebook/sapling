@@ -14,15 +14,13 @@ import os
 import random
 import subprocess
 
-from . import (
-    encoding,
-    pycompat,
-)
+from . import encoding, pycompat
 
-_kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
-_advapi32 = ctypes.WinDLL('advapi32', use_last_error=True)
-_user32 = ctypes.WinDLL('user32', use_last_error=True)
-_crypt32 = ctypes.WinDLL('crypt32', use_last_error=True)
+
+_kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+_advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+_user32 = ctypes.WinDLL("user32", use_last_error=True)
+_crypt32 = ctypes.WinDLL("crypt32", use_last_error=True)
 
 _BOOL = ctypes.c_long
 _WORD = ctypes.c_ushort
@@ -57,21 +55,25 @@ elif ctypes.sizeof(ctypes.c_longlong) == ctypes.sizeof(ctypes.c_void_p):
     _WPARAM = ctypes.c_ulonglong
     _LPARAM = ctypes.c_longlong
 
+
 class _FILETIME(ctypes.Structure):
-    _fields_ = [('dwLowDateTime', _DWORD),
-                ('dwHighDateTime', _DWORD)]
+    _fields_ = [("dwLowDateTime", _DWORD), ("dwHighDateTime", _DWORD)]
+
 
 class _BY_HANDLE_FILE_INFORMATION(ctypes.Structure):
-    _fields_ = [('dwFileAttributes', _DWORD),
-                ('ftCreationTime', _FILETIME),
-                ('ftLastAccessTime', _FILETIME),
-                ('ftLastWriteTime', _FILETIME),
-                ('dwVolumeSerialNumber', _DWORD),
-                ('nFileSizeHigh', _DWORD),
-                ('nFileSizeLow', _DWORD),
-                ('nNumberOfLinks', _DWORD),
-                ('nFileIndexHigh', _DWORD),
-                ('nFileIndexLow', _DWORD)]
+    _fields_ = [
+        ("dwFileAttributes", _DWORD),
+        ("ftCreationTime", _FILETIME),
+        ("ftLastAccessTime", _FILETIME),
+        ("ftLastWriteTime", _FILETIME),
+        ("dwVolumeSerialNumber", _DWORD),
+        ("nFileSizeHigh", _DWORD),
+        ("nFileSizeLow", _DWORD),
+        ("nNumberOfLinks", _DWORD),
+        ("nFileIndexHigh", _DWORD),
+        ("nFileIndexLow", _DWORD),
+    ]
+
 
 # CreateFile
 _FILE_SHARE_READ = 0x00000001
@@ -93,51 +95,65 @@ _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 # GetExitCodeProcess
 _STILL_ACTIVE = 259
 
+
 class _STARTUPINFO(ctypes.Structure):
-    _fields_ = [('cb', _DWORD),
-                ('lpReserved', _LPSTR),
-                ('lpDesktop', _LPSTR),
-                ('lpTitle', _LPSTR),
-                ('dwX', _DWORD),
-                ('dwY', _DWORD),
-                ('dwXSize', _DWORD),
-                ('dwYSize', _DWORD),
-                ('dwXCountChars', _DWORD),
-                ('dwYCountChars', _DWORD),
-                ('dwFillAttribute', _DWORD),
-                ('dwFlags', _DWORD),
-                ('wShowWindow', _WORD),
-                ('cbReserved2', _WORD),
-                ('lpReserved2', ctypes.c_char_p),
-                ('hStdInput', _HANDLE),
-                ('hStdOutput', _HANDLE),
-                ('hStdError', _HANDLE)]
+    _fields_ = [
+        ("cb", _DWORD),
+        ("lpReserved", _LPSTR),
+        ("lpDesktop", _LPSTR),
+        ("lpTitle", _LPSTR),
+        ("dwX", _DWORD),
+        ("dwY", _DWORD),
+        ("dwXSize", _DWORD),
+        ("dwYSize", _DWORD),
+        ("dwXCountChars", _DWORD),
+        ("dwYCountChars", _DWORD),
+        ("dwFillAttribute", _DWORD),
+        ("dwFlags", _DWORD),
+        ("wShowWindow", _WORD),
+        ("cbReserved2", _WORD),
+        ("lpReserved2", ctypes.c_char_p),
+        ("hStdInput", _HANDLE),
+        ("hStdOutput", _HANDLE),
+        ("hStdError", _HANDLE),
+    ]
+
 
 class _PROCESS_INFORMATION(ctypes.Structure):
-    _fields_ = [('hProcess', _HANDLE),
-                ('hThread', _HANDLE),
-                ('dwProcessId', _DWORD),
-                ('dwThreadId', _DWORD)]
+    _fields_ = [
+        ("hProcess", _HANDLE),
+        ("hThread", _HANDLE),
+        ("dwProcessId", _DWORD),
+        ("dwThreadId", _DWORD),
+    ]
+
 
 _CREATE_NO_WINDOW = 0x08000000
 _SW_HIDE = 0
 
+
 class _COORD(ctypes.Structure):
-    _fields_ = [('X', ctypes.c_short),
-                ('Y', ctypes.c_short)]
+    _fields_ = [("X", ctypes.c_short), ("Y", ctypes.c_short)]
+
 
 class _SMALL_RECT(ctypes.Structure):
-    _fields_ = [('Left', ctypes.c_short),
-                ('Top', ctypes.c_short),
-                ('Right', ctypes.c_short),
-                ('Bottom', ctypes.c_short)]
+    _fields_ = [
+        ("Left", ctypes.c_short),
+        ("Top", ctypes.c_short),
+        ("Right", ctypes.c_short),
+        ("Bottom", ctypes.c_short),
+    ]
+
 
 class _CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
-    _fields_ = [('dwSize', _COORD),
-                ('dwCursorPosition', _COORD),
-                ('wAttributes', _WORD),
-                ('srWindow', _SMALL_RECT),
-                ('dwMaximumWindowSize', _COORD)]
+    _fields_ = [
+        ("dwSize", _COORD),
+        ("dwCursorPosition", _COORD),
+        ("wAttributes", _WORD),
+        ("srWindow", _SMALL_RECT),
+        ("dwMaximumWindowSize", _COORD),
+    ]
+
 
 _STD_OUTPUT_HANDLE = _DWORD(-11).value
 _STD_ERROR_HANDLE = _DWORD(-12).value
@@ -153,11 +169,9 @@ PKCS_7_ASN_ENCODING = 0x00010000
 class CERT_CHAIN_CONTEXT(ctypes.Structure):
     _fields_ = (
         ("cbSize", _DWORD),
-
         # CERT_TRUST_STATUS struct
         ("dwErrorStatus", _DWORD),
         ("dwInfoStatus", _DWORD),
-
         ("cChain", _DWORD),
         ("rgpChain", ctypes.c_void_p),
         ("cLowerQualityChainContext", _DWORD),
@@ -166,14 +180,15 @@ class CERT_CHAIN_CONTEXT(ctypes.Structure):
         ("dwRevocationFreshnessTime", _DWORD),
     )
 
+
 class CERT_USAGE_MATCH(ctypes.Structure):
     _fields_ = (
         ("dwType", _DWORD),
-
-         # CERT_ENHKEY_USAGE struct
+        # CERT_ENHKEY_USAGE struct
         ("cUsageIdentifier", _DWORD),
-        ("rgpszUsageIdentifier", ctypes.c_void_p), # LPSTR *
+        ("rgpszUsageIdentifier", ctypes.c_void_p),  # LPSTR *
     )
+
 
 class CERT_CHAIN_PARA(ctypes.Structure):
     _fields_ = (
@@ -183,35 +198,45 @@ class CERT_CHAIN_PARA(ctypes.Structure):
         ("dwUrlRetrievalTimeout", _DWORD),
         ("fCheckRevocationFreshnessTime", _BOOL),
         ("dwRevocationFreshnessTime", _DWORD),
-        ("pftCacheResync", ctypes.c_void_p), # LPFILETIME
-        ("pStrongSignPara", ctypes.c_void_p), # PCCERT_STRONG_SIGN_PARA
+        ("pftCacheResync", ctypes.c_void_p),  # LPFILETIME
+        ("pStrongSignPara", ctypes.c_void_p),  # PCCERT_STRONG_SIGN_PARA
         ("dwStrongSignFlags", _DWORD),
     )
 
+
 # types of parameters of C functions used (required by pypy)
 
-_crypt32.CertCreateCertificateContext.argtypes = [_DWORD, # cert encoding
-                                                  ctypes.c_char_p, # cert
-                                                  _DWORD] # cert size
+_crypt32.CertCreateCertificateContext.argtypes = [
+    _DWORD,  # cert encoding
+    ctypes.c_char_p,  # cert
+    _DWORD,
+]  # cert size
 _crypt32.CertCreateCertificateContext.restype = _PCCERT_CONTEXT
 
 _crypt32.CertGetCertificateChain.argtypes = [
-        ctypes.c_void_p, # HCERTCHAINENGINE
-        _PCCERT_CONTEXT,
-        ctypes.c_void_p, # LPFILETIME
-        ctypes.c_void_p, # HCERTSTORE
-        ctypes.c_void_p, # PCERT_CHAIN_PARA
-        _DWORD,
-        ctypes.c_void_p, # LPVOID
-        ctypes.c_void_p  # PCCERT_CHAIN_CONTEXT *
-    ]
+    ctypes.c_void_p,  # HCERTCHAINENGINE
+    _PCCERT_CONTEXT,
+    ctypes.c_void_p,  # LPFILETIME
+    ctypes.c_void_p,  # HCERTSTORE
+    ctypes.c_void_p,  # PCERT_CHAIN_PARA
+    _DWORD,
+    ctypes.c_void_p,  # LPVOID
+    ctypes.c_void_p,  # PCCERT_CHAIN_CONTEXT *
+]
 _crypt32.CertGetCertificateChain.restype = _BOOL
 
 _crypt32.CertFreeCertificateContext.argtypes = [_PCCERT_CONTEXT]
 _crypt32.CertFreeCertificateContext.restype = _BOOL
 
-_kernel32.CreateFileA.argtypes = [_LPCSTR, _DWORD, _DWORD, ctypes.c_void_p,
-    _DWORD, _DWORD, _HANDLE]
+_kernel32.CreateFileA.argtypes = [
+    _LPCSTR,
+    _DWORD,
+    _DWORD,
+    ctypes.c_void_p,
+    _DWORD,
+    _DWORD,
+    _HANDLE,
+]
 _kernel32.CreateFileA.restype = _HANDLE
 
 _kernel32.GetFileInformationByHandle.argtypes = [_HANDLE, ctypes.c_void_p]
@@ -241,9 +266,18 @@ _kernel32.GetLastError.restype = _DWORD
 _kernel32.GetModuleFileNameA.argtypes = [_HANDLE, ctypes.c_void_p, _DWORD]
 _kernel32.GetModuleFileNameA.restype = _DWORD
 
-_kernel32.CreateProcessA.argtypes = [_LPCSTR, _LPCSTR, ctypes.c_void_p,
-    ctypes.c_void_p, _BOOL, _DWORD, ctypes.c_void_p, _LPCSTR, ctypes.c_void_p,
-    ctypes.c_void_p]
+_kernel32.CreateProcessA.argtypes = [
+    _LPCSTR,
+    _LPCSTR,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    _BOOL,
+    _DWORD,
+    ctypes.c_void_p,
+    _LPCSTR,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+]
 _kernel32.CreateProcessA.restype = _BOOL
 
 _kernel32.ExitProcess.argtypes = [_UINT]
@@ -281,24 +315,37 @@ _WNDENUMPROC = ctypes.WINFUNCTYPE(_BOOL, _HWND, _LPARAM)
 _user32.EnumWindows.argtypes = [_WNDENUMPROC, _LPARAM]
 _user32.EnumWindows.restype = _BOOL
 
-_kernel32.PeekNamedPipe.argtypes = [_HANDLE, ctypes.c_void_p, _DWORD,
-    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+_kernel32.PeekNamedPipe.argtypes = [
+    _HANDLE,
+    ctypes.c_void_p,
+    _DWORD,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+]
 _kernel32.PeekNamedPipe.restype = _BOOL
+
 
 def _raiseoserror(name):
     # Force the code to a signed int to avoid an 'int too large' error.
     # See https://bugs.python.org/issue28474
     code = _kernel32.GetLastError()
     if code > 0x7fffffff:
-        code -= 2**32
+        code -= 2 ** 32
     err = ctypes.WinError(code=code)
-    raise OSError(err.errno, '%s: %s' % (name,
-                                         encoding.strtolocal(err.strerror)))
+    raise OSError(err.errno, "%s: %s" % (name, encoding.strtolocal(err.strerror)))
+
 
 def getfileinfo(name):
-    fh = _kernel32.CreateFileA(name, 0,
-            _FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE,
-            None, _OPEN_EXISTING, _FILE_FLAG_BACKUP_SEMANTICS, None)
+    fh = _kernel32.CreateFileA(
+        name,
+        0,
+        _FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE,
+        None,
+        _OPEN_EXISTING,
+        _FILE_FLAG_BACKUP_SEMANTICS,
+        None,
+    )
     if fh == _INVALID_HANDLE_VALUE:
         _raiseoserror(name)
     try:
@@ -309,12 +356,14 @@ def getfileinfo(name):
     finally:
         _kernel32.CloseHandle(fh)
 
+
 def getcurrentprocstarttime():
     """Get current process start time
 
     See _getprocstarttime docstring for more info"""
     pid = _kernel32.GetCurrentProcessId()
     return getprocstarttime(pid)
+
 
 def getprocstarttime(pid):
     """Get the windows timestamp of process start time
@@ -331,11 +380,13 @@ def getprocstarttime(pid):
         exittime = _FILETIME()
         kerneltime = _FILETIME()
         usertime = _FILETIME()
-        success = _kernel32.GetProcessTimes(ph,
-                                            ctypes.byref(creationtime),
-                                            ctypes.byref(exittime),
-                                            ctypes.byref(kerneltime),
-                                            ctypes.byref(usertime))
+        success = _kernel32.GetProcessTimes(
+            ph,
+            ctypes.byref(creationtime),
+            ctypes.byref(exittime),
+            ctypes.byref(kerneltime),
+            ctypes.byref(usertime),
+        )
         if not success:
             raise ctypes.WinError(_kernel32.GetLastError())
         ct = (creationtime.dwHighDateTime << 32) + creationtime.dwLowDateTime
@@ -343,25 +394,26 @@ def getprocstarttime(pid):
     finally:
         _kernel32.CloseHandle(ph)
 
+
 def checkcertificatechain(cert, build=True):
-    '''Tests the given certificate to see if there is a complete chain to a
+    """Tests the given certificate to see if there is a complete chain to a
        trusted root certificate.  As a side effect, missing certificates are
        downloaded and installed unless ``build=False``.  True is returned if a
        chain to a trusted root exists (even if built on the fly), otherwise
        False.  NB: A chain to a trusted root does NOT imply that the certificate
        is valid.
-    '''
+    """
 
     chainctxptr = ctypes.POINTER(CERT_CHAIN_CONTEXT)
 
     pchainctx = chainctxptr()
-    chainpara = CERT_CHAIN_PARA(cbSize=ctypes.sizeof(CERT_CHAIN_PARA),
-                                RequestedUsage=CERT_USAGE_MATCH())
+    chainpara = CERT_CHAIN_PARA(
+        cbSize=ctypes.sizeof(CERT_CHAIN_PARA), RequestedUsage=CERT_USAGE_MATCH()
+    )
 
-    certctx = _crypt32.CertCreateCertificateContext(X509_ASN_ENCODING, cert,
-                                                    len(cert))
+    certctx = _crypt32.CertCreateCertificateContext(X509_ASN_ENCODING, cert, len(cert))
     if certctx is None:
-        _raiseoserror('CertCreateCertificateContext')
+        _raiseoserror("CertCreateCertificateContext")
 
     flags = 0
 
@@ -370,15 +422,17 @@ def checkcertificatechain(cert, build=True):
 
     try:
         # Building the certificate chain will update root certs as necessary.
-        if not _crypt32.CertGetCertificateChain(None,      # hChainEngine
-                                                certctx,   # pCertContext
-                                                None,      # pTime
-                                                None,      # hAdditionalStore
-                                                ctypes.byref(chainpara),
-                                                flags,
-                                                None,      # pvReserved
-                                                ctypes.byref(pchainctx)):
-            _raiseoserror('CertGetCertificateChain')
+        if not _crypt32.CertGetCertificateChain(
+            None,  # hChainEngine
+            certctx,  # pCertContext
+            None,  # pTime
+            None,  # hAdditionalStore
+            ctypes.byref(chainpara),
+            flags,
+            None,  # pvReserved
+            ctypes.byref(pchainctx),
+        ):
+            _raiseoserror("CertGetCertificateChain")
 
         chainctx = pchainctx.contents
 
@@ -388,37 +442,43 @@ def checkcertificatechain(cert, build=True):
             _crypt32.CertFreeCertificateChain(pchainctx)
         _crypt32.CertFreeCertificateContext(certctx)
 
+
 def oslink(src, dst):
     try:
         if not _kernel32.CreateHardLinkA(dst, src, None):
             _raiseoserror(src)
-    except AttributeError: # Wine doesn't support this function
+    except AttributeError:  # Wine doesn't support this function
         _raiseoserror(src)
 
+
 def nlinks(name):
-    '''return number of hardlinks for the given file'''
+    """return number of hardlinks for the given file"""
     return getfileinfo(name).nNumberOfLinks
 
+
 def samefile(path1, path2):
-    '''Returns whether path1 and path2 refer to the same file or directory.'''
+    """Returns whether path1 and path2 refer to the same file or directory."""
     res1 = getfileinfo(path1)
     res2 = getfileinfo(path2)
-    return (res1.dwVolumeSerialNumber == res2.dwVolumeSerialNumber
+    return (
+        res1.dwVolumeSerialNumber == res2.dwVolumeSerialNumber
         and res1.nFileIndexHigh == res2.nFileIndexHigh
-        and res1.nFileIndexLow == res2.nFileIndexLow)
+        and res1.nFileIndexLow == res2.nFileIndexLow
+    )
+
 
 def samedevice(path1, path2):
-    '''Returns whether path1 and path2 are on the same device.'''
+    """Returns whether path1 and path2 are on the same device."""
     res1 = getfileinfo(path1)
     res2 = getfileinfo(path2)
     return res1.dwVolumeSerialNumber == res2.dwVolumeSerialNumber
+
 
 def peekpipe(pipe):
     handle = msvcrt.get_osfhandle(pipe.fileno())
     avail = _DWORD()
 
-    if not _kernel32.PeekNamedPipe(handle, None, 0, None, ctypes.byref(avail),
-                                   None):
+    if not _kernel32.PeekNamedPipe(handle, None, 0, None, ctypes.byref(avail), None):
         err = _kernel32.GetLastError()
         if err == _ERROR_BROKEN_PIPE:
             return 0
@@ -426,9 +486,10 @@ def peekpipe(pipe):
 
     return avail.value
 
+
 def testpid(pid):
-    '''return True if pid is still running or unable to
-    determine, False otherwise'''
+    """return True if pid is still running or unable to
+    determine, False otherwise"""
     h = _kernel32.OpenProcess(_PROCESS_QUERY_INFORMATION, False, pid)
     if h:
         try:
@@ -439,41 +500,47 @@ def testpid(pid):
             _kernel32.CloseHandle(h)
     return _kernel32.GetLastError() != _ERROR_INVALID_PARAMETER
 
+
 def executablepath():
-    '''return full path of hg.exe'''
+    """return full path of hg.exe"""
     size = 600
     buf = ctypes.create_string_buffer(size + 1)
     len = _kernel32.GetModuleFileNameA(None, ctypes.byref(buf), size)
     if len == 0:
-        raise ctypes.WinError() # Note: WinError is a function
+        raise ctypes.WinError()  # Note: WinError is a function
     elif len == size:
         raise ctypes.WinError(_ERROR_INSUFFICIENT_BUFFER)
     return buf.value
 
+
 def getuser():
-    '''return name of current user'''
+    """return name of current user"""
     size = _DWORD(300)
     buf = ctypes.create_string_buffer(size.value + 1)
     if not _advapi32.GetUserNameA(ctypes.byref(buf), ctypes.byref(size)):
         raise ctypes.WinError()
     return buf.value
 
+
 _signalhandler = []
 
+
 def setsignalhandler():
-    '''Register a termination handler for console events including
+    """Register a termination handler for console events including
     CTRL+C. python signal handlers do not work well with socket
     operations.
-    '''
+    """
+
     def handler(event):
         _kernel32.ExitProcess(1)
 
     if _signalhandler:
-        return # already registered
+        return  # already registered
     h = _SIGNAL_HANDLER(handler)
-    _signalhandler.append(h) # needed to prevent garbage collection
+    _signalhandler.append(h)  # needed to prevent garbage collection
     if not _kernel32.SetConsoleCtrlHandler(h, True):
         raise ctypes.WinError()
+
 
 def hidewindow():
 
@@ -482,11 +549,12 @@ def hidewindow():
         _user32.GetWindowThreadProcessId(hwnd, ctypes.byref(wpid))
         if pid == wpid.value:
             _user32.ShowWindow(hwnd, _SW_HIDE)
-            return False # stop enumerating windows
+            return False  # stop enumerating windows
         return True
 
     pid = _kernel32.GetCurrentProcessId()
     _user32.EnumWindows(_WNDENUMPROC(callback), pid)
+
 
 def termsize():
     # cmd.exe does not handle CR like a unix console, the CR is
@@ -497,24 +565,25 @@ def termsize():
     height = 25
     # Query stderr to avoid problems with redirections
     screenbuf = _kernel32.GetStdHandle(
-                  _STD_ERROR_HANDLE) # don't close the handle returned
+        _STD_ERROR_HANDLE
+    )  # don't close the handle returned
     if screenbuf is None or screenbuf == _INVALID_HANDLE_VALUE:
         return width, height
     csbi = _CONSOLE_SCREEN_BUFFER_INFO()
-    if not _kernel32.GetConsoleScreenBufferInfo(
-                        screenbuf, ctypes.byref(csbi)):
+    if not _kernel32.GetConsoleScreenBufferInfo(screenbuf, ctypes.byref(csbi)):
         return width, height
     width = csbi.srWindow.Right - csbi.srWindow.Left  # don't '+ 1'
     height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1
     return width, height
 
+
 def enablevtmode():
-    '''Enable virtual terminal mode for the associated console.  Return True if
-    enabled, else False.'''
+    """Enable virtual terminal mode for the associated console.  Return True if
+    enabled, else False."""
 
     ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4
 
-    handle = _kernel32.GetStdHandle(_STD_OUTPUT_HANDLE) # don't close the handle
+    handle = _kernel32.GetStdHandle(_STD_OUTPUT_HANDLE)  # don't close the handle
     if handle == _INVALID_HANDLE_VALUE:
         return False
 
@@ -531,6 +600,7 @@ def enablevtmode():
 
     return True
 
+
 def spawndetached(args):
     # No standard library function really spawns a fully detached
     # process under win32 because they allocate pipes or other objects
@@ -542,31 +612,40 @@ def spawndetached(args):
 
     pi = _PROCESS_INFORMATION()
 
-    env = ''
+    env = ""
     for k in encoding.environ:
         env += "%s=%s\0" % (k, encoding.environ[k])
     if not env:
-        env = '\0'
-    env += '\0'
+        env = "\0"
+    env += "\0"
 
     args = subprocess.list2cmdline(args)
 
     res = _kernel32.CreateProcessA(
-        None, args, None, None, False, _CREATE_NO_WINDOW,
-        env, pycompat.getcwd(), ctypes.byref(si), ctypes.byref(pi))
+        None,
+        args,
+        None,
+        None,
+        False,
+        _CREATE_NO_WINDOW,
+        env,
+        pycompat.getcwd(),
+        ctypes.byref(si),
+        ctypes.byref(pi),
+    )
     if not res:
         raise ctypes.WinError()
 
     return pi.dwProcessId
 
+
 def unlink(f):
-    '''try to implement POSIX' unlink semantics on Windows'''
+    """try to implement POSIX' unlink semantics on Windows"""
 
     if os.path.isdir(f):
         # use EPERM because it is POSIX prescribed value, even though
         # unlink(2) on directories returns EISDIR on Linux
-        raise IOError(errno.EPERM,
-                      "Unlinking directory not permitted: '%s'" % f)
+        raise IOError(errno.EPERM, "Unlinking directory not permitted: '%s'" % f)
 
     # POSIX allows to unlink and rename open files. Windows has serious
     # problems with doing that:
@@ -586,7 +665,7 @@ def unlink(f):
     # implicit zombie filename blocking on a temporary name.
 
     for tries in xrange(10):
-        temp = '%s-%08x' % (f, random.randint(0, 0xffffffff))
+        temp = "%s-%08x" % (f, random.randint(0, 0xffffffff))
         try:
             os.rename(f, temp)  # raises OSError EEXIST if temp exists
             break
@@ -610,6 +689,7 @@ def unlink(f):
             # Leaking a tempfile is the lesser evil than aborting here and
             # leaving some potentially serious inconsistencies.
             pass
+
 
 def makedir(path, notindexed):
     os.mkdir(path)

@@ -13,21 +13,34 @@ enabled (since most hg installations use either strip or markers, but not both).
 To disable that warning, set ``backups.warnobsolescence`` to False.
 """
 
-from mercurial import cmdutil, commands, error, bundlerepo
-from mercurial import hg, exchange, obsolete, registrar
-from mercurial import bundle2
-from mercurial import lock as lockmod
-from mercurial import pycompat
-from . import pager
-from mercurial.node import nullid, short
-from mercurial.i18n import _
-import os, glob, time
+import glob
+import os
+import time
 
-pager.attended.append('backups')
+from mercurial import (
+    bundle2,
+    bundlerepo,
+    cmdutil,
+    commands,
+    error,
+    exchange,
+    hg,
+    lock as lockmod,
+    obsolete,
+    pycompat,
+    registrar,
+)
+from mercurial.i18n import _
+from mercurial.node import nullid, short
+
+from . import pager
+
+
+pager.attended.append("backups")
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-testedwith = 'ships-with-fb-hgext'
+testedwith = "ships-with-fb-hgext"
 msgwithcreatermarkers = """Marker creation is enabled so no changeset should be
 stripped unless you explicitly called hg strip. hg backups will show you the
 stripped changesets. If you are trying to recover a changeset hidden from a
@@ -35,12 +48,15 @@ previous command, use hg journal to get its sha1 and you will be able to access
 it directly without recovering a backup.\n\n"""
 verbosetemplate = "{label('status.modified', node|short)} {desc|firstline}\n"
 
-@command('^backups', [
-    ('', 'recover', '',
-     'brings the specified changeset back into the repository')
-    ] + commands.logopts, _('hg backups [--recover HASH]'))
+
+@command(
+    "^backups",
+    [("", "recover", "", "brings the specified changeset back into the repository")]
+    + commands.logopts,
+    _("hg backups [--recover HASH]"),
+)
 def backups(ui, repo, *pats, **opts):
-    '''lists the changesets available in backup bundles
+    """lists the changesets available in backup bundles
 
     Without any arguments, this command prints a list of the changesets in each
     backup bundle.
@@ -50,9 +66,9 @@ def backups(ui, repo, *pats, **opts):
 
     --verbose will print the entire commit message and the bundle path for that
     backup.
-    '''
+    """
     supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
-    if supportsmarkers and ui.configbool('backups', 'warnobsolescence', True):
+    if supportsmarkers and ui.configbool("backups", "warnobsolescence", True):
         # Warn users of obsolescence markers that they probably don't want to
         # use backups but reflog instead
         ui.warn(msgwithcreatermarkers)
@@ -60,38 +76,40 @@ def backups(ui, repo, *pats, **opts):
     backups = filter(os.path.isfile, glob.glob(backuppath + "/*.hg"))
     backups.sort(key=lambda x: os.path.getmtime(x), reverse=True)
 
-    opts['bundle'] = ''
-    opts['force'] = None
+    opts["bundle"] = ""
+    opts["force"] = None
 
     def display(other, chlist, displayer):
         limit = cmdutil.loglimit(opts)
-        if opts.get('newest_first'):
+        if opts.get("newest_first"):
             chlist.reverse()
         count = 0
         for n in chlist:
             if limit is not None and count >= limit:
                 break
             parents = [p for p in other.changelog.parents(n) if p != nullid]
-            if opts.get('no_merges') and len(parents) == 2:
+            if opts.get("no_merges") and len(parents) == 2:
                 continue
             count += 1
             displayer.show(other[n])
 
-    recovernode = opts.get('recover')
+    recovernode = opts.get("recover")
     if recovernode:
         if recovernode in repo:
             ui.warn(_("%s already exists in the repo\n") % recovernode)
             return
     else:
-        msg = _('Recover changesets using: hg backups --recover '
-                '<changeset hash>\n\nAvailable backup changesets:')
+        msg = _(
+            "Recover changesets using: hg backups --recover "
+            "<changeset hash>\n\nAvailable backup changesets:"
+        )
         ui.status(msg, label="status.removed")
 
     for backup in backups:
         # Much of this is copied from the hg incoming logic
         source = os.path.relpath(backup, pycompat.getcwd())
         source = ui.expandpath(source)
-        source, branches = hg.parseurl(source, opts.get('branch'))
+        source, branches = hg.parseurl(source, opts.get("branch"))
         try:
             other = hg.peer(repo, opts, source)
         except error.LookupError as ex:
@@ -100,8 +118,7 @@ def backups(ui, repo, *pats, **opts):
             ui.warn(msg)
             ui.warn(hint)
             continue
-        revs, checkout = hg.addbranchrevs(repo, other, branches,
-                                          opts.get('rev'))
+        revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get("rev"))
 
         if revs:
             revs = [other.lookup(rev) for rev in revs]
@@ -109,9 +126,9 @@ def backups(ui, repo, *pats, **opts):
         quiet = ui.quiet
         try:
             ui.quiet = True
-            other, chlist, cleanupfn = bundlerepo.getremotechanges(ui, repo,
-                                        other, revs, opts["bundle"],
-                                        opts["force"])
+            other, chlist, cleanupfn = bundlerepo.getremotechanges(
+                ui, repo, other, revs, opts["bundle"], opts["force"]
+            )
         except error.LookupError:
             continue
         finally:
@@ -129,22 +146,27 @@ def backups(ui, repo, *pats, **opts):
                             gen = exchange.readbundle(ui, f, source)
                             tr = repo.transaction("unbundle")
                             if not isinstance(gen, bundle2.unbundle20):
-                                gen.apply(repo, 'unbundle', 'bundle:' + source)
+                                gen.apply(repo, "unbundle", "bundle:" + source)
                             if isinstance(gen, bundle2.unbundle20):
-                                bundle2.applybundle(repo, gen, tr,
-                                                    source='unbundle',
-                                                    url='bundle:' + source)
+                                bundle2.applybundle(
+                                    repo,
+                                    gen,
+                                    tr,
+                                    source="unbundle",
+                                    url="bundle:" + source,
+                                )
                             tr.close()
                             break
                     finally:
                         lockmod.release(lock, tr)
                 else:
                     backupdate = os.path.getmtime(source)
-                    backupdate = time.strftime('%a %H:%M, %Y-%m-%d',
-                                                time.localtime(backupdate))
+                    backupdate = time.strftime(
+                        "%a %H:%M, %Y-%m-%d", time.localtime(backupdate)
+                    )
                     ui.status("\n%s\n" % (backupdate.ljust(50)))
                     if not ui.verbose:
-                        opts['template'] = verbosetemplate
+                        opts["template"] = verbosetemplate
                     else:
                         ui.status("%s%s\n" % ("bundle:".ljust(13), source))
                     displayer = cmdutil.show_changeset(ui, other, opts, False)

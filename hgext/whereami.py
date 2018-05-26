@@ -1,11 +1,13 @@
 from mercurial import registrar
 from mercurial.node import hex, nullid
 
+
 cmdtable = {}
 command = registrar.command(cmdtable)
-testedwith = 'ships-with-fb-hgext'
+testedwith = "ships-with-fb-hgext"
 
-@command('whereami')
+
+@command("whereami")
 def whereami(ui, repo, *args, **opts):
     """output the current working directory parents
 
@@ -13,6 +15,6 @@ def whereami(ui, repo, *args, **opts):
     by newline.
     """
     parents = repo.dirstate.parents()
-    ui.status('%s\n' % hex(parents[0]))
+    ui.status("%s\n" % hex(parents[0]))
     if parents[1] != nullid:
-        ui.status('%s\n' % hex(parents[1]))
+        ui.status("%s\n" % hex(parents[1]))

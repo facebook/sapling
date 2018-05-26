@@ -7,23 +7,16 @@ import shutil
 import tempfile
 import unittest
 
+import mercurial.ui
 import silenttestrunner
-
-from hgext.extlib.cstore import (
-    datapackstore,
-    uniondatapackstore,
-)
-
-from hgext.remotefilelog.datapack import (
-    datapack,
-    mutabledatapack,
-)
-
+from hgext.extlib.cstore import datapackstore, uniondatapackstore
+from hgext.remotefilelog.datapack import datapack, mutabledatapack
 from mercurial import mdiff
 from mercurial.node import nullid
-import mercurial.ui
+
 
 class uniondatapackstoretests(unittest.TestCase):
+
     def setUp(self):
         random.seed(0)
         self.tempdirs = []
@@ -41,7 +34,7 @@ class uniondatapackstoretests(unittest.TestCase):
         return hashlib.sha1(content).digest()
 
     def getFakeHash(self):
-        return ''.join(chr(random.randint(0, 255)) for _ in range(20))
+        return "".join(chr(random.randint(0, 255)) for _ in range(20))
 
     def createPackStore(self, packdir, revisions=None):
         if revisions is None:
@@ -74,8 +67,7 @@ class uniondatapackstoretests(unittest.TestCase):
         firsthash = self.getFakeHash()
         revisions = [
             ("foo", firsthash, nullid, rev1),
-            ("foo", self.getFakeHash(), firsthash,
-             mdiff.textdiff(rev1, rev2)),
+            ("foo", self.getFakeHash(), firsthash, mdiff.textdiff(rev1, rev2)),
         ]
         store = self.createPackStore(packdir, revisions=revisions)
 
@@ -119,14 +111,10 @@ class uniondatapackstoretests(unittest.TestCase):
         """Test getting chains from multiple packs."""
         packdir = self.makeTempDir()
 
-        revisions1 = [
-            ("foo", self.getFakeHash(), nullid, "content"),
-        ]
+        revisions1 = [("foo", self.getFakeHash(), nullid, "content")]
         store = self.createPackStore(packdir, revisions=revisions1)
 
-        revisions2 = [
-            ("foo", self.getFakeHash(), revisions1[0][1], "content2"),
-        ]
+        revisions2 = [("foo", self.getFakeHash(), revisions1[0][1], "content2")]
         store = self.createPackStore(packdir, revisions=revisions2)
 
         unionstore = uniondatapackstore([store])
@@ -146,14 +134,17 @@ class uniondatapackstoretests(unittest.TestCase):
 
         missinghash1 = self.getFakeHash()
         missinghash2 = self.getFakeHash()
-        missing = unionstore.getmissing([
-            (revisions[0][0], revisions[0][1]),
-            ("foo", missinghash1),
-            ("foo2", missinghash2)
-        ])
+        missing = unionstore.getmissing(
+            [
+                (revisions[0][0], revisions[0][1]),
+                ("foo", missinghash1),
+                ("foo2", missinghash2),
+            ]
+        )
         self.assertEquals(2, len(missing))
-        self.assertEquals(set([("foo", missinghash1), ("foo2", missinghash2)]),
-                          set(missing))
+        self.assertEquals(
+            set([("foo", missinghash1), ("foo2", missinghash2)]), set(missing)
+        )
 
     def testAddRemoveStore(self):
         packdir = self.makeTempDir()
@@ -168,24 +159,26 @@ class uniondatapackstoretests(unittest.TestCase):
         unionstore.addstore(store2)
 
         # Fetch from store2
-        result = unionstore.get('foo2', revisions2[0][1])
+        result = unionstore.get("foo2", revisions2[0][1])
         self.assertEquals(result, revisions2[0][3])
 
         # Drop the store
         unionstore.removestore(store2)
 
         # Fetch from store1
-        result = unionstore.get('foo', revisions[0][1])
+        result = unionstore.get("foo", revisions[0][1])
         self.assertEquals(result, revisions[0][3])
 
         # Fetch from missing store2
         try:
-            unionstore.get('foo2', revisions2[0][1])
+            unionstore.get("foo2", revisions2[0][1])
             self.asserFalse(True, "get should've thrown")
         except KeyError:
             pass
 
+
 class uniondatastorepythontests(uniondatapackstoretests):
+
     def createPackStore(self, packdir, revisions=None):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
@@ -202,14 +195,10 @@ class uniondatastorepythontests(uniondatapackstoretests):
         """Test getting chains from multiple packs."""
         packdir = self.makeTempDir()
 
-        revisions1 = [
-            ("foo", self.getFakeHash(), nullid, "content"),
-        ]
+        revisions1 = [("foo", self.getFakeHash(), nullid, "content")]
         pack1 = self.createPackStore(packdir, revisions=revisions1)
 
-        revisions2 = [
-            ("foo", self.getFakeHash(), revisions1[0][1], "content2"),
-        ]
+        revisions2 = [("foo", self.getFakeHash(), revisions1[0][1], "content2")]
         pack2 = self.createPackStore(packdir, revisions=revisions2)
 
         unionstore = uniondatapackstore([pack1, pack2])
@@ -224,15 +213,12 @@ class uniondatastorepythontests(uniondatapackstoretests):
         packdir1 = self.makeTempDir()
         packdir2 = self.makeTempDir()
 
-        revisions1 = [
-            ("foo", self.getFakeHash(), nullid, "content"),
-        ]
-        store = super(uniondatastorepythontests, self)\
-                .createPackStore(packdir1, revisions=revisions1)
+        revisions1 = [("foo", self.getFakeHash(), nullid, "content")]
+        store = super(uniondatastorepythontests, self).createPackStore(
+            packdir1, revisions=revisions1
+        )
 
-        revisions2 = [
-            ("foo", self.getFakeHash(), revisions1[0][1], "content2"),
-        ]
+        revisions2 = [("foo", self.getFakeHash(), revisions1[0][1], "content2")]
         pack = self.createPackStore(packdir2, revisions=revisions2)
 
         unionstore = uniondatapackstore([pack, store])
@@ -242,5 +228,6 @@ class uniondatastorepythontests(uniondatapackstoretests):
         self.assertEquals("content2", chain[0][4])
         self.assertEquals("content", chain[1][4])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     silenttestrunner.main(__name__)

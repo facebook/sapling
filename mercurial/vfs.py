@@ -14,14 +14,9 @@ import stat
 import tempfile
 import threading
 
+from . import encoding, error, pathutil, pycompat, util
 from .i18n import _
-from . import (
-    encoding,
-    error,
-    pathutil,
-    pycompat,
-    util,
-)
+
 
 def _avoidambig(path, oldstat):
     """Avoid file stat ambiguity forcibly
@@ -29,26 +24,28 @@ def _avoidambig(path, oldstat):
     This function causes copying ``path`` file, if it is owned by
     another (see issue5418 and issue5584 for detail).
     """
+
     def checkandavoid():
         newstat = util.filestat.frompath(path)
         # return whether file stat ambiguity is (already) avoided
-        return (not newstat.isambig(oldstat) or
-                newstat.avoidambig(path, oldstat))
+        return not newstat.isambig(oldstat) or newstat.avoidambig(path, oldstat)
+
     if not checkandavoid():
         # simply copy to change owner of path to get privilege to
         # advance mtime (see issue5418)
         util.rename(util.mktempcopy(path), path)
         checkandavoid()
 
+
 class abstractvfs(object):
     """Abstract base class; cannot be instantiated"""
 
     def __init__(self, *args, **kwargs):
-        '''Prevent instantiation; don't call this from subclasses.'''
-        raise NotImplementedError('attempted instantiating ' + str(type(self)))
+        """Prevent instantiation; don't call this from subclasses."""
+        raise NotImplementedError("attempted instantiating " + str(type(self)))
 
     def tryread(self, path):
-        '''gracefully return an empty string for missing files'''
+        """gracefully return an empty string for missing files"""
         try:
             return self.read(path)
         except IOError as inst:
@@ -56,8 +53,8 @@ class abstractvfs(object):
                 raise
         return ""
 
-    def tryreadlines(self, path, mode='rb'):
-        '''gracefully return an empty array for missing files'''
+    def tryreadlines(self, path, mode="rb"):
+        """gracefully return an empty array for missing files"""
         try:
             return self.readlines(path, mode=mode)
         except IOError as inst:
@@ -67,32 +64,32 @@ class abstractvfs(object):
 
     @util.propertycache
     def open(self):
-        '''Open ``path`` file, which is relative to vfs root.
+        """Open ``path`` file, which is relative to vfs root.
 
         Newly created directories are marked as "not to be indexed by
         the content indexing service", if ``notindexed`` is specified
         for "write" mode access.
-        '''
+        """
         return self.__call__
 
     def read(self, path):
-        with self(path, 'rb') as fp:
+        with self(path, "rb") as fp:
             return fp.read()
 
-    def readlines(self, path, mode='rb'):
+    def readlines(self, path, mode="rb"):
         with self(path, mode=mode) as fp:
             return fp.readlines()
 
     def write(self, path, data, backgroundclose=False):
-        with self(path, 'wb', backgroundclose=backgroundclose) as fp:
+        with self(path, "wb", backgroundclose=backgroundclose) as fp:
             return fp.write(data)
 
-    def writelines(self, path, data, mode='wb', notindexed=False):
+    def writelines(self, path, data, mode="wb", notindexed=False):
         with self(path, mode=mode, notindexed=notindexed) as fp:
             return fp.writelines(data)
 
     def append(self, path, data):
-        with self(path, 'ab') as fp:
+        with self(path, "ab") as fp:
             return fp.write(data)
 
     def basename(self, path):
@@ -129,9 +126,9 @@ class abstractvfs(object):
         return util.isexec(self.join(path))
 
     def isfileorlink(self, path=None):
-        '''return whether path is a regular file or a symlink
+        """return whether path is a regular file or a symlink
 
-        Unlike isfile, this doesn't follow symlinks.'''
+        Unlike isfile, this doesn't follow symlinks."""
         try:
             st = self.lstat(path)
         except OSError:
@@ -173,9 +170,10 @@ class abstractvfs(object):
     def mkdir(self, path=None):
         return os.mkdir(self.join(path))
 
-    def mkstemp(self, suffix='', prefix='tmp', dir=None, text=False):
-        fd, name = tempfile.mkstemp(suffix=suffix, prefix=prefix,
-                                    dir=self.join(dir), text=text)
+    def mkstemp(self, suffix="", prefix="tmp", dir=None, text=False):
+        fd, name = tempfile.mkstemp(
+            suffix=suffix, prefix=prefix, dir=self.join(dir), text=text
+        )
         dname, fname = util.split(name)
         if dir:
             return fd, os.path.join(dir, fname)
@@ -223,6 +221,7 @@ class abstractvfs(object):
         If ``forcibly``, this tries to remove READ-ONLY files, too.
         """
         if forcibly:
+
             def onerror(function, path, excinfo):
                 if function is not os.remove:
                     raise
@@ -232,10 +231,12 @@ class abstractvfs(object):
                     raise
                 os.chmod(path, stat.S_IMODE(s.st_mode) | stat.S_IWRITE)
                 os.remove(path)
+
         else:
             onerror = None
-        return shutil.rmtree(self.join(path),
-                             ignore_errors=ignore_errors, onerror=onerror)
+        return shutil.rmtree(
+            self.join(path), ignore_errors=ignore_errors, onerror=onerror
+        )
 
     def setflags(self, path, l, x):
         return util.setflags(self.join(path), l, x)
@@ -286,10 +287,9 @@ class abstractvfs(object):
         if not isinstance(threading.currentThread(), threading._MainThread):
             yield
             return
-        vfs = getattr(self, 'vfs', self)
-        if getattr(vfs, '_backgroundfilecloser', None):
-            raise error.Abort(
-                _('can only have 1 active background file closer'))
+        vfs = getattr(self, "vfs", self)
+        if getattr(vfs, "_backgroundfilecloser", None):
+            raise error.Abort(_("can only have 1 active background file closer"))
 
         with backgroundfilecloser(ui, expectedcount=expectedcount) as bfc:
             try:
@@ -298,8 +298,9 @@ class abstractvfs(object):
             finally:
                 vfs._backgroundfilecloser = None
 
+
 class vfs(abstractvfs):
-    '''Operate files relative to a base directory
+    """Operate files relative to a base directory
 
     This class is used to hide the details of COW semantics and
     remote file access from higher level code.
@@ -307,9 +308,11 @@ class vfs(abstractvfs):
     'cacheaudited' should be enabled only if (a) vfs object is short-lived, or
     (b) the base directory is managed by hg and considered sort-of append-only.
     See pathutil.pathauditor() for details.
-    '''
-    def __init__(self, base, audit=True, cacheaudited=False, expandpath=False,
-                 realpath=False):
+    """
+
+    def __init__(
+        self, base, audit=True, cacheaudited=False, expandpath=False, realpath=False
+    ):
         if expandpath:
             base = util.expandpath(base)
         if realpath:
@@ -319,7 +322,7 @@ class vfs(abstractvfs):
         if audit:
             self.audit = pathutil.pathauditor(self.base, cached=cacheaudited)
         else:
-            self.audit = (lambda path, mode=None: True)
+            self.audit = lambda path, mode=None: True
         self.createmode = None
         self._trustnlink = None
 
@@ -336,10 +339,18 @@ class vfs(abstractvfs):
             return
         os.chmod(name, self.createmode & 0o666)
 
-    def __call__(self, path, mode="r", text=False, atomictemp=False,
-                 notindexed=False, backgroundclose=False, checkambig=False,
-                 auditpath=True):
-        '''Open ``path`` file, which is relative to vfs root.
+    def __call__(
+        self,
+        path,
+        mode="r",
+        text=False,
+        atomictemp=False,
+        notindexed=False,
+        backgroundclose=False,
+        checkambig=False,
+        auditpath=True,
+    ):
+        """Open ``path`` file, which is relative to vfs root.
 
         Newly created directories are marked as "not to be indexed by
         the content indexing service", if ``notindexed`` is specified
@@ -367,7 +378,7 @@ class vfs(abstractvfs):
         truncation), if it is owned by another. Therefore, use
         combination of append mode and checkambig=True only in limited
         cases (see also issue5418 and issue5584 for detail).
-        '''
+        """
         if auditpath:
             if self._audit:
                 r = util.checkosfilename(path)
@@ -377,20 +388,21 @@ class vfs(abstractvfs):
         f = self.join(path)
 
         if not text and "b" not in mode:
-            mode += "b" # for that other OS
+            mode += "b"  # for that other OS
 
         nlink = -1
-        if mode not in ('r', 'rb'):
+        if mode not in ("r", "rb"):
             dirname, basename = util.split(f)
             # If basename is empty, then the path is malformed because it points
             # to a directory. Let the posixfile() call below raise IOError.
             if basename:
                 if atomictemp:
                     util.makedirs(dirname, self.createmode, notindexed)
-                    return util.atomictempfile(f, mode, self.createmode,
-                                               checkambig=checkambig)
+                    return util.atomictempfile(
+                        f, mode, self.createmode, checkambig=checkambig
+                    )
                 try:
-                    if 'w' in mode:
+                    if "w" in mode:
                         util.unlink(f)
                         nlink = 0
                     else:
@@ -399,7 +411,7 @@ class vfs(abstractvfs):
                         with util.posixfile(f):
                             nlink = util.nlinks(f)
                             if nlink < 1:
-                                nlink = 2 # force mktempcopy (issue1922)
+                                nlink = 2  # force mktempcopy (issue1922)
                 except (OSError, IOError) as e:
                     if e.errno != errno.ENOENT:
                         raise
@@ -415,17 +427,26 @@ class vfs(abstractvfs):
             self._fixfilemode(f)
 
         if checkambig:
-            if mode in ('r', 'rb'):
-                raise error.Abort(_('implementation error: mode %s is not'
-                                    ' valid for checkambig=True') % mode)
+            if mode in ("r", "rb"):
+                raise error.Abort(
+                    _(
+                        "implementation error: mode %s is not"
+                        " valid for checkambig=True"
+                    )
+                    % mode
+                )
             fp = checkambigatclosing(fp)
 
-        if (backgroundclose and
-                isinstance(threading.currentThread(), threading._MainThread)):
+        if backgroundclose and isinstance(
+            threading.currentThread(), threading._MainThread
+        ):
             if not self._backgroundfilecloser:
-                raise error.Abort(_('backgroundclose can only be used when a '
-                                  'backgroundclosing context manager is active')
-                                  )
+                raise error.Abort(
+                    _(
+                        "backgroundclose can only be used when a "
+                        "backgroundclosing context manager is active"
+                    )
+                )
 
             fp = delayclosedfile(fp, self._backgroundfilecloser)
 
@@ -442,9 +463,12 @@ class vfs(abstractvfs):
             try:
                 os.symlink(src, linkname)
             except OSError as err:
-                raise OSError(err.errno, _('could not symlink to %r: %s') %
-                              (src, encoding.strtolocal(err.strerror)),
-                              linkname)
+                raise OSError(
+                    err.errno,
+                    _("could not symlink to %r: %s")
+                    % (src, encoding.strtolocal(err.strerror)),
+                    linkname,
+                )
         else:
             self.write(dst, src)
 
@@ -454,9 +478,12 @@ class vfs(abstractvfs):
         else:
             return self.base
 
+
 opener = vfs
 
+
 class proxyvfs(object):
+
     def __init__(self, vfs):
         self.vfs = vfs
 
@@ -468,8 +495,9 @@ class proxyvfs(object):
     def options(self, value):
         self.vfs.options = value
 
+
 class filtervfs(abstractvfs, proxyvfs):
-    '''Wrapper vfs for filtering filenames with a function.'''
+    """Wrapper vfs for filtering filenames with a function."""
 
     def __init__(self, vfs, filter):
         proxyvfs.__init__(self, vfs)
@@ -484,29 +512,33 @@ class filtervfs(abstractvfs, proxyvfs):
         else:
             return self.vfs.join(path)
 
+
 filteropener = filtervfs
 
+
 class readonlyvfs(abstractvfs, proxyvfs):
-    '''Wrapper vfs preventing any writing.'''
+    """Wrapper vfs preventing any writing."""
 
     def __init__(self, vfs):
         proxyvfs.__init__(self, vfs)
 
-    def __call__(self, path, mode='r', *args, **kw):
-        if mode not in ('r', 'rb'):
-            raise error.Abort(_('this vfs is read only'))
+    def __call__(self, path, mode="r", *args, **kw):
+        if mode not in ("r", "rb"):
+            raise error.Abort(_("this vfs is read only"))
         return self.vfs(path, mode, *args, **kw)
 
     def join(self, path, *insidef):
         return self.vfs.join(path, *insidef)
+
 
 class closewrapbase(object):
     """Base class of wrapper, which hooks closing
 
     Do not instantiate outside of the vfs layer.
     """
+
     def __init__(self, fh):
-        object.__setattr__(self, r'_origfh', fh)
+        object.__setattr__(self, r"_origfh", fh)
 
     def __getattr__(self, attr):
         return getattr(self._origfh, attr)
@@ -521,19 +553,21 @@ class closewrapbase(object):
         return self._origfh.__enter__()
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        raise NotImplementedError('attempted instantiating ' + str(type(self)))
+        raise NotImplementedError("attempted instantiating " + str(type(self)))
 
     def close(self):
-        raise NotImplementedError('attempted instantiating ' + str(type(self)))
+        raise NotImplementedError("attempted instantiating " + str(type(self)))
+
 
 class delayclosedfile(closewrapbase):
     """Proxy for a file object whose close is delayed.
 
     Do not instantiate outside of the vfs layer.
     """
+
     def __init__(self, fh, closer):
         super(delayclosedfile, self).__init__(fh)
-        object.__setattr__(self, r'_closer', closer)
+        object.__setattr__(self, r"_closer", closer)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self._closer.close(self._origfh)
@@ -541,8 +575,10 @@ class delayclosedfile(closewrapbase):
     def close(self):
         self._closer.close(self._origfh)
 
+
 class backgroundfilecloser(object):
     """Coordinates background closing of file handles on multiple threads."""
+
     def __init__(self, ui, expectedcount=-1):
         self._running = False
         self._entered = False
@@ -552,7 +588,7 @@ class backgroundfilecloser(object):
         # Only Windows/NTFS has slow file closing. So only enable by default
         # on that platform. But allow to be enabled elsewhere for testing.
         defaultenabled = pycompat.iswindows
-        enabled = ui.configbool('worker', 'backgroundclose', defaultenabled)
+        enabled = ui.configbool("worker", "backgroundclose", defaultenabled)
 
         if not enabled:
             return
@@ -560,23 +596,22 @@ class backgroundfilecloser(object):
         # There is overhead to starting and stopping the background threads.
         # Don't do background processing unless the file count is large enough
         # to justify it.
-        minfilecount = ui.configint('worker', 'backgroundcloseminfilecount')
+        minfilecount = ui.configint("worker", "backgroundcloseminfilecount")
         # FUTURE dynamically start background threads after minfilecount closes.
         # (We don't currently have any callers that don't know their file count)
         if expectedcount > 0 and expectedcount < minfilecount:
             return
 
-        maxqueue = ui.configint('worker', 'backgroundclosemaxqueue')
-        threadcount = ui.configint('worker', 'backgroundclosethreadcount')
+        maxqueue = ui.configint("worker", "backgroundclosemaxqueue")
+        threadcount = ui.configint("worker", "backgroundclosethreadcount")
 
-        ui.debug('starting %d threads for background file closing\n' %
-                 threadcount)
+        ui.debug("starting %d threads for background file closing\n" % threadcount)
 
         self._queue = util.queue(maxsize=maxqueue)
         self._running = True
 
         for i in range(threadcount):
-            t = threading.Thread(target=self._worker, name='backgroundcloser')
+            t = threading.Thread(target=self._worker, name="backgroundcloser")
             self._threads.append(t)
             t.start()
 
@@ -611,8 +646,7 @@ class backgroundfilecloser(object):
     def close(self, fh):
         """Schedule a file for closing."""
         if not self._entered:
-            raise error.Abort(_('can only call close() when context manager '
-                              'active'))
+            raise error.Abort(_("can only call close() when context manager " "active"))
 
         # If a background thread encountered an exception, raise now so we fail
         # fast. Otherwise we may potentially go on for minutes until the error
@@ -629,6 +663,7 @@ class backgroundfilecloser(object):
 
         self._queue.put(fh, block=True, timeout=None)
 
+
 class checkambigatclosing(closewrapbase):
     """Proxy for a file object, to avoid ambiguity of file stat
 
@@ -639,9 +674,10 @@ class checkambigatclosing(closewrapbase):
 
     Do not instantiate outside of the vfs layer.
     """
+
     def __init__(self, fh):
         super(checkambigatclosing, self).__init__(fh)
-        object.__setattr__(self, r'_oldstat', util.filestat.frompath(fh.name))
+        object.__setattr__(self, r"_oldstat", util.filestat.frompath(fh.name))
 
     def _checkambig(self):
         oldstat = self._oldstat

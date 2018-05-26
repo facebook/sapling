@@ -1,11 +1,12 @@
 from __future__ import absolute_import, print_function
+
 import pprint
-from mercurial import (
-    minirst,
-)
+
+from mercurial import minirst
+
 
 def debugformat(text, form, **kwargs):
-    if form == 'html':
+    if form == "html":
         print("html format:")
         out = minirst.format(text, style=form, **kwargs)
     else:
@@ -22,11 +23,13 @@ def debugformat(text, form, **kwargs):
     print("-" * 70)
     print()
 
+
 def debugformats(title, text, **kwargs):
     print("== %s ==" % title)
     debugformat(text, 60, **kwargs)
     debugformat(text, 30, **kwargs)
-    debugformat(text, 'html', **kwargs)
+    debugformat(text, "html", **kwargs)
+
 
 paragraphs = """
 This is some text in the first paragraph.
@@ -37,7 +40,7 @@ This is some text in the first paragraph.
  \n  \n   \nThe third and final paragraph.
 """
 
-debugformats('paragraphs', paragraphs)
+debugformats("paragraphs", paragraphs)
 
 definitions = """
 A Term
@@ -52,7 +55,7 @@ Another Term
     Definition.
 """
 
-debugformats('definitions', definitions)
+debugformats("definitions", definitions)
 
 literals = r"""
 The fully minimized form is the most
@@ -76,7 +79,7 @@ simply ends with space-double-colon. ::
       with '::' disappears in the final output.
 """
 
-debugformats('literals', literals)
+debugformats("literals", literals)
 
 lists = """
 - This is the first list item.
@@ -127,7 +130,7 @@ Bullet lists are also detected:
 * This is the third bullet
 """
 
-debugformats('lists', lists)
+debugformats("lists", lists)
 
 options = """
 There is support for simple option lists,
@@ -153,7 +156,7 @@ marker after the option. It is treated as a normal paragraph:
 --foo bar baz
 """
 
-debugformats('options', options)
+debugformats("options", options)
 
 fields = """
 :a: First item.
@@ -166,7 +169,7 @@ Next list:
 :much too large: This key is big enough to get its own line.
 """
 
-debugformats('fields', fields)
+debugformats("fields", fields)
 
 containers = """
 Normal output.
@@ -184,14 +187,13 @@ Normal output.
       Debug output.
 """
 
-debugformats('containers (normal)', containers)
-debugformats('containers (verbose)', containers, keep=['verbose'])
-debugformats('containers (debug)', containers, keep=['debug'])
-debugformats('containers (verbose debug)', containers,
-            keep=['verbose', 'debug'])
+debugformats("containers (normal)", containers)
+debugformats("containers (verbose)", containers, keep=["verbose"])
+debugformats("containers (debug)", containers, keep=["debug"])
+debugformats("containers (verbose debug)", containers, keep=["verbose", "debug"])
 
 roles = """Please see :hg:`add`."""
-debugformats('roles', roles)
+debugformats("roles", roles)
 
 
 sections = """
@@ -207,7 +209,7 @@ Subsection
 Markup: ``foo`` and :hg:`help`
 ------------------------------
 """
-debugformats('sections', sections)
+debugformats("sections", sections)
 
 
 admonitions = """
@@ -225,7 +227,7 @@ admonitions = """
    This is danger
 """
 
-debugformats('admonitions', admonitions)
+debugformats("admonitions", admonitions)
 
 comments = """
 Some text.
@@ -241,27 +243,30 @@ Some text.
 Empty comment above
 """
 
-debugformats('comments', comments)
+debugformats("comments", comments)
 
 
-data = [['a', 'b', 'c'],
-         ['1', '2', '3'],
-         ['foo', 'bar', 'baz this list is very very very long man']]
+data = [
+    ["a", "b", "c"],
+    ["1", "2", "3"],
+    ["foo", "bar", "baz this list is very very very long man"],
+]
 
 rst = minirst.maketable(data, 2, True)
-table = ''.join(rst)
+table = "".join(rst)
 
 print(table)
 
-debugformats('table', table)
+debugformats("table", table)
 
-data = [['s', 'long', 'line\ngoes on here'],
-        ['', 'xy', 'tried to fix here\n        by indenting']]
+data = [
+    ["s", "long", "line\ngoes on here"],
+    ["", "xy", "tried to fix here\n        by indenting"],
+]
 
 rst = minirst.maketable(data, 1, False)
-table = ''.join(rst)
+table = "".join(rst)
 
 print(table)
 
-debugformats('table+nl', table)
-
+debugformats("table+nl", table)

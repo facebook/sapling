@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''
+"""
 demandimport - automatic demandloading of modules
 
 To enable this module, do:
@@ -22,7 +22,7 @@ These imports will not be delayed:
 
   from a import *
   b = __import__(a)
-'''
+"""
 
 from __future__ import absolute_import
 
@@ -30,11 +30,13 @@ import __builtin__ as builtins
 import contextlib
 import sys
 
+
 contextmanager = contextlib.contextmanager
 
 _origimport = __import__
 
 nothing = object()
+
 
 def _hgextimport(importfunc, name, globals, *args, **kwargs):
     try:
@@ -43,13 +45,14 @@ def _hgextimport(importfunc, name, globals, *args, **kwargs):
         if not globals:
             raise
         # extensions are loaded with "hgext_" prefix
-        hgextname = 'hgext_%s' % name
-        nameroot = hgextname.split('.', 1)[0]
-        contextroot = globals.get('__name__', '').split('.', 1)[0]
+        hgextname = "hgext_%s" % name
+        nameroot = hgextname.split(".", 1)[0]
+        contextroot = globals.get("__name__", "").split(".", 1)[0]
         if nameroot != contextroot:
             raise
         # retry to import with "hgext_" prefix
         return importfunc(hgextname, globals, *args, **kwargs)
+
 
 class _demandmod(object):
     """module demand-loader and proxy
@@ -59,14 +62,13 @@ class _demandmod(object):
     """
 
     def __init__(self, name, globals, locals, level):
-        if '.' in name:
-            head, rest = name.split('.', 1)
+        if "." in name:
+            head, rest = name.split(".", 1)
             after = [rest]
         else:
             head = name
             after = []
-        object.__setattr__(self, r"_data",
-                           (head, globals, locals, after, level, set()))
+        object.__setattr__(self, r"_data", (head, globals, locals, after, level, set()))
         object.__setattr__(self, r"_module", None)
 
     def _extend(self, name):
@@ -108,11 +110,10 @@ class _demandmod(object):
             # load submodules
             def subload(mod, p):
                 h, t = p, None
-                if '.' in p:
-                    h, t = p.split('.', 1)
+                if "." in p:
+                    h, t = p.split(".", 1)
                 if getattr(mod, h, nothing) is nothing:
-                    setattr(mod, h, _demandmod(p, mod.__dict__, mod.__dict__,
-                                               level=1))
+                    setattr(mod, h, _demandmod(p, mod.__dict__, mod.__dict__, level=1))
                 elif t:
                     subload(getattr(mod, h), t)
 
@@ -123,8 +124,8 @@ class _demandmod(object):
             if locals:
                 if locals.get(head) is self:
                     locals[head] = mod
-                elif locals.get(head + r'mod') is self:
-                    locals[head + r'mod'] = mod
+                elif locals.get(head + r"mod") is self:
+                    locals[head + r"mod"] = mod
 
             for modname in modrefs:
                 modref = sys.modules.get(modname, None)
@@ -159,18 +160,20 @@ class _demandmod(object):
         self._load()
         return self._module.__doc__
 
-_pypy = '__pypy__' in sys.builtin_module_names
+
+_pypy = "__pypy__" in sys.builtin_module_names
+
 
 def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
-    if locals is None or name in ignore or fromlist == ('*',):
+    if locals is None or name in ignore or fromlist == ("*",):
         # these cases we can't really delay
         return _hgextimport(_origimport, name, globals, locals, fromlist, level)
     elif not fromlist:
         # import a [as b]
-        if '.' in name: # a.b
-            base, rest = name.split('.', 1)
+        if "." in name:  # a.b
+            base, rest = name.split(".", 1)
             # email.__init__ loading email.mime
-            if globals and globals.get('__name__', None) == base:
+            if globals and globals.get("__name__", None) == base:
                 return _origimport(name, globals, locals, fromlist, level)
             # if a is already demand-loaded, add b to its submodule list
             if base in locals:
@@ -190,7 +193,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
         # so modern Mercurial code will have level >= 0.
 
         # The name of the module the import statement is located in.
-        globalname = globals.get('__name__')
+        globalname = globals.get("__name__")
 
         def processfromitem(mod, attr):
             """Process an imported symbol in the import statement.
@@ -200,7 +203,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
             modules up as _demandmod instances.
             """
             symbol = getattr(mod, attr, nothing)
-            nonpkg = getattr(mod, '__path__', nothing) is nothing
+            nonpkg = getattr(mod, "__path__", nothing) is nothing
             if symbol is nothing:
                 if nonpkg:
                     # do not try relative import, which would raise ValueError,
@@ -208,7 +211,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
                     # would do. the missing attribute will be detected later
                     # while processing the import statement.
                     return
-                mn = '%s.%s' % (mod.__name__, attr)
+                mn = "%s.%s" % (mod.__name__, attr)
                 if mn in ignore:
                     importfunc = _origimport
                 else:
@@ -225,22 +228,21 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
         def chainmodules(rootmod, modname):
             # recurse down the module chain, and return the leaf module
             mod = rootmod
-            for comp in modname.split('.')[1:]:
+            for comp in modname.split(".")[1:]:
                 obj = getattr(mod, comp, nothing)
                 if obj is nothing:
                     obj = _demandmod(comp, mod.__dict__, mod.__dict__, level=1)
                     setattr(mod, comp, obj)
-                elif mod.__name__ + '.' + comp in sys.modules:
+                elif mod.__name__ + "." + comp in sys.modules:
                     # prefer loaded module over attribute (issue5617)
-                    obj = sys.modules[mod.__name__ + '.' + comp]
+                    obj = sys.modules[mod.__name__ + "." + comp]
                 mod = obj
             return mod
 
         if level >= 0:
             if name:
                 # "from a import b" or "from .a import b" style
-                rootmod = _hgextimport(_origimport, name, globals, locals,
-                                       level=level)
+                rootmod = _hgextimport(_origimport, name, globals, locals, level=level)
                 mod = chainmodules(rootmod, name)
             elif _pypy:
                 # PyPy's __import__ throws an exception if invoked
@@ -248,15 +250,14 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
                 # desired behaviour by hand.
                 mn = globalname
                 mod = sys.modules[mn]
-                if getattr(mod, '__path__', nothing) is nothing:
-                    mn = mn.rsplit('.', 1)[0]
+                if getattr(mod, "__path__", nothing) is nothing:
+                    mn = mn.rsplit(".", 1)[0]
                     mod = sys.modules[mn]
                 if level > 1:
-                    mn = mn.rsplit('.', level - 1)[0]
+                    mn = mn.rsplit(".", level - 1)[0]
                     mod = sys.modules[mn]
             else:
-                mod = _hgextimport(_origimport, name, globals, locals,
-                                   level=level)
+                mod = _hgextimport(_origimport, name, globals, locals, level=level)
 
             for x in fromlist:
                 processfromitem(mod, x)
@@ -273,22 +274,28 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
 
         return mod
 
+
 ignore = []
+
 
 def init(ignorelist):
     global ignore
     ignore = ignorelist
 
+
 def isenabled():
     return builtins.__import__ == _demandimport
+
 
 def enable():
     "enable global demand-loading of modules"
     builtins.__import__ = _demandimport
 
+
 def disable():
     "disable global demand-loading of modules"
     builtins.__import__ = _origimport
+
 
 @contextmanager
 def deactivated():

@@ -5,13 +5,16 @@ import tempfile
 
 from hgext.fastannotate import error, revmap
 
+
 try:
     xrange(0)
 except NameError:
     xrange = range
 
+
 def genhsh(i):
-    return chr(i) + b'\0' * 19
+    return chr(i) + b"\0" * 19
+
 
 def gettemppath():
     fd, path = tempfile.mkstemp()
@@ -19,9 +22,11 @@ def gettemppath():
     os.close(fd)
     return path
 
+
 def ensure(condition):
     if not condition:
-        raise RuntimeError('Unexpected')
+        raise RuntimeError("Unexpected")
+
 
 def testbasicreadwrite():
     path = gettemppath()
@@ -30,9 +35,9 @@ def testbasicreadwrite():
     ensure(rm.maxrev == 0)
     for i in xrange(5):
         ensure(rm.rev2hsh(i) is None)
-    ensure(rm.hsh2rev(b'\0' * 20) is None)
+    ensure(rm.hsh2rev(b"\0" * 20) is None)
 
-    paths = ['', 'a', None, 'b', 'b', 'c', 'c', None, 'a', 'b', 'a', 'a']
+    paths = ["", "a", None, "b", "b", "c", "c", None, "a", "b", "a", "a"]
     for i in xrange(1, 5):
         ensure(rm.append(genhsh(i), sidebranch=(i & 1), path=paths[i]) == i)
 
@@ -52,8 +57,7 @@ def testbasicreadwrite():
 
     # append without calling save() explicitly
     for i in xrange(5, 12):
-        ensure(rm.append(genhsh(i), sidebranch=(i & 1), path=paths[i],
-                         flush=True) == i)
+        ensure(rm.append(genhsh(i), sidebranch=(i & 1), path=paths[i], flush=True) == i)
 
     # re-load and verify
     rm = revmap.revmap(path)
@@ -72,21 +76,22 @@ def testbasicreadwrite():
     ensure(rm.rev2hsh(-1) is None)
     ensure(rm.rev2flag(12) is None)
     ensure(rm.rev2path(12) is None)
-    ensure(rm.hsh2rev(b'\1' * 20) is None)
+    ensure(rm.hsh2rev(b"\1" * 20) is None)
 
     # illformed hash (not 20 bytes)
     try:
-        rm.append(b'\0')
+        rm.append(b"\0")
         ensure(False)
     except Exception:
         pass
+
 
 def testcorruptformat():
     path = gettemppath()
 
     # incorrect header
-    with open(path, 'w') as f:
-        f.write(b'NOT A VALID HEADER')
+    with open(path, "w") as f:
+        f.write(b"NOT A VALID HEADER")
     try:
         revmap.revmap(path)
         ensure(False)
@@ -103,8 +108,8 @@ def testcorruptformat():
 
     # corrupt the file by appending a byte
     size = os.stat(path).st_size
-    with open(path, 'a') as f:
-        f.write('\xff')
+    with open(path, "a") as f:
+        f.write("\xff")
     try:
         revmap.revmap(path)
         ensure(False)
@@ -113,7 +118,7 @@ def testcorruptformat():
 
     # corrupt the file by removing the last byte
     ensure(size > 0)
-    with open(path, 'w') as f:
+    with open(path, "w") as f:
         f.truncate(size - 1)
     try:
         revmap.revmap(path)
@@ -122,6 +127,7 @@ def testcorruptformat():
         pass
 
     os.unlink(path)
+
 
 def testcopyfrom():
     path = gettemppath()
@@ -143,7 +149,9 @@ def testcopyfrom():
     os.unlink(path)
     os.unlink(path2)
 
+
 class fakefctx(object):
+
     def __init__(self, node, path=None):
         self._node = node
         self._path = path
@@ -153,6 +161,7 @@ class fakefctx(object):
 
     def path(self):
         return self._path
+
 
 def testcontains():
     path = gettemppath()
@@ -174,7 +183,8 @@ def testcontains():
         ensure(rm.append(genhsh(i), path=str(i // 2)) == i)
     for i in xrange(1, 5):
         ensure(fakefctx(genhsh(i), path=str(i // 2)) in rm)
-        ensure(fakefctx(genhsh(i), path='a') not in rm)
+        ensure(fakefctx(genhsh(i), path="a") not in rm)
+
 
 def testlastnode():
     path = gettemppath()
@@ -187,6 +197,7 @@ def testlastnode():
         ensure(revmap.getlastnode(path) == hsh)
         rm2 = revmap.revmap(path)
         ensure(rm2.rev2hsh(rm2.maxrev) == hsh)
+
 
 testbasicreadwrite()
 testcorruptformat()

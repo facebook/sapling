@@ -8,21 +8,15 @@ import tempfile
 import time
 import unittest
 
-import silenttestrunner
-
-from hgext.extlib.cstore import (
-    datapackstore,
-)
-
-from hgext.remotefilelog.datapack import (
-    fastdatapack,
-    mutabledatapack,
-)
-
-from mercurial.node import nullid
 import mercurial.ui
+import silenttestrunner
+from hgext.extlib.cstore import datapackstore
+from hgext.remotefilelog.datapack import fastdatapack, mutabledatapack
+from mercurial.node import nullid
+
 
 class datapackstoretests(unittest.TestCase):
+
     def setUp(self):
         random.seed(0)
         self.tempdirs = []
@@ -40,7 +34,7 @@ class datapackstoretests(unittest.TestCase):
         return hashlib.sha1(content).digest()
 
     def getFakeHash(self):
-        return ''.join(chr(random.randint(0, 255)) for _ in range(20))
+        return "".join(chr(random.randint(0, 255)) for _ in range(20))
 
     def createPack(self, packdir, revisions=None):
         if revisions is None:
@@ -89,14 +83,10 @@ class datapackstoretests(unittest.TestCase):
         """Test getting chains from multiple packs."""
         packdir = self.makeTempDir()
 
-        revisions1 = [
-            ("foo", self.getFakeHash(), nullid, "content"),
-        ]
+        revisions1 = [("foo", self.getFakeHash(), nullid, "content")]
         self.createPack(packdir, revisions=revisions1)
 
-        revisions2 = [
-            ("foo", self.getFakeHash(), revisions1[0][1], "content2"),
-        ]
+        revisions2 = [("foo", self.getFakeHash(), revisions1[0][1], "content2")]
         self.createPack(packdir, revisions=revisions2)
 
         store = datapackstore(packdir)
@@ -119,14 +109,17 @@ class datapackstoretests(unittest.TestCase):
 
         missinghash1 = self.getFakeHash()
         missinghash2 = self.getFakeHash()
-        missing = store.getmissing([
-            (revisions[0][0], revisions[0][1]),
-            ("foo", missinghash1),
-            ("foo2", missinghash2),
-        ])
+        missing = store.getmissing(
+            [
+                (revisions[0][0], revisions[0][1]),
+                ("foo", missinghash1),
+                ("foo2", missinghash2),
+            ]
+        )
         self.assertEquals(2, len(missing))
-        self.assertEquals(set([("foo", missinghash1), ("foo2", missinghash2)]),
-                          set(missing))
+        self.assertEquals(
+            set([("foo", missinghash1), ("foo2", missinghash2)]), set(missing)
+        )
 
     def testRefreshPacks(self):
         packdir = self.makeTempDir()
@@ -135,16 +128,14 @@ class datapackstoretests(unittest.TestCase):
         self.createPack(packdir, revisions=revisions)
         store = datapackstore(packdir)
 
-        missing = store.getmissing([
-            (revisions[0][0], revisions[0][1])])
+        missing = store.getmissing([(revisions[0][0], revisions[0][1])])
         self.assertEquals(0, len(missing))
 
         revisions2 = [("foo2", self.getFakeHash(), nullid, "content")]
         self.createPack(packdir, revisions=revisions2)
 
         # First miss should guarantee a refresh
-        missing = store.getmissing([
-            (revisions2[0][0], revisions2[0][1])])
+        missing = store.getmissing([(revisions2[0][0], revisions2[0][1])])
         self.assertEquals(0, len(missing))
 
         revisions3 = [("foo3", self.getFakeHash(), nullid, "content")]
@@ -155,9 +146,9 @@ class datapackstoretests(unittest.TestCase):
         now = time.time()
         while time.time() - now < 0.2:
             continue
-        missing = store.getmissing([
-            (revisions3[0][0], revisions3[0][1])])
+        missing = store.getmissing([(revisions3[0][0], revisions3[0][1])])
         self.assertEquals(0, len(missing))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     silenttestrunner.main(__name__)

@@ -1,13 +1,17 @@
 # hggitperf.py - performance test routines
-'''helper extension to measure performance of hg-git operations
+"""helper extension to measure performance of hg-git operations
 
 This requires both the hggit and hggitperf extensions to be enabled and
 available.
-'''
+"""
+
+import functools
+import os
+import tempfile
+import time
 
 from mercurial import cmdutil
-import time, os, tempfile
-import functools
+
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -28,8 +32,9 @@ def gettimer(ui, opts=None):
     ui = ui.copy()
     ui.fout = ui.ferr
     # get a formatter
-    fm = ui.formatter('perf', opts)
+    fm = ui.formatter("perf", opts)
     return functools.partial(_timer, fm), fm
+
 
 def _timer(fm, func, title=None):
     results = []
@@ -43,7 +48,7 @@ def _timer(fm, func, title=None):
         ostop = os.times()
         count += 1
         a, b = ostart, ostop
-        results.append((cstop - cstart, b[0] - a[0], b[1]-a[1]))
+        results.append((cstop - cstart, b[0] - a[0], b[1] - a[1]))
         if cstop - begin > 3 and count >= 100:
             break
         if cstop - begin > 10 and count >= 3:
@@ -52,29 +57,31 @@ def _timer(fm, func, title=None):
     fm.startitem()
 
     if title:
-        fm.write('title', '! %s\n', title)
+        fm.write("title", "! %s\n", title)
     if r:
-        fm.write('result', '! result: %s\n', r)
+        fm.write("result", "! result: %s\n", r)
     m = min(results)
-    fm.plain('!')
-    fm.write('wall', ' wall %f', m[0])
-    fm.write('comb', ' comb %f', m[1] + m[2])
-    fm.write('user', ' user %f', m[1])
-    fm.write('sys',  ' sys %f', m[2])
-    fm.write('count',  ' (best of %d)', count)
-    fm.plain('\n')
+    fm.plain("!")
+    fm.write("wall", " wall %f", m[0])
+    fm.write("comb", " comb %f", m[1] + m[2])
+    fm.write("user", " user %f", m[1])
+    fm.write("sys", " sys %f", m[2])
+    fm.write("count", " (best of %d)", count)
+    fm.plain("\n")
 
-@command('perfgitloadmap')
+
+@command("perfgitloadmap")
 def perfgitloadmap(ui, repo):
     timer, fm = gettimer(ui)
     timer(repo.githandler.load_map)
     fm.end()
 
-@command('perfgitsavemap')
+
+@command("perfgitsavemap")
 def perfgitsavemap(ui, repo):
     timer, fm = gettimer(ui)
     repo.githandler.load_map()
-    fd, f = tempfile.mkstemp(prefix='.git-mapfile-', dir=repo.path)
+    fd, f = tempfile.mkstemp(prefix=".git-mapfile-", dir=repo.path)
     basename = os.path.basename(f)
     try:
         timer(lambda: repo.githandler.save_map(basename))

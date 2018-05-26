@@ -22,19 +22,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
-'''command to delete untracked files from the working directory'''
+"""command to delete untracked files from the working directory"""
 from __future__ import absolute_import
 
 import os
 
+from mercurial import cmdutil, error, registrar, scmutil, util
 from mercurial.i18n import _
-from mercurial import (
-    cmdutil,
-    error,
-    registrar,
-    scmutil,
-    util,
-)
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -42,7 +37,8 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
+
 
 def findthingstopurge(repo, match, findfiles, finddirs, includeignored):
     """Find files and/or directories that should be purged.
@@ -66,25 +62,37 @@ def findthingstopurge(repo, match, findfiles, finddirs, includeignored):
         # otherwise nested directories that are being removed would be counted
         # when in reality they'd be removed already by the time the parent
         # directory is to be removed.
-        dirs = (f for f in sorted(directories, reverse=True)
-                if (match(f) and not os.listdir(repo.wjoin(f))))
+        dirs = (
+            f
+            for f in sorted(directories, reverse=True)
+            if (match(f) and not os.listdir(repo.wjoin(f)))
+        )
     else:
         dirs = []
 
     return files, dirs
 
-@command('purge|clean',
-    [('a', 'abort-on-err', None, _('abort if an error occurs')),
-    ('',  'all', None, _('purge ignored files too')),
-    ('',  'dirs', None, _('purge empty directories')),
-    ('',  'files', None, _('purge files')),
-    ('p', 'print', None, _('print filenames instead of deleting them')),
-    ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
-                            ' (implies -p/--print)')),
-    ] + cmdutil.walkopts,
-    _('hg purge [OPTION]... [DIR]...'))
+
+@command(
+    "purge|clean",
+    [
+        ("a", "abort-on-err", None, _("abort if an error occurs")),
+        ("", "all", None, _("purge ignored files too")),
+        ("", "dirs", None, _("purge empty directories")),
+        ("", "files", None, _("purge files")),
+        ("p", "print", None, _("print filenames instead of deleting them")),
+        (
+            "0",
+            "print0",
+            None,
+            _("end filenames with NUL, for use with xargs" " (implies -p/--print)"),
+        ),
+    ]
+    + cmdutil.walkopts,
+    _("hg purge [OPTION]... [DIR]..."),
+)
 def purge(ui, repo, *dirs, **opts):
-    '''removes files not tracked by Mercurial
+    """removes files not tracked by Mercurial
 
     Delete files not known to Mercurial. This is useful to test local
     and uncommitted changes in an otherwise-clean source tree.
@@ -112,15 +120,15 @@ def purge(ui, repo, *dirs, **opts):
     you forgot to add to the repository. If you only want to print the
     list of files that this program would delete, use the --print
     option.
-    '''
-    act = not opts.get('print')
-    eol = '\n'
-    if opts.get('print0'):
-        eol = '\0'
-        act = False # --print0 implies --print
-    removefiles = opts.get('files')
-    removedirs = opts.get('dirs')
-    removeignored = opts.get('all')
+    """
+    act = not opts.get("print")
+    eol = "\n"
+    if opts.get("print0"):
+        eol = "\0"
+        act = False  # --print0 implies --print
+    removefiles = opts.get("files")
+    removedirs = opts.get("dirs")
+    removeignored = opts.get("all")
     if not removefiles and not removedirs:
         removefiles = True
         removedirs = True
@@ -130,23 +138,22 @@ def purge(ui, repo, *dirs, **opts):
             try:
                 remove_func(repo.wjoin(name))
             except OSError:
-                m = _('%s cannot be removed') % name
-                if opts.get('abort_on_err'):
+                m = _("%s cannot be removed") % name
+                if opts.get("abort_on_err"):
                     raise error.Abort(m)
-                ui.warn(_('warning: %s\n') % m)
+                ui.warn(_("warning: %s\n") % m)
         else:
-            ui.write('%s%s' % (name, eol))
+            ui.write("%s%s" % (name, eol))
 
     match = scmutil.match(repo[None], dirs, opts)
-    files, dirs = findthingstopurge(repo, match, removefiles, removedirs,
-                                    removeignored)
+    files, dirs = findthingstopurge(repo, match, removefiles, removedirs, removeignored)
 
     for f in files:
         if act:
-            ui.note(_('removing file %s\n') % f)
+            ui.note(_("removing file %s\n") % f)
         remove(util.unlink, f)
 
     for f in dirs:
         if act:
-            ui.note(_('removing directory %s\n') % f)
+            ui.note(_("removing directory %s\n") % f)
         remove(os.rmdir, f)

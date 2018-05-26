@@ -7,23 +7,24 @@
 
 from __future__ import absolute_import
 
+from . import rcutil, util
 from .i18n import _
-from . import (
-    rcutil,
-    util,
-)
+
 
 hinttable = {}
 messages = []
 triggered = set()
 
+
 def loadhint(ui, extname, registrarobj):
     for name, func in registrarobj._table.iteritems():
         hinttable[name] = func
 
+
 def loadhintconfig(ui):
-    for name, message in ui.configitems('hint-definitions'):
+    for name, message in ui.configitems("hint-definitions"):
         hinttable[name] = lambda *args, **kwargs: message
+
 
 def trigger(name, *args, **kwargs):
     """Trigger a hint message. It will be shown at the end of the command."""
@@ -34,40 +35,46 @@ def trigger(name, *args, **kwargs):
         if msg:
             messages.append((name, msg.rstrip()))
 
+
 def _prefix(ui, name):
     """Return "hint[%s]" % name, colored"""
-    return ui.label(_('hint[%s]: ') % (name,), 'hint.prefix')
+    return ui.label(_("hint[%s]: ") % (name,), "hint.prefix")
+
 
 def show(ui):
     """Show all triggered hint messages"""
-    if ui.plain('hint'):
+    if ui.plain("hint"):
         return
-    acked = ui.configlist('hint', 'ack')
-    if acked == ['*']:
+    acked = ui.configlist("hint", "ack")
+    if acked == ["*"]:
+
         def isacked(name):
             return True
+
     else:
         acked = set(acked)
+
         def isacked(name):
-            return name in acked or ui.configbool('hint', 'ack-%s' % name)
+            return name in acked or ui.configbool("hint", "ack-%s" % name)
+
     names = []
     for name, msg in messages:
         if not isacked(name):
             prefix = _prefix(ui, name)
-            ui.write_err(('%s%s\n') % (prefix, msg.rstrip()))
+            ui.write_err(("%s%s\n") % (prefix, msg.rstrip()))
             names.append(name)
-    if names and not isacked('hint-ack'):
-        prefix = _prefix(ui, 'hint-ack')
-        msg = (_("use 'hg hint --ack %s' to silence these hints\n")
-               % ' '.join(names))
+    if names and not isacked("hint-ack"):
+        prefix = _prefix(ui, "hint-ack")
+        msg = _("use 'hg hint --ack %s' to silence these hints\n") % " ".join(names)
         ui.write_err(prefix + msg)
+
 
 def silence(ui, names):
     """Silence given hints"""
     path = rcutil.userrcpath()[0]
-    acked = ui.configlist('hint', 'ack')
+    acked = ui.configlist("hint", "ack")
     for name in names:
         if name not in acked:
             acked.append(name)
-    value = ' '.join(util.shellquote(w) for w in acked)
-    rcutil.editconfig(path, 'hint', 'ack', value)
+    value = " ".join(util.shellquote(w) for w in acked)
+    rcutil.editconfig(path, "hint", "ack", value)

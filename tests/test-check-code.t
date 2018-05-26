@@ -107,23 +107,23 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping hgext/hgsubversion/util.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/verify.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/wrappers.py it has no-che?k-code (glob)
-  hgext/morestatus.py:48:
-   >                 os.getcwd()) for path in unresolvedlist])
+  hgext/morestatus.py:45:
+   >                 "    %s" % os.path.relpath(os.path.join(repo.root, path), os.getcwd())
    use pycompat.getcwd instead (py3)
   hgext/phabstatus.py:80:
-   >             repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
+   >         client = graphql.Client(repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
    use pycompat.getcwd instead (py3)
   hgext/undo.py:*: (glob)
-   >     if 'CHGINTERNALMARK' in os.environ:
+   >     if "CHGINTERNALMARK" in os.environ:
    use encoding.environ instead (py3)
   hgext/undo.py:*: (glob)
-   >     if '_undologactive' in os.environ:
+   >     if "_undologactive" in os.environ:
    use encoding.environ instead (py3)
   hgext/undo.py:*: (glob)
-   >             os.environ['_undologactive'] = "active"
+   >             os.environ["_undologactive"] = "active"
    use encoding.environ instead (py3)
   hgext/undo.py:*: (glob)
-   >                 del os.environ['_undologactive']
+   >                 del os.environ["_undologactive"]
    use encoding.environ instead (py3)
   Skipping i18n/polib.py it has no-che?k-code (glob)
   Skipping lib/clib/buffer.c it has no-che?k-code (glob)

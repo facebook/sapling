@@ -15,46 +15,45 @@ short version:
 
 from __future__ import absolute_import
 
-from mercurial import (
-    error,
-    extensions,
-    hg,
-    registrar,
-    revset,
-)
-from mercurial.i18n import _
 import re
+
+from mercurial import error, extensions, hg, registrar, revset
+from mercurial.i18n import _
+
 
 revsetpredicate = registrar.revsetpredicate()
 
-githashre = re.compile('g([0-9a-fA-F]{40,40})')
+githashre = re.compile("g([0-9a-fA-F]{40,40})")
 
 templatekeyword = registrar.templatekeyword()
+
 
 @templatekeyword("gitnode")
 def showgitnode(repo, ctx, templ, **args):
     """Return the git revision corresponding to a given hg rev"""
-    hexgitnode = _lookup_node(repo, ctx.hex(), from_scm_type='hg')
+    hexgitnode = _lookup_node(repo, ctx.hex(), from_scm_type="hg")
     # templates are expected to return an empty string when no
     # data exists
-    return hexgitnode.encode('hex') if hexgitnode else ''
+    return hexgitnode.encode("hex") if hexgitnode else ""
 
-@revsetpredicate('gitnode(id)')
+
+@revsetpredicate("gitnode(id)")
 def gitnode(repo, subset, x):
     """``gitnode(id)``
     Return the hg revision corresponding to a given git rev."""
     l = revset.getargs(x, 1, 1, _("id requires one argument"))
     n = revset.getstring(l[0], _("id requires a string"))
 
-    hexhgnode = _lookup_node(repo, n, from_scm_type='git')
+    hexhgnode = _lookup_node(repo, n, from_scm_type="git")
     if not hexhgnode:
         raise error.RepoLookupError(_("unknown revision '%s'") % n)
 
     rev = repo[hexhgnode].rev()
     return subset.filter(lambda r: r == rev)
 
+
 def _lookup_node(repo, hexnode, from_scm_type):
-    gitlookupnode = '_gitlookup_%s_%s' % (from_scm_type, hexnode)
+    gitlookupnode = "_gitlookup_%s_%s" % (from_scm_type, hexnode)
 
     # ui.expandpath('default') returns 'default' if there is no default
     # path. This can be the case when command is ran on the server.
@@ -64,7 +63,7 @@ def _lookup_node(repo, hexnode, from_scm_type):
     except error.RepoLookupError:
         # Note: RepoLookupError is caught here because repo.lookup()
         # can throw only this exception.
-        peerpath = repo.ui.expandpath('default')
+        peerpath = repo.ui.expandpath("default")
 
         # sshing can cause junk 'remote: ...' output to stdout, so we need to
         # redirect it temporarily so automation can parse the result easily.
@@ -81,13 +80,15 @@ def _lookup_node(repo, hexnode, from_scm_type):
         finally:
             repo.baseui.fout = oldfout
 
+
 def overridestringset(orig, repo, subset, x, *args, **kwargs):
     m = githashre.match(x)
     if m is not None:
-        return gitnode(repo, subset, ('string', m.group(1)))
+        return gitnode(repo, subset, ("string", m.group(1)))
     return orig(repo, subset, x, *args, **kwargs)
 
+
 def extsetup(ui):
-    extensions.wrapfunction(revset, 'stringset', overridestringset)
-    revset.methods['string'] = revset.stringset
-    revset.methods['symbol'] = revset.stringset
+    extensions.wrapfunction(revset, "stringset", overridestringset)
+    revset.methods["string"] = revset.stringset
+    revset.methods["symbol"] = revset.stringset

@@ -9,12 +9,8 @@ from __future__ import absolute_import
 
 import functools
 
-from . import (
-    configitems,
-    error,
-    pycompat,
-    util,
-)
+from . import configitems, error, pycompat, util
+
 
 # unlike the other registered items, config options are neither functions or
 # classes. Registering the option is just small function call.
@@ -22,6 +18,7 @@ from . import (
 # We still add the official API to the registrar module for consistency with
 # the other items extensions want might to register.
 configitem = configitems.getitemregister
+
 
 class _funcregistrarbase(object):
     """Base of decorator to register a function for specific purpose
@@ -49,6 +46,7 @@ class _funcregistrarbase(object):
     - 'barfunc' is stored as 'bar' in '_table' of an instance 'keyword' above
     - 'barfunc.__doc__' becomes ":bar: Explanation of bar keyword"
     """
+
     def __init__(self, table=None):
         if table is None:
             self._table = {}
@@ -65,7 +63,7 @@ class _funcregistrarbase(object):
             msg = 'duplicate registration for name: "%s"' % name
             raise error.ProgrammingError(msg)
 
-        if func.__doc__ and not util.safehasattr(func, '_origdoc'):
+        if func.__doc__ and not util.safehasattr(func, "_origdoc"):
             doc = pycompat.sysbytes(func.__doc__).strip()
             func._origdoc = doc
             func.__doc__ = pycompat.sysstr(self._formatdoc(decl, doc))
@@ -78,7 +76,7 @@ class _funcregistrarbase(object):
     def _parsefuncdecl(self, decl):
         """Parse function declaration and return the name of function in it
         """
-        i = decl.find('(')
+        i = decl.find("(")
         if i >= 0:
             return decl[:i]
         else:
@@ -104,6 +102,7 @@ class _funcregistrarbase(object):
     def _extrasetup(self, name, func):
         """Execute exra setup for registered function, if needed
         """
+
 
 class command(_funcregistrarbase):
     """Decorator to register a command function to table
@@ -174,13 +173,23 @@ class command(_funcregistrarbase):
         if parentcommand is not None:
             parentcommand.subcommands = self._table
 
-    def _doregister(self, func, name, options=(), synopsis=None,
-                    norepo=False, optionalrepo=False, inferrepo=False,
-                    cmdtype=unrecoverablewrite, subonly=False):
+    def _doregister(
+        self,
+        func,
+        name,
+        options=(),
+        synopsis=None,
+        norepo=False,
+        optionalrepo=False,
+        inferrepo=False,
+        cmdtype=unrecoverablewrite,
+        subonly=False,
+    ):
 
         if cmdtype not in self.possiblecmdtypes:
-            raise error.ProgrammingError("unknown cmdtype value '%s' for "
-                                         "'%s' command" % (cmdtype, name))
+            raise error.ProgrammingError(
+                "unknown cmdtype value '%s' for " "'%s' command" % (cmdtype, name)
+            )
         func.norepo = norepo
         func.optionalrepo = optionalrepo
         func.inferrepo = inferrepo
@@ -193,6 +202,7 @@ class command(_funcregistrarbase):
         else:
             self._table[name] = func, list(options)
         return func
+
 
 class revsetpredicate(_funcregistrarbase):
     """Decorator to register revset predicate
@@ -242,6 +252,7 @@ class revsetpredicate(_funcregistrarbase):
         func._takeorder = takeorder
         func._weight = weight
 
+
 class filesetpredicate(_funcregistrarbase):
     """Decorator to register fileset predicate
 
@@ -281,10 +292,12 @@ class filesetpredicate(_funcregistrarbase):
         func._callstatus = callstatus
         func._callexisting = callexisting
 
+
 class _templateregistrarbase(_funcregistrarbase):
     """Base of decorator to register functions as template specific one
     """
     _docformat = ":%s: %s"
+
 
 class templatekeyword(_templateregistrarbase):
     """Decorator to register template keyword
@@ -311,6 +324,7 @@ class templatekeyword(_templateregistrarbase):
     Otherwise, explicit 'templatekw.loadkeyword()' is needed.
     """
 
+
 class templatefilter(_templateregistrarbase):
     """Decorator to register template filer
 
@@ -335,6 +349,7 @@ class templatefilter(_templateregistrarbase):
 
     Otherwise, explicit 'templatefilters.loadkeyword()' is needed.
     """
+
 
 class templatefunc(_templateregistrarbase):
     """Decorator to register template function
@@ -368,6 +383,7 @@ class templatefunc(_templateregistrarbase):
 
     def _extrasetup(self, name, func, argspec=None):
         func._argspec = argspec
+
 
 class internalmerge(_funcregistrarbase):
     """Decorator to register in-process merge tool
@@ -421,14 +437,14 @@ class internalmerge(_funcregistrarbase):
 
     # merge type definitions:
     nomerge = None
-    mergeonly = 'mergeonly'  # just the full merge, no premerge
-    fullmerge = 'fullmerge'  # both premerge and merge
+    mergeonly = "mergeonly"  # just the full merge, no premerge
+    fullmerge = "fullmerge"  # both premerge and merge
 
-    def _extrasetup(self, name, func, mergetype,
-                    onfailure=None, precheck=None):
+    def _extrasetup(self, name, func, mergetype, onfailure=None, precheck=None):
         func.mergetype = mergetype
         func.onfailure = onfailure
         func.precheck = precheck
+
 
 class hint(_funcregistrarbase):
     """Decorator to register hint messages

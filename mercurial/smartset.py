@@ -7,15 +7,14 @@
 
 from __future__ import absolute_import
 
-from . import (
-    error,
-    util,
-)
+from . import error, util
+
 
 try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 def _formatsetrepr(r):
     """Format an optional printable representation of a set
@@ -30,7 +29,7 @@ def _formatsetrepr(r):
     ========  =================================
     """
     if r is None:
-        return ''
+        return ""
     elif isinstance(r, tuple):
         return r[0] % r[1:]
     elif isinstance(r, str):
@@ -39,6 +38,7 @@ def _formatsetrepr(r):
         return r()
     else:
         return repr(r)
+
 
 class abstractsmartset(object):
 
@@ -84,7 +84,7 @@ class abstractsmartset(object):
             for v in self.fastasc():
                 break
             else:
-                raise ValueError('arg is an empty sequence')
+                raise ValueError("arg is an empty sequence")
         self.min = lambda: v
         return v
 
@@ -96,7 +96,7 @@ class abstractsmartset(object):
             for v in self.fastdesc():
                 break
             else:
-                raise ValueError('arg is an empty sequence')
+                raise ValueError("arg is an empty sequence")
         self.max = lambda: v
         return v
 
@@ -145,8 +145,9 @@ class abstractsmartset(object):
 
         This is part of the mandatory API for smartset."""
         c = other.__contains__
-        return self.filter(lambda r: not c(r), condrepr=('<not %r>', other),
-                           cache=False)
+        return self.filter(
+            lambda r: not c(r), condrepr=("<not %r>", other), cache=False
+        )
 
     def filter(self, condition, condrepr=None, cache=True):
         """Returns this smartset filtered by condition as a new smartset.
@@ -157,14 +158,14 @@ class abstractsmartset(object):
 
         This is part of the mandatory API for smartset."""
         # builtin cannot be cached. but do not needs to
-        if cache and util.safehasattr(condition, 'func_code'):
+        if cache and util.safehasattr(condition, "func_code"):
             condition = util.cachefunc(condition)
         return filteredset(self, condition, condrepr)
 
     def slice(self, start, stop):
         """Return new smartset that contains selected elements from this set"""
         if start < 0 or stop < 0:
-            raise error.ProgrammingError('negative index not allowed')
+            raise error.ProgrammingError("negative index not allowed")
         return self._slice(start, stop)
 
     def _slice(self, start, stop):
@@ -181,7 +182,8 @@ class abstractsmartset(object):
             if y is None:
                 break
             ys.append(y)
-        return baseset(ys, datarepr=('slice=%d:%d %r', start, stop, self))
+        return baseset(ys, datarepr=("slice=%d:%d %r", start, stop, self))
+
 
 class baseset(abstractsmartset):
     """Basic data structure that represents a revset and contains the basic
@@ -242,6 +244,7 @@ class baseset(abstractsmartset):
     >>> rs._istopo
     True
     """
+
     def __init__(self, data=(), datarepr=None, istopo=False):
         """
         datarepr: a tuple of (format, obj, ...), a function or an object that
@@ -273,7 +276,7 @@ class baseset(abstractsmartset):
     @util.propertycache
     def _list(self):
         # _list is only lazily constructed if we have _set
-        assert r'_set' in self.__dict__
+        assert r"_set" in self.__dict__
         return list(self._set)
 
     def __iter__(self):
@@ -311,7 +314,7 @@ class baseset(abstractsmartset):
         self._istopo = False
 
     def __len__(self):
-        if '_list' in self.__dict__:
+        if "_list" in self.__dict__:
             return len(self._list)
         else:
             return len(self._set)
@@ -362,20 +365,23 @@ class baseset(abstractsmartset):
 
     def _fastsetop(self, other, op):
         # try to use native set operations as fast paths
-        if (type(other) is baseset and r'_set' in other.__dict__ and r'_set' in
-            self.__dict__ and self._ascending is not None):
-            s = baseset(data=getattr(self._set, op)(other._set),
-                        istopo=self._istopo)
+        if (
+            type(other) is baseset
+            and r"_set" in other.__dict__
+            and r"_set" in self.__dict__
+            and self._ascending is not None
+        ):
+            s = baseset(data=getattr(self._set, op)(other._set), istopo=self._istopo)
             s._ascending = self._ascending
         else:
             s = getattr(super(baseset, self), op)(other)
         return s
 
     def __and__(self, other):
-        return self._fastsetop(other, '__and__')
+        return self._fastsetop(other, "__and__")
 
     def __sub__(self, other):
-        return self._fastsetop(other, '__sub__')
+        return self._fastsetop(other, "__sub__")
 
     def _slice(self, start, stop):
         # creating new list should be generally cheaper than iterating items
@@ -390,7 +396,7 @@ class baseset(abstractsmartset):
         return s
 
     def __repr__(self):
-        d = {None: '', False: '-', True: '+'}[self._ascending]
+        d = {None: "", False: "-", True: "+"}[self._ascending]
         s = _formatsetrepr(self._datarepr)
         if not s:
             l = self._list
@@ -400,13 +406,15 @@ class baseset(abstractsmartset):
             if self._ascending is not None:
                 l = self._asclist
             s = repr(l)
-        return '<%s%s %s>' % (type(self).__name__, d, s)
+        return "<%s%s %s>" % (type(self).__name__, d, s)
+
 
 class filteredset(abstractsmartset):
     """Duck type for baseset class which iterates lazily over the revisions in
     the subset and contains a function which tests for membership in the
     revset
     """
+
     def __init__(self, subset, condition=lambda x: True, condrepr=None):
         """
         condition: a function that decide whether a revision in the subset
@@ -446,10 +454,12 @@ class filteredset(abstractsmartset):
 
     def __nonzero__(self):
         fast = None
-        candidates = [self.fastasc if self.isascending() else None,
-                      self.fastdesc if self.isdescending() else None,
-                      self.fastasc,
-                      self.fastdesc]
+        candidates = [
+            self.fastasc if self.isascending() else None,
+            self.fastdesc if self.isdescending() else None,
+            self.fastasc,
+            self.fastdesc,
+        ]
         for candidate in candidates:
             if candidate is not None:
                 fast = candidate
@@ -503,7 +513,7 @@ class filteredset(abstractsmartset):
         if it is not None:
             for x in it():
                 return x
-            return None #empty case
+            return None  # empty case
         else:
             x = None
             for x in self:
@@ -515,7 +525,8 @@ class filteredset(abstractsmartset):
         s = _formatsetrepr(self._condrepr)
         if s:
             xs.append(s)
-        return '<%s %s>' % (type(self).__name__, ', '.join(xs))
+        return "<%s %s>" % (type(self).__name__, ", ".join(xs))
+
 
 def _iterordered(ascending, iter1, iter2):
     """produce an ordered iteration from two iterators with the same order
@@ -552,6 +563,7 @@ def _iterordered(ascending, iter1, iter2):
             yield val2
         for val in it:
             yield val
+
 
 class addset(abstractsmartset):
     """Represent the addition of two sets
@@ -624,6 +636,7 @@ class addset(abstractsmartset):
     >>> [x for x in rs]
     [5, 4, 3, 2, 0]
     """
+
     def __init__(self, revs1, revs2, ascending=None):
         self._r1 = revs1
         self._r2 = revs2
@@ -659,6 +672,7 @@ class addset(abstractsmartset):
         if self._ascending is None:
             if self._genlist:
                 return iter(self._genlist)
+
             def arbitraryordergen():
                 for r in self._r1:
                     yield r
@@ -666,13 +680,14 @@ class addset(abstractsmartset):
                 for r in self._r2:
                     if not inr1(r):
                         yield r
+
             return arbitraryordergen()
         # try to use our own fast iterator if it exists
         self._trysetasclist()
         if self._ascending:
-            attr = 'fastasc'
+            attr = "fastasc"
         else:
-            attr = 'fastdesc'
+            attr = "fastdesc"
         it = getattr(self, attr)
         if it is not None:
             return it()
@@ -761,8 +776,9 @@ class addset(abstractsmartset):
         return val
 
     def __repr__(self):
-        d = {None: '', False: '-', True: '+'}[self._ascending]
-        return '<%s%s %r, %r>' % (type(self).__name__, d, self._r1, self._r2)
+        d = {None: "", False: "-", True: "+"}[self._ascending]
+        return "<%s%s %r, %r>" % (type(self).__name__, d, self._r1, self._r2)
+
 
 class generatorset(abstractsmartset):
     """Wrap a generator for lazy iteration
@@ -777,6 +793,7 @@ class generatorset(abstractsmartset):
     >>> xs.last()  # cached
     4
     """
+
     def __init__(self, gen, iterasc=None):
         """
         gen: a generator producing the values for the generatorset.
@@ -874,7 +891,8 @@ class generatorset(abstractsmartset):
         # iteration.
         genlist = self._genlist
         nextgen = self._consumegen()
-        _len, _next = len, next # cache global lookup
+        _len, _next = len, next  # cache global lookup
+
         def gen():
             i = 0
             while True:
@@ -886,6 +904,7 @@ class generatorset(abstractsmartset):
                     except StopIteration:
                         return
                 i += 1
+
         return gen()
 
     def _consumegen(self):
@@ -951,8 +970,9 @@ class generatorset(abstractsmartset):
         return next(it(), None)
 
     def __repr__(self):
-        d = {False: '-', True: '+'}[self._ascending]
-        return '<%s%s>' % (type(self).__name__, d)
+        d = {False: "-", True: "+"}[self._ascending]
+        return "<%s%s>" % (type(self).__name__, d)
+
 
 def spanset(repo, start=0, end=None):
     """Create a spanset that represents a range of repository revisions
@@ -969,6 +989,7 @@ def spanset(repo, start=0, end=None):
         start, end = end + 1, start + 1
     return _spanset(start, end, ascending, repo.changelog.filteredrevs)
 
+
 class _spanset(abstractsmartset):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
@@ -979,6 +1000,7 @@ class _spanset(abstractsmartset):
     - revision filtered with this repoview will be skipped.
 
     """
+
     def __init__(self, start, end, ascending, hiddenrevs):
         self._start = start
         self._end = end
@@ -1023,8 +1045,7 @@ class _spanset(abstractsmartset):
 
     def __contains__(self, rev):
         hidden = self._hiddenrevs
-        return ((self._start <= rev < self._end)
-                and not (hidden and rev in hidden))
+        return (self._start <= rev < self._end) and not (hidden and rev in hidden)
 
     def __nonzero__(self):
         for r in self:
@@ -1082,9 +1103,14 @@ class _spanset(abstractsmartset):
         return _spanset(x, y, self._ascending, self._hiddenrevs)
 
     def __repr__(self):
-        d = {False: '-', True: '+'}[self._ascending]
-        return '<%s%s %d:%d>' % (type(self).__name__.lstrip('_'), d,
-                                 self._start, self._end)
+        d = {False: "-", True: "+"}[self._ascending]
+        return "<%s%s %d:%d>" % (
+            type(self).__name__.lstrip("_"),
+            d,
+            self._start,
+            self._end,
+        )
+
 
 class fullreposet(_spanset):
     """a set containing all revisions in the repo
@@ -1094,8 +1120,9 @@ class fullreposet(_spanset):
     """
 
     def __init__(self, repo):
-        super(fullreposet, self).__init__(0, len(repo), True,
-                                          repo.changelog.filteredrevs)
+        super(fullreposet, self).__init__(
+            0, len(repo), True, repo.changelog.filteredrevs
+        )
 
     def __and__(self, other):
         """As self contains the whole repo, all of the other set should also be
@@ -1104,7 +1131,7 @@ class fullreposet(_spanset):
         This boldly assumes the other contains valid revs only.
         """
         # other not a smartset, make is so
-        if not util.safehasattr(other, 'isascending'):
+        if not util.safehasattr(other, "isascending"):
             # filter out hidden revision
             # (this boldly assumes all smartset are pure)
             #
@@ -1115,16 +1142,17 @@ class fullreposet(_spanset):
         other.sort(reverse=self.isdescending())
         return other
 
+
 def prettyformat(revs):
     lines = []
     rs = repr(revs)
     p = 0
     while p < len(rs):
-        q = rs.find('<', p + 1)
+        q = rs.find("<", p + 1)
         if q < 0:
             q = len(rs)
-        l = rs.count('<', 0, p) - rs.count('>', 0, p)
+        l = rs.count("<", 0, p) - rs.count(">", 0, p)
         assert l >= 0
         lines.append((l, rs[p:q].rstrip()))
         p = q
-    return '\n'.join('  ' * l + s for l, s in lines)
+    return "\n".join("  " * l + s for l, s in lines)

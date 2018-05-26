@@ -1,6 +1,6 @@
 import test_hgsubversion_util
+from hgext.hgsubversion import maps, svnmeta
 
-from hgext.hgsubversion import svnmeta, maps
 
 class TestRevMapMigrate(test_hgsubversion_util.TestBase):
 
@@ -11,18 +11,18 @@ class TestRevMapMigrate(test_hgsubversion_util.TestBase):
     def _test_revmap_migrate(self, fromclass, toclass):
         # revmap interfaces to test
         getters = [
-            lambda x: x.branchedits('the_branch', 3),
-            lambda x: x.branchedits('the_branch', 4),
-            lambda x: x.branchedits('the_branch', 5),
-            lambda x: x.branchedits('the_branch', 6),
+            lambda x: x.branchedits("the_branch", 3),
+            lambda x: x.branchedits("the_branch", 4),
+            lambda x: x.branchedits("the_branch", 5),
+            lambda x: x.branchedits("the_branch", 6),
             lambda x: x.branchedits(None, 5),
-            lambda x: x.branchedits('non_existed', 10),
-            lambda x: x.branchmaxrevnum('the_branch', 3),
-            lambda x: x.branchmaxrevnum('the_branch', 4),
-            lambda x: x.branchmaxrevnum('the_branch', 5),
-            lambda x: x.branchmaxrevnum('the_branch', 6),
+            lambda x: x.branchedits("non_existed", 10),
+            lambda x: x.branchmaxrevnum("the_branch", 3),
+            lambda x: x.branchmaxrevnum("the_branch", 4),
+            lambda x: x.branchmaxrevnum("the_branch", 5),
+            lambda x: x.branchmaxrevnum("the_branch", 6),
             lambda x: x.branchmaxrevnum(None, 5),
-            lambda x: x.branchmaxrevnum('non_existed', 10),
+            lambda x: x.branchmaxrevnum("non_existed", 10),
             lambda x: list(x.revhashes(3)),
             lambda x: list(x.revhashes(4)),
             lambda x: list(x.revhashes(42)),
@@ -33,17 +33,17 @@ class TestRevMapMigrate(test_hgsubversion_util.TestBase):
         ]
 
         svnmeta.SVNMeta._defaultrevmapclass = fromclass
-        repo = self._load_fixture_and_fetch('two_heads.svndump')
+        repo = self._load_fixture_and_fetch("two_heads.svndump")
         meta = svnmeta.SVNMeta(repo)
         self.assertEqual(meta.revmap.__class__, fromclass)
         origrevmap = meta.revmap
 
         # insert fake special (duplicated, with '\0') data
-        origrevmap[103, None] = b'\0' * 20
-        origrevmap[104, None] = b'\0' * 18 + b'cd'
-        origrevmap[105, None] = b'ab\0cdefghijklmnopqrs'
-        origrevmap[104, None] = b'\0' * 18 + b'\xff\0'
-        origrevmap[105, 'ab'] = origrevmap[105, None]
+        origrevmap[103, None] = b"\0" * 20
+        origrevmap[104, None] = b"\0" * 18 + b"cd"
+        origrevmap[105, None] = b"ab\0cdefghijklmnopqrs"
+        origrevmap[104, None] = b"\0" * 18 + b"\xff\0"
+        origrevmap[105, "ab"] = origrevmap[105, None]
 
         origvalues = [f(meta.revmap) for f in getters]
 
@@ -69,7 +69,8 @@ class TestRevMapMigrate(test_hgsubversion_util.TestBase):
     def test_revmap_migrate_down(self):
         self._test_revmap_migrate(maps.SqliteRevMap, maps.RevMap)
 
-if __name__ == '__main__':
-    import silenttestrunner
-    silenttestrunner.main(__name__)
 
+if __name__ == "__main__":
+    import silenttestrunner
+
+    silenttestrunner.main(__name__)

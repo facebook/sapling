@@ -66,7 +66,7 @@
    reduce is not available in Python 3+
   python3-compat.py:3:
    > dict(key=value)
-   dict() is different in Py2 and 3 and is slower than {}
+   dict constructor is different in Py2 and 3 and is slower than {}
   [1]
 
   $ cat > foo.c <<EOF

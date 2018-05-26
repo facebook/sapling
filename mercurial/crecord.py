@@ -15,53 +15,57 @@ import os
 import re
 import signal
 
+from . import encoding, error, patch as patchmod, progress, scmutil, util
 from .i18n import _
-from . import (
-    encoding,
-    error,
-    patch as patchmod,
-    progress,
-    scmutil,
-    util,
-)
+
+
 stringio = util.stringio
 
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
-locale.setlocale(locale.LC_ALL, u'')
+locale.setlocale(locale.LC_ALL, u"")
 
 # patch comments based on the git one
-diffhelptext = _("""# To remove '-' lines, make them ' ' lines (context).
+diffhelptext = _(
+    """# To remove '-' lines, make them ' ' lines (context).
 # To remove '+' lines, delete them.
 # Lines starting with # will be removed from the patch.
-""")
+"""
+)
 
-hunkhelptext = _("""#
+hunkhelptext = _(
+    """#
 # If the patch applies cleanly, the edited hunk will immediately be
 # added to the record list. If it does not apply cleanly, a rejects file
 # will be generated. You can use that when you try again. If all lines
 # of the hunk are removed, then the edit is aborted and the hunk is left
 # unchanged.
-""")
+"""
+)
 
-patchhelptext = _("""#
+patchhelptext = _(
+    """#
 # If the patch applies cleanly, the edited patch will immediately
 # be finalised. If it does not apply cleanly, rejects files will be
 # generated. You can use those when you try again.
-""")
+"""
+)
 
 try:
     import curses
+
     curses.error
 except ImportError:
     # I have no idea if wcurses works with crecord...
     try:
         import wcurses as curses
+
         curses.error
     except ImportError:
         # wcurses is not shipped on Windows by default, or python is not
         # compiled with curses
         curses = False
+
 
 def checkcurses(ui):
     """Return True if the user wants to use curses
@@ -70,6 +74,7 @@ def checkcurses(ui):
     it) and that the user has the correct flag for the ui.
     """
     return curses and ui.interface("chunkselector") == "curses"
+
 
 class patchnode(object):
     """abstract class for patch graph nodes
@@ -148,7 +153,7 @@ class patchnode(object):
                 # else return grandparent's next sibling (or None)
                 return self.parentitem().parentitem().nextsibling()
 
-            except AttributeError: # parent and/or grandparent was None
+            except AttributeError:  # parent and/or grandparent was None
                 return None
 
     def previtem(self):
@@ -163,11 +168,9 @@ class patchnode(object):
         prevsibling = self.prevsibling()
         if prevsibling is not None:
             prevsiblinglastchild = prevsibling.lastchild()
-            if ((prevsiblinglastchild is not None) and
-                not prevsibling.folded):
+            if (prevsiblinglastchild is not None) and not prevsibling.folded:
                 prevsiblinglclc = prevsiblinglastchild.lastchild()
-                if ((prevsiblinglclc is not None) and
-                    not prevsiblinglastchild.folded):
+                if (prevsiblinglclc is not None) and not prevsiblinglastchild.folded:
                     return prevsiblinglclc
                 else:
                     return prevsiblinglastchild
@@ -177,15 +180,18 @@ class patchnode(object):
         # try parent (or None)
         return self.parentitem()
 
-class patch(patchnode, list): # todo: rename patchroot
+
+class patch(patchnode, list):  # todo: rename patchroot
     """
     list of header objects representing the patch.
     """
+
     def __init__(self, headerlist):
         self.extend(headerlist)
         # add parent patch object reference to each header
         for header in self:
             header.patch = self
+
 
 class uiheader(patchnode):
     """patch header
@@ -262,8 +268,10 @@ class uiheader(patchnode):
     def __getattr__(self, name):
         return getattr(self.nonuiheader, name)
 
+
 class uihunkline(patchnode):
     "represents a changed line in a hunk"
+
     def __init__(self, linetext, hunk):
         self.linetext = linetext
         self.applied = True
@@ -280,7 +288,7 @@ class uihunkline(patchnode):
         numlinesinhunk = len(self.hunk.changedlines)
         indexofthisline = self.hunk.changedlines.index(self)
 
-        if (indexofthisline < numlinesinhunk - 1):
+        if indexofthisline < numlinesinhunk - 1:
             nextline = self.hunk.changedlines[indexofthisline + 1]
             return nextline
         else:
@@ -308,6 +316,7 @@ class uihunkline(patchnode):
         # hunk-lines don't have children
         return None
 
+
 class uihunk(patchnode):
     """ui patch hunk, wraps a hunk and keep track of ui behavior """
     maxcontext = 3
@@ -331,7 +340,7 @@ class uihunk(patchnode):
         numhunksinheader = len(self.header.hunks)
         indexofthishunk = self.header.hunks.index(self)
 
-        if (indexofthishunk < numhunksinheader - 1):
+        if indexofthishunk < numhunksinheader - 1:
             nexthunk = self.header.hunks[indexofthishunk + 1]
             return nexthunk
         else:
@@ -369,19 +378,20 @@ class uihunk(patchnode):
 
     def countchanges(self):
         """changedlines -> (n+,n-)"""
-        add = len([l for l in self.changedlines if l.applied
-                   and l.prettystr()[0] == '+'])
-        rem = len([l for l in self.changedlines if l.applied
-                   and l.prettystr()[0] == '-'])
+        add = len(
+            [l for l in self.changedlines if l.applied and l.prettystr()[0] == "+"]
+        )
+        rem = len(
+            [l for l in self.changedlines if l.applied and l.prettystr()[0] == "-"]
+        )
         return add, rem
 
     def getfromtoline(self):
         # calculate the number of removed lines converted to context lines
         removedconvertedtocontext = self.originalremoved - self.removed
 
-        contextlen = (len(self.before) + len(self.after) +
-                      removedconvertedtocontext)
-        if self.after and self.after[-1] == '\\ No newline at end of file\n':
+        contextlen = len(self.before) + len(self.after) + removedconvertedtocontext
+        if self.after and self.after[-1] == "\\ No newline at end of file\n":
             contextlen -= 1
         fromlen = contextlen + self.removed
         tolen = contextlen + self.added
@@ -399,9 +409,13 @@ class uihunk(patchnode):
             if tolen == 0:
                 toline -= 1
 
-        fromtoline = '@@ -%d,%d +%d,%d @@%s\n' % (
-            fromline, fromlen, toline, tolen,
-            self.proc and (' ' + self.proc))
+        fromtoline = "@@ -%d,%d +%d,%d @@%s\n" % (
+            fromline,
+            fromlen,
+            toline,
+            tolen,
+            self.proc and (" " + self.proc),
+        )
         return fromtoline
 
     def write(self, fp):
@@ -419,7 +433,7 @@ class uihunk(patchnode):
             elif changedlinestr[0] == "-":
                 hunklinelist.append(" " + changedlinestr[1:])
 
-        fp.write(''.join(self.before + hunklinelist + self.after))
+        fp.write("".join(self.before + hunklinelist + self.after))
 
     pretty = write
 
@@ -464,23 +478,25 @@ class uihunk(patchnode):
         for line in self.changedlines:
             text = line.linetext
             if line.applied:
-                if text[0] == '+':
+                if text[0] == "+":
                     dels.append(text[1:])
-                elif text[0] == '-':
+                elif text[0] == "-":
                     adds.append(text[1:])
-            elif text[0] == '+':
+            elif text[0] == "+":
                 dels.append(text[1:])
                 adds.append(text[1:])
-        hunk = ['-%s' % l for l in dels] + ['+%s' % l for l in adds]
+        hunk = ["-%s" % l for l in dels] + ["+%s" % l for l in adds]
         h = self._hunk
-        return patchmod.recordhunk(h.header, h.toline, h.fromline, h.proc,
-                                   h.before, hunk, h.after)
+        return patchmod.recordhunk(
+            h.header, h.toline, h.fromline, h.proc, h.before, hunk, h.after
+        )
 
     def __getattr__(self, name):
         return getattr(self._hunk, name)
 
     def __repr__(self):
-        return '<hunk %r@%d>' % (self.filename(), self.fromline)
+        return "<hunk %r@%d>" % (self.filename(), self.fromline)
+
 
 def filterpatch(ui, chunks, chunkselector, operation=None):
     """interactively filter patch chunks into applied-only chunks"""
@@ -498,8 +514,9 @@ def filterpatch(ui, chunks, chunkselector, operation=None):
     ret = chunkselector(ui, uiheaders, operation=operation)
     appliedhunklist = []
     for hdr in uiheaders:
-        if (hdr.applied and
-            (hdr.special() or len([h for h in hdr.hunks if h.applied]) > 0)):
+        if hdr.applied and (
+            hdr.special() or len([h for h in hdr.hunks if h.applied]) > 0
+        ):
             appliedhunklist.append(hdr)
             fixoffset = 0
             for hnk in hdr.hunks:
@@ -508,22 +525,23 @@ def filterpatch(ui, chunks, chunkselector, operation=None):
                     # adjust the 'to'-line offset of the hunk to be correct
                     # after de-activating some of the other hunks for this file
                     if fixoffset:
-                        #hnk = copy.copy(hnk) # necessary??
+                        # hnk = copy.copy(hnk) # necessary??
                         hnk.toline += fixoffset
                 else:
                     fixoffset += hnk.removed - hnk.added
 
     return (appliedhunklist, ret)
 
+
 def chunkselector(ui, headerlist, operation=None):
     """
     curses interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
     """
-    ui.write(_('starting interactive selection\n'))
+    ui.write(_("starting interactive selection\n"))
     chunkselector = curseschunkselector(headerlist, ui, operation)
     origsigtstp = sentinel = object()
-    if util.safehasattr(signal, 'SIGTSTP'):
+    if util.safehasattr(signal, "SIGTSTP"):
         origsigtstp = signal.getsignal(signal.SIGTSTP)
     try:
         with progress.suspend():
@@ -536,10 +554,14 @@ def chunkselector(ui, headerlist, operation=None):
             signal.signal(signal.SIGTSTP, origsigtstp)
     return chunkselector.opts
 
+
 def testdecorator(testfn, f):
+
     def u(*args, **kwargs):
         return f(testfn, *args, **kwargs)
+
     return u
+
 
 def testchunkselector(testfn, ui, headerlist, operation=None):
     """
@@ -549,20 +571,23 @@ def testchunkselector(testfn, ui, headerlist, operation=None):
     chunkselector = curseschunkselector(headerlist, ui, operation)
     if testfn and os.path.exists(testfn):
         testf = open(testfn)
-        testcommands = map(lambda x: x.rstrip('\n'), testf.readlines())
+        testcommands = map(lambda x: x.rstrip("\n"), testf.readlines())
         testf.close()
         while True:
             if chunkselector.handlekeypressed(testcommands.pop(0), test=True):
                 break
     return chunkselector.opts
 
-_headermessages = { # {operation: text}
-    'apply': _('Select hunks to apply'),
-    'discard': _('Select hunks to discard'),
-    None: _('Select hunks to record'),
+
+_headermessages = {  # {operation: text}
+    "apply": _("Select hunks to apply"),
+    "discard": _("Select hunks to discard"),
+    None: _("Select hunks to record"),
 }
 
+
 class curseschunkselector(object):
+
     def __init__(self, headerlist, ui, operation=None):
         # put the headers into a patch object
         self.headerlist = patch(headerlist)
@@ -619,7 +644,7 @@ class curseschunkselector(object):
 
         # affects some ui text
         if operation not in _headermessages:
-            raise error.ProgrammingError('unexpected operation: %s' % operation)
+            raise error.ProgrammingError("unexpected operation: %s" % operation)
         self.operation = operation
 
     def uparrowevent(self):
@@ -667,7 +692,7 @@ class curseschunkselector(object):
         a hunk is currently selected, then select the next hunk, if one exists,
         or if not, the next header if one exists.
         """
-        #self.startprintline += 1 #debug
+        # self.startprintline += 1 #debug
         currentitem = self.currentselecteditem
 
         nextitem = currentitem.nextitem()
@@ -826,19 +851,18 @@ class curseschunkselector(object):
             nosiblingsapplied = not (True in siblingappliedstatus)
 
             siblingspartialstatus = [hnk.partial for hnk in item.header.hunks]
-            somesiblingspartial = (True in siblingspartialstatus)
+            somesiblingspartial = True in siblingspartialstatus
 
-            #cases where applied or partial should be removed from header
+            # cases where applied or partial should be removed from header
 
             # if no 'sibling' hunks are applied (including this hunk)
             if nosiblingsapplied:
                 if not item.header.special():
                     item.header.applied = False
                     item.header.partial = False
-            else: # some/all parent siblings are applied
+            else:  # some/all parent siblings are applied
                 item.header.applied = True
-                item.header.partial = (somesiblingspartial or
-                                        not allsiblingsapplied)
+                item.header.partial = somesiblingspartial or not allsiblingsapplied
 
         elif isinstance(item, uihunkline):
             siblingappliedstatus = [ln.applied for ln in item.hunk.changedlines]
@@ -852,18 +876,16 @@ class curseschunkselector(object):
             elif allsiblingsapplied:
                 item.hunk.applied = True
                 item.hunk.partial = False
-            else: # some siblings applied
+            else:  # some siblings applied
                 item.hunk.applied = True
                 item.hunk.partial = True
 
-            parentsiblingsapplied = [hnk.applied for hnk
-                                     in item.hunk.header.hunks]
+            parentsiblingsapplied = [hnk.applied for hnk in item.hunk.header.hunks]
             noparentsiblingsapplied = not (True in parentsiblingsapplied)
             allparentsiblingsapplied = not (False in parentsiblingsapplied)
 
-            parentsiblingspartial = [hnk.partial for hnk
-                                     in item.hunk.header.hunks]
-            someparentsiblingspartial = (True in parentsiblingspartial)
+            parentsiblingspartial = [hnk.partial for hnk in item.hunk.header.hunks]
+            someparentsiblingspartial = True in parentsiblingspartial
 
             # if all parent hunks are not applied, un-apply header
             if noparentsiblingsapplied:
@@ -871,14 +893,15 @@ class curseschunkselector(object):
                     item.hunk.header.applied = False
                     item.hunk.header.partial = False
             # set the applied and partial status of the header if needed
-            else: # some/all parent siblings are applied
+            else:  # some/all parent siblings are applied
                 item.hunk.header.applied = True
-                item.hunk.header.partial = (someparentsiblingspartial or
-                                            not allparentsiblingsapplied)
+                item.hunk.header.partial = (
+                    someparentsiblingspartial or not allparentsiblingsapplied
+                )
 
     def toggleall(self):
         "toggle the applied flag of all items."
-        if self.waslasttoggleallapplied: # then unapply them this time
+        if self.waslasttoggleallapplied:  # then unapply them this time
             for item in self.headerlist:
                 if item.applied:
                     self.toggleapply(item)
@@ -900,7 +923,7 @@ class curseschunkselector(object):
                 item.neverunfolded = False
 
             # also fold any foldable children of the parent/current item
-            if isinstance(item, uiheader): # the original or 'new' item
+            if isinstance(item, uiheader):  # the original or 'new' item
                 for child in item.allchildren():
                     child.folded = not item.folded
 
@@ -919,11 +942,22 @@ class curseschunkselector(object):
         # turn tabs into spaces
         instr = instr.expandtabs(4)
         strwidth = encoding.colwidth(instr)
-        numspaces = (width - ((strwidth + xstart) % width) - 1)
+        numspaces = width - ((strwidth + xstart) % width) - 1
         return instr + " " * numspaces + "\n"
 
-    def printstring(self, window, text, fgcolor=None, bgcolor=None, pair=None,
-        pairname=None, attrlist=None, towin=True, align=True, showwhtspc=False):
+    def printstring(
+        self,
+        window,
+        text,
+        fgcolor=None,
+        bgcolor=None,
+        pair=None,
+        pairname=None,
+        attrlist=None,
+        towin=True,
+        align=True,
+        showwhtspc=False,
+    ):
         """
         print the string, text, with the specified colors and attributes, to
         the specified curses window object.
@@ -945,8 +979,11 @@ class curseschunkselector(object):
         # preprocess the text, converting tabs to spaces
         text = text.expandtabs(4)
         # strip \n, and convert control characters to ^[char] representation
-        text = re.sub(r'[\x00-\x08\x0a-\x1f]',
-                lambda m:'^' + chr(ord(m.group()) + 64), text.strip('\n'))
+        text = re.sub(
+            r"[\x00-\x08\x0a-\x1f]",
+            lambda m: "^" + chr(ord(m.group()) + 64),
+            text.strip("\n"),
+        )
 
         if pair is not None:
             colorpair = pair
@@ -975,11 +1012,11 @@ class curseschunkselector(object):
                     colorpair |= textattr
 
         y, xstart = self.chunkpad.getyx()
-        t = "" # variable for counting lines printed
+        t = ""  # variable for counting lines printed
         # if requested, show trailing whitespace
         if showwhtspc:
             origlen = len(text)
-            text = text.rstrip(' \n') # tabs have already been expanded
+            text = text.rstrip(" \n")  # tabs have already been expanded
             strippedlen = len(text)
             numtrailingspaces = origlen - strippedlen
 
@@ -988,11 +1025,11 @@ class curseschunkselector(object):
         t += text
 
         if showwhtspc:
-                wscolorpair = colorpair | curses.A_REVERSE
-                if towin:
-                    for i in range(numtrailingspaces):
-                        window.addch(curses.ACS_CKBOARD, wscolorpair)
-                t += " " * numtrailingspaces
+            wscolorpair = colorpair | curses.A_REVERSE
+            if towin:
+                for i in range(numtrailingspaces):
+                    window.addch(curses.ACS_CKBOARD, wscolorpair)
+            t += " " * numtrailingspaces
 
         if align:
             if towin:
@@ -1012,29 +1049,28 @@ class curseschunkselector(object):
     def _getstatuslinesegments(self):
         """-> [str]. return segments"""
         selected = self.currentselecteditem.applied
-        spaceselect = _('space: select')
-        spacedeselect = _('space: deselect')
+        spaceselect = _("space: select")
+        spacedeselect = _("space: deselect")
         # Format the selected label into a place as long as the longer of the
         # two possible labels.  This may vary by language.
         spacelen = max(len(spaceselect), len(spacedeselect))
-        selectedlabel = '%-*s' % (spacelen,
-                                  spacedeselect if selected else spaceselect)
+        selectedlabel = "%-*s" % (spacelen, spacedeselect if selected else spaceselect)
         segments = [
             _headermessages[self.operation],
-            '-',
-            _('[x]=selected **=collapsed'),
-            _('c: confirm'),
-            _('q: abort'),
-            _('arrow keys: move/expand/collapse'),
+            "-",
+            _("[x]=selected **=collapsed"),
+            _("c: confirm"),
+            _("q: abort"),
+            _("arrow keys: move/expand/collapse"),
             selectedlabel,
-            _('?: help'),
+            _("?: help"),
         ]
         return segments
 
     def _getstatuslines(self):
         """() -> [str]. return short help used in the top status window"""
         if self.errorstr is not None:
-            lines = [self.errorstr, _('Press any key to continue')]
+            lines = [self.errorstr, _("Press any key to continue")]
         else:
             # wrap segments to lines
             segments = self._getstatuslinesegments()
@@ -1043,7 +1079,7 @@ class curseschunkselector(object):
             lastwidth = width
             for s in segments:
                 w = encoding.colwidth(s)
-                sep = ' ' * (1 + (s and s[0] not in '-['))
+                sep = " " * (1 + (s and s[0] not in "-["))
                 if lastwidth + w + len(sep) >= width:
                     lines.append(s)
                     lastwidth = w
@@ -1075,10 +1111,14 @@ class curseschunkselector(object):
         try:
             self.printitem()
             self.updatescroll()
-            self.chunkpad.refresh(self.firstlineofpadtoprint, 0,
-                                  self.numstatuslines, 0,
-                                  self.yscreensize - self.numstatuslines,
-                                  self.xscreensize)
+            self.chunkpad.refresh(
+                self.firstlineofpadtoprint,
+                0,
+                self.numstatuslines,
+                0,
+                self.yscreensize - self.numstatuslines,
+                self.xscreensize,
+            )
         except curses.error:
             pass
 
@@ -1110,13 +1150,12 @@ class curseschunkselector(object):
                 if isinstance(item, uiheader):
                     # add two more spaces for headers
                     checkbox += "  "
-        except AttributeError: # not foldable
+        except AttributeError:  # not foldable
             checkbox += "  "
 
         return checkbox
 
-    def printheader(self, header, selected=False, towin=True,
-                    ignorefolding=False):
+    def printheader(self, header, selected=False, towin=True, ignorefolding=False):
         """
         print the header to the pad.  if countlines is True, don't print
         anything, but just count the number of lines which would be printed.
@@ -1128,11 +1167,13 @@ class curseschunkselector(object):
 
         if chunkindex != 0 and not header.folded:
             # add separating line before headers
-            outstr += self.printstring(self.chunkpad, '_' * self.xscreensize,
-                                       towin=towin, align=False)
+            outstr += self.printstring(
+                self.chunkpad, "_" * self.xscreensize, towin=towin, align=False
+            )
         # select color-pair based on if the header is selected
-        colorpair = self.getcolorpair(name=selected and "selected" or "normal",
-                                      attrlist=[curses.A_BOLD])
+        colorpair = self.getcolorpair(
+            name=selected and "selected" or "normal", attrlist=[curses.A_BOLD]
+        )
 
         # print out each line of the chunk, expanding it to screen width
 
@@ -1144,19 +1185,20 @@ class curseschunkselector(object):
             linestr = checkbox + textlist[0]
         else:
             linestr = checkbox + header.filename()
-        outstr += self.printstring(self.chunkpad, linestr, pair=colorpair,
-                                   towin=towin)
+        outstr += self.printstring(self.chunkpad, linestr, pair=colorpair, towin=towin)
         if not header.folded or ignorefolding:
             if len(textlist) > 1:
                 for line in textlist[1:]:
-                    linestr = " "*(indentnumchars + len(checkbox)) + line
-                    outstr += self.printstring(self.chunkpad, linestr,
-                                               pair=colorpair, towin=towin)
+                    linestr = " " * (indentnumchars + len(checkbox)) + line
+                    outstr += self.printstring(
+                        self.chunkpad, linestr, pair=colorpair, towin=towin
+                    )
 
         return outstr
 
-    def printhunklinesbefore(self, hunk, selected=False, towin=True,
-                             ignorefolding=False):
+    def printhunklinesbefore(
+        self, hunk, selected=False, towin=True, ignorefolding=False
+    ):
         "includes start/end line indicator"
         outstr = ""
         # where hunk is in list of siblings
@@ -1164,22 +1206,24 @@ class curseschunkselector(object):
 
         if hunkindex != 0:
             # add separating line before headers
-            outstr += self.printstring(self.chunkpad, ' '*self.xscreensize,
-                                       towin=towin, align=False)
+            outstr += self.printstring(
+                self.chunkpad, " " * self.xscreensize, towin=towin, align=False
+            )
 
-        colorpair = self.getcolorpair(name=selected and "selected" or "normal",
-                                      attrlist=[curses.A_BOLD])
+        colorpair = self.getcolorpair(
+            name=selected and "selected" or "normal", attrlist=[curses.A_BOLD]
+        )
 
         # print out from-to line with checkbox
         checkbox = self.getstatusprefixstring(hunk)
 
-        lineprefix = " "*self.hunkindentnumchars + checkbox
+        lineprefix = " " * self.hunkindentnumchars + checkbox
         frtoline = "   " + hunk.getfromtoline().strip("\n")
 
-        outstr += self.printstring(self.chunkpad, lineprefix, towin=towin,
-                                   align=False) # add uncolored checkbox/indent
-        outstr += self.printstring(self.chunkpad, frtoline, pair=colorpair,
-                                   towin=towin)
+        outstr += self.printstring(
+            self.chunkpad, lineprefix, towin=towin, align=False
+        )  # add uncolored checkbox/indent
+        outstr += self.printstring(self.chunkpad, frtoline, pair=colorpair, towin=towin)
 
         if hunk.folded and not ignorefolding:
             # skip remainder of output
@@ -1187,7 +1231,7 @@ class curseschunkselector(object):
 
         # print out lines of the chunk preceeding changed-lines
         for line in hunk.before:
-            linestr = " "*(self.hunklineindentnumchars + len(checkbox)) + line
+            linestr = " " * (self.hunklineindentnumchars + len(checkbox)) + line
             outstr += self.printstring(self.chunkpad, linestr, towin=towin)
 
         return outstr
@@ -1200,7 +1244,7 @@ class curseschunkselector(object):
         # a bit superfluous, but to avoid hard-coding indent amount
         checkbox = self.getstatusprefixstring(hunk)
         for line in hunk.after:
-            linestr = " "*(self.hunklineindentnumchars + len(checkbox)) + line
+            linestr = " " * (self.hunklineindentnumchars + len(checkbox)) + line
             outstr += self.printstring(self.chunkpad, linestr, towin=towin)
 
         return outstr
@@ -1221,15 +1265,18 @@ class curseschunkselector(object):
         elif linestr.startswith("\\"):
             colorpair = self.getcolorpair(name="normal")
 
-        lineprefix = " "*self.hunklineindentnumchars + checkbox
-        outstr += self.printstring(self.chunkpad, lineprefix, towin=towin,
-                                   align=False) # add uncolored checkbox/indent
-        outstr += self.printstring(self.chunkpad, linestr, pair=colorpair,
-                                   towin=towin, showwhtspc=True)
+        lineprefix = " " * self.hunklineindentnumchars + checkbox
+        outstr += self.printstring(
+            self.chunkpad, lineprefix, towin=towin, align=False
+        )  # add uncolored checkbox/indent
+        outstr += self.printstring(
+            self.chunkpad, linestr, pair=colorpair, towin=towin, showwhtspc=True
+        )
         return outstr
 
-    def printitem(self, item=None, ignorefolding=False, recursechildren=True,
-                  towin=True):
+    def printitem(
+        self, item=None, ignorefolding=False, recursechildren=True, towin=True
+    ):
         """
         use __printitem() to print the the specified item.applied.
         if item is not specified, then print the entire patch.
@@ -1242,12 +1289,11 @@ class curseschunkselector(object):
             self.linesprintedtopadsofar = 0
 
         outstr = []
-        self.__printitem(item, ignorefolding, recursechildren, outstr,
-                                  towin=towin)
-        return ''.join(outstr)
+        self.__printitem(item, ignorefolding, recursechildren, outstr, towin=towin)
+        return "".join(outstr)
 
     def outofdisplayedarea(self):
-        y, _ = self.chunkpad.getyx() # cursor location
+        y, _ = self.chunkpad.getyx()  # cursor location
         # * 2 here works but an optimization would be the max number of
         # consecutive non selectable lines
         # i.e the max number of context line for any hunk in the patch
@@ -1256,18 +1302,17 @@ class curseschunkselector(object):
         return y < miny or y > maxy
 
     def handleselection(self, item, recursechildren):
-        selected = (item is self.currentselecteditem)
+        selected = item is self.currentselecteditem
         if selected and recursechildren:
             # assumes line numbering starting from line 0
             self.selecteditemstartline = self.linesprintedtopadsofar
-            selecteditemlines = self.getnumlinesdisplayed(item,
-                                                          recursechildren=False)
-            self.selecteditemendline = (self.selecteditemstartline +
-                                        selecteditemlines - 1)
+            selecteditemlines = self.getnumlinesdisplayed(item, recursechildren=False)
+            self.selecteditemendline = (
+                self.selecteditemstartline + selecteditemlines - 1
+            )
         return selected
 
-    def __printitem(self, item, ignorefolding, recursechildren, outstr,
-                    towin=True):
+    def __printitem(self, item, ignorefolding, recursechildren, outstr, towin=True):
         """
         recursive method for printing out patch/header/hunk/hunk-line data to
         screen.  also returns a string with all of the content of the displayed
@@ -1288,36 +1333,40 @@ class curseschunkselector(object):
         if isinstance(item, patch):
             if recursechildren:
                 for hdr in item:
-                    self.__printitem(hdr, ignorefolding,
-                            recursechildren, outstr, towin)
+                    self.__printitem(hdr, ignorefolding, recursechildren, outstr, towin)
         # todo: eliminate all isinstance() calls
         if isinstance(item, uiheader):
-            outstr.append(self.printheader(item, selected, towin=towin,
-                                       ignorefolding=ignorefolding))
+            outstr.append(
+                self.printheader(
+                    item, selected, towin=towin, ignorefolding=ignorefolding
+                )
+            )
             if recursechildren:
                 for hnk in item.hunks:
-                    self.__printitem(hnk, ignorefolding,
-                            recursechildren, outstr, towin)
-        elif (isinstance(item, uihunk) and
-              ((not item.header.folded) or ignorefolding)):
+                    self.__printitem(hnk, ignorefolding, recursechildren, outstr, towin)
+        elif isinstance(item, uihunk) and ((not item.header.folded) or ignorefolding):
             # print the hunk data which comes before the changed-lines
-            outstr.append(self.printhunklinesbefore(item, selected, towin=towin,
-                                                ignorefolding=ignorefolding))
+            outstr.append(
+                self.printhunklinesbefore(
+                    item, selected, towin=towin, ignorefolding=ignorefolding
+                )
+            )
             if recursechildren:
                 for l in item.changedlines:
-                    self.__printitem(l, ignorefolding,
-                            recursechildren, outstr, towin)
-                outstr.append(self.printhunklinesafter(item, towin=towin,
-                                                ignorefolding=ignorefolding))
-        elif (isinstance(item, uihunkline) and
-              ((not item.hunk.folded) or ignorefolding)):
-            outstr.append(self.printhunkchangedline(item, selected,
-                towin=towin))
+                    self.__printitem(l, ignorefolding, recursechildren, outstr, towin)
+                outstr.append(
+                    self.printhunklinesafter(
+                        item, towin=towin, ignorefolding=ignorefolding
+                    )
+                )
+        elif isinstance(item, uihunkline) and ((not item.hunk.folded) or ignorefolding):
+            outstr.append(self.printhunkchangedline(item, selected, towin=towin))
 
         return outstr
 
-    def getnumlinesdisplayed(self, item=None, ignorefolding=False,
-                             recursechildren=True):
+    def getnumlinesdisplayed(
+        self, item=None, ignorefolding=False, recursechildren=True
+    ):
         """
         return the number of lines which would be displayed if the item were
         to be printed to the display.  the item will not be printed to the
@@ -1328,8 +1377,9 @@ class curseschunkselector(object):
         """
 
         # temporarily disable printing to windows by printstring
-        patchdisplaystring = self.printitem(item, ignorefolding,
-                                            recursechildren, towin=False)
+        patchdisplaystring = self.printitem(
+            item, ignorefolding, recursechildren, towin=False
+        )
         numlines = len(patchdisplaystring) / self.xscreensize
         return numlines
 
@@ -1344,8 +1394,7 @@ class curseschunkselector(object):
         except curses.error:
             pass
 
-    def getcolorpair(self, fgcolor=None, bgcolor=None, name=None,
-                     attrlist=None):
+    def getcolorpair(self, fgcolor=None, bgcolor=None, name=None, attrlist=None):
         """
         get a curses color pair, adding it to self.colorpairs if it is not
         already defined.  an optional string, name, can be passed as a shortcut
@@ -1374,8 +1423,9 @@ class curseschunkselector(object):
             else:
                 pairindex = len(self.colorpairs) + 1
                 curses.init_pair(pairindex, fgcolor, bgcolor)
-                colorpair = self.colorpairs[(fgcolor, bgcolor)] = (
-                    curses.color_pair(pairindex))
+                colorpair = self.colorpairs[(fgcolor, bgcolor)] = curses.color_pair(
+                    pairindex
+                )
                 if name is not None:
                     self.colorpairnames[name] = curses.color_pair(pairindex)
 
@@ -1424,12 +1474,14 @@ the following are valid keystrokes:
                       c : confirm selected changes
                       r : review/edit and confirm selected changes
                       q : quit without confirming (no changes will be made)
-                      ? : help (what you're currently reading)""")
+                      ? : help (what you're currently reading)"""
+        )
 
         helpwin = curses.newwin(self.yscreensize, 0, 0, 0)
         helplines = helptext.split("\n")
-        helplines = helplines + [" "]*(
-            self.yscreensize - self.numstatuslines - len(helplines) - 1)
+        helplines = helplines + [" "] * (
+            self.yscreensize - self.numstatuslines - len(helplines) - 1
+        )
         try:
             for line in helplines:
                 self.printstring(helpwin, line, pairname="legend")
@@ -1437,7 +1489,7 @@ the following are valid keystrokes:
             pass
         helpwin.refresh()
         try:
-            with self.ui.timeblockedsection('crecord'):
+            with self.ui.timeblockedsection("crecord"):
                 helpwin.getkey()
         except curses.error:
             pass
@@ -1451,7 +1503,7 @@ the following are valid keystrokes:
         self.commenttext = self.ui.edit(self.commenttext, self.ui.username())
         curses.cbreak()
         self.stdscr.refresh()
-        self.stdscr.keypad(1) # allow arrow-keys to continue to function
+        self.stdscr.keypad(1)  # allow arrow-keys to continue to function
 
     def confirmationwindow(self, windowtext):
         "display an informational window, then wait for and return a keypress."
@@ -1466,7 +1518,7 @@ the following are valid keystrokes:
         self.stdscr.refresh()
         confirmwin.refresh()
         try:
-            with self.ui.timeblockedsection('crecord'):
+            with self.ui.timeblockedsection("crecord"):
                 response = chr(self.stdscr.getch())
         except ValueError:
             response = None
@@ -1477,7 +1529,7 @@ the following are valid keystrokes:
         """ask for 'y' to be pressed to confirm selected. return True if
         confirmed."""
         confirmtext = _(
-"""if you answer yes to the following, the your currently chosen patch chunks
+            """if you answer yes to the following, the your currently chosen patch chunks
 will be loaded into an editor.  you may modify the patch from the editor, and
 save the changes if you wish to change the patch.  otherwise, you can just
 close the editor without saving to accept the current patch as-is.
@@ -1486,8 +1538,9 @@ note: don't add/remove lines unless you also modify the range information.
       failing to follow this rule will result in the commit aborting.
 
 are you sure you want to review/edit and confirm the selected changes [yn]?
-""")
-        with self.ui.timeblockedsection('crecord'):
+"""
+        )
+        with self.ui.timeblockedsection("crecord"):
             response = self.confirmationwindow(confirmtext)
         if response is None:
             response = "n"
@@ -1503,17 +1556,21 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         committed changeset, instead of creating a new changeset.  Otherwise, a
         new changeset will be created (the normal commit behavior).
         """
-        if opts.get('amend') is None:
-            opts['amend'] = True
-            msg = _("Amend option is turned on -- committing the currently "
-                    "selected changes will not create a new changeset, but "
-                    "instead update the most recently committed changeset.\n\n"
-                    "Press any key to continue.")
-        elif opts.get('amend') is True:
-            opts['amend'] = None
-            msg = _("Amend option is turned off -- committing the currently "
-                    "selected changes will create a new changeset.\n\n"
-                    "Press any key to continue.")
+        if opts.get("amend") is None:
+            opts["amend"] = True
+            msg = _(
+                "Amend option is turned on -- committing the currently "
+                "selected changes will not create a new changeset, but "
+                "instead update the most recently committed changeset.\n\n"
+                "Press any key to continue."
+            )
+        elif opts.get("amend") is True:
+            opts["amend"] = None
+            msg = _(
+                "Amend option is turned off -- committing the currently "
+                "selected changes will create a new changeset.\n\n"
+                "Press any key to continue."
+            )
         if not test:
             self.confirmationwindow(msg)
 
@@ -1531,6 +1588,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         """
         edit the currently selected chunk
         """
+
         def updateui(self):
             self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
             self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
@@ -1541,11 +1599,11 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
         def editpatchwitheditor(self, chunk):
             if chunk is None:
-                self.ui.write(_('cannot edit patch for whole file'))
+                self.ui.write(_("cannot edit patch for whole file"))
                 self.ui.write("\n")
                 return None
             if chunk.header.binary():
-                self.ui.write(_('cannot edit patch for binary file'))
+                self.ui.write(_("cannot edit patch for binary file"))
                 self.ui.write("\n")
                 return None
 
@@ -1563,8 +1621,9 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 return None
 
             # remove comment lines
-            patch = [line + '\n' for line in patch.splitlines()
-                     if not line.startswith('#')]
+            patch = [
+                line + "\n" for line in patch.splitlines() if not line.startswith("#")
+            ]
             return patchmod.parsepatch(patch)
 
         if item is None:
@@ -1588,7 +1647,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         header = item.header
         editedhunkindex = header.hunks.index(item)
         hunksbefore = header.hunks[:editedhunkindex]
-        hunksafter = header.hunks[editedhunkindex + 1:]
+        hunksafter = header.hunks[editedhunkindex + 1 :]
         newpatchheader = newpatches[0]
         newhunks = [uihunk(h, header) for h in newpatchheader.hunks]
         newadded = sum([h.added for h in newhunks])
@@ -1639,27 +1698,27 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         elif keypressed in ["H", "KEY_SLEFT"]:
             self.leftarrowshiftevent()
         elif keypressed in ["q"]:
-            raise error.Abort(_('user quit'))
-        elif keypressed in ['a']:
+            raise error.Abort(_("user quit"))
+        elif keypressed in ["a"]:
             self.toggleamend(self.opts, test)
         elif keypressed in ["c"]:
             return True
-        elif test and keypressed in ['X']:
+        elif test and keypressed in ["X"]:
             return True
         elif keypressed in ["r"]:
             if self.reviewcommit():
-                self.opts['review'] = True
+                self.opts["review"] = True
                 return True
-        elif test and keypressed in ['R']:
-            self.opts['review'] = True
+        elif test and keypressed in ["R"]:
+            self.opts["review"] = True
             return True
-        elif keypressed in [' '] or (test and keypressed in ["TOGGLE"]):
+        elif keypressed in [" "] or (test and keypressed in ["TOGGLE"]):
             self.toggleapply()
-            if self.ui.configbool('experimental', 'spacemovesdown'):
+            if self.ui.configbool("experimental", "spacemovesdown"):
                 self.downarrowevent()
-        elif keypressed in ['A']:
+        elif keypressed in ["A"]:
             self.toggleall()
-        elif keypressed in ['e']:
+        elif keypressed in ["e"]:
             self.toggleedit(test=test)
         elif keypressed in ["f"]:
             self.togglefolded()
@@ -1681,9 +1740,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         """
 
         origsigwinch = sentinel = object()
-        if util.safehasattr(signal, 'SIGWINCH'):
-            origsigwinch = signal.signal(signal.SIGWINCH,
-                                         self.sigwinchhandler)
+        if util.safehasattr(signal, "SIGWINCH"):
+            origsigwinch = signal.signal(signal.SIGWINCH, self.sigwinchhandler)
         try:
             return self._main(stdscr)
         finally:
@@ -1703,14 +1761,13 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
         self.initcolorpair(None, None, name="normal")
-        self.initcolorpair(curses.COLOR_WHITE, curses.COLOR_MAGENTA,
-                           name="selected")
+        self.initcolorpair(curses.COLOR_WHITE, curses.COLOR_MAGENTA, name="selected")
         self.initcolorpair(curses.COLOR_RED, None, name="deletion")
         self.initcolorpair(curses.COLOR_GREEN, None, name="addition")
         self.initcolorpair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
         # newwin([height, width,] begin_y, begin_x)
         self.statuswin = curses.newwin(self.numstatuslines, 0, 0, 0)
-        self.statuswin.keypad(1) # interpret arrow-key, etc. esc sequences
+        self.statuswin.keypad(1)  # interpret arrow-key, etc. esc sequences
 
         # figure out how much space to allocate for the chunk-pad which is
         # used for displaying the patch
@@ -1724,16 +1781,17 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         try:
             self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
         except curses.error:
-            self.initerr = _('this diff is too large to be displayed')
+            self.initerr = _("this diff is too large to be displayed")
             return
         # initialize selecteditemendline (initial start-line is 0)
         self.selecteditemendline = self.getnumlinesdisplayed(
-            self.currentselecteditem, recursechildren=False)
+            self.currentselecteditem, recursechildren=False
+        )
 
         while True:
             self.updatescreen()
             try:
-                with self.ui.timeblockedsection('crecord'):
+                with self.ui.timeblockedsection("crecord"):
                     keypressed = self.statuswin.getkey()
                 if self.errorstr is not None:
                     self.errorstr = None
@@ -1746,4 +1804,4 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         if self.commenttext != "":
             whitespaceremoved = re.sub("(?m)^\s.*(\n|$)", "", self.commenttext)
             if whitespaceremoved != "":
-                self.opts['message'] = self.commenttext
+                self.opts["message"] = self.commenttext

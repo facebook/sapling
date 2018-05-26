@@ -13,28 +13,32 @@ import os
 import subprocess
 import time
 
-from mercurial import (
-    error,
-    lock as lockmod,
-    pycompat,
-    util,
-    vfs as vfsmod,
-)
+from mercurial import error, lock as lockmod, pycompat, util, vfs as vfsmod
+
 
 if pycompat.iswindows:
     CREATE_NO_WINDOW = 0x08000000
     _creationflags = CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
 
     def runbgcommand(script, env, shell=False, stdout=None, stderr=None):
-        '''Spawn a command without waiting for it to finish.'''
+        """Spawn a command without waiting for it to finish."""
         # we can't use close_fds *and* redirect stdin. I'm not sure that we
         # need to because the detached process has no console connection.
         subprocess.Popen(
-            script, shell=shell, env=env, close_fds=True,
-            creationflags=_creationflags, stdout=stdout, stderr=stderr)
+            script,
+            shell=shell,
+            env=env,
+            close_fds=True,
+            creationflags=_creationflags,
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+
 else:
+
     def runbgcommand(cmd, env, shell=False, stdout=None, stderr=None):
-        '''Spawn a command without waiting for it to finish.'''
+        """Spawn a command without waiting for it to finish."""
         # double-fork to completely detach from the parent process
         # based on http://code.activestate.com/recipes/278731
         pid = os.fork()
@@ -55,8 +59,9 @@ else:
                 # doesn't seem worth adding that complexity here, though.)
                 if returncode == 255:
                     returncode = errno.EINVAL
-                raise OSError(returncode, 'error running %r: %s' %
-                              (cmd, os.strerror(returncode)))
+                raise OSError(
+                    returncode, "error running %r: %s" % (cmd, os.strerror(returncode))
+                )
             return
 
         returncode = 255
@@ -64,20 +69,26 @@ else:
             # Start a new session
             os.setsid()
 
-            stdin = open(os.devnull, 'r')
+            stdin = open(os.devnull, "r")
             if stdout is None:
-                stdout = open(os.devnull, 'w')
+                stdout = open(os.devnull, "w")
             if stderr is None:
-                stderr = open(os.devnull, 'w')
+                stderr = open(os.devnull, "w")
 
             # connect stdin to devnull to make sure the subprocess can't
             # muck up that stream for mercurial.
             subprocess.Popen(
-                cmd, shell=shell, env=env, close_fds=True,
-                stdin=stdin, stdout=stdout, stderr=stderr)
+                cmd,
+                shell=shell,
+                env=env,
+                close_fds=True,
+                stdin=stdin,
+                stdout=stdout,
+                stderr=stderr,
+            )
             returncode = 0
         except EnvironmentError as ex:
-            returncode = (ex.errno & 0xff)
+            returncode = ex.errno & 0xff
             if returncode == 0:
                 # This shouldn't happen, but just in case make sure the
                 # return code is never 0 here.
@@ -89,8 +100,9 @@ else:
             # continue the hg process here.
             os._exit(returncode)
 
+
 def runshellcommand(script, env):
-    '''
+    """
     Run a shell command in the background.
     This spawns the command and returns before it completes.
 
@@ -98,11 +110,12 @@ def runshellcommand(script, env):
     be discouraged in new code.  Running commands through a subshell requires
     you to be very careful about correctly escaping arguments, and you need to
     make sure your command works with both Windows and Unix shells.
-    '''
+    """
     runbgcommand(script, env=env, shell=True)
 
+
 def replaceclass(container, classname):
-    '''Replace a class with another in a module, and interpose it into
+    """Replace a class with another in a module, and interpose it into
     the hierarchies of all loaded subclasses. This function is
     intended for use as a decorator.
 
@@ -116,20 +129,23 @@ def replaceclass(container, classname):
     Existing instances of the class being replaced will not have their
     __class__ modified, so call this function before creating any
     objects of the target type.
-    '''
+    """
+
     def wrap(cls):
         oldcls = getattr(container, classname)
         for subcls in oldcls.__subclasses__():
             if subcls is not cls:
                 assert oldcls in subcls.__bases__
-                newbases = [oldbase
-                            for oldbase in subcls.__bases__
-                            if oldbase != oldcls]
+                newbases = [
+                    oldbase for oldbase in subcls.__bases__ if oldbase != oldcls
+                ]
                 newbases.append(cls)
                 subcls.__bases__ = tuple(newbases)
         setattr(container, classname, cls)
         return cls
+
     return wrap
+
 
 @contextlib.contextmanager
 def flock(lockpath, description, timeout=-1):
@@ -144,6 +160,7 @@ def flock(lockpath, description, timeout=-1):
     # best effort lightweight lock
     try:
         import fcntl
+
         fcntl.flock
     except ImportError:
         # fallback to Mercurial lock
@@ -153,7 +170,7 @@ def flock(lockpath, description, timeout=-1):
         return
     # make sure lock file exists
     util.makedirs(os.path.dirname(lockpath))
-    with open(lockpath, 'a'):
+    with open(lockpath, "a"):
         pass
     lockfd = os.open(lockpath, os.O_RDONLY, 0o664)
     start = time.time()
@@ -164,8 +181,7 @@ def flock(lockpath, description, timeout=-1):
         except IOError as ex:
             if ex.errno == errno.EAGAIN:
                 if timeout != -1 and time.time() - start > timeout:
-                    raise error.LockHeld(errno.EAGAIN, lockpath, description,
-                                         '')
+                    raise error.LockHeld(errno.EAGAIN, lockpath, description, "")
                 else:
                     time.sleep(0.05)
                     continue
@@ -176,4 +192,3 @@ def flock(lockpath, description, timeout=-1):
     finally:
         fcntl.flock(lockfd, fcntl.LOCK_UN)
         os.close(lockfd)
-

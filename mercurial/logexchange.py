@@ -8,14 +8,13 @@
 
 from __future__ import absolute_import
 
+from . import vfs as vfsmod
 from .node import hex
 
-from . import (
-    vfs as vfsmod,
-)
 
 # directory name in .hg/ in which remotenames files will be present
-remotenamedir = 'logexchange'
+remotenamedir = "logexchange"
+
 
 def readremotenamefile(repo, filename):
     """
@@ -37,12 +36,13 @@ def readremotenamefile(repo, filename):
         if lineno == 0:
             lineno += 1
         try:
-            node, remote, rname = line.split('\0')
+            node, remote, rname = line.split("\0")
             yield node, remote, rname
         except ValueError:
             pass
 
     f.close()
+
 
 def readremotenames(repo):
     """
@@ -52,33 +52,35 @@ def readremotenames(repo):
     information, call the respective functions.
     """
 
-    for bmentry in readremotenamefile(repo, 'bookmarks'):
+    for bmentry in readremotenamefile(repo, "bookmarks"):
         yield bmentry
-    for branchentry in readremotenamefile(repo, 'branches'):
+    for branchentry in readremotenamefile(repo, "branches"):
         yield branchentry
+
 
 def writeremotenamefile(repo, remotepath, names, nametype):
     vfs = vfsmod.vfs(repo.vfs.join(remotenamedir))
-    f = vfs(nametype, 'w', atomictemp=True)
+    f = vfs(nametype, "w", atomictemp=True)
     # write the storage version info on top of file
     # version '0' represents the very initial version of the storage format
-    f.write('0\n\n')
+    f.write("0\n\n")
 
     olddata = set(readremotenamefile(repo, nametype))
     # re-save the data from a different remote than this one.
     for node, oldpath, rname in sorted(olddata):
         if oldpath != remotepath:
-            f.write('%s\0%s\0%s\n' % (node, oldpath, rname))
+            f.write("%s\0%s\0%s\n" % (node, oldpath, rname))
 
     for name, node in sorted(names.iteritems()):
         if nametype == "branches":
             for n in node:
-                f.write('%s\0%s\0%s\n' % (n, remotepath, name))
+                f.write("%s\0%s\0%s\n" % (n, remotepath, name))
         elif nametype == "bookmarks":
             if node:
-                f.write('%s\0%s\0%s\n' % (node, remotepath, name))
+                f.write("%s\0%s\0%s\n" % (node, remotepath, name))
 
     f.close()
+
 
 def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
     """
@@ -88,11 +90,12 @@ def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
     wlock = repo.wlock()
     try:
         if bookmarks:
-            writeremotenamefile(repo, remotepath, bookmarks, 'bookmarks')
+            writeremotenamefile(repo, remotepath, bookmarks, "bookmarks")
         if branches:
-            writeremotenamefile(repo, remotepath, branches, 'branches')
+            writeremotenamefile(repo, remotepath, branches, "branches")
     finally:
         wlock.release()
+
 
 def pullremotenames(localrepo, remoterepo):
     """
@@ -102,7 +105,7 @@ def pullremotenames(localrepo, remoterepo):
     remoterepo is the peer instance
     """
     remotepath = remoterepo.url()
-    bookmarks = remoterepo.listkeys('bookmarks')
+    bookmarks = remoterepo.listkeys("bookmarks")
     # on a push, we don't want to keep obsolete heads since
     # they won't show up as heads on the next pull, so we
     # remove them here otherwise we would require the user

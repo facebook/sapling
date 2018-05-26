@@ -10,35 +10,29 @@ from __future__ import absolute_import
 import os
 import sys
 
+from . import demandimport, encoding, error, extensions, pycompat, util
 from .i18n import _
-from . import (
-    demandimport,
-    encoding,
-    error,
-    extensions,
-    pycompat,
-    util,
-)
+
 
 def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
-    '''call python hook. hook is callable object, looked up as
+    """call python hook. hook is callable object, looked up as
     name in python module. if callable returns "true", hook
     fails, else passes. if hook raises exception, treated as
     hook failure. exception propagates if throw is "true".
 
     reason for "true" meaning "hook failed" is so that
     unmodified commands (e.g. mercurial.commands.update) can
-    be run as hooks without wrappers to convert return values.'''
+    be run as hooks without wrappers to convert return values."""
 
     if callable(funcname):
         obj = funcname
         funcname = pycompat.sysbytes(obj.__module__ + r"." + obj.__name__)
     else:
-        d = funcname.rfind('.')
+        d = funcname.rfind(".")
         if d == -1:
             raise error.HookLoadError(
-                _('%s hook is invalid: "%s" not in a module')
-                % (hname, funcname))
+                _('%s hook is invalid: "%s" not in a module') % (hname, funcname)
+            )
         modname = funcname[:d]
         oldpaths = sys.path
         if util.mainfrozen():
@@ -58,34 +52,33 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
                 except (ImportError, SyntaxError):
                     e2 = sys.exc_info()
                     if ui.tracebackflag:
-                        ui.warn(_('exception from first failed import '
-                                  'attempt:\n'))
+                        ui.warn(_("exception from first failed import " "attempt:\n"))
                     ui.traceback(e1)
                     if ui.tracebackflag:
-                        ui.warn(_('exception from second failed import '
-                                  'attempt:\n'))
+                        ui.warn(_("exception from second failed import " "attempt:\n"))
                     ui.traceback(e2)
 
                     if not ui.tracebackflag:
-                        tracebackhint = _(
-                            'run with --traceback for stack trace')
+                        tracebackhint = _("run with --traceback for stack trace")
                     else:
                         tracebackhint = None
                     raise error.HookLoadError(
-                        _('%s hook is invalid: import of "%s" failed') %
-                        (hname, modname), hint=tracebackhint)
+                        _('%s hook is invalid: import of "%s" failed')
+                        % (hname, modname),
+                        hint=tracebackhint,
+                    )
         sys.path = oldpaths
         try:
-            for p in funcname.split('.')[1:]:
+            for p in funcname.split(".")[1:]:
                 obj = getattr(obj, p)
         except AttributeError:
             raise error.HookLoadError(
-                _('%s hook is invalid: "%s" is not defined')
-                % (hname, funcname))
+                _('%s hook is invalid: "%s" is not defined') % (hname, funcname)
+            )
         if not callable(obj):
             raise error.HookLoadError(
-                _('%s hook is invalid: "%s" is not callable')
-                % (hname, funcname))
+                _('%s hook is invalid: "%s" is not callable') % (hname, funcname)
+            )
 
     ui.note(_("calling hook %s: %s\n") % (hname, funcname))
     starttime = util.timer()
@@ -94,26 +87,33 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
         r = obj(ui=ui, repo=repo, hooktype=htype, **pycompat.strkwargs(args))
     except Exception as exc:
         if isinstance(exc, error.Abort):
-            ui.warn(_('error: %s hook failed: %s\n') %
-                         (hname, exc.args[0]))
+            ui.warn(_("error: %s hook failed: %s\n") % (hname, exc.args[0]))
         else:
-            ui.warn(_('error: %s hook raised an exception: '
-                      '%s\n') % (hname, encoding.strtolocal(str(exc))))
+            ui.warn(
+                _("error: %s hook raised an exception: " "%s\n")
+                % (hname, encoding.strtolocal(str(exc)))
+            )
         if throw:
             raise
         if not ui.tracebackflag:
-            ui.warn(_('(run with --traceback for stack trace)\n'))
+            ui.warn(_("(run with --traceback for stack trace)\n"))
         ui.traceback()
         return True, True
     finally:
         duration = util.timer() - starttime
-        ui.log('pythonhook', 'pythonhook-%s: %s finished in %0.2f seconds\n',
-               htype, funcname, duration)
+        ui.log(
+            "pythonhook",
+            "pythonhook-%s: %s finished in %0.2f seconds\n",
+            htype,
+            funcname,
+            duration,
+        )
     if r:
         if throw:
-            raise error.HookAbort(_('%s hook failed') % hname)
-        ui.warn(_('warning: %s hook failed\n') % hname)
+            raise error.HookAbort(_("%s hook failed") % hname)
+        ui.warn(_("warning: %s hook failed\n") % hname)
     return r, False
+
 
 def _exthook(ui, repo, htype, name, cmd, args, throw):
     ui.note(_("running hook %s: %s\n") % (name, cmd))
@@ -126,9 +126,9 @@ def _exthook(ui, repo, htype, name, cmd, args, throw):
         tr = repo.currenttransaction()
         repo.dirstate.write(tr)
         if tr and tr.writepending():
-            env['HG_PENDING'] = repo.root
-    env['HG_HOOKTYPE'] = htype
-    env['HG_HOOKNAME'] = name
+            env["HG_PENDING"] = repo.root
+    env["HG_HOOKTYPE"] = htype
+    env["HG_HOOKNAME"] = name
 
     for k, v in args.iteritems():
         if callable(v):
@@ -136,29 +136,28 @@ def _exthook(ui, repo, htype, name, cmd, args, throw):
         if isinstance(v, dict):
             # make the dictionary element order stable across Python
             # implementations
-            v = ('{' +
-                 ', '.join('%r: %r' % i for i in sorted(v.iteritems())) +
-                 '}')
-        env['HG_' + k.upper()] = v
+            v = "{" + ", ".join("%r: %r" % i for i in sorted(v.iteritems())) + "}"
+        env["HG_" + k.upper()] = v
 
     if repo:
         cwd = repo.root
     else:
         cwd = pycompat.getcwd()
-    r = ui.system(cmd, environ=env, cwd=cwd, blockedtag='exthook-%s' % (name,))
+    r = ui.system(cmd, environ=env, cwd=cwd, blockedtag="exthook-%s" % (name,))
 
     duration = util.timer() - starttime
-    ui.log('exthook', 'exthook-%s: %s finished in %0.2f seconds\n',
-           name, cmd, duration)
+    ui.log("exthook", "exthook-%s: %s finished in %0.2f seconds\n", name, cmd, duration)
     if r:
         desc, r = util.explainexit(r)
         if throw:
-            raise error.HookAbort(_('%s hook %s') % (name, desc))
-        ui.warn(_('warning: %s hook %s\n') % (name, desc))
+            raise error.HookAbort(_("%s hook %s") % (name, desc))
+        ui.warn(_("warning: %s hook %s\n") % (name, desc))
     return r
+
 
 # represent an untrusted hook command
 _fromuntrusted = object()
+
 
 def _allhooks(ui):
     """return a list of (hook-id, cmd) pairs sorted by priority"""
@@ -175,28 +174,34 @@ def _allhooks(ui):
     # (end of the security sensitive section)
     return [(k, v) for p, o, k, v in sorted(hooks.values())]
 
+
 def _hookitems(ui, _untrusted=False):
     """return all hooks items ready to be sorted"""
     hooks = {}
-    for name, cmd in ui.configitems('hooks', untrusted=_untrusted):
-        if not name.startswith('priority'):
-            priority = ui.configint('hooks', 'priority.%s' % name, 0)
+    for name, cmd in ui.configitems("hooks", untrusted=_untrusted):
+        if not name.startswith("priority"):
+            priority = ui.configint("hooks", "priority.%s" % name, 0)
             hooks[name] = (-priority, len(hooks), name, cmd)
     return hooks
 
+
 _redirect = False
+
+
 def redirect(state):
     global _redirect
     _redirect = state
+
 
 def hashook(ui, htype):
     """return True if a hook is configured for 'htype'"""
     if not ui.callhooks:
         return False
     for hname, cmd in _allhooks(ui):
-        if hname.split('.')[0] == htype and cmd:
+        if hname.split(".")[0] == htype and cmd:
             return True
     return False
+
 
 def hook(ui, repo, htype, throw=False, **args):
     if not ui.callhooks:
@@ -204,7 +209,7 @@ def hook(ui, repo, htype, throw=False, **args):
 
     hooks = []
     for hname, cmd in _allhooks(ui):
-        if hname.split('.')[0] == htype and cmd:
+        if hname.split(".")[0] == htype and cmd:
             hooks.append((hname, cmd))
 
     res = runhooks(ui, repo, htype, hooks, throw=throw, **args)
@@ -212,6 +217,7 @@ def hook(ui, repo, htype, throw=False, **args):
     for hname, cmd in hooks:
         r = res[hname][0] or r
     return r
+
 
 def runhooks(ui, repo, htype, hooks, throw=False, **args):
     args = pycompat.byteskwargs(args)
@@ -236,30 +242,29 @@ def runhooks(ui, repo, htype, hooks, throw=False, **args):
             if cmd is _fromuntrusted:
                 if throw:
                     raise error.HookAbort(
-                        _('untrusted hook %s not executed') % hname,
-                        hint = _("see 'hg help config.trusted'"))
-                ui.warn(_('warning: untrusted hook %s not executed\n') % hname)
+                        _("untrusted hook %s not executed") % hname,
+                        hint=_("see 'hg help config.trusted'"),
+                    )
+                ui.warn(_("warning: untrusted hook %s not executed\n") % hname)
                 r = 1
                 raised = False
             elif callable(cmd):
-                r, raised = _pythonhook(ui, repo, htype, hname, cmd, args,
-                                        throw)
-            elif cmd.startswith('python:'):
-                if cmd.count(':') >= 2:
-                    path, cmd = cmd[7:].rsplit(':', 1)
+                r, raised = _pythonhook(ui, repo, htype, hname, cmd, args, throw)
+            elif cmd.startswith("python:"):
+                if cmd.count(":") >= 2:
+                    path, cmd = cmd[7:].rsplit(":", 1)
                     path = util.expandpath(path)
                     if repo:
                         path = os.path.join(repo.root, path)
                     try:
-                        mod = extensions.loadpath(path, 'hghook.%s' % hname)
+                        mod = extensions.loadpath(path, "hghook.%s" % hname)
                     except Exception:
                         ui.write(_("loading %s hook failed:\n") % hname)
                         raise
                     hookfn = getattr(mod, cmd)
                 else:
                     hookfn = cmd[7:].strip()
-                r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args,
-                                        throw)
+                r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)
             else:
                 r = _exthook(ui, repo, htype, hname, cmd, args, throw)
                 raised = False

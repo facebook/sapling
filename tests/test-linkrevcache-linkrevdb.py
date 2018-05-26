@@ -4,17 +4,21 @@ import tempfile
 
 from hgext import linkrevcache
 
+
 try:
     xrange(0)
 except NameError:
     xrange = range
 
+
 def genhsh(i):
-    return chr(i) + b'\0' * 19
+    return chr(i) + b"\0" * 19
+
 
 def ensure(condition):
     if not condition:
-        raise RuntimeError('Unexpected')
+        raise RuntimeError("Unexpected")
+
 
 def testbasicreadwrite():
     path = tempfile.mkdtemp()
@@ -49,5 +53,6 @@ def testbasicreadwrite():
         fname = str(i % 5)
         fnode = genhsh(i // 5)
         ensure(db.getlinkrevs(fname, fnode) == [])
+
 
 testbasicreadwrite()

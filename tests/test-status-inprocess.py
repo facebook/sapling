@@ -1,33 +1,30 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, print_function
 
-from mercurial import (
-    commands,
-    localrepo,
-    ui as uimod,
-)
+from mercurial import commands, localrepo, ui as uimod
+
 
 u = uimod.ui.load()
 
-print('% creating repo')
-repo = localrepo.localrepository(u, '.', create=True)
+print("% creating repo")
+repo = localrepo.localrepository(u, ".", create=True)
 
-f = open('test.py', 'w')
+f = open("test.py", "w")
 try:
-    f.write('foo\n')
+    f.write("foo\n")
 finally:
     f.close
 
-print('% add and commit')
-commands.add(u, repo, 'test.py')
-commands.commit(u, repo, message='*')
+print("% add and commit")
+commands.add(u, repo, "test.py")
+commands.commit(u, repo, message="*")
 commands.status(u, repo, clean=True)
 
 
-print('% change')
-f = open('test.py', 'w')
+print("% change")
+f = open("test.py", "w")
 try:
-    f.write('bar\n')
+    f.write("bar\n")
 finally:
     f.close()
 

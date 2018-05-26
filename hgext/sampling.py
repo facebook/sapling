@@ -14,36 +14,43 @@
 # - If the file cannot be created or accessed, fails silently
 #
 # The configuration details can be found in the documentation of ui.log below
+import json
+import os
+
 from mercurial import encoding, pycompat, registrar, util
 
-import json, os
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('sampling', 'filepath', default='')
+configitem("sampling", "filepath", default="")
+
 
 def _parentfolderexists(f):
-    return (f is not None and
-            os.path.exists(os.path.dirname(os.path.normpath(f))))
+    return f is not None and os.path.exists(os.path.dirname(os.path.normpath(f)))
+
 
 def _getcandidatelocation(ui):
     for candidatelocation in (
-            encoding.environ.get("SCM_SAMPLING_FILEPATH", None),
-            ui.config("sampling", "filepath")):
+        encoding.environ.get("SCM_SAMPLING_FILEPATH", None),
+        ui.config("sampling", "filepath"),
+    ):
         if _parentfolderexists(candidatelocation):
             return candidatelocation
     return None
 
+
 def uisetup(ui):
+
     class logtofile(ui.__class__):
+
         @classmethod
         def computesamplingfilters(cls, self):
             filtermap = {}
             for k in ui.configitems("sampling"):
                 if not k[0].startswith("key."):
-                    continue # not a key
-                filtermap[k[0].lstrip("key.")]  = k[1]
+                    continue  # not a key
+                filtermap[k[0].lstrip("key.")] = k[1]
             return filtermap
 
         def log(self, event, *msg, **opts):
@@ -78,18 +85,19 @@ def uisetup(ui):
              "msg":"",
              "opts":{"t":42}}\0
             """
-            if not util.safehasattr(self, 'samplingfilters'):
+            if not util.safehasattr(self, "samplingfilters"):
                 self.samplingfilters = logtofile.computesamplingfilters(self)
             if event not in self.samplingfilters:
                 return super(logtofile, self).log(event, *msg, **opts)
 
             # special case: remove less interesting blocked fields starting
             # with "unknown_" or "alias_".
-            if event == 'measuredtimes':
-                opts = {k: v
-                        for k, v in opts.items()
-                        if (not k.startswith('alias_') and not
-                            k.startswith('unknown_'))}
+            if event == "measuredtimes":
+                opts = {
+                    k: v
+                    for k, v in opts.items()
+                    if (not k.startswith("alias_") and not k.startswith("unknown_"))
+                }
 
             ref = self.samplingfilters[event]
             script = _getcandidatelocation(ui)
@@ -99,9 +107,8 @@ def uisetup(ui):
                     if msg:
                         # ui.log treats msg as a format string + format args.
                         opts["msg"] = msg[0] % msg[1:]
-                    with open(script, 'a') as outfile:
-                        outfile.write(json.dumps({"data": opts,
-                                                  "category": ref}))
+                    with open(script, "a") as outfile:
+                        outfile.write(json.dumps({"data": opts, "category": ref}))
                         outfile.write("\0")
                 except EnvironmentError:
                     pass
@@ -110,15 +117,17 @@ def uisetup(ui):
     # Replace the class for this instance and all clones created from it:
     ui.__class__ = logtofile
 
+
 def getrelativecwd(repo):
     """Returns the current directory relative to the working copy root, or
     None if it's not in the working copy.
     """
     cwd = pycompat.getcwdsafe()
     if cwd.startswith(repo.root):
-        return os.path.normpath(cwd[len(repo.root) + 1:])
+        return os.path.normpath(cwd[len(repo.root) + 1 :])
     else:
         return None
+
 
 def gettopdir(repo):
     """Returns the first component of the current directory, if it's in the
@@ -127,19 +136,25 @@ def gettopdir(repo):
     reldir = getrelativecwd(repo)
     if reldir:
         components = reldir.split(pycompat.ossep)
-        if len(components) > 0 and components[0] != '.':
+        if len(components) > 0 and components[0] != ".":
             return components[0]
     else:
         return None
 
+
 def reposetup(ui, repo):
+
     @repo.ui.atexit
     def telemetry():
-        if util.safehasattr(repo, 'requirements'):
-            ui.log('requirements',
-                generaldelta=str('generaldelta' in repo.requirements).lower())
-            ui.log('requirements',
-                remotefilelog=str('remotefilelog' in repo.requirements).lower())
+        if util.safehasattr(repo, "requirements"):
+            ui.log(
+                "requirements",
+                generaldelta=str("generaldelta" in repo.requirements).lower(),
+            )
+            ui.log(
+                "requirements",
+                remotefilelog=str("remotefilelog" in repo.requirements).lower(),
+            )
 
     # Log other information that we don't want to log in the wrapper, if it's
     # cheap to do so.
@@ -150,5 +165,4 @@ def reposetup(ui, repo):
     if repo.ui.config("sampling", "logtopdir"):
         topdir = gettopdir(repo)
         if topdir:
-            ui.log('command_info', topdir=topdir)
-
+            ui.log("command_info", topdir=topdir)

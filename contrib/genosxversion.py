@@ -7,21 +7,29 @@ import os
 import subprocess
 import sys
 
-# Always load hg libraries from the hg we can find on $PATH.
-hglib = json.loads(subprocess.check_output(
-    ['hg', 'debuginstall', '-Tjson']))[0]['hgmodules']
-sys.path.insert(0, os.path.dirname(hglib))
-
 from mercurial import util
 
+
+# Always load hg libraries from the hg we can find on $PATH.
+hglib = json.loads(subprocess.check_output(["hg", "debuginstall", "-Tjson"]))[0][
+    "hgmodules"
+]
+sys.path.insert(0, os.path.dirname(hglib))
+
+
 ap = argparse.ArgumentParser()
-ap.add_argument('--paranoid',
-                action='store_true',
-                help=("Be paranoid about how version numbers compare and "
-                      "produce something that's more likely to sort "
-                      "reasonably."))
-ap.add_argument('--selftest', action='store_true', help='Run self-tests.')
-ap.add_argument('versionfile', help='Path to a valid mercurial __version__.py')
+ap.add_argument(
+    "--paranoid",
+    action="store_true",
+    help=(
+        "Be paranoid about how version numbers compare and "
+        "produce something that's more likely to sort "
+        "reasonably."
+    ),
+)
+ap.add_argument("--selftest", action="store_true", help="Run self-tests.")
+ap.add_argument("versionfile", help="Path to a valid mercurial __version__.py")
+
 
 def paranoidver(ver):
     """Given an hg version produce something that distutils can sort.
@@ -95,36 +103,39 @@ def paranoidver(ver):
     if micro is None:
         micro = 0
     if extra:
-        if extra.startswith('rc'):
+        if extra.startswith("rc"):
             if minor == 0:
                 major -= 1
                 minor = 9
             else:
                 minor -= 1
             micro = 9999
-            extra = '-' + extra
+            extra = "-" + extra
         else:
-            extra = '+' + extra
+            extra = "+" + extra
     else:
-        extra = ''
-    return '%d.%d.%d%s' % (major, minor, micro, extra)
+        extra = ""
+    return "%d.%d.%d%s" % (major, minor, micro, extra)
+
 
 def main(argv):
     opts = ap.parse_args(argv[1:])
     if opts.selftest:
         import doctest
+
         doctest.testmod()
         return
     with open(opts.versionfile) as f:
         for l in f:
-            if l.startswith('version = '):
+            if l.startswith("version = "):
                 # version number is entire line minus the quotes
-                ver = l[len('version = ') + 1:-2]
+                ver = l[len("version = ") + 1 : -2]
                 break
     if opts.paranoid:
         print(paranoidver(ver))
     else:
         print(ver)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main(sys.argv)

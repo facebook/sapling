@@ -6,13 +6,14 @@ This uses Hypothesis's stateful testing to generate random repository
 operations and test Mercurial using them, both to see if there are any
 unexpected errors and to compare different versions of it."""
 
+# isort:skip_file
+
 import os
 import subprocess
 import sys
 
 # Only run if slow tests are allowed
-if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'],
-                    'slow']):
+if subprocess.call(["python", "%s/hghave" % os.environ["TESTDIR"], "slow"]):
     sys.exit(80)
 
 # These tests require Hypothesis and pytz to be installed.
@@ -29,6 +30,7 @@ except ImportError:
 # fix this problem.
 try:
     import enum
+
     assert enum  # Silence pyflakes
 except ImportError:
     sys.stderr.write("skipped: enum34 not installed" + os.linesep)
@@ -43,8 +45,7 @@ import silenttestrunner
 import subprocess
 
 from hypothesis.errors import HypothesisException
-from hypothesis.stateful import (
-    rule, RuleBasedStateMachine, Bundle, precondition)
+from hypothesis.stateful import rule, RuleBasedStateMachine, Bundle, precondition
 from hypothesis import settings, note, strategies as st
 from hypothesis.configuration import set_hypothesis_home_dir
 from hypothesis.database import ExampleDatabase
@@ -76,9 +77,7 @@ except OSError:
 file_index = 0
 while True:
     file_index += 1
-    savefile = os.path.join(generatedtests, "test-generated-%d.t" % (
-        file_index,
-    ))
+    savefile = os.path.join(generatedtests, "test-generated-%d.t" % (file_index,))
     try:
         os.close(os.open(savefile, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
         break
@@ -94,16 +93,22 @@ filecharacters = (
     "[]^_`;=@{}~ !#$%&'()+,-"
 )
 
-files = st.text(filecharacters, min_size=1).map(lambda x: x.strip()).filter(
-    bool).map(lambda s: s.encode('ascii'))
-
-safetext = st.text(st.characters(
-    min_codepoint=1, max_codepoint=127,
-    blacklist_categories=('Cc', 'Cs')), min_size=1).map(
-    lambda s: s.encode('utf-8')
+files = (
+    st.text(filecharacters, min_size=1)
+    .map(lambda x: x.strip())
+    .filter(bool)
+    .map(lambda s: s.encode("ascii"))
 )
 
-extensions = st.sampled_from(('shelve', 'mq', 'blackbox',))
+safetext = st.text(
+    st.characters(
+        min_codepoint=1, max_codepoint=127, blacklist_categories=("Cc", "Cs")
+    ),
+    min_size=1,
+).map(lambda s: s.encode("utf-8"))
+
+extensions = st.sampled_from(("shelve", "mq", "blackbox"))
+
 
 @contextmanager
 def acceptableerrors(*args):
@@ -118,9 +123,11 @@ def acceptableerrors(*args):
             note(e.output)
             raise
 
+
 reponames = st.text("abcdefghijklmnopqrstuvwxyz01234556789", min_size=1).map(
-    lambda s: s.encode('ascii')
+    lambda s: s.encode("ascii")
 )
+
 
 class verifyingstatemachine(RuleBasedStateMachine):
     """This defines the set of acceptable operations on a Mercurial repository
@@ -145,11 +152,11 @@ class verifyingstatemachine(RuleBasedStateMachine):
 
     # A bundle is a reusable collection of previously generated data which may
     # be provided as arguments to future operations.
-    repos = Bundle('repos')
-    paths = Bundle('paths')
-    contents = Bundle('contents')
-    branches = Bundle('branches')
-    committimes = Bundle('committimes')
+    repos = Bundle("repos")
+    paths = Bundle("paths")
+    contents = Bundle("contents")
+    branches = Bundle("branches")
+    committimes = Bundle("committimes")
 
     def __init__(self):
         super(verifyingstatemachine, self).__init__()
@@ -184,43 +191,41 @@ class verifyingstatemachine(RuleBasedStateMachine):
         ttest = os.linesep.join("  " + l for l in self.log)
         os.chdir(testtmp)
         path = os.path.join(testtmp, "test-generated.t")
-        with open(path, 'w') as o:
+        with open(path, "w") as o:
             o.write(ttest + os.linesep)
         with open(os.devnull, "w") as devnull:
             rewriter = subprocess.Popen(
-                [runtests, "--local", "-i", path], stdin=subprocess.PIPE,
-                stdout=devnull, stderr=devnull,
+                [runtests, "--local", "-i", path],
+                stdin=subprocess.PIPE,
+                stdout=devnull,
+                stderr=devnull,
             )
             rewriter.communicate("yes")
-            with open(path, 'r') as i:
+            with open(path, "r") as i:
                 ttest = i.read()
 
         e = None
         if not self.failed:
             try:
-                output = subprocess.check_output([
-                    runtests, path, "--local", "--pure"
-                ], stderr=subprocess.STDOUT)
+                output = subprocess.check_output(
+                    [runtests, path, "--local", "--pure"], stderr=subprocess.STDOUT
+                )
                 assert "Ran 1 test" in output, output
-                for ext in (
-                    self.all_extensions - self.non_skippable_extensions
-                ):
-                    tf = os.path.join(testtmp, "test-generated-no-%s.t" % (
-                        ext,
-                    ))
-                    with open(tf, 'w') as o:
+                for ext in self.all_extensions - self.non_skippable_extensions:
+                    tf = os.path.join(testtmp, "test-generated-no-%s.t" % (ext,))
+                    with open(tf, "w") as o:
                         for l in ttest.splitlines():
                             if l.startswith("  $ hg"):
                                 l = l.replace(
-                                    "--config %s=" % (
-                                        extensionconfigkey(ext),), "")
+                                    "--config %s=" % (extensionconfigkey(ext),), ""
+                                )
                             o.write(l + os.linesep)
-                    with open(tf, 'r') as r:
+                    with open(tf, "r") as r:
                         t = r.read()
                         assert ext not in t, t
-                    output = subprocess.check_output([
-                        runtests, tf, "--local",
-                    ], stderr=subprocess.STDOUT)
+                    output = subprocess.check_output(
+                        [runtests, tf, "--local"], stderr=subprocess.STDOUT
+                    )
                     assert "Ran 1 test" in output, output
             except subprocess.CalledProcessError as e:
                 note(e.output)
@@ -243,8 +248,7 @@ class verifyingstatemachine(RuleBasedStateMachine):
     def mkdirp(self, path):
         if os.path.exists(path):
             return
-        self.log.append(
-            "$ mkdir -p -- %s" % (pipes.quote(os.path.relpath(path)),))
+        self.log.append("$ mkdir -p -- %s" % (pipes.quote(os.path.relpath(path)),))
         os.makedirs(path)
 
     def cd(self, path):
@@ -262,37 +266,30 @@ class verifyingstatemachine(RuleBasedStateMachine):
         self.command("hg", *(tuple(extra_flags) + args))
 
     def command(self, *args):
-        self.log.append("$ " + ' '.join(map(pipes.quote, args)))
+        self.log.append("$ " + " ".join(map(pipes.quote, args)))
         subprocess.check_output(args, stderr=subprocess.STDOUT)
 
     # Section: Set up basic data
     # This section has no side effects but generates data that we will want
     # to use later.
     @rule(
-        target=paths,
-        source=st.lists(files, min_size=1).map(lambda l: os.path.join(*l)))
+        target=paths, source=st.lists(files, min_size=1).map(lambda l: os.path.join(*l))
+    )
     def genpath(self, source):
         return source
 
-    @rule(
-        target=committimes,
-        when=datetimes(min_year=1970, max_year=2038) | st.none())
+    @rule(target=committimes, when=datetimes(min_year=1970, max_year=2038) | st.none())
     def gentime(self, when):
         return when
 
     @rule(
         target=contents,
-        content=st.one_of(
-            st.binary(),
-            st.text().map(lambda x: x.encode('utf-8'))
-        ))
+        content=st.one_of(st.binary(), st.text().map(lambda x: x.encode("utf-8"))),
+    )
     def gencontent(self, content):
         return content
 
-    @rule(
-        target=branches,
-        name=safetext,
-    )
+    @rule(target=branches, name=safetext)
     def genbranch(self, name):
         return name
 
@@ -320,14 +317,12 @@ class verifyingstatemachine(RuleBasedStateMachine):
                 # of the current path. This will cause mkdirp to fail with this
                 # error. We just turn this into a no-op in that case.
                 return
-        with open(path, 'wb') as o:
+        with open(path, "wb") as o:
             o.write(content)
-        self.log.append((
-            "$ python -c 'import binascii; "
-            "print(binascii.unhexlify(\"%s\"))' > %s") % (
-                binascii.hexlify(content),
-                pipes.quote(path),
-            ))
+        self.log.append(
+            ("$ python -c 'import binascii; " 'print(binascii.unhexlify("%s"))\' > %s')
+            % (binascii.hexlify(content), pipes.quote(path))
+        )
 
     @rule(path=paths)
     def addpath(self, path):
@@ -337,9 +332,7 @@ class verifyingstatemachine(RuleBasedStateMachine):
     @rule(path=paths)
     def forgetpath(self, path):
         if os.path.exists(path):
-            with acceptableerrors(
-                "file is already untracked",
-            ):
+            with acceptableerrors("file is already untracked"):
                 self.hg("forget", "--", path)
 
     @rule(s=st.none() | st.integers(0, 100))
@@ -353,9 +346,7 @@ class verifyingstatemachine(RuleBasedStateMachine):
     def removepath(self, path):
         if os.path.exists(path):
             with acceptableerrors(
-                'file is untracked',
-                'file has been marked for add',
-                'file is modified',
+                "file is untracked", "file has been marked for add", "file is modified"
             ):
                 self.hg("remove", "--", path)
 
@@ -367,9 +358,7 @@ class verifyingstatemachine(RuleBasedStateMachine):
         secret=st.booleans(),
         close_branch=st.booleans(),
     )
-    def maybecommit(
-        self, message, amend, when, addremove, secret, close_branch
-    ):
+    def maybecommit(self, message, amend, when, addremove, secret, close_branch):
         command = ["commit"]
         errors = ["nothing changed"]
         if amend:
@@ -385,11 +374,10 @@ class verifyingstatemachine(RuleBasedStateMachine):
             command.append("--addremove")
         if when is not None:
             if when.year == 1970:
-                errors.append('negative date value')
+                errors.append("negative date value")
             if when.year == 2038:
-                errors.append('exceeds 32 bits')
-            command.append("--date=%s" % (
-                when.strftime('%Y-%m-%d %H:%M:%S %z'),))
+                errors.append("exceeds 32 bits")
+            command.append("--date=%s" % (when.strftime("%Y-%m-%d %H:%M:%S %z"),))
 
         with acceptableerrors(*errors):
             self.hg(*command)
@@ -403,11 +391,7 @@ class verifyingstatemachine(RuleBasedStateMachine):
     def config(self):
         return self.configperrepo.setdefault(self.currentrepo, {})
 
-    @rule(
-        target=repos,
-        source=repos,
-        name=reponames,
-    )
+    @rule(target=repos, source=repos, name=reponames)
     def clone(self, source, name):
         if not os.path.exists(os.path.join("..", name)):
             self.cd("..")
@@ -415,10 +399,7 @@ class verifyingstatemachine(RuleBasedStateMachine):
             self.cd(name)
         return name
 
-    @rule(
-        target=repos,
-        name=reponames,
-    )
+    @rule(target=repos, name=reponames)
     def fresh(self, name):
         if not os.path.exists(os.path.join("..", name)):
             self.cd("..")
@@ -440,23 +421,17 @@ class verifyingstatemachine(RuleBasedStateMachine):
     @rule()
     def pull(self, repo=repos):
         with acceptableerrors(
-            "repository default not found",
-            "repository is unrelated",
+            "repository default not found", "repository is unrelated"
         ):
             self.hg("pull")
 
     @rule(newbranch=st.booleans())
     def push(self, newbranch):
-        with acceptableerrors(
-            "default repository not configured",
-            "no changes found",
-        ):
+        with acceptableerrors("default repository not configured", "no changes found"):
             if newbranch:
                 self.hg("push", "--new-branch")
             else:
-                with acceptableerrors(
-                    "creates new branches"
-                ):
+                with acceptableerrors("creates new branches"):
                     self.hg("push")
 
     # Section: Simple side effect free "check" operations
@@ -488,19 +463,16 @@ class verifyingstatemachine(RuleBasedStateMachine):
     @rule(branch=branches)
     def switchbranch(self, branch):
         with acceptableerrors(
-            'cannot use an integer as a name',
-            'cannot be used in a name',
-            'a branch of the same name already exists',
-            'is reserved',
+            "cannot use an integer as a name",
+            "cannot be used in a name",
+            "a branch of the same name already exists",
+            "is reserved",
         ):
             self.hg("branch", "--", branch)
 
     @rule(branch=branches, clean=st.booleans())
     def update(self, branch, clean):
-        with acceptableerrors(
-            'unknown revision',
-            'parse error',
-        ):
+        with acceptableerrors("unknown revision", "parse error"):
             if clean:
                 self.hg("update", "-C", "--", branch)
             else:
@@ -538,7 +510,9 @@ class verifyingstatemachine(RuleBasedStateMachine):
         with acceptableerrors("no shelved changes to apply"):
             self.hg("unshelve")
 
+
 class writeonlydatabase(ExampleDatabase):
+
     def __init__(self, underlying):
         super(ExampleDatabase, self).__init__()
         self.underlying = underlying
@@ -555,44 +529,44 @@ class writeonlydatabase(ExampleDatabase):
     def close(self):
         self.underlying.close()
 
+
 def extensionconfigkey(extension):
     return "extensions." + extension
 
+
 settings.register_profile(
-    'default',  settings(
-        timeout=300,
-        stateful_step_count=50,
-        max_examples=10,
-    )
+    "default", settings(timeout=300, stateful_step_count=50, max_examples=10)
 )
 
 settings.register_profile(
-    'fast',  settings(
+    "fast",
+    settings(
         timeout=10,
         stateful_step_count=20,
         max_examples=5,
         min_satisfying_examples=1,
         max_shrinks=0,
-    )
+    ),
 )
 
 settings.register_profile(
-    'continuous', settings(
+    "continuous",
+    settings(
         timeout=-1,
         stateful_step_count=1000,
         max_examples=10 ** 8,
         max_iterations=10 ** 8,
-        database=writeonlydatabase(settings.default.database)
-    )
+        database=writeonlydatabase(settings.default.database),
+    ),
 )
 
-settings.load_profile(os.getenv('HYPOTHESIS_PROFILE', 'default'))
+settings.load_profile(os.getenv("HYPOTHESIS_PROFILE", "default"))
 
 verifyingtest = verifyingstatemachine.TestCase
 
 verifyingtest.settings = settings.default
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         silenttestrunner.main(__name__)
     finally:

@@ -2,18 +2,20 @@ import string
 
 from mercurial.i18n import _
 
+
 def reposetup(ui, repo):
-    ui.setconfig('hooks', 'pretxncommit.checkmessage', checkcommitmessage)
+    ui.setconfig("hooks", "pretxncommit.checkmessage", checkcommitmessage)
+
 
 def checkcommitmessage(ui, repo, **kwargs):
     """
     Checks a single commit message for adherence to commit message rules.
     """
-    hg_commit_message = repo['tip'].description()
+    hg_commit_message = repo["tip"].description()
     try:
-        hg_commit_message.decode('utf8')
+        hg_commit_message.decode("utf8")
     except UnicodeDecodeError:
-        ui.warn(_('commit message is not utf-8\n'))
+        ui.warn(_("commit message is not utf-8\n"))
         return True
 
     printable = set(string.printable)
@@ -25,9 +27,9 @@ def checkcommitmessage(ui, repo, **kwargs):
                 break
 
     if badlines:
-        ui.warn(_('non-printable characters in commit message\n'))
+        ui.warn(_("non-printable characters in commit message\n"))
         for num, l in badlines:
-            ui.warn(_('Line {}: {!r}\n'.format(num, l)))
+            ui.warn(_("Line {}: {!r}\n".format(num, l)))
 
     # False means success
     return bool(badlines)

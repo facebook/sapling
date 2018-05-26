@@ -7,16 +7,15 @@
 
 from __future__ import absolute_import
 
+from . import error
 from .i18n import _
 
-from . import (
-    error,
-)
 
 def checkunresolved(ms):
     if list(ms.unresolved()):
-        raise error.Abort(_("unresolved merge conflicts "
-                            "(see 'hg help resolve')"))
-    if ms.mdstate() != 's' or list(ms.driverresolved()):
-        raise error.Abort(_('driver-resolved merge conflicts'),
-                          hint=_('run "hg resolve --all" to resolve'))
+        raise error.Abort(_("unresolved merge conflicts " "(see 'hg help resolve')"))
+    if ms.mdstate() != "s" or list(ms.driverresolved()):
+        raise error.Abort(
+            _("driver-resolved merge conflicts"),
+            hint=_('run "hg resolve --all" to resolve'),
+        )

@@ -11,62 +11,60 @@ import os
 from mercurial import commands, error, extensions
 from mercurial.i18n import _
 
-from .extlib.phabricator import (
-    arcconfig,
-    graphql,
-    diffprops,
-)
+from .extlib.phabricator import arcconfig, diffprops, graphql
+
 
 def extsetup(ui):
-    entry = extensions.wrapcommand(commands.table, 'diff', _diff)
+    entry = extensions.wrapcommand(commands.table, "diff", _diff)
     options = entry[1]
-    options.append(('', 'since-last-arc-diff', None,
-                    _('show changes since last `arc diff`')))
+    options.append(
+        ("", "since-last-arc-diff", None, _("show changes since last `arc diff`"))
+    )
+
 
 def _differentialhash(ui, repo, phabrev):
-    timeout = repo.ui.configint('ssl', 'timeout', 5)
-    ca_certs = repo.ui.configpath('web', 'cacerts')
+    timeout = repo.ui.configint("ssl", "timeout", 5)
+    ca_certs = repo.ui.configpath("web", "cacerts")
     try:
-        client = graphql.Client(
-            repodir=repo.root, ca_bundle=ca_certs, repo=repo)
+        client = graphql.Client(repodir=repo.root, ca_bundle=ca_certs, repo=repo)
         info = client.getrevisioninfo(timeout, [phabrev]).get(str(phabrev))
         if not info:
             return None
         return info
 
     except graphql.ClientError as e:
-        ui.warn(_('Error calling graphql: %s\n') % str(e))
+        ui.warn(_("Error calling graphql: %s\n") % str(e))
         return None
     except arcconfig.ArcConfigError as e:
         raise error.Abort(str(e))
 
+
 def _diff(orig, ui, repo, *pats, **opts):
-    if not opts.get('since_last_arc_diff'):
+    if not opts.get("since_last_arc_diff"):
         return orig(ui, repo, *pats, **opts)
 
-    if len(opts['rev']) > 1:
-        mess = _('cannot specify --since-last-arc-diff with multiple revisions')
+    if len(opts["rev"]) > 1:
+        mess = _("cannot specify --since-last-arc-diff with multiple revisions")
         raise error.Abort(mess)
     try:
-        targetrev = opts['rev'][0]
+        targetrev = opts["rev"][0]
     except IndexError:
-        targetrev = '.'
+        targetrev = "."
     ctx = repo[targetrev]
     phabrev = diffprops.parserevfromcommitmsg(ctx.description())
 
     if phabrev is None:
-        mess = _('local changeset is not associated with a differential '
-                 'revision')
+        mess = _("local changeset is not associated with a differential " "revision")
         raise error.Abort(mess)
 
     rev = _differentialhash(ui, repo, phabrev)
 
     if rev is None or not isinstance(rev, dict) or "hash" not in rev:
-        mess = _('unable to determine previous changeset hash')
+        mess = _("unable to determine previous changeset hash")
         raise error.Abort(mess)
 
-    rev = str(rev['hash'])
-    opts['rev'] = [rev, targetrev]
+    rev = str(rev["hash"])
+    opts["rev"] = [rev, targetrev]
 
     # if patterns aren't provided, restrict diff to files in both changesets
     # this prevents performing a diff on rebased changes

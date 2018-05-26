@@ -12,13 +12,11 @@ import locale
 import os
 import sys
 
-from . import (
-    encoding,
-    pycompat,
-)
+from . import encoding, pycompat
+
 
 # modelled after templater.templatepath:
-if getattr(sys, 'frozen', None) is not None:
+if getattr(sys, "frozen", None) is not None:
     module = pycompat.sysexecutable
 else:
     module = pycompat.fsencode(__file__)
@@ -29,17 +27,20 @@ except NameError:
     unicode = str
 
 _languages = None
-if (pycompat.iswindows
-    and 'LANGUAGE' not in encoding.environ
-    and 'LC_ALL' not in encoding.environ
-    and 'LC_MESSAGES' not in encoding.environ
-    and 'LANG' not in encoding.environ):
+if (
+    pycompat.iswindows
+    and "LANGUAGE" not in encoding.environ
+    and "LC_ALL" not in encoding.environ
+    and "LC_MESSAGES" not in encoding.environ
+    and "LANG" not in encoding.environ
+):
     # Try to detect UI language by "User Interface Language Management" API
     # if no locale variables are set. Note that locale.getdefaultlocale()
     # uses GetLocaleInfo(), which may be different from UI language.
     # (See http://msdn.microsoft.com/en-us/library/dd374098(v=VS.85).aspx )
     try:
         import ctypes
+
         langid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
         _languages = [locale.windows_locale[langid]]
     except (ImportError, AttributeError, KeyError):
@@ -48,17 +49,20 @@ if (pycompat.iswindows
 
 _ugettext = None
 
+
 def setdatapath(datapath):
     datapath = pycompat.fsdecode(datapath)
-    localedir = os.path.join(datapath, pycompat.sysstr('locale'))
-    t = gettextmod.translation('hg', localedir, _languages, fallback=True)
+    localedir = os.path.join(datapath, pycompat.sysstr("locale"))
+    t = gettextmod.translation("hg", localedir, _languages, fallback=True)
     global _ugettext
     try:
         _ugettext = t.ugettext
     except AttributeError:
         _ugettext = t.gettext
 
+
 _msgcache = {}  # encoding: {message: translation}
+
 
 def gettext(message):
     """Translate message.
@@ -78,12 +82,12 @@ def gettext(message):
     if message not in cache:
         if type(message) is unicode:
             # goofy unicode docstrings in test
-            paragraphs = message.split(u'\n\n')
+            paragraphs = message.split(u"\n\n")
         else:
-            paragraphs = [p.decode("ascii") for p in message.split('\n\n')]
+            paragraphs = [p.decode("ascii") for p in message.split("\n\n")]
         # Be careful not to translate the empty string -- it holds the
         # meta data of the .po file.
-        u = u'\n\n'.join([p and _ugettext(p) or u'' for p in paragraphs])
+        u = u"\n\n".join([p and _ugettext(p) or u"" for p in paragraphs])
         try:
             # encoding.tolocal cannot be used since it will first try to
             # decode the Unicode string. Calling u.decode(enc) really
@@ -97,20 +101,23 @@ def gettext(message):
             cache[message] = message
     return cache[message]
 
+
 _plain = True
 
+
 def _getplain():
-    if ('HGPLAIN' not in encoding.environ
-        and 'HGPLAINEXCEPT' not in encoding.environ):
+    if "HGPLAIN" not in encoding.environ and "HGPLAINEXCEPT" not in encoding.environ:
         return False
-    exceptions = encoding.environ.get('HGPLAINEXCEPT', '').strip().split(',')
-    return 'i18n' not in exceptions
+    exceptions = encoding.environ.get("HGPLAINEXCEPT", "").strip().split(",")
+    return "i18n" not in exceptions
+
 
 def _(message):
     if _plain:
         return message
     else:
         return gettext(message)
+
 
 def init():
     """inline _plain() so it's faster. called by dispatch._dispatch"""

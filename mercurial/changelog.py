@@ -7,29 +7,19 @@
 
 from __future__ import absolute_import
 
+from . import encoding, error, revlog, util
 from .i18n import _
-from .node import (
-    bin,
-    hex,
-    nullid,
-)
-from .thirdparty import (
-    attr,
-)
+from .node import bin, hex, nullid
+from .thirdparty import attr
 
-from . import (
-    encoding,
-    error,
-    revlog,
-    util,
-)
 
-_defaultextra = {'branch': 'default'}
+_defaultextra = {"branch": "default"}
 
 try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 def _string_escape(text):
     """
@@ -43,8 +33,9 @@ def _string_escape(text):
     True
     """
     # subset of the string_escape codec
-    text = text.replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r')
-    return text.replace('\0', '\\0')
+    text = text.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r")
+    return text.replace("\0", "\\0")
+
 
 def decodeextra(text):
     """
@@ -58,29 +49,33 @@ def decodeextra(text):
     [('baz', '\\\\\\x002'), ('branch', 'default'), ('foo', 'bar')]
     """
     extra = _defaultextra.copy()
-    for l in text.split('\0'):
+    for l in text.split("\0"):
         if l:
-            if '\\0' in l:
+            if "\\0" in l:
                 # fix up \0 without getting into trouble with \\0
-                l = l.replace('\\\\', '\\\\\n')
-                l = l.replace('\\0', '\0')
-                l = l.replace('\n', '')
-            k, v = util.unescapestr(l).split(':', 1)
+                l = l.replace("\\\\", "\\\\\n")
+                l = l.replace("\\0", "\0")
+                l = l.replace("\n", "")
+            k, v = util.unescapestr(l).split(":", 1)
             extra[k] = v
     return extra
 
+
 def encodeextra(d):
     # keys must be sorted to produce a deterministic changelog entry
-    items = [_string_escape('%s:%s' % (k, d[k])) for k in sorted(d)]
+    items = [_string_escape("%s:%s" % (k, d[k])) for k in sorted(d)]
     return "\0".join(items)
+
 
 def stripdesc(desc):
     """strip trailing whitespace and leading and trailing empty lines"""
-    return '\n'.join([l.rstrip() for l in desc.splitlines()]).strip('\n')
+    return "\n".join([l.rstrip() for l in desc.splitlines()]).strip("\n")
+
 
 class appender(object):
-    '''the changelog index must be updated last on disk, so we use this class
-    to delay writes to it'''
+    """the changelog index must be updated last on disk, so we use this class
+    to delay writes to it"""
+
     def __init__(self, vfs, name, mode, buf):
         self.data = buf
         fp = vfs(name, mode)
@@ -91,15 +86,18 @@ class appender(object):
 
     def end(self):
         return self._end
+
     def tell(self):
         return self.offset
+
     def flush(self):
         pass
+
     def close(self):
         self.fp.close()
 
     def seek(self, offset, whence=0):
-        '''virtual file offset spans real file and data'''
+        """virtual file offset spans real file and data"""
         if whence == 0:
             self.offset = offset
         elif whence == 1:
@@ -110,7 +108,7 @@ class appender(object):
             self.fp.seek(self.offset)
 
     def read(self, count=-1):
-        '''only trick here is reads that span real file and data'''
+        """only trick here is reads that span real file and data"""
         ret = ""
         if self.offset < self.size:
             s = self.fp.read(count)
@@ -122,7 +120,7 @@ class appender(object):
             doff = self.offset - self.size
             self.data.insert(0, "".join(self.data))
             del self.data[1:]
-            s = self.data[0][doff:doff + count]
+            s = self.data[0][doff : doff + count]
             self.offset += len(s)
             ret += s
         return ret
@@ -132,21 +130,28 @@ class appender(object):
         self.offset += len(s)
         self._end += len(s)
 
+
 def _divertopener(opener, target):
     """build an opener that writes in 'target.a' instead of 'target'"""
-    def _divert(name, mode='r', checkambig=False):
+
+    def _divert(name, mode="r", checkambig=False):
         if name != target:
             return opener(name, mode)
         return opener(name + ".a", mode)
+
     return _divert
+
 
 def _delayopener(opener, target, buf):
     """build an opener that stores chunks in 'buf' instead of 'target'"""
-    def _delay(name, mode='r', checkambig=False):
+
+    def _delay(name, mode="r", checkambig=False):
         if name != target:
             return opener(name, mode)
         return appender(opener, name, mode, buf)
+
     return _delay
+
 
 @attr.s
 class _changelogrevision(object):
@@ -154,10 +159,11 @@ class _changelogrevision(object):
     # it in
     extra = attr.ib()
     manifest = attr.ib(default=nullid)
-    user = attr.ib(default='')
+    user = attr.ib(default="")
     date = attr.ib(default=(0, 0))
     files = attr.ib(default=attr.Factory(list))
-    description = attr.ib(default='')
+    description = attr.ib(default="")
+
 
 class changelogrevision(object):
     """Holds results of a parsed changelog revision.
@@ -167,10 +173,7 @@ class changelogrevision(object):
     the parsed object.
     """
 
-    __slots__ = (
-        u'_offsets',
-        u'_text',
-    )
+    __slots__ = (u"_offsets", u"_text")
 
     def __new__(cls, text):
         if not text:
@@ -191,16 +194,16 @@ class changelogrevision(object):
         #
         # changelog v0 doesn't use extra
 
-        nl1 = text.index('\n')
-        nl2 = text.index('\n', nl1 + 1)
-        nl3 = text.index('\n', nl2 + 1)
+        nl1 = text.index("\n")
+        nl2 = text.index("\n", nl1 + 1)
+        nl3 = text.index("\n", nl2 + 1)
 
         # The list of files may be empty. Which means nl3 is the first of the
         # double newline that precedes the description.
-        if text[nl3 + 1:nl3 + 2] == '\n':
+        if text[nl3 + 1 : nl3 + 2] == "\n":
             doublenl = nl3
         else:
-            doublenl = text.index('\n\n', nl3 + 1)
+            doublenl = text.index("\n\n", nl3 + 1)
 
         self._offsets = (nl1, nl2, nl3, doublenl)
         self._text = text
@@ -209,24 +212,24 @@ class changelogrevision(object):
 
     @property
     def manifest(self):
-        return bin(self._text[0:self._offsets[0]])
+        return bin(self._text[0 : self._offsets[0]])
 
     @property
     def user(self):
         off = self._offsets
-        return encoding.tolocal(self._text[off[0] + 1:off[1]])
+        return encoding.tolocal(self._text[off[0] + 1 : off[1]])
 
     @property
     def _rawdate(self):
         off = self._offsets
-        dateextra = self._text[off[1] + 1:off[2]]
-        return dateextra.split(' ', 2)[0:2]
+        dateextra = self._text[off[1] + 1 : off[2]]
+        return dateextra.split(" ", 2)[0:2]
 
     @property
     def _rawextra(self):
         off = self._offsets
-        dateextra = self._text[off[1] + 1:off[2]]
-        fields = dateextra.split(' ', 2)
+        dateextra = self._text[off[1] + 1 : off[2]]
+        fields = dateextra.split(" ", 2)
         if len(fields) != 3:
             return None
 
@@ -258,13 +261,15 @@ class changelogrevision(object):
         if off[2] == off[3]:
             return []
 
-        return self._text[off[2] + 1:off[3]].split('\n')
+        return self._text[off[2] + 1 : off[3]].split("\n")
 
     @property
     def description(self):
-        return encoding.tolocal(self._text[self._offsets[3] + 2:])
+        return encoding.tolocal(self._text[self._offsets[3] + 2 :])
+
 
 class changelog(revlog.revlog):
+
     def __init__(self, opener, trypending=False):
         """Load a changelog revlog using an opener.
 
@@ -275,14 +280,20 @@ class changelog(revlog.revlog):
         It exists in a separate file to facilitate readers (such as
         hooks processes) accessing data before a transaction is finalized.
         """
-        if trypending and opener.exists('00changelog.i.a'):
-            indexfile = '00changelog.i.a'
+        if trypending and opener.exists("00changelog.i.a"):
+            indexfile = "00changelog.i.a"
         else:
-            indexfile = '00changelog.i'
+            indexfile = "00changelog.i"
 
-        datafile = '00changelog.d'
-        revlog.revlog.__init__(self, opener, indexfile, datafile=datafile,
-                               checkambig=True, mmaplargeindex=True)
+        datafile = "00changelog.d"
+        revlog.revlog.__init__(
+            self,
+            opener,
+            indexfile,
+            datafile=datafile,
+            checkambig=True,
+            mmaplargeindex=True,
+        )
 
         if self._initempty:
             # changelogs don't benefit from generaldelta
@@ -302,14 +313,13 @@ class changelog(revlog.revlog):
 
     def tip(self):
         """filtered version of revlog.tip"""
-        for i in xrange(len(self) -1, -2, -1):
+        for i in xrange(len(self) - 1, -2, -1):
             if i not in self.filteredrevs:
                 return self.node(i)
 
     def __contains__(self, rev):
         """filtered version of revlog.__contains__"""
-        return (0 <= rev < len(self)
-                and rev not in self.filteredrevs)
+        return 0 <= rev < len(self) and rev not in self.filteredrevs
 
     def __iter__(self):
         """filtered version of revlog.__iter__"""
@@ -359,8 +369,9 @@ class changelog(revlog.revlog):
         """filtered version of revlog.rev"""
         r = super(changelog, self).rev(node)
         if r in self.filteredrevs:
-            raise error.FilteredLookupError(hex(node), self.indexfile,
-                                            _('filtered node'))
+            raise error.FilteredLookupError(
+                hex(node), self.indexfile, _("filtered node")
+            )
         return r
 
     def node(self, rev):
@@ -393,16 +404,17 @@ class changelog(revlog.revlog):
         if not self._delayed:
             if len(self) == 0:
                 self._divert = True
-                if self._realopener.exists(self.indexfile + '.a'):
-                    self._realopener.unlink(self.indexfile + '.a')
+                if self._realopener.exists(self.indexfile + ".a"):
+                    self._realopener.unlink(self.indexfile + ".a")
                 self.opener = _divertopener(self._realopener, self.indexfile)
             else:
                 self._delaybuf = []
-                self.opener = _delayopener(self._realopener, self.indexfile,
-                                           self._delaybuf)
+                self.opener = _delayopener(
+                    self._realopener, self.indexfile, self._delaybuf
+                )
         self._delayed = True
-        tr.addpending('cl-%i' % id(self), self._writepending)
-        tr.addfinalize('cl-%i' % id(self), self._finalize)
+        tr.addpending("cl-%i" % id(self), self._writepending)
+        tr.addfinalize("cl-%i" % id(self), self._finalize)
 
     def _finalize(self, tr):
         "finalize index updates"
@@ -416,7 +428,7 @@ class changelog(revlog.revlog):
             nfile.close()
             self.opener.rename(tmpname, self.indexfile, checkambig=True)
         elif self._delaybuf:
-            fp = self.opener(self.indexfile, 'a', checkambig=True)
+            fp = self.opener(self.indexfile, "a", checkambig=True)
             fp.write("".join(self._delaybuf))
             fp.close()
             self._delaybuf = None
@@ -469,14 +481,7 @@ class changelog(revlog.revlog):
         access.
         """
         c = changelogrevision(self.revision(node))
-        return (
-            c.manifest,
-            c.user,
-            c.date,
-            c.files,
-            c.description,
-            c.extra
-        )
+        return (c.manifest, c.user, c.date, c.files, c.description, c.extra)
 
     def changelogrevision(self, nodeorrev):
         """Obtain a ``changelogrevision`` for a node or revision."""
@@ -490,11 +495,12 @@ class changelog(revlog.revlog):
         if not text:
             return []
         last = text.index("\n\n")
-        l = text[:last].split('\n')
+        l = text[:last].split("\n")
         return l[3:]
 
-    def add(self, manifest, files, desc, transaction, p1, p2,
-                  user, date=None, extra=None):
+    def add(
+        self, manifest, files, desc, transaction, p1, p2, user, date=None, extra=None
+    ):
         # Convert to UTF-8 encoded bytestrings as the very first
         # thing: calling any method on a localstr object will turn it
         # into a str object and the cached UTF-8 string is thus lost.
@@ -507,8 +513,7 @@ class changelog(revlog.revlog):
         if not user:
             raise error.RevlogError(_("empty username"))
         if "\n" in user:
-            raise error.RevlogError(_("username %s contains a newline")
-                                    % repr(user))
+            raise error.RevlogError(_("username %s contains a newline") % repr(user))
 
         desc = stripdesc(desc)
 
@@ -521,8 +526,7 @@ class changelog(revlog.revlog):
             if branch in ("default", ""):
                 del extra["branch"]
             elif branch in (".", "null", "tip"):
-                raise error.RevlogError(_('the name \'%s\' is reserved')
-                                        % branch)
+                raise error.RevlogError(_("the name '%s' is reserved") % branch)
         if extra:
             extra = encodeextra(extra)
             parseddate = "%s %s" % (parseddate, extra)
@@ -536,20 +540,21 @@ class changelog(revlog.revlog):
         This function exists because creating a changectx object
         just to access this is costly."""
         extra = self.read(rev)[5]
-        return encoding.tolocal(extra.get("branch")), 'close' in extra
+        return encoding.tolocal(extra.get("branch")), "close" in extra
 
     def _addrevision(self, node, rawtext, transaction, *args, **kwargs):
         # overlay over the standard revlog._addrevision to track the new
         # revision on the transaction.
         rev = len(self)
-        node = super(changelog, self)._addrevision(node, rawtext, transaction,
-                                                   *args, **kwargs)
-        revs = transaction.changes.get('revs')
+        node = super(changelog, self)._addrevision(
+            node, rawtext, transaction, *args, **kwargs
+        )
+        revs = transaction.changes.get("revs")
         if revs is not None:
             if revs:
                 assert revs[-1] + 1 == rev
                 revs = xrange(revs[0], rev + 1)
             else:
                 revs = xrange(rev, rev + 1)
-            transaction.changes['revs'] = revs
+            transaction.changes["revs"] = revs
         return node

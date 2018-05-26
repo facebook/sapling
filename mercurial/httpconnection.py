@@ -14,13 +14,9 @@ import logging
 import os
 import socket
 
+from . import httpclient, sslutil, urllibcompat, util
 from .i18n import _
-from . import (
-    httpclient,
-    sslutil,
-    urllibcompat,
-    util,
-)
+
 
 urlerr = util.urlerr
 urlreq = util.urlreq
@@ -62,75 +58,85 @@ class httpsendfile(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+
 # moved here from url.py to avoid a cycle
 def readauthforuri(ui, uri, user):
     # Read configuration
     groups = {}
-    for key, val in ui.configitems('auth'):
-        if key in ('cookiefile',):
+    for key, val in ui.configitems("auth"):
+        if key in ("cookiefile",):
             continue
 
-        if '.' not in key:
+        if "." not in key:
             ui.warn(_("ignoring invalid [auth] key '%s'\n") % key)
             continue
-        group, setting = key.rsplit('.', 1)
+        group, setting = key.rsplit(".", 1)
         gdict = groups.setdefault(group, {})
-        if setting in ('username', 'cert', 'key'):
+        if setting in ("username", "cert", "key"):
             val = util.expandpath(val)
         gdict[setting] = val
 
     # Find the best match
-    scheme, hostpath = uri.split('://', 1)
+    scheme, hostpath = uri.split("://", 1)
     bestuser = None
     bestlen = 0
     bestauth = None
     for group, auth in groups.iteritems():
-        if user and user != auth.get('username', user):
+        if user and user != auth.get("username", user):
             # If a username was set in the URI, the entry username
             # must either match it or be unset
             continue
-        prefix = auth.get('prefix')
+        prefix = auth.get("prefix")
         if not prefix:
             continue
-        p = prefix.split('://', 1)
+        p = prefix.split("://", 1)
         if len(p) > 1:
             schemes, prefix = [p[0]], p[1]
         else:
-            schemes = (auth.get('schemes') or 'https').split()
-        if (prefix == '*' or hostpath.startswith(prefix)) and \
-            (len(prefix) > bestlen or (len(prefix) == bestlen and \
-                not bestuser and 'username' in auth)) \
-             and scheme in schemes:
+            schemes = (auth.get("schemes") or "https").split()
+        if (
+            (prefix == "*" or hostpath.startswith(prefix))
+            and (
+                len(prefix) > bestlen
+                or (len(prefix) == bestlen and not bestuser and "username" in auth)
+            )
+            and scheme in schemes
+        ):
             bestlen = len(prefix)
             bestauth = group, auth
-            bestuser = auth.get('username')
+            bestuser = auth.get("username")
             if user and not bestuser:
-                auth['username'] = user
+                auth["username"] = user
     return bestauth
+
 
 # Mercurial (at least until we can remove the old codepath) requires
 # that the http response object be sufficiently file-like, so we
 # provide a close() method here.
 class HTTPResponse(httpclient.HTTPResponse):
+
     def close(self):
         pass
 
+
 class HTTPConnection(httpclient.HTTPConnection):
     response_class = HTTPResponse
+
     def request(self, method, uri, body=None, headers=None):
         if headers is None:
             headers = {}
         if isinstance(body, httpsendfile):
             body.seek(0)
-        httpclient.HTTPConnection.request(self, method, uri, body=body,
-                                          headers=headers)
+        httpclient.HTTPConnection.request(self, method, uri, body=body, headers=headers)
+
 
 _configuredlogging = False
-LOGFMT = '%(levelname)s:%(name)s:%(lineno)d:%(message)s'
+LOGFMT = "%(levelname)s:%(name)s:%(lineno)d:%(message)s"
 # Subclass BOTH of these because otherwise urllib2 "helpfully"
 # reinserts them since it notices we don't include any subclasses of
 # them.
 class http2handler(urlreq.httphandler, urlreq.httpshandler):
+
     def __init__(self, ui, pwmgr):
         global _configuredlogging
         urlreq.abstracthttphandler.__init__(self)
@@ -138,10 +144,10 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
         self.pwmgr = pwmgr
         self._connections = {}
         # developer config: ui.http2debuglevel
-        loglevel = ui.config('ui', 'http2debuglevel')
+        loglevel = ui.config("ui", "http2debuglevel")
         if loglevel and not _configuredlogging:
             _configuredlogging = True
-            logger = logging.getLogger('mercurial.httpclient')
+            logger = logging.getLogger("mercurial.httpclient")
             logger.setLevel(getattr(logging, loglevel.upper()))
             handler = logging.StreamHandler()
             handler.setFormatter(logging.Formatter(LOGFMT))
@@ -170,32 +176,31 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
         # hostname is encoded in the URI in the urllib2 request
         # object. On Python 2.6.5, it's stored in the _tunnel_host
         # attribute which has no accessor.
-        tunhost = getattr(req, '_tunnel_host', None)
+        tunhost = getattr(req, "_tunnel_host", None)
         host = urllibcompat.gethost(req)
         if tunhost:
             proxyhost = host
             host = tunhost
         elif req.has_proxy():
             proxyhost = urllibcompat.gethost(req)
-            host = urllibcompat.getselector(
-                req).split('://', 1)[1].split('/', 1)[0]
+            host = urllibcompat.getselector(req).split("://", 1)[1].split("/", 1)[0]
         else:
             proxyhost = None
 
         if proxyhost:
-            if ':' in proxyhost:
+            if ":" in proxyhost:
                 # Note: this means we'll explode if we try and use an
                 # IPv6 http proxy. This isn't a regression, so we
                 # won't worry about it for now.
-                proxyhost, proxyport = proxyhost.rsplit(':', 1)
+                proxyhost, proxyport = proxyhost.rsplit(":", 1)
             else:
-                proxyport = 3128 # squid default
+                proxyport = 3128  # squid default
             proxy = (proxyhost, proxyport)
         else:
             proxy = None
 
         if not host:
-            raise urlerr.urlerror('no host given')
+            raise urlerr.urlerror("no host given")
 
         connkey = use_ssl, host, proxy
         allconns = self._connections.get(connkey, [])
@@ -204,8 +209,9 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
             h = conns[0]
         else:
             if allconns:
-                self.ui.debug('all connections for %s busy, making a new '
-                              'one\n' % host)
+                self.ui.debug(
+                    "all connections for %s busy, making a new " "one\n" % host
+                )
             timeout = None
             if req.timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:
                 timeout = req.timeout
@@ -214,17 +220,16 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
 
         headers = dict(req.headers)
         headers.update(req.unredirected_hdrs)
-        headers = dict(
-            (name.title(), val) for name, val in headers.items())
+        headers = dict((name.title(), val) for name, val in headers.items())
         try:
             path = urllibcompat.getselector(req)
-            if '://' in path:
-                path = path.split('://', 1)[1].split('/', 1)[1]
-            if path[0] != '/':
-                path = '/' + path
+            if "://" in path:
+                path = path.split("://", 1)[1].split("/", 1)[1]
+            if path[0] != "/":
+                path = "/" + path
             h.request(req.get_method(), path, req.data, headers)
             r = h.getresponse()
-        except socket.error as err: # XXX what error?
+        except socket.error as err:  # XXX what error?
             raise urlerr.urlerror(err)
 
         # Pick apart the HTTPResponse object to get the addinfourl
@@ -240,12 +245,14 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
     # target, and then allows full URIs in the request path, which it
     # then observes and treats as a signal to do proxying instead.
     def http_open(self, req):
-        if urllibcompat.getfullurl(req).startswith('https'):
+        if urllibcompat.getfullurl(req).startswith("https"):
             return self.https_open(req)
+
         def makehttpcon(*args, **kwargs):
             k2 = dict(kwargs)
-            k2[r'use_ssl'] = False
+            k2[r"use_ssl"] = False
             return HTTPConnection(*args, **k2)
+
         return self.do_open(makehttpcon, req, False)
 
     def https_open(self, req):
@@ -266,30 +273,34 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
         keyfile = None
         certfile = None
 
-        if args: # key_file
+        if args:  # key_file
             keyfile = args.pop(0)
-        if args: # cert_file
+        if args:  # cert_file
             certfile = args.pop(0)
 
         # if the user has specified different key/cert files in
         # hgrc, we prefer these
-        if self.auth and 'key' in self.auth and 'cert' in self.auth:
-            keyfile = self.auth['key']
-            certfile = self.auth['cert']
+        if self.auth and "key" in self.auth and "cert" in self.auth:
+            keyfile = self.auth["key"]
+            certfile = self.auth["cert"]
 
         # let host port take precedence
-        if ':' in host and '[' not in host or ']:' in host:
-            host, port = host.rsplit(':', 1)
+        if ":" in host and "[" not in host or "]:" in host:
+            host, port = host.rsplit(":", 1)
             port = int(port)
-            if '[' in host:
+            if "[" in host:
                 host = host[1:-1]
 
-        kwargs[r'keyfile'] = keyfile
-        kwargs[r'certfile'] = certfile
+        kwargs[r"keyfile"] = keyfile
+        kwargs[r"certfile"] = certfile
 
-        con = HTTPConnection(host, port, use_ssl=True,
-                             ssl_wrap_socket=sslutil.wrapsocket,
-                             ssl_validator=sslutil.validatesocket,
-                             ui=self.ui,
-                             **kwargs)
+        con = HTTPConnection(
+            host,
+            port,
+            use_ssl=True,
+            ssl_wrap_socket=sslutil.wrapsocket,
+            ssl_validator=sslutil.validatesocket,
+            ui=self.ui,
+            **kwargs
+        )
         return con

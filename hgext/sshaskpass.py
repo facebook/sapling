@@ -31,17 +31,20 @@ import signal
 import socket
 import sys
 import tempfile
+from multiprocessing.reduction import recv_handle, send_handle
+
 
 try:
     from mercurial import encoding
+
     environ = encoding.environ
 except ImportError:
-    environ = getattr(os, 'environ')
+    environ = getattr(os, "environ")
 
-from multiprocessing.reduction import recv_handle, send_handle
 
 # backup tty fds. useful if we lose them later, like chg starting the pager
 _ttyfds = []
+
 
 @contextlib.contextmanager
 def _silentexception(terminate=False):
@@ -60,18 +63,20 @@ def _silentexception(terminate=False):
     if terminate:
         os._exit(exitcode)
 
+
 def _sockbind(sock, addr):
     """shim for util.bindunixsocket"""
     sock.bind(addr)
 
+
 def _isttyserverneeded():
     # respect user's setting, SSH_ASKPASS is likely a gui program
-    if 'SSH_ASKPASS' in environ:
+    if "SSH_ASKPASS" in environ:
         return False
 
     # the tty server is not needed if /dev/tty can be opened
     try:
-        with open('/dev/tty'):
+        with open("/dev/tty"):
             return False
     except Exception:
         pass
@@ -83,6 +88,7 @@ def _isttyserverneeded():
     # tty server is needed
     return True
 
+
 def _startttyserver():
     """start a tty fd server
 
@@ -91,7 +97,7 @@ def _startttyserver():
     listens at sockpath: $TMPDIR/ttysrv$UID/$PID
     returns (pid, sockpath)
     """
-    sockpath = os.path.join(tempfile.mkdtemp('ttysrv'), str(os.getpid()))
+    sockpath = os.path.join(tempfile.mkdtemp("ttysrv"), str(os.getpid()))
     pipes = os.pipe()
     pid = os.fork()
     if pid:
@@ -105,12 +111,12 @@ def _startttyserver():
     ttyrfd, ttywfd = _ttyfds or [sys.stdin.fileno(), sys.stderr.fileno()]
 
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    getattr(util, 'bindunixsocket', _sockbind)(sock, sockpath)
+    getattr(util, "bindunixsocket", _sockbind)(sock, sockpath)
     sock.listen(1)
 
     # unblock parent
     os.close(pipes[0])
-    os.write(pipes[1], ' ')
+    os.write(pipes[1], " ")
     os.close(pipes[1])
     with _silentexception(terminate=True):
         while True:
@@ -119,6 +125,7 @@ def _startttyserver():
             send_handle(conn, ttyrfd, 0)
             send_handle(conn, ttywfd, 0)
             conn.close()
+
 
 def _killprocess(pid):
     """kill and reap a child process"""
@@ -130,6 +137,7 @@ def _killprocess(pid):
     except Exception:
         pass
 
+
 def _receivefds(sockpath):
     """get fds from the tty server listening at sockpath
 
@@ -137,11 +145,12 @@ def _receivefds(sockpath):
     """
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     # use chdir to handle long sockpath
-    os.chdir(os.path.dirname(sockpath) or '.')
+    os.chdir(os.path.dirname(sockpath) or ".")
     sock.connect(os.path.basename(sockpath))
     rfd = recv_handle(sock)
     wfd = recv_handle(sock)
     return (rfd, wfd)
+
 
 def _validaterepo(orig, self, sshcmd, args, remotecmd, sshenv=None):
     if not _isttyserverneeded():
@@ -150,21 +159,22 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd, sshenv=None):
     pid = sockpath = scriptpath = None
     with _silentexception(terminate=False):
         pid, sockpath = _startttyserver()
-        scriptpath = sockpath + '.sh'
-        with open(scriptpath, 'w') as f:
-            f.write('#!/bin/bash\nexec %s %s "$@"'
-                    % (util.shellquote(sys.executable),
-                       util.shellquote(__file__)))
+        scriptpath = sockpath + ".sh"
+        with open(scriptpath, "w") as f:
+            f.write(
+                '#!/bin/bash\nexec %s %s "$@"'
+                % (util.shellquote(sys.executable), util.shellquote(__file__))
+            )
         os.chmod(scriptpath, 0o755)
         env = {
             # ssh will not use SSH_ASKPASS if DISPLAY is not set
-            'DISPLAY': environ.get('DISPLAY', ''),
-            'SSH_ASKPASS': util.shellquote(scriptpath),
-            'TTYSOCK': util.shellquote(sockpath),
+            "DISPLAY": environ.get("DISPLAY", ""),
+            "SSH_ASKPASS": util.shellquote(scriptpath),
+            "TTYSOCK": util.shellquote(sockpath),
         }
-        prefix = ' '.join('%s=%s' % (k, v) for k, v in env.items())
+        prefix = " ".join("%s=%s" % (k, v) for k, v in env.items())
         # modify sshcmd to include new environ
-        sshcmd = '%s %s' % (prefix, sshcmd)
+        sshcmd = "%s %s" % (prefix, sshcmd)
 
     try:
         return orig(self, sshcmd, args, remotecmd, sshenv=sshenv)
@@ -174,6 +184,7 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd, sshenv=None):
         for path in [scriptpath, sockpath]:
             if path and os.path.exists(path):
                 util.unlinkpath(path, ignoremissing=True)
+
 
 def _attachio(orig, self):
     orig(self)
@@ -186,6 +197,7 @@ def _attachio(orig, self):
         wfd = os.dup(ui.ferr.fileno())
         _ttyfds[:] = [rfd, wfd]
 
+
 def _patchchgserver():
     """patch chgserver so we can backup tty fds before they are replaced if
     chg starts the pager.
@@ -195,42 +207,47 @@ def _patchchgserver():
         from mercurial import chgserver
     except ImportError:
         try:
-            chgserver = extensions.find('chgserver')
+            chgserver = extensions.find("chgserver")
         except KeyError:
             pass
-    server = getattr(chgserver, 'chgcmdserver', None)
-    if server and 'attachio' in server.capabilities:
+    server = getattr(chgserver, "chgcmdserver", None)
+    if server and "attachio" in server.capabilities:
         orig = server.attachio
-        server.capabilities['attachio'] = extensions.bind(_attachio, orig)
+        server.capabilities["attachio"] = extensions.bind(_attachio, orig)
+
 
 def uisetup(ui):
     # _validaterepo runs ssh and needs to be wrapped
-    extensions.wrapfunction(sshpeer.sshpeer, '_validaterepo', _validaterepo)
+    extensions.wrapfunction(sshpeer.sshpeer, "_validaterepo", _validaterepo)
     _patchchgserver()
+
 
 def _setecho(ttyr, enableecho):
     import termios
+
     attrs = termios.tcgetattr(ttyr)
     if bool(enableecho) == bool(attrs[3] & termios.ECHO):
         return
     attrs[3] ^= termios.ECHO
     termios.tcsetattr(ttyr, termios.TCSANOW, attrs)
 
+
 def _shoulddisableecho(prompt):
     # we don't have the "flag" information from openssh's
     # read_passphrase(const char *prompt, int flags).
     # guess from the prompt string.
     # do not match "Passcode or option"
-    if 'Passcode or option' in prompt:
+    if "Passcode or option" in prompt:
         return False
     # match "password", "Password", "passphrase", "Passphrase".
-    return prompt.find('ass') >= 0
+    return prompt.find("ass") >= 0
+
 
 def _sshaskpassmain(prompt):
     """the ssh-askpass client"""
-    rfd, wfd = _receivefds(environ['TTYSOCK'])
-    r, w = os.fdopen(rfd, 'r'), os.fdopen(wfd, 'a')
-    w.write('\033[31;1m==== AUTHENTICATING FOR SSH  ====\033[0m\n')
+    rfd, wfd = _receivefds(environ["TTYSOCK"])
+    r, w = os.fdopen(rfd, "r"), os.fdopen(wfd, "a")
+    w.write("\033[31;1m==== AUTHENTICATING FOR SSH  ====\033[0m\n")
     w.write(prompt)
     w.flush()
     shouldecho = not _shoulddisableecho(prompt)
@@ -239,21 +256,17 @@ def _sshaskpassmain(prompt):
         line = r.readline()
     finally:
         if not shouldecho:
-            w.write('\n')
+            w.write("\n")
         _setecho(r, True)
     sys.stdout.write(line)
     sys.stdout.flush()
-    w.write('\033[31;1m==== AUTHENTICATION COMPLETE ====\033[0m\n')
+    w.write("\033[31;1m==== AUTHENTICATION COMPLETE ====\033[0m\n")
 
-if __name__ == '__main__' and all(n in environ
-                                  for n in ['SSH_ASKPASS', 'TTYSOCK']):
+
+if __name__ == "__main__" and all(n in environ for n in ["SSH_ASKPASS", "TTYSOCK"]):
     # started by ssh as ssh-askpass
     with _silentexception(terminate=True):
-        _sshaskpassmain(' '.join(sys.argv[1:]))
+        _sshaskpassmain(" ".join(sys.argv[1:]))
 else:
     # imported as a mercurial extension
-    from mercurial import (
-        extensions,
-        sshpeer,
-        util,
-    )
+    from mercurial import extensions, sshpeer, util

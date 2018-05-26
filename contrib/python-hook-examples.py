@@ -1,25 +1,24 @@
-'''
+"""
 Examples of useful python hooks for Mercurial.
-'''
+"""
 from __future__ import absolute_import
-from mercurial import (
-    patch,
-    util,
-)
+
+from mercurial import patch, util
+
 
 def diffstat(ui, repo, **kwargs):
-    '''Example usage:
+    """Example usage:
 
     [hooks]
     commit.diffstat = python:/path/to/this/file.py:diffstat
     changegroup.diffstat = python:/path/to/this/file.py:diffstat
-    '''
-    if kwargs.get('parent2'):
+    """
+    if kwargs.get("parent2"):
         return
-    node = kwargs['node']
+    node = kwargs["node"]
     first = repo[node].p1().node()
-    if 'url' in kwargs:
-        last = repo['tip'].node()
+    if "url" in kwargs:
+        last = repo["tip"].node()
     else:
         last = node
     diff = patch.diff(repo, first, last)

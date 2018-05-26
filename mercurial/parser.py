@@ -18,34 +18,37 @@
 
 from __future__ import absolute_import, print_function
 
+from . import encoding, error, util
 from .i18n import _
-from . import (
-    encoding,
-    error,
-    util,
-)
+
 
 class parser(object):
+
     def __init__(self, elements, methods=None):
         self._elements = elements
         self._methods = methods
         self.current = None
+
     def _advance(self):
-        'advance the tokenizer'
+        "advance the tokenizer"
         t = self.current
         self.current = next(self._iter, None)
         return t
+
     def _hasnewterm(self):
-        'True if next token may start new term'
+        "True if next token may start new term"
         return any(self._elements[self.current[0]][1:3])
+
     def _match(self, m):
-        'make sure the tokenizer matches an end condition'
+        "make sure the tokenizer matches an end condition"
         if self.current[0] != m:
-            raise error.ParseError(_("unexpected token: %s") % self.current[0],
-                                   self.current[2])
+            raise error.ParseError(
+                _("unexpected token: %s") % self.current[0], self.current[2]
+            )
         self._advance()
+
     def _parseoperand(self, bind, m=None):
-        'gather right-hand-side operand until an end condition or binding met'
+        "gather right-hand-side operand until an end condition or binding met"
         if m and self.current[0] == m:
             expr = None
         else:
@@ -53,6 +56,7 @@ class parser(object):
         if m:
             self._match(m)
         return expr
+
     def _parse(self, bind=0):
         token, value, pos = self._advance()
         # handle prefix rules on current token, take as primary if unambiguous
@@ -75,24 +79,28 @@ class parser(object):
             else:
                 raise error.ParseError(_("not an infix: %s") % token, pos)
         return expr
+
     def parse(self, tokeniter):
-        'generate a parse tree from tokens'
+        "generate a parse tree from tokens"
         self._iter = tokeniter
         self._advance()
         res = self._parse()
         token, value, pos = self.current
         return res, pos
+
     def eval(self, tree):
-        'recursively evaluate a parse tree using node methods'
+        "recursively evaluate a parse tree using node methods"
         if not isinstance(tree, tuple):
             return tree
         return self._methods[tree[0]](*[self.eval(t) for t in tree[1:]])
+
     def __call__(self, tokeniter):
-        'parse tokens into a parse tree and evaluate if methods given'
+        "parse tokens into a parse tree and evaluate if methods given"
         t = self.parse(tokeniter)
         if self._methods:
             return self.eval(t)
         return t
+
 
 def splitargspec(spec):
     """Parse spec of function arguments into (poskeys, varkey, keys, optkey)
@@ -109,23 +117,24 @@ def splitargspec(spec):
     ([], None, [], 'foo')
     """
     optkey = None
-    pre, sep, post = spec.partition('**')
+    pre, sep, post = spec.partition("**")
     if sep:
         posts = post.split()
         if not posts:
-            raise error.ProgrammingError('no **optkey name provided')
+            raise error.ProgrammingError("no **optkey name provided")
         if len(posts) > 1:
-            raise error.ProgrammingError('excessive **optkey names provided')
+            raise error.ProgrammingError("excessive **optkey names provided")
         optkey = posts[0]
 
-    pre, sep, post = pre.partition('*')
+    pre, sep, post = pre.partition("*")
     pres = pre.split()
     posts = post.split()
     if sep:
         if not posts:
-            raise error.ProgrammingError('no *varkey name provided')
+            raise error.ProgrammingError("no *varkey name provided")
         return pres, posts[0], posts[1:], optkey
     return [], None, pres, optkey
+
 
 def buildargsdict(trees, funcname, argspec, keyvaluenode, keynode):
     """Build dict from list containing positional and keyword arguments
@@ -144,48 +153,52 @@ def buildargsdict(trees, funcname, argspec, keyvaluenode, keynode):
     arguments are rejected, but missing keyword arguments are just omitted.
     """
     poskeys, varkey, keys, optkey = argspec
-    kwstart = next((i for i, x in enumerate(trees) if x[0] == keyvaluenode),
-                   len(trees))
+    kwstart = next((i for i, x in enumerate(trees) if x[0] == keyvaluenode), len(trees))
     if kwstart < len(poskeys):
-        raise error.ParseError(_("%(func)s takes at least %(nargs)d positional "
-                                 "arguments")
-                               % {'func': funcname, 'nargs': len(poskeys)})
+        raise error.ParseError(
+            _("%(func)s takes at least %(nargs)d positional " "arguments")
+            % {"func": funcname, "nargs": len(poskeys)}
+        )
     if not varkey and kwstart > len(poskeys) + len(keys):
-        raise error.ParseError(_("%(func)s takes at most %(nargs)d positional "
-                                 "arguments")
-                               % {'func': funcname,
-                                  'nargs': len(poskeys) + len(keys)})
+        raise error.ParseError(
+            _("%(func)s takes at most %(nargs)d positional " "arguments")
+            % {"func": funcname, "nargs": len(poskeys) + len(keys)}
+        )
     args = util.sortdict()
     # consume positional arguments
     for k, x in zip(poskeys, trees[:kwstart]):
         args[k] = x
     if varkey:
-        args[varkey] = trees[len(args):kwstart]
+        args[varkey] = trees[len(args) : kwstart]
     else:
-        for k, x in zip(keys, trees[len(args):kwstart]):
+        for k, x in zip(keys, trees[len(args) : kwstart]):
             args[k] = x
     # remainder should be keyword arguments
     if optkey:
         args[optkey] = util.sortdict()
     for x in trees[kwstart:]:
         if x[0] != keyvaluenode or x[1][0] != keynode:
-            raise error.ParseError(_("%(func)s got an invalid argument")
-                                   % {'func': funcname})
+            raise error.ParseError(
+                _("%(func)s got an invalid argument") % {"func": funcname}
+            )
         k = x[1][1]
         if k in keys:
             d = args
         elif not optkey:
-            raise error.ParseError(_("%(func)s got an unexpected keyword "
-                                     "argument '%(key)s'")
-                                   % {'func': funcname, 'key': k})
+            raise error.ParseError(
+                _("%(func)s got an unexpected keyword " "argument '%(key)s'")
+                % {"func": funcname, "key": k}
+            )
         else:
             d = args[optkey]
         if k in d:
-            raise error.ParseError(_("%(func)s got multiple values for keyword "
-                                     "argument '%(key)s'")
-                                   % {'func': funcname, 'key': k})
+            raise error.ParseError(
+                _("%(func)s got multiple values for keyword " "argument '%(key)s'")
+                % {"func": funcname, "key": k}
+            )
         d[k] = x[2]
     return args
+
 
 def unescapestr(s):
     try:
@@ -194,28 +207,32 @@ def unescapestr(s):
         # mangle Python's exception into our format
         raise error.ParseError(str(e).lower())
 
+
 def _brepr(obj):
     if isinstance(obj, bytes):
         return b"'%s'" % util.escapestr(obj)
     return encoding.strtolocal(repr(obj))
+
 
 def _prettyformat(tree, leafnodes, level, lines):
     if not isinstance(tree, tuple):
         lines.append((level, _brepr(tree)))
     elif tree[0] in leafnodes:
         rs = map(_brepr, tree[1:])
-        lines.append((level, '(%s %s)' % (tree[0], ' '.join(rs))))
+        lines.append((level, "(%s %s)" % (tree[0], " ".join(rs))))
     else:
-        lines.append((level, '(%s' % tree[0]))
+        lines.append((level, "(%s" % tree[0]))
         for s in tree[1:]:
             _prettyformat(s, leafnodes, level + 1, lines)
-        lines[-1:] = [(lines[-1][0], lines[-1][1] + ')')]
+        lines[-1:] = [(lines[-1][0], lines[-1][1] + ")")]
+
 
 def prettyformat(tree, leafnodes):
     lines = []
     _prettyformat(tree, leafnodes, 0, lines)
-    output = '\n'.join(('  ' * l + s) for l, s in lines)
+    output = "\n".join(("  " * l + s) for l, s in lines)
     return output
+
 
 def simplifyinfixops(tree, targetnodes):
     """Flatten chained infix operations to reduce usage of Python stack
@@ -296,12 +313,14 @@ def simplifyinfixops(tree, targetnodes):
     simplified.append(op)
     return tuple(reversed(simplified))
 
+
 def _buildtree(template, placeholder, replstack):
     if template == placeholder:
         return replstack.pop()
     if not isinstance(template, tuple):
         return template
     return tuple(_buildtree(x, placeholder, replstack) for x in template)
+
 
 def buildtree(template, placeholder, *repls):
     """Create new tree by substituting placeholders by replacements
@@ -316,12 +335,13 @@ def buildtree(template, placeholder, *repls):
     ('and', ('symbol', '1'), ('not', ('symbol', '2')))
     """
     if not isinstance(placeholder, tuple):
-        raise error.ProgrammingError('placeholder must be a node tuple')
+        raise error.ProgrammingError("placeholder must be a node tuple")
     replstack = list(reversed(repls))
     r = _buildtree(template, placeholder, replstack)
     if replstack:
-        raise error.ProgrammingError('too many replacements')
+        raise error.ProgrammingError("too many replacements")
     return r
+
 
 def _matchtree(pattern, tree, placeholder, incompletenodes, matches):
     if pattern == tree:
@@ -333,8 +353,11 @@ def _matchtree(pattern, tree, placeholder, incompletenodes, matches):
         return True
     if len(pattern) != len(tree):
         return False
-    return all(_matchtree(p, x, placeholder, incompletenodes, matches)
-               for p, x in zip(pattern, tree))
+    return all(
+        _matchtree(p, x, placeholder, incompletenodes, matches)
+        for p, x in zip(pattern, tree)
+    )
+
 
 def matchtree(pattern, tree, placeholder=None, incompletenodes=()):
     """If a tree matches the pattern, return a list of the tree and nodes
@@ -371,18 +394,20 @@ def matchtree(pattern, tree, placeholder=None, incompletenodes=()):
     ...   (b'func', (b'symbol', b'ancestors'), (b'symbol', b'0')))
     """
     if placeholder is not None and not isinstance(placeholder, tuple):
-        raise error.ProgrammingError('placeholder must be a node tuple')
+        raise error.ProgrammingError("placeholder must be a node tuple")
     matches = [tree]
     if _matchtree(pattern, tree, placeholder, incompletenodes, matches):
         return matches
+
 
 def parseerrordetail(inst):
     """Compose error message from specified ParseError object
     """
     if len(inst.args) > 1:
-        return _('at %d: %s') % (inst.args[1], inst.args[0])
+        return _("at %d: %s") % (inst.args[1], inst.args[0])
     else:
         return inst.args[0]
+
 
 class alias(object):
     """Parsed result of alias"""
@@ -396,6 +421,7 @@ class alias(object):
         # this avoids showing same warning multiple times at each
         # `expandaliases`.
         self.warned = False
+
 
 class basealiasrules(object):
     """Parsing and expansion rule set of aliases
@@ -412,7 +438,7 @@ class basealiasrules(object):
     # typically a config section, which will be included in error messages
     _section = None
     # tag of symbol node
-    _symbolnode = 'symbol'
+    _symbolnode = "symbol"
 
     def __new__(cls):
         raise TypeError("'%s' is not instantiatable" % cls.__name__)
@@ -512,7 +538,7 @@ class basealiasrules(object):
         if tree[0] == cls._symbolnode:
             # "name = ...." style
             name = tree[1]
-            if name.startswith('$'):
+            if name.startswith("$"):
                 return (decl, None, _("invalid symbol '%s'") % name)
             return (name, None, None)
 
@@ -520,7 +546,7 @@ class basealiasrules(object):
         if func:
             # "name(arg, ....) = ...." style
             name, args = func
-            if name.startswith('$'):
+            if name.startswith("$"):
                 return (decl, None, _("invalid function '%s'") % name)
             if any(t[0] != cls._symbolnode for t in args):
                 return (decl, None, _("invalid argument list"))
@@ -542,8 +568,8 @@ class basealiasrules(object):
         assert len(tree) == 2
         sym = tree[1]
         if sym in args:
-            op = '_aliasarg'
-        elif sym.startswith('$'):
+            op = "_aliasarg"
+        elif sym.startswith("$"):
             raise error.ParseError(_("invalid symbol '%s'") % sym)
         return (op, sym)
 
@@ -615,7 +641,7 @@ class basealiasrules(object):
                 err = parseerrordetail(inst)
                 efmt = _('bad definition of %(section)s "%(name)s": %(error)s')
         if err:
-            err = efmt % {'section': cls._section, 'name': name, 'error': err}
+            err = efmt % {"section": cls._section, "name": name, "error": err}
         return alias(name, args, err, repl)
 
     @classmethod
@@ -655,7 +681,7 @@ class basealiasrules(object):
         """
         if not isinstance(tree, tuple):
             return tree
-        if tree[0] == '_aliasarg':
+        if tree[0] == "_aliasarg":
             sym = tree[1]
             return args[sym]
         return tuple(cls._expandargs(t, args) for t in tree)
@@ -666,28 +692,26 @@ class basealiasrules(object):
             return tree
         r = cls._getalias(aliases, tree)
         if r is None:
-            return tuple(cls._expand(aliases, t, expanding, cache)
-                         for t in tree)
+            return tuple(cls._expand(aliases, t, expanding, cache) for t in tree)
         a, l = r
         if a.error:
             raise error.Abort(a.error)
         if a in expanding:
-            raise error.ParseError(_('infinite expansion of %(section)s '
-                                     '"%(name)s" detected')
-                                   % {'section': cls._section, 'name': a.name})
+            raise error.ParseError(
+                _("infinite expansion of %(section)s " '"%(name)s" detected')
+                % {"section": cls._section, "name": a.name}
+            )
         # get cacheable replacement tree by expanding aliases recursively
         expanding.append(a)
         if a.name not in cache:
-            cache[a.name] = cls._expand(aliases, a.replacement, expanding,
-                                        cache)
+            cache[a.name] = cls._expand(aliases, a.replacement, expanding, cache)
         result = cache[a.name]
         expanding.pop()
         if a.args is None:
             return result
         # substitute function arguments in replacement tree
         if len(l) != len(a.args):
-            raise error.ParseError(_('invalid number of arguments: %d')
-                                   % len(l))
+            raise error.ParseError(_("invalid number of arguments: %d") % len(l))
         l = [cls._expand(aliases, t, [], cache) for t in l]
         return cls._expandargs(result, dict(zip(a.args, l)))
 

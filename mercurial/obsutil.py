@@ -7,10 +7,8 @@
 
 from __future__ import absolute_import
 
-from . import (
-    phases,
-    util
-)
+from . import phases, util
+
 
 class marker(object):
     """Wrap obsolete marker raw data"""
@@ -30,9 +28,8 @@ class marker(object):
         return self._data == other._data
 
     def precnode(self):
-        msg = ("'marker.precnode' is deprecated, "
-               "use 'marker.prednode'")
-        util.nouideprecwarn(msg, '4.4')
+        msg = "'marker.precnode' is deprecated, " "use 'marker.prednode'"
+        util.nouideprecwarn(msg, "4.4")
         return self.prednode()
 
     def prednode(self):
@@ -59,6 +56,7 @@ class marker(object):
         """The flags field of the marker"""
         return self._data[2]
 
+
 def getmarkers(repo, nodes=None, exclusive=False):
     """returns markers known in a repository
 
@@ -73,6 +71,7 @@ def getmarkers(repo, nodes=None, exclusive=False):
 
     for markerdata in rawmarkers:
         yield marker(repo, markerdata)
+
 
 def closestpredecessors(repo, nodeid):
     """yield the list of next predecessors pointing on visible changectx nodes
@@ -102,14 +101,15 @@ def closestpredecessors(repo, nodeid):
             else:
                 stack.append(precnodeid)
 
+
 def allprecursors(*args, **kwargs):
     """ (DEPRECATED)
     """
-    msg = ("'obsutil.allprecursors' is deprecated, "
-           "use 'obsutil.allpredecessors'")
-    util.nouideprecwarn(msg, '4.4')
+    msg = "'obsutil.allprecursors' is deprecated, " "use 'obsutil.allpredecessors'"
+    util.nouideprecwarn(msg, "4.4")
 
     return allpredecessors(*args, **kwargs)
+
 
 def allpredecessors(obsstore, nodes, ignoreflags=0):
     """Yield node for every precursors of <nodes>.
@@ -133,6 +133,7 @@ def allpredecessors(obsstore, nodes, ignoreflags=0):
                 seen.add(suc)
                 remaining.add(suc)
 
+
 def allsuccessors(obsstore, nodes, ignoreflags=0):
     """Yield node for every successor of <nodes>.
 
@@ -154,9 +155,11 @@ def allsuccessors(obsstore, nodes, ignoreflags=0):
                     seen.add(suc)
                     remaining.add(suc)
 
+
 def _filterprunes(markers):
     """return a set with no prune markers"""
     return set(m for m in markers if m[1])
+
 
 def exclusivemarkers(repo, nodes):
     """set of markers relevant to "nodes" but no other locally-known nodes
@@ -279,6 +282,7 @@ def exclusivemarkers(repo, nodes):
 
     return exclmarkers
 
+
 def foreground(repo, nodes):
     """return all nodes in the "foreground" of other node
 
@@ -289,7 +293,7 @@ def foreground(repo, nodes):
     Beware that possible obsolescence cycle may result if complex situation.
     """
     repo = repo.unfiltered()
-    foreground = set(repo.set('%ln::', nodes))
+    foreground = set(repo.set("%ln::", nodes))
     if repo.obsstore:
         # We only need this complicated logic if there is obsolescence
         # XXX will probably deserve an optimised revset.
@@ -302,8 +306,9 @@ def foreground(repo, nodes):
             mutable = [c.node() for c in foreground if c.mutable()]
             succs.update(allsuccessors(repo.obsstore, mutable))
             known = (n for n in succs if n in nm)
-            foreground = set(repo.set('%ln::', known))
+            foreground = set(repo.set("%ln::", known))
     return set(c.node() for c in foreground)
+
 
 def getobsoleted(repo, tr):
     """return the set of pre-existing revisions obsoleted by a transaction"""
@@ -311,8 +316,8 @@ def getobsoleted(repo, tr):
     phase = repo._phasecache.phase
     succsmarkers = repo.obsstore.successors.get
     public = phases.public
-    addedmarkers = tr.changes.get('obsmarkers')
-    addedrevs = tr.changes.get('revs')
+    addedmarkers = tr.changes.get("obsmarkers")
+    addedrevs = tr.changes.get("revs")
     seenrevs = set()
     obsoleted = set()
     for mark in addedmarkers:
@@ -326,6 +331,7 @@ def getobsoleted(repo, tr):
         if set(succsmarkers(node) or []).issubset(addedmarkers):
             obsoleted.add(rev)
     return obsoleted
+
 
 class _succs(list):
     """small class to represent a successors with some metadata about it"""
@@ -346,6 +352,7 @@ class _succs(list):
 
     def canmerge(self, other):
         return self._set.issubset(other._set)
+
 
 def successorssets(repo, initialnode, closest=False, cache=None):
     """Return set of all latest successors of initial nodes
@@ -454,9 +461,9 @@ def successorssets(repo, initialnode, closest=False, cache=None):
 
         # case 2 condition is a bit hairy because of closest,
         # we compute it on its own
-        case2condition =  ((current not in succmarkers)
-                           or (closest and current != initialnode
-                               and current in repo))
+        case2condition = (current not in succmarkers) or (
+            closest and current != initialnode and current in repo
+        )
 
         if current in cache:
             # case (1): We already know the successors sets
@@ -562,8 +569,7 @@ def successorssets(repo, initialnode, closest=False, cache=None):
                 # remove duplicated and subset
                 seen = []
                 final = []
-                candidates = sorted((s for s in succssets if s),
-                                    key=len, reverse=True)
+                candidates = sorted((s for s in succssets if s), key=len, reverse=True)
                 for cand in candidates:
                     for seensuccs in seen:
                         if cand.canmerge(seensuccs):
@@ -572,9 +578,10 @@ def successorssets(repo, initialnode, closest=False, cache=None):
                     else:
                         final.append(cand)
                         seen.append(cand)
-                final.reverse() # put small successors set first
+                final.reverse()  # put small successors set first
                 cache[current] = final
     return cache[initialnode]
+
 
 def successorsandmarkers(repo, ctx):
     """compute the raw data needed for computing obsfate
@@ -592,7 +599,7 @@ def successorsandmarkers(repo, ctx):
 
     # Try to recover pruned markers
     succsmap = repo.obsstore.successors
-    fullsuccessorsets = [] # successor set + markers
+    fullsuccessorsets = []  # successor set + markers
     for sset in ssets:
         if sset:
             fullsuccessorsets.append(sset)
@@ -619,43 +626,49 @@ def successorsandmarkers(repo, ctx):
 
     values = []
     for sset in fullsuccessorsets:
-        values.append({'successors': sset, 'markers': sset.markers})
+        values.append({"successors": sset, "markers": sset.markers})
 
     return values
+
 
 def obsfateverb(successorset, markers):
     """ Return the verb summarizing the successorset and potentially using
     information from the markers
     """
     if not successorset:
-        verb = 'pruned'
+        verb = "pruned"
     elif len(successorset) == 1:
-        verb = 'rewritten'
+        verb = "rewritten"
     else:
-        verb = 'split'
+        verb = "split"
     return verb
+
 
 def markersdates(markers):
     """returns the list of dates for a list of markers
     """
     return [m[4] for m in markers]
 
+
 def markersusers(markers):
     """ Returns a sorted list of markers users without duplicates
     """
     markersmeta = [dict(m[3]) for m in markers]
-    users = set(meta.get('user') for meta in markersmeta if meta.get('user'))
+    users = set(meta.get("user") for meta in markersmeta if meta.get("user"))
 
     return sorted(users)
+
 
 def markersoperations(markers):
     """ Returns a sorted list of markers operations without duplicates
     """
     markersmeta = [dict(m[3]) for m in markers]
-    operations = set(meta.get('operation') for meta in markersmeta
-                     if meta.get('operation'))
+    operations = set(
+        meta.get("operation") for meta in markersmeta if meta.get("operation")
+    )
 
     return sorted(operations)
+
 
 def obsfateprinter(successors, markers, ui):
     """ Build a obsfate string for a single successorset using all obsfate
@@ -700,11 +713,11 @@ def obsfateprinter(successors, markers, ui):
         max_date = max(dates)
 
         if min_date == max_date:
-            fmtmin_date = util.datestr(min_date, '%Y-%m-%d %H:%M %1%2')
+            fmtmin_date = util.datestr(min_date, "%Y-%m-%d %H:%M %1%2")
             line.append(" (at %s)" % fmtmin_date)
         else:
-            fmtmin_date = util.datestr(min_date, '%Y-%m-%d %H:%M %1%2')
-            fmtmax_date = util.datestr(max_date, '%Y-%m-%d %H:%M %1%2')
+            fmtmin_date = util.datestr(min_date, "%Y-%m-%d %H:%M %1%2")
+            fmtmax_date = util.datestr(max_date, "%Y-%m-%d %H:%M %1%2")
             line.append(" (between %s and %s)" % (fmtmin_date, fmtmax_date))
 
     return "".join(line)

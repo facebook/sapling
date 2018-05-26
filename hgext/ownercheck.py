@@ -14,21 +14,20 @@ This prevents some common mistakes like using sudo to clone a repo.
 """
 
 import os
-from mercurial import (
-    error,
-    extensions,
-    localrepo,
-)
+
+from mercurial import error, extensions, localrepo
 from mercurial.i18n import _
+
 
 try:
     import pwd
 except ImportError:
     pwd = None
 
+
 def _getowner(path):
     """find uid of a path or its parents. return (uid, path)"""
-    path = os.path.abspath(path or '')
+    path = os.path.abspath(path or "")
     while True:
         try:
             stat = os.stat(path)
@@ -40,6 +39,7 @@ def _getowner(path):
             path = parent
     return None, None
 
+
 def _describeuser(uid):
     """convert uid to username if possible"""
     if pwd:
@@ -47,7 +47,8 @@ def _describeuser(uid):
             return pwd.getpwuid(uid).pw_name
         except Exception:
             pass
-    return 'user %d' % uid
+    return "user %d" % uid
+
 
 def _checkownedpath(path):
     ownerid, path = _getowner(path)
@@ -55,16 +56,17 @@ def _checkownedpath(path):
     # allow access to public places owned by root (ex. /tmp)
     if ownerid in [None, 0, uid]:
         return
-    raise error.Abort(_('%s is owned by %s, not you (%s).\n'
-                        'you are likely doing something wrong.')
-                      % (path, _describeuser(ownerid), _describeuser(uid)),
-                      hint=_('you can skip the check using '
-                             '--config extensions.ownercheck=!'))
+    raise error.Abort(
+        _("%s is owned by %s, not you (%s).\n" "you are likely doing something wrong.")
+        % (path, _describeuser(ownerid), _describeuser(uid)),
+        hint=_("you can skip the check using " "--config extensions.ownercheck=!"),
+    )
+
 
 def _localrepoinit(orig, self, baseui, path=None, create=False):
     _checkownedpath(path)
     return orig(self, baseui, path, create)
 
+
 def uisetup(ui):
-    extensions.wrapfunction(localrepo.localrepository,
-                            '__init__', _localrepoinit)
+    extensions.wrapfunction(localrepo.localrepository, "__init__", _localrepoinit)

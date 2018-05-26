@@ -10,17 +10,19 @@ import re
 from mercurial import pathutil, registrar, revset, util
 from mercurial.i18n import _
 
+
 revsetpredicate = registrar.revsetpredicate()
 
-touchprefix = 'touch'
+touchprefix = "touch"
 prefixtoprocessors = {
     "add": lambda adds, removes: adds > 0,
     "remove": lambda adds, removes: removes > 0,
     "delta": lambda adds, removes: adds != removes,
     touchprefix: lambda adds, removes: adds > 0 or removes > 0,
     "inc": lambda adds, removes: adds > removes,
-    "dec": lambda adds, removes: adds < removes
+    "dec": lambda adds, removes: adds < removes,
 }
+
 
 def getpatternandprocessor(repo, args):
     """Parse prefix and pattern from the provided arguments
@@ -29,11 +31,11 @@ def getpatternandprocessor(repo, args):
     pattern = args[0][1]
     prefix = touchprefix
     patstart = 0
-    if ':' in pattern:
-        patstart = pattern.index(':') + 1
-        prefix = pattern[:patstart - 1]
+    if ":" in pattern:
+        patstart = pattern.index(":") + 1
+        prefix = pattern[: patstart - 1]
     if prefix and prefix not in prefixtoprocessors:
-        repo.ui.warning(_('treating %s as a part of pattern') % (prefix + ':'))
+        repo.ui.warning(_("treating %s as a part of pattern") % (prefix + ":"))
         prefix = touchprefix
     else:
         pattern = pattern[patstart:]
@@ -43,7 +45,8 @@ def getpatternandprocessor(repo, args):
     pattern = util.re.compile(pattern, re.M | re.I)
     return pattern, processor
 
-@revsetpredicate('grepdiff(pattern, [file], ...)')
+
+@revsetpredicate("grepdiff(pattern, [file], ...)")
 def grepdiffpredicate(repo, subset, x):
     """grepdiff: a revset for code archeology
 
@@ -69,14 +72,18 @@ def grepdiffpredicate(repo, subset, x):
     args = revset.getargs(x, 1, -1, err)
     files = None
     if len(args) > 1:
-        files = set(pathutil.canonpath(repo.root, repo.getcwd(), arg[1])
-                    for arg in args[1:])
+        files = set(
+            pathutil.canonpath(repo.root, repo.getcwd(), arg[1]) for arg in args[1:]
+        )
     pattern, processor = getpatternandprocessor(repo, args)
+
     def matcher(rev):
         res = processor(*ctxaddsremoves(repo[rev], files, pattern))
         return res
+
     resset = subset.filter(matcher)
     return resset
+
 
 def ctxaddsremoves(ctx, files, regexp):
     """Check whether some context matches a given pattern
@@ -113,19 +120,19 @@ def ctxaddsremoves(ctx, files, regexp):
         # file separated by '\n', so we want to parse that, find which ones
         # start with '+' or '-', group them into blocks and match the regex
         # against those blocks.
-        if diffitem.startswith('diff'):
+        if diffitem.startswith("diff"):
             # title line that start diff for some file, does not contain
             # the diff itself. the next iteration of this loop wil hit the
             # actual diff line
-            lines = diffitem.split('\n')
+            lines = diffitem.split("\n")
             filenamelines = lines[1:3]
             continue
 
         # a changeblock is a set of consequtive change lines which share the
         # same sign (+/-). we want to join those lines into blocks in order
         # to be able to perform multi-line regex matches
-        changeblocks, currentblock, currentsign = [], [], ''
-        lines = diffitem.split('\n')
+        changeblocks, currentblock, currentsign = [], [], ""
+        lines = diffitem.split("\n")
         # an extra iteration is necessary to save the last block
         for line in lines + ["@"]:
             if not line:
@@ -139,7 +146,7 @@ def ctxaddsremoves(ctx, files, regexp):
                 # we know that current block is over so we should save it
                 changeblocks.append((currentsign, "\n".join(currentblock)))
 
-            if line[0] == '+' or line[0] == '-':
+            if line[0] == "+" or line[0] == "-":
                 # new block starts here
                 currentsign = line[0]
                 currentblock = [line[1:]]
@@ -147,10 +154,10 @@ def ctxaddsremoves(ctx, files, regexp):
                 # other lines include the ones that start with @@ and
                 # contain context line numbers or unchanged context lines
                 # from source file.
-                currentsign, currentblock = '', []
+                currentsign, currentblock = "", []
 
         beforetablines = (ln.split("\t", 1)[0] for ln in filenamelines)
-        filenames = (ln.split('/', 1)[1] for ln in beforetablines if '/' in ln)
+        filenames = (ln.split("/", 1)[1] for ln in beforetablines if "/" in ln)
         if files and not any(fn for fn in filenames if fn in files):
             # this part of diff does not touch any of the files we're
             # interested in
@@ -159,9 +166,8 @@ def ctxaddsremoves(ctx, files, regexp):
             match = regexp.search(change)
             if not match:
                 continue
-            if mod == '+':
+            if mod == "+":
                 addcount += 1
             else:
                 removecount += 1
     return addcount, removecount
-

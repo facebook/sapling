@@ -10,17 +10,16 @@ from __future__ import absolute_import
 import re
 import struct
 
-from . import (
-    error,
-    mdiff,
-    revlog,
-)
+from . import error, mdiff, revlog
 
-_mdre = re.compile('\1\n')
+
+_mdre = re.compile("\1\n")
+
+
 def parsemeta(text):
     """return (metadatadict, metadatasize)"""
     # text can be buffer, so we can't use .startswith or .index
-    if text[:2] != '\1\n':
+    if text[:2] != "\1\n":
         return None, None
     s = _mdre.search(text, 2).start()
     mtext = text[2:s]
@@ -30,29 +29,32 @@ def parsemeta(text):
         meta[k] = v
     return meta, (s + 2)
 
+
 def packmeta(meta, text):
     keys = sorted(meta)
     metatext = "".join("%s: %s\n" % (k, meta[k]) for k in keys)
     return "\1\n%s\1\n%s" % (metatext, text)
 
+
 def _censoredtext(text):
     m, offs = parsemeta(text)
     return m and "censored" in m
 
+
 class filelog(revlog.revlog):
+
     def __init__(self, opener, path):
-        super(filelog, self).__init__(opener,
-                        "/".join(("data", path + ".i")))
+        super(filelog, self).__init__(opener, "/".join(("data", path + ".i")))
 
     def read(self, node):
         t = self.revision(node)
-        if not t.startswith('\1\n'):
+        if not t.startswith("\1\n"):
             return t
-        s = t.index('\1\n', 2)
-        return t[s + 2:]
+        s = t.index("\1\n", 2)
+        return t[s + 2 :]
 
     def add(self, text, meta, transaction, link, p1=None, p2=None):
-        if meta or text.startswith('\1\n'):
+        if meta or text.startswith("\1\n"):
             text = packmeta(meta, text)
         return self.addrevision(text, transaction, link, p1, p2)
 
@@ -85,8 +87,8 @@ class filelog(revlog.revlog):
         """
 
         t = text
-        if text.startswith('\1\n'):
-            t = '\1\n\1\n' + text
+        if text.startswith("\1\n"):
+            t = "\1\n\1\n" + text
 
         samehashes = not super(filelog, self).cmp(node, t)
         if samehashes:
@@ -94,7 +96,7 @@ class filelog(revlog.revlog):
 
         # censored files compare against the empty file
         if self.iscensored(self.rev(node)):
-            return text != ''
+            return text != ""
 
         # renaming a file produces a different hash, even if the data
         # remains unchanged. Check if it's the case (slow):
@@ -134,4 +136,4 @@ class filelog(revlog.revlog):
 
         add = "\1\ncensored:"
         addlen = len(add)
-        return newlen >= addlen and delta[hlen:hlen + addlen] == add
+        return newlen >= addlen and delta[hlen : hlen + addlen] == add

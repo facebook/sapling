@@ -5,26 +5,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''command to move sets of revisions to a different ancestor
+"""command to move sets of revisions to a different ancestor
 
 This extension lets you rebase changesets in an existing Mercurial
 repository.
 
 For more information:
 https://mercurial-scm.org/wiki/RebaseExtension
-'''
+"""
 
 from __future__ import absolute_import
 
 import errno
 import os
 
-from mercurial.i18n import _
-from mercurial.node import (
-    nullid,
-    nullrev,
-    short,
-)
 from mercurial import (
     bookmarks,
     cmdutil,
@@ -53,6 +47,9 @@ from mercurial import (
     templatefilters,
     util,
 )
+from mercurial.i18n import _
+from mercurial.node import nullid, nullrev, short
+
 
 release = lock.release
 
@@ -61,11 +58,11 @@ release = lock.release
 
 # Indicates that a revision needs to be rebased
 revtodo = -1
-revtodostr = '-1'
+revtodostr = "-1"
 
 # legacy revstates no longer needed in current code
 # -2: nullmerge, -3: revignored, -4: revprecursor, -5: revpruned
-legacystates = {'-2', '-3', '-4', '-5'}
+legacystates = {"-2", "-3", "-4", "-5"}
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -73,23 +70,27 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
-colortable = {'rebase.manual.update': 'yellow'}
+colortable = {"rebase.manual.update": "yellow"}
+
 
 def _nothingtorebase():
     return 1
 
+
 def _savegraft(ctx, extra):
-    s = ctx.extra().get('source', None)
+    s = ctx.extra().get("source", None)
     if s is not None:
-        extra['source'] = s
-    s = ctx.extra().get('intermediate-source', None)
+        extra["source"] = s
+    s = ctx.extra().get("intermediate-source", None)
     if s is not None:
-        extra['intermediate-source'] = s
+        extra["intermediate-source"] = s
+
 
 def _savebranch(ctx, extra):
-    extra['branch'] = ctx.branch()
+    extra["branch"] = ctx.branch()
+
 
 def _makeextrafn(copiers):
     """make an extrafn out of the given copy-functions.
@@ -97,21 +98,31 @@ def _makeextrafn(copiers):
     A copy function takes a context and an extra dict, and mutates the
     extra dict as needed based on the given context.
     """
+
     def extrafn(ctx, extra):
         for c in copiers:
             c(ctx, extra)
+
     return extrafn
+
 
 def _destrebase(repo, sourceset, destspace=None):
     """small wrapper around destmerge to pass the right extra args
 
     Please wrap destutil.destmerge instead."""
-    return destutil.destmerge(repo, action='rebase', sourceset=sourceset,
-                              onheadcheck=False, destspace=destspace)
+    return destutil.destmerge(
+        repo,
+        action="rebase",
+        sourceset=sourceset,
+        onheadcheck=False,
+        destspace=destspace,
+    )
+
 
 revsetpredicate = registrar.revsetpredicate()
 
-@revsetpredicate('_destrebase')
+
+@revsetpredicate("_destrebase")
 def _revsetdestrebase(repo, subset, x):
     # ``_rebasedefaultdest()``
 
@@ -124,22 +135,24 @@ def _revsetdestrebase(repo, subset, x):
         sourceset = revset.getset(repo, smartset.fullreposet(repo), x)
     return subset & smartset.baseset([_destrebase(repo, sourceset)])
 
+
 def _ctxdesc(ctx):
     """short description for a context"""
-    desc = '%d:%s "%s"' % (ctx.rev(), ctx,
-                           ctx.description().split('\n', 1)[0])
+    desc = '%d:%s "%s"' % (ctx.rev(), ctx, ctx.description().split("\n", 1)[0])
     repo = ctx.repo()
     names = []
     for nsname, ns in repo.names.iteritems():
-        if nsname == 'branches':
+        if nsname == "branches":
             continue
         names.extend(ns.names(repo, ctx.node()))
     if names:
-        desc += ' (%s)' % ' '.join(names)
+        desc += " (%s)" % " ".join(names)
     return desc
+
 
 class rebaseruntime(object):
     """This class is a container for rebase runtime state"""
+
     def __init__(self, repo, ui, inmemory=False, opts=None):
         if opts is None:
             opts = {}
@@ -167,20 +180,20 @@ class rebaseruntime(object):
         self.destmap = {}
         self.skipped = set()
 
-        self.collapsef = opts.get('collapse', False)
+        self.collapsef = opts.get("collapse", False)
         self.collapsemsg = cmdutil.logmessage(ui, opts)
-        self.date = opts.get('date', None)
+        self.date = opts.get("date", None)
 
-        e = opts.get('extrafn') # internal, used by e.g. hgsubversion
+        e = opts.get("extrafn")  # internal, used by e.g. hgsubversion
         self.extrafns = [_savegraft]
         if e:
             self.extrafns = [e]
 
-        self.keepf = opts.get('keep', False)
-        self.keepbranchesf = opts.get('keepbranches', False)
+        self.keepf = opts.get("keep", False)
+        self.keepbranchesf = opts.get("keepbranches", False)
         # keepopen is not meant for use on the command line, but by
         # other extensions
-        self.keepopen = opts.get('keepopen', False)
+        self.keepopen = opts.get("keepopen", False)
         self.obsoletenotrebased = {}
         self.obsoletewithoutsuccessorindestination = set()
         self.inmemory = inmemory
@@ -195,8 +208,9 @@ class rebaseruntime(object):
     def storestatus(self, tr=None):
         """Store the current status to allow recovery"""
         if tr:
-            tr.addfilegenerator('rebasestate', ('rebasestate',),
-                                self._writestatus, location='plain')
+            tr.addfilegenerator(
+                "rebasestate", ("rebasestate",), self._writestatus, location="plain"
+            )
         else:
             with self.repo.vfs("rebasestate", "w") as f:
                 self._writestatus(f)
@@ -204,14 +218,14 @@ class rebaseruntime(object):
     def _writestatus(self, f):
         repo = self.repo
         assert repo.filtername is None
-        f.write(repo[self.originalwd].hex() + '\n')
+        f.write(repo[self.originalwd].hex() + "\n")
         # was "dest". we now write dest per src root below.
-        f.write('\n')
-        f.write(repo[self.external].hex() + '\n')
-        f.write('%d\n' % int(self.collapsef))
-        f.write('%d\n' % int(self.keepf))
-        f.write('%d\n' % int(self.keepbranchesf))
-        f.write('%s\n' % (self.activebookmark or ''))
+        f.write("\n")
+        f.write(repo[self.external].hex() + "\n")
+        f.write("%d\n" % int(self.collapsef))
+        f.write("%d\n" % int(self.keepf))
+        f.write("%d\n" % int(self.keepbranchesf))
+        f.write("%s\n" % (self.activebookmark or ""))
         destmap = self.destmap
         for d, v in self.state.iteritems():
             oldrev = repo[d].hex()
@@ -221,7 +235,7 @@ class rebaseruntime(object):
                 newrev = v
             destnode = repo[destmap[d]].hex()
             f.write("%s:%s:%s\n" % (oldrev, newrev, destnode))
-        repo.ui.debug('rebase status stored\n')
+        repo.ui.debug("rebase status stored\n")
 
     def restorestatus(self):
         """Restore a previously stored status"""
@@ -254,13 +268,13 @@ class rebaseruntime(object):
                     keep = bool(int(l))
                 elif i == 5:
                     keepbranches = bool(int(l))
-                elif i == 6 and not (len(l) == 81 and ':' in l):
+                elif i == 6 and not (len(l) == 81 and ":" in l):
                     # line 6 is a recent addition, so for backwards
                     # compatibility check that the line doesn't look like the
                     # oldrev:newrev lines
                     activebookmark = l
                 else:
-                    args = l.split(':')
+                    args = l.split(":")
                     oldrev = args[0]
                     newrev = args[1]
                     if newrev in legacystates:
@@ -279,10 +293,10 @@ class rebaseruntime(object):
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
-            cmdutil.wrongtooltocontinue(repo, _('rebase'))
+            cmdutil.wrongtooltocontinue(repo, _("rebase"))
 
         if keepbranches is None:
-            raise error.Abort(_('.hg/rebasestate is incomplete'))
+            raise error.Abort(_(".hg/rebasestate is incomplete"))
 
         skipped = set()
         # recompute the set of skipped revs
@@ -292,9 +306,11 @@ class rebaseruntime(object):
                 if new != revtodo and new in seen:
                     skipped.add(old)
                 seen.add(new)
-        repo.ui.debug('computed skipped revs: %s\n' %
-                        (' '.join(str(r) for r in sorted(skipped)) or None))
-        repo.ui.debug('rebase status resumed\n')
+        repo.ui.debug(
+            "computed skipped revs: %s\n"
+            % (" ".join(str(r) for r in sorted(skipped)) or None)
+        )
+        repo.ui.debug("rebase status resumed\n")
 
         self.originalwd = originalwd
         self.destmap = destmap
@@ -313,11 +329,12 @@ class rebaseruntime(object):
         destmap:        {srcrev: destrev} destination revisions
         """
         self.obsoletenotrebased = {}
-        if not self.ui.configbool('experimental', 'rebaseskipobsolete'):
+        if not self.ui.configbool("experimental", "rebaseskipobsolete"):
             return
         obsoleteset = set(obsoleterevs)
-        self.obsoletenotrebased, self.obsoletewithoutsuccessorindestination = \
-            _computeobsoletenotrebased(self.repo, obsoleteset, destmap)
+        self.obsoletenotrebased, self.obsoletewithoutsuccessorindestination = _computeobsoletenotrebased(
+            self.repo, obsoleteset, destmap
+        )
         skippedset = set(self.obsoletenotrebased)
         skippedset.update(self.obsoletewithoutsuccessorindestination)
         _checkobsrebase(self.repo, self.ui, obsoleteset, skippedset)
@@ -331,16 +348,25 @@ class rebaseruntime(object):
             if isabort:
                 clearstatus(self.repo)
                 clearcollapsemsg(self.repo)
-                self.repo.ui.warn(_('rebase aborted (no revision is removed,'
-                                    ' only broken state is cleared)\n'))
+                self.repo.ui.warn(
+                    _(
+                        "rebase aborted (no revision is removed,"
+                        " only broken state is cleared)\n"
+                    )
+                )
                 return 0
             else:
-                msg = _('cannot continue inconsistent rebase')
+                msg = _("cannot continue inconsistent rebase")
                 hint = _('use "hg rebase --abort" to clear broken state')
                 raise error.Abort(msg, hint=hint)
         if isabort:
-            return abort(self.repo, self.originalwd, self.destmap,
-                         self.state, activebookmark=self.activebookmark)
+            return abort(
+                self.repo,
+                self.originalwd,
+                self.destmap,
+                self.state,
+                activebookmark=self.activebookmark,
+            )
 
     def _preparenewrebase(self, destmap):
         if not destmap:
@@ -348,53 +374,55 @@ class rebaseruntime(object):
 
         rebaseset = destmap.keys()
         allowunstable = obsolete.isenabled(self.repo, obsolete.allowunstableopt)
-        if (not (self.keepf or allowunstable)
-              and self.repo.revs('first(children(%ld) - %ld)',
-                                 rebaseset, rebaseset)):
+        if not (self.keepf or allowunstable) and self.repo.revs(
+            "first(children(%ld) - %ld)", rebaseset, rebaseset
+        ):
             raise error.Abort(
-                _("can't remove original changesets with"
-                  " unrebased descendants"),
-                hint=_('use --keep to keep original changesets'))
+                _("can't remove original changesets with" " unrebased descendants"),
+                hint=_("use --keep to keep original changesets"),
+            )
 
         result = buildstate(self.repo, destmap, self.collapsef)
 
         if not result:
             # Empty state built, nothing to rebase
-            self.ui.status(_('nothing to rebase\n'))
+            self.ui.status(_("nothing to rebase\n"))
             return _nothingtorebase()
 
-        for root in self.repo.set('roots(%ld)', rebaseset):
+        for root in self.repo.set("roots(%ld)", rebaseset):
             if not self.keepf and not root.mutable():
-                raise error.Abort(_("can't rebase public changeset %s")
-                                  % root,
-                                  hint=_("see 'hg help phases' for details"))
+                raise error.Abort(
+                    _("can't rebase public changeset %s") % root,
+                    hint=_("see 'hg help phases' for details"),
+                )
 
         (self.originalwd, self.destmap, self.state) = result
         if self.collapsef:
             dests = set(self.destmap.values())
             if len(dests) != 1:
                 raise error.Abort(
-                    _('--collapse does not work with multiple destinations'))
+                    _("--collapse does not work with multiple destinations")
+                )
             destrev = next(iter(dests))
-            destancestors = self.repo.changelog.ancestors([destrev],
-                                                          inclusive=True)
+            destancestors = self.repo.changelog.ancestors([destrev], inclusive=True)
             self.external = externalparent(self.repo, self.state, destancestors)
 
         for destrev in sorted(set(destmap.values())):
             dest = self.repo[destrev]
             if dest.closesbranch() and not self.keepbranchesf:
-                self.ui.status(_('reopening closed branch head %s\n') % dest)
+                self.ui.status(_("reopening closed branch head %s\n") % dest)
 
         self.prepared = True
 
     def _assignworkingcopy(self):
         if self.inmemory:
             from mercurial.context import overlayworkingctx
+
             self.wctx = overlayworkingctx(self.repo)
             self.repo.ui.debug("rebasing in-memory\n")
-            msg = self.repo.ui.config('rebase', 'experimental.inmemorywarning')
+            msg = self.repo.ui.config("rebase", "experimental.inmemorywarning")
             if msg:
-                self.repo.ui.warn(msg + '\n')
+                self.repo.ui.warn(msg + "\n")
         else:
             self.wctx = self.repo[None]
             self.repo.ui.debug("rebasing on disk\n")
@@ -413,8 +441,9 @@ class rebaseruntime(object):
                 for rev in self.state:
                     branches.add(repo[rev].branch())
                     if len(branches) > 1:
-                        raise error.Abort(_('cannot collapse multiple named '
-                            'branches'))
+                        raise error.Abort(
+                            _("cannot collapse multiple named " "branches")
+                        )
 
         # Calculate self.obsoletenotrebased
         obsrevs = _filterobsoleterevs(self.repo, self.state)
@@ -432,19 +461,20 @@ class rebaseruntime(object):
         cands = [k for k, v in self.state.iteritems() if v == revtodo]
         total = len(cands)
         pos = 0
-        with progress.bar(ui, _('rebasing'), _('changesets'), total) as prog:
+        with progress.bar(ui, _("rebasing"), _("changesets"), total) as prog:
             for subset in sortsource(self.destmap):
                 pos = self._performrebasesubset(tr, subset, pos, prog)
-        ui.note(_('rebase merging completed\n'))
+        ui.note(_("rebase merging completed\n"))
 
     def _performrebasesubset(self, tr, subset, pos, prog):
         repo, ui, opts = self.repo, self.ui, self.opts
-        sortedrevs = repo.revs('sort(%ld, -topo)', subset)
+        sortedrevs = repo.revs("sort(%ld, -topo)", subset)
         allowdivergence = self.ui.configbool(
-            'experimental', 'evolution.allowdivergence')
+            "experimental", "evolution.allowdivergence"
+        )
         if not allowdivergence:
             sortedrevs -= repo.revs(
-                'descendants(%ld) and not %ld',
+                "descendants(%ld) and not %ld",
                 self.obsoletewithoutsuccessorindestination,
                 self.obsoletewithoutsuccessorindestination,
             )
@@ -453,74 +483,107 @@ class rebaseruntime(object):
             ctx = repo[rev]
             desc = _ctxdesc(ctx)
             if self.state[rev] == rev:
-                ui.status(_('already rebased %s\n') % desc)
-            elif (not allowdivergence
-                  and rev in self.obsoletewithoutsuccessorindestination):
-                msg = _('note: not rebasing %s and its descendants as '
-                        'this would cause divergence\n') % desc
+                ui.status(_("already rebased %s\n") % desc)
+            elif (
+                not allowdivergence
+                and rev in self.obsoletewithoutsuccessorindestination
+            ):
+                msg = (
+                    _(
+                        "note: not rebasing %s and its descendants as "
+                        "this would cause divergence\n"
+                    )
+                    % desc
+                )
                 repo.ui.status(msg)
                 self.skipped.add(rev)
             elif rev in self.obsoletenotrebased:
                 succ = self.obsoletenotrebased[rev]
                 if succ is None:
-                    msg = _('note: not rebasing %s, it has no '
-                            'successor\n') % desc
+                    msg = _("note: not rebasing %s, it has no " "successor\n") % desc
                 else:
                     succdesc = _ctxdesc(repo[succ])
-                    msg = (_('note: not rebasing %s, already in '
-                             'destination as %s\n') % (desc, succdesc))
+                    msg = _(
+                        "note: not rebasing %s, already in " "destination as %s\n"
+                    ) % (desc, succdesc)
                 repo.ui.status(msg)
                 # Make clearrebased aware state[rev] is not a true successor
                 self.skipped.add(rev)
                 # Record rev as moved to its desired destination in self.state.
                 # This helps bookmark and working parent movement.
-                dest = max(adjustdest(repo, rev, self.destmap, self.state,
-                                      self.skipped))
+                dest = max(
+                    adjustdest(repo, rev, self.destmap, self.state, self.skipped)
+                )
                 self.state[rev] = dest
             elif self.state[rev] == revtodo:
                 pos += 1
-                ui.status(_('rebasing %s\n') % desc)
+                ui.status(_("rebasing %s\n") % desc)
                 prog.value = (pos, "%d:%s" % (rev, ctx))
-                p1, p2, base = defineparents(repo, rev, self.destmap,
-                                             self.state, self.skipped,
-                                             self.obsoletenotrebased)
+                p1, p2, base = defineparents(
+                    repo,
+                    rev,
+                    self.destmap,
+                    self.state,
+                    self.skipped,
+                    self.obsoletenotrebased,
+                )
                 self.storestatus(tr=tr)
                 storecollapsemsg(repo, self.collapsemsg)
                 if len(repo[None].parents()) == 2:
-                    repo.ui.debug('resuming interrupted rebase\n')
+                    repo.ui.debug("resuming interrupted rebase\n")
                 else:
                     try:
-                        ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
-                                     'rebase')
-                        stats = rebasenode(repo, rev, p1, base, self.state,
-                                           self.collapsef, dest, wctx=self.wctx)
+                        ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "rebase")
+                        stats = rebasenode(
+                            repo,
+                            rev,
+                            p1,
+                            base,
+                            self.state,
+                            self.collapsef,
+                            dest,
+                            wctx=self.wctx,
+                        )
                         if stats and stats[3] > 0:
                             if self.wctx.isinmemory():
                                 raise error.InMemoryMergeConflictsError()
                             else:
                                 raise error.InterventionRequired(
-                                    _('unresolved conflicts (see hg '
-                                      'resolve, then hg rebase --continue)'))
+                                    _(
+                                        "unresolved conflicts (see hg "
+                                        "resolve, then hg rebase --continue)"
+                                    )
+                                )
                     finally:
-                        ui.setconfig('ui', 'forcemerge', '', 'rebase')
+                        ui.setconfig("ui", "forcemerge", "", "rebase")
                 if not self.collapsef:
                     merging = p2 != nullrev
-                    editform = cmdutil.mergeeditform(merging, 'rebase')
+                    editform = cmdutil.mergeeditform(merging, "rebase")
                     editor = cmdutil.getcommiteditor(editform=editform, **opts)
                     if self.wctx.isinmemory():
-                        newnode = concludememorynode(repo, rev, p1, p2,
+                        newnode = concludememorynode(
+                            repo,
+                            rev,
+                            p1,
+                            p2,
                             wctx=self.wctx,
                             extrafn=_makeextrafn(self.extrafns),
                             editor=editor,
                             keepbranches=self.keepbranchesf,
-                            date=self.date)
+                            date=self.date,
+                        )
                         mergemod.mergestate.clean(repo)
                     else:
-                        newnode = concludenode(repo, rev, p1, p2,
+                        newnode = concludenode(
+                            repo,
+                            rev,
+                            p1,
+                            p2,
                             extrafn=_makeextrafn(self.extrafns),
                             editor=editor,
                             keepbranches=self.keepbranchesf,
-                            date=self.date)
+                            date=self.date,
+                        )
 
                     if newnode is None:
                         # If it ended up being a no-op commit, then the normal
@@ -537,65 +600,83 @@ class rebaseruntime(object):
                 # Update the state
                 if newnode is not None:
                     self.state[rev] = repo[newnode].rev()
-                    ui.debug('rebased as %s\n' % short(newnode))
+                    ui.debug("rebased as %s\n" % short(newnode))
                 else:
                     if not self.collapsef:
-                        ui.warn(_('note: rebase of %d:%s created no changes '
-                                  'to commit\n') % (rev, ctx))
+                        ui.warn(
+                            _("note: rebase of %d:%s created no changes " "to commit\n")
+                            % (rev, ctx)
+                        )
                         self.skipped.add(rev)
                     self.state[rev] = p1
-                    ui.debug('next revision set to %s\n' % p1)
+                    ui.debug("next revision set to %s\n" % p1)
             else:
-                ui.status(_('already rebased %s as %s\n') %
-                          (desc, repo[self.state[rev]]))
+                ui.status(
+                    _("already rebased %s as %s\n") % (desc, repo[self.state[rev]])
+                )
         return pos
 
     def _finishrebase(self):
         repo, ui, opts = self.repo, self.ui, self.opts
-        fm = ui.formatter('rebase', opts)
+        fm = ui.formatter("rebase", opts)
         fm.startitem()
         if self.collapsef and not self.keepopen:
-            p1, p2, _base = defineparents(repo, min(self.state), self.destmap,
-                                          self.state, self.skipped,
-                                          self.obsoletenotrebased)
-            editopt = opts.get('edit')
-            editform = 'rebase.collapse'
+            p1, p2, _base = defineparents(
+                repo,
+                min(self.state),
+                self.destmap,
+                self.state,
+                self.skipped,
+                self.obsoletenotrebased,
+            )
+            editopt = opts.get("edit")
+            editform = "rebase.collapse"
             if self.collapsemsg:
                 commitmsg = self.collapsemsg
             else:
-                commitmsg = 'Collapsed revision'
+                commitmsg = "Collapsed revision"
                 for rebased in sorted(self.state):
                     if rebased not in self.skipped:
-                        commitmsg += '\n* %s' % repo[rebased].description()
+                        commitmsg += "\n* %s" % repo[rebased].description()
                 editopt = True
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             revtoreuse = max(self.state)
 
             dsguard = None
             if self.inmemory:
-                newnode = concludememorynode(repo, revtoreuse, p1,
+                newnode = concludememorynode(
+                    repo,
+                    revtoreuse,
+                    p1,
                     self.external,
                     commitmsg=commitmsg,
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
                     keepbranches=self.keepbranchesf,
-                    date=self.date, wctx=self.wctx)
+                    date=self.date,
+                    wctx=self.wctx,
+                )
             else:
-                if ui.configbool('rebase', 'singletransaction'):
-                    dsguard = dirstateguard.dirstateguard(repo, 'rebase')
+                if ui.configbool("rebase", "singletransaction"):
+                    dsguard = dirstateguard.dirstateguard(repo, "rebase")
                 with util.acceptintervention(dsguard):
-                    newnode = concludenode(repo, revtoreuse, p1, self.external,
+                    newnode = concludenode(
+                        repo,
+                        revtoreuse,
+                        p1,
+                        self.external,
                         commitmsg=commitmsg,
                         extrafn=_makeextrafn(self.extrafns),
                         editor=editor,
                         keepbranches=self.keepbranchesf,
-                        date=self.date)
+                        date=self.date,
+                    )
             if newnode is not None:
                 newrev = repo[newnode].rev()
                 for oldrev in self.state.iterkeys():
                     self.state[oldrev] = newrev
 
-        if 'qtip' in repo.tags():
+        if "qtip" in repo.tags():
             updatemq(repo, self.state, self.skipped, **opts)
 
         # restore original working directory
@@ -614,63 +695,87 @@ class rebaseruntime(object):
                     # Print a nice message rather than aborting/restarting.
                     newctx = repo[newwd]
                     firstline = templatefilters.firstline(newctx.description())
-                    ui.warn(_("important: run `hg up %s` to get the new "
-                              "version of your current commit (\"%s\")\n"
-                              "(this was not done automatically because you "
-                              "made working copy changes during the "
-                              "rebase)\n") %
-                              (short(newctx.node()), firstline),
-                        label='rebase.manual.update')
+                    ui.warn(
+                        _(
+                            "important: run `hg up %s` to get the new "
+                            'version of your current commit ("%s")\n'
+                            "(this was not done automatically because you "
+                            "made working copy changes during the "
+                            "rebase)\n"
+                        )
+                        % (short(newctx.node()), firstline),
+                        label="rebase.manual.update",
+                    )
                 else:
-                    raise # Keep old behavior
+                    raise  # Keep old behavior
 
         collapsedas = None
         if not self.keepf:
             if self.collapsef:
                 collapsedas = newnode
-        clearrebased(ui, repo, self.destmap, self.state, self.skipped,
-                     collapsedas, self.keepf, fm=fm)
+        clearrebased(
+            ui,
+            repo,
+            self.destmap,
+            self.state,
+            self.skipped,
+            collapsedas,
+            self.keepf,
+            fm=fm,
+        )
 
         clearstatus(repo)
         clearcollapsemsg(repo)
 
         ui.note(_("rebase completed\n"))
-        util.unlinkpath(repo.sjoin('undo'), ignoremissing=True)
+        util.unlinkpath(repo.sjoin("undo"), ignoremissing=True)
         if self.skipped:
             skippedlen = len(self.skipped)
             ui.note(_("%d revisions have been skipped\n") % skippedlen)
         fm.end()
 
-        if (self.activebookmark and self.activebookmark in repo._bookmarks and
-            repo['.'].node() == repo._bookmarks[self.activebookmark]):
-                bookmarks.activate(repo, self.activebookmark)
+        if (
+            self.activebookmark
+            and self.activebookmark in repo._bookmarks
+            and repo["."].node() == repo._bookmarks[self.activebookmark]
+        ):
+            bookmarks.activate(repo, self.activebookmark)
 
-@command('rebase',
-    [('s', 'source', '',
-     _('rebase the specified changeset and descendants'), _('REV')),
-    ('b', 'base', '',
-     _('rebase everything from branching point of specified changeset'),
-     _('REV')),
-    ('r', 'rev', [],
-     _('rebase these revisions'),
-     _('REV')),
-    ('d', 'dest', '',
-     _('rebase onto the specified changeset'), _('REV')),
-    ('', 'collapse', False, _('collapse the rebased changesets')),
-    ('m', 'message', '',
-     _('use text as collapse commit message'), _('TEXT')),
-    ('e', 'edit', False, _('invoke editor on commit messages')),
-    ('l', 'logfile', '',
-     _('read collapse commit message from file'), _('FILE')),
-    ('k', 'keep', False, _('keep original changesets')),
-    ('', 'keepbranches', False, _('keep original branch names')),
-    ('D', 'detach', False, _('(DEPRECATED)')),
-    ('i', 'interactive', False, _('(DEPRECATED)')),
-    ('t', 'tool', '', _('specify merge tool')),
-    ('c', 'continue', False, _('continue an interrupted rebase')),
-    ('a', 'abort', False, _('abort an interrupted rebase'))] +
-    cmdutil.formatteropts,
-    _('[-s REV | -b REV] [-d REV] [OPTION]'))
+
+@command(
+    "rebase",
+    [
+        (
+            "s",
+            "source",
+            "",
+            _("rebase the specified changeset and descendants"),
+            _("REV"),
+        ),
+        (
+            "b",
+            "base",
+            "",
+            _("rebase everything from branching point of specified changeset"),
+            _("REV"),
+        ),
+        ("r", "rev", [], _("rebase these revisions"), _("REV")),
+        ("d", "dest", "", _("rebase onto the specified changeset"), _("REV")),
+        ("", "collapse", False, _("collapse the rebased changesets")),
+        ("m", "message", "", _("use text as collapse commit message"), _("TEXT")),
+        ("e", "edit", False, _("invoke editor on commit messages")),
+        ("l", "logfile", "", _("read collapse commit message from file"), _("FILE")),
+        ("k", "keep", False, _("keep original changesets")),
+        ("", "keepbranches", False, _("keep original branch names")),
+        ("D", "detach", False, _("(DEPRECATED)")),
+        ("i", "interactive", False, _("(DEPRECATED)")),
+        ("t", "tool", "", _("specify merge tool")),
+        ("c", "continue", False, _("continue an interrupted rebase")),
+        ("a", "abort", False, _("abort an interrupted rebase")),
+    ]
+    + cmdutil.formatteropts,
+    _("[-s REV | -b REV] [-d REV] [OPTION]"),
+)
 def rebase(ui, repo, **opts):
     """move changeset (and descendants) to a different branch
 
@@ -814,14 +919,14 @@ def rebase(ui, repo, **opts):
     unresolved conflicts.
 
     """
-    inmemory = ui.configbool('rebase', 'experimental.inmemory')
+    inmemory = ui.configbool("rebase", "experimental.inmemory")
 
     # Check for conditions that disable in-memory merge if it was requested.
     if inmemory:
         whynotimm = None
 
         # in-memory rebase is not compatible with resuming rebases.
-        if opts.get('continue') or opts.get('abort'):
+        if opts.get("continue") or opts.get("abort"):
             whynotimm = "--continue or --abort passed"
 
         # in-memory rebase cannot currently run within a parent transaction,
@@ -838,14 +943,15 @@ def rebase(ui, repo, **opts):
         # preprocess() function itself can't be trusted.)
         #
         # TODO(phillco): Replace with decorators on the scripts themselves
-        elif (ui.config('experimental', 'mergedriver') and
-              ui.configbool('rebase',
-                  'experimental.inmemory.nomergedriver', True)):
-            whynotimm = 'mergedriver enabled'
+        elif ui.config("experimental", "mergedriver") and ui.configbool(
+            "rebase", "experimental.inmemory.nomergedriver", True
+        ):
+            whynotimm = "mergedriver enabled"
 
         if whynotimm:
-            ui.log("rebase", "disabling IMM because: %s" % whynotimm,
-                why_not_imm=whynotimm)
+            ui.log(
+                "rebase", "disabling IMM because: %s" % whynotimm, why_not_imm=whynotimm
+            )
             inmemory = False
 
     opts = pycompat.byteskwargs(opts)
@@ -876,13 +982,13 @@ def rebase(ui, repo, **opts):
         except error.InMemoryMergeConflictsError as e:
             # in-memory merge doesn't support conflicts, so if we hit any, abort
             # and re-run as an on-disk merge.
-            ui.warn(('hit merge conflicts; using on-disk merge instead '
-                     '(%s)\n' % e))
+            ui.warn(("hit merge conflicts; using on-disk merge instead " "(%s)\n" % e))
             ui.log("rebase", "", rebase_imm_restart=True)
-            cmdutil.bailifchanged(repo,
-                hint=_('commit, shelve or remove them, then rerun the rebase'))
+            cmdutil.bailifchanged(
+                repo, hint=_("commit, shelve or remove them, then rerun the rebase")
+            )
             rbsrt.inmemory = False
-            _origrebase(ui, repo, rbsrt, **{'abort': True})
+            _origrebase(ui, repo, rbsrt, **{"abort": True})
             return _origrebase(ui, repo, rbsrt, **opts)
         except Exception as e:
             # Catch generic exceptions and restart the rebase without IMM. Any
@@ -891,16 +997,17 @@ def rebase(ui, repo, **opts):
             # `_shoulddisableimm()`). So we double check the value of
             # `rbsrt.inmemory`.
             if rbsrt.inmemory:
-                ui.warn(('hit error; using on-disk merge instead '
-                         '(%s)\n' % e))
-                ui.log("rebase", "", rebase_imm_restart=True,
-                    rebase_imm_exception=str(e))
+                ui.warn(("hit error; using on-disk merge instead " "(%s)\n" % e))
+                ui.log(
+                    "rebase", "", rebase_imm_restart=True, rebase_imm_exception=str(e)
+                )
                 inmemory = False
-                cmdutil.bailifchanged(repo,
-                    hint=_('commit, shelve or remove them, then rerun the '
-                           'rebase'))
+                cmdutil.bailifchanged(
+                    repo,
+                    hint=_("commit, shelve or remove them, then rerun the " "rebase"),
+                )
                 try:
-                    _origrebase(ui, repo, rbsrt, **{'abort': True})
+                    _origrebase(ui, repo, rbsrt, **{"abort": True})
                 except Exception as e:
                     ui.warn(_("(couldn't abort rebase: %s)\n") % e.message)
                 rbsrt = rebaseruntime(repo, ui, inmemory, opts)
@@ -910,44 +1017,49 @@ def rebase(ui, repo, **opts):
     else:
         return _origrebase(ui, repo, rbsrt, **opts)
 
+
 def _origrebase(ui, repo, rbsrt, **opts):
     with repo.wlock(), repo.lock():
         # Validate input and define rebasing points
-        destf = opts.get('dest', None)
-        srcf = opts.get('source', None)
-        basef = opts.get('base', None)
-        revf = opts.get('rev', [])
+        destf = opts.get("dest", None)
+        srcf = opts.get("source", None)
+        basef = opts.get("base", None)
+        revf = opts.get("rev", [])
         # search default destination in this space
         # used in the 'hg pull --rebase' case, see issue 5214.
-        destspace = opts.get('_destspace')
-        contf = opts.get('continue')
-        abortf = opts.get('abort')
-        if opts.get('interactive'):
+        destspace = opts.get("_destspace")
+        contf = opts.get("continue")
+        abortf = opts.get("abort")
+        if opts.get("interactive"):
             try:
-                if extensions.find('histedit'):
-                    enablehistedit = ''
+                if extensions.find("histedit"):
+                    enablehistedit = ""
             except KeyError:
                 enablehistedit = " --config extensions.histedit="
             help = "hg%s help -e histedit" % enablehistedit
-            msg = _("interactive history editing is supported by the "
-                    "'histedit' extension (see \"%s\")") % help
+            msg = (
+                _(
+                    "interactive history editing is supported by the "
+                    "'histedit' extension (see \"%s\")"
+                )
+                % help
+            )
             raise error.Abort(msg)
 
         if rbsrt.collapsemsg and not rbsrt.collapsef:
-            raise error.Abort(
-                _('message can only be specified with collapse'))
+            raise error.Abort(_("message can only be specified with collapse"))
 
         if contf or abortf:
             if contf and abortf:
-                raise error.Abort(_('cannot use both abort and continue'))
+                raise error.Abort(_("cannot use both abort and continue"))
             if rbsrt.collapsef:
-                raise error.Abort(
-                    _('cannot use collapse with continue or abort'))
+                raise error.Abort(_("cannot use collapse with continue or abort"))
             if srcf or basef or destf:
                 raise error.Abort(
-                    _('abort and continue do not allow specifying revisions'))
-            if abortf and opts.get('tool', False):
-                ui.warn(_('tool option will be ignored\n'))
+                    _("abort and continue do not allow specifying revisions")
+                )
+            if abortf and opts.get("tool", False):
+                ui.warn(_("tool option will be ignored\n"))
             if contf:
                 ms = mergemod.mergestate.read(repo)
                 mergeutil.checkunresolved(ms)
@@ -956,8 +1068,9 @@ def _origrebase(ui, repo, rbsrt, **opts):
             if retcode is not None:
                 return retcode
         else:
-            destmap = _definedestmap(ui, repo, rbsrt, destf, srcf, basef, revf,
-                                     destspace=destspace)
+            destmap = _definedestmap(
+                ui, repo, rbsrt, destf, srcf, basef, revf, destspace=destspace
+            )
             retcode = rbsrt._preparenewrebase(destmap)
             if retcode is not None:
                 return retcode
@@ -965,9 +1078,9 @@ def _origrebase(ui, repo, rbsrt, **opts):
         tr = None
         dsguard = None
 
-        singletr = ui.configbool('rebase', 'singletransaction')
+        singletr = ui.configbool("rebase", "singletransaction")
         if singletr:
-            tr = repo.transaction('rebase')
+            tr = repo.transaction("rebase")
 
         # If `rebase.singletransaction` is enabled, wrap the entire operation in
         # one transaction here. Otherwise, transactions are obtained when
@@ -976,11 +1089,12 @@ def _origrebase(ui, repo, rbsrt, **opts):
             # Same logic for the dirstate guard, except we don't create one when
             # rebasing in-memory (it's not needed).
             if singletr and not rbsrt.inmemory:
-                dsguard = dirstateguard.dirstateguard(repo, 'rebase')
+                dsguard = dirstateguard.dirstateguard(repo, "rebase")
             with util.acceptintervention(dsguard):
                 rbsrt._performrebase(tr)
 
         rbsrt._finishrebase()
+
 
 def _shoulddisableimm(ui, repo, rebaseset, rebasingwcp):
     """returns if we should disable in-memory merge based on the rebaseset"""
@@ -990,8 +1104,9 @@ def _shoulddisableimm(ui, repo, rebaseset, rebasingwcp):
     # This is because the extra work of checking out the newly rebased commit
     # might outweight the benefits of rebasing in-memory.
     ui.log("rebase", "", rebase_rebasing_wcp=rebasingwcp)
-    allowwcprebase = ui.configbool("rebase",
-        "experimental.inmemory.canrebaseworkingcopy", False)
+    allowwcprebase = ui.configbool(
+        "rebase", "experimental.inmemory.canrebaseworkingcopy", False
+    )
     if rebasingwcp:
         if allowwcprebase:
             cmdutil.bailifchanged(repo)
@@ -999,7 +1114,7 @@ def _shoulddisableimm(ui, repo, rebaseset, rebasingwcp):
             whynotimm = "wcp in rebaseset\n"
             msg = "disabling IMM because: %s" % whynotimm
             ui.log("rebase", msg, why_not_imm=whynotimm)
-            ui.debug(msg + '\n')
+            ui.debug(msg + "\n")
             return True
 
     # Check for paths in the rebaseset that are likely to later trigger
@@ -1019,13 +1134,15 @@ def _shoulddisableimm(ui, repo, rebaseset, rebasingwcp):
                 whynotimm = "path matched inmemory_disallowed_paths: %s" % path
                 msg = "disabling IMM because: %s" % whynotimm
                 ui.log("rebase", msg, why_not_imm=whynotimm)
-                ui.debug(msg + '\n')
+                ui.debug(msg + "\n")
                 return True
 
-    return False # no change
+    return False  # no change
 
-def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
-                   revf=None, destspace=None):
+
+def _definedestmap(
+    ui, repo, rbsrt, destf=None, srcf=None, basef=None, revf=None, destspace=None
+):
     """use revisions argument to define destmap {srcrev: destrev}"""
     if revf is None:
         revf = []
@@ -1033,19 +1150,20 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
     # destspace is here to work around issues with `hg pull --rebase` see
     # issue5214 for details
     if srcf and basef:
-        raise error.Abort(_('cannot specify both a source and a base'))
+        raise error.Abort(_("cannot specify both a source and a base"))
     if revf and basef:
-        raise error.Abort(_('cannot specify both a revision and a base'))
+        raise error.Abort(_("cannot specify both a revision and a base"))
     if revf and srcf:
-        raise error.Abort(_('cannot specify both a revision and a source'))
+        raise error.Abort(_("cannot specify both a revision and a source"))
 
     cmdutil.checkunfinished(repo)
     if not rbsrt.inmemory:
         cmdutil.bailifchanged(repo)
 
-    if ui.configbool('commands', 'rebase.requiredest') and not destf:
-        raise error.Abort(_('you must specify a destination'),
-                          hint=_('use: hg rebase -d REV'))
+    if ui.configbool("commands", "rebase.requiredest") and not destf:
+        raise error.Abort(
+            _("you must specify a destination"), hint=_("use: hg rebase -d REV")
+        )
 
     dest = None
 
@@ -1059,13 +1177,12 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
         if not src:
             ui.status(_('empty "source" revision set - nothing to rebase\n'))
             return None
-        rebaseset = repo.revs('(%ld)::', src)
+        rebaseset = repo.revs("(%ld)::", src)
         assert rebaseset
     else:
-        base = scmutil.revrange(repo, [basef or '.'])
+        base = scmutil.revrange(repo, [basef or "."])
         if not base:
-            ui.status(_('empty "base" revision set - '
-                        "can't compute rebase set\n"))
+            ui.status(_('empty "base" revision set - ' "can't compute rebase set\n"))
             return None
         if destf:
             # --base does not support multiple destinations
@@ -1074,19 +1191,19 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
             dest = repo[_destrebase(repo, base, destspace=destspace)]
             destf = str(dest)
 
-        roots = [] # selected children of branching points
-        bpbase = {} # {branchingpoint: [origbase]}
-        for b in base: # group bases by branching points
-            bp = repo.revs('ancestor(%d, %d)', b, dest).first()
+        roots = []  # selected children of branching points
+        bpbase = {}  # {branchingpoint: [origbase]}
+        for b in base:  # group bases by branching points
+            bp = repo.revs("ancestor(%d, %d)", b, dest).first()
             bpbase[bp] = bpbase.get(bp, []) + [b]
         if None in bpbase:
             # emulate the old behavior, showing "nothing to rebase" (a better
             # behavior may be abort with "cannot find branching point" error)
             bpbase.clear()
-        for bp, bs in bpbase.iteritems(): # calculate roots
-            roots += list(repo.revs('children(%d) & ancestors(%ld)', bp, bs))
+        for bp, bs in bpbase.iteritems():  # calculate roots
+            roots += list(repo.revs("children(%d) & ancestors(%ld)", bp, bs))
 
-        rebaseset = repo.revs('%ld::', roots)
+        rebaseset = repo.revs("%ld::", roots)
 
         if not rebaseset:
             # transform to list because smartsets are not comparable to
@@ -1094,31 +1211,46 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
             # smartset.
             if list(base) == [dest.rev()]:
                 if basef:
-                    ui.status(_('nothing to rebase - %s is both "base"'
-                                ' and destination\n') % dest)
+                    ui.status(
+                        _('nothing to rebase - %s is both "base"' " and destination\n")
+                        % dest
+                    )
                 else:
-                    ui.status(_('nothing to rebase - working directory '
-                                'parent is also destination\n'))
-            elif not repo.revs('%ld - ::%d', base, dest):
+                    ui.status(
+                        _(
+                            "nothing to rebase - working directory "
+                            "parent is also destination\n"
+                        )
+                    )
+            elif not repo.revs("%ld - ::%d", base, dest):
                 if basef:
-                    ui.status(_('nothing to rebase - "base" %s is '
-                                'already an ancestor of destination '
-                                '%s\n') %
-                              ('+'.join(str(repo[r]) for r in base),
-                               dest))
+                    ui.status(
+                        _(
+                            'nothing to rebase - "base" %s is '
+                            "already an ancestor of destination "
+                            "%s\n"
+                        )
+                        % ("+".join(str(repo[r]) for r in base), dest)
+                    )
                 else:
-                    ui.status(_('nothing to rebase - working '
-                                'directory parent is already an '
-                                'ancestor of destination %s\n') % dest)
-            else: # can it happen?
-                ui.status(_('nothing to rebase from %s to %s\n') %
-                          ('+'.join(str(repo[r]) for r in base), dest))
+                    ui.status(
+                        _(
+                            "nothing to rebase - working "
+                            "directory parent is already an "
+                            "ancestor of destination %s\n"
+                        )
+                        % dest
+                    )
+            else:  # can it happen?
+                ui.status(
+                    _("nothing to rebase from %s to %s\n")
+                    % ("+".join(str(repo[r]) for r in base), dest)
+                )
             return None
 
     # Possibly disable in-memory merge based on the rebaseset.
-    rbsrt.rebasingwcp = repo['.'].rev() in rebaseset
-    if rbsrt.inmemory and _shoulddisableimm(ui, repo, rebaseset,
-                                            rbsrt.rebasingwcp):
+    rbsrt.rebasingwcp = repo["."].rev() in rebaseset
+    if rbsrt.inmemory and _shoulddisableimm(ui, repo, rebaseset, rbsrt.rebasingwcp):
         rbsrt.inmemory = False
 
         # Check for local changes since we did not before.
@@ -1128,8 +1260,8 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
         dest = repo[_destrebase(repo, rebaseset, destspace=destspace)]
         destf = str(dest)
 
-    allsrc = revsetlang.formatspec('%ld', rebaseset)
-    alias = {'ALLSRC': allsrc}
+    allsrc = revsetlang.formatspec("%ld", rebaseset)
+    alias = {"ALLSRC": allsrc}
 
     if dest is None:
         try:
@@ -1139,7 +1271,7 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
             # multi-dest path: resolve dest for each SRC separately
             destmap = {}
             for r in rebaseset:
-                alias['SRC'] = revsetlang.formatspec('%d', r)
+                alias["SRC"] = revsetlang.formatspec("%d", r)
                 # use repo.anyrevs instead of scmutil.revsingle because we
                 # don't want to abort if destset is empty.
                 destset = repo.anyrevs([destf], user=True, localalias=alias)
@@ -1147,21 +1279,23 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
                 if size == 1:
                     destmap[r] = destset.first()
                 elif size == 0:
-                    ui.note(_('skipping %s - empty destination\n') % repo[r])
+                    ui.note(_("skipping %s - empty destination\n") % repo[r])
                 else:
-                    raise error.Abort(_('rebase destination for %s is not '
-                                        'unique') % repo[r])
+                    raise error.Abort(
+                        _("rebase destination for %s is not " "unique") % repo[r]
+                    )
 
     if dest is not None:
         # single-dest case: assign dest to each rev in rebaseset
         destrev = dest.rev()
-        destmap = {r: destrev for r in rebaseset} # {srcrev: destrev}
+        destmap = {r: destrev for r in rebaseset}  # {srcrev: destrev}
 
     if not destmap:
-        ui.status(_('nothing to rebase - empty destination\n'))
+        ui.status(_("nothing to rebase - empty destination\n"))
         return None
 
     return destmap
+
 
 def externalparent(repo, state, destancestors):
     """Return the revision that should be used as the second parent
@@ -1174,39 +1308,51 @@ def externalparent(repo, state, destancestors):
         if rev == source:
             continue
         for p in repo[rev].parents():
-            if (p.rev() not in state
-                        and p.rev() not in destancestors):
+            if p.rev() not in state and p.rev() not in destancestors:
                 parents.add(p.rev())
     if not parents:
         return nullrev
     if len(parents) == 1:
         return parents.pop()
-    raise error.Abort(_('unable to collapse on top of %s, there is more '
-                       'than one external parent: %s') %
-                     (max(destancestors),
-                      ', '.join(str(p) for p in sorted(parents))))
+    raise error.Abort(
+        _(
+            "unable to collapse on top of %s, there is more "
+            "than one external parent: %s"
+        )
+        % (max(destancestors), ", ".join(str(p) for p in sorted(parents)))
+    )
 
-def concludememorynode(repo, rev, p1, p2, wctx=None,
-                       commitmsg=None, editor=None, extrafn=None,
-                       keepbranches=False, date=None):
-    '''Commit the memory changes with parents p1 and p2. Reuse commit info from
+
+def concludememorynode(
+    repo,
+    rev,
+    p1,
+    p2,
+    wctx=None,
+    commitmsg=None,
+    editor=None,
+    extrafn=None,
+    keepbranches=False,
+    date=None,
+):
+    """Commit the memory changes with parents p1 and p2. Reuse commit info from
     rev but also store useful information in extra.
-    Return node of committed revision.'''
+    Return node of committed revision."""
     ctx = repo[rev]
     if commitmsg is None:
         commitmsg = ctx.description()
     keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
-    extra = {'rebase_source': ctx.hex()}
+    extra = {"rebase_source": ctx.hex()}
     if extrafn:
         extrafn(ctx, extra)
 
     destphase = max(ctx.phase(), phases.draft)
-    overrides = {('phases', 'new-commit'): destphase}
-    with repo.ui.configoverride(overrides, 'rebase'):
+    overrides = {("phases", "new-commit"): destphase}
+    with repo.ui.configoverride(overrides, "rebase"):
         if keepbranch:
-            repo.ui.setconfig('ui', 'allowemptycommit', True)
+            repo.ui.setconfig("ui", "allowemptycommit", True)
         # Replicates the empty check in ``repo.commit``.
-        if wctx.isempty() and not repo.ui.configbool('ui', 'allowemptycommit'):
+        if wctx.isempty() and not repo.ui.configbool("ui", "allowemptycommit"):
             return None
 
         if date is None:
@@ -1215,55 +1361,74 @@ def concludememorynode(repo, rev, p1, p2, wctx=None,
         # By convention, ``extra['branch']`` (set by extrafn) clobbers
         # ``branch`` (used when passing ``--keepbranches``).
         branch = repo[p1].branch()
-        if 'branch' in extra:
-            branch = extra['branch']
+        if "branch" in extra:
+            branch = extra["branch"]
 
-        memctx = wctx.tomemctx(commitmsg, parents=(p1, p2), date=date,
-            extra=extra, user=ctx.user(), branch=branch, editor=editor)
+        memctx = wctx.tomemctx(
+            commitmsg,
+            parents=(p1, p2),
+            date=date,
+            extra=extra,
+            user=ctx.user(),
+            branch=branch,
+            editor=editor,
+        )
         commitres = repo.commitctx(memctx)
-        wctx.clean() # Might be reused
+        wctx.clean()  # Might be reused
         return commitres
 
-def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
-                 keepbranches=False, date=None):
-    '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
+
+def concludenode(
+    repo,
+    rev,
+    p1,
+    p2,
+    commitmsg=None,
+    editor=None,
+    extrafn=None,
+    keepbranches=False,
+    date=None,
+):
+    """Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
-    Return node of committed revision.'''
+    Return node of committed revision."""
     dsguard = util.nullcontextmanager()
-    if not repo.ui.configbool('rebase', 'singletransaction'):
-        dsguard = dirstateguard.dirstateguard(repo, 'rebase')
+    if not repo.ui.configbool("rebase", "singletransaction"):
+        dsguard = dirstateguard.dirstateguard(repo, "rebase")
     with dsguard:
         repo.setparents(repo[p1].node(), repo[p2].node())
         ctx = repo[rev]
         if commitmsg is None:
             commitmsg = ctx.description()
         keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
-        extra = {'rebase_source': ctx.hex()}
+        extra = {"rebase_source": ctx.hex()}
         if extrafn:
             extrafn(ctx, extra)
 
         destphase = max(ctx.phase(), phases.draft)
-        overrides = {('phases', 'new-commit'): destphase}
-        with repo.ui.configoverride(overrides, 'rebase'):
+        overrides = {("phases", "new-commit"): destphase}
+        with repo.ui.configoverride(overrides, "rebase"):
             if keepbranch:
-                repo.ui.setconfig('ui', 'allowemptycommit', True)
+                repo.ui.setconfig("ui", "allowemptycommit", True)
             # Commit might fail if unresolved files exist
             if date is None:
                 date = ctx.date()
-            newnode = repo.commit(text=commitmsg, user=ctx.user(),
-                                  date=date, extra=extra, editor=editor)
+            newnode = repo.commit(
+                text=commitmsg, user=ctx.user(), date=date, extra=extra, editor=editor
+            )
 
         repo.dirstate.setbranch(repo[newnode].branch())
         return newnode
 
+
 def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
-    'Rebase a single revision rev on top of p1 using base as merge ancestor'
+    "Rebase a single revision rev on top of p1 using base as merge ancestor"
     # Merge phase
     # Update to destination and merge it with local
     if wctx.isinmemory():
         wctx.setbase(repo[p1])
     else:
-        if repo['.'].rev() != p1:
+        if repo["."].rev() != p1:
             repo.ui.debug(" update to %d:%s\n" % (p1, repo[p1]))
             mergemod.update(repo, p1, False, True)
         else:
@@ -1277,8 +1442,9 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
         repo.ui.debug("   detach base %d:%s\n" % (base, repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
-    stats = mergemod.update(repo, rev, True, True, base, collapse,
-                            labels=['dest', 'source'], wc=wctx)
+    stats = mergemod.update(
+        repo, rev, True, True, base, collapse, labels=["dest", "source"], wc=wctx
+    )
     if collapse:
         copies.duplicatecopies(repo, wctx, rev, dest)
     else:
@@ -1290,6 +1456,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
         p1rev = repo[rev].p1().rev()
         copies.duplicatecopies(repo, wctx, rev, p1rev, skiprev=dest)
     return stats
+
 
 def adjustdest(repo, rev, destmap, state, skipped):
     """adjust rebase destination given the current rebase state
@@ -1345,14 +1512,15 @@ def adjustdest(repo, rev, destmap, state, skipped):
     """
     # pick already rebased revs with same dest from state as interesting source
     dest = destmap[rev]
-    source = [s for s, d in state.items()
-              if d > 0 and destmap[s] == dest and s not in skipped]
+    source = [
+        s for s, d in state.items() if d > 0 and destmap[s] == dest and s not in skipped
+    ]
 
     result = []
     for prev in repo.changelog.parentrevs(rev):
         adjusted = dest
         if prev != nullrev:
-            candidate = repo.revs('max(%ld and (::%d))', source, prev).first()
+            candidate = repo.revs("max(%ld and (::%d))", source, prev).first()
             if candidate is not None:
                 adjusted = state[candidate]
         if adjusted == dest and dest in state:
@@ -1360,9 +1528,11 @@ def adjustdest(repo, rev, destmap, state, skipped):
             if adjusted == revtodo:
                 # sortsource should produce an order that makes this impossible
                 raise error.ProgrammingError(
-                    'rev %d should be rebased already at this time' % dest)
+                    "rev %d should be rebased already at this time" % dest
+                )
         result.append(adjusted)
     return result
+
 
 def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped):
     """
@@ -1373,18 +1543,18 @@ def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped):
     successors in destination
     """
     # Obsolete node with successors not in dest leads to divergence
-    divergenceok = ui.configbool('experimental',
-                                 'evolution.allowdivergence')
+    divergenceok = ui.configbool("experimental", "evolution.allowdivergence")
     divergencebasecandidates = rebaseobsrevs - rebaseobsskipped
 
     if divergencebasecandidates and not divergenceok:
-        divhashes = (str(repo[r])
-                     for r in divergencebasecandidates)
-        msg = _("this rebase will cause "
-                "divergences from: %s")
-        h = _("to force the rebase please set "
-              "experimental.evolution.allowdivergence=True")
+        divhashes = (str(repo[r]) for r in divergencebasecandidates)
+        msg = _("this rebase will cause " "divergences from: %s")
+        h = _(
+            "to force the rebase please set "
+            "experimental.evolution.allowdivergence=True"
+        )
         raise error.Abort(msg % (",".join(divhashes),), hint=h)
+
 
 def successorrevs(unfi, rev):
     """yield revision numbers for successors of rev"""
@@ -1393,6 +1563,7 @@ def successorrevs(unfi, rev):
     for s in obsutil.allsuccessors(unfi.obsstore, [unfi[rev].node()]):
         if s in nodemap:
             yield nodemap[s]
+
 
 def defineparents(repo, rev, destmap, state, skipped, obsskipped):
     """Return new parents and optionally a merge base for rev being rebased
@@ -1412,6 +1583,7 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
     # use unfiltered changelog since successorrevs may return filtered nodes
     assert repo.filtername is None
     cl = repo.changelog
+
     def isancestor(a, b):
         # take revision numbers instead of nodes
         if a == b:
@@ -1421,10 +1593,10 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
         return cl.isancestor(cl.node(a), cl.node(b))
 
     dest = destmap[rev]
-    oldps = repo.changelog.parentrevs(rev) # old parents
-    newps = [nullrev, nullrev] # new parents
+    oldps = repo.changelog.parentrevs(rev)  # old parents
+    newps = [nullrev, nullrev]  # new parents
     dests = adjustdest(repo, rev, destmap, state, skipped)
-    bases = list(oldps) # merge base candidates, initially just old parents
+    bases = list(oldps)  # merge base candidates, initially just old parents
 
     if all(r == nullrev for r in oldps[1:]):
         # For non-merge changeset, just move p to adjusted dest as requested.
@@ -1453,7 +1625,7 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
         # The loop tries to be not rely on the fact that a Mercurial node has
         # at most 2 parents.
         for i, p in enumerate(oldps):
-            np = p # new parent
+            np = p  # new parent
             if any(isancestor(x, dests[i]) for x in successorrevs(repo, p)):
                 np = dests[i]
             elif p in state and state[p] > 0:
@@ -1479,9 +1651,9 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
             for j, x in enumerate(newps[:i]):
                 if x == nullrev:
                     continue
-                if isancestor(np, x): # CASE-1
+                if isancestor(np, x):  # CASE-1
                     np = nullrev
-                elif isancestor(x, np): # CASE-2
+                elif isancestor(x, np):  # CASE-2
                     newps[j] = np
                     np = nullrev
                     # New parents forming an ancestor relationship does not
@@ -1506,15 +1678,16 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
         #    /|    # None of A and B will be changed to D and rebase fails.
         #   A B D
         if set(newps) == set(oldps) and dest not in newps:
-            raise error.Abort(_('cannot rebase %d:%s without '
-                                'moving at least one of its parents')
-                              % (rev, repo[rev]))
+            raise error.Abort(
+                _("cannot rebase %d:%s without " "moving at least one of its parents")
+                % (rev, repo[rev])
+            )
 
     # Source should not be ancestor of dest. The check here guarantees it's
     # impossible. With multi-dest, the initial check does not cover complex
     # cases since we don't have abstractions to dry-run rebase cheaply.
     if any(p != nullrev and isancestor(rev, p) for p in newps):
-        raise error.Abort(_('source is ancestor of destination'))
+        raise error.Abort(_("source is ancestor of destination"))
 
     # "rebasenode" updates to new p1, use the corresponding merge base.
     if bases[0] != nullrev:
@@ -1538,28 +1711,29 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
     # better than the default (ancestor(F, Z) == null). Therefore still
     # pick one (so choose p1 above).
     if sum(1 for b in bases if b != nullrev) > 1:
-        unwanted = [None, None] # unwanted[i]: unwanted revs if choose bases[i]
+        unwanted = [None, None]  # unwanted[i]: unwanted revs if choose bases[i]
         for i, base in enumerate(bases):
             if base == nullrev:
                 continue
             # Revisions in the side (not chosen as merge base) branch that
             # might contain "surprising" contents
-            siderevs = list(repo.revs('((%ld-%d) %% (%d+%d))',
-                                      bases, base, base, dest))
+            siderevs = list(repo.revs("((%ld-%d) %% (%d+%d))", bases, base, base, dest))
 
             # If those revisions are covered by rebaseset, the result is good.
             # A merge in rebaseset would be considered to cover its ancestors.
             if siderevs:
-                rebaseset = [r for r, d in state.items()
-                             if d > 0 and r not in obsskipped]
-                merges = [r for r in rebaseset
-                          if cl.parentrevs(r)[1] != nullrev]
-                unwanted[i] = list(repo.revs('%ld - (::%ld) - %ld',
-                                             siderevs, merges, rebaseset))
+                rebaseset = [
+                    r for r, d in state.items() if d > 0 and r not in obsskipped
+                ]
+                merges = [r for r in rebaseset if cl.parentrevs(r)[1] != nullrev]
+                unwanted[i] = list(
+                    repo.revs("%ld - (::%ld) - %ld", siderevs, merges, rebaseset)
+                )
 
         # Choose a merge base that has a minimal number of unwanted revs.
-        l, i = min((len(revs), i)
-                   for i, revs in enumerate(unwanted) if revs is not None)
+        l, i = min(
+            (len(revs), i) for i, revs in enumerate(unwanted) if revs is not None
+        )
         base = bases[i]
 
         # newps[0] should match merge base if possible. Currently, if newps[i]
@@ -1572,27 +1746,34 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
         # The merge will include unwanted revisions. Abort now. Revisit this if
         # we have a more advanced merge algorithm that handles multiple bases.
         if l > 0:
-            unwanteddesc = _(' or ').join(
-                (', '.join('%d:%s' % (r, repo[r]) for r in revs)
-                 for revs in unwanted if revs is not None))
+            unwanteddesc = _(" or ").join(
+                (
+                    ", ".join("%d:%s" % (r, repo[r]) for r in revs)
+                    for revs in unwanted
+                    if revs is not None
+                )
+            )
             raise error.Abort(
-                _('rebasing %d:%s will include unwanted changes from %s')
-                % (rev, repo[rev], unwanteddesc))
+                _("rebasing %d:%s will include unwanted changes from %s")
+                % (rev, repo[rev], unwanteddesc)
+            )
 
     repo.ui.debug(" future parents are %d and %d\n" % tuple(newps))
 
     return newps[0], newps[1], base
 
+
 def isagitpatch(repo, patchname):
-    'Return true if the given patch is in git format'
+    "Return true if the given patch is in git format"
     mqpatch = os.path.join(repo.mq.path, patchname)
-    for line in patch.linereader(file(mqpatch, 'rb')): # noqa
-        if line.startswith('diff --git'):
+    for line in patch.linereader(file(mqpatch, "rb")):  # noqa
+        if line.startswith("diff --git"):
             return True
     return False
 
+
 def updatemq(repo, state, skipped, **opts):
-    'Update rebased mq patches - finalize and then import them'
+    "Update rebased mq patches - finalize and then import them"
     mqrebase = {}
     mq = repo.mq
     original_series = mq.fullseries[:]
@@ -1601,8 +1782,9 @@ def updatemq(repo, state, skipped, **opts):
     for p in mq.applied:
         rev = repo[p.node].rev()
         if rev in state:
-            repo.ui.debug('revision %d is an mq patch (%s), finalize it.\n' %
-                                        (rev, p.name))
+            repo.ui.debug(
+                "revision %d is an mq patch (%s), finalize it.\n" % (rev, p.name)
+            )
             mqrebase[rev] = (p.name, isagitpatch(repo, p.name))
         else:
             # Applied but not rebased, not sure this should happen
@@ -1615,10 +1797,11 @@ def updatemq(repo, state, skipped, **opts):
         for rev in sorted(mqrebase, reverse=True):
             if rev not in skipped:
                 name, isgit = mqrebase[rev]
-                repo.ui.note(_('updating mq patch %s to %s:%s\n') %
-                             (name, state[rev], repo[state[rev]]))
-                mq.qimport(repo, (), patchname=name, git=isgit,
-                                rev=[str(state[rev])])
+                repo.ui.note(
+                    _("updating mq patch %s to %s:%s\n")
+                    % (name, state[rev], repo[state[rev]])
+                )
+                mq.qimport(repo, (), patchname=name, git=isgit, rev=[str(state[rev])])
             else:
                 # Rebased and skipped
                 skippedpatches.add(mqrebase[rev][0])
@@ -1626,25 +1809,31 @@ def updatemq(repo, state, skipped, **opts):
         # Patches were either applied and rebased and imported in
         # order, applied and removed or unapplied. Discard the removed
         # ones while preserving the original series order and guards.
-        newseries = [s for s in original_series
-                     if mq.guard_re.split(s, 1)[0] not in skippedpatches]
+        newseries = [
+            s
+            for s in original_series
+            if mq.guard_re.split(s, 1)[0] not in skippedpatches
+        ]
         mq.fullseries[:] = newseries
         mq.seriesdirty = True
         mq.savedirty()
 
+
 def storecollapsemsg(repo, collapsemsg):
-    'Store the collapse message to allow recovery'
-    collapsemsg = collapsemsg or ''
+    "Store the collapse message to allow recovery"
+    collapsemsg = collapsemsg or ""
     f = repo.vfs("last-message.txt", "w")
     f.write("%s\n" % collapsemsg)
     f.close()
 
+
 def clearcollapsemsg(repo):
-    'Remove collapse message file'
+    "Remove collapse message file"
     repo.vfs.unlinkpath("last-message.txt", ignoremissing=True)
 
+
 def restorecollapsemsg(repo, isabort):
-    'Restore previously stored collapse message'
+    "Restore previously stored collapse message"
     try:
         f = repo.vfs("last-message.txt")
         collapsemsg = f.readline().strip()
@@ -1654,22 +1843,24 @@ def restorecollapsemsg(repo, isabort):
             raise
         if isabort:
             # Oh well, just abort like normal
-            collapsemsg = ''
+            collapsemsg = ""
         else:
-            raise error.Abort(_('missing .hg/last-message.txt for rebase'))
+            raise error.Abort(_("missing .hg/last-message.txt for rebase"))
     return collapsemsg
 
+
 def clearstatus(repo):
-    'Remove the status files'
+    "Remove the status files"
     # Make sure the active transaction won't write the state file
     tr = repo.currenttransaction()
     if tr:
-        tr.removefilegenerator('rebasestate')
+        tr.removefilegenerator("rebasestate")
     repo.vfs.unlinkpath("rebasestate", ignoremissing=True)
 
+
 def needupdate(repo, state):
-    '''check whether we should `update --clean` away from a merge, or if
-    somehow the working dir got forcibly updated, e.g. by older hg'''
+    """check whether we should `update --clean` away from a merge, or if
+    somehow the working dir got forcibly updated, e.g. by older hg"""
     parents = [p.rev() for p in repo[None].parents()]
 
     # Are we in a merge state at all?
@@ -1677,51 +1868,55 @@ def needupdate(repo, state):
         return False
 
     # We should be standing on the first as-of-yet unrebased commit.
-    firstunrebased = min([old for old, new in state.iteritems()
-                          if new == nullrev])
+    firstunrebased = min([old for old, new in state.iteritems() if new == nullrev])
     if firstunrebased in parents:
         return True
 
     return False
 
+
 def abort(repo, originalwd, destmap, state, activebookmark=None):
-    '''Restore the repository to its original state.  Additional args:
+    """Restore the repository to its original state.  Additional args:
 
     activebookmark: the name of the bookmark that should be active after the
-        restore'''
+        restore"""
 
     try:
         # If the first commits in the rebased set get skipped during the rebase,
         # their values within the state mapping will be the dest rev id. The
         # rebased list must must not contain the dest rev (issue4896)
-        rebased = [s for r, s in state.items()
-                   if s >= 0 and s != r and s != destmap[r]]
+        rebased = [s for r, s in state.items() if s >= 0 and s != r and s != destmap[r]]
         immutable = [d for d in rebased if not repo[d].mutable()]
         cleanup = True
         if immutable:
-            repo.ui.warn(_("warning: can't clean up public changesets %s\n")
-                        % ', '.join(str(repo[r]) for r in immutable),
-                        hint=_("see 'hg help phases' for details"))
+            repo.ui.warn(
+                _("warning: can't clean up public changesets %s\n")
+                % ", ".join(str(repo[r]) for r in immutable),
+                hint=_("see 'hg help phases' for details"),
+            )
             cleanup = False
 
         descendants = set()
         if rebased:
             descendants = set(repo.changelog.descendants(rebased))
         if descendants - set(rebased):
-            repo.ui.warn(_("warning: new changesets detected on destination "
-                           "branch, can't strip\n"))
+            repo.ui.warn(
+                _(
+                    "warning: new changesets detected on destination "
+                    "branch, can't strip\n"
+                )
+            )
             cleanup = False
 
         if cleanup:
             shouldupdate = False
             if rebased:
-                strippoints = [
-                        c.node() for c in repo.set('roots(%ld)', rebased)]
+                strippoints = [c.node() for c in repo.set("roots(%ld)", rebased)]
 
             updateifonnodes = set(rebased)
             updateifonnodes.update(destmap.values())
             updateifonnodes.add(originalwd)
-            shouldupdate = repo['.'].rev() in updateifonnodes
+            shouldupdate = repo["."].rev() in updateifonnodes
 
             # Update away from the rebase if necessary
             if shouldupdate or needupdate(repo, state):
@@ -1738,8 +1933,9 @@ def abort(repo, originalwd, destmap, state, activebookmark=None):
     finally:
         clearstatus(repo)
         clearcollapsemsg(repo)
-        repo.ui.warn(_('rebase aborted\n'))
+        repo.ui.warn(_("rebase aborted\n"))
     return 0
+
 
 def sortsource(destmap):
     """yield source revisions in an order that we only rebase things once
@@ -1762,47 +1958,48 @@ def sortsource(destmap):
             if destmap[r] not in srcset:
                 result.append(r)
         if not result:
-            raise error.Abort(_('source and destination form a cycle'))
+            raise error.Abort(_("source and destination form a cycle"))
         srcset -= set(result)
         yield result
 
+
 def buildstate(repo, destmap, collapse):
-    '''Define which revisions are going to be rebased and where
+    """Define which revisions are going to be rebased and where
 
     repo: repo
     destmap: {srcrev: destrev}
-    '''
+    """
     rebaseset = destmap.keys()
-    originalwd = repo['.'].rev()
+    originalwd = repo["."].rev()
 
     # This check isn't strictly necessary, since mq detects commits over an
     # applied patch. But it prevents messing up the working directory when
     # a partially completed rebase is blocked by mq.
-    if 'qtip' in repo.tags():
+    if "qtip" in repo.tags():
         mqapplied = set(repo[s.node].rev() for s in repo.mq.applied)
         if set(destmap.values()) & mqapplied:
-            raise error.Abort(_('cannot rebase onto an applied mq patch'))
+            raise error.Abort(_("cannot rebase onto an applied mq patch"))
 
     # Get "cycle" error early by exhausting the generator.
-    sortedsrc = list(sortsource(destmap)) # a list of sorted revs
+    sortedsrc = list(sortsource(destmap))  # a list of sorted revs
     if not sortedsrc:
-        raise error.Abort(_('no matching revisions'))
+        raise error.Abort(_("no matching revisions"))
 
     # Only check the first batch of revisions to rebase not depending on other
     # rebaseset. This means "source is ancestor of destination" for the second
     # (and following) batches of revisions are not checked here. We rely on
     # "defineparents" to do that check.
-    roots = list(repo.set('roots(%ld)', sortedsrc[0]))
+    roots = list(repo.set("roots(%ld)", sortedsrc[0]))
     if not roots:
-        raise error.Abort(_('no matching revisions'))
+        raise error.Abort(_("no matching revisions"))
     roots.sort()
     state = dict.fromkeys(rebaseset, revtodo)
-    emptyrebase = (len(sortedsrc) == 1)
+    emptyrebase = len(sortedsrc) == 1
     for root in roots:
         dest = repo[destmap[root.rev()]]
         commonbase = root.ancestor(dest)
         if commonbase == root:
-            raise error.Abort(_('source is ancestor of destination'))
+            raise error.Abort(_("source is ancestor of destination"))
         if commonbase == dest:
             wctx = repo[None]
             if dest == wctx.p1():
@@ -1814,11 +2011,11 @@ def buildstate(repo, destmap, collapse):
                 # mark the revision as done by setting its new revision
                 # equal to its old (current) revisions
                 state[root.rev()] = root.rev()
-                repo.ui.debug('source is a child of destination\n')
+                repo.ui.debug("source is a child of destination\n")
                 continue
 
         emptyrebase = False
-        repo.ui.debug('rebase onto %s starting from %s\n' % (dest, root))
+        repo.ui.debug("rebase onto %s starting from %s\n" % (dest, root))
     if emptyrebase:
         return None
     for rev in sorted(state):
@@ -1828,8 +2025,10 @@ def buildstate(repo, destmap, collapse):
             state[rev] = rev
     return originalwd, destmap, state
 
-def clearrebased(ui, repo, destmap, state, skipped, collapsedas=None,
-                 keepf=False, fm=None):
+
+def clearrebased(
+    ui, repo, destmap, state, skipped, collapsedas=None, keepf=False, fm=None
+):
     """dispose of rebased revision at the end of the rebase
 
     If `collapsedas` is not None, the rebase was a collapse whose result if the
@@ -1852,39 +2051,54 @@ def clearrebased(ui, repo, destmap, state, skipped, collapsedas=None,
                 else:
                     succs = (newnode,)
                 replacements[oldnode] = succs
-    scmutil.cleanupnodes(repo, replacements, 'rebase', moves)
+    scmutil.cleanupnodes(repo, replacements, "rebase", moves)
     if fm:
         hf = fm.hexfunc
         fl = fm.formatlist
         fd = fm.formatdict
-        nodechanges = fd({hf(oldn): fl([hf(n) for n in newn], name='node')
-                          for oldn, newn in replacements.iteritems()},
-                         key="oldnode", value="newnodes")
+        nodechanges = fd(
+            {
+                hf(oldn): fl([hf(n) for n in newn], name="node")
+                for oldn, newn in replacements.iteritems()
+            },
+            key="oldnode",
+            value="newnodes",
+        )
         fm.data(nodechanges=nodechanges)
 
+
 def pullrebase(orig, ui, repo, *args, **opts):
-    'Call rebase after pull if the latter has been invoked with --rebase'
+    "Call rebase after pull if the latter has been invoked with --rebase"
     ret = None
-    if opts.get(r'rebase'):
-        if ui.configbool('commands', 'rebase.requiredest'):
-            msg = _('rebase destination required by configuration')
-            hint = _('use hg pull followed by hg rebase -d DEST')
+    if opts.get(r"rebase"):
+        if ui.configbool("commands", "rebase.requiredest"):
+            msg = _("rebase destination required by configuration")
+            hint = _("use hg pull followed by hg rebase -d DEST")
             raise error.Abort(msg, hint=hint)
 
         with repo.wlock(), repo.lock():
-            if opts.get(r'update'):
-                del opts[r'update']
-                ui.debug('--update and --rebase are not compatible, ignoring '
-                         'the update flag\n')
+            if opts.get(r"update"):
+                del opts[r"update"]
+                ui.debug(
+                    "--update and --rebase are not compatible, ignoring "
+                    "the update flag\n"
+                )
 
             cmdutil.checkunfinished(repo)
-            cmdutil.bailifchanged(repo, hint=_('cannot pull with rebase: '
-                'please commit or shelve your changes first'))
+            cmdutil.bailifchanged(
+                repo,
+                hint=_(
+                    "cannot pull with rebase: "
+                    "please commit or shelve your changes first"
+                ),
+            )
 
             revsprepull = len(repo)
             origpostincoming = commands.postincoming
+
             def _dummy(*args, **kwargs):
                 pass
+
             commands.postincoming = _dummy
             try:
                 ret = orig(ui, repo, *args, **opts)
@@ -1894,37 +2108,39 @@ def pullrebase(orig, ui, repo, *args, **opts):
             if revspostpull > revsprepull:
                 # --rev option from pull conflict with rebase own --rev
                 # dropping it
-                if r'rev' in opts:
-                    del opts[r'rev']
+                if r"rev" in opts:
+                    del opts[r"rev"]
                 # positional argument from pull conflicts with rebase's own
                 # --source.
-                if r'source' in opts:
-                    del opts[r'source']
+                if r"source" in opts:
+                    del opts[r"source"]
                 # revsprepull is the len of the repo, not revnum of tip.
                 destspace = list(repo.changelog.revs(start=revsprepull))
-                opts[r'_destspace'] = destspace
+                opts[r"_destspace"] = destspace
                 try:
                     rebase(ui, repo, **opts)
                 except error.NoMergeDestAbort:
                     # we can maybe update instead
                     rev, _a, _b = destutil.destupdate(repo)
-                    if rev == repo['.'].rev():
-                        ui.status(_('nothing to rebase\n'))
+                    if rev == repo["."].rev():
+                        ui.status(_("nothing to rebase\n"))
                     else:
-                        ui.status(_('nothing to rebase - updating instead\n'))
+                        ui.status(_("nothing to rebase - updating instead\n"))
                         # not passing argument to get the bare update behavior
                         # with warning and trumpets
                         commands.update(ui, repo)
     else:
-        if opts.get(r'tool'):
-            raise error.Abort(_('--tool can only be used with --rebase'))
+        if opts.get(r"tool"):
+            raise error.Abort(_("--tool can only be used with --rebase"))
         ret = orig(ui, repo, *args, **opts)
 
     return ret
 
+
 def _filterobsoleterevs(repo, revs):
     """returns a set of the obsolete revisions in revs"""
     return set(r for r in revs if repo[r].obsolete())
+
 
 def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
     """Return (obsoletenotrebased, obsoletewithoutsuccessorindestination).
@@ -1966,14 +2182,18 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
                 # and its descendants to avoid divergence.
                 # obsutil.allsuccessors can include nodes that aren't present
                 # in changelog nodemap.
-                if any(nodemap[s] in destmap
-                       for s in successors if s != srcnode and s in nodemap):
+                if any(
+                    nodemap[s] in destmap
+                    for s in successors
+                    if s != srcnode and s in nodemap
+                ):
                     obsoletewithoutsuccessorindestination.add(srcrev)
 
     return obsoletenotrebased, obsoletewithoutsuccessorindestination
 
+
 def summaryhook(ui, repo):
-    if not repo.vfs.exists('rebasestate'):
+    if not repo.vfs.exists("rebasestate"):
         return
     try:
         rbsrt = rebaseruntime(repo, ui, {})
@@ -1986,21 +2206,28 @@ def summaryhook(ui, repo):
         return
     numrebased = len([i for i in state.itervalues() if i >= 0])
     # i18n: column positioning for "hg summary"
-    ui.write(_('rebase: %s, %s (rebase --continue)\n') %
-             (ui.label(_('%d rebased'), 'rebase.rebased') % numrebased,
-              ui.label(_('%d remaining'), 'rebase.remaining') %
-              (len(state) - numrebased)))
+    ui.write(
+        _("rebase: %s, %s (rebase --continue)\n")
+        % (
+            ui.label(_("%d rebased"), "rebase.rebased") % numrebased,
+            ui.label(_("%d remaining"), "rebase.remaining") % (len(state) - numrebased),
+        )
+    )
+
 
 def uisetup(ui):
-    #Replace pull with a decorator to provide --rebase option
-    entry = extensions.wrapcommand(commands.table, 'pull', pullrebase)
-    entry[1].append(('', 'rebase', None,
-                     _("rebase working directory to branch head")))
-    entry[1].append(('t', 'tool', '',
-                     _("specify merge tool for rebase")))
-    cmdutil.summaryhooks.add('rebase', summaryhook)
+    # Replace pull with a decorator to provide --rebase option
+    entry = extensions.wrapcommand(commands.table, "pull", pullrebase)
+    entry[1].append(("", "rebase", None, _("rebase working directory to branch head")))
+    entry[1].append(("t", "tool", "", _("specify merge tool for rebase")))
+    cmdutil.summaryhooks.add("rebase", summaryhook)
     cmdutil.unfinishedstates.append(
-        ['rebasestate', False, False, _('rebase in progress'),
-         _("use 'hg rebase --continue' or 'hg rebase --abort'")])
-    cmdutil.afterresolvedstates.append(
-        ['rebasestate', _('hg rebase --continue')])
+        [
+            "rebasestate",
+            False,
+            False,
+            _("rebase in progress"),
+            _("use 'hg rebase --continue' or 'hg rebase --abort'"),
+        ]
+    )
+    cmdutil.afterresolvedstates.append(["rebasestate", _("hg rebase --continue")])

@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''perform automatic newline conversion (DEPRECATED)
+"""perform automatic newline conversion (DEPRECATED)
 
   Deprecation: The win32text extension requires each user to configure
   the extension again and again for each clone since the configuration
@@ -39,43 +39,39 @@ pushed or pulled::
   [hooks]
   pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
   # or pretxnchangegroup.cr = python:hgext.win32text.forbidcr
-'''
+"""
 
 from __future__ import absolute_import
 
 import re
+
+from mercurial import registrar, util
 from mercurial.i18n import _
-from mercurial.node import (
-    short,
-)
-from mercurial import (
-    registrar,
-    util,
-)
+from mercurial.node import short
+
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('win32text', 'warn',
-    default=True,
-)
+configitem("win32text", "warn", default=True)
 
 # regexp for single LF without CR preceding.
-re_single_lf = re.compile('(^|[^\r])\n', re.MULTILINE)
+re_single_lf = re.compile("(^|[^\r])\n", re.MULTILINE)
 
-newlinestr = {'\r\n': 'CRLF', '\r': 'CR'}
-filterstr = {'\r\n': 'clever', '\r': 'mac'}
+newlinestr = {"\r\n": "CRLF", "\r": "CR"}
+filterstr = {"\r\n": "clever", "\r": "mac"}
 
 try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 def checknewline(s, newline, ui=None, repo=None, filename=None):
     # warn if already has 'newline' in repository.
@@ -83,57 +79,71 @@ def checknewline(s, newline, ui=None, repo=None, filename=None):
     # see issue 302:
     #   https://bz.mercurial-scm.org/302
     if newline in s and ui and filename and repo:
-        ui.warn(_('WARNING: %s already has %s line endings\n'
-                  'and does not need EOL conversion by the win32text plugin.\n'
-                  'Before your next commit, please reconsider your '
-                  'encode/decode settings in \nMercurial.ini or %s.\n') %
-                (filename, newlinestr[newline], repo.vfs.join('hgrc')))
+        ui.warn(
+            _(
+                "WARNING: %s already has %s line endings\n"
+                "and does not need EOL conversion by the win32text plugin.\n"
+                "Before your next commit, please reconsider your "
+                "encode/decode settings in \nMercurial.ini or %s.\n"
+            )
+            % (filename, newlinestr[newline], repo.vfs.join("hgrc"))
+        )
+
 
 def dumbdecode(s, cmd, **kwargs):
-    checknewline(s, '\r\n', **kwargs)
+    checknewline(s, "\r\n", **kwargs)
     # replace single LF to CRLF
-    return re_single_lf.sub('\\1\r\n', s)
+    return re_single_lf.sub("\\1\r\n", s)
+
 
 def dumbencode(s, cmd):
-    return s.replace('\r\n', '\n')
+    return s.replace("\r\n", "\n")
+
 
 def macdumbdecode(s, cmd, **kwargs):
-    checknewline(s, '\r', **kwargs)
-    return s.replace('\n', '\r')
+    checknewline(s, "\r", **kwargs)
+    return s.replace("\n", "\r")
+
 
 def macdumbencode(s, cmd):
-    return s.replace('\r', '\n')
+    return s.replace("\r", "\n")
+
 
 def cleverdecode(s, cmd, **kwargs):
     if not util.binary(s):
         return dumbdecode(s, cmd, **kwargs)
     return s
 
+
 def cleverencode(s, cmd):
     if not util.binary(s):
         return dumbencode(s, cmd)
     return s
+
 
 def macdecode(s, cmd, **kwargs):
     if not util.binary(s):
         return macdumbdecode(s, cmd, **kwargs)
     return s
 
+
 def macencode(s, cmd):
     if not util.binary(s):
         return macdumbencode(s, cmd)
     return s
 
+
 _filters = {
-    'dumbdecode:': dumbdecode,
-    'dumbencode:': dumbencode,
-    'cleverdecode:': cleverdecode,
-    'cleverencode:': cleverencode,
-    'macdumbdecode:': macdumbdecode,
-    'macdumbencode:': macdumbencode,
-    'macdecode:': macdecode,
-    'macencode:': macencode,
-    }
+    "dumbdecode:": dumbdecode,
+    "dumbencode:": dumbencode,
+    "cleverdecode:": cleverdecode,
+    "cleverencode:": cleverencode,
+    "macdumbdecode:": macdumbdecode,
+    "macdumbencode:": macdumbencode,
+    "macdecode:": macdecode,
+    "macencode:": macencode,
+}
+
 
 def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
     halt = False
@@ -143,7 +153,7 @@ def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
     # newest version as canonical. this prevents us from blocking a
     # changegroup that contains an unacceptable commit followed later
     # by a commit that fixes the problem.
-    tip = repo['tip']
+    tip = repo["tip"]
     for rev in xrange(len(repo) - 1, repo[node].rev() - 1, -1):
         c = repo[rev]
         for f in c.files():
@@ -153,35 +163,47 @@ def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
             data = c[f].data()
             if not util.binary(data) and newline in data:
                 if not halt:
-                    ui.warn(_('attempt to commit or push text file(s) '
-                              'using %s line endings\n') %
-                              newlinestr[newline])
-                ui.warn(_('in %s: %s\n') % (short(c.node()), f))
+                    ui.warn(
+                        _(
+                            "attempt to commit or push text file(s) "
+                            "using %s line endings\n"
+                        )
+                        % newlinestr[newline]
+                    )
+                ui.warn(_("in %s: %s\n") % (short(c.node()), f))
                 halt = True
-    if halt and hooktype == 'pretxnchangegroup':
+    if halt and hooktype == "pretxnchangegroup":
         crlf = newlinestr[newline].lower()
         filter = filterstr[newline]
-        ui.warn(_('\nTo prevent this mistake in your local repository,\n'
-                  'add to Mercurial.ini or .hg/hgrc:\n'
-                  '\n'
-                  '[hooks]\n'
-                  'pretxncommit.%s = python:hgext.win32text.forbid%s\n'
-                  '\n'
-                  'and also consider adding:\n'
-                  '\n'
-                  '[extensions]\n'
-                  'win32text =\n'
-                  '[encode]\n'
-                  '** = %sencode:\n'
-                  '[decode]\n'
-                  '** = %sdecode:\n') % (crlf, crlf, filter, filter))
+        ui.warn(
+            _(
+                "\nTo prevent this mistake in your local repository,\n"
+                "add to Mercurial.ini or .hg/hgrc:\n"
+                "\n"
+                "[hooks]\n"
+                "pretxncommit.%s = python:hgext.win32text.forbid%s\n"
+                "\n"
+                "and also consider adding:\n"
+                "\n"
+                "[extensions]\n"
+                "win32text =\n"
+                "[encode]\n"
+                "** = %sencode:\n"
+                "[decode]\n"
+                "** = %sdecode:\n"
+            )
+            % (crlf, crlf, filter, filter)
+        )
     return halt
 
+
 def forbidcrlf(ui, repo, hooktype, node, **kwargs):
-    return forbidnewline(ui, repo, hooktype, node, '\r\n', **kwargs)
+    return forbidnewline(ui, repo, hooktype, node, "\r\n", **kwargs)
+
 
 def forbidcr(ui, repo, hooktype, node, **kwargs):
-    return forbidnewline(ui, repo, hooktype, node, '\r', **kwargs)
+    return forbidnewline(ui, repo, hooktype, node, "\r", **kwargs)
+
 
 def reposetup(ui, repo):
     if not repo.local():
@@ -189,8 +211,13 @@ def reposetup(ui, repo):
     for name, fn in _filters.iteritems():
         repo.adddatafilter(name, fn)
 
+
 def extsetup(ui):
     # deprecated config: win32text.warn
-    if ui.configbool('win32text', 'warn'):
-        ui.warn(_("win32text is deprecated: "
-                  "https://mercurial-scm.org/wiki/Win32TextExtension\n"))
+    if ui.configbool("win32text", "warn"):
+        ui.warn(
+            _(
+                "win32text is deprecated: "
+                "https://mercurial-scm.org/wiki/Win32TextExtension\n"
+            )
+        )

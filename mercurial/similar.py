@@ -7,22 +7,21 @@
 
 from __future__ import absolute_import
 
+from . import mdiff, progress
 from .i18n import _
-from . import (
-    mdiff,
-    progress,
-)
+
 
 def _findexactmatches(repo, added, removed):
-    '''find renamed files that have no changes
+    """find renamed files that have no changes
 
     Takes a list of new filectxs and a list of removed filectxs, and yields
     (before, after) tuples of exact matches.
-    '''
+    """
     numfiles = len(added) + len(removed)
 
-    with progress.bar(repo.ui, _('searching for exact renames'), _('files'),
-                      numfiles) as prog:
+    with progress.bar(
+        repo.ui, _("searching for exact renames"), _("files"), numfiles
+    ) as prog:
         # Build table of removed files: {hash(fctx.data()): [fctx, ...]}.
         # We use hash() to discard fctx.data() from memory.
         hashes = {}
@@ -45,10 +44,12 @@ def _findexactmatches(repo, added, removed):
                     yield (rfctx, fctx)
                     break
 
+
 def _ctxdata(fctx):
     # lazily load text
     orig = fctx.data()
     return orig, mdiff.splitnewlines(orig)
+
 
 def _score(fctx, otherdata):
     orig, lines = otherdata
@@ -64,18 +65,21 @@ def _score(fctx, otherdata):
     lengths = len(text) + len(orig)
     return equal * 2.0 / lengths
 
+
 def score(fctx1, fctx2):
     return _score(fctx1, _ctxdata(fctx2))
 
+
 def _findsimilarmatches(repo, added, removed, threshold):
-    '''find potentially renamed files based on similar file content
+    """find potentially renamed files based on similar file content
 
     Takes a list of new filectxs and a list of removed filectxs, and yields
     (before, after, score) tuples of partial matches.
-    '''
+    """
     copies = {}
-    with progress.bar(repo.ui, _('searching for similar files'), _('files'),
-                      len(removed)) as prog:
+    with progress.bar(
+        repo.ui, _("searching for similar files"), _("files"), len(removed)
+    ) as prog:
         for r in removed:
             prog.value += 1
 
@@ -92,11 +96,13 @@ def _findsimilarmatches(repo, added, removed, threshold):
         source, bscore = v
         yield source, dest, bscore
 
+
 def _dropempty(fctxs):
     return [x for x in fctxs if x.size() > 0]
 
+
 def findrenames(repo, added, removed, threshold):
-    '''find renamed files -- yields (before, after, score) tuples'''
+    """find renamed files -- yields (before, after, score) tuples"""
     wctx = repo[None]
     pctx = wctx.p1()
 
@@ -115,6 +121,7 @@ def findrenames(repo, added, removed, threshold):
     # If the user requested similar files to be matched, search for them also.
     if threshold < 1.0:
         addedfiles = [x for x in addedfiles if x not in matchedfiles]
-        for (a, b, score) in _findsimilarmatches(repo, addedfiles,
-                                                 removedfiles, threshold):
+        for (a, b, score) in _findsimilarmatches(
+            repo, addedfiles, removedfiles, threshold
+        ):
             yield (a.path(), b.path(), score)

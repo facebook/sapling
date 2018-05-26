@@ -1,33 +1,37 @@
 from __future__ import absolute_import, print_function
+
 import os
-from mercurial import (
-    hg,
-    merge,
-    ui as uimod,
-)
+
+from mercurial import hg, merge, ui as uimod
+
 
 u = uimod.ui.load()
 
-repo = hg.repository(u, 'test1', create=1)
-os.chdir('test1')
+repo = hg.repository(u, "test1", create=1)
+os.chdir("test1")
+
 
 def commit(text, time):
     repo.commit(text=text, date="%d 0" % time)
 
+
 def addcommit(name, time):
-    f = open(name, 'w')
-    f.write('%s\n' % name)
+    f = open(name, "w")
+    f.write("%s\n" % name)
     f.close()
     repo[None].add([name])
     commit(name, time)
 
+
 def update(rev):
     merge.update(repo, rev, False, True)
+
 
 def merge_(rev):
     merge.update(repo, rev, True, False)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     addcommit("A", 0)
     addcommit("B", 1)
 
@@ -51,38 +55,38 @@ if __name__ == '__main__':
     addcommit("I", 8)
 
     # Ancestors
-    print('Ancestors of 5')
+    print("Ancestors of 5")
     for r in repo.changelog.ancestors([5]):
-        print(r, end=' ')
+        print(r, end=" ")
 
-    print('\nAncestors of 6 and 5')
+    print("\nAncestors of 6 and 5")
     for r in repo.changelog.ancestors([6, 5]):
-        print(r, end=' ')
+        print(r, end=" ")
 
-    print('\nAncestors of 5 and 4')
+    print("\nAncestors of 5 and 4")
     for r in repo.changelog.ancestors([5, 4]):
-        print(r, end=' ')
+        print(r, end=" ")
 
-    print('\nAncestors of 7, stop at 6')
+    print("\nAncestors of 7, stop at 6")
     for r in repo.changelog.ancestors([7], 6):
-        print(r, end=' ')
+        print(r, end=" ")
 
-    print('\nAncestors of 7, including revs')
+    print("\nAncestors of 7, including revs")
     for r in repo.changelog.ancestors([7], inclusive=True):
-        print(r, end=' ')
+        print(r, end=" ")
 
-    print('\nAncestors of 7, 5 and 3, including revs')
+    print("\nAncestors of 7, 5 and 3, including revs")
     for r in repo.changelog.ancestors([7, 5, 3], inclusive=True):
-        print(r, end=' ')
+        print(r, end=" ")
 
     # Descendants
-    print('\n\nDescendants of 5')
+    print("\n\nDescendants of 5")
     for r in repo.changelog.descendants([5]):
-        print(r, end=' ')
+        print(r, end=" ")
 
-    print('\nDescendants of 5 and 3')
+    print("\nDescendants of 5 and 3")
     for r in repo.changelog.descendants([5, 3]):
-        print(r, end=' ')
+        print(r, end=" ")
 
-    print('\nDescendants of 5 and 4')
-    print(*repo.changelog.descendants([5, 4]), sep=' ')
+    print("\nDescendants of 5 and 4")
+    print(*repo.changelog.descendants([5, 4]), sep=" ")

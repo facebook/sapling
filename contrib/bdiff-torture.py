@@ -1,25 +1,24 @@
 # Randomized torture test generation for bdiff
 
 from __future__ import absolute_import, print_function
+
 import random
 import sys
 
-from mercurial import (
-    mdiff,
-)
+from mercurial import mdiff
+
 
 if sys.version_info.major >= 3:
     xrange = range
+
 
 def reducetest(a, b):
     tries = 0
     reductions = 0
     print("reducing...")
     while tries < 1000:
-        a2 = "\n".join(l for l in a.splitlines()
-                       if random.randint(0, 100) > 0) + "\n"
-        b2 = "\n".join(l for l in b.splitlines()
-                       if random.randint(0, 100) > 0) + "\n"
+        a2 = "\n".join(l for l in a.splitlines() if random.randint(0, 100) > 0) + "\n"
+        b2 = "\n".join(l for l in b.splitlines() if random.randint(0, 100) > 0) + "\n"
         if a2 == a and b2 == b:
             continue
         if a2 == b2:
@@ -34,14 +33,14 @@ def reducetest(a, b):
             a = a2
             b = b2
 
-    print("reduced:", reductions, len(a) + len(b),
-          repr(a), repr(b))
+    print("reduced:", reductions, len(a) + len(b), repr(a), repr(b))
     try:
         test1(a, b)
     except Exception as inst:
         print("failed:", inst)
 
     sys.exit(0)
+
 
 def test1(a, b):
     d = mdiff.textdiff(a, b)
@@ -51,6 +50,7 @@ def test1(a, b):
     if c != b:
         raise ValueError("bad")
 
+
 def testwrap(a, b):
     try:
         test1(a, b)
@@ -59,9 +59,11 @@ def testwrap(a, b):
         print("exception:", inst)
     reducetest(a, b)
 
+
 def test(a, b):
     testwrap(a, b)
     testwrap(b, a)
+
 
 def rndtest(size, noise):
     a = []
@@ -83,6 +85,7 @@ def rndtest(size, noise):
     b = "\n".join(b2) + "\n"
 
     test(a, b)
+
 
 maxvol = 10000
 startsize = 2

@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''commands to sign and verify changesets'''
+"""commands to sign and verify changesets"""
 
 from __future__ import absolute_import
 
@@ -11,16 +11,9 @@ import binascii
 import os
 import tempfile
 
+from mercurial import cmdutil, error, match, node as hgnode, pycompat, registrar, util
 from mercurial.i18n import _
-from mercurial import (
-    cmdutil,
-    error,
-    match,
-    node as hgnode,
-    pycompat,
-    registrar,
-    util,
-)
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -28,26 +21,21 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('gpg', 'cmd',
-    default='gpg',
-)
-configitem('gpg', 'key',
-    default=None,
-)
-configitem('gpg', '.*',
-    default=None,
-    generic=True,
-)
+configitem("gpg", "cmd", default="gpg")
+configitem("gpg", "key", default=None)
+configitem("gpg", ".*", default=None, generic=True)
+
 
 class gpg(object):
+
     def __init__(self, path, key=None):
         self.path = path
-        self.key = (key and " --local-user \"%s\"" % key) or ""
+        self.key = (key and ' --local-user "%s"' % key) or ""
 
     def sign(self, data):
         gpgcmd = "%s --sign --detach-sign%s" % (self.path, self.key)
@@ -59,15 +47,18 @@ class gpg(object):
         try:
             # create temporary files
             fd, sigfile = tempfile.mkstemp(prefix="hg-gpg-", suffix=".sig")
-            fp = os.fdopen(fd, pycompat.sysstr('wb'))
+            fp = os.fdopen(fd, pycompat.sysstr("wb"))
             fp.write(sig)
             fp.close()
             fd, datafile = tempfile.mkstemp(prefix="hg-gpg-", suffix=".txt")
-            fp = os.fdopen(fd, pycompat.sysstr('wb'))
+            fp = os.fdopen(fd, pycompat.sysstr("wb"))
             fp.write(data)
             fp.close()
-            gpgcmd = ("%s --logger-fd 1 --status-fd 1 --verify "
-                      "\"%s\" \"%s\"" % (self.path, sigfile, datafile))
+            gpgcmd = "%s --logger-fd 1 --status-fd 1 --verify " '"%s" "%s"' % (
+                self.path,
+                sigfile,
+                datafile,
+            )
             ret = util.filter("", gpgcmd)
         finally:
             for f in (sigfile, datafile):
@@ -91,10 +82,12 @@ class gpg(object):
                 key = l.split(" ", 3)[:2]
                 key.append("")
                 fingerprint = None
-            elif (l.startswith("GOODSIG") or
-                  l.startswith("EXPSIG") or
-                  l.startswith("EXPKEYSIG") or
-                  l.startswith("BADSIG")):
+            elif (
+                l.startswith("GOODSIG")
+                or l.startswith("EXPSIG")
+                or l.startswith("EXPKEYSIG")
+                or l.startswith("BADSIG")
+            ):
                 if key is not None:
                     keys.append(key + [fingerprint])
                 key = l.split(" ", 2)
@@ -103,19 +96,22 @@ class gpg(object):
             keys.append(key + [fingerprint])
         return keys
 
+
 def newgpg(ui, **opts):
     """create a new gpg instance"""
     gpgpath = ui.config("gpg", "cmd")
-    gpgkey = opts.get(r'key')
+    gpgkey = opts.get(r"key")
     if not gpgkey:
         gpgkey = ui.config("gpg", "key")
     return gpg(gpgpath, gpgkey)
+
 
 def sigwalk(repo):
     """
     walk over every sigs, yields a couple
     ((node, version, sig), (filename, linenumber))
     """
+
     def parsefile(fileiter, context):
         ln = 1
         for l in fileiter:
@@ -138,6 +134,7 @@ def sigwalk(repo):
     except IOError:
         pass
 
+
 def getkeys(ui, repo, mygpg, sigdata, context):
     """get the keys who signed a data"""
     fn, ln = context
@@ -153,22 +150,28 @@ def getkeys(ui, repo, mygpg, sigdata, context):
     # warn for expired key and/or sigs
     for key in keys:
         if key[0] == "ERRSIG":
-            ui.write(_("%s Unknown key ID \"%s\"\n")
-                     % (prefix, shortkey(ui, key[1][:15])))
+            ui.write(
+                _('%s Unknown key ID "%s"\n') % (prefix, shortkey(ui, key[1][:15]))
+            )
             continue
         if key[0] == "BADSIG":
-            ui.write(_("%s Bad signature from \"%s\"\n") % (prefix, key[2]))
+            ui.write(_('%s Bad signature from "%s"\n') % (prefix, key[2]))
             continue
         if key[0] == "EXPSIG":
-            ui.write(_("%s Note: Signature has expired"
-                       " (signed by: \"%s\")\n") % (prefix, key[2]))
+            ui.write(
+                _("%s Note: Signature has expired" ' (signed by: "%s")\n')
+                % (prefix, key[2])
+            )
         elif key[0] == "EXPKEYSIG":
-            ui.write(_("%s Note: This key has expired"
-                       " (signed by: \"%s\")\n") % (prefix, key[2]))
+            ui.write(
+                _("%s Note: This key has expired" ' (signed by: "%s")\n')
+                % (prefix, key[2])
+            )
         validkeys.append((key[1], key[2], key[3]))
     return validkeys
 
-@command("sigs", [], _('hg sigs'))
+
+@command("sigs", [], _("hg sigs"))
 def sigs(ui, repo):
     """list signed changesets"""
     mygpg = newgpg(ui)
@@ -193,7 +196,8 @@ def sigs(ui, repo):
             r = "%5d:%s" % (rev, hgnode.hex(repo.changelog.node(rev)))
             ui.write("%-30s %s\n" % (keystr(ui, k), r))
 
-@command("sigcheck", [], _('hg sigcheck REV'))
+
+@command("sigcheck", [], _("hg sigcheck REV"))
 def sigcheck(ui, repo, rev):
     """verify all the signatures there may be for a particular revision"""
     mygpg = newgpg(ui)
@@ -217,6 +221,7 @@ def sigcheck(ui, repo, rev):
     for key in keys:
         ui.write(" %s\n" % keystr(ui, key))
 
+
 def keystr(ui, key):
     """associate a string to a key (username, comment)"""
     keyid, user, fingerprint = key
@@ -226,17 +231,20 @@ def keystr(ui, key):
     else:
         return user
 
-@command("sign",
-         [('l', 'local', None, _('make the signature local')),
-          ('f', 'force', None, _('sign even if the sigfile is modified')),
-          ('', 'no-commit', None, _('do not commit the sigfile after signing')),
-          ('k', 'key', '',
-           _('the key id to sign with'), _('ID')),
-          ('m', 'message', '',
-           _('use text as commit message'), _('TEXT')),
-          ('e', 'edit', False, _('invoke editor on commit messages')),
-         ] + cmdutil.commitopts2,
-         _('hg sign [OPTION]... [REV]...'))
+
+@command(
+    "sign",
+    [
+        ("l", "local", None, _("make the signature local")),
+        ("f", "force", None, _("sign even if the sigfile is modified")),
+        ("", "no-commit", None, _("do not commit the sigfile after signing")),
+        ("k", "key", "", _("the key id to sign with"), _("ID")),
+        ("m", "message", "", _("use text as commit message"), _("TEXT")),
+        ("e", "edit", False, _("invoke editor on commit messages")),
+    ]
+    + cmdutil.commitopts2,
+    _("hg sign [OPTION]... [REV]..."),
+)
 def sign(ui, repo, *revs, **opts):
     """add a signature for the current or given revision
 
@@ -251,31 +259,31 @@ def sign(ui, repo, *revs, **opts):
     with repo.wlock():
         return _dosign(ui, repo, *revs, **opts)
 
+
 def _dosign(ui, repo, *revs, **opts):
     mygpg = newgpg(ui, **opts)
     opts = pycompat.byteskwargs(opts)
     sigver = "0"
     sigmessage = ""
 
-    date = opts.get('date')
+    date = opts.get("date")
     if date:
-        opts['date'] = util.parsedate(date)
+        opts["date"] = util.parsedate(date)
 
     if revs:
         nodes = [repo.lookup(n) for n in revs]
     else:
-        nodes = [node for node in repo.dirstate.parents()
-                 if node != hgnode.nullid]
+        nodes = [node for node in repo.dirstate.parents() if node != hgnode.nullid]
         if len(nodes) > 1:
-            raise error.Abort(_('uncommitted merge - please provide a '
-                               'specific revision'))
+            raise error.Abort(
+                _("uncommitted merge - please provide a " "specific revision")
+            )
         if not nodes:
             nodes = [repo.changelog.tip()]
 
     for n in nodes:
         hexnode = hgnode.hex(n)
-        ui.write(_("signing %d:%s\n") % (repo.changelog.rev(n),
-                                         hgnode.short(n)))
+        ui.write(_("signing %d:%s\n") % (repo.changelog.rev(n), hgnode.short(n)))
         # build data
         data = node2txt(repo, n, sigver)
         sig = mygpg.sign(data)
@@ -286,46 +294,50 @@ def _dosign(ui, repo, *revs, **opts):
         sigmessage += "%s %s %s\n" % (hexnode, sigver, sig)
 
     # write it
-    if opts['local']:
+    if opts["local"]:
         repo.vfs.append("localsigs", sigmessage)
         return
 
     if not opts["force"]:
-        msigs = match.exact(repo.root, '', ['.hgsigs'])
+        msigs = match.exact(repo.root, "", [".hgsigs"])
         if any(repo.status(match=msigs, unknown=True, ignored=True)):
-            raise error.Abort(_("working copy of .hgsigs is changed "),
-                             hint=_("please commit .hgsigs manually"))
+            raise error.Abort(
+                _("working copy of .hgsigs is changed "),
+                hint=_("please commit .hgsigs manually"),
+            )
 
     sigsfile = repo.wvfs(".hgsigs", "ab")
     sigsfile.write(sigmessage)
     sigsfile.close()
 
-    if '.hgsigs' not in repo.dirstate:
+    if ".hgsigs" not in repo.dirstate:
         repo[None].add([".hgsigs"])
 
     if opts["no_commit"]:
         return
 
-    message = opts['message']
+    message = opts["message"]
     if not message:
         # we don't translate commit messages
-        message = "\n".join(["Added signature for changeset %s"
-                             % hgnode.short(n)
-                             for n in nodes])
+        message = "\n".join(
+            ["Added signature for changeset %s" % hgnode.short(n) for n in nodes]
+        )
     try:
-        editor = cmdutil.getcommiteditor(editform='gpg.sign',
-                                         **pycompat.strkwargs(opts))
-        repo.commit(message, opts['user'], opts['date'], match=msigs,
-                    editor=editor)
+        editor = cmdutil.getcommiteditor(
+            editform="gpg.sign", **pycompat.strkwargs(opts)
+        )
+        repo.commit(message, opts["user"], opts["date"], match=msigs, editor=editor)
     except ValueError as inst:
         raise error.Abort(str(inst))
 
+
 def shortkey(ui, key):
     if len(key) != 16:
-        ui.debug("key ID \"%s\" format error\n" % key)
+        ui.debug('key ID "%s" format error\n' % key)
         return key
 
     return key[-8:]
+
 
 def node2txt(repo, node, ver):
     """map a manifest into some text"""

@@ -5,7 +5,6 @@ repository. See the command help for details.
 """
 from __future__ import absolute_import
 
-from mercurial.i18n import _
 from mercurial import (
     bookmarks as bookmarksmod,
     cmdutil,
@@ -20,6 +19,9 @@ from mercurial import (
     scmutil,
     util,
 )
+from mercurial.i18n import _
+
+
 nullid = nodemod.nullid
 release = lockmod.release
 
@@ -29,11 +31,12 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
+
 
 def checksubstate(repo, baserev=None):
-    '''return list of subrepos at a different revision than substate.
-    Abort if any subrepos have uncommitted changes.'''
+    """return list of subrepos at a different revision than substate.
+    Abort if any subrepos have uncommitted changes."""
     inclsubs = []
     wctx = repo[None]
     if baserev:
@@ -46,35 +49,42 @@ def checksubstate(repo, baserev=None):
             inclsubs.append(s)
     return inclsubs
 
-def checklocalchanges(repo, force=False, excsuffix=''):
+
+def checklocalchanges(repo, force=False, excsuffix=""):
     cmdutil.checkunfinished(repo)
     s = repo.status()
     if not force:
         if s.modified or s.added or s.removed or s.deleted:
-            _("local changes found") # i18n tool detection
+            _("local changes found")  # i18n tool detection
             raise error.Abort(_("local changes found" + excsuffix))
         if checksubstate(repo):
-            _("local changed subrepos found") # i18n tool detection
+            _("local changed subrepos found")  # i18n tool detection
             raise error.Abort(_("local changed subrepos found" + excsuffix))
     return s
+
 
 def _findupdatetarget(repo, nodes):
     unode, p2 = repo.changelog.parents(nodes[0])
     currentbranch = repo[None].branch()
 
-    if (util.safehasattr(repo, 'mq') and p2 != nullid
-        and p2 in [x.node for x in repo.mq.applied]):
+    if (
+        util.safehasattr(repo, "mq")
+        and p2 != nullid
+        and p2 in [x.node for x in repo.mq.applied]
+    ):
         unode = p2
     elif currentbranch != repo[unode].branch():
-        pwdir = 'parents(wdir())'
-        revset = 'max(((parents(%ln::%r) + %r) - %ln::%r) and branch(%s))'
-        branchtarget = repo.revs(revset, nodes, pwdir, pwdir, nodes, pwdir,
-                                 currentbranch)
+        pwdir = "parents(wdir())"
+        revset = "max(((parents(%ln::%r) + %r) - %ln::%r) and branch(%s))"
+        branchtarget = repo.revs(
+            revset, nodes, pwdir, pwdir, nodes, pwdir, currentbranch
+        )
         if branchtarget:
             cl = repo.changelog
             unode = cl.node(branchtarget.first())
 
     return unode
+
 
 def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
     with repo.wlock(), repo.lock():
@@ -89,28 +99,45 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
 
         repomarks = repo._bookmarks
         if bookmarks:
-            with repo.transaction('strip') as tr:
+            with repo.transaction("strip") as tr:
                 if repo._activebookmark in bookmarks:
                     bookmarksmod.deactivate(repo)
                 repomarks.applychanges(repo, tr, [(b, None) for b in bookmarks])
             for bookmark in sorted(bookmarks):
                 ui.write(_("bookmark '%s' deleted\n") % bookmark)
 
-@command("strip",
-         [
-          ('r', 'rev', [], _('strip specified revision (optional, '
-                               'can specify revisions without this '
-                               'option)'), _('REV')),
-          ('f', 'force', None, _('force removal of changesets, discard '
-                                 'uncommitted changes (no backup)')),
-          ('', 'no-backup', None, _('no backups')),
-          ('', 'nobackup', None, _('no backups (DEPRECATED)')),
-          ('n', '', None, _('ignored  (DEPRECATED)')),
-          ('k', 'keep', None, _("do not modify working directory during "
-                                "strip")),
-          ('B', 'bookmark', [], _("remove revs only reachable from given"
-                                  " bookmark"))],
-          _('hg strip [-k] [-f] [-B bookmark] [-r] REV...'))
+
+@command(
+    "strip",
+    [
+        (
+            "r",
+            "rev",
+            [],
+            _(
+                "strip specified revision (optional, "
+                "can specify revisions without this "
+                "option)"
+            ),
+            _("REV"),
+        ),
+        (
+            "f",
+            "force",
+            None,
+            _(
+                "force removal of changesets, discard "
+                "uncommitted changes (no backup)"
+            ),
+        ),
+        ("", "no-backup", None, _("no backups")),
+        ("", "nobackup", None, _("no backups (DEPRECATED)")),
+        ("n", "", None, _("ignored  (DEPRECATED)")),
+        ("k", "keep", None, _("do not modify working directory during " "strip")),
+        ("B", "bookmark", [], _("remove revs only reachable from given" " bookmark")),
+    ],
+    _("hg strip [-k] [-f] [-B bookmark] [-r] REV..."),
+)
 def stripcmd(ui, repo, *revs, **opts):
     """strip changesets and all their descendants from the repository
 
@@ -142,20 +169,22 @@ def stripcmd(ui, repo, *revs, **opts):
     """
     opts = pycompat.byteskwargs(opts)
     backup = True
-    if opts.get('no_backup') or opts.get('nobackup'):
+    if opts.get("no_backup") or opts.get("nobackup"):
         backup = False
 
     cl = repo.changelog
-    revs = list(revs) + opts.get('rev')
+    revs = list(revs) + opts.get("rev")
     revs = set(scmutil.revrange(repo, revs))
 
     with repo.wlock():
-        bookmarks = set(opts.get('bookmark'))
+        bookmarks = set(opts.get("bookmark"))
         if bookmarks:
             repomarks = repo._bookmarks
             if not bookmarks.issubset(repomarks):
-                raise error.Abort(_("bookmark '%s' not found") %
-                    ','.join(sorted(bookmarks - set(repomarks.keys()))))
+                raise error.Abort(
+                    _("bookmark '%s' not found")
+                    % ",".join(sorted(bookmarks - set(repomarks.keys())))
+                )
 
             # If the requested bookmark is not the only one pointing to a
             # a revision we have to only delete the bookmark and not strip
@@ -168,14 +197,14 @@ def stripcmd(ui, repo, *revs, **opts):
                     rsrevs = repair.stripbmrevset(repo, marks[0])
                     revs.update(set(rsrevs))
             if not revs:
-                with repo.lock(), repo.transaction('bookmark') as tr:
+                with repo.lock(), repo.transaction("bookmark") as tr:
                     bmchanges = [(b, None) for b in bookmarks]
                     repomarks.applychanges(repo, tr, bmchanges)
                 for bookmark in sorted(bookmarks):
                     ui.write(_("bookmark '%s' deleted\n") % bookmark)
 
         if not revs:
-            raise error.Abort(_('empty revision set'))
+            raise error.Abort(_("empty revision set"))
 
         descendants = set(cl.descendants(revs))
         strippedrevs = revs.union(descendants)
@@ -191,11 +220,11 @@ def stripcmd(ui, repo, *revs, **opts):
 
         rootnodes = set(cl.node(r) for r in roots)
 
-        q = getattr(repo, 'mq', None)
+        q = getattr(repo, "mq", None)
         if q is not None and q.applied:
             # refresh queue state if we're about to strip
             # applied patches
-            if cl.rev(repo.lookup('qtip')) in strippedrevs:
+            if cl.rev(repo.lookup("qtip")) in strippedrevs:
                 q.applieddirty = True
                 start = 0
                 end = len(q.applied)
@@ -209,7 +238,7 @@ def stripcmd(ui, repo, *revs, **opts):
                 q.savedirty()
 
         revs = sorted(rootnodes)
-        if update and opts.get('keep'):
+        if update and opts.get("keep"):
             urev = _findupdatetarget(repo, revs)
             uctx = repo[urev]
 
@@ -223,18 +252,25 @@ def stripcmd(ui, repo, *revs, **opts):
 
             # reset files that only changed in the dirstate too
             dirstate = repo.dirstate
-            dirchanges = [f for f in dirstate if dirstate[f] != 'n']
+            dirchanges = [f for f in dirstate if dirstate[f] != "n"]
             changedfiles.extend(dirchanges)
 
             repo.dirstate.rebuild(urev, uctx.manifest(), changedfiles)
             repo.dirstate.write(repo.currenttransaction())
 
             # clear resolve state
-            merge.mergestate.clean(repo, repo['.'].node())
+            merge.mergestate.clean(repo, repo["."].node())
 
             update = False
 
-        strip(ui, repo, revs, backup=backup, update=update,
-              force=opts.get('force'), bookmarks=bookmarks)
+        strip(
+            ui,
+            repo,
+            revs,
+            backup=backup,
+            update=update,
+            force=opts.get("force"),
+            bookmarks=bookmarks,
+        )
 
     return 0

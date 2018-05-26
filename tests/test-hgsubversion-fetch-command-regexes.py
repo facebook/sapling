@@ -48,24 +48,27 @@ Name: svn:special
 
 """
 
+
 class RegexTests(unittest.TestCase):
+
     def test_empty_file_re(self):
         changed = stupid.parsediff(two_empties)
         self.assertEqual(3, len(changed))
-        self.assertEqual('__init__.py', changed[0].name)
+        self.assertEqual("__init__.py", changed[0].name)
         self.assert_(changed[0].isempty())
-        self.assertEqual('bar/__init__.py', changed[1].name)
+        self.assertEqual("bar/__init__.py", changed[1].name)
         self.assert_(changed[1].isempty())
-        self.assertEqual('bar/test_muhaha.py', changed[2].name)
+        self.assertEqual("bar/test_muhaha.py", changed[2].name)
         self.assert_(not changed[2].isempty())
 
     def test_any_matches_just_one(self):
-        pat = '''Index: trunk/django/contrib/admin/urls/__init__.py
+        pat = """Index: trunk/django/contrib/admin/urls/__init__.py
 ===================================================================
-'''
+"""
         changed = stupid.parsediff(pat)
-        self.assertEqual(['trunk/django/contrib/admin/urls/__init__.py'],
-                         [f.name for f in changed])
+        self.assertEqual(
+            ["trunk/django/contrib/admin/urls/__init__.py"], [f.name for f in changed]
+        )
 
     def test_special_re(self):
         changed = stupid.parsediff(special_delta)
@@ -74,14 +77,20 @@ class RegexTests(unittest.TestCase):
 
     def test_any_file_re(self):
         changed = stupid.parsediff(two_empties)
-        self.assertEqual(['__init__.py', 'bar/__init__.py', 'bar/test_muhaha.py'],
-                         [f.name for f in changed])
+        self.assertEqual(
+            ["__init__.py", "bar/__init__.py", "bar/test_muhaha.py"],
+            [f.name for f in changed],
+        )
 
     def test_binary_file_re(self):
         changed = stupid.parsediff(binary_delta)
         binaries = [f.name for f in changed if f.binary]
-        self.assertEqual(['trunk/functional_tests/doc_tests/test_doctest_fixtures/doctest_fixtures_fixtures.pyc'],
-                         binaries)
+        self.assertEqual(
+            [
+                "trunk/functional_tests/doc_tests/test_doctest_fixtures/doctest_fixtures_fixtures.pyc"
+            ],
+            binaries,
+        )
 
     def test_diff16(self):
         data = """Index: d3/d
@@ -104,7 +113,7 @@ Added: svn:mergeinfo
    Merged /branches/branch:r4-5
 """
         changed = stupid.parsediff(data)
-        self.assertEqual(['d3/d', 'd3', '.'], [f.name for f in changed])
+        self.assertEqual(["d3/d", "d3", "."], [f.name for f in changed])
         data = """Property changes on: empty1
 ___________________________________________________________________
 Deleted: svn:executable
@@ -141,10 +150,13 @@ Added: svn:executable
    + *
 """
         changed = stupid.parsediff(data)
-        self.assertEqual(['empty1', 'empty2', 'binary1', 'text1', 'binary2', 'text2'],
-                         [f.name for f in changed])
+        self.assertEqual(
+            ["empty1", "empty2", "binary1", "text1", "binary2", "text2"],
+            [f.name for f in changed],
+        )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import silenttestrunner
-    silenttestrunner.main(__name__)
 
+    silenttestrunner.main(__name__)

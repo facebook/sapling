@@ -13,11 +13,14 @@
 #              the file will be opened in append mode.
 #
 from __future__ import absolute_import
+
 import os
 import sys
 
+
 try:
     import msvcrt
+
     msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
@@ -35,13 +38,12 @@ if len(sys.argv) > 2:
 
 # variables with empty values may not exist on all platforms, filter
 # them now for portability sake.
-env = [(k, v) for k, v in os.environ.iteritems()
-       if k.startswith("HG_") and v]
+env = [(k, v) for k, v in os.environ.iteritems() if k.startswith("HG_") and v]
 env.sort()
 
 out.write("%s hook: " % name)
-if os.name == 'nt':
-    filter = lambda x: x.replace('\\', '/')
+if os.name == "nt":
+    filter = lambda x: x.replace("\\", "/")
 else:
     filter = lambda x: x
 vars = ["%s=%s" % (k, filter(v)) for k, v in env]

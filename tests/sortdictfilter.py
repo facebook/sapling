@@ -1,24 +1,26 @@
 from __future__ import absolute_import
 
+import ast
+import pprint
+import sys
+
+
 """Sort output that looks like a Python dictionary.
 
 Only works for trivial cases.
 """
 
-import ast
-import pprint
-import sys
 
 def main():
     for line in sys.stdin:
-        buf = ''  # buffered string representation of a dict
-        level = 0 # number of unmatched '{' so far
+        buf = ""  # buffered string representation of a dict
+        level = 0  # number of unmatched '{' so far
         for ch in line:
-            if ch == '{':
+            if ch == "{":
                 level += 1
             if level > 0:
                 buf += ch
-            if ch == '}':
+            if ch == "}":
                 level -= 1
             if level == 0:
                 if buf:
@@ -28,12 +30,13 @@ def main():
                     except Exception:
                         pass
                     sys.stdout.write(buf)
-                    buf = ''
+                    buf = ""
                 else:
                     sys.stdout.write(ch)
         if level > 0 and buf:
             sys.stdout.write(buf)
     sys.stdout.flush()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

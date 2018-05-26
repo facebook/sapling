@@ -2,20 +2,37 @@
 #
 """reset the active bookmark and working copy to a desired revision"""
 
+import binascii
+import glob
+import os
+
+from mercurial import (
+    bundlerepo,
+    error,
+    exchange,
+    extensions,
+    hg,
+    lock as lockmod,
+    merge,
+    obsolete,
+    phases,
+    pycompat,
+    registrar,
+    repair,
+    scmutil,
+)
 from mercurial.i18n import _
 from mercurial.node import hex
-from mercurial import extensions, merge, scmutil, hg
-from mercurial import obsolete, repair, bundlerepo, error
-from mercurial import exchange, phases, pycompat, registrar
-from mercurial import lock as lockmod
-import os, glob, binascii
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-testedwith = 'ships-with-fb-hgext'
+testedwith = "ships-with-fb-hgext"
+
 
 def _isobsstoreenabled(repo):
     return obsolete.isenabled(repo, obsolete.createmarkersopt)
+
 
 def _isahash(rev):
     try:
@@ -24,12 +41,16 @@ def _isahash(rev):
     except TypeError:
         return False
 
-@command("reset", [
-        ('C', 'clean', None, _('wipe the working copy clean when resetting')),
-        ('k', 'keep', None, _('keeps the old changesets the bookmark pointed'
-                              ' to')),
-        ('r', 'rev', '', _('revision to reset to')),
-    ], _('hg reset [REV]'))
+
+@command(
+    "reset",
+    [
+        ("C", "clean", None, _("wipe the working copy clean when resetting")),
+        ("k", "keep", None, _("keeps the old changesets the bookmark pointed" " to")),
+        ("r", "rev", "", _("revision to reset to")),
+    ],
+    _("hg reset [REV]"),
+)
 def reset(ui, repo, *args, **opts):
     """moves the active bookmark and working copy parent to the desired rev
 
@@ -45,12 +66,12 @@ def reset(ui, repo, *args, **opts):
     delete any changesets that belonged only to that bookmark. Use --keep/-k to
     avoid deleting any changesets.
     """
-    if args and args[0] and opts.get('rev'):
-        e = _('do not use both --rev and positional argument for revision')
+    if args and args[0] and opts.get("rev"):
+        e = _("do not use both --rev and positional argument for revision")
         raise error.Abort(e)
 
-    rev = opts.get('rev') or (args[0] if args else '.')
-    oldctx = repo['.']
+    rev = opts.get("rev") or (args[0] if args else ".")
+    oldctx = repo["."]
 
     wlock = None
     try:
@@ -58,14 +79,15 @@ def reset(ui, repo, *args, **opts):
         # Ensure we have an active bookmark
         bookmark = bmactive(repo)
         if not bookmark:
-            ui.warn(_('resetting without an active bookmark\n'))
+            ui.warn(_("resetting without an active bookmark\n"))
 
         ctx = _revive(repo, rev)
-        _moveto(repo, bookmark, ctx, clean=opts.get('clean'))
-        if not opts.get('keep'):
+        _moveto(repo, bookmark, ctx, clean=opts.get("clean"))
+        if not opts.get("keep"):
             _deleteunreachable(repo, oldctx)
     finally:
         wlock.release()
+
 
 def _revive(repo, rev):
     """Brings the given rev back into the repository. Finding it in backup
@@ -80,18 +102,19 @@ def _revive(repo, rev):
     else:
         if ctx.obsolete():
             try:
-                inhibit = extensions.find('inhibit')
+                inhibit = extensions.find("inhibit")
             except KeyError:
-                raise error.Abort(_('cannot revive %s - inhibit extension '
-                                    'is not enabled') % ctx)
+                raise error.Abort(
+                    _("cannot revive %s - inhibit extension " "is not enabled") % ctx
+                )
             else:
-                torevive = unfi.set('::%d & obsolete()', ctx.rev())
-                inhibit.revive(torevive, operation='reset')
+                torevive = unfi.set("::%d & obsolete()", ctx.rev())
+                inhibit.revive(torevive, operation="reset")
 
     try:
         revs = scmutil.revrange(repo, [rev])
         if len(revs) > 1:
-            raise error.Abort(_('exactly one revision must be specified'))
+            raise error.Abort(_("exactly one revision must be specified"))
         if len(revs) == 1:
             return repo[revs.first()]
     except error.RepoLookupError:
@@ -99,21 +122,23 @@ def _revive(repo, rev):
 
     return _pullbundle(repo, rev)
 
+
 def _pullbundle(repo, rev):
     """Find the given rev in a backup bundle and pull it back into the
     repository.
     """
     other, rev = _findbundle(repo, rev)
     if not other:
-        raise error.Abort("could not find '%s' in the repo or the backup"
-                         " bundles" % rev)
+        raise error.Abort(
+            "could not find '%s' in the repo or the backup" " bundles" % rev
+        )
     lock = repo.lock()
     try:
         oldtip = len(repo)
         exchange.pull(repo, other, heads=[rev])
 
         tr = repo.transaction("phase")
-        nodes = (c.node() for c in repo.set('%d:', oldtip))
+        nodes = (c.node() for c in repo.set("%d:", oldtip))
         phases.retractboundary(repo, tr, 1, nodes)
         tr.close()
     finally:
@@ -123,6 +148,7 @@ def _pullbundle(repo, rev):
         raise error.Abort("unable to get rev %s from repo" % rev)
 
     return repo[rev]
+
 
 def _findbundle(repo, rev):
     """Returns the backup bundle that contains the given rev. If found, it
@@ -155,6 +181,7 @@ def _findbundle(repo, rev):
 
     return None, rev
 
+
 def _moveto(repo, bookmark, ctx, clean=False):
     """Moves the given bookmark and the working copy to the given revision.
     By default it does not overwrite the working copy contents unless clean is
@@ -164,10 +191,13 @@ def _moveto(repo, bookmark, ctx, clean=False):
     """
     # Move working copy over
     if clean:
-        merge.update(repo, ctx.node(),
-                     False, # not a branchmerge
-                     True, # force overwriting files
-                     None) # not a partial update
+        merge.update(
+            repo,
+            ctx.node(),
+            False,  # not a branchmerge
+            True,  # force overwriting files
+            None,
+        )  # not a partial update
     else:
         # Mark any files that are different between the two as normal-lookup
         # so they show up correctly in hg status afterwards.
@@ -180,10 +210,10 @@ def _moveto(repo, bookmark, ctx, clean=False):
         changedfiles.extend(diff.iterkeys())
 
         dirstate = repo.dirstate
-        dirchanges = [f for f in dirstate if dirstate[f] != 'n']
+        dirchanges = [f for f in dirstate if dirstate[f] != "n"]
         changedfiles.extend(dirchanges)
 
-        if changedfiles or ctx.node() != repo['.'].node():
+        if changedfiles or ctx.node() != repo["."].node():
             with dirstate.parentchange():
                 dirstate.rebuild(ctx.node(), m2, changedfiles)
 
@@ -192,12 +222,13 @@ def _moveto(repo, bookmark, ctx, clean=False):
         lock = tr = None
         try:
             lock = repo.lock()
-            tr = repo.transaction('reset')
+            tr = repo.transaction("reset")
             changes = [(bookmark, ctx.node())]
             repo._bookmarks.applychanges(repo, tr, changes)
             tr.close()
         finally:
             lockmod.release(lock, tr)
+
 
 def _deleteunreachable(repo, ctx):
     """Deletes all ancestor and descendant commits of the given revision that
@@ -205,11 +236,11 @@ def _deleteunreachable(repo, ctx):
     """
     keepheads = "bookmark() + ."
     try:
-        extensions.find('remotenames')
+        extensions.find("remotenames")
         keepheads += " + remotenames()"
     except KeyError:
         pass
-    hiderevs = repo.revs('::%s - ::(%r)', ctx.rev(), keepheads)
+    hiderevs = repo.revs("::%s - ::(%r)", ctx.rev(), keepheads)
     if hiderevs:
         lock = None
         try:
@@ -221,10 +252,10 @@ def _deleteunreachable(repo, ctx):
                 obsolete.createmarkers(repo, markers)
                 repo.ui.status(_("%d changesets pruned\n") % len(hiderevs))
             else:
-                repair.strip(repo.ui, repo,
-                             [repo.changelog.node(r) for r in hiderevs])
+                repair.strip(repo.ui, repo, [repo.changelog.node(r) for r in hiderevs])
         finally:
             lockmod.release(lock)
+
 
 ### bookmarks api compatibility layer ###
 def bmactive(repo):

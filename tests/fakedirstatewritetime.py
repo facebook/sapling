@@ -7,42 +7,34 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
-    context,
-    dirstate,
-    extensions,
-    policy,
-    registrar,
-    util,
-)
-from hgext import (
-    treedirstate,
-)
+from hgext import treedirstate
+from mercurial import context, dirstate, extensions, policy, registrar, util
+
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('fakedirstatewritetime', 'fakenow',
-    default=None,
-)
+configitem("fakedirstatewritetime", "fakenow", default=None)
 
-parsers = policy.importmod(r'parsers')
+parsers = policy.importmod(r"parsers")
+
 
 def pack_dirstate(fakenow, orig, dmap, copymap, pl, now):
     # execute what original parsers.pack_dirstate should do actually
     # for consistency
     actualnow = int(now)
     for f, e in dmap.iteritems():
-        if e[0] == 'n' and e[3] == actualnow:
+        if e[0] == "n" and e[3] == actualnow:
             e = parsers.dirstatetuple(e[0], e[1], e[2], -1)
             dmap[f] = e
 
     return orig(dmap, copymap, pl, fakenow)
 
+
 def fakewrite(ui, func):
     # fake "now" of 'pack_dirstate' only if it is invoked while 'func'
 
-    fakenow = ui.config('fakedirstatewritetime', 'fakenow')
+    fakenow = ui.config("fakedirstatewritetime", "fakenow")
     if not fakenow:
         # Execute original one, if fakenow isn't configured. This is
         # useful to prevent subrepos from executing replaced one,
@@ -52,7 +44,7 @@ def fakewrite(ui, func):
 
     # parsing 'fakenow' in YYYYmmddHHMM format makes comparison between
     # 'fakenow' value and 'touch -t YYYYmmddHHMM' argument easy
-    fakenow = util.parsedate(fakenow, ['%Y%m%d%H%M'])[0]
+    fakenow = util.parsedate(fakenow, ["%Y%m%d%H%M"])[0]
 
     orig_pack_dirstate = parsers.pack_dirstate
     orig_dirstate_getfsnow = dirstate._getfsnow
@@ -66,25 +58,26 @@ def fakewrite(ui, func):
         parsers.pack_dirstate = orig_pack_dirstate
         dirstate._getfsnow = orig_dirstate_getfsnow
 
+
 def _poststatusfixup(orig, workingctx, status, fixup):
     ui = workingctx.repo().ui
-    return fakewrite(ui, lambda : orig(workingctx, status, fixup))
+    return fakewrite(ui, lambda: orig(workingctx, status, fixup))
+
 
 def markcommitted(orig, committablectx, node):
     ui = committablectx.repo().ui
-    return fakewrite(ui, lambda : orig(committablectx, node))
+    return fakewrite(ui, lambda: orig(committablectx, node))
+
 
 def treedirstatewrite(orig, self, st, now):
     ui = self._ui
-    fakenow = ui.config('fakedirstatewritetime', 'fakenow')
+    fakenow = ui.config("fakedirstatewritetime", "fakenow")
     if fakenow:
-        now = util.parsedate(fakenow, ['%Y%m%d%H%M'])[0]
+        now = util.parsedate(fakenow, ["%Y%m%d%H%M"])[0]
     return orig(self, st, now)
 
+
 def extsetup(ui):
-    extensions.wrapfunction(context.workingctx, '_poststatusfixup',
-                            _poststatusfixup)
-    extensions.wrapfunction(context.committablectx, 'markcommitted',
-                            markcommitted)
-    extensions.wrapfunction(treedirstate.treedirstatemap, 'write',
-                            treedirstatewrite)
+    extensions.wrapfunction(context.workingctx, "_poststatusfixup", _poststatusfixup)
+    extensions.wrapfunction(context.committablectx, "markcommitted", markcommitted)
+    extensions.wrapfunction(treedirstate.treedirstatemap, "write", treedirstatewrite)

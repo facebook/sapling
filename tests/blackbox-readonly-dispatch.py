@@ -1,8 +1,9 @@
 from __future__ import absolute_import, print_function
+
 import os
-from mercurial import (
-    dispatch,
-)
+
+from mercurial import dispatch
+
 
 def testdispatch(cmd):
     """Simple wrapper around dispatch.dispatch()
@@ -14,16 +15,17 @@ def testdispatch(cmd):
     result = dispatch.dispatch(req)
     print("result: %r" % (result,))
 
+
 # create file 'foo', add and commit
-f = open('foo', 'wb')
-f.write('foo\n')
+f = open("foo", "wb")
+f.write("foo\n")
 f.close()
 testdispatch("add foo")
 testdispatch("commit -m commit1 -d 2000-01-01 foo")
 
 # append to file 'foo' and commit
-f = open('foo', 'ab')
-f.write('bar\n')
+f = open("foo", "ab")
+f.write("bar\n")
 f.close()
 # remove blackbox.log directory (proxy for readonly log file)
 os.rmdir(".hg/blackbox.log")

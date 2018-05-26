@@ -15,55 +15,52 @@ import time
 import zipfile
 import zlib
 
+from . import error, formatter, match as matchmod, progress, util, vfs as vfsmod
 from .i18n import _
 
-from . import (
-    error,
-    formatter,
-    match as matchmod,
-    progress,
-    util,
-    vfs as vfsmod,
-)
+
 stringio = util.stringio
 
 # from unzip source code:
 _UNX_IFREG = 0x8000
 _UNX_IFLNK = 0xa000
 
+
 def tidyprefix(dest, kind, prefix):
-    '''choose prefix to use for names in archive.  make sure prefix is
-    safe for consumers.'''
+    """choose prefix to use for names in archive.  make sure prefix is
+    safe for consumers."""
 
     if prefix:
         prefix = util.normpath(prefix)
     else:
         if not isinstance(dest, str):
-            raise ValueError('dest must be string if no prefix')
+            raise ValueError("dest must be string if no prefix")
         prefix = os.path.basename(dest)
         lower = prefix.lower()
         for sfx in exts.get(kind, []):
             if lower.endswith(sfx):
-                prefix = prefix[:-len(sfx)]
+                prefix = prefix[: -len(sfx)]
                 break
     lpfx = os.path.normpath(util.localpath(prefix))
     prefix = util.pconvert(lpfx)
-    if not prefix.endswith('/'):
-        prefix += '/'
+    if not prefix.endswith("/"):
+        prefix += "/"
     # Drop the leading '.' path component if present, so Windows can read the
     # zip files (issue4634)
-    if prefix.startswith('./'):
+    if prefix.startswith("./"):
         prefix = prefix[2:]
-    if prefix.startswith('../') or os.path.isabs(lpfx) or '/../' in prefix:
-        raise error.Abort(_('archive prefix contains illegal components'))
+    if prefix.startswith("../") or os.path.isabs(lpfx) or "/../" in prefix:
+        raise error.Abort(_("archive prefix contains illegal components"))
     return prefix
 
+
 exts = {
-    'tar': ['.tar'],
-    'tbz2': ['.tbz2', '.tar.bz2'],
-    'tgz': ['.tgz', '.tar.gz'],
-    'zip': ['.zip'],
-    }
+    "tar": [".tar"],
+    "tbz2": [".tbz2", ".tar.bz2"],
+    "tgz": [".tgz", ".tar.gz"],
+    "zip": [".zip"],
+}
+
 
 def guesskind(dest):
     for kind, extensions in exts.iteritems():
@@ -71,63 +68,62 @@ def guesskind(dest):
             return kind
     return None
 
+
 def _rootctx(repo):
     # repo[0] may be hidden
     for rev in repo:
         return repo[rev]
-    return repo['null']
+    return repo["null"]
+
 
 def buildmetadata(ctx):
-    '''build content of .hg_archival.txt'''
+    """build content of .hg_archival.txt"""
     repo = ctx.repo()
 
     default = (
-        r'repo: {root}\n'
+        r"repo: {root}\n"
         r'node: {ifcontains(rev, revset("wdir()"),'
-                            r'"{p1node}{dirty}", "{node}")}\n'
-        r'branch: {branch|utf8}\n'
-
+        r'"{p1node}{dirty}", "{node}")}\n'
+        r"branch: {branch|utf8}\n"
         # {tags} on ctx includes local tags and 'tip', with no current way to
         # limit that to global tags.  Therefore, use {latesttag} as a substitute
         # when the distance is 0, since that will be the list of global tags on
         # ctx.
         r'{ifeq(latesttagdistance, 0, latesttag % "tag: {tag}\n",'
-                       r'"{latesttag % "latesttag: {tag}\n"}'
-                       r'latesttagdistance: {latesttagdistance}\n'
-                       r'changessincelatesttag: {changessincelatesttag}\n")}'
+        r'"{latesttag % "latesttag: {tag}\n"}'
+        r"latesttagdistance: {latesttagdistance}\n"
+        r'changessincelatesttag: {changessincelatesttag}\n")}'
     )
 
-    opts = {
-        'template': repo.ui.config('experimental', 'archivemetatemplate',
-                                   default)
-    }
+    opts = {"template": repo.ui.config("experimental", "archivemetatemplate", default)}
 
     out = util.stringio()
 
-    fm = formatter.formatter(repo.ui, out, 'archive', opts)
+    fm = formatter.formatter(repo.ui, out, "archive", opts)
     fm.startitem()
     fm.context(ctx=ctx)
     fm.data(root=_rootctx(repo).hex())
 
     if ctx.rev() is None:
-        dirty = ''
+        dirty = ""
         if ctx.dirty(missing=True):
-            dirty = '+'
+            dirty = "+"
         fm.data(dirty=dirty)
     fm.end()
 
     return out.getvalue()
 
+
 class tarit(object):
-    '''write archive to tar file or stream.  can write uncompressed,
-    or compress with gzip or bzip2.'''
+    """write archive to tar file or stream.  can write uncompressed,
+    or compress with gzip or bzip2."""
 
     class GzipFileWithTime(gzip.GzipFile):
 
         def __init__(self, *args, **kw):
             timestamp = None
-            if 'timestamp' in kw:
-                timestamp = kw.pop(r'timestamp')
+            if "timestamp" in kw:
+                timestamp = kw.pop(r"timestamp")
             if timestamp is None:
                 self.timestamp = time.time()
             else:
@@ -135,42 +131,42 @@ class tarit(object):
             gzip.GzipFile.__init__(self, *args, **kw)
 
         def _write_gzip_header(self):
-            self.fileobj.write('\037\213')             # magic header
-            self.fileobj.write('\010')                 # compression method
+            self.fileobj.write("\037\213")  # magic header
+            self.fileobj.write("\010")  # compression method
             fname = self.name
-            if fname and fname.endswith('.gz'):
+            if fname and fname.endswith(".gz"):
                 fname = fname[:-3]
             flags = 0
             if fname:
                 flags = gzip.FNAME
             self.fileobj.write(chr(flags))
-            gzip.write32u(self.fileobj, long(self.timestamp)) # noqa
-            self.fileobj.write('\002')
-            self.fileobj.write('\377')
+            gzip.write32u(self.fileobj, long(self.timestamp))  # noqa
+            self.fileobj.write("\002")
+            self.fileobj.write("\377")
             if fname:
-                self.fileobj.write(fname + '\000')
+                self.fileobj.write(fname + "\000")
 
-    def __init__(self, dest, mtime, kind=''):
+    def __init__(self, dest, mtime, kind=""):
         self.mtime = mtime
         self.fileobj = None
 
-        def taropen(mode, name='', fileobj=None):
-            if kind == 'gz':
+        def taropen(mode, name="", fileobj=None):
+            if kind == "gz":
                 mode = mode[0]
                 if not fileobj:
-                    fileobj = open(name, mode + 'b')
-                gzfileobj = self.GzipFileWithTime(name, mode + 'b',
-                                                  zlib.Z_BEST_COMPRESSION,
-                                                  fileobj, timestamp=mtime)
+                    fileobj = open(name, mode + "b")
+                gzfileobj = self.GzipFileWithTime(
+                    name, mode + "b", zlib.Z_BEST_COMPRESSION, fileobj, timestamp=mtime
+                )
                 self.fileobj = gzfileobj
                 return tarfile.TarFile.taropen(name, mode, gzfileobj)
             else:
                 return tarfile.open(name, mode + kind, fileobj)
 
         if isinstance(dest, str):
-            self.z = taropen('w:', name=dest)
+            self.z = taropen("w:", name=dest)
         else:
-            self.z = taropen('w|', fileobj=dest)
+            self.z = taropen("w|", fileobj=dest)
 
     def addfile(self, name, mode, islink, data):
         i = tarfile.TarInfo(name)
@@ -192,9 +188,10 @@ class tarit(object):
         if self.fileobj:
             self.fileobj.close()
 
+
 class tellable(object):
-    '''provide tell method for zipfile.ZipFile when writing to http
-    response file object.'''
+    """provide tell method for zipfile.ZipFile when writing to http
+    response file object."""
 
     def __init__(self, fp):
         self.fp = fp
@@ -210,9 +207,10 @@ class tellable(object):
     def tell(self):
         return self.offset
 
+
 class zipit(object):
-    '''write archive to zip file or stream.  can write uncompressed,
-    or compressed with deflate.'''
+    """write archive to zip file or stream.  can write uncompressed,
+    or compressed with deflate."""
 
     def __init__(self, dest, mtime, compress=True):
         if not isinstance(dest, str):
@@ -220,13 +218,13 @@ class zipit(object):
                 dest.tell()
             except (AttributeError, IOError):
                 dest = tellable(dest)
-        self.z = zipfile.ZipFile(dest, 'w',
-                                 compress and zipfile.ZIP_DEFLATED or
-                                 zipfile.ZIP_STORED)
+        self.z = zipfile.ZipFile(
+            dest, "w", compress and zipfile.ZIP_DEFLATED or zipfile.ZIP_STORED
+        )
 
         # Python's zipfile module emits deprecation warnings if we try
         # to store files with a date before 1980.
-        epoch = 315532800 # calendar.timegm((1980, 1, 1, 0, 0, 0, 1, 1, 0))
+        epoch = 315532800  # calendar.timegm((1980, 1, 1, 0, 0, 0, 1, 1, 0))
         if mtime < epoch:
             mtime = epoch
 
@@ -247,18 +245,21 @@ class zipit(object):
         # add "extended-timestamp" extra block, because zip archives
         # without this will be extracted with unexpected timestamp,
         # if TZ is not configured as GMT
-        i.extra += struct.pack('<hhBl',
-                               0x5455,     # block type: "extended-timestamp"
-                               1 + 4,      # size of this block
-                               1,          # "modification time is present"
-                               int(self.mtime)) # last modification (UTC)
+        i.extra += struct.pack(
+            "<hhBl",
+            0x5455,  # block type: "extended-timestamp"
+            1 + 4,  # size of this block
+            1,  # "modification time is present"
+            int(self.mtime),
+        )  # last modification (UTC)
         self.z.writestr(i, data)
 
     def done(self):
         self.z.close()
 
+
 class fileit(object):
-    '''write archive as files in directory.'''
+    """write archive as files in directory."""
 
     def __init__(self, name, mtime):
         self.basedir = name
@@ -280,18 +281,29 @@ class fileit(object):
     def done(self):
         pass
 
-archivers = {
-    'files': fileit,
-    'tar': tarit,
-    'tbz2': lambda name, mtime: tarit(name, mtime, 'bz2'),
-    'tgz': lambda name, mtime: tarit(name, mtime, 'gz'),
-    'uzip': lambda name, mtime: zipit(name, mtime, False),
-    'zip': zipit,
-    }
 
-def archive(repo, dest, node, kind, decode=True, matchfn=None,
-            prefix='', mtime=None, subrepos=False):
-    '''create archive of repo as it was at node.
+archivers = {
+    "files": fileit,
+    "tar": tarit,
+    "tbz2": lambda name, mtime: tarit(name, mtime, "bz2"),
+    "tgz": lambda name, mtime: tarit(name, mtime, "gz"),
+    "uzip": lambda name, mtime: zipit(name, mtime, False),
+    "zip": zipit,
+}
+
+
+def archive(
+    repo,
+    dest,
+    node,
+    kind,
+    decode=True,
+    matchfn=None,
+    prefix="",
+    mtime=None,
+    subrepos=False,
+):
+    """create archive of repo as it was at node.
 
     dest can be name of directory, name of archive file, or file
     object to write archive to.
@@ -308,11 +320,11 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     mtime is the modified time, in seconds, or None to use the changeset time.
 
     subrepos tells whether to include subrepos.
-    '''
+    """
 
-    if kind == 'files':
+    if kind == "files":
         if prefix:
-            raise error.Abort(_('cannot give prefix when archiving to files'))
+            raise error.Abort(_("cannot give prefix when archiving to files"))
     else:
         prefix = tidyprefix(dest, kind, prefix)
 
@@ -329,7 +341,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     archiver = archivers[kind](dest, mtime or ctx.date()[0])
 
     if repo.ui.configbool("ui", "archivemeta"):
-        name = '.hg_archival.txt'
+        name = ".hg_archival.txt"
         if not matchfn or matchfn(name):
             write(name, 0o644, False, lambda: buildmetadata(ctx))
 
@@ -340,10 +352,10 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     total = len(files)
     if total:
         files.sort()
-        with progress.bar(repo.ui, _('archiving'), _('files'), total) as prog:
+        with progress.bar(repo.ui, _("archiving"), _("files"), total) as prog:
             for i, f in enumerate(files, 1):
                 ff = ctx.flags(f)
-                write(f, 'x' in ff and 0o755 or 0o644, 'l' in ff, ctx[f].data)
+                write(f, "x" in ff and 0o755 or 0o644, "l" in ff, ctx[f].data)
                 prog.value = (i, f)
 
     if subrepos:
@@ -353,7 +365,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
             total += sub.archive(archiver, prefix, submatch, decode)
 
     if total == 0:
-        raise error.Abort(_('no files match the archive pattern'))
+        raise error.Abort(_("no files match the archive pattern"))
 
     archiver.done()
     return total

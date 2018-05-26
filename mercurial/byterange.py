@@ -17,6 +17,8 @@
 
 # $Id: byterange.py,v 1.9 2005/02/14 21:55:07 mstenner Exp $
 
+# @lint-ignore-every FBPYTHON4
+
 from __future__ import absolute_import
 
 import email
@@ -27,10 +29,8 @@ import re
 import socket
 import stat
 
-from . import (
-    urllibcompat,
-    util,
-)
+from . import urllibcompat, util
+
 
 urlerr = util.urlerr
 urlreq = util.urlreq
@@ -43,8 +43,10 @@ splitport = urlreq.splitport
 splituser = urlreq.splituser
 unquote = urlreq.unquote
 
+
 class RangeError(IOError):
     """Error raised when an unsatisfiable range is requested."""
+
 
 class HTTPRangeHandler(urlreq.basehandler):
     """Handler that enables HTTP Range headers.
@@ -79,7 +81,8 @@ class HTTPRangeHandler(urlreq.basehandler):
 
     def http_error_416(self, req, fp, code, msg, hdrs):
         # HTTP's Range Not Satisfiable error
-        raise RangeError('Requested Range Not Satisfiable')
+        raise RangeError("Requested Range Not Satisfiable")
+
 
 class RangeableFileObject(object):
     """File object wrapper to enable raw range handling.
@@ -129,20 +132,20 @@ class RangeableFileObject(object):
         this object was created with a range tuple of (500,899),
         tell() will return 0 when at byte position 500 of the file.
         """
-        return (self.realpos - self.firstbyte)
+        return self.realpos - self.firstbyte
 
     def seek(self, offset, whence=0):
         """Seek within the byte range.
         Positioning is identical to that described under tell().
         """
         assert whence in (0, 1, 2)
-        if whence == 0:   # absolute seek
+        if whence == 0:  # absolute seek
             realoffset = self.firstbyte + offset
-        elif whence == 1: # relative seek
+        elif whence == 1:  # relative seek
             realoffset = self.realpos + offset
-        elif whence == 2: # absolute from end of file
+        elif whence == 2:  # absolute from end of file
             # XXX: are we raising the right Error here?
-            raise IOError('seek from end of file not supported.')
+            raise IOError("seek from end of file not supported.")
 
         # do not allow seek past lastbyte in range
         if self.lastbyte and (realoffset >= self.lastbyte):
@@ -174,10 +177,10 @@ class RangeableFileObject(object):
         """
         if self.lastbyte:
             if size > -1:
-                if ((self.realpos + size) >= self.lastbyte):
-                    size = (self.lastbyte - self.realpos)
+                if (self.realpos + size) >= self.lastbyte:
+                    size = self.lastbyte - self.realpos
             else:
-                size = (self.lastbyte - self.realpos)
+                size = self.lastbyte - self.realpos
         return size
 
     def _do_seek(self, offset):
@@ -185,7 +188,7 @@ class RangeableFileObject(object):
         offset is relative to the current position (self.realpos).
         """
         assert offset >= 0
-        seek = getattr(self.fo, 'seek', self._poor_mans_seek)
+        seek = getattr(self.fo, "seek", self._poor_mans_seek)
         seek(self.realpos + offset)
         self.realpos += offset
 
@@ -206,14 +209,16 @@ class RangeableFileObject(object):
                 bufsize = offset - pos
             buf = self.fo.read(bufsize)
             if len(buf) != bufsize:
-                raise RangeError('Requested Range Not Satisfiable')
+                raise RangeError("Requested Range Not Satisfiable")
             pos += bufsize
+
 
 class FileRangeHandler(urlreq.filehandler):
     """FileHandler subclass that adds Range support.
     This class handles Range headers exactly like an HTTP
     server would.
     """
+
     def open_local_file(self, req):
         host = urllibcompat.gethost(req)
         file = urllibcompat.getselector(req)
@@ -225,23 +230,25 @@ class FileRangeHandler(urlreq.filehandler):
         if host:
             host, port = urlreq.splitport(host)
             if port or socket.gethostbyname(host) not in self.get_names():
-                raise urlerr.urlerror('file not on local host')
-        fo = open(localfile,'rb')
-        brange = req.headers.get('Range', None)
+                raise urlerr.urlerror("file not on local host")
+        fo = open(localfile, "rb")
+        brange = req.headers.get("Range", None)
         brange = range_header_to_tuple(brange)
         assert brange != ()
         if brange:
             (fb, lb) = brange
-            if lb == '':
+            if lb == "":
                 lb = size
             if fb < 0 or fb > size or lb > size:
-                raise RangeError('Requested Range Not Satisfiable')
-            size = (lb - fb)
+                raise RangeError("Requested Range Not Satisfiable")
+            size = lb - fb
             fo = RangeableFileObject(fo, (fb, lb))
         headers = email.message_from_string(
-            'Content-Type: %s\nContent-Length: %d\nLast-Modified: %s\n' %
-            (mtype or 'text/plain', size, modified))
-        return urlreq.addinfourl(fo, headers, 'file:'+file)
+            "Content-Type: %s\nContent-Length: %d\nLast-Modified: %s\n"
+            % (mtype or "text/plain", size, modified)
+        )
+        return urlreq.addinfourl(fo, headers, "file:" + file)
+
 
 # FTP Range Support
 # Unfortunately, a large amount of base FTP code had to be copied
@@ -250,11 +257,13 @@ class FileRangeHandler(urlreq.filehandler):
 # follows:
 # -- range support modifications start/end here
 
+
 class FTPRangeHandler(urlreq.ftphandler):
+
     def ftp_open(self, req):
         host = urllibcompat.gethost(req)
         if not host:
-            raise IOError('ftp error', 'no host given')
+            raise IOError("ftp error", "no host given")
         host, port = splitport(host)
         if port is None:
             port = ftplib.FTP_PORT
@@ -268,15 +277,15 @@ class FTPRangeHandler(urlreq.ftphandler):
         else:
             passwd = None
         host = unquote(host)
-        user = unquote(user or '')
-        passwd = unquote(passwd or '')
+        user = unquote(user or "")
+        passwd = unquote(passwd or "")
 
         try:
             host = socket.gethostbyname(host)
         except socket.error as msg:
             raise urlerr.urlerror(msg)
         path, attrs = splitattr(req.get_selector())
-        dirs = path.split('/')
+        dirs = path.split("/")
         dirs = map(unquote, dirs)
         dirs, file = dirs[:-1], dirs[-1]
         if dirs and not dirs[0]:
@@ -284,19 +293,18 @@ class FTPRangeHandler(urlreq.ftphandler):
         try:
             fw = self.connect_ftp(user, passwd, host, port, dirs)
             if file:
-                type = 'I'
+                type = "I"
             else:
-                type = 'D'
+                type = "D"
 
             for attr in attrs:
                 attr, value = splitattr(attr)
-                if attr.lower() == 'type' and \
-                   value in ('a', 'A', 'i', 'I', 'd', 'D'):
+                if attr.lower() == "type" and value in ("a", "A", "i", "I", "d", "D"):
                     type = value.upper()
 
             # -- range support modifications start here
             rest = None
-            range_tup = range_header_to_tuple(req.headers.get('Range', None))
+            range_tup = range_header_to_tuple(req.headers.get("Range", None))
             assert range_tup != ()
             if range_tup:
                 (fb, lb) = range_tup
@@ -309,15 +317,17 @@ class FTPRangeHandler(urlreq.ftphandler):
             # -- range support modifications start here
             if range_tup:
                 (fb, lb) = range_tup
-                if lb == '':
+                if lb == "":
                     if retrlen is None or retrlen == 0:
-                        raise RangeError('Requested Range Not Satisfiable due'
-                                         ' to unobtainable file length.')
+                        raise RangeError(
+                            "Requested Range Not Satisfiable due"
+                            " to unobtainable file length."
+                        )
                     lb = retrlen
                     retrlen = lb - fb
                     if retrlen < 0:
                         # beginning of range is larger than file
-                        raise RangeError('Requested Range Not Satisfiable')
+                        raise RangeError("Requested Range Not Satisfiable")
                 else:
                     retrlen = lb - fb
                     fp = RangeableFileObject(fp, (0, retrlen))
@@ -332,11 +342,12 @@ class FTPRangeHandler(urlreq.ftphandler):
             headers = email.message_from_string(headers)
             return addinfourl(fp, headers, req.get_full_url())
         except ftplib.all_errors as msg:
-            raise IOError('ftp error', msg)
+            raise IOError("ftp error", msg)
 
     def connect_ftp(self, user, passwd, host, port, dirs):
         fw = ftpwrapper(user, passwd, host, port, dirs)
         return fw
+
 
 class ftpwrapper(urlreq.ftpwrapper):
     # range support note:
@@ -345,11 +356,11 @@ class ftpwrapper(urlreq.ftpwrapper):
     # argument and pass it on to ftp.ntransfercmd
     def retrfile(self, file, type, rest=None):
         self.endtransfer()
-        if type in ('d', 'D'):
-            cmd = 'TYPE A'
+        if type in ("d", "D"):
+            cmd = "TYPE A"
             isdir = 1
         else:
-            cmd = 'TYPE ' + type
+            cmd = "TYPE " + type
             isdir = 0
         try:
             self.ftp.voidcmd(cmd)
@@ -362,40 +373,42 @@ class ftpwrapper(urlreq.ftpwrapper):
             try:
                 self.ftp.nlst(file)
             except ftplib.error_perm as reason:
-                raise IOError('ftp error', reason)
+                raise IOError("ftp error", reason)
             # Restore the transfer mode!
             self.ftp.voidcmd(cmd)
             # Try to retrieve as a file
             try:
-                cmd = 'RETR ' + file
+                cmd = "RETR " + file
                 conn = self.ftp.ntransfercmd(cmd, rest)
             except ftplib.error_perm as reason:
-                if str(reason).startswith('501'):
+                if str(reason).startswith("501"):
                     # workaround for REST not supported error
                     fp, retrlen = self.retrfile(file, type)
-                    fp = RangeableFileObject(fp, (rest,''))
+                    fp = RangeableFileObject(fp, (rest, ""))
                     return (fp, retrlen)
-                elif not str(reason).startswith('550'):
-                    raise IOError('ftp error', reason)
+                elif not str(reason).startswith("550"):
+                    raise IOError("ftp error", reason)
         if not conn:
             # Set transfer mode to ASCII!
-            self.ftp.voidcmd('TYPE A')
+            self.ftp.voidcmd("TYPE A")
             # Try a directory listing
             if file:
-                cmd = 'LIST ' + file
+                cmd = "LIST " + file
             else:
-                cmd = 'LIST'
+                cmd = "LIST"
             conn = self.ftp.ntransfercmd(cmd)
         self.busy = 1
         # Pass back both a suitably decorated object and a retrieval length
-        return (addclosehook(conn[0].makefile('rb'),
-                            self.endtransfer), conn[1])
+        return (addclosehook(conn[0].makefile("rb"), self.endtransfer), conn[1])
+
 
 ####################################################################
 # Range Tuple Functions
 # XXX: These range tuple functions might go better in a class.
 
 _rangere = None
+
+
 def range_header_to_tuple(range_header):
     """Get a (firstbyte,lastbyte) tuple from a Range header value.
 
@@ -414,14 +427,15 @@ def range_header_to_tuple(range_header):
     if range_header is None:
         return None
     if _rangere is None:
-        _rangere = re.compile(r'^bytes=(\d{1,})-(\d*)')
+        _rangere = re.compile(r"^bytes=(\d{1,})-(\d*)")
     match = _rangere.match(range_header)
     if match:
         tup = range_tuple_normalize(match.group(1, 2))
         if tup and tup[1]:
-            tup = (tup[0], tup[1]+1)
+            tup = (tup[0], tup[1] + 1)
         return tup
     return ()
+
 
 def range_tuple_to_header(range_tup):
     """Convert a range tuple to a Range header value.
@@ -434,7 +448,8 @@ def range_tuple_to_header(range_tup):
     if range_tup:
         if range_tup[1]:
             range_tup = (range_tup[0], range_tup[1] - 1)
-        return 'bytes=%s-%s' % range_tup
+        return "bytes=%s-%s" % range_tup
+
 
 def range_tuple_normalize(range_tup):
     """Normalize a (first_byte,last_byte) range tuple.
@@ -447,7 +462,7 @@ def range_tuple_normalize(range_tup):
         return None
     # handle first byte
     fb = range_tup[0]
-    if fb in (None, ''):
+    if fb in (None, ""):
         fb = 0
     else:
         fb = int(fb)
@@ -455,16 +470,16 @@ def range_tuple_normalize(range_tup):
     try:
         lb = range_tup[1]
     except IndexError:
-        lb = ''
+        lb = ""
     else:
         if lb is None:
-            lb = ''
-        elif lb != '':
+            lb = ""
+        elif lb != "":
             lb = int(lb)
     # check if range is over the entire file
-    if (fb, lb) == (0, ''):
+    if (fb, lb) == (0, ""):
         return None
     # check that the range is valid
     if lb < fb:
-        raise RangeError('Invalid byte range: %s-%s' % (fb, lb))
+        raise RangeError("Invalid byte range: %s-%s" % (fb, lb))
     return (fb, lb)

@@ -7,16 +7,11 @@
 
 from __future__ import absolute_import
 
+from . import error, node, obsolete, revset
 from .i18n import _
 
-from . import (
-    error,
-    node,
-    obsolete,
-    revset,
-)
 
-def precheck(repo, revs, action='rewrite'):
+def precheck(repo, revs, action="rewrite"):
     """check if revs can be rewritten
     action is used to control the error message.
 
@@ -27,7 +22,7 @@ def precheck(repo, revs, action='rewrite'):
         hint = _("no changeset checked out")
         raise error.Abort(msg, hint=hint)
 
-    publicrevs = repo.revs('%ld and public()', revs)
+    publicrevs = repo.revs("%ld and public()", revs)
     if len(repo[None].parents()) > 1:
         raise error.Abort(_("cannot %s while merging") % action)
 
@@ -39,6 +34,7 @@ def precheck(repo, revs, action='rewrite'):
     newunstable = disallowednewunstable(repo, revs)
     if newunstable:
         raise error.Abort(_("cannot %s changeset with children") % action)
+
 
 def disallowednewunstable(repo, revs):
     """Checks whether editing the revs will create new unstable changesets and

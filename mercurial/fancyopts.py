@@ -9,22 +9,21 @@ from __future__ import absolute_import
 
 import functools
 
+from . import error, pycompat
 from .i18n import _
-from . import (
-    error,
-    pycompat,
-)
+
 
 # Set of flags to not apply boolean negation logic on
 nevernegate = {
     # avoid --no-noninteractive
-    'noninteractive',
+    "noninteractive",
     # These two flags are special because they cause hg to do one
     # thing and then exit, and so aren't suitable for use in things
     # like aliases anyway.
-    'help',
-    'version',
+    "help",
+    "version",
 }
+
 
 def _earlyoptarg(arg, shortlist, namelist):
     """Check if the given arg is a valid unabbreviated option
@@ -75,18 +74,19 @@ def _earlyoptarg(arg, shortlist, namelist):
     >>> opt(b'-:foo')
     ('', False, '', False)
     """
-    if arg.startswith('--'):
-        flag, eq, val = arg.partition('=')
+    if arg.startswith("--"):
+        flag, eq, val = arg.partition("=")
         if flag[2:] in namelist:
             return flag, bool(eq), val, False
-        if flag[2:] + '=' in namelist:
+        if flag[2:] + "=" in namelist:
             return flag, bool(eq), val, True
-    elif arg.startswith('-') and arg != '-' and not arg.startswith('-:'):
+    elif arg.startswith("-") and arg != "-" and not arg.startswith("-:"):
         flag, val = arg[:2], arg[2:]
         i = shortlist.find(flag[1:])
         if i >= 0:
-            return flag, bool(val), val, shortlist.startswith(':', i + 1)
-    return '', False, '', False
+            return flag, bool(val), val, shortlist.startswith(":", i + 1)
+    return "", False, "", False
+
 
 def earlygetopt(args, shortlist, namelist, gnu=False, keepsep=False):
     """Parse options like getopt, but ignores unknown options and abbreviated
@@ -175,7 +175,7 @@ def earlygetopt(args, shortlist, namelist, gnu=False, keepsep=False):
     pos = 0
     while pos < len(args):
         arg = args[pos]
-        if arg == '--':
+        if arg == "--":
             pos += not keepsep
             break
         flag, hasval, val, takeval = _earlyoptarg(arg, shortlist, namelist)
@@ -200,6 +200,7 @@ def earlygetopt(args, shortlist, namelist, gnu=False, keepsep=False):
 
     parsedargs.extend(args[pos:])
     return parsedopts, parsedargs
+
 
 def fancyopts(args, options, state, gnu=False, early=False, optaliases=None):
     """
@@ -231,7 +232,7 @@ def fancyopts(args, options, state, gnu=False, early=False, optaliases=None):
     if optaliases is None:
         optaliases = {}
     namelist = []
-    shortlist = ''
+    shortlist = ""
     argmap = {}
     defmap = {}
     negations = {}
@@ -245,11 +246,11 @@ def fancyopts(args, options, state, gnu=False, early=False, optaliases=None):
         # convert opts to getopt format
         onames = [name]
         onames.extend(optaliases.get(name, []))
-        name = name.replace('-', '_')
+        name = name.replace("-", "_")
 
-        argmap['-' + short] = name
+        argmap["-" + short] = name
         for n in onames:
-            argmap['--' + n] = name
+            argmap["--" + n] = name
         defmap[name] = default
 
         # copy defaults to state
@@ -263,20 +264,20 @@ def fancyopts(args, options, state, gnu=False, early=False, optaliases=None):
         # does it take a parameter?
         if not (default is None or default is True or default is False):
             if short:
-                short += ':'
-            onames = [n + '=' for n in onames]
+                short += ":"
+            onames = [n + "=" for n in onames]
         elif name not in nevernegate:
             for n in onames:
-                if n.startswith('no-'):
+                if n.startswith("no-"):
                     insert = n[3:]
                 else:
-                    insert = 'no-' + n
+                    insert = "no-" + n
                 # backout (as a practical example) has both --commit and
                 # --no-commit options, so we don't want to allow the
                 # negations of those flags.
                 if insert not in alllong:
-                    assert ('--' + n) not in negations
-                    negations['--' + insert] = '--' + n
+                    assert ("--" + n) not in negations
+                    negations["--" + insert] = "--" + n
                     namelist.append(insert)
         if short:
             shortlist += short
@@ -308,9 +309,10 @@ def fancyopts(args, options, state, gnu=False, early=False, optaliases=None):
             try:
                 state[name] = int(val)
             except ValueError:
-                raise error.Abort(_('invalid value %r for option %s, '
-                                   'expected int') % (val, opt))
-        elif t is type(''):
+                raise error.Abort(
+                    _("invalid value %r for option %s, " "expected int") % (val, opt)
+                )
+        elif t is type(""):
             state[name] = val
         elif t is type([]):
             state[name].append(val)

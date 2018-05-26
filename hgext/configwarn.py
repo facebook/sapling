@@ -17,37 +17,40 @@ Config::
 
 from __future__ import absolute_import
 
+from mercurial import rcutil, registrar
 from mercurial.i18n import _
-from mercurial import (
-    rcutil,
-    registrar,
-)
+
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('configwarn', 'systemconfigs', default=[])
+configitem("configwarn", "systemconfigs", default=[])
+
 
 def reposetup(ui, repo):
     # use reposetup, not uisetup to work better with chg and it checks reporc.
     if not repo.local():
         return
 
-    nonsystempaths = set(rcutil.userrcpath() + [repo.vfs.join('hgrc')])
-    systemconfigs = ui.configlist('configwarn', 'systemconfigs')
+    nonsystempaths = set(rcutil.userrcpath() + [repo.vfs.join("hgrc")])
+    systemconfigs = ui.configlist("configwarn", "systemconfigs")
 
     for configname in systemconfigs:
-        if '.' not in configname:
+        if "." not in configname:
             continue
 
-        section, name = configname.split('.', 1)
+        section, name = configname.split(".", 1)
         source = ui.configsource(section, name)
 
-        if ':' not in source:
+        if ":" not in source:
             continue
 
-        path, lineno = source.split(':', 1)
+        path, lineno = source.split(":", 1)
         if path in nonsystempaths and lineno.isdigit():
-            ui.warn(_('warning: overriding config %s is unsupported (hint: '
-                      'remove line %s from %s to resolve this issue)\n')
-                    % (configname, lineno, path))
+            ui.warn(
+                _(
+                    "warning: overriding config %s is unsupported (hint: "
+                    "remove line %s from %s to resolve this issue)\n"
+                )
+                % (configname, lineno, path)
+            )

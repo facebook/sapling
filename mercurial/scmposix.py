@@ -6,59 +6,64 @@ import fcntl
 import os
 import sys
 
-from . import (
-    encoding,
-    pycompat,
-    util,
-)
+from . import encoding, pycompat, util
+
 
 # BSD 'more' escapes ANSI color sequences by default. This can be disabled by
 # $MORE variable, but there's no compatible option with Linux 'more'. Given
 # OS X is widely used and most modern Unix systems would have 'less', setting
 # 'less' as the default seems reasonable.
-fallbackpager = 'less'
+fallbackpager = "less"
+
 
 def _rcfiles(path):
-    rcs = [os.path.join(path, 'hgrc')]
-    rcdir = os.path.join(path, 'hgrc.d')
+    rcs = [os.path.join(path, "hgrc")]
+    rcdir = os.path.join(path, "hgrc.d")
     try:
-        rcs.extend([os.path.join(rcdir, f)
-                    for f, kind in util.listdir(rcdir)
-                    if f.endswith(".rc")])
+        rcs.extend(
+            [
+                os.path.join(rcdir, f)
+                for f, kind in util.listdir(rcdir)
+                if f.endswith(".rc")
+            ]
+        )
     except OSError:
         pass
     return rcs
 
+
 def systemrcpath():
     path = []
-    if pycompat.sysplatform == 'plan9':
-        root = 'lib/mercurial'
+    if pycompat.sysplatform == "plan9":
+        root = "lib/mercurial"
     else:
-        root = 'etc/mercurial'
+        root = "etc/mercurial"
     # old mod_python does not set sys.argv
-    if len(getattr(sys, 'argv', [])) > 0:
+    if len(getattr(sys, "argv", [])) > 0:
         p = os.path.dirname(os.path.dirname(pycompat.sysargv[0]))
-        if p != '/':
+        if p != "/":
             path.extend(_rcfiles(os.path.join(p, root)))
-    path.extend(_rcfiles('/' + root))
+    path.extend(_rcfiles("/" + root))
     return path
 
-def userrcpath():
-    if pycompat.sysplatform == 'plan9':
-        return [encoding.environ['home'] + '/lib/hgrc']
-    elif pycompat.isdarwin:
-        return [os.path.expanduser('~/.hgrc')]
-    else:
-        confighome = encoding.environ.get('XDG_CONFIG_HOME')
-        if confighome is None or not os.path.isabs(confighome):
-            confighome = os.path.expanduser('~/.config')
 
-        return [os.path.expanduser('~/.hgrc'),
-                os.path.join(confighome, 'hg', 'hgrc')]
+def userrcpath():
+    if pycompat.sysplatform == "plan9":
+        return [encoding.environ["home"] + "/lib/hgrc"]
+    elif pycompat.isdarwin:
+        return [os.path.expanduser("~/.hgrc")]
+    else:
+        confighome = encoding.environ.get("XDG_CONFIG_HOME")
+        if confighome is None or not os.path.isabs(confighome):
+            confighome = os.path.expanduser("~/.config")
+
+        return [os.path.expanduser("~/.hgrc"), os.path.join(confighome, "hg", "hgrc")]
+
 
 def termsize(ui):
     try:
         import termios
+
         TIOCGWINSZ = termios.TIOCGWINSZ  # unavailable on IRIX (issue3449)
     except (AttributeError, ImportError):
         return 80, 24
@@ -71,8 +76,8 @@ def termsize(ui):
                 continue
             if not os.isatty(fd):
                 continue
-            arri = fcntl.ioctl(fd, TIOCGWINSZ, '\0' * 8)
-            height, width = array.array(r'h', arri)[:2]
+            arri = fcntl.ioctl(fd, TIOCGWINSZ, "\0" * 8)
+            height, width = array.array(r"h", arri)[:2]
             if width > 0 and height > 0:
                 return width, height
         except ValueError:

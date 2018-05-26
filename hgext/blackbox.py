@@ -40,21 +40,16 @@ from __future__ import absolute_import
 import errno
 import re
 
+from mercurial import error, registrar, ui as uimod, util
 from mercurial.i18n import _
 from mercurial.node import hex
 
-from mercurial import (
-    error,
-    registrar,
-    ui as uimod,
-    util,
-)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -62,21 +57,11 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('blackbox', 'dirty',
-    default=False,
-)
-configitem('blackbox', 'maxsize',
-    default='1 MB',
-)
-configitem('blackbox', 'logsource',
-    default=False,
-)
-configitem('blackbox', 'maxfiles',
-    default=7,
-)
-configitem('blackbox', 'track',
-    default=lambda: ['*'],
-)
+configitem("blackbox", "dirty", default=False)
+configitem("blackbox", "maxsize", default="1 MB")
+configitem("blackbox", "logsource", default=False)
+configitem("blackbox", "maxfiles", default=7)
+configitem("blackbox", "track", default=lambda: ["*"])
 
 lastui = None
 
@@ -85,24 +70,27 @@ try:
 except NameError:
     xrange = range
 
+
 def _openlogfile(ui, vfs):
+
     def rotate(oldpath, newpath):
         try:
             vfs.unlink(newpath)
         except OSError as err:
             if err.errno != errno.ENOENT:
-                ui.debug("warning: cannot remove '%s': %s\n" %
-                         (newpath, err.strerror))
+                ui.debug("warning: cannot remove '%s': %s\n" % (newpath, err.strerror))
         try:
             if newpath:
                 vfs.rename(oldpath, newpath)
         except OSError as err:
             if err.errno != errno.ENOENT:
-                ui.debug("warning: cannot rename '%s' to '%s': %s\n" %
-                         (newpath, oldpath, err.strerror))
+                ui.debug(
+                    "warning: cannot rename '%s' to '%s': %s\n"
+                    % (newpath, oldpath, err.strerror)
+                )
 
-    maxsize = ui.configbytes('blackbox', 'maxsize')
-    name = 'blackbox.log'
+    maxsize = ui.configbytes("blackbox", "maxsize")
+    name = "blackbox.log"
     if maxsize > 0:
         try:
             st = vfs.stat(name)
@@ -111,35 +99,36 @@ def _openlogfile(ui, vfs):
         else:
             if st.st_size >= maxsize:
                 path = vfs.join(name)
-                maxfiles = ui.configint('blackbox', 'maxfiles')
+                maxfiles = ui.configint("blackbox", "maxfiles")
                 for i in xrange(maxfiles - 1, 1, -1):
-                    rotate(oldpath='%s.%d' % (path, i - 1),
-                           newpath='%s.%d' % (path, i))
-                rotate(oldpath=path,
-                       newpath=maxfiles > 0 and path + '.1')
-    return vfs(name, 'a')
+                    rotate(oldpath="%s.%d" % (path, i - 1), newpath="%s.%d" % (path, i))
+                rotate(oldpath=path, newpath=maxfiles > 0 and path + ".1")
+    return vfs(name, "a")
+
 
 def wrapui(ui):
+
     class blackboxui(ui.__class__):
+
         @property
         def _bbvfs(self):
             vfs = None
-            repo = getattr(self, '_bbrepo', None)
+            repo = getattr(self, "_bbrepo", None)
             if repo:
                 vfs = repo.vfs
-                if not vfs.isdir('.'):
+                if not vfs.isdir("."):
                     vfs = None
             return vfs
 
         @util.propertycache
         def track(self):
-            return self.configlist('blackbox', 'track')
+            return self.configlist("blackbox", "track")
 
         def log(self, event, *msg, **opts):
             global lastui
             super(blackboxui, self).log(event, *msg, **opts)
 
-            if not '*' in self.track and not event in self.track:
+            if not "*" in self.track and not event in self.track:
                 return
 
             if not msg or not msg[0]:
@@ -159,51 +148,51 @@ def wrapui(ui):
             if not vfs:
                 return
 
-            repo = getattr(ui, '_bbrepo', None)
+            repo = getattr(ui, "_bbrepo", None)
             if not lastui or repo:
                 lastui = ui
-            if getattr(ui, '_bbinlog', False):
+            if getattr(ui, "_bbinlog", False):
                 # recursion and failure guard
                 return
             ui._bbinlog = True
-            default = self.configdate('devel', 'default-date')
-            date = util.datestr(default, '%Y/%m/%d %H:%M:%S')
+            default = self.configdate("devel", "default-date")
+            date = util.datestr(default, "%Y/%m/%d %H:%M:%S")
             user = util.getuser()
-            pid = '%d' % util.getpid()
+            pid = "%d" % util.getpid()
             formattedmsg = msg[0] % msg[1:]
-            rev = '(unknown)'
-            changed = ''
+            rev = "(unknown)"
+            changed = ""
             if repo:
                 try:
                     ctx = repo[None]
                     parents = ctx.parents()
-                    rev = ('+'.join([hex(p.node()) for p in parents]))
+                    rev = "+".join([hex(p.node()) for p in parents])
                 except error.Abort:
                     # This can happen if the dirstate file is sufficiently
                     # corrupt that we can't extract the parents. In that case,
                     # just don't set the rev.
                     pass
-                if (ui.configbool('blackbox', 'dirty') and
-                    ctx.dirty(missing=True, merge=False, branch=False)):
-                    changed = '+'
-            if ui.configbool('blackbox', 'logsource'):
-                src = ' [%s]' % event
+                if ui.configbool("blackbox", "dirty") and ctx.dirty(
+                    missing=True, merge=False, branch=False
+                ):
+                    changed = "+"
+            if ui.configbool("blackbox", "logsource"):
+                src = " [%s]" % event
             else:
-                src = ''
-            requestid = ui.environ.get('HGREQUESTID') or ''
+                src = ""
+            requestid = ui.environ.get("HGREQUESTID") or ""
             if requestid:
-                src += '[%s]' % requestid
+                src += "[%s]" % requestid
             try:
-                fmt = '%s %s @%s%s (%s)%s> %s'
+                fmt = "%s %s @%s%s (%s)%s> %s"
                 args = (date, user, rev, changed, pid, src, formattedmsg)
                 with _openlogfile(ui, vfs) as fp:
                     line = fmt % args
-                    if not line.endswith('\n'):
-                        line += '\n'
+                    if not line.endswith("\n"):
+                        line += "\n"
                     fp.write(line)
             except (IOError, OSError) as err:
-                self.debug('warning: cannot write to blackbox.log: %s\n' %
-                           err.strerror)
+                self.debug("warning: cannot write to blackbox.log: %s\n" % err.strerror)
                 # do not restore _bbinlog intentionally to avoid failed
                 # logging again
             else:
@@ -215,8 +204,10 @@ def wrapui(ui):
     ui.__class__ = blackboxui
     uimod.ui = blackboxui
 
+
 def uisetup(ui):
     wrapui(ui)
+
 
 def reposetup(ui, repo):
     # During 'hg pull' a httppeer repo is created to represent the remote repo.
@@ -225,7 +216,7 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    if util.safehasattr(ui, 'setrepo'):
+    if util.safehasattr(ui, "setrepo"):
         ui.setrepo(repo)
 
         # Set lastui even if ui.log is not called. This gives blackbox a
@@ -234,22 +225,24 @@ def reposetup(ui, repo):
         if lastui is None:
             lastui = ui
 
-    repo._wlockfreeprefix.add('blackbox.log')
+    repo._wlockfreeprefix.add("blackbox.log")
 
-@command('^blackbox',
-    [('l', 'limit', 10, _('the number of events to show')),
-    ],
-    _('hg blackbox [OPTION]...'))
+
+@command(
+    "^blackbox",
+    [("l", "limit", 10, _("the number of events to show"))],
+    _("hg blackbox [OPTION]..."),
+)
 def blackbox(ui, repo, *revs, **opts):
-    '''view the recent repository events
-    '''
+    """view the recent repository events
+    """
 
-    if not repo.vfs.exists('blackbox.log'):
+    if not repo.vfs.exists("blackbox.log"):
         return
 
-    limit = opts.get(r'limit')
-    fp = repo.vfs('blackbox.log', 'r')
-    lines = fp.read().split('\n')
+    limit = opts.get(r"limit")
+    fp = repo.vfs("blackbox.log", "r")
+    lines = fp.read().split("\n")
 
     count = 0
     output = []
@@ -258,8 +251,8 @@ def blackbox(ui, repo, *revs, **opts):
             break
 
         # count the commands by matching lines like: 2013/01/23 19:13:36 root>
-        if re.match('^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} .*> .*', line):
+        if re.match("^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} .*> .*", line):
             count += 1
         output.append(line)
 
-    ui.status('\n'.join(reversed(output)))
+    ui.status("\n".join(reversed(output)))

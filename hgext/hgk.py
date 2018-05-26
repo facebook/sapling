@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''browse the repository in a graphical way
+"""browse the repository in a graphical way
 
 The hgk extension allows browsing the history of a repository in a
 graphical way. It requires Tcl/Tk version 8.4 or later. (Tcl/Tk is not
@@ -32,27 +32,16 @@ Assuming you had already configured extdiff vdiff command, just add::
 
 Revisions context menu will now display additional entries to fire
 vdiff on hovered and selected revisions.
-'''
+"""
 
 from __future__ import absolute_import
 
 import os
 
+from mercurial import commands, obsolete, patch, pycompat, registrar, scmutil, util
 from mercurial.i18n import _
-from mercurial.node import (
-    nullid,
-    nullrev,
-    short,
-)
-from mercurial import (
-    commands,
-    obsolete,
-    patch,
-    pycompat,
-    registrar,
-    scmutil,
-    util,
-)
+from mercurial.node import nullid, nullrev, short
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -60,29 +49,32 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('hgk', 'path',
-    default='hgk',
-)
+configitem("hgk", "path", default="hgk")
 
 try:
     xrange(0)
 except NameError:
     xrange = range
 
-@command('debug-diff-tree',
-    [('p', 'patch', None, _('generate patch')),
-    ('r', 'recursive', None, _('recursive')),
-    ('P', 'pretty', None, _('pretty')),
-    ('s', 'stdin', None, _('stdin')),
-    ('C', 'copy', None, _('detect copies')),
-    ('S', 'search', "", _('search'))],
-    ('[OPTION]... NODE1 NODE2 [FILE]...'),
-    inferrepo=True)
+
+@command(
+    "debug-diff-tree",
+    [
+        ("p", "patch", None, _("generate patch")),
+        ("r", "recursive", None, _("recursive")),
+        ("P", "pretty", None, _("pretty")),
+        ("s", "stdin", None, _("stdin")),
+        ("C", "copy", None, _("detect copies")),
+        ("S", "search", "", _("search")),
+    ],
+    ("[OPTION]... NODE1 NODE2 [FILE]..."),
+    inferrepo=True,
+)
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
 
@@ -93,25 +85,30 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         mmap = repo[node1].manifest()
         mmap2 = repo[node2].manifest()
         m = scmutil.match(repo[node1], files)
-        modified, added, removed  = repo.status(node1, node2, m)[:3]
+        modified, added, removed = repo.status(node1, node2, m)[:3]
         empty = short(nullid)
 
         for f in modified:
             # TODO get file permissions
-            ui.write((":100664 100664 %s %s M\t%s\t%s\n") %
-                     (short(mmap[f]), short(mmap2[f]), f, f))
+            ui.write(
+                (":100664 100664 %s %s M\t%s\t%s\n")
+                % (short(mmap[f]), short(mmap2[f]), f, f)
+            )
         for f in added:
-            ui.write((":000000 100664 %s %s N\t%s\t%s\n") %
-                     (empty, short(mmap2[f]), f, f))
+            ui.write(
+                (":000000 100664 %s %s N\t%s\t%s\n") % (empty, short(mmap2[f]), f, f)
+            )
         for f in removed:
-            ui.write((":100664 000000 %s %s D\t%s\t%s\n") %
-                     (short(mmap[f]), empty, f, f))
+            ui.write(
+                (":100664 000000 %s %s D\t%s\t%s\n") % (short(mmap[f]), empty, f, f)
+            )
+
     ##
 
     while True:
-        if opts[r'stdin']:
+        if opts[r"stdin"]:
             try:
-                line = util.bytesinput(ui.fin, ui.fout).split(' ')
+                line = util.bytesinput(ui.fin, ui.fout).split(" ")
                 node1 = line[0]
                 if len(line) > 1:
                     node2 = line[1]
@@ -125,23 +122,23 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         else:
             node2 = node1
             node1 = repo.changelog.parents(node1)[0]
-        if opts[r'patch']:
-            if opts[r'pretty']:
+        if opts[r"patch"]:
+            if opts[r"pretty"]:
                 catcommit(ui, repo, node2, "")
             m = scmutil.match(repo[node1], files)
             diffopts = patch.difffeatureopts(ui)
             diffopts.git = True
-            chunks = patch.diff(repo, node1, node2, match=m,
-                                opts=diffopts)
+            chunks = patch.diff(repo, node1, node2, match=m, opts=diffopts)
             for chunk in chunks:
                 ui.write(chunk)
         else:
             __difftree(repo, node1, node2, files=files)
-        if not opts[r'stdin']:
+        if not opts[r"stdin"]:
             break
 
+
 def catcommit(ui, repo, n, prefix, ctx=None):
-    nlprefix = '\n' + prefix
+    nlprefix = "\n" + prefix
     if ctx is None:
         ctx = repo[n]
     # use ctx.node() instead ??
@@ -153,8 +150,8 @@ def catcommit(ui, repo, n, prefix, ctx=None):
     description = ctx.description().replace("\0", "")
     ui.write(("author %s %s %s\n" % (ctx.user(), int(date[0]), date[1])))
 
-    if 'committer' in ctx.extra():
-        ui.write(("committer %s\n" % ctx.extra()['committer']))
+    if "committer" in ctx.extra():
+        ui.write(("committer %s\n" % ctx.extra()["committer"]))
 
     ui.write(("revision %d\n" % ctx.rev()))
     ui.write(("branch %s\n" % ctx.branch()))
@@ -164,14 +161,14 @@ def catcommit(ui, repo, n, prefix, ctx=None):
     ui.write(("phase %s\n\n" % ctx.phasestr()))
 
     if prefix != "":
-        ui.write("%s%s\n" % (prefix,
-                             description.replace('\n', nlprefix).strip()))
+        ui.write("%s%s\n" % (prefix, description.replace("\n", nlprefix).strip()))
     else:
         ui.write(description + "\n")
     if prefix:
-        ui.write('\0')
+        ui.write("\0")
 
-@command('debug-merge-base', [], _('REV REV'))
+
+@command("debug-merge-base", [], _("REV REV"))
 def base(ui, repo, node1, node2):
     """output common ancestor information"""
     node1 = repo.lookup(node1)
@@ -179,10 +176,13 @@ def base(ui, repo, node1, node2):
     n = repo.changelog.ancestor(node1, node2)
     ui.write(short(n) + "\n")
 
-@command('debug-cat-file',
-    [('s', 'stdin', None, _('stdin'))],
-    _('[OPTION]... TYPE FILE'),
-    inferrepo=True)
+
+@command(
+    "debug-cat-file",
+    [("s", "stdin", None, _("stdin"))],
+    _("[OPTION]... TYPE FILE"),
+    inferrepo=True,
+)
 def catfile(ui, repo, type=None, r=None, **opts):
     """cat a specific revision"""
     # in stdin mode, every line except the commit is prefixed with two
@@ -190,9 +190,9 @@ def catfile(ui, repo, type=None, r=None, **opts):
     # strings
     #
     prefix = ""
-    if opts[r'stdin']:
+    if opts[r"stdin"]:
         try:
-            (type, r) = util.bytesinput(ui.fin, ui.fout).split(' ')
+            (type, r) = util.bytesinput(ui.fin, ui.fout).split(" ")
             prefix = "    "
         except EOFError:
             return
@@ -200,7 +200,7 @@ def catfile(ui, repo, type=None, r=None, **opts):
     else:
         if not type or not r:
             ui.warn(_("cat-file: type or revision not supplied\n"))
-            commands.help_(ui, 'cat-file')
+            commands.help_(ui, "cat-file")
 
     while r:
         if type != "commit":
@@ -208,13 +208,14 @@ def catfile(ui, repo, type=None, r=None, **opts):
             return 1
         n = repo.lookup(r)
         catcommit(ui, repo, n, prefix)
-        if opts[r'stdin']:
+        if opts[r"stdin"]:
             try:
-                (type, r) = util.bytesinput(ui.fin, ui.fout).split(' ')
+                (type, r) = util.bytesinput(ui.fin, ui.fout).split(" ")
             except EOFError:
                 break
         else:
             break
+
 
 # git rev-tree is a confusing thing.  You can supply a number of
 # commit sha1s on the command line, and it walks the commit history
@@ -222,6 +223,7 @@ def catfile(ui, repo, type=None, r=None, **opts):
 # a bitmask based on arg position.
 # you can specify a commit to stop at by starting the sha1 with ^
 def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
+
     def chlogwalk():
         count = len(repo)
         i = count
@@ -236,12 +238,12 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
 
             for x in xrange(chunk):
                 if i + x >= count:
-                    l[chunk - x:] = [0] * (chunk - x)
+                    l[chunk - x :] = [0] * (chunk - x)
                     break
                 if full is not None:
                     if (i + x) in repo:
                         l[x] = repo[i + x]
-                        l[x].changeset() # force reading
+                        l[x].changeset()  # force reading
                 else:
                     if (i + x) in repo:
                         l[x] = 1
@@ -270,11 +272,11 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
     # figure out which commits they are asking for and which ones they
     # want us to stop on
     for i, arg in enumerate(args):
-        if arg.startswith('^'):
+        if arg.startswith("^"):
             s = repo.lookup(arg[1:])
             stop_sha1.append(s)
             want_sha1.append(s)
-        elif arg != 'HEAD':
+        elif arg != "HEAD":
             want_sha1.append(repo.lookup(arg))
 
     # calculate the graph for the supplied commits
@@ -312,7 +314,7 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
                 ui.write("%s%s\n" % (short(n), parentstr))
             elif full == "commit":
                 ui.write("%s%s\n" % (short(n), parentstr))
-                catcommit(ui, repo, n, '    ', ctx)
+                catcommit(ui, repo, n, "    ", ctx)
             else:
                 (p1, p2) = repo.changelog.parents(n)
                 (h, h1, h2) = map(short, (n, p1, p2))
@@ -331,36 +333,43 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
                 break
             count += 1
 
+
 # git rev-list tries to order things by date, and has the ability to stop
 # at a given commit without walking the whole repo.  TODO add the stop
 # parameter
-@command('debug-rev-list',
-    [('H', 'header', None, _('header')),
-    ('t', 'topo-order', None, _('topo-order')),
-    ('p', 'parents', None, _('parents')),
-    ('n', 'max-count', 0, _('max-count'))],
-    ('[OPTION]... REV...'))
+@command(
+    "debug-rev-list",
+    [
+        ("H", "header", None, _("header")),
+        ("t", "topo-order", None, _("topo-order")),
+        ("p", "parents", None, _("parents")),
+        ("n", "max-count", 0, _("max-count")),
+    ],
+    ("[OPTION]... REV..."),
+)
 def revlist(ui, repo, *revs, **opts):
     """print revisions"""
-    if opts['header']:
+    if opts["header"]:
         full = "commit"
     else:
         full = None
     copy = [x for x in revs]
-    revtree(ui, copy, repo, full, opts[r'max_count'], opts[r'parents'])
+    revtree(ui, copy, repo, full, opts[r"max_count"], opts[r"parents"])
 
-@command('view',
-    [('l', 'limit', '',
-     _('limit number of changes displayed'), _('NUM'))],
-    _('[-l LIMIT] [REVRANGE]'))
+
+@command(
+    "view",
+    [("l", "limit", "", _("limit number of changes displayed"), _("NUM"))],
+    _("[-l LIMIT] [REVRANGE]"),
+)
 def view(ui, repo, *etc, **opts):
     "start interactive history viewer"
     opts = pycompat.byteskwargs(opts)
     os.chdir(repo.root)
-    optstr = ' '.join(['--%s %s' % (k, v) for k, v in opts.iteritems() if v])
+    optstr = " ".join(["--%s %s" % (k, v) for k, v in opts.iteritems() if v])
     if repo.filtername is None:
-        optstr += '--hidden'
+        optstr += "--hidden"
 
     cmd = ui.config("hgk", "path") + " %s %s" % (optstr, " ".join(etc))
     ui.debug("running %s\n" % cmd)
-    ui.system(cmd, blockedtag='hgk_view')
+    ui.system(cmd, blockedtag="hgk_view")

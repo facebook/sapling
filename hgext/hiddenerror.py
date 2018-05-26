@@ -19,15 +19,13 @@ with the hash of the hidden changeset.
 """
 from __future__ import absolute_import
 
-from mercurial.node import short
+from mercurial import context, error, extensions
 from mercurial.i18n import _
-from mercurial import (
-    context,
-    error,
-    extensions,
-)
+from mercurial.node import short
 
-testedwith = 'ships-with-fb-hgext'
+
+testedwith = "ships-with-fb-hgext"
+
 
 def uisetup(ui):
     """Wrap context.changectx to catch FilteredRepoLookupError."""
@@ -51,15 +49,16 @@ def uisetup(ui):
             return error.FilteredRepoLookupError(msg, hint=hint)
         return orig(repo, rev)
 
-    extensions.wrapfunction(context, '_filterederror', _filterederror)
+    extensions.wrapfunction(context, "_filterederror", _filterederror)
+
 
 def _getstrings(ui):
     """Lood the error messages to show when the user tries to access a
        hidden commit from the user's configuration file. Fall back to
        default messages if nothing is configured.
     """
-    msg = ui.config('hiddenerror', 'message')
-    hint = ui.config('hiddenerror', 'hint')
+    msg = ui.config("hiddenerror", "message")
+    hint = ui.config("hiddenerror", "hint")
     if not msg:
         msg = _("hidden changeset {0}")
     return msg, hint

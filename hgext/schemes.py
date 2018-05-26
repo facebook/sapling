@@ -44,16 +44,9 @@ from __future__ import absolute_import
 import os
 import re
 
+from mercurial import error, extensions, hg, pycompat, registrar, templater, util
 from mercurial.i18n import _
-from mercurial import (
-    error,
-    extensions,
-    hg,
-    pycompat,
-    registrar,
-    templater,
-    util,
-)
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -61,11 +54,13 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
-_partre = re.compile(br'\{(\d+)\}')
+_partre = re.compile(br"\{(\d+)\}")
+
 
 class ShortRepository(object):
+
     def __init__(self, url, scheme, templater):
         self.scheme = scheme
         self.templater = templater
@@ -76,7 +71,7 @@ class ShortRepository(object):
             self.parts = 0
 
     def __repr__(self):
-        return '<ShortRepository: %s>' % self.scheme
+        return "<ShortRepository: %s>" % self.scheme
 
     def instance(self, ui, url, create):
         url = self.resolve(url)
@@ -85,50 +80,60 @@ class ShortRepository(object):
     def resolve(self, url):
         # Should this use the util.url class, or is manual parsing better?
         try:
-            url = url.split('://', 1)[1]
+            url = url.split("://", 1)[1]
         except IndexError:
             raise error.Abort(_("no '://' in scheme url '%s'") % url)
-        parts = url.split('/', self.parts)
+        parts = url.split("/", self.parts)
         if len(parts) > self.parts:
             tail = parts[-1]
             parts = parts[:-1]
         else:
-            tail = ''
+            tail = ""
         context = dict((str(i + 1), v) for i, v in enumerate(parts))
-        return ''.join(self.templater.process(self.url, context)) + tail
+        return "".join(self.templater.process(self.url, context)) + tail
+
 
 def hasdriveletter(orig, path):
     if path:
         for scheme in schemes:
-            if path.startswith(scheme + ':'):
+            if path.startswith(scheme + ":"):
                 return False
     return orig(path)
 
+
 schemes = {
-    'py': 'http://hg.python.org/',
-    'bb': 'https://bitbucket.org/',
-    'bb+ssh': 'ssh://hg@bitbucket.org/',
-    'gcode': 'https://{1}.googlecode.com/hg/',
-    'kiln': 'https://{1}.kilnhg.com/Repo/'
-    }
+    "py": "http://hg.python.org/",
+    "bb": "https://bitbucket.org/",
+    "bb+ssh": "ssh://hg@bitbucket.org/",
+    "gcode": "https://{1}.googlecode.com/hg/",
+    "kiln": "https://{1}.kilnhg.com/Repo/",
+}
+
 
 def extsetup(ui):
-    schemes.update(dict(ui.configitems('schemes')))
+    schemes.update(dict(ui.configitems("schemes")))
     t = templater.engine(lambda x: x)
     for scheme, url in schemes.items():
-        if (pycompat.iswindows and len(scheme) == 1 and scheme.isalpha()
-            and os.path.exists('%s:\\' % scheme)):
-            raise error.Abort(_('custom scheme %s:// conflicts with drive '
-                               'letter %s:\\\n') % (scheme, scheme.upper()))
+        if (
+            pycompat.iswindows
+            and len(scheme) == 1
+            and scheme.isalpha()
+            and os.path.exists("%s:\\" % scheme)
+        ):
+            raise error.Abort(
+                _("custom scheme %s:// conflicts with drive " "letter %s:\\\n")
+                % (scheme, scheme.upper())
+            )
         hg.schemes[scheme] = ShortRepository(url, scheme, t)
 
-    extensions.wrapfunction(util, 'hasdriveletter', hasdriveletter)
+    extensions.wrapfunction(util, "hasdriveletter", hasdriveletter)
 
-@command('debugexpandscheme', norepo=True)
+
+@command("debugexpandscheme", norepo=True)
 def expandscheme(ui, url, **opts):
     """given a repo path, provide the scheme-expanded path
     """
     repo = hg._peerlookup(url)
     if isinstance(repo, ShortRepository):
         url = repo.resolve(url)
-    ui.write(url + '\n')
+    ui.write(url + "\n")

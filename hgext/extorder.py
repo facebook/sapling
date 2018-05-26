@@ -25,25 +25,25 @@ Please not that this extension modifies only order of loading extensions. It
 will not load them for you
 """
 
-from mercurial import (
-    extensions,
-    registrar,
-)
+from mercurial import extensions, registrar
 
-testedwith = 'ships-with-fb-hgext'
+
+testedwith = "ships-with-fb-hgext"
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+
 class MercurialExtOrderException(BaseException):
-    '''Special exception to bypass upstream exception catching
+    """Special exception to bypass upstream exception catching
 
     Upstream mercurial catches all Exception from uisetup or extsetup - see
     ea1c2eb7abd341c84422f489af75bccb02622671. We need to throw something that is
     subclass of BaseException to actually abort the program if extension order
     is incorrect. That's why this class exists.
-    '''
+    """
     pass
+
 
 def uisetup(ui):
 
@@ -54,11 +54,11 @@ def uisetup(ui):
     # The configs being read here are user defined, so we need to suppress
     # warnings telling us to register them.
     with ui.configoverride({("devel", "all-warnings"): False}):
-        for item, _v in ui.configitems('extorder'):
-            val = ui.configlist('extorder', item)
-            if item == 'preferlast':
+        for item, _v in ui.configitems("extorder"):
+            val = ui.configlist("extorder", item)
+            if item == "preferlast":
                 preferlast.extend(val)
-            elif item == 'preferfirst':
+            elif item == "preferfirst":
                 preferfirst.extend(val)
             else:
                 deps[item] = val
@@ -73,8 +73,7 @@ def uisetup(ui):
 
     def visit(n):
         if n in temp:
-            raise MercurialExtOrderException(
-                "extorder: conflicting extension order")
+            raise MercurialExtOrderException("extorder: conflicting extension order")
         elif n in unvisited:
             temp.add(n)
             for m in deps.get(n, []):
@@ -82,6 +81,7 @@ def uisetup(ui):
             unvisited.remove(n)
             temp.remove(n)
             order.append(n)
+
     while len(unvisited) > 0:
         visit(unvisited[0])
 

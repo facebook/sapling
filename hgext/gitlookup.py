@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-''' extension that will look up hashes from an hg-git map file over the wire.
+""" extension that will look up hashes from an hg-git map file over the wire.
     This also provides client and server commands to download all the Git
     metadata via bundle2. Example usage:
 
@@ -32,7 +32,7 @@
     # corresponds to serving the complete map.
     onlymapdelta = False
 
-'''
+"""
 
 import errno
 import json
@@ -49,39 +49,40 @@ from mercurial import (
     util,
     wireproto,
 )
-
-from mercurial.node import (
-    bin,
-    hex,
-    nullid,
-)
-
 from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+
 def wrapwireprotocommand(command, wrapper):
-    '''Wrap the wire proto command named `command' in table
+    """Wrap the wire proto command named `command' in table
 
     Just like extensions.wrapcommand, except for wire protocol commands.
-    '''
-    assert util.safehasattr(wrapper, '__call__')
+    """
+    assert util.safehasattr(wrapper, "__call__")
     origfn, args = wireproto.commands[command]
+
     def wrap(*args, **kwargs):
         return util.checksignature(wrapper)(
-            util.checksignature(origfn), *args, **kwargs)
+            util.checksignature(origfn), *args, **kwargs
+        )
+
     wireproto.commands[command] = wrap, args
     return wrapper
 
+
 def remotelookup(orig, repo, proto, key):
     k = encoding.tolocal(key)
-    if k.startswith('_gitlookup_'):
+    if k.startswith("_gitlookup_"):
         ret = _dolookup(repo, k)
         if ret is not None:
             success = 1
-            return '%s %s\n' % (success, ret)
+            return "%s %s\n" % (success, ret)
     return orig(repo, proto, key)
+
 
 def locallookup(orig, repo, key):
     gitlookup = _dolookup(repo, key)
@@ -90,60 +91,61 @@ def locallookup(orig, repo, key):
     else:
         return orig(repo, key)
 
+
 def _dolookup(repo, key):
-    mapfile = repo.ui.configpath('gitlookup', 'mapfile')
+    mapfile = repo.ui.configpath("gitlookup", "mapfile")
     if mapfile is None:
         return None
     if not isinstance(key, str):
         return None
     # direction: git to hg = g, hg to git = h
-    if key.startswith('_gitlookup_git_'):
-        direction = 'tohg'
+    if key.startswith("_gitlookup_git_"):
+        direction = "tohg"
         sha = key[15:]
-    elif key.startswith('_gitlookup_hg_'):
-        direction = 'togit'
+    elif key.startswith("_gitlookup_hg_"):
+        direction = "togit"
         sha = key[14:]
     else:
         return None
-    hggitmap = open(mapfile, 'rb')
+    hggitmap = open(mapfile, "rb")
     for line in hggitmap:
-        gitsha, hgsha = line.strip().split(' ', 1)
-        if direction == 'tohg' and sha == gitsha:
+        gitsha, hgsha = line.strip().split(" ", 1)
+        if direction == "tohg" and sha == gitsha:
             return hgsha
-        if direction == 'togit' and sha == hgsha:
+        if direction == "togit" and sha == hgsha:
             return gitsha
     return None
 
-@command('gitgetmeta', [], '[SOURCE]')
-def gitgetmeta(ui, repo, source='default'):
-    '''get git metadata from a server that supports fb_gitmeta'''
+
+@command("gitgetmeta", [], "[SOURCE]")
+def gitgetmeta(ui, repo, source="default"):
+    """get git metadata from a server that supports fb_gitmeta"""
     source, branch = hg.parseurl(ui.expandpath(source))
     other = hg.peer(repo, {}, source)
-    ui.status(_('getting git metadata from %s\n') %
-              util.hidepassword(source))
+    ui.status(_("getting git metadata from %s\n") % util.hidepassword(source))
 
-    kwargs = {'bundlecaps': exchange.caps20to10(repo)}
+    kwargs = {"bundlecaps": exchange.caps20to10(repo)}
     capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
-    kwargs['bundlecaps'].add('bundle2=' + util.urlreq.quote(capsblob))
+    kwargs["bundlecaps"].add("bundle2=" + util.urlreq.quote(capsblob))
     # this would ideally not be in the bundlecaps at all, but adding new kwargs
     # for wire transmissions is not possible as of Mercurial d19164a018a1
-    kwargs['bundlecaps'].add('fb_gitmeta')
-    kwargs['heads'] = [nullid]
-    kwargs['cg'] = False
-    kwargs['common'] = _getcommonheads(repo)
-    bundle = other.getbundle('pull', **kwargs)
+    kwargs["bundlecaps"].add("fb_gitmeta")
+    kwargs["heads"] = [nullid]
+    kwargs["cg"] = False
+    kwargs["common"] = _getcommonheads(repo)
+    bundle = other.getbundle("pull", **kwargs)
     try:
         op = bundle2.processbundle(repo, bundle)
     except error.BundleValueError as exc:
-        raise error.Abort('missing support for %s' % exc)
-    writebytes = op.records['fb:gitmeta:writebytes']
-    ui.status(_('wrote %d files (%d bytes)\n') %
-              (len(writebytes), sum(writebytes)))
+        raise error.Abort("missing support for %s" % exc)
+    writebytes = op.records["fb:gitmeta:writebytes"]
+    ui.status(_("wrote %d files (%d bytes)\n") % (len(writebytes), sum(writebytes)))
 
-hgheadsfile = 'git-synced-hgheads'
-gitmapfile = 'git-mapfile'
-gitmetafiles = set(
-    [gitmapfile, 'git-named-branches', 'git-tags', 'git-remote-refs'])
+
+hgheadsfile = "git-synced-hgheads"
+gitmapfile = "git-mapfile"
+gitmetafiles = set([gitmapfile, "git-named-branches", "git-tags", "git-remote-refs"])
+
 
 def _getfile(repo, filename):
     try:
@@ -154,6 +156,7 @@ def _getfile(repo, filename):
 
     return None
 
+
 def _getcommonheads(repo):
     commonheads = []
     f = _getfile(repo, hgheadsfile)
@@ -162,8 +165,10 @@ def _getcommonheads(repo):
         commonheads = [bin(x.strip()) for x in commonheads]
     return commonheads
 
+
 def _isheadmissing(repo, heads):
     return not all(repo.known(heads))
+
 
 def _getmissinglines(mapfile, missinghashes):
     missinglines = set()
@@ -174,7 +179,7 @@ def _getmissinglines(mapfile, missinghashes):
 
     hashestofind = missinghashes.copy()
     for line in mapfile:
-        gitsha, hgsha = line.strip().split(' ', 1)
+        gitsha, hgsha = line.strip().split(" ", 1)
         if hgsha in hashestofind:
             missinglines.add(line)
 
@@ -183,9 +188,11 @@ def _getmissinglines(mapfile, missinghashes):
             if not hashestofind:
                 return missinglines
 
-    raise error.Abort(_('gitmeta: missing hashes in file %s') % mapfile.name)
+    raise error.Abort(_("gitmeta: missing hashes in file %s") % mapfile.name)
+
 
 class _githgmappayload(object):
+
     def __init__(self, needfullsync, newheads, missinglines):
         self.needfullsync = needfullsync
         self.newheads = newheads
@@ -193,9 +200,9 @@ class _githgmappayload(object):
 
     def _todict(self):
         d = {}
-        d['needfullsync'] = self.needfullsync
-        d['newheads'] = list(self.newheads)
-        d['missinglines'] = list(self.missinglines)
+        d["needfullsync"] = self.needfullsync
+        d["newheads"] = list(self.newheads)
+        d["missinglines"] = list(self.missinglines)
         return d
 
     def tojson(self):
@@ -203,9 +210,9 @@ class _githgmappayload(object):
 
     @classmethod
     def _fromdict(cls, d):
-        needfullsync = d['needfullsync']
-        newheads = set(d['newheads'])
-        missinglines = set(d['missinglines'])
+        needfullsync = d["needfullsync"]
+        newheads = set(d["newheads"])
+        missinglines = set(d["missinglines"])
         return cls(needfullsync, newheads, missinglines)
 
     @classmethod
@@ -213,27 +220,28 @@ class _githgmappayload(object):
         d = json.loads(jsonstr)
         return cls._fromdict(d)
 
-@exchange.getbundle2partsgenerator('b2x:fb:gitmeta:githgmap')
+
+@exchange.getbundle2partsgenerator("b2x:fb:gitmeta:githgmap")
 def _getbundlegithgmappart(bundler, repo, source, bundlecaps=None, **kwargs):
-    '''send missing git to hg map data via bundle2'''
-    if 'fb_gitmeta' in bundlecaps:
+    """send missing git to hg map data via bundle2"""
+    if "fb_gitmeta" in bundlecaps:
         # Do nothing if the config indicates serving the complete git-hg map
         # file. _getbundlegitmetapart will handle serving the complete file in
         # this case.
-        if not repo.ui.configbool('gitlookup', 'onlymapdelta', False):
+        if not repo.ui.configbool("gitlookup", "onlymapdelta", False):
             return
 
-        mapfile  = _getfile(repo, gitmapfile)
+        mapfile = _getfile(repo, gitmapfile)
         if not mapfile:
             return
 
-        commonheads = kwargs['common']
+        commonheads = kwargs["common"]
 
         # If there are missing heads, we will sync everything.
         if _isheadmissing(repo, commonheads):
             commonheads = []
 
-        needfullsync = (len(commonheads) == 0)
+        needfullsync = len(commonheads) == 0
 
         heads = repo.heads()
         newheads = set(hex(head) for head in heads)
@@ -245,23 +253,24 @@ def _getbundlegithgmappart(bundler, repo, source, bundlecaps=None, **kwargs):
         payload = _githgmappayload(needfullsync, newheads, missinglines)
         serializedpayload = payload.tojson()
         part = bundle2.bundlepart(
-            'b2x:fb:gitmeta:githgmap',
-            [('filename', gitmapfile)],
-            data = serializedpayload
+            "b2x:fb:gitmeta:githgmap",
+            [("filename", gitmapfile)],
+            data=serializedpayload,
         )
 
         bundler.addpart(part)
 
-@exchange.getbundle2partsgenerator('b2x:fb:gitmeta')
+
+@exchange.getbundle2partsgenerator("b2x:fb:gitmeta")
 def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
-    '''send git metadata via bundle2'''
-    if 'fb_gitmeta' in bundlecaps:
+    """send git metadata via bundle2"""
+    if "fb_gitmeta" in bundlecaps:
         filestooverwrite = gitmetafiles
 
         # Exclude the git-hg map file if the config indicates that the server
         # should only be serving the missing map data. _getbundle2partsgenerator
         # will serve the missing map data in this case.
-        if repo.ui.configbool('gitlookup', 'onlymapdelta', False):
+        if repo.ui.configbool("gitlookup", "onlymapdelta", False):
             filestooverwrite = filestooverwrite - set([gitmapfile])
 
         for fname in sorted(filestooverwrite):
@@ -269,35 +278,37 @@ def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
             if not f:
                 continue
 
-            part = bundle2.bundlepart('b2x:fb:gitmeta',
-                                      [('filename', fname)],
-                                      data=f.read())
+            part = bundle2.bundlepart(
+                "b2x:fb:gitmeta", [("filename", fname)], data=f.read()
+            )
             bundler.addpart(part)
 
+
 def _writefile(op, filename, data):
-    with op.repo.vfs(filename, 'w+', atomictemp=True) as f:
-        op.repo.ui.note(_('writing .hg/%s\n') % filename)
+    with op.repo.vfs(filename, "w+", atomictemp=True) as f:
+        op.repo.ui.note(_("writing .hg/%s\n") % filename)
         f.write(data)
-        op.records.add('fb:gitmeta:writebytes', len(data))
+        op.records.add("fb:gitmeta:writebytes", len(data))
+
 
 def _validatepartparams(op, params):
-    if 'filename' not in params:
+    if "filename" not in params:
         raise error.Abort(_("gitmeta: 'filename' missing"))
 
-    fname = params['filename']
+    fname = params["filename"]
     if fname not in gitmetafiles:
-        op.repo.ui.warn(
-            _("warning: gitmeta: unknown file '%s' skipped\n") % fname)
+        op.repo.ui.warn(_("warning: gitmeta: unknown file '%s' skipped\n") % fname)
         return False
 
     return True
 
-@bundle2.parthandler('b2x:fb:gitmeta:githgmap', ('filename',))
-@bundle2.parthandler('fb:gitmeta:githgmap', ('filename',))
+
+@bundle2.parthandler("b2x:fb:gitmeta:githgmap", ("filename",))
+@bundle2.parthandler("fb:gitmeta:githgmap", ("filename",))
 def bundle2getgithgmap(op, part):
     params = dict(part.mandatoryparams)
     if _validatepartparams(op, params):
-        filename = params['filename']
+        filename = params["filename"]
         with op.repo.wlock():
             data = _githgmappayload.fromjson(part.read())
             missinglines = data.missinglines
@@ -313,29 +324,32 @@ def bundle2getgithgmap(op, part):
                 if mapfile:
                     currentlines = set(mapfile.readlines())
                     if currentlines & missinglines:
-                        msg = 'warning: gitmeta: unexpected lines in .hg/%s\n'
+                        msg = "warning: gitmeta: unexpected lines in .hg/%s\n"
                         op.repo.ui.warn(_(msg) % filename)
 
                     currentlines.update(missinglines)
                     newlines = currentlines
                 else:
                     raise error.Abort(
-                        _('gitmeta: could not read from .hg/%s') % filename)
+                        _("gitmeta: could not read from .hg/%s") % filename
+                    )
 
-            _writefile(op, filename, ''.join(newlines))
-            _writefile(op, hgheadsfile, '\n'.join(data.newheads))
+            _writefile(op, filename, "".join(newlines))
+            _writefile(op, hgheadsfile, "\n".join(data.newheads))
 
-@bundle2.parthandler('b2x:fb:gitmeta', ('filename',))
-@bundle2.parthandler('fb:gitmeta', ('filename',))
+
+@bundle2.parthandler("b2x:fb:gitmeta", ("filename",))
+@bundle2.parthandler("fb:gitmeta", ("filename",))
 def bundle2getgitmeta(op, part):
-    '''unbundle a bundle2 containing git metadata on the client'''
+    """unbundle a bundle2 containing git metadata on the client"""
     params = dict(part.mandatoryparams)
     if _validatepartparams(op, params):
-        filename = params['filename']
+        filename = params["filename"]
         with op.repo.wlock():
             data = part.read()
             _writefile(op, filename, data)
 
+
 def extsetup(ui):
-    wrapwireprotocommand('lookup', remotelookup)
-    extensions.wrapfunction(localrepo.localrepository, 'lookup', locallookup)
+    wrapwireprotocommand("lookup", remotelookup)
+    extensions.wrapfunction(localrepo.localrepository, "lookup", locallookup)

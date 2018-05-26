@@ -9,20 +9,15 @@ from __future__ import absolute_import
 
 import struct
 
+from . import branchmap, error, phases, progress, store, util
 from .i18n import _
-from . import (
-    branchmap,
-    error,
-    phases,
-    progress,
-    store,
-    util,
-)
+
 
 try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 def canperformstreamclone(pullop, bailifbundle2supported=False):
     """Whether it is possible to perform a streaming clone as part of pull.
@@ -41,17 +36,17 @@ def canperformstreamclone(pullop, bailifbundle2supported=False):
 
     bundle2supported = False
     if pullop.canusebundle2:
-        if 'v1' in pullop.remotebundle2caps.get('stream', []):
+        if "v1" in pullop.remotebundle2caps.get("stream", []):
             bundle2supported = True
         # else
-            # Server doesn't support bundle2 stream clone or doesn't support
-            # the versions we support. Fall back and possibly allow legacy.
+        # Server doesn't support bundle2 stream clone or doesn't support
+        # the versions we support. Fall back and possibly allow legacy.
 
     # Ensures legacy code path uses available bundle2.
     if bailifbundle2supported and bundle2supported:
         return False, None
     # Ensures bundle2 doesn't try to do a stream clone if it isn't supported.
-    #elif not bailifbundle2supported and not bundle2supported:
+    # elif not bailifbundle2supported and not bundle2supported:
     #    return False, None
 
     # Streaming clone only works on empty repositories.
@@ -68,7 +63,7 @@ def canperformstreamclone(pullop, bailifbundle2supported=False):
     # likely only comes into play in LANs.
     if streamrequested is None:
         # The server can advertise whether to prefer streaming clone.
-        streamrequested = remote.capable('stream-preferred')
+        streamrequested = remote.capable("stream-preferred")
 
     if not streamrequested:
         return False, None
@@ -81,31 +76,39 @@ def canperformstreamclone(pullop, bailifbundle2supported=False):
     # if the only requirement is "revlogv1." Else, the "streamreqs" capability
     # is advertised and contains a comma-delimited list of requirements.
     requirements = set()
-    if remote.capable('stream'):
-        requirements.add('revlogv1')
+    if remote.capable("stream"):
+        requirements.add("revlogv1")
     else:
-        streamreqs = remote.capable('streamreqs')
+        streamreqs = remote.capable("streamreqs")
         # This is weird and shouldn't happen with modern servers.
         if not streamreqs:
-            pullop.repo.ui.warn(_(
-                'warning: stream clone requested but server has them '
-                'disabled\n'))
+            pullop.repo.ui.warn(
+                _("warning: stream clone requested but server has them " "disabled\n")
+            )
             return False, None
 
-        streamreqs = set(streamreqs.split(','))
+        streamreqs = set(streamreqs.split(","))
         # Server requires something we don't support. Bail.
         missingreqs = streamreqs - repo.supportedformats
         if missingreqs:
-            pullop.repo.ui.warn(_(
-                'warning: stream clone requested but client is missing '
-                'requirements: %s\n') % ', '.join(sorted(missingreqs)))
             pullop.repo.ui.warn(
-                _('(see https://www.mercurial-scm.org/wiki/MissingRequirement '
-                  'for more information)\n'))
+                _(
+                    "warning: stream clone requested but client is missing "
+                    "requirements: %s\n"
+                )
+                % ", ".join(sorted(missingreqs))
+            )
+            pullop.repo.ui.warn(
+                _(
+                    "(see https://www.mercurial-scm.org/wiki/MissingRequirement "
+                    "for more information)\n"
+                )
+            )
             return False, None
         requirements = streamreqs
 
     return True, requirements
+
 
 def maybeperformlegacystreamclone(pullop):
     """Possibly perform a legacy stream clone operation.
@@ -129,31 +132,29 @@ def maybeperformlegacystreamclone(pullop):
     # Save remote branchmap. We will use it later to speed up branchcache
     # creation.
     rbranchmap = None
-    if remote.capable('branchmap'):
+    if remote.capable("branchmap"):
         rbranchmap = remote.branchmap()
 
-    repo.ui.status(_('streaming all changes\n'))
+    repo.ui.status(_("streaming all changes\n"))
 
     fp = remote.stream_out()
     l = fp.readline()
     try:
         resp = int(l)
     except ValueError:
-        raise error.ResponseError(
-            _('unexpected response from remote server:'), l)
+        raise error.ResponseError(_("unexpected response from remote server:"), l)
     if resp == 1:
-        raise error.Abort(_('operation forbidden by server'))
+        raise error.Abort(_("operation forbidden by server"))
     elif resp == 2:
-        raise error.Abort(_('locking the remote repository failed'))
+        raise error.Abort(_("locking the remote repository failed"))
     elif resp != 0:
-        raise error.Abort(_('the server sent an unknown error code'))
+        raise error.Abort(_("the server sent an unknown error code"))
 
     l = fp.readline()
     try:
-        filecount, bytecount = map(int, l.split(' ', 1))
+        filecount, bytecount = map(int, l.split(" ", 1))
     except (ValueError, TypeError):
-        raise error.ResponseError(
-            _('unexpected response from remote server:'), l)
+        raise error.ResponseError(_("unexpected response from remote server:"), l)
 
     with repo.lock():
         consumev1(repo, fp, filecount, bytecount)
@@ -161,8 +162,7 @@ def maybeperformlegacystreamclone(pullop):
         # new requirements = old non-format requirements +
         #                    new format-related remote requirements
         # requirements from the streamed-in repository
-        repo.requirements = requirements | (
-                repo.requirements - repo.supportedformats)
+        repo.requirements = requirements | (repo.requirements - repo.supportedformats)
         repo._applyopenerreqs()
         repo._writerequirements()
 
@@ -173,22 +173,25 @@ def maybeperformlegacystreamclone(pullop):
 
     return True
 
+
 def allowservergeneration(repo):
     """Whether streaming clones are allowed from the server."""
-    if not repo.ui.configbool('server', 'uncompressed', untrusted=True):
+    if not repo.ui.configbool("server", "uncompressed", untrusted=True):
         return False
 
     # The way stream clone works makes it impossible to hide secret changesets.
     # So don't allow this by default.
     secret = phases.hassecret(repo)
     if secret:
-        return repo.ui.configbool('server', 'uncompressedallowsecret')
+        return repo.ui.configbool("server", "uncompressedallowsecret")
 
     return True
+
 
 # This is it's own function so extensions can override it.
 def _walkstreamfiles(repo):
     return repo.store.walk()
+
 
 def generatev1(repo):
     """Emit content for version 1 of a streaming clone.
@@ -213,14 +216,13 @@ def generatev1(repo):
     total_bytes = 0
     # Get consistent snapshot of repo, lock during scan.
     with repo.lock():
-        repo.ui.debug('scanning\n')
+        repo.ui.debug("scanning\n")
         for name, ename, size in _walkstreamfiles(repo):
             if size:
                 entries.append((name, size))
                 total_bytes += size
 
-    repo.ui.debug('%d files, %d bytes to transfer\n' %
-                  (len(entries), total_bytes))
+    repo.ui.debug("%d files, %d bytes to transfer\n" % (len(entries), total_bytes))
 
     svfs = repo.svfs
     debugflag = repo.ui.debugflag
@@ -228,12 +230,12 @@ def generatev1(repo):
     def emitrevlogdata():
         for name, size in entries:
             if debugflag:
-                repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
+                repo.ui.debug("sending %s (%d bytes)\n" % (name, size))
             # partially encode name over the wire for backwards compat
-            yield '%s\0%d\n' % (store.encodedir(name), size)
+            yield "%s\0%d\n" % (store.encodedir(name), size)
             # auditing at this stage is both pointless (paths are already
             # trusted by the local repo) and expensive
-            with svfs(name, 'rb', auditpath=False) as fp:
+            with svfs(name, "rb", auditpath=False) as fp:
                 if size <= 65536:
                     yield fp.read(size)
                 else:
@@ -242,6 +244,7 @@ def generatev1(repo):
 
     return len(entries), total_bytes, emitrevlogdata()
 
+
 def generatev1wireproto(repo):
     """Emit content for version 1 of streaming clone suitable for the wire.
 
@@ -249,11 +252,12 @@ def generatev1wireproto(repo):
     indicating file count and byte size.
     """
     filecount, bytecount, it = generatev1(repo)
-    yield '%d %d\n' % (filecount, bytecount)
+    yield "%d %d\n" % (filecount, bytecount)
     for chunk in it:
         yield chunk
 
-def generatebundlev1(repo, compression='UN'):
+
+def generatebundlev1(repo, compression="UN"):
     """Emit content for version 1 of a stream clone bundle.
 
     The first 4 bytes of the output ("HGS1") denote this as stream clone
@@ -275,34 +279,35 @@ def generatebundlev1(repo, compression='UN'):
 
     Returns a tuple of (requirements, data generator).
     """
-    if compression != 'UN':
-        raise ValueError('we do not support the compression argument yet')
+    if compression != "UN":
+        raise ValueError("we do not support the compression argument yet")
 
     requirements = repo.requirements & repo.supportedformats
-    requires = ','.join(sorted(requirements))
+    requires = ",".join(sorted(requirements))
 
     def gen():
-        yield 'HGS1'
+        yield "HGS1"
         yield compression
 
         filecount, bytecount, it = generatev1(repo)
-        repo.ui.status(_('writing %d bytes for %d files\n') %
-                         (bytecount, filecount))
+        repo.ui.status(_("writing %d bytes for %d files\n") % (bytecount, filecount))
 
-        yield struct.pack('>QQ', filecount, bytecount)
-        yield struct.pack('>H', len(requires) + 1)
-        yield requires + '\0'
+        yield struct.pack(">QQ", filecount, bytecount)
+        yield struct.pack(">H", len(requires) + 1)
+        yield requires + "\0"
 
         # This is where we'll add compression in the future.
-        assert compression == 'UN'
+        assert compression == "UN"
 
-        with progress.bar(repo.ui, _('bundle'), _('bytes'), bytecount,
-                          formatfunc=util.bytecount) as prog:
+        with progress.bar(
+            repo.ui, _("bundle"), _("bytes"), bytecount, formatfunc=util.bytecount
+        ) as prog:
             for chunk in it:
                 prog.value += len(chunk)
                 yield chunk
 
     return requirements, gen()
+
 
 def consumev1(repo, fp, filecount, bytecount):
     """Apply the contents from version 1 of a streaming clone file handle.
@@ -314,8 +319,10 @@ def consumev1(repo, fp, filecount, bytecount):
     handled by this function.
     """
     with repo.lock():
-        repo.ui.status(_('%d files to transfer, %s of data\n') %
-                       (filecount, util.bytecount(bytecount)))
+        repo.ui.status(
+            _("%d files to transfer, %s of data\n")
+            % (filecount, util.bytecount(bytecount))
+        )
         start = util.timer()
 
         # TODO: get rid of (potential) inconsistency
@@ -332,26 +339,27 @@ def consumev1(repo, fp, filecount, bytecount):
         # nesting occurs also in ordinary case (e.g. enabling
         # clonebundles).
 
-        with progress.bar(repo.ui, _('clone'), _('bytes'), bytecount,
-                          formatfunc=util.bytecount) as prog:
-            with repo.transaction('clone'):
-                with repo.svfs.backgroundclosing(repo.ui,
-                                                 expectedcount=filecount):
+        with progress.bar(
+            repo.ui, _("clone"), _("bytes"), bytecount, formatfunc=util.bytecount
+        ) as prog:
+            with repo.transaction("clone"):
+                with repo.svfs.backgroundclosing(repo.ui, expectedcount=filecount):
                     for i in xrange(filecount):
                         # XXX doesn't support '\n' or '\r' in filenames
                         l = fp.readline()
                         try:
-                            name, size = l.split('\0', 1)
+                            name, size = l.split("\0", 1)
                             size = int(size)
                         except (ValueError, TypeError):
-                            msg = _('unexpected response from remote server:')
+                            msg = _("unexpected response from remote server:")
                             raise error.ResponseError(msg, l)
                         if repo.ui.debugflag:
-                            repo.ui.debug('adding %s (%s)\n' %
-                                          (name, util.bytecount(size)))
+                            repo.ui.debug(
+                                "adding %s (%s)\n" % (name, util.bytecount(size))
+                            )
                         # for backwards compat, name was partially encoded
                         path = store.decodedir(name)
-                        with repo.svfs(path, 'w', backgroundclose=True) as ofp:
+                        with repo.svfs(path, "w", backgroundclose=True) as ofp:
                             for chunk in util.filechunkiter(fp, limit=size):
                                 prog.value += len(chunk)
                                 ofp.write(chunk)
@@ -363,27 +371,33 @@ def consumev1(repo, fp, filecount, bytecount):
         elapsed = util.timer() - start
         if elapsed <= 0:
             elapsed = 0.001
-        repo.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
-                       (util.bytecount(bytecount), elapsed,
-                        util.bytecount(bytecount / elapsed)))
+        repo.ui.status(
+            _("transferred %s in %.1f seconds (%s/sec)\n")
+            % (util.bytecount(bytecount), elapsed, util.bytecount(bytecount / elapsed))
+        )
+
 
 def readbundle1header(fp):
     compression = fp.read(2)
-    if compression != 'UN':
-        raise error.Abort(_('only uncompressed stream clone bundles are '
-            'supported; got %s') % compression)
+    if compression != "UN":
+        raise error.Abort(
+            _("only uncompressed stream clone bundles are " "supported; got %s")
+            % compression
+        )
 
-    filecount, bytecount = struct.unpack('>QQ', fp.read(16))
-    requireslen = struct.unpack('>H', fp.read(2))[0]
+    filecount, bytecount = struct.unpack(">QQ", fp.read(16))
+    requireslen = struct.unpack(">H", fp.read(2))[0]
     requires = fp.read(requireslen)
 
-    if not requires.endswith('\0'):
-        raise error.Abort(_('malformed stream clone bundle: '
-                            'requirements not properly encoded'))
+    if not requires.endswith("\0"):
+        raise error.Abort(
+            _("malformed stream clone bundle: " "requirements not properly encoded")
+        )
 
-    requirements = set(requires.rstrip('\0').split(','))
+    requirements = set(requires.rstrip("\0").split(","))
 
     return filecount, bytecount, requirements
+
 
 def applybundlev1(repo, fp):
     """Apply the content from a stream clone bundle version 1.
@@ -392,17 +406,18 @@ def applybundlev1(repo, fp):
     is at the 2 byte compression identifier.
     """
     if len(repo):
-        raise error.Abort(_('cannot apply stream clone bundle on non-empty '
-                            'repo'))
+        raise error.Abort(_("cannot apply stream clone bundle on non-empty " "repo"))
 
     filecount, bytecount, requirements = readbundle1header(fp)
     missingreqs = requirements - repo.supportedformats
     if missingreqs:
-        raise error.Abort(_('unable to apply stream clone: '
-                            'unsupported format: %s') %
-                            ', '.join(sorted(missingreqs)))
+        raise error.Abort(
+            _("unable to apply stream clone: " "unsupported format: %s")
+            % ", ".join(sorted(missingreqs))
+        )
 
     consumev1(repo, fp, filecount, bytecount)
+
 
 class streamcloneapplier(object):
     """Class to manage applying streaming clone bundles.
@@ -410,6 +425,7 @@ class streamcloneapplier(object):
     We need to wrap ``applybundlev1()`` in a dedicated type to enable bundle
     readers to perform bundle type-specific functionality.
     """
+
     def __init__(self, fh):
         self._fh = fh
 

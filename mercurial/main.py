@@ -5,8 +5,11 @@
 
 from __future__ import absolute_import
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import hgdemandimport
+
     hgdemandimport.enable()
     from . import dispatch
-    dispatch.run(entrypoint='mercurial.main')
+
+    dispatch.run(entrypoint="mercurial.main")

@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import binascii
 
+
 # This ugly style has a noticeable effect in manifest parsing
 hex = binascii.hexlify
 bin = binascii.unhexlify
@@ -19,9 +20,9 @@ nullhex = hex(nullid)
 
 # Phony node value to stand-in for new files in some uses of
 # manifests.
-newnodeid = '!' * 20
-addednodeid = ('0' * 15) + 'added'
-modifiednodeid = ('0' * 12) + 'modified'
+newnodeid = "!" * 20
+addednodeid = ("0" * 15) + "added"
+modifiednodeid = ("0" * 12) + "modified"
 
 wdirnodes = {newnodeid, addednodeid, modifiednodeid}
 
@@ -30,6 +31,7 @@ wdirnodes = {newnodeid, addednodeid, modifiednodeid}
 wdirrev = 0x7fffffff
 wdirid = b"\xff" * 20
 wdirhex = hex(wdirid)
+
 
 def short(node):
     return hex(node[:6])

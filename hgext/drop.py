@@ -34,89 +34,87 @@ Root changesets cannot be dropped.
 
 """
 
-from mercurial import (
-    cmdutil,
-    error,
-    extensions,
-    phases,
-    registrar,
-    scmutil,
-)
-
+from mercurial import cmdutil, error, extensions, phases, registrar, scmutil
 from mercurial.i18n import _
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-testedwith = 'ships-with-fb-hgext'
+testedwith = "ships-with-fb-hgext"
+
 
 def _checkextension(name, ui):
     try:
         return extensions.find(name)
     except KeyError:
-        ui.warn(_('extension %s not found\n') % name)
+        ui.warn(_("extension %s not found\n") % name)
         return None
+
 
 def _showrev(ui, repo, revid):
     """pretty print the changeset to drop"""
     showopts = {
-        'template': 'Dropping changeset '
-                    '{shortest(node, 6)}{if(bookmarks, " ({bookmarks})")}'
-                    ': {desc|firstline}\n'
+        "template": "Dropping changeset "
+        '{shortest(node, 6)}{if(bookmarks, " ({bookmarks})")}'
+        ": {desc|firstline}\n"
     }
     displayer = cmdutil.show_changeset(ui, repo, showopts)
     displayer.show(repo[revid])
 
+
 def extsetup(ui):
     global rebasemod
-    rebasemod = _checkextension('rebase', ui)
+    rebasemod = _checkextension("rebase", ui)
 
-@command('drop',
-         [('r', 'rev', [], _("revision to drop"))],
-         _('hg drop [OPTION] [REV]'))
+
+@command("drop", [("r", "rev", [], _("revision to drop"))], _("hg drop [OPTION] [REV]"))
 def drop(ui, repo, *revs, **opts):
     """drop changeset from stack
     """
     if not rebasemod:
-        raise error.Abort(_('required extensions not detected'))
+        raise error.Abort(_("required extensions not detected"))
 
     cmdutil.checkunfinished(repo)
     cmdutil.bailifchanged(repo)
 
-    revs = scmutil.revrange(repo, list(revs) + opts.get('rev'))
+    revs = scmutil.revrange(repo, list(revs) + opts.get("rev"))
     if not revs:
-        raise error.Abort(_('no revision to drop was provided'))
+        raise error.Abort(_("no revision to drop was provided"))
 
     # currently drop supports dropping only one changeset at a time
     if len(revs) > 1:
-        raise error.Abort(_('only one revision can be dropped at a time'))
+        raise error.Abort(_("only one revision can be dropped at a time"))
 
     revid = revs.first()
     changectx = repo[revid]
     if changectx.phase() == phases.public:
-        raise error.Abort(_('public changeset which landed cannot be dropped'))
+        raise error.Abort(_("public changeset which landed cannot be dropped"))
 
-    parents = repo.revs('parents(%s)', revid)
+    parents = repo.revs("parents(%s)", revid)
     if len(parents) > 1:
-        raise error.Abort(_('merge changeset cannot be dropped'))
+        raise error.Abort(_("merge changeset cannot be dropped"))
     elif len(parents) == 0:
-        raise error.Abort(_('root changeset cannot be dropped'))
+        raise error.Abort(_("root changeset cannot be dropped"))
 
     _showrev(ui, repo, revid)
 
-    descendants = repo.revs('(%d::) - %d', revid, revid)
+    descendants = repo.revs("(%d::) - %d", revid, revid)
     parent = parents.first()
     with repo.wlock():
         with repo.lock():
-            with repo.transaction('drop'):
+            with repo.transaction("drop"):
                 if len(descendants) > 0:
                     try:
-                        rebasemod.rebase(ui, repo, dest=str(parent),
-                                         rev=descendants)
+                        rebasemod.rebase(ui, repo, dest=str(parent), rev=descendants)
                     except error.InterventionRequired:
-                        ui.warn(_("conflict occurred during drop: " +
-                                  "please fix it by running " +
-                                  "'hg rebase --continue', " +
-                                  "and then re-run 'hg drop'\n"))
+                        ui.warn(
+                            _(
+                                "conflict occurred during drop: "
+                                + "please fix it by running "
+                                + "'hg rebase --continue', "
+                                + "and then re-run 'hg drop'\n"
+                            )
+                        )
                         raise
-                    scmutil.cleanupnodes(repo, [changectx.node()], 'drop')
+                    scmutil.cleanupnodes(repo, [changectx.node()], "drop")

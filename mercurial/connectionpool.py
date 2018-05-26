@@ -7,13 +7,11 @@
 
 from __future__ import absolute_import
 
-from . import (
-    extensions,
-    sshpeer,
-    util,
-)
+from . import extensions, sshpeer, util
+
 
 class connectionpool(object):
+
     def __init__(self, repo):
         self._repo = repo
         self._pool = dict()
@@ -24,9 +22,11 @@ class connectionpool(object):
 
         if opts is None:
             opts = {}
-        if opts.get('ssh') or opts.get('remotecmd'):
-            self._repo.ui.debug("not using connection pool due to ssh or "
-                                "remotecmd option being set\n")
+        if opts.get("ssh") or opts.get("remotecmd"):
+            self._repo.ui.debug(
+                "not using connection pool due to ssh or "
+                "remotecmd option being set\n"
+            )
             peer = hg.peer(self._repo.ui, opts, path)
             return standaloneconnection(peer)
 
@@ -41,8 +41,9 @@ class connectionpool(object):
                 conn = pathpool.pop()
                 peer = conn.peer
                 # If the connection has died, drop it
-                if (isinstance(peer, sshpeer.sshpeer) and
-                    util.safehasattr(peer, '_subprocess')):
+                if isinstance(peer, sshpeer.sshpeer) and util.safehasattr(
+                    peer, "_subprocess"
+                ):
                     proc = peer._subprocess
                     if proc.poll() is not None:
                         conn = None
@@ -50,17 +51,18 @@ class connectionpool(object):
                 pass
 
         if conn is None:
+
             def _cleanup(orig):
                 # close pipee first so peer.cleanup reading it won't deadlock,
                 # if there are other processes with pipeo open (i.e. us).
                 peer = orig.im_self
-                if util.safehasattr(peer, 'pipee'):
+                if util.safehasattr(peer, "pipee"):
                     peer.pipee.close()
                 return orig()
 
             peer = hg.peer(self._repo.ui, {}, path)
-            if util.safehasattr(peer, 'cleanup'):
-                extensions.wrapfunction(peer, 'cleanup', _cleanup)
+            if util.safehasattr(peer, "cleanup"):
+                extensions.wrapfunction(peer, "cleanup", _cleanup)
 
             conn = connection(pathpool, peer)
 
@@ -72,7 +74,9 @@ class connectionpool(object):
                 conn.close()
             del pathpool[:]
 
+
 class standaloneconnection(object):
+
     def __init__(self, peer):
         self.peer = peer
 
@@ -83,10 +87,12 @@ class standaloneconnection(object):
         self.close()
 
     def close(self):
-        if util.safehasattr(self.peer, 'cleanup'):
+        if util.safehasattr(self.peer, "cleanup"):
             self.peer.cleanup()
 
+
 class connection(object):
+
     def __init__(self, pool, peer):
         self._pool = pool
         self.peer = peer
@@ -104,5 +110,5 @@ class connection(object):
             self.close()
 
     def close(self):
-        if util.safehasattr(self.peer, 'cleanup'):
+        if util.safehasattr(self.peer, "cleanup"):
             self.peer.cleanup()

@@ -39,16 +39,15 @@ import os
 import subprocess
 import sys
 
-from mercurial import (
-    encoding,
-    pycompat,
-)
+from mercurial import encoding, pycompat
+
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
+
 
 def uisetup(ui):
     if pycompat.iswindows:
@@ -62,9 +61,15 @@ def uisetup(ui):
             # we can't use close_fds *and* redirect stdin. I'm not sure that we
             # need to because the detached process has no console connection.
             subprocess.Popen(
-                script, shell=True, env=env, close_fds=True,
-                creationflags=_creationflags)
+                script,
+                shell=True,
+                env=env,
+                close_fds=True,
+                creationflags=_creationflags,
+            )
+
     else:
+
         def runshellcommand(script, env):
             # double-fork to completely detach from the parent process
             # based on http://code.activestate.com/recipes/278731
@@ -75,28 +80,34 @@ def uisetup(ui):
             # subprocess.Popen() forks again, all we need to add is
             # flag the new process as a new session.
             if sys.version_info < (3, 2):
-                newsession = {'preexec_fn': os.setsid}
+                newsession = {"preexec_fn": os.setsid}
             else:
-                newsession = {'start_new_session': True}
+                newsession = {"start_new_session": True}
             try:
                 # connect stdin to devnull to make sure the subprocess can't
                 # muck up that stream for mercurial.
                 subprocess.Popen(
-                    script, shell=True, stdin=open(os.devnull, 'r'), env=env,
-                    close_fds=True, **newsession)
+                    script,
+                    shell=True,
+                    stdin=open(os.devnull, "r"),
+                    env=env,
+                    close_fds=True,
+                    **newsession
+                )
             finally:
                 # mission accomplished, this child needs to exit and not
                 # continue the hg process here.
                 os._exit(0)
 
     class logtoprocessui(ui.__class__):
+
         def log(self, event, *msg, **opts):
             """Map log events to external commands
 
             Arguments are passed on as environment variables.
 
             """
-            script = self.config('logtoprocess', event)
+            script = self.config("logtoprocess", event)
             if script:
                 if msg:
                     # try to format the log message given the remaining
@@ -115,15 +126,18 @@ def uisetup(ui):
                 # positional arguments are listed as MSG[N] keys in the
                 # environment
                 msgpairs = (
-                    ('MSG{0:d}'.format(i), str(m))
-                    for i, m in enumerate(messages, 1))
+                    ("MSG{0:d}".format(i), str(m)) for i, m in enumerate(messages, 1)
+                )
                 # keyword arguments get prefixed with OPT_ and uppercased
                 optpairs = (
-                    ('OPT_{0}'.format(key.upper()), str(value))
-                    for key, value in opts.iteritems())
-                env = dict(itertools.chain(encoding.environ.items(),
-                                           msgpairs, optpairs),
-                           EVENT=event, HGPID=str(os.getpid()))
+                    ("OPT_{0}".format(key.upper()), str(value))
+                    for key, value in opts.iteritems()
+                )
+                env = dict(
+                    itertools.chain(encoding.environ.items(), msgpairs, optpairs),
+                    EVENT=event,
+                    HGPID=str(os.getpid()),
+                )
                 runshellcommand(script, env)
             return super(logtoprocessui, self).log(event, *msg, **opts)
 

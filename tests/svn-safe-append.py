@@ -2,11 +2,13 @@
 
 from __future__ import absolute_import
 
+import os
+import sys
+
+
 __doc__ = """Same as `echo a >> b`, but ensures a changed mtime of b.
 Without this svn will not detect workspace changes."""
 
-import os
-import sys
 
 text = sys.argv[1]
 fname = sys.argv[2]
@@ -25,4 +27,3 @@ while now == before:
     inc += 1
     os.utime(fname, (t, t))
     now = os.stat(fname).st_mtime
-

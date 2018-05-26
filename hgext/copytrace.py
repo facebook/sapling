@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''extension that does copytracing fast
+"""extension that does copytracing fast
 
 ::
 
@@ -35,15 +35,13 @@
     # Disabled by default
     draftusefullcopytrace = False
 
-'''
+"""
 
 import anydbm
 import collections
 import json
 import os
 import time
-
-from mercurial.i18n import _
 
 from mercurial import (
     cmdutil,
@@ -58,56 +56,77 @@ from mercurial import (
     scmutil,
     util,
 )
+from mercurial.i18n import _
+
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('copytrace', 'maxmovescandidatestocheck', default=5)
-configitem('copytrace', 'sourcecommitlimit', default=100)
-configitem('copytrace', 'fastcopytrace', default=False)
-configitem('copytrace', 'enableamendcopytrace', default=True)
-configitem('copytrace', 'amendcopytracecommitlimit', default=100)
+configitem("copytrace", "maxmovescandidatestocheck", default=5)
+configitem("copytrace", "sourcecommitlimit", default=100)
+configitem("copytrace", "fastcopytrace", default=False)
+configitem("copytrace", "enableamendcopytrace", default=True)
+configitem("copytrace", "amendcopytracecommitlimit", default=100)
 
 defaultdict = collections.defaultdict
-_copytracinghint = ("hint: if this message is due to a moved file, you can " +
-                    "ask mercurial to attempt to automatically resolve this " +
-                    "change by re-running with the --tracecopies flag, but " +
-                    "this will significantly slow down the operation, so you " +
-                    "will need to be patient.\n" +
-                    "Source control team is working on fixing this problem.\n")
+_copytracinghint = (
+    "hint: if this message is due to a moved file, you can "
+    + "ask mercurial to attempt to automatically resolve this "
+    + "change by re-running with the --tracecopies flag, but "
+    + "this will significantly slow down the operation, so you "
+    + "will need to be patient.\n"
+    + "Source control team is working on fixing this problem.\n"
+)
+
 
 def uisetup(ui):
     extensions.wrapfunction(dispatch, "runcommand", _runcommand)
 
+
 def extsetup(ui):
     commands.globalopts.append(
-        ("", "tracecopies", None,
-         _("enable copytracing. Warning: can be very slow!")))
+        ("", "tracecopies", None, _("enable copytracing. Warning: can be very slow!"))
+    )
     commands.globalopts.append(
-        ("", "drafttrace", None,
-         _("enable copytracing for draft branches.")))
+        ("", "drafttrace", None, _("enable copytracing for draft branches."))
+    )
 
     # With experimental.copytrace=off there can be cryptic merge errors.
     # Let"s change error message to suggest re-running the command with
     # enabled copytracing
     filemerge._localchangedotherdeletedmsg = _(
-        "local%(l)s changed %(fd)s which other%(o)s deleted\n" +
-        _copytracinghint +
-        "use (c)hanged version, (d)elete, or leave (u)nresolved?"
-        "$$ &Changed $$ &Delete $$ &Unresolved")
+        "local%(l)s changed %(fd)s which other%(o)s deleted\n"
+        + _copytracinghint
+        + "use (c)hanged version, (d)elete, or leave (u)nresolved?"
+        "$$ &Changed $$ &Delete $$ &Unresolved"
+    )
 
     filemerge._otherchangedlocaldeletedmsg = _(
-        "other%(o)s changed %(fd)s which local%(l)s deleted\n" +
-        _copytracinghint +
-        "use (c)hanged version, leave (d)eleted, or leave (u)nresolved?"
-        "$$ &Changed $$ &Deleted $$ &Unresolved")
+        "other%(o)s changed %(fd)s which local%(l)s deleted\n"
+        + _copytracinghint
+        + "use (c)hanged version, leave (d)eleted, or leave (u)nresolved?"
+        "$$ &Changed $$ &Deleted $$ &Unresolved"
+    )
 
-    extensions.wrapfunction(filemerge, '_filemerge', _filemerge)
-    extensions.wrapfunction(copiesmod, 'mergecopies', _mergecopies)
-    extensions.wrapfunction(cmdutil, 'amend', _amend)
+    extensions.wrapfunction(filemerge, "_filemerge", _filemerge)
+    extensions.wrapfunction(copiesmod, "mergecopies", _mergecopies)
+    extensions.wrapfunction(cmdutil, "amend", _amend)
 
-def _filemerge(origfunc, premerge, repo, wctx, mynode, orig, fcd, fco, fca,
-               labels=None, *args, **kwargs):
+
+def _filemerge(
+    origfunc,
+    premerge,
+    repo,
+    wctx,
+    mynode,
+    orig,
+    fcd,
+    fco,
+    fca,
+    labels=None,
+    *args,
+    **kwargs
+):
     if premerge:
         # copytracing worked if files to merge have different file names
         # and filelog contents are different (fco.cmp(fcd) returns True if
@@ -117,31 +136,33 @@ def _filemerge(origfunc, premerge, repo, wctx, mynode, orig, fcd, fco, fca,
         # even with disabled copytracing, so we don't want to log it.
         if orig != fco.path() and fco.cmp(fcd):
             # copytracing was in action, let's record it
-            if repo.ui.config('experimental', 'copytrace') == 'on':
-                msg = 'success (fastcopytracing)'
+            if repo.ui.config("experimental", "copytrace") == "on":
+                msg = "success (fastcopytracing)"
             else:
-                msg = 'success'
+                msg = "success"
 
             try:
                 destctx = _getctxfromfctx(fcd)
                 srcctx = _getctxfromfctx(fco)
-                hexes = '%s, %s' % (_gethex(destctx), _gethex(srcctx))
-                paths = '%s, %s' % (orig, fco.path())
+                hexes = "%s, %s" % (_gethex(destctx), _gethex(srcctx))
+                paths = "%s, %s" % (orig, fco.path())
                 msg = "%s (%s; %s)" % (msg, hexes, paths)
             except Exception as e:
                 # we don't expect any exceptions to happen, but to be 100%
                 # sure we don't break hg let's catch everything and log it
-                msg = 'failed to log: %s' % (e,)
-            repo.ui.log("copytrace", msg=msg,
-                        reponame=_getreponame(repo, repo.ui))
+                msg = "failed to log: %s" % (e,)
+            repo.ui.log("copytrace", msg=msg, reponame=_getreponame(repo, repo.ui))
 
-    return origfunc(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels,
-                *args, **kwargs)
+    return origfunc(
+        premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels, *args, **kwargs
+    )
+
 
 def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
     if "--tracecopies" in fullargs:
-        ui.setconfig('experimental', 'copytrace', 'on', '--tracecopies')
+        ui.setconfig("experimental", "copytrace", "on", "--tracecopies")
     return orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
+
 
 def _amend(orig, ui, repo, old, extra, pats, opts):
     """Wraps amend to collect copytrace data on amend
@@ -185,29 +206,32 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
 
     # Store the amend-copies against the amended context.
     if amend_copies:
-        path = repo.vfs.join('amendcopytrace')
+        path = repo.vfs.join("amendcopytrace")
         try:
             # Open the database, creating it if it doesn't already exist.
-            db = anydbm.open(path, 'c')
+            db = anydbm.open(path, "c")
         except anydbm.error as e:
             # Database locked, can't record these amend-copies.
-            ui.log('copytrace', 'Failed to open amendcopytrace db: %s' % e)
+            ui.log("copytrace", "Failed to open amendcopytrace db: %s" % e)
             return node
 
         # Merge in any existing amend copies from any previous amends.
         try:
             orig_data = db[old.node()]
         except KeyError:
-            orig_data = '{}'
+            orig_data = "{}"
         except anydbm.error as e:
-            ui.log('copytrace',
-                   'Failed to read key %s from amendcopytrace db: %s' %
-                   (old.hex(), e))
+            ui.log(
+                "copytrace",
+                "Failed to read key %s from amendcopytrace db: %s" % (old.hex(), e),
+            )
             return node
 
         orig_encoded = json.loads(orig_data)
-        orig_amend_copies = dict((k.decode('base64'), v.decode('base64'))
-                for (k, v) in orig_encoded.iteritems())
+        orig_amend_copies = dict(
+            (k.decode("base64"), v.decode("base64"))
+            for (k, v) in orig_encoded.iteritems()
+        )
 
         # Copytrace information is not valid if it refers to a file that
         # doesn't exist in a commit.  We need to update or remove entries
@@ -228,27 +252,30 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
                 amend_copies[dst] = src
 
         # Write out the entry for the new amend commit.
-        encoded = dict((k.encode('base64'), v.encode('base64'))
-                for (k, v) in amend_copies.iteritems())
+        encoded = dict(
+            (k.encode("base64"), v.encode("base64"))
+            for (k, v) in amend_copies.iteritems()
+        )
         db[node] = json.dumps(encoded)
         try:
             db.close()
         except Exception as e:
             # Database corruption.  Not much we can do, so just log.
-            ui.log('copytrace', 'Failed to close amendcopytrace db: %s' % e)
+            ui.log("copytrace", "Failed to close amendcopytrace db: %s" % e)
 
     return node
 
+
 def _getamendcopies(repo, dest, ancestor):
-    path = repo.vfs.join('amendcopytrace')
+    path = repo.vfs.join("amendcopytrace")
     try:
-        db = anydbm.open(path, 'r')
+        db = anydbm.open(path, "r")
     except anydbm.error:
         return {}
     try:
         ctx = dest
         count = 0
-        limit = repo.ui.configint('copytrace', 'amendcopytracecommitlimit')
+        limit = repo.ui.configint("copytrace", "amendcopytracecommitlimit")
 
         # Search for the ancestor commit that has amend copytrace data.  This
         # will be the most recent amend commit if we are rebasing onto an
@@ -262,11 +289,11 @@ def _getamendcopies(repo, dest, ancestor):
 
         # Load the amend copytrace data from this commit.
         encoded = json.loads(db[ctx.node()])
-        return dict((k.decode('base64'), v.decode('base64'))
-                for (k, v) in encoded.iteritems())
+        return dict(
+            (k.decode("base64"), v.decode("base64")) for (k, v) in encoded.iteritems()
+        )
     except Exception:
-        repo.ui.log('copytrace',
-                    'Failed to load amend copytrace for %s' % dest.hex())
+        repo.ui.log("copytrace", "Failed to load amend copytrace for %s" % dest.hex())
         return {}
     finally:
         try:
@@ -274,19 +301,27 @@ def _getamendcopies(repo, dest, ancestor):
         except anydbm.error:
             pass
 
+
 def _mergecopies(orig, repo, cdst, csrc, base):
     start = time.time()
     try:
         return _domergecopies(orig, repo, cdst, csrc, base)
     except Exception as e:
         # make sure we don't break clients
-        repo.ui.log("copytrace", "Copytrace failed: %s" % e,
-                    reponame=_getreponame(repo, repo.ui))
+        repo.ui.log(
+            "copytrace",
+            "Copytrace failed: %s" % e,
+            reponame=_getreponame(repo, repo.ui),
+        )
         return {}, {}, {}, {}, {}
     finally:
-        repo.ui.log("copytracingduration", "",
-                    copytracingduration=time.time() - start,
-                    fastcopytraceenabled=_fastcopytraceenabled(repo.ui))
+        repo.ui.log(
+            "copytracingduration",
+            "",
+            copytracingduration=time.time() - start,
+            fastcopytraceenabled=_fastcopytraceenabled(repo.ui),
+        )
+
 
 def _domergecopies(orig, repo, cdst, csrc, base):
     """ Fast copytracing using filename heuristics
@@ -338,7 +373,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
 
     """
 
-    if repo.ui.config('experimental', 'copytrace') == 'on':
+    if repo.ui.config("experimental", "copytrace") == "on":
         # user explicitly enabled copytracing - use it
         return orig(repo, cdst, csrc, base)
 
@@ -348,8 +383,8 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     # If base, source and destination are all draft branches, let's use full
     # copytrace for increased capabilities since it will work fast enough
     if _isfullcopytraceable(repo.ui, cdst, base):
-        configoverrides = {('experimental', 'copytrace'): 'on'}
-        with repo.ui.configoverride(configoverrides, 'mergecopies'):
+        configoverrides = {("experimental", "copytrace"): "on"}
+        with repo.ui.configoverride(configoverrides, "mergecopies"):
             result = orig(repo, cdst, csrc, base)
             if repo.ui.configbool("copytrace", "enableamendcopytrace"):
                 # Look for additional amend-copies
@@ -373,7 +408,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     ctx = csrc
     changedfiles = set()
     sourcecommitnum = 0
-    sourcecommitlimit = repo.ui.configint('copytrace', 'sourcecommitlimit')
+    sourcecommitlimit = repo.ui.configint("copytrace", "sourcecommitlimit")
     mdst = cdst.manifest()
     while ctx != base:
         if len(ctx.parents()) == 2:
@@ -394,8 +429,9 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     # the base and present in the source.
     # Presence in the base is important to exclude added files, presence in the
     # source is important to exclude removed files.
-    missingfiles = filter(lambda f: f not in mdst and f in base and f in csrc,
-                          changedfiles)
+    missingfiles = filter(
+        lambda f: f not in mdst and f in base and f in csrc, changedfiles
+    )
     if missingfiles:
         # Use the following file name heuristic to find moves: moves are
         # usually either directory moves or renames of the files in the
@@ -410,7 +446,8 @@ def _domergecopies(orig, repo, cdst, csrc, base):
             dirnametofilename[dirname].append(f)
 
         maxmovecandidatestocheck = repo.ui.configint(
-            'copytrace', 'maxmovescandidatestocheck')
+            "copytrace", "maxmovescandidatestocheck"
+        )
         # in case of a rebase/graft, base may not be a common ancestor
         anc = cdst.ancestor(csrc)
         for f in missingfiles:
@@ -431,29 +468,31 @@ def _domergecopies(orig, repo, cdst, csrc, base):
                     copies[candidate] = f
             if len(movecandidates) > maxmovecandidatestocheck:
                 msg = "too many moves candidates: %d" % len(movecandidates)
-                repo.ui.log("copytrace", msg=msg,
-                            reponame=_getreponame(repo, repo.ui))
+                repo.ui.log("copytrace", msg=msg, reponame=_getreponame(repo, repo.ui))
 
     if repo.ui.configbool("copytrace", "enableamendcopytrace"):
         # Look for additional amend-copies.
         amend_copies = _getamendcopies(repo, cdst, base.p1())
         if amend_copies:
-            repo.ui.debug('Loaded amend copytrace for %s' % cdst)
+            repo.ui.debug("Loaded amend copytrace for %s" % cdst)
             for dst, src in amend_copies.iteritems():
                 if dst not in copies:
                     copies[dst] = src
 
     return copies, {}, {}, {}, {}
 
+
 def _fastcopytraceenabled(ui):
     return ui.configbool("copytrace", "fastcopytrace")
 
+
 def _getreponame(repo, ui):
-    reporoot = repo.origroot if util.safehasattr(repo, 'origroot') else ''
-    reponame = ui.config('paths', 'default') or reporoot
+    reporoot = repo.origroot if util.safehasattr(repo, "origroot") else ""
+    reponame = ui.config("paths", "default") or reporoot
     if reponame:
         reponame = os.path.basename(reponame)
     return reponame
+
 
 def _getctxfromfctx(fctx):
     if fctx.isabsent():
@@ -461,9 +500,11 @@ def _getctxfromfctx(fctx):
     else:
         return fctx._changectx
 
+
 def _gethex(ctx):
     # for workingctx return p1 hex
     return ctx.hex() if ctx.hex() != node.wdirhex else ctx.p1().hex()
+
 
 def _isfullcopytraceable(ui, cdst, base):
     if not ui.configbool("copytrace", "draftusefullcopytrace", False):
@@ -472,7 +513,7 @@ def _isfullcopytraceable(ui, cdst, base):
         # draft branch: Use traditional copytracing if < 100 commits
         ctx = cdst
         commits = 0
-        sourcecommitlimit = ui.configint('copytrace', 'sourcecommitlimit')
+        sourcecommitlimit = ui.configint("copytrace", "sourcecommitlimit")
         while ctx != base and commits != sourcecommitlimit:
             ctx = ctx.p1()
             commits += 1

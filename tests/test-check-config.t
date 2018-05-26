@@ -46,7 +46,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   $ testrepohg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
   >   $PYTHON contrib/check-config.py
   undocumented: clone.requestfullclone (bool)
-  undocumented: extensions.fbsparse (str) ['!']
+  undocumented: extensions.fbsparse (str) ["!"]
   undocumented: extensions.treemanifest (str)
   undocumented: fastlog.debug (str)
   undocumented: fastlog.enabled (bool)
@@ -156,8 +156,8 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotenames.upstream (list)
   undocumented: server.requireexplicitfullclone (bool)
   undocumented: simplecache.cachedir (str)
-  undocumented: simplecache.caches (list) [['local']]
-  undocumented: smartlog.ignorebookmarks (str) ['!']
+  undocumented: simplecache.caches (list) [["local"]]
+  undocumented: smartlog.ignorebookmarks (str) ["!"]
   undocumented: ssl.timeout (int) [5]
   undocumented: treemanifest.autocreatetrees (bool)
   undocumented: treemanifest.verifyautocreate (bool)

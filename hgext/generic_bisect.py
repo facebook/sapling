@@ -1,10 +1,9 @@
-
 def bisect(l, r, comp, val):
-    '''Bisect algorithm with custom compare function
+    """Bisect algorithm with custom compare function
 
     Returns smallest index between l and r whose value is equal to val.
     Returns None if there are no such index.
-    '''
+    """
     if r < l:
         return None
     while l < r:

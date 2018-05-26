@@ -11,15 +11,9 @@ import collections
 import heapq
 import os
 
+from . import match as matchmod, node, pathutil, scmutil, util
 from .i18n import _
 
-from . import (
-    match as matchmod,
-    node,
-    pathutil,
-    scmutil,
-    util,
-)
 
 def _findlimit(repo, a, b):
     """
@@ -43,7 +37,7 @@ def _findlimit(repo, a, b):
     #   - quit when interesting revs is zero
 
     cl = repo.changelog
-    working = len(cl) # pseudo rev for the working directory
+    working = len(cl)  # pseudo rev for the working directory
     if a is None:
         a = working
     if b is None:
@@ -77,7 +71,7 @@ def _findlimit(repo, a, b):
                 interesting -= 1
                 hascommonancestor = True
         if side[r]:
-            limit = r # lowest rev visited
+            limit = r  # lowest rev visited
             interesting -= 1
 
     if not hascommonancestor:
@@ -106,6 +100,7 @@ def _findlimit(repo, a, b):
     # This only occurs when a is a descendent of b or visa-versa.
     return min(limit, a, b)
 
+
 def _chain(src, dst, a, b):
     """chain two sets of copies a->b"""
     t = a.copy()
@@ -129,6 +124,7 @@ def _chain(src, dst, a, b):
 
     return t
 
+
 def _tracefile(fctx, am, limit=-1):
     """return file context that is the ancestor of fctx present in ancestor
     manifest am, stopping after the first ancestor lower than limit"""
@@ -139,13 +135,15 @@ def _tracefile(fctx, am, limit=-1):
         if limit >= 0 and f.linkrev() < limit and f.rev() < limit:
             return None
 
+
 def _dirstatecopies(d, match=None):
     ds = d._repo.dirstate
     c = ds.copies().copy()
     for k in list(c):
-        if ds[k] not in 'anm' or (match and not match(k)):
+        if ds[k] not in "anm" or (match and not match(k)):
             del c[k]
     return c
+
 
 def _computeforwardmissing(a, b, match=None):
     """Computes which files are in b but not a.
@@ -155,6 +153,7 @@ def _computeforwardmissing(a, b, match=None):
     ma = a.manifest()
     mb = b.manifest()
     return mb.filesnotin(ma, match=match)
+
 
 def _committedforwardcopies(a, b, match):
     """Like _forwardcopies(), but b.rev() cannot be None (working copy)"""
@@ -191,6 +190,7 @@ def _committedforwardcopies(a, b, match):
             cm[f] = ofctx.path()
     return cm
 
+
 def _forwardcopies(a, b, match=None):
     """find {dst@b: src@a} copy mapping where a is an ancestor of b"""
 
@@ -205,8 +205,9 @@ def _forwardcopies(a, b, match=None):
         return _chain(a, b, cm, _dirstatecopies(b, match))
     return _committedforwardcopies(a, b, match)
 
+
 def _backwardrenames(a, b):
-    if a._repo.ui.config('experimental', 'copytrace') == 'off':
+    if a._repo.ui.config("experimental", "copytrace") == "off":
         return {}
 
     # Even though we're not taking copies into account, 1:n rename situations
@@ -221,6 +222,7 @@ def _backwardrenames(a, b):
         r[v] = k
     return r
 
+
 def pathcopies(x, y, match=None):
     """find {dst@y: src@x} copy mapping for directed compare"""
     if x == y or not x or not y:
@@ -230,10 +232,10 @@ def pathcopies(x, y, match=None):
         return _forwardcopies(x, y, match=match)
     if a == y:
         return _backwardrenames(x, y)
-    return _chain(x, y, _backwardrenames(x, a),
-                  _forwardcopies(a, y, match=match))
+    return _chain(x, y, _backwardrenames(x, a), _forwardcopies(a, y, match=match))
 
-def _computenonoverlap(repo, c1, c2, addedinm1, addedinm2, baselabel=''):
+
+def _computenonoverlap(repo, c1, c2, addedinm1, addedinm2, baselabel=""):
     """Computes, based on addedinm1 and addedinm2, the files exclusive to c1
     and c2. This is its own function so extensions can easily wrap this call
     to see what files mergecopies is about to process.
@@ -249,12 +251,13 @@ def _computenonoverlap(repo, c1, c2, addedinm1, addedinm2, baselabel=''):
 
     header = "  unmatched files in %s"
     if baselabel:
-        header += ' (from %s)' % baselabel
+        header += " (from %s)" % baselabel
     if u1:
-        repo.ui.debug("%s:\n   %s\n" % (header % 'local', "\n   ".join(u1)))
+        repo.ui.debug("%s:\n   %s\n" % (header % "local", "\n   ".join(u1)))
     if u2:
-        repo.ui.debug("%s:\n   %s\n" % (header % 'other', "\n   ".join(u2)))
+        repo.ui.debug("%s:\n   %s\n" % (header % "other", "\n   ".join(u2)))
     return u1, u2
+
 
 def _makegetfctx(ctx):
     """return a 'getfctx' function suitable for _checkcopies usage
@@ -272,13 +275,14 @@ def _makegetfctx(ctx):
     """
     rev = ctx.rev()
     repo = ctx._repo
-    ac = getattr(ctx, '_ancestrycontext', None)
+    ac = getattr(ctx, "_ancestrycontext", None)
     if ac is None:
         revs = [rev]
         if rev is None:
             revs = [p.rev() for p in ctx.parents()]
         ac = repo.changelog.ancestors(revs, inclusive=True)
         ctx._ancestrycontext = ac
+
     def makectx(f, n):
         if n in node.wdirnodes:  # in a working context?
             if ctx.rev() is None:
@@ -289,7 +293,9 @@ def _makegetfctx(ctx):
         fctx._ancestrycontext = ac
         fctx._descendantrev = rev
         return fctx
+
     return util.lrucachefunc(makectx)
+
 
 def _combinecopies(copyfrom, copyto, finalcopy, diverge, incompletediverge):
     """combine partial copy paths"""
@@ -306,6 +312,7 @@ def _combinecopies(copyfrom, copyto, finalcopy, diverge, incompletediverge):
         else:
             remainder[f] = ic
     return remainder
+
 
 def mergecopies(repo, c1, c2, base):
     """
@@ -360,14 +367,14 @@ def mergecopies(repo, c1, c2, base):
     if c2.node() is None and c1.node() == repo.dirstate.p1():
         return repo.dirstate.copies(), {}, {}, {}, {}
 
-    copytracing = repo.ui.config('experimental', 'copytrace')
+    copytracing = repo.ui.config("experimental", "copytrace")
 
     # Copy trace disabling is explicitly below the node == p1 logic above
     # because the logic above is required for a simple copy to be kept across a
     # rebase.
-    if copytracing == 'off':
+    if copytracing == "off":
         return {}, {}, {}, {}, {}
-    elif copytracing == 'heuristics':
+    elif copytracing == "heuristics":
         # Do full copytracing if only non-public revisions are involved as
         # that will be fast enough and will also cover the copies which could
         # be missed by heuristics
@@ -376,6 +383,7 @@ def mergecopies(repo, c1, c2, base):
         return _heuristicscopytracing(repo, c1, c2, base)
     else:
         return _fullcopytracing(repo, c1, c2, base)
+
 
 def _isfullcopytraceable(repo, c1, base):
     """ Checks that if base, source and destination are all no-public branches,
@@ -389,11 +397,13 @@ def _isfullcopytraceable(repo, c1, base):
     if c1.rev() is None:
         c1 = c1.p1()
     if c1.mutable() and base.mutable():
-        sourcecommitlimit = repo.ui.configint('experimental',
-                                              'copytrace.sourcecommitlimit')
-        commits = len(repo.revs('%d::%d', base.rev(), c1.rev()))
+        sourcecommitlimit = repo.ui.configint(
+            "experimental", "copytrace.sourcecommitlimit"
+        )
+        commits = len(repo.revs("%d::%d", base.rev(), c1.rev()))
         return commits < sourcecommitlimit
     return False
+
 
 def _fullcopytracing(repo, c1, c2, base):
     """ The full copytracing algorithm which finds all the new files that were
@@ -440,20 +450,22 @@ def _fullcopytracing(repo, c1, c2, base):
     # - fullcopy = record all copies in this dict
     # - incomplete = record non-divergent partial copies here
     # - incompletediverge = record divergent partial copies here
-    diverge = {} # divergence data is shared
-    incompletediverge  = {}
-    data1 = {'copy': {},
-             'fullcopy': {},
-             'incomplete': {},
-             'diverge': diverge,
-             'incompletediverge': incompletediverge,
-            }
-    data2 = {'copy': {},
-             'fullcopy': {},
-             'incomplete': {},
-             'diverge': diverge,
-             'incompletediverge': incompletediverge,
-            }
+    diverge = {}  # divergence data is shared
+    incompletediverge = {}
+    data1 = {
+        "copy": {},
+        "fullcopy": {},
+        "incomplete": {},
+        "diverge": diverge,
+        "incompletediverge": incompletediverge,
+    }
+    data2 = {
+        "copy": {},
+        "fullcopy": {},
+        "incomplete": {},
+        "diverge": diverge,
+        "incompletediverge": incompletediverge,
+    }
 
     # find interesting file sets from manifests
     addedinm1 = m1.filesnotin(mb)
@@ -465,14 +477,20 @@ def _fullcopytracing(repo, c1, c2, base):
         u1u, u2u = u1r, u2r
     else:
         # unmatched file from base (DAG rotation in the graft case)
-        u1r, u2r = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2,
-                                      baselabel='base')
+        u1r, u2r = _computenonoverlap(
+            repo, c1, c2, addedinm1, addedinm2, baselabel="base"
+        )
         # unmatched file from topological common ancestors (no DAG rotation)
         # need to recompute this for directory move handling when grafting
         mta = tca.manifest()
-        u1u, u2u = _computenonoverlap(repo, c1, c2, m1.filesnotin(mta),
-                                                    m2.filesnotin(mta),
-                                      baselabel='topological common ancestor')
+        u1u, u2u = _computenonoverlap(
+            repo,
+            c1,
+            c2,
+            m1.filesnotin(mta),
+            m2.filesnotin(mta),
+            baselabel="topological common ancestor",
+        )
 
     for f in u1u:
         _checkcopies(c1, c2, f, base, tca, dirtyc1, limit, data1)
@@ -480,66 +498,71 @@ def _fullcopytracing(repo, c1, c2, base):
     for f in u2u:
         _checkcopies(c2, c1, f, base, tca, dirtyc2, limit, data2)
 
-    copy = dict(data1['copy'])
-    copy.update(data2['copy'])
-    fullcopy = dict(data1['fullcopy'])
-    fullcopy.update(data2['fullcopy'])
+    copy = dict(data1["copy"])
+    copy.update(data2["copy"])
+    fullcopy = dict(data1["fullcopy"])
+    fullcopy.update(data2["fullcopy"])
 
     if dirtyc1:
-        _combinecopies(data2['incomplete'], data1['incomplete'], copy, diverge,
-                       incompletediverge)
+        _combinecopies(
+            data2["incomplete"], data1["incomplete"], copy, diverge, incompletediverge
+        )
     else:
-        _combinecopies(data1['incomplete'], data2['incomplete'], copy, diverge,
-                       incompletediverge)
+        _combinecopies(
+            data1["incomplete"], data2["incomplete"], copy, diverge, incompletediverge
+        )
 
     renamedelete = {}
     renamedeleteset = set()
     divergeset = set()
     for of, fl in list(diverge.items()):
         if len(fl) == 1 or of in c1 or of in c2:
-            del diverge[of] # not actually divergent, or not a rename
+            del diverge[of]  # not actually divergent, or not a rename
             if of not in c1 and of not in c2:
                 # renamed on one side, deleted on the other side, but filter
                 # out files that have been renamed and then deleted
                 renamedelete[of] = [f for f in fl if f in c1 or f in c2]
-                renamedeleteset.update(fl) # reverse map for below
+                renamedeleteset.update(fl)  # reverse map for below
         else:
-            divergeset.update(fl) # reverse map for below
+            divergeset.update(fl)  # reverse map for below
 
     if bothnew:
-        repo.ui.debug("  unmatched files new in both:\n   %s\n"
-                      % "\n   ".join(bothnew))
+        repo.ui.debug("  unmatched files new in both:\n   %s\n" % "\n   ".join(bothnew))
     bothdiverge = {}
     bothincompletediverge = {}
     remainder = {}
-    both1 = {'copy': {},
-             'fullcopy': {},
-             'incomplete': {},
-             'diverge': bothdiverge,
-             'incompletediverge': bothincompletediverge
-            }
-    both2 = {'copy': {},
-             'fullcopy': {},
-             'incomplete': {},
-             'diverge': bothdiverge,
-             'incompletediverge': bothincompletediverge
-            }
+    both1 = {
+        "copy": {},
+        "fullcopy": {},
+        "incomplete": {},
+        "diverge": bothdiverge,
+        "incompletediverge": bothincompletediverge,
+    }
+    both2 = {
+        "copy": {},
+        "fullcopy": {},
+        "incomplete": {},
+        "diverge": bothdiverge,
+        "incompletediverge": bothincompletediverge,
+    }
     for f in bothnew:
         _checkcopies(c1, c2, f, base, tca, dirtyc1, limit, both1)
         _checkcopies(c2, c1, f, base, tca, dirtyc2, limit, both2)
     if dirtyc1:
         # incomplete copies may only be found on the "dirty" side for bothnew
-        assert not both2['incomplete']
-        remainder = _combinecopies({}, both1['incomplete'], copy, bothdiverge,
-                                   bothincompletediverge)
+        assert not both2["incomplete"]
+        remainder = _combinecopies(
+            {}, both1["incomplete"], copy, bothdiverge, bothincompletediverge
+        )
     elif dirtyc2:
-        assert not both1['incomplete']
-        remainder = _combinecopies({}, both2['incomplete'], copy, bothdiverge,
-                                   bothincompletediverge)
+        assert not both1["incomplete"]
+        remainder = _combinecopies(
+            {}, both2["incomplete"], copy, bothdiverge, bothincompletediverge
+        )
     else:
         # incomplete copies and divergences can't happen outside grafts
-        assert not both1['incomplete']
-        assert not both2['incomplete']
+        assert not both1["incomplete"]
+        assert not both2["incomplete"]
         assert not bothincompletediverge
     for f in remainder:
         assert f not in bothdiverge
@@ -549,11 +572,13 @@ def _fullcopytracing(repo, c1, c2, base):
             bothdiverge[f] = ic
     for of, fl in bothdiverge.items():
         if len(fl) == 2 and fl[0] == fl[1]:
-            copy[fl[0]] = of # not actually divergent, just matching renames
+            copy[fl[0]] = of  # not actually divergent, just matching renames
 
     if fullcopy and repo.ui.debugflag:
-        repo.ui.debug("  all copies found (* = to merge, ! = divergent, "
-                      "% = renamed and deleted):\n")
+        repo.ui.debug(
+            "  all copies found (* = to merge, ! = divergent, "
+            "% = renamed and deleted):\n"
+        )
         for f in sorted(fullcopy):
             note = ""
             if f in copy:
@@ -562,8 +587,7 @@ def _fullcopytracing(repo, c1, c2, base):
                 note += "!"
             if f in renamedeleteset:
                 note += "%"
-            repo.ui.debug("   src: '%s' -> dst: '%s' %s\n" % (fullcopy[f], f,
-                                                              note))
+            repo.ui.debug("   src: '%s' -> dst: '%s' %s\n" % (fullcopy[f], f, note))
     del divergeset
 
     if not fullcopy:
@@ -574,8 +598,8 @@ def _fullcopytracing(repo, c1, c2, base):
     # generate a directory move map
     d1, d2 = c1.dirs(), c2.dirs()
     # Hack for adding '', which is not otherwise added, to d1 and d2
-    d1.addpath('/')
-    d2.addpath('/')
+    d1.addpath("/")
+    d2.addpath("/")
     invalid = set()
     dirmove = {}
 
@@ -608,8 +632,7 @@ def _fullcopytracing(repo, c1, c2, base):
         return copy, {}, diverge, renamedelete, {}
 
     for d in dirmove:
-        repo.ui.debug("   discovered dir src: '%s' -> dst: '%s'\n" %
-                      (d, dirmove[d]))
+        repo.ui.debug("   discovered dir src: '%s' -> dst: '%s'\n" % (d, dirmove[d]))
 
     movewithdir = {}
     # check unaccounted nonoverlapping files against directory moves
@@ -618,14 +641,16 @@ def _fullcopytracing(repo, c1, c2, base):
             for d in dirmove:
                 if f.startswith(d):
                     # new file added in a directory that was moved, move it
-                    df = dirmove[d] + f[len(d):]
+                    df = dirmove[d] + f[len(d) :]
                     if df not in copy:
                         movewithdir[f] = df
-                        repo.ui.debug(("   pending file src: '%s' -> "
-                                       "dst: '%s'\n") % (f, df))
+                        repo.ui.debug(
+                            ("   pending file src: '%s' -> " "dst: '%s'\n") % (f, df)
+                        )
                     break
 
     return copy, movewithdir, diverge, renamedelete, dirmove
+
 
 def _heuristicscopytracing(repo, c1, c2, base):
     """ Fast copytracing using filename heuristics
@@ -661,10 +686,11 @@ def _heuristicscopytracing(repo, c1, c2, base):
 
     changedfiles = set()
     m1 = c1.manifest()
-    if not repo.revs('%d::%d', base.rev(), c2.rev()):
+    if not repo.revs("%d::%d", base.rev(), c2.rev()):
         # If base is not in c2 branch, we switch to fullcopytracing
-        repo.ui.debug("switching to full copytracing as base is not "
-                      "an ancestor of c2\n")
+        repo.ui.debug(
+            "switching to full copytracing as base is not " "an ancestor of c2\n"
+        )
         return _fullcopytracing(repo, c1, c2, base)
 
     ctx = c2
@@ -685,8 +711,7 @@ def _heuristicscopytracing(repo, c1, c2, base):
     # the base and present in the source.
     # Presence in the base is important to exclude added files, presence in the
     # source is important to exclude removed files.
-    missingfiles = filter(lambda f: f not in m1 and f in base and f in c2,
-                          changedfiles)
+    missingfiles = filter(lambda f: f not in m1 and f in base and f in c2, changedfiles)
 
     if missingfiles:
         basenametofilename = collections.defaultdict(list)
@@ -712,13 +737,18 @@ def _heuristicscopytracing(repo, c1, c2, base):
             f2 = c2.filectx(f)
             # we can have a lot of candidates which can slow down the heuristics
             # config value to limit the number of candidates moves to check
-            maxcandidates = repo.ui.configint('experimental',
-                                              'copytrace.movecandidateslimit')
+            maxcandidates = repo.ui.configint(
+                "experimental", "copytrace.movecandidateslimit"
+            )
 
             if len(movecandidates) > maxcandidates:
-                repo.ui.status(_("skipping copytracing for '%s', more "
-                                 "candidates than the limit: %d\n")
-                               % (f, len(movecandidates)))
+                repo.ui.status(
+                    _(
+                        "skipping copytracing for '%s', more "
+                        "candidates than the limit: %d\n"
+                    )
+                    % (f, len(movecandidates))
+                )
                 continue
 
             for candidate in movecandidates:
@@ -731,6 +761,7 @@ def _heuristicscopytracing(repo, c1, c2, base):
 
     return copies, {}, {}, {}, {}
 
+
 def _related(f1, f2, limit):
     """return True if f1 and f2 filectx have a common ancestor
 
@@ -741,7 +772,7 @@ def _related(f1, f2, limit):
     """
 
     if f1 == f2:
-        return f1 # a match
+        return f1  # a match
 
     g1, g2 = f1.ancestors(), f2.ancestors()
     try:
@@ -759,11 +790,12 @@ def _related(f1, f2, limit):
             elif f2r > f1r:
                 f2 = next(g2)
             elif f1 == f2:
-                return f1 # a match
+                return f1  # a match
             elif f1r == f2r or f1r < limit or f2r < limit:
-                return False # copy no longer relevant
+                return False  # copy no longer relevant
     except StopIteration:
         return False
+
 
 def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
     """
@@ -819,45 +851,46 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
 
         # remember for dir rename detection
         if backwards:
-            data['fullcopy'][of] = f # grafting backwards through renames
+            data["fullcopy"][of] = f  # grafting backwards through renames
         else:
-            data['fullcopy'][f] = of
+            data["fullcopy"][f] = of
         if of not in mdst:
-            continue # no match, keep looking
+            continue  # no match, keep looking
         if mdst[of] == mb.get(of):
-            return # no merge needed, quit early
+            return  # no merge needed, quit early
         c2 = getdstfctx(of, mdst[of])
         # c2 might be a plain new file on added on destination side that is
         # unrelated to the droids we are looking for.
         cr = _related(oc, c2, tca.rev())
-        if cr and (of == f or of == c2.path()): # non-divergent
+        if cr and (of == f or of == c2.path()):  # non-divergent
             if backwards:
-                data['copy'][of] = f
+                data["copy"][of] = f
             elif of in mb:
-                data['copy'][f] = of
-            elif remotebase: # special case: a <- b <- a -> b "ping-pong" rename
-                data['copy'][of] = f
-                del data['fullcopy'][f]
-                data['fullcopy'][of] = f
-            else: # divergence w.r.t. graft CA on one side of topological CA
+                data["copy"][f] = of
+            elif remotebase:  # special case: a <- b <- a -> b "ping-pong" rename
+                data["copy"][of] = f
+                del data["fullcopy"][f]
+                data["fullcopy"][of] = f
+            else:  # divergence w.r.t. graft CA on one side of topological CA
                 for sf in seen:
                     if sf in mb:
-                        assert sf not in data['diverge']
-                        data['diverge'][sf] = [f, of]
+                        assert sf not in data["diverge"]
+                        data["diverge"][sf] = [f, of]
                         break
             return
 
     if of in mta:
         if backwards or remotebase:
-            data['incomplete'][of] = f
+            data["incomplete"][of] = f
         else:
             for sf in seen:
                 if sf in mb:
                     if tca == base:
-                        data['diverge'].setdefault(sf, []).append(f)
+                        data["diverge"].setdefault(sf, []).append(f)
                     else:
-                        data['incompletediverge'][sf] = [of, f]
+                        data["incompletediverge"][sf] = [of, f]
                     return
+
 
 def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):
     """reproduce copies from fromrev to rev in the dirstate
@@ -868,8 +901,7 @@ def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):
     copies between fromrev and rev.
     """
     exclude = {}
-    if (skiprev is not None and
-        repo.ui.config('experimental', 'copytrace') != 'off'):
+    if skiprev is not None and repo.ui.config("experimental", "copytrace") != "off":
         # copytrace='off' skips this line, but not the entire function because
         # the line below is O(size of the repo) during a rebase, while the rest
         # of the function is much faster (and is required for carrying copy

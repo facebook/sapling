@@ -9,14 +9,9 @@ from __future__ import absolute_import
 
 import string
 
+from . import error, node, parser, pycompat, util
 from .i18n import _
-from . import (
-    error,
-    node,
-    parser,
-    pycompat,
-    util,
-)
+
 
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix
@@ -47,7 +42,7 @@ elements = {
     "end": (0, None, None, None, None),
 }
 
-keywords = {'and', 'or', 'not'}
+keywords = {"and", "or", "not"}
 
 symbols = {}
 
@@ -60,16 +55,18 @@ _quoteletters = {'"', "'"}
 _simpleopletters = set(pycompat.iterbytestr("()[]#:=,-|&+!~^%"))
 
 # default set of valid characters for the initial letter of symbols
-_syminitletters = set(pycompat.iterbytestr(
-    string.ascii_letters.encode('ascii') +
-    string.digits.encode('ascii') +
-    '._@')) | set(map(pycompat.bytechr, xrange(128, 256)))
+_syminitletters = set(
+    pycompat.iterbytestr(
+        string.ascii_letters.encode("ascii") + string.digits.encode("ascii") + "._@"
+    )
+) | set(map(pycompat.bytechr, xrange(128, 256)))
 
 # default set of valid characters for non-initial letters of symbols
-_symletters = _syminitletters | set(pycompat.iterbytestr('-/'))
+_symletters = _syminitletters | set(pycompat.iterbytestr("-/"))
+
 
 def tokenize(program, lookup=None, syminitletters=None, symletters=None):
-    '''
+    """
     Parse a revset statement into a stream of tokens
 
     ``syminitletters`` is the set of valid characters for the initial
@@ -88,7 +85,7 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     >>> list(tokenize(b"@::"))
     [('symbol', '@', 0), ('::', None, 1), ('end', None, 3)]
 
-    '''
+    """
     program = pycompat.bytestr(program)
     if syminitletters is None:
         syminitletters = _syminitletters
@@ -98,37 +95,38 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     if program and lookup:
         # attempt to parse old-style ranges first to deal with
         # things like old-tag which contain query metacharacters
-        parts = program.split(':', 1)
+        parts = program.split(":", 1)
         if all(lookup(sym) for sym in parts if sym):
             if parts[0]:
-                yield ('symbol', parts[0], 0)
+                yield ("symbol", parts[0], 0)
             if len(parts) > 1:
                 s = len(parts[0])
-                yield (':', None, s)
+                yield (":", None, s)
                 if parts[1]:
-                    yield ('symbol', parts[1], s + 1)
-            yield ('end', None, len(program))
+                    yield ("symbol", parts[1], s + 1)
+            yield ("end", None, len(program))
             return
 
     pos, l = 0, len(program)
     while pos < l:
         c = program[pos]
-        if c.isspace(): # skip inter-token whitespace
+        if c.isspace():  # skip inter-token whitespace
             pass
-        elif c == ':' and program[pos:pos + 2] == '::': # look ahead carefully
-            yield ('::', None, pos)
-            pos += 1 # skip ahead
-        elif c == '.' and program[pos:pos + 2] == '..': # look ahead carefully
-            yield ('..', None, pos)
-            pos += 1 # skip ahead
-        elif c == '#' and program[pos:pos + 2] == '##': # look ahead carefully
-            yield ('##', None, pos)
-            pos += 1 # skip ahead
-        elif c in _simpleopletters: # handle simple operators
+        elif c == ":" and program[pos : pos + 2] == "::":  # look ahead carefully
+            yield ("::", None, pos)
+            pos += 1  # skip ahead
+        elif c == "." and program[pos : pos + 2] == "..":  # look ahead carefully
+            yield ("..", None, pos)
+            pos += 1  # skip ahead
+        elif c == "#" and program[pos : pos + 2] == "##":  # look ahead carefully
+            yield ("##", None, pos)
+            pos += 1  # skip ahead
+        elif c in _simpleopletters:  # handle simple operators
             yield (c, None, pos)
-        elif (c in _quoteletters or c == 'r' and
-              program[pos:pos + 2] in ("r'", 'r"')): # handle quoted strings
-            if c == 'r':
+        elif (
+            c in _quoteletters or c == "r" and program[pos : pos + 2] in ("r'", 'r"')
+        ):  # handle quoted strings
+            if c == "r":
                 pos += 1
                 c = program[pos]
                 decode = lambda x: x
@@ -136,13 +134,13 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
                 decode = parser.unescapestr
             pos += 1
             s = pos
-            while pos < l: # find closing quote
+            while pos < l:  # find closing quote
                 d = program[pos]
-                if d == '\\': # skip over escaped characters
+                if d == "\\":  # skip over escaped characters
                     pos += 2
                     continue
                 if d == c:
-                    yield ('string', decode(program[s:pos]), s)
+                    yield ("string", decode(program[s:pos]), s)
                     break
                 pos += 1
             else:
@@ -151,55 +149,58 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
         elif c in syminitletters:
             s = pos
             pos += 1
-            while pos < l: # find end of symbol
+            while pos < l:  # find end of symbol
                 d = program[pos]
                 if d not in symletters:
                     break
-                if d == '.' and program[pos - 1] == '.': # special case for ..
+                if d == "." and program[pos - 1] == ".":  # special case for ..
                     pos -= 1
                     break
                 pos += 1
             sym = program[s:pos]
-            if sym in keywords: # operator keywords
+            if sym in keywords:  # operator keywords
                 yield (sym, None, s)
-            elif '-' in sym:
+            elif "-" in sym:
                 # some jerk gave us foo-bar-baz, try to check if it's a symbol
                 if lookup and lookup(sym):
                     # looks like a real symbol
-                    yield ('symbol', sym, s)
+                    yield ("symbol", sym, s)
                 else:
                     # looks like an expression
-                    parts = sym.split('-')
+                    parts = sym.split("-")
                     for p in parts[:-1]:
-                        if p: # possible consecutive -
-                            yield ('symbol', p, s)
+                        if p:  # possible consecutive -
+                            yield ("symbol", p, s)
                         s += len(p)
-                        yield ('-', None, pos)
+                        yield ("-", None, pos)
                         s += 1
-                    if parts[-1]: # possible trailing -
-                        yield ('symbol', parts[-1], s)
+                    if parts[-1]:  # possible trailing -
+                        yield ("symbol", parts[-1], s)
             else:
-                yield ('symbol', sym, s)
+                yield ("symbol", sym, s)
             pos -= 1
         else:
-            raise error.ParseError(_("syntax error in revset '%s'") %
-                                   program, pos)
+            raise error.ParseError(_("syntax error in revset '%s'") % program, pos)
         pos += 1
-    yield ('end', None, pos)
+    yield ("end", None, pos)
+
 
 # helpers
 
 _notset = object()
 
+
 def getsymbol(x):
-    if x and x[0] == 'symbol':
+    if x and x[0] == "symbol":
         return x[1]
-    raise error.ParseError(_('not a symbol'))
+    raise error.ParseError(_("not a symbol"))
+
 
 def getstring(x, err):
-    if x and (x[0] == 'string' or x[0] == 'symbol'):
+    if x and (x[0] == "string" or x[0] == "symbol"):
         return x[1]
     raise error.ParseError(err)
+
 
 def getinteger(x, err, default=_notset):
     if not x and default is not _notset:
@@ -209,32 +210,36 @@ def getinteger(x, err, default=_notset):
     except ValueError:
         raise error.ParseError(err)
 
+
 def getboolean(x, err):
     value = util.parsebool(getsymbol(x))
     if value is not None:
         return value
     raise error.ParseError(err)
 
+
 def getlist(x):
     if not x:
         return []
-    if x[0] == 'list':
+    if x[0] == "list":
         return list(x[1:])
     return [x]
+
 
 def getrange(x, err):
     if not x:
         raise error.ParseError(err)
     op = x[0]
-    if op == 'range':
+    if op == "range":
         return x[1], x[2]
-    elif op == 'rangepre':
+    elif op == "rangepre":
         return None, x[1]
-    elif op == 'rangepost':
+    elif op == "rangepost":
         return x[1], None
-    elif op == 'rangeall':
+    elif op == "rangeall":
         return None, None
     raise error.ParseError(err)
+
 
 def getargs(x, min, max, err):
     l = getlist(x)
@@ -242,12 +247,20 @@ def getargs(x, min, max, err):
         raise error.ParseError(err)
     return l
 
+
 def getargsdict(x, funcname, keys):
-    return parser.buildargsdict(getlist(x), funcname, parser.splitargspec(keys),
-                                keyvaluenode='keyvalue', keynode='symbol')
+    return parser.buildargsdict(
+        getlist(x),
+        funcname,
+        parser.splitargspec(keys),
+        keyvaluenode="keyvalue",
+        keynode="symbol",
+    )
+
 
 # cache of {spec: raw parsed tree} built internally
 _treecache = {}
+
 
 def _cachedtree(spec):
     # thread safe because parse() is reentrant and dict.__setitem__() is atomic
@@ -256,6 +269,7 @@ def _cachedtree(spec):
         _treecache[spec] = tree = parse(spec)
     return tree
 
+
 def _build(tmplspec, *repls):
     """Create raw parsed tree from a template revset statement
 
@@ -263,7 +277,8 @@ def _build(tmplspec, *repls):
     ('and', ('func', ('symbol', 'f'), ('string', '1')), ('symbol', '2'))
     """
     template = _cachedtree(tmplspec)
-    return parser.buildtree(template, ('symbol', '_'), *repls)
+    return parser.buildtree(template, ("symbol", "_"), *repls)
+
 
 def _match(patspec, tree):
     """Test if a tree matches the given pattern statement; return the matches
@@ -274,11 +289,12 @@ def _match(patspec, tree):
     >>> _match(b'f(_)', parse(b'f(1, 2)'))
     """
     pattern = _cachedtree(patspec)
-    return parser.matchtree(pattern, tree, ('symbol', '_'),
-                            {'keyvalue', 'list'})
+    return parser.matchtree(pattern, tree, ("symbol", "_"), {"keyvalue", "list"})
+
 
 def _matchonly(revs, bases):
-    return _match('ancestors(_) and not ancestors(_)', ('and', revs, bases))
+    return _match("ancestors(_) and not ancestors(_)", ("and", revs, bases))
+
 
 def _fixops(x):
     """Rewrite raw parsed tree to resolve ambiguous syntax which cannot be
@@ -287,69 +303,78 @@ def _fixops(x):
         return x
 
     op = x[0]
-    if op == 'parent':
+    if op == "parent":
         # x^:y means (x^) : y, not x ^ (:y)
         # x^:  means (x^) :,   not x ^ (:)
-        post = ('parentpost', x[1])
-        if x[2][0] == 'dagrangepre':
-            return _fixops(('dagrange', post, x[2][1]))
-        elif x[2][0] == 'rangepre':
-            return _fixops(('range', post, x[2][1]))
-        elif x[2][0] == 'rangeall':
-            return _fixops(('rangepost', post))
-    elif op == 'or':
+        post = ("parentpost", x[1])
+        if x[2][0] == "dagrangepre":
+            return _fixops(("dagrange", post, x[2][1]))
+        elif x[2][0] == "rangepre":
+            return _fixops(("range", post, x[2][1]))
+        elif x[2][0] == "rangeall":
+            return _fixops(("rangepost", post))
+    elif op == "or":
         # make number of arguments deterministic:
         # x + y + z -> (or x y z) -> (or (list x y z))
-        return (op, _fixops(('list',) + x[1:]))
-    elif op == 'subscript' and x[1][0] == 'relation':
+        return (op, _fixops(("list",) + x[1:]))
+    elif op == "subscript" and x[1][0] == "relation":
         # x#y[z] ternary
-        return _fixops(('relsubscript', x[1][1], x[1][2], x[2]))
+        return _fixops(("relsubscript", x[1][1], x[1][2], x[2]))
 
     return (op,) + tuple(_fixops(y) for y in x[1:])
+
 
 def _analyze(x):
     if x is None:
         return x
 
     op = x[0]
-    if op == 'minus':
-        return _analyze(_build('_ and not _', *x[1:]))
-    elif op == 'only':
-        return _analyze(_build('only(_, _)', *x[1:]))
-    elif op == 'onlypost':
-        return _analyze(_build('only(_)', x[1]))
-    elif op == 'dagrangepre':
-        return _analyze(_build('ancestors(_)', x[1]))
-    elif op == 'dagrangepost':
-        return _analyze(_build('descendants(_)', x[1]))
-    elif op == 'negate':
+    if op == "minus":
+        return _analyze(_build("_ and not _", *x[1:]))
+    elif op == "only":
+        return _analyze(_build("only(_, _)", *x[1:]))
+    elif op == "onlypost":
+        return _analyze(_build("only(_)", x[1]))
+    elif op == "dagrangepre":
+        return _analyze(_build("ancestors(_)", x[1]))
+    elif op == "dagrangepost":
+        return _analyze(_build("descendants(_)", x[1]))
+    elif op == "negate":
         s = getstring(x[1], _("can't negate that"))
-        return _analyze(('string', '-' + s))
-    elif op in ('string', 'symbol'):
+        return _analyze(("string", "-" + s))
+    elif op in ("string", "symbol"):
         return x
-    elif op == 'rangeall':
+    elif op == "rangeall":
         return (op, None)
-    elif op in {'or', 'not', 'rangepre', 'rangepost', 'parentpost'}:
+    elif op in {"or", "not", "rangepre", "rangepost", "parentpost"}:
         return (op, _analyze(x[1]))
-    elif op == 'group':
+    elif op == "group":
         return _analyze(x[1])
-    elif op in {'and', 'dagrange', 'range', 'parent', 'ancestor', 'relation',
-                'subscript'}:
+    elif op in {
+        "and",
+        "dagrange",
+        "range",
+        "parent",
+        "ancestor",
+        "relation",
+        "subscript",
+    }:
         ta = _analyze(x[1])
         tb = _analyze(x[2])
         return (op, ta, tb)
-    elif op == 'relsubscript':
+    elif op == "relsubscript":
         ta = _analyze(x[1])
         tb = _analyze(x[2])
         tc = _analyze(x[3])
         return (op, ta, tb, tc)
-    elif op == 'list':
+    elif op == "list":
         return (op,) + tuple(_analyze(y) for y in x[1:])
-    elif op == 'keyvalue':
+    elif op == "keyvalue":
         return (op, x[1], _analyze(x[2]))
-    elif op == 'func':
+    elif op == "func":
         return (op, x[1], _analyze(x[2]))
-    raise ValueError('invalid operator %r' % op)
+    raise ValueError("invalid operator %r" % op)
+
 
 def analyze(x):
     """Transform raw parsed tree to evaluatable tree which can be fed to
@@ -360,53 +385,56 @@ def analyze(x):
     """
     return _analyze(x)
 
+
 def _optimize(x):
     if x is None:
         return 0, x
 
     op = x[0]
-    if op in ('string', 'symbol'):
-        return 0.5, x # single revisions are small
-    elif op == 'and':
+    if op in ("string", "symbol"):
+        return 0.5, x  # single revisions are small
+    elif op == "and":
         wa, ta = _optimize(x[1])
         wb, tb = _optimize(x[2])
         w = min(wa, wb)
 
         # (draft/secret/_notpublic() & ::x) have a fast path
-        m = _match('_() & ancestors(_)', ('and', ta, tb))
-        if m and getsymbol(m[1]) in {'draft', 'secret', '_notpublic'}:
-            return w, _build('_phaseandancestors(_, _)', m[1], m[2])
+        m = _match("_() & ancestors(_)", ("and", ta, tb))
+        if m and getsymbol(m[1]) in {"draft", "secret", "_notpublic"}:
+            return w, _build("_phaseandancestors(_, _)", m[1], m[2])
 
         # (::x and not ::y)/(not ::y and ::x) have a fast path
         m = _matchonly(ta, tb) or _matchonly(tb, ta)
         if m:
-            return w, _build('only(_, _)', *m[1:])
+            return w, _build("only(_, _)", *m[1:])
 
-        m = _match('not _', tb)
+        m = _match("not _", tb)
         if m:
-            return wa, ('difference', ta, m[1])
+            return wa, ("difference", ta, m[1])
         if wa > wb:
-            op = 'andsmally'
+            op = "andsmally"
         return w, (op, ta, tb)
-    elif op == 'or':
+    elif op == "or":
         # fast path for machine-generated expression, that is likely to have
         # lots of trivial revisions: 'a + b + c()' to '_list(a b) + c()'
         ws, ts, ss = [], [], []
+
         def flushss():
             if not ss:
                 return
             if len(ss) == 1:
                 w, t = ss[0]
             else:
-                s = '\0'.join(t[1] for w, t in ss)
-                y = _build('_list(_)', ('string', s))
+                s = "\0".join(t[1] for w, t in ss)
+                y = _build("_list(_)", ("string", s))
                 w, t = _optimize(y)
             ws.append(w)
             ts.append(t)
             del ss[:]
+
         for y in getlist(x[1]):
             w, t = _optimize(y)
-            if t is not None and (t[0] == 'string' or t[0] == 'symbol'):
+            if t is not None and (t[0] == "string" or t[0] == "symbol"):
                 ss.append((w, t))
                 continue
             flushss()
@@ -414,43 +442,44 @@ def _optimize(x):
             ts.append(t)
         flushss()
         if len(ts) == 1:
-            return ws[0], ts[0] # 'or' operation is fully optimized out
-        return max(ws), (op, ('list',) + tuple(ts))
-    elif op == 'not':
+            return ws[0], ts[0]  # 'or' operation is fully optimized out
+        return max(ws), (op, ("list",) + tuple(ts))
+    elif op == "not":
         # Optimize not public() to _notpublic() because we have a fast version
-        if _match('public()', x[1]):
-            o = _optimize(_build('_notpublic()'))
+        if _match("public()", x[1]):
+            o = _optimize(_build("_notpublic()"))
             return o[0], o[1]
         else:
             o = _optimize(x[1])
             return o[0], (op, o[1])
-    elif op == 'rangeall':
+    elif op == "rangeall":
         return 1, x
-    elif op in ('rangepre', 'rangepost', 'parentpost'):
+    elif op in ("rangepre", "rangepost", "parentpost"):
         o = _optimize(x[1])
         return o[0], (op, o[1])
-    elif op in ('dagrange', 'range'):
+    elif op in ("dagrange", "range"):
         wa, ta = _optimize(x[1])
         wb, tb = _optimize(x[2])
         return wa + wb, (op, ta, tb)
-    elif op in ('parent', 'ancestor', 'relation', 'subscript'):
+    elif op in ("parent", "ancestor", "relation", "subscript"):
         w, t = _optimize(x[1])
         return w, (op, t, x[2])
-    elif op == 'relsubscript':
+    elif op == "relsubscript":
         w, t = _optimize(x[1])
         return w, (op, t, x[2], x[3])
-    elif op == 'list':
+    elif op == "list":
         ws, ts = zip(*(_optimize(y) for y in x[1:]))
         return sum(ws), (op,) + ts
-    elif op == 'keyvalue':
+    elif op == "keyvalue":
         w, t = _optimize(x[2])
         return w, (op, x[1], t)
-    elif op == 'func':
+    elif op == "func":
         f = getsymbol(x[1])
         wa, ta = _optimize(x[2])
-        w = getattr(symbols.get(f), '_weight', 1)
+        w = getattr(symbols.get(f), "_weight", 1)
         return w + wa, (op, x[1], ta)
-    raise ValueError('invalid operator %r' % op)
+    raise ValueError("invalid operator %r" % op)
+
 
 def optimize(tree):
     """Optimize evaluatable tree
@@ -460,9 +489,11 @@ def optimize(tree):
     _weight, newtree = _optimize(tree)
     return newtree
 
+
 # the set of valid characters for the initial letter of symbols in
 # alias declarations and definitions
-_aliassyminitletters = _syminitletters | {'$'}
+_aliassyminitletters = _syminitletters | {"$"}
+
 
 def _parsewith(spec, lookup=None, syminitletters=None):
     """Generate a parse tree of given spec with given tokenizing options
@@ -479,15 +510,15 @@ def _parsewith(spec, lookup=None, syminitletters=None):
     ParseError: ('invalid token', 4)
     """
     p = parser.parser(elements)
-    tree, pos = p.parse(tokenize(spec, lookup=lookup,
-                                 syminitletters=syminitletters))
+    tree, pos = p.parse(tokenize(spec, lookup=lookup, syminitletters=syminitletters))
     if pos != len(spec):
-        raise error.ParseError(_('invalid token'), pos)
-    return _fixops(parser.simplifyinfixops(tree, ('list', 'or')))
+        raise error.ParseError(_("invalid token"), pos)
+    return _fixops(parser.simplifyinfixops(tree, ("list", "or")))
+
 
 class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of revset aliases"""
-    _section = _('revset alias')
+    _section = _("revset alias")
 
     @staticmethod
     def _parse(spec):
@@ -501,8 +532,9 @@ class _aliasrules(parser.basealiasrules):
 
     @staticmethod
     def _trygetfunc(tree):
-        if tree[0] == 'func' and tree[1][0] == 'symbol':
+        if tree[0] == "func" and tree[1][0] == "symbol":
             return tree[1][1], getlist(tree[2])
+
 
 def expandaliases(tree, aliases, warn=None):
     """Expand aliases in a tree, aliases is a list of (name, value) tuples"""
@@ -512,30 +544,32 @@ def expandaliases(tree, aliases, warn=None):
     if warn is not None:
         for name, alias in sorted(aliases.iteritems()):
             if alias.error and not alias.warned:
-                warn(_('warning: %s\n') % (alias.error))
+                warn(_("warning: %s\n") % (alias.error))
                 alias.warned = True
     return tree
+
 
 def foldconcat(tree):
     """Fold elements to be concatenated by `##`
     """
-    if not isinstance(tree, tuple) or tree[0] in ('string', 'symbol'):
+    if not isinstance(tree, tuple) or tree[0] in ("string", "symbol"):
         return tree
-    if tree[0] == '_concat':
+    if tree[0] == "_concat":
         pending = [tree]
         l = []
         while pending:
             e = pending.pop()
-            if e[0] == '_concat':
+            if e[0] == "_concat":
                 pending.extend(reversed(e[1:]))
-            elif e[0] in ('string', 'symbol'):
+            elif e[0] in ("string", "symbol"):
                 l.append(e[1])
             else:
-                msg = _("\"##\" can't concatenate \"%s\" element") % (e[0])
+                msg = _('"##" can\'t concatenate "%s" element') % (e[0])
                 raise error.ParseError(msg)
-        return ('string', ''.join(l))
+        return ("string", "".join(l))
     else:
         return tuple(foldconcat(t) for t in tree)
+
 
 def parse(spec, lookup=None):
     try:
@@ -546,13 +580,14 @@ def parse(spec, lookup=None):
             # point to the char where the error happened, not the char after.
             loc = inst.args[1] + 1
             # Remove newlines -- spaces are equivalent whitespace.
-            spec = spec.replace('\n', ' ')
+            spec = spec.replace("\n", " ")
             # We want the caret to point to the place in the template that
             # failed to parse, but in a hint we get a open paren at the
             # start. Therefore, we print "loc + 1" spaces (instead of "loc")
             # to line up the caret with the location of the error.
-            inst.hint = spec + '\n' + ' ' * loc + '^ ' + _('here')
+            inst.hint = spec + "\n" + " " * loc + "^ " + _("here")
         raise
+
 
 def _quote(s):
     r"""Quote a value in order to make it safe for the revset engine.
@@ -568,8 +603,9 @@ def _quote(s):
     """
     return "'%s'" % util.escapestr(pycompat.bytestr(s))
 
+
 def formatspec(expr, *args):
-    '''
+    """
     This is a convenience function for using revsets internally, and
     escapes arguments appropriately. Aliases are intentionally ignored
     so that intended expression behavior isn't accidentally subverted.
@@ -599,19 +635,19 @@ def formatspec(expr, *args):
     "branch('default')"
     >>> formatspec(b'root(%ls)', [b'a', b'b', b'c', b'd'])
     "root(_list('a\\x00b\\x00c\\x00d'))"
-    '''
+    """
 
     def argtype(c, arg):
-        if c == 'd':
-            return '%d' % int(arg)
-        elif c == 's':
+        if c == "d":
+            return "%d" % int(arg)
+        elif c == "s":
             return _quote(arg)
-        elif c == 'r':
-            parse(arg) # make sure syntax errors are confined
-            return '(%s)' % arg
-        elif c == 'n':
+        elif c == "r":
+            parse(arg)  # make sure syntax errors are confined
+            return "(%s)" % arg
+        elif c == "n":
             return _quote(node.hex(arg))
-        elif c == 'b':
+        elif c == "b":
             return _quote(arg.branch())
 
     def listexp(s, t):
@@ -620,49 +656,50 @@ def formatspec(expr, *args):
             return "_list('')"
         elif l == 1:
             return argtype(t, s[0])
-        elif t == 'd':
-            return "_intlist('%s')" % "\0".join('%d' % int(a) for a in s)
-        elif t == 's':
+        elif t == "d":
+            return "_intlist('%s')" % "\0".join("%d" % int(a) for a in s)
+        elif t == "s":
             return "_list('%s')" % "\0".join(s)
-        elif t == 'n':
+        elif t == "n":
             return "_hexlist('%s')" % "\0".join(node.hex(a) for a in s)
-        elif t == 'b':
+        elif t == "b":
             return "_list('%s')" % "\0".join(a.branch() for a in s)
 
         m = l // 2
-        return '(%s or %s)' % (listexp(s[:m], t), listexp(s[m:], t))
+        return "(%s or %s)" % (listexp(s[:m], t), listexp(s[m:], t))
 
     expr = pycompat.bytestr(expr)
-    ret = ''
+    ret = ""
     pos = 0
     arg = 0
     while pos < len(expr):
         c = expr[pos]
-        if c == '%':
+        if c == "%":
             pos += 1
             d = expr[pos]
-            if d == '%':
+            if d == "%":
                 ret += d
-            elif d in 'dsnbr':
+            elif d in "dsnbr":
                 ret += argtype(d, args[arg])
                 arg += 1
-            elif d == 'l':
+            elif d == "l":
                 # a list of some type
                 pos += 1
                 d = expr[pos]
                 ret += listexp(list(args[arg]), d)
                 arg += 1
             else:
-                raise error.Abort(_('unexpected revspec format character %s')
-                                  % d)
+                raise error.Abort(_("unexpected revspec format character %s") % d)
         else:
             ret += c
         pos += 1
 
     return ret
 
+
 def prettyformat(tree):
-    return parser.prettyformat(tree, ('string', 'symbol'))
+    return parser.prettyformat(tree, ("string", "symbol"))
+
 
 def depth(tree):
     if isinstance(tree, tuple):
@@ -670,13 +707,14 @@ def depth(tree):
     else:
         return 0
 
+
 def funcsused(tree):
-    if not isinstance(tree, tuple) or tree[0] in ('string', 'symbol'):
+    if not isinstance(tree, tuple) or tree[0] in ("string", "symbol"):
         return set()
     else:
         funcs = set()
         for s in tree[1:]:
             funcs |= funcsused(s)
-        if tree[0] == 'func':
+        if tree[0] == "func":
             funcs.add(tree[1][1])
         return funcs

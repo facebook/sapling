@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''
+"""
 A "pvec" is a changeset property based on the theory of vector clocks
 that can be compared to discover relatedness without consulting a
 graph. This can be useful for tasks like determining how a
@@ -46,34 +46,35 @@ Uses:
   and approximately how many changesets are involved
 - can be used to find a heuristic divergence measure between changesets on
   different branches
-'''
+"""
 
 from __future__ import absolute_import
 
+from . import util
 from .node import nullrev
-from . import (
-    util,
-)
 
-_size = 448 # 70 chars b85-encoded
+
+_size = 448  # 70 chars b85-encoded
 _bytes = _size / 8
 _depthbits = 24
 _depthbytes = _depthbits / 8
 _vecbytes = _bytes - _depthbytes
 _vecbits = _vecbytes * 8
-_radius = (_vecbits - 30) / 2 # high probability vectors are related
+_radius = (_vecbits - 30) / 2  # high probability vectors are related
 
 try:
     xrange(0)
 except NameError:
     xrange = range
 
+
 def _bin(bs):
-    '''convert a bytestring to a long'''
+    """convert a bytestring to a long"""
     v = 0
     for b in bs:
         v = v * 256 + ord(b)
     return v
+
 
 def _str(v, l):
     bs = ""
@@ -82,12 +83,15 @@ def _str(v, l):
         v >>= 8
     return bs
 
+
 def _split(b):
-    '''depth and bitvec'''
+    """depth and bitvec"""
     return _bin(b[:_depthbytes]), _bin(b[_depthbytes:])
+
 
 def _join(depth, bitvec):
     return _str(depth, _depthbytes) + _str(bitvec, _vecbytes)
+
 
 def _hweight(x):
     c = 0
@@ -96,16 +100,20 @@ def _hweight(x):
             c += 1
         x >>= 1
     return c
+
+
 _htab = [_hweight(x) for x in xrange(256)]
 
+
 def _hamming(a, b):
-    '''find the hamming distance between two longs'''
+    """find the hamming distance between two longs"""
     d = a ^ b
     c = 0
     while d:
         c += _htab[d & 0xff]
         d >>= 8
     return c
+
 
 def _mergevec(x, y, c):
     # Ideally, this function would be x ^ y ^ ancestor, but finding
@@ -120,7 +128,7 @@ def _mergevec(x, y, c):
     hdist = _hamming(v1, v2)
     ddist = d1 - d2
     v = v1
-    m = v1 ^ v2 # mask of different bits
+    m = v1 ^ v2  # mask of different bits
     i = 1
 
     if hdist > ddist:
@@ -144,13 +152,15 @@ def _mergevec(x, y, c):
 
     return depth, v
 
+
 def _flipbit(v, node):
     # converting bit strings to longs is slow
     bit = (hash(node) & 0xffffffff) % _vecbits
-    return v ^ (1<<bit)
+    return v ^ (1 << bit)
+
 
 def ctxpvec(ctx):
-    '''construct a pvec for ctx while filling in the cache'''
+    """construct a pvec for ctx while filling in the cache"""
     r = ctx.repo()
     if not util.safehasattr(r, "_pveccache"):
         r._pveccache = {}
@@ -172,7 +182,9 @@ def ctxpvec(ctx):
     bs = _join(*pvc[ctx.rev()])
     return pvec(util.b85encode(bs))
 
+
 class pvec(object):
+
     def __init__(self, hashorctx):
         if isinstance(hashorctx, str):
             self._bs = hashorctx
@@ -189,7 +201,7 @@ class pvec(object):
     def __lt__(self, b):
         delta = b._depth - self._depth
         if delta < 0:
-            return False # always correct
+            return False  # always correct
         if _hamming(self._vec, b._vec) > delta:
             return False
         return True

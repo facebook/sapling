@@ -25,20 +25,15 @@ algorithm might still be able to merge these files without conflict.
 """
 
 from __future__ import print_function
-from . import histedit
-from mercurial import (
-    cmdutil,
-    destutil,
-    node,
-    registrar,
-    scmutil,
-    error,
-    util,
-)
-from mercurial.i18n import _
 
 import functools
 import os
+
+from mercurial import cmdutil, destutil, error, node, registrar, scmutil, util
+from mercurial.i18n import _
+
+from . import histedit
+
 
 try:
     xrange(0)
@@ -50,71 +45,71 @@ try:
 except ImportError:
     curses = None
 
-KEY_LIST = ['pick', 'edit', 'fold', 'drop', 'mess', 'roll']
-ACTION_LABELS = {
-    'fold': '^fold',
-    'roll': '^roll',
-}
+KEY_LIST = ["pick", "edit", "fold", "drop", "mess", "roll"]
+ACTION_LABELS = {"fold": "^fold", "roll": "^roll"}
 
-COLOR_HELP, COLOR_SELECTED, COLOR_OK, COLOR_WARN  = 1, 2, 3, 4
+COLOR_HELP, COLOR_SELECTED, COLOR_OK, COLOR_WARN = 1, 2, 3, 4
 
 E_QUIT, E_HISTEDIT = 1, 2
 E_PAGEDOWN, E_PAGEUP, E_LINEUP, E_LINEDOWN, E_RESIZE = 3, 4, 5, 6, 7
 MODE_INIT, MODE_PATCH, MODE_RULES, MODE_HELP = 0, 1, 2, 3
 
 KEYTABLE = {
-    'global': {
-        'h':         'next-action',
-        'KEY_RIGHT': 'next-action',
-        'l':         'prev-action',
-        'KEY_LEFT':  'prev-action',
-        'q':         'quit',
-        'c':         'histedit',
-        'C':         'histedit',
-        'v':         'showpatch',
-        '?':         'help',
+    "global": {
+        "h": "next-action",
+        "KEY_RIGHT": "next-action",
+        "l": "prev-action",
+        "KEY_LEFT": "prev-action",
+        "q": "quit",
+        "c": "histedit",
+        "C": "histedit",
+        "v": "showpatch",
+        "?": "help",
     },
     MODE_RULES: {
-        'd':         'action-drop',
-        'e':         'action-edit',
-        'f':         'action-fold',
-        'm':         'action-mess',
-        'p':         'action-pick',
-        'r':         'action-roll',
-        ' ':         'select',
-        'j':         'down',
-        'k':         'up',
-        'KEY_DOWN':  'down',
-        'KEY_UP':    'up',
-        'J':         'move-down',
-        'K':         'move-up',
-        'KEY_NPAGE': 'move-down',
-        'KEY_PPAGE': 'move-up',
-        '0':         'goto',  # Used for 0..9
+        "d": "action-drop",
+        "e": "action-edit",
+        "f": "action-fold",
+        "m": "action-mess",
+        "p": "action-pick",
+        "r": "action-roll",
+        " ": "select",
+        "j": "down",
+        "k": "up",
+        "KEY_DOWN": "down",
+        "KEY_UP": "up",
+        "J": "move-down",
+        "K": "move-up",
+        "KEY_NPAGE": "move-down",
+        "KEY_PPAGE": "move-up",
+        "0": "goto",  # Used for 0..9
     },
     MODE_PATCH: {
-        ' ':         'page-down',
-        'KEY_NPAGE': 'page-down',
-        'KEY_PPAGE': 'page-up',
-        'j':         'line-down',
-        'k':         'line-up',
-        'KEY_DOWN':  'line-down',
-        'KEY_UP':    'line-up',
-        'J':         'down',
-        'K':         'up',
+        " ": "page-down",
+        "KEY_NPAGE": "page-down",
+        "KEY_PPAGE": "page-up",
+        "j": "line-down",
+        "k": "line-up",
+        "KEY_DOWN": "line-down",
+        "KEY_UP": "line-up",
+        "J": "down",
+        "K": "up",
     },
-    MODE_HELP: {
-    },
+    MODE_HELP: {},
 }
+
 
 def screen_size():
     import termios
     from fcntl import ioctl
     from struct import unpack
-    return unpack('hh', ioctl(1, termios.TIOCGWINSZ, '    '))
+
+    return unpack("hh", ioctl(1, termios.TIOCGWINSZ, "    "))
+
 
 class histeditrule(object):
-    def __init__(self, ctx, pos, action='pick'):
+
+    def __init__(self, ctx, pos, action="pick"):
         self.ctx = ctx
         self.action = action
         self.origpos = pos
@@ -137,10 +132,9 @@ class histeditrule(object):
         h = self.ctx.hex()[0:12]
         r = self.ctx.rev()
         desc = self.ctx.description().splitlines()[0].strip()
-        if self.action == 'roll':
-            desc = ''
-        return "#{0:<2} {1:<6} {2}:{3}   {4}".format(
-                self.origpos, action, r, h, desc)
+        if self.action == "roll":
+            desc = ""
+        return "#{0:<2} {1:<6} {2}:{3}   {4}".format(self.origpos, action, r, h, desc)
 
     def checkconflicts(self, other):
         if other.pos > self.pos and other.origpos <= self.origpos:
@@ -152,38 +146,42 @@ class histeditrule(object):
             self.conflicts.remove(other)
         return self.conflicts
 
+
 # ============ EVENTS ===============
 def movecursor(state, oldpos, newpos):
-    '''Change the rule/changeset that the cursor is pointing to, regardless of
-    current mode (you can switch between patches from the view patch window).'''
-    state['pos'] = newpos
+    """Change the rule/changeset that the cursor is pointing to, regardless of
+    current mode (you can switch between patches from the view patch window)."""
+    state["pos"] = newpos
 
-    mode, _ = state['mode']
+    mode, _ = state["mode"]
     if mode == MODE_RULES:
         # Scroll through the list by updating the view for MODE_RULES, so that
         # even if we are not currently viewing the rules, switching back will
         # result in the cursor's rule being visible.
-        modestate = state['modes'][MODE_RULES]
-        if newpos < modestate['line_offset']:
-            modestate['line_offset'] = newpos
-        elif newpos > modestate['line_offset'] + state['page_height'] - 1:
-            modestate['line_offset'] = newpos - state['page_height'] + 1
+        modestate = state["modes"][MODE_RULES]
+        if newpos < modestate["line_offset"]:
+            modestate["line_offset"] = newpos
+        elif newpos > modestate["line_offset"] + state["page_height"] - 1:
+            modestate["line_offset"] = newpos - state["page_height"] + 1
 
     # Reset the patch view region to the top of the new patch.
-    state['modes'][MODE_PATCH]['line_offset'] = 0
+    state["modes"][MODE_PATCH]["line_offset"] = 0
+
 
 def changemode(state, mode):
-    curmode, _ = state['mode']
-    state['mode'] = (mode, curmode)
+    curmode, _ = state["mode"]
+    state["mode"] = (mode, curmode)
+
 
 def makeselection(state, pos):
-    state['selected'] = pos
+    state["selected"] = pos
+
 
 def swap(state, oldpos, newpos):
     """Swap two positions and calculate necessary conflicts in
     O(|newpos-oldpos|) time"""
 
-    rules = state['rules']
+    rules = state["rules"]
     assert 0 <= oldpos < len(rules) and 0 <= newpos < len(rules)
 
     rules[oldpos], rules[newpos] = rules[newpos], rules[oldpos]
@@ -198,19 +196,21 @@ def swap(state, oldpos, newpos):
         rules[newpos].checkconflicts(rules[r])
         rules[oldpos].checkconflicts(rules[r])
 
-    if state['selected']:
+    if state["selected"]:
         makeselection(state, newpos)
+
 
 def changeaction(state, pos, action):
     """Change the action state on the given position to the new action"""
-    rules = state['rules']
+    rules = state["rules"]
     assert 0 <= pos < len(rules)
     rules[pos].action = action
+
 
 def cycleaction(state, pos, next=False):
     """Changes the action state the next or the previous action from
     the action list"""
-    rules = state['rules']
+    rules = state["rules"]
     assert 0 <= pos < len(rules)
     current = rules[pos].action
 
@@ -223,20 +223,22 @@ def cycleaction(state, pos, next=False):
         index -= 1
     changeaction(state, pos, KEY_LIST[index % len(KEY_LIST)])
 
+
 def changeview(state, delta, unit):
-    '''Change the region of whatever is being viewed (a patch or the list of
-    changesets). 'delta' is an amount (+/- 1) and 'unit' is 'page' or 'line'.'''
-    mode, _ = state['mode']
+    """Change the region of whatever is being viewed (a patch or the list of
+    changesets). 'delta' is an amount (+/- 1) and 'unit' is 'page' or 'line'."""
+    mode, _ = state["mode"]
     if mode != MODE_PATCH:
         return
-    mode_state = state['modes'][mode]
+    mode_state = state["modes"][mode]
     num_lines = len(patchcontents(state))
-    page_height = state['page_height']
-    unit = page_height if unit == 'page' else 1
+    page_height = state["page_height"]
+    unit = page_height if unit == "page" else 1
     num_pages = 1 + (num_lines - 1) / page_height
     max_offset = (num_pages - 1) * page_height
-    newline = mode_state['line_offset'] + delta * unit
-    mode_state['line_offset'] = max(0, min(max_offset, newline))
+    newline = mode_state["line_offset"] + delta * unit
+    mode_state["line_offset"] = max(0, min(max_offset, newline))
+
 
 def event(state, ch):
     """Change state based on the current character input
@@ -244,61 +246,62 @@ def event(state, ch):
     This takes the current state and based on the current character input from
     the user we change the state.
     """
-    selected = state['selected']
-    oldpos = state['pos']
-    rules = state['rules']
+    selected = state["selected"]
+    oldpos = state["pos"]
+    rules = state["rules"]
 
     if ch in (curses.KEY_RESIZE, "KEY_RESIZE"):
         return E_RESIZE
 
     lookup_ch = ch
-    if '0' <= ch <= '9':
-        lookup_ch = '0'
+    if "0" <= ch <= "9":
+        lookup_ch = "0"
 
-    curmode, prevmode = state['mode']
-    action = KEYTABLE[curmode].get(lookup_ch, KEYTABLE['global'].get(lookup_ch))
+    curmode, prevmode = state["mode"]
+    action = KEYTABLE[curmode].get(lookup_ch, KEYTABLE["global"].get(lookup_ch))
     if action is None:
         return
-    if action in ('down', 'move-down'):
+    if action in ("down", "move-down"):
         newpos = min(oldpos + 1, len(rules) - 1)
         movecursor(state, oldpos, newpos)
-        if selected is not None or action == 'move-down':
+        if selected is not None or action == "move-down":
             swap(state, oldpos, newpos)
-    elif action in ('up', 'move-up'):
+    elif action in ("up", "move-up"):
         newpos = max(0, oldpos - 1)
         movecursor(state, oldpos, newpos)
-        if selected is not None or action == 'move-up':
+        if selected is not None or action == "move-up":
             swap(state, oldpos, newpos)
-    elif action == 'next-action':
+    elif action == "next-action":
         cycleaction(state, oldpos, next=True)
-    elif action == 'prev-action':
+    elif action == "prev-action":
         cycleaction(state, oldpos, next=False)
-    elif action == 'select':
+    elif action == "select":
         selected = oldpos if selected is None else None
         makeselection(state, selected)
-    elif action == 'goto' and int(ch) < len(rules) and len(rules) <= 10:
+    elif action == "goto" and int(ch) < len(rules) and len(rules) <= 10:
         newrule = next((r for r in rules if r.origpos == int(ch)))
         movecursor(state, oldpos, newrule.pos)
         if selected is not None:
             swap(state, oldpos, newrule.pos)
-    elif action.startswith('action-'):
+    elif action.startswith("action-"):
         changeaction(state, oldpos, action[7:])
-    elif action == 'showpatch':
+    elif action == "showpatch":
         changemode(state, MODE_PATCH if curmode != MODE_PATCH else prevmode)
-    elif action == 'help':
+    elif action == "help":
         changemode(state, MODE_HELP if curmode != MODE_HELP else prevmode)
-    elif action == 'quit':
+    elif action == "quit":
         return E_QUIT
-    elif action == 'histedit':
+    elif action == "histedit":
         return E_HISTEDIT
-    elif action == 'page-down':
+    elif action == "page-down":
         return E_PAGEDOWN
-    elif action == 'page-up':
+    elif action == "page-up":
         return E_PAGEUP
-    elif action == 'line-down':
+    elif action == "line-down":
         return E_LINEDOWN
-    elif action == 'line-up':
+    elif action == "line-up":
         return E_LINEUP
+
 
 def makecommands(rules):
     """Returns a list of commands consumable by histedit --commands based on
@@ -307,6 +310,7 @@ def makecommands(rules):
     for rules in rules:
         commands.append("{0} {1}\n".format(rules.action, rules.ctx))
     return commands
+
 
 def addln(win, y, x, line, color=None):
     """Add a line to the given window left padding but 100% filled with
@@ -323,15 +327,17 @@ def addln(win, y, x, line, color=None):
     else:
         win.addstr(y, x, line)
 
+
 def patchcontents(state):
-    repo = state['repo']
-    rule = state['rules'][state['pos']]
-    displayer = cmdutil.show_changeset(repo.ui, repo, {
-        'patch': True, 'verbose': True
-    }, buffered=True)
+    repo = state["repo"]
+    rule = state["rules"][state["pos"]]
+    displayer = cmdutil.show_changeset(
+        repo.ui, repo, {"patch": True, "verbose": True}, buffered=True
+    )
     displayer.show(rule.ctx)
     displayer.close()
     return displayer.hunk[rule.ctx.rev()].splitlines()
+
 
 def main(repo, rules, stdscr):
     # initialize color pattern
@@ -349,8 +355,8 @@ def main(repo, rules, stdscr):
     def rendercommit(win, state):
         """Renders the commit window that shows the log of the current selected
         commit"""
-        pos = state['pos']
-        rules = state['rules']
+        pos = state["pos"]
+        rules = state["rules"]
         rule = rules[pos]
 
         ctx = rule.ctx
@@ -366,10 +372,10 @@ def main(repo, rules, stdscr):
         win.addstr(2, 1, line[:length])
 
         bms = repo.nodebookmarks(ctx.node())
-        line = "bookmark:  {0}".format(' '.join(bms))
+        line = "bookmark:  {0}".format(" ".join(bms))
         win.addstr(3, 1, line[:length])
 
-        line = "files:     {0}".format(','.join(ctx.files()))
+        line = "files:     {0}".format(",".join(ctx.files()))
         win.addstr(4, 1, line[:length])
 
         line = "summary:   {0}".format(ctx.description().splitlines()[0])
@@ -377,10 +383,10 @@ def main(repo, rules, stdscr):
 
         conflicts = rule.conflicts
         if len(conflicts) > 0:
-            conflictstr = ','.join(map(lambda r: str(r.ctx), conflicts))
+            conflictstr = ",".join(map(lambda r: str(r.ctx), conflicts))
             conflictstr = "changed files overlap with {0}".format(conflictstr)
         else:
-            conflictstr = 'no overlap'
+            conflictstr = "no overlap"
 
         win.addstr(6, 1, conflictstr[:length])
         win.noutrefresh()
@@ -401,7 +407,7 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
 
     def renderhelp(win, state):
         maxy, maxx = win.getmaxyx()
-        mode, _ = state['mode']
+        mode, _ = state["mode"]
         for y, line in enumerate(helplines(mode)):
             if y >= maxy:
                 break
@@ -409,18 +415,18 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
         win.noutrefresh()
 
     def renderrules(rulesscr, state):
-        rules = state['rules']
-        pos = state['pos']
-        selected = state['selected']
-        start = state['modes'][MODE_RULES]['line_offset']
+        rules = state["rules"]
+        pos = state["pos"]
+        selected = state["selected"]
+        start = state["modes"][MODE_RULES]["line_offset"]
 
         conflicts = [r.ctx for r in rules if r.conflicts]
         if len(conflicts) > 0:
-            line = "potential conflict in %s" % ','.join(map(str, conflicts))
+            line = "potential conflict in %s" % ",".join(map(str, conflicts))
             addln(rulesscr, -1, 0, line, curses.color_pair(COLOR_WARN))
 
         for y, rule in enumerate(rules[start:]):
-            if y >= state['page_height']:
+            if y >= state["page_height"]:
                 break
             if len(rule.conflicts) > 0:
                 rulesscr.addstr(y, 0, " ", curses.color_pair(COLOR_WARN))
@@ -442,16 +448,16 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
         win.noutrefresh()
 
     def renderpatch(win, state):
-        start = state['modes'][MODE_PATCH]['line_offset']
+        start = state["modes"][MODE_PATCH]["line_offset"]
         renderstring(win, state, patchcontents(state)[start:])
 
     def layout(mode):
         maxy, maxx = stdscr.getmaxyx()
         helplen = len(helplines(mode))
         return {
-            'commit': (8, maxx),
-            'help': (helplen, maxx),
-            'main': (maxy - helplen - 8, maxx),
+            "commit": (8, maxx),
+            "help": (helplen, maxx),
+            "main": (maxy - helplen - 8, maxx),
         }
 
     def drawvertwin(size, y, x):
@@ -460,20 +466,13 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
         return win, y, x
 
     state = {
-        'pos': 0,
-        'rules': rules,
-        'selected': None,
-        'mode': (MODE_INIT, MODE_INIT),
-        'page_height': None,
-        'modes': {
-            MODE_RULES: {
-                'line_offset': 0,
-            },
-            MODE_PATCH: {
-                'line_offset': 0,
-            }
-        },
-        'repo': repo,
+        "pos": 0,
+        "rules": rules,
+        "selected": None,
+        "mode": (MODE_INIT, MODE_INIT),
+        "page_height": None,
+        "modes": {MODE_RULES: {"line_offset": 0}, MODE_PATCH: {"line_offset": 0}},
+        "repo": repo,
     }
 
     # eventloop
@@ -482,7 +481,7 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
     stdscr.refresh()
     while True:
         try:
-            oldmode, _ = state['mode']
+            oldmode, _ = state["mode"]
             if oldmode == MODE_INIT:
                 changemode(state, MODE_RULES)
             e = event(state, ch)
@@ -490,36 +489,36 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
             if e == E_QUIT:
                 return False
             if e == E_HISTEDIT:
-                return state['rules']
+                return state["rules"]
             else:
                 if e == E_RESIZE:
                     size = screen_size()
                     if size != stdscr.getmaxyx():
                         curses.resizeterm(*size)
 
-                curmode, _ = state['mode']
+                curmode, _ = state["mode"]
                 sizes = layout(curmode)
                 if curmode != oldmode:
-                    state['page_height'] = sizes['main'][0]
+                    state["page_height"] = sizes["main"][0]
                     # Adjust the view to fit the current screen size.
-                    movecursor(state, state['pos'], state['pos'])
+                    movecursor(state, state["pos"], state["pos"])
 
                 # Pack the windows against the top, each pane spread across the
                 # full width of the screen.
                 y, x = (0, 0)
-                helpwin, y, x = drawvertwin(sizes['help'], y, x)
-                mainwin, y, x = drawvertwin(sizes['main'], y, x)
-                commitwin, y, x = drawvertwin(sizes['commit'], y, x)
+                helpwin, y, x = drawvertwin(sizes["help"], y, x)
+                mainwin, y, x = drawvertwin(sizes["main"], y, x)
+                commitwin, y, x = drawvertwin(sizes["commit"], y, x)
 
                 if e in (E_PAGEDOWN, E_PAGEUP, E_LINEDOWN, E_LINEUP):
                     if e == E_PAGEDOWN:
-                        changeview(state, +1, 'page')
+                        changeview(state, +1, "page")
                     elif e == E_PAGEUP:
-                        changeview(state, -1, 'page')
+                        changeview(state, -1, "page")
                     elif e == E_LINEDOWN:
-                        changeview(state, +1, 'line')
+                        changeview(state, +1, "line")
                     elif e == E_LINEUP:
-                        changeview(state, -1, 'line')
+                        changeview(state, -1, "line")
 
                 # start rendering
                 commitwin.erase()
@@ -539,16 +538,21 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
         except curses.error:
             pass
 
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-testedwith = 'ships-with-fb-hgext'
+testedwith = "ships-with-fb-hgext"
 
-@command('chistedit', [
-     ('k', 'keep', False,
-      _("don't strip old nodes after edit is complete")),
-    ('r', 'rev', [], _('first revision to be edited'))],
-    _("ANCESTOR"))
+
+@command(
+    "chistedit",
+    [
+        ("k", "keep", False, _("don't strip old nodes after edit is complete")),
+        ("r", "rev", [], _("first revision to be edited")),
+    ],
+    _("ANCESTOR"),
+)
 def chistedit(ui, repo, *freeargs, **opts):
     """Provides a ncurses interface to histedit. Press ? in chistedit mode
     to see an extensive help. Requires python-curses to be installed."""
@@ -560,34 +564,36 @@ def chistedit(ui, repo, *freeargs, **opts):
     ui._colormode = None
 
     try:
-        keep = opts.get('keep')
-        revs = opts.get('rev', [])[:]
+        keep = opts.get("keep")
+        revs = opts.get("rev", [])[:]
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
 
-        if os.path.exists(os.path.join(repo.path, 'histedit-state')):
-            raise error.Abort(_('history edit already in progress, try '
-                               '--continue or --abort'))
+        if os.path.exists(os.path.join(repo.path, "histedit-state")):
+            raise error.Abort(
+                _("history edit already in progress, try " "--continue or --abort")
+            )
         revs.extend(freeargs)
         if not revs:
             defaultrev = destutil.desthistedit(ui, repo)
             if defaultrev is not None:
                 revs.append(defaultrev)
         if len(revs) != 1:
-            raise error.Abort(
-                _('histedit requires exactly one ancestor revision'))
+            raise error.Abort(_("histedit requires exactly one ancestor revision"))
 
-        rr = list(repo.set('roots(%ld)', scmutil.revrange(repo, revs)))
+        rr = list(repo.set("roots(%ld)", scmutil.revrange(repo, revs)))
         if len(rr) != 1:
-            raise error.Abort(_('The specified revisions must have '
-                'exactly one common root'))
+            raise error.Abort(
+                _("The specified revisions must have " "exactly one common root")
+            )
         root = rr[0].node()
 
         topmost, empty = repo.dirstate.parents()
         revs = histedit.between(repo, root, topmost, keep)
         if not revs:
-            raise error.Abort(_('%s is not an ancestor of working directory') %
-                             node.short(root))
+            raise error.Abort(
+                _("%s is not an ancestor of working directory") % node.short(root)
+            )
 
         ctxs = []
         for i, r in enumerate(revs):
@@ -601,11 +607,11 @@ def chistedit(ui, repo, *freeargs, **opts):
         if type(rc) is list:
             ui.status(_("running histedit\n"))
             rules = makecommands(rc)
-            filename = repo.vfs.join('chistedit')
-            with open(filename, 'w+') as fp:
+            filename = repo.vfs.join("chistedit")
+            with open(filename, "w+") as fp:
                 for r in rules:
                     fp.write(r)
-            opts['commands'] = filename
+            opts["commands"] = filename
             return histedit.histedit(ui, repo, *freeargs, **opts)
     except KeyboardInterrupt:
         pass

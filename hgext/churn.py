@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''command to display statistics about repository history'''
+"""command to display statistics about repository history"""
 
 from __future__ import absolute_import
 
@@ -14,7 +14,6 @@ import datetime
 import os
 import time
 
-from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     encoding,
@@ -25,6 +24,8 @@ from mercurial import (
     scmutil,
     util,
 )
+from mercurial.i18n import _
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -32,30 +33,35 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
+
 
 def changedlines(ui, repo, ctx1, ctx2, fns):
     added, removed = 0, 0
     fmatch = scmutil.matchfiles(repo, fns)
-    diff = ''.join(patch.diff(repo, ctx1.node(), ctx2.node(), fmatch))
-    for l in diff.split('\n'):
+    diff = "".join(patch.diff(repo, ctx1.node(), ctx2.node(), fmatch))
+    for l in diff.split("\n"):
         if l.startswith("+") and not l.startswith("+++ "):
             added += 1
         elif l.startswith("-") and not l.startswith("--- "):
             removed += 1
     return (added, removed)
 
+
 def countrate(ui, repo, amap, *pats, **opts):
     """Calculate stats"""
     opts = pycompat.byteskwargs(opts)
-    if opts.get('dateformat'):
+    if opts.get("dateformat"):
+
         def getkey(ctx):
             t, tz = ctx.date()
             date = datetime.datetime(*time.gmtime(float(t) - tz)[:6])
-            return date.strftime(opts['dateformat'])
+            return date.strftime(opts["dateformat"])
+
     else:
-        tmpl = opts.get('oldtemplate') or opts.get('template')
+        tmpl = opts.get("oldtemplate") or opts.get("template")
         tmpl = cmdutil.makelogtemplater(ui, repo, tmpl)
+
         def getkey(ctx):
             ui.pushbuffer()
             tmpl.show(ctx)
@@ -63,24 +69,25 @@ def countrate(ui, repo, amap, *pats, **opts):
 
     rate = {}
     df = False
-    if opts.get('date'):
-        df = util.matchdate(opts['date'])
+    if opts.get("date"):
+        df = util.matchdate(opts["date"])
 
-    prog = progress.bar(ui, _('analyzing'), _('revisions'), len(repo))
+    prog = progress.bar(ui, _("analyzing"), _("revisions"), len(repo))
     m = scmutil.match(repo[None], pats, opts)
+
     def prep(ctx, fns):
         rev = ctx.rev()
-        if df and not df(ctx.date()[0]): # doesn't match date format
+        if df and not df(ctx.date()[0]):  # doesn't match date format
             return
 
         key = getkey(ctx).strip()
-        key = amap.get(key, key) # alias remap
-        if opts.get('changesets'):
+        key = amap.get(key, key)  # alias remap
+        if opts.get("changesets"):
             rate[key] = (rate.get(key, (0,))[0] + 1, 0)
         else:
             parents = ctx.parents()
             if len(parents) > 1:
-                ui.note(_('revision %d is a merge, ignoring...\n') % (rev,))
+                ui.note(_("revision %d is a merge, ignoring...\n") % (rev,))
                 return
 
             ctx1 = parents[0]
@@ -95,26 +102,50 @@ def countrate(ui, repo, amap, *pats, **opts):
 
     return rate
 
-@command('churn',
-    [('r', 'rev', [],
-     _('count rate for the specified revision or revset'), _('REV')),
-    ('d', 'date', '',
-     _('count rate for revisions matching date spec'), _('DATE')),
-    ('t', 'oldtemplate', '',
-     _('template to group changesets (DEPRECATED)'), _('TEMPLATE')),
-    ('T', 'template', '{author|email}',
-     _('template to group changesets'), _('TEMPLATE')),
-    ('f', 'dateformat', '',
-     _('strftime-compatible format for grouping by date'), _('FORMAT')),
-    ('c', 'changesets', False, _('count rate by number of changesets')),
-    ('s', 'sort', False, _('sort by key (default: sort by count)')),
-    ('', 'diffstat', False, _('display added/removed lines separately')),
-    ('', 'aliases', '', _('file with email aliases'), _('FILE')),
-    ] + cmdutil.walkopts,
+
+@command(
+    "churn",
+    [
+        (
+            "r",
+            "rev",
+            [],
+            _("count rate for the specified revision or revset"),
+            _("REV"),
+        ),
+        ("d", "date", "", _("count rate for revisions matching date spec"), _("DATE")),
+        (
+            "t",
+            "oldtemplate",
+            "",
+            _("template to group changesets (DEPRECATED)"),
+            _("TEMPLATE"),
+        ),
+        (
+            "T",
+            "template",
+            "{author|email}",
+            _("template to group changesets"),
+            _("TEMPLATE"),
+        ),
+        (
+            "f",
+            "dateformat",
+            "",
+            _("strftime-compatible format for grouping by date"),
+            _("FORMAT"),
+        ),
+        ("c", "changesets", False, _("count rate by number of changesets")),
+        ("s", "sort", False, _("sort by key (default: sort by count)")),
+        ("", "diffstat", False, _("display added/removed lines separately")),
+        ("", "aliases", "", _("file with email aliases"), _("FILE")),
+    ]
+    + cmdutil.walkopts,
     _("hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]"),
-    inferrepo=True)
+    inferrepo=True,
+)
 def churn(ui, repo, *pats, **opts):
-    '''histogram of changes to the repository
+    """histogram of changes to the repository
 
     This command will display a histogram representing the number
     of changed lines or revisions, grouped according to the given
@@ -148,18 +179,19 @@ def churn(ui, repo, *pats, **opts):
     Such a file may be specified with the --aliases option, otherwise
     a .hgchurn file will be looked for in the working directory root.
     Aliases will be split from the rightmost "=".
-    '''
+    """
+
     def pad(s, l):
         return s + " " * (l - encoding.colwidth(s))
 
     amap = {}
-    aliases = opts.get(r'aliases')
-    if not aliases and os.path.exists(repo.wjoin('.hgchurn')):
-        aliases = repo.wjoin('.hgchurn')
+    aliases = opts.get(r"aliases")
+    if not aliases and os.path.exists(repo.wjoin(".hgchurn")):
+        aliases = repo.wjoin(".hgchurn")
     if aliases:
         for l in open(aliases, "r"):
             try:
-                alias, actual = l.rsplit('=' in l and '=' or None, 1)
+                alias, actual = l.rsplit("=" in l and "=" or None, 1)
                 amap[alias.strip()] = actual.strip()
             except ValueError:
                 l = l.strip()
@@ -171,7 +203,7 @@ def churn(ui, repo, *pats, **opts):
     if not rate:
         return
 
-    if opts.get(r'sort'):
+    if opts.get(r"sort"):
         rate.sort()
     else:
         rate.sort(key=lambda x: (-sum(x[1]), x))
@@ -184,21 +216,27 @@ def churn(ui, repo, *pats, **opts):
     ui.debug("assuming %i character terminal\n" % ttywidth)
     width = ttywidth - maxname - 2 - 2 - 2
 
-    if opts.get(r'diffstat'):
+    if opts.get(r"diffstat"):
         width -= 15
+
         def format(name, diffstat):
             added, removed = diffstat
-            return "%s %15s %s%s\n" % (pad(name, maxname),
-                                       '+%d/-%d' % (added, removed),
-                                       ui.label('+' * charnum(added),
-                                                'diffstat.inserted'),
-                                       ui.label('-' * charnum(removed),
-                                                'diffstat.deleted'))
+            return "%s %15s %s%s\n" % (
+                pad(name, maxname),
+                "+%d/-%d" % (added, removed),
+                ui.label("+" * charnum(added), "diffstat.inserted"),
+                ui.label("-" * charnum(removed), "diffstat.deleted"),
+            )
+
     else:
         width -= 6
+
         def format(name, count):
-            return "%s %6d %s\n" % (pad(name, maxname), sum(count),
-                                    '*' * charnum(sum(count)))
+            return "%s %6d %s\n" % (
+                pad(name, maxname),
+                sum(count),
+                "*" * charnum(sum(count)),
+            )
 
     def charnum(count):
         return int(round(count * width / maxcount))

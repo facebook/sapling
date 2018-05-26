@@ -14,22 +14,22 @@ import socket
 import time
 import warnings
 
+from . import encoding, error, pycompat, util
 from .i18n import _
 
-from . import (
-    encoding,
-    error,
-    pycompat,
-    util,
-)
 
 if pycompat.iswindows:
     from . import win32
 
+
 class _emptylocker(object):
+
     def getwarning(self, l):
         return _("waiting for lock on %r") % l.desc
+
+
 emptylocker = _emptylocker()
+
 
 class locker(object):
     """Container for a process that originally created a file lock
@@ -59,22 +59,22 @@ class locker(object):
         self.pid = None
         self.starttime = None
 
-        if ':' not in fromstr:
-            msg = _('malformed lock file')
-            hint = ''
+        if ":" not in fromstr:
+            msg = _("malformed lock file")
+            hint = ""
             if path is not None:
-                msg += ' (%s)' % path
-                hint = _('run hg debuglocks')
+                msg += " (%s)" % path
+                hint = _("run hg debuglocks")
             raise error.MalformedLock(msg, hint=hint)
-        ns, uid = fromstr.strip().split(':', 1)
+        ns, uid = fromstr.strip().split(":", 1)
 
-        if '/' in ns:
-            self.host, self.pidnamespace = ns.split('/', 1)
+        if "/" in ns:
+            self.host, self.pidnamespace = ns.split("/", 1)
         elif ns:
             self.host = ns
 
-        if uid and '/' in uid:
-            self.pid, self.starttime = uid.split('/', 2)
+        if uid and "/" in uid:
+            self.pid, self.starttime = uid.split("/", 2)
         else:
             self.pid = uid
 
@@ -83,19 +83,18 @@ class locker(object):
             return False
         if isinstance(other, str):
             return self == locker(other)
-        return (self.namespace == other.namespace
-                and self.uniqueid == other.uniqueid)
+        return self.namespace == other.namespace and self.uniqueid == other.uniqueid
 
     @property
     def namespace(self):
         if self.pidnamespace:
-            return self.host + '/' + self.pidnamespace
+            return self.host + "/" + self.pidnamespace
         return self.host
 
     @property
     def uniqueid(self):
         if self.starttime is not None:
-            return self.pid + '/' + self.starttime
+            return self.pid + "/" + self.starttime
         return self.pid
 
     @classmethod
@@ -104,11 +103,10 @@ class locker(object):
             return cls._currentnamespace
         result = socket.gethostname()
         if pycompat.ispy3:
-            result = result.encode(pycompat.sysstr(encoding.encoding),
-                                   'replace')
-        if pycompat.sysplatform.startswith('linux'):
+            result = result.encode(pycompat.sysstr(encoding.encoding), "replace")
+        if pycompat.sysplatform.startswith("linux"):
             try:
-                result += '/%x' % os.stat('/proc/self/ns/pid').st_ino
+                result += "/%x" % os.stat("/proc/self/ns/pid").st_ino
             except OSError as ex:
                 if ex.errno not in (errno.ENOENT, errno.EACCES, errno.ENOTDIR):
                     raise
@@ -118,7 +116,7 @@ class locker(object):
     @staticmethod
     def getcurrentid():
         if pycompat.iswindows:
-            return '%d/%d' % (util.getpid(), win32.getcurrentprocstarttime())
+            return "%d/%d" % (util.getpid(), win32.getcurrentprocstarttime())
         return str(util.getpid())
 
     def issamenamespace(self):
@@ -140,7 +138,8 @@ class locker(object):
         """Get a locker's warning string while trying to acquire `l` lock"""
         msg = _("waiting for lock on %s held by process %r on host %r\n")
         msg %= (l.desc, self.pid, self.host)
-        return ''.join(msg)
+        return "".join(msg)
+
 
 def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
     """return an acquired lock or raise an a LockHeld exception
@@ -167,8 +166,9 @@ def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
             if delay == warningidx:
                 ui.warn(inst.locker.getwarning(l))
             if timeout <= delay:
-                raise error.LockHeld(errno.ETIMEDOUT, inst.filename,
-                                     l.desc, inst.locker)
+                raise error.LockHeld(
+                    errno.ETIMEDOUT, inst.filename, l.desc, inst.locker
+                )
             time.sleep(1)
             delay += 1
 
@@ -183,15 +183,16 @@ def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
         l.acquirefn()
     return l
 
+
 class lock(object):
-    '''An advisory lock held by one process to control access to a set
+    """An advisory lock held by one process to control access to a set
     of files.  Non-cooperating processes or incorrectly written scripts
     can ignore Mercurial's locking scheme and stomp all over the
     repository, so don't do that.
 
     Typically used via localrepository.lock() to lock the repository
     store (.hg/store/) or localrepository.wlock() to lock everything
-    else under .hg/.'''
+    else under .hg/."""
 
     # lock is symlink on platforms that support it, file on others.
 
@@ -203,9 +204,19 @@ class lock(object):
 
     _namespace = None
 
-    def __init__(self, vfs, file, timeout=-1, releasefn=None, acquirefn=None,
-                 desc=None, inheritchecker=None, parentlock=None,
-                 dolock=True, ui=None):
+    def __init__(
+        self,
+        vfs,
+        file,
+        timeout=-1,
+        releasefn=None,
+        acquirefn=None,
+        desc=None,
+        inheritchecker=None,
+        parentlock=None,
+        dolock=True,
+        ui=None,
+    ):
         self.vfs = vfs
         self.f = file
         self.held = 0
@@ -217,7 +228,7 @@ class lock(object):
         self.parentlock = parentlock
         self._parentheld = False
         self._inherited = False
-        self.postrelease  = []
+        self.postrelease = []
         self.pid = self._getpid()
         self.ui = ui
         if dolock:
@@ -235,9 +246,11 @@ class lock(object):
 
     def __del__(self):
         if self.held:
-            warnings.warn("use lock.release instead of del lock",
-                    category=DeprecationWarning,
-                    stacklevel=2)
+            warnings.warn(
+                "use lock.release instead of del lock",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
 
             # ensure the lock will be removed
             # even if recursive locking did occur
@@ -250,7 +263,7 @@ class lock(object):
         return locker.getcurrentid()
 
     def _getlockname(self):
-        return '%s:%s' % (locker.getcurrentnamespace(), self.pid)
+        return "%s:%s" % (locker.getcurrentnamespace(), self.pid)
 
     def lock(self):
         timeout = self.timeout
@@ -264,8 +277,9 @@ class lock(object):
                     if timeout > 0:
                         timeout -= 1
                     continue
-                raise error.LockHeld(errno.ETIMEDOUT, inst.filename, self.desc,
-                                     inst.locker)
+                raise error.LockHeld(
+                    errno.ETIMEDOUT, inst.filename, self.desc, inst.locker
+                )
 
     def _trylock(self):
         if self.held:
@@ -282,8 +296,7 @@ class lock(object):
                     lockfilecontents = self._readlock()
                     if lockfilecontents is None:
                         continue
-                    lockerdesc = locker(lockfilecontents,
-                                        path=self.vfs.join(self.f))
+                    lockerdesc = locker(lockfilecontents, path=self.vfs.join(self.f))
 
                     # special case where a parent process holds the lock -- this
                     # is different from the pid being different because we do
@@ -295,18 +308,20 @@ class lock(object):
                         return
                     lockerdesc = self._testlock(lockerdesc)
                     if lockerdesc is not None:
-                        raise error.LockHeld(errno.EAGAIN,
-                                             self.vfs.join(self.f), self.desc,
-                                             lockerdesc)
+                        raise error.LockHeld(
+                            errno.EAGAIN, self.vfs.join(self.f), self.desc, lockerdesc
+                        )
                 else:
-                    raise error.LockUnavailable(why.errno, why.strerror,
-                                                why.filename, self.desc)
+                    raise error.LockUnavailable(
+                        why.errno, why.strerror, why.filename, self.desc
+                    )
 
         if not self.held:
             # use empty locker to mean "busy for frequent lock/unlock
             # by many processes"
-            raise error.LockHeld(errno.EAGAIN, self.vfs.join(self.f),
-                                 self.desc, emptylocker)
+            raise error.LockHeld(
+                errno.EAGAIN, self.vfs.join(self.f), self.desc, emptylocker
+            )
 
     def _readlock(self):
         """read lock and return its value
@@ -335,28 +350,29 @@ class lock(object):
             # this and below debug prints will hopefully help us
             # understand the issue with stale lock files not being
             # cleaned up on Windows (T25415269)
-            m = _('locker is not in the same namespace(locker: %r, us: %r)\n')
+            m = _("locker is not in the same namespace(locker: %r, us: %r)\n")
             m %= (lockerdesc.namespace, locker.getcurrentnamespace())
             self._debugprintonce(m)
             return lockerdesc
         if lockerdesc.isrunning():
-            m = _('locker is still running (full unique id: %r)\n')
+            m = _("locker is still running (full unique id: %r)\n")
             m %= (lockerdesc.uniqueid,)
             self._debugprintonce(m)
             return lockerdesc
         # if locker dead, break lock.  must do this with another lock
         # held, or can race and break valid lock.
         try:
-            msg = _('trying to removed the stale lock file '
-                    '(will acquire %s for that)\n')
-            breaklock = self.f + '.break'
+            msg = _(
+                "trying to removed the stale lock file " "(will acquire %s for that)\n"
+            )
+            breaklock = self.f + ".break"
             self._debugprintonce(msg % breaklock)
             l = lock(self.vfs, breaklock, timeout=0)
             self.vfs.unlink(self.f)
             l.release()
-            self._debugprintonce(_('removed the stale lock file\n'))
+            self._debugprintonce(_("removed the stale lock file\n"))
         except error.LockError:
-            self._debugprintonce(_('failed to remove the stale lock file\n'))
+            self._debugprintonce(_("failed to remove the stale lock file\n"))
             return lockerdesc
 
     def testlock(self):
@@ -370,8 +386,7 @@ class lock(object):
         The lock file is only deleted when None is returned.
 
         """
-        lockerdesc = locker(self._readlock(),
-                            path=self.vfs.join(self.f))
+        lockerdesc = locker(self._readlock(), path=self.vfs.join(self.f))
         return self._testlock(lockerdesc)
 
     @contextlib.contextmanager
@@ -384,10 +399,12 @@ class lock(object):
         """
         if not self.held:
             raise error.LockInheritanceContractViolation(
-                'inherit can only be called while lock is held')
+                "inherit can only be called while lock is held"
+            )
         if self._inherited:
             raise error.LockInheritanceContractViolation(
-                'inherit cannot be called while lock is already inherited')
+                "inherit cannot be called while lock is already inherited"
+            )
         if self._inheritchecker is not None:
             self._inheritchecker()
         if self.releasefn:
@@ -432,6 +449,7 @@ class lock(object):
                     callback()
                 # Prevent double usage and help clear cycles.
                 self.postrelease = None
+
 
 def release(*locks):
     for lock in locks:

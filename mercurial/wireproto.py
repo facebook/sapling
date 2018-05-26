@@ -14,13 +14,6 @@ import os
 import tempfile
 import time
 
-from .i18n import _
-from .node import (
-    bin,
-    hex,
-    nullid,
-)
-
 from . import (
     bundle2,
     changegroup as changegroupmod,
@@ -35,19 +28,22 @@ from . import (
     streamclone,
     util,
 )
+from .i18n import _
+from .node import bin, hex, nullid
+
 
 urlerr = util.urlerr
 urlreq = util.urlreq
 
-bundle2requiredmain = _('incompatible Mercurial client; bundle2 required')
-bundle2requiredhint = _('see https://www.mercurial-scm.org/wiki/'
-                        'IncompatibleClient')
-bundle2required = '%s\n(%s)\n' % (bundle2requiredmain, bundle2requiredhint)
+bundle2requiredmain = _("incompatible Mercurial client; bundle2 required")
+bundle2requiredhint = _("see https://www.mercurial-scm.org/wiki/" "IncompatibleClient")
+bundle2required = "%s\n(%s)\n" % (bundle2requiredmain, bundle2requiredhint)
 
 try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 class abstractserverproto(object):
     """abstract class that summarizes the protocol API
@@ -84,12 +80,14 @@ class abstractserverproto(object):
     #
     # left commented here on purpose
     #
-    #def restore(self):
+    # def restore(self):
     #    """reinstall previous stdout and stderr and return intercepted stdout
     #    """
     #    raise NotImplementedError()
 
+
 class remoteiterbatcher(peer.iterbatcher):
+
     def __init__(self, remote):
         super(remoteiterbatcher, self).__init__()
         self._remote = remote
@@ -98,9 +96,10 @@ class remoteiterbatcher(peer.iterbatcher):
         # Validate this method is batchable, since submit() only supports
         # batchable methods.
         fn = getattr(self._remote, name)
-        if not getattr(fn, 'batchable', None):
-            raise error.ProgrammingError('Attempted to batch a non-batchable '
-                                         'call to %r' % name)
+        if not getattr(fn, "batchable", None):
+            raise error.ProgrammingError(
+                "Attempted to batch a non-batchable " "call to %r" % name
+            )
 
         return super(remoteiterbatcher, self).__getattr__(name)
 
@@ -147,10 +146,13 @@ class remoteiterbatcher(peer.iterbatcher):
             except StopIteration:
                 pass
             else:
-                raise error.ProgrammingError('%s @batchable generator emitted '
-                                             'unexpected value count' % command)
+                raise error.ProgrammingError(
+                    "%s @batchable generator emitted "
+                    "unexpected value count" % command
+                )
 
             yield finalfuture.value
+
 
 # Forward a couple of names from peer to make wireproto interactions
 # slightly more sensible.
@@ -159,32 +161,40 @@ future = peer.future
 
 # list of nodes encoding / decoding
 
-def decodelist(l, sep=' '):
+
+def decodelist(l, sep=" "):
     if l:
-        return [bin(v) for v in  l.split(sep)]
+        return [bin(v) for v in l.split(sep)]
     return []
 
-def encodelist(l, sep=' '):
+
+def encodelist(l, sep=" "):
     try:
         return sep.join(map(hex, l))
     except TypeError:
         raise
 
+
 # batched call argument encoding
 
+
 def escapearg(plain):
-    return (plain
-            .replace(':', ':c')
-            .replace(',', ':o')
-            .replace(';', ':s')
-            .replace('=', ':e'))
+    return (
+        plain.replace(":", ":c")
+        .replace(",", ":o")
+        .replace(";", ":s")
+        .replace("=", ":e")
+    )
+
 
 def unescapearg(escaped):
-    return (escaped
-            .replace(':e', '=')
-            .replace(':s', ';')
-            .replace(':o', ',')
-            .replace(':c', ':'))
+    return (
+        escaped.replace(":e", "=")
+        .replace(":s", ";")
+        .replace(":o", ",")
+        .replace(":c", ":")
+    )
+
 
 def encodebatchcmds(req):
     """Return a ``cmds`` argument value for the ``batch`` command."""
@@ -195,11 +205,13 @@ def encodebatchcmds(req):
         # servers.
         assert all(escapearg(k) == k for k in argsdict)
 
-        args = ','.join('%s=%s' % (escapearg(k), escapearg(v))
-                        for k, v in argsdict.iteritems())
-        cmds.append('%s %s' % (op, args))
+        args = ",".join(
+            "%s=%s" % (escapearg(k), escapearg(v)) for k, v in argsdict.iteritems()
+        )
+        cmds.append("%s %s" % (op, args))
 
-    return ';'.join(cmds)
+    return ";".join(cmds)
+
 
 # mapping of options accepted by getbundle and their types
 #
@@ -212,17 +224,20 @@ def encodebatchcmds(req):
 # :csv:   list of comma-separated values
 # :scsv:  list of comma-separated values return as set
 # :plain: string with no transformation needed.
-gboptsmap = {'heads':  'nodes',
-             'bookmarks': 'boolean',
-             'common': 'nodes',
-             'obsmarkers': 'boolean',
-             'phases': 'boolean',
-             'bundlecaps': 'scsv',
-             'listkeys': 'csv',
-             'cg': 'boolean',
-             'cbattempted': 'boolean'}
+gboptsmap = {
+    "heads": "nodes",
+    "bookmarks": "boolean",
+    "common": "nodes",
+    "obsmarkers": "boolean",
+    "phases": "boolean",
+    "bundlecaps": "scsv",
+    "listkeys": "csv",
+    "cg": "boolean",
+    "cbattempted": "boolean",
+}
 
 # client side
+
 
 class wirepeer(repository.legacypeer):
     """Client-side interface for communicating with a peer repository.
@@ -239,9 +254,9 @@ class wirepeer(repository.legacypeer):
 
     @batchable
     def lookup(self, key):
-        self.requirecap('lookup', _('look up remote revision'))
+        self.requirecap("lookup", _("look up remote revision"))
         f = future()
-        yield {'key': encoding.fromlocal(key)}, f
+        yield {"key": encoding.fromlocal(key)}, f
         d = f.value
         success, data = d[:-1].split(" ", 1)
         if int(success):
@@ -262,7 +277,7 @@ class wirepeer(repository.legacypeer):
     @batchable
     def known(self, nodes):
         f = future()
-        yield {'nodes': encodelist(nodes)}, f
+        yield {"nodes": encodelist(nodes)}, f
         d = f.value
         try:
             yield [bool(int(b)) for b in d]
@@ -277,7 +292,7 @@ class wirepeer(repository.legacypeer):
         try:
             branchmap = {}
             for branchpart in d.splitlines():
-                branchname, branchheads = branchpart.split(' ', 1)
+                branchname, branchheads = branchpart.split(" ", 1)
                 branchname = encoding.tolocal(urlreq.unquote(branchname))
                 branchheads = decodelist(branchheads)
                 branchmap[branchname] = branchheads
@@ -287,80 +302,78 @@ class wirepeer(repository.legacypeer):
 
     @batchable
     def listkeys(self, namespace):
-        if not self.capable('pushkey'):
+        if not self.capable("pushkey"):
             yield {}, None
         f = future()
         self.ui.debug('preparing listkeys for "%s"\n' % namespace)
-        yield {'namespace': encoding.fromlocal(namespace)}, f
+        yield {"namespace": encoding.fromlocal(namespace)}, f
         d = f.value
-        self.ui.debug('received listkey for "%s": %i bytes\n'
-                      % (namespace, len(d)))
+        self.ui.debug('received listkey for "%s": %i bytes\n' % (namespace, len(d)))
         yield pushkeymod.decodekeys(d)
 
     @batchable
     def pushkey(self, namespace, key, old, new):
-        if not self.capable('pushkey'):
+        if not self.capable("pushkey"):
             yield False, None
         f = future()
         self.ui.debug('preparing pushkey for "%s:%s"\n' % (namespace, key))
-        yield {'namespace': encoding.fromlocal(namespace),
-               'key': encoding.fromlocal(key),
-               'old': encoding.fromlocal(old),
-               'new': encoding.fromlocal(new)}, f
+        yield {
+            "namespace": encoding.fromlocal(namespace),
+            "key": encoding.fromlocal(key),
+            "old": encoding.fromlocal(old),
+            "new": encoding.fromlocal(new),
+        }, f
         d = f.value
-        d, output = d.split('\n', 1)
+        d, output = d.split("\n", 1)
         try:
             d = bool(int(d))
         except ValueError:
-            raise error.ResponseError(
-                _('push failed (unexpected response):'), d)
+            raise error.ResponseError(_("push failed (unexpected response):"), d)
         for l in output.splitlines(True):
-            self.ui.status(_('remote: '), l)
+            self.ui.status(_("remote: "), l)
         yield d
 
     def stream_out(self):
-        if self.capable('stream_option'):
-            fullclone = self.ui.configbool('clone', 'requestfullclone')
-            args = pycompat.strkwargs({
-                'fullclone': str(fullclone)
-            })
-            return self._callstream('stream_out_option', **args)
-        return self._callstream('stream_out')
+        if self.capable("stream_option"):
+            fullclone = self.ui.configbool("clone", "requestfullclone")
+            args = pycompat.strkwargs({"fullclone": str(fullclone)})
+            return self._callstream("stream_out_option", **args)
+        return self._callstream("stream_out")
 
     def getbundle(self, source, **kwargs):
         kwargs = pycompat.byteskwargs(kwargs)
-        self.requirecap('getbundle', _('look up remote changes'))
+        self.requirecap("getbundle", _("look up remote changes"))
         opts = {}
-        bundlecaps = kwargs.get('bundlecaps')
+        bundlecaps = kwargs.get("bundlecaps")
         if bundlecaps is not None:
-            kwargs['bundlecaps'] = sorted(bundlecaps)
+            kwargs["bundlecaps"] = sorted(bundlecaps)
         else:
-            bundlecaps = () # kwargs could have it to None
+            bundlecaps = ()  # kwargs could have it to None
         for key, value in kwargs.iteritems():
             if value is None:
                 continue
             keytype = gboptsmap.get(key)
             if keytype is None:
                 raise error.ProgrammingError(
-                    'Unexpectedly None keytype for key %s' % key)
-            elif keytype == 'nodes':
+                    "Unexpectedly None keytype for key %s" % key
+                )
+            elif keytype == "nodes":
                 value = encodelist(value)
-            elif keytype in ('csv', 'scsv'):
-                value = ','.join(value)
-            elif keytype == 'boolean':
-                value = '%i' % bool(value)
-            elif keytype != 'plain':
-                raise KeyError('unknown getbundle option type %s'
-                               % keytype)
+            elif keytype in ("csv", "scsv"):
+                value = ",".join(value)
+            elif keytype == "boolean":
+                value = "%i" % bool(value)
+            elif keytype != "plain":
+                raise KeyError("unknown getbundle option type %s" % keytype)
             opts[key] = value
         f = self._callcompressable("getbundle", **pycompat.strkwargs(opts))
-        if any((cap.startswith('HG2') for cap in bundlecaps)):
+        if any((cap.startswith("HG2") for cap in bundlecaps)):
             return bundle2.getunbundler(self.ui, f)
         else:
-            return changegroupmod.cg1unpacker(f, 'UN')
+            return changegroupmod.cg1unpacker(f, "UN")
 
     def unbundle(self, cg, heads, url):
-        '''Send cg (a readable file-like object representing the
+        """Send cg (a readable file-like object representing the
         changegroup to push, typically a chunkbuffer object) to the
         remote server as a bundle.
 
@@ -371,31 +384,30 @@ class wirepeer(repository.legacypeer):
 
         `url` is the url the client thinks it's pushing to, which is
         visible to hooks.
-        '''
+        """
 
-        if heads != ['force'] and self.capable('unbundlehash'):
-            heads = encodelist(['hashed',
-                                hashlib.sha1(''.join(sorted(heads))).digest()])
+        if heads != ["force"] and self.capable("unbundlehash"):
+            heads = encodelist(
+                ["hashed", hashlib.sha1("".join(sorted(heads))).digest()]
+            )
         else:
             heads = encodelist(heads)
 
-        if util.safehasattr(cg, 'deltaheader'):
+        if util.safehasattr(cg, "deltaheader"):
             # this a bundle10, do the old style call sequence
             ret, output = self._callpush("unbundle", cg, heads=heads)
             if ret == "":
-                raise error.ResponseError(
-                    _('push failed:'), output)
+                raise error.ResponseError(_("push failed:"), output)
             try:
                 ret = int(ret)
             except ValueError:
-                raise error.ResponseError(
-                    _('push failed (unexpected response):'), ret)
+                raise error.ResponseError(_("push failed (unexpected response):"), ret)
 
             for l in output.splitlines(True):
-                self.ui.status(_('remote: '), l)
+                self.ui.status(_("remote: "), l)
         else:
             # bundle2 push. Send a stream, fetch a stream.
-            stream = self._calltwowaystream('unbundle', cg, heads=heads)
+            stream = self._calltwowaystream("unbundle", cg, heads=heads)
             ret = bundle2.getunbundler(self.ui, stream)
         return ret
 
@@ -413,10 +425,10 @@ class wirepeer(repository.legacypeer):
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
     def between(self, pairs):
-        batch = 8 # avoid giant requests
+        batch = 8  # avoid giant requests
         r = []
         for i in xrange(0, len(pairs), batch):
-            n = " ".join([encodelist(p, '-') for p in pairs[i:i + batch]])
+            n = " ".join([encodelist(p, "-") for p in pairs[i : i + batch]])
             d = self._call("between", pairs=n)
             try:
                 r.extend(l and decodelist(l) or [] for l in d.splitlines())
@@ -427,15 +439,14 @@ class wirepeer(repository.legacypeer):
     def changegroup(self, nodes, kind):
         n = encodelist(nodes)
         f = self._callcompressable("changegroup", roots=n)
-        return changegroupmod.cg1unpacker(f, 'UN')
+        return changegroupmod.cg1unpacker(f, "UN")
 
     def changegroupsubset(self, bases, heads, kind):
-        self.requirecap('changegroupsubset', _('look up remote changes'))
+        self.requirecap("changegroupsubset", _("look up remote changes"))
         bases = encodelist(bases)
         heads = encodelist(heads)
-        f = self._callcompressable("changegroupsubset",
-                                   bases=bases, heads=heads)
-        return changegroupmod.cg1unpacker(f, 'UN')
+        f = self._callcompressable("changegroupsubset", bases=bases, heads=heads)
+        return changegroupmod.cg1unpacker(f, "UN")
 
     # End of baselegacywirepeer interface.
 
@@ -448,16 +459,16 @@ class wirepeer(repository.legacypeer):
         chunk = rsp.read(1024)
         work = [chunk]
         while chunk:
-            while ';' not in chunk and chunk:
+            while ";" not in chunk and chunk:
                 chunk = rsp.read(1024)
                 work.append(chunk)
-            merged = ''.join(work)
-            while ';' in merged:
-                one, merged = merged.split(';', 1)
+            merged = "".join(work)
+            while ";" in merged:
+                one, merged = merged.split(";", 1)
                 yield unescapearg(one)
             chunk = rsp.read(1024)
             work = [merged, chunk]
-        yield unescapearg(''.join(work))
+        yield unescapearg("".join(work))
 
     def _submitone(self, op, args):
         return self._call(op, **pycompat.strkwargs(args))
@@ -466,10 +477,10 @@ class wirepeer(repository.legacypeer):
         # don't pass optional arguments left at their default value
         opts = {}
         if three is not None:
-            opts[r'three'] = three
+            opts[r"three"] = three
         if four is not None:
-            opts[r'four'] = four
-        return self._call('debugwireargs', one=one, two=two, **opts)
+            opts[r"four"] = four
+        return self._call("debugwireargs", one=one, two=two, **opts)
 
     def _call(self, cmd, **args):
         """execute <cmd> on the server
@@ -526,6 +537,7 @@ class wirepeer(repository.legacypeer):
         """
         raise NotImplementedError()
 
+
 # server side
 
 # wire protocol command can either return a string or one of these classes.
@@ -542,26 +554,32 @@ class streamres(object):
     new commands because new clients should support a more modern compression
     mechanism.
     """
+
     def __init__(self, gen=None, reader=None, v1compressible=False):
         self.gen = gen
         self.reader = reader
         self.v1compressible = v1compressible
+
 
 class pushres(object):
     """wireproto reply: success with simple integer return
 
     The call was successful and returned an integer contained in `self.res`.
     """
+
     def __init__(self, res):
         self.res = res
+
 
 class pusherr(object):
     """wireproto reply: failure
 
     The call failed. The `self.res` attribute contains the error message.
     """
+
     def __init__(self, res):
         self.res = res
+
 
 class ooberror(object):
     """wireproto reply: failure of a batch of operation
@@ -569,8 +587,10 @@ class ooberror(object):
     Something failed during a batch call. The error message is stored in
     `self.message`.
     """
+
     def __init__(self, message):
         self.message = message
+
 
 def getdispatchrepo(repo, proto, command):
     """Obtain the repo used for processing wire protocol commands.
@@ -579,11 +599,13 @@ def getdispatchrepo(repo, proto, command):
     extensions that need commands to operate on different repo views under
     specialized circumstances.
     """
-    return repo.filtered('served')
+    return repo.filtered("served")
+
 
 def wrapstreamres(towrap, logger, start_time):
     if towrap.gen:
         gen = towrap.gen
+
         def logginggen():
             responselen = 0
             for chunk in gen:
@@ -591,10 +613,12 @@ def wrapstreamres(towrap, logger, start_time):
                 yield chunk
             duration = int((time.time() - start_time) * 1000)
             logger(duration=duration, responselen=responselen)
+
         towrap.gen = logginggen()
     else:
         towrap.reader.responselen = 0
         orig = towrap.reader.read
+
         def read(self, size):
             chunk = orig(size)
             self.reader.responselen += len(chunk)
@@ -603,9 +627,11 @@ def wrapstreamres(towrap, logger, start_time):
                 logger(duration=duration, responselen=self.reader.responselen)
             return chunk
 
+
 def logwireprotorequest(ui, start_time, command, serializedargs, res):
-    logger = functools.partial(ui.log, "wireproto_requests",
-                                "", command=command, args=serializedargs)
+    logger = functools.partial(
+        ui.log, "wireproto_requests", "", command=command, args=serializedargs
+    )
     duration = int((time.time() - start_time) * 1000)
     if isinstance(res, streamres):
         wrapstreamres(res, logger, start_time)
@@ -618,7 +644,8 @@ def logwireprotorequest(ui, start_time, command, serializedargs, res):
     elif isinstance(res, pushres):
         logger(duration=duration, responselen=len(str(res.res)))
     else:
-        logger(duration=duration, error='unknown response')
+        logger(duration=duration, error="unknown response")
+
 
 def dispatch(repo, proto, command):
     repo = getdispatchrepo(repo, proto, command)
@@ -628,12 +655,12 @@ def dispatch(repo, proto, command):
     try:
         serializedargs = json.dumps(args)
     except Exception as e:
-        serializedargs = 'Failed to serialize arguments'
+        serializedargs = "Failed to serialize arguments"
 
     start_time = time.time()
     res = func(repo, proto, *args)
 
-    logrequests = repo.ui.configlist('wireproto', 'logrequests')
+    logrequests = repo.ui.configlist("wireproto", "logrequests")
     if command in logrequests:
         ui = repo.ui
         try:
@@ -641,8 +668,9 @@ def dispatch(repo, proto, command):
         except Exception as e:
             # No logging error should break client-server interaction,
             # but let's warn about the problem
-            ui.warn(_('error while logging wireproto request: %s') % e)
+            ui.warn(_("error while logging wireproto request: %s") % e)
     return res
+
 
 def options(cmd, keys, others):
     opts = {}
@@ -651,9 +679,11 @@ def options(cmd, keys, others):
             opts[k] = others[k]
             del others[k]
     if others:
-        util.stderr.write("warning: %s ignored unexpected arguments %s\n"
-                          % (cmd, ",".join(others)))
+        util.stderr.write(
+            "warning: %s ignored unexpected arguments %s\n" % (cmd, ",".join(others))
+        )
     return opts
+
 
 def bundle1allowed(repo, action):
     """Whether a bundle1 operation is allowed from the server.
@@ -666,23 +696,24 @@ def bundle1allowed(repo, action):
     4. server.bundle1
     """
     ui = repo.ui
-    gd = 'generaldelta' in repo.requirements
+    gd = "generaldelta" in repo.requirements
 
     if gd:
-        v = ui.configbool('server', 'bundle1gd.%s' % action)
+        v = ui.configbool("server", "bundle1gd.%s" % action)
         if v is not None:
             return v
 
-    v = ui.configbool('server', 'bundle1.%s' % action)
+    v = ui.configbool("server", "bundle1.%s" % action)
     if v is not None:
         return v
 
     if gd:
-        v = ui.configbool('server', 'bundle1gd')
+        v = ui.configbool("server", "bundle1gd")
         if v is not None:
             return v
 
-    return ui.configbool('server', 'bundle1')
+    return ui.configbool("server", "bundle1")
+
 
 def supportedcompengines(ui, proto, role):
     """Obtain the list of supported compression engines for a request."""
@@ -692,24 +723,22 @@ def supportedcompengines(ui, proto, role):
 
     # Allow config to override default list and ordering.
     if role == util.SERVERROLE:
-        configengines = ui.configlist('server', 'compressionengines')
-        config = 'server.compressionengines'
+        configengines = ui.configlist("server", "compressionengines")
+        config = "server.compressionengines"
     else:
         # This is currently implemented mainly to facilitate testing. In most
         # cases, the server should be in charge of choosing a compression engine
         # because a server has the most to lose from a sub-optimal choice. (e.g.
         # CPU DoS due to an expensive engine or a network DoS due to poor
         # compression ratio).
-        configengines = ui.configlist('experimental',
-                                      'clientcompressionengines')
-        config = 'experimental.clientcompressionengines'
+        configengines = ui.configlist("experimental", "clientcompressionengines")
+        config = "experimental.clientcompressionengines"
 
     # No explicit config. Filter out the ones that aren't supposed to be
     # advertised and return default ordering.
     if not configengines:
-        attr = 'serverpriority' if role == util.SERVERROLE else 'clientpriority'
-        return [e for e in compengines
-                if getattr(e.wireprotosupport(), attr) > 0]
+        attr = "serverpriority" if role == util.SERVERROLE else "clientpriority"
+        return [e for e in compengines if getattr(e.wireprotosupport(), attr) > 0]
 
     # If compression engines are listed in the config, assume there is a good
     # reason for it (like server operators wanting to achieve specific
@@ -718,53 +747,60 @@ def supportedcompengines(ui, proto, role):
     validnames = set(e.name() for e in compengines)
     invalidnames = set(e for e in configengines if e not in validnames)
     if invalidnames:
-        raise error.Abort(_('invalid compression engine defined in %s: %s') %
-                          (config, ', '.join(sorted(invalidnames))))
+        raise error.Abort(
+            _("invalid compression engine defined in %s: %s")
+            % (config, ", ".join(sorted(invalidnames)))
+        )
 
     compengines = [e for e in compengines if e.name() in configengines]
-    compengines = sorted(compengines,
-                         key=lambda e: configengines.index(e.name()))
+    compengines = sorted(compengines, key=lambda e: configengines.index(e.name()))
 
     if not compengines:
-        raise error.Abort(_('%s config option does not specify any known '
-                            'compression engines') % config,
-                          hint=_('usable compression engines: %s') %
-                          ', '.sorted(validnames))
+        raise error.Abort(
+            _("%s config option does not specify any known " "compression engines")
+            % config,
+            hint=_("usable compression engines: %s") % ", ".sorted(validnames),
+        )
 
     return compengines
+
 
 # list of commands
 commands = {}
 
-def wireprotocommand(name, args=''):
+
+def wireprotocommand(name, args=""):
     """decorator for wire protocol command"""
+
     def register(func):
         commands[name] = (func, args)
         return func
+
     return register
 
-@wireprotocommand('batch', 'cmds *')
+
+@wireprotocommand("batch", "cmds *")
 def batch(repo, proto, cmds, others):
     repo = repo.filtered("served")
     res = []
-    for pair in cmds.split(';'):
-        op, args = pair.split(' ', 1)
+    for pair in cmds.split(";"):
+        op, args = pair.split(" ", 1)
         vals = {}
-        for a in args.split(','):
+        for a in args.split(","):
             if a:
-                n, v = a.split('=')
+                n, v = a.split("=")
                 vals[unescapearg(n)] = unescapearg(v)
         func, spec = commands[op]
         if spec:
             keys = spec.split()
             data = {}
             for k in keys:
-                if k == '*':
+                if k == "*":
                     star = {}
                     for key in vals.keys():
                         if key not in keys:
                             star[key] = vals[key]
-                    data['*'] = star
+                    data["*"] = star
                 else:
                     data[k] = vals[k]
             result = func(repo, proto, *[data[k] for k in keys])
@@ -773,27 +809,30 @@ def batch(repo, proto, cmds, others):
         if isinstance(result, ooberror):
             return result
         res.append(escapearg(result))
-    return ';'.join(res)
+    return ";".join(res)
 
-@wireprotocommand('between', 'pairs')
+
+@wireprotocommand("between", "pairs")
 def between(repo, proto, pairs):
-    pairs = [decodelist(p, '-') for p in pairs.split(" ")]
+    pairs = [decodelist(p, "-") for p in pairs.split(" ")]
     r = []
     for b in repo.between(pairs):
         r.append(encodelist(b) + "\n")
     return "".join(r)
 
-@wireprotocommand('branchmap')
+
+@wireprotocommand("branchmap")
 def branchmap(repo, proto):
     branchmap = repo.branchmap()
     heads = []
     for branch, nodes in branchmap.iteritems():
         branchname = urlreq.quote(encoding.fromlocal(branch))
         branchnodes = encodelist(nodes)
-        heads.append('%s %s' % (branchname, branchnodes))
-    return '\n'.join(heads)
+        heads.append("%s %s" % (branchname, branchnodes))
+    return "\n".join(heads)
 
-@wireprotocommand('branches', 'nodes')
+
+@wireprotocommand("branches", "nodes")
 def branches(repo, proto, nodes):
     nodes = decodelist(nodes)
     r = []
@@ -801,7 +840,8 @@ def branches(repo, proto, nodes):
         r.append(encodelist(b) + "\n")
     return "".join(r)
 
-@wireprotocommand('clonebundles', '')
+
+@wireprotocommand("clonebundles", "")
 def clonebundles(repo, proto):
     """Server command for returning info for available bundles to seed clones.
 
@@ -811,10 +851,20 @@ def clonebundles(repo, proto):
     depending on the request. e.g. you could advertise URLs for the closest
     data center given the client's IP address.
     """
-    return repo.vfs.tryread('clonebundles.manifest')
+    return repo.vfs.tryread("clonebundles.manifest")
 
-wireprotocaps = ['lookup', 'changegroupsubset', 'branchmap', 'pushkey',
-                 'known', 'getbundle', 'unbundlehash', 'batch']
+
+wireprotocaps = [
+    "lookup",
+    "changegroupsubset",
+    "branchmap",
+    "pushkey",
+    "known",
+    "getbundle",
+    "unbundlehash",
+    "batch",
+]
+
 
 def _capabilities(repo, proto):
     """return a list of capabilities for a repo
@@ -829,145 +879,150 @@ def _capabilities(repo, proto):
     # copy to prevent modification of the global list
     caps = list(wireprotocaps)
     if streamclone.allowservergeneration(repo):
-        if repo.ui.configbool('server', 'preferuncompressed'):
-            caps.append('stream-preferred')
+        if repo.ui.configbool("server", "preferuncompressed"):
+            caps.append("stream-preferred")
         requiredformats = repo.requirements & repo.supportedformats
         # if our local revlogs are just revlogv1, add 'stream' cap
-        if not requiredformats - {'revlogv1'}:
-            caps.append('stream')
+        if not requiredformats - {"revlogv1"}:
+            caps.append("stream")
         # otherwise, add 'streamreqs' detailing our local revlog format
         else:
-            caps.append('streamreqs=%s' % ','.join(sorted(requiredformats)))
-        caps.append('stream_option')
-    if repo.ui.configbool('experimental', 'bundle2-advertise'):
+            caps.append("streamreqs=%s" % ",".join(sorted(requiredformats)))
+        caps.append("stream_option")
+    if repo.ui.configbool("experimental", "bundle2-advertise"):
         capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
-        caps.append('bundle2=' + urlreq.quote(capsblob))
-    caps.append('unbundle=%s' % ','.join(bundle2.bundlepriority))
+        caps.append("bundle2=" + urlreq.quote(capsblob))
+    caps.append("unbundle=%s" % ",".join(bundle2.bundlepriority))
 
-    if proto.name == 'http':
-        caps.append('httpheader=%d' %
-                    repo.ui.configint('server', 'maxhttpheaderlen'))
-        if repo.ui.configbool('experimental', 'httppostargs'):
-            caps.append('httppostargs')
+    if proto.name == "http":
+        caps.append("httpheader=%d" % repo.ui.configint("server", "maxhttpheaderlen"))
+        if repo.ui.configbool("experimental", "httppostargs"):
+            caps.append("httppostargs")
 
         # FUTURE advertise 0.2rx once support is implemented
         # FUTURE advertise minrx and mintx after consulting config option
-        caps.append('httpmediatype=0.1rx,0.1tx,0.2tx')
+        caps.append("httpmediatype=0.1rx,0.1tx,0.2tx")
 
         compengines = supportedcompengines(repo.ui, proto, util.SERVERROLE)
         if compengines:
-            comptypes = ','.join(urlreq.quote(e.wireprotosupport().name)
-                                 for e in compengines)
-            caps.append('compression=%s' % comptypes)
+            comptypes = ",".join(
+                urlreq.quote(e.wireprotosupport().name) for e in compengines
+            )
+            caps.append("compression=%s" % comptypes)
 
     return caps
 
+
 # If you are writing an extension and consider wrapping this function. Wrap
 # `_capabilities` instead.
-@wireprotocommand('capabilities')
+@wireprotocommand("capabilities")
 def capabilities(repo, proto):
-    return ' '.join(_capabilities(repo, proto))
+    return " ".join(_capabilities(repo, proto))
 
-@wireprotocommand('changegroup', 'roots')
+
+@wireprotocommand("changegroup", "roots")
 def changegroup(repo, proto, roots):
     nodes = decodelist(roots)
-    outgoing = discovery.outgoing(repo, missingroots=nodes,
-                                  missingheads=repo.heads())
-    cg = changegroupmod.makechangegroup(repo, outgoing, '01', 'serve')
+    outgoing = discovery.outgoing(repo, missingroots=nodes, missingheads=repo.heads())
+    cg = changegroupmod.makechangegroup(repo, outgoing, "01", "serve")
     return streamres(reader=cg, v1compressible=True)
 
-@wireprotocommand('changegroupsubset', 'bases heads')
+
+@wireprotocommand("changegroupsubset", "bases heads")
 def changegroupsubset(repo, proto, bases, heads):
     bases = decodelist(bases)
     heads = decodelist(heads)
-    outgoing = discovery.outgoing(repo, missingroots=bases,
-                                  missingheads=heads)
-    cg = changegroupmod.makechangegroup(repo, outgoing, '01', 'serve')
+    outgoing = discovery.outgoing(repo, missingroots=bases, missingheads=heads)
+    cg = changegroupmod.makechangegroup(repo, outgoing, "01", "serve")
     return streamres(reader=cg, v1compressible=True)
 
-@wireprotocommand('debugwireargs', 'one two *')
+
+@wireprotocommand("debugwireargs", "one two *")
 def debugwireargs(repo, proto, one, two, others):
     # only accept optional args from the known set
-    opts = options('debugwireargs', ['three', 'four'], others)
+    opts = options("debugwireargs", ["three", "four"], others)
     return repo.debugwireargs(one, two, **pycompat.strkwargs(opts))
 
-@wireprotocommand('getbundle', '*')
+
+@wireprotocommand("getbundle", "*")
 def getbundle(repo, proto, others):
-    opts = options('getbundle', gboptsmap.keys(), others)
+    opts = options("getbundle", gboptsmap.keys(), others)
     for k, v in opts.iteritems():
         keytype = gboptsmap[k]
-        if keytype == 'nodes':
+        if keytype == "nodes":
             opts[k] = decodelist(v)
-        elif keytype == 'csv':
-            opts[k] = list(v.split(','))
-        elif keytype == 'scsv':
-            opts[k] = set(v.split(','))
-        elif keytype == 'boolean':
+        elif keytype == "csv":
+            opts[k] = list(v.split(","))
+        elif keytype == "scsv":
+            opts[k] = set(v.split(","))
+        elif keytype == "boolean":
             # Client should serialize False as '0', which is a non-empty string
             # so it evaluates as a True bool.
-            if v == '0':
+            if v == "0":
                 opts[k] = False
             else:
                 opts[k] = bool(v)
-        elif keytype != 'plain':
-            raise KeyError('unknown getbundle option type %s'
-                           % keytype)
+        elif keytype != "plain":
+            raise KeyError("unknown getbundle option type %s" % keytype)
 
-    if not bundle1allowed(repo, 'pull'):
-        if not exchange.bundle2requested(opts.get('bundlecaps')):
-            if proto.name == 'http':
+    if not bundle1allowed(repo, "pull"):
+        if not exchange.bundle2requested(opts.get("bundlecaps")):
+            if proto.name == "http":
                 return ooberror(bundle2required)
-            raise error.Abort(bundle2requiredmain,
-                              hint=bundle2requiredhint)
+            raise error.Abort(bundle2requiredmain, hint=bundle2requiredhint)
 
     try:
-        if repo.ui.configbool('server', 'disablefullbundle'):
+        if repo.ui.configbool("server", "disablefullbundle"):
             # Check to see if this is a full clone.
             clheads = set(repo.changelog.heads())
-            heads = set(opts.get('heads', set()))
-            common = set(opts.get('common', set()))
+            heads = set(opts.get("heads", set()))
+            common = set(opts.get("common", set()))
             common.discard(nullid)
             if not common and clheads == heads:
                 raise error.Abort(
-                    _('server has pull-based clones disabled'),
-                    hint=_('remove --pull if specified or upgrade Mercurial'))
+                    _("server has pull-based clones disabled"),
+                    hint=_("remove --pull if specified or upgrade Mercurial"),
+                )
 
-        chunks = exchange.getbundlechunks(repo, 'serve',
-                                          **pycompat.strkwargs(opts))
+        chunks = exchange.getbundlechunks(repo, "serve", **pycompat.strkwargs(opts))
     except error.Abort as exc:
         # cleanly forward Abort error to the client
-        if not exchange.bundle2requested(opts.get('bundlecaps')):
-            if proto.name == 'http':
-                return ooberror(str(exc) + '\n')
-            raise # cannot do better for bundle1 + ssh
+        if not exchange.bundle2requested(opts.get("bundlecaps")):
+            if proto.name == "http":
+                return ooberror(str(exc) + "\n")
+            raise  # cannot do better for bundle1 + ssh
         # bundle2 request expect a bundle2 reply
         bundler = bundle2.bundle20(repo.ui)
         bundler.addpart(bundle2.createerrorpart(str(exc), hint=exc.hint))
         return streamres(gen=bundler.getchunks(), v1compressible=True)
     return streamres(gen=chunks, v1compressible=True)
 
-@wireprotocommand('heads')
+
+@wireprotocommand("heads")
 def heads(repo, proto):
     h = repo.heads()
     return encodelist(h) + "\n"
 
-@wireprotocommand('hello')
+
+@wireprotocommand("hello")
 def hello(repo, proto):
-    '''the hello command returns a set of lines describing various
+    """the hello command returns a set of lines describing various
     interesting things about the server, in an RFC822-like format.
     Currently the only one defined is "capabilities", which
     consists of a line in the form:
 
     capabilities: space separated list of tokens
-    '''
+    """
     return "capabilities: %s\n" % (capabilities(repo, proto))
 
-@wireprotocommand('listkeys', 'namespace')
+
+@wireprotocommand("listkeys", "namespace")
 def listkeys(repo, proto, namespace):
     d = repo.listkeys(encoding.tolocal(namespace)).items()
     return pushkeymod.encodekeys(d)
 
-@wireprotocommand('lookup', 'key')
+
+@wireprotocommand("lookup", "key")
 def lookup(repo, proto, key):
     try:
         k = encoding.tolocal(key)
@@ -979,53 +1034,64 @@ def lookup(repo, proto, key):
         success = 0
     return "%d %s\n" % (success, r)
 
-@wireprotocommand('known', 'nodes *')
-def known(repo, proto, nodes, others):
-    return ''.join(b and "1" or "0" for b in repo.known(decodelist(nodes)))
 
-@wireprotocommand('pushkey', 'namespace key old new')
+@wireprotocommand("known", "nodes *")
+def known(repo, proto, nodes, others):
+    return "".join(b and "1" or "0" for b in repo.known(decodelist(nodes)))
+
+
+@wireprotocommand("pushkey", "namespace key old new")
 def pushkey(repo, proto, namespace, key, old, new):
     # compatibility with pre-1.8 clients which were accidentally
     # sending raw binary nodes rather than utf-8-encoded hex
     if len(new) == 20 and util.escapestr(new) != new:
         # looks like it could be a binary node
         try:
-            new.decode('utf-8')
-            new = encoding.tolocal(new) # but cleanly decodes as UTF-8
+            new.decode("utf-8")
+            new = encoding.tolocal(new)  # but cleanly decodes as UTF-8
         except UnicodeDecodeError:
-            pass # binary, leave unmodified
+            pass  # binary, leave unmodified
     else:
-        new = encoding.tolocal(new) # normal path
+        new = encoding.tolocal(new)  # normal path
 
-    if util.safehasattr(proto, 'restore'):
+    if util.safehasattr(proto, "restore"):
 
         proto.redirect()
 
         try:
-            r = repo.pushkey(encoding.tolocal(namespace), encoding.tolocal(key),
-                             encoding.tolocal(old), new) or False
+            r = (
+                repo.pushkey(
+                    encoding.tolocal(namespace),
+                    encoding.tolocal(key),
+                    encoding.tolocal(old),
+                    new,
+                )
+                or False
+            )
         except error.Abort:
             r = False
 
         output = proto.restore()
 
-        return '%s\n%s' % (int(r), output)
+        return "%s\n%s" % (int(r), output)
 
-    r = repo.pushkey(encoding.tolocal(namespace), encoding.tolocal(key),
-                     encoding.tolocal(old), new)
-    return '%s\n' % int(r)
+    r = repo.pushkey(
+        encoding.tolocal(namespace), encoding.tolocal(key), encoding.tolocal(old), new
+    )
+    return "%s\n" % int(r)
 
-@wireprotocommand('stream_out')
+
+@wireprotocommand("stream_out")
 def stream(repo, proto):
-    '''If the server supports streaming clone, it advertises the "stream"
+    """If the server supports streaming clone, it advertises the "stream"
     capability with a value representing the version and flags of the repo
     it is serving. Client checks to see if it understands the format.
-    '''
+    """
     if not streamclone.allowservergeneration(repo):
-        return '1\n'
+        return "1\n"
 
     def getstream(it):
-        yield '0\n'
+        yield "0\n"
         for chunk in it:
             yield chunk
 
@@ -1035,50 +1101,57 @@ def stream(repo, proto):
         it = streamclone.generatev1wireproto(repo)
         return streamres(gen=getstream(it))
     except error.LockError:
-        return '2\n'
+        return "2\n"
 
-@wireprotocommand('stream_out_option', '*')
+
+@wireprotocommand("stream_out_option", "*")
 def streamoption(repo, proto, options):
-    if (repo.ui.configbool("server", "requireexplicitfullclone") and
-        options.get('fullclone', False) != 'True'):
+    if (
+        repo.ui.configbool("server", "requireexplicitfullclone")
+        and options.get("fullclone", False) != "True"
+    ):
         # For large repositories, we want to block accidental full clones.
-        repo.ui.warn(_("unable to perform an implicit streaming clone - "
-                       "make sure remotefilelog is enabled\n"))
-        return '1\n'
+        repo.ui.warn(
+            _(
+                "unable to perform an implicit streaming clone - "
+                "make sure remotefilelog is enabled\n"
+            )
+        )
+        return "1\n"
 
     return stream(repo, proto)
 
-@wireprotocommand('unbundle', 'heads')
+
+@wireprotocommand("unbundle", "heads")
 def unbundle(repo, proto, heads):
     their_heads = decodelist(heads)
 
     try:
         proto.redirect()
 
-        exchange.check_heads(repo, their_heads, 'preparing changes')
+        exchange.check_heads(repo, their_heads, "preparing changes")
 
         # write bundle data to temporary file because it can be big
-        fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
-        fp = os.fdopen(fd, pycompat.sysstr('wb+'))
+        fd, tempname = tempfile.mkstemp(prefix="hg-unbundle-")
+        fp = os.fdopen(fd, pycompat.sysstr("wb+"))
         r = 0
         try:
             proto.getfile(fp)
             fp.seek(0)
             gen = exchange.readbundle(repo.ui, fp, None)
-            if (isinstance(gen, changegroupmod.cg1unpacker)
-                and not bundle1allowed(repo, 'push')):
-                if proto.name == 'http':
+            if isinstance(gen, changegroupmod.cg1unpacker) and not bundle1allowed(
+                repo, "push"
+            ):
+                if proto.name == "http":
                     # need to special case http because stderr do not get to
                     # the http client on failed push so we need to abuse some
                     # other error type to make sure the message get to the
                     # user.
                     return ooberror(bundle2required)
-                raise error.Abort(bundle2requiredmain,
-                                  hint=bundle2requiredhint)
+                raise error.Abort(bundle2requiredmain, hint=bundle2requiredhint)
 
-            r = exchange.unbundle(repo, gen, their_heads, 'serve',
-                                  proto._client())
-            if util.safehasattr(r, 'addpart'):
+            r = exchange.unbundle(repo, gen, their_heads, "serve", proto._client())
+            if util.safehasattr(r, "addpart"):
                 # The return looks streamable, we are in the bundle2 case and
                 # should return a stream.
                 return streamres(gen=r.getchunks())
@@ -1090,7 +1163,7 @@ def unbundle(repo, proto, heads):
 
     except (error.BundleValueError, error.Abort, error.PushRaced) as exc:
         # handle non-bundle2 case first
-        if not getattr(exc, 'duringunbundle2', False):
+        if not getattr(exc, "duringunbundle2", False):
             try:
                 raise
             except error.Abort:
@@ -1106,38 +1179,39 @@ def unbundle(repo, proto, heads):
                 return pusherr(str(exc))
 
         bundler = bundle2.bundle20(repo.ui)
-        for out in getattr(exc, '_bundle2salvagedoutput', ()):
+        for out in getattr(exc, "_bundle2salvagedoutput", ()):
             bundler.addpart(out)
         try:
             try:
                 raise
             except error.PushkeyFailed as exc:
                 # check client caps
-                remotecaps = getattr(exc, '_replycaps', None)
-                if (remotecaps is not None
-                        and 'pushkey' not in remotecaps.get('error', ())):
+                remotecaps = getattr(exc, "_replycaps", None)
+                if remotecaps is not None and "pushkey" not in remotecaps.get(
+                    "error", ()
+                ):
                     # no support remote side, fallback to Abort handler.
                     raise
-                part = bundler.newpart('error:pushkey')
-                part.addparam('in-reply-to', exc.partid)
+                part = bundler.newpart("error:pushkey")
+                part.addparam("in-reply-to", exc.partid)
                 if exc.namespace is not None:
-                    part.addparam('namespace', exc.namespace, mandatory=False)
+                    part.addparam("namespace", exc.namespace, mandatory=False)
                 if exc.key is not None:
-                    part.addparam('key', exc.key, mandatory=False)
+                    part.addparam("key", exc.key, mandatory=False)
                 if exc.new is not None:
-                    part.addparam('new', exc.new, mandatory=False)
+                    part.addparam("new", exc.new, mandatory=False)
                 if exc.old is not None:
-                    part.addparam('old', exc.old, mandatory=False)
+                    part.addparam("old", exc.old, mandatory=False)
                 if exc.ret is not None:
-                    part.addparam('ret', exc.ret, mandatory=False)
+                    part.addparam("ret", exc.ret, mandatory=False)
         except error.BundleValueError as exc:
-            errpart = bundler.newpart('error:unsupportedcontent')
+            errpart = bundler.newpart("error:unsupportedcontent")
             if exc.parttype is not None:
-                errpart.addparam('parttype', exc.parttype)
+                errpart.addparam("parttype", exc.parttype)
             if exc.params:
-                errpart.addparam('params', '\0'.join(exc.params))
+                errpart.addparam("params", "\0".join(exc.params))
         except error.Abort as exc:
             bundler.addpart(bundle2.createerrorpart(str(exc), hint=exc.hint))
         except error.PushRaced as exc:
-            bundler.newpart('error:pushraced', [('message', str(exc))])
+            bundler.newpart("error:pushraced", [("message", str(exc))])
         return streamres(gen=bundler.getchunks())

@@ -17,16 +17,13 @@ import struct
 import sys
 import traceback
 
+from . import encoding, error, pycompat, util
 from .i18n import _
 from .thirdparty import selectors2
-from . import (
-    encoding,
-    error,
-    pycompat,
-    util,
-)
+
 
 logfile = None
+
 
 def log(*args):
     if not logfile:
@@ -37,6 +34,7 @@ def log(*args):
 
     logfile.flush()
 
+
 class channeledoutput(object):
     """
     Write data to out in the following format:
@@ -44,25 +42,27 @@ class channeledoutput(object):
     data length (unsigned int),
     data
     """
+
     def __init__(self, out, channel):
         self.out = out
         self.channel = channel
 
     @property
     def name(self):
-        return '<%c-channel>' % self.channel
+        return "<%c-channel>" % self.channel
 
     def write(self, data):
         if not data:
             return
         # single write() to guarantee the same atomicity as the underlying file
-        self.out.write(struct.pack('>cI', self.channel, len(data)) + data)
+        self.out.write(struct.pack(">cI", self.channel, len(data)) + data)
         self.out.flush()
 
     def __getattr__(self, attr):
-        if attr in ('isatty', 'fileno', 'tell', 'seek'):
+        if attr in ("isatty", "fileno", "tell", "seek"):
             raise AttributeError(attr)
         return getattr(self.out, attr)
+
 
 class channeledinput(object):
     """
@@ -86,7 +86,7 @@ class channeledinput(object):
 
     @property
     def name(self):
-        return '<%c-channel>' % self.channel
+        return "<%c-channel>" % self.channel
 
     def read(self, size=-1):
         if size < 0:
@@ -105,34 +105,34 @@ class channeledinput(object):
 
     def _read(self, size, channel):
         if not size:
-            return ''
+            return ""
         assert size > 0
 
         # tell the client we need at most size bytes
-        self.out.write(struct.pack('>cI', channel, size))
+        self.out.write(struct.pack(">cI", channel, size))
         self.out.flush()
 
         length = self.in_.read(4)
-        length = struct.unpack('>I', length)[0]
+        length = struct.unpack(">I", length)[0]
         if not length:
-            return ''
+            return ""
         else:
             return self.in_.read(length)
 
     def readline(self, size=-1):
         if size < 0:
             size = self.maxchunksize
-            s = self._read(size, 'L')
+            s = self._read(size, "L")
             buf = s
             # keep asking for more until there's either no more or
             # we got a full line
-            while s and s[-1] != '\n':
-                s = self._read(size, 'L')
+            while s and s[-1] != "\n":
+                s = self._read(size, "L")
                 buf += s
 
             return buf
         else:
-            return self._read(size, 'L')
+            return self._read(size, "L")
 
     def __iter__(self):
         return self
@@ -144,15 +144,17 @@ class channeledinput(object):
         return l
 
     def __getattr__(self, attr):
-        if attr in ('isatty', 'fileno', 'tell', 'seek'):
+        if attr in ("isatty", "fileno", "tell", "seek"):
             raise AttributeError(attr)
         return getattr(self.in_, attr)
+
 
 class server(object):
     """
     Listens for commands on fin, runs them and writes the output on a channel
     based stream to fout.
     """
+
     def __init__(self, ui, repo, fin, fout):
         self.cwd = pycompat.getcwd()
 
@@ -160,11 +162,11 @@ class server(object):
         logpath = ui.config("cmdserver", "log")
         if logpath:
             global logfile
-            if logpath == '-':
+            if logpath == "-":
                 # write log on a special 'd' (debug) channel
-                logfile = channeledoutput(fout, 'd')
+                logfile = channeledoutput(fout, "d")
             else:
-                logfile = open(logpath, 'a')
+                logfile = open(logpath, "a")
 
         if repo:
             # the ui here is really the repo ui so take its baseui so we don't
@@ -176,10 +178,10 @@ class server(object):
             self.ui = ui
             self.repo = self.repoui = None
 
-        self.cerr = channeledoutput(fout, 'e')
-        self.cout = channeledoutput(fout, 'o')
-        self.cin = channeledinput(fin, fout, 'I')
-        self.cresult = channeledoutput(fout, 'r')
+        self.cerr = channeledoutput(fout, "e")
+        self.cout = channeledoutput(fout, "o")
+        self.cin = channeledinput(fin, fout, "I")
+        self.cresult = channeledoutput(fout, "r")
 
         self.client = fin
 
@@ -188,7 +190,7 @@ class server(object):
 
     def _read(self, size):
         if not size:
-            return ''
+            return ""
 
         data = self.client.read(size)
 
@@ -204,16 +206,16 @@ class server(object):
         format:
         data length (uint32), data
         """
-        length = struct.unpack('>I', self._read(4))[0]
+        length = struct.unpack(">I", self._read(4))[0]
         if not length:
-            return ''
+            return ""
         return self._read(length)
 
     def _readlist(self):
         """read a list of NULL separated strings from the channel"""
         s = self._readstr()
         if s:
-            return s.split('\0')
+            return s.split("\0")
         else:
             return []
 
@@ -232,7 +234,7 @@ class server(object):
             self.repo.baseui = copiedui
             # clone ui without using ui.copy because this is protected
             repoui = self.repoui.__class__(self.repoui)
-            repoui.copy = copiedui.copy # redo copy protection
+            repoui.copy = copiedui.copy  # redo copy protection
             uis.append(repoui)
             self.repo.ui = self.repo.dirstate._ui = repoui
             self.repo.invalidateall()
@@ -242,19 +244,20 @@ class server(object):
             # any kind of interaction must use server channels, but chg may
             # replace channels by fully functional tty files. so nontty is
             # enforced only if cin is a channel.
-            if not util.safehasattr(self.cin, 'fileno'):
-                ui.setconfig('ui', 'nontty', 'true', 'commandserver')
+            if not util.safehasattr(self.cin, "fileno"):
+                ui.setconfig("ui", "nontty", "true", "commandserver")
 
-        req = dispatch.request(args[:], copiedui, self.repo, self.cin,
-                               self.cout, self.cerr)
+        req = dispatch.request(
+            args[:], copiedui, self.repo, self.cin, self.cout, self.cerr
+        )
 
-        ret = (dispatch.dispatch(req) or 0) & 255 # might return None
+        ret = (dispatch.dispatch(req) or 0) & 255  # might return None
 
         # restore old cwd
-        if '--cwd' in args:
+        if "--cwd" in args:
             os.chdir(self.cwd)
 
-        self.cresult.write(struct.pack('>i', int(ret)))
+        self.cresult.write(struct.pack(">i", int(ret)))
 
     def getencoding(self):
         """ writes the current encoding to the result channel """
@@ -269,26 +272,25 @@ class server(object):
             else:
                 # clients are expected to check what commands are supported by
                 # looking at the servers capabilities
-                raise error.Abort(_('unknown command %s') % cmd)
+                raise error.Abort(_("unknown command %s") % cmd)
 
-        return cmd != ''
+        return cmd != ""
 
-    capabilities = {'runcommand': runcommand,
-                    'getencoding': getencoding}
+    capabilities = {"runcommand": runcommand, "getencoding": getencoding}
 
     def serve(self):
-        hellomsg = 'capabilities: ' + ' '.join(sorted(self.capabilities))
-        hellomsg += '\n'
-        hellomsg += 'encoding: ' + encoding.encoding
-        hellomsg += '\n'
-        hellomsg += 'pid: %d' % util.getpid()
-        versionmod = sys.modules.get('mercurial.__version__')
+        hellomsg = "capabilities: " + " ".join(sorted(self.capabilities))
+        hellomsg += "\n"
+        hellomsg += "encoding: " + encoding.encoding
+        hellomsg += "\n"
+        hellomsg += "pid: %d" % util.getpid()
+        versionmod = sys.modules.get("mercurial.__version__")
         if versionmod:
-            hellomsg += '\n'
-            hellomsg += 'versionhash: %s' % versionmod.versionhash
-        if util.safehasattr(os, 'getpgid'):
-            hellomsg += '\n'
-            hellomsg += 'pgid: %d' % os.getpgid(0)
+            hellomsg += "\n"
+            hellomsg += "versionhash: %s" % versionmod.versionhash
+        if util.safehasattr(os, "getpgid"):
+            hellomsg += "\n"
+            hellomsg += "pgid: %d" % os.getpgid(0)
 
         # write the hello msg in -one- chunk
         self.cout.write(hellomsg)
@@ -303,13 +305,16 @@ class server(object):
 
         return 0
 
+
 def _protectio(ui):
     """ duplicates streams and redirect original to null if ui uses stdio """
     ui.flush()
     newfiles = []
     nullfd = os.open(os.devnull, os.O_RDWR)
-    for f, sysf, mode in [(ui.fin, util.stdin, pycompat.sysstr('rb')),
-                          (ui.fout, util.stdout, pycompat.sysstr('wb'))]:
+    for f, sysf, mode in [
+        (ui.fin, util.stdin, pycompat.sysstr("rb")),
+        (ui.fout, util.stdout, pycompat.sysstr("wb")),
+    ]:
         if f is sysf:
             newfd = os.dup(f.fileno())
             os.dup2(nullfd, f.fileno())
@@ -317,6 +322,7 @@ def _protectio(ui):
         newfiles.append(f)
     os.close(nullfd)
     return tuple(newfiles)
+
 
 def _restoreio(ui, fin, fout):
     """ restores streams from duplicated ones """
@@ -326,7 +332,9 @@ def _restoreio(ui, fin, fout):
             os.dup2(f.fileno(), uif.fileno())
             f.close()
 
+
 class pipeservice(object):
+
     def __init__(self, ui, repo, opts):
         self.ui = ui
         self.repo = repo
@@ -346,6 +354,7 @@ class pipeservice(object):
             sv.cleanup()
             _restoreio(ui, fin, fout)
 
+
 def _initworkerprocess():
     # use a different process group from the master process, in order to:
     # 1. make the current process group no longer "orphaned" (because the
@@ -363,9 +372,10 @@ def _initworkerprocess():
     # same state inherited from parent.
     random.seed()
 
+
 def _serverequest(ui, repo, conn, createcmdserver):
-    fin = conn.makefile('rb')
-    fout = conn.makefile('wb')
+    fin = conn.makefile("rb")
+    fout = conn.makefile("wb")
     sv = None
     try:
         sv = createcmdserver(repo, conn, fin, fout)
@@ -374,7 +384,7 @@ def _serverequest(ui, repo, conn, createcmdserver):
         # handle exceptions that may be raised by command server. most of
         # known exceptions are caught by dispatch.
         except error.Abort as inst:
-            ui.warn(_('abort: %s\n') % inst)
+            ui.warn(_("abort: %s\n") % inst)
         except IOError as inst:
             if inst.errno != errno.EPIPE:
                 raise
@@ -382,13 +392,13 @@ def _serverequest(ui, repo, conn, createcmdserver):
             pass
         finally:
             sv.cleanup()
-    except: # re-raises
+    except:  # re-raises
         # also write traceback to error channel. otherwise client cannot
         # see it because it is written to server's stderr by default.
         if sv:
             cerr = sv.cerr
         else:
-            cerr = channeledoutput(fout, 'e')
+            cerr = channeledoutput(fout, "e")
         traceback.print_exc(file=cerr)
         raise
     finally:
@@ -398,6 +408,7 @@ def _serverequest(ui, repo, conn, createcmdserver):
         except IOError as inst:
             if inst.errno != errno.EPIPE:
                 raise
+
 
 class unixservicehandler(object):
     """Set of pluggable operations for unix-mode services
@@ -414,7 +425,7 @@ class unixservicehandler(object):
     def bindsocket(self, sock, address):
         util.bindunixsocket(sock, address)
         sock.listen(socket.SOMAXCONN)
-        self.ui.status(_('listening at %s\n') % address)
+        self.ui.status(_("listening at %s\n") % address)
         self.ui.flush()  # avoid buffering of status message
 
     def unlinksocket(self, address):
@@ -432,6 +443,7 @@ class unixservicehandler(object):
         serves for the current connection"""
         return server(self.ui, repo, fin, fout)
 
+
 class unixforkingservice(object):
     """
     Listens on unix domain socket and forks server per connection
@@ -440,11 +452,11 @@ class unixforkingservice(object):
     def __init__(self, ui, repo, opts, handler=None):
         self.ui = ui
         self.repo = repo
-        self.address = opts['address']
-        if not util.safehasattr(socket, 'AF_UNIX'):
-            raise error.Abort(_('unsupported platform'))
+        self.address = opts["address"]
+        if not util.safehasattr(socket, "AF_UNIX"):
+            raise error.Abort(_("unsupported platform"))
         if not self.address:
-            raise error.Abort(_('no socket path specified with --address'))
+            raise error.Abort(_("no socket path specified with --address"))
         self._servicehandler = handler or unixservicehandler(ui)
         self._sock = None
         self._oldsigchldhandler = None
@@ -454,7 +466,7 @@ class unixforkingservice(object):
     def init(self):
         self._sock = socket.socket(socket.AF_UNIX)
         self._servicehandler.bindsocket(self._sock, self.address)
-        if util.safehasattr(util, 'unblocksignal'):
+        if util.safehasattr(util, "unblocksignal"):
             util.unblocksignal(signal.SIGCHLD)
         o = signal.signal(signal.SIGCHLD, self._sigchldhandler)
         self._oldsigchldhandler = o
@@ -508,7 +520,7 @@ class unixforkingservice(object):
             pid = os.fork()
             if pid:
                 try:
-                    self.ui.debug('forked worker process (pid=%d)\n' % pid)
+                    self.ui.debug("forked worker process (pid=%d)\n" % pid)
                     self._workerpids.add(pid)
                     h.newconnection()
                 finally:
@@ -543,7 +555,7 @@ class unixforkingservice(object):
             if pid == 0:
                 # no waitable child processes
                 return
-            self.ui.debug('worker process exited (pid=%d)\n' % pid)
+            self.ui.debug("worker process exited (pid=%d)\n" % pid)
             self._workerpids.discard(pid)
 
     def _runworker(self, conn):

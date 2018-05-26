@@ -15,22 +15,18 @@ import stat
 import sys
 import tempfile
 
+from . import encoding, error, policy, pycompat, win32
 from .i18n import _
-from . import (
-    encoding,
-    error,
-    policy,
-    pycompat,
-    win32,
-)
+
 
 try:
     import _winreg as winreg
+
     winreg.CloseKey
 except ImportError:
     import winreg
 
-osutil = policy.importmod(r'osutil')
+osutil = policy.importmod(r"osutil")
 
 executablepath = win32.executablepath
 getuser = win32.getuser
@@ -47,6 +43,7 @@ testpid = win32.testpid
 unlink = win32.unlink
 
 umask = 0o022
+
 
 class mixedfilemodewrapper(object):
     """Wraps a file handle when it is opened in read/write mode.
@@ -65,8 +62,8 @@ class mixedfilemodewrapper(object):
     OPWRITE = 2
 
     def __init__(self, fp):
-        object.__setattr__(self, r'_fp', fp)
-        object.__setattr__(self, r'_lastop', 0)
+        object.__setattr__(self, r"_fp", fp)
+        object.__setattr__(self, r"_lastop", 0)
 
     def __enter__(self):
         return self._fp.__enter__()
@@ -84,68 +81,70 @@ class mixedfilemodewrapper(object):
         self._fp.seek(0, os.SEEK_CUR)
 
     def seek(self, *args, **kwargs):
-        object.__setattr__(self, r'_lastop', self.OPNONE)
+        object.__setattr__(self, r"_lastop", self.OPNONE)
         return self._fp.seek(*args, **kwargs)
 
     def write(self, d):
         if self._lastop == self.OPREAD:
             self._noopseek()
 
-        object.__setattr__(self, r'_lastop', self.OPWRITE)
+        object.__setattr__(self, r"_lastop", self.OPWRITE)
         return self._fp.write(d)
 
     def writelines(self, *args, **kwargs):
         if self._lastop == self.OPREAD:
             self._noopeseek()
 
-        object.__setattr__(self, r'_lastop', self.OPWRITE)
+        object.__setattr__(self, r"_lastop", self.OPWRITE)
         return self._fp.writelines(*args, **kwargs)
 
     def read(self, *args, **kwargs):
         if self._lastop == self.OPWRITE:
             self._noopseek()
 
-        object.__setattr__(self, r'_lastop', self.OPREAD)
+        object.__setattr__(self, r"_lastop", self.OPREAD)
         return self._fp.read(*args, **kwargs)
 
     def readline(self, *args, **kwargs):
         if self._lastop == self.OPWRITE:
             self._noopseek()
 
-        object.__setattr__(self, r'_lastop', self.OPREAD)
+        object.__setattr__(self, r"_lastop", self.OPREAD)
         return self._fp.readline(*args, **kwargs)
 
     def readlines(self, *args, **kwargs):
         if self._lastop == self.OPWRITE:
             self._noopseek()
 
-        object.__setattr__(self, r'_lastop', self.OPREAD)
+        object.__setattr__(self, r"_lastop", self.OPREAD)
         return self._fp.readlines(*args, **kwargs)
 
-def posixfile(name, mode='r', buffering=-1):
-    '''Open a file with even more POSIX-like semantics'''
+
+def posixfile(name, mode="r", buffering=-1):
+    """Open a file with even more POSIX-like semantics"""
     try:
-        fp = osutil.posixfile(name, mode, buffering) # may raise WindowsError
+        fp = osutil.posixfile(name, mode, buffering)  # may raise WindowsError
 
         # The position when opening in append mode is implementation defined, so
         # make it consistent with other platforms, which position at EOF.
-        if 'a' in mode:
+        if "a" in mode:
             fp.seek(0, os.SEEK_END)
 
-        if '+' in mode:
+        if "+" in mode:
             return mixedfilemodewrapper(fp)
 
         return fp
     except WindowsError as err:
         # convert to a friendlier exception
-        raise IOError(err.errno, '%s: %s' % (
-            name, encoding.strtolocal(err.strerror)))
+        raise IOError(err.errno, "%s: %s" % (name, encoding.strtolocal(err.strerror)))
+
 
 # may be wrapped by win32mbcs extension
 listdir = osutil.listdir
 
+
 class winstdout(object):
-    '''stdout on windows misbehaves if sent through a pipe'''
+    """stdout on windows misbehaves if sent through a pipe"""
 
     def __init__(self, fp):
         self.fp = fp
@@ -175,7 +174,7 @@ class winstdout(object):
             if inst.errno != 0:
                 raise
             self.close()
-            raise IOError(errno.EPIPE, 'Broken pipe')
+            raise IOError(errno.EPIPE, "Broken pipe")
 
     def flush(self):
         try:
@@ -183,75 +182,91 @@ class winstdout(object):
         except IOError as inst:
             if inst.errno != errno.EINVAL:
                 raise
-            raise IOError(errno.EPIPE, 'Broken pipe')
+            raise IOError(errno.EPIPE, "Broken pipe")
+
 
 def _is_win_9x():
-    '''return true if run on windows 95, 98 or me.'''
+    """return true if run on windows 95, 98 or me."""
     try:
         return sys.getwindowsversion()[3] == 1
     except AttributeError:
-        return 'command' in encoding.environ.get('comspec', '')
+        return "command" in encoding.environ.get("comspec", "")
+
 
 def openhardlinks():
     return not _is_win_9x()
 
+
 def parsepatchoutput(output_line):
     """parses the output produced by patch and returns the filename"""
     pf = output_line[14:]
-    if pf[0] == '`':
-        pf = pf[1:-1] # Remove the quotes
+    if pf[0] == "`":
+        pf = pf[1:-1]  # Remove the quotes
     return pf
 
+
 def sshargs(sshcmd, host, user, port):
-    '''Build argument list for ssh or Plink'''
-    pflag = 'plink' in sshcmd.lower() and '-P' or '-p'
+    """Build argument list for ssh or Plink"""
+    pflag = "plink" in sshcmd.lower() and "-P" or "-p"
     args = user and ("%s@%s" % (user, host)) or host
-    if args.startswith('-') or args.startswith('/'):
+    if args.startswith("-") or args.startswith("/"):
         raise error.Abort(
-            _('illegal ssh hostname or username starting with - or /: %s') %
-            args)
+            _("illegal ssh hostname or username starting with - or /: %s") % args
+        )
     args = shellquote(args)
     if port:
-        args = '%s %s %s' % (pflag, shellquote(port), args)
+        args = "%s %s %s" % (pflag, shellquote(port), args)
     return args
+
 
 def setflags(f, l, x):
     pass
 
+
 def copymode(src, dst, mode=None):
     pass
+
 
 def checkexec(path):
     return False
 
+
 def checklink(path):
     return False
+
 
 def setbinary(fd):
     # When run without console, pipes may expose invalid
     # fileno(), usually set to -1.
-    fno = getattr(fd, 'fileno', None)
+    fno = getattr(fd, "fileno", None)
     if fno is not None and fno() >= 0:
         msvcrt.setmode(fno(), os.O_BINARY)
 
+
 def pconvert(path):
-    return path.replace(pycompat.ossep, '/')
+    return path.replace(pycompat.ossep, "/")
+
 
 def localpath(path):
-    return path.replace('/', '\\')
+    return path.replace("/", "\\")
+
 
 def normpath(path):
     return pconvert(os.path.normpath(path))
 
+
 def normcase(path):
-    return encoding.upper(path) # NTFS compares via upper()
+    return encoding.upper(path)  # NTFS compares via upper()
+
 
 # see posix.py for definitions
 normcasespec = encoding.normcasespecs.upper
 normcasefallback = encoding.upperfallback
 
+
 def samestat(s1, s2):
     return False
+
 
 # A sequence of backslashes is special iff it precedes a double quote:
 # - if there's an even number of backslashes, the double quote is not
@@ -266,6 +281,8 @@ def samestat(s1, s2):
 # quote we've appended to the end)
 _quotere = None
 _needsshellquote = None
+
+
 def shellquote(s):
     r"""
     >>> shellquote(br'C:\Users\xyz')
@@ -289,11 +306,12 @@ def shellquote(s):
         # safe because shlex.split() (kind of) treats it as an escape char and
         # drops it.  It will leave the next character, even if it is another
         # "\".
-        _needsshellquote = re.compile(r'[^a-zA-Z0-9._:/-]').search
+        _needsshellquote = re.compile(r"[^a-zA-Z0-9._:/-]").search
     if s and not _needsshellquote(s) and not _quotere.search(s):
         # "s" shouldn't have to be quoted
         return s
-    return '"%s"' % _quotere.sub(r'\1\1\\\2', s)
+    return '"%s"' % _quotere.sub(r"\1\1\\\2", s)
+
 
 def quotecommand(cmd):
     """Build a command string suitable for os.popen* calls."""
@@ -302,34 +320,38 @@ def quotecommand(cmd):
         return '"' + cmd + '"'
     return cmd
 
-def popen(command, mode='r'):
+
+def popen(command, mode="r"):
     # Work around "popen spawned process may not write to stdout
     # under windows"
     # http://bugs.python.org/issue1366
     command += " 2> %s" % os.devnull
     return os.popen(quotecommand(command), mode)
 
+
 def explainexit(code):
     return _("exited with status %d") % code, code
+
 
 # if you change this stub into a real check, please try to implement the
 # username and groupname functions above, too.
 def isowner(st):
     return True
 
+
 def findexe(command):
-    '''Find executable for command searching like cmd.exe does.
+    """Find executable for command searching like cmd.exe does.
     If command is a basename then PATH is searched for command.
     PATH isn't searched if command is an absolute or relative path.
     An extension from PATHEXT is found and added if not present.
-    If command isn't found None is returned.'''
-    pathext = encoding.environ.get('PATHEXT', '.COM;.EXE;.BAT;.CMD')
+    If command isn't found None is returned."""
+    pathext = encoding.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD")
     pathexts = [ext for ext in pathext.lower().split(pycompat.ospathsep)]
     if os.path.splitext(command)[1].lower() in pathexts:
-        pathexts = ['']
+        pathexts = [""]
 
     def findexisting(pathcommand):
-        'Will append extension (if needed) and return existing file'
+        "Will append extension (if needed) and return existing file"
         for ext in pathexts:
             executable = pathcommand + ext
             if os.path.exists(executable):
@@ -339,41 +361,47 @@ def findexe(command):
     if pycompat.ossep in command:
         return findexisting(command)
 
-    for path in encoding.environ.get('PATH', '').split(pycompat.ospathsep):
+    for path in encoding.environ.get("PATH", "").split(pycompat.ospathsep):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:
             return executable
     return findexisting(os.path.expanduser(os.path.expandvars(command)))
 
+
 _wantedkinds = {stat.S_IFREG, stat.S_IFLNK}
 
+
 def statfiles(files):
-    '''Stat each file in files. Yield each stat, or None if a file
+    """Stat each file in files. Yield each stat, or None if a file
     does not exist or has a type we don't care about.
 
-    Cluster and cache stat per directory to minimize number of OS stat calls.'''
-    dircache = {} # dirname -> filename -> status | None if file does not exist
+    Cluster and cache stat per directory to minimize number of OS stat calls."""
+    dircache = {}  # dirname -> filename -> status | None if file does not exist
     getkind = stat.S_IFMT
     for nf in files:
-        nf  = normcase(nf)
+        nf = normcase(nf)
         dir, base = os.path.split(nf)
         if not dir:
-            dir = '.'
+            dir = "."
         cache = dircache.get(dir, None)
         if cache is None:
             try:
-                dmap = dict([(normcase(n), s)
-                             for n, k, s in listdir(dir, True)
-                             if getkind(s.st_mode) in _wantedkinds])
+                dmap = dict(
+                    [
+                        (normcase(n), s)
+                        for n, k, s in listdir(dir, True)
+                        if getkind(s.st_mode) in _wantedkinds
+                    ]
+                )
             except OSError as err:
                 # Python >= 2.5 returns ENOENT and adds winerror field
                 # EINVAL is raised if dir is not a directory.
-                if err.errno not in (errno.ENOENT, errno.EINVAL,
-                                     errno.ENOTDIR):
+                if err.errno not in (errno.ENOENT, errno.EINVAL, errno.ENOTDIR):
                     raise
                 dmap = {}
             cache = dircache.setdefault(dir, dmap)
         yield cache.get(base, None)
+
 
 def username(uid=None):
     """Return the name of the user with the given uid.
@@ -381,11 +409,13 @@ def username(uid=None):
     If uid is None, return the name of the current user."""
     return None
 
+
 def groupname(gid=None):
     """Return the name of the group with the given gid.
 
     If gid is None, return the name of the current group."""
     return None
+
 
 def removedirs(name):
     """special version of os.removedirs that does not remove symlinked
@@ -405,8 +435,9 @@ def removedirs(name):
             break
         head, tail = os.path.split(head)
 
+
 def rename(src, dst):
-    '''atomically rename file src to dst, replacing dst if it exists'''
+    """atomically rename file src to dst, replacing dst if it exists"""
     try:
         os.rename(src, dst)
     except OSError as e:
@@ -415,17 +446,22 @@ def rename(src, dst):
         unlink(dst)
         os.rename(src, dst)
 
+
 def gethgcmd():
     return [sys.executable] + sys.argv[:1]
+
 
 def groupmembers(name):
     # Don't support groups on Windows for now
     raise KeyError
 
+
 def isexec(f):
     return False
 
+
 class cachestat(object):
+
     def __init__(self, path):
         self.fi = win32.getfileinfo(path)
 
@@ -439,21 +475,19 @@ class cachestat(object):
             lhs = self.fi
             rhs = other.fi
             return (
-                lhs.dwFileAttributes == rhs.dwFileAttributes and
-                lhs.ftCreationTime.dwLowDateTime ==
-                    rhs.ftCreationTime.dwLowDateTime and
-                lhs.ftCreationTime.dwHighDateTime ==
-                    rhs.ftCreationTime.dwHighDateTime and
-                lhs.ftLastWriteTime.dwLowDateTime ==
-                    rhs.ftLastWriteTime.dwLowDateTime and
-                lhs.ftLastWriteTime.dwHighDateTime ==
-                    rhs.ftLastWriteTime.dwHighDateTime and
-                lhs.dwVolumeSerialNumber ==
-                    rhs.dwVolumeSerialNumber and
-                lhs.nFileSizeHigh == rhs.nFileSizeHigh and
-                lhs.nFileSizeLow == rhs.nFileSizeLow and
-                lhs.nFileIndexHigh == rhs.nFileIndexHigh and
-                lhs.nFileIndexLow == rhs.nFileIndexLow
+                lhs.dwFileAttributes == rhs.dwFileAttributes
+                and lhs.ftCreationTime.dwLowDateTime == rhs.ftCreationTime.dwLowDateTime
+                and lhs.ftCreationTime.dwHighDateTime
+                == rhs.ftCreationTime.dwHighDateTime
+                and lhs.ftLastWriteTime.dwLowDateTime
+                == rhs.ftLastWriteTime.dwLowDateTime
+                and lhs.ftLastWriteTime.dwHighDateTime
+                == rhs.ftLastWriteTime.dwHighDateTime
+                and lhs.dwVolumeSerialNumber == rhs.dwVolumeSerialNumber
+                and lhs.nFileSizeHigh == rhs.nFileSizeHigh
+                and lhs.nFileSizeLow == rhs.nFileSizeLow
+                and lhs.nFileIndexHigh == rhs.nFileIndexHigh
+                and lhs.nFileIndexLow == rhs.nFileIndexLow
             )
         except AttributeError:
             return False
@@ -461,15 +495,16 @@ class cachestat(object):
     def __ne__(self, other):
         return not self == other
 
+
 def lookupreg(key, valname=None, scope=None):
-    ''' Look up a key/value name in the Windows registry.
+    """ Look up a key/value name in the Windows registry.
 
     valname: value name. If unspecified, the default value for the key
     is used.
     scope: optionally specify scope for registry lookup, this can be
     a sequence of scopes to look up in order. Default (CURRENT_USER,
     LOCAL_MACHINE).
-    '''
+    """
     if scope is None:
         scope = (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE)
     elif not isinstance(scope, (list, tuple)):
@@ -482,19 +517,24 @@ def lookupreg(key, valname=None, scope=None):
         except EnvironmentError:
             pass
 
+
 expandglobs = True
 
+
 def statislink(st):
-    '''check whether a stat result is a symlink'''
+    """check whether a stat result is a symlink"""
     return False
 
+
 def statisexec(st):
-    '''check whether a stat result is an executable file'''
+    """check whether a stat result is an executable file"""
     return False
+
 
 def poll(fds):
     # see posix.py for description
     raise NotImplementedError()
+
 
 def readpipe(pipe):
     """Read all available data from a pipe."""
@@ -509,27 +549,30 @@ def readpipe(pipe):
             break
         chunks.append(s)
 
-    return ''.join(chunks)
+    return "".join(chunks)
+
 
 def bindunixsocket(sock, path):
-    raise NotImplementedError('unsupported platform')
+    raise NotImplementedError("unsupported platform")
+
 
 def _cleanuptemplockfiles(dirname, basename):
     for susp in os.listdir(dirname):
-        if not susp.startswith(basename) or not susp.endswith('.tmplock'):
+        if not susp.startswith(basename) or not susp.endswith(".tmplock"):
             continue
         try:
             os.unlink(os.path.join(dirname, susp))
         except WindowsError:
             pass
 
+
 def makelock(info, pathname):
     dirname = os.path.dirname(pathname)
     basename = os.path.basename(pathname)
     _cleanuptemplockfiles(dirname, basename)
-    fd, tname = tempfile.mkstemp(suffix='.tmplock',
-                                 prefix='%s.%i.' % (basename, os.getpid()),
-                                 dir=dirname)
+    fd, tname = tempfile.mkstemp(
+        suffix=".tmplock", prefix="%s.%i." % (basename, os.getpid()), dir=dirname
+    )
     os.write(fd, info)
     os.fsync(fd)
     os.close(fd)

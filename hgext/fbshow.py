@@ -41,35 +41,44 @@ and 'hg show --stat' prints something like:
 
 """
 
-from mercurial.i18n import _
 from mercurial import cmdutil, commands, error, registrar, scmutil
+from mercurial.i18n import _
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-testedwith = 'ships-with-fb-hgext'
+testedwith = "ships-with-fb-hgext"
+
 
 def uisetup(ui):
-    permitted_opts = [
-        ('g', 'git', None, _('use git extended diff format')),
-        ('', 'stat', None, _('output diffstat-style summary of changes')),
-    ] + commands.templateopts + commands.walkopts
+    permitted_opts = (
+        [
+            ("g", "git", None, _("use git extended diff format")),
+            ("", "stat", None, _("output diffstat-style summary of changes")),
+        ]
+        + commands.templateopts
+        + commands.walkopts
+    )
 
     local_opts = [
-        ('', 'nodates', None, _('omit dates from diff headers ' +
-                                '(but keeps it in commit header)')),
-        ('', 'noprefix', None, _('omit a/ and b/ prefixes from filenames')),
-        ('U', 'unified', int, _('number of lines of diff context to show')),
+        (
+            "",
+            "nodates",
+            None,
+            _("omit dates from diff headers " + "(but keeps it in commit header)"),
+        ),
+        ("", "noprefix", None, _("omit a/ and b/ prefixes from filenames")),
+        ("U", "unified", int, _("number of lines of diff context to show")),
     ] + commands.diffwsopts
 
-    aliases, entry = cmdutil.findcmd('log', commands.table)
-    allowed_opts = [opt for opt in entry[1]
-                        if opt in permitted_opts] + local_opts
+    aliases, entry = cmdutil.findcmd("log", commands.table)
+    allowed_opts = [opt for opt in entry[1] if opt in permitted_opts] + local_opts
 
     # manual call of the decorator
-    command('^show',
-            allowed_opts,
-            _('[OPTION]... [REV [FILE]...]'),
-            inferrepo=True)(show)
+    command("^show", allowed_opts, _("[OPTION]... [REV [FILE]...]"), inferrepo=True)(
+        show
+    )
+
 
 def show(ui, repo, *args, **opts):
     """show revision in detail
@@ -82,34 +91,34 @@ def show(ui, repo, *args, **opts):
     specifying custom templates.
 
     """
-    ui.pager('show')
+    ui.pager("show")
     if len(args) == 0:
-        opts['rev'] = ['.']
+        opts["rev"] = ["."]
         pats = []
     else:
-        opts['rev'] = [args[0]]
+        opts["rev"] = [args[0]]
         pats = args[1:]
-        if not scmutil.revrange(repo, opts['rev']):
+        if not scmutil.revrange(repo, opts["rev"]):
             h = _("if %s is a file, try `hg show . %s`") % (args[0], args[0])
-            raise error.Abort(_("unknown revision %s") % args[0],
-                              hint=h)
+            raise error.Abort(_("unknown revision %s") % args[0], hint=h)
 
-    opts['patch'] = not opts['stat']
-    opts['verbose'] = True
+    opts["patch"] = not opts["stat"]
+    opts["verbose"] = True
 
     # Copy tracking is slow when doing a git diff. Override hgrc, and rely on
     # opts getting us a git diff if it's been requested. Ideally, we'd find and
     # fix the slowness in copy tracking, but this works for now.
     # On a commit with lots of possible copies, Bryan O'Sullivan found that this
     # reduces "time hg show" from 1.76 seconds to 0.81 seconds.
-    overrides = {('diff', 'git'): opts.get('git')
-                ,('diff', 'unified'): opts.get('unified')
-                ,('ui', 'verbose'): True}
-    overrides.update({('diff', opt): opts.get(opt)
-                      for opt in commands.diffwsopts})
+    overrides = {
+        ("diff", "git"): opts.get("git"),
+        ("diff", "unified"): opts.get("unified"),
+        ("ui", "verbose"): True,
+    }
+    overrides.update({("diff", opt): opts.get(opt) for opt in commands.diffwsopts})
 
-    logcmd, defaultlogopts = cmdutil.getcmdanddefaultopts('log', commands.table)
+    logcmd, defaultlogopts = cmdutil.getcmdanddefaultopts("log", commands.table)
     defaultlogopts.update(opts)
 
-    with ui.configoverride(overrides, 'show'):
+    with ui.configoverride(overrides, "show"):
         logcmd(ui, repo, *pats, **defaultlogopts)

@@ -20,12 +20,9 @@ import sys
 import tempfile
 import unicodedata
 
+from . import encoding, error, pycompat
 from .i18n import _
-from . import (
-    encoding,
-    error,
-    pycompat,
-)
+
 
 posixfile = open
 normpath = os.path.normpath
@@ -38,8 +35,9 @@ except AttributeError:
     # poor souls, just say we tried and that it failed so we fall back
     # to copies.
     def oslink(src, dst):
-        raise OSError(errno.EINVAL,
-                      'hardlinks not supported: %s to %s' % (src, dst))
+        raise OSError(errno.EINVAL, "hardlinks not supported: %s to %s" % (src, dst))
+
+
 unlink = os.unlink
 rename = os.rename
 removedirs = os.removedirs
@@ -48,8 +46,9 @@ expandglobs = False
 umask = os.umask(0)
 os.umask(umask)
 
+
 def split(p):
-    '''Same as posixpath.split, but faster
+    """Same as posixpath.split, but faster
 
     >>> import posixpath
     >>> for f in [b'/absolute/path/to/file',
@@ -61,14 +60,15 @@ def split(p):
     ...           b'///multiple_leading_separators_at_root',
     ...           b'']:
     ...     assert split(f) == posixpath.split(f), f
-    '''
-    ht = p.rsplit('/', 1)
+    """
+    ht = p.rsplit("/", 1)
     if len(ht) == 1:
-        return '', p
-    nh = ht[0].rstrip('/')
+        return "", p
+    nh = ht[0].rstrip("/")
     if nh:
         return nh, ht[1]
-    return ht[0] + '/', ht[1]
+    return ht[0] + "/", ht[1]
+
 
 def makelock(info, pathname):
     try:
@@ -76,46 +76,53 @@ def makelock(info, pathname):
     except OSError as why:
         if why.errno == errno.EEXIST:
             raise
-    except AttributeError: # no symlink in os
+    except AttributeError:  # no symlink in os
         pass
 
     ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
     os.write(ld, info)
     os.close(ld)
 
+
 def openhardlinks():
-    '''return true if it is safe to hold open file handles to hardlinks'''
+    """return true if it is safe to hold open file handles to hardlinks"""
     return True
 
+
 def nlinks(name):
-    '''return number of hardlinks for the given file'''
+    """return number of hardlinks for the given file"""
     return os.lstat(name).st_nlink
+
 
 def parsepatchoutput(output_line):
     """parses the output produced by patch and returns the filename"""
     pf = output_line[14:]
-    if pycompat.sysplatform == 'OpenVMS':
-        if pf[0] == '`':
-            pf = pf[1:-1] # Remove the quotes
+    if pycompat.sysplatform == "OpenVMS":
+        if pf[0] == "`":
+            pf = pf[1:-1]  # Remove the quotes
     else:
         if pf.startswith("'") and pf.endswith("'") and " " in pf:
-            pf = pf[1:-1] # Remove the quotes
+            pf = pf[1:-1]  # Remove the quotes
     return pf
 
+
 def sshargs(sshcmd, host, user, port):
-    '''Build argument list for ssh'''
+    """Build argument list for ssh"""
     args = user and ("%s@%s" % (user, host)) or host
-    if '-' in args[:1]:
+    if "-" in args[:1]:
         raise error.Abort(
-            _('illegal ssh hostname or username starting with -: %s') % args)
+            _("illegal ssh hostname or username starting with -: %s") % args
+        )
     args = shellquote(args)
     if port:
-        args = '-p %s %s' % (shellquote(port), args)
+        args = "-p %s %s" % (shellquote(port), args)
     return args
+
 
 def isexec(f):
     """check whether a file is executable"""
-    return (os.lstat(f).st_mode & 0o100 != 0)
+    return os.lstat(f).st_mode & 0o100 != 0
+
 
 def setflags(f, l, x):
     st = os.lstat(f)
@@ -143,7 +150,7 @@ def setflags(f, l, x):
         fp = open(f, "w")
         fp.write(data)
         fp.close()
-        s = 0o666 & ~umask # avoid restatting for chmod
+        s = 0o666 & ~umask  # avoid restatting for chmod
 
     sx = s & 0o100
     if st.st_nlink > 1 and bool(x) != bool(sx):
@@ -162,10 +169,11 @@ def setflags(f, l, x):
         # Turn off all +x bits
         os.chmod(f, s & 0o666)
 
+
 def copymode(src, dst, mode=None):
-    '''Copy the file mode from the file at path src to dst.
+    """Copy the file mode from the file at path src to dst.
     If src doesn't exist, we're using mode instead. If mode is None, we're
-    using umask.'''
+    using umask."""
     try:
         st_mode = os.lstat(src).st_mode & 0o777
     except OSError as inst:
@@ -176,6 +184,7 @@ def copymode(src, dst, mode=None):
             st_mode = ~umask
         st_mode &= 0o666
     os.chmod(dst, st_mode)
+
 
 def _checkexec(path):
     """
@@ -190,10 +199,10 @@ def _checkexec(path):
 
     try:
         EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-        cachedir = os.path.join(path, '.hg', 'cache')
+        cachedir = os.path.join(path, ".hg", "cache")
         if os.path.isdir(cachedir):
-            checkisexec = os.path.join(cachedir, 'checkisexec')
-            checknoexec = os.path.join(cachedir, 'checknoexec')
+            checkisexec = os.path.join(cachedir, "checkisexec")
+            checknoexec = os.path.join(cachedir, "checknoexec")
 
             try:
                 m = os.stat(checkisexec).st_mode
@@ -210,7 +219,7 @@ def _checkexec(path):
                     except OSError as e:
                         if e.errno != errno.ENOENT:
                             raise
-                        open(checknoexec, 'w').close() # might fail
+                        open(checknoexec, "w").close()  # might fail
                         m = os.stat(checknoexec).st_mode
                     if m & EXECFLAGS == 0:
                         # check-exec is exec and check-no-exec is not exec
@@ -226,7 +235,7 @@ def _checkexec(path):
             # check directly in path and don't leave checkisexec behind
             checkdir = path
             checkisexec = None
-        fh, fn = tempfile.mkstemp(dir=checkdir, prefix='hg-checkexec-')
+        fh, fn = tempfile.mkstemp(dir=checkdir, prefix="hg-checkexec-")
         try:
             os.close(fh)
             m = os.stat(fn).st_mode
@@ -244,13 +253,14 @@ def _checkexec(path):
         # we don't care, the user probably won't be able to commit anyway
         return False
 
+
 def _checklink(path):
     """check whether the given path is on a symlink-capable filesystem"""
     # mktemp is not racy because symlink creation will fail if the
     # file already exists
     while True:
-        cachedir = os.path.join(path, '.hg', 'cache')
-        checklink = os.path.join(cachedir, 'checklink')
+        cachedir = os.path.join(path, ".hg", "cache")
+        checklink = os.path.join(cachedir, "checklink")
         # try fast path, read only
         if os.path.islink(checklink):
             return True
@@ -260,21 +270,21 @@ def _checklink(path):
             checkdir = path
             cachedir = None
         fscheckdir = pycompat.fsdecode(checkdir)
-        name = tempfile.mktemp(dir=fscheckdir,
-                               prefix=r'checklink-')
+        name = tempfile.mktemp(dir=fscheckdir, prefix=r"checklink-")
         name = pycompat.fsencode(name)
         try:
             fd = None
             if cachedir is None:
-                fd = tempfile.NamedTemporaryFile(dir=fscheckdir,
-                                                 prefix=r'hg-checklink-')
+                fd = tempfile.NamedTemporaryFile(
+                    dir=fscheckdir, prefix=r"hg-checklink-"
+                )
                 target = pycompat.fsencode(os.path.basename(fd.name))
             else:
                 # create a fixed file to link to; doesn't matter if it
                 # already exists.
-                target = 'checklink-target'
+                target = "checklink-target"
                 try:
-                    open(os.path.join(cachedir, target), 'w').close()
+                    open(os.path.join(cachedir, target), "w").close()
                 except IOError as inst:
                     if inst[0] == errno.EACCES:
                         # If we can't write to cachedir, just pretend
@@ -310,51 +320,60 @@ def _checklink(path):
                 unlink(name)
             return False
 
+
 def _checkbrokensymlink(path, msg=None):
-    '''Check if path or one of its parent directory is a broken symlink.  Raise
+    """Check if path or one of its parent directory is a broken symlink.  Raise
     more detailed error about it.
 
     Subject to filesystem races. ONLY call this when there is already an ENONET
     error.
 
     If msg is set, it would be used as extra context in the error message.
-    '''
+    """
     src = path
-    while src not in ('', '/'):
+    while src not in ("", "/"):
         src = os.path.dirname(src)
         errmsg = None
         try:
             if os.path.islink(src):
                 dest = os.readlink(src)
                 if not os.path.exists(src):
-                    errmsg = ("Symlink %r points to non-existed destination %r"
-                              % (src, dest))
+                    errmsg = "Symlink %r points to non-existed destination %r" % (
+                        src,
+                        dest,
+                    )
                     if msg:
-                        errmsg += ' during %s' % msg
+                        errmsg += " during %s" % msg
         except OSError:
             # Ignore filesystem races (ex. "src" is deleted before readlink)
             pass
         if errmsg:
             raise OSError(errno.ENOENT, errmsg, path)
 
+
 def checkosfilename(path):
-    '''Check that the base-relative path is a valid filename on this platform.
-    Returns None if the path is ok, or a UI string describing the problem.'''
-    return None # on posix platforms, every path is ok
+    """Check that the base-relative path is a valid filename on this platform.
+    Returns None if the path is ok, or a UI string describing the problem."""
+    return None  # on posix platforms, every path is ok
+
 
 def setbinary(fd):
     pass
 
+
 def pconvert(path):
     return path
 
+
 def localpath(path):
     return path
+
 
 def samefile(fpath1, fpath2):
     """Returns whether path1 and path2 refer to the same file. This is only
     guaranteed to work for files, not directories."""
     return os.path.samefile(fpath1, fpath2)
+
 
 def samedevice(fpath1, fpath2):
     """Returns whether fpath1 and fpath2 are on the same device. This is only
@@ -363,10 +382,11 @@ def samedevice(fpath1, fpath2):
     st2 = os.lstat(fpath2)
     return st1.st_dev == st2.st_dev
 
+
 if pycompat.isdarwin:
 
     def normcase(path):
-        '''
+        """
         Normalize a filename for OS X-compatible comparison:
         - escape-encode invalid characters
         - decompose to NFD
@@ -381,7 +401,7 @@ if pycompat.isdarwin:
         'e\\xcc\\x81'
         >>> normcase(b'\\xb8\\xca\\xc3\\xca\\xbe\\xc8.JPG') # issue3918
         '%b8%ca%c3\\xca\\xbe%c8.jpg'
-        '''
+        """
 
         try:
             return encoding.asciilower(path)  # exception for non-ASCII
@@ -392,10 +412,10 @@ if pycompat.isdarwin:
 
     def normcasefallback(path):
         try:
-            u = path.decode('utf-8')
+            u = path.decode("utf-8")
         except UnicodeDecodeError:
             # OS X percent-encodes any bytes that aren't valid utf-8
-            s = ''
+            s = ""
             pos = 0
             l = len(path)
             while pos < l:
@@ -403,31 +423,27 @@ if pycompat.isdarwin:
                     c = encoding.getutf8char(path, pos)
                     pos += len(c)
                 except ValueError:
-                    c = '%%%02X' % ord(path[pos:pos + 1])
+                    c = "%%%02X" % ord(path[pos : pos + 1])
                     pos += 1
                 s += c
 
-            u = s.decode('utf-8')
+            u = s.decode("utf-8")
 
         # Decompose then lowercase (HFS+ technote specifies lower)
-        enc = unicodedata.normalize(r'NFD', u).lower().encode('utf-8')
+        enc = unicodedata.normalize(r"NFD", u).lower().encode("utf-8")
         # drop HFS+ ignored characters
         return encoding.hfsignoreclean(enc)
 
     checkexec = _checkexec
     checklink = _checklink
 
-elif pycompat.sysplatform == 'cygwin':
+elif pycompat.sysplatform == "cygwin":
     # workaround for cygwin, in which mount point part of path is
     # treated as case sensitive, even though underlying NTFS is case
     # insensitive.
 
     # default mount points
-    cygwinmountpoints = sorted([
-            "/usr/bin",
-            "/usr/lib",
-            "/cygdrive",
-            ], reverse=True)
+    cygwinmountpoints = sorted(["/usr/bin", "/usr/lib", "/cygdrive"], reverse=True)
 
     # use upper-ing as normcase as same as NTFS workaround
     def normcase(path):
@@ -442,7 +458,7 @@ elif pycompat.sysplatform == 'cygwin':
                 continue
 
             mplen = len(mp)
-            if mplen == pathlen: # mount point itself
+            if mplen == pathlen:  # mount point itself
                 return mp
             if path[mplen] == pycompat.ossep:
                 return mp + encoding.upper(path[mplen:])
@@ -465,6 +481,7 @@ elif pycompat.sysplatform == 'cygwin':
     def checklink(path):
         return False
 
+
 else:
     # os.path.normcase is a no-op, which doesn't help us on non-native
     # filesystems
@@ -480,33 +497,39 @@ else:
     checklink = _checklink
 
 _needsshellquote = None
+
+
 def shellquote(s):
-    if pycompat.sysplatform == 'OpenVMS':
+    if pycompat.sysplatform == "OpenVMS":
         return '"%s"' % s
     global _needsshellquote
     if _needsshellquote is None:
-        _needsshellquote = re.compile(br'[^a-zA-Z0-9._/+-]').search
+        _needsshellquote = re.compile(br"[^a-zA-Z0-9._/+-]").search
     if s and not _needsshellquote(s):
         # "s" shouldn't have to be quoted
         return s
     else:
         return "'%s'" % s.replace("'", "'\\''")
 
+
 def quotecommand(cmd):
     return cmd
 
-def popen(command, mode='r'):
+
+def popen(command, mode="r"):
     return os.popen(command, mode)
 
+
 def testpid(pid):
-    '''return False if pid dead, True if running or not sure'''
-    if pycompat.sysplatform == 'OpenVMS':
+    """return False if pid dead, True if running or not sure"""
+    if pycompat.sysplatform == "OpenVMS":
         return True
     try:
         os.kill(pid, 0)
         return True
     except OSError as inst:
         return inst.errno != errno.ESRCH
+
 
 def explainexit(code):
     """return a 2-tuple (desc, code) describing a subprocess status
@@ -515,20 +538,22 @@ def explainexit(code):
         return _("exited with status %d") % code, code
     return _("killed by signal %d") % -code, -code
 
+
 def isowner(st):
     """Return True if the stat object st is from the current user."""
     return st.st_uid == os.getuid()
 
+
 def findexe(command):
-    '''Find executable for command searching like which does.
+    """Find executable for command searching like which does.
     If command is a basename then PATH is searched for command.
     PATH isn't searched if command is an absolute or relative path.
-    If command isn't found None is returned.'''
-    if pycompat.sysplatform == 'OpenVMS':
+    If command isn't found None is returned."""
+    if pycompat.sysplatform == "OpenVMS":
         return command
 
     def findexisting(executable):
-        'Will return executable if existing file'
+        "Will return executable if existing file"
         if os.path.isfile(executable) and os.access(executable, os.X_OK):
             return executable
         return None
@@ -536,23 +561,26 @@ def findexe(command):
     if pycompat.ossep in command:
         return findexisting(command)
 
-    if pycompat.sysplatform == 'plan9':
-        return findexisting(os.path.join('/bin', command))
+    if pycompat.sysplatform == "plan9":
+        return findexisting(os.path.join("/bin", command))
 
-    for path in encoding.environ.get('PATH', '').split(pycompat.ospathsep):
+    for path in encoding.environ.get("PATH", "").split(pycompat.ospathsep):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:
             return executable
     return None
 
+
 def setsignalhandler():
     pass
 
+
 _wantedkinds = {stat.S_IFREG, stat.S_IFLNK}
 
+
 def statfiles(files):
-    '''Stat each file in files. Yield each stat, or None if a file does not
-    exist or has a type we don't care about.'''
+    """Stat each file in files. Yield each stat, or None if a file does not
+    exist or has a type we don't care about."""
     lstat = os.lstat
     getkind = stat.S_IFMT
     for nf in files:
@@ -566,9 +594,11 @@ def statfiles(files):
             st = None
         yield st
 
+
 def getuser():
-    '''return name of current user'''
+    """return name of current user"""
     return pycompat.fsencode(getpass.getuser())
+
 
 def username(uid=None):
     """Return the name of the user with the given uid.
@@ -582,6 +612,7 @@ def username(uid=None):
     except KeyError:
         return str(uid)
 
+
 def groupname(gid=None):
     """Return the name of the group with the given gid.
 
@@ -594,18 +625,21 @@ def groupname(gid=None):
     except KeyError:
         return str(gid)
 
+
 def groupmembers(name):
     """Return the list of members of the group with the given
     name, KeyError if the group does not exist.
     """
     return list(grp.getgrnam(name).gr_mem)
 
+
 def spawndetached(args):
-    return os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
-                      args[0], args)
+    return os.spawnvp(os.P_NOWAIT | getattr(os, "P_DETACH", 0), args[0], args)
+
 
 def gethgcmd():
     return sys.argv[:1]
+
 
 def makedir(path, notindexed):
     try:
@@ -614,11 +648,13 @@ def makedir(path, notindexed):
         # Spend a little more effort making the error less mysterious in case
         # there is a broken symlink.
         if err.errno == errno.ENOENT:
-            _checkbrokensymlink(path, 'makedir')
+            _checkbrokensymlink(path, "makedir")
         raise
+
 
 def lookupreg(key, name=None, scope=None):
     return None
+
 
 def hidewindow():
     """Hide current shell window.
@@ -628,7 +664,9 @@ def hidewindow():
     """
     pass
 
+
 class cachestat(object):
+
     def __init__(self, path):
         self.stat = os.stat(path)
 
@@ -644,31 +682,37 @@ class cachestat(object):
             # rest. However, one of the other fields changing indicates
             # something fishy going on, so return False if anything but atime
             # changes.
-            return (self.stat.st_mode == other.stat.st_mode and
-                    self.stat.st_ino == other.stat.st_ino and
-                    self.stat.st_dev == other.stat.st_dev and
-                    self.stat.st_nlink == other.stat.st_nlink and
-                    self.stat.st_uid == other.stat.st_uid and
-                    self.stat.st_gid == other.stat.st_gid and
-                    self.stat.st_size == other.stat.st_size and
-                    self.stat.st_mtime == other.stat.st_mtime and
-                    self.stat.st_ctime == other.stat.st_ctime)
+            return (
+                self.stat.st_mode == other.stat.st_mode
+                and self.stat.st_ino == other.stat.st_ino
+                and self.stat.st_dev == other.stat.st_dev
+                and self.stat.st_nlink == other.stat.st_nlink
+                and self.stat.st_uid == other.stat.st_uid
+                and self.stat.st_gid == other.stat.st_gid
+                and self.stat.st_size == other.stat.st_size
+                and self.stat.st_mtime == other.stat.st_mtime
+                and self.stat.st_ctime == other.stat.st_ctime
+            )
         except AttributeError:
             return False
 
     def __ne__(self, other):
         return not self == other
 
+
 def executablepath():
-    return None # available on Windows only
+    return None  # available on Windows only
+
 
 def statislink(st):
-    '''check whether a stat result is a symlink'''
+    """check whether a stat result is a symlink"""
     return st and stat.S_ISLNK(st.st_mode)
 
+
 def statisexec(st):
-    '''check whether a stat result is an executable file'''
+    """check whether a stat result is an executable file"""
     return st and (st.st_mode & 0o100 != 0)
+
 
 def poll(fds):
     """block until something happens on any file descriptor
@@ -686,9 +730,10 @@ def poll(fds):
                 if inst.args[0] == errno.EINTR:
                     continue
                 raise
-    except ValueError: # out of range file descriptor
+    except ValueError:  # out of range file descriptor
         raise NotImplementedError()
     return sorted(list(set(sum(res, []))))
+
 
 def readpipe(pipe):
     """Read all available data from a pipe."""
@@ -710,9 +755,10 @@ def readpipe(pipe):
             except IOError:
                 break
 
-        return ''.join(chunks)
+        return "".join(chunks)
     finally:
         fcntl.fcntl(pipe, fcntl.F_SETFL, oldflags)
+
 
 def bindunixsocket(sock, path):
     """Bind the UNIX domain socket to the specified path"""
@@ -722,7 +768,7 @@ def bindunixsocket(sock, path):
     dirname, basename = os.path.split(path)
     bakwdfd = None
     if dirname:
-        bakwdfd = os.open('.', os.O_DIRECTORY)
+        bakwdfd = os.open(".", os.O_DIRECTORY)
         os.chdir(dirname)
     sock.bind(basename)
     if bakwdfd:

@@ -8,20 +8,23 @@
 # o, 52   -> 'capabilities: getencoding runcommand\nencoding: UTF-8'
 
 from __future__ import absolute_import, print_function
+
 import struct
 import sys
 
+
 if len(sys.argv) != 2:
-    print('usage: debugcmdserver.py FILE')
+    print("usage: debugcmdserver.py FILE")
     sys.exit(1)
 
-outputfmt = '>cI'
+outputfmt = ">cI"
 outputfmtsize = struct.calcsize(outputfmt)
 
-if sys.argv[1] == '-':
+if sys.argv[1] == "-":
     log = sys.stderr
 else:
-    log = open(sys.argv[1], 'a')
+    log = open(sys.argv[1], "a")
+
 
 def read(size):
     data = sys.stdin.read(size)
@@ -31,16 +34,17 @@ def read(size):
     sys.stdout.flush()
     return data
 
+
 try:
     while True:
         header = read(outputfmtsize)
         channel, length = struct.unpack(outputfmt, header)
-        log.write('%s, %-4d' % (channel, length))
-        if channel in 'IL':
-            log.write(' -> waiting for input\n')
+        log.write("%s, %-4d" % (channel, length))
+        if channel in "IL":
+            log.write(" -> waiting for input\n")
         else:
             data = read(length)
-            log.write(' -> %r\n' % data)
+            log.write(" -> %r\n" % data)
         log.flush()
 except EOFError:
     pass

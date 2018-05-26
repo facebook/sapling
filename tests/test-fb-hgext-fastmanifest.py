@@ -1,22 +1,22 @@
-import silenttestrunner
-import unittest
 import os
 import time
+import unittest
 
-from mercurial import error
-from mercurial import manifest
-from mercurial import ui
-from mercurial import util
-from mercurial import vfs as vfsmod
+import silenttestrunner
+from mercurial import error, manifest, ui, util, vfs as vfsmod
+
 
 class mockmanifest(object):
+
     def __init__(self, text):
         self.text = text
 
     def copy(self):
         return mockmanifest(self.text)
 
+
 class mockondiskcache(object):
+
     def __init__(self):
         self.data = {}
 
@@ -49,8 +49,8 @@ class mockondiskcache(object):
         return len(self.data[hexnode]) if hexnode in self.data else None
 
     def totalsize(self, silent=True):
-        return (sum(self.entrysize(hexnode) for hexnode in self),
-                len(self.items()))
+        return (sum(self.entrysize(hexnode) for hexnode in self), len(self.items()))
+
 
 class HybridManifest(unittest.TestCase):
 
@@ -64,18 +64,21 @@ class HybridManifest(unittest.TestCase):
         vfs = vfsmod.vfs(os.getcwd())
         tempui = ui.ui()
         tempui.setconfig("fastmanifest", "usecache", True)
-        hd = fastmanifest.implementation.hybridmanifest(tempui, vfs, None,
-                                                        fast=True)
+        hd = fastmanifest.implementation.hybridmanifest(tempui, vfs, None, fast=True)
         ismagic = lambda x: x.startswith("__") and x.endswith("__")
-        magicmethods = [k
-                        for k, v in manifest.manifestdict.__dict__.items()
-                        if util.safehasattr(v, '__call__') and ismagic(k)]
+        magicmethods = [
+            k
+            for k, v in manifest.manifestdict.__dict__.items()
+            if util.safehasattr(v, "__call__") and ismagic(k)
+        ]
         for method in magicmethods:
-                assert util.safehasattr(hd, method),\
-                        "%s missing in hybrid manifest" % method
+            assert util.safehasattr(hd, method), (
+                "%s missing in hybrid manifest" % method
+            )
 
     def test_cachelimit(self):
         from hgext.fastmanifest.cachemanager import _systemawarecachelimit
+
         cachealloc = _systemawarecachelimit.cacheallocation
         GB = fastmanifest.cachemanager.GB
         MB = fastmanifest.cachemanager.MB
@@ -85,11 +88,11 @@ class HybridManifest(unittest.TestCase):
 
     def test_looselock_basic(self):
         """Attempt to secure two locks.  The second one should fail."""
-        vfs = vfsmod.vfs('')
+        vfs = vfsmod.vfs("")
         with fastmanifest.concurrency.looselock(vfs, "lock") as l1:
             assert l1.held()
 
-            vfs2 = vfsmod.vfs('')
+            vfs2 = vfsmod.vfs("")
             try:
                 with fastmanifest.concurrency.looselock(vfs2, "lock") as l2:
                     assert l2.held()
@@ -99,8 +102,7 @@ class HybridManifest(unittest.TestCase):
             else:
                 self.fail("two locks both succeeded.")
 
-        self.assertRaises(OSError,
-                          lambda: vfs.lstat("lock"))
+        self.assertRaises(OSError, lambda: vfs.lstat("lock"))
 
     def test_cachehierarchy(self):
         """We mock the ondisk cache and test that the two layers of cache
@@ -108,8 +110,7 @@ class HybridManifest(unittest.TestCase):
         vfs = vfsmod.vfs(os.getcwd())
         tempui = ui.ui()
         tempui.setconfig("fastmanifest", "usecache", True)
-        cache = fastmanifest.implementation.fastmanifestcache(vfs,
-                                                              tempui, None)
+        cache = fastmanifest.implementation.fastmanifestcache(vfs, tempui, None)
         ondiskcache = mockondiskcache()
         cache.ondiskcache = ondiskcache
         # Test 1) Put one manifest in the cache, check that retrieving it does
@@ -136,7 +137,7 @@ class HybridManifest(unittest.TestCase):
         # Test 4) We have at most 10 entries in the in memorycache by
         # default
         for a in range(20):
-            cache[chr(a + ord('a'))] = mockmanifest(chr(a + ord('a')) + "node")
+            cache[chr(a + ord("a"))] = mockmanifest(chr(a + ord("a")) + "node")
 
         assert len(cache.ondiskcache.items()) == 21
         assert len(cache.inmemorycache) == 10
@@ -148,7 +149,7 @@ class HybridManifest(unittest.TestCase):
 
         Finally, verify that the locks are properly cleaned up.
         """
-        vfs = vfsmod.vfs('')
+        vfs = vfsmod.vfs("")
         with fastmanifest.concurrency.looselock(vfs, "lock") as l1:
             assert l1.held()
 
@@ -156,11 +157,11 @@ class HybridManifest(unittest.TestCase):
             # have to wait.........
             time.sleep(2)
 
-            vfs2 = vfsmod.vfs('')
+            vfs2 = vfsmod.vfs("")
             with fastmanifest.concurrency.looselock(vfs2, "lock", 0.2) as l2:
                 assert l2.held()
 
-                vfs3 = vfsmod.vfs('')
+                vfs3 = vfsmod.vfs("")
                 try:
                     with fastmanifest.concurrency.looselock(vfs3, "lock") as l3:
                         assert l3.held()
@@ -169,9 +170,10 @@ class HybridManifest(unittest.TestCase):
                 else:
                     self.fail("third lock shouldn't be able to steal.")
 
-            self.assertRaises(OSError,
-                              lambda: vfs.lstat("lock"))
+            self.assertRaises(OSError, lambda: vfs.lstat("lock"))
+
 
 if __name__ == "__main__":
     from hgext import fastmanifest
+
     silenttestrunner.main(__name__)

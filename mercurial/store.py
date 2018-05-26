@@ -12,16 +12,11 @@ import hashlib
 import os
 import stat
 
+from . import error, policy, pycompat, util, vfs as vfsmod
 from .i18n import _
-from . import (
-    error,
-    policy,
-    pycompat,
-    util,
-    vfs as vfsmod,
-)
 
-parsers = policy.importmod(r'parsers')
+
+parsers = policy.importmod(r"parsers")
 
 # This avoids a collision between a file named foo and a dir named
 # foo.i or foo.d
@@ -30,8 +25,9 @@ try:
 except NameError:
     xrange = range
 
+
 def _encodedir(path):
-    '''
+    """
     >>> _encodedir(b'data/foo.i')
     'data/foo.i'
     >>> _encodedir(b'data/foo.i/bla.i')
@@ -40,39 +36,44 @@ def _encodedir(path):
     'data/foo.i.hg.hg/bla.i'
     >>> _encodedir(b'data/foo.i\\ndata/foo.i/bla.i\\ndata/foo.i.hg/bla.i\\n')
     'data/foo.i\\ndata/foo.i.hg/bla.i\\ndata/foo.i.hg.hg/bla.i\\n'
-    '''
-    return (path
-            .replace(".hg/", ".hg.hg/")
-            .replace(".i/", ".i.hg/")
-            .replace(".d/", ".d.hg/"))
+    """
+    return (
+        path.replace(".hg/", ".hg.hg/")
+        .replace(".i/", ".i.hg/")
+        .replace(".d/", ".d.hg/")
+    )
 
-encodedir = getattr(parsers, 'encodedir', _encodedir)
+
+encodedir = getattr(parsers, "encodedir", _encodedir)
+
 
 def decodedir(path):
-    '''
+    """
     >>> decodedir(b'data/foo.i')
     'data/foo.i'
     >>> decodedir(b'data/foo.i.hg/bla.i')
     'data/foo.i/bla.i'
     >>> decodedir(b'data/foo.i.hg.hg/bla.i')
     'data/foo.i.hg/bla.i'
-    '''
+    """
     if ".hg/" not in path:
         return path
-    return (path
-            .replace(".d.hg/", ".d/")
-            .replace(".i.hg/", ".i/")
-            .replace(".hg.hg/", ".hg/"))
+    return (
+        path.replace(".d.hg/", ".d/")
+        .replace(".i.hg/", ".i/")
+        .replace(".hg.hg/", ".hg/")
+    )
+
 
 def _reserved():
-    ''' characters that are problematic for filesystems
+    """ characters that are problematic for filesystems
 
     * ascii escapes (0..31)
     * ascii hi (126..255)
     * windows specials
 
     these characters will be escaped by encodefunctions
-    '''
+    """
     winreserved = [ord(x) for x in u'\\:*?"<>|']
     for x in range(32):
         yield x
@@ -81,8 +82,9 @@ def _reserved():
     for x in winreserved:
         yield x
 
+
 def _buildencodefun():
-    '''
+    """
     >>> enc, dec = _buildencodefun()
 
     >>> enc(b'nothing/special.txt')
@@ -104,8 +106,8 @@ def _buildencodefun():
     'the~07quick~adshot'
     >>> dec(b'the~07quick~adshot')
     'the\\x07quick\\xadshot'
-    '''
-    e = '_'
+    """
+    e = "_"
     xchr = pycompat.bytechr
     asciistr = list(map(xchr, range(127)))
     capitals = list(range(ord("A"), ord("Z") + 1))
@@ -119,39 +121,47 @@ def _buildencodefun():
     dmap = {}
     for k, v in cmap.iteritems():
         dmap[v] = k
+
     def decode(s):
         i = 0
         while i < len(s):
             for l in xrange(1, 4):
                 try:
-                    yield dmap[s[i:i + l]]
+                    yield dmap[s[i : i + l]]
                     i += l
                     break
                 except KeyError:
                     pass
             else:
                 raise KeyError
-    return (lambda s: ''.join([cmap[s[c:c + 1]] for c in xrange(len(s))]),
-            lambda s: ''.join(list(decode(s))))
+
+    return (
+        lambda s: "".join([cmap[s[c : c + 1]] for c in xrange(len(s))]),
+        lambda s: "".join(list(decode(s))),
+    )
+
 
 _encodefname, _decodefname = _buildencodefun()
 
+
 def encodefilename(s):
-    '''
+    """
     >>> encodefilename(b'foo.i/bar.d/bla.hg/hi:world?/HELLO')
     'foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o'
-    '''
+    """
     return _encodefname(encodedir(s))
 
+
 def decodefilename(s):
-    '''
+    """
     >>> decodefilename(b'foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o')
     'foo.i/bar.d/bla.hg/hi:world?/HELLO'
-    '''
+    """
     return decodedir(_decodefname(s))
 
+
 def _buildlowerencodefun():
-    '''
+    """
     >>> f = _buildlowerencodefun()
     >>> f(b'nothing/special.txt')
     'nothing/special.txt'
@@ -161,24 +171,29 @@ def _buildlowerencodefun():
     'hello~3aworld~3f'
     >>> f(b'the\\x07quick\\xADshot')
     'the~07quick~adshot'
-    '''
+    """
     xchr = pycompat.bytechr
     cmap = dict([(xchr(x), xchr(x)) for x in xrange(127)])
     for x in _reserved():
         cmap[xchr(x)] = "~%02x" % x
     for x in range(ord("A"), ord("Z") + 1):
         cmap[xchr(x)] = xchr(x).lower()
+
     def lowerencode(s):
         return "".join([cmap[c] for c in pycompat.iterbytestr(s)])
+
     return lowerencode
 
-lowerencode = getattr(parsers, 'lowerencode', None) or _buildlowerencodefun()
+
+lowerencode = getattr(parsers, "lowerencode", None) or _buildlowerencodefun()
 
 # Windows reserved names: con, prn, aux, nul, com1..com9, lpt1..lpt9
-_winres3 = ('aux', 'con', 'prn', 'nul') # length 3
-_winres4 = ('com', 'lpt')               # length 4 (with trailing 1..9)
+_winres3 = ("aux", "con", "prn", "nul")  # length 3
+_winres4 = ("com", "lpt")  # length 4 (with trailing 1..9)
+
+
 def _auxencode(path, dotencode):
-    '''
+    """
     Encodes filenames containing names reserved by Windows or which end in
     period or space. Does not touch other single reserved characters c.
     Specifically, c in '\\:*?"<>|' or ord(c) <= 31 are *not* encoded here.
@@ -198,36 +213,38 @@ def _auxencode(path, dotencode):
     ['foo.~20']
     >>> _auxencode([b' .foo'], True)
     ['~20.foo']
-    '''
+    """
     for i, n in enumerate(path):
         if not n:
             continue
-        if dotencode and n[0] in '. ':
+        if dotencode and n[0] in ". ":
             n = "~%02x" % ord(n[0:1]) + n[1:]
             path[i] = n
         else:
-            l = n.find('.')
+            l = n.find(".")
             if l == -1:
                 l = len(n)
-            if ((l == 3 and n[:3] in _winres3) or
-                (l == 4 and n[3:4] <= '9' and n[3:4] >= '1'
-                        and n[:3] in _winres4)):
+            if (l == 3 and n[:3] in _winres3) or (
+                l == 4 and n[3:4] <= "9" and n[3:4] >= "1" and n[:3] in _winres4
+            ):
                 # encode third letter ('aux' -> 'au~78')
                 ec = "~%02x" % ord(n[2:3])
                 n = n[0:2] + ec + n[3:]
                 path[i] = n
-        if n[-1] in '. ':
+        if n[-1] in ". ":
             # encode last period or space ('foo...' -> 'foo..~2e')
             path[i] = n[:-1] + "~%02x" % ord(n[-1:])
     return path
+
 
 _maxstorepathlen = 120
 _dirprefixlen = 8
 _maxshortdirslen = 8 * (_dirprefixlen + 1) - 4
 
+
 def _hashencode(path, dotencode):
     digest = hashlib.sha1(path).hexdigest()
-    le = lowerencode(path[5:]).split('/') # skips prefix 'data/' or 'meta/'
+    le = lowerencode(path[5:]).split("/")  # skips prefix 'data/' or 'meta/'
     parts = _auxencode(le, dotencode)
     basename = parts[-1]
     _root, ext = os.path.splitext(basename)
@@ -235,9 +252,9 @@ def _hashencode(path, dotencode):
     sdirslen = 0
     for p in parts[:-1]:
         d = p[:_dirprefixlen]
-        if d[-1] in '. ':
+        if d[-1] in ". ":
             # Windows can't access dirs ending in period or space
-            d = d[:-1] + '_'
+            d = d[:-1] + "_"
         if sdirslen == 0:
             t = len(d)
         else:
@@ -246,18 +263,19 @@ def _hashencode(path, dotencode):
                 break
         sdirs.append(d)
         sdirslen = t
-    dirs = '/'.join(sdirs)
+    dirs = "/".join(sdirs)
     if len(dirs) > 0:
-        dirs += '/'
-    res = 'dh/' + dirs + digest + ext
+        dirs += "/"
+    res = "dh/" + dirs + digest + ext
     spaceleft = _maxstorepathlen - len(res)
     if spaceleft > 0:
         filler = basename[:spaceleft]
-        res = 'dh/' + dirs + filler + digest + ext
+        res = "dh/" + dirs + filler + digest + ext
     return res
 
+
 def _hybridencode(path, dotencode):
-    '''encodes path with a length limit
+    """encodes path with a length limit
 
     Encodes all paths that begin with 'data/', according to the following.
 
@@ -286,45 +304,54 @@ def _hybridencode(path, dotencode):
 
     The string 'data/' at the beginning is replaced with 'dh/', if the hashed
     encoding was used.
-    '''
+    """
     path = encodedir(path)
-    ef = _encodefname(path).split('/')
-    res = '/'.join(_auxencode(ef, dotencode))
+    ef = _encodefname(path).split("/")
+    res = "/".join(_auxencode(ef, dotencode))
     if len(res) > _maxstorepathlen:
         res = _hashencode(path, dotencode)
     return res
+
 
 def _pathencode(path):
     de = encodedir(path)
     if len(path) > _maxstorepathlen:
         return _hashencode(de, True)
-    ef = _encodefname(de).split('/')
-    res = '/'.join(_auxencode(ef, True))
+    ef = _encodefname(de).split("/")
+    res = "/".join(_auxencode(ef, True))
     if len(res) > _maxstorepathlen:
         return _hashencode(de, True)
     return res
 
-_pathencode = getattr(parsers, 'pathencode', _pathencode)
+
+_pathencode = getattr(parsers, "pathencode", _pathencode)
+
 
 def _plainhybridencode(f):
     return _hybridencode(f, False)
+
 
 def _calcmode(vfs):
     try:
         # files in .hg/ will be created using this mode
         mode = vfs.stat().st_mode
-            # avoid some useless chmods
+        # avoid some useless chmods
         if (0o777 & ~util.umask) == (0o777 & mode):
             mode = None
     except OSError:
         mode = None
     return mode
 
-_data = ('data meta 00manifest.d 00manifest.i 00changelog.d 00changelog.i'
-         ' phaseroots obsstore')
+
+_data = (
+    "data meta 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
+    " phaseroots obsstore"
+)
+
 
 class basicstore(object):
-    '''base class for local repository stores'''
+    """base class for local repository stores"""
+
     def __init__(self, path, vfstype):
         vfs = vfstype(path)
         self.path = vfs.base
@@ -335,13 +362,13 @@ class basicstore(object):
         self.opener = self.vfs
 
     def join(self, f):
-        return self.path + '/' + encodedir(f)
+        return self.path + "/" + encodedir(f)
 
     def _walk(self, relpath, recurse):
-        '''yields (unencoded, encoded, size)'''
+        """yields (unencoded, encoded, size)"""
         path = self.path
         if relpath:
-            path += '/' + relpath
+            path += "/" + relpath
         striplen = len(self.path) + 1
         l = []
         if self.rawvfs.isdir(path):
@@ -350,8 +377,8 @@ class basicstore(object):
             while visit:
                 p = visit.pop()
                 for f, kind, st in readdir(p, stat=True):
-                    fp = p + '/' + f
-                    if kind == stat.S_IFREG and f[-2:] in ('.d', '.i'):
+                    fp = p + "/" + f
+                    if kind == stat.S_IFREG and f[-2:] in (".d", ".i"):
                         n = util.pconvert(fp[striplen:])
                         l.append((decodedir(n), n, st.st_size))
                     elif kind == stat.S_IFDIR and recurse:
@@ -360,14 +387,14 @@ class basicstore(object):
         return l
 
     def datafiles(self):
-        return self._walk('data', True) + self._walk('meta', True)
+        return self._walk("data", True) + self._walk("meta", True)
 
     def topfiles(self):
         # yield manifest before changelog
-        return reversed(self._walk('', False))
+        return reversed(self._walk("", False))
 
     def walk(self):
-        '''yields (unencoded, encoded, size)'''
+        """yields (unencoded, encoded, size)"""
         # yield data files first
         for x in self.datafiles():
             yield x
@@ -375,7 +402,7 @@ class basicstore(object):
             yield x
 
     def copylist(self):
-        return ['requires'] + _data.split()
+        return ["requires"] + _data.split()
 
     def write(self, tr):
         pass
@@ -387,7 +414,7 @@ class basicstore(object):
         pass
 
     def __contains__(self, path):
-        '''Checks if the store contains path'''
+        """Checks if the store contains path"""
         path = "/".join(("data", path))
         # file?
         if self.vfs.exists(path + ".i"):
@@ -397,9 +424,11 @@ class basicstore(object):
             path = path + "/"
         return self.vfs.exists(path)
 
+
 class encodedstore(basicstore):
+
     def __init__(self, path, vfstype):
-        vfs = vfstype(path + '/store')
+        vfs = vfstype(path + "/store")
         self.path = vfs.base
         self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
@@ -416,11 +445,11 @@ class encodedstore(basicstore):
             yield a, b, size
 
     def join(self, f):
-        return self.path + '/' + encodefilename(f)
+        return self.path + "/" + encodefilename(f)
 
     def copylist(self):
-        return (['requires', '00changelog.i'] +
-                ['store/' + f for f in _data.split()])
+        return ["requires", "00changelog.i"] + ["store/" + f for f in _data.split()]
+
 
 class fncache(object):
     # the filename used to be partially encoded
@@ -431,29 +460,29 @@ class fncache(object):
         self._dirty = False
 
     def _load(self):
-        '''fill the entries from the fncache file'''
+        """fill the entries from the fncache file"""
         self._dirty = False
         try:
-            fp = self.vfs('fncache', mode='rb')
+            fp = self.vfs("fncache", mode="rb")
         except IOError:
             # skip nonexistent file
             self.entries = set()
             return
         self.entries = set(decodedir(fp.read()).splitlines())
-        if '' in self.entries:
+        if "" in self.entries:
             fp.seek(0)
             for n, line in enumerate(util.iterfile(fp)):
-                if not line.rstrip('\n'):
-                    t = _('invalid entry in fncache, line %d') % (n + 1)
+                if not line.rstrip("\n"):
+                    t = _("invalid entry in fncache, line %d") % (n + 1)
                     raise error.Abort(t)
         fp.close()
 
     def write(self, tr):
         if self._dirty:
-            tr.addbackup('fncache')
-            fp = self.vfs('fncache', mode='wb', atomictemp=True)
+            tr.addbackup("fncache")
+            fp = self.vfs("fncache", mode="wb", atomictemp=True)
             if self.entries:
-                fp.write(encodedir('\n'.join(self.entries) + '\n'))
+                fp.write(encodedir("\n".join(self.entries) + "\n"))
             fp.close()
             self._dirty = False
 
@@ -483,15 +512,18 @@ class fncache(object):
             self._load()
         return iter(self.entries)
 
+
 class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs):
+
     def __init__(self, vfs, fnc, encode):
         vfsmod.proxyvfs.__init__(self, vfs)
         self.fncache = fnc
         self.encode = encode
 
-    def __call__(self, path, mode='r', *args, **kw):
-        if mode not in ('r', 'rb') and (path.startswith('data/') or
-                                        path.startswith('meta/')):
+    def __call__(self, path, mode="r", *args, **kw):
+        if mode not in ("r", "rb") and (
+            path.startswith("data/") or path.startswith("meta/")
+        ):
             self.fncache.add(path)
         return self.vfs(self.encode(path), mode, *args, **kw)
 
@@ -501,16 +533,18 @@ class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs):
         else:
             return self.vfs.join(path)
 
+
 class fncachestore(basicstore):
+
     def __init__(self, path, vfstype, dotencode):
         if dotencode:
             encode = _pathencode
         else:
             encode = _plainhybridencode
         self.encode = encode
-        vfs = vfstype(path + '/store')
+        vfs = vfstype(path + "/store")
         self.path = vfs.base
-        self.pathsep = self.path + '/'
+        self.pathsep = self.path + "/"
         self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
         self.rawvfs = vfs
@@ -535,10 +569,11 @@ class fncachestore(basicstore):
                     raise
 
     def copylist(self):
-        d = ('data meta dh fncache phaseroots obsstore'
-             ' 00manifest.d 00manifest.i 00changelog.d 00changelog.i')
-        return (['requires', '00changelog.i'] +
-                ['store/' + f for f in d.split()])
+        d = (
+            "data meta dh fncache phaseroots obsstore"
+            " 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
+        )
+        return ["requires", "00changelog.i"] + ["store/" + f for f in d.split()]
 
     def write(self, tr):
         self.fncache.write(tr)
@@ -561,23 +596,24 @@ class fncachestore(basicstore):
             return False
 
     def __contains__(self, path):
-        '''Checks if the store contains path'''
+        """Checks if the store contains path"""
         path = "/".join(("data", path))
         # check for files (exact match)
-        e = path + '.i'
+        e = path + ".i"
         if e in self.fncache and self._exists(e):
             return True
         # now check for directories (prefix match)
-        if not path.endswith('/'):
-            path += '/'
+        if not path.endswith("/"):
+            path += "/"
         for e in self.fncache:
             if e.startswith(path) and self._exists(e):
                 return True
         return False
 
+
 def store(requirements, path, vfstype):
-    if 'store' in requirements:
-        if 'fncache' in requirements:
-            return fncachestore(path, vfstype, 'dotencode' in requirements)
+    if "store" in requirements:
+        if "fncache" in requirements:
+            return fncachestore(path, vfstype, "dotencode" in requirements)
         return encodedstore(path, vfstype)
     return basicstore(path, vfstype)

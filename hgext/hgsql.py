@@ -10,15 +10,13 @@
 
 from __future__ import absolute_import
 
-import Queue
 import os
+import Queue
 import sys
 import threading
 import time
 import warnings
 
-from mercurial.node import bin, hex, nullid, nullrev
-from mercurial.i18n import _
 from mercurial import (
     bookmarks,
     bundle2,
@@ -40,6 +38,9 @@ from mercurial import (
     util,
     wireproto,
 )
+from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid, nullrev
+
 
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
@@ -56,91 +57,96 @@ with demandimport.deactivated():
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-testedwith = '3.9.1'
+testedwith = "3.9.1"
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('hgsql', 'database', default=None)
-configitem('hgsql', 'host', default=None)
-configitem('hgsql', 'reponame', default=None)
-configitem('hgsql', 'password', default='')
-configitem('hgsql', 'port', default=0)
-configitem('hgsql', 'user', default=None)
+configitem("hgsql", "database", default=None)
+configitem("hgsql", "host", default=None)
+configitem("hgsql", "reponame", default=None)
+configitem("hgsql", "password", default="")
+configitem("hgsql", "port", default=0)
+configitem("hgsql", "user", default=None)
 
-configitem('hgsql', 'bypass', default=False)
-configitem('hgsql', 'enabled', default=False)
-configitem('hgsql', 'engine', default='innodb')
-configitem('hgsql', 'locktimeout', default=60)
-configitem('hgsql', 'maxcommitsize', default=52428800)
-configitem('hgsql', 'maxinsertsize', default=1048576)
-configitem('hgsql', 'maxrowsize', default=1048576)
-configitem('hgsql', 'profileoutput', default='/tmp')
-configitem('hgsql', 'profiler', default=None)
-configitem('hgsql', 'verifybatchsize', default=1000)
-configitem('hgsql', 'waittimeout', default=300)
-configitem('format', 'usehgsql', default=True)
+configitem("hgsql", "bypass", default=False)
+configitem("hgsql", "enabled", default=False)
+configitem("hgsql", "engine", default="innodb")
+configitem("hgsql", "locktimeout", default=60)
+configitem("hgsql", "maxcommitsize", default=52428800)
+configitem("hgsql", "maxinsertsize", default=1048576)
+configitem("hgsql", "maxrowsize", default=1048576)
+configitem("hgsql", "profileoutput", default="/tmp")
+configitem("hgsql", "profiler", default=None)
+configitem("hgsql", "verifybatchsize", default=1000)
+configitem("hgsql", "waittimeout", default=300)
+configitem("format", "usehgsql", default=True)
 
-writelock = 'write_lock'
+writelock = "write_lock"
 
-INITIAL_SYNC_NORMAL = 'normal'
-INITIAL_SYNC_DISABLE = 'disabled'
-INITIAL_SYNC_FORCE = 'force'
+INITIAL_SYNC_NORMAL = "normal"
+INITIAL_SYNC_DISABLE = "disabled"
+INITIAL_SYNC_FORCE = "force"
 
 initialsync = INITIAL_SYNC_NORMAL
 
 cls = localrepo.localrepository
 # Do NOT add hgsql to localrepository.supportedformats. Doing that breaks
 # streaming clones.
-for reqs in ['openerreqs', '_basesupported']:
-    getattr(cls, reqs).add('hgsql')
+for reqs in ["openerreqs", "_basesupported"]:
+    getattr(cls, reqs).add("hgsql")
+
 
 def newreporequirements(orig, repo):
     reqs = orig(repo)
-    if repo.ui.configbool('format', 'usehgsql'):
-        reqs.add('hgsql')
+    if repo.ui.configbool("format", "usehgsql"):
+        reqs.add("hgsql")
     return reqs
+
 
 class CorruptionException(Exception):
     pass
 
+
 def issqlrepo(repo):
-    return repo.ui.configbool('hgsql', 'enabled')
+    return repo.ui.configbool("hgsql", "enabled")
+
 
 def cansyncwithsql(repo):
     return issqlrepo(repo) and not isinstance(repo, bundlerepo.bundlerepository)
 
+
 def uisetup(ui):
     if ui.configbool("hgsql", "bypass"):
         return
-    wrapfunction(localrepo, 'newreporequirements', newreporequirements)
+    wrapfunction(localrepo, "newreporequirements", newreporequirements)
 
     # Enable SQL for local commands that write to the repository.
-    wrapcommand(commands.table, 'pull', pull)
-    wrapcommand(commands.table, 'commit', commit)
+    wrapcommand(commands.table, "pull", pull)
+    wrapcommand(commands.table, "commit", commit)
 
-    wrapcommand(commands.table, 'bookmark', bookmarkcommand)
-    wrapfunction(exchange, '_localphasemove', _localphasemove)
-    wrapfunction(exchange.pulloperation, '__init__', pullop_init)
-    wrapfunction(exchange, 'push', push)
+    wrapcommand(commands.table, "bookmark", bookmarkcommand)
+    wrapfunction(exchange, "_localphasemove", _localphasemove)
+    wrapfunction(exchange.pulloperation, "__init__", pullop_init)
+    wrapfunction(exchange, "push", push)
 
     # Enable SQL for remote commands that write to the repository
-    wireproto.commands['unbundle'] = (wireproto.unbundle, 'heads')
-    wrapfunction(exchange, 'unbundle', unbundle)
+    wireproto.commands["unbundle"] = (wireproto.unbundle, "heads")
+    wrapfunction(exchange, "unbundle", unbundle)
 
-    wrapfunction(wireproto, 'pushkey', pushkey)
-    wireproto.commands['pushkey'] = (wireproto.pushkey, 'namespace key old new')
+    wrapfunction(wireproto, "pushkey", pushkey)
+    wireproto.commands["pushkey"] = (wireproto.pushkey, "namespace key old new")
 
-    wrapfunction(bookmarks, 'updatefromremote', updatefromremote)
-    if util.safehasattr(changegroup, 'addchangegroup'):
-        wrapfunction(changegroup, 'addchangegroup', addchangegroup)
+    wrapfunction(bookmarks, "updatefromremote", updatefromremote)
+    if util.safehasattr(changegroup, "addchangegroup"):
+        wrapfunction(changegroup, "addchangegroup", addchangegroup)
     else:
         # Mercurial 3.6+
-        wrapfunction(changegroup.cg1unpacker, 'apply', changegroupapply)
+        wrapfunction(changegroup.cg1unpacker, "apply", changegroupapply)
 
     try:
-        treemfmod = extensions.find('treemanifest')
-        wrapcommand(treemfmod.cmdtable, 'backfilltree', backfilltree)
+        treemfmod = extensions.find("treemanifest")
+        wrapcommand(treemfmod.cmdtable, "backfilltree", backfilltree)
     except KeyError:
         pass
 
@@ -152,34 +158,43 @@ def uisetup(ui):
 
         e = revlog.indexformatng.unpack(entry)
         node = hex(e[7])
-        data0 = data[0] or ''
-        transaction.repo.pendingrevs.append((self.indexfile, link,
-            len(self) - 1, node, entry, data0, data[1]))
+        data0 = data[0] or ""
+        transaction.repo.pendingrevs.append(
+            (self.indexfile, link, len(self) - 1, node, entry, data0, data[1])
+        )
         return orig(self, transaction, ifh, dfh, entry, data, link, offset)
-    wrapfunction(revlog.revlog, '_writeentry', writeentry)
+
+    wrapfunction(revlog.revlog, "_writeentry", writeentry)
 
     # Reorder incoming revs to be in linkrev order
-    wrapfunction(revlog.revlog, 'addgroup', addgroup)
+    wrapfunction(revlog.revlog, "addgroup", addgroup)
+
 
 def extsetup(ui):
     if ui.configbool("hgsql", "bypass"):
         return
 
-    if ui.configbool('hgsql', 'enabled'):
+    if ui.configbool("hgsql", "enabled"):
         commands.globalopts.append(
-                ('', 'forcesync', False,
-                 _('force hgsql sync even on read-only commands'),
-                 _('TYPE')))
+            (
+                "",
+                "forcesync",
+                False,
+                _("force hgsql sync even on read-only commands"),
+                _("TYPE"),
+            )
+        )
 
     # Directly examining argv seems like a terrible idea, but it seems
     # neccesary unless we refactor mercurial dispatch code. This is because
     # the first place we have access to parsed options is in the same function
     # (dispatch.dispatch) that created the repo and the repo creation initiates
     # the sync operation in which the lock is elided unless we set this.
-    if '--forcesync' in sys.argv:
-        ui.debug('forcesync enabled\n')
+    if "--forcesync" in sys.argv:
+        ui.debug("forcesync enabled\n")
         global initialsync
         initialsync = INITIAL_SYNC_FORCE
+
 
 def reposetup(ui, repo):
     if ui.configbool("hgsql", "bypass"):
@@ -192,16 +207,18 @@ def reposetup(ui, repo):
             # Use a noop to force a sync
             def noop():
                 pass
-            waitforlock = (initialsync == INITIAL_SYNC_FORCE)
+
+            waitforlock = initialsync == INITIAL_SYNC_FORCE
             executewithsql(repo, noop, waitforlock=waitforlock)
+
 
 # Incoming commits are only allowed via push and pull
 def unbundle(orig, repo, cg, *args, **kwargs):
     if not issqlrepo(repo):
         return orig(repo, cg, *args, **kwargs)
 
-    isbundle2 = util.safehasattr(cg, 'params')
-    islazylocking = repo.ui.configbool('experimental', 'bundle2lazylocking')
+    isbundle2 = util.safehasattr(cg, "params")
+    islazylocking = repo.ui.configbool("experimental", "bundle2lazylocking")
     if isbundle2 and islazylocking:
         # lazy locked bundle2
         exception = None
@@ -213,17 +230,22 @@ def unbundle(orig, repo, cg, *args, **kwargs):
             # Temporarily replace bundleoperation so we can hook into it's
             # locking mechanism.
             oldopclass = bundle2.bundleoperation
+
             class sqllockedoperation(bundle2.bundleoperation):
+
                 def __init__(self, repo, transactiongetter, *args, **kwargs):
+
                     def sqllocktr():
                         if not context.active():
                             context.__enter__()
                         return transactiongetter()
 
-                    super(sqllockedoperation, self).__init__(repo, sqllocktr,
-                                                           *args, **kwargs)
+                    super(sqllockedoperation, self).__init__(
+                        repo, sqllocktr, *args, **kwargs
+                    )
                     # undo our temporary wrapping
                     bundle2.bundleoperation = oldopclass
+
             bundle2.bundleoperation = sqllockedoperation
 
             return orig(repo, cg, *args, **kwargs)
@@ -240,11 +262,12 @@ def unbundle(orig, repo, cg, *args, **kwargs):
                 if exception:
                     type = exception.__class__
                     value = exception
-                    traceback = [] # This isn't really important
+                    traceback = []  # This isn't really important
                 context.__exit__(type, value, traceback)
     else:
         # bundle1 or non-lazy locked
         return executewithsql(repo, orig, True, repo, cg, *args, **kwargs)
+
 
 def pull(orig, *args, **kwargs):
     repo = args[1]
@@ -253,10 +276,12 @@ def pull(orig, *args, **kwargs):
     else:
         return orig(*args, **kwargs)
 
+
 def pullop_init(orig, self, repo, *args, **kwargs):
-    if issqlrepo(repo) or 'hgsql' in repo.requirements:
-        kwargs['exactbyteclone'] = True
+    if issqlrepo(repo) or "hgsql" in repo.requirements:
+        kwargs["exactbyteclone"] = True
     return orig(self, repo, *args, **kwargs)
+
 
 def push(orig, *args, **kwargs):
     repo = args[0]
@@ -267,12 +292,14 @@ def push(orig, *args, **kwargs):
     else:
         return orig(*args, **kwargs)
 
+
 def commit(orig, *args, **kwargs):
     repo = args[1]
     if issqlrepo(repo):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
+
 
 def updatefromremote(orig, *args, **kwargs):
     repo = args[1]
@@ -281,6 +308,7 @@ def updatefromremote(orig, *args, **kwargs):
     else:
         return orig(*args, **kwargs)
 
+
 def addchangegroup(orig, *args, **kwargs):
     repo = args[0]
     if issqlrepo(repo):
@@ -288,10 +316,13 @@ def addchangegroup(orig, *args, **kwargs):
     else:
         return orig(*args, **kwargs)
 
+
 def backfilltree(orig, ui, repo, *args, **kwargs):
     if issqlrepo(repo):
+
         def _helper():
             return orig(ui, repo, *args, **kwargs)
+
         try:
             repo.sqlreplaytransaction = True
             return executewithsql(repo, _helper, True)
@@ -300,12 +331,14 @@ def backfilltree(orig, ui, repo, *args, **kwargs):
     else:
         return orig(ui, repo, *args, **kwargs)
 
+
 def changegroupapply(orig, *args, **kwargs):
     repo = args[1]
     if issqlrepo(repo):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
+
 
 def _localphasemove(orig, pushop, *args, **kwargs):
     repo = pushop.repo
@@ -314,7 +347,9 @@ def _localphasemove(orig, pushop, *args, **kwargs):
     else:
         return orig(pushop, *args, **kwargs)
 
+
 class sqlcontext(object):
+
     def __init__(self, repo, takelock=False, waitforlock=False):
         self.repo = repo
         self.takelock = takelock
@@ -346,19 +381,29 @@ class sqlcontext(object):
                 repo.sqllock(writelock)
             except error.Abort:
                 elapsed = time.time() - startwait
-                repo.ui.log("sqllock", "failed to get sql lock after %s "
-                            "seconds\n", elapsed, elapsed=elapsed * 1000,
-                            valuetype='lockwait', success='false',
-                            repository=repo.root)
+                repo.ui.log(
+                    "sqllock",
+                    "failed to get sql lock after %s " "seconds\n",
+                    elapsed,
+                    elapsed=elapsed * 1000,
+                    valuetype="lockwait",
+                    success="false",
+                    repository=repo.root,
+                )
                 raise
 
             self._startprofile()
             self._locked = True
             elapsed = time.time() - startwait
-            repo.ui.log("sqllock", "waited for sql lock for %s seconds\n",
-                        elapsed, elapsed=elapsed * 1000,
-                        valuetype='lockwait', success='true',
-                        repository=repo.root)
+            repo.ui.log(
+                "sqllock",
+                "waited for sql lock for %s seconds\n",
+                elapsed,
+                elapsed=elapsed * 1000,
+                valuetype="lockwait",
+                success="true",
+                repository=repo.root,
+            )
         self._startlocktime = time.time()
 
         if self._connected:
@@ -369,9 +414,14 @@ class sqlcontext(object):
             repo = self.repo
             if self._locked:
                 elapsed = time.time() - self._startlocktime
-                repo.ui.log("sqllock", "held sql lock for %s seconds\n",
-                            elapsed, elapsed=elapsed * 1000,
-                            valuetype='lockheld', repository=repo.root)
+                repo.ui.log(
+                    "sqllock",
+                    "held sql lock for %s seconds\n",
+                    elapsed,
+                    elapsed=elapsed * 1000,
+                    valuetype="lockheld",
+                    repository=repo.root,
+                )
                 self._stopprofile(elapsed)
                 repo.sqlunlock(writelock)
 
@@ -385,50 +435,58 @@ class sqlcontext(object):
                 raise
 
     def _startprofile(self):
-        profiler = self.repo.ui.config('hgsql', 'profiler')
+        profiler = self.repo.ui.config("hgsql", "profiler")
         if not profiler:
             return
 
-        freq = self.repo.ui.configint('profiling', 'freq')
-        if profiler == 'ls':
+        freq = self.repo.ui.configint("profiling", "freq")
+        if profiler == "ls":
             from mercurial import lsprof
+
             self._profiler = lsprof.Profiler()
             self._profiler.enable(subcalls=True)
-        elif profiler == 'stat':
+        elif profiler == "stat":
             from mercurial import statprof
+
             statprof.reset(freq)
             statprof.start()
         else:
             raise Exception("unknown profiler: %s" % profiler)
 
     def _stopprofile(self, elapsed):
-        profiler = self.repo.ui.config('hgsql', 'profiler')
+        profiler = self.repo.ui.config("hgsql", "profiler")
         if not profiler:
             return
-        outputdir = self.repo.ui.config('hgsql', 'profileoutput')
+        outputdir = self.repo.ui.config("hgsql", "profileoutput")
         import random
+
         pid = os.getpid()
         rand = random.random()
         timestamp = time.time()
 
-        if profiler == 'ls':
+        if profiler == "ls":
             from mercurial import lsprof
+
             self._profiler.disable()
             stats = lsprof.Stats(self._profiler.getstats())
-            stats.sort('inlinetime')
-            path = os.path.join(outputdir, 'hgsql-profile-%s-%s-%s' %
-                                           (pid, timestamp, rand))
-            with open(path, 'a+') as f:
+            stats.sort("inlinetime")
+            path = os.path.join(
+                outputdir, "hgsql-profile-%s-%s-%s" % (pid, timestamp, rand)
+            )
+            with open(path, "a+") as f:
                 stats.pprint(limit=30, file=f, climit=0)
                 f.write("Total Elapsed Time: %s\n" % elapsed)
-        elif profiler == 'stat':
+        elif profiler == "stat":
             from mercurial import statprof
+
             statprof.stop()
-            path = os.path.join(outputdir, 'hgsql-profile-%s-%s-%s' %
-                                           (pid, timestamp, rand))
-            with open(path, 'a+') as f:
+            path = os.path.join(
+                outputdir, "hgsql-profile-%s-%s-%s" % (pid, timestamp, rand)
+            )
+            with open(path, "a+") as f:
                 statprof.display(f)
                 f.write("Total Elapsed Time: %s\n" % elapsed)
+
 
 def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     """Executes the given action while having a SQL connection open.
@@ -440,16 +498,19 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     # the connect.
 
     waitforlock = sqllock
-    if 'waitforlock' in kwargs:
+    if "waitforlock" in kwargs:
         if not waitforlock:
-            waitforlock = kwargs['waitforlock']
-        del kwargs['waitforlock']
+            waitforlock = kwargs["waitforlock"]
+        del kwargs["waitforlock"]
 
     with sqlcontext(repo, takelock=sqllock, waitforlock=waitforlock):
         return action(*args, **kwargs)
 
+
 def wraprepo(repo):
+
     class sqllocalrepo(repo.__class__):
+
         def sqlconnect(self):
             if self.sqlconn:
                 raise Exception("SQL connection already open")
@@ -458,8 +519,9 @@ def wraprepo(repo):
             retry = 3
             while True:
                 try:
-                    self.sqlconn = mysql.connector.connect(force_ipv6=True,
-                            **self.sqlargs)
+                    self.sqlconn = mysql.connector.connect(
+                        force_ipv6=True, **self.sqlargs
+                    )
 
                     # The default behavior is to return byte arrays, when we
                     # need strings. This custom convert returns strings.
@@ -473,25 +535,26 @@ def wraprepo(repo):
                         raise
                     time.sleep(0.2)
 
-            waittimeout = self.ui.config('hgsql', 'waittimeout')
-            waittimeout = self.sqlconn.converter.escape('%s' % waittimeout)
+            waittimeout = self.ui.config("hgsql", "waittimeout")
+            waittimeout = self.sqlconn.converter.escape("%s" % waittimeout)
 
-            self.engine = self.ui.config('hgsql', 'engine')
-            self.locktimeout = self.ui.config('hgsql', 'locktimeout')
-            self.locktimeout = self.sqlconn.converter.escape('%s' %
-                                self.locktimeout)
+            self.engine = self.ui.config("hgsql", "engine")
+            self.locktimeout = self.ui.config("hgsql", "locktimeout")
+            self.locktimeout = self.sqlconn.converter.escape("%s" % self.locktimeout)
 
             self.sqlcursor = self.sqlconn.cursor()
             self.sqlcursor.execute("SET wait_timeout=%s" % waittimeout)
 
-            if self.engine == 'rocksdb':
-                self.sqlcursor.execute("SET rocksdb_lock_wait_timeout=%s" %
-                                       self.locktimeout)
-            elif self.engine == 'innodb':
-                self.sqlcursor.execute("SET innodb_lock_wait_timeout=%s" %
-                                       self.locktimeout)
+            if self.engine == "rocksdb":
+                self.sqlcursor.execute(
+                    "SET rocksdb_lock_wait_timeout=%s" % self.locktimeout
+                )
+            elif self.engine == "innodb":
+                self.sqlcursor.execute(
+                    "SET innodb_lock_wait_timeout=%s" % self.locktimeout
+                )
             else:
-                raise RuntimeError('unsupported hgsql.engine %s' % self.engine)
+                raise RuntimeError("unsupported hgsql.engine %s" % self.engine)
 
         def sqlclose(self):
             with warnings.catch_warnings():
@@ -509,13 +572,15 @@ def wraprepo(repo):
             lockname = self._lockname(name)
 
             # cast to int to prevent passing bad sql data
-            self.sqlcursor.execute("SELECT GET_LOCK('%s', %s)" %
-                                   (lockname, self.locktimeout))
+            self.sqlcursor.execute(
+                "SELECT GET_LOCK('%s', %s)" % (lockname, self.locktimeout)
+            )
 
             result = int(self.sqlcursor.fetchall()[0][0])
             if result != 1:
-                raise util.Abort("timed out waiting for mysql repo lock (%s)" %
-                                 lockname)
+                raise util.Abort(
+                    "timed out waiting for mysql repo lock (%s)" % lockname
+                )
             self.heldlocks.add(name)
 
         def hassqllock(self, name, checkserver=True):
@@ -550,15 +615,18 @@ def wraprepo(repo):
 
         def lock(self, *args, **kwargs):
             wl = self._wlockref and self._wlockref()
-            if (not self._issyncing and
-                not (wl is not None and wl.held) and
-                not self.hassqllock(writelock, checkserver=False)):
+            if (
+                not self._issyncing
+                and not (wl is not None and wl.held)
+                and not self.hassqllock(writelock, checkserver=False)
+            ):
                 self._recordbadlockorder()
             return super(sqllocalrepo, self).lock(*args, **kwargs)
 
         def wlock(self, *args, **kwargs):
-            if (not self._issyncing and
-                not self.hassqllock(writelock, checkserver=False)):
+            if not self._issyncing and not self.hassqllock(
+                writelock, checkserver=False
+            ):
                 self._recordbadlockorder()
             return super(sqllocalrepo, self).wlock(*args, **kwargs)
 
@@ -571,15 +639,18 @@ def wraprepo(repo):
                 return tr
 
             validator = tr.validator
+
             def pretxnclose(tr):
                 validator(tr)
                 self.committodb(tr)
                 del self.pendingrevs[:]
+
             tr.validator = pretxnclose
 
             def transactionabort(orig):
                 del self.pendingrevs[:]
                 return orig()
+
             wrapfunction(tr, "_abort", transactionabort)
 
             tr.repo = self
@@ -589,8 +660,11 @@ def wraprepo(repo):
             """Returns True if the local repo is not in sync with the database.
             If it returns False, the heads and bookmarks match the database.
             """
-            self.sqlcursor.execute("""SELECT namespace, name, value
-                FROM revision_references WHERE repo = %s""", (self.sqlreponame,))
+            self.sqlcursor.execute(
+                """SELECT namespace, name, value
+                FROM revision_references WHERE repo = %s""",
+                (self.sqlreponame,),
+            )
             sqlheads = set()
             sqlbookmarks = {}
             tip = -1
@@ -611,7 +685,9 @@ def wraprepo(repo):
             bookmarks = self._bookmarks
             heads = set(self.heads())
 
-            outofsync = heads != sqlheads or bookmarks != sqlbookmarks or tip != len(self) - 1
+            outofsync = (
+                heads != sqlheads or bookmarks != sqlbookmarks or tip != len(self) - 1
+            )
             return outofsync, sqlheads, sqlbookmarks, tip
 
         def synclimiter(self):
@@ -621,8 +697,14 @@ def wraprepo(repo):
             clients should not attempt to perform a sync."""
             try:
                 wait = False
-                return self._lock(self.svfs, "synclimiter", wait, None,
-                                  None, _('repository %s') % self.origroot)
+                return self._lock(
+                    self.svfs,
+                    "synclimiter",
+                    wait,
+                    None,
+                    None,
+                    _("repository %s") % self.origroot,
+                )
             except error.LockHeld:
                 return None
 
@@ -644,8 +726,10 @@ def wraprepo(repo):
                     limiter = self.synclimiter()
                     if not limiter:
                         # Someone else is already checking and updating the repo
-                        self.ui.debug("skipping database sync because another "
-                                      "process is already syncing\n")
+                        self.ui.debug(
+                            "skipping database sync because another "
+                            "process is already syncing\n"
+                        )
 
                         # It's important that we load bookmarks before the
                         # changelog. This way we know that the bookmarks point to
@@ -697,7 +781,9 @@ def wraprepo(repo):
                 # circumvent this when we sync from the server.
                 configbackups.append(ui.backupconfig("hooks", "pretxnopen.hg-ssh"))
                 self.ui.setconfig("hooks", "pretxnopen.hg-ssh", None)
-                configbackups.append(ui.backupconfig("hooks", "pretxnopen.readonlyrejectpush"))
+                configbackups.append(
+                    ui.backupconfig("hooks", "pretxnopen.readonlyrejectpush")
+                )
                 self.ui.setconfig("hooks", "pretxnopen.readonlyrejectpush", None)
                 # Someone else may have synced us while we were waiting.
                 # Restart the transaction so we have access to the latest rows.
@@ -708,7 +794,7 @@ def wraprepo(repo):
 
                 transaction = self.transaction("syncdb")
 
-                self.hook('presyncdb', throw=True)
+                self.hook("presyncdb", throw=True)
 
                 try:
                     # Inspect the changelog now that we have the lock
@@ -717,8 +803,10 @@ def wraprepo(repo):
                     queue = Queue.Queue()
                     abort = threading.Event()
 
-                    t = threading.Thread(target=self.fetchthread,
-                        args=(queue, abort, fetchstart, fetchend))
+                    t = threading.Thread(
+                        target=self.fetchthread,
+                        args=(queue, abort, fetchstart, fetchend),
+                    )
                     t.setDaemon(True)
                     try:
                         t.start()
@@ -726,8 +814,9 @@ def wraprepo(repo):
                     finally:
                         abort.set()
 
-                    phases.advanceboundary(self, transaction, phases.public,
-                                           self.heads())
+                    phases.advanceboundary(
+                        self, transaction, phases.public, self.heads()
+                    )
 
                     transaction.close()
                 finally:
@@ -736,16 +825,16 @@ def wraprepo(repo):
                 # We circumvent the changelog and manifest when we add entries to
                 # the revlogs. So clear all the caches.
                 self.invalidate()
-                self._filecache.pop('changelog', None)
-                self._filecache.pop('manifestlog', None)
-                self._filecache.pop('_phasecache', None)
+                self._filecache.pop("changelog", None)
+                self._filecache.pop("manifestlog", None)
+                self._filecache.pop("_phasecache", None)
 
                 # Refill the cache. We can't just reuse the exact contents of
                 # the old cached ctx, since the old ctx contains a reference to
                 # the old revlog, which is now out of date.
                 mfl = self.manifestlog
                 for dirname, lrucache in oldmancache.iteritems():
-                    if dirname == '':
+                    if dirname == "":
                         for oldmfnode in lrucache:
                             oldmfctx = lrucache[oldmfnode]
                             if oldmfctx._data is not None:
@@ -764,9 +853,11 @@ def wraprepo(repo):
                 try:
                     bm = self._bookmarks
 
-                    self.sqlcursor.execute("""SELECT name, value FROM revision_references
+                    self.sqlcursor.execute(
+                        """SELECT name, value FROM revision_references
                         WHERE namespace = 'bookmarks' AND repo = %s""",
-                        (self.sqlreponame,))
+                        (self.sqlreponame,),
+                    )
                     fetchedbookmarks = self.sqlcursor.fetchall()
 
                     changes = []
@@ -775,8 +866,9 @@ def wraprepo(repo):
                         if node != bm.get(name):
                             changes.append((name, node))
 
-                    for deletebm in set(bm.keys()).difference(k for k, v in
-                                        fetchedbookmarks):
+                    for deletebm in set(bm.keys()).difference(
+                        k for k, v in fetchedbookmarks
+                    ):
                         changes.append((deletebm, None))
 
                     bm.applychanges(self, transaction, changes)
@@ -815,10 +907,12 @@ def wraprepo(repo):
                         break
 
                     maxrev = min(clrev + chunksize, fetchend + 1)
-                    self.sqlcursor.execute("""SELECT path, chunk, chunkcount,
+                    self.sqlcursor.execute(
+                        """SELECT path, chunk, chunkcount,
                         linkrev, entry, data0, data1 FROM revisions WHERE repo = %s
                         AND linkrev > %s AND linkrev < %s ORDER BY linkrev ASC""",
-                        (self.sqlreponame, clrev - 1, maxrev))
+                        (self.sqlreponame, clrev - 1, maxrev),
+                    )
 
                     # Put split chunks back together into a single revision
                     groupedrevdata = {}
@@ -842,7 +936,7 @@ def wraprepo(repo):
                         #   entry, which cannot be "\0".
                         # * data0 is either empty or "u".
                         if revdata[6] is None:
-                            revdata = revdata[:6] + (b'\0',)
+                            revdata = revdata[:6] + (b"\0",)
 
                         groupedrevdata.setdefault((name, linkrev), {})[chunk] = revdata
 
@@ -862,10 +956,14 @@ def wraprepo(repo):
                             fullchunk[6] = data1
                             fullrevisions.append(tuple(fullchunk))
                         else:
-                            raise Exception("missing revision chunk - expected %s got %s" %
-                                (chunkcount, len(chunks)))
+                            raise Exception(
+                                "missing revision chunk - expected %s got %s"
+                                % (chunkcount, len(chunks))
+                            )
 
-                    fullrevisions = sorted(fullrevisions, key=lambda revdata: revdata[3])
+                    fullrevisions = sorted(
+                        fullrevisions, key=lambda revdata: revdata[3]
+                    )
                     for revdata in fullrevisions:
                         queue.put(revdata)
 
@@ -877,10 +975,11 @@ def wraprepo(repo):
             queue.put(False)
 
         def pushkey(self, namespace, key, old, new):
+
             def _pushkey():
                 return super(sqllocalrepo, self).pushkey(namespace, key, old, new)
 
-            return executewithsql(self, _pushkey, namespace == 'bookmarks')
+            return executewithsql(self, _pushkey, namespace == "bookmarks")
 
         def committodb(self, tr):
             """Commits all pending revisions to the database
@@ -889,10 +988,11 @@ def wraprepo(repo):
                 return
 
             if self.sqlconn == None:
-                raise util.Abort("invalid repo change - only hg push and pull" +
-                    " are allowed")
+                raise util.Abort(
+                    "invalid repo change - only hg push and pull" + " are allowed"
+                )
 
-            if not self.pendingrevs and not 'bookmark_moved' in tr.hookargs:
+            if not self.pendingrevs and not "bookmark_moved" in tr.hookargs:
                 return
 
             reponame = self.sqlreponame
@@ -910,7 +1010,7 @@ def wraprepo(repo):
                 cursor.execute(
                     "SELECT value FROM revision_references "
                     "WHERE repo = %s AND namespace='heads'",
-                    (reponame,)
+                    (reponame,),
                 )
                 for head in cursor:
                     head = head[0]
@@ -920,23 +1020,24 @@ def wraprepo(repo):
                         oldheads.append(head)
 
                 if oldheads:
-                    headargs = ','.join(['%s'] * len(oldheads))
+                    headargs = ",".join(["%s"] * len(oldheads))
                     cursor.execute(
-                        "DELETE revision_references FROM revision_references " +
-                        "FORCE INDEX (bookmarkindex) " +
-                        "WHERE namespace = 'heads' " +
-                        "AND repo = %s AND value IN (" + headargs + ")",
-                        (reponame,) + tuple(oldheads)
+                        "DELETE revision_references FROM revision_references "
+                        + "FORCE INDEX (bookmarkindex) "
+                        + "WHERE namespace = 'heads' "
+                        + "AND repo = %s AND value IN ("
+                        + headargs
+                        + ")",
+                        (reponame,) + tuple(oldheads),
                     )
 
                 # Compute new bookmarks, and delete old bookmarks
-                newbookmarks = dict((k, hex(v)) for k, v in
-                                    self._bookmarks.iteritems())
+                newbookmarks = dict((k, hex(v)) for k, v in self._bookmarks.iteritems())
                 oldbookmarks = []
                 cursor.execute(
                     "SELECT name, value FROM revision_references "
                     "WHERE namespace = 'bookmarks' AND repo = %s",
-                    (reponame,)
+                    (reponame,),
                 )
                 for k, v in cursor:
                     if newbookmarks.get(k) == v:
@@ -945,13 +1046,15 @@ def wraprepo(repo):
                         oldbookmarks.append(k)
 
                 if oldbookmarks:
-                    bookargs = ','.join(['%s'] * len(oldbookmarks))
+                    bookargs = ",".join(["%s"] * len(oldbookmarks))
                     cursor.execute(
-                        "DELETE revision_references FROM revision_references " +
-                        "FORCE INDEX (bookmarkindex) " +
-                        "WHERE namespace = 'bookmarks' AND repo = %s " +
-                        "AND name IN (" + bookargs + ")",
-                        (repo.sqlreponame,) + tuple(oldbookmarks)
+                        "DELETE revision_references FROM revision_references "
+                        + "FORCE INDEX (bookmarkindex) "
+                        + "WHERE namespace = 'bookmarks' AND repo = %s "
+                        + "AND name IN ("
+                        + bookargs
+                        + ")",
+                        (repo.sqlreponame,) + tuple(oldbookmarks),
                     )
 
                 tmpl = []
@@ -968,21 +1071,28 @@ def wraprepo(repo):
                     values.append(v)
 
                 if tmpl:
-                    cursor.execute("INSERT INTO revision_references(repo, namespace, name, value) " +
-                                   "VALUES %s" % ','.join(tmpl), tuple(values))
+                    cursor.execute(
+                        "INSERT INTO revision_references(repo, namespace, name, value) "
+                        + "VALUES %s" % ",".join(tmpl),
+                        tuple(values),
+                    )
 
                 # revision_references has multiple keys (primary key, and a unique index), so
                 # mysql gives a warning when using ON DUPLICATE KEY since it would only update one
                 # row despite multiple key duplicates. This doesn't matter for us, since we know
                 # there is only one row that will share the same key. So suppress the warning.
-                cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
+                cursor.execute(
+                    """INSERT INTO revision_references(repo, namespace, name, value)
                                VALUES(%s, 'tip', 'tip', %s) ON DUPLICATE KEY UPDATE value=%s""",
-                               (reponame, len(self) - 1, len(self) - 1))
+                    (reponame, len(self) - 1, len(self) - 1),
+                )
 
                 # Just to be super sure, check the write lock before doing the final commit
                 if not self.hassqllock(writelock):
-                    raise Exception("attempting to write to sql without holding %s (precommit)"
-                        % writelock)
+                    raise Exception(
+                        "attempting to write to sql without holding %s (precommit)"
+                        % writelock
+                    )
 
                 self.sqlconn.commit()
             except:
@@ -992,12 +1102,15 @@ def wraprepo(repo):
                 del self.pendingrevs[:]
 
         def _addrevstosql(self, revisions):
+
             def insert(args, values):
-                argstring = ','.join(args)
-                cursor.execute("INSERT INTO revisions(repo, path, "
+                argstring = ",".join(args)
+                cursor.execute(
+                    "INSERT INTO revisions(repo, path, "
                     "chunk, chunkcount, linkrev, rev, node, entry, "
-                    "data0, data1, createdtime) VALUES %s" %
-                    argstring, values)
+                    "data0, data1, createdtime) VALUES %s" % argstring,
+                    values,
+                )
 
             reponame = self.sqlreponame
             cursor = self.sqlcursor
@@ -1011,7 +1124,7 @@ def wraprepo(repo):
             args = []
             values = []
 
-            now = time.strftime('%Y-%m-%d %H:%M:%S')
+            now = time.strftime("%Y-%m-%d %H:%M:%S")
             for revision in revisions:
                 path, linkrev, rev, node, entry, data0, data1 = revision
 
@@ -1027,9 +1140,22 @@ def wraprepo(repo):
                 while chunk == 0 or start < len(data1):
                     end = min(len(data1), start + maxrowsize)
                     datachunk = data1[start:end]
-                    args.append('(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)')
-                    values.extend((reponame, path, chunk, chunkcount, linkrev, rev,
-                         node, entry, data0, datachunk, now))
+                    args.append("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)")
+                    values.extend(
+                        (
+                            reponame,
+                            path,
+                            chunk,
+                            chunkcount,
+                            linkrev,
+                            rev,
+                            node,
+                            entry,
+                            data0,
+                            datachunk,
+                            now,
+                        )
+                    )
 
                     size = len(datachunk)
                     commitsize += size
@@ -1067,39 +1193,54 @@ def wraprepo(repo):
 
             # Ensure we hold the write lock
             if not self.hassqllock(writelock):
-                raise Exception("attempting to write to sql without holding %s (prevalidate)"
-                    % writelock)
+                raise Exception(
+                    "attempting to write to sql without holding %s (prevalidate)"
+                    % writelock
+                )
 
             # Validate that we are appending to the correct linkrev
-            cursor.execute("""SELECT value FROM revision_references WHERE repo = %s AND
-                namespace = 'tip'""", (reponame,))
+            cursor.execute(
+                """SELECT value FROM revision_references WHERE repo = %s AND
+                namespace = 'tip'""",
+                (reponame,),
+            )
             tipresults = cursor.fetchall()
             if len(tipresults) == 0:
                 maxlinkrev = -1
             elif len(tipresults) == 1:
                 maxlinkrev = int(tipresults[0][0])
             else:
-                raise CorruptionException(("multiple tips for %s in " +
-                    " the database") % reponame)
+                raise CorruptionException(
+                    ("multiple tips for %s in " + " the database") % reponame
+                )
 
-            if (not util.safehasattr(self, 'sqlreplaytransaction')
-                or not self.sqlreplaytransaction):
-                minlinkrev = min(self.pendingrevs, key= lambda x: x[1])[1]
+            if (
+                not util.safehasattr(self, "sqlreplaytransaction")
+                or not self.sqlreplaytransaction
+            ):
+                minlinkrev = min(self.pendingrevs, key=lambda x: x[1])[1]
                 if maxlinkrev == None or maxlinkrev != minlinkrev - 1:
-                    raise CorruptionException("attempting to write non-sequential " +
-                        "linkrev %s, expected %s" % (minlinkrev, maxlinkrev + 1))
+                    raise CorruptionException(
+                        "attempting to write non-sequential "
+                        + "linkrev %s, expected %s" % (minlinkrev, maxlinkrev + 1)
+                    )
 
             # Clean up excess revisions left from interrupted commits.
             # Since MySQL can only hold so much data in a transaction, we allow
             # committing across multiple db transactions. That means if
             # the commit is interrupted, the next transaction needs to clean
             # up bad revisions.
-            cursor.execute("""DELETE FROM revisions WHERE repo = %s AND
-                linkrev > %s""", (reponame, maxlinkrev))
+            cursor.execute(
+                """DELETE FROM revisions WHERE repo = %s AND
+                linkrev > %s""",
+                (reponame, maxlinkrev),
+            )
 
             # Validate that all rev dependencies (base, p1, p2) have the same
             # node in the database
-            pending = set([(path, rev) for path, _, rev, _, _, _, _ in self.pendingrevs])
+            pending = set(
+                [(path, rev) for path, _, rev, _, _, _, _ in self.pendingrevs]
+            )
             expectedrevs = set()
             for revision in self.pendingrevs:
                 path, linkrev, rev, node, entry, data0, data1 = revision
@@ -1110,8 +1251,7 @@ def wraprepo(repo):
                     expectedrevs.add((path, p1r))
                 if p2r != nullrev and not (path, p2r) in pending:
                     expectedrevs.add((path, p2r))
-                if (base != nullrev and base != rev and
-                    not (path, base) in pending):
+                if base != nullrev and base != rev and not (path, base) in pending:
                     expectedrevs.add((path, base))
 
             if not expectedrevs:
@@ -1120,10 +1260,10 @@ def wraprepo(repo):
             missingrevs = []
             expectedlist = list(expectedrevs)
             expectedcount = len(expectedrevs)
-            batchsize = self.ui.configint('hgsql', 'verifybatchsize')
+            batchsize = self.ui.configint("hgsql", "verifybatchsize")
             i = 0
             while i < expectedcount:
-                checkrevs = set(expectedlist[i:i + batchsize])
+                checkrevs = set(expectedlist[i : i + batchsize])
                 i += batchsize
 
                 whereclauses = []
@@ -1134,32 +1274,43 @@ def wraprepo(repo):
                     args.append(path)
                     args.append(rev)
 
-                whereclause = ' OR '.join(whereclauses)
-                cursor.execute("""SELECT path, rev, node FROM revisions WHERE
-                    repo = %s AND (""" + whereclause + ")",
-                    args)
+                whereclause = " OR ".join(whereclauses)
+                cursor.execute(
+                    """SELECT path, rev, node FROM revisions WHERE
+                    repo = %s AND ("""
+                    + whereclause
+                    + ")",
+                    args,
+                )
 
                 for path, rev, node in cursor:
                     rev = int(rev)
                     checkrevs.remove((path, rev))
                     rl = None
-                    if path == '00changelog.i':
+                    if path == "00changelog.i":
                         rl = self.changelog
-                    elif path == '00manifest.i':
+                    elif path == "00manifest.i":
                         rl = self.manifestlog._revlog
                     else:
                         rl = revlog.revlog(self.svfs, path)
                     localnode = hex(rl.node(rev))
                     if localnode != node:
-                        raise CorruptionException(("expected node %s at rev %d of "
-                            "%s but found %s") % (node, rev, path, localnode))
+                        raise CorruptionException(
+                            ("expected node %s at rev %d of " "%s but found %s")
+                            % (node, rev, path, localnode)
+                        )
 
                 if len(checkrevs) > 0:
                     missingrevs.extend(checkrevs)
 
             if missingrevs:
-                raise CorruptionException(("unable to verify %d dependent " +
-                    "revisions before adding a commit") % (len(missingrevs)))
+                raise CorruptionException(
+                    (
+                        "unable to verify %d dependent "
+                        + "revisions before adding a commit"
+                    )
+                    % (len(missingrevs))
+                )
 
         def _afterlock(self, callback):
             if self.hassqllock(writelock, checkserver=False):
@@ -1170,13 +1321,13 @@ def wraprepo(repo):
     ui = repo.ui
 
     sqlargs = {}
-    sqlargs['host'] = ui.config("hgsql", "host")
-    sqlargs['database'] = ui.config("hgsql", "database")
-    sqlargs['user'] = ui.config("hgsql", "user")
-    sqlargs['port'] = ui.configint("hgsql", "port")
+    sqlargs["host"] = ui.config("hgsql", "host")
+    sqlargs["database"] = ui.config("hgsql", "database")
+    sqlargs["user"] = ui.config("hgsql", "user")
+    sqlargs["port"] = ui.configint("hgsql", "port")
     password = ui.config("hgsql", "password")
     if password:
-        sqlargs['password'] = password
+        sqlargs["password"] = password
 
     repo.sqlargs = sqlargs
 
@@ -1196,10 +1347,12 @@ def wraprepo(repo):
 
     repo.__class__ = sqllocalrepo
 
+
 class bufferedopener(object):
     """Opener implementation that buffers all writes in memory until
     flush or close is called.
     """
+
     def __init__(self, opener, path, mode):
         self.opener = opener
         self.path = path
@@ -1218,12 +1371,13 @@ class bufferedopener(object):
 
         if buffer:
             fp = self.opener(self.path, self.mode)
-            fp.write(''.join(buffer))
+            fp.write("".join(buffer))
             fp.close()
 
     def close(self):
         self.flush()
         self.closed = True
+
 
 def addentries(repo, queue, transaction, ignoreexisting=False):
     """Reads new rev entries from a queue and writes them to a buffered
@@ -1232,6 +1386,7 @@ def addentries(repo, queue, transaction, ignoreexisting=False):
     opener = repo.svfs
 
     revlogs = {}
+
     def writeentry(revdata):
         # Instantiates pseudo-revlogs for us to write data directly to
         path, chunk, chunkcount, link, entry, data0, data1 = revdata
@@ -1242,7 +1397,7 @@ def addentries(repo, queue, transaction, ignoreexisting=False):
 
         # Replace the existing openers with buffered ones so we can
         # perform the flush to disk all at once at the end.
-        if not hasattr(revlog, 'ifh') or revlog.ifh.closed:
+        if not hasattr(revlog, "ifh") or revlog.ifh.closed:
             dfh = None
             if not revlog._inline:
                 dfh = bufferedopener(opener, revlog.datafile, "a+")
@@ -1250,8 +1405,15 @@ def addentries(repo, queue, transaction, ignoreexisting=False):
             revlog.ifh = ifh
             revlog.dfh = dfh
 
-        revlog.addentry(transaction, revlog.ifh, revlog.dfh, entry,
-                        data0, data1, ignoreexisting=ignoreexisting)
+        revlog.addentry(
+            transaction,
+            revlog.ifh,
+            revlog.dfh,
+            entry,
+            data0,
+            data1,
+            ignoreexisting=ignoreexisting,
+        )
 
     leftover = None
     exit = False
@@ -1313,21 +1475,24 @@ def addentries(repo, queue, transaction, ignoreexisting=False):
     if changelog:
         flushrevlog(changelog)
 
+
 class EntryRevlog(revlog.revlog):
     """Pseudo-revlog implementation that allows applying data directly to
     the end of the revlog.
     """
+
     def __init__(self, opener, path):
         super(EntryRevlog, self).__init__(opener, path)
 
         # This is a copy of the changelog init implementation.
         # It hard codes no generaldelta.
-        if path == '00changelog.i' and self._initempty:
+        if path == "00changelog.i" and self._initempty:
             self.version &= ~revlog.FLAG_GENERALDELTA
             self._generaldelta = False
 
-    def addentry(self, transaction, ifh, dfh, entry, data0, data1,
-                 ignoreexisting=False):
+    def addentry(
+        self, transaction, ifh, dfh, entry, data0, data1, ignoreexisting=False
+    ):
         curr = len(self)
         offset = self.end(curr - 1)
 
@@ -1348,17 +1513,21 @@ class EntryRevlog(revlog.revlog):
 
         # Verify that the rev's parents and base appear earlier in the revlog
         if p1r >= curr or p2r >= curr:
-            raise CorruptionException("parent revision is not in revlog: %s" %
-                self.indexfile)
+            raise CorruptionException(
+                "parent revision is not in revlog: %s" % self.indexfile
+            )
         if base > curr:
-            raise CorruptionException("base revision is not in revlog: %s" %
-                self.indexfile)
+            raise CorruptionException(
+                "base revision is not in revlog: %s" % self.indexfile
+            )
 
         expectedoffset = revlog.getoffset(offsettype)
         if expectedoffset != 0 and expectedoffset != offset:
-            raise CorruptionException("revision offset doesn't match prior length " +
-                "(%s offset vs %s length): %s" %
-                (expectedoffset, offset, self.indexfile))
+            raise CorruptionException(
+                "revision offset doesn't match prior length "
+                + "(%s offset vs %s length): %s"
+                % (expectedoffset, offset, self.indexfile)
+            )
 
         if node not in self.nodemap:
             self.index.insert(-1, e)
@@ -1379,13 +1548,13 @@ class EntryRevlog(revlog.revlog):
             ifh.write(data1)
             self.checkinlinesize(transaction, ifh)
 
+
 def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
     """Copy paste of revlog.addgroup, but we ensure that the revisions are
     added in linkrev order.
     """
     if not util.safehasattr(transaction, "repo"):
-        return orig(self, deltas, linkmapper, transaction,
-                    addrevisioncb=addrevisioncb)
+        return orig(self, deltas, linkmapper, transaction, addrevisioncb=addrevisioncb)
 
     # track the base of the current delta log
     content = []
@@ -1422,13 +1591,13 @@ def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
                 reorder = True
             lastlinkrev = link
             chunkdata = {
-                'node': node,
-                'p1': p1,
-                'p2': p2,
-                'cs': linknode,
-                'deltabase': deltabase,
-                'delta': delta,
-                'flags': flags,
+                "node": node,
+                "p1": p1,
+                "p2": p2,
+                "cs": linknode,
+                "deltabase": deltabase,
+                "delta": delta,
+                "flags": flags,
             }
             chunkdatas.append((link, chunkdata))
             chunkmap[node] = chunkdata
@@ -1439,6 +1608,7 @@ def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
             chunkdatas = sorted(chunkdatas)
 
             fulltexts = {}
+
             def getfulltext(node):
                 if node in fulltexts:
                     return fulltexts[node]
@@ -1446,8 +1616,8 @@ def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
                     return self.revision(node, raw=True)
 
                 chunkdata = chunkmap[node]
-                deltabase = chunkdata['deltabase']
-                delta = chunkdata['delta']
+                deltabase = chunkdata["deltabase"]
+                delta = chunkdata["delta"]
 
                 deltachain = []
                 currentbase = deltabase
@@ -1462,8 +1632,8 @@ def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
                         break
                     else:
                         deltachunk = chunkmap[currentbase]
-                        currentbase = deltachunk['deltabase']
-                        deltachain.append(deltachunk['delta'])
+                        currentbase = deltachunk["deltabase"]
+                        deltachain.append(deltachunk["delta"])
 
                 prevtext = deltachain.pop()
                 while deltachain:
@@ -1476,29 +1646,28 @@ def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
             visited = set()
             prevnode = self.node(len(self) - 1)
             for link, chunkdata in chunkdatas:
-                node = chunkdata['node']
-                deltabase = chunkdata['deltabase']
-                if (not deltabase in self.nodemap and
-                    not deltabase in visited):
+                node = chunkdata["node"]
+                deltabase = chunkdata["deltabase"]
+                if not deltabase in self.nodemap and not deltabase in visited:
                     fulltext = getfulltext(node)
                     ptext = getfulltext(prevnode)
                     delta = mdiff.textdiff(ptext, fulltext)
 
-                    chunkdata['delta'] = delta
-                    chunkdata['deltabase'] = prevnode
+                    chunkdata["delta"] = delta
+                    chunkdata["deltabase"] = prevnode
 
                 prevnode = node
                 visited.add(node)
 
         # Apply the reordered revs to the revlog
         for link, chunkdata in chunkdatas:
-            node = chunkdata['node']
-            p1 = chunkdata['p1']
-            p2 = chunkdata['p2']
-            cs = chunkdata['cs']
-            deltabase = chunkdata['deltabase']
-            delta = chunkdata['delta']
-            flags = chunkdata['flags'] or revlog.REVIDX_DEFAULT_FLAGS
+            node = chunkdata["node"]
+            p1 = chunkdata["p1"]
+            p2 = chunkdata["p2"]
+            cs = chunkdata["cs"]
+            deltabase = chunkdata["deltabase"]
+            delta = chunkdata["delta"]
+            flags = chunkdata["flags"] or revlog.REVIDX_DEFAULT_FLAGS
 
             content.append(node)
 
@@ -1509,17 +1678,15 @@ def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
 
             for p in (p1, p2):
                 if p not in self.nodemap:
-                    raise LookupError(p, self.indexfile,
-                                      _('unknown parent'))
+                    raise LookupError(p, self.indexfile, _("unknown parent"))
 
             if deltabase not in self.nodemap:
-                raise LookupError(deltabase, self.indexfile,
-                                  _('unknown delta base'))
+                raise LookupError(deltabase, self.indexfile, _("unknown delta base"))
 
             baserev = self.rev(deltabase)
-            chain = self._addrevision(node, None, transaction, link, p1, p2,
-                                      flags, (baserev, delta),
-                                      ifh, dfh)
+            chain = self._addrevision(
+                node, None, transaction, link, p1, p2, flags, (baserev, delta), ifh, dfh
+            )
 
             if addrevisioncb:
                 # Data for added revision can't be read unless flushed
@@ -1543,12 +1710,12 @@ def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
 
     return content
 
+
 def bookmarkcommand(orig, ui, repo, *names, **opts):
     if not issqlrepo(repo):
         return orig(ui, repo, *names, **opts)
 
-    write = (opts.get('delete') or opts.get('rename')
-             or opts.get('inactive') or names)
+    write = opts.get("delete") or opts.get("rename") or opts.get("inactive") or names
 
     def _bookmarkcommand():
         return orig(ui, repo, *names, **opts)
@@ -1558,20 +1725,28 @@ def bookmarkcommand(orig, ui, repo, *names, **opts):
     else:
         return _bookmarkcommand()
 
+
 def pushkey(orig, repo, proto, namespace, key, old, new):
     if issqlrepo(repo):
+
         def commitpushkey():
             return orig(repo, proto, namespace, key, old, new)
 
-        return executewithsql(repo, commitpushkey, namespace == 'bookmarks')
+        return executewithsql(repo, commitpushkey, namespace == "bookmarks")
     else:
         return orig(repo, proto, namespace, key, old, new)
 
+
 # recover must be a norepo command because loading the repo fails
-@command('^sqlrecover', [
-    ('f', 'force', '', _('strips as far back as necessary'), ''),
-    ('', 'no-backup', None, _('does not produce backup bundles for strips')),
-    ], _('hg sqlrecover'), norepo=True)
+@command(
+    "^sqlrecover",
+    [
+        ("f", "force", "", _("strips as far back as necessary"), ""),
+        ("", "no-backup", None, _("does not produce backup bundles for strips")),
+    ],
+    _("hg sqlrecover"),
+    norepo=True,
+)
 def sqlrecover(ui, *args, **opts):
     """
     Strips commits from the local repo until it is back in sync with the SQL
@@ -1580,7 +1755,7 @@ def sqlrecover(ui, *args, **opts):
 
     global initialsync
     initialsync = INITIAL_SYNC_DISABLE
-    repo = hg.repository(ui, ui.environ['PWD'])
+    repo = hg.repository(ui, ui.environ["PWD"])
     repo.disablesync = True
 
     if repo.recover():
@@ -1601,9 +1776,11 @@ def sqlrecover(ui, *args, **opts):
 
     stripsize = 10
     while iscorrupt() and len(repo) > 0:
-        if not opts.get('force') and reposize > len(repo) + 10000:
-            ui.warn("unable to fix repo after stripping 10000 commits " +
-                    "(use -f to strip more)")
+        if not opts.get("force") and reposize > len(repo) + 10000:
+            ui.warn(
+                "unable to fix repo after stripping 10000 commits "
+                + "(use -f to strip more)"
+            )
 
         striprev = max(0, len(repo) - stripsize)
         nodelist = [repo[striprev].node()]
@@ -1621,39 +1798,60 @@ def sqlrecover(ui, *args, **opts):
     else:
         ui.status(_("local repo now matches SQL\n"))
 
-@command('sqltreestrip', [
-    ('', 'local-only', None, _('only strips the commits locally, and not from sql')),
-    ('', 'i-know-what-i-am-doing', None, _('only run sqltreestrip if you '
-                                           'know exactly what you\'re doing')),
-    ], _('hg sqltreestrip REV'))
+
+@command(
+    "sqltreestrip",
+    [
+        (
+            "",
+            "local-only",
+            None,
+            _("only strips the commits locally, and not from sql"),
+        ),
+        (
+            "",
+            "i-know-what-i-am-doing",
+            None,
+            _("only run sqltreestrip if you " "know exactly what you're doing"),
+        ),
+    ],
+    _("hg sqltreestrip REV"),
+)
 def sqltreestrip(ui, repo, rev, *args, **opts):
     """Strips trees from local and sql history
     """
     try:
-        treemfmod = extensions.find('treemanifest')
+        treemfmod = extensions.find("treemanifest")
     except KeyError:
         ui.warn(_("treemanifest is not enabled for this repository\n"))
         return 1
 
-    if not repo.ui.configbool('treemanifest', 'server'):
-        ui.warn(_("this repository is not configured to be a treemanifest "
-                  "server\n"))
+    if not repo.ui.configbool("treemanifest", "server"):
+        ui.warn(_("this repository is not configured to be a treemanifest " "server\n"))
         return 1
 
-    if not opts.get('i_know_what_i_am_doing'):
-        raise util.Abort("You must pass --i-know-what-i-am-doing to run this " +
-            "command. If you have multiple servers using the database, this " +
-            "command will break your servers until you run it on each one. " +
-            "Only the Mercurial server admins should ever run this.")
+    if not opts.get("i_know_what_i_am_doing"):
+        raise util.Abort(
+            "You must pass --i-know-what-i-am-doing to run this "
+            + "command. If you have multiple servers using the database, this "
+            + "command will break your servers until you run it on each one. "
+            + "Only the Mercurial server admins should ever run this."
+        )
 
     rev = int(rev)
 
-    ui.warn(_("*** YOU ARE ABOUT TO DELETE TREE HISTORY INCLUDING AND AFTER %s "
-              "(MANDATORY 5 SECOND WAIT) ***\n") % rev)
+    ui.warn(
+        _(
+            "*** YOU ARE ABOUT TO DELETE TREE HISTORY INCLUDING AND AFTER %s "
+            "(MANDATORY 5 SECOND WAIT) ***\n"
+        )
+        % rev
+    )
     import time
+
     time.sleep(5)
 
-    if not opts.get('local_only'):
+    if not opts.get("local_only"):
         # strip from sql
         reponame = repo.sqlreponame
         repo.sqlconnect()
@@ -1661,11 +1859,13 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
         try:
             cursor = repo.sqlcursor
             ui.status(_("mysql: deleting trees with linkrevs >= %s\n") % rev)
-            cursor.execute("""DELETE FROM revisions
+            cursor.execute(
+                """DELETE FROM revisions
                               WHERE repo = %s AND linkrev >= %s AND
                                     (path LIKE 'meta/%%' OR
                                      path = '00manifesttree.i')""",
-                           (reponame, rev))
+                (reponame, rev),
+            )
             repo.sqlconn.commit()
         finally:
             repo.sqlunlock(writelock)
@@ -1673,7 +1873,7 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
 
     # strip from local
     ui.status(_("local: deleting trees with linkrevs >= %s\n") % rev)
-    with repo.wlock(), repo.lock(), repo.transaction('treestrip') as tr:
+    with repo.wlock(), repo.lock(), repo.transaction("treestrip") as tr:
         repo.disablesync = True
 
         # Duplicating some logic from repair.py
@@ -1685,17 +1885,31 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
 
         for i in xrange(offset, len(tr.entries)):
             file, troffset, ignore = tr.entries[i]
-            with repo.svfs(file, 'a', checkambig=True) as fp:
+            with repo.svfs(file, "a", checkambig=True) as fp:
                 fp.truncate(troffset)
             if troffset == 0:
                 repo.store.markremoved(file)
 
-@command('^sqlstrip', [
-    ('', 'i-know-what-i-am-doing', None, _('only run sqlstrip if you know ' +
-        'exactly what you\'re doing')),
-    ('', 'no-backup-permanent-data-loss', None,
-     _('does not produce backup bundles (for use with corrupt revlogs)')),
-    ], _('hg sqlstrip [OPTIONS] REV'), norepo=True)
+
+@command(
+    "^sqlstrip",
+    [
+        (
+            "",
+            "i-know-what-i-am-doing",
+            None,
+            _("only run sqlstrip if you know " + "exactly what you're doing"),
+        ),
+        (
+            "",
+            "no-backup-permanent-data-loss",
+            None,
+            _("does not produce backup bundles (for use with corrupt revlogs)"),
+        ),
+    ],
+    _("hg sqlstrip [OPTIONS] REV"),
+    norepo=True,
+)
 def sqlstrip(ui, rev, *args, **opts):
     """strips all revisions greater than or equal to the given revision from the sql database
 
@@ -1705,14 +1919,17 @@ def sqlstrip(ui, rev, *args, **opts):
     this command on each master server before proceeding to write new revisions.
     """
 
-    if not opts.get('i_know_what_i_am_doing'):
-        raise util.Abort("You must pass --i-know-what-i-am-doing to run this " +
-            "command. If you have multiple servers using the database, this " +
-            "command will break your servers until you run it on each one. " +
-            "Only the Mercurial server admins should ever run this.")
+    if not opts.get("i_know_what_i_am_doing"):
+        raise util.Abort(
+            "You must pass --i-know-what-i-am-doing to run this "
+            + "command. If you have multiple servers using the database, this "
+            + "command will break your servers until you run it on each one. "
+            + "Only the Mercurial server admins should ever run this."
+        )
 
     ui.warn("*** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***\n")
     import time
+
     time.sleep(5)
 
     backup = not opts.get("no_backup_permanent_data_loss")
@@ -1724,7 +1941,7 @@ def sqlstrip(ui, rev, *args, **opts):
 
     global initialsync
     initialsync = INITIAL_SYNC_DISABLE
-    repo = hg.repository(ui, ui.environ['PWD'])
+    repo = hg.repository(ui, ui.environ["PWD"])
     repo.disablesync = True
 
     try:
@@ -1747,36 +1964,51 @@ def sqlstrip(ui, rev, *args, **opts):
             cursor = repo.sqlcursor
             changelog = repo.changelog
 
-            revs = repo.revs('%s:' % rev)
+            revs = repo.revs("%s:" % rev)
             # strip locally
             ui.status("stripping locally\n")
-            repair.strip(ui, repo, [changelog.node(r) for r in revs],
-                         backup=backup, topic="sqlstrip")
+            repair.strip(
+                ui,
+                repo,
+                [changelog.node(r) for r in revs],
+                backup=backup,
+                topic="sqlstrip",
+            )
 
             ui.status("stripping from the database\n")
             ui.status("deleting old references\n")
-            cursor.execute("""DELETE FROM revision_references WHERE repo = %s""", (reponame,))
+            cursor.execute(
+                """DELETE FROM revision_references WHERE repo = %s""", (reponame,)
+            )
 
             ui.status("adding new head references\n")
             for head in repo.heads():
-                cursor.execute("""INSERT INTO revision_references(repo, namespace, value)
+                cursor.execute(
+                    """INSERT INTO revision_references(repo, namespace, value)
                                VALUES(%s, 'heads', %s)""",
-                               (reponame, hex(head)))
+                    (reponame, hex(head)),
+                )
 
             ui.status("adding new tip reference\n")
-            cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
+            cursor.execute(
+                """INSERT INTO revision_references(repo, namespace, name, value)
                            VALUES(%s, 'tip', 'tip', %s)""",
-                           (reponame, len(repo) - 1))
+                (reponame, len(repo) - 1),
+            )
 
             ui.status("adding new bookmark references\n")
             for k, v in repo._bookmarks.iteritems():
-                cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
+                cursor.execute(
+                    """INSERT INTO revision_references(repo, namespace, name, value)
                                VALUES(%s, 'bookmarks', %s, %s)""",
-                               (reponame, k, hex(v)))
+                    (reponame, k, hex(v)),
+                )
 
             ui.status("deleting revision data\n")
-            cursor.execute("""DELETE FROM revisions WHERE repo = %s and linkrev > %s""",
-                              (reponame, rev))
+            cursor.execute(
+                """DELETE FROM revisions WHERE repo = %s and linkrev > %s""",
+                (reponame, rev),
+            )
 
             repo.sqlconn.commit()
         finally:
@@ -1788,9 +2020,11 @@ def sqlstrip(ui, rev, *args, **opts):
         if wlock:
             wlock.release()
 
+
 class CustomConverter(mysql.connector.conversion.MySQLConverter):
     """Ensure that all values being returned are returned as python string
     (versus the default byte arrays)."""
+
     def _STRING_to_python(self, value, dsc=None):
         return str(value)
 
@@ -1800,10 +2034,15 @@ class CustomConverter(mysql.connector.conversion.MySQLConverter):
     def _BLOB_to_python(self, value, dsc=None):
         return str(value)
 
-@command('^sqlreplay', [
-    ('', 'start', '', _('the rev to start with'), ''),
-    ('', 'end', '', _('the rev to end with'), ''),
-    ], _('hg sqlreplay'))
+
+@command(
+    "^sqlreplay",
+    [
+        ("", "start", "", _("the rev to start with"), ""),
+        ("", "end", "", _("the rev to end with"), ""),
+    ],
+    _("hg sqlreplay"),
+)
 def sqlreplay(ui, repo, *args, **opts):
     """goes through the entire sql history and performs missing revlog writes
 
@@ -1813,15 +2052,17 @@ def sqlreplay(ui, repo, *args, **opts):
     revlogs from things being appended out of order.
     """
     maxrev = len(repo.changelog) - 1
-    startrev = int(opts.get('start') or '0')
-    endrev = int(opts.get('end') or str(maxrev))
+    startrev = int(opts.get("start") or "0")
+    endrev = int(opts.get("end") or str(maxrev))
 
     startrev = max(startrev, 0)
     endrev = min(endrev, maxrev)
 
     def _helper():
         _sqlreplay(repo, startrev, endrev)
+
     executewithsql(repo, _helper, False)
+
 
 def _sqlreplay(repo, startrev, endrev):
     wlock = lock = None
@@ -1842,8 +2083,9 @@ def _sqlreplay(repo, startrev, endrev):
             queue = Queue.Queue()
             abort = threading.Event()
 
-            t = threading.Thread(target=repo.fetchthread,
-                args=(queue, abort, startrev, endrev))
+            t = threading.Thread(
+                target=repo.fetchthread, args=(queue, abort, startrev, endrev)
+            )
             t.setDaemon(True)
             try:
                 t.start()
@@ -1861,16 +2103,19 @@ def _sqlreplay(repo, startrev, endrev):
         if wlock:
             wlock.release()
 
-@command('^sqlverify', [
-    ('', 'earliest-rev', '', _('the earliest rev to process'), ''),
-    ], _('hg sqlverify'))
+
+@command(
+    "^sqlverify",
+    [("", "earliest-rev", "", _("the earliest rev to process"), "")],
+    _("hg sqlverify"),
+)
 def sqlverify(ui, repo, *args, **opts):
     """verifies the current revlog indexes match the data in mysql
 
     Runs in reverse order, so it verifies the latest commits first.
     """
     maxrev = len(repo.changelog) - 1
-    minrev = int(opts.get('earliest_rev') or '0')
+    minrev = int(opts.get("earliest_rev") or "0")
 
     def _helper():
         stepsize = 1000
@@ -1879,7 +2124,7 @@ def sqlverify(ui, repo, *args, **opts):
 
         insql = set()
         revlogcache = {}
-        with progress.bar(ui, 'verifying', total=maxrev - minrev) as prog:
+        with progress.bar(ui, "verifying", total=maxrev - minrev) as prog:
             while True:
                 insql.update(_sqlverify(repo, firstrev, lastrev, revlogcache))
                 prog.value = maxrev - firstrev
@@ -1892,10 +2137,10 @@ def sqlverify(ui, repo, *args, **opts):
         # hgsql
         earliestmtime = time.time() - (3600 * 24 * 7)
         corrupted = False
-        with progress.bar(ui, 'verifying revlogs') as prog:
+        with progress.bar(ui, "verifying revlogs") as prog:
             for filepath, x, x in repo.store.walk():
                 prog.value += 1
-                if filepath[-2:] != '.i':
+                if filepath[-2:] != ".i":
                     continue
 
                 # If the revlog is recent, check it
@@ -1905,9 +2150,9 @@ def sqlverify(ui, repo, *args, **opts):
 
                 rl = revlogcache.get(filepath)
                 if rl is None:
-                    if filepath == '00changelog.i':
+                    if filepath == "00changelog.i":
                         rl = repo.unfiltered().changelog
-                    elif filepath == '00manifest.i':
+                    elif filepath == "00manifest.i":
                         rl = repo.manifestlog._revlog
                     else:
                         rl = revlog.revlog(repo.svfs, filepath)
@@ -1918,9 +2163,10 @@ def sqlverify(ui, repo, *args, **opts):
                         break
                     if (filepath, node) not in insql:
                         corrupted = True
-                        msg = (("corruption: '%s:%s' with linkrev %s "
-                                "exists on local disk, but not in sql\n") %
-                                (filepath, hex(node), linkrev))
+                        msg = (
+                            "corruption: '%s:%s' with linkrev %s "
+                            "exists on local disk, but not in sql\n"
+                        ) % (filepath, hex(node), linkrev)
                         repo.ui.status(msg)
 
         if corrupted:
@@ -1930,11 +2176,11 @@ def sqlverify(ui, repo, *args, **opts):
 
     executewithsql(repo, _helper, False)
 
+
 def _sqlverify(repo, minrev, maxrev, revlogcache):
     queue = Queue.Queue()
     abort = threading.Event()
-    t = threading.Thread(target=repo.fetchthread,
-        args=(queue, abort, minrev, maxrev))
+    t = threading.Thread(target=repo.fetchthread, args=(queue, abort, minrev, maxrev))
     t.setDaemon(True)
 
     insql = set()
@@ -1960,9 +2206,9 @@ def _sqlverify(repo, minrev, maxrev, revlogcache):
 
             rl = revlogcache.get(path)
             if rl is None:
-                if path == '00changelog.i':
+                if path == "00changelog.i":
                     rl = repo.unfiltered().changelog
-                elif path == '00manifest.i':
+                elif path == "00manifest.i":
                     rl = repo.manifestlog._revlog
                 else:
                     rl = revlog.revlog(repo.svfs, path)
@@ -1981,8 +2227,9 @@ def _sqlverify(repo, minrev, maxrev, revlogcache):
 
             revlogentry = rl.index[rev]
             if revlogentry != sqlentry:
-                raise CorruptionException(("'%s:%s' with linkrev %s, disk does "
-                                           "not match mysql") %
-                                          (path, hex(node), str(linkrev)))
+                raise CorruptionException(
+                    ("'%s:%s' with linkrev %s, disk does " "not match mysql")
+                    % (path, hex(node), str(linkrev))
+                )
     finally:
         abort.set()

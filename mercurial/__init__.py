@@ -11,6 +11,8 @@ import sys
 
 # Allow 'from mercurial import demandimport' to keep working.
 import hgdemandimport
+
+
 demandimport = hgdemandimport
 
 __all__ = []
@@ -27,18 +29,19 @@ if sys.version_info[0] >= 3:
 
     class hgpathentryfinder(importlib.abc.MetaPathFinder):
         """A sys.meta_path finder that uses a custom module loader."""
+
         def find_spec(self, fullname, path, target=None):
             # Only handle Mercurial-related modules.
-            if not fullname.startswith(('mercurial.', 'hgext.', 'hgext3rd.')):
+            if not fullname.startswith(("mercurial.", "hgext.", "hgext3rd.")):
                 return None
             # third-party packages are expected to be dual-version clean
-            if fullname.startswith('mercurial.thirdparty'):
+            if fullname.startswith("mercurial.thirdparty"):
                 return None
             # zstd is already dual-version clean, don't try and mangle it
-            if fullname.startswith('mercurial.zstd'):
+            if fullname.startswith("mercurial.zstd"):
                 return None
             # pywatchman is already dual-version clean, don't try and mangle it
-            if fullname.startswith('hgext.extlib.pywatchman'):
+            if fullname.startswith("hgext.extlib.pywatchman"):
                 return None
 
             # Try to find the module using other registered finders.
@@ -62,7 +65,7 @@ if sys.version_info[0] >= 3:
             loader = hgloader(spec.name, spec.origin)
             # Can't use util.safehasattr here because that would require
             # importing util, and we're in import code.
-            if hasattr(spec.loader, 'loader'): # hasattr-py3-only
+            if hasattr(spec.loader, "loader"):  # hasattr-py3-only
                 # This is a nested loader (maybe a lazy loader?)
                 spec.loader.loader = loader
             else:
@@ -105,7 +108,7 @@ if sys.version_info[0] >= 3:
             """
             nested = 0
             for j in range(i + 2, len(tokens)):
-                if _isop(j, ')', ']', '}'):
+                if _isop(j, ")", "]", "}"):
                     # end of call, tuple, subscription or dict / set
                     nested -= 1
                     if nested < 0:
@@ -113,9 +116,9 @@ if sys.version_info[0] >= 3:
                 elif n == 0:
                     # this is the starting position of arg
                     return j
-                elif _isop(j, '(', '[', '{'):
+                elif _isop(j, "(", "[", "{"):
                     nested += 1
-                elif _isop(j, ',') and nested == 0:
+                elif _isop(j, ",") and nested == 0:
                     n -= 1
 
             return None
@@ -132,7 +135,7 @@ if sys.version_info[0] >= 3:
             """
             st = tokens[j]
             if st.type == token.STRING and st.string.startswith(("'", '"')):
-                tokens[j] = st._replace(string='u%s' % st.string)
+                tokens[j] = st._replace(string="u%s" % st.string)
 
         for i, t in enumerate(tokens):
             # Convert most string literals to byte literals. String literals
@@ -163,45 +166,50 @@ if sys.version_info[0] >= 3:
                     continue
 
                 # String literal. Prefix to make a b'' string.
-                yield t._replace(string='b%s' % t.string)
+                yield t._replace(string="b%s" % t.string)
                 continue
 
             # Insert compatibility imports at "from __future__ import" line.
             # No '\n' should be added to preserve line numbers.
-            if (t.type == token.NAME and t.string == 'import' and
-                all(u.type == token.NAME for u in tokens[i - 2:i]) and
-                [u.string for u in tokens[i - 2:i]] == ['from', '__future__']):
+            if (
+                t.type == token.NAME
+                and t.string == "import"
+                and all(u.type == token.NAME for u in tokens[i - 2 : i])
+                and [u.string for u in tokens[i - 2 : i]] == ["from", "__future__"]
+            ):
                 futureimpline = True
             if t.type == token.NEWLINE and futureimpline:
                 futureimpline = False
-                if fullname == 'mercurial.pycompat':
+                if fullname == "mercurial.pycompat":
                     yield t
                     continue
                 r, c = t.start
-                l = (b'; from mercurial.pycompat import '
-                     b'delattr, getattr, hasattr, setattr, xrange, '
-                     b'open, unicode\n')
+                l = (
+                    b"; from mercurial.pycompat import "
+                    b"delattr, getattr, hasattr, setattr, xrange, "
+                    b"open, unicode\n"
+                )
                 for u in tokenize.tokenize(io.BytesIO(l).readline):
                     if u.type in (tokenize.ENCODING, token.ENDMARKER):
                         continue
-                    yield u._replace(
-                        start=(r, c + u.start[1]), end=(r, c + u.end[1]))
+                    yield u._replace(start=(r, c + u.start[1]), end=(r, c + u.end[1]))
                 continue
 
             # This looks like a function call.
-            if t.type == token.NAME and _isop(i + 1, '('):
+            if t.type == token.NAME and _isop(i + 1, "("):
                 fn = t.string
 
                 # *attr() builtins don't accept byte strings to 2nd argument.
-                if (fn in ('getattr', 'setattr', 'hasattr', 'safehasattr') and
-                        not _isop(i - 1, '.')):
+                if fn in ("getattr", "setattr", "hasattr", "safehasattr") and not _isop(
+                    i - 1, "."
+                ):
                     arg1idx = _findargnofcall(1)
                     if arg1idx is not None:
                         _ensureunicode(arg1idx)
 
                 # .encode() and .decode() on str/bytes/unicode don't accept
                 # byte strings on Python 3.
-                elif fn in ('encode', 'decode') and _isop(i - 1, '.'):
+                elif fn in ("encode", "decode") and _isop(i - 1, "."):
                     for argn in range(2):
                         argidx = _findargnofcall(argn)
                         if argidx is not None:
@@ -209,7 +217,7 @@ if sys.version_info[0] >= 3:
 
                 # It changes iteritems/values to items/values as they are not
                 # present in Python 3 world.
-                elif fn in ('iteritems', 'itervalues'):
+                elif fn in ("iteritems", "itervalues"):
                     yield t._replace(string=fn[4:])
                     continue
 
@@ -220,7 +228,7 @@ if sys.version_info[0] >= 3:
     # ``replacetoken`` or any mechanism that changes semantics of module
     # loading is changed. Otherwise cached bytecode may get loaded without
     # the new transformation mechanisms applied.
-    BYTECODEHEADER = b'HG\x00\x0a'
+    BYTECODEHEADER = b"HG\x00\x0a"
 
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.
@@ -251,6 +259,7 @@ if sys.version_info[0] >= 3:
         The added header has the form ``HG<VERSION>``. That is a literal
         ``HG`` with 2 binary bytes indicating the transformation version.
         """
+
         def get_data(self, path):
             data = super(hgloader, self).get_data(path)
 
@@ -262,10 +271,10 @@ if sys.version_info[0] >= 3:
             # we raise an OSError because that is what
             # ``SourceFileLoader.get_code()`` expects when loading bytecode
             # paths to indicate the cached file is "bad."
-            if data[0:2] != b'HG':
-                raise OSError('no hg header')
+            if data[0:2] != b"HG":
+                raise OSError("no hg header")
             if data[0:4] != BYTECODEHEADER:
-                raise OSError('hg header version mismatch')
+                raise OSError("hg header version mismatch")
 
             return data[4:]
 

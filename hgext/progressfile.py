@@ -34,17 +34,16 @@ from __future__ import absolute_import
 
 import json
 
-from mercurial import (
-    progress,
-    registrar,
-)
+from mercurial import progress, registrar
 
-testedwith = 'ships-with-fb-hgext'
+
+testedwith = "ships-with-fb-hgext"
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('progress', 'statefile', default='')
+configitem("progress", "statefile", default="")
+
 
 def writeprogress(self, progressfile, filemode, bars):
     topics = {}
@@ -56,43 +55,44 @@ def writeprogress(self, progressfile, filemode, bars):
         isactive = index == self._currentbarindex
         cullempty = lambda str: str if str else None
         info = {
-            'topic': topic,
-            'pos': pos,
-            'total': total,
-            'unit': cullempty(unit),
-            'item': cullempty(item),
-
-            'active': isactive,
-            'units_per_sec': None,
-            'speed_str': None,
-            'estimate_sec': None,
-            'estimate_str': None,
+            "topic": topic,
+            "pos": pos,
+            "total": total,
+            "unit": cullempty(unit),
+            "item": cullempty(item),
+            "active": isactive,
+            "units_per_sec": None,
+            "speed_str": None,
+            "estimate_sec": None,
+            "estimate_str": None,
         }
         if isactive:
             speed = progress.estimatespeed(bar)
             remaining = progress.estimateremaining(bar) if total else None
-            info['units_per_sec'] = cullempty(speed)
-            info['estimate_sec'] = cullempty(remaining)
-            info['speed_str'] = cullempty(progress.fmtspeed(speed, bar))
-            info['estimate_str'] = cullempty(progress.fmtremaining(remaining))
+            info["units_per_sec"] = cullempty(speed)
+            info["estimate_sec"] = cullempty(remaining)
+            info["speed_str"] = cullempty(progress.fmtspeed(speed, bar))
+            info["estimate_str"] = cullempty(progress.fmtremaining(remaining))
         topics[topic] = info
 
-    text = json.dumps({
-        'state': topics,
-        'topics': [bar._topic for bar in bars],
-    }, sort_keys=True)
+    text = json.dumps(
+        {"state": topics, "topics": [bar._topic for bar in bars]}, sort_keys=True
+    )
     try:
         with open(progressfile, filemode) as f:
-            f.write(text + '\n')
+            f.write(text + "\n")
     except (IOError, OSError):
         pass
 
+
 def uisetup(ui):
-    progressfile = ui.config('progress', 'statefile')
-    append = ui.configbool('progress', 'statefileappend', False)
-    filemode = 'a+' if append else 'w+'
+    progressfile = ui.config("progress", "statefile")
+    append = ui.configbool("progress", "statefileappend", False)
+    filemode = "a+" if append else "w+"
     if progressfile:
+
         class fileengine(progress._engine.__class__):
+
             def _show(self, now):
                 super(fileengine, self)._show(now)
                 writeprogress(self, progressfile, filemode, self._bars)

@@ -11,8 +11,9 @@ from __future__ import absolute_import
 from .i18n import _
 from .node import nullrev
 
+
 class basedag(object):
-    '''generic interface for DAGs
+    """generic interface for DAGs
 
     terms:
     "ix" (short for index) identifies a nodes internally,
@@ -20,72 +21,73 @@ class basedag(object):
 
     All params are ixs unless explicitly suffixed otherwise.
     Pluralized params are lists or sets.
-    '''
+    """
 
     def __init__(self):
         self._inverse = None
 
     def nodeset(self):
-        '''set of all node ixs'''
+        """set of all node ixs"""
         raise NotImplementedError
 
     def heads(self):
-        '''list of head ixs'''
+        """list of head ixs"""
         raise NotImplementedError
 
     def parents(self, ix):
-        '''list of parents ixs of ix'''
+        """list of parents ixs of ix"""
         raise NotImplementedError
 
     def inverse(self):
-        '''inverse DAG, where parents becomes children, etc.'''
+        """inverse DAG, where parents becomes children, etc."""
         raise NotImplementedError
 
     def ancestorset(self, starts, stops=None):
-        '''
+        """
         set of all ancestors of starts (incl), but stop walk at stops (excl)
-        '''
+        """
         raise NotImplementedError
 
     def descendantset(self, starts, stops=None):
-        '''
+        """
         set of all descendants of starts (incl), but stop walk at stops (excl)
-        '''
+        """
         return self.inverse().ancestorset(starts, stops)
 
     def headsetofconnecteds(self, ixs):
-        '''
+        """
         subset of connected list of ixs so that no node has a descendant in it
 
         By "connected list" we mean that if an ancestor and a descendant are in
         the list, then so is at least one path connecting them.
-        '''
+        """
         raise NotImplementedError
 
     def externalize(self, ix):
-        '''return a node id'''
+        """return a node id"""
         return self._externalize(ix)
 
     def externalizeall(self, ixs):
-        '''return a list of (or set if given a set) of node ids'''
+        """return a list of (or set if given a set) of node ids"""
         ids = self._externalizeall(ixs)
         if isinstance(ixs, set):
             return set(ids)
         return list(ids)
 
     def internalize(self, id):
-        '''return a node ix'''
+        """return a node ix"""
         return self._internalize(id)
 
     def internalizeall(self, ids, filterunknown=False):
-        '''return a list of (or set if given a set) of node ixs'''
+        """return a list of (or set if given a set) of node ixs"""
         ixs = self._internalizeall(ids, filterunknown)
         if isinstance(ids, set):
             return set(ixs)
         return list(ixs)
 
+
 class genericdag(basedag):
-    '''generic implementations for DAGs'''
+    """generic implementations for DAGs"""
 
     def ancestorset(self, starts, stops=None):
         if stops:
@@ -111,8 +113,9 @@ class genericdag(basedag):
         assert hds
         return hds
 
+
 class revlogbaseddag(basedag):
-    '''generic dag interface to a revlog'''
+    """generic dag interface to a revlog"""
 
     def __init__(self, revlog, nodeset):
         basedag.__init__(self)
@@ -130,6 +133,7 @@ class revlogbaseddag(basedag):
 
     def _externalize(self, ix):
         return self._revlog.index[ix][7]
+
     def _externalizeall(self, ixs):
         idx = self._revlog.index
         return [idx[i][7] for i in ixs]
@@ -137,19 +141,22 @@ class revlogbaseddag(basedag):
     def _internalize(self, id):
         ix = self._revlog.rev(id)
         if ix == nullrev:
-            raise LookupError(id, self._revlog.indexfile, _('nullid'))
+            raise LookupError(id, self._revlog.indexfile, _("nullid"))
         return ix
+
     def _internalizeall(self, ids, filterunknown):
         rl = self._revlog
         if filterunknown:
-            return [r for r in map(rl.nodemap.get, ids)
-                    if (r is not None
-                        and r != nullrev
-                        and r not in rl.filteredrevs)]
+            return [
+                r
+                for r in map(rl.nodemap.get, ids)
+                if (r is not None and r != nullrev and r not in rl.filteredrevs)
+            ]
         return [self._internalize(i) for i in ids]
 
+
 class revlogdag(revlogbaseddag):
-    '''dag interface to a revlog'''
+    """dag interface to a revlog"""
 
     def __init__(self, revlog, localsubset=None):
         revlogbaseddag.__init__(self, revlog, set(revlog))
@@ -214,14 +221,14 @@ class revlogdag(revlogbaseddag):
         return headrevs
 
     def linearize(self, ixs):
-        '''linearize and topologically sort a list of revisions
+        """linearize and topologically sort a list of revisions
 
         The linearization process tries to create long runs of revs where
         a child rev comes immediately after its first parent. This is done by
         visiting the heads of the given revs in inverse topological order,
         and for each visited rev, visiting its second parent, then its first
         parent, then adding the rev itself to the output list.
-        '''
+        """
         sorted = []
         visit = list(self.headsetofconnecteds(ixs))
         visit.sort(reverse=True)
@@ -236,13 +243,15 @@ class revlogdag(revlogbaseddag):
                     finished.add(cur)
             else:
                 visit.append(-cur - 1)
-                visit += [p for p in self.parents(cur)
-                          if p in ixs and p not in finished]
+                visit += [
+                    p for p in self.parents(cur) if p in ixs and p not in finished
+                ]
         assert len(sorted) == len(ixs)
         return sorted
 
+
 class inverserevlogdag(revlogbaseddag, genericdag):
-    '''inverse of an existing revlog dag; see revlogdag.inverse()'''
+    """inverse of an existing revlog dag; see revlogdag.inverse()"""
 
     def __init__(self, orig):
         revlogbaseddag.__init__(self, orig._revlog, orig._nodeset)
@@ -259,7 +268,7 @@ class inverserevlogdag(revlogbaseddag, genericdag):
         while rev >= walkto:
             data = idx[rev]
             isroot = True
-            for prev in [data[5], data[6]]: # parent revs
+            for prev in [data[5], data[6]]:  # parent revs
                 if prev != nullrev:
                     cs.setdefault(prev, []).append(rev)
                     isroot = False

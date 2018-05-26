@@ -8,20 +8,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''command to display child changesets (DEPRECATED)
+"""command to display child changesets (DEPRECATED)
 
 This extension is deprecated. You should use :hg:`log -r
 "children(REV)"` instead.
-'''
+"""
 
 from __future__ import absolute_import
 
+from mercurial import cmdutil, pycompat, registrar
 from mercurial.i18n import _
-from mercurial import (
-    cmdutil,
-    pycompat,
-    registrar,
-)
+
 
 templateopts = cmdutil.templateopts
 
@@ -31,14 +28,16 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
-@command('children',
-    [('r', 'rev', '',
-     _('show children of the specified revision'), _('REV')),
-    ] + templateopts,
-    _('hg children [-r REV] [FILE]'),
-    inferrepo=True)
+
+@command(
+    "children",
+    [("r", "rev", "", _("show children of the specified revision"), _("REV"))]
+    + templateopts,
+    _("hg children [-r REV] [FILE]"),
+    inferrepo=True,
+)
 def children(ui, repo, file_=None, **opts):
     """show the children of the given or working directory revision
 
@@ -57,7 +56,7 @@ def children(ui, repo, file_=None, **opts):
 
     """
     opts = pycompat.byteskwargs(opts)
-    rev = opts.get('rev')
+    rev = opts.get("rev")
     if file_:
         fctx = repo.filectx(file_, changeid=rev)
         childctxs = [fcctx.changectx() for fcctx in fctx.children()]

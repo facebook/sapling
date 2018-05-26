@@ -11,19 +11,15 @@ import re
 import struct
 import zlib
 
-from .i18n import _
-from . import (
-    error,
-    policy,
-    pycompat,
-    util,
-)
+from . import error, policy, pycompat, util
 from .cext import xdiff
+from .i18n import _
+
 
 _missing_newline_marker = "\\ No newline at end of file\n"
 
-bdiff = policy.importmod(r'bdiff')
-mpatch = policy.importmod(r'mpatch')
+bdiff = policy.importmod(r"bdiff")
+mpatch = policy.importmod(r"mpatch")
 
 blocks = bdiff.blocks
 fixws = bdiff.fixws
@@ -38,22 +34,24 @@ except NameError:
 
 # called by dispatch.py
 def init(ui):
-    if ui.configbool('experimental', 'xdiff'):
+    if ui.configbool("experimental", "xdiff"):
         global blocks
         blocks = xdiff.blocks
 
+
 def splitnewlines(text):
-    '''like str.splitlines, but only split on newlines.'''
-    lines = [l + '\n' for l in text.split('\n')]
+    """like str.splitlines, but only split on newlines."""
+    lines = [l + "\n" for l in text.split("\n")]
     if lines:
-        if lines[-1] == '\n':
+        if lines[-1] == "\n":
             lines.pop()
         else:
             lines[-1] = lines[-1][:-1]
     return lines
 
+
 class diffopts(object):
-    '''context is the number of context lines
+    """context is the number of context lines
     text treats all files as text
     showfunc enables diff -p output
     git enables the git extended patch format
@@ -64,25 +62,25 @@ class diffopts(object):
     ignorewsamount ignores changes in the amount of whitespace
     ignoreblanklines ignores changes whose lines are all blank
     upgrade generates git diffs to avoid data loss
-    '''
+    """
 
     defaults = {
-        'context': 3,
-        'text': False,
-        'showfunc': False,
-        'git': False,
-        'nodates': False,
-        'nobinary': False,
-        'noprefix': False,
-        'index': 0,
-        'ignorews': False,
-        'ignorewsamount': False,
-        'ignorewseol': False,
-        'ignoreblanklines': False,
-        'upgrade': False,
-        'showsimilarity': False,
-        'worddiff': False,
-        }
+        "context": 3,
+        "text": False,
+        "showfunc": False,
+        "git": False,
+        "nodates": False,
+        "nobinary": False,
+        "noprefix": False,
+        "index": 0,
+        "ignorews": False,
+        "ignorewsamount": False,
+        "ignorewseol": False,
+        "ignoreblanklines": False,
+        "upgrade": False,
+        "showsimilarity": False,
+        "worddiff": False,
+    }
 
     def __init__(self, **opts):
         opts = pycompat.byteskwargs(opts)
@@ -95,8 +93,10 @@ class diffopts(object):
         try:
             self.context = int(self.context)
         except ValueError:
-            raise error.Abort(_('diff context lines count must be '
-                               'an integer, not %r') % self.context)
+            raise error.Abort(
+                _("diff context lines count must be " "an integer, not %r")
+                % self.context
+            )
 
     def copy(self, **kwargs):
         opts = dict((k, getattr(self, k)) for k in self.defaults)
@@ -104,7 +104,9 @@ class diffopts(object):
         opts.update(kwargs)
         return diffopts(**opts)
 
+
 defaultopts = diffopts()
+
 
 def wsclean(opts, text, blank=True):
     if opts.ignorews:
@@ -112,10 +114,11 @@ def wsclean(opts, text, blank=True):
     elif opts.ignorewsamount:
         text = bdiff.fixws(text, 0)
     if blank and opts.ignoreblanklines:
-        text = re.sub('\n+', '\n', text).strip('\n')
+        text = re.sub("\n+", "\n", text).strip("\n")
     if opts.ignorewseol:
-        text = re.sub(r'[ \t\r\f]+\n', r'\n', text)
+        text = re.sub(r"[ \t\r\f]+\n", r"\n", text)
     return text
+
 
 def splitblock(base1, lines1, base2, lines2, opts):
     # The input lines matches except for interwoven blank lines. We
@@ -125,11 +128,10 @@ def splitblock(base1, lines1, base2, lines2, opts):
     s1, e1 = 0, len(lines1)
     s2, e2 = 0, len(lines2)
     while s1 < e1 or s2 < e2:
-        i1, i2, btype = s1, s2, '='
-        if (i1 >= e1 or lines1[i1] == 0
-            or i2 >= e2 or lines2[i2] == 0):
+        i1, i2, btype = s1, s2, "="
+        if i1 >= e1 or lines1[i1] == 0 or i2 >= e2 or lines2[i2] == 0:
             # Consume the block of blank lines
-            btype = '~'
+            btype = "~"
             while i1 < e1 and lines1[i1] == 0:
                 i1 += 1
             while i2 < e2 and lines2[i2] == 0:
@@ -142,6 +144,7 @@ def splitblock(base1, lines1, base2, lines2, opts):
         yield [base1 + s1, base1 + i1, base2 + s2, base2 + i2], btype
         s1 = i1
         s2 = i2
+
 
 def hunkinrange(hunk, linerange):
     """Return True if `hunk` defined as (start, length) is in `linerange`
@@ -168,6 +171,7 @@ def hunkinrange(hunk, linerange):
     lowerbound, upperbound = linerange
     return lowerbound < start + length and start < upperbound
 
+
 def blocksinrange(blocks, rangeb):
     """filter `blocks` like (a1, a2, b1, b2) from items outside line range
     `rangeb` from ``(b1, b2)`` point of view.
@@ -185,27 +189,28 @@ def blocksinrange(blocks, rangeb):
     filteredblocks = []
     for block in blocks:
         (a1, a2, b1, b2), stype = block
-        if lbb >= b1 and ubb <= b2 and stype == '=':
+        if lbb >= b1 and ubb <= b2 and stype == "=":
             # rangeb is within a single "=" hunk, restrict back linerange1
             # by offsetting rangeb
             lba = lbb - b1 + a1
             uba = ubb - b1 + a1
         else:
             if b1 <= lbb < b2:
-                if stype == '=':
+                if stype == "=":
                     lba = a2 - (b2 - lbb)
                 else:
                     lba = a1
             if b1 < ubb <= b2:
-                if stype == '=':
+                if stype == "=":
                     uba = a1 + (ubb - b1)
                 else:
                     uba = a2
         if hunkinrange((b1, (b2 - b1)), rangeb):
             filteredblocks.append(block)
     if lba is None or uba is None or uba < lba:
-        raise error.Abort(_('line range exceeds file size'))
+        raise error.Abort(_("line range exceeds file size"))
     return filteredblocks, (lba, uba)
+
 
 def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
     """Return (block, type) tuples, where block is an mdiff.blocks
@@ -235,18 +240,19 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
         # bdiff sometimes gives huge matches past eof, this check eats them,
         # and deals with the special first match case described above
         if s[0] != s[1] or s[2] != s[3]:
-            type = '!'
+            type = "!"
             if opts.ignoreblanklines:
                 if lines1 is None:
                     lines1 = splitnewlines(text1)
                 if lines2 is None:
                     lines2 = splitnewlines(text2)
-                old = wsclean(opts, "".join(lines1[s[0]:s[1]]))
-                new = wsclean(opts, "".join(lines2[s[2]:s[3]]))
+                old = wsclean(opts, "".join(lines1[s[0] : s[1]]))
+                new = wsclean(opts, "".join(lines2[s[2] : s[3]]))
                 if old == new:
-                    type = '~'
+                    type = "~"
             yield s, type
-        yield s1, '='
+        yield s1, "="
+
 
 def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
     """Return a unified diff as a (headers, hunks) tuple.
@@ -259,22 +265,23 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
     Setting `check_binary` to false will skip the binary check, i.e. when
     it has been done in advance. Files are expected to be text in this case.
     """
+
     def datetag(date, fn=None):
         if not opts.git and not opts.nodates:
-            return '\t%s' % date
-        if fn and ' ' in fn:
-            return '\t'
-        return ''
+            return "\t%s" % date
+        if fn and " " in fn:
+            return "\t"
+        return ""
 
     sentinel = [], ()
     if not a and not b:
         return sentinel
 
     if opts.noprefix:
-        aprefix = bprefix = ''
+        aprefix = bprefix = ""
     else:
-        aprefix = 'a/'
-        bprefix = 'b/'
+        aprefix = "a/"
+        bprefix = "b/"
 
     epoch = util.datestr((0, 0))
 
@@ -285,12 +292,12 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
         if a and b and len(a) == len(b) and a == b:
             return sentinel
         headerlines = []
-        hunks = (None, ['Binary file %s has changed\n' % fn1]),
+        hunks = ((None, ["Binary file %s has changed\n" % fn1]),)
     elif not a:
-        without_newline = b[-1] != '\n'
+        without_newline = b[-1] != "\n"
         b = splitnewlines(b)
         if a is None:
-            l1 = '--- /dev/null%s' % datetag(epoch)
+            l1 = "--- /dev/null%s" % datetag(epoch)
         else:
             l1 = "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1))
         l2 = "+++ %s%s" % (bprefix + fn2, datetag(bd, fn2))
@@ -299,15 +306,15 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
         hunkrange = (0, 0, 1, size)
         hunklines = ["@@ -0,0 +1,%d @@\n" % size] + ["+" + e for e in b]
         if without_newline:
-            hunklines[-1] += '\n'
+            hunklines[-1] += "\n"
             hunklines.append(_missing_newline_marker)
-        hunks = (hunkrange, hunklines),
+        hunks = ((hunkrange, hunklines),)
     elif not b:
-        without_newline = a[-1] != '\n'
+        without_newline = a[-1] != "\n"
         a = splitnewlines(a)
         l1 = "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1))
         if b is None:
-            l2 = '+++ /dev/null%s' % datetag(epoch)
+            l2 = "+++ /dev/null%s" % datetag(epoch)
         else:
             l2 = "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2))
         headerlines = [l1, l2]
@@ -315,9 +322,9 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
         hunkrange = (1, size, 0, 0)
         hunklines = ["@@ -1,%d +0,0 @@\n" % size] + ["-" + e for e in a]
         if without_newline:
-            hunklines[-1] += '\n'
+            hunklines[-1] += "\n"
             hunklines.append(_missing_newline_marker)
-        hunks = (hunkrange, hunklines),
+        hunks = ((hunkrange, hunklines),)
     else:
         hunks = _unidiff(a, b, opts=opts)
         if not next(hunks):
@@ -329,6 +336,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
         ]
 
     return headerlines, hunks
+
 
 def _unidiff(t1, t2, opts=defaultopts):
     """Yield hunks of a headerless unified diff from t1 and t2 texts.
@@ -343,6 +351,7 @@ def _unidiff(t1, t2, opts=defaultopts):
     """
     l1 = splitnewlines(t1)
     l2 = splitnewlines(t2)
+
     def contextend(l, len):
         ret = l + opts.context
         if ret > len:
@@ -355,7 +364,8 @@ def _unidiff(t1, t2, opts=defaultopts):
             return 0
         return ret
 
-    lastfunc = [0, '']
+    lastfunc = [0, ""]
+
     def yieldhunk(hunk):
         (astart, a2, bstart, b2, delta) = hunk
         aend = contextend(a2, len(l1))
@@ -370,7 +380,7 @@ def _unidiff(t1, t2, opts=defaultopts):
             # alphanumeric char.
             for i in xrange(astart - 1, lastpos - 1, -1):
                 if l1[i][0].isalnum():
-                    func = ' ' + l1[i].rstrip()[:40]
+                    func = " " + l1[i].rstrip()[:40]
                     lastfunc[1] = func
                     break
             # by recording this hunk's starting point as the next place to
@@ -388,7 +398,7 @@ def _unidiff(t1, t2, opts=defaultopts):
         hunklines = (
             ["@@ -%d,%d +%d,%d @@%s\n" % (hunkrange + (func,))]
             + delta
-            + [' ' + l1[x] for x in xrange(a2, aend)]
+            + [" " + l1[x] for x in xrange(a2, aend)]
         )
         # If either file ends without a newline and the last line of
         # that file is part of a hunk, a marker is printed. If the
@@ -396,18 +406,18 @@ def _unidiff(t1, t2, opts=defaultopts):
         # a newline, print only one marker. That's the only case in
         # which the hunk can end in a shared line without a newline.
         skip = False
-        if t1[-1] != '\n' and astart + alen == len(l1) + 1:
+        if t1[-1] != "\n" and astart + alen == len(l1) + 1:
             for i in xrange(len(hunklines) - 1, -1, -1):
-                if hunklines[i][0] in ('-', ' '):
-                    if hunklines[i][0] == ' ':
+                if hunklines[i][0] in ("-", " "):
+                    if hunklines[i][0] == " ":
                         skip = True
-                    hunklines[i] += '\n'
+                    hunklines[i] += "\n"
                     hunklines.insert(i + 1, _missing_newline_marker)
                     break
-        if not skip and t2[-1] != '\n' and bstart + blen == len(l2) + 1:
+        if not skip and t2[-1] != "\n" and bstart + blen == len(l2) + 1:
             for i in xrange(len(hunklines) - 1, -1, -1):
-                if hunklines[i][0] == '+':
-                    hunklines[i] += '\n'
+                if hunklines[i][0] == "+":
+                    hunklines[i] += "\n"
                     hunklines.insert(i + 1, _missing_newline_marker)
                     break
         yield hunkrange, hunklines
@@ -421,8 +431,8 @@ def _unidiff(t1, t2, opts=defaultopts):
     has_hunks = False
     for s, stype in allblocks(t1, t2, opts, l1, l2):
         a1, a2, b1, b2 = s
-        if stype != '!':
-            if stype == '~':
+        if stype != "!":
+            if stype == "~":
                 # The diff context lines are based on t1 content. When
                 # blank lines are ignored, the new lines offsets must
                 # be adjusted as if equivalent blocks ('~') had the
@@ -459,9 +469,9 @@ def _unidiff(t1, t2, opts=defaultopts):
             # create a new hunk
             hunk = [astart, a2, bstart, b2, delta]
 
-        delta[len(delta):] = [' ' + x for x in l1[astart:a1]]
-        delta[len(delta):] = ['-' + x for x in old]
-        delta[len(delta):] = ['+' + x for x in new]
+        delta[len(delta) :] = [" " + x for x in l1[astart:a1]]
+        delta[len(delta) :] = ["-" + x for x in old]
+        delta[len(delta) :] = ["+" + x for x in new]
 
     if hunk:
         if not has_hunks:
@@ -472,50 +482,54 @@ def _unidiff(t1, t2, opts=defaultopts):
     elif not has_hunks:
         yield False
 
+
 def b85diff(to, tn):
-    '''print base85-encoded binary diff'''
+    """print base85-encoded binary diff"""
+
     def fmtline(line):
         l = len(line)
         if l <= 26:
-            l = chr(ord('A') + l - 1)
+            l = chr(ord("A") + l - 1)
         else:
-            l = chr(l - 26 + ord('a') - 1)
-        return '%c%s\n' % (l, util.b85encode(line, True))
+            l = chr(l - 26 + ord("a") - 1)
+        return "%c%s\n" % (l, util.b85encode(line, True))
 
     def chunk(text, csize=52):
         l = len(text)
         i = 0
         while i < l:
-            yield text[i:i + csize]
+            yield text[i : i + csize]
             i += csize
 
     if to is None:
-        to = ''
+        to = ""
     if tn is None:
-        tn = ''
+        tn = ""
 
     if to == tn:
-        return ''
+        return ""
 
     # TODO: deltas
     ret = []
-    ret.append('GIT binary patch\n')
-    ret.append('literal %d\n' % len(tn))
+    ret.append("GIT binary patch\n")
+    ret.append("literal %d\n" % len(tn))
     for l in chunk(zlib.compress(tn)):
         ret.append(fmtline(l))
-    ret.append('\n')
+    ret.append("\n")
 
-    return ''.join(ret)
+    return "".join(ret)
+
 
 def patchtext(bin):
     pos = 0
     t = []
     while pos < len(bin):
-        p1, p2, l = struct.unpack(">lll", bin[pos:pos + 12])
+        p1, p2, l = struct.unpack(">lll", bin[pos : pos + 12])
         pos += 12
-        t.append(bin[pos:pos + l])
+        t.append(bin[pos : pos + l])
         pos += l
     return "".join(t)
+
 
 def patch(a, bin):
     if len(a) == 0:
@@ -523,12 +537,15 @@ def patch(a, bin):
         return util.buffer(bin, 12)
     return mpatch.patches(a, [bin])
 
+
 # similar to difflib.SequenceMatcher.get_matching_blocks
 def get_matching_blocks(a, b):
     return [(d[0], d[2], d[1] - d[0]) for d in blocks(a, b)]
 
+
 def trivialdiffheader(length):
-    return struct.pack(">lll", 0, 0, length) if length else ''
+    return struct.pack(">lll", 0, 0, length) if length else ""
+
 
 def replacediffheader(oldlen, newlen):
     return struct.pack(">lll", 0, oldlen, newlen)

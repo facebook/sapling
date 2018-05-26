@@ -36,16 +36,14 @@ import subprocess
 import sys
 import traceback
 
-from mercurial import (
-    dispatch,
-    encoding,
-    extensions,
-)
+from mercurial import dispatch, encoding, extensions
+
 
 def _printtrace(ui, warning):
     # Like dispatch.handlecommandexception, but avoids an unnecessary ui.log
     ui.warn(warning)
-    return False # return value for "handlecommandexception", re-raises
+    return False  # return value for "handlecommandexception", re-raises
+
 
 def _handlecommandexception(orig, ui):
     warning = dispatch._exceptionwarning(ui)
@@ -54,25 +52,29 @@ def _handlecommandexception(orig, ui):
     # let blackbox log it (if it is configured to do so)
     ui.log("commandexception", "%s\n%s\n", warning, trace)
     exctype = sys.exc_info()[0]
-    exctypename = 'None' if exctype is None else exctype.__name__
-    ui.log("hgerrors", "exception has occurred: %s",
-           warning, type=exctypename, traceback=trace)
+    exctypename = "None" if exctype is None else exctype.__name__
+    ui.log(
+        "hgerrors",
+        "exception has occurred: %s",
+        warning,
+        type=exctypename,
+        traceback=trace,
+    )
 
-    script = ui.config('errorredirect', 'script')
+    script = ui.config("errorredirect", "script")
     if not script:
         return orig(ui)
 
     # run the external script
     env = encoding.environ.copy()
-    env['WARNING'] = warning
-    env['TRACE'] = trace
+    env["WARNING"] = warning
+    env["TRACE"] = trace
 
     # decide whether to use shell smartly, see 9335dc6b2a9c in hg
     shell = any(c in script for c in "|&;<>()$`\\\"' \t\n*?[#~=%")
 
     try:
-        p = subprocess.Popen(script, shell=shell, stdin=subprocess.PIPE,
-                             env=env)
+        p = subprocess.Popen(script, shell=shell, stdin=subprocess.PIPE, env=env)
         p.communicate(trace)
     except Exception:
         # The binary cannot be executed, or some other issues. For example,
@@ -90,8 +92,8 @@ def _handlecommandexception(orig, ui):
         if ret != 0 and not ctrlc:
             return _printtrace(ui, warning)
 
-    return True # do not re-raise
+    return True  # do not re-raise
+
 
 def uisetup(ui):
-    extensions.wrapfunction(dispatch, 'handlecommandexception',
-                            _handlecommandexception)
+    extensions.wrapfunction(dispatch, "handlecommandexception", _handlecommandexception)

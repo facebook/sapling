@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''hooks for sending email push notifications
+"""hooks for sending email push notifications
 
 This extension implements hooks to send email notifications when
 changesets are sent from or received by the local repository.
@@ -131,7 +131,7 @@ web.baseurl
   Root repository URL to combine with repository paths when making
   references. See also ``notify.strip``.
 
-'''
+"""
 from __future__ import absolute_import
 
 import email
@@ -139,76 +139,39 @@ import fnmatch
 import socket
 import time
 
+from mercurial import cmdutil, error, mail, patch, registrar, util
 from mercurial.i18n import _
-from mercurial import (
-    cmdutil,
-    error,
-    mail,
-    patch,
-    registrar,
-    util,
-)
+
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('notify', 'changegroup',
-    default=None,
-)
-configitem('notify', 'config',
-    default=None,
-)
-configitem('notify', 'diffstat',
-    default=True,
-)
-configitem('notify', 'domain',
-    default=None,
-)
-configitem('notify', 'fromauthor',
-    default=None,
-)
-configitem('notify', 'incoming',
-    default=None,
-)
-configitem('notify', 'maxdiff',
-    default=300,
-)
-configitem('notify', 'maxsubject',
-    default=67,
-)
-configitem('notify', 'mbox',
-    default=None,
-)
-configitem('notify', 'merge',
-    default=True,
-)
-configitem('notify', 'outgoing',
-    default=None,
-)
-configitem('notify', 'sources',
-    default='serve',
-)
-configitem('notify', 'strip',
-    default=0,
-)
-configitem('notify', 'style',
-    default=None,
-)
-configitem('notify', 'template',
-    default=None,
-)
-configitem('notify', 'test',
-    default=True,
-)
+configitem("notify", "changegroup", default=None)
+configitem("notify", "config", default=None)
+configitem("notify", "diffstat", default=True)
+configitem("notify", "domain", default=None)
+configitem("notify", "fromauthor", default=None)
+configitem("notify", "incoming", default=None)
+configitem("notify", "maxdiff", default=300)
+configitem("notify", "maxsubject", default=67)
+configitem("notify", "mbox", default=None)
+configitem("notify", "merge", default=True)
+configitem("notify", "outgoing", default=None)
+configitem("notify", "sources", default="serve")
+configitem("notify", "strip", default=0)
+configitem("notify", "style", default=None)
+configitem("notify", "template", default=None)
+configitem("notify", "test", default=True)
 
 # template for single changeset can include email headers.
-single_template = '''
+single_template = (
+    """
 Subject: changeset in {webroot}: {desc|firstline|strip}
 From: {author}
 
@@ -216,118 +179,127 @@ changeset {node|short} in {root}
 details: {baseurl}{webroot}?cmd=changeset;node={node|short}
 description:
 \t{desc|tabindent|strip}
-'''.lstrip()
+""".lstrip()
+)
 
 # template for multiple changesets should not contain email headers,
 # because only first set of headers will be used and result will look
 # strange.
-multiple_template = '''
+multiple_template = """
 changeset {node|short} in {root}
 details: {baseurl}{webroot}?cmd=changeset;node={node|short}
 summary: {desc|firstline}
-'''
+"""
 
-deftemplates = {
-    'changegroup': multiple_template,
-}
+deftemplates = {"changegroup": multiple_template}
 
 try:
     xrange(0)
 except NameError:
     xrange = range
 
+
 class notifier(object):
-    '''email notification class.'''
+    """email notification class."""
 
     def __init__(self, ui, repo, hooktype):
         self.ui = ui
-        cfg = self.ui.config('notify', 'config')
+        cfg = self.ui.config("notify", "config")
         if cfg:
-            self.ui.readconfig(cfg, sections=['usersubs', 'reposubs'])
+            self.ui.readconfig(cfg, sections=["usersubs", "reposubs"])
         self.repo = repo
-        self.stripcount = int(self.ui.config('notify', 'strip'))
+        self.stripcount = int(self.ui.config("notify", "strip"))
         self.root = self.strip(self.repo.root)
-        self.domain = self.ui.config('notify', 'domain')
-        self.mbox = self.ui.config('notify', 'mbox')
-        self.test = self.ui.configbool('notify', 'test')
+        self.domain = self.ui.config("notify", "domain")
+        self.mbox = self.ui.config("notify", "mbox")
+        self.test = self.ui.configbool("notify", "test")
         self.charsets = mail._charsets(self.ui)
         self.subs = self.subscribers()
-        self.merge = self.ui.configbool('notify', 'merge')
+        self.merge = self.ui.configbool("notify", "merge")
 
         mapfile = None
-        template = (self.ui.config('notify', hooktype) or
-                    self.ui.config('notify', 'template'))
+        template = self.ui.config("notify", hooktype) or self.ui.config(
+            "notify", "template"
+        )
         if not template:
-            mapfile = self.ui.config('notify', 'style')
+            mapfile = self.ui.config("notify", "style")
         if not mapfile and not template:
             template = deftemplates.get(hooktype) or single_template
         spec = cmdutil.logtemplatespec(template, mapfile)
-        self.t = cmdutil.changeset_templater(self.ui, self.repo, spec,
-                                             False, None, False)
+        self.t = cmdutil.changeset_templater(
+            self.ui, self.repo, spec, False, None, False
+        )
 
     def strip(self, path):
-        '''strip leading slashes from local path, turn into web-safe path.'''
+        """strip leading slashes from local path, turn into web-safe path."""
 
         path = util.pconvert(path)
         count = self.stripcount
         while count > 0:
-            c = path.find('/')
+            c = path.find("/")
             if c == -1:
                 break
-            path = path[c + 1:]
+            path = path[c + 1 :]
             count -= 1
         return path
 
     def fixmail(self, addr):
-        '''try to clean up email addresses.'''
+        """try to clean up email addresses."""
 
         addr = util.email(addr.strip())
         if self.domain:
-            a = addr.find('@localhost')
+            a = addr.find("@localhost")
             if a != -1:
                 addr = addr[:a]
-            if '@' not in addr:
-                return addr + '@' + self.domain
+            if "@" not in addr:
+                return addr + "@" + self.domain
         return addr
 
     def subscribers(self):
-        '''return list of email addresses of subscribers to this repo.'''
+        """return list of email addresses of subscribers to this repo."""
         subs = set()
-        for user, pats in self.ui.configitems('usersubs'):
-            for pat in pats.split(','):
-                if '#' in pat:
-                    pat, revs = pat.split('#', 1)
+        for user, pats in self.ui.configitems("usersubs"):
+            for pat in pats.split(","):
+                if "#" in pat:
+                    pat, revs = pat.split("#", 1)
                 else:
                     revs = None
                 if fnmatch.fnmatch(self.repo.root, pat.strip()):
                     subs.add((self.fixmail(user), revs))
-        for pat, users in self.ui.configitems('reposubs'):
-            if '#' in pat:
-                pat, revs = pat.split('#', 1)
+        for pat, users in self.ui.configitems("reposubs"):
+            if "#" in pat:
+                pat, revs = pat.split("#", 1)
             else:
                 revs = None
             if fnmatch.fnmatch(self.repo.root, pat):
-                for user in users.split(','):
+                for user in users.split(","):
                     subs.add((self.fixmail(user), revs))
-        return [(mail.addressencode(self.ui, s, self.charsets, self.test), r)
-                for s, r in sorted(subs)]
+        return [
+            (mail.addressencode(self.ui, s, self.charsets, self.test), r)
+            for s, r in sorted(subs)
+        ]
 
     def node(self, ctx, **props):
-        '''format one changeset, unless it is a suppressed merge.'''
+        """format one changeset, unless it is a suppressed merge."""
         if not self.merge and len(ctx.parents()) > 1:
             return False
-        self.t.show(ctx, changes=ctx.changeset(),
-                    baseurl=self.ui.config('web', 'baseurl'),
-                    root=self.repo.root, webroot=self.root, **props)
+        self.t.show(
+            ctx,
+            changes=ctx.changeset(),
+            baseurl=self.ui.config("web", "baseurl"),
+            root=self.repo.root,
+            webroot=self.root,
+            **props
+        )
         return True
 
     def skipsource(self, source):
-        '''true if incoming changes from this source should be skipped.'''
-        ok_sources = self.ui.config('notify', 'sources').split()
+        """true if incoming changes from this source should be skipped."""
+        ok_sources = self.ui.config("notify", "sources").split()
         return source not in ok_sources
 
     def send(self, ctx, count, data):
-        '''send message.'''
+        """send message."""
 
         # Select subscribers by revset
         subs = set()
@@ -335,13 +307,12 @@ class notifier(object):
             if spec is None:
                 subs.add(sub)
                 continue
-            revs = self.repo.revs('%r and %d:', spec, ctx.rev())
+            revs = self.repo.revs("%r and %d:", spec, ctx.rev())
             if len(revs):
                 subs.add(sub)
                 continue
         if len(subs) == 0:
-            self.ui.debug('notify: no subscribers to selected repo '
-                          'and revset\n')
+            self.ui.debug("notify: no subscribers to selected repo " "and revset\n")
             return
 
         p = email.Parser.Parser()
@@ -351,8 +322,8 @@ class notifier(object):
             raise error.Abort(inst)
 
         # store sender and subject
-        sender, subject = msg['From'], msg['Subject']
-        del msg['From'], msg['Subject']
+        sender, subject = msg["From"], msg["Subject"]
+        del msg["From"], msg["Subject"]
 
         if not msg.is_multipart():
             # create fresh mime message from scratch
@@ -365,97 +336,100 @@ class notifier(object):
             for k, v in headers:
                 msg[k] = v
 
-        msg['Date'] = util.datestr(format="%a, %d %b %Y %H:%M:%S %1%2")
+        msg["Date"] = util.datestr(format="%a, %d %b %Y %H:%M:%S %1%2")
 
         # try to make subject line exist and be useful
         if not subject:
             if count > 1:
-                subject = _('%s: %d new changesets') % (self.root, count)
+                subject = _("%s: %d new changesets") % (self.root, count)
             else:
-                s = ctx.description().lstrip().split('\n', 1)[0].rstrip()
-                subject = '%s: %s' % (self.root, s)
-        maxsubject = int(self.ui.config('notify', 'maxsubject'))
+                s = ctx.description().lstrip().split("\n", 1)[0].rstrip()
+                subject = "%s: %s" % (self.root, s)
+        maxsubject = int(self.ui.config("notify", "maxsubject"))
         if maxsubject:
             subject = util.ellipsis(subject, maxsubject)
-        msg['Subject'] = mail.headencode(self.ui, subject,
-                                         self.charsets, self.test)
+        msg["Subject"] = mail.headencode(self.ui, subject, self.charsets, self.test)
 
         # try to make message have proper sender
         if not sender:
-            sender = self.ui.config('email', 'from') or self.ui.username()
-        if '@' not in sender or '@localhost' in sender:
+            sender = self.ui.config("email", "from") or self.ui.username()
+        if "@" not in sender or "@localhost" in sender:
             sender = self.fixmail(sender)
-        msg['From'] = mail.addressencode(self.ui, sender,
-                                         self.charsets, self.test)
+        msg["From"] = mail.addressencode(self.ui, sender, self.charsets, self.test)
 
-        msg['X-Hg-Notification'] = 'changeset %s' % ctx
-        if not msg['Message-Id']:
-            msg['Message-Id'] = ('<hg.%s.%s.%s@%s>' %
-                                 (ctx, int(time.time()),
-                                  hash(self.repo.root), socket.getfqdn()))
-        msg['To'] = ', '.join(sorted(subs))
+        msg["X-Hg-Notification"] = "changeset %s" % ctx
+        if not msg["Message-Id"]:
+            msg["Message-Id"] = "<hg.%s.%s.%s@%s>" % (
+                ctx,
+                int(time.time()),
+                hash(self.repo.root),
+                socket.getfqdn(),
+            )
+        msg["To"] = ", ".join(sorted(subs))
 
         msgtext = msg.as_string()
         if self.test:
             self.ui.write(msgtext)
-            if not msgtext.endswith('\n'):
-                self.ui.write('\n')
+            if not msgtext.endswith("\n"):
+                self.ui.write("\n")
         else:
-            self.ui.status(_('notify: sending %d subscribers %d changes\n') %
-                           (len(subs), count))
-            mail.sendmail(self.ui, util.email(msg['From']),
-                          subs, msgtext, mbox=self.mbox)
+            self.ui.status(
+                _("notify: sending %d subscribers %d changes\n") % (len(subs), count)
+            )
+            mail.sendmail(
+                self.ui, util.email(msg["From"]), subs, msgtext, mbox=self.mbox
+            )
 
     def diff(self, ctx, ref=None):
 
-        maxdiff = int(self.ui.config('notify', 'maxdiff'))
+        maxdiff = int(self.ui.config("notify", "maxdiff"))
         prev = ctx.p1().node()
         if ref:
             ref = ref.node()
         else:
             ref = ctx.node()
-        chunks = patch.diff(self.repo, prev, ref,
-                            opts=patch.diffallopts(self.ui))
-        difflines = ''.join(chunks).splitlines()
+        chunks = patch.diff(self.repo, prev, ref, opts=patch.diffallopts(self.ui))
+        difflines = "".join(chunks).splitlines()
 
-        if self.ui.configbool('notify', 'diffstat'):
+        if self.ui.configbool("notify", "diffstat"):
             s = patch.diffstat(difflines)
             # s may be nil, don't include the header if it is
             if s:
-                self.ui.write(_('\ndiffstat:\n\n%s') % s)
+                self.ui.write(_("\ndiffstat:\n\n%s") % s)
 
         if maxdiff == 0:
             return
         elif maxdiff > 0 and len(difflines) > maxdiff:
-            msg = _('\ndiffs (truncated from %d to %d lines):\n\n')
+            msg = _("\ndiffs (truncated from %d to %d lines):\n\n")
             self.ui.write(msg % (len(difflines), maxdiff))
             difflines = difflines[:maxdiff]
         elif difflines:
-            self.ui.write(_('\ndiffs (%d lines):\n\n') % len(difflines))
+            self.ui.write(_("\ndiffs (%d lines):\n\n") % len(difflines))
 
         self.ui.write("\n".join(difflines))
 
+
 def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
-    '''send email notifications to interested subscribers.
+    """send email notifications to interested subscribers.
 
     if used as changegroup hook, send one email for all changesets in
-    changegroup. else send one email per changeset.'''
+    changegroup. else send one email per changeset."""
 
     n = notifier(ui, repo, hooktype)
     ctx = repo[node]
 
     if not n.subs:
-        ui.debug('notify: no subscribers to repository %s\n' % n.root)
+        ui.debug("notify: no subscribers to repository %s\n" % n.root)
         return
     if n.skipsource(source):
         ui.debug('notify: changes have source "%s" - skipping\n' % source)
         return
 
     ui.pushbuffer()
-    data = ''
+    data = ""
     count = 0
-    author = ''
-    if hooktype == 'changegroup' or hooktype == 'outgoing':
+    author = ""
+    if hooktype == "changegroup" or hooktype == "outgoing":
         start, end = ctx.rev(), len(repo)
         for rev in xrange(start, end):
             if n.node(repo[rev]):
@@ -464,16 +438,20 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
                     author = repo[rev].user()
             else:
                 data += ui.popbuffer()
-                ui.note(_('notify: suppressing notification for merge %d:%s\n')
-                        % (rev, repo[rev].hex()[:12]))
+                ui.note(
+                    _("notify: suppressing notification for merge %d:%s\n")
+                    % (rev, repo[rev].hex()[:12])
+                )
                 ui.pushbuffer()
         if count:
-            n.diff(ctx, repo['tip'])
+            n.diff(ctx, repo["tip"])
     else:
         if not n.node(ctx):
             ui.popbuffer()
-            ui.note(_('notify: suppressing notification for merge %d:%s\n') %
-                    (ctx.rev(), ctx.hex()[:12]))
+            ui.note(
+                _("notify: suppressing notification for merge %d:%s\n")
+                % (ctx.rev(), ctx.hex()[:12])
+            )
             return
         count += 1
         n.diff(ctx)
@@ -481,9 +459,9 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
             author = ctx.user()
 
     data += ui.popbuffer()
-    fromauthor = ui.config('notify', 'fromauthor')
+    fromauthor = ui.config("notify", "fromauthor")
     if author and fromauthor:
-        data = '\n'.join(['From: %s' % author, data])
+        data = "\n".join(["From: %s" % author, data])
 
     if count:
         n.send(ctx, count, data)

@@ -14,21 +14,16 @@ import sys
 import threading
 import time
 
+from . import encoding, error, pycompat, scmutil, util
 from .i18n import _
-from . import (
-    encoding,
-    error,
-    pycompat,
-    scmutil,
-    util,
-)
+
 
 def countcpus():
-    '''try to count the number of CPUs on the system'''
+    """try to count the number of CPUs on the system"""
 
     # posix
     try:
-        n = int(os.sysconf(r'SC_NPROCESSORS_ONLN'))
+        n = int(os.sysconf(r"SC_NPROCESSORS_ONLN"))
         if n > 0:
             return n
     except (AttributeError, ValueError):
@@ -36,7 +31,7 @@ def countcpus():
 
     # windows
     try:
-        n = int(encoding.environ['NUMBER_OF_PROCESSORS'])
+        n = int(encoding.environ["NUMBER_OF_PROCESSORS"])
         if n > 0:
             return n
     except (KeyError, ValueError):
@@ -44,32 +39,36 @@ def countcpus():
 
     return 1
 
+
 def _numworkers(ui):
-    s = ui.config('worker', 'numcpus')
+    s = ui.config("worker", "numcpus")
     if s:
         try:
             n = int(s)
             if n >= 1:
                 return n
         except ValueError:
-            raise error.Abort(_('number of cpus must be an integer'))
+            raise error.Abort(_("number of cpus must be an integer"))
     return min(max(countcpus(), 4), 32)
+
 
 if pycompat.isposix or pycompat.iswindows:
     _startupcost = 0.01
 else:
     _startupcost = 1e30
 
+
 def worthwhile(ui, costperop, nops):
-    '''try to determine whether the benefit of multiple processes can
-    outweigh the cost of starting them'''
+    """try to determine whether the benefit of multiple processes can
+    outweigh the cost of starting them"""
     linear = costperop * nops
     workers = _numworkers(ui)
     benefit = linear - (_startupcost * workers + linear / workers)
     return benefit >= 0.15
 
+
 def worker(ui, costperarg, func, staticargs, args):
-    '''run a function, possibly in parallel in multiple worker
+    """run a function, possibly in parallel in multiple worker
     processes.
 
     returns a progress iterator
@@ -82,11 +81,12 @@ def worker(ui, costperarg, func, staticargs, args):
 
     args - arguments to split into chunks, to pass to individual
     workers
-    '''
-    enabled = ui.configbool('worker', 'enabled')
+    """
+    enabled = ui.configbool("worker", "enabled")
     if enabled and worthwhile(ui, costperarg, len(args)):
         return _platformworker(ui, func, staticargs, args)
     return func(*staticargs + (args,))
+
 
 def _posixworker(ui, func, staticargs, args):
     rfd, wfd = os.pipe()
@@ -94,6 +94,7 @@ def _posixworker(ui, func, staticargs, args):
     oldhandler = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     pids, problem = set(), [0]
+
     def killworkers():
         # unregister SIGCHLD handler as all children will be killed. This
         # function shouldn't be interrupted by another SIGCHLD; otherwise pids
@@ -106,6 +107,7 @@ def _posixworker(ui, func, staticargs, args):
             except OSError as err:
                 if err.errno != errno.ESRCH:
                     raise
+
     def waitforworkers(blocking=True):
         for pid in pids.copy():
             p = st = 0
@@ -131,10 +133,12 @@ def _posixworker(ui, func, staticargs, args):
             st = _exitstatus(st)
             if st and not problem[0]:
                 problem[0] = st
+
     def sigchldhandler(signum, frame):
         waitforworkers(blocking=False)
         if problem[0]:
             killworkers()
+
     oldchldhandler = signal.signal(signal.SIGCHLD, sigchldhandler)
     ui.flush()
     parentpid = os.getpid()
@@ -156,11 +160,11 @@ def _posixworker(ui, func, staticargs, args):
                 def workerfunc():
                     os.close(rfd)
                     for i, item in func(*(staticargs + (pargs,))):
-                        os.write(wfd, '%d %s\n' % (i, item))
+                        os.write(wfd, "%d %s\n" % (i, item))
                     return 0
 
                 ret = scmutil.callcatch(ui, workerfunc)
-        except: # parent re-raises, child never returns
+        except:  # parent re-raises, child never returns
             if os.getpid() == parentpid:
                 raise
             exctype = sys.exc_info()[0]
@@ -170,13 +174,14 @@ def _posixworker(ui, func, staticargs, args):
             if os.getpid() != parentpid:
                 try:
                     ui.flush()
-                except: # never returns, no re-raises
+                except:  # never returns, no re-raises
                     pass
                 finally:
                     os._exit(ret & 255)
         pids.add(pid)
     os.close(wfd)
-    fp = os.fdopen(rfd, pycompat.sysstr('rb'), 0)
+    fp = os.fdopen(rfd, pycompat.sysstr("rb"), 0)
+
     def cleanup():
         signal.signal(signal.SIGINT, oldhandler)
         waitforworkers()
@@ -186,32 +191,47 @@ def _posixworker(ui, func, staticargs, args):
             if status < 0:
                 os.kill(os.getpid(), -status)
             sys.exit(status)
+
     try:
         for line in util.iterfile(fp):
-            l = line.split(' ', 1)
+            l = line.split(" ", 1)
             yield int(l[0]), l[1][:-1]
-    except: # re-raises
+    except:  # re-raises
         killworkers()
         cleanup()
         raise
     cleanup()
 
+
 def _posixexitstatus(code):
-    '''convert a posix exit status into the same form returned by
+    """convert a posix exit status into the same form returned by
     os.spawnv
 
-    returns None if the process was stopped instead of exiting'''
+    returns None if the process was stopped instead of exiting"""
     if os.WIFEXITED(code):
         return os.WEXITSTATUS(code)
     elif os.WIFSIGNALED(code):
         return -os.WTERMSIG(code)
 
+
 def _windowsworker(ui, func, staticargs, args):
+
     class Worker(threading.Thread):
-        def __init__(self, taskqueue, resultqueue, func, staticargs,
-                     group=None, target=None, name=None, verbose=None):
-            threading.Thread.__init__(self, group=group, target=target,
-                                      name=name, verbose=verbose)
+
+        def __init__(
+            self,
+            taskqueue,
+            resultqueue,
+            func,
+            staticargs,
+            group=None,
+            target=None,
+            name=None,
+            verbose=None,
+        ):
+            threading.Thread.__init__(
+                self, group=group, target=target, name=name, verbose=verbose
+            )
             self._taskqueue = taskqueue
             self._resultqueue = resultqueue
             self._func = func
@@ -244,6 +264,7 @@ def _windowsworker(ui, func, staticargs, args):
                 raise
 
     threads = []
+
     def trykillworkers():
         # Allow up to 1 second to clean worker threads nicely
         cleanupend = time.time() + 1
@@ -257,8 +278,9 @@ def _windowsworker(ui, func, staticargs, args):
                 # important to surface the inital exception than the
                 # fact that one of workers may be processing a large
                 # task and does not get to handle the interruption.
-                ui.warn(_("failed to kill worker threads while "
-                          "handling an exception\n"))
+                ui.warn(
+                    _("failed to kill worker threads while " "handling an exception\n")
+                )
                 return
 
     workers = _numworkers(ui)
@@ -282,11 +304,12 @@ def _windowsworker(ui, func, staticargs, args):
                 if t.exception is not None:
                     raise t.exception
                 threads.remove(t)
-    except (Exception, KeyboardInterrupt): # re-raises
+    except (Exception, KeyboardInterrupt):  # re-raises
         trykillworkers()
         raise
     while not resultqueue.empty():
         yield resultqueue.get()
+
 
 if pycompat.iswindows:
     _platformworker = _windowsworker
@@ -294,8 +317,9 @@ else:
     _platformworker = _posixworker
     _exitstatus = _posixexitstatus
 
+
 def partition(lst, nslices):
-    '''partition a list into N slices of roughly equal size
+    """partition a list into N slices of roughly equal size
 
     The current strategy takes every Nth element from the input. If
     we ever write workers that need to preserve grouping in input
@@ -322,6 +346,6 @@ def partition(lst, nslices):
         What we should really be doing is have workers read filenames from a
         ordered queue. This preserves locality and also keeps any worker from
         getting more than one file out of balance.
-    '''
+    """
     for i in range(nslices):
         yield lst[i::nslices]

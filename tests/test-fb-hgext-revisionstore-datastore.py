@@ -7,28 +7,17 @@ import shutil
 import tempfile
 import unittest
 
-import silenttestrunner
-
-from hgext.extlib.pyrevisionstore import (
-    datastore,
-)
-
-from hgext.remotefilelog import constants
-
-from hgext.remotefilelog.datapack import (
-    datapackstore,
-    fastdatapack,
-    mutabledatapack,
-)
-
-from hgext.remotefilelog.contentstore import (
-    unioncontentstore,
-)
-
-from mercurial.node import nullid
 import mercurial.ui
+import silenttestrunner
+from hgext.extlib.pyrevisionstore import datastore
+from hgext.remotefilelog import constants
+from hgext.remotefilelog.contentstore import unioncontentstore
+from hgext.remotefilelog.datapack import datapackstore, fastdatapack, mutabledatapack
+from mercurial.node import nullid
+
 
 class datastoretests(unittest.TestCase):
+
     def setUp(self):
         random.seed(0)
         self.tempdirs = []
@@ -46,7 +35,7 @@ class datastoretests(unittest.TestCase):
         return hashlib.sha1(content).digest()
 
     def getFakeHash(self):
-        return ''.join(chr(random.randint(0, 255)) for _ in range(20))
+        return "".join(chr(random.randint(0, 255)) for _ in range(20))
 
     def createPack(self, packdir, revisions=None):
         if revisions is None:
@@ -93,10 +82,7 @@ class datastoretests(unittest.TestCase):
     def testGetMeta(self):
         packdir = self.makeTempDir()
         hash1 = self.getFakeHash()
-        meta = {
-            constants.METAKEYFLAG: 1,
-            constants.METAKEYSIZE: len("content1"),
-        }
+        meta = {constants.METAKEYFLAG: 1, constants.METAKEYSIZE: len("content1")}
         revisions = [
             ("foo", hash1, nullid, "content1", meta),
             ("foo", self.getFakeHash(), hash1, "content2", None),
@@ -129,13 +115,11 @@ class datastoretests(unittest.TestCase):
         pycontent = pystore.getmissing(missing)
         self.assertEquals(pycontent, rustcontent)
 
-        missing = [
-            (revisions[0][0], revisions[0][1]),
-            ("bar", self.getFakeHash()),
-        ]
+        missing = [(revisions[0][0], revisions[0][1]), ("bar", self.getFakeHash())]
         rustcontent = ruststore.getmissing(missing)
         pycontent = pystore.getmissing(missing)
         self.assertEquals(pycontent, rustcontent)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     silenttestrunner.main(__name__)

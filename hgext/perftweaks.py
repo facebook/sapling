@@ -14,6 +14,9 @@
     fasthiddencache = False
 """
 
+import errno
+import os
+
 from mercurial import (
     branchmap,
     dispatch,
@@ -28,26 +31,25 @@ from mercurial import (
 )
 from mercurial.extensions import wrapfunction
 from mercurial.node import bin
-import errno
-import os
 
-testedwith = 'ships-with-fb-hgext'
+
+testedwith = "ships-with-fb-hgext"
+
 
 def extsetup(ui):
-    wrapfunction(tags, '_readtagcache', _readtagcache)
-    wrapfunction(branchmap.branchcache, 'update', _branchmapupdate)
-    wrapfunction(branchmap, 'read', _branchmapread)
-    wrapfunction(branchmap, 'replacecache', _branchmapreplacecache)
-    wrapfunction(branchmap, 'updatecache', _branchmapupdatecache)
+    wrapfunction(tags, "_readtagcache", _readtagcache)
+    wrapfunction(branchmap.branchcache, "update", _branchmapupdate)
+    wrapfunction(branchmap, "read", _branchmapread)
+    wrapfunction(branchmap, "replacecache", _branchmapreplacecache)
+    wrapfunction(branchmap, "updatecache", _branchmapupdatecache)
 
-    wrapfunction(dispatch, 'runcommand', _trackdirstatesizes)
-    wrapfunction(dispatch, 'runcommand', _tracksparseprofiles)
-    wrapfunction(merge, 'update', _trackupdatesize)
+    wrapfunction(dispatch, "runcommand", _trackdirstatesizes)
+    wrapfunction(dispatch, "runcommand", _tracksparseprofiles)
+    wrapfunction(merge, "update", _trackupdatesize)
 
     try:
-        rebase = extensions.find('rebase')
-        wrapfunction(rebase.rebaseruntime, '_preparenewrebase',
-                     _trackrebasesize)
+        rebase = extensions.find("rebase")
+        wrapfunction(rebase.rebaseruntime, "_preparenewrebase", _trackrebasesize)
     except KeyError:
         pass
 
@@ -56,16 +58,16 @@ def extsetup(ui):
     # node->rev lookup for. Since looking up rev->node is cheaper than
     # node->rev, we use this cache to prefill the changelog radix tree with
     # mappings.
-    wrapfunction(branchmap.branchcache, 'write', _branchmapwrite)
-    wrapfunction(phases.phasecache, 'advanceboundary', _editphases)
-    wrapfunction(phases.phasecache, 'retractboundary', _editphases)
+    wrapfunction(branchmap.branchcache, "write", _branchmapwrite)
+    wrapfunction(phases.phasecache, "advanceboundary", _editphases)
+    wrapfunction(phases.phasecache, "retractboundary", _editphases)
     try:
-        remotenames = extensions.find('remotenames')
-        wrapfunction(remotenames, 'saveremotenames', _saveremotenames)
+        remotenames = extensions.find("remotenames")
+        wrapfunction(remotenames, "saveremotenames", _saveremotenames)
     except KeyError:
         pass
 
-    wrapfunction(namespaces.namespaces, 'singlenode', _singlenode)
+    wrapfunction(namespaces.namespaces, "singlenode", _singlenode)
 
     def wrapcheckcollisionafterfbsparse(loaded=False):
         # wrap merge._checkcollision after fbsparse has had a chance to wrapped
@@ -73,16 +75,20 @@ def extsetup(ui):
         # this extension disabled the collision check.
         # Note: this wrapping takes place even when fbsparse is not loaded at
         # all, which is intentional.
-        wrapfunction(merge, '_checkcollision', _checkcollision)
-    extensions.afterloaded('fbsparse', wrapcheckcollisionafterfbsparse)
+        wrapfunction(merge, "_checkcollision", _checkcollision)
+
+    extensions.afterloaded("fbsparse", wrapcheckcollisionafterfbsparse)
+
 
 def reposetup(ui, repo):
     if repo.local() is not None:
         _preloadrevs(repo)
 
         # developer config: perftweaks.disableupdatebranchcacheoncommit
-        if repo.ui.configbool('perftweaks', 'disableupdatebranchcacheoncommit'):
+        if repo.ui.configbool("perftweaks", "disableupdatebranchcacheoncommit"):
+
             class perftweaksrepo(repo.__class__):
+
                 @localrepo.unfilteredmethod
                 def updatecaches(self, tr=None):
                     # Disable "branchmap.updatecache(self.filtered('served'))"
@@ -90,28 +96,29 @@ def reposetup(ui, repo):
                     # don't have on-disk branchmap. Second, accessing
                     # "repo.filtered('served')" alone is not very cheap.
                     bakrevs = None
-                    if tr and 'revs' in tr.changes:
-                        bakrevs = tr.changes['revs']
-                        tr.changes['revs'] = frozenset()
+                    if tr and "revs" in tr.changes:
+                        bakrevs = tr.changes["revs"]
+                        tr.changes["revs"] = frozenset()
                     try:
                         super(perftweaksrepo, self).updatecaches(tr)
                     finally:
                         if bakrevs:
-                            tr.changes['revs'] = bakrevs
+                            tr.changes["revs"] = bakrevs
 
             repo.__class__ = perftweaksrepo
 
         # record nodemap lag
         try:
             lag = repo.changelog.nodemap.lag
-            ui.log('nodemap_lag', '', nodemap_lag=lag)
+            ui.log("nodemap_lag", "", nodemap_lag=lag)
         except AttributeError:
             pass
+
 
 def _singlenode(orig, self, repo, name):
     """Skips reading branches namespace if unnecessary"""
     # developer config: perftweaks.disableresolvingbranches
-    if not repo.ui.configbool('perftweaks', 'disableresolvingbranches'):
+    if not repo.ui.configbool("perftweaks", "disableresolvingbranches"):
         return orig(self, repo, name)
 
     # If branches are disabled, only resolve the 'default' branch. Loading
@@ -119,28 +126,31 @@ def _singlenode(orig, self, repo, name):
     # headrevs() which scans the entire changelog.
     names = self._names
     namesbak = names.copy()
-    if name != 'default' and 'branches' in names:
-        del names['branches']
+    if name != "default" and "branches" in names:
+        del names["branches"]
     try:
         return orig(self, repo, name)
     finally:
         self.names = namesbak
 
+
 def _readtagcache(orig, ui, repo):
     """Disables reading tags if the repo is known to not contain any."""
-    if ui.configbool('perftweaks', 'disabletags'):
+    if ui.configbool("perftweaks", "disabletags"):
         return (None, None, None, {}, False)
 
     return orig(ui, repo)
 
+
 def _checkcollision(orig, repo, wmf, actions):
     """Disables case collision checking since it is known to be very slow."""
-    if repo.ui.configbool('perftweaks', 'disablecasecheck'):
+    if repo.ui.configbool("perftweaks", "disablecasecheck"):
         return
     orig(repo, wmf, actions)
 
+
 def _branchmapupdate(orig, self, repo, revgen):
-    if not repo.ui.configbool('perftweaks', 'disablebranchcache'):
+    if not repo.ui.configbool("perftweaks", "disablebranchcache"):
         return orig(self, repo, revgen)
 
     cl = repo.changelog
@@ -155,32 +165,34 @@ def _branchmapupdate(orig, self, repo, revgen):
     branchheads = [i for i in cl.headrevs() if i >= 0]
 
     if not branchheads:
-        if 'default' in self:
-            del self['default']
+        if "default" in self:
+            del self["default"]
         tiprev = -1
     else:
-        self['default'] = [tonode(rev) for rev in branchheads]
+        self["default"] = [tonode(rev) for rev in branchheads]
         tiprev = branchheads[-1]
     self.tipnode = cl.node(tiprev)
     self.tiprev = tiprev
     self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
-    repo.ui.log('branchcache', 'perftweaks updated %s branch cache\n',
-                repo.filtername)
+    repo.ui.log("branchcache", "perftweaks updated %s branch cache\n", repo.filtername)
+
 
 def _branchmapread(orig, repo):
     # developer config: perftweaks.disablebranchcache2
-    if not repo.ui.configbool('perftweaks', 'disablebranchcache2'):
+    if not repo.ui.configbool("perftweaks", "disablebranchcache2"):
         return orig(repo)
     # Don't bother reading branchmap since branchcache.update() will be called
     # anyway and that is O(changelog)
 
+
 def _branchmapreplacecache(orig, repo, bm):
-    if not repo.ui.configbool('perftweaks', 'disablebranchcache2'):
+    if not repo.ui.configbool("perftweaks", "disablebranchcache2"):
         return orig(repo, bm)
     # Don't bother writing branchmap since we don't read it
 
+
 def _branchmapupdatecache(orig, repo):
-    if not repo.ui.configbool('perftweaks', 'disablebranchcache2'):
+    if not repo.ui.configbool("perftweaks", "disablebranchcache2"):
         return orig(repo)
 
     # The original logic has unnecessary steps, ex. it calculates the "served"
@@ -194,24 +206,26 @@ def _branchmapupdatecache(orig, repo):
     partial.update(repo, None)
     repo._branchcaches[repo.filtername] = partial
 
+
 def _branchmapwrite(orig, self, repo):
-    if repo.ui.configbool('perftweaks', 'disablebranchcache2'):
+    if repo.ui.configbool("perftweaks", "disablebranchcache2"):
         # Since we don't read the branchcache, don't bother writing it.
         result = None
     else:
         result = orig(self, repo)
-    if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
+    if repo.ui.configbool("perftweaks", "cachenoderevs", True):
         revs = set()
         nodemap = repo.changelog.nodemap
         for branch, heads in self.iteritems():
             revs.update(nodemap[n] for n in heads)
-        name = 'branchheads-%s' % repo.filtername
+        name = "branchheads-%s" % repo.filtername
         _savepreloadrevs(repo, name, revs)
     return result
 
+
 def _saveremotenames(orig, repo, remotepath, branches=None, bookmarks=None):
     result = orig(repo, remotepath, branches=branches, bookmarks=bookmarks)
-    if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
+    if repo.ui.configbool("perftweaks", "cachenoderevs", True):
         revs = set()
         nodemap = repo.changelog.nodemap
         if bookmarks:
@@ -228,13 +242,15 @@ def _saveremotenames(orig, repo, remotepath, branches=None, bookmarks=None):
                     if n in nodemap:
                         revs.add(nodemap[n])
 
-        name = 'remotenames-%s' % remotepath
+        name = "remotenames-%s" % remotepath
         _savepreloadrevs(repo, name, revs)
 
     return result
 
+
 def _editphases(orig, self, repo, tr, *args):
     result = orig(self, repo, tr, *args)
+
     def _write(fp):
         revs = set()
         nodemap = repo.changelog.nodemap
@@ -242,20 +258,22 @@ def _editphases(orig, self, repo, tr, *args):
             for n in roots:
                 if n in nodemap:
                     revs.add(nodemap[n])
-        _savepreloadrevs(repo, 'phaseroots', revs)
+        _savepreloadrevs(repo, "phaseroots", revs)
 
     # We don't actually use the transaction file generator. It's just a hook so
     # we can write out at the same time as phases.
     if tr:
-        tr.addfilegenerator('noderev-phaseroot', ('phaseroots-fake',), _write)
+        tr.addfilegenerator("noderev-phaseroot", ("phaseroots-fake",), _write)
     else:
         # fp is not used anyway
         _write(fp=None)
 
     return result
 
+
 def _cachefilename(name):
-    return 'noderevs/%s' % name
+    return "noderevs/%s" % name
+
 
 def _preloadrevs(repo):
     # Preloading the node-rev map for likely to be used revs saves 100ms on
@@ -266,10 +284,10 @@ def _preloadrevs(repo):
     # Reading old commits is common, since the branchmap needs to to convert old
     # branch heads from node to rev.
 
-    if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
+    if repo.ui.configbool("perftweaks", "cachenoderevs", True):
         repo = repo.unfiltered()
         revs = set()
-        cachedir = repo.vfs.join('cache', 'noderevs')
+        cachedir = repo.vfs.join("cache", "noderevs")
         try:
             for cachefile in os.listdir(cachedir):
                 filename = _cachefilename(cachefile)
@@ -288,9 +306,10 @@ def _preloadrevs(repo):
             # No permission to read? No big deal
             pass
 
+
 def _savepreloadrevs(repo, name, revs):
-    if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
-        cachedir = repo.vfs.join('cache', 'noderevs')
+    if repo.ui.configbool("perftweaks", "cachenoderevs", True):
+        cachedir = repo.vfs.join("cache", "noderevs")
         try:
             repo.vfs.mkdir(cachedir)
         except OSError as ex:
@@ -302,47 +321,50 @@ def _savepreloadrevs(repo, name, revs):
 
         try:
             filename = _cachefilename(name)
-            f = repo.cachevfs.open(filename, mode='w+', atomictemp=True)
-            f.write('\n'.join(str(r) for r in revs))
+            f = repo.cachevfs.open(filename, mode="w+", atomictemp=True)
+            f.write("\n".join(str(r) for r in revs))
             f.close()
         except EnvironmentError:
             # No permission to write? No big deal
             pass
 
+
 def _trackdirstatesizes(runcommand, lui, repo, *args):
     res = runcommand(lui, repo, *args)
     if repo is not None and repo.local():
         dirstate = repo.dirstate
-        if 'treedirstate' in getattr(repo, 'requirements', set()):
+        if "treedirstate" in getattr(repo, "requirements", set()):
             # Treedirstate always has the dirstate size available.
-            lui.log('dirstate_size', '', dirstate_size=len(dirstate._map))
-        elif '_map' in vars(dirstate) and '_map' in vars(dirstate._map):
+            lui.log("dirstate_size", "", dirstate_size=len(dirstate._map))
+        elif "_map" in vars(dirstate) and "_map" in vars(dirstate._map):
             # For other dirstate types, access the inner map directly.  If the
             # _map attribute is missing on the map, the dirstate was not loaded.
-            lui.log('dirstate_size', '', dirstate_size=len(dirstate._map._map))
+            lui.log("dirstate_size", "", dirstate_size=len(dirstate._map._map))
     return res
+
 
 def _tracksparseprofiles(runcommand, lui, repo, *args):
     res = runcommand(lui, repo, *args)
     if repo is not None and repo.local():
-        if util.safehasattr(repo, 'getactiveprofiles'):
+        if util.safehasattr(repo, "getactiveprofiles"):
             profiles = repo.getactiveprofiles()
-            lui.log('sparse_profiles', '',
-                    active_profiles=','.join(sorted(profiles)))
+            lui.log("sparse_profiles", "", active_profiles=",".join(sorted(profiles)))
     return res
+
 
 def _trackupdatesize(orig, repo, node, branchmerge, *args, **kwargs):
     if not branchmerge:
         try:
-            distance = len(repo.revs('(%s %% .) + (. %% %s)', node, node))
-            repo.ui.log('update_size', '', update_distance=distance)
+            distance = len(repo.revs("(%s %% .) + (. %% %s)", node, node))
+            repo.ui.log("update_size", "", update_distance=distance)
         except Exception:
             # error may happen like: RepoLookupError: unknown revision '-1'
             pass
 
     stats = orig(repo, node, branchmerge, *args, **kwargs)
-    repo.ui.log('update_size', '', update_filecount=sum(stats))
+    repo.ui.log("update_size", "", update_filecount=sum(stats))
     return stats
+
 
 def _trackrebasesize(orig, self, destmap):
     result = orig(self, destmap)
@@ -356,12 +378,17 @@ def _trackrebasesize(orig, self, destmap):
     destrev = max(destmap.values())
     rebaseset = destmap.keys()
     commitcount = len(rebaseset)
-    distance = len(repo.revs('(%ld %% %d) + (%d %% %ld)',
-                             rebaseset, destrev, destrev, rebaseset))
+    distance = len(
+        repo.revs("(%ld %% %d) + (%d %% %ld)", rebaseset, destrev, destrev, rebaseset)
+    )
     # 'distance' includes the commits being rebased, so subtract them to get the
     # actual distance being traveled. Even though we log update_distance above,
     # a rebase may run multiple updates, so that value might be not be accurate.
-    repo.ui.log('rebase_size', '', rebase_commitcount=commitcount,
-                                   rebase_distance=distance - commitcount)
+    repo.ui.log(
+        "rebase_size",
+        "",
+        rebase_commitcount=commitcount,
+        rebase_distance=distance - commitcount,
+    )
 
     return result

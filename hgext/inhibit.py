@@ -7,12 +7,9 @@
 """redefine obsolete(), bumped(), divergent() revsets"""
 
 from __future__ import absolute_import
-from mercurial import (
-    error,
-    extensions,
-    obsolete,
-    util,
-)
+
+from mercurial import error, extensions, obsolete, util
+
 
 def _obsoletedrevs(repo):
     """Redefine "obsolete()" revset. Previously, X is obsoleted if X appears as
@@ -41,12 +38,23 @@ def _obsoletedrevs(repo):
                 result.add(r)
     return result
 
-def _obsstorecreate(orig, self, tr, prec, succs=(), flag=0, parents=None,
-                    date=None, metadata=None, ui=None):
+
+def _obsstorecreate(
+    orig,
+    self,
+    tr,
+    prec,
+    succs=(),
+    flag=0,
+    parents=None,
+    date=None,
+    metadata=None,
+    ui=None,
+):
     # we need to resolve default date
     if date is None:
         if ui is not None:
-            date = ui.configdate('devel', 'default-date')
+            date = ui.configdate("devel", "default-date")
         if date is None:
             date = util.makedate()
     # if prec is a successor of an existing marker, make default date bigger so
@@ -60,6 +68,7 @@ def _obsstorecreate(orig, self, tr, prec, succs=(), flag=0, parents=None,
             date = maxdate
     return orig(self, tr, prec, succs, flag, parents, date, metadata, ui)
 
+
 def _createmarkers(orig, repo, rels, *args, **kwargs):
     # make predecessor context unfiltered so parents() won't raise
     unfi = repo.unfiltered()
@@ -72,7 +81,8 @@ def _createmarkers(orig, repo, rels, *args, **kwargs):
             pass
     return orig(unfi, rels, *args, **kwargs)
 
-def revive(ctxlist, operation='revive'):
+
+def revive(ctxlist, operation="revive"):
     """un-obsolete revisions (public API used by other extensions)"""
     rels = [(ctx, (ctx,)) for ctx in ctxlist if ctx.obsolete()]
     if not rels:
@@ -82,22 +92,23 @@ def revive(ctxlist, operation='revive'):
     with repo.lock():
         obsolete.createmarkers(repo, rels, operation=operation)
 
+
 def uisetup(ui):
     revsets = obsolete.cachefuncs
 
     # redefine obsolete(): handle cycles and make nodes visible
-    revsets['obsolete'] = _obsoletedrevs
+    revsets["obsolete"] = _obsoletedrevs
 
     # make divergent() and bumped() empty
     # NOTE: we should avoid doing this but just change templates to only show a
     # subset of troubles we care about.
-    revsets['divergent'] = revsets['bumped'] = lambda repo: frozenset()
+    revsets["divergent"] = revsets["bumped"] = lambda repo: frozenset()
 
     # make obsstore.create not complain about in-marker cycles, since we want
     # to write X -> X to revive X.
-    extensions.wrapfunction(obsolete.obsstore, 'create', _obsstorecreate)
+    extensions.wrapfunction(obsolete.obsstore, "create", _obsstorecreate)
 
     # make createmarkers use unfiltered predecessor ctx, workarounds an issue
     # that prec.parents() may raise FilteredIndexError.
     # NOTE: should be fixed upstream once hash-preserving obsstore is a thing.
-    extensions.wrapfunction(obsolete, 'createmarkers', _createmarkers)
+    extensions.wrapfunction(obsolete, "createmarkers", _createmarkers)
