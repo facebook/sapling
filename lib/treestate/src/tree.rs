@@ -151,6 +151,9 @@ pub trait CompatExt<T> {
     /// Write extra fields. Extends `write_entries`.
     fn write_ext(&self, writer: &mut Write) -> Result<()>;
 
+    /// Calculate `aggregated_state` if it's not calculated yet.
+    fn calculate_aggregated_state(&self) -> AggregatedState;
+
     /// Extract StateFlags from a file.
     fn get_file_state(_file: &T) -> StateFlags {
         StateFlags::empty()
@@ -165,25 +168,37 @@ impl CompatExt<FileState> for Node<FileState> {
     fn write_ext(&self, _: &mut Write) -> Result<()> {
         Ok(())
     }
+
+    fn calculate_aggregated_state(&self) -> AggregatedState {
+        panic!("should not be called");
+    }
 }
 
 impl CompatExt<FileStateV2> for Node<FileStateV2> {
     fn write_ext(&self, writer: &mut Write) -> Result<()> {
-        if self.aggregated_state.get().is_none() {
-            let state = self.entries
-                .as_ref()
-                .expect("entries should exist")
-                .iter()
-                .fold(AggregatedState::default(), |acc, (_, entry)| match entry {
-                    &NodeEntry::Directory(ref dir) => {
-                        acc.merge(dir.aggregated_state.get().expect("should be ready now"))
-                    }
-                    &NodeEntry::File(ref file) => acc.merge(file.state.into()),
-                });
-            self.aggregated_state.set(Some(state));
-        }
-        self.aggregated_state.get().unwrap().serialize(writer)?;
+        let state = self.calculate_aggregated_state();
+        state.serialize(writer)?;
         Ok(())
+    }
+
+    fn calculate_aggregated_state(&self) -> AggregatedState {
+        match self.aggregated_state.get() {
+            None => {
+                let state = self.entries
+                    .as_ref()
+                    .expect("entries should exist")
+                    .iter()
+                    .fold(AggregatedState::default(), |acc, (_, x)| match x {
+                        &NodeEntry::Directory(ref x) => {
+                            acc.merge(x.aggregated_state.get().expect("should be ready now"))
+                        }
+                        &NodeEntry::File(ref x) => acc.merge(x.state.into()),
+                    });
+                self.aggregated_state.set(Some(state));
+                state
+            }
+            Some(state) => state,
+        }
     }
 
     fn load_ext(&self, data: &mut Read) -> Result<()> {
