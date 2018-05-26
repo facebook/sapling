@@ -14,7 +14,7 @@
 # - If the file cannot be created or accessed, fails silently
 #
 # The configuration details can be found in the documentation of ui.log below
-from mercurial import encoding, registrar, util
+from mercurial import encoding, pycompat, registrar, util
 
 import json, os
 
@@ -110,6 +110,28 @@ def uisetup(ui):
     # Replace the class for this instance and all clones created from it:
     ui.__class__ = logtofile
 
+def getrelativecwd(repo):
+    """Returns the current directory relative to the working copy root, or
+    None if it's not in the working copy.
+    """
+    cwd = pycompat.getcwdsafe()
+    if cwd.startswith(repo.root):
+        return os.path.normpath(cwd[len(repo.root) + 1:])
+    else:
+        return None
+
+def gettopdir(repo):
+    """Returns the first component of the current directory, if it's in the
+     working copy.
+     """
+    reldir = getrelativecwd(repo)
+    if reldir:
+        components = reldir.split(pycompat.ossep)
+        if len(components) > 0 and components[0] != '.':
+            return components[0]
+    else:
+        return None
+
 def reposetup(ui, repo):
     @repo.ui.atexit
     def telemetry():
@@ -118,3 +140,15 @@ def reposetup(ui, repo):
                 generaldelta=str('generaldelta' in repo.requirements).lower())
             ui.log('requirements',
                 remotefilelog=str('remotefilelog' in repo.requirements).lower())
+
+    # Log other information that we don't want to log in the wrapper, if it's
+    # cheap to do so.
+
+    # Log the current directory bucketed to top-level directories, if enabled.
+    # This provides a very rough approximation of what area the users works in.
+    # developer config: sampling.logtopdir
+    if repo.ui.config("sampling", "logtopdir"):
+        topdir = gettopdir(repo)
+        if topdir:
+            ui.log('command_info', topdir=topdir)
+

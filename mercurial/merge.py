@@ -1309,21 +1309,13 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
 
     return prunedactions, diverge, renamedelete
 
-def _getcwd():
-    try:
-        return pycompat.getcwd()
-    except OSError as err:
-        if err.errno == errno.ENOENT:
-            return None
-        raise
-
 def batchremove(repo, wctx, actions):
     """apply removes to the working directory
 
     yields tuples for progress updates
     """
     verbose = repo.ui.verbose
-    cwd = _getcwd()
+    cwd = pycompat.getcwdsafe()
     i = 0
     for f, args, msg in actions:
         repo.ui.debug(" %s: %s -> r\n" % (f, msg))
@@ -1342,7 +1334,7 @@ def batchremove(repo, wctx, actions):
     if i > 0:
         yield i, f
 
-    if cwd and not _getcwd():
+    if cwd and not pycompat.getcwdsafe():
         # cwd was removed in the course of removing files; print a helpful
         # warning.
         repo.ui.warn(_("current directory was removed\n"

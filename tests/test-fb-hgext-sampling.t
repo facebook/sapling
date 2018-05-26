@@ -54,7 +54,7 @@ logged
   $ echo "filepath = $LOGDIR/samplingpath.txt" >> $HGRCPATH
 
 Do a couple of commits.  We expect to log two messages per call to repo.commit.
-
+  $ mkdir a_topdir && cd a_topdir
   $ mkcommit b
   atexit handler executed
   atexit handler executed
@@ -79,3 +79,13 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   match filter commit_table
   message string commit_table
   atexit_measured:  [u'atexit_measured', u'command_duration', u'dirstatewalk_time', u'metrics_type', u'msg', u'stdio_blocked']
+
+Test topdir logging:
+  $ setconfig sampling.logtopdir=True
+  $ setconfig sampling.key.command_info=command_info
+  $ hg st > /dev/null
+  hiatexit handler executed
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read().strip("\0").split("\0")
+  >>> print([d for d in data if "topdir" in d])
+  ['{"category": "command_info", "data": {"topdir": "a_topdir", "metrics_type": "command_info"}}']

@@ -10,6 +10,7 @@ This contains aliases to hide python version-specific details from the core.
 
 from __future__ import absolute_import
 
+import errno
 import getopt
 import os
 import shlex
@@ -328,3 +329,12 @@ def getoptb(args, shortlist, namelist):
 
 def gnugetoptb(args, shortlist, namelist):
     return _getoptbwrapper(getopt.gnu_getopt, args, shortlist, namelist)
+
+def getcwdsafe():
+    """Returns the current working dir, or None if it has been deleted"""
+    try:
+        return getcwd()
+    except OSError as err:
+        if err.errno == errno.ENOENT:
+            return None
+        raise
