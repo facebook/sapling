@@ -184,7 +184,7 @@ Future<Unit> EdenServer::unmountAll() {
   }
   // Use collectAll() rather than collect() to wait for all of the unmounts
   // to complete, and only check for errors once everything has finished.
-  return folly::collectAll(futures).then(
+  return folly::collectAllSemiFuture(futures).toUnsafeFuture().then(
       [](std::vector<folly::Try<Unit>> results) {
         for (const auto& result : results) {
           result.throwIfFailed();
@@ -225,7 +225,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
   }
   // Use collectAll() rather than collect() to wait for all of the unmounts
   // to complete, and only check for errors once everything has finished.
-  return folly::collectAll(futures).then(
+  return folly::collectAllSemiFuture(futures).toUnsafeFuture().then(
       [](std::vector<folly::Try<Optional<TakeoverData::MountInfo>>> results) {
         TakeoverData data;
         data.mountPoints.reserve(results.size());
@@ -594,7 +594,7 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
   channelData.connInfo = info.connInfo;
 
   // Start up the fuse workers.
-  return folly::collectAll(futures).then(
+  return folly::collectAllSemiFuture(futures).toUnsafeFuture().then(
       [this, edenMount, channelData = std::move(channelData)]() mutable {
         return edenMount->takeoverFuse(std::move(channelData));
       });

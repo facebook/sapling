@@ -145,7 +145,8 @@ folly::Future<folly::Unit> diffRemovedTree(
     }
   }
 
-  return folly::collectAll(subFutures)
+  return folly::collectAllSemiFuture(subFutures)
+      .toUnsafeFuture()
       .then([currentPath = RelativePath{std::move(currentPath)},
              tree = std::move(tree),
              context](vector<folly::Try<Unit>> results) {

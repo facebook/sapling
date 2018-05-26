@@ -298,7 +298,8 @@ Future<Unit> TreeDiffer::waitOnResults(ChildFutures&& childFutures) {
     return makeFuture();
   }
 
-  return folly::collectAll(std::move(childFutures.futures))
+  return folly::collectAllSemiFuture(std::move(childFutures.futures))
+      .toUnsafeFuture()
       .then([this, paths = std::move(childFutures.paths)](
                 vector<Try<Unit>>&& results) {
         DCHECK_EQ(paths.size(), results.size());
