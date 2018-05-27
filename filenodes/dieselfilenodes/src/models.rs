@@ -22,6 +22,7 @@ pub(crate) struct FilenodeRow {
     pub linknode: DChangesetId,
     pub p1: Option<DFileNodeId>,
     pub p2: Option<DFileNodeId>,
+    pub has_copyinfo: i32,
 }
 
 impl FilenodeRow {
@@ -33,7 +34,9 @@ impl FilenodeRow {
         linknode: &DChangesetId,
         p1: Option<DFileNodeId>,
         p2: Option<DFileNodeId>,
+        has_copyinfo: bool,
     ) -> Self {
+        let has_copyinfo = if has_copyinfo { 1 } else { 0 };
         FilenodeRow {
             repo_id: *repo_id,
             path_hash: blake2_path_hash(path),
@@ -42,6 +45,7 @@ impl FilenodeRow {
             linknode: *linknode,
             p1: p1,
             p2: p2,
+            has_copyinfo,
         }
     }
 }

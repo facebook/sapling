@@ -195,17 +195,21 @@ macro_rules! impl_filenodes {
                         .context(ErrorKind::FailFetchFilenode(filenode.clone(), path.clone()))?;
                     match filenode_row {
                         Some(filenode_row) => {
-                            let copyfrom = Self::fetch_copydata(
-                                &*connection,
-                                &filenode,
-                                &path,
-                                &repo_id,
-                            );
-
-                            let copyfrom = copyfrom
-                                .context(
-                                    ErrorKind::FailFetchCopydata(filenode.clone(), path.clone())
-                                )?;
+                            let copyfrom = if filenode_row.has_copyinfo != 0 {
+                                let copyfrom = Self::fetch_copydata(
+                                    &*connection,
+                                    &filenode,
+                                    &path,
+                                    &repo_id,
+                                );
+                                Some(
+                                    copyfrom.context(
+                                        ErrorKind::FailFetchCopydata(filenode.clone(), path.clone())
+                                    )?
+                                )
+                            } else {
+                                None
+                            };
 
                             let filenodeinfo = FilenodeInfo {
                                 path: path.clone(),
@@ -278,6 +282,7 @@ macro_rules! impl_filenodes {
                         &filenode.linknode,
                         filenode.p1,
                         filenode.p2,
+                        filenode.copyfrom.is_some(),
                     );
                     filenode_rows.push(filenode_row);
                     if let Some(copyinfo) = filenode.copyfrom {
@@ -315,7 +320,7 @@ macro_rules! impl_filenodes {
                 filenode: &DFileNodeId,
                 path: &RepoPath,
                 repo_id: &RepositoryId,
-            ) -> Result<Option<(RepoPath, DFileNodeId)>> {
+            ) -> Result<(RepoPath, DFileNodeId)> {
                 let is_tree = match path {
                     &RepoPath::RootPath | &RepoPath::DirectoryPath(_) => true,
                     &RepoPath::FilePath(_) => false,
@@ -326,22 +331,23 @@ macro_rules! impl_filenodes {
                 let copydata_row =
                     copyinfoquery.first::<models::FixedCopyInfoRow>(&*connection)
                     .optional()?;
-                if let Some(copydata) = copydata_row {
-                    let path_row = path_query(repo_id, &copydata.frompath_hash)
-                        .first::<models::PathRow>(&*connection)
-                        .optional()?;
-                    match path_row {
-                        Some(path_row) => {
-                            let frompath = convert_to_repo_path(&path_row.path, is_tree)?;
-                            Ok(Some((frompath, copydata.fromnode)))
-                        }
-                        None => {
-                            let err: Error = ErrorKind::PathNotFound(copydata.frompath_hash).into();
-                            Err(err)
-                        }
+
+                let copydata: Result<_>  = copydata_row.ok_or(
+                        ErrorKind::CopydataNotFound(filenode.clone(), path.clone()).into()
+                );
+                let copydata = copydata?;
+                let path_row = path_query(repo_id, &copydata.frompath_hash)
+                    .first::<models::PathRow>(&*connection)
+                    .optional()?;
+                match path_row {
+                    Some(path_row) => {
+                        let frompath = convert_to_repo_path(&path_row.path, is_tree)?;
+                        Ok((frompath, copydata.fromnode))
                     }
-                } else {
-                    Ok(None)
+                    None => {
+                        let err: Error = ErrorKind::PathNotFound(copydata.frompath_hash).into();
+                        Err(err)
+                    }
                 }
             }
         }

@@ -16,4 +16,6 @@ pub enum ErrorKind {
     FailFetchFilenode(DFileNodeId, RepoPath),
     #[fail(display = "Internal error: failure while fetching copy information {} {}", _0, _1)]
     FailFetchCopydata(DFileNodeId, RepoPath),
+    #[fail(display = "Internal error: copy information is not found for {} {}", _0, _1)]
+    CopydataNotFound(DFileNodeId, RepoPath),
 }

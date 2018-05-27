@@ -8,6 +8,9 @@ CREATE TABLE filenodes (
   linknode VARBINARY(32) NOT NULL,
   p1 BINARY(20),
   p2 BINARY(20),
+  -- Fetching of a BIT field for Mysql Diesel backend fails with
+  -- "Numeric overflow/underflow occurred". So use TINYINT instead
+  has_copyinfo TINYINT NOT NULL,
   PRIMARY KEY (repo_id, path_hash, is_tree, filenode)
 );
 

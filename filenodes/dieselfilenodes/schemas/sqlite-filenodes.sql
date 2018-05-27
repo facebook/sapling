@@ -6,6 +6,7 @@ CREATE TABLE filenodes (
   linknode VARBINARY(32) NOT NULL,
   p1 BINARY(20),
   p2 BINARY(20),
+  has_copyinfo BIT NOT NULL,
   PRIMARY KEY (repo_id, path_hash, is_tree, filenode)
 );
 

@@ -21,6 +21,7 @@ table! {
         linknode -> DChangesetIdSql,
         p1 -> Nullable<DFileNodeIdSql>,
         p2 -> Nullable<DFileNodeIdSql>,
+        has_copyinfo -> Integer,
     }
 }
 
