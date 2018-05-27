@@ -75,6 +75,7 @@ Show debug commands if there are no other candidates
   debugbuilddag
   debugbundle
   debugcapabilities
+  debugcheckcasecollisions
   debugcheckstate
   debugcolor
   debugcommands
@@ -264,6 +265,7 @@ Show all commands + options
   debugbuilddag: mergeable-file, overwritten-file, new-file
   debugbundle: all, part-type, spec
   debugcapabilities: 
+  debugcheckcasecollisions: rev
   debugcheckstate: 
   debugcolor: style
   debugcommands: 

@@ -2920,3 +2920,60 @@ def debugprogress(ui, number, spinner=False, nototal=False, bytes=False):
         with progress.bar(ui, _spinning, total=num, formatfunc=formatfunc) as p:
             for i in xrange(num):
                 p.value = (i, "item %s" % i)
+
+
+@command(
+    b"debugcheckcasecollisions",
+    [("r", "rev", [], _("check the specified revision"), _("REV"))],
+    _("[-r REV]... FILENAMES"),
+)
+def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
+    """check for case collisions against a commit"""
+    res = 0
+    opts = pycompat.byteskwargs(opts)
+    ctx = scmutil.revsingle(repo, opts.get("rev"))
+    lowertfs = {}
+
+    def name(short, long):
+        """pretty-print a filename that may or may not be a directory"""
+        if short == long:
+            return short
+        else:
+            return "%s (directory for %s)" % (short, long)
+
+    # Build a mapping from the lowercased versions of testfiles (and all
+    # directory prefixes) to the fullcased version (both the dir and the
+    # full file that caused it.
+    #
+    # Whilst building it, check that none of the files conflict with the
+    # other files in the set.
+    for tff in testfiles:
+        for tf in [tff] + list(util.finddirs(tff)):
+            lowertf = tf.lower()
+            if lowertf in lowertfs and tf != lowertfs[lowertf][0]:
+                ui.status(
+                    _("%s conflicts with %s\n")
+                    % (name(tf, tff), name(*lowertfs[lowertf]))
+                )
+                res = 1
+            else:
+                lowertfs[lowertf] = (tf, tff)
+
+    # Now check nothing in the manifest (including path prefixes) conflict
+    # with anything in the list of files.
+    seen = set()
+    for mfnf in ctx.manifest().iterkeys():
+        for mfn in [mfnf] + list(util.finddirs(mfnf)):
+            if mfn in seen:
+                continue
+            seen.add(mfn)
+            lowermfn = mfn.lower()
+            if lowermfn in lowertfs and mfn != lowertfs[lowermfn][0]:
+                tf, tff = lowertfs[lowermfn]
+                ui.status(
+                    _("%s conflicts with %s\n")
+                    % (name(mfn, mfnf), name(*lowertfs[lowermfn]))
+                )
+                res = 1
+
+    return res
