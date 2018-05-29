@@ -679,3 +679,21 @@ Check cloud sync pulls in the shared commit in the other client
   |
   o  d20a80d4def3 'base'
   
+Check '--workspace_version' option
+  $ hg cloud sync --workspace-version 1
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud this version has been already synchronized
+
+Check '--check_autosync_enabled' option
+  $ hg cloud sync --check-autosync-enabled
+  #commitcloud automatic backup and synchronization is currently disabled
+  $ hg backupdisable
+  note: background backup was already disabled
+  background backup is now disabled until * (glob)
+  $ hg cloud sync --check-autosync-enabled
+  #commitcloud automatic backup and synchronization is currently disabled
+  $ hg backupenable
+  background backup is enabled
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud commits synchronized

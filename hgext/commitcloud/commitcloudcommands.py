@@ -12,8 +12,6 @@ import re
 import socket
 import time
 
-# Mercurial
-from mercurial.i18n import _
 from mercurial import (
     commands,
     discovery,
@@ -25,14 +23,12 @@ from mercurial import (
     registrar,
 )
 
+# Mercurial
+from mercurial.i18n import _
+
+from . import commitcloudcommon, commitcloudutil, service, state
 from .. import shareutil
 
-from . import (
-    commitcloudcommon,
-    commitcloudutil,
-    service,
-    state,
-)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -40,7 +36,8 @@ highlightdebug = commitcloudcommon.highlightdebug
 highlightstatus = commitcloudcommon.highlightstatus
 infinitepush = None
 
-@command('cloud', [], 'SUBCOMMAND ...', subonly=True)
+
+@command("cloud", [], "SUBCOMMAND ...", subonly=True)
 def cloud(ui, repo, **opts):
     """synchronise commits via commit cloud
 
@@ -59,9 +56,11 @@ def cloud(ui, repo, **opts):
     """
     pass
 
+
 subcmd = cloud.subcommand()
 
-@subcmd('join|connect', [])
+
+@subcmd("join|connect", [])
 def cloudjoin(ui, repo, **opts):
     """connect the local repository to commit cloud
 
@@ -78,12 +77,17 @@ def cloudjoin(ui, repo, **opts):
     workspacemanager.setworkspace()
 
     highlightstatus(
-        ui, _("this repository is now connected to the '%s' "
-              "workspace for the '%s' repo\n") %
-        (workspacemanager.workspace, workspacemanager.reponame))
+        ui,
+        _(
+            "this repository is now connected to the '%s' "
+            "workspace for the '%s' repo\n"
+        )
+        % (workspacemanager.workspace, workspacemanager.reponame),
+    )
     cloudsync(ui, repo, **opts)
 
-@subcmd('leave|disconnect')
+
+@subcmd("leave|disconnect")
 def cloudleave(ui, repo, **opts):
     """disconnect the local repository from commit cloud
 
@@ -91,27 +95,26 @@ def cloudleave(ui, repo, **opts):
     repositories.
     """
     commitcloudutil.WorkspaceManager(repo).clearworkspace()
-    highlightstatus(
-            ui,
-            _('this repository is now disconnected from commit cloud\n'))
+    highlightstatus(ui, _("this repository is now disconnected from commit cloud\n"))
 
-@subcmd('authenticate', [('t', 'token', '', 'set or update token')])
+
+@subcmd("authenticate", [("t", "token", "", _("set or update token"))])
 def cloudauth(ui, repo, **opts):
     """authenticate this host with the commit cloud service
     """
     tokenlocator = commitcloudutil.TokenLocator(ui)
 
-    token = opts.get('token')
+    token = opts.get("token")
     if token:
         # The user has provided a token, so just store it.
         if tokenlocator.token:
-            ui.status(_('updating authentication token\n'))
+            ui.status(_("updating authentication token\n"))
         else:
-            ui.status(_('setting authentication token\n'))
+            ui.status(_("setting authentication token\n"))
         # check token actually works
         service.get(ui, token).check()
         tokenlocator.settoken(token)
-        ui.status(_('authentication successful\n'))
+        ui.status(_("authentication successful\n"))
     else:
         token = tokenlocator.token
         if token:
@@ -120,33 +123,35 @@ def cloudauth(ui, repo, **opts):
             except commitcloudcommon.RegistrationError:
                 token = None
             else:
-                ui.status(_('using existing authentication token\n'))
+                ui.status(_("using existing authentication token\n"))
         if token:
-            ui.status(_('authentication successful\n'))
+            ui.status(_("authentication successful\n"))
         else:
             # Run through interactive authentication
             authenticate(ui, repo, tokenlocator)
 
+
 def authenticate(ui, repo, tokenlocator):
     """interactive authentication"""
     if not ui.interactive():
-        msg = _('authentication with commit cloud required')
+        msg = _("authentication with commit cloud required")
         hint = _("use 'hg cloud auth --token TOKEN' to set a token")
         raise commitcloudcommon.RegistrationError(ui, msg, hint=hint)
 
-    authhelp = ui.config('commitcloud', 'auth_help')
+    authhelp = ui.config("commitcloud", "auth_help")
     if authhelp:
-        ui.status(authhelp + '\n')
+        ui.status(authhelp + "\n")
     # ui.prompt doesn't set up the prompt correctly, so pasting long lines
     # wraps incorrectly in the terminal.  Print the prompt on its own line
     # to avoid this.
-    prompt = _('paste your commit cloud authentication token below:\n')
-    ui.write(ui.label(prompt, 'ui.prompt'))
-    token = ui.prompt('', default='').strip()
+    prompt = _("paste your commit cloud authentication token below:\n")
+    ui.write(ui.label(prompt, "ui.prompt"))
+    token = ui.prompt("", default="").strip()
     if token:
         service.get(ui, token).check()
         tokenlocator.settoken(token)
-        ui.status(_('authentication successful\n'))
+        ui.status(_("authentication successful\n"))
+
 
 def checkauthenticated(ui, repo, tokenlocator):
     """check if authentication is needed"""
@@ -160,48 +165,90 @@ def checkauthenticated(ui, repo, tokenlocator):
             return
     authenticate(ui, repo, tokenlocator)
 
+
 def getrepoworkspace(ui, repo):
     """get the workspace identity for the currently joined workspace"""
     workspacemanager = commitcloudutil.WorkspaceManager(repo)
     reponame = workspacemanager.reponame
     if not reponame:
-        raise commitcloudcommon.ConfigurationError(ui, _('unknown repo'))
+        raise commitcloudcommon.ConfigurationError(ui, _("unknown repo"))
 
     workspace = workspacemanager.workspace
     if not workspace:
-        raise commitcloudcommon.WorkspaceError(ui, _('undefined workspace'))
+        raise commitcloudcommon.WorkspaceError(ui, _("undefined workspace"))
 
     return reponame, workspace
 
-@subcmd('sync')
+
+@subcmd(
+    "sync",
+    [
+        (
+            "",
+            "workspace-version",
+            "",
+            _(
+                "(EXPERIMENTAL) latest version "
+                "(some external services can receive notifications and "
+                "know the latest version)"
+            ),
+        ),
+        (
+            "",
+            "check-autosync-enabled",
+            None,
+            _(
+                "(EXPERIMENTAL) check that "
+                "automatic synchronization is enabled "
+                "(some external services can run `cloud sync` on behalf of the user)"
+            ),
+        ),
+    ],
+)
 def cloudsync(ui, repo, **opts):
     """synchronize commits with the commit cloud service"""
     try:
         # Wait at most 30 seconds, because that's the average backup time
         timeout = 30
         srcrepo = shareutil.getsrcrepo(repo)
-        with lockmod.lock(srcrepo.vfs,
-                          infinitepush.backupcommands._backuplockname,
-                          timeout=timeout):
-            currentnode = repo['.'].node()
+        with lockmod.lock(
+            srcrepo.vfs, infinitepush.backupcommands._backuplockname, timeout=timeout
+        ):
+            currentnode = repo["."].node()
             _docloudsync(ui, repo, **opts)
             return _maybeupdateworkingcopy(ui, repo, currentnode)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
-            ui.warn(_('timeout waiting on backup lock\n'))
+            ui.warn(_("timeout waiting on backup lock\n"))
             return 2
         else:
             raise
 
+
 def _docloudsync(ui, repo, **opts):
     start = time.time()
+
+    # external services can run cloud sync and require to check if
+    # auto sync is enabled
+    if opts.get("check_autosync_enabled") and not autosyncenabled(ui, repo):
+        highlightstatus(
+            ui, _("automatic backup and synchronization " "is currently disabled\n")
+        )
+        return 0
+
     tokenlocator = commitcloudutil.TokenLocator(ui)
     reponame, workspace = getrepoworkspace(ui, repo)
     serv = service.get(ui, tokenlocator.token)
-    highlightstatus(ui, _("synchronizing '%s' with '%s'\n")
-                    % (reponame, workspace))
+    highlightstatus(ui, _("synchronizing '%s' with '%s'\n") % (reponame, workspace))
 
     lastsyncstate = state.SyncState(repo)
+
+    # external services can run cloud sync and know the lasest version
+    version = opts.get("workspace_version")
+    if version and version.isdigit() and int(version) <= lastsyncstate.version:
+        highlightstatus(ui, _("this version has been already synchronized\n"))
+        return 0
+
     cloudrefs = serv.getreferences(reponame, workspace, lastsyncstate.version)
 
     synced = False
@@ -212,9 +259,11 @@ def _docloudsync(ui, repo, **opts):
         localheads = _getheads(repo)
         localbookmarks = _getbookmarks(repo)
 
-        if (set(localheads) == set(lastsyncstate.heads) and
-                localbookmarks == lastsyncstate.bookmarks and
-                lastsyncstate.version != 0):
+        if (
+            set(localheads) == set(lastsyncstate.heads)
+            and localbookmarks == lastsyncstate.bookmarks
+            and lastsyncstate.version != 0
+        ):
             synced = True
 
         if not synced:
@@ -223,27 +272,32 @@ def _docloudsync(ui, repo, **opts):
 
             # First, push commits that the server doesn't have.
             newheads = list(set(localheads) - set(lastsyncstate.heads))
-            pushbackup(ui, repo, newheads, localheads, localbookmarks, None,
-                       **opts)
+            pushbackup(ui, repo, newheads, localheads, localbookmarks, None, **opts)
 
             # Next, update the cloud heads, bookmarks and obsmarkers.
             obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
             synced, cloudrefs = serv.updatereferences(
-                    reponame, workspace, lastsyncstate.version,
-                    lastsyncstate.heads, localheads,
-                    lastsyncstate.bookmarks.keys(), localbookmarks, obsmarkers)
+                reponame,
+                workspace,
+                lastsyncstate.version,
+                lastsyncstate.heads,
+                localheads,
+                lastsyncstate.bookmarks.keys(),
+                localbookmarks,
+                obsmarkers,
+            )
             if synced:
-                lastsyncstate.update(cloudrefs.version, localheads,
-                                     localbookmarks)
+                lastsyncstate.update(cloudrefs.version, localheads, localbookmarks)
                 if obsmarkers:
                     commitcloudutil.clearsyncingobsmarkers(repo)
 
     elapsed = time.time() - start
-    highlightdebug(ui, _('cloudsync completed in %0.2f sec\n') % elapsed)
-    highlightstatus(ui, _('commits synchronized\n'))
+    highlightdebug(ui, _("cloudsync completed in %0.2f sec\n") % elapsed)
+    highlightstatus(ui, _("commits synchronized\n"))
+
 
 def _maybeupdateworkingcopy(ui, repo, currentnode):
-    if repo['.'].node() != currentnode:
+    if repo["."].node() != currentnode:
         return 0
 
     destination = finddestinationnode(repo, currentnode)
@@ -253,34 +307,39 @@ def _maybeupdateworkingcopy(ui, repo, currentnode):
 
     if destination and destination in repo:
         highlightstatus(
-            ui, _(
-                'current revision %s has been moved remotely to %s\n') %
-            (node.short(currentnode), node.short(
-                destination)))
-        if ui.configbool('commitcloud', 'updateonmove'):
+            ui,
+            _("current revision %s has been moved remotely to %s\n")
+            % (node.short(currentnode), node.short(destination)),
+        )
+        if ui.configbool("commitcloud", "updateonmove"):
             return _update(ui, repo, destination)
     else:
         highlightstatus(
             ui,
-            _('current revision %s has been replaced remotely '
-                'with multiple revisions\n'
-              'Please run `hg update` to go to the desired revision\n') %
-            node.short(currentnode))
+            _(
+                "current revision %s has been replaced remotely "
+                "with multiple revisions\n"
+                "Please run `hg update` to go to the desired revision\n"
+            )
+            % node.short(currentnode),
+        )
         return 0
 
-@subcmd('recover')
+
+@subcmd("recover")
 def cloudrecover(ui, repo, **opts):
     """perform recovery for commit cloud
 
     Clear the local cache of commit cloud service state, and resynchronize
     the repository from scratch.
     """
-    highlightstatus(ui, 'clearing local commit cloud cache\n')
+    highlightstatus(ui, "clearing local commit cloud cache\n")
     state.SyncState.erasestate(repo)
     cloudsync(ui, repo, **opts)
 
+
 def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
-    pullcmd, pullopts = _getcommandandoptions('^pull')
+    pullcmd, pullopts = _getcommandandoptions("^pull")
 
     # Pull all the new heads
     # so we need to filter cloudrefs before pull
@@ -288,7 +347,7 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
     unfi = repo.unfiltered()
     newheads = filter(lambda rev: rev not in unfi, cloudrefs.heads)
     if newheads:
-        pullopts['rev'] = newheads
+        pullopts["rev"] = newheads
         pullcmd(ui, repo, **pullopts)
 
     # Merge cloud bookmarks into the repo
@@ -298,23 +357,23 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
     _mergeobsmarkers(ui, repo, cloudrefs.obsmarkers)
 
     # We have now synced the repo to the cloud version.  Store this.
-    lastsyncstate.update(cloudrefs.version, cloudrefs.heads,
-                         cloudrefs.bookmarks)
+    lastsyncstate.update(cloudrefs.version, cloudrefs.heads, cloudrefs.bookmarks)
 
     # Also update infinitepush state.  These new heads are already backed up,
     # otherwise the server wouldn't have told us about them.
     recordbackup(ui, repo, cloudrefs.heads)
 
+
 def _update(ui, repo, destination):
     # update to new head with merging local uncommited changes
-    ui.status(_('updating to %s\n') % node.short(destination))
-    updatecheck = 'none'
-    return hg.updatetotally(ui, repo, destination, destination,
-                            updatecheck=updatecheck)
+    ui.status(_("updating to %s\n") % node.short(destination))
+    updatecheck = "none"
+    return hg.updatetotally(ui, repo, destination, destination, updatecheck=updatecheck)
+
 
 def _mergebookmarks(ui, repo, cloudbookmarks, lastsyncbookmarks):
     localbookmarks = _getbookmarks(repo)
-    with repo.wlock(), repo.lock(), repo.transaction('bookmark') as tr:
+    with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
         changes = []
         allnames = set(localbookmarks.keys() + cloudbookmarks.keys())
         newnames = set()
@@ -323,25 +382,34 @@ def _mergebookmarks(ui, repo, cloudbookmarks, lastsyncbookmarks):
             cloudnode = cloudbookmarks.get(name)
             lastnode = lastsyncbookmarks.get(name)
             if cloudnode != localnode:
-                if (localnode is not None and cloudnode is not None and
-                        localnode != lastnode and cloudnode != lastnode):
+                if (
+                    localnode is not None
+                    and cloudnode is not None
+                    and localnode != lastnode
+                    and cloudnode != lastnode
+                ):
                     # Changed both locally and remotely, fork the local
                     # bookmark
                     forkname = _forkname(ui, name, allnames | newnames)
                     newnames.add(forkname)
                     changes.append((forkname, node.bin(localnode)))
-                    ui.warn(_('%s changed locally and remotely, '
-                              'local bookmark renamed to %s\n') %
-                            (name, forkname))
+                    ui.warn(
+                        _(
+                            "%s changed locally and remotely, "
+                            "local bookmark renamed to %s\n"
+                        )
+                        % (name, forkname)
+                    )
 
                 if cloudnode != lastnode:
                     if cloudnode is not None:
                         if cloudnode in repo:
                             changes.append((name, node.bin(cloudnode)))
                         else:
-                            ui.warn(_('%s not found, '
-                                      'not creating %s bookmark\n') %
-                                    (cloudnode, name))
+                            ui.warn(
+                                _("%s not found, " "not creating %s bookmark\n")
+                                % (cloudnode, name)
+                            )
                     else:
                         if localnode is not None and localnode != lastnode:
                             # Moved locally, deleted in the cloud, resurrect
@@ -351,37 +419,43 @@ def _mergebookmarks(ui, repo, cloudbookmarks, lastsyncbookmarks):
                             changes.append((name, None))
         repo._bookmarks.applychanges(repo, tr, changes)
 
+
 def _mergeobsmarkers(ui, repo, obsmarkers):
-    with repo.wlock(), repo.lock(), repo.transaction('commitcloud-obs') as tr:
+    with repo.wlock(), repo.lock(), repo.transaction("commitcloud-obs") as tr:
         tr._commitcloudskippendingobsmarkers = True
         repo.obsstore.add(tr, obsmarkers)
 
+
 def _forkname(ui, name, othernames):
-    hostname = ui.config('commitcloud', 'hostname', socket.gethostname())
+    hostname = ui.config("commitcloud", "hostname", socket.gethostname())
 
     # Strip off any old suffix.
-    m = re.match('-%s(-[0-9]*)?$' % re.escape(hostname), name)
+    m = re.match("-%s(-[0-9]*)?$" % re.escape(hostname), name)
     if m:
-        suffix = '-%s%s' % (hostname, m.group(1) or '')
-        name = name[0:-len(suffix)]
+        suffix = "-%s%s" % (hostname, m.group(1) or "")
+        name = name[0 : -len(suffix)]
 
     # Find a new name.
     for n in itertools.count():
-        candidate = '%s-%s%s' % (name, hostname, '-%s' % n if n != 0 else '')
+        candidate = "%s-%s%s" % (name, hostname, "-%s" % n if n != 0 else "")
         if candidate not in othernames:
             return candidate
 
+
 def _getheads(repo):
-    headsrevset = repo.set('heads(draft()) & not obsolete()')
+    headsrevset = repo.set("heads(draft()) & not obsolete()")
     return [ctx.hex() for ctx in headsrevset]
+
 
 def _getbookmarks(repo):
     return {n: node.hex(v) for n, v in repo._bookmarks.items()}
+
 
 def _getcommandandoptions(command):
     cmd = commands.table[command][0]
     opts = dict(opt[1:3] for opt in commands.table[command][1])
     return cmd, opts
+
 
 def getsuccessorsnodes(repo, node):
     successors = repo.obsstore.successors.get(node, ())
@@ -391,6 +465,7 @@ def getsuccessorsnodes(repo, node):
             if snode and snode != node:
                 yield snode
 
+
 def finddestinationnode(repo, node):
     nodes = list(getsuccessorsnodes(repo, node))
     if len(nodes) == 1:
@@ -399,33 +474,33 @@ def finddestinationnode(repo, node):
         return node
     return None
 
+
 def pushbackup(ui, repo, newheads, localheads, localbookmarks, dest, **opts):
     """Push a backup bundle to the server containing the new heads."""
     # Calculate the commits to back-up.  The bundle needs to cleanly apply
     # to the server, so we need to include the whole draft stack.
-    commitstobackup = repo.set('draft() & ::%ln',
-                               [node.bin(h) for h in newheads])
+    commitstobackup = repo.set("draft() & ::%ln", [node.bin(h) for h in newheads])
 
     # Calculate the parent commits of the commits we are backing up.  These
     # are the public commits that should be on the server.
-    parentcommits = repo.set('parents(roots(%ln))', commitstobackup)
+    parentcommits = repo.set("parents(roots(%ln))", commitstobackup)
 
     # Build a discovery object encapsulating the commits to backup.
     # Skip the actual discovery process, as we know exactly which
     # commits are missing.  For common commits, include all the
     # parents of the commits we are sending.
-    og = discovery.outgoing(repo, commonheads=parentcommits,
-                            missingheads=newheads)
+    og = discovery.outgoing(repo, commonheads=parentcommits, missingheads=newheads)
     og._missing = [c.node() for c in commitstobackup]
     og._common = [c.node() for c in parentcommits]
 
     # Build a dictionary of infinitepush bookmarks.  We delete
     # all bookmarks and replace them with the full set each time.
     namingmgr = infinitepush.backupcommands.BackupBookmarkNamingManager(
-            ui, repo, opts.get('user'))
+        ui, repo, opts.get("user")
+    )
     infinitepushbookmarks = {}
-    infinitepushbookmarks[namingmgr.getbackupheadprefix()] = ''
-    infinitepushbookmarks[namingmgr.getbackupbookmarkprefix()] = ''
+    infinitepushbookmarks[namingmgr.getbackupheadprefix()] = ""
+    infinitepushbookmarks[namingmgr.getbackupbookmarkprefix()] = ""
     for bookmark, hexnode in localbookmarks.items():
         name = namingmgr.getbackupbookmarkname(bookmark)
         infinitepushbookmarks[name] = hexnode
@@ -435,13 +510,16 @@ def pushbackup(ui, repo, newheads, localheads, localbookmarks, dest, **opts):
 
     # Push these commits to the server.
     other = infinitepush.backupcommands._getremote(repo, ui, dest, **opts)
-    infinitepush.backupcommands._dobackuppush(ui, repo, other, og,
-                                              infinitepushbookmarks)
+    infinitepush.backupcommands._dobackuppush(
+        ui, repo, other, og, infinitepushbookmarks
+    )
 
     # Update the infinitepush local state.
     srcrepo = shareutil.getsrcrepo(repo)
     infinitepush.backupcommands._writelocalbackupstate(
-            srcrepo.vfs, list(localheads), localbookmarks)
+        srcrepo.vfs, list(localheads), localbookmarks
+    )
+
 
 def recordbackup(ui, repo, newheads):
     """Record that the given heads are already backed up."""
@@ -449,4 +527,9 @@ def recordbackup(ui, repo, newheads):
     backupheads = set(backupstate.heads) | set(newheads)
     srcrepo = shareutil.getsrcrepo(repo)
     infinitepush.backupcommands._writelocalbackupstate(
-            srcrepo.vfs, list(backupheads), backupstate.localbookmarks)
+        srcrepo.vfs, list(backupheads), backupstate.localbookmarks
+    )
+
+
+def autosyncenabled(ui, _repo):
+    return infinitepush.backupcommands.autobackupenabled(ui)
