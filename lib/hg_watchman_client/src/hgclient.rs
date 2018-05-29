@@ -25,13 +25,12 @@ where
         }
     }
 
-    /************ REQUESTS **********************************************/
+    /// REQUESTS
 
     /// Ask watchman to start following the files in the repo_path
 
-    pub fn watch_project(&mut self) -> Result<()> {
-        self.transport.watch_project(&self.repo_path)?;
-        Ok(())
+    pub fn watch_project(&mut self) -> Result<WatchProjectResponse> {
+        self.transport.watch_project(&self.repo_path)
     }
 
     /// Query watchman for all directories in the working copy the since last known clock

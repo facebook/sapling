@@ -126,22 +126,18 @@ mod test_client {
             Ok(())
         }
 
-        /**************** TEST Requests *******************************/
+        // TEST Requests
 
         pub fn query_files(&mut self) -> Result<QueryResponse> {
             println!("hint: returns list of modified files since the previous run");
             let now = Instant::now();
             self.client.watch_project()?;
             let mut clock_state = self.read_watchman_state()?;
-            let res = self
-                .client
+            let res = self.client
                 .query_files(None, None, clock_state.query_files_last_clock);
             match res {
                 Ok(ref r) => {
-                    clock_state.query_files_last_clock = match r {
-                        &QueryResponse::QueryResponseNamesOnly(ref r) => r.clock.clone(),
-                        &QueryResponse::QueryResponseMultipleFields(ref r) => r.clock.clone(),
-                    };
+                    clock_state.query_files_last_clock = r.clock.clone();
                     self.write_watchman_state(&clock_state)?;
                 }
                 Err(_) => {}
@@ -160,15 +156,11 @@ mod test_client {
             let now = Instant::now();
             self.client.watch_project()?;
             let mut clock_state = self.read_watchman_state()?;
-            let res = self
-                .client
+            let res = self.client
                 .query_dirs(None, None, clock_state.query_dirs_last_clock);
             match res {
                 Ok(ref r) => {
-                    clock_state.query_dirs_last_clock = match r {
-                        &QueryResponse::QueryResponseNamesOnly(ref r) => r.clock.clone(),
-                        &QueryResponse::QueryResponseMultipleFields(ref r) => r.clock.clone(),
-                    };
+                    clock_state.query_dirs_last_clock = r.clock.clone();
                     self.write_watchman_state(&clock_state)?;
                 }
                 Err(_) => {}

@@ -1,5 +1,9 @@
+use path::decode_path_fallible;
 use serde_json;
 use std::path::PathBuf;
+
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct FileName(#[serde(deserialize_with = "decode_path_fallible")] pub PathBuf);
 
 /// Commands
 pub const WATCH_PROJECT: &'static str = "watch-project";
@@ -19,7 +23,7 @@ pub enum RequestResult<T> {
     Ok(T),
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct RequestError {
     /// error message if request has failed
     pub error: String,
@@ -33,21 +37,21 @@ pub struct RequestError {
 #[derive(Clone, Default, Debug, Serialize)]
 pub struct WatchProjectRequest(pub &'static str, pub PathBuf);
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct WatchProjectResponse {
     /// version of watchman daemon
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     /// repo path that will be watched
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub watch: Option<PathBuf>,
+    pub watch: Option<FileName>,
     /// can be inotify, eden, etc
     #[serde(skip_serializing_if = "Option::is_none")]
     pub watcher: Option<String>,
     /// relative path to the dir that has been watched
     /// files in query request will be returns wihout the prefix
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub relative_path: Option<PathBuf>,
+    pub relative_path: Option<FileName>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cli_validated: Option<bool>,
 }
@@ -84,10 +88,7 @@ pub struct QueryRequestParams {
 #[derive(Clone, Default, Debug, Serialize)]
 pub struct QueryRequest(pub &'static str, pub PathBuf, pub QueryRequestParams);
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-pub struct FileName(pub PathBuf);
-
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct FileInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub exists: Option<bool>,
@@ -103,31 +104,29 @@ pub struct FileInfo {
     pub mtime: Option<u64>,
 }
 
-pub type QueryResponseNamesOnly = QueryResponseGeneric<FileName>;
-pub type QueryResponseMultipleFields = QueryResponseGeneric<FileInfo>;
-pub type FileNameList = Vec<FileName>;
-pub type FileInfoList = Vec<FileInfo>;
+pub type FileListNamesOnly = Vec<FileName>;
+pub type FileListMultipleFields = Vec<FileInfo>;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum QueryResponse {
-    QueryResponseNamesOnly(QueryResponseNamesOnly),
-    QueryResponseMultipleFields(QueryResponseMultipleFields),
+/// If the field list is a single element,
+/// then the result is an array of elements of the same type as the specified field.
+/// Otherwise, it is an array of objects holding all of the specified fields.
+/// In mercurial we only use names if we run single element request
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum Files {
+    FileListNamesOnly(FileListNamesOnly),
+    FileListMultipleFields(FileListMultipleFields),
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum FileInfoTypes {
-    FileNameList(FileNameList),
-    FileInfoList(FileInfoList),
-}
-
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-pub struct QueryResponseGeneric<FileInfoType> {
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct QueryResponse {
     /// version of watchman daemon
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     /// list of files info
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub files: Option<Vec<FileInfoType>>,
+    pub files: Option<Files>,
     /// clock value at the point in time at which the results were generated
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clock: Option<String>,
@@ -143,14 +142,14 @@ pub struct QueryResponseGeneric<FileInfoType> {
 #[derive(Clone, Default, Debug, Serialize)]
 pub struct GetSockNameRequest(pub (&'static str,));
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct GetSockNameResponse {
     /// version of watchman daemon
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     /// socket name
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sockname: Option<PathBuf>,
+    pub sockname: Option<FileName>,
 }
 
 /// [state-enter](https://facebook.github.io/watchman/docs/cmd/state-enter.html)
@@ -168,12 +167,12 @@ pub struct StateEnterParams {
 #[derive(Clone, Default, Debug, Serialize)]
 pub struct StateEnterRequest(pub &'static str, pub PathBuf, pub StateEnterParams);
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct StateEnterResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub root: Option<String>,
+    pub root: Option<FileName>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "state-enter")]
     pub state_enter: Option<String>,
@@ -196,12 +195,12 @@ pub struct StateLeaveParams {
 #[derive(Clone, Default, Debug, Serialize)]
 pub struct StateLeaveRequest(pub &'static str, pub PathBuf, pub StateLeaveParams);
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct StateLeaveResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub root: Option<String>,
+    pub root: Option<FileName>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "state-leave")]
     pub state_leave: Option<String>,

@@ -30,20 +30,10 @@ pub trait Transport {
     ) -> Result<StateLeaveResponse>;
 }
 
-fn is_names_only_query(params: &QueryRequestParams) -> bool {
-    if let Some(ref fields) = params.fields {
-        // special case of single field
-        fields.len() == 1 && fields[0] == "name"
-    } else {
-        false
-    }
-}
-
 /// Implementations:
 
 pub mod unix_socket_transport {
-    /* local unix domain socket transport */
-
+    /// local unix domain socket transport */
     use self::command_line_transport::CommandLineTransport;
     use std::env;
     use std::os::unix::net::UnixStream;
@@ -90,7 +80,7 @@ pub mod unix_socket_transport {
                         let mut transport = CommandLineTransport::<RP>::new();
                         let resp = transport.get_sock_name()?;
                         if let Some(sockname) = resp.sockname {
-                            self.sockname = Some(sockname);
+                            self.sockname = Some(sockname.0);
                         } else {
                             return Err(ErrorKind::UnixSocketTransportError(
                                 "get_sock_name",
@@ -146,16 +136,9 @@ pub mod unix_socket_transport {
             params: QueryRequestParams,
             path: P,
         ) -> Result<QueryResponse> {
-            let is_names_only_query = is_names_only_query(&params);
-            if is_names_only_query {
-                let resp: QueryResponseNamesOnly =
-                    self.rpc(QUERY, QueryRequest(QUERY, path.as_ref().to_owned(), params))?;
-                Ok(QueryResponse::QueryResponseNamesOnly(resp))
-            } else {
-                let resp: QueryResponseMultipleFields =
-                    self.rpc(QUERY, QueryRequest(QUERY, path.as_ref().to_owned(), params))?;
-                Ok(QueryResponse::QueryResponseMultipleFields(resp))
-            }
+            let resp: QueryResponse =
+                self.rpc(QUERY, QueryRequest(QUERY, path.as_ref().to_owned(), params))?;
+            Ok(resp)
         }
 
         fn state_enter<P: AsRef<Path>>(
@@ -179,8 +162,7 @@ pub mod unix_socket_transport {
 }
 
 pub mod command_line_transport {
-    /* command line transport, required installed watchman client */
-
+    /// command line transport, required installed watchman client
     use std::process::{Command, Stdio};
     use timeout_readwrite::TimeoutReader;
     use transport::*;
@@ -269,16 +251,9 @@ pub mod command_line_transport {
             params: QueryRequestParams,
             path: P,
         ) -> Result<QueryResponse> {
-            let is_names_only_query = is_names_only_query(&params);
-            if is_names_only_query {
-                let resp: QueryResponseNamesOnly =
-                    self.rpc(QUERY, QueryRequest(QUERY, path.as_ref().to_owned(), params))?;
-                Ok(QueryResponse::QueryResponseNamesOnly(resp))
-            } else {
-                let resp: QueryResponseMultipleFields =
-                    self.rpc(QUERY, QueryRequest(QUERY, path.as_ref().to_owned(), params))?;
-                Ok(QueryResponse::QueryResponseMultipleFields(resp))
-            }
+            let resp: QueryResponse =
+                self.rpc(QUERY, QueryRequest(QUERY, path.as_ref().to_owned(), params))?;
+            Ok(resp)
         }
 
         fn state_enter<P: AsRef<Path>>(

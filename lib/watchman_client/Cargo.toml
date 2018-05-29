@@ -12,6 +12,7 @@ serde_bser = { version = "*", path = "../../../../watchman/rust/serde_bser" }
 timeout-readwrite = "*"
 
 [dev-dependencies]
+bytes = "0.4"
 
 [features]
 default = []
