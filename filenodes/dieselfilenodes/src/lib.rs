@@ -195,30 +195,12 @@ macro_rules! impl_filenodes {
                         .context(ErrorKind::FailFetchFilenode(filenode.clone(), path.clone()))?;
                     match filenode_row {
                         Some(filenode_row) => {
-                            let copyfrom = if filenode_row.has_copyinfo != 0 {
-                                let copyfrom = Self::fetch_copydata(
-                                    &*connection,
-                                    &filenode,
-                                    &path,
-                                    &repo_id,
-                                );
-                                Some(
-                                    copyfrom.context(
-                                        ErrorKind::FailFetchCopydata(filenode.clone(), path.clone())
-                                    )?
-                                )
-                            } else {
-                                None
-                            };
-
-                            let filenodeinfo = FilenodeInfo {
-                                path: path.clone(),
-                                filenode: filenode.clone(),
-                                p1: filenode_row.p1,
-                                p2: filenode_row.p2,
-                                copyfrom,
-                                linknode: filenode_row.linknode,
-                            };
+                            let filenodeinfo = Self::convert_to_filenode_info(
+                                &connection,
+                                &path,
+                                &repo_id,
+                                &filenode_row,
+                            )?;
                             Ok(Some(filenodeinfo))
                         }
                         None => {
@@ -313,6 +295,38 @@ macro_rules! impl_filenodes {
                     .values(&copydata_rows)
                     .execute(&*connection)?;
                 Ok(())
+            }
+
+            fn convert_to_filenode_info(
+                connection: &$connection,
+                path: &RepoPath,
+                repo_id: &RepositoryId,
+                row: &models::FilenodeRow,
+            ) -> Result<FilenodeInfo> {
+                let copyfrom = if row.has_copyinfo != 0 {
+                    let copyfrom = Self::fetch_copydata(
+                        &*connection,
+                        &row.filenode,
+                        &path,
+                        &repo_id,
+                    );
+                    Some(
+                        copyfrom.context(
+                            ErrorKind::FailFetchCopydata(row.filenode.clone(), path.clone())
+                        )?
+                    )
+                } else {
+                    None
+                };
+
+                Ok(FilenodeInfo {
+                    path: path.clone(),
+                    filenode: row.filenode.clone(),
+                    p1: row.p1,
+                    p2: row.p2,
+                    copyfrom,
+                    linknode: row.linknode,
+                })
             }
 
             fn fetch_copydata(
