@@ -1031,7 +1031,7 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
         parentflat = manifest.manifestdict()
         parenttree = cstore.treemanifest(tmfl.datastore)
 
-    newtree = _getnewtree(newflat, parenttree, parentflat)[0]
+    newtree = _getnewtree(parenttree, parentflat.diff(newflat))[0]
 
     # Let's use the provided ctx's linknode. We exclude memmanifestctx's because
     # they haven't been committed yet and don't actually have a linknode yet.
@@ -1050,9 +1050,7 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
              overridep1node=p1node,
              tr=tr, linkrev=linkrev)
 
-def _getnewtree(newflat, parenttree, parentflat):
-    diff = parentflat.diff(newflat)
-
+def _getnewtree(parenttree, diff):
     newtree = parenttree.copy()
     added = []
     removed = []
@@ -1157,7 +1155,7 @@ def _convertdeltatotree(repo, lrucache, node, p1, p2, linknode, deltabase,
     newflat = manifest.manifestdict(newflattext)
 
     # Diff old and new flat text to get new tree
-    newtree = _getnewtree(newflat, parenttree, parentflat)[0]
+    newtree = _getnewtree(parenttree, parentflat.diff(newflat))[0]
 
     # Save new tree
     mfl.add(mfl.ui, newtree, p1, p2, linknode, overridenode=node,
