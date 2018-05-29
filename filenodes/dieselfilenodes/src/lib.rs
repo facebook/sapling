@@ -53,6 +53,7 @@ pub const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
 define_stats! {
     prefix = "filenodes";
     gets: timeseries(RATE, SUM),
+    range_gets: timeseries(RATE, SUM),
     adds: timeseries(RATE, SUM),
 }
 
@@ -189,7 +190,7 @@ macro_rules! impl_filenodes {
 
                 asynchronize(move || {
                     let connection = db.get_conn()?;
-                    let query = filenode_query(&repo_id, &filenode, &path);
+                    let query = single_filenode_query(&repo_id, &filenode, &path);
                     let filenode_row = query.first::<models::FilenodeRow>(&*connection)
                         .optional()
                         .context(ErrorKind::FailFetchFilenode(filenode.clone(), path.clone()))?;
@@ -207,6 +208,32 @@ macro_rules! impl_filenodes {
                             Ok(None)
                         },
                     }
+                })
+            }
+
+            fn get_all_filenodes(
+                &self,
+                path: &RepoPath,
+                repo_id: &RepositoryId,
+            ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
+                STATS::range_gets.add_value(1);
+                let db = self.clone();
+                let path = path.clone();
+                let repo_id = *repo_id;
+
+                asynchronize(move || {
+                    let connection = db.get_conn()?;
+                    let query = all_filenodes_query(&repo_id, &path);
+                    let filenode_rows = query.load::<models::FilenodeRow>(&*connection)
+                        .context(ErrorKind::FailRangeFetch(path.clone()))?;
+                    let mut res = vec![];
+                    for row in filenode_rows {
+                        res.push(
+                            Self::convert_to_filenode_info(&connection, &path, &repo_id, &row)?
+                        );
+                    }
+
+                    Ok(res)
                 })
             }
         }
@@ -371,7 +398,26 @@ macro_rules! impl_filenodes {
 impl_filenodes!(MysqlFilenodes, MysqlConnection);
 impl_filenodes!(SqliteFilenodes, SqliteConnection);
 
-fn filenode_query<DB>(
+fn all_filenodes_query<DB>(
+    repo_id: &RepositoryId,
+    path: &RepoPath,
+) -> schema::filenodes::BoxedQuery<'static, DB>
+where
+    DB: Backend,
+    DB: HasSqlType<DFileNodeIdSql>,
+{
+    let (path_bytes, is_tree) = convert_from_repo_path(path);
+
+    let path_hash = common::blake2_path_hash(&path_bytes);
+
+    schema::filenodes::table
+        .filter(schema::filenodes::repo_id.eq(*repo_id))
+        .filter(schema::filenodes::path_hash.eq(path_hash.clone()))
+        .filter(schema::filenodes::is_tree.eq(is_tree))
+        .into_boxed()
+}
+
+fn single_filenode_query<DB>(
     repo_id: &RepositoryId,
     filenode: &DFileNodeId,
     path: &RepoPath,

@@ -142,6 +142,19 @@ fn assert_filenode(
     assert_eq!(res, expected);
 }
 
+fn assert_all_filenodes(
+    filenodes: &Filenodes,
+    path: &RepoPath,
+    repo_id: &RepositoryId,
+    expected: &Vec<FilenodeInfo>,
+) {
+    let res = filenodes
+        .get_all_filenodes(path, repo_id)
+        .wait()
+        .expect("error while fetching filenode");
+    assert_eq!(&res, expected);
+}
+
 macro_rules! filenodes_test_impl {
     ($mod_name: ident => {
         new: $new_cb: expr,
@@ -408,6 +421,50 @@ macro_rules! filenodes_test_impl {
                         &TWOS_FNID,
                         &REPO_ONE,
                         notcopied,
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
+
+            #[test]
+            fn get_all_filenodes() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let filenodes = &$new_cb();
+                    let root_filenodes = vec![
+                        root_first_filenode(),
+                        root_second_filenode(),
+                        root_merge_filenode(),
+                    ];
+                    do_add_filenodes(
+                        filenodes,
+                        vec![root_first_filenode(), root_second_filenode(), root_merge_filenode()],
+                        &REPO_ZERO
+                    );
+                    do_add_filenodes(
+                        filenodes,
+                        vec![file_a_first_filenode(), file_b_first_filenode()],
+                        &REPO_ZERO
+                    );
+
+                    assert_all_filenodes(
+                        filenodes,
+                        &RepoPath::RootPath,
+                        &REPO_ZERO,
+                        &root_filenodes,
+                    );
+
+                    assert_all_filenodes(
+                        filenodes,
+                        &RepoPath::file("a").unwrap(),
+                        &REPO_ZERO,
+                        &vec![file_a_first_filenode()],
+                    );
+
+                    assert_all_filenodes(
+                        filenodes,
+                        &RepoPath::file("b").unwrap(),
+                        &REPO_ZERO,
+                        &vec![file_b_first_filenode()],
                     );
                     Ok(())
                 }).expect("test failed");

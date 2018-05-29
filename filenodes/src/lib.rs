@@ -78,6 +78,14 @@ impl Filenodes for CachingFilenodes {
             })
             .boxify()
     }
+
+    fn get_all_filenodes(
+        &self,
+        path: &RepoPath,
+        repo_id: &RepositoryId,
+    ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
+        self.filenodes.get_all_filenodes(path, repo_id)
+    }
 }
 
 pub struct FilenodesFiller {
@@ -123,4 +131,10 @@ pub trait Filenodes: Send + Sync {
         filenode: &DFileNodeId,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error>;
+
+    fn get_all_filenodes(
+        &self,
+        path: &RepoPath,
+        repo_id: &RepositoryId,
+    ) -> BoxFuture<Vec<FilenodeInfo>, Error>;
 }
