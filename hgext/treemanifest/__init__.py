@@ -1029,7 +1029,8 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
         parenttree = cstore.treemanifest(tmfl.datastore)
 
     diff = _getflatdiff(mfl, mfctx)
-    newtree = _getnewtree(parenttree, diff)[0]
+    added, removed = _difftoaddremove(diff)
+    newtree = _getnewtree(parenttree, added, removed)
 
     # Let's use the provided ctx's linknode. We exclude memmanifestctx's because
     # they haven't been committed yet and don't actually have a linknode yet.
@@ -1048,20 +1049,25 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
              overridep1node=p1node,
              tr=tr, linkrev=linkrev)
 
-def _getnewtree(parenttree, diff):
-    newtree = parenttree.copy()
+def _difftoaddremove(diff):
     added = []
     removed = []
     for filename, (old, new) in diff.iteritems():
         if new is not None and new[0] is not None:
-            added.append(filename)
-            newtree[filename] = new[0]
-            newtree.setflag(filename, new[1])
+            added.append((filename, new[0], new[1]))
         else:
             removed.append(filename)
-            del newtree[filename]
+    return added, removed
 
-    return (newtree, added, removed)
+def _getnewtree(parenttree, added, removed):
+    newtree = parenttree.copy()
+    for fname in removed:
+        del newtree[fname]
+
+    for fname, fnode, fflags in added:
+        newtree.set(fname, fnode, fflags)
+
+    return newtree
 
 def _getflatdiff(mfl, mfctx):
     p1node, p2node = mfctx.parents
@@ -1227,7 +1233,8 @@ def _convertdeltatotree(repo, lrucache, node, p1, p2, linknode, deltabase,
     newflat = manifest.manifestdict(newflattext)
 
     # Diff old and new flat text to get new tree
-    newtree = _getnewtree(parenttree, parentflat.diff(newflat))[0]
+    added, removed = _difftoaddremove(parentflat.diff(newflat))
+    newtree = _getnewtree(parenttree, added, removed)
 
     # Save new tree
     mfl.add(mfl.ui, newtree, p1, p2, linknode, overridenode=node,
@@ -1340,12 +1347,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
             adds, deletes = _getfastflatdiff(mfl, mfl[node])
 
             # Apply the changes on top of the parent tree
-            newtree = origtree.copy()
-            for fname in deletes:
-                newtree.set(fname, None, None)
-
-            for fname, fnode, fflags in adds:
-                newtree.set(fname, fnode, fflags)
+            newtree = _getnewtree(origtree, adds, deletes)
 
             tempdatapack = InterceptedMutableDataPack(datapack,
                                                       mfrevlog.node(rev),
