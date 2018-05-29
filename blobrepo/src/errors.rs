@@ -78,6 +78,9 @@ pub enum ErrorKind {
     UnresolvedConflicts,
     #[fail(display = "Manifest without parents did not get changed by a BonsaiChangeset")]
     UnchangedManifest,
+    #[fail(display = "Trying to merge a manifest with two existing parents p1 {} and p2 {}", _0,
+           _1)]
+    ManifestAlreadyAMerge(HgNodeHash, HgNodeHash),
     #[fail(display = "Path not found: {}", _0)] PathNotFound(MPath),
     #[fail(display = "Remove called on non-directory")] NotADirectory,
 }
