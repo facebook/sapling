@@ -80,6 +80,3 @@ pub use repo_commit::compute_changed_files;
 // TODO: (jsgf) T21597565 This is exposed here for blobimport -- don't use it for anything else.
 
 pub use utils::RawNodeBlob;
-
-// TODO: Temporary, until this code is used for real
-pub use memory_manifest::*;

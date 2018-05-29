@@ -38,7 +38,8 @@ use mercurial_types::{Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents,
                       Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::DManifestId;
-use mononoke_types::{Blob, BlobstoreBytes, ContentId, DateTime, FileContents, MPath, MononokeId};
+use mononoke_types::{Blob, BlobstoreBytes, BonsaiChangeset, ContentId, DateTime, FileChange,
+                     FileContents, MPath, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Core;
@@ -47,6 +48,7 @@ use BlobChangeset;
 use BlobManifest;
 use errors::*;
 use file::{fetch_file_content_and_renames_from_blobstore, fetch_raw_filenode_bytes, HgBlobEntry};
+use memory_manifest::MemoryRootManifest;
 use repo_commit::*;
 use utils::{get_node_key, RawNodeBlob};
 
@@ -418,9 +420,54 @@ impl BlobRepo {
             })
     }
 
-    // These functions are temporary, while memory_manifest.rs isn't yet in full use.
+    // This is used by tests in memory_manifest.rs
     pub fn get_blobstore(&self) -> Arc<Blobstore> {
         self.blobstore.clone()
+    }
+
+    // TODO(T29283916): make this save the file change as a Mercurial format HgBlobEntry
+    pub fn store_file_change(
+        _blobstore: Arc<Blobstore>,
+        _change: Option<&FileChange>,
+    ) -> BoxFuture<Option<HgBlobEntry>, Error> {
+        unimplemented!()
+    }
+
+    // TODO(T29283916): Using caching to avoid wasting compute, change this to find the manifest_p1
+    // and manifest_p2 from bcs, so that you can remove manifest_p1 and manifest_p2 from the args
+    // to this function
+    pub fn get_manifest_from_bonsai(
+        &self,
+        bcs: BonsaiChangeset,
+        manifest_p1: Option<&HgNodeHash>,
+        manifest_p2: Option<&HgNodeHash>,
+    ) -> BoxFuture<DNodeHash, Error> {
+        MemoryRootManifest::new(
+            self.blobstore.clone(),
+            self.logger.clone(),
+            manifest_p1,
+            manifest_p2,
+        ).and_then({
+            let blobstore = self.blobstore.clone();
+            move |memory_manifest| {
+                let memory_manifest = Arc::new(memory_manifest);
+                let mut futures = Vec::new();
+
+                for (path, entry) in bcs.file_changes() {
+                    let path = path.clone();
+                    let memory_manifest = memory_manifest.clone();
+                    futures.push(
+                        Self::store_file_change(blobstore.clone(), entry.clone())
+                            .and_then(move |entry| memory_manifest.change_entry(&path, entry)),
+                    );
+                }
+
+                future::join_all(futures)
+                    .and_then(move |_| memory_manifest.save())
+                    .map(|m| m.get_hash().into_nodehash())
+            }
+        })
+            .boxify()
     }
 }
 
