@@ -31,7 +31,7 @@ private:
   uint64_t _deltasz;
 
 public:
-  DeltaChainLink(delta_chain_link_t *link)
+  explicit DeltaChainLink(delta_chain_link_t *link)
   {
     if (link) {
       _filename = link->filename;
@@ -66,47 +66,47 @@ public:
 
   ~DeltaChainLink() = default;
 
-  const char *filename()
+  const char *filename() const
   {
     return _filename;
   }
 
-  const char *deltabasefilename()
+  const char *deltabasefilename() const
   {
     return _deltabasefilename;
   }
 
-  const uint8_t *node()
+  const uint8_t *node() const
   {
     return _node;
   }
 
-  const uint8_t *deltabasenode()
+  const uint8_t *deltabasenode() const
   {
     return _deltabasenode;
   }
 
-  const uint8_t *delta()
+  const uint8_t *delta() const
   {
     return _delta;
   }
 
-  uint16_t filenamesz()
+  uint16_t filenamesz() const
   {
     return _filenamesz;
   }
 
-  uint16_t deltabasefilenamesz()
+  uint16_t deltabasefilenamesz() const
   {
     return _deltabasefilenamesz;
   }
 
-  uint64_t deltasz()
+  uint64_t deltasz() const
   {
     return _deltasz;
   }
 
-  bool isdone()
+  bool isdone() const
   {
     return (_filename == NULL);
   }
@@ -127,11 +127,11 @@ public:
   {
   }
 
-  virtual const DeltaChainLink getlink(const size_t) = 0;
+  virtual const DeltaChainLink getlink(const size_t) const = 0;
 
-  virtual size_t linkcount() = 0;
+  virtual size_t linkcount() const = 0;
 
-  virtual get_delta_chain_code_t status() = 0;
+  virtual get_delta_chain_code_t status() const = 0;
 };
 
 /*
@@ -162,17 +162,17 @@ public:
     freedeltachain(_chain);
   }
 
-  const DeltaChainLink getlink(const size_t idx)
+  const DeltaChainLink getlink(const size_t idx) const override
   {
     return DeltaChainLink(&(_chain.delta_chain_links[idx]));
   }
 
-  size_t linkcount()
+  size_t linkcount() const override
   {
     return _chain.links_count;
   }
 
-  get_delta_chain_code_t status()
+  get_delta_chain_code_t status() const override
   {
     return _chain.code;
   }
@@ -194,7 +194,7 @@ protected:
   }
 
 public:
-  DeltaChainIterator(std::shared_ptr<DeltaChain> chain) : _index(0)
+  explicit DeltaChainIterator(std::shared_ptr<DeltaChain> chain) : _index(0)
   {
     _chains.push_back(chain);
   }

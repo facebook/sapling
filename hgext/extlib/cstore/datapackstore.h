@@ -71,15 +71,15 @@ public:
   explicit DatapackStore(const std::string &path,
                          bool removeDeadPackFilesOnRefresh = false);
 
-  DeltaChainIterator getDeltaChain(const Key &key);
+  DeltaChainIterator getDeltaChain(const Key &key) override;
 
-  std::shared_ptr<KeyIterator> getMissing(KeyIterator &missing);
+  std::shared_ptr<KeyIterator> getMissing(KeyIterator &missing) override;
 
-  std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key &key);
+  std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key &key) override;
 
-  bool contains(const Key &key);
+  bool contains(const Key &key) override;
 
-  void markForRefresh();
+  void markForRefresh() override;
 };
 
 #endif // FBHGEXT_DATAPACKSTORE_H

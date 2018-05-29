@@ -43,17 +43,17 @@ public:
   {
   }
 
-  const DeltaChainLink getlink(const size_t idx)
+  const DeltaChainLink getlink(const size_t idx) const override
   {
     return _chain->at(idx);
   }
 
-  size_t linkcount()
+  size_t linkcount() const override
   {
     return _chain->size();
   }
 
-  get_delta_chain_code_t status()
+  get_delta_chain_code_t status() const override
   {
     if (_chain->size()) {
       return GET_DELTA_CHAIN_OK;
@@ -75,15 +75,15 @@ public:
 
   PythonObj getStore();
 
-  DeltaChainIterator getDeltaChain(const Key &key);
+  DeltaChainIterator getDeltaChain(const Key &key) override;
 
-  std::shared_ptr<KeyIterator> getMissing(KeyIterator &missing);
+  std::shared_ptr<KeyIterator> getMissing(KeyIterator &missing) override;
 
-  std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key &key);
+  std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key &key) override;
 
-  bool contains(const Key &key);
+  bool contains(const Key &key) override;
 
-  void markForRefresh();
+  void markForRefresh() override;
 };
 
 #endif // FBHGEXT_PYTHONDATASTORE_H
