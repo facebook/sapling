@@ -56,6 +56,10 @@ class HttpsCommitCloudService(baseservice.BaseService):
             )
 
         self.remote_host = ui.config("commitcloud", "remote_host")
+        if not self.remote_host:
+            raise commitcloudcommon.ConfigurationError(
+                self.ui, _("remote_host is required")
+            )
 
         # optional, but needed for using a sandbox
         self.certs = ui.config("commitcloud", "certs")
@@ -79,11 +83,6 @@ class HttpsCommitCloudService(baseservice.BaseService):
             else ssl.create_default_context(),
             timeout=DEFAULT_TIMEOUT,
         )
-
-        if not self.remote_host:
-            raise commitcloudcommon.ConfigurationError(
-                self.ui, _("remote_host is required")
-            )
 
     def requiresauthentication(self):
         return True
