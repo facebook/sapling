@@ -1017,21 +1017,19 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
         return
 
     p1node, p2node = mfctx.parents
-    newflat = mfctx.read()
     if p1node != nullid:
         try:
-            parentflat = mfl[p1node].read()
             parenttree = tmfl[p1node].read()
             # Just read p2node to verify it's actually present
             tmfl[p2node].read()
         except KeyError:
-            raise error.Abort(_("unable to find parent nodes %s %s") %
+            raise error.Abort(_("unable to find tree parent nodes %s %s") %
                               (hex(p1node), hex(p2node)))
     else:
-        parentflat = manifest.manifestdict()
         parenttree = cstore.treemanifest(tmfl.datastore)
 
-    newtree = _getnewtree(parenttree, parentflat.diff(newflat))[0]
+    diff = _getflatdiff(mfl, mfctx)
+    newtree = _getnewtree(parenttree, diff)[0]
 
     # Let's use the provided ctx's linknode. We exclude memmanifestctx's because
     # they haven't been committed yet and don't actually have a linknode yet.
@@ -1064,6 +1062,20 @@ def _getnewtree(parenttree, diff):
             del newtree[filename]
 
     return (newtree, added, removed)
+
+def _getflatdiff(mfl, mfctx):
+    p1node, p2node = mfctx.parents
+    if p1node != nullid:
+        try:
+            parentflat = mfl[p1node].read()
+        except KeyError:
+            raise error.Abort(_("unable to find flat parent nodes %s %s") %
+                              (hex(p1node), hex(p2node)))
+    else:
+        parentflat = manifest.manifestdict()
+
+    newflat = mfctx.read()
+    return parentflat.diff(newflat)
 
 def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
     if not treeenabled(repo.ui):
