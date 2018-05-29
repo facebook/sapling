@@ -45,8 +45,15 @@ def get_test_env_and_deps(suffix=''):
         'EDENFS_POST_CLONE_PATH': '//eden/hooks/hg:post-clone',
         'EDENFS_FSATTR_BIN': '//eden/integration:fsattr',
         'EDENFS_HG_IMPORT_HELPER': '//eden/fs/store/hg:hg_import_helper',
-        'EDEN_HG_BINARY': '//scm/hg:hg',
     }
+
+    if is_facebook_internal():
+        env_to_target.update(
+            {
+                'EDEN_HG_BINARY': '//scm/telemetry/hg:hg',
+                'HG_REAL_BIN': '//scm/hg:hg',
+            }
+        )
 
     envs = {
       'EDENFS_SUFFIX': suffix,

@@ -116,25 +116,6 @@ class FindExeClass(object):
         if hg_bin:
             return hg_bin
 
-        start_path = os.path.abspath(sys.argv[0])
-        hg_bin = pathutils.get_build_rule_output_path(
-            "//scm/hg:hg", pathutils.BuildRuleTypes.PYTHON_BINARY, start_path=start_path
-        )
-        if hg_bin:
-            return hg_bin
-
-        # TODO(T25533322): Once we are sure that `hg status` is a read-only
-        # operation in stock Hg (or at least when the Eden extension is
-        # enabled), go back to using the Rust wrapper for Hg by default.
-        if False:
-            hg_bin = pathutils.get_build_rule_output_path(
-                "//scm/telemetry/hg:hg",
-                pathutils.BuildRuleTypes.RUST_BINARY,
-                start_path=start_path,
-            )
-            if hg_bin:
-                return hg_bin
-
         hg_bin = distutils.spawn.find_executable("hg.real")
         if hg_bin:
             return hg_bin

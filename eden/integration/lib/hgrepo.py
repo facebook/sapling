@@ -36,9 +36,13 @@ class HgRepository(repobase.Repository):
         super().__init__(path)
         self.hg_environment = os.environ.copy()
         # Drop any environment variables starting with 'HG'
-        # to ensure the user's environment does not affect the tests
+        # to ensure the user's environment does not affect the tests.
+        # Note we make an exception for $HG_REAL_BIN as that is needed by the
+        # Rust wrapper.
         self.hg_environment = {
-            k: v for k, v in os.environ.items() if not k.startswith("HG")
+            k: v
+            for k, v in os.environ.items()
+            if not k.startswith("HG") or k == "HG_REAL_BIN"
         }
         self.hg_environment["HGPLAIN"] = "1"
         # Set HGRCPATH to make sure we aren't affected by the local system's
