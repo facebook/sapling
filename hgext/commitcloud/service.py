@@ -5,20 +5,17 @@
 
 from __future__ import absolute_import
 
-# Mercurial
 from mercurial import error
 
-from . import (
-    httpsservice,
-    localservice,
-)
+from . import httpsservice, localservice
+
 
 def get(ui, token=None):
-    servicetype = ui.config('commitcloud', 'servicetype')
-    if servicetype == 'local':
+    servicetype = ui.config("commitcloud", "servicetype")
+    if servicetype == "local":
         return localservice.LocalService(ui)
-    elif servicetype == 'remote':
+    elif servicetype == "remote":
         return httpsservice.HttpsCommitCloudService(ui, token)
     else:
-        msg = 'Unrecognized commitcloud.servicetype: %s' % servicetype
+        msg = "Unrecognized commitcloud.servicetype: %s" % servicetype
         raise error.Abort(msg)

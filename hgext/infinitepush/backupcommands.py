@@ -46,8 +46,8 @@
 """
 from __future__ import absolute_import
 
-import ConfigParser
 import collections
+import ConfigParser
 import errno
 import json
 import os
@@ -57,8 +57,6 @@ import stat
 import subprocess
 import time
 
-# Mercurial
-from mercurial.i18n import _
 from mercurial import (
     bundle2,
     changegroup,
@@ -80,10 +78,14 @@ from mercurial import (
     util,
 )
 
-from .. import shareutil
-from . import bundleparts
+# Mercurial
+from mercurial.i18n import _
 
-osutil = policy.importmod(r'osutil')
+from . import bundleparts
+from .. import shareutil
+
+
+osutil = policy.importmod(r"osutil")
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -91,13 +93,16 @@ command = registrar.command(cmdtable)
 revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
 templatefunc = registrar.templatefunc()
-localoverridesfile = 'generated.infinitepushbackups.rc'
+localoverridesfile = "generated.infinitepushbackups.rc"
 secondsinhour = 60 * 60
 
 backupbookmarktuple = collections.namedtuple(
-    'backupbookmarktuple', ['hostname', 'reporoot', 'localbookmark'])
+    "backupbookmarktuple", ["hostname", "reporoot", "localbookmark"]
+)
+
 
 class backupstate(object):
+
     def __init__(self):
         self.heads = util.sortdict()
         self.localbookmarks = util.sortdict()
@@ -105,61 +110,68 @@ class backupstate(object):
     def empty(self):
         return not self.heads and not self.localbookmarks
 
+
 class WrongPermissionsException(Exception):
+
     def __init__(self, logdir):
         self.logdir = logdir
 
+
 restoreoptions = [
-     ('', 'reporoot', '', 'root of the repo to restore'),
-     ('', 'user', '', 'user who ran the backup'),
-     ('', 'hostname', '', 'hostname of the repo to restore'),
+    ("", "reporoot", "", "root of the repo to restore"),
+    ("", "user", "", "user who ran the backup"),
+    ("", "hostname", "", "hostname of the repo to restore"),
 ]
 
-_backuplockname = 'infinitepushbackup.lock'
+_backuplockname = "infinitepushbackup.lock"
 
 # Check if backup is enabled
 def autobackupenabled(ui):
     # Backup is possibly disabled by user
     # but the disabling might have expired
-    if ui.config('infinitepushbackup', 'disableduntil', None) is not None:
+    if ui.config("infinitepushbackup", "disableduntil", None) is not None:
         try:
-            timestamp = int(ui.config('infinitepushbackup', 'disableduntil'))
+            timestamp = int(ui.config("infinitepushbackup", "disableduntil"))
             if time.time() <= timestamp:
                 return False
         except ValueError:
             # should never happen
-            raise error.Abort(_("error: config file is broken, " +
-                              "can't parse infinitepushbackup.disableduntil\n"))
+            raise error.Abort(
+                _(
+                    "error: config file is broken, "
+                    + "can't parse infinitepushbackup.disableduntil\n"
+                )
+            )
     # Backup may be unconditionally disabled by the Source Control Team
-    return ui.configbool('infinitepushbackup', 'autobackup')
+    return ui.configbool("infinitepushbackup", "autobackup")
+
 
 # Wraps commands with backup if enabled
 def extsetup(ui):
     if autobackupenabled(ui):
-        extensions.wrapfunction(dispatch, 'runcommand',
-                                _autobackupruncommandwrapper)
-        extensions.wrapfunction(localrepo.localrepository, 'transaction',
-                                _transaction)
+        extensions.wrapfunction(dispatch, "runcommand", _autobackupruncommandwrapper)
+        extensions.wrapfunction(localrepo.localrepository, "transaction", _transaction)
+
 
 def converttimestamptolocaltime(timestamp):
-    _timeformat = '%Y-%m-%d %H:%M:%S %Z'
+    _timeformat = "%Y-%m-%d %H:%M:%S %Z"
     return time.strftime(_timeformat, time.localtime(timestamp))
 
+
 def checkinsertgeneratedconfig(localconfig, generatedconfig):
-    includeline = '%include {generatedconfig}'.format(
-        generatedconfig = generatedconfig
-    )
+    includeline = "%include {generatedconfig}".format(generatedconfig=generatedconfig)
 
     # This split doesn't include '\n'
     if includeline in open(localconfig).read().splitlines():
         pass
     else:
-        with open(localconfig, 'a') as configfile:
+        with open(localconfig, "a") as configfile:
             configfile.write("\n# include local overrides\n")
             configfile.write(includeline)
-            configfile.write('\n')
+            configfile.write("\n")
 
-@command('backupenable')
+
+@command("backupenable")
 def backupenable(ui, repo, **opts):
     """
     Enable background backup
@@ -171,17 +183,19 @@ def backupenable(ui, repo, **opts):
         ui.write(_("background backup is already enabled\n"))
         return 0
 
-    localconfig = repo.vfs.join('hgrc')
+    localconfig = repo.vfs.join("hgrc")
     generatedconfig = repo.vfs.join(localoverridesfile)
     checkinsertgeneratedconfig(localconfig, generatedconfig)
     with open(generatedconfig, "w") as file:
-        file.write('')
+        file.write("")
 
     ui.write(_("background backup is enabled\n"))
     return 0
 
-@command('backupdisable',
-         [('', 'hours', '1', 'disable backup for the specified duration')])
+
+@command(
+    "backupdisable", [("", "hours", "1", "disable backup for the specified duration")]
+)
 def backupdisable(ui, repo, **opts):
     """
     Disable background backup
@@ -193,35 +207,42 @@ def backupdisable(ui, repo, **opts):
     if not autobackupenabled(ui):
         ui.write(_("note: background backup was already disabled\n"))
 
-    localconfig = repo.vfs.join('hgrc')
+    localconfig = repo.vfs.join("hgrc")
     generatedconfig = repo.vfs.join(localoverridesfile)
     checkinsertgeneratedconfig(localconfig, generatedconfig)
 
     try:
-        duration = secondsinhour * int(opts.get('hours', 1))
+        duration = secondsinhour * int(opts.get("hours", 1))
     except ValueError:
         raise error.Abort(
-            _("error: argument 'hours': invalid int value: '{value}'\n"
-            .format(value=opts.get('hours'))
-        ))
+            _(
+                "error: argument 'hours': invalid int value: '{value}'\n".format(
+                    value=opts.get("hours")
+                )
+            )
+        )
 
     timestamp = int(time.time()) + duration
 
     config = ConfigParser.ConfigParser()
-    config.add_section('infinitepushbackup')
-    config.set('infinitepushbackup', 'disableduntil', timestamp)
+    config.add_section("infinitepushbackup")
+    config.set("infinitepushbackup", "disableduntil", timestamp)
 
-    with open(generatedconfig, 'w') as configfile:
+    with open(generatedconfig, "w") as configfile:
         configfile.write("# disable infinitepush background backup\n")
         config.write(configfile)
 
-    ui.write(_("background backup is now disabled until {localtime}\n"
-        .format(localtime=converttimestamptolocaltime(timestamp))
-    ))
+    ui.write(
+        _(
+            "background backup is now disabled until {localtime}\n".format(
+                localtime=converttimestamptolocaltime(timestamp)
+            )
+        )
+    )
     return 0
 
-@command('pushbackup',
-         [('', 'background', None, 'run backup in background')])
+
+@command("pushbackup", [("", "background", None, "run backup in background")])
 def backup(ui, repo, dest=None, **opts):
     """
     Pushes commits, bookmarks and heads to infinitepush.
@@ -232,7 +253,7 @@ def backup(ui, repo, dest=None, **opts):
     Local heads are saved remotely as:
         infinitepush/backups/USERNAME/HOST/REPOROOT/heads/HEAD_HASH
     """
-    if opts.get('background'):
+    if opts.get("background"):
         _dobackgroundbackup(ui, repo, dest)
         return 0
 
@@ -244,12 +265,13 @@ def backup(ui, repo, dest=None, **opts):
             return _dobackup(ui, repo, dest, **opts)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
-            ui.warn(_('timeout waiting on backup lock\n'))
+            ui.warn(_("timeout waiting on backup lock\n"))
             return 2
         else:
             raise
 
-@command('pullbackup', restoreoptions)
+
+@command("pullbackup", restoreoptions)
 def restore(ui, repo, dest=None, **opts):
     """
     Pulls commits from infinitepush that were previously saved with
@@ -263,92 +285,105 @@ def restore(ui, repo, dest=None, **opts):
 
     other = _getremote(repo, ui, dest, **opts)
 
-    sourcereporoot = opts.get('reporoot')
-    sourcehostname = opts.get('hostname')
-    namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get('user'))
+    sourcereporoot = opts.get("reporoot")
+    sourcehostname = opts.get("hostname")
+    namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get("user"))
     allbackupstates = _downloadbackupstate(
-        ui, other, sourcereporoot, sourcehostname, namingmgr)
+        ui, other, sourcereporoot, sourcehostname, namingmgr
+    )
     if not allbackupstates:
-        ui.warn(_('no backups found!'))
+        ui.warn(_("no backups found!"))
         return 1
     _checkbackupstates(ui, namingmgr.username, allbackupstates)
 
     __, backupstate = allbackupstates.popitem()
-    pullcmd, pullopts = _getcommandandoptions('^pull')
+    pullcmd, pullopts = _getcommandandoptions("^pull")
     # Pull backuped heads and nodes that are pointed by bookmarks.
     # Note that we are avoiding the use of set() because we want to pull
     # revisions in the same order
-    pullopts['rev'] = list(backupstate.heads) \
-                      + [x for x in backupstate.localbookmarks.values()
-                            if x not in backupstate.heads]
+    pullopts["rev"] = list(backupstate.heads) + [
+        x for x in backupstate.localbookmarks.values() if x not in backupstate.heads
+    ]
     if dest:
-        pullopts['source'] = dest
+        pullopts["source"] = dest
 
     maxrevbeforepull = len(repo.changelog)
     result = pullcmd(ui, repo, **pullopts)
     maxrevafterpull = len(repo.changelog)
 
-    if ui.config('infinitepushbackup', 'createlandedasmarkers', False):
-        ext = extensions.find('pullcreatemarkers')
-        ext.createmarkers(result, repo, maxrevbeforepull, maxrevafterpull,
-                          fromdrafts=False)
+    if ui.config("infinitepushbackup", "createlandedasmarkers", False):
+        ext = extensions.find("pullcreatemarkers")
+        ext.createmarkers(
+            result, repo, maxrevbeforepull, maxrevafterpull, fromdrafts=False
+        )
 
-    with repo.wlock(), repo.lock(), repo.transaction('bookmark') as tr:
+    with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
         changes = []
         for book, hexnode in backupstate.localbookmarks.iteritems():
             if hexnode in repo:
                 changes.append((book, node.bin(hexnode)))
             else:
-                ui.warn(_('%s not found, not creating %s bookmark') %
-                        (hexnode, book))
+                ui.warn(_("%s not found, not creating %s bookmark") % (hexnode, book))
         repo._bookmarks.applychanges(repo, tr, changes)
 
     # manually write local backup state and flag to not autobackup
     # just after we restored, which would be pointless
-    _writelocalbackupstate(repo.vfs,
-                           backupstate.heads.values(),
-                           backupstate.localbookmarks)
+    _writelocalbackupstate(
+        repo.vfs, backupstate.heads.values(), backupstate.localbookmarks
+    )
     repo.ignoreautobackup = True
 
     return result
 
-@command('getavailablebackups',
-    [('a', 'all', None, _('list all backups, not just the most recent')),
-     ('', 'user', '', _('username, defaults to current user')),
-     ('', 'json', None, _('print available backups in json format'))])
+
+@command(
+    "getavailablebackups",
+    [
+        ("a", "all", None, _("list all backups, not just the most recent")),
+        ("", "user", "", _("username, defaults to current user")),
+        ("", "json", None, _("print available backups in json format")),
+    ],
+)
 def getavailablebackups(ui, repo, dest=None, **opts):
     other = _getremote(repo, ui, dest, **opts)
 
-    sourcereporoot = opts.get('reporoot')
-    sourcehostname = opts.get('hostname')
+    sourcereporoot = opts.get("reporoot")
+    sourcehostname = opts.get("hostname")
 
-    namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get('user'))
+    namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get("user"))
     allbackupstates = _downloadbackupstate(
-        ui, other, sourcereporoot, sourcehostname, namingmgr)
+        ui, other, sourcereporoot, sourcehostname, namingmgr
+    )
 
     # Preserve allbackupstates MRU order in messages for users
-    if opts.get('json'):
+    if opts.get("json"):
         jsondict = util.sortdict()
         for hostname, reporoot in allbackupstates.keys():
             jsondict.setdefault(hostname, []).append(reporoot)
-        ui.write('%s\n' % json.dumps(jsondict, indent=4))
+        ui.write("%s\n" % json.dumps(jsondict, indent=4))
     elif not allbackupstates:
-        ui.write(_('no backups available for %s\n') % namingmgr.username)
+        ui.write(_("no backups available for %s\n") % namingmgr.username)
     else:
-        _printbackupstates(ui, namingmgr.username, allbackupstates,
-                           bool(opts.get('all')))
+        _printbackupstates(
+            ui, namingmgr.username, allbackupstates, bool(opts.get("all"))
+        )
 
-@command('backupdelete',
-    [('', 'reporoot', '', 'root of the repo to delete the backup for'),
-     ('', 'hostname', '', 'hostname of the repo to delete the backup for')])
+
+@command(
+    "backupdelete",
+    [
+        ("", "reporoot", "", "root of the repo to delete the backup for"),
+        ("", "hostname", "", "hostname of the repo to delete the backup for"),
+    ],
+)
 def backupdelete(ui, repo, dest=None, **opts):
     """
     Deletes a backup from the server.  Removes all heads and bookmarks
     associated with the backup from the server.  The commits themselves are
     not removed, so you can still update to them using 'hg update HASH'.
     """
-    sourcereporoot = opts.get('reporoot')
-    sourcehostname = opts.get('hostname')
+    sourcereporoot = opts.get("reporoot")
+    sourcehostname = opts.get("hostname")
     if not sourcereporoot or not sourcehostname:
         msg = _("you must specify a reporoot and hostname to delete a backup")
         hint = _("use 'hg getavailablebackups' to find which backups exist")
@@ -356,10 +391,10 @@ def backupdelete(ui, repo, dest=None, **opts):
     namingmgr = BackupBookmarkNamingManager(ui, repo)
 
     # Do some sanity checking on the names
-    if not re.match(r'^[-a-zA-Z0-9._/]+$', sourcereporoot):
+    if not re.match(r"^[-a-zA-Z0-9._/]+$", sourcereporoot):
         msg = _("repo root contains unexpected characters")
         raise error.Abort(msg)
-    if not re.match(r'^[-a-zA-Z0-9.]+$', sourcehostname):
+    if not re.match(r"^[-a-zA-Z0-9.]+$", sourcehostname):
         msg = _("hostname contains unexpected characters")
         raise error.Abort(msg)
     if sourcereporoot == repo.origroot and sourcehostname == namingmgr.hostname:
@@ -367,34 +402,41 @@ def backupdelete(ui, repo, dest=None, **opts):
 
     other = _getremote(repo, ui, dest, **opts)
     backupstates = _downloadbackupstate(
-        ui, other, sourcereporoot, sourcehostname, namingmgr)
+        ui, other, sourcereporoot, sourcehostname, namingmgr
+    )
     backupstate = backupstates.get((sourcehostname, sourcereporoot))
     if backupstate is None:
-        raise error.Abort(_("no backup found for %s on %s")
-                          % (sourcereporoot, sourcehostname))
+        raise error.Abort(
+            _("no backup found for %s on %s") % (sourcereporoot, sourcehostname)
+        )
     ui.write(_("%s on %s:\n") % (sourcereporoot, sourcehostname))
     ui.write(_("    heads:\n"))
     for head in backupstate.heads:
         ui.write(("        %s\n") % head)
     ui.write(_("    bookmarks:\n"))
     for bookname, booknode in backupstate.localbookmarks.items():
-        ui.write(("        %-20s %s\n") % (bookname + ':', booknode))
+        ui.write(("        %-20s %s\n") % (bookname + ":", booknode))
     if ui.promptchoice(_("delete this backup (yn)? $$ &Yes $$ &No"), 1) == 0:
-        ui.status(_("deleting backup for %s on %s\n") %
-                  (sourcereporoot, sourcehostname))
+        ui.status(
+            _("deleting backup for %s on %s\n") % (sourcereporoot, sourcehostname)
+        )
         bookmarks = {
-            namingmgr.getcommonuserhostreporootprefix(sourcehostname,
-                                                      sourcereporoot): ''
+            namingmgr.getcommonuserhostreporootprefix(
+                sourcehostname, sourcereporoot
+            ): ""
         }
         _dobackuppush(ui, repo, other, None, bookmarks)
         ui.status(_("backup deleted\n"))
-        ui.status(_("(you can still access the commits directly "
-                    "using their hashes)\n"))
+        ui.status(
+            _("(you can still access the commits directly " "using their hashes)\n")
+        )
     return 0
 
-@command('debugcheckbackup',
-         [('', 'all', None, _('check all backups that user have')),
-         ] + restoreoptions)
+
+@command(
+    "debugcheckbackup",
+    [("", "all", None, _("check all backups that user have"))] + restoreoptions,
+)
 def checkbackup(ui, repo, dest=None, **opts):
     """
     Checks that all the nodes that backup needs are available in bundlestore
@@ -402,25 +444,27 @@ def checkbackup(ui, repo, dest=None, **opts):
     backups for the user
     """
 
-    sourcereporoot = opts.get('reporoot')
-    sourcehostname = opts.get('hostname')
+    sourcereporoot = opts.get("reporoot")
+    sourcehostname = opts.get("hostname")
 
     other = _getremote(repo, ui, dest, **opts)
-    namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get('user'))
+    namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get("user"))
     allbackupstates = _downloadbackupstate(
-        ui, other, sourcereporoot, sourcehostname, namingmgr)
-    if not opts.get('all'):
+        ui, other, sourcereporoot, sourcehostname, namingmgr
+    )
+    if not opts.get("all"):
         _checkbackupstates(ui, namingmgr.username, allbackupstates)
 
     ret = 0
     while allbackupstates:
         key, bkpstate = allbackupstates.popitem()
-        ui.status(_('checking %s on %s\n') % (key[1], key[0]))
+        ui.status(_("checking %s on %s\n") % (key[1], key[0]))
         if not _dobackupcheck(bkpstate, ui, repo, dest, **opts):
             ret = 255
     return ret
 
-@command('debugwaitbackup', [('', 'timeout', '', 'timeout value')])
+
+@command("debugwaitbackup", [("", "timeout", "", "timeout value")])
 def waitbackup(ui, repo, timeout):
     try:
         if timeout:
@@ -428,7 +472,7 @@ def waitbackup(ui, repo, timeout):
         else:
             timeout = -1
     except ValueError:
-        raise error.Abort('timeout should be integer')
+        raise error.Abort("timeout should be integer")
 
     try:
         repo = shareutil.getsrcrepo(repo)
@@ -436,47 +480,53 @@ def waitbackup(ui, repo, timeout):
             pass
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
-            raise error.Abort(_('timeout while waiting for backup'))
+            raise error.Abort(_("timeout while waiting for backup"))
         raise
 
-@command('isbackedup',
-     [('r', 'rev', [], _('show the specified revision or revset'), _('REV')),
-      ('', 'remote', None, _('check on the remote server'))])
+
+@command(
+    "isbackedup",
+    [
+        ("r", "rev", [], _("show the specified revision or revset"), _("REV")),
+        ("", "remote", None, _("check on the remote server")),
+    ],
+)
 def isbackedup(ui, repo, dest=None, **opts):
     """checks if commit was backed up to infinitepush
 
     If no revision are specified then it checks working copy parent
     """
 
-    revs = opts.get('rev')
-    remote = opts.get('remote')
+    revs = opts.get("rev")
+    remote = opts.get("remote")
     if not revs:
-        revs = ['.']
+        revs = ["."]
     bkpstate = _readlocalbackupstate(ui, repo)
     unfi = repo.unfiltered()
-    backeduprevs = unfi.revs('draft() and ::%ls', bkpstate.heads)
+    backeduprevs = unfi.revs("draft() and ::%ls", bkpstate.heads)
     if remote:
         other = _getremote(repo, ui, dest, **opts)
     for r in scmutil.revrange(unfi, revs):
-        ui.write(_(unfi[r].hex() + ' '))
+        ui.write(_(unfi[r].hex() + " "))
         backedup = r in backeduprevs
         if remote and backedup:
             try:
                 other.lookup(unfi[r].hex())
             except error.RepoError:
                 backedup = False
-        ui.write(_('backed up' if backedup else 'not backed up'))
-        ui.write(_('\n'))
+        ui.write(_("backed up" if backedup else "not backed up"))
+        ui.write(_("\n"))
 
-@revsetpredicate('backedup')
+
+@revsetpredicate("backedup")
 def backedup(repo, subset, x):
     """Draft changesets that have been backed up by infinitepush"""
     unfi = repo.unfiltered()
     bkpstate = _readlocalbackupstate(repo.ui, repo)
-    return subset & unfi.revs('draft() and ::%ls and not hidden()',
-                              bkpstate.heads)
+    return subset & unfi.revs("draft() and ::%ls and not hidden()", bkpstate.heads)
 
-@revsetpredicate('notbackedup')
+
+@revsetpredicate("notbackedup")
 def notbackedup(repo, subset, x):
     """Changesets that have not yet been backed up by infinitepush"""
     bkpstate = _readlocalbackupstate(repo.ui, repo)
@@ -511,60 +561,78 @@ def notbackedup(repo, subset, x):
                     candidates.update([p.hex() for p in ctx.parents()])
     return subset & notbackeduprevs
 
-@templatekeyword('backingup')
+
+@templatekeyword("backingup")
 def backingup(repo, ctx, **args):
     """Whether infinitepush is currently backing up commits."""
     # If the backup lock exists then a backup should be in progress.
     srcrepo = shareutil.getsrcrepo(repo)
     return srcrepo.vfs.lexists(_backuplockname)
 
+
 def _smartlogbackupsuggestion(ui, repo):
-    ui.warn(_('Run `hg pushbackup` to perform a backup. '
-          'If this fails,\n'
-          'please report to the Source Control @ FB group.\n'))
+    ui.warn(
+        _(
+            "Run `hg pushbackup` to perform a backup. "
+            "If this fails,\n"
+            "please report to the Source Control @ FB group.\n"
+        )
+    )
+
 
 def _smartlogbackupmessagemap(ui, repo):
     return {
-        'inprogress': 'backing up',
-        'pending': 'backup pending',
-        'failed':  'not backed up',
+        "inprogress": "backing up",
+        "pending": "backup pending",
+        "failed": "not backed up",
     }
 
-@templatefunc('backupstatusmsg(status)')
+
+@templatefunc("backupstatusmsg(status)")
 def backupstatusmsg(context, mapping, args):
     if len(args) != 1:
         raise error.ParseError(_("backupstatusmsg expects 1 argument"))
     status = templater.evalfuncarg(context, mapping, args[0])
-    repo = mapping['ctx'].repo()
+    repo = mapping["ctx"].repo()
     wordmap = _smartlogbackupmessagemap(repo.ui, repo)
     if status not in wordmap:
         raise error.ParseError(_("unknown status"))
     return wordmap[status]
 
+
 def smartlogsummary(ui, repo):
-    if not ui.configbool('infinitepushbackup', 'enablestatus'):
+    if not ui.configbool("infinitepushbackup", "enablestatus"):
         return
 
     # Output backup status if enablestatus is on
     autobackupenabledstatus = autobackupenabled(ui)
     if not autobackupenabledstatus:
-        timestamp = ui.config('infinitepushbackup', 'disableduntil', None)
+        timestamp = ui.config("infinitepushbackup", "disableduntil", None)
         if timestamp:
-            ui.write(_('note: background backup is currently disabled until '
-                + converttimestamptolocaltime(int(timestamp)) + '\n'))
-            ui.write(_('so your commits are not being backed up.\n'))
-            ui.write(_('Run `hg backupenable` to turn backups back on.\n'))
+            ui.write(
+                _(
+                    "note: background backup is currently disabled until "
+                    + converttimestamptolocaltime(int(timestamp))
+                    + "\n"
+                )
+            )
+            ui.write(_("so your commits are not being backed up.\n"))
+            ui.write(_("Run `hg backupenable` to turn backups back on.\n"))
         else:
-            ui.write(_('note: background backup is currently disabled ' +
-                       'by the Source Control Team,\n'))
-            ui.write(_('so your commits are not being backed up.\n'))
+            ui.write(
+                _(
+                    "note: background backup is currently disabled "
+                    + "by the Source Control Team,\n"
+                )
+            )
+            ui.write(_("so your commits are not being backed up.\n"))
 
     # Don't output the summary if a backup is currently in progress.
     srcrepo = shareutil.getsrcrepo(repo)
     if srcrepo.vfs.lexists(_backuplockname):
         return
 
-    unbackeduprevs = repo.revs('notbackedup()')
+    unbackeduprevs = repo.revs("notbackedup()")
 
     # Count the number of changesets that haven't been backed up for 10 minutes.
     # If there is only one, also print out its hash.
@@ -577,50 +645,55 @@ def smartlogsummary(ui, repo):
             count += 1
     if count > 0:
         if not autobackupenabledstatus:
-            ui.write('\n')
+            ui.write("\n")
         if count > 1:
-            ui.warn(_('note: %d changesets are not backed up.\n') % count)
+            ui.warn(_("note: %d changesets are not backed up.\n") % count)
         else:
-            ui.warn(_('note: changeset %s is not backed up.\n') %
-                    node.short(repo[singleunbackeduprev].node()))
+            ui.warn(
+                _("note: changeset %s is not backed up.\n")
+                % node.short(repo[singleunbackeduprev].node())
+            )
         _smartlogbackupsuggestion(ui, repo)
 
+
 def _autobackupruncommandwrapper(orig, lui, repo, cmd, fullargs, *args):
-    '''
+    """
     If this wrapper is enabled then auto backup is started after every command
     that modifies a repository.
     Since we don't want to start auto backup after read-only commands,
     then this wrapper checks if this command opened at least one transaction.
     If yes then background backup will be started.
-    '''
+    """
 
     # For chg, do not wrap the "serve" runcommand call
-    if 'CHGINTERNALMARK' in encoding.environ:
+    if "CHGINTERNALMARK" in encoding.environ:
         return orig(lui, repo, cmd, fullargs, *args)
 
     try:
         return orig(lui, repo, cmd, fullargs, *args)
     finally:
-        if getattr(repo, 'txnwasopened', False) \
-                and not getattr(repo, 'ignoreautobackup', False):
+        if getattr(repo, "txnwasopened", False) and not getattr(
+            repo, "ignoreautobackup", False
+        ):
             lui.debug("starting infinitepush autobackup in the background\n")
             _dobackgroundbackup(lui, repo)
 
+
 def _transaction(orig, self, *args, **kwargs):
-    ''' Wrapper that records if a transaction was opened.
+    """ Wrapper that records if a transaction was opened.
 
     If a transaction was opened then we want to start background backup process.
     This hook records the fact that transaction was opened.
-    '''
+    """
     self.txnwasopened = True
     return orig(self, *args, **kwargs)
 
+
 def _backupheads(ui, repo):
     """Returns the set of heads that should be backed up in this repo."""
-    maxheadstobackup = ui.configint('infinitepushbackup',
-                                    'maxheadstobackup', -1)
+    maxheadstobackup = ui.configint("infinitepushbackup", "maxheadstobackup", -1)
 
-    revset = 'heads(draft()) & not obsolete()'
+    revset = "heads(draft()) & not obsolete()"
 
     backupheads = [ctx.hex() for ctx in repo.set(revset)]
     if maxheadstobackup > 0:
@@ -629,14 +702,14 @@ def _backupheads(ui, repo):
         backupheads = []
     return set(backupheads)
 
+
 def _dobackup(ui, repo, dest, **opts):
-    ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
+    ui.status(_("starting backup %s\n") % time.strftime("%H:%M:%S %d %b %Y %Z"))
     start = time.time()
     # to handle multiple working copies correctly
     repo = shareutil.getsrcrepo(repo)
     currentbkpgenerationvalue = _readbackupgenerationfile(repo.vfs)
-    newbkpgenerationvalue = ui.configint('infinitepushbackup',
-                                         'backupgeneration', 0)
+    newbkpgenerationvalue = ui.configint("infinitepushbackup", "backupgeneration", 0)
     if currentbkpgenerationvalue != newbkpgenerationvalue:
         # Unlinking local backup state will trigger re-backuping
         _deletebackupstate(repo)
@@ -651,8 +724,9 @@ def _dobackup(ui, repo, dest, **opts):
     # if backup finishes successfully
     afterbackupheads = _backupheads(ui, repo)
     other = _getremote(repo, ui, dest, **opts)
-    outgoing, badhexnodes = _getrevstobackup(repo, ui, other,
-                                        afterbackupheads - set(bkpstate.heads))
+    outgoing, badhexnodes = _getrevstobackup(
+        repo, ui, other, afterbackupheads - set(bkpstate.heads)
+    )
     # If remotefilelog extension is enabled then there can be nodes that we
     # can't backup. In this case let's remove them from afterbackupheads
     afterbackupheads.difference_update(badhexnodes)
@@ -661,7 +735,8 @@ def _dobackup(ui, repo, dest, **opts):
     # saved in backup state file if backup finishes successfully
     afterbackuplocalbooks = _getlocalbookmarks(repo)
     afterbackuplocalbooks = _filterbookmarks(
-        afterbackuplocalbooks, repo, afterbackupheads)
+        afterbackuplocalbooks, repo, afterbackupheads
+    )
 
     newheads = afterbackupheads - set(bkpstate.heads)
     removedheads = set(bkpstate.heads) - afterbackupheads
@@ -670,35 +745,37 @@ def _dobackup(ui, repo, dest, **opts):
 
     namingmgr = BackupBookmarkNamingManager(ui, repo)
     bookmarkstobackup = _getbookmarkstobackup(
-        repo, newbookmarks, removedbookmarks,
-        newheads, removedheads, namingmgr)
+        repo, newbookmarks, removedbookmarks, newheads, removedheads, namingmgr
+    )
 
     # Special cases if backup state is empty.
     if bkpstate.empty():
         # If there is nothing to backup, exit now to prevent accidentally
         # clearing a previous backup.
         if not afterbackuplocalbooks and not afterbackupheads:
-            ui.status(_('nothing to backup\n'))
+            ui.status(_("nothing to backup\n"))
             return
         # Otherwise, clean all backup bookmarks from the server.
-        bookmarkstobackup[namingmgr.getbackupheadprefix()] = ''
-        bookmarkstobackup[namingmgr.getbackupbookmarkprefix()] = ''
+        bookmarkstobackup[namingmgr.getbackupheadprefix()] = ""
+        bookmarkstobackup[namingmgr.getbackupbookmarkprefix()] = ""
 
     try:
         if _dobackuppush(ui, repo, other, outgoing, bookmarkstobackup):
-            _writelocalbackupstate(repo.vfs, list(afterbackupheads),
-                                   afterbackuplocalbooks)
-            if ui.config('infinitepushbackup', 'savelatestbackupinfo'):
+            _writelocalbackupstate(
+                repo.vfs, list(afterbackupheads), afterbackuplocalbooks
+            )
+            if ui.config("infinitepushbackup", "savelatestbackupinfo"):
                 _writelocalbackupinfo(repo.vfs, **afterbackupinfo)
         else:
-            ui.status(_('nothing to backup\n'))
+            ui.status(_("nothing to backup\n"))
     finally:
-        ui.status(_('finished in %f seconds\n') % (time.time() - start))
+        ui.status(_("finished in %f seconds\n") % (time.time() - start))
+
 
 def _dobackuppush(ui, repo, other, outgoing, bookmarks):
     # Wrap deltaparent function to make sure that bundle takes less space
     # See _deltaparent comments for details
-    extensions.wrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
+    extensions.wrapfunction(changegroup.cg2packer, "deltaparent", _deltaparent)
     try:
         bundler = _createbundler(ui, repo, other)
         bundler.addparam("infinitepush", "True")
@@ -706,43 +783,48 @@ def _dobackuppush(ui, repo, other, outgoing, bookmarks):
         if outgoing and outgoing.missing:
             backup = True
             parts = bundleparts.getscratchbranchparts(
-                repo, other, outgoing, confignonforwardmove=False,
-                ui=ui, bookmark=None, create=False)
+                repo,
+                other,
+                outgoing,
+                confignonforwardmove=False,
+                ui=ui,
+                bookmark=None,
+                create=False,
+            )
             for part in parts:
                 bundler.addpart(part)
 
         if bookmarks:
             backup = True
-            bundler.addpart(bundleparts.getscratchbookmarkspart(
-                other, bookmarks))
+            bundler.addpart(bundleparts.getscratchbookmarkspart(other, bookmarks))
 
         if backup:
             _sendbundle(bundler, other)
         return backup
     finally:
         # cleanup ensures that all pipes are flushed
-        cleanup = getattr(other, '_cleanup', None) or getattr(other, 'cleanup')
+        cleanup = getattr(other, "_cleanup", None) or getattr(other, "cleanup")
         try:
             cleanup()
         except Exception:
-            ui.warn(_('remote connection cleanup failed\n'))
-        extensions.unwrapfunction(
-            changegroup.cg2packer, 'deltaparent', _deltaparent)
+            ui.warn(_("remote connection cleanup failed\n"))
+        extensions.unwrapfunction(changegroup.cg2packer, "deltaparent", _deltaparent)
     return 0
 
-def _dobackgroundbackup(ui, repo, dest=None, command=None):
-    background_cmd = command or ['hg', 'pushbackup']
-    infinitepush_bgssh = ui.config('infinitepush', 'bgssh')
-    if infinitepush_bgssh:
-        background_cmd += ['--config', 'ui.ssh=%s' % infinitepush_bgssh]
 
-    if ui.configbool('infinitepushbackup', 'bgdebug', False):
-        background_cmd.append('--debug')
+def _dobackgroundbackup(ui, repo, dest=None, command=None):
+    background_cmd = command or ["hg", "pushbackup"]
+    infinitepush_bgssh = ui.config("infinitepush", "bgssh")
+    if infinitepush_bgssh:
+        background_cmd += ["--config", "ui.ssh=%s" % infinitepush_bgssh]
+
+    if ui.configbool("infinitepushbackup", "bgdebug", False):
+        background_cmd.append("--debug")
 
     if dest:
         background_cmd.append(dest)
     logfile = None
-    logdir = ui.config('infinitepushbackup', 'logdir')
+    logdir = ui.config("infinitepushbackup", "logdir")
     if logdir:
         # make newly created files and dirs non-writable
         oldumask = os.umask(0o022)
@@ -750,7 +832,7 @@ def _dobackgroundbackup(ui, repo, dest=None, command=None):
             try:
                 username = util.shortuser(ui.username())
             except Exception:
-                username = 'unknown'
+                username = "unknown"
 
             if not _checkcommonlogdir(logdir):
                 raise WrongPermissionsException(logdir)
@@ -766,24 +848,29 @@ def _dobackgroundbackup(ui, repo, dest=None, command=None):
             _removeoldlogfiles(userlogdir, reponame)
             logfile = _getlogfilename(logdir, username, reponame)
         except (OSError, IOError) as e:
-            ui.debug('background backup log is disabled: %s\n' % e)
+            ui.debug("background backup log is disabled: %s\n" % e)
         except WrongPermissionsException as e:
-            ui.debug(('%s directory has incorrect permission, ' +
-                     'background backup logging will be disabled\n') %
-                     e.logdir)
+            ui.debug(
+                (
+                    "%s directory has incorrect permission, "
+                    + "background backup logging will be disabled\n"
+                )
+                % e.logdir
+            )
         finally:
             os.umask(oldumask)
 
     if not logfile:
         logfile = os.devnull
 
-    with open(logfile, 'a') as f:
-        subprocess.Popen(background_cmd, shell=False, stdout=f,
-                         stderr=subprocess.STDOUT)
+    with open(logfile, "a") as f:
+        subprocess.Popen(
+            background_cmd, shell=False, stdout=f, stderr=subprocess.STDOUT
+        )
+
 
 def _dobackupcheck(bkpstate, ui, repo, dest, **opts):
-    remotehexnodes = sorted(
-        set(bkpstate.heads).union(bkpstate.localbookmarks.values()))
+    remotehexnodes = sorted(set(bkpstate.heads).union(bkpstate.localbookmarks.values()))
     if not remotehexnodes:
         return True
     other = _getremote(repo, ui, dest, **opts)
@@ -800,19 +887,21 @@ def _dobackupcheck(bkpstate, ui, repo, dest, **opts):
             pass
         return True
     except error.RepoError:
-        ui.warn(_('unknown revision %r\n') % remotehexnodes[i])
+        ui.warn(_("unknown revision %r\n") % remotehexnodes[i])
         return False
 
-_backuplatestinfofile = 'infinitepushlatestbackupinfo'
-_backupstatefile = 'infinitepushbackupstate'
-_backupgenerationfile = 'infinitepushbackupgeneration'
+
+_backuplatestinfofile = "infinitepushlatestbackupinfo"
+_backupstatefile = "infinitepushbackupstate"
+_backupgenerationfile = "infinitepushbackupgeneration"
 
 # Common helper functions
 def _getlocalinfo(repo):
     localinfo = {}
-    localinfo['rev'] = repo[repo.changelog.tip()].rev()
-    localinfo['time'] = int(time.time())
+    localinfo["rev"] = repo[repo.changelog.tip()].rev()
+    localinfo["time"] = int(time.time())
     return localinfo
+
 
 def _getlocalbookmarks(repo):
     localbookmarks = {}
@@ -821,21 +910,22 @@ def _getlocalbookmarks(repo):
         localbookmarks[bookmark] = hexnode
     return localbookmarks
 
+
 def _filterbookmarks(localbookmarks, repo, headstobackup):
-    '''Filters out some bookmarks from being backed up
+    """Filters out some bookmarks from being backed up
 
     Filters out bookmarks that do not point to ancestors of headstobackup or
     public commits
-    '''
+    """
 
     headrevstobackup = [repo[hexhead].rev() for hexhead in headstobackup]
     ancestors = repo.changelog.ancestors(headrevstobackup, inclusive=True)
     filteredbooks = {}
     for bookmark, hexnode in localbookmarks.iteritems():
-        if (repo[hexnode].rev() in ancestors or
-                repo[hexnode].phase() == phases.public):
+        if repo[hexnode].rev() in ancestors or repo[hexnode].phase() == phases.public:
             filteredbooks[bookmark] = hexnode
     return filteredbooks
+
 
 def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
     """
@@ -860,13 +950,14 @@ def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
     """
     if sourcehostname and sourcereporoot:
         pattern = namingmgr.getcommonuserhostreporootprefix(
-            sourcehostname, sourcereporoot)
+            sourcehostname, sourcereporoot
+        )
     elif sourcehostname:
         pattern = namingmgr.getcommonuserhostprefix(sourcehostname)
     else:
         pattern = namingmgr.getcommonuserprefix()
 
-    fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])
+    fetchedbookmarks = other.listkeyspatterns("bookmarks", patterns=[pattern])
     allbackupstates = util.sortdict()
     for book, hexnode in fetchedbookmarks.iteritems():
         parsed = _parsebackupbookmark(book, namingmgr)
@@ -884,7 +975,7 @@ def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
             else:
                 allbackupstates[key].heads[hexnode] = hexnode
         else:
-            ui.warn(_('wrong format of backup bookmark: %s') % book)
+            ui.warn(_("wrong format of backup bookmark: %s") % book)
 
     # reverse to make MRU order
     allbackupstatesrev = util.sortdict()
@@ -893,37 +984,50 @@ def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
 
     return allbackupstatesrev
 
+
 def _checkbackupstates(ui, username, allbackupstates):
     if not allbackupstates:
-        raise error.Abort('no backups found!')
+        raise error.Abort("no backups found!")
 
     if len(allbackupstates) > 1:
         _printbackupstates(ui, username, allbackupstates)
         raise error.Abort(
-                _('multiple backups found'),
-                hint=_('set --hostname and --reporoot to pick a backup'))
+            _("multiple backups found"),
+            hint=_("set --hostname and --reporoot to pick a backup"),
+        )
+
 
 def _printbackupstates(ui, username, allbackupstates, all=False):
-    ui.write(_('user %s has %d available backups:\n'
-               '(backups are ordered with '
-               'the most recent at the top of the list)\n') %
-             (username, len(allbackupstates)))
+    ui.write(
+        _(
+            "user %s has %d available backups:\n"
+            "(backups are ordered with "
+            "the most recent at the top of the list)\n"
+        )
+        % (username, len(allbackupstates))
+    )
 
-    limit = ui.configint('infinitepushbackup', 'backuplistlimit', 5)
+    limit = ui.configint("infinitepushbackup", "backuplistlimit", 5)
     for i, (hostname, reporoot) in enumerate(allbackupstates.keys()):
         if not all and i == limit:
-            ui.write(_("(older backups have been hidden, "
-                       "run 'hg getavailablebackups --all' to see them all)\n"))
+            ui.write(
+                _(
+                    "(older backups have been hidden, "
+                    "run 'hg getavailablebackups --all' to see them all)\n"
+                )
+            )
             break
-        ui.write(_('%s on %s\n') % (reporoot, hostname))
+        ui.write(_("%s on %s\n") % (reporoot, hostname))
+
 
 class BackupBookmarkNamingManager(object):
-    '''
+    """
     The naming convention is:
     infinitepush/backups/<unixusername>/<host>/<reporoot>/bookmarks/<name>
     or:
     infinitepush/backups/<unixusername>/<host>/<reporoot>/heads/<hash>
-    '''
+    """
+
     def __init__(self, ui, repo, username=None):
         self.ui = ui
         self.repo = repo
@@ -931,88 +1035,96 @@ class BackupBookmarkNamingManager(object):
             username = util.shortuser(ui.username())
         self.username = username
 
-        self.hostname = self.ui.config('infinitepushbackup', 'hostname')
+        self.hostname = self.ui.config("infinitepushbackup", "hostname")
         if not self.hostname:
             self.hostname = socket.gethostname()
 
     def getcommonuserprefix(self):
-        return '/'.join((self._getcommonuserprefix(), '*'))
+        return "/".join((self._getcommonuserprefix(), "*"))
 
     def getcommonuserhostprefix(self, host):
-        return '/'.join((self._getcommonuserprefix(), host, '*'))
+        return "/".join((self._getcommonuserprefix(), host, "*"))
 
     def getcommonuserhostreporootprefix(self, host, reporoot):
         # Remove any prefix or suffix slashes, since the join will add them
         # back and the format doesn't expect a double slash.
-        strippedroot = reporoot.strip('/')
-        return '/'.join((self._getcommonuserprefix(), host, strippedroot, '*'))
+        strippedroot = reporoot.strip("/")
+        return "/".join((self._getcommonuserprefix(), host, strippedroot, "*"))
 
     def getcommonprefix(self):
-        return '/'.join((self._getcommonprefix(), '*'))
+        return "/".join((self._getcommonprefix(), "*"))
 
     def getbackupbookmarkprefix(self):
-        return '/'.join((self._getbackupbookmarkprefix(), '*'))
+        return "/".join((self._getbackupbookmarkprefix(), "*"))
 
     def getbackupbookmarkname(self, bookmark):
         bookmark = _escapebookmark(bookmark)
-        return '/'.join((self._getbackupbookmarkprefix(), bookmark))
+        return "/".join((self._getbackupbookmarkprefix(), bookmark))
 
     def getbackupheadprefix(self):
-        return '/'.join((self._getbackupheadprefix(), '*'))
+        return "/".join((self._getbackupheadprefix(), "*"))
 
     def getbackupheadname(self, hexhead):
-        return '/'.join((self._getbackupheadprefix(), hexhead))
+        return "/".join((self._getbackupheadprefix(), hexhead))
 
     def _getbackupbookmarkprefix(self):
-        return '/'.join((self._getcommonprefix(), 'bookmarks'))
+        return "/".join((self._getcommonprefix(), "bookmarks"))
 
     def _getbackupheadprefix(self):
-        return '/'.join((self._getcommonprefix(), 'heads'))
+        return "/".join((self._getcommonprefix(), "heads"))
 
     def _getcommonuserprefix(self):
-        return '/'.join(('infinitepush', 'backups', self.username))
+        return "/".join(("infinitepush", "backups", self.username))
 
     def _getcommonprefix(self):
         reporoot = self.repo.origroot
 
-        result = '/'.join((self._getcommonuserprefix(), self.hostname))
-        if not reporoot.startswith('/'):
-            result += '/'
+        result = "/".join((self._getcommonuserprefix(), self.hostname))
+        if not reporoot.startswith("/"):
+            result += "/"
         result += reporoot
-        if result.endswith('/'):
+        if result.endswith("/"):
             result = result[:-1]
         return result
 
+
 def _escapebookmark(bookmark):
-    '''
+    """
     If `bookmark` contains "bookmarks" as a substring then replace it with
     "bookmarksbookmarks". This will make parsing remote bookmark name
     unambigious.
     Also, encode * since it is used for prefix pattern matching
-    '''
+    """
     bookmark = encoding.fromlocal(bookmark)
-    bookmark = bookmark.replace('*', '*%')
-    return bookmark.replace('bookmarks', 'bookmarksbookmarks')
+    bookmark = bookmark.replace("*", "*%")
+    return bookmark.replace("bookmarks", "bookmarksbookmarks")
+
 
 def _unescapebookmark(bookmark):
     bookmark = encoding.tolocal(bookmark)
-    bookmark = bookmark.replace('*%', '*')
-    return bookmark.replace('bookmarksbookmarks', 'bookmarks')
+    bookmark = bookmark.replace("*%", "*")
+    return bookmark.replace("bookmarksbookmarks", "bookmarks")
+
 
 def _getremote(repo, ui, dest, **opts):
-    path = ui.paths.getpath(dest, default=('infinitepush', 'default'))
+    path = ui.paths.getpath(dest, default=("infinitepush", "default"))
     if not path:
-        raise error.Abort(_('default repository not configured!'),
-                         hint=_("see 'hg help config.paths'"))
+        raise error.Abort(
+            _("default repository not configured!"),
+            hint=_("see 'hg help config.paths'"),
+        )
     dest = path.pushloc or path.loc
     return hg.peer(repo, opts, dest)
+
 
 def _getcommandandoptions(command):
     cmd = commands.table[command][0]
     opts = dict(opt[1:3] for opt in commands.table[command][1])
     return cmd, opts
 
+
 # Backup helper functions
+
 
 def _deltaparent(orig, self, revlog, rev, p1, p2, prev):
     # This version of deltaparent prefers p1 over prev to use less space
@@ -1022,13 +1134,15 @@ def _deltaparent(orig, self, revlog, rev, p1, p2, prev):
         return node.nullrev
     return p1
 
-def _getbookmarkstobackup(repo, newbookmarks, removedbookmarks,
-                          newheads, removedheads, namingmgr):
+
+def _getbookmarkstobackup(
+    repo, newbookmarks, removedbookmarks, newheads, removedheads, namingmgr
+):
     bookmarkstobackup = {}
 
     for bookmark, hexnode in removedbookmarks.items():
         backupbookmark = namingmgr.getbackupbookmarkname(bookmark)
-        bookmarkstobackup[backupbookmark] = ''
+        bookmarkstobackup[backupbookmark] = ""
 
     for bookmark, hexnode in newbookmarks.items():
         backupbookmark = namingmgr.getbackupbookmarkname(bookmark)
@@ -1036,7 +1150,7 @@ def _getbookmarkstobackup(repo, newbookmarks, removedbookmarks,
 
     for hexhead in removedheads:
         headbookmarksname = namingmgr.getbackupheadname(hexhead)
-        bookmarkstobackup[headbookmarksname] = ''
+        bookmarkstobackup[headbookmarksname] = ""
 
     for hexhead in newheads:
         headbookmarksname = namingmgr.getbackupheadname(hexhead)
@@ -1044,34 +1158,37 @@ def _getbookmarkstobackup(repo, newbookmarks, removedbookmarks,
 
     return bookmarkstobackup
 
+
 def _createbundler(ui, repo, other):
     bundler = bundle2.bundle20(ui, bundle2.bundle2caps(other))
-    compress = ui.config('infinitepush', 'bundlecompression', 'UN')
+    compress = ui.config("infinitepush", "bundlecompression", "UN")
     bundler.setcompression(compress)
     # Disallow pushback because we want to avoid taking repo locks.
     # And we don't need pushback anyway
-    capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo,
-                                                      allowpushback=False))
-    bundler.newpart('replycaps', data=capsblob)
+    capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo, allowpushback=False))
+    bundler.newpart("replycaps", data=capsblob)
     return bundler
+
 
 def _sendbundle(bundler, other):
     stream = util.chunkbuffer(bundler.getchunks())
     try:
-        reply = other.unbundle(stream, ['force'], other.url())
+        reply = other.unbundle(stream, ["force"], other.url())
         # Look for an error part in the response.  Note that we don't apply
         # the reply bundle, as we're not expecting any response, except maybe
         # an error.  If we receive any extra parts, that is an error.
         for part in reply.iterparts():
-            if part.type == 'error:abort':
-                raise bundle2.AbortFromPart(part.params['message'],
-                                            hint=part.params.get('hint'))
-            elif part.type == 'reply:changegroup':
+            if part.type == "error:abort":
+                raise bundle2.AbortFromPart(
+                    part.params["message"], hint=part.params.get("hint")
+                )
+            elif part.type == "reply:changegroup":
                 pass
             else:
-                raise error.Abort(_('unexpected part in reply: %s') % part.type)
+                raise error.Abort(_("unexpected part in reply: %s") % part.type)
     except error.BundleValueError as exc:
-        raise error.Abort(_('missing support for %s') % exc)
+        raise error.Abort(_("missing support for %s") % exc)
+
 
 def findcommonoutgoing(repo, ui, other, heads):
     if heads:
@@ -1099,25 +1216,27 @@ def findcommonoutgoing(repo, ui, other, heads):
     else:
         return None
 
+
 def _getrevstobackup(repo, ui, other, headstobackup):
     # In rare cases it's possible to have a local node without filelogs.
     # This is possible if remotefilelog is enabled and if the node was
     # stripped server-side. We want to filter out these bad nodes and all
     # of their descendants.
-    badnodes = ui.configlist('infinitepushbackup', 'dontbackupnodes', [])
+    badnodes = ui.configlist("infinitepushbackup", "dontbackupnodes", [])
     badnodes = [node for node in badnodes if node in repo]
     badrevs = [repo[node].rev() for node in badnodes]
-    badnodesdescendants = repo.set('%ld::', badrevs) if badrevs else set()
+    badnodesdescendants = repo.set("%ld::", badrevs) if badrevs else set()
     badnodesdescendants = set(ctx.hex() for ctx in badnodesdescendants)
-    filteredheads = filter(lambda head: head in badnodesdescendants,
-                           headstobackup)
+    filteredheads = filter(lambda head: head in badnodesdescendants, headstobackup)
 
     if filteredheads:
-        ui.warn(_('filtering nodes: %s\n') % filteredheads)
-        ui.log('infinitepushbackup', 'corrupted nodes found',
-               infinitepushbackupcorruptednodes='failure')
-    headstobackup = filter(lambda head: head not in badnodesdescendants,
-                           headstobackup)
+        ui.warn(_("filtering nodes: %s\n") % filteredheads)
+        ui.log(
+            "infinitepushbackup",
+            "corrupted nodes found",
+            infinitepushbackupcorruptednodes="failure",
+        )
+    headstobackup = filter(lambda head: head not in badnodesdescendants, headstobackup)
 
     revs = list(repo[hexnode].rev() for hexnode in headstobackup)
     outgoing = findcommonoutgoing(repo, ui, other, revs)
@@ -1125,15 +1244,19 @@ def _getrevstobackup(repo, ui, other, headstobackup):
     if outgoing and len(outgoing.missing) > nodeslimit:
         # trying to push too many nodes usually means that there is a bug
         # somewhere. Let's be safe and avoid pushing too many nodes at once
-        raise error.Abort('trying to back up too many nodes: %d' %
-                          (len(outgoing.missing),))
+        raise error.Abort(
+            "trying to back up too many nodes: %d" % (len(outgoing.missing),)
+        )
     return outgoing, set(filteredheads)
+
 
 def _localbackupstateexists(repo):
     return repo.vfs.exists(_backupstatefile)
 
+
 def _deletebackupstate(repo):
     return repo.vfs.tryunlink(_backupstatefile)
+
 
 def _readlocalbackupstate(ui, repo):
     repo = shareutil.getsrcrepo(repo)
@@ -1143,22 +1266,25 @@ def _readlocalbackupstate(ui, repo):
     with repo.vfs(_backupstatefile) as f:
         try:
             state = json.loads(f.read())
-            if (not isinstance(state['bookmarks'], dict) or
-                    not isinstance(state['heads'], list)):
-                raise ValueError('bad types of bookmarks or heads')
+            if not isinstance(state["bookmarks"], dict) or not isinstance(
+                state["heads"], list
+            ):
+                raise ValueError("bad types of bookmarks or heads")
 
             result = backupstate()
-            result.heads = set(map(str, state['heads']))
-            result.localbookmarks = state['bookmarks']
+            result.heads = set(map(str, state["heads"]))
+            result.localbookmarks = state["bookmarks"]
             return result
         except (ValueError, KeyError, TypeError) as e:
-            ui.warn(_('corrupt file: %s (%s)\n') % (_backupstatefile, e))
+            ui.warn(_("corrupt file: %s (%s)\n") % (_backupstatefile, e))
             return backupstate()
     return backupstate()
 
+
 def _writelocalbackupstate(vfs, heads, bookmarks):
-    with vfs(_backupstatefile, 'w') as f:
-        f.write(json.dumps({'heads': list(heads), 'bookmarks': bookmarks}))
+    with vfs(_backupstatefile, "w") as f:
+        f.write(json.dumps({"heads": list(heads), "bookmarks": bookmarks}))
+
 
 def _readbackupgenerationfile(vfs):
     try:
@@ -1167,17 +1293,20 @@ def _readbackupgenerationfile(vfs):
     except (IOError, OSError, ValueError):
         return 0
 
+
 def _writebackupgenerationfile(vfs, backupgenerationvalue):
-    with vfs(_backupgenerationfile, 'w', atomictemp=True) as f:
+    with vfs(_backupgenerationfile, "w", atomictemp=True) as f:
         f.write(str(backupgenerationvalue))
 
+
 def _writelocalbackupinfo(vfs, rev, time):
-    with vfs(_backuplatestinfofile, 'w', atomictemp=True) as f:
-        f.write(('backuprevision=%d\nbackuptime=%d\n') % (rev, time))
+    with vfs(_backuplatestinfofile, "w", atomictemp=True) as f:
+        f.write(("backuprevision=%d\nbackuptime=%d\n") % (rev, time))
+
 
 # Restore helper functions
 def _parsebackupbookmark(backupbookmark, namingmgr):
-    '''Parses backup bookmark and returns info about it
+    """Parses backup bookmark and returns info about it
 
     Backup bookmark may represent either a local bookmark or a head.
     Returns None if backup bookmark has wrong format or tuple.
@@ -1185,12 +1314,12 @@ def _parsebackupbookmark(backupbookmark, namingmgr):
     Second entry is a root of the repo where this bookmark came from.
     Third entry in a tuple is local bookmark if backup bookmark
     represents a local bookmark and None otherwise.
-    '''
+    """
 
     backupbookmarkprefix = namingmgr._getcommonuserprefix()
-    commonre = '^{0}/([-\w.]+)(/.*)'.format(re.escape(backupbookmarkprefix))
-    bookmarkre = commonre + '/bookmarks/(.*)$'
-    headsre = commonre + '/heads/[a-f0-9]{40}$'
+    commonre = "^{0}/([-\w.]+)(/.*)".format(re.escape(backupbookmarkprefix))
+    bookmarkre = commonre + "/bookmarks/(.*)$"
+    headsre = commonre + "/heads/[a-f0-9]{40}$"
 
     match = re.search(bookmarkre, backupbookmark)
     if not match:
@@ -1199,27 +1328,32 @@ def _parsebackupbookmark(backupbookmark, namingmgr):
             return None
         # It's a local head not a local bookmark.
         # That's why localbookmark is None
-        return backupbookmarktuple(hostname=match.group(1),
-                                   reporoot=match.group(2),
-                                   localbookmark=None)
+        return backupbookmarktuple(
+            hostname=match.group(1), reporoot=match.group(2), localbookmark=None
+        )
 
-    return backupbookmarktuple(hostname=match.group(1),
-                               reporoot=match.group(2),
-                               localbookmark=_unescapebookmark(match.group(3)))
+    return backupbookmarktuple(
+        hostname=match.group(1),
+        reporoot=match.group(2),
+        localbookmark=_unescapebookmark(match.group(3)),
+    )
 
-_timeformat = '%Y%m%d'
+
+_timeformat = "%Y%m%d"
+
 
 def _getlogfilename(logdir, username, reponame):
-    '''Returns name of the log file for particular user and repo
+    """Returns name of the log file for particular user and repo
 
     Different users have different directories inside logdir. Log filename
     consists of reponame (basename of repo path) and current day
     (see _timeformat). That means that two different repos with the same name
     can share the same log file. This is not a big problem so we ignore it.
-    '''
+    """
 
     currentday = time.strftime(_timeformat)
     return os.path.join(logdir, username, reponame + currentday)
+
 
 def _removeoldlogfiles(userlogdir, reponame):
     existinglogfiles = []
@@ -1228,7 +1362,7 @@ def _removeoldlogfiles(userlogdir, reponame):
         fullpath = os.path.join(userlogdir, filename)
         if filename.startswith(reponame) and os.path.isfile(fullpath):
             try:
-                time.strptime(filename[len(reponame):], _timeformat)
+                time.strptime(filename[len(reponame) :], _timeformat)
             except ValueError:
                 continue
             existinglogfiles.append(filename)
@@ -1242,12 +1376,13 @@ def _removeoldlogfiles(userlogdir, reponame):
         for filename in existinglogfiles[maxlogfilenumber:]:
             os.unlink(os.path.join(userlogdir, filename))
 
+
 def _checkcommonlogdir(logdir):
-    '''Checks permissions of the log directory
+    """Checks permissions of the log directory
 
     We want log directory to actually be a directory, have restricting
     deletion flag set (sticky bit)
-    '''
+    """
 
     try:
         st = os.stat(logdir)
@@ -1256,28 +1391,31 @@ def _checkcommonlogdir(logdir):
         # is raised by os.stat()
         return False
 
+
 def _checkuserlogdir(userlogdir):
-    '''Checks permissions of the user log directory
+    """Checks permissions of the user log directory
 
     We want user log directory to be writable only by the user who created it
     and be owned by `username`
-    '''
+    """
 
     try:
         st = os.stat(userlogdir)
         # Check that `userlogdir` is owned by `username`
         if os.getuid() != st.st_uid:
             return False
-        return ((st.st_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)) ==
-                stat.S_IWUSR)
+        return (
+            st.st_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
+        ) == stat.S_IWUSR
     except OSError:
         # is raised by os.stat()
         return False
 
+
 def _dictdiff(first, second):
-    '''Returns new dict that contains items from the first dict that are missing
+    """Returns new dict that contains items from the first dict that are missing
     from the second dict.
-    '''
+    """
     result = {}
     for book, hexnode in first.items():
         if second.get(book) != hexnode:

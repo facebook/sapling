@@ -13,24 +13,22 @@
 
 import os
 
-from indexapi import (
-    indexapi,
-    indexexception,
-)
-
+from indexapi import indexapi, indexexception
 from mercurial import util
 
+
 class fileindexapi(indexapi):
+
     def __init__(self, repo):
         super(fileindexapi, self).__init__()
         self._repo = repo
-        root = repo.ui.config('infinitepush', 'indexpath')
+        root = repo.ui.config("infinitepush", "indexpath")
         if not root:
-            root = os.path.join('scratchbranches', 'index')
+            root = os.path.join("scratchbranches", "index")
 
-        self._nodemap = os.path.join(root, 'nodemap')
-        self._bookmarkmap = os.path.join(root, 'bookmarkmap')
-        self._metadatamap = os.path.join(root, 'nodemetadatamap')
+        self._nodemap = os.path.join(root, "nodemap")
+        self._bookmarkmap = os.path.join(root, "bookmarkmap")
+        self._metadatamap = os.path.join(root, "nodemetadatamap")
         self._lock = None
 
     def __enter__(self):
@@ -76,9 +74,10 @@ class fileindexapi(indexapi):
             return None
 
         if len(nodefiles) > 1:
-            raise indexexception(('ambiguous identifier \'%s\'\n'
-                        % hashprefix) +
-                        'suggestion: provide longer commithash prefix')
+            raise indexexception(
+                ("ambiguous identifier '%s'\n" % hashprefix)
+                + "suggestion: provide longer commithash prefix"
+            )
 
         return nodefiles[0]
 
@@ -94,8 +93,8 @@ class fileindexapi(indexapi):
         vfs.write(os.path.join(self._metadatamap, node), jsonmetadata)
 
     def _listbookmarks(self, pattern):
-        if pattern.endswith('*'):
-            pattern = 're:^' + pattern[:-1] + '.*'
+        if pattern.endswith("*"):
+            pattern = "re:^" + pattern[:-1] + ".*"
         kind, pat, matcher = util.stringmatcher(pattern)
         prefixlen = len(self._bookmarkmap) + 1
         for dirpath, _, books in self._repo.vfs.walk(self._bookmarkmap):

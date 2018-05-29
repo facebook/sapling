@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+
 class indexapi(object):
     """Class that manages access to infinitepush index.
 
@@ -68,6 +69,7 @@ class indexapi(object):
     def saveoptionaljsonmetadata(self, node, jsonmetadata):
         """Saves optional metadata for a given node"""
         raise NotImplementedError()
+
 
 class indexexception(Exception):
     pass

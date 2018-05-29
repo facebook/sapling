@@ -3,105 +3,103 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from .common import (
-    encodebookmarks,
-)
-from mercurial import (
-    bundle2,
-    changegroup,
-    error,
-    extensions,
-    revsetlang,
-    util,
-)
+from mercurial import bundle2, changegroup, error, extensions, revsetlang, util
 from mercurial.i18n import _
 
-scratchbranchparttype = 'b2x:infinitepush'
-scratchbookmarksparttype = 'b2x:infinitepushscratchbookmarks'
+from .common import encodebookmarks
 
-def getscratchbranchparts(repo, peer, outgoing, confignonforwardmove,
-                         ui, bookmark, create):
+
+scratchbranchparttype = "b2x:infinitepush"
+scratchbookmarksparttype = "b2x:infinitepushscratchbookmarks"
+
+
+def getscratchbranchparts(
+    repo, peer, outgoing, confignonforwardmove, ui, bookmark, create
+):
     if not outgoing.missing:
-        raise error.Abort(_('no commits to push'))
+        raise error.Abort(_("no commits to push"))
 
     if scratchbranchparttype not in bundle2.bundle2caps(peer):
-        raise error.Abort(_('no server support for %r') % scratchbranchparttype)
+        raise error.Abort(_("no server support for %r") % scratchbranchparttype)
 
-    _validaterevset(repo, revsetlang.formatspec('%ln', outgoing.missing),
-                    bookmark)
+    _validaterevset(repo, revsetlang.formatspec("%ln", outgoing.missing), bookmark)
 
     supportedversions = changegroup.supportedoutgoingversions(repo)
     # Explicitly avoid using '01' changegroup version in infinitepush to
     # support general delta
-    supportedversions.discard('01')
+    supportedversions.discard("01")
     cgversion = min(supportedversions)
     _handlelfs(repo, outgoing.missing)
-    cg = changegroup.makestream(repo, outgoing, cgversion, 'push')
+    cg = changegroup.makestream(repo, outgoing, cgversion, "push")
 
     params = {}
-    params['cgversion'] = cgversion
+    params["cgversion"] = cgversion
     if bookmark:
-        params['bookmark'] = bookmark
+        params["bookmark"] = bookmark
         if create:
-            params['create'] = '1'
+            params["create"] = "1"
     if confignonforwardmove:
-        params['force'] = '1'
+        params["force"] = "1"
 
     parts = []
 
     # .upper() marks this as a mandatory part: server will abort if there's no
     #  handler
-    parts.append(bundle2.bundlepart(
-        scratchbranchparttype.upper(),
-        advisoryparams=params.iteritems(),
-        data=cg))
+    parts.append(
+        bundle2.bundlepart(
+            scratchbranchparttype.upper(), advisoryparams=params.iteritems(), data=cg
+        )
+    )
 
     try:
-        treemod = extensions.find('treemanifest')
-        remotefilelog = extensions.find('remotefilelog')
-        sendtrees = remotefilelog.shallowbundle.cansendtrees(repo,
-                                                             outgoing.missing)
+        treemod = extensions.find("treemanifest")
+        remotefilelog = extensions.find("remotefilelog")
+        sendtrees = remotefilelog.shallowbundle.cansendtrees(repo, outgoing.missing)
         if sendtrees != remotefilelog.shallowbundle.NoTrees:
-            parts.append(treemod.createtreepackpart(
-                repo, outgoing, treemod.TREEGROUP_PARTTYPE2,
-                sendtrees=sendtrees))
+            parts.append(
+                treemod.createtreepackpart(
+                    repo, outgoing, treemod.TREEGROUP_PARTTYPE2, sendtrees=sendtrees
+                )
+            )
     except KeyError:
         pass
 
     return parts
 
+
 def getscratchbookmarkspart(peer, bookmarks):
     if scratchbookmarksparttype not in bundle2.bundle2caps(peer):
-        raise error.Abort(
-            _('no server support for %r') % scratchbookmarksparttype)
+        raise error.Abort(_("no server support for %r") % scratchbookmarksparttype)
 
     return bundle2.bundlepart(
-        scratchbookmarksparttype.upper(),
-        data=encodebookmarks(bookmarks))
+        scratchbookmarksparttype.upper(), data=encodebookmarks(bookmarks)
+    )
+
 
 def _validaterevset(repo, revset, bookmark):
     """Abort if the revs to be pushed aren't valid for a scratch branch."""
     if not repo.revs(revset):
-        raise error.Abort(_('nothing to push'))
+        raise error.Abort(_("nothing to push"))
     if bookmark:
         # Allow bundle with many heads only if no bookmark is specified
-        heads = repo.revs('heads(%r)', revset)
+        heads = repo.revs("heads(%r)", revset)
         if len(heads) > 1:
-            raise error.Abort(
-                _('cannot push more than one head to a scratch branch'))
+            raise error.Abort(_("cannot push more than one head to a scratch branch"))
+
 
 def _handlelfs(repo, missing):
-    '''Special case if lfs is enabled
+    """Special case if lfs is enabled
 
     If lfs is enabled then we need to call prepush hook
     to make sure large files are uploaded to lfs
-    '''
+    """
     try:
-        lfsmod = extensions.find('lfs')
+        lfsmod = extensions.find("lfs")
         lfsmod.wrapper.uploadblobsfromrevs(repo, missing)
     except KeyError:
         # Ignore if lfs extension is not enabled
         return
+
 
 class copiedpart(object):
     """a copy of unbundlepart content that can be consumed later"""
