@@ -454,11 +454,6 @@ class HgServer(object):
 
     def _fetch_tree_impl(self, path, manifest_node):
         mfnodes = set([manifest_node])
-        base_mfnodes = set()
-
-        # The directories parameter isn't actually supported and
-        # must always be an empty list.
-        directories = []
 
         # It would be nice to initially only fetch the one tree that we need
         # immediately, and fetch the rest of the subtree later, in the
@@ -466,15 +461,14 @@ class HgServer(object):
         # mechanism to do this yet.  In the future it's probably worth adding a
         # "depth" parameter requesting data only down to a specific depth.
 
-        # Newer mercurial releases have self.repo.prefetchtrees()
-        # Older mercurial releases have self.treemanifest._prefetchtrees()
-        if mercurial.util.safehasattr(self.repo, "prefetchtrees"):
-            # TODO: repo.prefetchtrees() does not accept a path
-            self.repo.prefetchtrees(mfnodes)
+        if path:
+            # We have to call repo._prefetchtrees() directly if we have a path.
+            # We cannot compute the set of base nodes in this case.
+            self.repo._prefetchtrees(path, mfnodes, [], [])
         else:
-            self.treemanifest._prefetchtrees(
-                self.repo, path, mfnodes, base_mfnodes, directories
-            )
+            # When querying the top-level node use repo.prefetchtrees()
+            # It will compute a reasonable set of base nodes to send in the query.
+            self.repo.prefetchtrees(mfnodes)
 
     def send_chunk(self, request, data, is_last=True):
         flags = 0
