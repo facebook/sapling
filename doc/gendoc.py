@@ -6,32 +6,30 @@ where DOC is the name of a document
 
 from __future__ import absolute_import
 
+# isort:skip_file
+
 import os
 import sys
 import textwrap
-
-# Load util so that the locale path is set by i18n.setdatapath() before
-# calling _().
-from mercurial import (
-    commands,
-    demandimport,
-    extensions,
-    help,
-    minirst,
-    ui as uimod,
-    util,
-)
-from mercurial.i18n import _, gettext
-
 
 # This script is executed during installs and may not have C extensions
 # available. Relax C module requirements.
 os.environ["HGMODULEPOLICY"] = "allow"
 # import from the live mercurial repo
 sys.path.insert(0, "..")
+from mercurial import demandimport
 
 demandimport.enable()
+
+# Load util so that the locale path is set by i18n.setdatapath() before
+# calling _().
+from mercurial import util
+
 util.datapath
+
+from mercurial import commands, extensions, help, minirst, ui as uimod
+from mercurial.i18n import _, gettext
+
 
 table = commands.table
 globalopts = commands.globalopts
