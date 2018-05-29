@@ -15,20 +15,20 @@ use Blobstore;
 
 /// A caching layer over an existing blobstore, backed by an in-memory cache layer
 #[derive(Clone)]
-pub struct CachingBlobstore<T: Blobstore + Clone> {
+pub struct MemoizedBlobstore<T: Blobstore + Clone> {
     cache: Asyncmemo<BlobstoreCacheFiller<T>>,
     blobstore: T,
 }
 
-impl<T: Blobstore + Clone> CachingBlobstore<T> {
+impl<T: Blobstore + Clone> MemoizedBlobstore<T> {
     pub fn new(blobstore: T, entries_limit: usize, bytes_limit: usize) -> Self {
         let filler = BlobstoreCacheFiller::new(blobstore.clone());
         let cache = Asyncmemo::with_limits(filler, entries_limit, bytes_limit);
-        CachingBlobstore { cache, blobstore }
+        MemoizedBlobstore { cache, blobstore }
     }
 }
 
-impl<T: Blobstore + Clone> Blobstore for CachingBlobstore<T> {
+impl<T: Blobstore + Clone> Blobstore for MemoizedBlobstore<T> {
     fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.cache
             .get(key)

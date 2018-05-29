@@ -24,7 +24,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 
 mod in_memory_cache;
-pub use in_memory_cache::CachingBlobstore;
+pub use in_memory_cache::MemoizedBlobstore;
 
 mod errors;
 pub use errors::*;

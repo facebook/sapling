@@ -24,7 +24,7 @@ use slog::{Discard, Drain, Logger};
 use time_ext::DurationExt;
 use uuid::Uuid;
 
-use blobstore::{Blobstore, CachingBlobstore};
+use blobstore::{Blobstore, MemoizedBlobstore};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
@@ -218,7 +218,7 @@ impl BlobRepo {
             io_remotes.iter().collect(),
             max_concurrent_requests_per_io_thread,
         );
-        let blobstore = CachingBlobstore::new(blobstore, usize::MAX, blobstore_cache_size);
+        let blobstore = MemoizedBlobstore::new(blobstore, usize::MAX, blobstore_cache_size);
 
         let filenodes = MysqlFilenodes::open(connection_params.clone(), DEFAULT_INSERT_CHUNK_SIZE)
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
