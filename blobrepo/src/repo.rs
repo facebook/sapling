@@ -218,8 +218,7 @@ impl BlobRepo {
             io_remotes.iter().collect(),
             max_concurrent_requests_per_io_thread,
         );
-        let blobstore =
-            CachingBlobstore::new(Arc::new(blobstore), usize::MAX, blobstore_cache_size);
+        let blobstore = CachingBlobstore::new(blobstore, usize::MAX, blobstore_cache_size);
 
         let filenodes = MysqlFilenodes::open(connection_params.clone(), DEFAULT_INSERT_CHUNK_SIZE)
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;

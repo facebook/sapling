@@ -50,6 +50,9 @@ pub use errors::*;
 /// `BlobstoreBytes` definition of equality. If `value != value2`, then the implementation's
 /// behaviour is implementation defined (it can overwrite or not write at all, as long as it does
 /// not break the atomicity guarantee, and does not have to be consistent in its behaviour).
+///
+/// Implementations of Blobstore must be `Clone` if they are to interoperate with other Mononoke
+/// uses of Blobstores
 pub trait Blobstore: Send + Sync + 'static {
     /// Fetch the value associated with `key`, or None if no value is present
     fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;

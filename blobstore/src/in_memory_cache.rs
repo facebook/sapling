@@ -4,8 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::sync::Arc;
-
 use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
@@ -16,20 +14,21 @@ use mononoke_types::BlobstoreBytes;
 use Blobstore;
 
 /// A caching layer over an existing blobstore, backed by an in-memory cache layer
-pub struct CachingBlobstore {
-    cache: Asyncmemo<BlobstoreCacheFiller>,
-    blobstore: Arc<Blobstore>,
+#[derive(Clone)]
+pub struct CachingBlobstore<T: Blobstore + Clone> {
+    cache: Asyncmemo<BlobstoreCacheFiller<T>>,
+    blobstore: T,
 }
 
-impl CachingBlobstore {
-    pub fn new(blobstore: Arc<Blobstore>, entries_limit: usize, bytes_limit: usize) -> Self {
+impl<T: Blobstore + Clone> CachingBlobstore<T> {
+    pub fn new(blobstore: T, entries_limit: usize, bytes_limit: usize) -> Self {
         let filler = BlobstoreCacheFiller::new(blobstore.clone());
         let cache = Asyncmemo::with_limits(filler, entries_limit, bytes_limit);
         CachingBlobstore { cache, blobstore }
     }
 }
 
-impl Blobstore for CachingBlobstore {
+impl<T: Blobstore + Clone> Blobstore for CachingBlobstore<T> {
     fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.cache
             .get(key)
@@ -46,17 +45,17 @@ impl Blobstore for CachingBlobstore {
     }
 }
 
-struct BlobstoreCacheFiller {
-    blobstore: Arc<Blobstore>,
+struct BlobstoreCacheFiller<T> {
+    blobstore: T,
 }
 
-impl BlobstoreCacheFiller {
-    fn new(blobstore: Arc<Blobstore>) -> Self {
+impl<T> BlobstoreCacheFiller<T> {
+    fn new(blobstore: T) -> Self {
         Self { blobstore }
     }
 }
 
-impl Filler for BlobstoreCacheFiller {
+impl<T: Blobstore + Clone> Filler for BlobstoreCacheFiller<T> {
     type Key = String;
     type Value = BoxFuture<BlobstoreBytes, Option<Error>>;
 
