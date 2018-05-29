@@ -1028,8 +1028,7 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
     else:
         parenttree = cstore.treemanifest(tmfl.datastore)
 
-    diff = _getflatdiff(mfl, mfctx)
-    added, removed = _difftoaddremove(diff)
+    added, removed = _getflatdiff(mfl, mfctx)
     newtree = _getnewtree(parenttree, added, removed)
 
     # Let's use the provided ctx's linknode. We exclude memmanifestctx's because
@@ -1081,7 +1080,8 @@ def _getflatdiff(mfl, mfctx):
         parentflat = manifest.manifestdict()
 
     newflat = mfctx.read()
-    return parentflat.diff(newflat)
+    diff = parentflat.diff(newflat)
+    return _difftoaddremove(diff)
 
 def _getfastflatdiff(mfl, mfctx):
     mfrevlog = mfl._revlog
