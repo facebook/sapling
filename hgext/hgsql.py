@@ -781,6 +781,8 @@ def wraprepo(repo):
                 # circumvent this when we sync from the server.
                 configbackups.append(ui.backupconfig("hooks", "pretxnopen.hg-ssh"))
                 self.ui.setconfig("hooks", "pretxnopen.hg-ssh", None)
+                configbackups.append(ui.backupconfig("hooks", "pretxnopen.hg-rsh"))
+                self.ui.setconfig("hooks", "pretxnopen.hg-rsh", None)
                 configbackups.append(
                     ui.backupconfig("hooks", "pretxnopen.readonlyrejectpush")
                 )

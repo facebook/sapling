@@ -1376,7 +1376,7 @@ def handlecommandexception(ui):
 
 
 def rejectpush(ui, **kwargs):
-    ui.warn(("Permission denied\n"))
+    ui.warn(("Permission denied - blocked by readonlyrejectpush hook\n"))
     # mercurial hooks use unix process conventions for hook return values
     # so a truthy return means failure
     return True

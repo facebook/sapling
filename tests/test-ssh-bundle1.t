@@ -427,9 +427,9 @@ Test hg-ssh in read-only mode:
   searching for changes
   devel-warn: using deprecated bundlev1 format
    at: */changegroup.py:* (makechangegroup) (glob)
-  remote: Permission denied
+  remote: Permission denied - blocked by readonlyrejectpush hook
   remote: abort: pretxnopen.readonlyrejectpush hook failed
-  remote: Permission denied
+  remote: Permission denied - blocked by readonlyrejectpush hook
   remote: pushkey-abort: prepushkey.readonlyrejectpush hook failed
   updating 6c0482d977a3 to public failed!
   [1]
