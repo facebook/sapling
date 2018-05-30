@@ -25,7 +25,6 @@ MTStat = NamedTuple("MTStat", [("st_uid", int), ("st_dev", int)])
 
 
 class MountTable(abc.ABC):
-
     @abc.abstractmethod
     def read(self) -> List[MountInfo]:
         "Returns the list of system mounts."
@@ -59,7 +58,6 @@ def parse_mtab(contents: bytes) -> List[MountInfo]:
 
 
 class LinuxMountTable(MountTable):
-
     def read(self) -> List[MountInfo]:
         # What's the most portable mtab path? I've seen both /etc/mtab and
         # /proc/self/mounts.  CentOS 6 in particular does not symlink /etc/mtab

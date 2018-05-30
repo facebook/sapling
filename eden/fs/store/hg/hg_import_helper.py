@@ -117,7 +117,6 @@ FLAG_MORE_CHUNKS = 0x02
 
 
 class Request(object):
-
     def __init__(self, txn_id, command, flags, body):
         self.txn_id = txn_id
         self.command = command
@@ -138,7 +137,6 @@ def cmd(command_id):
 
 
 class HgUI(mercurial.ui.ui):
-
     def __init__(self, src=None):
         super(HgUI, self).__init__(src=src)
         # Always print to stderr, never to stdout.
@@ -155,7 +153,6 @@ class HgUI(mercurial.ui.ui):
 
 
 class HgServer(object):
-
     def __init__(self, repo_path, config_overrides, in_fd=None, out_fd=None):
         """
         Create an HgServer.

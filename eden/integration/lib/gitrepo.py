@@ -25,7 +25,6 @@ class GitError(CommandError):
 
 
 class GitRepository(repobase.Repository):
-
     def __init__(self, path: str) -> None:
         super().__init__(path)
         self.git_bin = FindExe.GIT

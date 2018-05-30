@@ -187,7 +187,6 @@ class BasicTest(testcase.EdenRepoTest):
             os.umask(original_umask)
 
     def test_access(self) -> None:
-
         def check_access(path: str, mode: int) -> bool:
             return os.access(os.path.join(self.mount, path), mode)
 

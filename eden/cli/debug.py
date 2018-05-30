@@ -107,7 +107,6 @@ def parse_object_id(value: str) -> bytes:
 
 @debug_cmd("tree", "Show eden's data for a source control tree")
 class TreeCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-L",
@@ -141,7 +140,6 @@ class TreeCmd(Subcmd):
 
 @debug_cmd("blob", "Show eden's data for a source control blob")
 class BlobCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-L",
@@ -168,7 +166,6 @@ class BlobCmd(Subcmd):
 
 @debug_cmd("blobmeta", "Show eden's metadata about a source control blob")
 class BlobMetaCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-L",
@@ -213,7 +210,6 @@ def _parse_mode(mode: int) -> Tuple[str, int]:
 
 @debug_cmd("buildinfo", "Show the build info for the Eden server")
 class BuildInfoCmd(Subcmd):
-
     def run(self, args: argparse.Namespace) -> int:
         config = cmd_util.create_config(args)
         do_buildinfo(config)
@@ -231,7 +227,6 @@ def do_buildinfo(config: config_mod.Config, out: Optional[IO[bytes]] = None) -> 
 
 @debug_cmd("uptime", "Check how long edenfs has been running")
 class UptimeCmd(Subcmd):
-
     def run(self, args: argparse.Namespace) -> int:
         config = cmd_util.create_config(args)
         do_uptime(config)
@@ -250,7 +245,6 @@ def do_uptime(config: config_mod.Config, out: Optional[IO[bytes]] = None) -> Non
 
 @debug_cmd("hg_copy_map_get_all", "Copymap for dirstate")
 class HgCopyMapGetAllCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
@@ -275,7 +269,6 @@ def _print_copymap(copy_map: Dict[str, str]) -> None:
 
 @debug_cmd("hg_dirstate", "Print full dirstate")
 class HgDirstateCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
@@ -301,7 +294,6 @@ class HgDirstateCmd(Subcmd):
 
 @debug_cmd("hg_get_dirstate_tuple", "Dirstate status for file")
 class HgGetDirstateTupleCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path", help="The path to the file whose status should be queried."
@@ -383,7 +375,6 @@ def _get_dirstate_data(
 
 @debug_cmd("inode", "Show data about loaded inodes")
 class InodeCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
@@ -407,7 +398,6 @@ class InodeCmd(Subcmd):
 
 @debug_cmd("fuse_calls", "Show data about outstanding fuse calls")
 class FuseCallsCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("path", help="The path to the eden mount point.")
 
@@ -475,7 +465,6 @@ def _load_overlay_tree(overlay_dir: str, inode_number: int) -> OverlayDir:
 
 
 def _print_overlay_tree(inode_number: int, path: str, tree_data: OverlayDir):
-
     def hex(binhash) -> str:
         if binhash is None:
             return "None"
@@ -576,7 +565,6 @@ def _display_overlay(
 
 @debug_cmd("overlay", "Show data about the overlay")
 class OverlayCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-n",
@@ -620,7 +608,6 @@ class OverlayCmd(Subcmd):
 
 @debug_cmd("getpath", "Get the eden path that corresponds to an inode number")
 class GetPathCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
@@ -653,7 +640,6 @@ class GetPathCmd(Subcmd):
 
 @debug_cmd("unload", "Unload unused inodes")
 class UnloadInodesCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
@@ -685,7 +671,6 @@ class UnloadInodesCmd(Subcmd):
 
 @debug_cmd("flush_cache", "Flush kernel cache for inode")
 class FlushCacheCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path", help="Path to a directory/file inside an eden mount."
@@ -703,7 +688,6 @@ class FlushCacheCmd(Subcmd):
 
 @debug_cmd("log", "Display the eden log file")
 class LogCmd(Subcmd):
-
     def run(self, args: argparse.Namespace) -> int:
         # Display eden's log with the system pager if possible.  We could
         # add a --tail option.
@@ -729,7 +713,6 @@ class LogCmd(Subcmd):
     "set_log_level", "Set the log level for a given category in the edenfs daemon"
 )
 class SetLogLevelCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("category", type=str, help="Period-separated log category.")
         parser.add_argument(
@@ -754,7 +737,6 @@ class SetLogLevelCmd(Subcmd):
 
 @debug_cmd("journal", "Prints the most recent N entries from the journal")
 class DebugLevelCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-n",
@@ -853,7 +835,6 @@ def print_raw_journal_deltas(
 # does not show up in the --help output.
 @subcmd_mod.subcmd("debug")
 class DebugCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         # Save the parser so we can use it to print help in run() if we are
         # called with no arguments.

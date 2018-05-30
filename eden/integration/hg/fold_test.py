@@ -12,7 +12,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class FoldTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo):
         repo.write_file("letters", "a\nb\nc\n")
         repo.write_file("numbers", "1\n2\n3\n")

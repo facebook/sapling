@@ -21,7 +21,6 @@ PAYLOAD = b"W00t\n"
 
 @testcase.eden_repo_test
 class UnixSocketTest(testcase.EdenRepoTest):
-
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")
@@ -41,7 +40,6 @@ class UnixSocketTest(testcase.EdenRepoTest):
             sock.listen(1)
 
             class Client(threading.Thread):
-
                 def run(self) -> None:
                     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     try:

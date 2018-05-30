@@ -18,7 +18,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class FilesTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("README.md", "docs\n")
         repo.write_file("LICENSE", "legal legal\n")

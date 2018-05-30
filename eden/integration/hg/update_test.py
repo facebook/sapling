@@ -20,7 +20,6 @@ from eden.integration.lib import hgrepo
 
 @hg_test
 class UpdateTest(EdenHgTestCase):
-
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {
             "eden.fs.inodes.TreeInode": "DBG5",

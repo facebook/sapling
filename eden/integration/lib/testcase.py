@@ -137,7 +137,6 @@ class EdenTestCase(TestParent):
         self.addCleanup(self.report_time, "clean up started")
 
     def setup_eden_test(self) -> None:
-
         def cleanup_tmp_dir() -> None:
             if os.environ.get("EDEN_TEST_NO_CLEANUP"):
                 print("Leaving behind eden test directory %r" % self.tmp_dir)
@@ -406,14 +405,11 @@ def test_replicator(
 def _replicate_eden_repo_test(
     test_class: Type[EdenRepoTest]
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
-
     class HgRepoTest(test_class):
-
         def create_repo(self, name: str) -> repobase.Repository:
             return self.create_hg_repo(name)
 
     class GitRepoTest(test_class):
-
         def create_repo(self, name: str) -> repobase.Repository:
             return self.create_git_repo(name)
 

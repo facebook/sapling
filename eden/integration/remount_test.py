@@ -15,7 +15,6 @@ from .lib import edenclient, testcase
 
 @testcase.eden_repo_test
 class RemountTest(testcase.EdenRepoTest):
-
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.write_file("adir/file", "foo!\n")

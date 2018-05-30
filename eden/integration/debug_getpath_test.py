@@ -18,7 +18,6 @@ from .lib import edenclient, testcase
 
 @testcase.eden_repo_test
 class DebugGetPathTest(testcase.EdenRepoTest):
-
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")

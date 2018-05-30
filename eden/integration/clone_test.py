@@ -28,7 +28,6 @@ repo_name = "main"
 
 @testcase.eden_repo_test
 class CloneTest(testcase.EdenRepoTest):
-
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")

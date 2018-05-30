@@ -793,7 +793,6 @@ def _create_watchman_subscription(
 
 
 class FakeClient:
-
     def __init__(self):
         self._mounts = []
 
@@ -808,7 +807,6 @@ class FakeClient:
 
 
 class FakeConfig:
-
     def __init__(
         self,
         mount_paths: Dict[str, Dict[str, str]],
@@ -838,7 +836,6 @@ class FakeConfig:
 
 
 class FakeMountTable(mtab.MountTable):
-
     def __init__(self):
         self.mounts: List[mtab.MountInfo] = []
         self.unmount_lazy_calls: List[bytes] = []

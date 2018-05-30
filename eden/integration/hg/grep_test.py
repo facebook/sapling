@@ -15,7 +15,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class GrepTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo):
         repo.write_file("file_in_root.txt", "\n".join(["apple", "  banana", "cat"]))
         repo.write_file("d1/d2/afile.txt", "\n".join(["banana", "  banana"]))

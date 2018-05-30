@@ -23,7 +23,6 @@ except ImportError:
 
 
 class BuildOptions(object):
-
     def __init__(self, num_jobs, external_dir, install_dir):
         self.num_jobs = num_jobs
         if not self.num_jobs:
@@ -41,7 +40,6 @@ class BuildOptions(object):
 
 
 class Project(object):
-
     def __init__(self, name, opts, updater, builder):
         self.name = name
         self.opts = opts
@@ -63,7 +61,6 @@ class Project(object):
 
 
 class GitUpdater(object):
-
     def __init__(self, repo, branch="master"):
         self.origin_repo = repo
         self.branch = branch
@@ -100,7 +97,6 @@ class GitUpdater(object):
 
 
 class BuilderBase(object):
-
     def __init__(self, subdir=None, env=None, build_dir=None):
         if env:
             self.env = os.environ.copy()
@@ -135,7 +131,6 @@ class BuilderBase(object):
 
 
 class MakeBuilder(BuilderBase):
-
     def __init__(self, subdir=None, env=None, args=None):
         super(MakeBuilder, self).__init__(subdir=subdir, env=env)
         self.args = args or []
@@ -149,7 +144,6 @@ class MakeBuilder(BuilderBase):
 
 
 class AutoconfBuilder(BuilderBase):
-
     def __init__(self, subdir=None, env=None, args=None):
         super(BuilderBase, self).__init__(subdir=subdir, env=env)
         self.args = args or []
@@ -168,7 +162,6 @@ class AutoconfBuilder(BuilderBase):
 
 
 class CMakeBuilder(BuilderBase):
-
     def __init__(self, subdir=None, env=None, defines=None):
         super(CMakeBuilder, self).__init__(subdir=subdir, env=env, build_dir="_build")
         self.defines = defines or {}

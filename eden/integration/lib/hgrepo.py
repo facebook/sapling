@@ -27,7 +27,6 @@ class HgError(CommandError):
 
 
 class HgRepository(repobase.Repository):
-
     def __init__(self, path: str, system_hgrc: Optional[str] = None) -> None:
         """
         If hgrc is specified, it will be used as the value of the HGRCPATH

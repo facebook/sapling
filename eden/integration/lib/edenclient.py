@@ -390,7 +390,6 @@ class EdenFS(object):
 
 
 class EdenCommandError(subprocess.CalledProcessError):
-
     def __init__(self, ex: subprocess.CalledProcessError) -> None:
         super().__init__(ex.returncode, ex.cmd, output=ex.output, stderr=ex.stderr)
 

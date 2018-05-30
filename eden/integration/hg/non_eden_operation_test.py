@@ -16,7 +16,6 @@ from eden.integration.lib import hgrepo
 
 @hg_test
 class NonEdenOperationTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
 

@@ -20,7 +20,6 @@ from eden.integration.lib import hgrepo
 # multiple configurations.
 @hg_test("Treemanifest")
 class NegativeCachingTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("src/main.c", "hello world\n")
         repo.write_file("src/hello.c", "hello2\n")

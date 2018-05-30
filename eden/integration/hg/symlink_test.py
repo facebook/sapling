@@ -12,7 +12,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class SymlinkTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo):
         repo.write_file("contents1", "c1\n")
         repo.write_file("contents2", "c2\n")

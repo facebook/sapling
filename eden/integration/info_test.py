@@ -15,7 +15,6 @@ from .lib import testcase
 
 @testcase.eden_repo_test
 class InfoTest(testcase.EdenRepoTest):
-
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")

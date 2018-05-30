@@ -22,7 +22,6 @@ from libfb.py import pathutils
 
 
 class cached_property(object):
-
     def __init__(self, find: Callable[["FindExeClass"], str]) -> None:
         self.name: Optional[str] = None
         self.find = find
@@ -40,7 +39,6 @@ class cached_property(object):
 
 
 class FindExeClass(object):
-
     def __init__(self) -> None:
         self._cache: Dict[str, str] = {}
 

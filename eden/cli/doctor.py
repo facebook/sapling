@@ -45,7 +45,6 @@ class CheckResult:
 
 
 class Check(abc.ABC):
-
     @abc.abstractmethod
     def do_check(self, dry_run: bool) -> CheckResult:
         pass
@@ -175,7 +174,6 @@ def printable_bytes(b: bytes) -> str:
 
 
 class StaleMountsCheck(Check):
-
     def __init__(
         self, active_mount_points: List[str], mount_table: mtab.MountTable
     ) -> None:
@@ -282,7 +280,6 @@ class StaleMountsCheck(Check):
 
 
 class WatchmanUsingEdenSubscriptionCheck(Check):
-
     def __init__(self, path: str, watchman_roots: Set[str], is_healthy: bool) -> None:
         self._path = path
         self._watchman_roots = watchman_roots
@@ -348,7 +345,6 @@ NUCLIDE_HG_SUBSCRIPTIONS = [
 
 
 class NuclideHasExpectedWatchmanSubscriptions(Check):
-
     def __init__(
         self, path: str, watchman_roots: Set[str], nuclide_roots: Set[str]
     ) -> None:
@@ -451,7 +447,6 @@ class NuclideHasExpectedWatchmanSubscriptions(Check):
 
 
 class SnapshotDirstateConsistencyCheck(Check):
-
     def __init__(self, path: str, snapshot_hex: str, is_healthy: bool) -> None:
         self._path = path
         self._snapshot_hex = snapshot_hex
@@ -484,7 +479,6 @@ class SnapshotDirstateConsistencyCheck(Check):
 
 
 class EdenfsIsLatest(Check):
-
     def __init__(self, config) -> None:
         self._config = config
 

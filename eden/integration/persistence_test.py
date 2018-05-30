@@ -16,7 +16,6 @@ from .lib import testcase
 
 @testcase.eden_repo_test
 class PersistenceTest(testcase.EdenRepoTest):
-
     def populate_repo(self) -> None:
         self.repo.write_file("file_in_root", "contents1")
         self.repo.write_file("subdir/file_in_subdir", "contents2")

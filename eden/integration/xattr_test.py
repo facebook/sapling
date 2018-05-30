@@ -19,7 +19,6 @@ def sha1(value: bytes) -> str:
 
 @testcase.eden_repo_test
 class XattrTest(testcase.EdenRepoTest):
-
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")

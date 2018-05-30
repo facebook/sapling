@@ -25,7 +25,6 @@ class AnsiEscapeCodes:
 
 
 class StdoutPrinter:
-
     def __init__(self, escapes: Optional[AnsiEscapeCodes] = None) -> None:
         if escapes is not None:
             self._bold = escapes.bold

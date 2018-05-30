@@ -21,7 +21,6 @@ SOCKET_PATH = "socket"
 
 
 class EdenNotRunningError(Exception):
-
     def __init__(self, eden_dir):
         msg = "edenfs daemon does not appear to be running: tried %s" % eden_dir
         super(EdenNotRunningError, self).__init__(msg)

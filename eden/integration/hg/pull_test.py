@@ -12,7 +12,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test("Flatmanifest", "Treemanifest", "TreeOnly")
 class PullTest(EdenHgTestCase):
-
     def create_backing_repo(self):
         # Create a server repository first
         self.server_repo = self.create_server_repo()

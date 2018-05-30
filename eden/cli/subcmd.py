@@ -94,7 +94,6 @@ def subcmd(
     """
 
     def wrapper(cls: Type[Subcmd]) -> Type[Subcmd]:
-
         class SubclassedCmd(cls):
             NAME = name
             HELP = help
@@ -190,7 +189,6 @@ def do_help(parser: argparse.ArgumentParser, help_args: List[str]) -> int:
 
 @subcmd("help", "Display command line usage information")
 class HelpCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("args", nargs="*")
 

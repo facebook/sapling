@@ -14,7 +14,6 @@ from .. import configinterpolator
 
 
 class InterpolatorTest(unittest.TestCase):
-
     def test_basic_subs(self):
         defaults = {"USER": "wez", "RECURSIVE": "a${RECURSIVE}b"}
         parser = configparser.ConfigParser(

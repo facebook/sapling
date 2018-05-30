@@ -12,7 +12,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class BranchTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo):
         repo.write_file("a_file.txt", "")
         repo.commit("first commit")

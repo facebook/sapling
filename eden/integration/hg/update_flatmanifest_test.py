@@ -19,7 +19,6 @@ from eden.integration.lib import hgrepo
 
 
 class FlatmanifestFallbackUpdateTest(EdenHgTestCase):
-
     def apply_hg_config_variant(self, config: configparser.ConfigParser) -> None:
         # Do nothing here for now.
         # Keep treemanifest disabled initially during populate_backing_repo()

@@ -14,7 +14,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, JournalEntry, hg_test
 
 @hg_test
 class JournalTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
         repo.write_file("foo/bar.txt", "test\n")

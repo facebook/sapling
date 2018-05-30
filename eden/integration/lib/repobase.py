@@ -14,7 +14,6 @@ from typing import List, Optional
 
 
 class Repository(object):
-
     def __init__(self, path: str) -> None:
         self.path = path
 

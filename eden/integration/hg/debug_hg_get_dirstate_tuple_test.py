@@ -14,7 +14,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class DebugHgGetDirstateTupleTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo):
         repo.write_file("hello", "hola\n")
         repo.write_file("dir/file", "blah\n")

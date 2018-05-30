@@ -81,14 +81,12 @@ def do_version(args: argparse.Namespace) -> int:
 
 @subcmd("version", "Print Eden's version information.")
 class VersionCmd(Subcmd):
-
     def run(self, args: argparse.Namespace) -> int:
         return do_version(args)
 
 
 @subcmd("info", "Get details about a checkout")
 class InfoCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "client", default=None, nargs="?", help="Name of the checkout"
@@ -104,7 +102,6 @@ class InfoCmd(Subcmd):
 
 @subcmd("status", "Check the health of the Eden service", aliases=["health"])
 class StatusCmd(Subcmd):
-
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
         health_info = config.check_health()
@@ -118,7 +115,6 @@ class StatusCmd(Subcmd):
 
 @subcmd("repository", "List all repositories")
 class RepositoryCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "name", nargs="?", default=None, help="Name of the checkout to mount"
@@ -162,7 +158,6 @@ class RepositoryCmd(Subcmd):
 
 @subcmd("list", "List available checkouts")
 class ListCmd(Subcmd):
-
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
 
@@ -193,7 +188,6 @@ class RepoError(Exception):
 
 @subcmd("clone", "Create a clone of a specific repo and check it out")
 class CloneCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "repo",
@@ -386,7 +380,6 @@ re-run `eden clone` with --allow-empty-repo"""
 
 @subcmd("config", "Query Eden configuration")
 class ConfigCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--get", help="Name of value to get")
 
@@ -405,7 +398,6 @@ class ConfigCmd(Subcmd):
 
 @subcmd("doctor", "Debug and fix issues with Eden")
 class DoctorCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--dry-run",
@@ -429,7 +421,6 @@ class DoctorCmd(Subcmd):
     ),
 )
 class MountCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "paths", nargs="+", metavar="path", help="The checkout mount path"
@@ -450,7 +441,6 @@ class MountCmd(Subcmd):
 
 @subcmd("remove", "Remove an eden checkout", aliases=["rm"])
 class RemoveCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-y",
@@ -510,7 +500,6 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
 
 @subcmd("prefetch", "Prefetch content for matching file patterns")
 class PrefetchCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--repo", help="Specify path to repo root (default: root of cwd)"
@@ -585,7 +574,6 @@ class PrefetchCmd(Subcmd):
 
 @subcmd("unmount", "Unmount a specific checkout")
 class UnmountCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--destroy",
@@ -613,7 +601,6 @@ class UnmountCmd(Subcmd):
 
 @subcmd("start", "Start the edenfs daemon", aliases=["daemon"])
 class StartCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--daemon-binary", help="Path to the binary for the Eden daemon."
@@ -687,7 +674,6 @@ RESTART_MODE_GRACEFUL = "graceful"
 
 @subcmd("restart", "Restart the edenfs daemon")
 class RestartCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         mode_group = parser.add_mutually_exclusive_group()
         mode_group.add_argument(
@@ -769,7 +755,6 @@ class RestartCmd(Subcmd):
 
 @subcmd("rage", "Prints diagnostic information about eden")
 class RageCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--stdout",
@@ -809,7 +794,6 @@ SHUTDOWN_EXIT_CODE_ERROR = 4
 
 @subcmd("stop", "Shutdown the daemon", aliases=["shutdown"])
 class StopCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-t",

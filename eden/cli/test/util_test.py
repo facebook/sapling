@@ -13,9 +13,7 @@ from .. import util
 
 
 class UtilTest(unittest.TestCase):
-
     def test_is_valid_sha1(self):
-
         def is_valid(sha1: str):
             return util.is_valid_sha1(sha1)
 

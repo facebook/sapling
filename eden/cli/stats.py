@@ -127,7 +127,6 @@ def total_private_dirty(maps: List[MemoryMapping]) -> Optional[int]:
 
 @stats_cmd("memory", "Show memory statistics for Eden")
 class MemoryCmd(Subcmd):
-
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout
         stats_print.write_heading("Memory Stats for EdenFS", out)
@@ -166,7 +165,6 @@ def get_memory_counters(counters: DiagInfoCounters) -> Table:
 
 @stats_cmd("io", "Show information about the number of I/O calls")
 class IoCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-A",
@@ -234,7 +232,6 @@ def get_fuse_counters(counters: DiagInfoCounters, all_flg: bool) -> Table:
 
 @stats_cmd("latency", "Show information about the latency of I/O calls")
 class LatencyCmd(Subcmd):
-
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-A",
@@ -304,7 +301,6 @@ def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
 
 @stats_cmd("thrift", "Show the number of received thrift calls")
 class ThriftCmd(Subcmd):
-
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout
         stats_print.write_heading("Counts of Thrift calls performed in EdenFs", out)

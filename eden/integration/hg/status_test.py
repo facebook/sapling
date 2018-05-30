@@ -14,7 +14,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class StatusTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo):
         repo.write_file("hello.txt", "hola")
         repo.commit("Initial commit.")
@@ -59,7 +58,6 @@ class StatusTest(EdenHgTestCase):
 # repository contents.
 @hg_test
 class StatusRevertTest(EdenHgTestCase):
-
     def populate_backing_repo(self, repo):
         repo.write_file("dir1/a.txt", "original contents of a\n")
         repo.write_file("dir1/b.txt", "b.txt\n")

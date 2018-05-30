@@ -82,6 +82,7 @@ class ClientConfig:
       files are actually stored and values are the relative pathnames in the
       EdenFS mount that maps to them.
     """
+
     __slots__ = ("path", "scm_type", "hooks_path", "bind_mounts", "default_revision")
 
     def __init__(
@@ -100,7 +101,6 @@ class ClientConfig:
 
 
 class Config:
-
     def __init__(self, config_dir: str, etc_eden_dir: str, home_dir: str) -> None:
         self._config_dir = config_dir
         self._etc_eden_dir = etc_eden_dir
@@ -615,7 +615,6 @@ Do you want to run `eden mount %s` instead?"""
         # > ResourceWarning: subprocess <pid> is still running
         # (Of course it's still running - our goal was to start a process.)
         class NoDestructorWarningHack(subprocess.Popen):
-
             def __del__(self) -> None:
                 pass
 
