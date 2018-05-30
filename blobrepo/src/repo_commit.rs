@@ -277,28 +277,22 @@ impl UploadEntries {
         let filenodes = {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             let uploaded_entries = mem::replace(&mut inner.uploaded_entries, HashMap::new());
-            let filenodeinfos = stream::iter_ok(uploaded_entries.into_iter())
-                .and_then(|(path, blobentry): (_, HgBlobEntry)| {
-                    blobentry
-                        .get_parents()
-                        .map(move |parents| (path, blobentry, parents))
-                })
-                .and_then(|(path, blobentry, parents)| {
-                    let copyfrom = compute_copy_from_info(&path, &blobentry, &parents);
-                    copyfrom.and_then(move |copyfrom| Ok((path, blobentry, parents, copyfrom)))
-                })
-                .map(move |(path, blobentry, parents, copyfrom)| {
-                    let (p1, p2) = parents.get_nodes();
-                    FilenodeInfo {
-                        path,
-                        filenode: DFileNodeId::new(blobentry.get_hash().into_nodehash()),
-                        p1: p1.cloned().map(DFileNodeId::new),
-                        p2: p2.cloned().map(DFileNodeId::new),
-                        copyfrom,
-                        linknode: DChangesetId::new(cs_id),
-                    }
-                })
-                .boxify();
+            let filenodeinfos =
+                stream::futures_unordered(uploaded_entries.into_iter().map(|(path, blobentry)| {
+                    blobentry.get_parents().and_then(move |parents| {
+                        compute_copy_from_info(&path, &blobentry, &parents).map(move |copyfrom| {
+                            let (p1, p2) = parents.get_nodes();
+                            FilenodeInfo {
+                                path,
+                                filenode: DFileNodeId::new(blobentry.get_hash().into_nodehash()),
+                                p1: p1.cloned().map(DFileNodeId::new),
+                                p2: p2.cloned().map(DFileNodeId::new),
+                                copyfrom,
+                                linknode: DChangesetId::new(cs_id),
+                            }
+                        })
+                    })
+                })).boxify();
 
             filenodes.add_filenodes(filenodeinfos, &inner.repoid)
         };
