@@ -48,11 +48,11 @@ pub struct WorkspaceSubscriber {
     /// Tcp port to run a receiver
     pub(crate) tcp_receiver_port: u16,
     /// throttling rate for logging alive notification
-    pub(crate) alive_throttling_rate_sec: u64,
+    pub(crate) alive_throttling_rate: Duration,
     /// throttling rate for logging errors
-    pub(crate) error_throttling_rate_sec: u64,
+    pub(crate) error_throttling_rate: Duration,
     /// throttling rate for logging no active subscriptions
-    pub(crate) no_subs_throttling_rate_sec: u64,
+    pub(crate) no_subs_throttling_rate: Duration,
 }
 
 // Enum stores last command id in an atomic usize
@@ -73,16 +73,16 @@ pub struct Command(pub (String,));
 
 struct ThrottlingExecutor {
     /// throttling rate in seconds
-    rate: u64,
+    rate: Duration,
     /// last time of command execution
     last_time: SystemTime,
 }
 
 impl ThrottlingExecutor {
-    pub fn new(rate_sec: u64) -> ThrottlingExecutor {
+    pub fn new(rate: Duration) -> ThrottlingExecutor {
         ThrottlingExecutor {
-            rate: rate_sec,
-            last_time: SystemTime::now() - Duration::new(rate_sec, 0),
+            rate,
+            last_time: SystemTime::now() - rate,
         }
     }
     /// Run command if it is time, skip otherwise
@@ -90,7 +90,7 @@ impl ThrottlingExecutor {
     fn execute(&mut self, f: &Fn()) {
         let now = SystemTime::now();
         if now.duration_since(self.last_time)
-            .map(|res| res.as_secs() >= self.rate)
+            .map(|elapsed| elapsed >= self.rate)
             .unwrap_or(true)
         {
             f();
@@ -100,7 +100,7 @@ impl ThrottlingExecutor {
     /// Reset time to pretend the command last execution was a while ago
     #[inline]
     fn reset(&mut self) {
-        self.last_time = SystemTime::now() - Duration::new(self.rate, 0);
+        self.last_time = SystemTime::now() - self.rate;
     }
 }
 
@@ -116,9 +116,9 @@ impl WorkspaceSubscriber {
             )?,
             cloudsync_retries: config.cloudsync_retries,
             tcp_receiver_port: config.tcp_receiver_port,
-            alive_throttling_rate_sec: config.alive_throttling_rate_sec,
-            error_throttling_rate_sec: config.error_throttling_rate_sec,
-            no_subs_throttling_rate_sec: config.no_subs_throttling_rate_sec,
+            alive_throttling_rate: Duration::new(config.alive_throttling_rate_sec, 0),
+            error_throttling_rate: Duration::new(config.error_throttling_rate_sec, 0),
+            no_subs_throttling_rate: Duration::new(config.no_subs_throttling_rate_sec, 0),
         })
     }
 
@@ -181,7 +181,7 @@ impl WorkspaceSubscriber {
             let port = self.tcp_receiver_port;
             thread::spawn(move || WorkspaceSubscriber::run_commands_receiver(port, command_id))
         };
-        let mut throttler_no_subs = ThrottlingExecutor::new(self.no_subs_throttling_rate_sec);
+        let mut throttler_no_subs = ThrottlingExecutor::new(self.no_subs_throttling_rate);
         loop {
             match CommandIds::from_usize(command_id.load(Ordering::Relaxed))
                 .unwrap_or(CommandIds::None)
@@ -245,8 +245,8 @@ impl WorkspaceSubscriber {
             let repo_roots = repo_roots.clone();
             let cloudsync_retries = self.cloudsync_retries;
             let command_id = command_id.clone();
-            let alive_throttling_rate_sec = self.alive_throttling_rate_sec;
-            let error_throttling_rate_sec = self.error_throttling_rate_sec;
+            let alive_throttling_rate = self.alive_throttling_rate;
+            let error_throttling_rate = self.error_throttling_rate;
 
             children.push(thread::spawn(move || {
                 info!("{} Thread started...", sid);
@@ -264,8 +264,8 @@ impl WorkspaceSubscriber {
                 }
                 info!("{} Start listening to notifications", sid);
 
-                let mut throttler_alive = ThrottlingExecutor::new(alive_throttling_rate_sec);
-                let mut throttler_error = ThrottlingExecutor::new(error_throttling_rate_sec);
+                let mut throttler_alive = ThrottlingExecutor::new(alive_throttling_rate);
+                let mut throttler_error = ThrottlingExecutor::new(error_throttling_rate);
 
                 // the library handles automatic reconnection
                 for event in client {
