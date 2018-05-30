@@ -314,13 +314,22 @@ datapack_handle_t *open_datapack(
   // we may need to backfill the remaining offsets.
   index_offset_t last_offset = (index_offset_t)
       (index_end - handle->index_table - 1);
-  for (int jx = last_fanout_increment; jx < fanout_count; jx ++) {
-    // fill the "start" except for the last time we changed the index
-    // offset.
-    if (jx != last_fanout_increment) {
-      handle->fanout_table[jx].start_index = last_offset;
+  if (prev_index_offset == 0) {
+    // Exactly one entry contains nodes, but we can't tell which one.
+    // All entries need to search the entire file.
+    for (int jx = 0; jx < fanout_count; jx++) {
+      handle->fanout_table[jx].start_index = 0;
+      handle->fanout_table[jx].end_index = last_offset;
     }
-    handle->fanout_table[jx].end_index = last_offset;
+  } else {
+    for (int jx = last_fanout_increment; jx < fanout_count; jx++) {
+      // fill the "start" except for the last time we changed the index
+      // offset.
+      if (jx != last_fanout_increment) {
+        handle->fanout_table[jx].start_index = last_offset;
+      }
+      handle->fanout_table[jx].end_index = last_offset;
+    }
   }
   handle->status = DATAPACK_HANDLE_OK;
 

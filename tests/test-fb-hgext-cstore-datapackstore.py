@@ -12,7 +12,7 @@ import mercurial.ui
 import silenttestrunner
 from hgext.extlib.cstore import datapackstore
 from hgext.remotefilelog.datapack import fastdatapack, mutabledatapack
-from mercurial.node import nullid
+from mercurial.node import bin, nullid
 
 
 class datapackstoretests(unittest.TestCase):
@@ -59,6 +59,37 @@ class datapackstoretests(unittest.TestCase):
         chain = store.getdeltachain(revisions[0][0], revisions[0][1])
         self.assertEquals(1, len(chain))
         self.assertEquals("content", chain[0][4])
+
+    def testPackWithSameNodePrefixes(self):
+        """
+        Test a pack with several nodes that all start with the same prefix.
+
+        Previously the cdatapack code had a bug reading packs where all nodes
+        started with the same byte, causing it to fail to find most nodes in
+        the pack file.
+        """
+        packdir = self.makeTempDir()
+
+        node1 = bin("c4beedc1071590f5a0869a72efd80ce182bb1146")
+        node2 = bin("c4beede6a252041e1d8c0e8410c5c37eb6568c49")
+        node3 = bin("c4beed4045e49bf0c18e6aa3a4bdd00ff72ed99e")
+
+        packer = mutabledatapack(mercurial.ui.ui(), packdir)
+        packer.add("foo.c", node1, nullid, "stuff")
+        packer.add("bar.c", node2, nullid, "other stuff")
+        packer.add("test", node3, nullid, "things")
+        path = packer.close()
+
+        # We use fastdatapack.getmissing() to exercise the cdatapack find()
+        # function
+        pack = fastdatapack(path)
+        self.assertEquals(pack.getmissing([("foo.c", node1)]), [])
+        self.assertEquals(pack.getmissing([("bar.c", node2)]), [])
+        self.assertEquals(pack.getmissing([("test", node3)]), [])
+
+        # Confirm that getmissing() does return a node that is actually missing
+        node4 = bin("4e4a47e84ced76e1d30da10a59ad9e95c9d621d7")
+        self.assertEquals(pack.getmissing([("other.c", node4)]), [("other.c", node4)])
 
     def testGetDeltaChainMultiRev(self):
         """Test getting a 2-length delta chain."""
