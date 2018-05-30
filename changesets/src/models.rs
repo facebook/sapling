@@ -8,9 +8,9 @@ use mercurial_types::{DChangesetId, RepositoryId};
 
 use schema::{changesets, csparents};
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 #[derive(Queryable)]
-pub(crate) struct ChangesetRow {
+pub struct ChangesetRow {
     // Diesel doesn't support unsigned types.
     // TODO (sid0) T26215455: use a custom type here
     pub id: i64,

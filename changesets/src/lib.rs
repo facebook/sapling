@@ -351,18 +351,31 @@ macro_rules! impl_changesets {
                                     .map_err(failure::Error::from)
                                     .context("while fetching parents to check duplicate insertion")?;
 
-                                let old_parent_rows: Vec<_> =  old_parent_rows
-                                    .into_iter().map(|val| val.1).collect();
+                                let mut old_parent_rows: Vec<_> =  old_parent_rows
+                                    .into_iter()
+                                    .map(|val| {
+                                        let mut val = val.1;
+                                        val.id = 0; // we don't want to compare the IDs
+                                        val
+                                    }).collect();
+                                old_parent_rows.sort();
+
+                                let mut parent_rows: Vec<_> =  parent_rows
+                                    .into_iter()
+                                    .map(|mut val| {
+                                        val.id = 0; // we don't want to compare the IDs
+                                        val
+                                    }).collect();
+                                parent_rows.sort();
+
                                 if old_parent_rows == parent_rows {
                                     return Ok(false);
                                 } else {
-                                    let old_parents: Vec<_> = old_parent_rows
-                                        .into_iter().map(|parent| parent.cs_id).collect();
                                     return Err(
                                         ErrorKind::DuplicateInsertionInconsistency(
                                             cs.cs_id,
-                                            old_parents,
-                                            cs.parents.clone(),
+                                            old_parent_rows,
+                                            parent_rows,
                                         ).into()
                                     );
                                 }
