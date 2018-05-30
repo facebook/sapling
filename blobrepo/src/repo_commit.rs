@@ -424,51 +424,48 @@ pub fn process_entries(
     root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     new_child_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
 ) -> BoxFuture<(Box<Manifest + Sync>, DManifestId), Error> {
-    root_manifest
-        .and_then({
-            let entry_processor = entry_processor.clone();
-            move |root_manifest| match root_manifest {
-                None => future::ok((
-                    manifest::EmptyManifest.boxed(),
-                    DManifestId::new(D_NULL_HASH),
-                )).boxify(),
-                Some((entry, path)) => {
-                    let hash = entry.get_hash().into_nodehash();
-                    let hash_fut =
-                        if entry.get_type() == manifest::Type::Tree && path == RepoPath::RootPath {
-                            entry_processor
-                                .process_root_manifest(&entry)
-                                .map(move |_| hash)
-                                .boxify()
-                        } else {
-                            future::err(Error::from(ErrorKind::BadRootManifest(entry.get_type())))
-                                .boxify()
-                        };
-
-                    hash_fut
-                        .and_then({
-                            let entry_processor = entry_processor.clone();
-                            |hash| {
-                                new_child_entries
-                                    .for_each(move |(entry, path)| {
-                                        entry_processor.process_one_entry(&entry, path)
-                                    })
-                                    .map(move |_| hash)
-                            }
-                        })
-                        .and_then(move |root_hash| {
-                            repo.get_manifest_by_nodeid(&root_hash)
-                                .map(move |m| (m, DManifestId::new(root_hash)))
-                        })
-                        .timed(move |stats, result| {
-                            if result.is_ok() {
-                                log_cs_future_stats(&logger, "upload_entries", stats, uuid);
-                            }
-                            Ok(())
-                        })
+    let root_manifest_fut = root_manifest.and_then({
+        let entry_processor = entry_processor.clone();
+        move |root_manifest| match root_manifest {
+            None => future::ok(None).boxify(),
+            Some((entry, path)) => {
+                let hash = entry.get_hash().into_nodehash();
+                if entry.get_type() == manifest::Type::Tree && path == RepoPath::RootPath {
+                    entry_processor
+                        .process_root_manifest(&entry)
+                        .map(move |_| Some(hash))
                         .boxify()
+                } else {
+                    future::err(Error::from(ErrorKind::BadRootManifest(entry.get_type()))).boxify()
                 }
             }
+        }
+    });
+
+    let child_entries_fut = new_child_entries
+        .map({
+            let entry_processor = entry_processor.clone();
+            move |(entry, path)| entry_processor.process_one_entry(&entry, path)
+        })
+        .buffer_unordered(100)
+        .for_each(|()| future::ok(()));
+
+    root_manifest_fut
+        .join(child_entries_fut)
+        .and_then(move |(root_hash, ())| match root_hash {
+            None => future::ok((
+                manifest::EmptyManifest.boxed(),
+                DManifestId::new(D_NULL_HASH),
+            )).boxify(),
+            Some(root_hash) => repo.get_manifest_by_nodeid(&root_hash)
+                .map(move |m| (m, DManifestId::new(root_hash)))
+                .boxify(),
+        })
+        .timed(move |stats, result| {
+            if result.is_ok() {
+                log_cs_future_stats(&logger, "upload_entries", stats, uuid);
+            }
+            Ok(())
         })
         .boxify()
 }
