@@ -755,15 +755,20 @@ impl CreateChangeset {
                                     "changeset_uuid" => format!("{}", uuid),
                                     "changeset_id" => format!("{}", cs_id));
 
+                                // NOTE(luk): an attempt was made in D8187210 to split the
+                                // upload_entries signal into upload_entries and processed_entries
+                                // and to signal_parent_ready after upload_entries, so that one
+                                // doesn't need to wait for the entries to be processed. There were
+                                // no performance gains from that experiment
+                                //
+                                // We deliberately eat this error - this is only so that another
+                                // changeset can start verifying data in the blob store while we
+                                // verify this one
+                                let _ = signal_parent_ready.send((cs_id, manifest_id));
+
                                 blobcs
                                     .save(blobstore)
                                     .join(entry_processor.finalize(filenodes, cs_id))
-                                    .map(move |_| {
-                                        // We deliberately eat this error - this is only so that
-                                        // another changeset can start uploading to the blob store
-                                        // while we complete this one
-                                        let _ = signal_parent_ready.send((cs_id, manifest_id));
-                                    })
                                     .map(move |_| blobcs)
                                     .boxify()
                             }
