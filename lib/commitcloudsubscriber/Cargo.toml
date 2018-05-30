@@ -15,10 +15,12 @@ description = """ \
 """
 
 [dependencies]
+enum_primitive = "*"
 eventsource = "*"
 failure = "*"
 lazy_static = "*"
 log = "*"
+num = "*"
 serde = "*"
 serde_derive = "*"
 serde_json = "*"

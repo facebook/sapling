@@ -7,6 +7,7 @@ use std::fmt;
 pub enum ErrorKind {
     #[fail(display = "Commit Cloud `hg cloud sync` error: {}", _0)]
     CommitCloudHgCloudSyncError(String),
+    #[fail(display = "Commit Cloud config error: {}", _0)] CommitCloudConfigError(&'static str),
     #[fail(display = "Unexpected error: {}", _0)] CommitCloudUnexpectedError(String),
 }
 

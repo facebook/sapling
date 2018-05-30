@@ -6,22 +6,23 @@ use std::{str, process::Command};
 use std::{fs, io, collections::HashMap, path::{Path, PathBuf}};
 use subscriber::Subscription;
 
-pub fn read_subscriptions(
-    config: &CommitCloudConfig,
-) -> Result<HashMap<Subscription, Vec<PathBuf>>> {
-    let ref joined_pool_path = config.joined_pool_path;
+static JOINED_DIR: &str = ".commitcloud";
+static JOINED: &str = "joined";
 
-    if joined_pool_path.is_none() {
-        error!("undefined config.joined_pool_path, should never happen as there is a default");
-        bail!("undefined config.joined_pool_path, should never happen as there is a default")
-    }
+/// Map from a subscription to list of repo roots
+pub fn read_subscriptions(
+    joined_pool_path: &PathBuf,
+) -> Result<HashMap<Subscription, Vec<PathBuf>>> {
+    let mut joined_pool_path = joined_pool_path.clone();
+    joined_pool_path.push(JOINED_DIR);
+    joined_pool_path.push(JOINED);
 
     info!(
         "Reading subscription requests from '{}' folder...",
-        joined_pool_path.as_ref().unwrap().display()
+        joined_pool_path.display()
     );
 
-    let paths = fs::read_dir(joined_pool_path.as_ref().unwrap());
+    let paths = fs::read_dir(joined_pool_path);
     if let &Err(ref e) = &paths {
         if e.kind() == io::ErrorKind::NotFound {
             info!("No active subscribers");
@@ -41,11 +42,12 @@ pub fn read_subscriptions(
             let ini = Ini::read_from(&mut io::BufReader::new(file))?;
             let section = ini.section(Some("commitcloud"));
             if let Some(section) = section {
-                let workspace = section.get("workspace");
-                let repo_name = section.get("repo_name");
+                // strip whitespaces around the fields
+                let workspace = section.get("workspace").map(|workspace| workspace.trim());
+                let repo_name = section.get("repo_name").map(|repo_name| repo_name.trim());
                 let repo_root = section
                     .get("repo_root")
-                    .map(|repo_root| PathBuf::from(repo_root));
+                    .map(|repo_root| PathBuf::from(repo_root.trim()));
 
                 if workspace.is_none() || repo_name.is_none() || repo_root.is_none() {
                     info!(
@@ -101,9 +103,13 @@ pub fn read_subscriptions(
     return Ok(subscriptions);
 }
 
+static TOKEN_FILENAME: &str = ".commitcloudrc";
+
 pub fn read_access_token(config: &CommitCloudConfig) -> Result<String> {
     // try to read token from file
     let token = if let Some(ref user_token_path) = config.user_token_path {
+        let mut user_token_path = user_token_path.clone();
+        user_token_path.push(TOKEN_FILENAME);
         info!(
             "Reading commitcloud OAuth token from a file {}...",
             user_token_path.display()
@@ -111,7 +117,7 @@ pub fn read_access_token(config: &CommitCloudConfig) -> Result<String> {
         match fs::OpenOptions::new().read(true).open(user_token_path) {
             Ok(ref mut file) => Ini::read_from(&mut io::BufReader::new(file))?
                 .get_from(Some("commitcloud"), "user_token")
-                .map(|s| s.into()),
+                .map(|s| s.trim().to_string()),
             Err(ref e) if e.kind() == io::ErrorKind::NotFound => None,
             Err(err) => {
                 error!("{}", err);
