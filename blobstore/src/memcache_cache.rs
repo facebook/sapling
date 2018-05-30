@@ -78,6 +78,26 @@ impl<T: Blobstore + Clone> MemcacheBlobstore<T> {
             value
         }
     }
+
+    // The following are used by the admin command to manually check on memcache
+    pub fn get_no_cache_fill(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        let mc_get = self.mc_get(&key);
+        let bs_get = self.blobstore.get(key);
+
+        mc_get
+            .and_then(move |blob| {
+                if blob.is_some() {
+                    Ok(blob).into_future().boxify()
+                } else {
+                    bs_get.boxify()
+                }
+            })
+            .boxify()
+    }
+
+    pub fn get_memcache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.mc_get(&key).boxify()
+    }
 }
 
 impl<T: Blobstore + Clone> Blobstore for MemcacheBlobstore<T> {

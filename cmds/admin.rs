@@ -33,7 +33,7 @@ use futures::stream::iter_ok;
 use tokio_core::reactor::Core;
 
 use blobrepo::{BlobRepo, RawNodeBlob};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, MemcacheBlobstore};
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
 use mercurial_types::{Changeset, DChangesetId, MPath, MPathElement, Manifest, RepositoryId};
@@ -58,6 +58,15 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .possible_values(&["raw_node_blob"])
                 .required(false)
                 .help("if provided decode the value"),
+        )
+        .arg(
+            Arg::with_name("use_memcache")
+                .long("use_memcache")
+                .short("m")
+                .takes_value(true)
+                .possible_values(&["cache_only", "no_fill", "fill_mc"])
+                .required(false)
+                .help("Use memcache to cache access to the blob store"),
         );
 
     let content_fetch = SubCommand::with_name(CONTENT_FETCH)
@@ -192,32 +201,45 @@ fn main() {
     let mut core = Core::new().unwrap();
     let remote = core.remote();
 
-    let blobstore = ManifoldBlob::new_with_prefix(
-        bucket,
-        prefix,
-        vec![&remote],
-        MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
-    );
-
     let future = match matches.subcommand() {
         (BLOBSTORE_FETCH, Some(sub_m)) => {
-            let key = sub_m.value_of("KEY").unwrap();
+            let key = sub_m.value_of("KEY").unwrap().to_string();
             let decode_as = sub_m.value_of("decode_as").map(|val| val.to_string());
-            blobstore
-                .get(key.to_string())
-                .map(move |value| {
-                    println!("{:?}", value);
-                    if let Some(value) = value {
-                        match decode_as {
-                            Some(val) => {
-                                if val == "raw_node_blob" {
-                                    println!("{:?}", RawNodeBlob::deserialize(&value.into()));
-                                }
-                            }
-                            _ => (),
-                        }
+            let use_memcache = sub_m.value_of("use_memcache").map(|val| val.to_string());
+
+            let blobstore = ManifoldBlob::new_with_prefix(
+                bucket,
+                prefix,
+                vec![&remote],
+                MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
+            );
+
+            match use_memcache {
+                None => blobstore.get(key).boxify(),
+                Some(val) => {
+                    let blobstore = MemcacheBlobstore::new(blobstore);
+
+                    if val == "cache_only" {
+                        blobstore.get_memcache_only(key)
+                    } else if val == "no_fill" {
+                        blobstore.get_no_cache_fill(key)
+                    } else {
+                        blobstore.get(key)
                     }
-                })
+                }
+            }.map(move |value| {
+                println!("{:?}", value);
+                if let Some(value) = value {
+                    match decode_as {
+                        Some(val) => {
+                            if val == "raw_node_blob" {
+                                println!("{:?}", RawNodeBlob::deserialize(&value.into()));
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+            })
                 .boxify()
         }
         (CONTENT_FETCH, Some(sub_m)) => {
