@@ -26,10 +26,10 @@ extern crate mononoke_types;
 extern crate slog;
 extern crate slog_glog_fmt;
 
-extern crate hooks2;
+extern crate hooks;
 
-use hooks2::{HookChangeset, HookRunner};
-use hooks2::lua_hook::LuaHookRunner;
+use hooks::{HookChangeset, HookRunner};
+use hooks::lua_hook::LuaHookRunner;
 use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
