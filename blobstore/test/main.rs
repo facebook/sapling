@@ -14,7 +14,6 @@ extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
 extern crate tempdir;
-extern crate tokio_core;
 
 extern crate blobstore;
 extern crate fileblob;

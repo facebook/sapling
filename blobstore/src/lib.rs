@@ -10,9 +10,10 @@ extern crate asyncmemo;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
-extern crate tokio_core;
+extern crate tokio;
 
 extern crate futures_ext;
+extern crate memcache;
 extern crate mononoke_types;
 
 use std::sync::Arc;
@@ -25,6 +26,9 @@ use mononoke_types::BlobstoreBytes;
 
 mod in_memory_cache;
 pub use in_memory_cache::MemoizedBlobstore;
+
+mod memcache_cache;
+pub use memcache_cache::MemcacheBlobstore;
 
 mod errors;
 pub use errors::*;
