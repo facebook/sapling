@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-"""Faster status operations with the Watchman file monitor (EXPERIMENTAL)
+"""faster status operations with the Watchman file monitor (EXPERIMENTAL)
 
 Integrates the file-watching program Watchman with Mercurial to produce faster
 status results.
@@ -114,14 +114,13 @@ import stat
 import sys
 import weakref
 
-from mercurial.i18n import _
-
 from mercurial import (
     context,
     encoding,
     error,
     extensions,
     localrepo,
+    match as matchmod,
     pathutil,
     progress,
     pycompat,
@@ -129,11 +128,11 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial import match as matchmod
-
-from ..extlib import pywatchman, watchmanclient
+from mercurial.i18n import _
 
 from . import state
+from ..extlib import pywatchman, watchmanclient
+
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

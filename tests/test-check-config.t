@@ -53,11 +53,11 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: fastmanifest.cachecutoffdays (int) [60]
   undocumented: fastmanifest.cacheonchange (bool)
   undocumented: fastmanifest.cacheonchangebackground (bool) [True]
-  undocumented: fastmanifest.debugfastmanifest (bool)
   undocumented: fastmanifest.debugmetrics (bool)
   undocumented: fastmanifest.logfile (str)
-  undocumented: fastmanifest.maxinmemoryentries (str) [DEFAULT_MAX_MEMORY_ENTRIES]
+  undocumented: fastmanifest.relevantremotenames (list) [["master"]]
   undocumented: fastmanifest.silent (bool)
+  undocumented: fastmanifest.silentworker (bool) [True]
   undocumented: fastmanifest.usecache (bool)
   undocumented: fastmanifest.usetree (bool)
   undocumented: fbconduit.backingrepos (list) [[reponame]]
@@ -86,7 +86,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: hgsql.user (str)
   undocumented: hgsql.verifybatchsize (int)
   undocumented: hgsql.waittimeout (str)
-  undocumented: hgsubversion.externals (str) ['svnexternals']
+  undocumented: hgsubversion.externals (str) ["svnexternals"]
   undocumented: hgsubversion.failoninvalidreplayfile (bool)
   undocumented: hgsubversion.failonmissing (bool)
   undocumented: hgsubversion.filestoresize (int) [200]
@@ -124,8 +124,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotefilelog.fastdatapack (bool)
   undocumented: remotefilelog.fetchpacks (bool)
   undocumented: remotefilelog.fetchwarning (str)
-  undocumented: remotefilelog.getfilesstep (int) [10000]
-  undocumented: remotefilelog.getfilestype (str) ['optimistic']
   undocumented: remotefilelog.includepattern (list)
   undocumented: remotefilelog.pullprefetch (str)
   undocumented: remotefilelog.reponame (str)
@@ -133,7 +131,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotefilelog.servercachepath (str)
   undocumented: remotefilelog.serverexpiration (int) [30]
   undocumented: remotefilelog.shallowtrees (bool)
-  undocumented: remotefilelog.validatecache (str) ['on']
+  undocumented: remotefilelog.validatecache (str) ["on"]
   undocumented: remotefilelog.validatecachelog (str)
   undocumented: remotenames.alias.default (bool)
   undocumented: remotenames.allownonfastforward (bool)
@@ -159,6 +157,5 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: simplecache.caches (list) [["local"]]
   undocumented: smartlog.ignorebookmarks (str) ["!"]
   undocumented: ssl.timeout (int) [5]
-  undocumented: treemanifest.autocreatetrees (bool)
   undocumented: treemanifest.verifyautocreate (bool)
   undocumented: ui.editor.chunkselector (str)

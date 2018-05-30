@@ -4,7 +4,8 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""
+"""a treemanifest disk cache for speeding up manifest comparison
+
 This extension adds fastmanifest, a treemanifest disk cache for speeding up
 manifest comparison. It also contains utilities to investigate manifest access
 patterns.
@@ -96,7 +97,6 @@ from __future__ import absolute_import
 
 import sys
 
-from mercurial.i18n import _
 from mercurial import (
     bookmarks,
     dispatch,
@@ -107,8 +107,10 @@ from mercurial import (
     registrar,
     revset as revsetmod,
 )
+from mercurial.i18n import _
 
 from . import cachemanager, debug, implementation, metrics
+
 
 metricscollector = metrics.metricscollector
 manifestfactory = implementation.manifestfactory

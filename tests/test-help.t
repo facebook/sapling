@@ -331,7 +331,8 @@ Test extension help:
        factotum      http authentication with factotum
        fastannotate  yet another annotate implementation that might be faster
        fastlog
-       fastmanifest
+       fastmanifest  a treemanifest disk cache for speeding up manifest
+                     comparison
        fastpartialmatch
                      extension that makes node prefix lookup faster
        fbamend       extends the existing commit amend functionality

@@ -49,9 +49,6 @@ from __future__ import absolute_import
 
 import tempfile
 
-from mercurial.node import hex, short
-from mercurial.i18n import _
-
 from mercurial import (
     bookmarks,
     cmdutil,
@@ -64,8 +61,8 @@ from mercurial import (
     registrar,
     scmutil,
 )
-
-from .. import histedit, rebase as rebasemod
+from mercurial.i18n import _
+from mercurial.node import hex, short
 
 from . import (
     common,
@@ -80,6 +77,8 @@ from . import (
     split,
     unamend,
 )
+from .. import histedit, rebase as rebasemod
+
 
 revsetpredicate = revsets.revsetpredicate
 hint = registrar.hint()
@@ -398,7 +397,7 @@ def amendtocommit(ui, repo, commitspec):
         targetcommit = repo[revs.first()]
         if targetcommit not in originalcommits:
             raise error.Abort(
-                _("revision '%s' is not a parent of " "the working copy" % commitspec)
+                _("revision '%s' is not a parent of the working copy") % commitspec
             )
 
         tempcommit = repo.commit(text="tempCommit")
