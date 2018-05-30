@@ -36,14 +36,11 @@ class HgRepository(repobase.Repository):
         self.hg_environment = os.environ.copy()
         # Drop any environment variables starting with 'HG'
         # to ensure the user's environment does not affect the tests.
-        # Note we make an exception for $HG_REAL_BIN as that is needed by the
-        # Rust wrapper.
         self.hg_environment = {
-            k: v
-            for k, v in os.environ.items()
-            if not k.startswith("HG") or k == "HG_REAL_BIN"
+            k: v for k, v in os.environ.items() if not k.startswith("HG")
         }
         self.hg_environment["HGPLAIN"] = "1"
+        self.hg_environment["HG_REAL_BIN"] = FindExe.HG_REAL
         # Set HGRCPATH to make sure we aren't affected by the local system's
         # mercurial settings from /etc/mercurial/
         if system_hgrc:

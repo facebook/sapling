@@ -108,19 +108,55 @@ class FindExeClass(object):
         logging.info("Found hg binary: %r", hg)
         return hg
 
+    @cached_property
+    def HG_REAL(self) -> str:
+        hg = self._find_hg_real()
+        logging.info("Found hg.real binary: %r", hg)
+        return hg
+
     def _find_hg(self) -> str:
         # If EDEN_HG_BINARY is set in the environment, use that.
+        # This is always set when the tests are run by `buck test`
+        # The code below is only used as a fallback when the tests are invoked manually.
         hg_bin = os.environ.get("EDEN_HG_BINARY")
         if hg_bin:
             return hg_bin
 
-        hg_bin = distutils.spawn.find_executable("hg.real")
+        # Look for the hg wrapper
+        start_path = os.path.abspath(sys.argv[0])
+        hg_bin = pathutils.get_build_rule_output_path(
+            "//scm/telemetry/hg:hg",
+            pathutils.BuildRuleTypes.RUST_BINARY,
+            start_path=start_path,
+        )
         if hg_bin:
             return hg_bin
 
-        hg_bin = distutils.spawn.find_executable("hg")
-        if hg_bin:
-            return hg_bin
+        # Fall back to the real hg binary
+        return self.HG_REAL
+
+    def _find_hg_real(self) -> str:
+        # If HG_REAL_BIN is set in the environment, use that.
+        # This is always set when the tests are run by `buck test`
+        # The code below is only used as a fallback when the tests are invoked manually.
+        hg_real_bin = os.environ.get("HG_REAL_BIN")
+        if hg_real_bin:
+            return hg_real_bin
+
+        start_path = os.path.abspath(sys.argv[0])
+        hg_real_bin = pathutils.get_build_rule_output_path(
+            "//scm/hg:hg", pathutils.BuildRuleTypes.PYTHON_BINARY, start_path=start_path
+        )
+        if hg_real_bin:
+            return hg_real_bin
+
+        hg_real_bin = distutils.spawn.find_executable("hg.real")
+        if hg_real_bin:
+            return hg_real_bin
+
+        hg_real_bin = distutils.spawn.find_executable("hg")
+        if hg_real_bin:
+            return hg_real_bin
 
         raise Exception("No hg binary found!")
 
