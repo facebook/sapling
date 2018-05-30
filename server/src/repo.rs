@@ -836,7 +836,7 @@ impl HgCommands for RepoClient {
         params
             .map(|(node, path)| (node.into_mononoke(), path))
             .map(move |(node, path)| {
-                debug!(logger, "get file request: {:?} {}", path, node);
+                trace!(logger, "get file request: {:?} {}", path, node);
                 let repo = repo.clone();
                 create_remotefilelog_blob(repo.blobrepo.clone(), node, path.clone())
                     .traced_global(
