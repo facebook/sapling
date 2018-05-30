@@ -115,7 +115,7 @@ Future<Unit> TreeDiffer::diffCommits(Hash hash1, Hash hash2) {
   return collect(future1, future2)
       .then([this](std::tuple<
                    std::shared_ptr<const Tree>,
-                   std::shared_ptr<const Tree>>& tup) {
+                   std::shared_ptr<const Tree>>&& tup) {
         auto tree1 = std::get<0>(tup);
         auto tree2 = std::get<1>(tup);
         return diffTrees(RelativePathPiece{}, *tree1, *tree2);
@@ -135,7 +135,7 @@ TreeDiffer::diffTrees(RelativePathPiece path, Hash hash1, Hash hash2) {
   return folly::collect(treeFuture1, treeFuture2)
       .then([this, path = path.copy()](std::tuple<
                                        std::shared_ptr<const Tree>,
-                                       std::shared_ptr<const Tree>>& tup) {
+                                       std::shared_ptr<const Tree>>&& tup) {
         auto tree1 = std::get<0>(tup);
         auto tree2 = std::get<1>(tup);
         return diffTrees(path, *tree1, *tree2);
