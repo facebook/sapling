@@ -255,7 +255,6 @@ def _parseasciigraph(text):
 
 
 class simplefilectx(object):
-
     def __init__(self, path, data, renamed=None):
         self._data = data
         self._path = path
@@ -280,7 +279,6 @@ class simplefilectx(object):
 
 
 class simplecommitctx(context.committablectx):
-
     def __init__(self, repo, name, parentctxs, added):
         opts = {
             "changes": scmutil.status([], list(added), [], [], [], [], []),

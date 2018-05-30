@@ -346,7 +346,6 @@ def makesubcmdlist(cmd, subcommands, verbose, quiet):
 
 
 def addtopicsymbols(topic, marker, symbols, dedent=False):
-
     def add(ui, topic, doc):
         return makeitemsdoc(ui, topic, doc, marker, symbols, dedent=dedent)
 
@@ -366,7 +365,6 @@ addtopicsymbols("hgweb", ".. webcommandsmarker", webcommands.commands, dedent=Tr
 
 
 class _helpdispatch(object):
-
     def __init__(
         self, ui, commands, unknowncmd=False, full=False, subtopic=None, **opts
     ):

@@ -48,13 +48,14 @@ try:
 except NameError:
     xrange = range
 
+
 class revmap(object):
     """trivial hg bin hash - linelog rev bidirectional map
 
     also stores a flag (uint8) for each revision, and track renames.
     """
 
-    HEADER = b'REVMAP1\0'
+    HEADER = b"REVMAP1\0"
 
     def __init__(self, path=None):
         """create or load the revmap, optionally associate to a file
@@ -70,7 +71,7 @@ class revmap(object):
         # since rename does not happen frequently, do not store path for every
         # revision. self._renamerevs can be used for bisecting.
         self._renamerevs = [0]
-        self._renamepaths = ['']
+        self._renamepaths = [""]
         self._lastmaxrev = -1
         if path:
             if os.path.exists(path):
@@ -98,9 +99,9 @@ class revmap(object):
         if flush is True, incrementally update the file.
         """
         if hsh in self._hsh2rev:
-            raise error.CorruptedFileError('%r is in revmap already' % hex(hsh))
+            raise error.CorruptedFileError("%r is in revmap already" % hex(hsh))
         if len(hsh) != _hshlen:
-            raise hgerror.ProgrammingError('hsh must be %d-char long' % _hshlen)
+            raise hgerror.ProgrammingError("hsh must be %d-char long" % _hshlen)
         idx = len(self._rev2hsh)
         flag = 0
         if sidebranch:
@@ -149,7 +150,7 @@ class revmap(object):
         self._rev2hsh = [None]
         self._rev2flag = [None]
         self._hsh2rev = {}
-        self._rev2path = ['']
+        self._rev2path = [""]
         self._lastmaxrev = -1
         if flush:
             self.flush()
@@ -158,13 +159,13 @@ class revmap(object):
         """write the state down to the file"""
         if not self.path:
             return
-        if self._lastmaxrev == -1: # write the entire file
-            with open(self.path, 'wb') as f:
+        if self._lastmaxrev == -1:  # write the entire file
+            with open(self.path, "wb") as f:
                 f.write(self.HEADER)
                 for i in xrange(1, len(self._rev2hsh)):
                     self._writerev(i, f)
-        else: # append incrementally
-            with open(self.path, 'ab') as f:
+        else:  # append incrementally
+            with open(self.path, "ab") as f:
                 for i in xrange(self._lastmaxrev + 1, len(self._rev2hsh)):
                     self._writerev(i, f)
         self._lastmaxrev = self.maxrev
@@ -177,7 +178,7 @@ class revmap(object):
         # which is faster than both LOAD_CONST and LOAD_GLOBAL.
         flaglen = 1
         hshlen = _hshlen
-        with open(self.path, 'rb') as f:
+        with open(self.path, "rb") as f:
             if f.read(len(self.HEADER)) != self.HEADER:
                 raise error.CorruptedFileError()
             self.clear(flush=False)
@@ -203,23 +204,23 @@ class revmap(object):
         """append a revision data to file"""
         flag = self._rev2flag[rev]
         hsh = self._rev2hsh[rev]
-        f.write(struct.pack('B', flag))
+        f.write(struct.pack("B", flag))
         if flag & renameflag:
             path = self.rev2path(rev)
             if path is None:
-                raise error.CorruptedFileError('cannot find path for %s' % rev)
-            f.write(path + '\0')
+                raise error.CorruptedFileError("cannot find path for %s" % rev)
+            f.write(path + "\0")
         f.write(hsh)
 
     @staticmethod
     def _readcstr(f):
         """read a C-language-like '\0'-terminated string"""
-        buf = ''
+        buf = ""
         while True:
             ch = f.read(1)
-            if not ch: # unexpected eof
+            if not ch:  # unexpected eof
                 raise error.CorruptedFileError()
-            if ch == '\0':
+            if ch == "\0":
                 break
             buf += ch
         return buf
@@ -229,9 +230,9 @@ class revmap(object):
         test if (node, path) is in the map, and is not in a side branch.
         f can be either a tuple of (node, path), or a fctx.
         """
-        if isinstance(f, tuple): # f: (node, path)
+        if isinstance(f, tuple):  # f: (node, path)
             hsh, path = f
-        else: # f: fctx
+        else:  # f: fctx
             hsh, path = f.node(), f.path()
         rev = self.hsh2rev(hsh)
         if rev is None:
@@ -240,13 +241,14 @@ class revmap(object):
             return False
         return (self.rev2flag(rev) & sidebranchflag) == 0
 
+
 def getlastnode(path):
     """return the last hash in a revmap, without loading its full content.
     this is equivalent to `m = revmap(path); m.rev2hsh(m.maxrev)`, but faster.
     """
     hsh = None
     try:
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             f.seek(-_hshlen, 2)
             if f.tell() > len(revmap.HEADER):
                 hsh = f.read(_hshlen)

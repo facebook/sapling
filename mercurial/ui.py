@@ -194,7 +194,6 @@ _reqexithandlers = []
 
 
 class ui(object):
-
     def __init__(self, src=None):
         """Create a fresh new ui object if no src given
 

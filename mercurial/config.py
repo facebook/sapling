@@ -13,7 +13,6 @@ from . import error, pycompat, util
 
 
 class config(object):
-
     def __init__(self, data=None, includepaths=None):
         self._data = {}
         self._unset = []

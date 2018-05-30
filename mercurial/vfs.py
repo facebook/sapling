@@ -483,7 +483,6 @@ opener = vfs
 
 
 class proxyvfs(object):
-
     def __init__(self, vfs):
         self.vfs = vfs
 

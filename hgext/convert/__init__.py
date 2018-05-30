@@ -5,20 +5,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''import revisions from foreign VCS repositories into Mercurial'''
+"""import revisions from foreign VCS repositories into Mercurial"""
 
 from __future__ import absolute_import
 
 from mercurial.i18n import _
-from mercurial import (
-    registrar,
-)
+from mercurial import registrar
 
-from . import (
-    convcmd,
-    cvsps,
-    subversion,
-)
+from . import convcmd, cvsps, subversion
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -26,32 +20,37 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
 # Commands definition was moved elsewhere to ease demandload job.
 
-@command('convert',
-    [('', 'authors', '',
-      _('username mapping filename (DEPRECATED) (use --authormap instead)'),
-      _('FILE')),
-    ('s', 'source-type', '', _('source repository type'), _('TYPE')),
-    ('d', 'dest-type', '', _('destination repository type'), _('TYPE')),
-    ('r', 'rev', [], _('import up to source revision REV'), _('REV')),
-    ('A', 'authormap', '', _('remap usernames using this file'), _('FILE')),
-    ('', 'filemap', '', _('remap file names using contents of file'),
-     _('FILE')),
-    ('', 'full', None,
-     _('apply filemap changes by converting all files again')),
-    ('', 'splicemap', '', _('splice synthesized history into place'),
-     _('FILE')),
-    ('', 'branchmap', '', _('change branch names while converting'),
-     _('FILE')),
-    ('', 'branchsort', None, _('try to sort changesets by branches')),
-    ('', 'datesort', None, _('try to sort changesets by date')),
-    ('', 'sourcesort', None, _('preserve source changesets order')),
-    ('', 'closesort', None, _('try to reorder closed revisions'))],
-   _('hg convert [OPTION]... SOURCE [DEST [REVMAP]]'),
-   norepo=True)
+
+@command(
+    "convert",
+    [
+        (
+            "",
+            "authors",
+            "",
+            _("username mapping filename (DEPRECATED) (use --authormap instead)"),
+            _("FILE"),
+        ),
+        ("s", "source-type", "", _("source repository type"), _("TYPE")),
+        ("d", "dest-type", "", _("destination repository type"), _("TYPE")),
+        ("r", "rev", [], _("import up to source revision REV"), _("REV")),
+        ("A", "authormap", "", _("remap usernames using this file"), _("FILE")),
+        ("", "filemap", "", _("remap file names using contents of file"), _("FILE")),
+        ("", "full", None, _("apply filemap changes by converting all files again")),
+        ("", "splicemap", "", _("splice synthesized history into place"), _("FILE")),
+        ("", "branchmap", "", _("change branch names while converting"), _("FILE")),
+        ("", "branchsort", None, _("try to sort changesets by branches")),
+        ("", "datesort", None, _("try to sort changesets by date")),
+        ("", "sourcesort", None, _("preserve source changesets order")),
+        ("", "closesort", None, _("try to reorder closed revisions")),
+    ],
+    _("hg convert [OPTION]... SOURCE [DEST [REVMAP]]"),
+    norepo=True,
+)
 def convert(ui, src, dest=None, revmapfile=None, **opts):
     """convert a foreign SCM repository to a Mercurial one.
 
@@ -441,31 +440,39 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     """
     return convcmd.convert(ui, src, dest, revmapfile, **opts)
 
-@command('debugsvnlog', [], 'hg debugsvnlog', norepo=True)
+
+@command("debugsvnlog", [], "hg debugsvnlog", norepo=True)
 def debugsvnlog(ui, **opts):
     return subversion.debugsvnlog(ui, **opts)
 
-@command('debugcvsps',
+
+@command(
+    "debugcvsps",
     [
-    # Main options shared with cvsps-2.1
-    ('b', 'branches', [], _('only return changes on specified branches')),
-    ('p', 'prefix', '', _('prefix to remove from file names')),
-    ('r', 'revisions', [],
-     _('only return changes after or between specified tags')),
-    ('u', 'update-cache', None, _("update cvs log cache")),
-    ('x', 'new-cache', None, _("create new cvs log cache")),
-    ('z', 'fuzz', 60, _('set commit time fuzz in seconds')),
-    ('', 'root', '', _('specify cvsroot')),
-    # Options specific to builtin cvsps
-    ('', 'parents', '', _('show parent changesets')),
-    ('', 'ancestors', '', _('show current changeset in ancestor branches')),
-    # Options that are ignored for compatibility with cvsps-2.1
-    ('A', 'cvs-direct', None, _('ignored for compatibility')),
+        # Main options shared with cvsps-2.1
+        ("b", "branches", [], _("only return changes on specified branches")),
+        ("p", "prefix", "", _("prefix to remove from file names")),
+        (
+            "r",
+            "revisions",
+            [],
+            _("only return changes after or between specified tags"),
+        ),
+        ("u", "update-cache", None, _("update cvs log cache")),
+        ("x", "new-cache", None, _("create new cvs log cache")),
+        ("z", "fuzz", 60, _("set commit time fuzz in seconds")),
+        ("", "root", "", _("specify cvsroot")),
+        # Options specific to builtin cvsps
+        ("", "parents", "", _("show parent changesets")),
+        ("", "ancestors", "", _("show current changeset in ancestor branches")),
+        # Options that are ignored for compatibility with cvsps-2.1
+        ("A", "cvs-direct", None, _("ignored for compatibility")),
     ],
-    _('hg debugcvsps [OPTION]... [PATH]...'),
-    norepo=True)
+    _("hg debugcvsps [OPTION]... [PATH]..."),
+    norepo=True,
+)
 def debugcvsps(ui, *args, **opts):
-    '''create changeset information from CVS
+    """create changeset information from CVS
 
     This command is intended as a debugging tool for the CVS to
     Mercurial converter, and can be used as a direct replacement for
@@ -474,36 +481,42 @@ def debugcvsps(ui, *args, **opts):
     Hg debugcvsps reads the CVS rlog for current directory (or any
     named directory) in the CVS repository, and converts the log to a
     series of changesets based on matching commit log entries and
-    dates.'''
+    dates."""
     return cvsps.debugcvsps(ui, *args, **opts)
 
+
 def kwconverted(ctx, name):
-    rev = ctx.extra().get('convert_revision', '')
-    if rev.startswith('svn:'):
-        if name == 'svnrev':
+    rev = ctx.extra().get("convert_revision", "")
+    if rev.startswith("svn:"):
+        if name == "svnrev":
             return str(subversion.revsplit(rev)[2])
-        elif name == 'svnpath':
+        elif name == "svnpath":
             return subversion.revsplit(rev)[1]
-        elif name == 'svnuuid':
+        elif name == "svnuuid":
             return subversion.revsplit(rev)[0]
     return rev
 
+
 templatekeyword = registrar.templatekeyword()
 
-@templatekeyword('svnrev')
+
+@templatekeyword("svnrev")
 def kwsvnrev(repo, ctx, **args):
     """String. Converted subversion revision number."""
-    return kwconverted(ctx, 'svnrev')
+    return kwconverted(ctx, "svnrev")
 
-@templatekeyword('svnpath')
+
+@templatekeyword("svnpath")
 def kwsvnpath(repo, ctx, **args):
     """String. Converted subversion revision project path."""
-    return kwconverted(ctx, 'svnpath')
+    return kwconverted(ctx, "svnpath")
 
-@templatekeyword('svnuuid')
+
+@templatekeyword("svnuuid")
 def kwsvnuuid(repo, ctx, **args):
     """String. Converted subversion revision repository identifier."""
-    return kwconverted(ctx, 'svnuuid')
+    return kwconverted(ctx, "svnuuid")
+
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = [kwsvnrev, kwsvnpath, kwsvnuuid]

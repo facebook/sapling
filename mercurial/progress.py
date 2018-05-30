@@ -173,7 +173,6 @@ class baserenderer(object):
 
 
 class classicrenderer(baserenderer):
-
     def __init__(self, bar):
         super(classicrenderer, self).__init__(bar)
         self.order = bar._ui.configlist("progress", "format")
@@ -263,7 +262,6 @@ class classicrenderer(baserenderer):
 
 
 class fancyrenderer(baserenderer):
-
     def __init__(self, bar):
         super(fancyrenderer, self).__init__(bar)
 
@@ -400,7 +398,6 @@ def getrenderer(bar):
 
 
 class engine(object):
-
     def __init__(self):
         self._cond = threading.Condition()
         self._active = False
@@ -410,9 +407,7 @@ class engine(object):
         self._currentbarindex = None
 
     def lock(self):
-
         class lockguard(object):
-
             def __init__(self, engine):
                 self.engine = engine
 
@@ -653,7 +648,6 @@ class normalbar(object):
 
 
 class debugbar(object):
-
     def __init__(self, ui, topic, unit="", total=None, start=0, formatfunc=None):
         self._ui = ui
         self._topic = topic

@@ -2702,7 +2702,6 @@ def grep(ui, repo, pattern, *pats, **opts):
             yield linenum, mstart - lstart, mend - lstart, body[lstart:lend]
 
     class linestate(object):
-
         def __init__(self, line, linenum, colstart, colend):
             self.line = line
             self.linenum = linenum

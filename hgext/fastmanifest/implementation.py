@@ -11,27 +11,20 @@ import os
 import time
 import heapq
 
-from mercurial import (
-    error,
-    manifest,
-    mdiff,
-    revlog,
-    util,
-)
+from mercurial import error, manifest, mdiff, revlog, util
 from ..extlib import cfastmanifest
 from .metrics import metricscollector
-from .constants import (
-    CACHE_SUBDIR,
-    DEFAULT_MAX_MEMORY_ENTRIES,
-)
+from .constants import CACHE_SUBDIR, DEFAULT_MAX_MEMORY_ENTRIES
 
 try:
     from ..extlib import cstore
+
     supportsctree = True
 except ImportError:
     supportsctree = False
 
 propertycache = util.propertycache
+
 
 class hybridmanifest(object):
     """
@@ -42,8 +35,18 @@ class hybridmanifest(object):
     - fast      an existing fast manifest
     - loadflat  a function to load a flat manifest from disk
     """
-    def __init__(self, ui, opener, manifestlog,
-                 flat=None, fast=None, loadflat=None, tree=None, node=None):
+
+    def __init__(
+        self,
+        ui,
+        opener,
+        manifestlog,
+        flat=None,
+        fast=None,
+        loadflat=None,
+        tree=None,
+        node=None,
+    ):
         self.__flatmanifest = flat
         self.loadflat = loadflat
 
@@ -57,10 +60,12 @@ class hybridmanifest(object):
         else:
             self.__cachedmanifest = False
 
-        assert (self.__flatmanifest is not None or
-                self.__cachedmanifest not in (None, False) or
-                self.__treemanifest not in (None, False) or
-                self.loadflat is not None)
+        assert (
+            self.__flatmanifest is not None
+            or self.__cachedmanifest not in (None, False)
+            or self.__treemanifest not in (None, False)
+            or self.loadflat is not None
+        )
 
         self.ui = ui
         self.opener = opener
@@ -72,11 +77,11 @@ class hybridmanifest(object):
 
         self.fastcache = fastmanifestcache.getinstance(opener, self.ui)
         self.treecache = treemanifestcache.getinstance(opener, self.ui)
-        self.debugfastmanifest = self.ui.configbool("fastmanifest",
-                                                     "debugfastmanifest", False)
+        self.debugfastmanifest = self.ui.configbool(
+            "fastmanifest", "debugfastmanifest", False
+        )
 
-        self.incache = (True if self.__cachedmanifest not in (None, False)
-                             else None)
+        self.incache = True if self.__cachedmanifest not in (None, False) else None
 
         if self.ui.configbool("fastmanifest", "silent"):
             self.debug = _silent_debug
@@ -95,11 +100,11 @@ class hybridmanifest(object):
             elif self.__cachedmanifest not in (None, False):
                 # build a flat manifest from the text of the fastmanifest.
                 self.__flatmanifest = manifest.manifestdict(
-                    self.__cachedmanifest.text())
+                    self.__cachedmanifest.text()
+                )
             elif self.__treemanifest not in (None, False):
                 # build a flat manifest from the text of the fastmanifest.
-                self.__flatmanifest = manifest.manifestdict(
-                    self.__treemanifest.text())
+                self.__flatmanifest = manifest.manifestdict(self.__treemanifest.text())
 
             assert isinstance(self.__flatmanifest, manifest.manifestdict)
         return self.__flatmanifest
@@ -110,8 +115,7 @@ class hybridmanifest(object):
 
         if self.incache is None:
             # Cache lookup
-            if (self.cachekey is not None and
-                self.cachekey in self.fastcache):
+            if self.cachekey is not None and self.cachekey in self.fastcache:
                 self.__cachedmanifest = self.fastcache[self.cachekey]
             elif self.node == revlog.nullid:
                 fm = cfastmanifest.fastmanifest()
@@ -123,10 +127,13 @@ class hybridmanifest(object):
                 self.__cachedmanifest = fastmanifestdict(fm)
 
             self.incache = self.__cachedmanifest is not None
-            metricscollector.get().recordsample("cachehit", hit=self.incache,
-                                                            node=self.cachekey)
-            self.debug("[FM] cache %s for fastmanifest %s\n"
-                       % ("hit" if self.incache else "miss", self.cachekey))
+            metricscollector.get().recordsample(
+                "cachehit", hit=self.incache, node=self.cachekey
+            )
+            self.debug(
+                "[FM] cache %s for fastmanifest %s\n"
+                % ("hit" if self.incache else "miss", self.cachekey)
+            )
 
         return self.__cachedmanifest
 
@@ -146,9 +153,8 @@ class hybridmanifest(object):
                 store = self.manifestlog.datastore
                 self.ui.pushbuffer()
                 try:
-                    store.get('', self.node)
-                    self.__treemanifest = cstore.treemanifest(store,
-                                                              self.node)
+                    store.get("", self.node)
+                    self.__treemanifest = cstore.treemanifest(store, self.node)
                     # The buffer is only to eat certain errors, so show
                     # non-error messages.
                     output = self.ui.popbuffer()
@@ -198,27 +204,27 @@ class hybridmanifest(object):
     # Magic methods should be proxied differently than __getattr__
     # For the moment all methods they all use the _flatmanifest
     def __iter__(self):
-        return self._manifest('__iter__').__iter__()
+        return self._manifest("__iter__").__iter__()
 
     def __contains__(self, key):
-        return self._manifest('__contains__').__contains__(key)
+        return self._manifest("__contains__").__contains__(key)
 
     def __getitem__(self, key):
-        return self._manifest('__getitem__').__getitem__(key)
+        return self._manifest("__getitem__").__getitem__(key)
 
     def __setitem__(self, key, val):
-        return self._manifest('__setitem__').__setitem__(key, val)
+        return self._manifest("__setitem__").__setitem__(key, val)
 
     def __delitem__(self, key):
-        return self._manifest('__delitem__').__delitem__(key)
+        return self._manifest("__delitem__").__delitem__(key)
 
     def __nonzero__(self):
-        return bool(self._manifest('__nonzero__'))
+        return bool(self._manifest("__nonzero__"))
 
     __bool__ = __nonzero__
 
     def __len__(self):
-        return len(self._manifest('__len__'))
+        return len(self._manifest("__len__"))
 
     def text(self, *args, **kwargs):
         # Normally we would prefer treemanifest instead of flat, but for text()
@@ -231,7 +237,7 @@ class hybridmanifest(object):
         return m.text(*args, **kwargs)
 
     def fastdelta(self, base, changes):
-        m = self._manifest('fastdelta')
+        m = self._manifest("fastdelta")
         if isinstance(m, cstore.treemanifest):
             return fastdelta(m, m.find, base, changes)
         return m.fastdelta(base, changes)
@@ -240,25 +246,22 @@ class hybridmanifest(object):
         if isinstance(m, hybridmanifest):
             return m
         elif isinstance(m, fastmanifestdict):
-            return hybridmanifest(self.ui, self.opener, self.manifestlog,
-                                  fast=m)
+            return hybridmanifest(self.ui, self.opener, self.manifestlog, fast=m)
         elif isinstance(m, manifest.manifestdict):
-            return hybridmanifest(self.ui, self.opener, self.manifestlog,
-                                  flat=m)
+            return hybridmanifest(self.ui, self.opener, self.manifestlog, flat=m)
         elif supportsctree and isinstance(m, cstore.treemanifest):
-            return hybridmanifest(self.ui, self.opener, self.manifestlog,
-                                  tree=m)
+            return hybridmanifest(self.ui, self.opener, self.manifestlog, tree=m)
         else:
             raise ValueError("unknown manifest type {0}".format(type(m)))
 
     def copy(self):
-        copy = self._manifest('copy').copy()
+        copy = self._manifest("copy").copy()
         hybridmf = self._converttohybridmanifest(copy)
         hybridmf.basemanifest = self.basemanifest or self
         return hybridmf
 
     def matches(self, *args, **kwargs):
-        matches = self._manifest('matches').matches(*args, **kwargs)
+        matches = self._manifest("matches").matches(*args, **kwargs)
         hybridmf = self._converttohybridmanifest(matches)
         hybridmf.basemanifest = self.basemanifest or self
         return hybridmf
@@ -279,32 +282,34 @@ class hybridmanifest(object):
             treemf1 = self._treemanifest()
             treemf2 = m2._treemanifest()
             if treemf1 is not None and treemf2 is not None:
-                self.debug(("[FM] %s: loaded matching tree "
-                            "manifests\n") % operation)
+                self.debug(("[FM] %s: loaded matching tree " "manifests\n") % operation)
                 return treemf1, treemf2, False
 
             # Third best: one tree, one computed tree
             def canbuildtree(m):
-                return (m._cachedmanifest() is not None and
-                        m.basemanifest is not None and
-                        m.basemanifest._cachedmanifest() is not None and
-                        m.basemanifest._treemanifest() is not None)
+                return (
+                    m._cachedmanifest() is not None
+                    and m.basemanifest is not None
+                    and m.basemanifest._cachedmanifest() is not None
+                    and m.basemanifest._treemanifest() is not None
+                )
 
             def buildtree(m):
-                diff = m.basemanifest._cachedmanifest().diff(
-                        m._cachedmanifest())
+                diff = m.basemanifest._cachedmanifest().diff(m._cachedmanifest())
                 temptreemf = m.basemanifest._treemanifest().copy()
                 for f, ((an, af), (bn, bf)) in diff.iteritems():
                     temptreemf.set(f, bn, bf)
                 return temptreemf
 
             if treemf1 is not None and canbuildtree(m2):
-                self.debug(("[FM] %s: computed matching tree "
-                            "manifests\n") % operation)
+                self.debug(
+                    ("[FM] %s: computed matching tree " "manifests\n") % operation
+                )
                 return treemf1, buildtree(m2), False
             elif treemf2 is not None and canbuildtree(self):
-                self.debug(("[FM] %s: computed matching tree "
-                            "manifests\n") % operation)
+                self.debug(
+                    ("[FM] %s: computed matching tree " "manifests\n") % operation
+                )
                 return buildtree(self), treemf2, False
 
             # Worst: both flat
@@ -326,6 +331,7 @@ class hybridmanifest(object):
         _m1, _m2, hit = self._getmatchingtypemanifest(m2, "filesnotin")
         metricscollector.get().recordsample("filesnotincachehit", hit=hit)
         return _m1.filesnotin(_m2, *args, **kwargs)
+
 
 class fastmanifestdict(object):
     def __init__(self, fm):
@@ -352,7 +358,7 @@ class fastmanifestdict(object):
             # sometimes we set the 22nd byte.  this is not preserved by
             # lazymanifest or manifest::_lazymanifest.
             node = node[:21]
-        self._fm[key] = node, self.flags(key, '')
+        self._fm[key] = node, self.flags(key, "")
 
     def __contains__(self, key):
         return key in self._fm
@@ -378,11 +384,13 @@ class fastmanifestdict(object):
         return list(self.iterkeys())
 
     def filesnotin(self, m2, match=None):
-        '''Set of files in this manifest that are not in the other'''
+        """Set of files in this manifest that are not in the other"""
         diff = self.diff(m2, match=match)
-        files = set(filepath
-                    for filepath, hashflags in diff.iteritems()
-                    if hashflags[1][0] is None)
+        files = set(
+            filepath
+            for filepath, hashflags in diff.iteritems()
+            if hashflags[1][0] is None
+        )
         return files
 
     @util.propertycache
@@ -396,20 +404,21 @@ class fastmanifestdict(object):
         return dir in self._dirs
 
     def _filesfastpath(self, match):
-        '''Checks whether we can correctly and quickly iterate over matcher
-        files instead of over manifest files.'''
+        """Checks whether we can correctly and quickly iterate over matcher
+        files instead of over manifest files."""
         files = match.files()
-        return (len(files) < 100 and (match.isexact() or
-            (match.prefix() and all(fn in self for fn in files))))
+        return len(files) < 100 and (
+            match.isexact() or (match.prefix() and all(fn in self for fn in files))
+        )
 
     def walk(self, match):
-        '''Generates matching file names.
+        """Generates matching file names.
 
         Equivalent to manifest.matches(match).iterkeys(), but without creating
         an entirely new manifest.
 
         It also reports nonexistent files by marking them bad with match.bad().
-        '''
+        """
         if match.always():
             for f in iter(self):
                 yield f
@@ -432,14 +441,14 @@ class fastmanifestdict(object):
 
         # for dirstate.walk, files=['.'] means "walk the whole tree".
         # follow that here, too
-        fset.discard('.')
+        fset.discard(".")
 
         for fn in sorted(fset):
             if not self.hasdir(fn):
                 match.bad(fn, None)
 
     def matches(self, match):
-        '''generate a new manifest filtered by the match argument'''
+        """generate a new manifest filtered by the match argument"""
         if match.always():
             return self.copy()
 
@@ -456,7 +465,7 @@ class fastmanifestdict(object):
         return m
 
     def diff(self, m2, match=None, clean=False):
-        '''Finds changes between the current manifest and m2.
+        """Finds changes between the current manifest and m2.
 
         Args:
           m2: the manifest to which this manifest should be compared.
@@ -469,7 +478,7 @@ class fastmanifestdict(object):
         in the current/other manifest. Where the file does not exist,
         the nodeid will be None and the flags will be the empty
         string.
-        '''
+        """
         if match:
             mf1 = self.matches(match)
             mf2 = m2.matches(match)
@@ -485,7 +494,7 @@ class fastmanifestdict(object):
         except KeyError:
             return default
 
-    def flags(self, key, default=''):
+    def flags(self, key, default=""):
         try:
             return self._fm[key][1]
         except KeyError:
@@ -507,6 +516,7 @@ class fastmanifestdict(object):
         relative to that text, compute a delta that can be used by revlog.
         """
         return fastdelta(self, self._fm.__getitem__, base, changes)
+
 
 def fastdelta(mf, mfgetter, base, changes):
     """Given a base manifest text as an array.array and a list of changes
@@ -533,8 +543,7 @@ def fastdelta(mf, mfgetter, base, changes):
             else:
                 if start == end:
                     # item we want to delete was not found, error out
-                    raise AssertionError(
-                            (("failed to remove %s from manifest") % f))
+                    raise AssertionError((("failed to remove %s from manifest") % f))
                 l = ""
             if dstart is not None and dstart <= start and dend >= start:
                 if dend < end:
@@ -560,6 +569,7 @@ def fastdelta(mf, mfgetter, base, changes):
 
     return arraytext, deltatext
 
+
 class ondiskcache(object):
     def __init__(self, debugf, opener, ui):
         self.debugf = debugf
@@ -583,7 +593,7 @@ class ondiskcache(object):
         filetime = time.time() - delay
         path = self._pathfromnode(hexnode)
         try:
-            self.debugf("[FM] refreshing %s with delay %d\n" %(hexnode, delay))
+            self.debugf("[FM] refreshing %s with delay %d\n" % (hexnode, delay))
             os.utime(path, (filetime, filetime))
         except EnvironmentError:
             pass
@@ -600,12 +610,12 @@ class ondiskcache(object):
             try:
                 if entry.startswith(self.pathprefix):
                     path = os.path.join(self.cachepath, entry)
-                    entries.append((entry,
-                                    os.path.getmtime(path),
-                                    os.path.getsize(path)))
+                    entries.append(
+                        (entry, os.path.getmtime(path), os.path.getsize(path))
+                    )
             except EnvironmentError:
                 pass
-        entries.sort(key=lambda x:(-x[1], x[0]))
+        entries.sort(key=lambda x: (-x[1], x[0]))
         return [x[0].replace(self.pathprefix, "") for x in entries]
 
     def __iter__(self):
@@ -620,8 +630,9 @@ class ondiskcache(object):
         if hexnode in self:
             return True
         path = self._pathfromnode(hexnode)
-        if (isinstance(manifest, cfastmanifest.fastmanifest) or
-            isinstance(manifest, fastmanifestdict)):
+        if isinstance(manifest, cfastmanifest.fastmanifest) or isinstance(
+            manifest, fastmanifestdict
+        ):
             fm = manifest
         else:
             fm = cfastmanifest.fastmanifest(manifest.text())
@@ -679,18 +690,22 @@ class ondiskcache(object):
             totalsize += entrysize
             numentries += 1
             if not silent:
-                msg = "%s (size %s)\n" % (self.pathprefix + entry,
-                                          util.bytecount(entrysize))
+                msg = "%s (size %s)\n" % (
+                    self.pathprefix + entry,
+                    util.bytecount(entrysize),
+                )
                 self.ui.status(msg)
         return totalsize, numentries
+
 
 class CacheFullException(Exception):
     pass
 
+
 class treemanifestcache(object):
     @staticmethod
     def getinstance(opener, ui):
-        if not util.safehasattr(opener, 'treemanifestcache'):
+        if not util.safehasattr(opener, "treemanifestcache"):
             opener.treemanifestcache = treemanifestcache(opener, ui)
         return opener.treemanifestcache
 
@@ -713,12 +728,14 @@ class treemanifestcache(object):
     def __setitem__(self, node, value):
         self._cache[node] = value
 
+
 class fastmanifestcache(object):
     @staticmethod
     def getinstance(opener, ui):
-        if not util.safehasattr(opener, 'fastmanifestcache'):
+        if not util.safehasattr(opener, "fastmanifestcache"):
             # Avoid circular imports
             from . import cachemanager
+
             limit = cachemanager._systemawarecachelimit(opener=opener, ui=ui)
             opener.fastmanifestcache = fastmanifestcache(opener, ui, limit)
         return opener.fastmanifestcache
@@ -730,9 +747,9 @@ class fastmanifestcache(object):
         else:
             self.debug = self.ui.debug
         self.ondiskcache = ondiskcache(self.debug, opener, ui)
-        maxinmemoryentries = self.ui.config("fastmanifest",
-                                            "maxinmemoryentries",
-                                            DEFAULT_MAX_MEMORY_ENTRIES)
+        maxinmemoryentries = self.ui.config(
+            "fastmanifest", "maxinmemoryentries", DEFAULT_MAX_MEMORY_ENTRIES
+        )
         self.inmemorycache = util.lrucachedict(maxinmemoryentries)
         self.limit = limit
 
@@ -764,8 +781,7 @@ class fastmanifestcache(object):
                 self.debug("[FM] skipped %s, cache full\n" % hexnode)
             else:
                 self.debug("[FM] caching revision %s\n" % hexnode)
-                self.ondiskcache.setwithlimit(hexnode, manifest,
-                                              self.limit.bytes())
+                self.ondiskcache.setwithlimit(hexnode, manifest, self.limit.bytes())
         else:
             self.debug("[FM] caching revision %s\n" % hexnode)
             self.ondiskcache[hexnode] = manifest
@@ -793,8 +809,7 @@ class fastmanifestcache(object):
         cacheentries = collections.deque(self.ondiskcache.items())
         maxtotal = self.limit.bytes() - needed
 
-        while (len(cacheentries) > 0 and
-               self.ondiskcache.totalsize()[0] > maxtotal):
+        while len(cacheentries) > 0 and self.ondiskcache.totalsize()[0] > maxtotal:
             candidate = cacheentries.pop()
 
             if candidate in excluded:
@@ -804,10 +819,12 @@ class fastmanifestcache(object):
             self.debug("[FM] removing cached manifest fast%s\n" % (candidate,))
             del self.ondiskcache[candidate]
 
+
 class hybridmanifestctx(object):
     """A class representing a single revision of a manifest, including its
     contents, its parent revs, and its linkrev.
     """
+
     def __init__(self, ui, manifestlog, revlog, node):
         self._ui = ui
         self._manifestlog = manifestlog
@@ -819,8 +836,9 @@ class hybridmanifestctx(object):
     @propertycache
     def revlog(self):
         if self._revlog is None:
-            raise error.ProgrammingError("cannot access flat manifest revlog "
-                                         "for treeonly repository")
+            raise error.ProgrammingError(
+                "cannot access flat manifest revlog " "for treeonly repository"
+            )
         return self._revlog
 
     def copy(self):
@@ -830,10 +848,10 @@ class hybridmanifestctx(object):
 
     @propertycache
     def parents(self):
-        if util.safehasattr(self._manifestlog, 'historystore'):
+        if util.safehasattr(self._manifestlog, "historystore"):
             store = self._manifestlog.historystore
             try:
-                p1, p2, linknode, copyfrom = store.getnodeinfo('', self._node)
+                p1, p2, linknode, copyfrom = store.getnodeinfo("", self._node)
                 return p1, p2
             except KeyError:
                 pass
@@ -841,6 +859,7 @@ class hybridmanifestctx(object):
 
     def read(self):
         if self._hybridmanifest is None:
+
             def loadflat():
                 # This should eventually be made lazy loaded, so consumers can
                 # access the node/p1/linkrev data without having to parse the
@@ -851,8 +870,12 @@ class hybridmanifestctx(object):
                 return manifest.manifestdict(data)
 
             self._hybridmanifest = hybridmanifest(
-                self._ui, self._opener, self._manifestlog,
-                loadflat=loadflat, node=self._node)
+                self._ui,
+                self._opener,
+                self._manifestlog,
+                loadflat=loadflat,
+                node=self._node,
+            )
         return self._hybridmanifest
 
     def readdelta(self, shallow=False):
@@ -943,6 +966,7 @@ class hybridmanifestctx(object):
     def find(self, path):
         return self.read().find(path)
 
+
 class manifestfactory(object):
     def __init__(self, ui):
         self.ui = ui
@@ -950,7 +974,7 @@ class manifestfactory(object):
     def newgetitem(self, orig, *args, **kwargs):
         mfl = args[0]
         node = args[1]
-        dir = ''
+        dir = ""
 
         if node in mfl._dirmancache.get(dir, ()):
             return mfl._dirmancache[dir][node]
@@ -967,7 +991,7 @@ class manifestfactory(object):
         return m
 
     def newgetdirmanifestctx(self, orig, mfl, dir, node, *args):
-        if dir != '':
+        if dir != "":
             raise NotImplemented("fastmanifest doesn't support trees")
 
         return self.newgetitem(None, mfl, node)
@@ -982,10 +1006,12 @@ class manifestfactory(object):
         cacheenabled = self.ui.configbool("fastmanifest", "usecache")
         treeenabled = self.ui.configbool("fastmanifest", "usetree")
 
-        if (cacheenabled and
-            p1hexnode in fastcache and
-            isinstance(m, hybridmanifest) and
-            m._incache()):
+        if (
+            cacheenabled
+            and p1hexnode in fastcache
+            and isinstance(m, hybridmanifest)
+            and m._incache()
+        ):
             p1text = fastcache[p1hexnode].text()
         elif treeenabled:
             tree = m._treemanifest()
@@ -995,8 +1021,9 @@ class manifestfactory(object):
         if p1text:
             manifest._checkforbidden(added)
             # combine the changed lists into one sorted iterator
-            work = heapq.merge([(x, False) for x in added],
-                               [(x, True) for x in removed])
+            work = heapq.merge(
+                [(x, False) for x in added], [(x, True) for x in removed]
+            )
 
             # TODO: potential for optimization: avoid this silly conversion to a
             # python array.
@@ -1005,8 +1032,7 @@ class manifestfactory(object):
             arraytext, deltatext = m.fastdelta(manifestarray, work)
             cachedelta = origself.rev(p1), deltatext
             text = util.buffer(arraytext)
-            node = origself.addrevision(
-                text, transaction, link, p1, p2, cachedelta)
+            node = origself.addrevision(text, transaction, link, p1, p2, cachedelta)
             hexnode = revlog.hex(node)
 
             # Even though we may have checked 'm._incache()' above, it may have
@@ -1025,9 +1051,12 @@ class manifestfactory(object):
     def ctxwrite(self, orig, mfctx, transaction, link, p1, p2, added, removed):
         mfl = mfctx._manifestlog
         treeenabled = self.ui.configbool("fastmanifest", "usetree")
-        if (supportsctree and treeenabled and
-            p1 not in mfl._revlog.nodemap and
-            not mfl.datastore.getmissing([('', p1)])):
+        if (
+            supportsctree
+            and treeenabled
+            and p1 not in mfl._revlog.nodemap
+            and not mfl.datastore.getmissing([("", p1)])
+        ):
             # If p1 is not in the flat manifest but is in the tree store, then
             # this is a commit on top of a tree only commit and we should then
             # produce a treeonly commit.
@@ -1045,8 +1074,10 @@ class manifestfactory(object):
             # _treemanifest()
             def loadflat():
                 raise RuntimeError("no-op loadflat should never be hit")
-            tree = hybridmanifest(self.ui, opener, mfl, loadflat=loadflat,
-                                  node=p1)._treemanifest()
+
+            tree = hybridmanifest(
+                self.ui, opener, mfl, loadflat=loadflat, node=p1
+            )._treemanifest()
 
             if tree is not None:
                 newtree = tree.copy()
@@ -1069,19 +1100,27 @@ class manifestfactory(object):
                     overridep1node = p1
 
                 # linknode=None because linkrev is provided
-                node = tmfl.add(self.ui, newtree, p1, p2, None,
-                                overridenode=overridenode,
-                                overridep1node=overridep1node,
-                                tr=transaction, linkrev=link)
+                node = tmfl.add(
+                    self.ui,
+                    newtree,
+                    p1,
+                    p2,
+                    None,
+                    overridenode=overridenode,
+                    overridep1node=overridep1node,
+                    tr=transaction,
+                    linkrev=link,
+                )
 
-                treemanifestcache.getinstance(opener,
-                                              mfl.ui)[node] = newtree
+                treemanifestcache.getinstance(opener, mfl.ui)[node] = newtree
+
                 def finalize(tr):
-                    treemanifestcache.getinstance(opener,
-                                                  mfl.ui).clear()
-                transaction.addfinalize('fastmanifesttreecache', finalize)
+                    treemanifestcache.getinstance(opener, mfl.ui).clear()
+
+                transaction.addfinalize("fastmanifesttreecache", finalize)
 
         return node
+
 
 def _silent_debug(*args, **kwargs):
     """Replacement for ui.debug that silently swallows the arguments.

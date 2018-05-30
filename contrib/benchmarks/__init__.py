@@ -10,7 +10,7 @@
 # We have to make this code work correctly with current mercurial stable branch
 # and if possible with reasonable cost with early Mercurial versions.
 
-'''ASV (https://asv.readthedocs.io) benchmark suite
+"""ASV (https://asv.readthedocs.io) benchmark suite
 
 Benchmark are parameterized against reference repositories found in the
 directory pointed by the REPOS_DIR environment variable.
@@ -29,7 +29,7 @@ Invocation example:
     $ asv --config contrib/asv.conf.json publish
     # serve the static website
     $ asv --config contrib/asv.conf.json preview
-'''
+"""
 
 from __future__ import absolute_import
 
@@ -37,22 +37,23 @@ import functools
 import os
 import re
 
-from mercurial import (
-    extensions,
-    hg,
-    ui as uimod,
-    util,
-)
+from mercurial import extensions, hg, ui as uimod, util
 
-basedir = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                          os.path.pardir, os.path.pardir))
-reposdir = os.environ['REPOS_DIR']
-reposnames = [name for name in os.listdir(reposdir)
-              if os.path.isdir(os.path.join(reposdir, name, ".hg"))]
+basedir = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir)
+)
+reposdir = os.environ["REPOS_DIR"]
+reposnames = [
+    name
+    for name in os.listdir(reposdir)
+    if os.path.isdir(os.path.join(reposdir, name, ".hg"))
+]
 if not reposnames:
     raise ValueError("No repositories found in $REPO_DIR")
-outputre = re.compile((r'! wall (\d+.\d+) comb \d+.\d+ user \d+.\d+ sys '
-                       r'\d+.\d+ \(best of \d+\)'))
+outputre = re.compile(
+    (r"! wall (\d+.\d+) comb \d+.\d+ user \d+.\d+ sys " r"\d+.\d+ \(best of \d+\)")
+)
+
 
 def runperfcommand(reponame, command, *args, **kwargs):
     os.environ["HGRCPATH"] = os.environ.get("ASVHGRCPATH", "")
@@ -63,8 +64,9 @@ def runperfcommand(reponame, command, *args, **kwargs):
     else:
         ui = uimod.ui()
     repo = hg.repository(ui, os.path.join(reposdir, reponame))
-    perfext = extensions.load(ui, 'perfext',
-                              os.path.join(basedir, 'contrib', 'perf.py'))
+    perfext = extensions.load(
+        ui, "perfext", os.path.join(basedir, "contrib", "perf.py")
+    )
     cmd = getattr(perfext, command)
     ui.pushbuffer()
     cmd(ui, repo, *args, **kwargs)
@@ -73,6 +75,7 @@ def runperfcommand(reponame, command, *args, **kwargs):
     if not match:
         raise ValueError("Invalid output {0}".format(output))
     return float(match.group(1))
+
 
 def perfbench(repos=reposnames, name=None, params=None):
     """decorator to declare ASV benchmark based on contrib/perf.py extension
@@ -104,10 +107,12 @@ def perfbench(repos=reposnames, name=None, params=None):
         def wrapped(repo, *args):
             def perf(command, *a, **kw):
                 return runperfcommand(repo, command, *a, **kw)
+
             return func(perf, *args)
 
         wrapped.params = [p[1] for p in params]
         wrapped.param_names = [p[0] for p in params]
         wrapped.pretty_name = name
         return wrapped
+
     return decorator

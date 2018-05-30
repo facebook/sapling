@@ -2,17 +2,9 @@ from __future__ import absolute_import
 
 import errno, hashlib, os, shutil, stat, time
 
-from . import (
-    constants,
-    shallowutil,
-)
+from . import constants, shallowutil
 
-from mercurial import (
-    error,
-    progress,
-    pycompat,
-    util,
-)
+from mercurial import error, progress, pycompat, util
 from mercurial.i18n import _
 from mercurial.node import bin, hex
 
@@ -20,6 +12,7 @@ try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 class basestore(object):
     def __init__(self, repo, path, reponame, shared=False):
@@ -39,13 +32,11 @@ class basestore(object):
         self._shared = shared
         self._uid = os.getuid() if not pycompat.iswindows else None
 
-        self._validatecachelog = self.ui.config("remotefilelog",
-                                                "validatecachelog")
-        self._validatecache = self.ui.config("remotefilelog", "validatecache",
-                                             'on')
-        if self._validatecache not in ('on', 'strict', 'off'):
-            self._validatecache = 'on'
-        if self._validatecache == 'off':
+        self._validatecachelog = self.ui.config("remotefilelog", "validatecachelog")
+        self._validatecache = self.ui.config("remotefilelog", "validatecache", "on")
+        if self._validatecache not in ("on", "strict", "off"):
+            self._validatecache = "on"
+        if self._validatecache == "off":
             self._validatecache = False
 
         if shared:
@@ -53,8 +44,9 @@ class basestore(object):
 
     def getmissing(self, keys):
         missing = []
-        with progress.bar(self.repo.ui, _('discovering'), _('files'),
-                          len(keys)) as prog:
+        with progress.bar(
+            self.repo.ui, _("discovering"), _("files"), len(keys)
+        ) as prog:
             for name, node in keys:
                 prog.value += 1
 
@@ -67,8 +59,11 @@ class basestore(object):
                 except os.error:
                     exists = False
 
-                if (exists and self._validatecache == 'strict' and
-                    not self._validatekey(filepath, 'contains')):
+                if (
+                    exists
+                    and self._validatecache == "strict"
+                    and not self._validatekey(filepath, "contains")
+                ):
                     exists = False
                 if not exists:
                     missing.append((name, node))
@@ -88,8 +83,7 @@ class basestore(object):
 
     def cleanup(self, ledger):
         entries = ledger.sources.get(self, [])
-        with progress.bar(self.ui, _('cleaning up'), _('files'),
-                          len(entries)) as prog:
+        with progress.bar(self.ui, _("cleaning up"), _("files"), len(entries)) as prog:
             for entry in entries:
                 if entry.gced or (entry.datarepacked and entry.historyrepacked):
                     path = self._getfilepath(entry.filename, entry.node)
@@ -123,7 +117,7 @@ class basestore(object):
                     pass
 
             elif stat.S_ISREG(mode):
-                if name.endswith('_old'):
+                if name.endswith("_old"):
                     oldfiles.add(name[:-4])
                 else:
                     otherfiles.add(name)
@@ -132,7 +126,7 @@ class basestore(object):
         # corresponding file without the suffix '_old'. See addremotefilelognode
         # method for the generation/purpose of files with '_old' suffix.
         for filename in oldfiles - otherfiles:
-            filepath = os.path.join(rootdir, filename + '_old')
+            filepath = os.path.join(rootdir, filename + "_old")
             util.tryunlink(filepath)
 
     def _getfiles(self):
@@ -166,7 +160,7 @@ class basestore(object):
         missingfilename = set(hashes)
 
         # Start with a full manifest, since it'll cover the majority of files
-        for filename in self.repo['tip'].manifest():
+        for filename in self.repo["tip"].manifest():
             sha = hashlib.sha1(filename).digest()
             if sha in missingfilename:
                 filenames[filename] = sha
@@ -187,8 +181,7 @@ class basestore(object):
         return filenames
 
     def _getrepocachepath(self):
-        return os.path.join(
-            self._path, self._reponame) if self._shared else self._path
+        return os.path.join(self._path, self._reponame) if self._shared else self._path
 
     def _listkeys(self):
         """List all the remotefilelog keys that exist in the store.
@@ -223,13 +216,14 @@ class basestore(object):
             data = shallowutil.readfile(filepath)
             if self._validatecache and not self._validatedata(data, filepath):
                 if self._validatecachelog:
-                    with util.posixfile(self._validatecachelog, 'a+') as f:
+                    with util.posixfile(self._validatecachelog, "a+") as f:
                         f.write("corrupt %s during read\n" % filepath)
                 os.rename(filepath, filepath + ".corrupt")
                 raise KeyError("corrupt local cache file %s" % filepath)
         except IOError:
-            raise KeyError("no file found at %s for %s:%s" % (filepath, name,
-                                                              hex(node)))
+            raise KeyError(
+                "no file found at %s for %s:%s" % (filepath, name, hex(node))
+            )
 
         return data
 
@@ -241,7 +235,7 @@ class basestore(object):
             # if this node already exists, save the old version for
             # recovery/debugging purposes.
             if os.path.exists(filepath):
-                newfilename = filepath + '_old'
+                newfilename = filepath + "_old"
                 # newfilename can be read-only and shutil.copy will fail.
                 # Delete newfilename to avoid it
                 if os.path.exists(newfilename):
@@ -252,9 +246,10 @@ class basestore(object):
             shallowutil.writefile(filepath, data, readonly=True)
 
             if self._validatecache:
-                if not self._validatekey(filepath, 'write'):
-                    raise error.Abort(_("local cache write was corrupted %s") %
-                                      filepath)
+                if not self._validatekey(filepath, "write"):
+                    raise error.Abort(
+                        _("local cache write was corrupted %s") % filepath
+                    )
         finally:
             os.umask(oldumask)
 
@@ -265,7 +260,7 @@ class basestore(object):
         they want to be kept alive in the store.
         """
         repospath = os.path.join(self._path, "repos")
-        with util.posixfile(repospath, 'a') as reposfile:
+        with util.posixfile(repospath, "a") as reposfile:
             reposfile.write(os.path.dirname(path) + "\n")
 
         repospathstat = os.stat(repospath)
@@ -273,14 +268,14 @@ class basestore(object):
             os.chmod(repospath, 0o0664)
 
     def _validatekey(self, path, action):
-        with util.posixfile(path, 'rb') as f:
+        with util.posixfile(path, "rb") as f:
             data = f.read()
 
         if self._validatedata(data, path):
             return True
 
         if self._validatecachelog:
-            with util.posixfile(self._validatecachelog, 'a+') as f:
+            with util.posixfile(self._validatecachelog, "a+") as f:
                 f.write("corrupt %s during %s\n" % (path, action))
 
         os.rename(path, path + ".corrupt")
@@ -297,7 +292,7 @@ class basestore(object):
 
                 # extract the node from the metadata
                 offset += size
-                datanode = data[offset:offset + 20]
+                datanode = data[offset : offset + 20]
 
                 # and compare against the path
                 if os.path.basename(path) == hex(datanode):
@@ -315,6 +310,7 @@ class basestore(object):
 
         # prune cache
         import Queue
+
         queue = Queue.PriorityQueue()
         originalsize = 0
         size = 0
@@ -324,15 +320,14 @@ class basestore(object):
         # keep files newer than a day even if they aren't needed
         limit = time.time() - (60 * 60 * 24)
 
-        with progress.bar(ui, _('removing unnecessary files'),
-                          _('files')) as prog:
+        with progress.bar(ui, _("removing unnecessary files"), _("files")) as prog:
             for root, dirs, files in os.walk(cachepath):
                 for file in files:
-                    if file == 'repos':
+                    if file == "repos":
                         continue
 
                     # Don't delete pack files
-                    if '/packs/' in root:
+                    if "/packs/" in root:
                         continue
 
                     count += 1
@@ -345,8 +340,7 @@ class basestore(object):
                         # errno.ENOENT = no such file or directory
                         if e.errno != errno.ENOENT:
                             raise
-                        msg = _("warning: file %s was removed by another "
-                                "process\n")
+                        msg = _("warning: file %s was removed by another " "process\n")
                         ui.warn(msg % path)
                         continue
 
@@ -362,8 +356,9 @@ class basestore(object):
                             # errno.ENOENT = no such file or directory
                             if e.errno != errno.ENOENT:
                                 raise
-                            msg = _("warning: file %s was removed by another "
-                                    "process\n")
+                            msg = _(
+                                "warning: file %s was removed by another " "process\n"
+                            )
                             ui.warn(msg % path)
                             continue
                         removed += 1
@@ -372,8 +367,9 @@ class basestore(object):
         limit = ui.configbytes("remotefilelog", "cachelimit", "1000 GB")
         if size > limit:
             excess = size - limit
-            with progress.bar(ui, _("enforcing cache limit"), _("bytes"),
-                              excess) as prog:
+            with progress.bar(
+                ui, _("enforcing cache limit"), _("bytes"), excess
+            ) as prog:
                 while queue and size > limit and size > 0:
                     atime, oldpath, oldpathstat = queue.get()
                     try:
@@ -382,14 +378,18 @@ class basestore(object):
                         # errno.ENOENT = no such file or directory
                         if e.errno != errno.ENOENT:
                             raise
-                        msg = _("warning: file %s was removed by another "
-                                "process\n")
+                        msg = _("warning: file %s was removed by another " "process\n")
                         ui.warn(msg % oldpath)
                     size -= oldpathstat.st_size
                     removed += 1
                     prog.value += oldpathstat.st_size
 
-        ui.status(_("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n")
-                  % (removed, count,
-                     float(originalsize) / 1024.0 / 1024.0 / 1024.0,
-                     float(size) / 1024.0 / 1024.0 / 1024.0))
+        ui.status(
+            _("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n")
+            % (
+                removed,
+                count,
+                float(originalsize) / 1024.0 / 1024.0 / 1024.0,
+                float(size) / 1024.0 / 1024.0 / 1024.0,
+            )
+        )

@@ -270,7 +270,6 @@ class incrementalmissingancestors(object):
 
 
 class lazyancestors(object):
-
     def __init__(self, pfunc, revs, stoprev=0, inclusive=False):
         """Create a new object generating ancestors for the given revs. Does
         not generate revs lower than stoprev.

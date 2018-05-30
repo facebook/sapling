@@ -334,7 +334,6 @@ def _restoreio(ui, fin, fout):
 
 
 class pipeservice(object):
-
     def __init__(self, ui, repo, opts):
         self.ui = ui
         self.repo = repo

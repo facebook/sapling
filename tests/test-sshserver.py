@@ -8,7 +8,6 @@ from mercurial import sshserver, wireproto
 
 
 class SSHServerGetArgsTests(unittest.TestCase):
-
     def testparseknown(self):
         tests = [
             ("* 0\nnodes 0\n", ["", {}]),
@@ -33,13 +32,11 @@ def mockserver(inbytes):
 
 
 class mockrepo(object):
-
     def __init__(self, ui):
         self.ui = ui
 
 
 class mockui(object):
-
     def __init__(self, inbytes):
         self.fin = io.BytesIO(inbytes)
         self.fout = io.BytesIO()

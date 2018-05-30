@@ -33,7 +33,6 @@ commit cloud error wrappers
 
 
 class UnexpectedError(error.Abort):
-
     def __init__(self, ui, message, *args):
         tb = sys.exc_info()[-1]
         functionname = traceback.extract_tb(tb, 1)[0][3]
@@ -46,7 +45,6 @@ class UnexpectedError(error.Abort):
 
 
 class RegistrationError(error.Abort):
-
     def __init__(self, ui, message, *args, **kwargs):
         authenticationhelp = ui.config("commitcloud", "auth_help")
         if authenticationhelp:
@@ -58,7 +56,6 @@ class RegistrationError(error.Abort):
 
 
 class WorkspaceError(error.Abort):
-
     def __init__(self, ui, message, *args):
         topic = highlightmsg(ui, _("workspace error"))
         details = _(
@@ -70,7 +67,6 @@ class WorkspaceError(error.Abort):
 
 
 class ConfigurationError(error.Abort):
-
     def __init__(self, ui, message, *args):
         topic = highlightmsg(ui, _("unexpected configuration error"))
         contact = _("please contact %s to report misconfiguration") % getownerteam(ui)
@@ -90,7 +86,6 @@ class ServiceError(error.Abort):
 
 
 class InvalidWorkspaceDataError(error.Abort):
-
     def __init__(self, ui, message, *args):
         topic = highlightmsg(ui, _("invalid workspace data"))
         details = _("please run 'hg cloud recover'")

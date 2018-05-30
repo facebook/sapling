@@ -23,7 +23,6 @@ new file mode 100644
 
 
 class DiffTests(test_hgsubversion_util.TestBase):
-
     def test_diff_output(self):
         self._load_fixture_and_fetch("two_revs.svndump")
         self.commitchanges(

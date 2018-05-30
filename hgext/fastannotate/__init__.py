@@ -102,62 +102,60 @@ annotate cache greatly. Run "debugbuildlinkrevcache" before
 from __future__ import absolute_import
 
 from mercurial.i18n import _
-from mercurial import (
-    error as hgerror,
-    localrepo,
-    util,
-)
+from mercurial import error as hgerror, localrepo, util
 
-from . import (
-    commands,
-    context,
-    protocol,
-)
+from . import commands, context, protocol
 
-testedwith = 'ships-with-fb-hgext'
+testedwith = "ships-with-fb-hgext"
 
 cmdtable = commands.cmdtable
+
 
 def _flockavailable():
     try:
         import fcntl
+
         fcntl.flock
     except Exception:
         return False
     else:
         return True
 
+
 def uisetup(ui):
-    modes = set(ui.configlist('fastannotate', 'modes', ['fastannotate']))
-    if 'fctx' in modes:
-        modes.discard('hgweb')
+    modes = set(ui.configlist("fastannotate", "modes", ["fastannotate"]))
+    if "fctx" in modes:
+        modes.discard("hgweb")
     for name in modes:
-        if name == 'fastannotate':
+        if name == "fastannotate":
             commands.registercommand()
-        elif name == 'hgweb':
+        elif name == "hgweb":
             from . import support
+
             support.replacehgwebannotate()
-        elif name == 'fctx':
+        elif name == "fctx":
             from . import support
+
             support.replacefctxannotate()
             support.replaceremotefctxannotate()
             commands.wrapdefault()
         else:
-            raise hgerror.Abort(_('fastannotate: invalid mode: %s') % name)
+            raise hgerror.Abort(_("fastannotate: invalid mode: %s") % name)
 
-    if ui.configbool('fastannotate', 'server'):
+    if ui.configbool("fastannotate", "server"):
         protocol.serveruisetup(ui)
 
-    if ui.configbool('fastannotate', 'useflock', _flockavailable()):
+    if ui.configbool("fastannotate", "useflock", _flockavailable()):
         context.pathhelper.lock = context.pathhelper._lockflock
 
     # fastannotate has its own locking, without depending on repo lock
-    localrepo.localrepository._wlockfreeprefix.add('fastannotate/')
+    localrepo.localrepository._wlockfreeprefix.add("fastannotate/")
+
 
 def reposetup(ui, repo):
-    client = ui.configbool('fastannotate', 'client', default=None)
+    client = ui.configbool("fastannotate", "client", default=None)
     if client is None:
-        if util.safehasattr(repo, 'requirements'):
-            client = 'remotefilelog' in repo.requirements
+        if util.safehasattr(repo, "requirements"):
+            client = "remotefilelog" in repo.requirements
     if client:
         protocol.clientreposetup(ui, repo)

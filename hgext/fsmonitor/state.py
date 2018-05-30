@@ -13,13 +13,11 @@ import socket
 import struct
 
 from mercurial.i18n import _
-from mercurial import (
-    pathutil,
-    util,
-)
+from mercurial import pathutil, util
 
 _version = 4
 _versionformat = ">I"
+
 
 class state(object):
     def __init__(self, repo):
@@ -29,14 +27,13 @@ class state(object):
         self._lastclock = None
         self._identity = util.filestat(None)
 
-        self.mode = self._ui.config('fsmonitor', 'mode')
-        self.walk_on_invalidate = self._ui.configbool(
-            'fsmonitor', 'walk_on_invalidate')
-        self.timeout = float(self._ui.config('fsmonitor', 'timeout'))
+        self.mode = self._ui.config("fsmonitor", "mode")
+        self.walk_on_invalidate = self._ui.configbool("fsmonitor", "walk_on_invalidate")
+        self.timeout = float(self._ui.config("fsmonitor", "timeout"))
 
     def get(self):
         try:
-            file = self._vfs('fsmonitor.state', 'rb')
+            file = self._vfs("fsmonitor.state", "rb")
         except IOError as inst:
             self._identity = util.filestat(None)
             if inst.errno != errno.ENOENT:
@@ -48,8 +45,10 @@ class state(object):
         versionbytes = file.read(4)
         if len(versionbytes) < 4:
             self._ui.log(
-                'fsmonitor', 'fsmonitor: state file only has %d bytes, '
-                'nuking state\n' % len(versionbytes))
+                "fsmonitor",
+                "fsmonitor: state file only has %d bytes, "
+                "nuking state\n" % len(versionbytes),
+            )
             self.invalidate()
             return None, None, None
         try:
@@ -57,27 +56,35 @@ class state(object):
             if diskversion != _version:
                 # different version, nuke state and start over
                 self._ui.log(
-                    'fsmonitor', 'fsmonitor: version switch from %d to '
-                    '%d, nuking state\n' % (diskversion, _version))
+                    "fsmonitor",
+                    "fsmonitor: version switch from %d to "
+                    "%d, nuking state\n" % (diskversion, _version),
+                )
                 self.invalidate()
                 return None, None, None
 
-            state = file.read().split('\0')
+            state = file.read().split("\0")
             # state = hostname\0clock\0ignorehash\0 + list of files, each
             # followed by a \0
             if len(state) < 3:
                 self._ui.log(
-                    'fsmonitor', 'fsmonitor: state file truncated (expected '
-                    '3 chunks, found %d), nuking state\n', len(state))
+                    "fsmonitor",
+                    "fsmonitor: state file truncated (expected "
+                    "3 chunks, found %d), nuking state\n",
+                    len(state),
+                )
                 self.invalidate()
                 return None, None, None
             diskhostname = state[0]
             hostname = socket.gethostname()
             if diskhostname != hostname:
                 # file got moved to a different host
-                self._ui.log('fsmonitor', 'fsmonitor: stored hostname "%s" '
-                             'different from current "%s", nuking state\n' %
-                             (diskhostname, hostname))
+                self._ui.log(
+                    "fsmonitor",
+                    'fsmonitor: stored hostname "%s" '
+                    'different from current "%s", nuking state\n'
+                    % (diskhostname, hostname),
+                )
                 self.invalidate()
                 return None, None, None
 
@@ -89,9 +96,10 @@ class state(object):
         finally:
             file.close()
 
-        if 'fsmonitor_details' in getattr(self._ui, 'track', ()):
-            self._ui.log('fsmonitor_details',
-                         'clock, notefiles = %r, %r' % (clock, notefiles))
+        if "fsmonitor_details" in getattr(self._ui, "track", ()):
+            self._ui.log(
+                "fsmonitor_details", "clock, notefiles = %r, %r" % (clock, notefiles)
+            )
 
         return clock, ignorehash, notefiles
 
@@ -102,48 +110,48 @@ class state(object):
 
         # Read the identity from the file on disk rather than from the open file
         # pointer below, because the latter is actually a brand new file.
-        identity = util.filestat.frompath(self._vfs.join('fsmonitor.state'))
+        identity = util.filestat.frompath(self._vfs.join("fsmonitor.state"))
         if identity != self._identity:
-            self._ui.debug('skip updating fsmonitor.state: identity mismatch\n')
+            self._ui.debug("skip updating fsmonitor.state: identity mismatch\n")
             return
 
         try:
-            file = self._vfs('fsmonitor.state', 'wb', atomictemp=True,
-                checkambig=True)
+            file = self._vfs("fsmonitor.state", "wb", atomictemp=True, checkambig=True)
         except (IOError, OSError):
             self._ui.warn(_("warning: unable to write out fsmonitor state\n"))
             return
 
-        if 'fsmonitor_details' in getattr(self._ui, 'track', ()):
-            self._ui.log('fsmonitor_details',
-                         'set clock, notefiles = %r, %r' % (clock, notefiles))
+        if "fsmonitor_details" in getattr(self._ui, "track", ()):
+            self._ui.log(
+                "fsmonitor_details",
+                "set clock, notefiles = %r, %r" % (clock, notefiles),
+            )
 
         with file:
             file.write(struct.pack(_versionformat, _version))
-            file.write(socket.gethostname() + '\0')
-            file.write(clock + '\0')
-            file.write(ignorehash + '\0')
+            file.write(socket.gethostname() + "\0")
+            file.write(clock + "\0")
+            file.write(ignorehash + "\0")
             if notefiles:
-                file.write('\0'.join(notefiles))
-                file.write('\0')
+                file.write("\0".join(notefiles))
+                file.write("\0")
 
     def invalidate(self):
         try:
-            os.unlink(os.path.join(self._rootdir, '.hg', 'fsmonitor.state'))
+            os.unlink(os.path.join(self._rootdir, ".hg", "fsmonitor.state"))
         except OSError as inst:
             if inst.errno != errno.ENOENT:
                 raise
-        if 'fsmonitor_details' in getattr(self._ui, 'track', ()):
-            self._ui.log('fsmonitor_details', 'fsmonitor state invalidated')
+        if "fsmonitor_details" in getattr(self._ui, "track", ()):
+            self._ui.log("fsmonitor_details", "fsmonitor state invalidated")
         self._identity = util.filestat(None)
 
     def setlastclock(self, clock):
-        if 'fsmonitor_details' in getattr(self._ui, 'track', ()):
-            self._ui.log('fsmonitor_details', 'setlastclock: %r' % clock)
+        if "fsmonitor_details" in getattr(self._ui, "track", ()):
+            self._ui.log("fsmonitor_details", "setlastclock: %r" % clock)
         self._lastclock = clock
 
     def getlastclock(self):
-        if 'fsmonitor_details' in getattr(self._ui, 'track', ()):
-            self._ui.log('fsmonitor_details',
-                         'getlastclock: %r' % self._lastclock)
+        if "fsmonitor_details" in getattr(self._ui, "track", ()):
+            self._ui.log("fsmonitor_details", "getlastclock: %r" % self._lastclock)
         return self._lastclock

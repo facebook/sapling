@@ -18,7 +18,6 @@ from mercurial import util
 
 
 class fileindexapi(indexapi):
-
     def __init__(self, repo):
         super(fileindexapi, self).__init__()
         self._repo = repo

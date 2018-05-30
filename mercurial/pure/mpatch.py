@@ -10,11 +10,14 @@ from __future__ import absolute_import
 import struct
 
 from .. import pycompat
+
 stringio = pycompat.stringio
+
 
 class mpatchError(Exception):
     """error raised when a delta cannot be decoded
     """
+
 
 # This attempts to apply a series of patches in time proportional to
 # the total size of the patches, rather than patches * len(text). This
@@ -26,15 +29,17 @@ class mpatchError(Exception):
 # mmap and simply use memmove. This avoids creating a bunch of large
 # temporary string buffers.
 
-def _pull(dst, src, l): # pull l bytes from src
+
+def _pull(dst, src, l):  # pull l bytes from src
     while l:
         f = src.pop()
-        if f[0] > l: # do we need to split?
+        if f[0] > l:  # do we need to split?
             src.append((f[0] - l, f[1] + l))
             dst.append((l, f[1]))
             return
         dst.append(f)
         l -= f[0]
+
 
 def _move(m, dest, src, count):
     """move count bytes from src to dest
@@ -46,12 +51,14 @@ def _move(m, dest, src, count):
     m.seek(dest)
     m.write(buf)
 
+
 def _collect(m, buf, list):
     start = buf
     for l, p in reversed(list):
         _move(m, buf, p, l)
         buf += l
     return (buf - start, start)
+
 
 def patches(a, bins):
     if not bins:
@@ -60,7 +67,7 @@ def patches(a, bins):
     plens = [len(x) for x in bins]
     pl = sum(plens)
     bl = len(a) + pl
-    tl = bl + bl + pl # enough for the patches and two working texts
+    tl = bl + bl + pl  # enough for the patches and two working texts
     b1, b2 = 0, bl
 
     if not tl:
@@ -93,17 +100,18 @@ def patches(a, bins):
                 p1, p2, l = struct.unpack(">lll", m.read(12))
             except struct.error:
                 raise mpatchError("patch cannot be decoded")
-            _pull(new, frags, p1 - last) # what didn't change
-            _pull([], frags, p2 - p1)    # what got deleted
-            new.append((l, pos + 12))   # what got added
+            _pull(new, frags, p1 - last)  # what didn't change
+            _pull([], frags, p2 - p1)  # what got deleted
+            new.append((l, pos + 12))  # what got added
             pos += l + 12
             last = p2
-        frags.extend(reversed(new))     # what was left at the end
+        frags.extend(reversed(new))  # what was left at the end
 
     t = _collect(m, b2, frags)
 
     m.seek(t[1])
     return m.read(t[0])
+
 
 def patchedsize(orig, delta):
     outlen, last, bin = 0, 0, 0
@@ -111,7 +119,7 @@ def patchedsize(orig, delta):
     data = 12
 
     while data <= binend:
-        decode = delta[bin:bin + 12]
+        decode = delta[bin : bin + 12]
         start, end, length = struct.unpack(">lll", decode)
         if start > end:
             break

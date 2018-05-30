@@ -1900,6 +1900,7 @@ firsterror = False
 
 class TestResult(unittest._TextTestResult):
     """Holds results when executing via unittest."""
+
     # Don't worry too much about accessing the non-public _TextTestResult.
     # It is relatively common in Python testing tools.
     def __init__(self, options, *args, **kwargs):
@@ -2872,7 +2873,6 @@ class TestRunner(object):
         return tests
 
     def _runtests(self, testdescs):
-
         def _reloadtest(test, i):
             # convert a test back to its description dict
             desc = {"path": test.path}

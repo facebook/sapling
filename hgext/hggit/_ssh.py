@@ -1,12 +1,12 @@
 from dulwich.client import SubprocessWrapper
 import subprocess
 
-from mercurial import (
-    util,
-)
+from mercurial import util
+
 
 class SSHVendor(object):
     """Parent class for ui-linked Vendor classes."""
+
 
 def generate_ssh_vendor(ui):
     """
@@ -23,15 +23,17 @@ def generate_ssh_vendor(ui):
                 # 0.11.x dulwich sends an array of [command arg1 arg2 ...], so
                 # we detect that here and reformat it back to what hg-git
                 # expects (e.g. "command 'arg1 arg2'")
-                command = ["%s '%s'" % (command[0], ' '.join(command[1:]))]
+                command = ["%s '%s'" % (command[0], " ".join(command[1:]))]
             sshcmd = ui.config("ui", "ssh")
             args = util.sshargs(sshcmd, host, username, port)
-            cmd = '%s %s %s' % (sshcmd, args,
-                                util.shellquote(' '.join(command)))
-            ui.debug('calling ssh: %s\n' % cmd)
-            proc = subprocess.Popen(util.quotecommand(cmd), shell=True,
-                                    stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE)
+            cmd = "%s %s %s" % (sshcmd, args, util.shellquote(" ".join(command)))
+            ui.debug("calling ssh: %s\n" % cmd)
+            proc = subprocess.Popen(
+                util.quotecommand(cmd),
+                shell=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
             return SubprocessWrapper(proc)
 
     return _Vendor

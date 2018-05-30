@@ -153,7 +153,6 @@ else:
     # define "@command" annotation locally, because cmdutil.command
     # has been available since 1.9 (or 2daa5179e73f)
     def command(name, options=(), synopsis=None, norepo=False):
-
         def decorator(func):
             if synopsis:
                 cmdtable[name] = func, list(options), synopsis
@@ -343,7 +342,6 @@ def safeattrsetter(obj, name, ignoremissing=False):
     origvalue = getattr(obj, name)
 
     class attrutil(object):
-
         def set(self, newvalue):
             setattr(obj, name, newvalue)
 
@@ -582,7 +580,6 @@ def perfbundleread(ui, repo, bundlepath, **opts):
     from mercurial import bundle2, exchange, streamclone
 
     def makebench(fn):
-
         def run():
             with open(bundlepath, "rb") as fh:
                 bundle = exchange.readbundle(ui, fh, bundlepath)
@@ -591,7 +588,6 @@ def perfbundleread(ui, repo, bundlepath, **opts):
         return run
 
     def makereadnbytes(size):
-
         def run():
             with open(bundlepath, "rb") as fh:
                 bundle = exchange.readbundle(ui, fh, bundlepath)
@@ -601,7 +597,6 @@ def perfbundleread(ui, repo, bundlepath, **opts):
         return run
 
     def makestdioread(size):
-
         def run():
             with open(bundlepath, "rb") as fh:
                 while fh.read(size):
@@ -638,7 +633,6 @@ def perfbundleread(ui, repo, bundlepath, **opts):
             part.seek(0, os.SEEK_END)
 
     def makepartreadnbytes(size):
-
         def run():
             with open(bundlepath, "rb") as fh:
                 bundle = exchange.readbundle(ui, fh, bundlepath)
@@ -1638,7 +1632,6 @@ def perfvolatilesets(ui, repo, *names, **opts):
     repo = repo.unfiltered()
 
     def getobs(name):
-
         def d():
             repo.invalidatevolatilesets()
             if opts["clear_obsstore"]:
@@ -1655,7 +1648,6 @@ def perfvolatilesets(ui, repo, *names, **opts):
         timer(getobs(name), title=name)
 
     def getfiltered(name):
-
         def d():
             repo.invalidatevolatilesets()
             if opts["clear_obsstore"]:
@@ -1766,7 +1758,6 @@ def perfloadmarkers(ui, repo):
 def perflrucache(
     ui, size=4, gets=10000, sets=10000, mixed=10000, mixedgetfreq=50, **opts
 ):
-
     def doinit():
         for i in xrange(10000):
             util.lrucachedict(size)

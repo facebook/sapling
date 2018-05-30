@@ -109,7 +109,6 @@ def addgroupcopy(rlog, tr, destname=b"_destrevlog.i", optimaldelta=True):
     """
 
     class dummychangegroup(object):
-
         @staticmethod
         def deltachunk(pnode):
             pnode = pnode or node.nullid

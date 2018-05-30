@@ -7,21 +7,22 @@ of the API concrete layouts are expected to implement.
 
 """
 
-class BaseLayout(object):
 
+class BaseLayout(object):
     def __init__(self, meta):
         self.meta = meta
 
     def __unimplemented(self, method_name):
         raise NotImplementedError(
-            "Incomplete layout implementation: %s.%s doesn't implement %s" %
-            (self.__module__, self.__name__, method_name))
+            "Incomplete layout implementation: %s.%s doesn't implement %s"
+            % (self.__module__, self.__name__, method_name)
+        )
 
     @property
     def name(self):
         """Return the name of the key for NAME_TO_CLASS so we can easily compute a
         stale cache."""
-        self.__unimplemented('name')
+        self.__unimplemented("name")
 
     def localname(self, path):
         """Compute the local name for a branch located at path.
@@ -29,7 +30,7 @@ class BaseLayout(object):
         path should be relative to the repo url.
 
         """
-        self.__unimplemented('localname')
+        self.__unimplemented("localname")
 
     def remotename(self, branch):
         """Compute a subversion path for a mercurial branch name
@@ -40,9 +41,9 @@ class BaseLayout(object):
         the given branch by raising a KeyError.
 
         """
-        self.__unimplemented('remotename')
+        self.__unimplemented("remotename")
 
-    def remotepath(self, branch, subdir='/'):
+    def remotepath(self, branch, subdir="/"):
         """Compute a  subversion path for a mercurial branch name.
 
         This should return an absolute path, assuming our repo root is at subdir
@@ -52,7 +53,7 @@ class BaseLayout(object):
         the given branch by raising a KeyError.
 
         """
-        self.__unimplemented('remotepath')
+        self.__unimplemented("remotepath")
 
     @property
     def taglocations(self):
@@ -61,7 +62,7 @@ class BaseLayout(object):
         Should be returned in reverse-sorted order.
 
         """
-        self.__unimplemented('tagpaths')
+        self.__unimplemented("tagpaths")
 
     def get_path_tag(self, path, taglocations):
         """Get the tag name for the given svn path, if it is a possible tag.
@@ -75,7 +76,7 @@ class BaseLayout(object):
         taglocations should be as returned by self.taglocations()
 
         """
-        self.__unimplemented('get_path_tag')
+        self.__unimplemented("get_path_tag")
 
     def split_remote_name(self, path, known_branches):
         """Split the path into a branch component and a local component.
@@ -96,4 +97,4 @@ class BaseLayout(object):
         asubversion branch structure.
 
         """
-        self.__unimplemented('split_remote_name')
+        self.__unimplemented("split_remote_name")

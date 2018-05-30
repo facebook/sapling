@@ -29,38 +29,31 @@ match (even matches with a low confidence score) will be used.
 from __future__ import absolute_import
 
 from . import highlight
-from mercurial.hgweb import (
-    common,
-    webcommands,
-    webutil,
-)
+from mercurial.hgweb import common, webcommands, webutil
 
-from mercurial import (
-    encoding,
-    extensions,
-    fileset,
-)
+from mercurial import encoding, extensions, fileset
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
+
 
 def pygmentize(web, field, fctx, tmpl):
-    style = web.config('web', 'pygments_style', 'colorful')
-    expr = web.config('web', 'highlightfiles', "size('<5M')")
-    filenameonly = web.configbool('web', 'highlightonlymatchfilename', False)
+    style = web.config("web", "pygments_style", "colorful")
+    expr = web.config("web", "highlightfiles", "size('<5M')")
+    filenameonly = web.configbool("web", "highlightonlymatchfilename", False)
 
     ctx = fctx.changectx()
     tree = fileset.parse(expr)
     mctx = fileset.matchctx(ctx, subset=[fctx.path()], status=None)
     if fctx.path() in fileset.getset(mctx, tree):
-        highlight.pygmentize(field, fctx, style, tmpl,
-                guessfilenameonly=filenameonly)
+        highlight.pygmentize(field, fctx, style, tmpl, guessfilenameonly=filenameonly)
+
 
 def filerevision_highlight(orig, web, req, tmpl, fctx):
-    mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))
+    mt = "".join(tmpl("mimetype", encoding=encoding.encoding))
     # only pygmentize for mimetype containing 'html' so we both match
     # 'text/html' and possibly 'application/xhtml+xml' in the future
     # so that we don't have to touch the extension when the mimetype
@@ -68,30 +61,31 @@ def filerevision_highlight(orig, web, req, tmpl, fctx):
     # raw file is sent using rawfile() and doesn't call us, so we
     # can't clash with the file's content-type here in case we
     # pygmentize a html file
-    if 'html' in mt:
-        pygmentize(web, 'fileline', fctx, tmpl)
+    if "html" in mt:
+        pygmentize(web, "fileline", fctx, tmpl)
 
     return orig(web, req, tmpl, fctx)
 
+
 def annotate_highlight(orig, web, req, tmpl):
-    mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))
-    if 'html' in mt:
+    mt = "".join(tmpl("mimetype", encoding=encoding.encoding))
+    if "html" in mt:
         fctx = webutil.filectx(web.repo, req)
-        pygmentize(web, 'annotateline', fctx, tmpl)
+        pygmentize(web, "annotateline", fctx, tmpl)
 
     return orig(web, req, tmpl)
 
+
 def generate_css(web, req, tmpl):
-    pg_style = web.config('web', 'pygments_style', 'colorful')
+    pg_style = web.config("web", "pygments_style", "colorful")
     fmter = highlight.HtmlFormatter(style=pg_style)
-    req.respond(common.HTTP_OK, 'text/css')
-    return ['/* pygments_style = %s */\n\n' % pg_style,
-            fmter.get_style_defs('')]
+    req.respond(common.HTTP_OK, "text/css")
+    return ["/* pygments_style = %s */\n\n" % pg_style, fmter.get_style_defs("")]
+
 
 def extsetup():
     # monkeypatch in the new version
-    extensions.wrapfunction(webcommands, '_filerevision',
-                            filerevision_highlight)
-    extensions.wrapfunction(webcommands, 'annotate', annotate_highlight)
+    extensions.wrapfunction(webcommands, "_filerevision", filerevision_highlight)
+    extensions.wrapfunction(webcommands, "annotate", annotate_highlight)
     webcommands.highlightcss = generate_css
-    webcommands.__all__.append('highlightcss')
+    webcommands.__all__.append("highlightcss")

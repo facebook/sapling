@@ -109,7 +109,6 @@ def _textv2(it):
 
 
 class lazymanifestiter(object):
-
     def __init__(self, lm):
         self.pos = 0
         self.lm = lm
@@ -133,7 +132,6 @@ class lazymanifestiter(object):
 
 
 class lazymanifestiterentries(object):
-
     def __init__(self, lm):
         self.lm = lm
         self.pos = 0
@@ -170,7 +168,6 @@ def _cmp(a, b):
 
 
 class purelazymanifest(object):
-
     def __init__(self, data, positions=None, extrainfo=None, extradata=None):
         if positions is None:
             self.positions = self.findlines(data)
@@ -421,7 +418,6 @@ except AttributeError:
 
 
 class manifestdict(object):
-
     def __init__(self, data=""):
         if data.startswith("\0"):
             # _lazymanifest can not parse v2
@@ -748,7 +744,6 @@ _noop = lambda s: None
 
 
 class treemanifest(object):
-
     def __init__(self, dir="", text=""):
         self._dir = dir
         self._node = revlog.nullid
@@ -1178,7 +1173,6 @@ class treemanifest(object):
         return _text(sorted(dirs + files), usemanifestv2)
 
     def read(self, gettext, readsubtree):
-
         def _load_for_read(s):
             s.parse(gettext(), readsubtree)
             s._dirty = False
@@ -1471,7 +1465,6 @@ class manifestlog(object):
 
 
 class memmanifestctx(object):
-
     def __init__(self, manifestlog):
         self._manifestlog = manifestlog
         self._manifestdict = manifestdict()
@@ -1627,7 +1620,6 @@ class manifestctx(object):
 
 
 class memtreemanifestctx(object):
-
     def __init__(self, manifestlog, dir=""):
         self._manifestlog = manifestlog
         self._dir = dir
@@ -1648,7 +1640,6 @@ class memtreemanifestctx(object):
         return self._treemanifest
 
     def write(self, transaction, link, p1, p2, added, removed):
-
         def readtree(dir, node):
             return self._manifestlog.get(dir, node).read()
 
@@ -1665,7 +1656,6 @@ class memtreemanifestctx(object):
 
 
 class treemanifestctx(object):
-
     def __init__(self, manifestlog, dir, node):
         self._manifestlog = manifestlog
         self._dir = dir

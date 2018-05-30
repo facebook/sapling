@@ -52,7 +52,7 @@ from mercurial import (
     util,
 )
 
-testedwith = 'ships-with-fb-hgext'
+testedwith = "ships-with-fb-hgext"
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -60,13 +60,13 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('absorb', 'amendflag', default=None)
-configitem('absorb', 'maxdescwidth', default=50)
+configitem("absorb", "amendflag", default=None)
+configitem("absorb", "maxdescwidth", default=50)
 
 colortable = {
-    'absorb.description': 'magenta',
-    'absorb.node': 'blue bold',
-    'absorb.path': 'bold',
+    "absorb.description": "magenta",
+    "absorb.node": "blue bold",
+    "absorb.path": "bold",
 }
 
 defaultdict = collections.defaultdict
@@ -76,8 +76,10 @@ try:
 except NameError:
     xrange = range
 
+
 class nullui(object):
     """blank ui object doing nothing"""
+
     debugflag = False
     verbose = False
     quiet = True
@@ -85,15 +87,19 @@ class nullui(object):
     def __getitem__(name):
         def nullfunc(*args, **kwds):
             return
+
         return nullfunc
+
 
 class emptyfilecontext(object):
     """minimal filecontext representing an empty file"""
+
     def data(self):
-        return ''
+        return ""
 
     def node(self):
         return node.nullid
+
 
 def uniq(lst):
     """list -> list. remove duplicated items without changing the order"""
@@ -104,6 +110,7 @@ def uniq(lst):
             seen.add(x)
             result.append(x)
     return result
+
 
 def getdraftstack(headctx, limit=None):
     """(ctx, int?) -> [ctx]. get a linear stack of non-public changesets.
@@ -126,6 +133,7 @@ def getdraftstack(headctx, limit=None):
         ctx = parents[0]
     result.reverse()
     return result
+
 
 def getfilestack(stack, path, seenfctxs=None):
     """([ctx], str, set) -> [fctx], {ctx: fctx}
@@ -175,25 +183,25 @@ def getfilestack(stack, path, seenfctxs=None):
     fctxs = []
     fctxmap = {}
 
-    pctx = stack[0].p1() # the public (immutable) ctx we stop at
+    pctx = stack[0].p1()  # the public (immutable) ctx we stop at
     for ctx in reversed(stack):
-        if path not in ctx: # the file is added in the next commit
+        if path not in ctx:  # the file is added in the next commit
             pctx = ctx
             break
         fctx = ctx[path]
         fctxs.append(fctx)
-        if fctx in seenfctxs: # treat fctx as the immutable one
-            pctx = None # do not add another immutable fctx
+        if fctx in seenfctxs:  # treat fctx as the immutable one
+            pctx = None  # do not add another immutable fctx
             break
-        fctxmap[ctx] = fctx # only for mutable fctxs
+        fctxmap[ctx] = fctx  # only for mutable fctxs
         renamed = fctx.renamed()
         if renamed:
-            path = renamed[0] # follow rename
-            if path in ctx: # but do not follow copy
+            path = renamed[0]  # follow rename
+            if path in ctx:  # but do not follow copy
                 pctx = ctx.p1()
                 break
 
-    if pctx is not None: # need an extra immutable fctx
+    if pctx is not None:  # need an extra immutable fctx
         if path in pctx:
             fctxs.append(pctx[path])
         else:
@@ -209,10 +217,12 @@ def getfilestack(stack, path, seenfctxs=None):
     # remove uniq and find a different way to identify fctxs.
     return uniq(fctxs), fctxmap
 
+
 class overlaystore(patch.filestore):
     """read-only, hybrid store based on a dict and ctx.
     memworkingcopy: {path: content}, overrides file contents.
     """
+
     def __init__(self, basectx, memworkingcopy):
         self.basectx = basectx
         self.memworkingcopy = memworkingcopy
@@ -227,8 +237,9 @@ class overlaystore(patch.filestore):
         else:
             content = fctx.data()
         mode = (fctx.islink(), fctx.isexec())
-        renamed = fctx.renamed() # False or (path, node)
+        renamed = fctx.renamed()  # False or (path, node)
         return content, mode, (renamed and renamed[0])
+
 
 def overlaycontext(memworkingcopy, ctx, parents=None, extra=None):
     """({path: content}, ctx, (p1node, p2node)?, {}?) -> memctx
@@ -245,9 +256,17 @@ def overlaycontext(memworkingcopy, ctx, parents=None, extra=None):
     files = set(ctx.files()).union(memworkingcopy.iterkeys())
     store = overlaystore(ctx, memworkingcopy)
     return context.memctx(
-        repo=ctx.repo(), parents=parents, text=desc,
-        files=files, filectxfn=store, user=user, date=date,
-        branch=None, extra=extra)
+        repo=ctx.repo(),
+        parents=parents,
+        text=desc,
+        files=files,
+        filectxfn=store,
+        user=user,
+        date=date,
+        branch=None,
+        extra=extra,
+    )
+
 
 class filefixupstate(object):
     """state needed to apply fixups to a single file
@@ -289,10 +308,10 @@ class filefixupstate(object):
             assert self._checkoutlinelog() == self.contents
 
         # following fields will be filled later
-        self.chunkstats = [0, 0] # [adopted, total : int]
-        self.targetlines = [] # [str]
-        self.fixups = [] # [(linelog rev, a1, a2, b1, b2)]
-        self.finalcontents = [] # [str]
+        self.chunkstats = [0, 0]  # [adopted, total : int]
+        self.targetlines = []  # [str]
+        self.fixups = []  # [(linelog rev, a1, a2, b1, b2)]
+        self.finalcontents = []  # [str]
 
     def diffwith(self, targetfctx, showchanges=False, showdescs=False):
         """calculate fixups needed by examining the differences between
@@ -313,7 +332,7 @@ class filefixupstate(object):
         self.targetlines = blines
 
         self.linelog.annotate(self.linelog.maxrev)
-        annotated = self.linelog.annotateresult # [(linelog rev, linenum)]
+        annotated = self.linelog.annotateresult  # [(linelog rev, linenum)]
         assert len(annotated) == len(alines)
         # add a dummy end line to make insertion at the end easier
         if annotated:
@@ -323,7 +342,7 @@ class filefixupstate(object):
         # analyse diff blocks
         for chunk in self._alldiffchunks(a, b, alines, blines):
             newfixups = self._analysediffchunk(chunk, annotated)
-            self.chunkstats[0] += bool(newfixups) # 1 or 0
+            self.chunkstats[0] += bool(newfixups)  # 1 or 0
             self.chunkstats[1] += 1
             self.fixups += newfixups
             if showchanges:
@@ -340,11 +359,12 @@ class filefixupstate(object):
             blines = self.targetlines[b1:b2]
             if self.ui.debugflag:
                 idx = (max(rev - 1, 0)) // 2
-                self.ui.write(_('%s: chunk %d:%d -> %d lines\n')
-                              % (node.short(self.fctxs[idx].node()),
-                                 a1, a2, len(blines)))
+                self.ui.write(
+                    _("%s: chunk %d:%d -> %d lines\n")
+                    % (node.short(self.fctxs[idx].node()), a1, a2, len(blines))
+                )
             self.linelog.replacelines(rev, a1, a2, b1, b2)
-        if self.opts.get('edit_lines', False):
+        if self.opts.get("edit_lines", False):
             self.finalcontents = self._checkoutlinelogwithedits()
         else:
             self.finalcontents = self._checkoutlinelog()
@@ -376,12 +396,11 @@ class filefixupstate(object):
         a1, a2, b1, b2 = chunk
         # find involved indexes from annotate result
         involved = annotated[a1:a2]
-        if not involved and annotated: # a1 == a2 and a is not empty
+        if not involved and annotated:  # a1 == a2 and a is not empty
             # pure insertion, check nearby lines. ignore lines belong
             # to the public (first) changeset (i.e. annotated[i][0] == 1)
             nearbylinenums = set([a2, max(0, a1 - 1)])
-            involved = [annotated[i]
-                        for i in nearbylinenums if annotated[i][0] != 1]
+            involved = [annotated[i] for i in nearbylinenums if annotated[i][0] != 1]
         involvedrevs = list(set(r for r, l in involved))
         newfixups = []
         if len(involvedrevs) == 1 and self._iscontinuous(a1, a2 - 1, True):
@@ -395,9 +414,9 @@ class filefixupstate(object):
             for i in xrange(a1, a2):
                 rev, linenum = annotated[i]
                 if rev > 1:
-                    if b1 == b2: # deletion, simply remove that single line
+                    if b1 == b2:  # deletion, simply remove that single line
                         nb1 = nb2 = 0
-                    else: # 1:1 line mapping, change the corresponding rev
+                    else:  # 1:1 line mapping, change the corresponding rev
                         nb1 = b1 + i - a1
                         nb2 = nb1 + 1
                     fixuprev = rev + 1
@@ -409,7 +428,7 @@ class filefixupstate(object):
         """like mdiff.allblocks, but only care about differences"""
         blocks = mdiff.allblocks(a, b, lines1=alines, lines2=blines)
         for chunk, btype in blocks:
-            if btype != '!':
+            if btype != "!":
                 continue
             yield chunk
 
@@ -418,7 +437,7 @@ class filefixupstate(object):
         this is similar to running a partial "annotate".
         """
         llog = linelog.linelog()
-        a, alines = '', []
+        a, alines = "", []
         for i in xrange(len(self.contents)):
             b, blines = self.contents[i], self.contentlines[i]
             llrev = i * 2 + 1
@@ -434,7 +453,7 @@ class filefixupstate(object):
         for i in xrange(len(self.contents)):
             rev = (i + 1) * 2
             self.linelog.annotate(rev)
-            content = ''.join(map(self._getline, self.linelog.annotateresult))
+            content = "".join(map(self._getline, self.linelog.annotateresult))
             contents.append(content)
         return contents
 
@@ -442,48 +461,56 @@ class filefixupstate(object):
         """() -> [str]. prompt all lines for edit"""
         alllines = self.linelog.getalllines()
         # header
-        editortext = (_('HG: editing %s\nHG: "y" means the line to the right '
-                        'exists in the changeset to the top\nHG:\n')
-                      % self.fctxs[-1].path())
+        editortext = (
+            _(
+                'HG: editing %s\nHG: "y" means the line to the right '
+                "exists in the changeset to the top\nHG:\n"
+            )
+            % self.fctxs[-1].path()
+        )
         # [(idx, fctx)]. hide the dummy emptyfilecontext
-        visiblefctxs = [(i, f)
-                        for i, f in enumerate(self.fctxs)
-                        if not isinstance(f, emptyfilecontext)]
+        visiblefctxs = [
+            (i, f)
+            for i, f in enumerate(self.fctxs)
+            if not isinstance(f, emptyfilecontext)
+        ]
         for i, (j, f) in enumerate(visiblefctxs):
-            editortext += (_('HG: %s/%s %s %s\n') %
-                           ('|' * i, '-' * (len(visiblefctxs) - i + 1),
-                            node.short(f.node()),
-                            f.description().split('\n',1)[0]))
-        editortext += _('HG: %s\n') % ('|' * len(visiblefctxs))
+            editortext += _("HG: %s/%s %s %s\n") % (
+                "|" * i,
+                "-" * (len(visiblefctxs) - i + 1),
+                node.short(f.node()),
+                f.description().split("\n", 1)[0],
+            )
+        editortext += _("HG: %s\n") % ("|" * len(visiblefctxs))
         # figure out the lifetime of a line, this is relatively inefficient,
         # but probably fine
-        lineset = defaultdict(lambda: set()) # {(llrev, linenum): {llrev}}
+        lineset = defaultdict(lambda: set())  # {(llrev, linenum): {llrev}}
         for i, f in visiblefctxs:
             self.linelog.annotate((i + 1) * 2)
             for l in self.linelog.annotateresult:
                 lineset[l].add(i)
         # append lines
         for l in alllines:
-            editortext += ('    %s : %s' %
-                           (''.join([('y' if i in lineset[l] else ' ')
-                                     for i, _f in visiblefctxs]),
-                            self._getline(l)))
+            editortext += "    %s : %s" % (
+                "".join([("y" if i in lineset[l] else " ") for i, _f in visiblefctxs]),
+                self._getline(l),
+            )
         # run editor
-        editedtext = self.ui.edit(editortext, '', action='absorb')
+        editedtext = self.ui.edit(editortext, "", action="absorb")
         if not editedtext:
-            raise error.Abort(_('empty editor text'))
+            raise error.Abort(_("empty editor text"))
         # parse edited result
-        contents = ['' for i in self.fctxs]
+        contents = ["" for i in self.fctxs]
         leftpadpos = 4
         colonpos = leftpadpos + len(visiblefctxs) + 1
         for l in mdiff.splitnewlines(editedtext):
-            if l.startswith('HG:'):
+            if l.startswith("HG:"):
                 continue
-            if l[colonpos - 1:colonpos + 2] != ' : ':
-                raise error.Abort(_('malformed line: %s') % l)
-            linecontent = l[colonpos + 2:]
-            for i, ch in enumerate(l[leftpadpos:colonpos - 1]):
-                if ch == 'y':
+            if l[colonpos - 1 : colonpos + 2] != " : ":
+                raise error.Abort(_("malformed line: %s") % l)
+            linecontent = l[colonpos + 2 :]
+            for i, ch in enumerate(l[leftpadpos : colonpos - 1]):
+                if ch == "y":
                     contents[visiblefctxs[i][0]] += linecontent
         # chunkstats is hard to calculate if anything changes, therefore
         # set them to just a simple value (1, 1).
@@ -494,9 +521,9 @@ class filefixupstate(object):
     def _getline(self, lineinfo):
         """((rev, linenum)) -> str. convert rev+line number to line content"""
         rev, linenum = lineinfo
-        if rev & 1: # odd: original line taken from fctxs
+        if rev & 1:  # odd: original line taken from fctxs
             return self.contentlines[rev // 2][linenum]
-        else: # even: fixup line from targetfctx
+        else:  # even: fixup line from targetfctx
             return self.targetlines[linenum]
 
     def _iscontinuous(self, a1, a2, closedinterval=False):
@@ -532,8 +559,12 @@ class filefixupstate(object):
             lastrev = pcurrentchunk[0][0]
             lasta2 = pcurrentchunk[0][2]
             lastb2 = pcurrentchunk[0][4]
-            if (a1 == lasta2 and b1 == lastb2 and rev == lastrev and
-                    self._iscontinuous(max(a1 - 1, 0), a1)):
+            if (
+                a1 == lasta2
+                and b1 == lastb2
+                and rev == lastrev
+                and self._iscontinuous(max(a1 - 1, 0), a1)
+            ):
                 # merge into currentchunk
                 pcurrentchunk[0][2] = a2
                 pcurrentchunk[0][4] = b2
@@ -547,7 +578,7 @@ class filefixupstate(object):
         ui = self.ui
 
         def label(line, label):
-            if line.endswith('\n'):
+            if line.endswith("\n"):
                 line = line[:-1]
             return ui.label(line, label)
 
@@ -561,30 +592,37 @@ class filefixupstate(object):
             for i in xrange(fb1, fb2):
                 bidxs[i - b1] = (max(idx, 1) - 1) // 2
 
-        buf = [] # [(idx, content)]
-        buf.append((0, label('@@ -%d,%d +%d,%d @@'
-                             % (a1, a2 - a1, b1, b2 - b1), 'diff.hunk')))
-        buf += [(aidxs[i - a1], label('-' + alines[i], 'diff.deleted'))
-                for i in xrange(a1, a2)]
-        buf += [(bidxs[i - b1], label('+' + blines[i], 'diff.inserted'))
-                for i in xrange(b1, b2)]
+        buf = []  # [(idx, content)]
+        buf.append(
+            (0, label("@@ -%d,%d +%d,%d @@" % (a1, a2 - a1, b1, b2 - b1), "diff.hunk"))
+        )
+        buf += [
+            (aidxs[i - a1], label("-" + alines[i], "diff.deleted"))
+            for i in xrange(a1, a2)
+        ]
+        buf += [
+            (bidxs[i - b1], label("+" + blines[i], "diff.inserted"))
+            for i in xrange(b1, b2)
+        ]
         for idx, line in buf:
             fctx = self.fctxs[idx]
-            shortnode = idx and node.short(fctx.node()) or ''
+            shortnode = idx and node.short(fctx.node()) or ""
             if showdescs:
-                w = ui.configint('absorb', 'maxdescwidth')
+                w = ui.configint("absorb", "maxdescwidth")
                 if w < 0:
                     w = 0
                 if shortnode:
                     dlines = fctx.changectx().description().splitlines()
-                    d = dlines[0][:w] if dlines else ''
-                    desc = ui.label(d.ljust(w + 2), 'absorb.description')
+                    d = dlines[0][:w] if dlines else ""
+                    desc = ui.label(d.ljust(w + 2), "absorb.description")
                 else:
-                    desc = ' ' * (w + 2)
+                    desc = " " * (w + 2)
             else:
-                desc = ''
-            ui.write(ui.label(shortnode[0:7].ljust(8), 'absorb.node') +
-                     desc + line + '\n')
+                desc = ""
+            ui.write(
+                ui.label(shortnode[0:7].ljust(8), "absorb.node") + desc + line + "\n"
+            )
+
 
 class fixupstate(object):
     """state needed to run absorb
@@ -612,22 +650,21 @@ class fixupstate(object):
         self.repo = stack[-1].repo().unfiltered()
 
         # following fields will be filled later
-        self.paths = [] # [str]
-        self.status = None # ctx.status output
-        self.fctxmap = {} # {path: {ctx: fctx}}
-        self.fixupmap = {} # {path: filefixupstate}
-        self.replacemap = {} # {oldnode: newnode or None}
-        self.finalnode = None # head after all fixups
+        self.paths = []  # [str]
+        self.status = None  # ctx.status output
+        self.fctxmap = {}  # {path: {ctx: fctx}}
+        self.fixupmap = {}  # {path: filefixupstate}
+        self.replacemap = {}  # {oldnode: newnode or None}
+        self.finalnode = None  # head after all fixups
 
-    def diffwith(self, targetctx, match=None, showchanges=False,
-                 showdescs=False):
+    def diffwith(self, targetctx, match=None, showchanges=False, showdescs=False):
         """diff and prepare fixups. update self.fixupmap, self.paths"""
         # only care about modified files
         self.status = self.stack[-1].status(targetctx, match)
         self.paths = []
         # but if --edit-lines is used, the user may want to edit files
         # even if they are not modified
-        editopt = self.opts.get('edit_lines')
+        editopt = self.opts.get("edit_lines")
         if not self.status.modified and editopt and match:
             interestingpaths = match.files()
         else:
@@ -638,13 +675,15 @@ class fixupstate(object):
         # case: "hg cp A B; hg cp A C; hg rm A", then only "B" can affect "A".
         for path in sorted(interestingpaths):
             if self.ui.debugflag:
-                self.ui.write(_('calculating fixups for %s\n') % path)
+                self.ui.write(_("calculating fixups for %s\n") % path)
             targetfctx = targetctx[path]
             fctxs, ctx2fctx = getfilestack(self.stack, path, seenfctxs)
             # ignore symbolic links or binary, or unchanged files
-            if any(f.islink() or util.binary(f.data())
-                   for f in [targetfctx] + fctxs
-                   if not isinstance(f, emptyfilecontext)):
+            if any(
+                f.islink() or util.binary(f.data())
+                for f in [targetfctx] + fctxs
+                if not isinstance(f, emptyfilecontext)
+            ):
                 continue
             if targetfctx.data() == fctxs[-1].data() and not editopt:
                 continue
@@ -652,12 +691,10 @@ class fixupstate(object):
             self.fctxmap[path] = ctx2fctx
             fstate = filefixupstate(fctxs, ui=self.ui, opts=self.opts)
             if showchanges:
-                colorpath = self.ui.label(path, 'absorb.path')
-                header = 'showing changes for ' + colorpath
-                self.ui.write(header + '\n')
-            fstate.diffwith(targetfctx,
-                            showchanges=showchanges,
-                            showdescs=showdescs)
+                colorpath = self.ui.label(path, "absorb.path")
+                header = "showing changes for " + colorpath
+                self.ui.write(header + "\n")
+            fstate.diffwith(targetfctx, showchanges=showchanges, showdescs=showdescs)
             self.fixupmap[path] = fstate
             self.paths.append(path)
 
@@ -665,26 +702,27 @@ class fixupstate(object):
         """apply fixups to individual filefixupstates"""
         for path, state in self.fixupmap.iteritems():
             if self.ui.debugflag:
-                self.ui.write(_('applying fixups to %s\n') % path)
+                self.ui.write(_("applying fixups to %s\n") % path)
             state.apply()
 
     @property
     def chunkstats(self):
         """-> {path: chunkstats}. collect chunkstats from filefixupstates"""
-        return dict((path, state.chunkstats)
-                    for path, state in self.fixupmap.iteritems())
+        return dict(
+            (path, state.chunkstats) for path, state in self.fixupmap.iteritems()
+        )
 
     def commit(self):
         """commit changes. update self.finalnode, self.replacemap"""
         with self.repo.wlock(), self.repo.lock():
-            with self.repo.transaction('absorb') as tr:
+            with self.repo.transaction("absorb") as tr:
                 self._commitstack()
                 self._movebookmarks(tr)
-                if self.repo['.'].node() in self.replacemap:
+                if self.repo["."].node() in self.replacemap:
                     self._moveworkingdirectoryparent()
                 if self._useobsolete:
                     self._obsoleteoldcommits()
-            if not self._useobsolete: # strip must be outside transactions
+            if not self._useobsolete:  # strip must be outside transactions
                 self._stripoldcommits()
         return self.finalnode
 
@@ -696,13 +734,14 @@ class fixupstate(object):
             # chunkstats for each file
             for path, stat in chunkstats.iteritems():
                 if stat[0]:
-                    ui.write(_('%s: %d of %d chunk(s) applied\n')
-                             % (path, stat[0], stat[1]))
+                    ui.write(
+                        _("%s: %d of %d chunk(s) applied\n") % (path, stat[0], stat[1])
+                    )
         elif not ui.quiet:
             # a summary for all files
             stats = chunkstats.values()
             applied, total = (sum(s[i] for s in stats) for i in (0, 1))
-            ui.write(_('%d of %d chunk(s) applied\n') % (applied, total))
+            ui.write(_("%d of %d chunk(s) applied\n") % (applied, total))
 
     def _commitstack(self):
         """make new commits. update self.finalnode, self.replacemap.
@@ -719,11 +758,11 @@ class fixupstate(object):
                 # nothing changed, nothing commited
                 nextp1 = ctx
                 continue
-            msg = ''
+            msg = ""
             if self._willbecomenoop(memworkingcopy, ctx, nextp1):
                 # changeset is no longer necessary
                 self.replacemap[ctx.node()] = None
-                msg = _('became empty and was dropped')
+                msg = _("became empty and was dropped")
             else:
                 # changeset needs re-commit
                 nodestr = self._commitsingle(memworkingcopy, ctx, p1=nextp1)
@@ -731,12 +770,14 @@ class fixupstate(object):
                 nextp1 = lastcommitted
                 self.replacemap[ctx.node()] = lastcommitted.node()
                 if memworkingcopy:
-                    msg = _('%d file(s) changed, became %s') % (
-                        len(memworkingcopy), self._ctx2str(lastcommitted))
+                    msg = _("%d file(s) changed, became %s") % (
+                        len(memworkingcopy),
+                        self._ctx2str(lastcommitted),
+                    )
                 else:
-                    msg = _('became %s') % self._ctx2str(lastcommitted)
+                    msg = _("became %s") % self._ctx2str(lastcommitted)
             if self.ui.verbose and msg:
-                self.ui.write(_('%s: %s\n') % (self._ctx2str(ctx), msg))
+                self.ui.write(_("%s: %s\n") % (self._ctx2str(ctx), msg))
         self.finalnode = lastcommitted and lastcommitted.node()
 
     def _ctx2str(self, ctx):
@@ -753,7 +794,7 @@ class fixupstate(object):
         """
         result = {}
         for path in self.paths:
-            ctx2fctx = self.fctxmap[path] # {ctx: fctx}
+            ctx2fctx = self.fctxmap[path]  # {ctx: fctx}
             if ctx not in ctx2fctx:
                 continue
             fctx = ctx2fctx[ctx]
@@ -765,20 +806,23 @@ class fixupstate(object):
 
     def _movebookmarks(self, tr):
         repo = self.repo
-        needupdate = [(name, self.replacemap[hsh])
-                      for name, hsh in repo._bookmarks.iteritems()
-                      if hsh in self.replacemap]
+        needupdate = [
+            (name, self.replacemap[hsh])
+            for name, hsh in repo._bookmarks.iteritems()
+            if hsh in self.replacemap
+        ]
         changes = []
         for name, hsh in needupdate:
             if hsh:
                 changes.append((name, hsh))
                 if self.ui.verbose:
-                    self.ui.write(_('moving bookmark %s to %s\n')
-                                  % (name, node.hex(hsh)))
+                    self.ui.write(
+                        _("moving bookmark %s to %s\n") % (name, node.hex(hsh))
+                    )
             else:
                 changes.append((name, None))
                 if self.ui.verbose:
-                    self.ui.write(_('deleting bookmark %s\n') % name)
+                    self.ui.write(_("deleting bookmark %s\n") % name)
         repo._bookmarks.applychanges(repo, tr, changes)
 
     def _moveworkingdirectoryparent(self):
@@ -821,13 +865,11 @@ class fixupstate(object):
         """
         parents = p1 and (p1, node.nullid)
         extra = ctx.extra()
-        if self._useobsolete and self.ui.configbool('absorb', 'addnoise',
-                                                    True):
-            extra['absorb_source'] = ctx.hex()
+        if self._useobsolete and self.ui.configbool("absorb", "addnoise", True):
+            extra["absorb_source"] = ctx.hex()
         mctx = overlaycontext(memworkingcopy, ctx, parents, extra=extra)
         # preserve phase
-        with mctx.repo().ui.configoverride({
-            ('phases', 'new-commit'): ctx.phase()}):
+        with mctx.repo().ui.configoverride({("phases", "new-commit"): ctx.phase()}):
             return mctx.commit()
 
     @util.propertycache
@@ -836,20 +878,24 @@ class fixupstate(object):
         return obsolete.isenabled(self.repo, obsolete.createmarkersopt)
 
     def _obsoleteoldcommits(self):
-        relations = [(self.repo[k], v and (self.repo[v],) or ())
-                     for k, v in self.replacemap.iteritems()]
+        relations = [
+            (self.repo[k], v and (self.repo[v],) or ())
+            for k, v in self.replacemap.iteritems()
+        ]
         if relations:
             obsolete.createmarkers(self.repo, relations)
 
     def _stripoldcommits(self):
         nodelist = self.replacemap.keys()
         # make sure we don't strip innocent children
-        revs = self.repo.revs('%ln - (::(heads(%ln::)-%ln))', nodelist,
-                              nodelist, nodelist)
+        revs = self.repo.revs(
+            "%ln - (::(heads(%ln::)-%ln))", nodelist, nodelist, nodelist
+        )
         tonode = self.repo.changelog.node
         nodelist = [tonode(r) for r in revs]
         if nodelist:
             repair.strip(self.repo.ui, self.repo, nodelist)
+
 
 def _parsechunk(hunk):
     """(crecord.uihunk or patch.recordhunk) -> (path, (a1, a2, [bline]))"""
@@ -864,8 +910,9 @@ def _parsechunk(hunk):
     patchlines = mdiff.splitnewlines(buf.getvalue())
     # hunk.prettystr() will update hunk.removed
     a2 = a1 + hunk.removed
-    blines = [l[1:] for l in patchlines[1:] if l[0] != '-']
+    blines = [l[1:] for l in patchlines[1:] if l[0] != "-"]
     return path, (a1, a2, blines)
+
 
 def overlaydiffcontext(ctx, chunks):
     """(ctx, [crecord.uihunk]) -> memctx
@@ -882,8 +929,8 @@ def overlaydiffcontext(ctx, chunks):
     # as we only care about applying changes to modified files, no mode
     # change, no binary diff, and no renames, it's probably okay to
     # re-invent the logic using much simpler code here.
-    memworkingcopy = {} # {path: content}
-    patchmap = defaultdict(lambda: []) # {path: [(a1, a2, [bline])]}
+    memworkingcopy = {}  # {path: content}
+    patchmap = defaultdict(lambda: [])  # {path: [(a1, a2, [bline])]}
     for path, info in map(_parsechunk, chunks):
         if not path or not info:
             continue
@@ -895,8 +942,9 @@ def overlaydiffcontext(ctx, chunks):
         lines = mdiff.splitnewlines(ctx[path].data())
         for a1, a2, blines in patches:
             lines[a1:a2] = blines
-        memworkingcopy[path] = ''.join(lines)
+        memworkingcopy[path] = "".join(lines)
     return overlaycontext(memworkingcopy, ctx)
+
 
 def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     """pick fixup chunks from targetctx, apply them to stack.
@@ -906,15 +954,15 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     return fixupstate.
     """
     if stack is None:
-        limit = ui.configint('absorb', 'maxstacksize', 50)
-        stack = getdraftstack(repo['.'], limit)
+        limit = ui.configint("absorb", "maxstacksize", 50)
+        stack = getdraftstack(repo["."], limit)
         if limit and len(stack) >= limit:
-            ui.warn(_('absorb: only the recent %d changesets will '
-                      'be analysed\n')
-                    % limit)
+            ui.warn(
+                _("absorb: only the recent %d changesets will " "be analysed\n") % limit
+            )
     if not stack:
-        raise error.Abort(_('no changeset to change'))
-    if targetctx is None: # default to working copy
+        raise error.Abort(_("no changeset to change"))
+    if targetctx is None:  # default to working copy
         targetctx = repo[None]
     if pats is None:
         pats = ()
@@ -922,33 +970,61 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
         opts = {}
     state = fixupstate(stack, ui=ui, opts=opts)
     matcher = scmutil.match(targetctx, pats, opts)
-    if opts.get('interactive'):
+    if opts.get("interactive"):
         diff = patch.diff(repo, stack[-1].node(), targetctx.node(), matcher)
         origchunks = patch.parsepatch(diff)
         chunks = cmdutil.recordfilter(ui, origchunks)[0]
         targetctx = overlaydiffcontext(stack[-1], chunks)
-    state.diffwith(targetctx, matcher, showchanges=opts.get('print_changes'),
-                   showdescs=opts.get('print_descriptions'))
-    if not opts.get('dry_run'):
+    state.diffwith(
+        targetctx,
+        matcher,
+        showchanges=opts.get("print_changes"),
+        showdescs=opts.get("print_descriptions"),
+    )
+    if not opts.get("dry_run"):
         state.apply()
         if state.commit():
             state.printchunkstats()
         elif not ui.quiet:
-            ui.write(_('nothing applied\n'))
+            ui.write(_("nothing applied\n"))
     return state
 
-@command('^absorb|sf',
-         [('p', 'print-changes', None,
-           _('print which changesets are modified by which changes')),
-          ('i', 'interactive', None,
-           _('interactively select which chunks to apply (EXPERIMENTAL)')),
-          ('e', 'edit-lines', None,
-           _('edit what lines belong to which changesets before commit '
-             '(EXPERIMENTAL)')),
-          ('d', 'print-descriptions', None,
-           _('print the first line of the changeset description')),
-         ] + commands.dryrunopts + commands.walkopts,
-         _('hg absorb [OPTION] [FILE]...'))
+
+@command(
+    "^absorb|sf",
+    [
+        (
+            "p",
+            "print-changes",
+            None,
+            _("print which changesets are modified by which changes"),
+        ),
+        (
+            "i",
+            "interactive",
+            None,
+            _("interactively select which chunks to apply (EXPERIMENTAL)"),
+        ),
+        (
+            "e",
+            "edit-lines",
+            None,
+            _(
+                "edit what lines belong to which changesets before commit "
+                "(EXPERIMENTAL)"
+            ),
+        ),
+        (
+            "d",
+            "print-descriptions",
+            None,
+            _("print the first line of the changeset description"),
+        ),
+    ]
+    + commands.dryrunopts
+    + commands.walkopts,
+    _("hg absorb [OPTION] [FILE]..."),
+)
 def absorbcmd(ui, repo, *pats, **opts):
     """incorporate corrections into the stack of draft changesets
 
@@ -975,13 +1051,14 @@ def absorbcmd(ui, repo, *pats, **opts):
     if sum(s[0] for s in state.chunkstats.values()) == 0:
         return 1
 
+
 def _wrapamend(flag):
     """add flag to amend, which will be a shortcut to the absorb command"""
     if not flag:
         return
     amendcmd = extensions.bind(_amendcmd, flag)
     # the amend command can exist in evolve, or fbamend
-    for extname in ['evolve', 'fbamend', None]:
+    for extname in ["evolve", "fbamend", None]:
         try:
             if extname is None:
                 cmdtable = commands.table
@@ -991,23 +1068,27 @@ def _wrapamend(flag):
         except (KeyError, AttributeError):
             continue
         try:
-            entry = extensions.wrapcommand(cmdtable, 'amend', amendcmd)
+            entry = extensions.wrapcommand(cmdtable, "amend", amendcmd)
             options = entry[1]
-            msg = _('incorporate corrections into stack. '
-                    'see \'hg help absorb\' for details')
-            options.append(('', flag, None, msg))
+            msg = _(
+                "incorporate corrections into stack. "
+                "see 'hg help absorb' for details"
+            )
+            options.append(("", flag, None, msg))
             return
         except error.UnknownCommand:
             pass
+
 
 def _amendcmd(flag, orig, ui, repo, *pats, **opts):
     if not opts.get(flag):
         return orig(ui, repo, *pats, **opts)
     # use absorb
-    for k, v in opts.iteritems(): # check unsupported flags
-        if v and k not in ['interactive', flag]:
-            raise error.Abort(_('--%s does not support --%s')
-                              % (flag, k.replace('_', '-')))
+    for k, v in opts.iteritems():  # check unsupported flags
+        if v and k not in ["interactive", flag]:
+            raise error.Abort(
+                _("--%s does not support --%s") % (flag, k.replace("_", "-"))
+            )
     state = absorb(ui, repo, pats=pats, opts=opts)
     # different from the original absorb, tell users what chunks were
     # ignored and were left. it's because users usually expect "amend" to
@@ -1020,27 +1101,36 @@ def _amendcmd(flag, orig, ui, repo, *pats, **opts):
         adoptedsum += adopted
         if adopted == total:
             continue
-        reason = _('%d modified chunks were ignored') % (total - adopted)
-        messages.append(('M', 'modified', path, reason))
-    for idx, word, symbol in [(0, 'modified', 'M'), (1, 'added', 'A'),
-                              (2, 'removed', 'R'), (3, 'deleted', '!')]:
+        reason = _("%d modified chunks were ignored") % (total - adopted)
+        messages.append(("M", "modified", path, reason))
+    for idx, word, symbol in [
+        (0, "modified", "M"),
+        (1, "added", "A"),
+        (2, "removed", "R"),
+        (3, "deleted", "!"),
+    ]:
         paths = set(state.status[idx]) - set(state.paths)
         for path in sorted(paths):
-            if word == 'modified':
-                reason = _('unsupported file type (ex. binary or link)')
+            if word == "modified":
+                reason = _("unsupported file type (ex. binary or link)")
             else:
-                reason = _('%s files were ignored') % word
+                reason = _("%s files were ignored") % word
             messages.append((symbol, word, path, reason))
     if messages:
-        ui.write(_('\n# changes not applied and left in '
-                   'working directory:\n'))
+        ui.write(_("\n# changes not applied and left in " "working directory:\n"))
         for symbol, word, path, reason in messages:
-            ui.write(_('# %s %s : %s\n') % (
-                ui.label(symbol, 'status.' + word),
-                ui.label(path, 'status.' + word), reason))
+            ui.write(
+                _("# %s %s : %s\n")
+                % (
+                    ui.label(symbol, "status." + word),
+                    ui.label(path, "status." + word),
+                    reason,
+                )
+            )
 
     if adoptedsum == 0:
         return 1
 
+
 def extsetup(ui):
-    _wrapamend(ui.config('absorb', 'amendflag'))
+    _wrapamend(ui.config("absorb", "amendflag"))

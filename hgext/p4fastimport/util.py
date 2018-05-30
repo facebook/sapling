@@ -4,19 +4,19 @@ from __future__ import absolute_import
 import collections
 import os
 
-from mercurial import (
-    util,
-    worker,
-)
+from mercurial import util, worker
+
 
 def localpath(p):
-    return p.lstrip('/')
+    return p.lstrip("/")
+
 
 def storepath(b, p, ci=False):
     p = os.path.join(b, p)
     if ci:
         p = p.lower()
     return p
+
 
 def caseconflict(filelist):
     temp = {}
@@ -29,21 +29,25 @@ def caseconflict(filelist):
         temp[this.lower()] = this
     return sorted(conflicts)
 
+
 def decodefileflags(json):
     r = collections.defaultdict(dict)
     for changelist, flag in json.items():
-        r[int(changelist)] = flag.encode('ascii')
+        r[int(changelist)] = flag.encode("ascii")
     return r
+
 
 def getcl(node):
     if node:
-        assert node.extra().get('p4changelist') or \
-            node.extra().get('p4fullimportbasechangelist')
-        if node.extra().get('p4changelist'):
-            return int(node.extra()['p4changelist'])
+        assert node.extra().get("p4changelist") or node.extra().get(
+            "p4fullimportbasechangelist"
+        )
+        if node.extra().get("p4changelist"):
+            return int(node.extra()["p4changelist"])
         else:
-            return int(node.extra()['p4fullimportbasechangelist'])
+            return int(node.extra()["p4fullimportbasechangelist"])
     return None
+
 
 def lastcl(node):
     clnum = getcl(node)
@@ -51,16 +55,17 @@ def lastcl(node):
         return clnum + 1
     return None
 
+
 def runworker(ui, fn, wargs, items):
     # 0.4 is the cost per argument. So if we have at least 100 files
     # on a 4 core machine than our linear cost outweights the
     # drawback of spwaning. We are overwritign this if we force a
     # worker to run with a ridiculous high number.
     weight = 0.0  # disable worker
-    useworker = ui.config('p4fastimport', 'useworker')
-    if useworker == 'force':
+    useworker = ui.config("p4fastimport", "useworker")
+    if useworker == "force":
         weight = 100000.0  # force worker
-    elif util.parsebool(useworker or ''):
+    elif util.parsebool(useworker or ""):
         weight = 0.04  # normal weight
 
     # Fix duplicated messages before

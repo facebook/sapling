@@ -41,7 +41,6 @@ def _formatsetrepr(r):
 
 
 class abstractsmartset(object):
-
     def __nonzero__(self):
         """True if the smartset is not empty"""
         raise NotImplementedError()

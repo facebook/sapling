@@ -192,7 +192,6 @@ def _getmissinglines(mapfile, missinghashes):
 
 
 class _githgmappayload(object):
-
     def __init__(self, needfullsync, newheads, missinglines):
         self.needfullsync = needfullsync
         self.newheads = newheads

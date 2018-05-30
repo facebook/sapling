@@ -711,6 +711,7 @@ class cowsortdict(cow, sortdict):
 
 class transactional(object):
     """Base class for making a transactional type into a context manager."""
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -778,6 +779,7 @@ class _lrucachenode(object):
     Holds a reference to nodes on either side as well as a key-value
     pair for the dictionary entry.
     """
+
     __slots__ = (u"next", u"prev", u"key", u"value")
 
     def __init__(self):
@@ -985,7 +987,6 @@ def lrucachefunc(func):
 
 
 class propertycache(object):
-
     def __init__(self, func):
         self.func = func
         self.name = func.__name__
@@ -1560,7 +1561,6 @@ except ImportError:
 
 
 class _re(object):
-
     def _checkre2(self):
         global _re2
         try:
@@ -2588,7 +2588,6 @@ def uirepr(s):
 
 # delay import of textwrap
 def MBTextWrapper(**kwargs):
-
     class tw(textwrap.TextWrapper):
         """
         Extend TextWrapper for width-awareness.
@@ -3758,7 +3757,6 @@ class compressionengine(object):
 
 
 class _zlibengine(compressionengine):
-
     def name(self):
         return "zlib"
 
@@ -3791,7 +3789,6 @@ class _zlibengine(compressionengine):
         yield z.flush()
 
     def decompressorreader(self, fh):
-
         def gen():
             d = zlib.decompressobj()
             for chunk in filechunkiter(fh):
@@ -3803,7 +3800,6 @@ class _zlibengine(compressionengine):
         return chunkbuffer(gen())
 
     class zlibrevlogcompressor(object):
-
         def compress(self, data):
             insize = len(data)
             # Caller handles empty input case.
@@ -3849,7 +3845,6 @@ compengines.register(_zlibengine())
 
 
 class _bz2engine(compressionengine):
-
     def name(self):
         return "bz2"
 
@@ -3883,7 +3878,6 @@ class _bz2engine(compressionengine):
         yield z.flush()
 
     def decompressorreader(self, fh):
-
         def gen():
             d = bz2.BZ2Decompressor()
             for chunk in filechunkiter(fh):
@@ -3896,7 +3890,6 @@ compengines.register(_bz2engine())
 
 
 class _truncatedbz2engine(compressionengine):
-
     def name(self):
         return "bz2truncated"
 
@@ -3906,7 +3899,6 @@ class _truncatedbz2engine(compressionengine):
     # We don't implement compressstream because it is hackily handled elsewhere.
 
     def decompressorreader(self, fh):
-
         def gen():
             # The input stream doesn't have the 'BZ' header. So add it back.
             d = bz2.BZ2Decompressor()
@@ -3921,7 +3913,6 @@ compengines.register(_truncatedbz2engine())
 
 
 class _noopengine(compressionengine):
-
     def name(self):
         return "none"
 
@@ -3948,7 +3939,6 @@ class _noopengine(compressionengine):
         return fh
 
     class nooprevlogcompressor(object):
-
         def compress(self, data):
             return None
 
@@ -3960,7 +3950,6 @@ compengines.register(_noopengine())
 
 
 class _zstdengine(compressionengine):
-
     def name(self):
         return "zstd"
 
@@ -4022,7 +4011,6 @@ class _zstdengine(compressionengine):
         return chunkbuffer(dctx.read_from(fh))
 
     class zstdrevlogcompressor(object):
-
         def __init__(self, zstd, level=3):
             # Writing the content size adds a few bytes to the output. However,
             # it allows decompression to be more optimal since we can
@@ -4153,7 +4141,6 @@ def safename(f, tag, ctx, others=None):
 
 
 class ring(object):
-
     def __init__(self, maxsize):
         self._maxsize = maxsize
         self._data = [None] * maxsize
@@ -4212,7 +4199,6 @@ def timefunction(key, uiposition, uiname):
     """
 
     def wrapper(func):
-
         def inner(*args, **kwargs):
             uiarg = args[uiposition]
             if uiname is not None:

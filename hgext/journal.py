@@ -265,6 +265,7 @@ class journalstorage(object):
     the dirstate).
 
     """
+
     _currentcommand = ()
     _lockref = None
 

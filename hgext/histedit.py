@@ -293,7 +293,6 @@ Commands:
 
 
 class histeditstate(object):
-
     def __init__(
         self,
         repo,
@@ -433,7 +432,6 @@ class histeditstate(object):
 
 
 class histeditaction(object):
-
     def __init__(self, state, node):
         self.state = state
         self.repo = state.repo
@@ -691,7 +689,6 @@ def abortdirty():
 
 
 def action(verbs, message, priority=False, internal=False):
-
     def wrap(cls):
         assert not priority or not internal
         verb = verbs[0]
@@ -716,7 +713,6 @@ def action(verbs, message, priority=False, internal=False):
 
 @action(["pick", "p"], _("use commit"), priority=True)
 class pick(histeditaction):
-
     def run(self):
         rulectx = self.repo[self.node]
         if rulectx.parents()[0].node() == self.state.parentctxnode:
@@ -728,7 +724,6 @@ class pick(histeditaction):
 
 @action(["edit", "e"], _("use commit, but stop for amending"), priority=True)
 class edit(histeditaction):
-
     def run(self):
         repo = self.repo
         rulectx = repo[self.node]
@@ -746,7 +741,6 @@ class edit(histeditaction):
 
 @action(["fold", "f"], _("use commit, but combine it with the one above"))
 class fold(histeditaction):
-
     def verify(self, prev, expected, seen):
         """ Verifies semantic correctness of the fold rule"""
         super(fold, self).verify(prev, expected, seen)
@@ -884,7 +878,6 @@ class fold(histeditaction):
 
 @action(["base", "b"], _("checkout changeset and apply further changesets from there"))
 class base(histeditaction):
-
     def run(self):
         if self.repo["."].node() != self.node:
             mergemod.update(self.repo, self.node, False, True)
@@ -923,14 +916,12 @@ class base(histeditaction):
     internal=True,
 )
 class _multifold(fold):
-
     def skipprompt(self):
         return True
 
 
 @action(["roll", "r"], _("like fold, but discard this commit's description and date"))
 class rollup(fold):
-
     def mergedescs(self):
         return False
 
@@ -943,7 +934,6 @@ class rollup(fold):
 
 @action(["drop", "d"], _("remove commit from history"))
 class drop(histeditaction):
-
     def run(self):
         parentctx = self.repo[self.state.parentctxnode]
         return parentctx, [(self.node, tuple())]
@@ -955,7 +945,6 @@ class drop(histeditaction):
     priority=True,
 )
 class message(histeditaction):
-
     def commiteditor(self):
         return cmdutil.getcommiteditor(edit=True, editform="histedit.mess")
 

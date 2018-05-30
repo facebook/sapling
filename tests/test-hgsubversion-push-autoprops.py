@@ -28,7 +28,6 @@ class PushAutoPropsTests(test_hgsubversion_util.TestBase):
 
 
 class AutoPropsConfigTest(test_hgsubversion_util.TestBase):
-
     def test_use_autoprops_for_matching_file_when_enabled(self):
         self.setup_svn_config(
             "[miscellany]\n"
@@ -82,7 +81,6 @@ class AutoPropsConfigTest(test_hgsubversion_util.TestBase):
 
 
 class ParseAutoPropsTests(test_hgsubversion_util.TestBase):
-
     def test_property_value_is_optional(self):
         props = svnwrap.parse_autoprops("svn:executable")
         self.assertEqual({"svn:executable": ""}, props)

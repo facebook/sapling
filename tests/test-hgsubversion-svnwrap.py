@@ -10,7 +10,6 @@ from hgext.hgsubversion import svnwrap
 
 
 class TestBasicRepoLayout(unittest.TestCase):
-
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp("svnwrap_test")
         self.repo_path = "%s/testrepo" % self.tmpdir
@@ -48,7 +47,6 @@ class TestBasicRepoLayout(unittest.TestCase):
 
 
 class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
-
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp("svnwrap_test")
         self.repo_path = "%s/testrepo" % self.tmpdir

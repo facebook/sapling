@@ -11,15 +11,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
-    commands,
-    error,
-    hg,
-    node,
-    phases,
-    registrar,
-    scmutil,
-)
+from mercurial import commands, error, hg, node, phases, registrar, scmutil
 from mercurial.i18n import _
 
 from . import common
@@ -28,16 +20,23 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 hex = node.hex
 
-@command('^fold|squash',
-         [('r', 'rev', [], _("revision to fold")),
-          ('', 'exact', None, _("only fold specified revisions")),
-          ('', 'from', None,
-            _("fold linearly from current revision to specified revision")
-          ),
-          ('', 'no-rebase', False, _("don't rebase descendants after split")),
-         ] + (commands.commitopts + commands.commitopts2 +
-              commands.formatteropts),
-         _('hg fold [OPTION]... [-r] REV'))
+
+@command(
+    "^fold|squash",
+    [
+        ("r", "rev", [], _("revision to fold")),
+        ("", "exact", None, _("only fold specified revisions")),
+        (
+            "",
+            "from",
+            None,
+            _("fold linearly from current revision to specified revision"),
+        ),
+        ("", "no-rebase", False, _("don't rebase descendants after split")),
+    ]
+    + (commands.commitopts + commands.commitopts2 + commands.formatteropts),
+    _("hg fold [OPTION]... [-r] REV"),
+)
 def fold(ui, repo, *revs, **opts):
     """fold multiple revisions into a single one
 
@@ -76,91 +75,102 @@ def fold(ui, repo, *revs, **opts):
          hg fold foo::@ --exact
     """
     revs = list(revs)
-    revs.extend(opts['rev'])
+    revs.extend(opts["rev"])
     if not revs:
-        raise error.Abort(_('no revisions specified'))
+        raise error.Abort(_("no revisions specified"))
 
     revs = scmutil.revrange(repo, revs)
 
-    if opts.get('no_rebase'):
+    if opts.get("no_rebase"):
         torebase = ()
     else:
-        torebase = repo.revs('descendants(%ld) - (%ld)', revs, revs)
+        torebase = repo.revs("descendants(%ld) - (%ld)", revs, revs)
 
-    if opts['from'] and opts['exact']:
-        raise error.Abort(_('cannot use both --from and --exact'))
-    elif opts['from']:
+    if opts["from"] and opts["exact"]:
+        raise error.Abort(_("cannot use both --from and --exact"))
+    elif opts["from"]:
         # Try to extend given revision starting from the working directory
-        extrevs = repo.revs('(%ld::.) or (.::%ld)', revs, revs)
+        extrevs = repo.revs("(%ld::.) or (.::%ld)", revs, revs)
         discardedrevs = [r for r in revs if r not in extrevs]
         if discardedrevs:
             msg = _("cannot fold non-linear revisions")
-            hint = _("given revisions are unrelated to parent of working"
-                     " directory")
+            hint = _("given revisions are unrelated to parent of working" " directory")
             raise error.Abort(msg, hint=hint)
         revs = extrevs
-    elif opts['exact']:
+    elif opts["exact"]:
         # Nothing to do; "revs" is already set correctly
         pass
     else:
-        raise error.Abort(_('must specify either --from or --exact'))
+        raise error.Abort(_("must specify either --from or --exact"))
 
     if not revs:
-        raise error.Abort(_('specified revisions evaluate to an empty set'),
-                          hint=_('use different revision arguments'))
+        raise error.Abort(
+            _("specified revisions evaluate to an empty set"),
+            hint=_("use different revision arguments"),
+        )
     elif len(revs) == 1:
-        ui.write_err(_('single revision specified, nothing to fold\n'))
+        ui.write_err(_("single revision specified, nothing to fold\n"))
         return 1
 
-    with repo.wlock(), repo.lock(), ui.formatter('fold', opts) as fm:
+    with repo.wlock(), repo.lock(), ui.formatter("fold", opts) as fm:
         fm.startitem()
         root, head = _foldcheck(repo, revs)
 
-        with repo.transaction('fold') as tr:
+        with repo.transaction("fold") as tr:
             commitopts = opts.copy()
             allctx = [repo[r] for r in revs]
             targetphase = max(c.phase() for c in allctx)
 
-            if commitopts.get('message') or commitopts.get('logfile'):
-                commitopts['edit'] = False
+            if commitopts.get("message") or commitopts.get("logfile"):
+                commitopts["edit"] = False
             else:
                 msgs = ["HG: This is a fold of %d changesets." % len(allctx)]
-                msgs += ["HG: Commit message of changeset %s.\n\n%s\n" %
-                         (c.rev(), c.description()) for c in allctx]
-                commitopts['message'] = "\n".join(msgs)
-                commitopts['edit'] = True
+                msgs += [
+                    "HG: Commit message of changeset %s.\n\n%s\n"
+                    % (c.rev(), c.description())
+                    for c in allctx
+                ]
+                commitopts["message"] = "\n".join(msgs)
+                commitopts["edit"] = True
 
-            newid, unusedvariable = common.rewrite(repo, root, allctx, head,
-                                                   [root.p1().node(),
-                                                    root.p2().node()],
-                                                   commitopts=commitopts)
+            newid, unusedvariable = common.rewrite(
+                repo,
+                root,
+                allctx,
+                head,
+                [root.p1().node(), root.p2().node()],
+                commitopts=commitopts,
+            )
             phases.retractboundary(repo, tr, targetphase, [newid])
 
             replacements = {ctx.node(): (newid,) for ctx in allctx}
-            nodechanges = {fm.hexfunc(ctx.node()): [fm.hexfunc(newid)]
-                           for ctx in allctx}
+            nodechanges = {
+                fm.hexfunc(ctx.node()): [fm.hexfunc(newid)] for ctx in allctx
+            }
             fm.data(nodechanges=fm.formatdict(nodechanges))
-            scmutil.cleanupnodes(repo, replacements, 'fold')
-            fm.condwrite(not ui.quiet, 'count',
-                         '%i changesets folded\n', len(revs))
-            if repo['.'].rev() in revs:
+            scmutil.cleanupnodes(repo, replacements, "fold")
+            fm.condwrite(not ui.quiet, "count", "%i changesets folded\n", len(revs))
+            if repo["."].rev() in revs:
                 hg.update(repo, newid)
 
             if torebase:
-                folded = repo.revs('allsuccessors(%ld)', revs).last()
+                folded = repo.revs("allsuccessors(%ld)", revs).last()
                 common.restackonce(ui, repo, folded)
 
+
 def _foldcheck(repo, revs):
-    roots = repo.revs('roots(%ld)', revs)
+    roots = repo.revs("roots(%ld)", revs)
     if len(roots) > 1:
-        raise error.Abort(_("cannot fold non-linear revisions "
-                            "(multiple roots given)"))
+        raise error.Abort(
+            _("cannot fold non-linear revisions " "(multiple roots given)")
+        )
     root = repo[roots.first()]
     if root.phase() <= phases.public:
         raise error.Abort(_("cannot fold public revisions"))
-    heads = repo.revs('heads(%ld)', revs)
+    heads = repo.revs("heads(%ld)", revs)
     if len(heads) > 1:
-        raise error.Abort(_("cannot fold non-linear revisions "
-                            "(multiple heads given)"))
+        raise error.Abort(
+            _("cannot fold non-linear revisions " "(multiple heads given)")
+        )
     head = repo[heads.first()]
     return root, head

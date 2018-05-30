@@ -7,7 +7,6 @@ from mercurial import match as matchmod
 
 
 class NeverMatcherTests(unittest.TestCase):
-
     def testVisitdir(self):
         m = matchmod.nevermatcher("", "")
         self.assertFalse(m.visitdir("."))

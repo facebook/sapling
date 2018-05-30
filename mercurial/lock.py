@@ -23,7 +23,6 @@ if pycompat.iswindows:
 
 
 class _emptylocker(object):
-
     def getwarning(self, l):
         return _("waiting for lock on %r") % l.desc
 
@@ -43,6 +42,7 @@ class locker(object):
     - just a 'pid' (POSIX)
     - pid/starttime (Windows)
     """
+
     _currentnamespace = None
 
     def __init__(self, fromstr, path=None):

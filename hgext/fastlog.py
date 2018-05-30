@@ -299,7 +299,6 @@ def getfastlogrevs(orig, repo, pats, opts):
 
 
 class readonlychangelog(object):
-
     def __init__(self, opener):
         self._changelog = changelog.changelog(opener)
 

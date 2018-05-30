@@ -42,25 +42,28 @@ try:
 except AttributeError:
     monotonic = time.time
 
-__author__ = 'Seth Michael Larson'
-__email__ = 'sethmichaellarson@protonmail.com'
-__version__ = '2.0.0'
-__license__ = 'MIT'
-__url__ = 'https://www.github.com/SethMichaelLarson/selectors2'
+__author__ = "Seth Michael Larson"
+__email__ = "sethmichaellarson@protonmail.com"
+__version__ = "2.0.0"
+__license__ = "MIT"
+__url__ = "https://www.github.com/SethMichaelLarson/selectors2"
 
-__all__ = ['EVENT_READ',
-           'EVENT_WRITE',
-           'SelectorKey',
-           'DefaultSelector',
-           'BaseSelector']
+__all__ = [
+    "EVENT_READ",
+    "EVENT_WRITE",
+    "SelectorKey",
+    "DefaultSelector",
+    "BaseSelector",
+]
 
-EVENT_READ = (1 << 0)
-EVENT_WRITE = (1 << 1)
+EVENT_READ = 1 << 0
+EVENT_WRITE = 1 << 1
 _DEFAULT_SELECTOR = None
 _SYSCALL_SENTINEL = object()  # Sentinel in case a system call returns None.
 _ERROR_TYPES = (OSError, IOError, socket.error)
 
-SelectorKey = namedtuple('SelectorKey', ['fileobj', 'fd', 'events', 'data'])
+SelectorKey = namedtuple("SelectorKey", ["fileobj", "fd", "events", "data"])
+
 
 class _SelectorMapping(Mapping):
     """ Mapping of file objects to selector keys """
@@ -81,6 +84,7 @@ class _SelectorMapping(Mapping):
     def __iter__(self):
         return iter(self._selector._fd_to_key)
 
+
 def _fileobj_to_fd(fileobj):
     """ Return a file descriptor from a file object. If
     given an integer will simply return that integer back. """
@@ -94,6 +98,7 @@ def _fileobj_to_fd(fileobj):
     if fd < 0:
         raise ValueError("Invalid file descriptor: {0}".format(fd))
     return fd
+
 
 class BaseSelector(object):
     """ Abstract Selector class
@@ -110,6 +115,7 @@ class BaseSelector(object):
     and kqueue()) depending on the platform. The 'DefaultSelector' class uses
     the most efficient implementation for the current platform.
     """
+
     def __init__(self):
         # Maps file descriptors to keys.
         self._fd_to_key = {}
@@ -145,8 +151,9 @@ class BaseSelector(object):
         key = SelectorKey(fileobj, self._fileobj_lookup(fileobj), events, data)
 
         if key.fd in self._fd_to_key:
-            raise KeyError("{0!r} (FD {1}) is already registered"
-                           .format(fileobj, key.fd))
+            raise KeyError(
+                "{0!r} (FD {1}) is already registered".format(fileobj, key.fd)
+            )
 
         self._fd_to_key[key.fd] = key
         return key
@@ -229,10 +236,13 @@ class BaseSelector(object):
     def __exit__(self, *_):
         self.close()
 
+
 # Almost all platforms have select.select()
 if hasattr(select, "select"):
+
     class SelectSelector(BaseSelector):
         """ Select-based selector. """
+
         def __init__(self):
             super(SelectSelector, self).__init__()
             self._readers = set()
@@ -259,8 +269,9 @@ if hasattr(select, "select"):
 
             timeout = None if timeout is None else max(timeout, 0.0)
             ready = []
-            r, w, _ = _syscall_wrapper(self._wrap_select, True, self._readers,
-                                       self._writers, timeout)
+            r, w, _ = _syscall_wrapper(
+                self._wrap_select, True, self._readers, self._writers, timeout
+            )
             r = set(r)
             w = set(w)
             for fd in r | w:
@@ -279,10 +290,11 @@ if hasattr(select, "select"):
             """ Wrapper for select.select because timeout is a positional arg """
             return select.select(r, w, [], timeout)
 
-    __all__.append('SelectSelector')
+    __all__.append("SelectSelector")
 
     # Jython has a different implementation of .fileno() for socket objects.
     if pycompat.isjython:
+
         class _JythonSelectorMapping(object):
             """ This is an implementation of _SelectorMapping that is built
             for use specifically with Jython, which does not provide a hashable
@@ -322,13 +334,16 @@ if hasattr(select, "select"):
                 self._writers = []
 
                 # Jython has a select.cpython_compatible_select function in older versions.
-                self._select_func = getattr(select, 'cpython_compatible_select', select.select)
+                self._select_func = getattr(
+                    select, "cpython_compatible_select", select.select
+                )
 
             def register(self, fileobj, events, data=None):
                 for sock, _ in self._sockets:
                     if sock is fileobj:
-                        raise KeyError("{0!r} is already registered"
-                                       .format(fileobj, sock))
+                        raise KeyError(
+                            "{0!r} is already registered".format(fileobj, sock)
+                        )
 
                 key = SelectorKey(fileobj, -1, events, data)
                 self._sockets.append((fileobj, key))
@@ -358,12 +373,16 @@ if hasattr(select, "select"):
                 """ Wrapper for select.select because timeout is a positional arg """
                 return self._select_func(r, w, [], timeout)
 
-        __all__.append('JythonSelectSelector')
-        SelectSelector = JythonSelectSelector  # Override so the wrong selector isn't used.
+        __all__.append("JythonSelectSelector")
+        SelectSelector = (
+            JythonSelectSelector
+        )  # Override so the wrong selector isn't used.
 
 if hasattr(select, "poll"):
+
     class PollSelector(BaseSelector):
         """ Poll-based selector """
+
         def __init__(self):
             super(PollSelector, self).__init__()
             self._poll = select.poll()
@@ -413,11 +432,13 @@ if hasattr(select, "poll"):
 
             return ready
 
-    __all__.append('PollSelector')
+    __all__.append("PollSelector")
 
 if hasattr(select, "epoll"):
+
     class EpollSelector(BaseSelector):
         """ Epoll-based selector """
+
         def __init__(self):
             super(EpollSelector, self).__init__()
             self._epoll = select.epoll()
@@ -462,9 +483,9 @@ if hasattr(select, "epoll"):
             max_events = max(len(self._fd_to_key), 1)
 
             ready = []
-            fd_events = _syscall_wrapper(self._epoll.poll, True,
-                                         timeout=timeout,
-                                         maxevents=max_events)
+            fd_events = _syscall_wrapper(
+                self._epoll.poll, True, timeout=timeout, maxevents=max_events
+            )
             for fd, event_mask in fd_events:
                 events = 0
                 if event_mask & ~select.EPOLLIN:
@@ -481,9 +502,10 @@ if hasattr(select, "epoll"):
             self._epoll.close()
             super(EpollSelector, self).close()
 
-    __all__.append('EpollSelector')
+    __all__.append("EpollSelector")
 
 if hasattr(select, "devpoll"):
+
     class DevpollSelector(BaseSelector):
         """Solaris /dev/poll selector."""
 
@@ -543,11 +565,13 @@ if hasattr(select, "devpoll"):
             self._devpoll.close()
             super(DevpollSelector, self).close()
 
-    __all__.append('DevpollSelector')
+    __all__.append("DevpollSelector")
 
 if hasattr(select, "kqueue"):
+
     class KqueueSelector(BaseSelector):
         """ Kqueue / Kevent-based selector """
+
         def __init__(self):
             super(KqueueSelector, self).__init__()
             self._kqueue = select.kqueue()
@@ -558,16 +582,12 @@ if hasattr(select, "kqueue"):
         def register(self, fileobj, events, data=None):
             key = super(KqueueSelector, self).register(fileobj, events, data)
             if events & EVENT_READ:
-                kevent = select.kevent(key.fd,
-                                       select.KQ_FILTER_READ,
-                                       select.KQ_EV_ADD)
+                kevent = select.kevent(key.fd, select.KQ_FILTER_READ, select.KQ_EV_ADD)
 
                 _syscall_wrapper(self._kqueue.control, False, [kevent], 0, 0)
 
             if events & EVENT_WRITE:
-                kevent = select.kevent(key.fd,
-                                       select.KQ_FILTER_WRITE,
-                                       select.KQ_EV_ADD)
+                kevent = select.kevent(key.fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
 
                 _syscall_wrapper(self._kqueue.control, False, [kevent], 0, 0)
 
@@ -576,17 +596,17 @@ if hasattr(select, "kqueue"):
         def unregister(self, fileobj):
             key = super(KqueueSelector, self).unregister(fileobj)
             if key.events & EVENT_READ:
-                kevent = select.kevent(key.fd,
-                                       select.KQ_FILTER_READ,
-                                       select.KQ_EV_DELETE)
+                kevent = select.kevent(
+                    key.fd, select.KQ_FILTER_READ, select.KQ_EV_DELETE
+                )
                 try:
                     _syscall_wrapper(self._kqueue.control, False, [kevent], 0, 0)
                 except _ERROR_TYPES:
                     pass
             if key.events & EVENT_WRITE:
-                kevent = select.kevent(key.fd,
-                                       select.KQ_FILTER_WRITE,
-                                       select.KQ_EV_DELETE)
+                kevent = select.kevent(
+                    key.fd, select.KQ_FILTER_WRITE, select.KQ_EV_DELETE
+                )
                 try:
                     _syscall_wrapper(self._kqueue.control, False, [kevent], 0, 0)
                 except _ERROR_TYPES:
@@ -601,8 +621,9 @@ if hasattr(select, "kqueue"):
             max_events = len(self._fd_to_key) * 2
             ready_fds = {}
 
-            kevent_list = _syscall_wrapper(self._kqueue.control, True,
-                                           None, max_events, timeout)
+            kevent_list = _syscall_wrapper(
+                self._kqueue.control, True, None, max_events, timeout
+            )
 
             for kevent in kevent_list:
                 fd = kevent.ident
@@ -627,7 +648,8 @@ if hasattr(select, "kqueue"):
             self._kqueue.close()
             super(KqueueSelector, self).close()
 
-    __all__.append('KqueueSelector')
+    __all__.append("KqueueSelector")
+
 
 def _can_allocate(struct):
     """ Checks that select structs can be allocated by the underlying
@@ -636,7 +658,7 @@ def _can_allocate(struct):
     don't have it available will not advertise it. (ie: GAE) """
     try:
         # select.poll() objects won't fail until used.
-        if struct == 'poll':
+        if struct == "poll":
             p = select.poll()
             p.poll(0)
 
@@ -647,13 +669,18 @@ def _can_allocate(struct):
     except (OSError, AttributeError):
         return False
 
+
 # Python 3.5 uses a more direct route to wrap system calls to increase speed.
 if sys.version_info >= (3, 5):
+
     def _syscall_wrapper(func, _, *args, **kwargs):
         """ This is the short-circuit version of the below logic
         because in Python 3.5+ all selectors restart system calls. """
         return func(*args, **kwargs)
+
+
 else:
+
     def _syscall_wrapper(func, recalc_timeout, *args, **kwargs):
         """ Wrapper function for syscalls that could fail due to EINTR.
         All functions should be retried if there is time left in the timeout
@@ -671,8 +698,7 @@ else:
 
         args = list(args)
         if recalc_timeout and "timeout" not in kwargs:
-            raise ValueError(
-                "Timeout must be in args or kwargs to be recalculated")
+            raise ValueError("Timeout must be in args or kwargs to be recalculated")
 
         result = _SYSCALL_SENTINEL
         while result is _SYSCALL_SENTINEL:
@@ -691,8 +717,9 @@ else:
                     errcode = e.args[0]
 
                 # Also test for the Windows equivalent of EINTR.
-                is_interrupt = (errcode == errno.EINTR or (hasattr(errno, "WSAEINTR") and
-                                                           errcode == errno.WSAEINTR))
+                is_interrupt = errcode == errno.EINTR or (
+                    hasattr(errno, "WSAEINTR") and errcode == errno.WSAEINTR
+                )
 
                 if is_interrupt:
                     if expires is not None:
@@ -706,6 +733,7 @@ else:
                 raise
         return result
 
+
 # Choose the best implementation, roughly:
 # kqueue == devpoll == epoll > poll > select
 # select() also can't accept a FD > FD_SETSIZE (usually around 1024)
@@ -717,16 +745,16 @@ def DefaultSelector():
     if _DEFAULT_SELECTOR is None:
         if pycompat.isjython:
             _DEFAULT_SELECTOR = JythonSelectSelector
-        elif _can_allocate('kqueue'):
+        elif _can_allocate("kqueue"):
             _DEFAULT_SELECTOR = KqueueSelector
-        elif _can_allocate('devpoll'):
+        elif _can_allocate("devpoll"):
             _DEFAULT_SELECTOR = DevpollSelector
-        elif _can_allocate('epoll'):
+        elif _can_allocate("epoll"):
             _DEFAULT_SELECTOR = EpollSelector
-        elif _can_allocate('poll'):
+        elif _can_allocate("poll"):
             _DEFAULT_SELECTOR = PollSelector
-        elif hasattr(select, 'select'):
+        elif hasattr(select, "select"):
             _DEFAULT_SELECTOR = SelectSelector
         else:  # Platform-specific: AppEngine
-            raise RuntimeError('Platform does not have a selector.')
+            raise RuntimeError("Platform does not have a selector.")
     return _DEFAULT_SELECTOR()

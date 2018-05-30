@@ -13,7 +13,6 @@ _sysstr = pycompat.sysstr
 
 
 class _pycompatstub(object):
-
     def __init__(self):
         self._aliases = {}
 

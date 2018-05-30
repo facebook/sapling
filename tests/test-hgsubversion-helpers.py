@@ -5,7 +5,6 @@ from hgext.hgsubversion import editor
 
 
 class TestHelpers(unittest.TestCase):
-
     def test_filestore(self):
         fs = editor.FileStore(2)
         fs.setfile("a", "a")

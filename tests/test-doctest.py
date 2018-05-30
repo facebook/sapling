@@ -15,7 +15,6 @@ if "TERM" in os.environ:
 
 
 class py3docchecker(doctest.OutputChecker):
-
     def check_output(self, want, got, optionflags):
         want2 = re.sub(r"""\bu(['"])(.*?)\1""", r"\1\2\1", want)  # py2: u''
         got2 = re.sub(r"""\bb(['"])(.*?)\1""", r"\1\2\1", got)  # py3: b''

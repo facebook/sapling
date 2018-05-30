@@ -9,9 +9,7 @@ from mercurial import error
 
 
 def reposetup(ui, repo):
-
     class faillockrepo(repo.__class__):
-
         def lock(self, wait=True):
             raise error.Abort("lock is taken!")
 

@@ -321,7 +321,6 @@ def getdag(ui, repo, revs, master):
 
     # Fake ctx that we stick in the dag so we can special case it later
     class fakectx(object):
-
         def __init__(self, rev):
             self._rev = rev
 

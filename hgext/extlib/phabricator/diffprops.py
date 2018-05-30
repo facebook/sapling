@@ -2,7 +2,8 @@ from __future__ import absolute_import
 
 import re
 
-diffrevisionregex = re.compile('^Differential Revision:.*/D(\d+)', re.M)
+diffrevisionregex = re.compile("^Differential Revision:.*/D(\d+)", re.M)
+
 
 def parserevfromcommitmsg(description):
     """Parses the D123 revision number from a commit message.

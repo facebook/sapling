@@ -50,7 +50,6 @@ Name: svn:special
 
 
 class RegexTests(unittest.TestCase):
-
     def test_empty_file_re(self):
         changed = stupid.parsediff(two_empties)
         self.assertEqual(3, len(changed))

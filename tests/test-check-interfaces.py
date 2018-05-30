@@ -44,7 +44,6 @@ def checkobject(o):
 
 # Facilitates testing localpeer.
 class dummyrepo(object):
-
     def __init__(self):
         self.ui = uimod.ui()
 
@@ -57,13 +56,11 @@ class dummyrepo(object):
 
 # Facilitates testing sshpeer without requiring an SSH server.
 class testingsshpeer(sshpeer.sshpeer):
-
     def _validaterepo(self, *args, **kwargs):
         pass
 
 
 class badpeer(httppeer.httppeer):
-
     def __init__(self):
         super(badpeer, self).__init__(uimod.ui(), "http://localhost")
         self.badattribute = True

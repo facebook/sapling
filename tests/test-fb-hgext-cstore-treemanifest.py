@@ -11,7 +11,6 @@ from mercurial.node import hex, nullid
 
 
 class FakeDataStore(object):
-
     def __init__(self):
         self._data = {}
 
@@ -23,7 +22,6 @@ class FakeDataStore(object):
 
 
 class FakeHistoryStore(object):
-
     def __init__(self):
         self._data = {}
 
@@ -64,7 +62,6 @@ def hashflags(requireflag=False):
 
 
 class ctreemanifesttests(unittest.TestCase):
-
     def setUp(self):
         random.seed(0)
 

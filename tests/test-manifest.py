@@ -96,7 +96,6 @@ A_HUGE_MANIFEST = b"".join(
 
 
 class basemanifesttests(object):
-
     def parsemanifest(self, text):
         raise NotImplementedError("parsemanifest not implemented by test case")
 
@@ -472,13 +471,11 @@ class basemanifesttests(object):
 
 
 class testmanifestdict(unittest.TestCase, basemanifesttests):
-
     def parsemanifest(self, text):
         return manifestmod.manifestdict(text)
 
 
 class testtreemanifest(unittest.TestCase, basemanifesttests):
-
     def parsemanifest(self, text):
         return manifestmod.treemanifest(b"", text)
 

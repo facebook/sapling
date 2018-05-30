@@ -8,42 +8,42 @@
 import stat
 
 from mercurial.i18n import _
-from mercurial import (
-    error,
-    progress,
-    util as hgutil,
-)
+from mercurial import error, progress, util as hgutil
 
 from dulwich import diff_tree
 from dulwich.objects import Commit, S_IFGITLINK
 
+
 def verify(ui, repo, hgctx):
-    '''verify that a Mercurial rev matches the corresponding Git rev
+    """verify that a Mercurial rev matches the corresponding Git rev
 
     Given a Mercurial revision that has a corresponding Git revision in the map,
     this attempts to answer whether that revision has the same contents as the
     corresponding Git revision.
 
-    '''
+    """
     handler = repo.githandler
 
     gitsha = handler.map_git_get(hgctx.hex())
     if not gitsha:
         # TODO deal better with commits in the middle of octopus merges
-        raise hgutil.Abort(_('no git commit found for rev %s') % hgctx,
-                           hint=_('if this is an octopus merge, '
-                                  'verify against the last rev'))
+        raise hgutil.Abort(
+            _("no git commit found for rev %s") % hgctx,
+            hint=_("if this is an octopus merge, " "verify against the last rev"),
+        )
 
     try:
         gitcommit = handler.git.get_object(gitsha)
     except KeyError:
-        raise hgutil.Abort(_('git equivalent %s for rev %s not found!') %
-                           (gitsha, hgctx))
+        raise hgutil.Abort(
+            _("git equivalent %s for rev %s not found!") % (gitsha, hgctx)
+        )
     if not isinstance(gitcommit, Commit):
-        raise hgutil.Abort(_('git equivalent %s for rev %s is not a commit!') %
-                           (gitsha, hgctx))
+        raise hgutil.Abort(
+            _("git equivalent %s for rev %s is not a commit!") % (gitsha, hgctx)
+        )
 
-    ui.status(_('verifying rev %s against git commit %s\n') % (hgctx, gitsha))
+    ui.status(_("verifying rev %s against git commit %s\n") % (hgctx, gitsha))
     failed = False
 
     # TODO check commit message and other metadata
@@ -52,19 +52,23 @@ def verify(ui, repo, hgctx):
 
     hgfiles = set(hgctx)
     # TODO deal with submodules
-    hgfiles.discard('.hgsubstate')
-    hgfiles.discard('.hgsub')
+    hgfiles.discard(".hgsubstate")
+    hgfiles.discard(".hgsub")
     gitfiles = set()
 
     i = 0
-    with progress.bar(ui, _('verify'), total=len(hgfiles)) as prog:
-        for gitfile, dummy in diff_tree.walk_trees(handler.git.object_store,
-                                                   gitcommit.tree, None):
+    with progress.bar(ui, _("verify"), total=len(hgfiles)) as prog:
+        for gitfile, dummy in diff_tree.walk_trees(
+            handler.git.object_store, gitcommit.tree, None
+        ):
             if gitfile.mode == dirkind:
                 continue
             # TODO deal with submodules
-            if (gitfile.mode == S_IFGITLINK or gitfile.path == '.hgsubstate' or
-                gitfile.path == '.hgsub'):
+            if (
+                gitfile.mode == S_IFGITLINK
+                or gitfile.path == ".hgsubstate"
+                or gitfile.path == ".hgsub"
+            ):
                 continue
             prog.value = i
             i += 1
@@ -79,21 +83,23 @@ def verify(ui, repo, hgctx):
             hgflags = fctx.flags()
             gitflags = handler.convert_git_int_mode(gitfile.mode)
             if hgflags != gitflags:
-                ui.write(_("file has different flags: %s (hg '%s', git '%s')\n")
-                         % (gitfile.path, hgflags, gitflags))
+                ui.write(
+                    _("file has different flags: %s (hg '%s', git '%s')\n")
+                    % (gitfile.path, hgflags, gitflags)
+                )
                 failed = True
             if fctx.data() != handler.git[gitfile.sha].data:
-                ui.write(_('difference in: %s\n') % gitfile.path)
+                ui.write(_("difference in: %s\n") % gitfile.path)
                 failed = True
 
     if hgfiles != gitfiles:
         failed = True
         missing = gitfiles - hgfiles
         for f in sorted(missing):
-            ui.write(_('file found in git but not hg: %s\n') % f)
+            ui.write(_("file found in git but not hg: %s\n") % f)
         unexpected = hgfiles - gitfiles
         for f in sorted(unexpected):
-            ui.write(_('file found in hg but not git: %s\n') % f)
+            ui.write(_("file found in hg but not git: %s\n") % f)
 
     if failed:
         return 1

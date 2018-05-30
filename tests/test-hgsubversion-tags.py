@@ -190,7 +190,6 @@ rename a tag
         self.assertRaises(error.Abort, lambda: repo.svnmeta().tags)
 
     def _debug_print_tags(self, repo, ctx, fp):
-
         def formatnode(ctx):
             crev = ctx.extra().get("convert_revision", "unk/unk@unk")
             path, rev = crev.rsplit("@", 1)

@@ -52,9 +52,7 @@ def _handlecommandexception(orig, ui):
 
 
 def uisetup(ui):
-
     class morecolorsui(ui.__class__):
-
         def traceback(self, exc=None, force=False):
             if exc is None:
                 exc = sys.exc_info()

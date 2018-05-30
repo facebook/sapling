@@ -6,13 +6,8 @@ from __future__ import absolute_import, division, print_function
 
 from ._make import attr, attributes, and_, _AndValidator
 
-__all__ = [
-    "and_",
-    "in_",
-    "instance_of",
-    "optional",
-    "provides",
-]
+__all__ = ["and_", "in_", "instance_of", "optional", "provides"]
+
 
 @attributes(repr=False, slots=True, hash=True)
 class _InstanceOfValidator(object):
@@ -25,17 +20,17 @@ class _InstanceOfValidator(object):
         if not isinstance(value, self.type):
             raise TypeError(
                 "'{name}' must be {type!r} (got {value!r} that is a "
-                "{actual!r})."
-                .format(name=attr.name, type=self.type,
-                        actual=value.__class__, value=value),
-                attr, self.type, value,
+                "{actual!r}).".format(
+                    name=attr.name, type=self.type, actual=value.__class__, value=value
+                ),
+                attr,
+                self.type,
+                value,
             )
 
     def __repr__(self):
-        return (
-            "<instance_of validator for type {type!r}>"
-            .format(type=self.type)
-        )
+        return "<instance_of validator for type {type!r}>".format(type=self.type)
+
 
 def instance_of(type):
     """
@@ -52,6 +47,7 @@ def instance_of(type):
     """
     return _InstanceOfValidator(type)
 
+
 @attributes(repr=False, slots=True, hash=True)
 class _ProvidesValidator(object):
     interface = attr()
@@ -63,16 +59,19 @@ class _ProvidesValidator(object):
         if not self.interface.providedBy(value):
             raise TypeError(
                 "'{name}' must provide {interface!r} which {value!r} "
-                "doesn't."
-                .format(name=attr.name, interface=self.interface, value=value),
-                attr, self.interface, value,
+                "doesn't.".format(
+                    name=attr.name, interface=self.interface, value=value
+                ),
+                attr,
+                self.interface,
+                value,
             )
 
     def __repr__(self):
-        return (
-            "<provides validator for interface {interface!r}>"
-            .format(interface=self.interface)
+        return "<provides validator for interface {interface!r}>".format(
+            interface=self.interface
         )
+
 
 def provides(interface):
     """
@@ -89,6 +88,7 @@ def provides(interface):
     """
     return _ProvidesValidator(interface)
 
+
 @attributes(repr=False, slots=True, hash=True)
 class _OptionalValidator(object):
     validator = attr()
@@ -100,10 +100,10 @@ class _OptionalValidator(object):
         self.validator(inst, attr, value)
 
     def __repr__(self):
-        return (
-            "<optional validator for {what} or None>"
-            .format(what=repr(self.validator))
+        return "<optional validator for {what} or None>".format(
+            what=repr(self.validator)
         )
+
 
 def optional(validator):
     """
@@ -122,6 +122,7 @@ def optional(validator):
         return _OptionalValidator(_AndValidator(validator))
     return _OptionalValidator(validator)
 
+
 @attributes(repr=False, slots=True, hash=True)
 class _InValidator(object):
     options = attr()
@@ -129,15 +130,14 @@ class _InValidator(object):
     def __call__(self, inst, attr, value):
         if value not in self.options:
             raise ValueError(
-                "'{name}' must be in {options!r} (got {value!r})"
-                .format(name=attr.name, options=self.options, value=value)
+                "'{name}' must be in {options!r} (got {value!r})".format(
+                    name=attr.name, options=self.options, value=value
+                )
             )
 
     def __repr__(self):
-        return (
-            "<in_ validator with options {options!r}>"
-            .format(options=self.options)
-        )
+        return "<in_ validator with options {options!r}>".format(options=self.options)
+
 
 def in_(options):
     """

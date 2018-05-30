@@ -49,10 +49,7 @@ from __future__ import absolute_import
 
 import tempfile
 
-from mercurial.node import (
-    hex,
-    short,
-)
+from mercurial.node import hex, short
 from mercurial.i18n import _
 
 from mercurial import (
@@ -68,10 +65,7 @@ from mercurial import (
     scmutil,
 )
 
-from .. import (
-    histedit,
-    rebase as rebasemod,
-)
+from .. import histedit, rebase as rebasemod
 
 from . import (
     common,
@@ -104,144 +98,182 @@ cmdtable.update(unamend.cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('fbamend', 'alwaysnewest', default=False)
-configitem('fbamend', 'date', default=None)
-configitem('fbamend', 'education', default=None)
-configitem('fbamend', 'safestrip', default=True)
-configitem('commands', 'amend.autorebase', default=True)
+configitem("fbamend", "alwaysnewest", default=False)
+configitem("fbamend", "date", default=None)
+configitem("fbamend", "education", default=None)
+configitem("fbamend", "safestrip", default=True)
+configitem("commands", "amend.autorebase", default=True)
 
-testedwith = 'ships-with-fb-hgext'
+testedwith = "ships-with-fb-hgext"
 
 amendopts = [
-    ('', 'rebase', None, _('rebases children after the amend')),
-    ('', 'fixup', None, _('rebase children from a previous amend')),
-    ('', 'to', '', _('amend to a specific commit in the current stack')),
+    ("", "rebase", None, _("rebases children after the amend")),
+    ("", "fixup", None, _("rebase children from a previous amend")),
+    ("", "to", "", _("amend to a specific commit in the current stack")),
 ]
 
-@hint('strip-hide')
+
+@hint("strip-hide")
 def hinthide():
-    return _("'hg strip' may be deprecated in the future - "
-             "use 'hg hide' instead")
+    return _("'hg strip' may be deprecated in the future - " "use 'hg hide' instead")
 
-@hint('strip-uncommit')
+
+@hint("strip-uncommit")
 def hintstrip():
-    return _("'hg strip' may be deprecated in the future - "
-             "use 'hg uncommit' or 'hg undo -k' to undo commits")
+    return _(
+        "'hg strip' may be deprecated in the future - "
+        "use 'hg uncommit' or 'hg undo -k' to undo commits"
+    )
 
-@hint('amend-restack')
+
+@hint("amend-restack")
 def hintrestack(node):
-    return _("descendants of %s are left behind - use 'hg restack' to rebase "
-             "them") % short(node)
+    return _(
+        "descendants of %s are left behind - use 'hg restack' to rebase " "them"
+    ) % short(node)
 
-@hint('amend-autorebase')
+
+@hint("amend-autorebase")
 def hintautorebase():
-    return _('descendants have been auto-rebased because no merge conflict '
-             'could have happened - use --no-rebase or set '
-             'commands.amend.autorebase=False to disable auto rebase')
+    return _(
+        "descendants have been auto-rebased because no merge conflict "
+        "could have happened - use --no-rebase or set "
+        "commands.amend.autorebase=False to disable auto rebase"
+    )
 
-@hint('update-prev')
+
+@hint("update-prev")
 def hintprev():
     return _("use 'hg prev' to move to the parent changeset")
+
 
 def uisetup(ui):
     hiddenoverride.uisetup(ui)
     prune.uisetup(ui)
-    entry = extensions.wrapcommand(commands.table, 'commit', commit)
+    entry = extensions.wrapcommand(commands.table, "commit", commit)
     for opt in amendopts:
         opt = (opt[0], opt[1], opt[2], "(with --amend) " + opt[3])
         entry[1].append(opt)
 
     # manual call of the decorator
-    command('^amend', [
-            ('A', 'addremove', None,
-             _('mark new/missing files as added/removed before committing')),
-           ('e', 'edit', None, _('prompt to edit the commit message')),
-           ('i', 'interactive', None, _('use interactive mode')),
-       ] + amendopts + commands.walkopts + commands.commitopts
+    command(
+        "^amend",
+        [
+            (
+                "A",
+                "addremove",
+                None,
+                _("mark new/missing files as added/removed before committing"),
+            ),
+            ("e", "edit", None, _("prompt to edit the commit message")),
+            ("i", "interactive", None, _("use interactive mode")),
+        ]
+        + amendopts
+        + commands.walkopts
+        + commands.commitopts
         + commands.commitopts2,
-       _('hg amend [OPTION]...'))(amend)
+        _("hg amend [OPTION]..."),
+    )(amend)
 
     def has_automv(loaded):
         if not loaded:
             return
-        automv = extensions.find('automv')
-        entry = extensions.wrapcommand(cmdtable, 'amend', automv.mvcheck)
+        automv = extensions.find("automv")
+        entry = extensions.wrapcommand(cmdtable, "amend", automv.mvcheck)
         entry[1].append(
-            ('', 'no-move-detection', None,
-             _('disable automatic file move detection')))
-    extensions.afterloaded('automv', has_automv)
+            ("", "no-move-detection", None, _("disable automatic file move detection"))
+        )
+
+    extensions.afterloaded("automv", has_automv)
 
     def evolveloaded(loaded):
         if not loaded:
             return
 
-        evolvemod = extensions.find('evolve')
+        evolvemod = extensions.find("evolve")
 
         # Remove conflicted commands from evolve.
         table = evolvemod.cmdtable
-        for name in ['prev', 'next', 'split', 'fold', 'metaedit', 'prune']:
+        for name in ["prev", "next", "split", "fold", "metaedit", "prune"]:
             todelete = [k for k in table if name in k]
             for k in todelete:
                 oldentry = table[k]
-                table['debugevolve%s' % name] = oldentry
+                table["debugevolve%s" % name] = oldentry
                 del table[k]
 
-    extensions.afterloaded('evolve', evolveloaded)
+    extensions.afterloaded("evolve", evolveloaded)
 
     def rebaseloaded(loaded):
         if not loaded:
             return
-        entry = extensions.wrapcommand(rebasemod.cmdtable, 'rebase',
-                                       wraprebase)
-        entry[1].append((
-            '', 'restack', False, _('rebase all changesets in the current '
-                                    'stack onto the latest version of their '
-                                    'respective parents')
-        ))
-    extensions.afterloaded('rebase', rebaseloaded)
+        entry = extensions.wrapcommand(rebasemod.cmdtable, "rebase", wraprebase)
+        entry[1].append(
+            (
+                "",
+                "restack",
+                False,
+                _(
+                    "rebase all changesets in the current "
+                    "stack onto the latest version of their "
+                    "respective parents"
+                ),
+            )
+        )
+
+    extensions.afterloaded("rebase", rebaseloaded)
+
 
 def commit(orig, ui, repo, *pats, **opts):
     if opts.get("amend"):
         # commit --amend default behavior is to prompt for edit
-        opts['noeditmessage'] = True
+        opts["noeditmessage"] = True
         return amend(ui, repo, *pats, **opts)
     else:
-        badflags = [flag for flag in
-                ['rebase', 'fixup'] if opts.get(flag, None)]
+        badflags = [flag for flag in ["rebase", "fixup"] if opts.get(flag, None)]
         if badflags:
-            raise error.Abort(_('--%s must be called with --amend') %
-                    badflags[0])
+            raise error.Abort(_("--%s must be called with --amend") % badflags[0])
 
         return orig(ui, repo, *pats, **opts)
 
+
 def amend(ui, repo, *pats, **opts):
-    '''amend the current changeset with more changes
-    '''
+    """amend the current changeset with more changes
+    """
     # 'rebase' is a tristate option: None=auto, True=force, False=disable
-    rebase = opts.get('rebase')
-    to = opts.get('to')
+    rebase = opts.get("rebase")
+    to = opts.get("to")
 
     if rebase and _histediting(repo):
         # if a histedit is in flight, it's dangerous to remove old commits
-        hint = _('during histedit, use amend without --rebase')
-        raise error.Abort('histedit in progress', hint=hint)
+        hint = _("during histedit, use amend without --rebase")
+        raise error.Abort("histedit in progress", hint=hint)
 
-    badflags = [flag for flag in
-            ['rebase', 'fixup'] if opts.get(flag, None)]
-    if opts.get('interactive') and badflags:
-        raise error.Abort(_('--interactive and --%s are mutually exclusive') %
-                badflags[0])
+    badflags = [flag for flag in ["rebase", "fixup"] if opts.get(flag, None)]
+    if opts.get("interactive") and badflags:
+        raise error.Abort(
+            _("--interactive and --%s are mutually exclusive") % badflags[0]
+        )
 
-    fixup = opts.get('fixup')
+    fixup = opts.get("fixup")
 
     badtoflags = [
-        'rebase', 'fixup', 'addremove', 'edit', 'interactive', 'include',
-        'exclude', 'message', 'logfile', 'date', 'user',
-        'no-move-detection', 'stack'
+        "rebase",
+        "fixup",
+        "addremove",
+        "edit",
+        "interactive",
+        "include",
+        "exclude",
+        "message",
+        "logfile",
+        "date",
+        "user",
+        "no-move-detection",
+        "stack",
     ]
 
     if to and any(opts.get(flag, None) for flag in badtoflags):
-        raise error.Abort(_('--to cannot be used with any other options'))
+        raise error.Abort(_("--to cannot be used with any other options"))
 
     if fixup:
         fixupamend(ui, repo)
@@ -251,26 +283,26 @@ def amend(ui, repo, *pats, **opts):
         amendtocommit(ui, repo, to)
         return
 
-    old = repo['.']
+    old = repo["."]
     if old.phase() == phases.public:
-        raise error.Abort(_('cannot amend public changesets'))
+        raise error.Abort(_("cannot amend public changesets"))
     if len(repo[None].parents()) > 1:
-        raise error.Abort(_('cannot amend while merging'))
+        raise error.Abort(_("cannot amend while merging"))
 
     haschildren = len(old.children()) > 0
 
-    opts['message'] = cmdutil.logmessage(ui, opts)
+    opts["message"] = cmdutil.logmessage(ui, opts)
     # Avoid further processing of any logfile. If such a file existed, its
     # contents have been copied into opts['message'] by logmessage
-    opts['logfile'] = ''
+    opts["logfile"] = ""
 
-    if not opts.get('noeditmessage') and not opts.get('message'):
-        opts['message'] = old.description()
+    if not opts.get("noeditmessage") and not opts.get("message"):
+        opts["message"] = old.description()
 
-    commitdate = opts.get('date')
+    commitdate = opts.get("date")
     if not commitdate:
-        if ui.config('fbamend', 'date') == 'implicitupdate':
-            commitdate = 'now'
+        if ui.config("fbamend", "date") == "implicitupdate":
+            commitdate = "now"
         else:
             commitdate = old.date()
 
@@ -282,11 +314,12 @@ def amend(ui, repo, *pats, **opts):
         wlock = repo.wlock()
         lock = repo.lock()
 
-        if opts.get('interactive'):
+        if opts.get("interactive"):
             # Strip the interactive flag to avoid infinite recursive loop
-            opts.pop('interactive')
-            cmdutil.dorecord(ui, repo, amend, None, False,
-                    cmdutil.recordfilter, *pats, **opts)
+            opts.pop("interactive")
+            cmdutil.dorecord(
+                ui, repo, amend, None, False, cmdutil.recordfilter, *pats, **opts
+            )
             return
 
         else:
@@ -305,23 +338,25 @@ def amend(ui, repo, *pats, **opts):
             # If the rebase did not change the manifest and the
             # working copy is clean, force the children to be
             # restacked.
-            if (old.manifestnode() == newcommit.manifestnode() and
-                not repo[None].dirty()):
-                if ui.configbool('commands', 'amend.autorebase'):
-                    hintutil.trigger('amend-autorebase')
+            if (
+                old.manifestnode() == newcommit.manifestnode()
+                and not repo[None].dirty()
+            ):
+                if ui.configbool("commands", "amend.autorebase"):
+                    hintutil.trigger("amend-autorebase")
                     rebase = True
-                else :
+                else:
                     rebase = False
 
         if haschildren and not rebase and not _histediting(repo):
-            hintutil.trigger('amend-restack', old.node())
+            hintutil.trigger("amend-restack", old.node())
 
         changes = []
         # move old bookmarks to new node
         for bm in oldbookmarks:
             changes.append((bm, node))
 
-        tr = repo.transaction('fixupamend')
+        tr = repo.transaction("fixupamend")
         repo._bookmarks.applychanges(repo, tr, changes)
         tr.close()
 
@@ -329,6 +364,7 @@ def amend(ui, repo, *pats, **opts):
             fixupamend(ui, repo)
     finally:
         lockmod.release(wlock, lock, tr)
+
 
 def fixupamend(ui, repo):
     """rebases any children found on the preamend changset and strips the
@@ -340,12 +376,13 @@ def fixupamend(ui, repo):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        current = repo['.']
+        current = repo["."]
 
         # Use obsolescence information to fix up the amend.
         common.restackonce(ui, repo, current.rev())
     finally:
         lockmod.release(wlock, lock, tr)
+
 
 def amendtocommit(ui, repo, commitspec):
     """amend to a specific commit
@@ -355,20 +392,19 @@ def amendtocommit(ui, repo, commitspec):
         try:
             revs = scmutil.revrange(repo, [commitspec])
         except error.RepoLookupError:
-            raise error.Abort(_("revision '%s' cannot be found")
-                              % commitspec)
+            raise error.Abort(_("revision '%s' cannot be found") % commitspec)
         if len(revs) > 1:
-            raise error.Abort(_("'%s' refers to multiple changesets")
-                              % commitspec)
+            raise error.Abort(_("'%s' refers to multiple changesets") % commitspec)
         targetcommit = repo[revs.first()]
         if targetcommit not in originalcommits:
-            raise error.Abort(_("revision '%s' is not a parent of "
-                              'the working copy' % commitspec))
+            raise error.Abort(
+                _("revision '%s' is not a parent of " "the working copy" % commitspec)
+            )
 
         tempcommit = repo.commit(text="tempCommit")
 
         if not tempcommit:
-            raise error.Abort(_('no pending changes to amend'))
+            raise error.Abort(_("no pending changes to amend"))
 
         tempcommithex = hex(tempcommit)
 
@@ -381,17 +417,21 @@ def amendtocommit(ui, repo, commitspec):
                     fp.write("roll " + tempcommithex[:12] + "\n")
                     found = True
             if not found:
-                raise error.Abort(_("revision '%s' cannot be found")
-                                  % commitspec)
+                raise error.Abort(_("revision '%s' cannot be found") % commitspec)
             fp.flush()
             try:
                 histedit.histedit(ui, repo, commands=fp.name)
             except error.InterventionRequired:
-                ui.warn(_('amend --to encountered an issue - '
-                        'use hg histedit to continue or abort'))
+                ui.warn(
+                    _(
+                        "amend --to encountered an issue - "
+                        "use hg histedit to continue or abort"
+                    )
+                )
                 raise
         finally:
             fp.close()
+
 
 def wraprebase(orig, ui, repo, **opts):
     """Wrapper around `hg rebase` adding the `--restack` option, which rebases
@@ -399,21 +439,21 @@ def wraprebase(orig, ui, repo, **opts):
        version of that changeset. This is similar to (and intended as a
        replacement for) the `hg evolve --all` command.
     """
-    if opts['restack']:
+    if opts["restack"]:
         # We can't abort if --dest is passed because some extensions
         # (namely remotenames) will automatically add this flag.
         # So just silently drop it instead.
-        opts.pop('dest', None)
+        opts.pop("dest", None)
 
-        if opts['rev']:
+        if opts["rev"]:
             raise error.Abort(_("cannot use both --rev and --restack"))
-        if opts['source']:
+        if opts["source"]:
             raise error.Abort(_("cannot use both --source and --restack"))
-        if opts['base']:
+        if opts["base"]:
             raise error.Abort(_("cannot use both --base and --restack"))
-        if opts['abort']:
+        if opts["abort"]:
             raise error.Abort(_("cannot use both --abort and --restack"))
-        if opts['continue']:
+        if opts["continue"]:
             raise error.Abort(_("cannot use both --continue and --restack"))
 
         # The --hidden option is handled at a higher level, so instead of
@@ -426,15 +466,18 @@ def wraprebase(orig, ui, repo, **opts):
 
     return orig(ui, repo, **opts)
 
+
 def _preamendname(repo, node):
-    suffix = '.preamend'
+    suffix = ".preamend"
     name = bmactive(repo)
     if not name:
         name = hex(node)[:12]
     return name + suffix
 
+
 def _histediting(repo):
-    return repo.vfs.exists('histedit-state')
+    return repo.vfs.exists("histedit-state")
+
 
 def _fixbookmarks(repo, revs):
     """Make any bookmarks pointing to the given revisions point to the
@@ -442,7 +485,7 @@ def _fixbookmarks(repo, revs):
     """
     repo = repo.unfiltered()
     cl = repo.changelog
-    with repo.wlock(), repo.lock(), repo.transaction('movebookmarks') as tr:
+    with repo.wlock(), repo.lock(), repo.transaction("movebookmarks") as tr:
         changes = []
         for rev in revs:
             latest = cl.node(common.latest(repo, rev))
@@ -450,12 +493,14 @@ def _fixbookmarks(repo, revs):
                 changes.append((bm, latest))
         repo._bookmarks.applychanges(repo, tr, changes)
 
+
 ### bookmarks api compatibility layer ###
 def bmactivate(repo, mark):
     try:
         return bookmarks.activate(repo, mark)
     except AttributeError:
         return bookmarks.setcurrent(repo, mark)
+
 
 def bmactive(repo):
     try:

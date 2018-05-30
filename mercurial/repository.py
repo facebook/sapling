@@ -22,6 +22,7 @@ class _basepeer(object):
     This is not a complete interface definition and should not be used
     outside of this module.
     """
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractproperty
@@ -75,6 +76,7 @@ class _basewirecommands(object):
     This interface is used as a gateway to the Mercurial wire protocol.
     methods commonly call wire protocol commands of the same name.
     """
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -172,6 +174,7 @@ class _baselegacywirecommands(object):
     used by modern clients. To facilitate identifying which commands are
     legacy, the interfaces are split.
     """
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod

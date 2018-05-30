@@ -100,7 +100,6 @@ def uisetup(ui):
                 os._exit(0)
 
     class logtoprocessui(ui.__class__):
-
         def log(self, event, *msg, **opts):
             """Map log events to external commands
 

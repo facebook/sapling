@@ -57,6 +57,7 @@ class mixedfilemodewrapper(object):
     mode and automatically adds checks or inserts appropriate file positioning
     calls when necessary.
     """
+
     OPNONE = 0
     OPREAD = 1
     OPWRITE = 2
@@ -461,7 +462,6 @@ def isexec(f):
 
 
 class cachestat(object):
-
     def __init__(self, path):
         self.fi = win32.getfileinfo(path)
 

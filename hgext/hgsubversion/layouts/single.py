@@ -2,21 +2,22 @@
 
 import base
 
+
 class SingleLayout(base.BaseLayout):
     """A layout with only the default branch"""
 
     @property
     def name(self):
-        return 'single'
+        return "single"
 
     def localname(self, path):
         return None
 
     def remotename(self, branch):
-        return ''
+        return ""
 
-    def remotepath(self, branch, subdir='/'):
-        return subdir or '/'
+    def remotepath(self, branch, subdir="/"):
+        return subdir or "/"
 
     @property
     def taglocations(self):
@@ -26,4 +27,4 @@ class SingleLayout(base.BaseLayout):
         return None
 
     def split_remote_name(self, path, known_branches):
-        return '', path
+        return "", path

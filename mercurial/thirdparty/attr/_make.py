@@ -20,12 +20,14 @@ _init_factory_pat = "__attr_factory_{}"
 _tuple_property_pat = "    {attr_name} = property(itemgetter({index}))"
 _empty_metadata_singleton = metadata_proxy({})
 
+
 class _Nothing(object):
     """
     Sentinel class to indicate the lack of a value when ``None`` is ambiguous.
 
     All instances of `_Nothing` are equal.
     """
+
     def __copy__(self):
         return self
 
@@ -44,14 +46,23 @@ class _Nothing(object):
     def __hash__(self):
         return 0xdeadbeef
 
+
 NOTHING = _Nothing()
 """
 Sentinel to indicate the lack of a value when ``None`` is ambiguous.
 """
 
-def attr(default=NOTHING, validator=None,
-         repr=True, cmp=True, hash=None, init=True,
-         convert=None, metadata={}):
+
+def attr(
+    default=NOTHING,
+    validator=None,
+    repr=True,
+    cmp=True,
+    hash=None,
+    init=True,
+    convert=None,
+    metadata={},
+):
     """
     Create a new attribute on a class.
 
@@ -120,9 +131,7 @@ def attr(default=NOTHING, validator=None,
         *hash* is ``None`` and therefore mirrors *cmp* by default .
     """
     if hash is not None and hash is not True and hash is not False:
-        raise TypeError(
-            "Invalid value for hash.  Must be True, False, or None."
-        )
+        raise TypeError("Invalid value for hash.  Must be True, False, or None.")
     return _CountingAttr(
         default=default,
         validator=validator,
@@ -133,6 +142,7 @@ def attr(default=NOTHING, validator=None,
         convert=convert,
         metadata=metadata,
     )
+
 
 def _make_attr_tuple_class(cls_name, attr_names):
     """
@@ -151,15 +161,15 @@ def _make_attr_tuple_class(cls_name, attr_names):
     ]
     if attr_names:
         for i, attr_name in enumerate(attr_names):
-            attr_class_template.append(_tuple_property_pat.format(
-                index=i,
-                attr_name=attr_name,
-            ))
+            attr_class_template.append(
+                _tuple_property_pat.format(index=i, attr_name=attr_name)
+            )
     else:
         attr_class_template.append("    pass")
     globs = {"itemgetter": itemgetter}
     eval(compile("\n".join(attr_class_template), "", "exec"), globs)
     return globs[attr_class_name]
+
 
 def _transform_attrs(cls, these):
     """
@@ -174,29 +184,29 @@ def _transform_attrs(cls, these):
         if sub_attrs is not None:
             super_cls.extend(a for a in sub_attrs if a not in super_cls)
     if these is None:
-        ca_list = [(name, attr)
-                   for name, attr
-                   in cls.__dict__.items()
-                   if isinstance(attr, _CountingAttr)]
+        ca_list = [
+            (name, attr)
+            for name, attr in cls.__dict__.items()
+            if isinstance(attr, _CountingAttr)
+        ]
     else:
-        ca_list = [(name, ca)
-                   for name, ca
-                   in iteritems(these)]
+        ca_list = [(name, ca) for name, ca in iteritems(these)]
 
     non_super_attrs = [
         Attribute.from_counting_attr(name=attr_name, ca=ca)
-        for attr_name, ca
-        in sorted(ca_list, key=lambda e: e[1].counter)
+        for attr_name, ca in sorted(ca_list, key=lambda e: e[1].counter)
     ]
     attr_names = [a.name for a in super_cls + non_super_attrs]
 
     AttrsClass = _make_attr_tuple_class(cls.__name__, attr_names)
 
-    cls.__attrs_attrs__ = AttrsClass(super_cls + [
-        Attribute.from_counting_attr(name=attr_name, ca=ca)
-        for attr_name, ca
-        in sorted(ca_list, key=lambda e: e[1].counter)
-    ])
+    cls.__attrs_attrs__ = AttrsClass(
+        super_cls
+        + [
+            Attribute.from_counting_attr(name=attr_name, ca=ca)
+            for attr_name, ca in sorted(ca_list, key=lambda e: e[1].counter)
+        ]
+    )
 
     had_default = False
     for a in cls.__attrs_attrs__:
@@ -205,13 +215,11 @@ def _transform_attrs(cls, these):
         if had_default is True and a.default is NOTHING and a.init is True:
             raise ValueError(
                 "No mandatory attributes allowed after an attribute with a "
-                "default value or factory.  Attribute in question: {a!r}"
-                .format(a=a)
+                "default value or factory.  Attribute in question: {a!r}".format(a=a)
             )
-        elif had_default is False and \
-                a.default is not NOTHING and \
-                a.init is not False:
+        elif had_default is False and a.default is not NOTHING and a.init is not False:
             had_default = True
+
 
 def _frozen_setattrs(self, name, value):
     """
@@ -219,15 +227,26 @@ def _frozen_setattrs(self, name, value):
     """
     raise FrozenInstanceError()
 
+
 def _frozen_delattrs(self, name):
     """
     Attached to frozen classes as __delattr__.
     """
     raise FrozenInstanceError()
 
-def attributes(maybe_cls=None, these=None, repr_ns=None,
-               repr=True, cmp=True, hash=None, init=True,
-               slots=False, frozen=False, str=False):
+
+def attributes(
+    maybe_cls=None,
+    these=None,
+    repr_ns=None,
+    repr=True,
+    cmp=True,
+    hash=None,
+    init=True,
+    slots=False,
+    frozen=False,
+    str=False,
+):
     r"""
     A class decorator that adds `dunder
     <https://wiki.python.org/moin/DunderAlias>`_\ -methods according to the
@@ -310,22 +329,22 @@ def attributes(maybe_cls=None, these=None, repr_ns=None,
             17.1.0 *hash* supports ``None`` as value which is also the default
             now.
     """
+
     def wrap(cls):
         if getattr(cls, "__class__", None) is None:
             raise TypeError("attrs only works with new-style classes.")
 
         if repr is False and str is True:
-            raise ValueError(
-                "__str__ can only be generated if a __repr__ exists."
-            )
+            raise ValueError("__str__ can only be generated if a __repr__ exists.")
 
         if slots:
             # Only need this later if we're using slots.
             if these is None:
-                ca_list = [name
-                           for name, attr
-                           in cls.__dict__.items()
-                           if isinstance(attr, _CountingAttr)]
+                ca_list = [
+                    name
+                    for name, attr in cls.__dict__.items()
+                    if isinstance(attr, _CountingAttr)
+                ]
             else:
                 ca_list = list(iterkeys(these))
         _transform_attrs(cls, these)
@@ -341,9 +360,7 @@ def attributes(maybe_cls=None, these=None, repr_ns=None,
             cls = _add_cmp(cls)
 
         if hash is not True and hash is not False and hash is not None:
-            raise TypeError(
-                "Invalid value for hash.  Must be True, False, or None."
-            )
+            raise TypeError("Invalid value for hash.  Must be True, False, or None.")
         elif hash is False or (hash is None and cmp is False):
             pass
         elif hash is True or (hash is None and cmp is True and frozen is True):
@@ -381,19 +398,22 @@ def attributes(maybe_cls=None, these=None, repr_ns=None,
     else:
         return wrap(maybe_cls)
 
+
 if PY2:
+
     def _has_frozen_superclass(cls):
         """
         Check whether *cls* has a frozen ancestor by looking at its
         __setattr__.
         """
         return (
-            getattr(
-                cls.__setattr__, "__module__", None
-            ) == _frozen_setattrs.__module__ and
-            cls.__setattr__.__name__ == _frozen_setattrs.__name__
+            getattr(cls.__setattr__, "__module__", None) == _frozen_setattrs.__module__
+            and cls.__setattr__.__name__ == _frozen_setattrs.__name__
         )
+
+
 else:
+
     def _has_frozen_superclass(cls):
         """
         Check whether *cls* has a frozen ancestor by looking at its
@@ -401,20 +421,24 @@ else:
         """
         return cls.__setattr__ == _frozen_setattrs
 
+
 def _attrs_to_tuple(obj, attrs):
     """
     Create a tuple of all values of *obj*'s *attrs*.
     """
     return tuple(getattr(obj, a.name) for a in attrs)
 
+
 def _add_hash(cls, attrs=None):
     """
     Add a hash method to *cls*.
     """
     if attrs is None:
-        attrs = [a
-                 for a in cls.__attrs_attrs__
-                 if a.hash is True or (a.hash is None and a.cmp is True)]
+        attrs = [
+            a
+            for a in cls.__attrs_attrs__
+            if a.hash is True or (a.hash is None and a.cmp is True)
+        ]
 
     def hash_(self):
         """
@@ -424,6 +448,7 @@ def _add_hash(cls, attrs=None):
 
     cls.__hash__ = hash_
     return cls
+
 
 def _add_cmp(cls, attrs=None):
     """
@@ -502,6 +527,7 @@ def _add_cmp(cls, attrs=None):
 
     return cls
 
+
 def _add_repr(cls, ns=None, attrs=None):
     """
     Add a repr method to *cls*.
@@ -525,38 +551,31 @@ def _add_repr(cls, ns=None, attrs=None):
 
         return "{0}({1})".format(
             class_name,
-            ", ".join(a.name + "=" + repr(getattr(self, a.name))
-                      for a in attrs)
+            ", ".join(a.name + "=" + repr(getattr(self, a.name)) for a in attrs),
         )
+
     cls.__repr__ = repr_
     return cls
+
 
 def _add_init(cls, frozen):
     """
     Add a __init__ method to *cls*.  If *frozen* is True, make it immutable.
     """
-    attrs = [a for a in cls.__attrs_attrs__
-             if a.init or a.default is not NOTHING]
+    attrs = [a for a in cls.__attrs_attrs__ if a.init or a.default is not NOTHING]
 
     # We cache the generated init methods for the same kinds of attributes.
     sha1 = hashlib.sha1()
     sha1.update(repr(attrs).encode("utf-8"))
-    unique_filename = "<attrs generated init {0}>".format(
-        sha1.hexdigest()
-    )
+    unique_filename = "<attrs generated init {0}>".format(sha1.hexdigest())
 
     script, globs = _attrs_to_script(
-        attrs,
-        frozen,
-        getattr(cls, "__attrs_post_init__", False),
+        attrs, frozen, getattr(cls, "__attrs_post_init__", False)
     )
     locs = {}
     bytecode = compile(script, unique_filename, "exec")
     attr_dict = dict((a.name, a) for a in attrs)
-    globs.update({
-        "NOTHING": NOTHING,
-        "attr_dict": attr_dict,
-    })
+    globs.update({"NOTHING": NOTHING, "attr_dict": attr_dict})
     if frozen is True:
         # Save the lookup overhead in __init__ if we need to circumvent
         # immutability.
@@ -570,15 +589,17 @@ def _add_init(cls, frozen):
         len(script),
         None,
         script.splitlines(True),
-        unique_filename
+        unique_filename,
     )
     cls.__init__ = init
     return cls
+
 
 def _add_pickle(cls):
     """
     Add pickle helpers, needed for frozen and slotted classes
     """
+
     def _slots_getstate__(obj):
         """
         Play nice with pickle.
@@ -596,6 +617,7 @@ def _add_pickle(cls):
     cls.__getstate__ = _slots_getstate__
     cls.__setstate__ = _slots_setstate__
     return cls
+
 
 def fields(cls):
     """
@@ -624,6 +646,7 @@ def fields(cls):
         )
     return attrs
 
+
 def validate(inst):
     """
     Validate all attributes on *inst* that have a validator.
@@ -639,6 +662,7 @@ def validate(inst):
         v = a.validator
         if v is not None:
             v(inst, a, getattr(inst, a.name))
+
 
 def _attrs_to_script(attrs, frozen, post_init):
     """
@@ -670,7 +694,9 @@ def _attrs_to_script(attrs, frozen, post_init):
                 "value_var": value_var,
                 "conv": conv_name,
             }
+
     else:
+
         def fmt_setter(attr_name, value):
             return "self.%(attr_name)s = %(value)s" % {
                 "attr_name": attr_name,
@@ -706,37 +732,45 @@ def _attrs_to_script(attrs, frozen, post_init):
             if has_factory:
                 init_factory_name = _init_factory_pat.format(a.name)
                 if a.convert is not None:
-                    lines.append(fmt_setter_with_converter(
-                        attr_name,
-                        init_factory_name + "({0})".format(maybe_self)))
+                    lines.append(
+                        fmt_setter_with_converter(
+                            attr_name, init_factory_name + "({0})".format(maybe_self)
+                        )
+                    )
                     conv_name = _init_convert_pat.format(a.name)
                     names_for_globals[conv_name] = a.convert
                 else:
-                    lines.append(fmt_setter(
-                        attr_name,
-                        init_factory_name + "({0})".format(maybe_self)
-                    ))
+                    lines.append(
+                        fmt_setter(
+                            attr_name, init_factory_name + "({0})".format(maybe_self)
+                        )
+                    )
                 names_for_globals[init_factory_name] = a.default.factory
             else:
                 if a.convert is not None:
-                    lines.append(fmt_setter_with_converter(
-                        attr_name,
-                        "attr_dict['{attr_name}'].default"
-                        .format(attr_name=attr_name)
-                    ))
+                    lines.append(
+                        fmt_setter_with_converter(
+                            attr_name,
+                            "attr_dict['{attr_name}'].default".format(
+                                attr_name=attr_name
+                            ),
+                        )
+                    )
                     conv_name = _init_convert_pat.format(a.name)
                     names_for_globals[conv_name] = a.convert
                 else:
-                    lines.append(fmt_setter(
-                        attr_name,
-                        "attr_dict['{attr_name}'].default"
-                        .format(attr_name=attr_name)
-                    ))
+                    lines.append(
+                        fmt_setter(
+                            attr_name,
+                            "attr_dict['{attr_name}'].default".format(
+                                attr_name=attr_name
+                            ),
+                        )
+                    )
         elif a.default is not NOTHING and not has_factory:
             args.append(
                 "{arg_name}=attr_dict['{attr_name}'].default".format(
-                    arg_name=arg_name,
-                    attr_name=attr_name,
+                    arg_name=arg_name, attr_name=attr_name
                 )
             )
             if a.convert is not None:
@@ -746,25 +780,27 @@ def _attrs_to_script(attrs, frozen, post_init):
                 lines.append(fmt_setter(attr_name, arg_name))
         elif has_factory:
             args.append("{arg_name}=NOTHING".format(arg_name=arg_name))
-            lines.append("if {arg_name} is not NOTHING:"
-                         .format(arg_name=arg_name))
+            lines.append("if {arg_name} is not NOTHING:".format(arg_name=arg_name))
             init_factory_name = _init_factory_pat.format(a.name)
             if a.convert is not None:
-                lines.append("    " + fmt_setter_with_converter(attr_name,
-                                                                arg_name))
+                lines.append("    " + fmt_setter_with_converter(attr_name, arg_name))
                 lines.append("else:")
-                lines.append("    " + fmt_setter_with_converter(
-                    attr_name,
-                    init_factory_name + "({0})".format(maybe_self)
-                ))
+                lines.append(
+                    "    "
+                    + fmt_setter_with_converter(
+                        attr_name, init_factory_name + "({0})".format(maybe_self)
+                    )
+                )
                 names_for_globals[_init_convert_pat.format(a.name)] = a.convert
             else:
                 lines.append("    " + fmt_setter(attr_name, arg_name))
                 lines.append("else:")
-                lines.append("    " + fmt_setter(
-                    attr_name,
-                    init_factory_name + "({0})".format(maybe_self)
-                ))
+                lines.append(
+                    "    "
+                    + fmt_setter(
+                        attr_name, init_factory_name + "({0})".format(maybe_self)
+                    )
+                )
             names_for_globals[init_factory_name] = a.default.factory
         else:
             args.append(arg_name)
@@ -780,20 +816,24 @@ def _attrs_to_script(attrs, frozen, post_init):
         for a in attrs_to_validate:
             val_name = "__attr_validator_{}".format(a.name)
             attr_name = "__attr_{}".format(a.name)
-            lines.append("    {}(self, {}, self.{})".format(
-                val_name, attr_name, a.name))
+            lines.append(
+                "    {}(self, {}, self.{})".format(val_name, attr_name, a.name)
+            )
             names_for_globals[val_name] = a.validator
             names_for_globals[attr_name] = a
     if post_init:
         lines.append("self.__attrs_post_init__()")
 
-    return """\
+    return (
+        """\
 def __init__(self, {args}):
     {lines}
 """.format(
-        args=", ".join(args),
-        lines="\n    ".join(lines) if lines else "pass",
-    ), names_for_globals
+            args=", ".join(args), lines="\n    ".join(lines) if lines else "pass"
+        ),
+        names_for_globals,
+    )
+
 
 class Attribute(object):
     """
@@ -803,13 +843,31 @@ class Attribute(object):
 
     Plus *all* arguments of :func:`attr.ib`.
     """
+
     __slots__ = (
-        "name", "default", "validator", "repr", "cmp", "hash", "init",
-        "convert", "metadata",
+        "name",
+        "default",
+        "validator",
+        "repr",
+        "cmp",
+        "hash",
+        "init",
+        "convert",
+        "metadata",
     )
 
-    def __init__(self, name, default, validator, repr, cmp, hash, init,
-                 convert=None, metadata=None):
+    def __init__(
+        self,
+        name,
+        default,
+        validator,
+        repr,
+        cmp,
+        hash,
+        init,
+        convert=None,
+        metadata=None,
+    ):
         # Cache this descriptor here to speed things up later.
         bound_setattr = _obj_setattr.__get__(self, Attribute)
 
@@ -821,8 +879,10 @@ class Attribute(object):
         bound_setattr("hash", hash)
         bound_setattr("init", init)
         bound_setattr("convert", convert)
-        bound_setattr("metadata", (metadata_proxy(metadata) if metadata
-                                   else _empty_metadata_singleton))
+        bound_setattr(
+            "metadata",
+            (metadata_proxy(metadata) if metadata else _empty_metadata_singleton),
+        )
 
     def __setattr__(self, name, value):
         raise FrozenInstanceError()
@@ -831,23 +891,20 @@ class Attribute(object):
     def from_counting_attr(cls, name, ca):
         inst_dict = {
             k: getattr(ca, k)
-            for k
-            in Attribute.__slots__
-            if k not in (
-                "name", "validator", "default",
-            )  # exclude methods
+            for k in Attribute.__slots__
+            if k not in ("name", "validator", "default")  # exclude methods
         }
-        return cls(name=name, validator=ca._validator, default=ca._default,
-                   **inst_dict)
+        return cls(name=name, validator=ca._validator, default=ca._default, **inst_dict)
 
     # Don't use _add_pickle since fields(Attribute) doesn't work
     def __getstate__(self):
         """
         Play nice with pickle.
         """
-        return tuple(getattr(self, name) if name != "metadata"
-                     else dict(self.metadata)
-                     for name in self.__slots__)
+        return tuple(
+            getattr(self, name) if name != "metadata" else dict(self.metadata)
+            for name in self.__slots__
+        )
 
     def __setstate__(self, state):
         """
@@ -858,17 +915,28 @@ class Attribute(object):
             if name != "metadata":
                 bound_setattr(name, value)
             else:
-                bound_setattr(name, metadata_proxy(value) if value else
-                              _empty_metadata_singleton)
+                bound_setattr(
+                    name, metadata_proxy(value) if value else _empty_metadata_singleton
+                )
 
-_a = [Attribute(name=name, default=NOTHING, validator=None,
-                repr=True, cmp=True, hash=(name != "metadata"), init=True)
-      for name in Attribute.__slots__]
+
+_a = [
+    Attribute(
+        name=name,
+        default=NOTHING,
+        validator=None,
+        repr=True,
+        cmp=True,
+        hash=(name != "metadata"),
+        init=True,
+    )
+    for name in Attribute.__slots__
+]
 
 Attribute = _add_hash(
-    _add_cmp(_add_repr(Attribute, attrs=_a), attrs=_a),
-    attrs=[a for a in _a if a.hash]
+    _add_cmp(_add_repr(Attribute, attrs=_a), attrs=_a), attrs=[a for a in _a if a.hash]
 )
+
 
 class _CountingAttr(object):
     """
@@ -878,21 +946,43 @@ class _CountingAttr(object):
     *Internal* data structure of the attrs library.  Running into is most
     likely the result of a bug like a forgotten `@attr.s` decorator.
     """
-    __slots__ = ("counter", "_default", "repr", "cmp", "hash", "init",
-                 "metadata", "_validator", "convert")
+
+    __slots__ = (
+        "counter",
+        "_default",
+        "repr",
+        "cmp",
+        "hash",
+        "init",
+        "metadata",
+        "_validator",
+        "convert",
+    )
     __attrs_attrs__ = tuple(
-        Attribute(name=name, default=NOTHING, validator=None,
-                  repr=True, cmp=True, hash=True, init=True)
-        for name
-        in ("counter", "_default", "repr", "cmp", "hash", "init",)
+        Attribute(
+            name=name,
+            default=NOTHING,
+            validator=None,
+            repr=True,
+            cmp=True,
+            hash=True,
+            init=True,
+        )
+        for name in ("counter", "_default", "repr", "cmp", "hash", "init")
     ) + (
-        Attribute(name="metadata", default=None, validator=None,
-                  repr=True, cmp=True, hash=False, init=True),
+        Attribute(
+            name="metadata",
+            default=None,
+            validator=None,
+            repr=True,
+            cmp=True,
+            hash=False,
+            init=True,
+        ),
     )
     cls_counter = 0
 
-    def __init__(self, default, validator, repr, cmp, hash, init, convert,
-                 metadata):
+    def __init__(self, default, validator, repr, cmp, hash, init, convert, metadata):
         _CountingAttr.cls_counter += 1
         self.counter = _CountingAttr.cls_counter
         self._default = default
@@ -939,7 +1029,9 @@ class _CountingAttr(object):
 
         return meth
 
+
 _CountingAttr = _add_cmp(_add_repr(_CountingAttr))
+
 
 @attributes(slots=True, init=False)
 class Factory(object):
@@ -956,6 +1048,7 @@ class Factory(object):
 
     .. versionadded:: 17.1.0  *takes_self*
     """
+
     factory = attr()
     takes_self = attr()
 
@@ -966,6 +1059,7 @@ class Factory(object):
         """
         self.factory = factory
         self.takes_self = takes_self
+
 
 def make_class(name, attrs, bases=(object,), **attributes_arguments):
     """
@@ -996,19 +1090,23 @@ def make_class(name, attrs, bases=(object,), **attributes_arguments):
 
     return attributes(**attributes_arguments)(type(name, bases, cls_dict))
 
+
 # These are required by whithin this module so we define them here and merely
 # import into .validators.
+
 
 @attributes(slots=True, hash=True)
 class _AndValidator(object):
     """
     Compose many validators to a single one.
     """
+
     _validators = attr()
 
     def __call__(self, inst, attr, value):
         for v in self._validators:
             v(inst, attr, value)
+
 
 def and_(*validators):
     """
@@ -1024,7 +1122,8 @@ def and_(*validators):
     vals = []
     for validator in validators:
         vals.extend(
-            validator._validators if isinstance(validator, _AndValidator)
+            validator._validators
+            if isinstance(validator, _AndValidator)
             else [validator]
         )
 

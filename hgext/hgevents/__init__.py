@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''publishes state-enter and state-leave events to Watchman
+"""publishes state-enter and state-leave events to Watchman
 
 Extension that is responsible for publishing state-enter and state-leave
 events to Watchman for the following states:
@@ -23,34 +23,37 @@ disabled when 'eden' is in repo.requirements.)
 Note that hg.update state changes must be published to Watchman in order for it
 to support SCM-aware subscriptions:
 https://facebook.github.io/watchman/docs/scm-query.html.
-'''
+"""
 
 from __future__ import absolute_import
 
 from mercurial.i18n import _
 
-from mercurial import (
-    extensions,
-    filemerge,
-    merge,
-)
+from mercurial import extensions, filemerge, merge
 
 from ..extlib import watchmanclient
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:
-_blacklist = ['largefiles', 'eol']
+_blacklist = ["largefiles", "eol"]
+
 
 def extsetup(ui):
-    extensions.wrapfunction(merge, 'update', wrapupdate)
-    extensions.wrapfunction(filemerge, '_xmerge', _xmerge)
+    extensions.wrapfunction(merge, "update", wrapupdate)
+    extensions.wrapfunction(filemerge, "_xmerge", _xmerge)
+
 
 def reposetup(ui, repo):
     exts = extensions.enabled()
     for ext in _blacklist:
         if ext in exts:
-            ui.warn(_('The hgevents extension is incompatible with the %s '
-                      'extension and has been disabled.\n') % ext)
+            ui.warn(
+                _(
+                    "The hgevents extension is incompatible with the %s "
+                    "extension and has been disabled.\n"
+                )
+                % ext
+            )
             return
 
     if not repo.local():
@@ -61,60 +64,93 @@ def reposetup(ui, repo):
     try:
         watchmanclient.createclientforrepo(repo)
     except Exception as ex:
-        ui.log('hgevents', 'Watchman exception: %s\n', ex)
+        ui.log("hgevents", "Watchman exception: %s\n", ex)
         return
+
 
 # Bracket working copy updates with calls to the watchman state-enter
 # and state-leave commands.  This allows clients to perform more intelligent
 # settling during bulk file change scenarios
 # https://facebook.github.io/watchman/docs/cmd/subscribe.html#advanced-settling
-def wrapupdate(orig, repo, node, branchmerge, force, ancestor=None,
-               mergeancestor=False, labels=None, matcher=None, wc=None,
-               **kwargs):
+def wrapupdate(
+    orig,
+    repo,
+    node,
+    branchmerge,
+    force,
+    ancestor=None,
+    mergeancestor=False,
+    labels=None,
+    matcher=None,
+    wc=None,
+    **kwargs
+):
     if wc and wc.isinmemory():
         # If the working context isn't on disk, there's no need to invoke
         # watchman.
         return orig(
-            repo, node, branchmerge, force, ancestor, mergeancestor,
-            labels, matcher, wc=wc, **kwargs)
+            repo,
+            node,
+            branchmerge,
+            force,
+            ancestor,
+            mergeancestor,
+            labels,
+            matcher,
+            wc=wc,
+            **kwargs
+        )
     distance = 0
     partial = True
-    oldnode = repo['.'].node()
+    oldnode = repo["."].node()
     newnode = repo[node].node()
     if matcher is None or matcher.always():
         partial = False
-        distance = watchmanclient.calcdistance(repo.unfiltered(), oldnode,
-                                               newnode)
+        distance = watchmanclient.calcdistance(repo.unfiltered(), oldnode, newnode)
 
-    with watchmanclient.state_update(repo, name="hg.update", oldnode=oldnode,
-                                     newnode=newnode, distance=distance,
-                                     partial=partial,
-                                     metadata={'merge': branchmerge}):
+    with watchmanclient.state_update(
+        repo,
+        name="hg.update",
+        oldnode=oldnode,
+        newnode=newnode,
+        distance=distance,
+        partial=partial,
+        metadata={"merge": branchmerge},
+    ):
         return orig(
-            repo, node, branchmerge, force, ancestor, mergeancestor,
-            labels, matcher, **kwargs)
+            repo,
+            node,
+            branchmerge,
+            force,
+            ancestor,
+            mergeancestor,
+            labels,
+            matcher,
+            **kwargs
+        )
 
-def _xmerge(origfunc, repo, mynode, orig, fcd, fco, fca, toolconf, files,
-            labels=None):
+
+def _xmerge(origfunc, repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     # _xmerge is called when an external merge tool is invoked.
     with state_filemerge(repo, fcd.path()):
-        return origfunc(repo, mynode, orig, fcd, fco, fca, toolconf, files,
-                        labels)
+        return origfunc(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels)
+
 
 class state_filemerge(object):
     """Context manager for single filemerge event"""
+
     def __init__(self, repo, path):
         self.repo = repo
         self.path = path
 
     def __enter__(self):
-        self._state('state-enter')
+        self._state("state-enter")
 
     def __exit__(self, errtype, value, tb):
-        self._state('state-leave')
+        self._state("state-leave")
 
     def _state(self, name):
-        client = getattr(self.repo, '_watchmanclient', None)
+        client = getattr(self.repo, "_watchmanclient", None)
         if client:
-            metadata = {'path': self.path}
-            client.command(name, {'name': 'hg.filemerge', 'metadata': metadata})
+            metadata = {"path": self.path}
+            client.command(name, {"name": "hg.filemerge", "metadata": metadata})

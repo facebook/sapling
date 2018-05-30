@@ -86,7 +86,6 @@ configitem("treedirstate", "repackfactor", default=3)
 
 
 class _reader(object):
-
     def __init__(self, data, offset):
         self.data = data
         self.offset = offset
@@ -104,7 +103,6 @@ class _reader(object):
 
 
 class _writer(object):
-
     def __init__(self):
         self.buffer = pycompat.stringio()
 
@@ -117,7 +115,6 @@ class _writer(object):
 
 
 class _overlaydict(dict):
-
     def __init__(self, lookup, *args, **kwargs):
         super(_overlaydict, self).__init__(*args, **kwargs)
         self.lookup = lookup
@@ -146,7 +143,6 @@ class _overlaydict(dict):
 # tree each time.  A future improvement is to keep the state between each
 # call to avoid these extra searches.
 class treedirstatemapiterator(object):
-
     def __init__(self, map_, removed=False):
         self._rmap = map_
         self._removed = removed
@@ -167,7 +163,6 @@ class treedirstatemapiterator(object):
 
 
 class treedirstatemap(object):
-
     def __init__(self, ui, opener, root, importmap=None):
         self._ui = ui
         self._opener = opener
@@ -715,7 +710,6 @@ def wrapdirstate(orig, self):
 
 
 class casecollisionauditor(object):
-
     def __init__(self, ui, abort, dirstate):
         self._ui = ui
         self._abort = abort

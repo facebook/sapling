@@ -72,7 +72,6 @@ def genfiles():
 
 
 class testtreestate(unittest.TestCase):
-
     def testempty(self):
         tree = treestate.treestate(os.path.join(testtmp, "empty"), 0)
         self.assertEqual(len(tree), 0)

@@ -92,7 +92,6 @@ def uisetup(ui):
     if progressfile:
 
         class fileengine(progress._engine.__class__):
-
             def _show(self, now):
                 super(fileengine, self)._show(now)
                 writeprogress(self, progressfile, filemode, self._bars)

@@ -10,42 +10,38 @@
 
 from __future__ import absolute_import
 
-from .. import (
-    encoding,
-    util,
-)
+from .. import encoding, util
 
-from . import (
-    common,
-)
+from . import common
+
 
 def launch(application):
     util.setbinary(util.stdin)
     util.setbinary(util.stdout)
 
     environ = dict(encoding.environ.iteritems())
-    environ.setdefault(r'PATH_INFO', '')
-    if environ.get(r'SERVER_SOFTWARE', r'').startswith(r'Microsoft-IIS'):
+    environ.setdefault(r"PATH_INFO", "")
+    if environ.get(r"SERVER_SOFTWARE", r"").startswith(r"Microsoft-IIS"):
         # IIS includes script_name in PATH_INFO
-        scriptname = environ[r'SCRIPT_NAME']
-        if environ[r'PATH_INFO'].startswith(scriptname):
-            environ[r'PATH_INFO'] = environ[r'PATH_INFO'][len(scriptname):]
+        scriptname = environ[r"SCRIPT_NAME"]
+        if environ[r"PATH_INFO"].startswith(scriptname):
+            environ[r"PATH_INFO"] = environ[r"PATH_INFO"][len(scriptname) :]
 
     stdin = util.stdin
-    if environ.get(r'HTTP_EXPECT', r'').lower() == r'100-continue':
+    if environ.get(r"HTTP_EXPECT", r"").lower() == r"100-continue":
         stdin = common.continuereader(stdin, util.stdout.write)
 
-    environ[r'wsgi.input'] = stdin
-    environ[r'wsgi.errors'] = util.stderr
-    environ[r'wsgi.version'] = (1, 0)
-    environ[r'wsgi.multithread'] = False
-    environ[r'wsgi.multiprocess'] = True
-    environ[r'wsgi.run_once'] = True
+    environ[r"wsgi.input"] = stdin
+    environ[r"wsgi.errors"] = util.stderr
+    environ[r"wsgi.version"] = (1, 0)
+    environ[r"wsgi.multithread"] = False
+    environ[r"wsgi.multiprocess"] = True
+    environ[r"wsgi.run_once"] = True
 
-    if environ.get(r'HTTPS', r'off').lower() in (r'on', r'1', r'yes'):
-        environ[r'wsgi.url_scheme'] = r'https'
+    if environ.get(r"HTTPS", r"off").lower() in (r"on", r"1", r"yes"):
+        environ[r"wsgi.url_scheme"] = r"https"
     else:
-        environ[r'wsgi.url_scheme'] = r'http'
+        environ[r"wsgi.url_scheme"] = r"http"
 
     headers_set = []
     headers_sent = []
@@ -58,10 +54,10 @@ def launch(application):
         elif not headers_sent:
             # Before the first output, send the stored headers
             status, response_headers = headers_sent[:] = headers_set
-            out.write('Status: %s\r\n' % status)
+            out.write("Status: %s\r\n" % status)
             for header in response_headers:
-                out.write('%s: %s\r\n' % header)
-            out.write('\r\n')
+                out.write("%s: %s\r\n" % header)
+            out.write("\r\n")
 
         out.write(data)
         out.flush()
@@ -73,7 +69,7 @@ def launch(application):
                     # Re-raise original exception if headers sent
                     raise exc_info[0](exc_info[1], exc_info[2])
             finally:
-                exc_info = None     # avoid dangling circular ref
+                exc_info = None  # avoid dangling circular ref
         elif headers_set:
             raise AssertionError("Headers already set!")
 
@@ -85,6 +81,6 @@ def launch(application):
         for chunk in content:
             write(chunk)
         if not headers_sent:
-            write('')   # send headers now if body was empty
+            write("")  # send headers now if body was empty
     finally:
-        getattr(content, 'close', lambda: None)()
+        getattr(content, "close", lambda: None)()

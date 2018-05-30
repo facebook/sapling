@@ -25,9 +25,7 @@ import svn.ra
 Pool = svn.core.Pool
 SubversionException = svn.core.SubversionException
 
-from mercurial import (
-    util,
-)
+from mercurial import util
 
 # Some older versions of the Python bindings need to be
 # explicitly initialized. But what we want to do probably
@@ -36,9 +34,11 @@ svn.ra.initialize()
 
 svn_config = None
 
+
 def _create_auth_baton(pool):
     """Create a Subversion authentication baton. """
     import svn.client
+
     # Give the client context baton a suite of authentication
     # providers.h
     providers = [
@@ -47,38 +47,40 @@ def _create_auth_baton(pool):
         svn.client.get_ssl_client_cert_file_provider(pool),
         svn.client.get_ssl_client_cert_pw_file_provider(pool),
         svn.client.get_ssl_server_trust_file_provider(pool),
-        ]
+    ]
     # Platform-dependent authentication methods
-    getprovider = getattr(svn.core, 'svn_auth_get_platform_specific_provider',
-                          None)
+    getprovider = getattr(svn.core, "svn_auth_get_platform_specific_provider", None)
     if getprovider:
         # Available in svn >= 1.6
-        for name in ('gnome_keyring', 'keychain', 'kwallet', 'windows'):
-            for type in ('simple', 'ssl_client_cert_pw', 'ssl_server_trust'):
+        for name in ("gnome_keyring", "keychain", "kwallet", "windows"):
+            for type in ("simple", "ssl_client_cert_pw", "ssl_server_trust"):
                 p = getprovider(name, type, pool)
                 if p:
                     providers.append(p)
     else:
-        if util.safehasattr(svn.client, 'get_windows_simple_provider'):
+        if util.safehasattr(svn.client, "get_windows_simple_provider"):
             providers.append(svn.client.get_windows_simple_provider(pool))
 
     return svn.core.svn_auth_open(providers, pool)
 
+
 class NotBranchError(SubversionException):
     pass
+
 
 class SvnRaTransport(object):
     """
     Open an ra connection to a Subversion repository.
     """
+
     def __init__(self, url="", ra=None):
         self.pool = Pool()
         self.svn_url = url
-        self.username = ''
-        self.password = ''
+        self.username = ""
+        self.password = ""
 
         # Only Subversion 1.4 has reparent()
-        if ra is None or not util.safehasattr(svn.ra, 'reparent'):
+        if ra is None or not util.safehasattr(svn.ra, "reparent"):
             self.client = svn.client.create_context(self.pool)
             ab = _create_auth_baton(self.pool)
             self.client.auth_baton = ab
@@ -88,45 +90,50 @@ class SvnRaTransport(object):
             self.client.config = svn_config
             try:
                 self.ra = svn.client.open_ra_session(
-                    self.svn_url,
-                    self.client, self.pool)
+                    self.svn_url, self.client, self.pool
+                )
             except SubversionException as xxx_todo_changeme:
                 (inst, num) = xxx_todo_changeme.args
-                if num in (svn.core.SVN_ERR_RA_ILLEGAL_URL,
-                           svn.core.SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,
-                           svn.core.SVN_ERR_BAD_URL):
+                if num in (
+                    svn.core.SVN_ERR_RA_ILLEGAL_URL,
+                    svn.core.SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,
+                    svn.core.SVN_ERR_BAD_URL,
+                ):
                     raise NotBranchError(url)
                 raise
         else:
             self.ra = ra
-            svn.ra.reparent(self.ra, self.svn_url.encode('utf8'))
+            svn.ra.reparent(self.ra, self.svn_url.encode("utf8"))
 
     class Reporter(object):
         def __init__(self, reporter_data):
             self._reporter, self._baton = reporter_data
 
         def set_path(self, path, revnum, start_empty, lock_token, pool=None):
-            svn.ra.reporter2_invoke_set_path(self._reporter, self._baton,
-                        path, revnum, start_empty, lock_token, pool)
+            svn.ra.reporter2_invoke_set_path(
+                self._reporter, self._baton, path, revnum, start_empty, lock_token, pool
+            )
 
         def delete_path(self, path, pool=None):
-            svn.ra.reporter2_invoke_delete_path(self._reporter, self._baton,
-                    path, pool)
+            svn.ra.reporter2_invoke_delete_path(self._reporter, self._baton, path, pool)
 
-        def link_path(self, path, url, revision, start_empty, lock_token,
-                      pool=None):
-            svn.ra.reporter2_invoke_link_path(self._reporter, self._baton,
-                    path, url, revision, start_empty, lock_token,
-                    pool)
+        def link_path(self, path, url, revision, start_empty, lock_token, pool=None):
+            svn.ra.reporter2_invoke_link_path(
+                self._reporter,
+                self._baton,
+                path,
+                url,
+                revision,
+                start_empty,
+                lock_token,
+                pool,
+            )
 
         def finish_report(self, pool=None):
-            svn.ra.reporter2_invoke_finish_report(self._reporter,
-                    self._baton, pool)
+            svn.ra.reporter2_invoke_finish_report(self._reporter, self._baton, pool)
 
         def abort_report(self, pool=None):
-            svn.ra.reporter2_invoke_abort_report(self._reporter,
-                    self._baton, pool)
+            svn.ra.reporter2_invoke_abort_report(self._reporter, self._baton, pool)
 
     def do_update(self, revnum, path, *args, **kwargs):
-        return self.Reporter(svn.ra.do_update(self.ra, revnum, path,
-                                              *args, **kwargs))
+        return self.Reporter(svn.ra.do_update(self.ra, revnum, path, *args, **kwargs))

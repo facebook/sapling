@@ -269,7 +269,6 @@ class changelogrevision(object):
 
 
 class changelog(revlog.revlog):
-
     def __init__(self, opener, trypending=False):
         """Load a changelog revlog using an opener.
 

@@ -32,7 +32,6 @@ def connectpipe(path=None):
 
 
 class unixconnection(object):
-
     def __init__(self, sockpath):
         self.sock = sock = socket.socket(socket.AF_UNIX)
         sock.connect(sockpath)
@@ -46,7 +45,6 @@ class unixconnection(object):
 
 
 class unixserver(object):
-
     def __init__(self, sockpath, logpath=None, repopath=None):
         self.sockpath = sockpath
         cmdline = ["hg", "serve", "--cmdserver", "unix", "-a", sockpath]

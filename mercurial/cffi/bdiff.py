@@ -15,6 +15,7 @@ from . import _bdiff
 ffi = _bdiff.ffi
 lib = _bdiff.lib
 
+
 def blocks(sa, sb):
     a = ffi.new("struct bdiff_line**")
     b = ffi.new("struct bdiff_line**")
@@ -42,6 +43,7 @@ def blocks(sa, sb):
         lib.bdiff_freehunks(l.next)
     return rl
 
+
 def bdiff(sa, sb):
     a = ffi.new("struct bdiff_line**")
     b = ffi.new("struct bdiff_line**")
@@ -62,8 +64,11 @@ def bdiff(sa, sb):
         while h:
             if h.a1 != la or h.b1 != lb:
                 lgt = (b[0] + h.b1).l - (b[0] + lb).l
-                rl.append(struct.pack(">lll", (a[0] + la).l - a[0].l,
-                                      (a[0] + h.a1).l - a[0].l, lgt))
+                rl.append(
+                    struct.pack(
+                        ">lll", (a[0] + la).l - a[0].l, (a[0] + h.a1).l - a[0].l, lgt
+                    )
+                )
                 rl.append(str(ffi.buffer((b[0] + lb).l, lgt)))
             la = h.a2
             lb = h.b2

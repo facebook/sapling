@@ -2230,7 +2230,6 @@ class overlayworkingctx(committablectx):
 
     @propertycache
     def _flagfunc(self):
-
         def f(path):
             return self._cache[path]["flags"]
 

@@ -30,38 +30,33 @@ if PY2:
 
         def __setitem__(self, key, val):
             # We gently pretend we're a Python 3 mappingproxy.
-            raise TypeError("'mappingproxy' object does not support item "
-                            "assignment")
+            raise TypeError("'mappingproxy' object does not support item " "assignment")
 
         def update(self, _):
             # We gently pretend we're a Python 3 mappingproxy.
-            raise AttributeError("'mappingproxy' object has no attribute "
-                                 "'update'")
+            raise AttributeError("'mappingproxy' object has no attribute " "'update'")
 
         def __delitem__(self, _):
             # We gently pretend we're a Python 3 mappingproxy.
-            raise TypeError("'mappingproxy' object does not support item "
-                            "deletion")
+            raise TypeError("'mappingproxy' object does not support item " "deletion")
 
         def clear(self):
             # We gently pretend we're a Python 3 mappingproxy.
-            raise AttributeError("'mappingproxy' object has no attribute "
-                                 "'clear'")
+            raise AttributeError("'mappingproxy' object has no attribute " "'clear'")
 
         def pop(self, key, default=None):
             # We gently pretend we're a Python 3 mappingproxy.
-            raise AttributeError("'mappingproxy' object has no attribute "
-                                 "'pop'")
+            raise AttributeError("'mappingproxy' object has no attribute " "'pop'")
 
         def popitem(self):
             # We gently pretend we're a Python 3 mappingproxy.
-            raise AttributeError("'mappingproxy' object has no attribute "
-                                 "'popitem'")
+            raise AttributeError("'mappingproxy' object has no attribute " "'popitem'")
 
         def setdefault(self, key, default=None):
             # We gently pretend we're a Python 3 mappingproxy.
-            raise AttributeError("'mappingproxy' object has no attribute "
-                                 "'setdefault'")
+            raise AttributeError(
+                "'mappingproxy' object has no attribute " "'setdefault'"
+            )
 
         def __repr__(self):
             # Override to be identical to the Python 3 version.
@@ -72,7 +67,9 @@ if PY2:
         res.data.update(d)  # We blocked update, so we have to do it like this.
         return res
 
+
 else:
+
     def isclass(klass):
         return isinstance(klass, type)
 

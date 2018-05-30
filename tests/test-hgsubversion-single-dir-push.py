@@ -154,7 +154,6 @@ class TestSingleDirPush(test_hgsubversion_util.TestBase):
         )
 
         def file_callback(data):
-
             def cb(repo, memctx, path):
                 if path == data:
                     return compathacks.makememfilectx(

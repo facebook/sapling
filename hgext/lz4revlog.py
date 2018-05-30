@@ -110,7 +110,6 @@ if usable:
 
         @replaceclass(localrepo, "localrepository")
         class lz4repo(localrepo.localrepository):
-
             def _baserequirements(self, create):
                 reqs = super(lz4repo, self)._baserequirements(create)
                 if create and self.ui.configbool("format", "uselz4", True):
@@ -119,7 +118,6 @@ if usable:
 
     @replaceclass(revlog, "revlog")
     class lz4revlog(revlog.revlog):
-
         def __init__(self, opener, indexfile, **kwds):
             super(lz4revlog, self).__init__(opener, indexfile, **kwds)
             opts = getattr(opener, "options", None)

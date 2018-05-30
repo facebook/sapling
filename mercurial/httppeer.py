@@ -77,7 +77,6 @@ def _wraphttpresponse(resp):
     origread = resp.read
 
     class readerproxy(resp.__class__):
-
         def read(self, size=None):
             try:
                 return origread(size)
@@ -113,7 +112,6 @@ def _wraphttpresponse(resp):
 
 
 class _multifile(object):
-
     def __init__(self, *fileobjs):
         for f in fileobjs:
             if not util.safehasattr(f, "length"):
@@ -159,7 +157,6 @@ class _multifile(object):
 
 
 class httppeer(wireproto.wirepeer):
-
     def __init__(self, ui, path):
         self._path = path
         self._caps = None
@@ -481,7 +478,6 @@ class httppeer(wireproto.wirepeer):
 
 
 class httpspeer(httppeer):
-
     def __init__(self, ui, path):
         if not url.has_https:
             raise error.Abort(_("Python support for SSL and HTTPS " "is not installed"))

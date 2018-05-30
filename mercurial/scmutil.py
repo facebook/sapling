@@ -315,7 +315,6 @@ def checkportabilityalert(ui):
 
 
 class casecollisionauditor(object):
-
     def __init__(self, ui, abort, dirstate):
         self._ui = ui
         self._abort = abort
@@ -974,7 +973,6 @@ def writerequires(opener, requirements):
 
 
 class filecachesubentry(object):
-
     def __init__(self, path, stat):
         self.path = path
         self.cachestat = None
@@ -1031,7 +1029,6 @@ class filecachesubentry(object):
 
 
 class filecacheentry(object):
-
     def __init__(self, paths, stat=True):
         self._entries = []
         for path in paths:
@@ -1235,6 +1232,7 @@ class simplekeyvaluefile(object):
 
     Keys must be alphanumerics and start with a letter, values must not
     contain '\n' characters"""
+
     firstlinekey = "__firstline"
 
     def __init__(self, vfs, path, keys=None):

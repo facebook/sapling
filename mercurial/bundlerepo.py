@@ -42,7 +42,6 @@ from .node import nullid
 
 
 class bundlerevlog(revlog.revlog):
-
     def __init__(self, opener, indexfile, cgunpacker, linkmapper):
         # How it works:
         # To retrieve a revision, we need to know the offset of the revision in
@@ -175,7 +174,6 @@ class bundlerevlog(revlog.revlog):
 
 
 class bundlechangelog(bundlerevlog, changelog.changelog):
-
     def __init__(self, opener, cgunpacker):
         changelog.changelog.__init__(self, opener)
         linkmapper = lambda x: x
@@ -197,7 +195,6 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
 
 
 class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
-
     def __init__(self, opener, cgunpacker, linkmapper, dirlogstarts=None, dir=""):
         manifest.manifestrevlog.__init__(self, opener, dir=dir)
         bundlerevlog.__init__(self, opener, self.indexfile, cgunpacker, linkmapper)
@@ -229,7 +226,6 @@ class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
 
 
 class bundlefilelog(bundlerevlog, filelog.filelog):
-
     def __init__(self, opener, path, cgunpacker, linkmapper):
         filelog.filelog.__init__(self, opener, path)
         bundlerevlog.__init__(self, opener, self.indexfile, cgunpacker, linkmapper)
@@ -239,13 +235,11 @@ class bundlefilelog(bundlerevlog, filelog.filelog):
 
 
 class bundlepeer(localrepo.localpeer):
-
     def canpush(self):
         return False
 
 
 class bundlephasecache(phases.phasecache):
-
     def __init__(self, *args, **kwargs):
         super(bundlephasecache, self).__init__(*args, **kwargs)
         if util.safehasattr(self, "opener"):
@@ -505,7 +499,6 @@ def instance(ui, path, create):
 
 
 class bundletransactionmanager(object):
-
     def transaction(self):
         return None
 

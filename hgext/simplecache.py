@@ -149,7 +149,6 @@ class pathcopiesserializer(jsonserializer):
 
 
 def pathcopiesui(ui):
-
     def pathcopies(orig, x, y, match=None):
         func = lambda: orig(x, y, match=match)
         if (
@@ -190,7 +189,6 @@ class buildstatusserializer(jsonserializer):
 
 
 def buildstatusui(ui):
-
     def buildstatus(orig, self, other, status, match, ignored, clean, unknown):
         func = lambda: orig(self, other, status, match, ignored, clean, unknown)
         if not match.always():

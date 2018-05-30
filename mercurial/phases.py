@@ -196,7 +196,6 @@ def _trackphasechange(data, rev, old, new):
 
 
 class phasecache(object):
-
     def __init__(self, repo, phasedefaults, _load=True):
         if _load:
             # Cheap trick to allow shallow-copy without copy module

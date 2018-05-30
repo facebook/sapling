@@ -5,7 +5,6 @@ from mercurial import commands
 
 
 class TestPullFallback(test_hgsubversion_util.TestBase):
-
     def setUp(self):
         super(TestPullFallback, self).setUp()
 
@@ -70,7 +69,6 @@ def _monkey_patch(to_patch, start=None):
         calls[path] = 0
 
         def outer(path=path, calls=calls, replacement=replacement):
-
             def wrapper(*p, **kw):
                 calls[path] += 1
                 return replacement(*p, **kw)

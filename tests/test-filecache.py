@@ -17,12 +17,10 @@ if subprocess.call(["python", "%s/hghave" % os.environ["TESTDIR"], "cacheable"])
 
 
 class fakerepo(object):
-
     def __init__(self):
         self._filecache = {}
 
     class fakevfs(object):
-
         def join(self, p):
             return p
 
@@ -126,7 +124,6 @@ def basic(repo):
 
 
 def fakeuncacheable():
-
     def wrapcacheable(orig, *args, **kwargs):
         return False
 

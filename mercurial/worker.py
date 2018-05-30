@@ -215,9 +215,7 @@ def _posixexitstatus(code):
 
 
 def _windowsworker(ui, func, staticargs, args):
-
     class Worker(threading.Thread):
-
         def __init__(
             self,
             taskqueue,

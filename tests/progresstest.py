@@ -10,7 +10,6 @@ command = registrar.command(cmdtable)
 
 
 class faketime(object):
-
     def __init__(self):
         self.now = 0
 
@@ -97,9 +96,7 @@ def bytesprogresstest(ui):
 
 
 def uisetup(ui):
-
     class syncengine(progress._engine.__class__):
-
         def _activate(self, ui):
             pass
 

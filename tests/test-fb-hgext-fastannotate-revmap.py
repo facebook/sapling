@@ -151,7 +151,6 @@ def testcopyfrom():
 
 
 class fakefctx(object):
-
     def __init__(self, node, path=None):
         self._node = node
         self._path = path

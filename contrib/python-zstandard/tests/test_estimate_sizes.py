@@ -5,9 +5,7 @@ except ImportError:
 
 import zstd
 
-from . common import (
-    make_cffi,
-)
+from .common import make_cffi
 
 
 @make_cffi

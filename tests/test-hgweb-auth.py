@@ -10,7 +10,6 @@ urlreq = util.urlreq
 
 
 class myui(uimod.ui):
-
     def interactive(self):
         return False
 

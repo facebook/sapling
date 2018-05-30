@@ -59,7 +59,6 @@ def buildancestorsets(graph):
 
 
 class naiveincrementalmissingancestors(object):
-
     def __init__(self, ancs, bases):
         self.ancs = ancs
         self.bases = set(bases)

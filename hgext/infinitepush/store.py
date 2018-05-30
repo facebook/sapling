@@ -26,6 +26,7 @@ class abstractbundlestore(object):
     be any Python object understood by the corresponding bundle index (see
     ``abstractbundleindex`` below).
     """
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -94,7 +95,6 @@ class filebundlestore(object):
 
 
 class externalbundlestore(abstractbundlestore):
-
     def __init__(self, put_binary, put_args, get_binary, get_args):
         """
         `put_binary` - path to binary file which uploads bundle to external

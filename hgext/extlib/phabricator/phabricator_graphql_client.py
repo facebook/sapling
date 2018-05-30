@@ -4,25 +4,27 @@ from __future__ import unicode_literals
 
 import time
 
-class PhabricatorGraphQLClient(object):
 
-    def __init__(self,
-                 urllib,
-                 ph_cert,
-                 ph_oauth,
-                 ph_user_name,
-                 source,
-                 host,
-                 app_id,
-                 app_token,
-                 ca_bundle=None):
+class PhabricatorGraphQLClient(object):
+    def __init__(
+        self,
+        urllib,
+        ph_cert,
+        ph_oauth,
+        ph_user_name,
+        source,
+        host,
+        app_id,
+        app_token,
+        ca_bundle=None,
+    ):
         self.urllib = urllib
         self.phabricator_certificate = ph_cert
         self.phabricator_oauth = ph_oauth
         self.user = ph_user_name
         self.__cert_time = 0
-        self.graphql_url = host + '/graphql'
-        self.token_url = host + '/phabricator/get_token'
+        self.graphql_url = host + "/graphql"
+        self.token_url = host + "/phabricator/get_token"
         self.source = source
         self.app_id = app_id
         self.app_token = app_token
@@ -34,17 +36,21 @@ class PhabricatorGraphQLClient(object):
         """
         self._checkconnection(timeout)
         if self.phabricator_oauth is None:
-            data = {'phabricator_token': self.__cert, 'doc': request,
-                    'variables': params}
+            data = {
+                "phabricator_token": self.__cert,
+                "doc": request,
+                "variables": params,
+            }
         else:
-            data = {'access_token': self.phabricator_oauth, 'doc': request,
-                    'variables': params}
+            data = {
+                "access_token": self.phabricator_oauth,
+                "doc": request,
+                "variables": params,
+            }
 
         return self.urllib.sendpost(
-            self.graphql_url,
-            data=data,
-            timeout=timeout,
-            ca_bundle=self.ca_bundle)
+            self.graphql_url, data=data, timeout=timeout, ca_bundle=self.ca_bundle
+        )
 
     def _checkconnection(self, timeout):
         """
@@ -54,12 +60,10 @@ class PhabricatorGraphQLClient(object):
         if self.phabricator_oauth is None:
             if time.time() - self.__cert_time > 600:
                 self._connect(timeout)
-            data = {'phabricator_token': self.__cert, 'source': self.source}
+            data = {"phabricator_token": self.__cert, "source": self.source}
             self.urllib.sendpost(
-                self.graphql_url,
-                data=data,
-                timeout=timeout,
-                ca_bundle=self.ca_bundle)
+                self.graphql_url, data=data, timeout=timeout, ca_bundle=self.ca_bundle
+            )
 
     def _connect(self, timeout):
         """
@@ -68,15 +72,13 @@ class PhabricatorGraphQLClient(object):
         """
         if self.phabricator_oauth is None:
             data = {
-                'ph_certificate': self.phabricator_certificate,
-                'ph_user_name': self.user,
-                'app': self.app_id,
-                'token': self.app_token
+                "ph_certificate": self.phabricator_certificate,
+                "ph_user_name": self.user,
+                "app": self.app_id,
+                "token": self.app_token,
             }
             res = self.urllib.sendpost(
-                self.token_url,
-                data=data,
-                timeout=timeout,
-                ca_bundle=self.ca_bundle)
-            self.__cert = res.get('token')
+                self.token_url, data=data, timeout=timeout, ca_bundle=self.ca_bundle
+            )
+            self.__cert = res.get("token")
         self.__cert_time = time.time()

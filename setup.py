@@ -297,7 +297,6 @@ def runcmd(cmd, env):
 
 
 class hgcommand(object):
-
     def __init__(self, cmd, env):
         self.cmd = cmd
         self.env = env
@@ -591,7 +590,6 @@ class hgbuildext(build_ext):
 
 
 class hgbuildscripts(build_scripts):
-
     def run(self):
         # Build chg on non-Windows platform
         if not iswindows:
@@ -643,7 +641,6 @@ class hgbuildscripts(build_scripts):
 
 
 class hgbuildpy(build_py):
-
     def finalize_options(self):
         build_py.finalize_options(self)
 
@@ -1315,7 +1312,6 @@ try:
     mingw32compilerclass = cygwinccompiler.Mingw32CCompiler
 
     class HackedMingw32CCompiler(cygwinccompiler.Mingw32CCompiler):
-
         def __init__(self, *args, **kwargs):
             mingw32compilerclass.__init__(self, *args, **kwargs)
             for i in "compiler compiler_so linker_exe linker_so".split():
@@ -1342,7 +1338,6 @@ if os.name == "nt":
     msvccompilerclass = msvccompiler.MSVCCompiler
 
     class HackedMSVCCompiler(msvccompiler.MSVCCompiler):
-
         def initialize(self):
             msvccompilerclass.initialize(self)
             # "warning LNK4197: export 'func' specified multiple times"

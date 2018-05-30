@@ -35,7 +35,6 @@ class batcher(object):
         self.calls = []
 
     def __getattr__(self, name):
-
         def call(*args, **opts):
             resref = future()
             # Please don't invent non-ascii method names, or you will
@@ -50,7 +49,6 @@ class batcher(object):
 
 
 class iterbatcher(batcher):
-
     def submit(self):
         raise NotImplementedError()
 
@@ -59,7 +57,6 @@ class iterbatcher(batcher):
 
 
 class localiterbatcher(iterbatcher):
-
     def __init__(self, local):
         super(iterbatcher, self).__init__()
         self.local = local

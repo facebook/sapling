@@ -8,7 +8,6 @@ from hgext.hgsubversion.svnwrap import parse_url
 
 
 class TestSubversionUrls(test_hgsubversion_util.TestBase):
-
     def test_standard_url(self):
         self.check_parse_url(
             (None, None, "file:///var/svn/repo"), ("file:///var/svn/repo",)

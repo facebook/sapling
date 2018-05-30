@@ -282,7 +282,6 @@ def _getlogrevs(orig, repo, pats, opts):
     orig_type = revs.__class__
 
     class wrapped_class(type(revs)):
-
         def __iter__(self):
             # The first time __iter__() is called, return a
             # PeekaheadRevsetIter(), and assign it to repo._phabstatusrevs

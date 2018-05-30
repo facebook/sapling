@@ -60,7 +60,6 @@ _partre = re.compile(br"\{(\d+)\}")
 
 
 class ShortRepository(object):
-
     def __init__(self, url, scheme, templater):
         self.scheme = scheme
         self.templater = templater

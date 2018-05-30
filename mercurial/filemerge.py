@@ -134,7 +134,6 @@ def findexternaltool(ui, tool):
 
 
 def _picktool(repo, ui, path, binary, symlink, changedelete):
-
     def supportscd(tool):
         return tool in internals and internals[tool].mergetype == nomerge
 

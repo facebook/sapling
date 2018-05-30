@@ -366,7 +366,6 @@ def applybundle(repo, unbundler, tr, source=None, url=None, **kwargs):
 
 
 class partiterator(object):
-
     def __init__(self, repo, op, unbundler):
         self.repo = repo
         self.op = op
@@ -376,7 +375,6 @@ class partiterator(object):
         self.current = None
 
     def __enter__(self):
-
         def func():
             itr = enumerate(self.unbundler.iterparts())
             for count, p in itr:

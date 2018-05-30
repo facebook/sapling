@@ -285,7 +285,6 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
 
 
 class basematcher(object):
-
     def __init__(self, root, cwd, badfn=None, relativeuipath=True):
         self._root = root
         self._cwd = cwd
@@ -452,7 +451,6 @@ class gitignorematcher(basematcher):
 
 
 class patternmatcher(basematcher):
-
     def __init__(self, root, cwd, kindpats, ctx=None, listsubrepos=False, badfn=None):
         super(patternmatcher, self).__init__(root, cwd, badfn)
 
@@ -482,7 +480,6 @@ class patternmatcher(basematcher):
 
 
 class includematcher(basematcher):
-
     def __init__(self, root, cwd, kindpats, ctx=None, listsubrepos=False, badfn=None):
         super(includematcher, self).__init__(root, cwd, badfn)
 
@@ -618,7 +615,6 @@ def intersectmatchers(m1, m2):
 
 
 class intersectionmatcher(basematcher):
-
     def __init__(self, m1, m2):
         super(intersectionmatcher, self).__init__(m1._root, m1._cwd)
         self._m1 = m1

@@ -50,7 +50,6 @@ except AttributeError:
 
     # We implement SSLContext using the interface from the standard library.
     class SSLContext(object):
-
         def __init__(self, protocol):
             # From the public interface of SSLContext
             self.protocol = protocol

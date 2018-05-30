@@ -15,10 +15,8 @@ import sys
 import time
 import traceback
 
-from mercurial import (
-    error,
-    pycompat,
-)
+from mercurial import error, pycompat
+
 
 class looselock(object):
     """A loose lock.  If the lock is held and the lockfile is recent, then we
@@ -52,14 +50,15 @@ class looselock(object):
             self.vfs.makelock(lockcontents, self.lockname)
         except (OSError, IOError) as ex:
             if ex.errno == errno.EEXIST:
-                raise error.LockHeld(ex.errno,
-                                     self.vfs.join(self.lockname),
-                                     self.lockname,
-                                     "unimplemented")
-            raise error.LockUnavailable(ex.errno,
-                                        ex.strerror,
-                                        self.vfs.join(self.lockname),
-                                        self.lockname)
+                raise error.LockHeld(
+                    ex.errno,
+                    self.vfs.join(self.lockname),
+                    self.lockname,
+                    "unimplemented",
+                )
+            raise error.LockUnavailable(
+                ex.errno, ex.strerror, self.vfs.join(self.lockname), self.lockname
+            )
 
     def lock(self):
         """Attempt to acquire a lock.
@@ -77,7 +76,7 @@ class looselock(object):
 
         if looselock._host is None:
             looselock._host = socket.gethostname()
-        lockcontents = '%s:%s' % (looselock._host, os.getpid())
+        lockcontents = "%s:%s" % (looselock._host, os.getpid())
 
         try:
             self._trylock(lockcontents)
@@ -133,14 +132,14 @@ class looselock(object):
             self.stealcount = 0
 
     def held(self):
-        return (self.stealcount != 0 or
-                self.refcount != 0)
+        return self.stealcount != 0 or self.refcount != 0
 
     def __enter__(self):
         return self.lock()
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         return self.unlock()
+
 
 # This originated in hgext/logtoprocess.py, was copied to
 # remotefilelog/shallowutil.py, and now here.
@@ -153,15 +152,15 @@ if pycompat.iswindows:
 
     def runshellcommand(script, env=None, silent_worker=True):
         if not silent_worker:
-            raise NotImplementedError(
-                "support for non-silent workers not yet built.")
+            raise NotImplementedError("support for non-silent workers not yet built.")
 
         # we can't use close_fds *and* redirect stdin. I'm not sure that we
         # need to because the detached process has no console connection.
-        subprocess.Popen(
-            script, env=env, close_fds=True,
-            creationflags=_creationflags)
+        subprocess.Popen(script, env=env, close_fds=True, creationflags=_creationflags)
+
+
 else:
+
     def runshellcommand(script, env=None, silent_worker=True):
         # double-fork to completely detach from the parent process
         # based on http://code.activestate.com/recipes/278731
@@ -174,22 +173,25 @@ else:
         newsession = {}
         if silent_worker:
             if sys.version_info < (3, 2):
-                newsession['preexec_fn'] = os.setsid
+                newsession["preexec_fn"] = os.setsid
             else:
-                newsession['start_new_session'] = True
+                newsession["start_new_session"] = True
         try:
             # connect stdin to devnull to make sure the subprocess can't
             # muck up that stream for mercurial.
             if silent_worker:
-                stderr = stdout = open(os.devnull, 'w')
+                stderr = stdout = open(os.devnull, "w")
             else:
                 stderr = stdout = None
             subprocess.Popen(
                 script,
                 stdout=stdout,
                 stderr=stderr,
-                stdin=open(os.devnull, 'r'),
-                env=env, close_fds=True, **newsession)
+                stdin=open(os.devnull, "r"),
+                env=env,
+                close_fds=True,
+                **newsession
+            )
         except Exception:
             if not silent_worker:
                 sys.stderr.write("Error spawning worker\n")

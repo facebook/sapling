@@ -60,14 +60,12 @@ configitem("transplant", "log", default=None)
 
 
 class transplantentry(object):
-
     def __init__(self, lnode, rnode):
         self.lnode = lnode
         self.rnode = rnode
 
 
 class transplants(object):
-
     def __init__(self, path=None, transplantfile=None, opener=None):
         self.path = path
         self.transplantfile = transplantfile
@@ -115,7 +113,6 @@ class transplants(object):
 
 
 class transplanter(object):
-
     def __init__(self, ui, repo, opts):
         self.ui = ui
         self.path = repo.vfs.join("transplant")
@@ -504,7 +501,6 @@ class transplanter(object):
             os.unlink(absdst)
 
     def transplantfilter(self, repo, source, root):
-
         def matchfn(node):
             if self.applied(repo, node, root):
                 return False
@@ -646,7 +642,6 @@ def transplant(ui, repo, *revs, **opts):
 
 
 def _dotransplant(ui, repo, *revs, **opts):
-
     def incwalk(repo, csets, match=util.always):
         for node in csets:
             if match(node):

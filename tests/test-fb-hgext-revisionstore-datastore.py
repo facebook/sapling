@@ -17,7 +17,6 @@ from mercurial.node import nullid
 
 
 class datastoretests(unittest.TestCase):
-
     def setUp(self):
         random.seed(0)
         self.tempdirs = []

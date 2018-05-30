@@ -12,9 +12,7 @@ import stat as statmod
 
 from ..pure.osutil import *
 
-from .. import (
-    pycompat,
-)
+from .. import pycompat
 
 if pycompat.isdarwin:
     from . import _osutil
@@ -26,7 +24,7 @@ if pycompat.isdarwin:
     # tweakable number, only affects performance, which chunks
     # of bytes do we get back from getattrlistbulk
 
-    attrkinds = [None] * 20 # we need the max no for enum VXXX, 20 is plenty
+    attrkinds = [None] * 20  # we need the max no for enum VXXX, 20 is plenty
 
     attrkinds[lib.VREG] = statmod.S_IFREG
     attrkinds[lib.VDIR] = statmod.S_IFDIR
@@ -56,12 +54,13 @@ if pycompat.isdarwin:
             cur = ffi.cast("val_attrs_t*", buf)
             for i in range(r):
                 lgt = cur.length
-                assert lgt == ffi.cast('uint32_t*', cur)[0]
+                assert lgt == ffi.cast("uint32_t*", cur)[0]
                 ofs = cur.name_info.attr_dataoffset
                 str_lgt = cur.name_info.attr_length
-                base_ofs = ffi.offsetof('val_attrs_t', 'name_info')
-                name = str(ffi.buffer(ffi.cast("char*", cur) + base_ofs + ofs,
-                           str_lgt - 1))
+                base_ofs = ffi.offsetof("val_attrs_t", "name_info")
+                name = str(
+                    ffi.buffer(ffi.cast("char*", cur) + base_ofs + ofs, str_lgt - 1)
+                )
                 tp = attrkinds[cur.obj_type]
                 if name == "." or name == "..":
                     continue
@@ -69,23 +68,31 @@ if pycompat.isdarwin:
                     return []
                 if stat:
                     mtime = cur.mtime.tv_sec
-                    mode = (cur.accessmask & ~lib.S_IFMT)| tp
-                    ret.append((name, tp, stat_res(st_mode=mode, st_mtime=mtime,
-                                st_size=cur.datalength)))
+                    mode = (cur.accessmask & ~lib.S_IFMT) | tp
+                    ret.append(
+                        (
+                            name,
+                            tp,
+                            stat_res(
+                                st_mode=mode, st_mtime=mtime, st_size=cur.datalength
+                            ),
+                        )
+                    )
                 else:
                     ret.append((name, tp))
-                cur = ffi.cast("val_attrs_t*", int(ffi.cast("intptr_t", cur))
-                    + lgt)
+                cur = ffi.cast("val_attrs_t*", int(ffi.cast("intptr_t", cur)) + lgt)
         return ret
 
     def listdir(path, stat=False, skip=None):
         req = ffi.new("struct attrlist*")
         req.bitmapcount = lib.ATTR_BIT_MAP_COUNT
-        req.commonattr = (lib.ATTR_CMN_RETURNED_ATTRS |
-                          lib.ATTR_CMN_NAME |
-                          lib.ATTR_CMN_OBJTYPE |
-                          lib.ATTR_CMN_ACCESSMASK |
-                          lib.ATTR_CMN_MODTIME)
+        req.commonattr = (
+            lib.ATTR_CMN_RETURNED_ATTRS
+            | lib.ATTR_CMN_NAME
+            | lib.ATTR_CMN_OBJTYPE
+            | lib.ATTR_CMN_ACCESSMASK
+            | lib.ATTR_CMN_MODTIME
+        )
         req.fileattr = lib.ATTR_FILE_DATALENGTH
         dfd = lib.open(path, lib.O_RDONLY, 0)
         if dfd == -1:
@@ -97,6 +104,6 @@ if pycompat.isdarwin:
             try:
                 lib.close(dfd)
             except BaseException:
-                pass # we ignore all the errors from closing, not
+                pass  # we ignore all the errors from closing, not
                 # much we can do about that
         return ret

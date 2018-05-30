@@ -232,9 +232,7 @@ def unbundle(orig, repo, cg, *args, **kwargs):
             oldopclass = bundle2.bundleoperation
 
             class sqllockedoperation(bundle2.bundleoperation):
-
                 def __init__(self, repo, transactiongetter, *args, **kwargs):
-
                     def sqllocktr():
                         if not context.active():
                             context.__enter__()
@@ -349,7 +347,6 @@ def _localphasemove(orig, pushop, *args, **kwargs):
 
 
 class sqlcontext(object):
-
     def __init__(self, repo, takelock=False, waitforlock=False):
         self.repo = repo
         self.takelock = takelock
@@ -508,9 +505,7 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
 
 
 def wraprepo(repo):
-
     class sqllocalrepo(repo.__class__):
-
         def sqlconnect(self):
             if self.sqlconn:
                 raise Exception("SQL connection already open")
@@ -977,7 +972,6 @@ def wraprepo(repo):
             queue.put(False)
 
         def pushkey(self, namespace, key, old, new):
-
             def _pushkey():
                 return super(sqllocalrepo, self).pushkey(namespace, key, old, new)
 
@@ -1104,7 +1098,6 @@ def wraprepo(repo):
                 del self.pendingrevs[:]
 
         def _addrevstosql(self, revisions):
-
             def insert(args, values):
                 argstring = ",".join(args)
                 cursor.execute(

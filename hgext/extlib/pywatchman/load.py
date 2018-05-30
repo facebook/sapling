@@ -29,6 +29,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
 # no unicode literals
 
 try:
@@ -39,6 +40,7 @@ except ImportError:
 import ctypes
 
 EMPTY_HEADER = b"\x00\x01\x05\x00\x00\x00\x00"
+
 
 def _read_bytes(fp, buf):
     """Read bytes from a file-like object
@@ -62,6 +64,7 @@ def _read_bytes(fp, buf):
         offset += l
         remaining -= l
     return offset
+
 
 def load(fp, mutable=True, value_encoding=None, value_errors=None):
     """Deserialize a BSER-encoded blob.
@@ -92,14 +95,14 @@ def load(fp, mutable=True, value_encoding=None, value_errors=None):
     if total_len > len(buf):
         ctypes.resize(buf, total_len)
 
-    body = (ctypes.c_char * (total_len - len(header))).from_buffer(
-        buf, len(header))
+    body = (ctypes.c_char * (total_len - len(header))).from_buffer(buf, len(header))
     read_len = _read_bytes(fp, body)
     if read_len < len(body):
-        raise RuntimeError('bser data ended early')
+        raise RuntimeError("bser data ended early")
 
     return bser.loads(
         (ctypes.c_char * total_len).from_buffer(buf, 0),
         mutable,
         value_encoding,
-        value_errors)
+        value_errors,
+    )

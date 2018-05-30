@@ -14,6 +14,7 @@ from . import _mpatch
 ffi = _mpatch.ffi
 lib = _mpatch.lib
 
+
 @ffi.def_extern()
 def cffi_get_next_item(arg, pos):
     all, bins = ffi.from_handle(arg)
@@ -25,14 +26,14 @@ def cffi_get_next_item(arg, pos):
         return ffi.NULL
     return container[0]
 
+
 def patches(text, bins):
     lgt = len(bins)
     all = []
     if not lgt:
         return text
     arg = (all, bins)
-    patch = lib.mpatch_fold(ffi.new_handle(arg),
-                            lib.cffi_get_next_item, 0, lgt)
+    patch = lib.mpatch_fold(ffi.new_handle(arg), lib.cffi_get_next_item, 0, lgt)
     if not patch:
         raise mpatchError("cannot decode chunk")
     outlen = lib.mpatch_calcsize(len(text), patch)

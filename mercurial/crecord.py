@@ -319,6 +319,7 @@ class uihunkline(patchnode):
 
 class uihunk(patchnode):
     """ui patch hunk, wraps a hunk and keep track of ui behavior """
+
     maxcontext = 3
 
     def __init__(self, hunk, header):
@@ -556,7 +557,6 @@ def chunkselector(ui, headerlist, operation=None):
 
 
 def testdecorator(testfn, f):
-
     def u(*args, **kwargs):
         return f(testfn, *args, **kwargs)
 
@@ -587,7 +587,6 @@ _headermessages = {  # {operation: text}
 
 
 class curseschunkselector(object):
-
     def __init__(self, headerlist, ui, operation=None):
         # put the headers into a patch object
         self.headerlist = patch(headerlist)

@@ -25,7 +25,6 @@ next_error_message = []
 
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-
     def handle_request(self, param):
         from_repo = param["from_repo"]
         from_scm = param["from_scm"]
@@ -125,7 +124,6 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
 class simplehttpservice(object):
-
     def __init__(self, host, port, port_file):
         self.address = (host, port)
         self.port_file = port_file

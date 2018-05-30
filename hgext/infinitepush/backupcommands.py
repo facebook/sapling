@@ -102,7 +102,6 @@ backupbookmarktuple = collections.namedtuple(
 
 
 class backupstate(object):
-
     def __init__(self):
         self.heads = util.sortdict()
         self.localbookmarks = util.sortdict()
@@ -112,7 +111,6 @@ class backupstate(object):
 
 
 class WrongPermissionsException(Exception):
-
     def __init__(self, logdir):
         self.logdir = logdir
 

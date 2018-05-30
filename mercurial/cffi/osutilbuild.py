@@ -3,7 +3,9 @@ from __future__ import absolute_import
 import cffi
 
 ffi = cffi.FFI()
-ffi.set_source("mercurial.cffi._osutil", """
+ffi.set_source(
+    "mercurial.cffi._osutil",
+    """
 #include <sys/attr.h>
 #include <sys/vnode.h>
 #include <unistd.h>
@@ -19,8 +21,11 @@ typedef struct val_attrs {
     uint32_t          accessmask;
     off_t             datalength;
 } __attribute__((aligned(4), packed)) val_attrs_t;
-""", include_dirs=['mercurial'])
-ffi.cdef('''
+""",
+    include_dirs=["mercurial"],
+)
+ffi.cdef(
+    """
 
 typedef uint32_t attrgroup_t;
 
@@ -96,7 +101,8 @@ int open(const char *path, int oflag, int perm);
 int close(int);
 
 #define O_RDONLY ...
-''')
+"""
+)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ffi.compile()

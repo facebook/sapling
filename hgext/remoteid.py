@@ -10,7 +10,6 @@ from mercurial.i18n import _
 
 
 def extsetup(ui):
-
     def printhostname(orig, *args, **kwargs):
         ui.warn(_("hostname") + ": " + socket.getfqdn())
         return orig(*args, **kwargs)

@@ -978,7 +978,6 @@ def _incoming(displaychlist, subreporecurse, ui, repo, source, opts, buffered=Fa
 
 
 def incoming(ui, repo, source, opts):
-
     def subreporecurse():
         ret = 1
         if opts.get("subrepos"):
@@ -1029,7 +1028,6 @@ def _outgoing(ui, repo, dest, opts):
 
 
 def outgoing(ui, repo, dest, opts):
-
     def recurse():
         ret = 1
         if opts.get("subrepos"):

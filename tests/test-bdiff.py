@@ -8,13 +8,11 @@ from mercurial import mdiff
 
 
 class diffreplace(collections.namedtuple("diffreplace", "start end from_ to")):
-
     def __repr__(self):
         return "diffreplace(%r, %r, %r, %r)" % self
 
 
 class BdiffTests(unittest.TestCase):
-
     def assert_bdiff_applies(self, a, b):
         d = mdiff.textdiff(a, b)
         c = a

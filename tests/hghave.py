@@ -34,9 +34,7 @@ def checkvers(name, desc, vers):
     vers can be a list or an iterator"""
 
     def decorator(func):
-
         def funcv(v):
-
             def f():
                 return func(v)
 

@@ -11,12 +11,10 @@
 from __future__ import absolute_import
 
 from mercurial import demandimport
-demandimport.ignore.extend(['pkgutil', 'pkg_resources', '__main__'])
 
-from mercurial import (
-    encoding,
-    util,
-)
+demandimport.ignore.extend(["pkgutil", "pkg_resources", "__main__"])
+
+from mercurial import encoding, util
 
 with demandimport.deactivated():
     import pygments
@@ -35,16 +33,16 @@ guess_lexer_for_filename = pygments.lexers.guess_lexer_for_filename
 TextLexer = pygments.lexers.TextLexer
 HtmlFormatter = pygments.formatters.HtmlFormatter
 
-SYNTAX_CSS = ('\n<link rel="stylesheet" href="{url}highlightcss" '
-              'type="text/css" />')
+SYNTAX_CSS = '\n<link rel="stylesheet" href="{url}highlightcss" ' 'type="text/css" />'
+
 
 def pygmentize(field, fctx, style, tmpl, guessfilenameonly=False):
 
     # append a <link ...> to the syntax highlighting css
-    old_header = tmpl.load('header')
+    old_header = tmpl.load("header")
     if SYNTAX_CSS not in old_header:
         new_header = old_header + SYNTAX_CSS
-        tmpl.cache['header'] = new_header
+        tmpl.cache["header"] = new_header
 
     text = fctx.data()
     if util.binary(text):
@@ -53,16 +51,15 @@ def pygmentize(field, fctx, style, tmpl, guessfilenameonly=False):
     # str.splitlines() != unicode.splitlines() because "reasons"
     for c in "\x0c\x1c\x1d\x1e":
         if c in text:
-            text = text.replace(c, '')
+            text = text.replace(c, "")
 
     # Pygments is best used with Unicode strings:
     # <http://pygments.org/docs/unicode/>
-    text = text.decode(encoding.encoding, 'replace')
+    text = text.decode(encoding.encoding, "replace")
 
     # To get multi-line strings right, we can't format line-by-line
     try:
-        lexer = guess_lexer_for_filename(fctx.path(), text[:1024],
-                                         stripnl=False)
+        lexer = guess_lexer_for_filename(fctx.path(), text[:1024], stripnl=False)
     except (ClassNotFound, ValueError):
         # guess_lexer will return a lexer if *any* lexer matches. There is
         # no way to specify a minimum match score. This can give a high rate of
@@ -83,11 +80,10 @@ def pygmentize(field, fctx, style, tmpl, guessfilenameonly=False):
     formatter = HtmlFormatter(nowrap=True, style=style)
 
     colorized = highlight(text, lexer, formatter)
-    coloriter = (s.encode(encoding.encoding, 'replace')
-                 for s in colorized.splitlines())
+    coloriter = (s.encode(encoding.encoding, "replace") for s in colorized.splitlines())
 
-    tmpl.filters['colorize'] = lambda x: next(coloriter)
+    tmpl.filters["colorize"] = lambda x: next(coloriter)
 
     oldl = tmpl.cache[field]
-    newl = oldl.replace('line|escape', 'line|colorize')
+    newl = oldl.replace("line|escape", "line|colorize")
     tmpl.cache[field] = newl

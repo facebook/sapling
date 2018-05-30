@@ -726,7 +726,6 @@ def _preparepats():
 
 
 class norepeatlogger(object):
-
     def __init__(self):
         self._lastseen = None
 

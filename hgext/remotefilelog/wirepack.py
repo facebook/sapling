@@ -22,6 +22,7 @@ try:
 except NameError:
     xrange = range
 
+
 def sendpackpart(filename, history, data):
     """A wirepack is formatted as follows:
 
@@ -41,33 +42,34 @@ def sendpackpart(filename, history, data):
                <delta len: 8 byte unsigned int>
                <delta>
     """
-    rawfilenamelen = struct.pack(constants.FILENAMESTRUCT,
-                                 len(filename))
-    yield '%s%s' % (rawfilenamelen, filename)
+    rawfilenamelen = struct.pack(constants.FILENAMESTRUCT, len(filename))
+    yield "%s%s" % (rawfilenamelen, filename)
 
     # Serialize and send history
-    historylen = struct.pack('!I', len(history))
-    rawhistory = ''
+    historylen = struct.pack("!I", len(history))
+    rawhistory = ""
     for entry in history:
-        copyfrom = entry[4] or ''
+        copyfrom = entry[4] or ""
         copyfromlen = len(copyfrom)
         tup = entry[:-1] + (copyfromlen,)
-        rawhistory += struct.pack('!20s20s20s20sH', *tup)
+        rawhistory += struct.pack("!20s20s20s20sH", *tup)
         if copyfrom:
             rawhistory += copyfrom
 
-    yield '%s%s' % (historylen, rawhistory)
+    yield "%s%s" % (historylen, rawhistory)
 
     # Serialize and send data
-    yield struct.pack('!I', len(data))
+    yield struct.pack("!I", len(data))
 
     # TODO: support datapack metadata
     for node, deltabase, delta in data:
-        deltalen = struct.pack('!Q', len(delta))
-        yield '%s%s%s%s' % (node, deltabase, deltalen, delta)
+        deltalen = struct.pack("!Q", len(delta))
+        yield "%s%s%s%s" % (node, deltabase, deltalen, delta)
+
 
 def closepart():
-    return '\0' * 10
+    return "\0" * 10
+
 
 def receivepack(ui, fh, packpath):
     receiveddata = []
@@ -93,14 +95,14 @@ def receivepack(ui, fh, packpath):
                         receiveddata.append((filename, node))
                         count += 1
 
-                    if count == 0 and filename == '':
+                    if count == 0 and filename == "":
                         break
                     prog.value += 1
 
             # Add history to pack in toposorted order
-            with progress.bar(ui, _("storing pack"),
-                              total=len(pendinghistory)) as prog:
+            with progress.bar(ui, _("storing pack"), total=len(pendinghistory)) as prog:
                 for filename, nodevalues in sorted(pendinghistory.iteritems()):
+
                     def _parentfunc(node):
                         p1, p2 = nodevalues[node][1:3]
                         parents = []
@@ -109,9 +111,10 @@ def receivepack(ui, fh, packpath):
                         if p2 != nullid:
                             parents.append(p2)
                         return parents
-                    sortednodes = reversed(shallowutil.sortnodes(
-                                            nodevalues.iterkeys(),
-                                            _parentfunc))
+
+                    sortednodes = reversed(
+                        shallowutil.sortnodes(nodevalues.iterkeys(), _parentfunc)
+                    )
                     for node in sortednodes:
                         node, p1, p2, linknode, copyfrom = nodevalues[node]
                         hpack.add(filename, node, p1, p2, linknode, copyfrom)
@@ -119,23 +122,26 @@ def receivepack(ui, fh, packpath):
 
     return receiveddata, receivedhistory
 
+
 def readhistory(fh):
-    count = readunpack(fh, '!I')[0]
+    count = readunpack(fh, "!I")[0]
     for i in xrange(count):
-        entry = readunpack(fh,'!20s20s20s20sH')
+        entry = readunpack(fh, "!20s20s20s20sH")
         if entry[4] != 0:
             copyfrom = readexactly(fh, entry[4])
         else:
-            copyfrom = ''
+            copyfrom = ""
         entry = entry[:4] + (copyfrom,)
         yield entry
 
+
 def readdeltas(fh):
-    count = readunpack(fh, '!I')[0]
+    count = readunpack(fh, "!I")[0]
     for i in xrange(count):
-        node, deltabase, deltalen = readunpack(fh, '!20s20sQ')
+        node, deltabase, deltalen = readunpack(fh, "!20s20sQ")
         delta = readexactly(fh, deltalen)
         yield (node, deltabase, delta)
+
 
 class wirepackstore(object):
     def __init__(self, wirepack):
@@ -160,8 +166,7 @@ class wirepackstore(object):
             size = len(self._data[(name, node)])
         except KeyError:
             raise KeyError((name, hex(node)))
-        return {constants.METAKEYFLAG: '',
-                constants.METAKEYSIZE: size}
+        return {constants.METAKEYFLAG: "", constants.METAKEYSIZE: size}
 
     def getancestors(self, name, node, known=None):
         if known is None:
@@ -229,7 +234,7 @@ class wirepackstore(object):
                 data[(filename, node)] = (delta, deltabase)
                 count += 1
 
-            if count == 0 and filename == '':
+            if count == 0 and filename == "":
                 break
 
     def markledger(self, ledger, options=None):

@@ -114,7 +114,6 @@ def collect(src, ui):
 
 
 def prune(candidates, src, dst, ui):
-
     def linkfilter(src, dst, st):
         try:
             ts = os.stat(dst)
@@ -149,7 +148,6 @@ def prune(candidates, src, dst, ui):
 
 
 def do_relink(src, dst, files, ui):
-
     def relinkfile(src, dst):
         bak = dst + ".bak"
         os.rename(dst, bak)

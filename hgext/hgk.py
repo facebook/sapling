@@ -223,7 +223,6 @@ def catfile(ui, repo, type=None, r=None, **opts):
 # a bitmask based on arg position.
 # you can specify a commit to stop at by starting the sha1 with ^
 def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
-
     def chlogwalk():
         count = len(repo)
         i = count

@@ -19,7 +19,6 @@ def log(msg):
 
 
 class dummysmtpserver(smtpd.SMTPServer):
-
     def __init__(self, localaddr):
         smtpd.SMTPServer.__init__(self, localaddr, remoteaddr=None)
 
@@ -28,7 +27,6 @@ class dummysmtpserver(smtpd.SMTPServer):
 
 
 class dummysmtpsecureserver(dummysmtpserver):
-
     def __init__(self, localaddr, certfile):
         dummysmtpserver.__init__(self, localaddr)
         self._certfile = certfile

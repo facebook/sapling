@@ -18,7 +18,6 @@ except NameError:
 
 
 class testatomictempfile(unittest.TestCase):
-
     def setUp(self):
         self._testdir = tempfile.mkdtemp("atomictempfiletest")
         self._filename = os.path.join(self._testdir, "testfilename")
@@ -62,7 +61,6 @@ class testatomictempfile(unittest.TestCase):
 
     # checkambig=True avoids ambiguity of timestamp
     def testcheckambig(self):
-
         def atomicwrite(checkambig):
             f = atomictempfile(self._filename, checkambig=checkambig)
             f.write("FOO")

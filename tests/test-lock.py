@@ -23,7 +23,6 @@ if types.MethodType not in copy._deepcopy_dispatch:
 
 
 class lockwrapper(lock.lock):
-
     def __init__(self, pidoffset, *args, **kwargs):
         # lock.lock.__init__() calls lock(), so the pidoffset assignment needs
         # to be earlier
@@ -36,7 +35,6 @@ class lockwrapper(lock.lock):
 
 
 class teststate(object):
-
     def __init__(self, testcase, dir, pidoffset=0):
         self._testcase = testcase
         self._acquirecalled = False
@@ -117,7 +115,6 @@ class teststate(object):
 
 
 class testlock(unittest.TestCase):
-
     def testlock(self):
         state = teststate(self, tempfile.mkdtemp(dir=os.getcwd()))
         lock = state.makelock()

@@ -24,6 +24,7 @@ try:
 except NameError:
     xrange = range
 
+
 def shallowgroup(cls, self, nodelist, rlog, lookup, prog=None, reorder=None):
     if not isinstance(rlog, remotefilelog.remotefilelog):
         for c in super(cls, self).group(nodelist, rlog, lookup, prog=prog):
@@ -45,8 +46,7 @@ def shallowgroup(cls, self, nodelist, rlog, lookup, prog=None, reorder=None):
         prev, curr = nodelist[i], nodelist[i + 1]
         if self._cgdeltaconfig == changegroup.CFG_CGDELTA_ALWAYS_NULL:
             prev = nullid
-        elif (self._cgdeltaconfig == changegroup.CFG_CGDELTA_NO_EXTERNAL
-              and i == 0):
+        elif self._cgdeltaconfig == changegroup.CFG_CGDELTA_NO_EXTERNAL and i == 0:
             prev = nullid
         linknode = lookup(curr)
         for c in self.nodechunk(rlog, curr, prev, linknode):
@@ -54,28 +54,29 @@ def shallowgroup(cls, self, nodelist, rlog, lookup, prog=None, reorder=None):
 
     yield self.close()
 
-@shallowutil.interposeclass(changegroup, 'cg1packer')
+
+@shallowutil.interposeclass(changegroup, "cg1packer")
 class shallowcg1packer(changegroup.cg1packer):
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         if "remotefilelog" in self._repo.requirements:
             fastpathlinkrev = False
 
-        return super(shallowcg1packer, self).generate(commonrevs, clnodes,
-            fastpathlinkrev, source)
+        return super(shallowcg1packer, self).generate(
+            commonrevs, clnodes, fastpathlinkrev, source
+        )
 
     def group(self, nodelist, rlog, lookup, prog=None, reorder=None):
-        return shallowgroup(shallowcg1packer, self, nodelist, rlog, lookup,
-                            prog=prog)
+        return shallowgroup(shallowcg1packer, self, nodelist, rlog, lookup, prog=prog)
 
     def _cansendflat(self, mfnodes):
         repo = self._repo
-        if 'treeonly' in self._bundlecaps:
+        if "treeonly" in self._bundlecaps:
             return False
 
-        if not util.safehasattr(repo.manifestlog, '_revlog'):
+        if not util.safehasattr(repo.manifestlog, "_revlog"):
             return False
 
-        if repo.ui.configbool('treemanifest', 'treeonly'):
+        if repo.ui.configbool("treemanifest", "treeonly"):
             return False
 
         revlog = repo.manifestlog._revlog
@@ -85,8 +86,9 @@ class shallowcg1packer(changegroup.cg1packer):
 
         return True
 
-    def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev,
-                          mfs, fnodes, source):
+    def generatemanifests(
+        self, commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, source
+    ):
         """
         - `commonrevs` is the set of known commits on both sides
         - `clrevorder` is a mapping from cl node to rev number, used for
@@ -106,22 +108,21 @@ class shallowcg1packer(changegroup.cg1packer):
         # bulk fetch the trees up front.
         repo = self._repo
         sendtrees = NoTrees
-        if (not fastpathlinkrev and
-            util.safehasattr(repo, 'prefetchtrees')):
-            sendtrees = cansendtrees(repo, mfs.values(), source=source,
-                                     bundlecaps=self._bundlecaps,
-                                     b2caps=self._b2caps)
+        if not fastpathlinkrev and util.safehasattr(repo, "prefetchtrees"):
+            sendtrees = cansendtrees(
+                repo,
+                mfs.values(),
+                source=source,
+                bundlecaps=self._bundlecaps,
+                b2caps=self._b2caps,
+            )
 
         if self._cansendflat(mfs.keys()):
             # In this code path, generating the manifests populates fnodes for
             # us.
             chunks = super(shallowcg1packer, self).generatemanifests(
-                commonrevs,
-                clrevorder,
-                fastpathlinkrev,
-                mfs,
-                fnodes,
-                source)
+                commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, source
+            )
             for chunk in chunks:
                 yield chunk
         else:
@@ -170,15 +171,18 @@ class shallowcg1packer(changegroup.cg1packer):
                 # bundlerepo is heavily tied to revlogs. Instead require that
                 # the user use unbundle instead.
                 # Force load the filelog data.
-                bundlerepo.bundlerepository.file(repo, 'foo')
+                bundlerepo.bundlerepository.file(repo, "foo")
                 if repo._cgfilespos:
-                    raise error.Abort("cannot pull from full bundles",
-                                      hint="use `hg unbundle` instead")
+                    raise error.Abort(
+                        "cannot pull from full bundles",
+                        hint="use `hg unbundle` instead",
+                    )
                 return []
             filestosend = self.shouldaddfilegroups(source)
             if filestosend == NoFiles:
-                changedfiles = list([f for f in changedfiles
-                                     if not repo.shallowmatch(f)])
+                changedfiles = list(
+                    [f for f in changedfiles if not repo.shallowmatch(f)]
+                )
             else:
                 files = []
                 # Prefetch the revisions being bundled
@@ -190,12 +194,11 @@ class shallowcg1packer(changegroup.cg1packer):
                     for fnode, cnode in list(linkrevnodes.iteritems()):
                         # Adjust linknodes so remote file revisions aren't sent
                         if filestosend == LocalFiles:
-                            localkey = fileserverclient.getlocalkey(fname,
-                                                                    hex(fnode))
-                            localpath = repo.sjoin(os.path.join("data",
-                                                                localkey))
-                            if (not os.path.exists(localpath)
-                                and repo.shallowmatch(fname)):
+                            localkey = fileserverclient.getlocalkey(fname, hex(fnode))
+                            localpath = repo.sjoin(os.path.join("data", localkey))
+                            if not os.path.exists(localpath) and repo.shallowmatch(
+                                fname
+                            ):
                                 del linkrevnodes[fnode]
                             else:
                                 files.append((fname, hex(fnode)))
@@ -217,8 +220,9 @@ class shallowcg1packer(changegroup.cg1packer):
 
                 repo.fileservice.prefetch(prevfiles)
 
-        return super(shallowcg1packer, self).generatefiles(changedfiles,
-                     linknodes, commonrevs, source)
+        return super(shallowcg1packer, self).generatefiles(
+            changedfiles, linknodes, commonrevs, source
+        )
 
     def shouldaddfilegroups(self, source):
         repo = self._repo
@@ -230,7 +234,7 @@ class shallowcg1packer(changegroup.cg1packer):
 
         caps = self._bundlecaps or []
         if source == "serve" or source == "pull":
-            if 'remotefilelog' in caps:
+            if "remotefilelog" in caps:
                 return LocalFiles
             else:
                 # Serving to a full repo requires us to serve everything
@@ -241,8 +245,7 @@ class shallowcg1packer(changegroup.cg1packer):
 
     def prune(self, rlog, missing, commonrevs):
         if not isinstance(rlog, remotefilelog.remotefilelog):
-            return super(shallowcg1packer, self).prune(rlog, missing,
-                commonrevs)
+            return super(shallowcg1packer, self).prune(rlog, missing, commonrevs)
 
         repo = self._repo
         results = []
@@ -253,7 +256,7 @@ class shallowcg1packer(changegroup.cg1packer):
         return results
 
     def nodechunk(self, revlog, node, prevnode, linknode):
-        prefix = ''
+        prefix = ""
         if prevnode is not nullid and not revlog.candelta(prevnode, node):
             basenode = nullid
         else:
@@ -273,9 +276,10 @@ class shallowcg1packer(changegroup.cg1packer):
         yield meta
         yield delta
 
-if util.safehasattr(changegroup, 'cg2packer'):
+
+if util.safehasattr(changegroup, "cg2packer"):
     # Mercurial >= 3.3
-    @shallowutil.interposeclass(changegroup, 'cg2packer')
+    @shallowutil.interposeclass(changegroup, "cg2packer")
     class shallowcg2packer(changegroup.cg2packer):
         def group(self, nodelist, rlog, lookup, prog=None, reorder=None):
             # for revlogs, shallowgroup will be called twice in the same stack
@@ -284,21 +288,21 @@ if util.safehasattr(changegroup, 'cg2packer'):
             # shallowgroup doesn't do anything on top of the usual group
             # function. If that assumption changes this will have to be
             # revisited.
-            return shallowgroup(shallowcg2packer, self, nodelist, rlog, lookup,
-                                prog=prog)
+            return shallowgroup(
+                shallowcg2packer, self, nodelist, rlog, lookup, prog=prog
+            )
 
-if util.safehasattr(changegroup, 'cg3packer'):
-    @shallowutil.interposeclass(changegroup, 'cg3packer')
+
+if util.safehasattr(changegroup, "cg3packer"):
+
+    @shallowutil.interposeclass(changegroup, "cg3packer")
     class shallowcg3packer(changegroup.cg3packer):
-        def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev,
-                              mfs, fnodes, *args, **kwargs):
+        def generatemanifests(
+            self, commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, *args, **kwargs
+        ):
             chunks = super(shallowcg3packer, self).generatemanifests(
-                commonrevs,
-                clrevorder,
-                fastpathlinkrev,
-                mfs,
-                fnodes,
-                *args, **kwargs)
+                commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, *args, **kwargs
+            )
             for chunk in chunks:
                 yield chunk
 
@@ -308,13 +312,14 @@ if util.safehasattr(changegroup, 'cg3packer'):
             if not self._cansendflat(mfs.keys()):
                 yield self._manifestsdone()
 
+
 # Unused except in older versions of Mercurial
-def getchangegroup(orig, repo, source, outgoing, bundlecaps=None, version='01'):
+def getchangegroup(orig, repo, source, outgoing, bundlecaps=None, version="01"):
     def origmakechangegroup(repo, outgoing, version, source):
-        return orig(repo, source, outgoing, bundlecaps=bundlecaps,
-                    version=version)
+        return orig(repo, source, outgoing, bundlecaps=bundlecaps, version=version)
 
     return makechangegroup(origmakechangegroup, repo, outgoing, version, source)
+
 
 def makechangegroup(orig, repo, outgoing, version, source, *args, **kwargs):
     if not requirement in repo.requirements:
@@ -323,27 +328,29 @@ def makechangegroup(orig, repo, outgoing, version, source, *args, **kwargs):
     original = repo.shallowmatch
     try:
         # if serving, only send files the clients has patterns for
-        if source == 'serve':
-            bundlecaps = kwargs.get('bundlecaps')
+        if source == "serve":
+            bundlecaps = kwargs.get("bundlecaps")
             includepattern = None
             excludepattern = None
-            for cap in (bundlecaps or []):
+            for cap in bundlecaps or []:
                 if cap.startswith("includepattern="):
-                    raw = cap[len("includepattern="):]
+                    raw = cap[len("includepattern=") :]
                     if raw:
-                        includepattern = raw.split('\0')
+                        includepattern = raw.split("\0")
                 elif cap.startswith("excludepattern="):
-                    raw = cap[len("excludepattern="):]
+                    raw = cap[len("excludepattern=") :]
                     if raw:
-                        excludepattern = raw.split('\0')
+                        excludepattern = raw.split("\0")
             if includepattern or excludepattern:
-                repo.shallowmatch = match.match(repo.root, '', None,
-                    includepattern, excludepattern)
+                repo.shallowmatch = match.match(
+                    repo.root, "", None, includepattern, excludepattern
+                )
             else:
-                repo.shallowmatch = match.always(repo.root, '')
+                repo.shallowmatch = match.always(repo.root, "")
         return orig(repo, outgoing, version, source, *args, **kwargs)
     finally:
         repo.shallowmatch = original
+
 
 def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
     if not requirement in repo.requirements:
@@ -361,7 +368,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
     # files in topological order.
 
     # read all the file chunks but don't add them
-    with progress.bar(repo.ui, _('files'), total=expectedfiles) as prog:
+    with progress.bar(repo.ui, _("files"), total=expectedfiles) as prog:
         while True:
             chunkdata = source.filelogheader()
             if not chunkdata:
@@ -396,6 +403,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
                 raise error.Abort(_("received file revlog group is empty"))
 
     processed = set()
+
     def available(f, node, depf, depnode):
         if depnode != nullid and (depf, depnode) not in processed:
             if not (depf, depnode) in revisiondatas:
@@ -448,7 +456,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
         # Deltas are always against flags=0 rawtext (see revdiff and its
         # callers), if deltabase is not nullid.
         if flags and deltabase != nullid:
-            raise error.Abort('unexpected deltabase')
+            raise error.Abort("unexpected deltabase")
 
         # If deltabase does not have flags=0, convert it to flags=0
         # rawtext, which is equivalent to raw=False text.
@@ -460,13 +468,13 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
         # "rawtext" will be the original LFS rawtext, and base should be
         # an empty string in this case.
         rawtext = mdiff.patch(base, delta)
-        if isinstance(rawtext, buffer): # noqa
+        if isinstance(rawtext, buffer):  # noqa
             rawtext = bytes(rawtext)
 
         meta, text = shallowutil.parsemeta(rawtext, flags)
-        if 'copy' in meta:
-            copyfrom = meta['copy']
-            copynode = bin(meta['copyrev'])
+        if "copy" in meta:
+            copyfrom = meta["copy"]
+            copynode = bin(meta["copyrev"])
             if not available(f, node, copyfrom, copynode):
                 continue
 
@@ -477,12 +485,12 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
         # Use addrawrevision so if it's already LFS, take it as-is, do not
         # re-calculate the LFS object.
-        fl.addrawrevision(rawtext, trp, linknode, p1, p2, node=node,
-                          flags=flags)
+        fl.addrawrevision(rawtext, trp, linknode, p1, p2, node=node, flags=flags)
         processed.add((f, node))
         skipcount = 0
 
     return len(revisiondatas), newfiles
+
 
 def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
     """Sending trees has the following rules:
@@ -502,15 +510,14 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
         b2caps = {}
     if bundlecaps is None:
         bundlecaps = set()
-    sendtrees = repo.ui.configbool('treemanifest', 'sendtrees')
-    treeonly = repo.ui.configbool('treemanifest', 'treeonly')
+    sendtrees = repo.ui.configbool("treemanifest", "sendtrees")
+    treeonly = repo.ui.configbool("treemanifest", "treeonly")
 
     result = AllTrees
     prefetch = AllTrees
 
     if repo.svfs.treemanifestserver:
-        if (source == 'infinitepushpull' and
-            'True' in b2caps.get('treemanifest', [])):
+        if source == "infinitepushpull" and "True" in b2caps.get("treemanifest", []):
             result = AllTrees
         else:
             result = NoTrees
@@ -523,8 +530,9 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
         # getting ready to send the flat manifests. This will cause tree
         # manifest lookups, so let's go ahead and bulk prefetch them.
         prefetch = AllTrees
-    elif ('treemanifestserver' in bundlecaps or
-          'True' in b2caps.get('treemanifestserver', [])):
+    elif "treemanifestserver" in bundlecaps or "True" in b2caps.get(
+        "treemanifestserver", []
+    ):
         # If we're talking to the main server, always send everything.
         result = AllTrees
         prefetch = AllTrees
@@ -544,8 +552,11 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
     ctxs = [repo[node] for node in nodes]
 
     try:
-        repo.prefetchtrees(c.manifestnode() for c in ctxs
-                if prefetch == AllTrees or c.phase() != phases.public)
+        repo.prefetchtrees(
+            c.manifestnode()
+            for c in ctxs
+            if prefetch == AllTrees or c.phase() != phases.public
+        )
     except shallowutil.MissingNodesError:
         # The server may not always have the manifests (like when we need to do
         # a conversion from a flat manifest to a tree), so eat it and let the

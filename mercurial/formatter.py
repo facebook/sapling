@@ -145,7 +145,6 @@ class _nullconverter(object):
 
 
 class baseformatter(object):
-
     def __init__(self, ui, topic, opts, converter):
         self._ui = ui
         self._topic = topic
@@ -315,7 +314,6 @@ class plainformatter(baseformatter):
 
 
 class debugformatter(baseformatter):
-
     def __init__(self, ui, out, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _nullconverter)
         self._out = out
@@ -330,7 +328,6 @@ class debugformatter(baseformatter):
 
 
 class pickleformatter(baseformatter):
-
     def __init__(self, ui, out, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _nullconverter)
         self._out = out
@@ -345,7 +342,6 @@ class pickleformatter(baseformatter):
 
 
 class jsonformatter(baseformatter):
-
     def __init__(self, ui, out, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _nullconverter)
         self._out = out
@@ -406,7 +402,6 @@ class _templateconverter(object):
 
 
 class templateformatter(baseformatter):
-
     def __init__(self, ui, out, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _templateconverter)
         self._out = out

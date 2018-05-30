@@ -966,7 +966,6 @@ def isstdiofilename(pat):
 
 
 class _unclosablefile(object):
-
     def __init__(self, fp):
         self._fp = fp
 
@@ -2397,7 +2396,6 @@ def walkfilerevs(repo, match, follow, revs, fncache):
 
 
 class _followfilter(object):
-
     def __init__(self, repo, onlyfirst=False):
         self.repo = repo
         self.startrev = nullrev
@@ -2405,7 +2403,6 @@ class _followfilter(object):
         self.onlyfirst = onlyfirst
 
     def match(self, rev):
-
         def realparents(rev):
             if self.onlyfirst:
                 return self.repo.changelog.parentrevs(rev)[0:1]
@@ -2501,7 +2498,6 @@ def walkchangerevs(repo, match, opts, prepare):
         # The slow path checks files modified in every changeset.
         # This is really slow on large repos, so compute the set lazily.
         class lazywantedset(object):
-
             def __init__(self):
                 self.set = set()
                 self.revs = set(revs)

@@ -32,7 +32,6 @@ from .node import nullid
 
 
 class unionrevlog(revlog.revlog):
-
     def __init__(self, opener, indexfile, revlog2, linkmapper):
         # How it works:
         # To retrieve a revision, we just need to know the node id so we can
@@ -147,7 +146,6 @@ class unionrevlog(revlog.revlog):
 
 
 class unionchangelog(unionrevlog, changelog.changelog):
-
     def __init__(self, opener, opener2):
         changelog.changelog.__init__(self, opener)
         linkmapper = None
@@ -165,7 +163,6 @@ class unionchangelog(unionrevlog, changelog.changelog):
 
 
 class unionmanifest(unionrevlog, manifest.manifestrevlog):
-
     def __init__(self, opener, opener2, linkmapper):
         manifest.manifestrevlog.__init__(self, opener)
         manifest2 = manifest.manifestrevlog(opener2)
@@ -179,7 +176,6 @@ class unionmanifest(unionrevlog, manifest.manifestrevlog):
 
 
 class unionfilelog(unionrevlog, filelog.filelog):
-
     def __init__(self, opener, path, opener2, linkmapper, repo):
         filelog.filelog.__init__(self, opener, path)
         filelog2 = filelog.filelog(opener2, path)
@@ -201,13 +197,11 @@ class unionfilelog(unionrevlog, filelog.filelog):
 
 
 class unionpeer(localrepo.localpeer):
-
     def canpush(self):
         return False
 
 
 class unionrepository(localrepo.localrepository):
-
     def __init__(self, ui, path, path2):
         localrepo.localrepository.__init__(self, ui, path)
         self.ui.setconfig("phases", "publish", False, "unionrepo")

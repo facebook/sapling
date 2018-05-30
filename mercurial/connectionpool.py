@@ -11,7 +11,6 @@ from . import extensions, sshpeer, util
 
 
 class connectionpool(object):
-
     def __init__(self, repo):
         self._repo = repo
         self._pool = dict()
@@ -76,7 +75,6 @@ class connectionpool(object):
 
 
 class standaloneconnection(object):
-
     def __init__(self, peer):
         self.peer = peer
 
@@ -92,7 +90,6 @@ class standaloneconnection(object):
 
 
 class connection(object):
-
     def __init__(self, pool, peer):
         self._pool = pool
         self.peer = peer

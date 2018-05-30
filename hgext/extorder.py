@@ -42,6 +42,7 @@ class MercurialExtOrderException(BaseException):
     subclass of BaseException to actually abort the program if extension order
     is incorrect. That's why this class exists.
     """
+
     pass
 
 

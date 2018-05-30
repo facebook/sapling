@@ -51,7 +51,6 @@ def filteredblocks(blocks, rangeb):
 
 
 class blocksinrangetests(unittest.TestCase):
-
     def setUp(self):
         self.blocks = list(mdiff.allblocks(text1, text2))
         assert self.blocks == [

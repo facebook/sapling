@@ -21,7 +21,6 @@ except NameError:
 
 
 class sshserver(wireproto.abstractserverproto):
-
     def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo

@@ -5,9 +5,10 @@ from mercurial import extensions
 
 lfsext = None
 try:
-    lfsext = extensions.find('lfs')
+    lfsext = extensions.find("lfs")
 except KeyError:
     pass
+
 
 def getlfsinfo(hgfilelog, node):
     if lfsext is None:
@@ -15,7 +16,6 @@ def getlfsinfo(hgfilelog, node):
     islfs = lfsext.wrapper._islfs(hgfilelog, node)
     oid = None
     if islfs:
-        lfspointer = lfsext.pointer.deserialize(
-                hgfilelog.revision(node, raw=True))
+        lfspointer = lfsext.pointer.deserialize(hgfilelog.revision(node, raw=True))
         oid = lfspointer.oid()
     return islfs, oid

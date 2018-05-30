@@ -4,7 +4,6 @@ from mercurial import extensions
 
 
 def genwrapper(x):
-
     def f(orig, *args, **kwds):
         return [x] + orig(*args, **kwds)
 
@@ -20,7 +19,6 @@ wrappers = [genwrapper(i) for i in range(5)]
 
 
 class dummyclass(object):
-
     def getstack(self):
         return ["orig"]
 
@@ -67,7 +65,6 @@ print("context manager", dummy.getstack())
 
 # Wrap callable object which has no __name__
 class callableobj(object):
-
     def __call__(self):
         return ["orig"]
 

@@ -29,12 +29,14 @@ batchsize = 1000
 # Max value size per key (in bytes)
 maxsize = 512 * 1024
 
+
 def readfile(path):
     f = open(path, "r")
     try:
         return f.read()
     finally:
         f.close()
+
 
 def writefile(path, content):
     dirname = os.path.dirname(path)
@@ -47,11 +49,13 @@ def writefile(path, content):
     finally:
         f.close()
 
+
 def compress(value):
     # Real world implementations will want to compress values.
     # Insert your favorite compression here, ex:
     # return lz4wrapper.lzcompresshc(value)
     return value
+
 
 def decompress(value):
     # Real world implementations will want to compress values.
@@ -59,11 +63,14 @@ def decompress(value):
     # return lz4wrapper.lz4decompress(value)
     return value
 
+
 def generateKey(id):
     return keyprefix + id
 
+
 def generateId(key):
-    return key[len(keyprefix):]
+    return key[len(keyprefix) :]
+
 
 def getKeys():
     raw = stdin.readline()[:-1]
@@ -112,6 +119,7 @@ def getKeys():
     stdout.write("0\n")
     stdout.flush()
 
+
 def setKeys():
     raw = stdin.readline()[:-1]
     keycount = int(raw)
@@ -147,6 +155,7 @@ def setKeys():
 
     if values:
         mc.set_multi(values)
+
 
 def main(argv=None):
     """
@@ -206,6 +215,7 @@ def main(argv=None):
         else:
             stderr.write("Invalid Command %s\n" % cmd)
             return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

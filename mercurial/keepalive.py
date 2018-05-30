@@ -168,7 +168,6 @@ class ConnectionManager(object):
 
 
 class KeepAliveHandler(object):
-
     def __init__(self):
         self._cm = ConnectionManager()
 
@@ -691,7 +690,6 @@ def test_timeout(url):
     dbbackup = DEBUG
 
     class FakeLogger(object):
-
         def debug(self, msg, *args):
             print(msg % args)
 

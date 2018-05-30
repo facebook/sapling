@@ -172,7 +172,6 @@ filters = {
 
 
 class eolfile(object):
-
     def __init__(self, ui, root, data):
         self._decode = {"LF": "to-lf", "CRLF": "to-crlf", "BIN": "is-binary"}
         self._encode = {"LF": "to-lf", "CRLF": "to-crlf", "BIN": "is-binary"}
@@ -348,7 +347,6 @@ def reposetup(ui, repo):
     ui.setconfig("patch", "eol", "auto", "eol")
 
     class eolrepo(repo.__class__):
-
         def loadeol(self, nodes):
             eol = parseeol(self.ui, self, nodes)
             if eol is None:

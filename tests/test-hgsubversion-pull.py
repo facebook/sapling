@@ -4,7 +4,6 @@ from mercurial import commands, node, util as hgutil
 
 
 class TestPull(test_hgsubversion_util.TestBase):
-
     def setUp(self):
         super(TestPull, self).setUp()
 

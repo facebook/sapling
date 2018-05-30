@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
+
 def wrapstore(store):
     class shallowstore(store.__class__):
         def __contains__(self, path):

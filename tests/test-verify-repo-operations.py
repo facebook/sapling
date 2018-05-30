@@ -512,7 +512,6 @@ class verifyingstatemachine(RuleBasedStateMachine):
 
 
 class writeonlydatabase(ExampleDatabase):
-
     def __init__(self, underlying):
         super(ExampleDatabase, self).__init__()
         self.underlying = underlying

@@ -35,6 +35,7 @@ from __future__ import absolute_import
 
 try:
     import httplib
+
     httplib.HTTPException
 except ImportError:
     import http.client as httplib
@@ -43,11 +44,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class ReadNotReady(Exception):
     """Raised when read() is attempted but not enough data is loaded."""
 
+
 class HTTPRemoteClosedError(httplib.HTTPException):
     """The server closed the remote socket in the middle of a response."""
+
 
 class AbstractReader(object):
     """Abstract base class for response readers.
@@ -56,6 +60,7 @@ class AbstractReader(object):
     it's not an error for the server to close their socket without
     some termination condition being detected during _load.
     """
+
     def __init__(self):
         self._finished = False
         self._done_chunks = []
@@ -95,12 +100,12 @@ class AbstractReader(object):
             need -= len(b)
             if need == 0:
                 break
-        result = b''.join(blocks)
+        result = b"".join(blocks)
         assert len(result) == amt or (self._finished and len(result) < amt)
 
         return result
 
-    def readto(self, delimstr, blocks = None):
+    def readto(self, delimstr, blocks=None):
         """return available data chunks up to the first one in which
         delimstr occurs. No data will be returned after delimstr --
         the chunk in which it occurs will be split and the remainder
@@ -124,7 +129,7 @@ class AbstractReader(object):
 
         return blocks
 
-    def _load(self, data): # pragma: no cover
+    def _load(self, data):  # pragma: no cover
         """Subclasses must implement this.
 
         As data is available to be read out of this object, it should
@@ -146,7 +151,9 @@ class AbstractReader(object):
         """
         if not self._finished:
             raise HTTPRemoteClosedError(
-                'server appears to have closed the socket mid-response')
+                "server appears to have closed the socket mid-response"
+            )
+
 
 class AbstractSimpleReader(AbstractReader):
     """Abstract base class for simple readers that require no response decoding.
@@ -154,25 +161,32 @@ class AbstractSimpleReader(AbstractReader):
     Examples of such responses are Connection: Close (close-is-end)
     and responses that specify a content length.
     """
+
     def _load(self, data):
         if data:
             assert not self._finished, (
-                'tried to add data (%r) to a closed reader!' % data)
-        logger.debug('%s read an additional %d data',
-                     self.name, len(data)) # pylint: disable=E1101
+                "tried to add data (%r) to a closed reader!" % data
+            )
+        logger.debug(
+            "%s read an additional %d data", self.name, len(data)
+        )  # pylint: disable=E1101
         self._addchunk(data)
+
 
 class CloseIsEndReader(AbstractSimpleReader):
     """Reader for responses that specify Connection: Close for length."""
-    name = 'close-is-end'
+
+    name = "close-is-end"
 
     def _close(self):
-        logger.info('Marking close-is-end reader as closed.')
+        logger.info("Marking close-is-end reader as closed.")
         self._finished = True
+
 
 class ContentLengthReader(AbstractSimpleReader):
     """Reader for responses that specify an exact content length."""
-    name = 'content-length'
+
+    name = "content-length"
 
     def __init__(self, amount):
         AbstractSimpleReader.__init__(self)
@@ -186,27 +200,28 @@ class ContentLengthReader(AbstractSimpleReader):
         self._amount_seen += len(data)
         if self._amount_seen >= self._amount:
             self._finished = True
-            logger.debug('content-length read complete')
+            logger.debug("content-length read complete")
+
 
 class ChunkedReader(AbstractReader):
     """Reader for chunked transfer encoding responses."""
+
     def __init__(self, eol):
         AbstractReader.__init__(self)
         self._eol = eol
         self._leftover_skip_amt = 0
-        self._leftover_data = ''
+        self._leftover_data = ""
 
     def _load(self, data):
-        assert not self._finished, 'tried to add data to a closed reader!'
-        logger.debug('chunked read an additional %d data', len(data))
+        assert not self._finished, "tried to add data to a closed reader!"
+        logger.debug("chunked read an additional %d data", len(data))
         position = 0
         if self._leftover_data:
-            logger.debug(
-                'chunked reader trying to finish block from leftover data')
+            logger.debug("chunked reader trying to finish block from leftover data")
             # TODO: avoid this string concatenation if possible
             data = self._leftover_data + data
             position = self._leftover_skip_amt
-            self._leftover_data = ''
+            self._leftover_data = ""
             self._leftover_skip_amt = 0
         datalen = len(data)
         while position < datalen:
@@ -225,8 +240,10 @@ class ChunkedReader(AbstractReader):
                 return
             if amt == 0:
                 self._finished = True
-                logger.debug('closing chunked reader due to chunk of length 0')
+                logger.debug("closing chunked reader due to chunk of length 0")
                 return
-            self._addchunk(data[block_start:block_start + amt])
+            self._addchunk(data[block_start : block_start + amt])
             position = block_start + amt + len(self._eol)
+
+
 # no-check-code

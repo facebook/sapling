@@ -41,9 +41,7 @@ def _getcandidatelocation(ui):
 
 
 def uisetup(ui):
-
     class logtofile(ui.__class__):
-
         @classmethod
         def computesamplingfilters(cls, self):
             filtermap = {}
@@ -143,7 +141,6 @@ def gettopdir(repo):
 
 
 def reposetup(ui, repo):
-
     @repo.ui.atexit
     def telemetry():
         if util.safehasattr(repo, "requirements"):

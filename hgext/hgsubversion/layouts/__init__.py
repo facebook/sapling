@@ -15,9 +15,7 @@ import custom
 import single
 import standard
 
-__all__ = [
-    "layout_from_name",
-    ]
+__all__ = ["layout_from_name"]
 
 # This is the authoritative store of what layouts are available.
 # The intention is for extension authors who wish to build their own
@@ -27,6 +25,7 @@ NAME_TO_CLASS = {
     "single": single.SingleLayout,
     "standard": standard.StandardLayout,
 }
+
 
 def layout_from_name(name, meta):
     """Returns a layout module given the layout name
@@ -38,5 +37,5 @@ def layout_from_name(name, meta):
     """
 
     if name not in NAME_TO_CLASS:
-        raise hgutil.Abort('Unknown hgsubversion layout: %s' % name)
+        raise hgutil.Abort("Unknown hgsubversion layout: %s" % name)
     return NAME_TO_CLASS[name](meta)

@@ -1,16 +1,15 @@
 # git2hg.py - convert Git repositories and commits to Mercurial ones
 
 from dulwich.objects import Commit, Tag
-from mercurial import (
-    util,
-)
+from mercurial import util
+
 
 def find_incoming(git_object_store, git_map, refs):
-    '''find what commits need to be imported
+    """find what commits need to be imported
 
     git_object_store is a dulwich object store.
     git_map is a map with keys being Git commits that have already been imported
-    refs is a map of refs to SHAs that we're interested in.'''
+    refs is a map of refs to SHAs that we're interested in."""
 
     done = set()
     commit_cache = {}
@@ -27,7 +26,7 @@ def find_incoming(git_object_store, git_map, refs):
         for ref, sha in refs.iteritems():
             # refs could contain refs on the server that we haven't pulled down
             # the objects for; also make sure it's a sha and not a symref
-            if ref != 'HEAD' and sha in git_object_store:
+            if ref != "HEAD" and sha in git_object_store:
                 obj = git_object_store[sha]
                 while isinstance(obj, Tag):
                     obj_type, sha = obj.object
@@ -40,10 +39,10 @@ def find_incoming(git_object_store, git_map, refs):
         return todo
 
     def get_unseen_commits(todo):
-        '''get all unseen commits reachable from todo in topological order
+        """get all unseen commits reachable from todo in topological order
 
         'unseen' means not reachable from the done set and not in the git map.
-        Mutates todo and the done set in the process.'''
+        Mutates todo and the done set in the process."""
         commits = []
         while todo:
             sha = todo[-1]
@@ -75,11 +74,14 @@ def find_incoming(git_object_store, git_map, refs):
 
     return GitIncomingResult(commits, commit_cache)
 
+
 class GitIncomingResult(object):
-    '''struct to store result from find_incoming'''
+    """struct to store result from find_incoming"""
+
     def __init__(self, commits, commit_cache):
         self.commits = commits
         self.commit_cache = commit_cache
+
 
 def extract_hg_metadata(message, git_extra):
     split = message.split("\n--HG--\n", 1)
@@ -105,40 +107,39 @@ def extract_hg_metadata(message, git_extra):
         message, meta = split
         lines = meta.split("\n")
         for line in lines:
-            if line == '':
+            if line == "":
                 continue
 
-            if ' : ' not in line:
+            if " : " not in line:
                 break
             command, data = line.split(" : ", 1)
 
-            if command == 'rename':
+            if command == "rename":
                 before, after = data.split(" => ", 1)
                 renames[after] = before
-            if command == 'branch':
+            if command == "branch":
                 branch = data
-            if command == 'extra':
+            if command == "extra":
                 k, v = data.split(" : ", 1)
                 extra[k] = util.urlreq.unquote(v)
 
     git_fn = 0
     for field, data in git_extra:
-        if field.startswith('HG:'):
+        if field.startswith("HG:"):
             if renames is None:
                 renames = {}
             command = field[3:]
-            if command == 'rename':
-                before, after = data.split(':', 1)
-                renames[util.urlreq.unquote(after)] = (
-                        util.urlreq.unquote(before))
-            elif command == 'extra':
-                k, v = data.split(':', 1)
+            if command == "rename":
+                before, after = data.split(":", 1)
+                renames[util.urlreq.unquote(after)] = util.urlreq.unquote(before)
+            elif command == "extra":
+                k, v = data.split(":", 1)
                 extra[util.urlreq.unquote(k)] = util.urlreq.unquote(v)
         else:
             # preserve ordering in Git by using an incrementing integer for
             # each field. Note that extra metadata in Git is an ordered list
             # of pairs.
-            hg_field = 'GIT%d-%s' % (git_fn, field)
+            hg_field = "GIT%d-%s" % (git_fn, field)
             git_fn += 1
             extra[util.urlreq.quote(hg_field)] = util.urlreq.quote(data)
 

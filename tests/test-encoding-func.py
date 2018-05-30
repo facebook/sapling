@@ -21,7 +21,6 @@ class IsasciistrTest(unittest.TestCase):
 
 
 class LocalEncodingTest(unittest.TestCase):
-
     def testasciifastpath(self):
         s = b"\0" * 100
         self.assertTrue(s is encoding.tolocal(s))
@@ -29,7 +28,6 @@ class LocalEncodingTest(unittest.TestCase):
 
 
 class Utf8bEncodingTest(unittest.TestCase):
-
     def testasciifastpath(self):
         s = b"\0" * 100
         self.assertTrue(s is encoding.toutf8b(s))

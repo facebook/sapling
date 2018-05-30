@@ -155,6 +155,7 @@ def registerformatvariant(cls):
 
 class formatvariant(improvement):
     """an improvement subclass dedicated to repository format"""
+
     type = deficiency
     ### The following attributes should be defined for each class:
 

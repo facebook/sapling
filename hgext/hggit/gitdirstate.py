@@ -3,12 +3,7 @@ import stat
 import re
 import errno
 
-from mercurial import (
-    dirstate,
-    error,
-    match as matchmod,
-    util,
-)
+from mercurial import dirstate, error, match as matchmod, util
 
 # ignore module was removed in Mercurial 3.5
 ignoremod = False
@@ -16,55 +11,57 @@ ignoremod = False
 from mercurial import pathutil
 from mercurial.i18n import _
 
+
 def gignorepats(orig, lines, root=None):
-    '''parse lines (iterable) of .gitignore text, returning a tuple of
+    """parse lines (iterable) of .gitignore text, returning a tuple of
     (patterns, parse errors). These patterns should be given to compile()
-    to be validated and converted into a match function.'''
-    syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:'}
-    syntax = 'glob:'
+    to be validated and converted into a match function."""
+    syntaxes = {"re": "relre:", "regexp": "relre:", "glob": "relglob:"}
+    syntax = "glob:"
 
     patterns = []
     warnings = []
 
     for line in lines:
         if "#" in line:
-            _commentre = re.compile(r'((^|[^\\])(\\\\)*)#.*')
+            _commentre = re.compile(r"((^|[^\\])(\\\\)*)#.*")
             # remove comments prefixed by an even number of escapes
-            line = _commentre.sub(r'\1', line)
+            line = _commentre.sub(r"\1", line)
             # fixup properly escaped comments that survived the above
             line = line.replace("\\#", "#")
         line = line.rstrip()
         if not line:
             continue
 
-        if line.startswith('!'):
+        if line.startswith("!"):
             warnings.append(_("unsupported ignore pattern '%s'") % line)
             continue
-        if re.match(r'(:?.*/)?\.hg(:?/|$)', line):
+        if re.match(r"(:?.*/)?\.hg(:?/|$)", line):
             continue
-        rootprefix = '%s/' % root if root else ''
-        if line.startswith('/'):
+        rootprefix = "%s/" % root if root else ""
+        if line.startswith("/"):
             line = line[1:]
-            rootsuffixes = ['']
+            rootsuffixes = [""]
         else:
-            rootsuffixes = ['', '**/']
+            rootsuffixes = ["", "**/"]
         for rootsuffix in rootsuffixes:
             pat = syntax + rootprefix + rootsuffix + line
             for s, rels in syntaxes.iteritems():
                 if line.startswith(rels):
                     pat = line
                     break
-                elif line.startswith(s + ':'):
-                    pat = rels + line[len(s) + 1:]
+                elif line.startswith(s + ":"):
+                    pat = rels + line[len(s) + 1 :]
                     break
             patterns.append(pat)
 
     return patterns, warnings
 
+
 def gignore(root, files, warn, extrapatterns=None):
     allpats = []
     pats = []
-    pats = [(f, ['include:%s' % f]) for f in files]
+    pats = [(f, ["include:%s" % f]) for f in files]
     for f, patlist in pats:
         allpats.extend(patlist)
 
@@ -73,30 +70,31 @@ def gignore(root, files, warn, extrapatterns=None):
     if not allpats:
         return util.never
     try:
-        ignorefunc = matchmod.match(root, '', [], allpats)
+        ignorefunc = matchmod.match(root, "", [], allpats)
     except error.Abort:
         for f, patlist in pats:
             try:
-                matchmod.match(root, '', [], patlist)
+                matchmod.match(root, "", [], patlist)
             except error.Abort as inst:
                 if not ignoremod:
                     # in this case, patlist is ['include: FILE'], and
                     # inst[0] should already include FILE
                     raise
-                raise error.Abort('%s: %s' % (f, inst[0]))
+                raise error.Abort("%s: %s" % (f, inst[0]))
         if extrapatterns:
             try:
-                matchmod.match(root, '', [], extrapatterns)
+                matchmod.match(root, "", [], extrapatterns)
             except error.Abort as inst:
-                raise error.Abort('%s: %s' % ('extra patterns', inst[0]))
+                raise error.Abort("%s: %s" % ("extra patterns", inst[0]))
     return ignorefunc
 
+
 class gitdirstate(dirstate.dirstate):
-    @dirstate.rootcache('.hgignore')
+    @dirstate.rootcache(".hgignore")
     def _ignore(self):
-        files = [self._join('.hgignore')]
+        files = [self._join(".hgignore")]
         for name, path in self._ui.configitems("ui"):
-            if name == 'ignore' or name.startswith('ignore.'):
+            if name == "ignore" or name.startswith("ignore."):
                 files.append(util.expandpath(path))
         patterns = []
         # Only use .gitignore if there's no .hgignore
@@ -115,22 +113,20 @@ class gitdirstate(dirstate.dirstate):
                 for warning in warnings:
                     self._ui.warn("%s: %s\n" % (fn, warning))
                 patterns.extend(pats)
-        return gignore(self._root, files, self._ui.warn,
-                             extrapatterns=patterns)
+        return gignore(self._root, files, self._ui.warn, extrapatterns=patterns)
 
     def _finddotgitignores(self):
         """A copy of dirstate.walk. This is called from the new _ignore method,
         which is called by dirstate.walk, which would cause infinite recursion,
         except _finddotgitignores calls the superclass _ignore directly."""
-        match = matchmod.match(self._root, self.getcwd(),
-                               ['relglob:.gitignore'])
+        match = matchmod.match(self._root, self.getcwd(), ["relglob:.gitignore"])
         # TODO: need subrepos?
         subrepos = []
         unknown = True
         ignored = False
 
         def fwarn(f, msg):
-            self._ui.warn('%s: %s\n' % (self.pathto(f), msg))
+            self._ui.warn("%s: %s\n" % (self.pathto(f), msg))
             return False
 
         ignore = super(gitdirstate, self)._ignore
@@ -152,6 +148,7 @@ class gitdirstate(dirstate.dirstate):
             listdir = util.listdir
         except AttributeError:
             from mercurial import osutil
+
             listdir = osutil.listdir
         lstat = os.lstat
         dirkind = stat.S_IFDIR
@@ -162,7 +159,7 @@ class gitdirstate(dirstate.dirstate):
         exact = skipstep3 = False
         if matchfn == match.exact:  # match.exact
             exact = True
-            dirignore = util.always                  # skip step 2
+            dirignore = util.always  # skip step 2
         elif match.files() and not match.anypats():  # match.match, no patterns
             skipstep3 = True
 
@@ -187,10 +184,10 @@ class gitdirstate(dirstate.dirstate):
         while work:
             nd = work.pop()
             skip = None
-            if nd == '.':
-                nd = ''
+            if nd == ".":
+                nd = ""
             else:
-                skip = '.hg'
+                skip = ".hg"
             try:
                 entries = listdir(join(nd), stat=True, skip=skip)
             except OSError as inst:
@@ -222,7 +219,7 @@ class gitdirstate(dirstate.dirstate):
 
         for s in subrepos:
             del results[s]
-        del results['.hg']
+        del results[".hg"]
 
         # step 3: report unseen items in the dmap hash
         if not skipstep3 and not exact:

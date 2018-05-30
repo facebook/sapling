@@ -6,8 +6,10 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
+
 class manifestaccesslogger(object):
     """Class to log manifest access and confirm our assumptions"""
+
     def __init__(self, ui):
         self._ui = ui
 
@@ -23,8 +25,10 @@ class manifestaccesslogger(object):
                 pass
         return r
 
+
 class fixedcachelimit(object):
     """A fix cache limit expressed as a number of bytes"""
+
     def __init__(self, bytes):
         self._bytes = bytes
 

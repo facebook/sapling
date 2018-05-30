@@ -20,27 +20,31 @@ def make_cffi(cls):
         if not inspect.ismethod(fn) and not inspect.isfunction(fn):
             continue
 
-        if not fn.__name__.startswith('test_'):
+        if not fn.__name__.startswith("test_"):
             continue
 
-        name = '%s_cffi' % fn.__name__
+        name = "%s_cffi" % fn.__name__
 
         # Replace the "zstd" symbol with the CFFI module instance. Then copy
         # the function object and install it in a new attribute.
         if isinstance(fn, types.FunctionType):
             globs = dict(fn.__globals__)
-            globs['zstd'] = zstd_cffi
-            new_fn = types.FunctionType(fn.__code__, globs, name,
-                                        fn.__defaults__, fn.__closure__)
+            globs["zstd"] = zstd_cffi
+            new_fn = types.FunctionType(
+                fn.__code__, globs, name, fn.__defaults__, fn.__closure__
+            )
             new_method = new_fn
         else:
             globs = dict(fn.__func__.func_globals)
-            globs['zstd'] = zstd_cffi
-            new_fn = types.FunctionType(fn.__func__.func_code, globs, name,
-                                        fn.__func__.func_defaults,
-                                        fn.__func__.func_closure)
-            new_method = types.UnboundMethodType(new_fn, fn.im_self,
-                                                 fn.im_class)
+            globs["zstd"] = zstd_cffi
+            new_fn = types.FunctionType(
+                fn.__func__.func_code,
+                globs,
+                name,
+                fn.__func__.func_defaults,
+                fn.__func__.func_closure,
+            )
+            new_method = types.UnboundMethodType(new_fn, fn.im_self, fn.im_class)
 
         setattr(cls, name, new_method)
 
@@ -78,7 +82,7 @@ def random_input_data():
         dirs[:] = list(sorted(dirs))
         for f in sorted(files):
             try:
-                with open(os.path.join(root, f), 'rb') as fh:
+                with open(os.path.join(root, f), "rb") as fh:
                     data = fh.read()
                     if data:
                         _source_files.append(data)

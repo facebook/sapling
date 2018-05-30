@@ -119,7 +119,6 @@ class tarit(object):
     or compress with gzip or bzip2."""
 
     class GzipFileWithTime(gzip.GzipFile):
-
         def __init__(self, *args, **kw):
             timestamp = None
             if "timestamp" in kw:

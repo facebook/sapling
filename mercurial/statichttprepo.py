@@ -33,7 +33,6 @@ urlreq = util.urlreq
 
 
 class httprangereader(object):
-
     def __init__(self, url, opener):
         # we assume opener has HTTPRangeHandler
         self.url = url
@@ -96,7 +95,6 @@ def build_opener(ui, authinfo):
     urlopener.add_handler(byterange.HTTPRangeHandler())
 
     class statichttpvfs(vfsmod.abstractvfs):
-
         def __init__(self, base):
             self.base = base
 
@@ -116,7 +114,6 @@ def build_opener(ui, authinfo):
 
 
 class statichttppeer(localrepo.localpeer):
-
     def local(self):
         return None
 

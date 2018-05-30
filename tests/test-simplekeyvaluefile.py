@@ -7,7 +7,6 @@ from mercurial import error, scmutil
 
 
 class mockfile(object):
-
     def __init__(self, name, fs):
         self.name = name
         self.fs = fs
@@ -26,7 +25,6 @@ class mockfile(object):
 
 
 class mockvfs(object):
-
     def __init__(self):
         self.contents = {}
 
@@ -42,7 +40,6 @@ class mockvfs(object):
 
 
 class testsimplekeyvaluefile(unittest.TestCase):
-
     def setUp(self):
         self.vfs = mockvfs()
 

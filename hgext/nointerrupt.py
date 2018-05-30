@@ -35,7 +35,6 @@ from mercurial import cmdutil, commands, dispatch, extensions
 
 
 def sigintprintwarninghandlerfactory(oldsiginthandler, msg):
-
     def sigint(*args):
         sys.stderr.write(msg)
         signal.signal(signal.SIGINT, oldsiginthandler)

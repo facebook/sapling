@@ -11,15 +11,17 @@ import difflib
 import re
 import struct
 
+
 def splitnewlines(text):
-    '''like str.splitlines, but only split on newlines.'''
-    lines = [l + '\n' for l in text.split('\n')]
+    """like str.splitlines, but only split on newlines."""
+    lines = [l + "\n" for l in text.split("\n")]
     if lines:
-        if lines[-1] == '\n':
+        if lines[-1] == "\n":
             lines.pop()
         else:
             lines[-1] = lines[-1][:-1]
     return lines
+
 
 def _normalizeblocks(a, b, blocks):
     prev = None
@@ -38,17 +40,16 @@ def _normalizeblocks(a, b, blocks):
         a2end = a2 + l2
         b2end = b2 + l2
         if a1end == a2:
-            while (a1end + shift < a2end and
-                   a[a1end + shift] == b[b1end + shift]):
+            while a1end + shift < a2end and a[a1end + shift] == b[b1end + shift]:
                 shift += 1
         elif b1end == b2:
-            while (b1end + shift < b2end and
-                   a[a1end + shift] == b[b1end + shift]):
+            while b1end + shift < b2end and a[a1end + shift] == b[b1end + shift]:
                 shift += 1
         r.append((a1, b1, l1 + shift))
         prev = a2 + shift, b2 + shift, l2 - shift
     r.append(prev)
     return r
+
 
 def bdiff(a, b):
     a = bytes(a).splitlines(True)
@@ -76,6 +77,7 @@ def bdiff(a, b):
 
     return "".join(bin)
 
+
 def blocks(a, b):
     an = splitnewlines(a)
     bn = splitnewlines(b)
@@ -83,10 +85,11 @@ def blocks(a, b):
     d = _normalizeblocks(an, bn, d)
     return [(i, i + n, j, j + n) for (i, j, n) in d]
 
+
 def fixws(text, allws):
     if allws:
-        text = re.sub('[ \t\r]+', '', text)
+        text = re.sub("[ \t\r]+", "", text)
     else:
-        text = re.sub('[ \t\r]+', ' ', text)
-        text = text.replace(' \n', '\n')
+        text = re.sub("[ \t\r]+", " ", text)
+        text = text.replace(" \n", "\n")
     return text

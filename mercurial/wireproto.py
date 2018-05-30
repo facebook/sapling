@@ -87,7 +87,6 @@ class abstractserverproto(object):
 
 
 class remoteiterbatcher(peer.iterbatcher):
-
     def __init__(self, remote):
         super(remoteiterbatcher, self).__init__()
         self._remote = remote
@@ -247,6 +246,7 @@ class wirepeer(repository.legacypeer):
     See also httppeer.py and sshpeer.py for protocol-specific
     implementations of this interface.
     """
+
     # Begin of basewirepeer interface.
 
     def iterbatch(self):

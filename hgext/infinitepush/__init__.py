@@ -247,7 +247,6 @@ def _tryhoist(ui, remotebookmark):
 
 
 class bundlestore(object):
-
     def __init__(self, repo):
         self._repo = repo
         storetype = self._repo.ui.config("infinitepush", "storetype", "")
@@ -805,7 +804,6 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
 
 
 def _lookupwrap(orig):
-
     def _lookup(repo, proto, key):
         localkey = encoding.tolocal(key)
 

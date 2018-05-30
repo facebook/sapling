@@ -12,31 +12,25 @@ import cgi
 import errno
 import socket
 
-from .common import (
-    ErrorResponse,
-    HTTP_NOT_MODIFIED,
-    statusmessage,
-)
+from .common import ErrorResponse, HTTP_NOT_MODIFIED, statusmessage
 
-from .. import (
-    pycompat,
-    util,
-)
+from .. import pycompat, util
 
 shortcuts = {
-    'cl': [('cmd', ['changelog']), ('rev', None)],
-    'sl': [('cmd', ['shortlog']), ('rev', None)],
-    'cs': [('cmd', ['changeset']), ('node', None)],
-    'f': [('cmd', ['file']), ('filenode', None)],
-    'fl': [('cmd', ['filelog']), ('filenode', None)],
-    'fd': [('cmd', ['filediff']), ('node', None)],
-    'fa': [('cmd', ['annotate']), ('filenode', None)],
-    'mf': [('cmd', ['manifest']), ('manifest', None)],
-    'ca': [('cmd', ['archive']), ('node', None)],
-    'tags': [('cmd', ['tags'])],
-    'tip': [('cmd', ['changeset']), ('node', ['tip'])],
-    'static': [('cmd', ['static']), ('file', None)]
+    "cl": [("cmd", ["changelog"]), ("rev", None)],
+    "sl": [("cmd", ["shortlog"]), ("rev", None)],
+    "cs": [("cmd", ["changeset"]), ("node", None)],
+    "f": [("cmd", ["file"]), ("filenode", None)],
+    "fl": [("cmd", ["filelog"]), ("filenode", None)],
+    "fd": [("cmd", ["filediff"]), ("node", None)],
+    "fa": [("cmd", ["annotate"]), ("filenode", None)],
+    "mf": [("cmd", ["manifest"]), ("manifest", None)],
+    "ca": [("cmd", ["archive"]), ("node", None)],
+    "tags": [("cmd", ["tags"])],
+    "tip": [("cmd", ["changeset"]), ("node", ["tip"])],
+    "static": [("cmd", ["static"]), ("file", None)],
 }
+
 
 def normalize(form):
     # first expand the shortcuts
@@ -52,6 +46,7 @@ def normalize(form):
         form[k] = [i.strip() for i in v]
     return form
 
+
 class wsgirequest(object):
     """Higher-level API for a WSGI request.
 
@@ -59,20 +54,18 @@ class wsgirequest(object):
     instantiate instances of this class, which provides higher-level APIs
     for obtaining request parameters, writing HTTP output, etc.
     """
+
     def __init__(self, wsgienv, start_response):
-        version = wsgienv[r'wsgi.version']
+        version = wsgienv[r"wsgi.version"]
         if (version < (1, 0)) or (version >= (2, 0)):
-            raise RuntimeError("Unknown and unsupported WSGI version %d.%d"
-                               % version)
-        self.inp = wsgienv[r'wsgi.input']
-        self.err = wsgienv[r'wsgi.errors']
-        self.threaded = wsgienv[r'wsgi.multithread']
-        self.multiprocess = wsgienv[r'wsgi.multiprocess']
-        self.run_once = wsgienv[r'wsgi.run_once']
+            raise RuntimeError("Unknown and unsupported WSGI version %d.%d" % version)
+        self.inp = wsgienv[r"wsgi.input"]
+        self.err = wsgienv[r"wsgi.errors"]
+        self.threaded = wsgienv[r"wsgi.multithread"]
+        self.multiprocess = wsgienv[r"wsgi.multiprocess"]
+        self.run_once = wsgienv[r"wsgi.run_once"]
         self.env = wsgienv
-        self.form = normalize(cgi.parse(self.inp,
-                                        self.env,
-                                        keep_blank_values=1))
+        self.form = normalize(cgi.parse(self.inp, self.env, keep_blank_values=1))
         self._start_response = start_response
         self.server_write = None
         self.headers = []
@@ -84,8 +77,8 @@ class wsgirequest(object):
         return self.inp.read(count)
 
     def drain(self):
-        '''need to read all data from request, httplib is half-duplex'''
-        length = int(self.env.get('CONTENT_LENGTH') or 0)
+        """need to read all data from request, httplib is half-duplex"""
+        length = int(self.env.get("CONTENT_LENGTH") or 0)
         for s in util.filechunkiter(self.inp, limit=length):
             pass
 
@@ -93,18 +86,22 @@ class wsgirequest(object):
         if not isinstance(type, str):
             type = pycompat.sysstr(type)
         if self._start_response is not None:
-            self.headers.append((r'Content-Type', type))
+            self.headers.append((r"Content-Type", type))
             if filename:
-                filename = (filename.rpartition('/')[-1]
-                            .replace('\\', '\\\\').replace('"', '\\"'))
-                self.headers.append(('Content-Disposition',
-                                     'inline; filename="%s"' % filename))
+                filename = (
+                    filename.rpartition("/")[-1]
+                    .replace("\\", "\\\\")
+                    .replace('"', '\\"')
+                )
+                self.headers.append(
+                    ("Content-Disposition", 'inline; filename="%s"' % filename)
+                )
             if body is not None:
-                self.headers.append((r'Content-Length', str(len(body))))
+                self.headers.append((r"Content-Length", str(len(body))))
 
             for k, v in self.headers:
                 if not isinstance(v, str):
-                    raise TypeError('header value must be string: %r' % (v,))
+                    raise TypeError("header value must be string: %r" % (v,))
 
             if isinstance(status, ErrorResponse):
                 self.headers.extend(status.headers)
@@ -112,12 +109,14 @@ class wsgirequest(object):
                     # RFC 2616 Section 10.3.5: 304 Not Modified has cases where
                     # it MUST NOT include any headers other than these and no
                     # body
-                    self.headers = [(k, v) for (k, v) in self.headers if
-                                    k in ('Date', 'ETag', 'Expires',
-                                          'Cache-Control', 'Vary')]
+                    self.headers = [
+                        (k, v)
+                        for (k, v) in self.headers
+                        if k in ("Date", "ETag", "Expires", "Cache-Control", "Vary")
+                    ]
                 status = statusmessage(status.code, str(status))
             elif status == 200:
-                status = '200 Script output follows'
+                status = "200 Script output follows"
             elif isinstance(status, int):
                 status = statusmessage(status)
 
@@ -146,10 +145,13 @@ class wsgirequest(object):
     def close(self):
         return None
 
+
 def wsgiapplication(app_maker):
-    '''For compatibility with old CGI scripts. A plain hgweb() or hgwebdir()
-    can and should now be used as a WSGI application.'''
+    """For compatibility with old CGI scripts. A plain hgweb() or hgwebdir()
+    can and should now be used as a WSGI application."""
     application = app_maker()
+
     def run_wsgi(env, respond):
         return application(env, respond)
+
     return run_wsgi

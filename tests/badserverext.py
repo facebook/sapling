@@ -214,14 +214,12 @@ def extsetup(ui):
     # Change the base HTTP server class so various events can be performed.
     # See SocketServer.BaseServer for how the specially named methods work.
     class badserver(server.MercurialHTTPServer):
-
         def __init__(self, ui, *args, **kwargs):
             self._ui = ui
             super(badserver, self).__init__(ui, *args, **kwargs)
 
             # Need to inherit object so super() works.
             class badrequesthandler(self.RequestHandlerClass, object):
-
                 def send_header(self, name, value):
                     # Make headers deterministic to facilitate testing.
                     if name.lower() == "date":

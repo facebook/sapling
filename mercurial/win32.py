@@ -543,7 +543,6 @@ def setsignalhandler():
 
 
 def hidewindow():
-
     def callback(hwnd, pid):
         wpid = _DWORD()
         _user32.GetWindowThreadProcessId(hwnd, ctypes.byref(wpid))

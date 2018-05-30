@@ -114,7 +114,6 @@ class doublepipe(object):
 
 
 class sshpeer(wireproto.wirepeer):
-
     def __init__(self, ui, path, create=False):
         self._url = path
         self._ui = ui

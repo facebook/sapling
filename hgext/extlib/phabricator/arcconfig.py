@@ -8,22 +8,19 @@ import errno
 import json
 import os
 
-from mercurial import (
-    encoding,
-    error,
-    pycompat,
-    registrar,
-)
+from mercurial import encoding, error, pycompat, registrar
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+
 class ArcConfigError(Exception):
     pass
 
+
 def _loadfile(filename):
     try:
-        with open(filename, 'r') as f:
+        with open(filename, "r") as f:
             return json.loads(f.read())
     except IOError as ex:
         if ex.errno == errno.ENOENT:
@@ -31,45 +28,47 @@ def _loadfile(filename):
         raise
     except ValueError as ex:
         # if the json file is badly formatted
-        if 'Expecting property name' in str(ex):
+        if "Expecting property name" in str(ex):
             raise ArcConfigError(
-                'Configuration file %s '
-                'is not a proper JSON file.' % filename)
+                "Configuration file %s " "is not a proper JSON file." % filename
+            )
         raise
+
 
 def loadforpath(path):
     # location where `arc install-certificate` writes .arcrc
     if pycompat.iswindows:
-        envvar = 'APPDATA'
+        envvar = "APPDATA"
     else:
-        envvar = 'HOME'
+        envvar = "HOME"
     homedir = encoding.environ.get(envvar)
     if not homedir:
-        raise ArcConfigError('$%s environment variable not found' % envvar)
+        raise ArcConfigError("$%s environment variable not found" % envvar)
 
     # Use their own file as a basis
-    userconfig = _loadfile(os.path.join(homedir, '.arcrc')) or {}
+    userconfig = _loadfile(os.path.join(homedir, ".arcrc")) or {}
 
     # Walk up the path and augment with an .arcconfig if we find it,
     # terminating the search at that point.
     path = os.path.abspath(path)
     while len(path) > 1:
-        config = _loadfile(os.path.join(path, '.arcconfig'))
+        config = _loadfile(os.path.join(path, ".arcconfig"))
         if config is not None:
             userconfig.update(config)
             # Return the located path too, as we need this for figuring
             # out where we are relative to the fbsource root.
-            userconfig['_arcconfig_path'] = path
+            userconfig["_arcconfig_path"] = path
             return userconfig
         path = os.path.dirname(path)
 
-    raise ArcConfigError('no .arcconfig found')
+    raise ArcConfigError("no .arcconfig found")
 
-@command('debugarcconfig')
+
+@command("debugarcconfig")
 def debugarcconfig(ui, repo, *args, **opts):
     """ exists purely for testing and diagnostic purposes """
     try:
         config = loadforpath(repo.root)
-        ui.write(json.dumps(config, sort_keys=True), '\n')
+        ui.write(json.dumps(config, sort_keys=True), "\n")
     except ArcConfigError as ex:
         raise error.Abort(str(ex))

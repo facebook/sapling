@@ -36,54 +36,54 @@ from mercurial import (
     scmutil,
     util,
 )
+
 stringio = util.stringio
 
 from . import common
+
 mapfile = common.mapfile
 NoRepo = common.NoRepo
 
-sha1re = re.compile(r'\b[0-9a-f]{12,40}\b')
+sha1re = re.compile(r"\b[0-9a-f]{12,40}\b")
+
 
 class mercurial_sink(common.converter_sink):
     def __init__(self, ui, repotype, path):
         common.converter_sink.__init__(self, ui, repotype, path)
-        self.branchnames = ui.configbool('convert', 'hg.usebranchnames')
-        self.clonebranches = ui.configbool('convert', 'hg.clonebranches')
-        self.tagsbranch = ui.config('convert', 'hg.tagsbranch')
+        self.branchnames = ui.configbool("convert", "hg.usebranchnames")
+        self.clonebranches = ui.configbool("convert", "hg.clonebranches")
+        self.tagsbranch = ui.config("convert", "hg.tagsbranch")
         self.lastbranch = None
         if os.path.isdir(path) and len(os.listdir(path)) > 0:
             try:
                 self.repo = hg.repository(self.ui, path)
                 if not self.repo.local():
-                    raise NoRepo(_('%s is not a local Mercurial repository')
-                                 % path)
+                    raise NoRepo(_("%s is not a local Mercurial repository") % path)
             except error.RepoError as err:
                 ui.traceback()
                 raise NoRepo(err.args[0])
         else:
             try:
-                ui.status(_('initializing destination %s repository\n') % path)
+                ui.status(_("initializing destination %s repository\n") % path)
                 self.repo = hg.repository(self.ui, path, create=True)
                 if not self.repo.local():
-                    raise NoRepo(_('%s is not a local Mercurial repository')
-                                 % path)
+                    raise NoRepo(_("%s is not a local Mercurial repository") % path)
                 self.created.append(path)
             except error.RepoError:
                 ui.traceback()
-                raise NoRepo(_("could not create hg repository %s as sink")
-                             % path)
+                raise NoRepo(_("could not create hg repository %s as sink") % path)
         self.lock = None
         self.wlock = None
         self.filemapmode = False
         self.subrevmaps = {}
 
     def before(self):
-        self.ui.debug('run hg sink pre-conversion action\n')
+        self.ui.debug("run hg sink pre-conversion action\n")
         self.wlock = self.repo.wlock()
         self.lock = self.repo.lock()
 
     def after(self):
-        self.ui.debug('run hg sink post-conversion action\n')
+        self.ui.debug("run hg sink post-conversion action\n")
         if self.lock:
             self.lock.release()
         if self.wlock:
@@ -99,15 +99,15 @@ class mercurial_sink(common.converter_sink):
         if not self.clonebranches:
             return
 
-        setbranch = (branch != self.lastbranch)
+        setbranch = branch != self.lastbranch
         self.lastbranch = branch
         if not branch:
-            branch = 'default'
-        pbranches = [(b[0], b[1] and b[1] or 'default') for b in pbranches]
+            branch = "default"
+        pbranches = [(b[0], b[1] and b[1] or "default") for b in pbranches]
         if pbranches:
             pbranch = pbranches[0][1]
         else:
-            pbranch = 'default'
+            pbranch = "default"
 
         branchpath = os.path.join(self.path, branch)
         if setbranch:
@@ -132,15 +132,14 @@ class mercurial_sink(common.converter_sink):
             for pbranch, heads in sorted(missings.iteritems()):
                 pbranchpath = os.path.join(self.path, pbranch)
                 prepo = hg.peer(self.ui, {}, pbranchpath)
-                self.ui.note(_('pulling from %s into %s\n') % (pbranch, branch))
-                exchange.pull(self.repo, prepo,
-                              [prepo.lookup(h) for h in heads])
+                self.ui.note(_("pulling from %s into %s\n") % (pbranch, branch))
+                exchange.pull(self.repo, prepo, [prepo.lookup(h) for h in heads])
             self.before()
 
     def _rewritetags(self, source, revmap, data):
         fp = stringio()
         for line in data.splitlines():
-            s = line.split(' ', 1)
+            s = line.split(" ", 1)
             if len(s) != 2:
                 continue
             revid = revmap.get(source.lookuprev(s[0]))
@@ -149,13 +148,13 @@ class mercurial_sink(common.converter_sink):
                     revid = s[0]
                 else:
                     continue
-            fp.write('%s %s\n' % (revid, s[1]))
+            fp.write("%s %s\n" % (revid, s[1]))
         return fp.getvalue()
 
     def _rewritesubstate(self, source, data):
         fp = stringio()
         for line in data.splitlines():
-            s = line.split(' ', 1)
+            s = line.split(" ", 1)
             if len(s) != 2:
                 continue
 
@@ -164,8 +163,7 @@ class mercurial_sink(common.converter_sink):
             if revid != nodemod.nullhex:
                 revmap = self.subrevmaps.get(subpath)
                 if revmap is None:
-                    revmap = mapfile(self.ui,
-                                     self.repo.wjoin(subpath, '.hg/shamap'))
+                    revmap = mapfile(self.ui, self.repo.wjoin(subpath, ".hg/shamap"))
                     self.subrevmaps[subpath] = revmap
 
                     # It is reasonable that one or more of the subrepos don't
@@ -174,7 +172,7 @@ class mercurial_sink(common.converter_sink):
                     # once.
                     msg = _('no ".hgsubstate" updates will be made for "%s"\n')
                     if len(revmap) == 0:
-                        sub = self.repo.wvfs.reljoin(subpath, '.hg')
+                        sub = self.repo.wvfs.reljoin(subpath, ".hg")
 
                         if self.repo.wvfs.exists(sub):
                             self.ui.warn(msg % subpath)
@@ -182,12 +180,13 @@ class mercurial_sink(common.converter_sink):
                 newid = revmap.get(revid)
                 if not newid:
                     if len(revmap) > 0:
-                        self.ui.warn(_("%s is missing from %s/.hg/shamap\n") %
-                                     (revid, subpath))
+                        self.ui.warn(
+                            _("%s is missing from %s/.hg/shamap\n") % (revid, subpath)
+                        )
                 else:
                     revid = newid
 
-            fp.write('%s %s\n' % (revid, subpath))
+            fp.write("%s %s\n" % (revid, subpath))
 
         return fp.getvalue()
 
@@ -202,11 +201,14 @@ class mercurial_sink(common.converter_sink):
         anc = [p1ctx.ancestor(p2ctx)]
         # Calculate what files are coming from p2
         actions, diverge, rename = mergemod.calculateupdates(
-            self.repo, p1ctx, p2ctx, anc,
+            self.repo,
+            p1ctx,
+            p2ctx,
+            anc,
             True,  # branchmerge
             True,  # force
-            False, # acceptremote
-            False, # followcopies
+            False,  # acceptremote
+            False,  # followcopies
         )
 
         for file, (action, info, msg) in actions.iteritems():
@@ -217,25 +219,28 @@ class mercurial_sink(common.converter_sink):
 
             # If the file requires actual merging, abort. We don't have enough
             # context to resolve merges correctly.
-            if action in ['m', 'dm', 'cd', 'dc']:
-                raise error.Abort(_("unable to convert merge commit "
-                    "since target parents do not merge cleanly (file "
-                    "%s, parents %s and %s)") % (file, p1ctx,
-                                                 p2ctx))
-            elif action == 'k':
+            if action in ["m", "dm", "cd", "dc"]:
+                raise error.Abort(
+                    _(
+                        "unable to convert merge commit "
+                        "since target parents do not merge cleanly (file "
+                        "%s, parents %s and %s)"
+                    )
+                    % (file, p1ctx, p2ctx)
+                )
+            elif action == "k":
                 # 'keep' means nothing changed from p1
                 continue
             else:
                 # Any other change means we want to take the p2 version
                 yield file
 
-    def putcommit(self, files, copies, parents, commit, source, revmap, full,
-                  cleanp2):
+    def putcommit(self, files, copies, parents, commit, source, revmap, full, cleanp2):
         files = dict(files)
 
         def getfilectx(repo, memctx, f):
             if p2ctx and f in p2files and f not in copies:
-                self.ui.debug('reusing %s from p2\n' % f)
+                self.ui.debug("reusing %s from p2\n" % f)
                 try:
                     return p2ctx[f]
                 except error.ManifestLookupError:
@@ -249,12 +254,13 @@ class mercurial_sink(common.converter_sink):
             data, mode = source.getfile(f, v)
             if data is None:
                 return None
-            if f == '.hgtags':
+            if f == ".hgtags":
                 data = self._rewritetags(source, revmap, data)
-            if f == '.hgsubstate':
+            if f == ".hgsubstate":
                 data = self._rewritesubstate(source, data)
-            return context.memfilectx(self.repo, memctx, f, data, 'l' in mode,
-                                      'x' in mode, copies.get(f))
+            return context.memfilectx(
+                self.repo, memctx, f, data, "l" in mode, "x" in mode, copies.get(f)
+            )
 
         pl = []
         for p in parents:
@@ -280,39 +286,43 @@ class mercurial_sink(common.converter_sink):
                 oldrev = source.lookuprev(sha1)
                 newrev = revmap.get(oldrev)
                 if newrev is not None:
-                    text = text.replace(sha1, newrev[:len(sha1)])
+                    text = text.replace(sha1, newrev[: len(sha1)])
             except Exception:
                 # Don't crash if we find a bad sha in the message
                 continue
 
         extra = commit.extra.copy()
 
-        sourcename = self.repo.ui.config('convert', 'hg.sourcename')
+        sourcename = self.repo.ui.config("convert", "hg.sourcename")
         if sourcename:
-            extra['convert_source'] = sourcename
+            extra["convert_source"] = sourcename
 
-        for label in ('source', 'transplant_source', 'rebase_source',
-                      'intermediate-source'):
+        for label in (
+            "source",
+            "transplant_source",
+            "rebase_source",
+            "intermediate-source",
+        ):
             node = extra.get(label)
 
             if node is None:
                 continue
 
             # Only transplant stores its reference in binary
-            if label == 'transplant_source':
+            if label == "transplant_source":
                 node = nodemod.hex(node)
 
             newrev = revmap.get(node)
             if newrev is not None:
-                if label == 'transplant_source':
+                if label == "transplant_source":
                     newrev = nodemod.bin(newrev)
 
                 extra[label] = newrev
 
         if self.branchnames and commit.branch:
-            extra['branch'] = commit.branch
+            extra["branch"] = commit.branch
         if commit.rev and commit.saverev:
-            extra['convert_revision'] = commit.rev
+            extra["convert_revision"] = commit.rev
 
         while parents:
             p1 = p2
@@ -332,13 +342,22 @@ class mercurial_sink(common.converter_sink):
                     p2files.add(file)
                     fileset.add(file)
 
-            ctx = context.memctx(self.repo, (p1, p2), text, fileset,
-                                 getfilectx, commit.author, commit.date, extra)
+            ctx = context.memctx(
+                self.repo,
+                (p1, p2),
+                text,
+                fileset,
+                getfilectx,
+                commit.author,
+                commit.date,
+                extra,
+            )
 
             # We won't know if the conversion changes the node until after the
             # commit, so copy the source's phase for now.
-            self.repo.ui.setconfig('phases', 'new-commit',
-                                   phases.phasenames[commit.phase], 'convert')
+            self.repo.ui.setconfig(
+                "phases", "new-commit", phases.phasenames[commit.phase], "convert"
+            )
 
             with self.repo.transaction("convert") as tr:
                 node = nodemod.hex(self.repo.commitctx(ctx))
@@ -349,8 +368,7 @@ class mercurial_sink(common.converter_sink):
                 if commit.rev != node:
                     ctx = self.repo[node]
                     if ctx.phase() < phases.draft:
-                        phases.registernew(self.repo, tr, phases.draft,
-                                           [ctx.node()])
+                        phases.registernew(self.repo, tr, phases.draft, [ctx.node()])
 
             text = "(octopus merge fixup)\n"
             p2 = node
@@ -358,7 +376,7 @@ class mercurial_sink(common.converter_sink):
         if self.filemapmode and nparents == 1:
             man = self.repo.manifestlog._revlog
             mnode = self.repo.changelog.read(nodemod.bin(p2))[0]
-            closed = 'close' in commit.extra
+            closed = "close" in commit.extra
             if not closed and not man.cmp(m1node, man.revision(mnode)):
                 self.ui.status(_("filtering out empty revision\n"))
                 self.repo.rollback(force=True)
@@ -376,9 +394,10 @@ class mercurial_sink(common.converter_sink):
         oldlines = set()
         for branch, heads in self.repo.branchmap().iteritems():
             for h in heads:
-                if '.hgtags' in self.repo[h]:
+                if ".hgtags" in self.repo[h]:
                     oldlines.update(
-                        set(self.repo[h]['.hgtags'].data().splitlines(True)))
+                        set(self.repo[h][".hgtags"].data().splitlines(True))
+                    )
         oldlines = sorted(list(oldlines))
 
         newlines = sorted([("%s %s\n" % (tags[tag], tag)) for tag in tags])
@@ -389,12 +408,12 @@ class mercurial_sink(common.converter_sink):
         oldtags = set()
         newtags = set()
         for line in oldlines:
-            s = line.strip().split(' ', 1)
+            s = line.strip().split(" ", 1)
             if len(s) != 2:
                 continue
             oldtags.add(s[1])
         for line in newlines:
-            s = line.strip().split(' ', 1)
+            s = line.strip().split(" ", 1)
             if len(s) != 2:
                 continue
             if s[1] not in oldtags:
@@ -404,15 +423,23 @@ class mercurial_sink(common.converter_sink):
             return None, None
 
         data = "".join(newlines)
+
         def getfilectx(repo, memctx, f):
             return context.memfilectx(repo, memctx, f, data, False, False, None)
 
         self.ui.status(_("updating tags\n"))
         date = "%s 0" % int(time.mktime(time.gmtime()))
-        extra = {'branch': self.tagsbranch}
-        ctx = context.memctx(self.repo, (tagparent, None), "update tags",
-                             [".hgtags"], getfilectx, "convert-repo", date,
-                             extra)
+        extra = {"branch": self.tagsbranch}
+        ctx = context.memctx(
+            self.repo,
+            (tagparent, None),
+            "update tags",
+            [".hgtags"],
+            getfilectx,
+            "convert-repo",
+            date,
+            extra,
+        )
         node = self.repo.commitctx(ctx)
         return nodemod.hex(node), nodemod.hex(tagparent)
 
@@ -426,11 +453,13 @@ class mercurial_sink(common.converter_sink):
         try:
             wlock = self.repo.wlock()
             lock = self.repo.lock()
-            tr = self.repo.transaction('bookmark')
+            tr = self.repo.transaction("bookmark")
             self.ui.status(_("updating bookmarks\n"))
             destmarks = self.repo._bookmarks
-            changes = [(bookmark, nodemod.bin(updatedbookmark[bookmark]))
-                       for bookmark in updatedbookmark]
+            changes = [
+                (bookmark, nodemod.bin(updatedbookmark[bookmark]))
+                for bookmark in updatedbookmark
+            ]
             destmarks.applychanges(self.repo, tr, changes)
             tr.close()
         finally:
@@ -442,17 +471,23 @@ class mercurial_sink(common.converter_sink):
 
     def hascommitforsplicemap(self, rev):
         if rev not in self.repo and self.clonebranches:
-            raise error.Abort(_('revision %s not found in destination '
-                               'repository (lookups with clonebranches=true '
-                               'are not implemented)') % rev)
+            raise error.Abort(
+                _(
+                    "revision %s not found in destination "
+                    "repository (lookups with clonebranches=true "
+                    "are not implemented)"
+                )
+                % rev
+            )
         return rev in self.repo
+
 
 class mercurial_source(common.converter_source):
     def __init__(self, ui, repotype, path, revs=None):
         common.converter_source.__init__(self, ui, repotype, path, revs)
-        self.ignoreerrors = ui.configbool('convert', 'hg.ignoreerrors')
+        self.ignoreerrors = ui.configbool("convert", "hg.ignoreerrors")
         self.ignored = set()
-        self.saverev = ui.configbool('convert', 'hg.saverev')
+        self.saverev = ui.configbool("convert", "hg.saverev")
         try:
             self.repo = hg.repository(self.ui, path)
             # try to provoke an exception if this isn't really a hg
@@ -467,15 +502,14 @@ class mercurial_source(common.converter_source):
         self._changescache = None, None
         self.convertfp = None
         # Restrict converted revisions to startrev descendants
-        startnode = ui.config('convert', 'hg.startrev')
-        hgrevs = ui.config('convert', 'hg.revs')
+        startnode = ui.config("convert", "hg.startrev")
+        hgrevs = ui.config("convert", "hg.revs")
         if hgrevs is None:
             if startnode is not None:
                 try:
                     startnode = self.repo.lookup(startnode)
                 except error.RepoError:
-                    raise error.Abort(_('%s is not a valid start revision')
-                                     % startnode)
+                    raise error.Abort(_("%s is not a valid start revision") % startnode)
                 startrev = self.repo.changelog.rev(startnode)
                 children = {startnode: 1}
                 for r in self.repo.changelog.descendants([startrev]):
@@ -489,8 +523,9 @@ class mercurial_source(common.converter_source):
                 self._heads = self.repo.heads()
         else:
             if revs or startnode is not None:
-                raise error.Abort(_('hg.revs cannot be combined with '
-                                   'hg.startrev or --rev'))
+                raise error.Abort(
+                    _("hg.revs cannot be combined with " "hg.startrev or --rev")
+                )
             nodes = set()
             parents = set()
             for r in scmutil.revrange(self.repo, [hgrevs]):
@@ -581,7 +616,7 @@ class mercurial_source(common.converter_source):
                 if not self.ignoreerrors:
                     raise
                 self.ignored.add(name)
-                self.ui.warn(_('ignoring: %s\n') % e)
+                self.ui.warn(_("ignoring: %s\n") % e)
         return copies
 
     def getcommit(self, rev):
@@ -591,25 +626,26 @@ class mercurial_source(common.converter_source):
         optparents = [p.hex() for p in ctx.parents() if p and p not in _parents]
         crev = rev
 
-        return common.commit(author=ctx.user(),
-                             date=util.datestr(ctx.date(),
-                                               '%Y-%m-%d %H:%M:%S %1%2'),
-                             desc=ctx.description(),
-                             rev=crev,
-                             parents=parents,
-                             optparents=optparents,
-                             branch=ctx.branch(),
-                             extra=ctx.extra(),
-                             sortkey=ctx.rev(),
-                             saverev=self.saverev,
-                             phase=ctx.phase())
+        return common.commit(
+            author=ctx.user(),
+            date=util.datestr(ctx.date(), "%Y-%m-%d %H:%M:%S %1%2"),
+            desc=ctx.description(),
+            rev=crev,
+            parents=parents,
+            optparents=optparents,
+            branch=ctx.branch(),
+            extra=ctx.extra(),
+            sortkey=ctx.rev(),
+            saverev=self.saverev,
+            phase=ctx.phase(),
+        )
 
     def gettags(self):
         # This will get written to .hgtags, filter non global tags out.
-        tags = [t for t in self.repo.tagslist()
-                if self.repo.tagtype(t[0]) == 'global']
-        return dict([(name, nodemod.hex(node)) for name, node in tags
-                     if self.keep(node)])
+        tags = [t for t in self.repo.tagslist() if self.repo.tagtype(t[0]) == "global"]
+        return dict(
+            [(name, nodemod.hex(node)) for name, node in tags if self.keep(node)]
+        )
 
     def getchangedfiles(self, rev, i):
         ctx = self._changectx(rev)
@@ -629,15 +665,15 @@ class mercurial_source(common.converter_source):
 
     def converted(self, rev, destrev):
         if self.convertfp is None:
-            self.convertfp = open(self.repo.vfs.join('shamap'), 'a')
-        self.convertfp.write('%s %s\n' % (destrev, rev))
+            self.convertfp = open(self.repo.vfs.join("shamap"), "a")
+        self.convertfp.write("%s %s\n" % (destrev, rev))
         self.convertfp.flush()
 
     def before(self):
-        self.ui.debug('run hg source pre-conversion action\n')
+        self.ui.debug("run hg source pre-conversion action\n")
 
     def after(self):
-        self.ui.debug('run hg source post-conversion action\n')
+        self.ui.debug("run hg source post-conversion action\n")
 
     def hasnativeorder(self):
         return True
@@ -654,6 +690,6 @@ class mercurial_source(common.converter_source):
     def getbookmarks(self):
         return bookmarks.listbookmarks(self.repo)
 
-    def checkrevformat(self, revstr, mapname='splicemap'):
+    def checkrevformat(self, revstr, mapname="splicemap"):
         """ Mercurial, revision string is a 40 byte hex """
         self.checkhexformat(revstr, mapname)

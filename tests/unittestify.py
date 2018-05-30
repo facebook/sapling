@@ -33,7 +33,6 @@ def chdir(path):
 
 
 def gettestmethod(name, port):
-
     def runsingletest(self):
         with chdir(self._runtests_dir):
             env = os.environ.copy()
@@ -73,7 +72,6 @@ def gettestmethod(name, port):
 
 
 class hgtests(unittest.TestCase):
-
     @classmethod
     def collecttests(cls, path):
         """scan tests in path and add them as test methods"""

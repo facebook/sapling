@@ -184,7 +184,6 @@ def ctxpvec(ctx):
 
 
 class pvec(object):
-
     def __init__(self, hashorctx):
         if isinstance(hashorctx, str):
             self._bs = hashorctx

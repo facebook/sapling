@@ -42,7 +42,6 @@ def _censoredtext(text):
 
 
 class filelog(revlog.revlog):
-
     def __init__(self, opener, path):
         super(filelog, self).__init__(opener, "/".join(("data", path + ".i")))
 

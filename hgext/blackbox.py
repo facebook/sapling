@@ -72,7 +72,6 @@ except NameError:
 
 
 def _openlogfile(ui, vfs):
-
     def rotate(oldpath, newpath):
         try:
             vfs.unlink(newpath)
@@ -107,9 +106,7 @@ def _openlogfile(ui, vfs):
 
 
 def wrapui(ui):
-
     class blackboxui(ui.__class__):
-
         @property
         def _bbvfs(self):
             vfs = None

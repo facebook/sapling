@@ -154,7 +154,6 @@ def clock():
 
 
 class ProfileState(object):
-
     def __init__(self, frequency=None):
         self.reset(frequency)
 
@@ -407,7 +406,6 @@ def profile():
 
 
 class SiteStats(object):
-
     def __init__(self, site):
         self.site = site
         self.selfcount = 0
@@ -664,9 +662,7 @@ def display_about_method(data, fp, function=None, **kwargs):
 
 
 def display_hotpath(data, fp, limit=0.05, **kwargs):
-
     class HotNode(object):
-
         def __init__(self, site):
             self.site = site
             self.count = 0

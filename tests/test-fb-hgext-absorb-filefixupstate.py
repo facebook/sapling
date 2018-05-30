@@ -6,7 +6,6 @@ from hgext import absorb
 
 
 class simplefctx(object):
-
     def __init__(self, content):
         self.content = content
 

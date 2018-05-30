@@ -87,6 +87,7 @@ class mergestate(object):
     The resolve command transitions between 'u' and 'r' for conflicts and
     'pu' and 'pr' for path conflicts.
     """
+
     statepathv1 = "merge/state"
     statepathv2 = "merge/state2"
 

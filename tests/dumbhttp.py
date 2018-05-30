@@ -30,14 +30,12 @@ else:
 
 
 class _httprequesthandler(httpserver.simplehttprequesthandler):
-
     def log_message(self, format, *args):
         httpserver.simplehttprequesthandler.log_message(self, format, *args)
         sys.stderr.flush()
 
 
 class simplehttpservice(object):
-
     def __init__(self, host, port):
         self.address = (host, port)
 

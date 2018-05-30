@@ -669,6 +669,7 @@ class MOFile(_BaseFile):
     This class inherits the :class:`~polib._BaseFile` class and, by
     extension, the python ``list`` type.
     """
+
     BIG_ENDIAN = 0xde120495
     LITTLE_ENDIAN = 0x950412de
 
@@ -1079,6 +1080,7 @@ class MOEntry(_BaseEntry):
     """
     Represents a mo file entry.
     """
+
     pass
 
 

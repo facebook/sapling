@@ -3,7 +3,6 @@ from mercurial import commands, hg
 
 
 class TestHooks(test_hgsubversion_util.TestBase):
-
     def setUp(self):
         super(TestHooks, self).setUp()
 

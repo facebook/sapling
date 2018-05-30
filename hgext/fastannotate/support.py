@@ -7,18 +7,10 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
-    context as hgcontext,
-    extensions,
-    hgweb,
-    patch,
-    util,
-)
+from mercurial import context as hgcontext, extensions, hgweb, patch, util
 
-from . import (
-    context,
-    revmap,
-)
+from . import context, revmap
+
 
 class _lazyfctx(object):
     """delegates to fctx but do not construct fctx when unnecessary"""
@@ -41,13 +33,14 @@ class _lazyfctx(object):
     def __getattr__(self, name):
         return getattr(self._fctx, name)
 
+
 def _convertoutputs(repo, annotated, contents):
     """convert fastannotate outputs to vanilla annotate format"""
     # fastannotate returns: [(nodeid, linenum, path)], [linecontent]
     # convert to what fctx.annotate returns: [((fctx, linenum), linecontent)]
     results = []
     fctxmap = {}
-    annotateline = getattr(hgcontext, 'annotateline', None)
+    annotateline = getattr(hgcontext, "annotateline", None)
     for i, (hsh, linenum, path) in enumerate(annotated):
         if (hsh, path) not in fctxmap:
             fctxmap[(hsh, path)] = _lazyfctx(repo, hsh, path)
@@ -62,9 +55,11 @@ def _convertoutputs(repo, annotated, contents):
             results.append((annotateline(fctx=fctx, lineno=lineno), line))
     return results
 
+
 def _getmaster(fctx):
     """(fctx) -> str"""
-    return fctx._repo.ui.config('fastannotate', 'mainbranch') or 'default'
+    return fctx._repo.ui.config("fastannotate", "mainbranch") or "default"
+
 
 def _doannotate(fctx, follow=True, diffopts=None):
     """like the vanilla fctx.annotate, but do it via fastannotate, and make
@@ -76,60 +71,84 @@ def _doannotate(fctx, follow=True, diffopts=None):
 
     with context.fctxannotatecontext(fctx, follow, diffopts) as ac:
         try:
-            annotated, contents = ac.annotate(fctx.rev(), master=master,
-                                              showpath=True, showlines=True)
+            annotated, contents = ac.annotate(
+                fctx.rev(), master=master, showpath=True, showlines=True
+            )
         except Exception:
-            ac.rebuild() # try rebuild once
-            fctx._repo.ui.debug('fastannotate: %s: rebuilding broken cache\n'
-                                % fctx._path)
+            ac.rebuild()  # try rebuild once
+            fctx._repo.ui.debug(
+                "fastannotate: %s: rebuilding broken cache\n" % fctx._path
+            )
             try:
-                annotated, contents = ac.annotate(fctx.rev(), master=master,
-                                                  showpath=True, showlines=True)
+                annotated, contents = ac.annotate(
+                    fctx.rev(), master=master, showpath=True, showlines=True
+                )
             except Exception:
                 raise
 
     assert annotated and contents
     return _convertoutputs(fctx._repo, annotated, contents)
 
+
 def _hgwebannotate(orig, fctx, ui):
-    diffopts = patch.difffeatureopts(ui, untrusted=True,
-                                     section='annotate', whitespace=True)
+    diffopts = patch.difffeatureopts(
+        ui, untrusted=True, section="annotate", whitespace=True
+    )
     return _doannotate(fctx, diffopts=diffopts)
 
-def _fctxannotate(orig, self, follow=False, linenumber=False, skiprevs=None,
-                  diffopts=None):
+
+def _fctxannotate(
+    orig, self, follow=False, linenumber=False, skiprevs=None, diffopts=None
+):
     if skiprevs:
         # skiprevs is not supported yet
-        return orig(self, follow, linenumber, skiprevs=skiprevs,
-                    diffopts=diffopts)
+        return orig(self, follow, linenumber, skiprevs=skiprevs, diffopts=diffopts)
     try:
         return _doannotate(self, follow, diffopts)
     except Exception as ex:
-        self._repo.ui.debug('fastannotate: falling back to the vanilla '
-                            'annotate: %r\n' % ex)
-        return orig(self, follow, linenumber, skiprevs=skiprevs,
-                    diffopts=diffopts)
+        self._repo.ui.debug(
+            "fastannotate: falling back to the vanilla " "annotate: %r\n" % ex
+        )
+        return orig(self, follow, linenumber, skiprevs=skiprevs, diffopts=diffopts)
 
-def _remotefctxannotate(orig, self, follow=False, linenumber=None,
-                        skiprevs=None, diffopts=None, prefetchskip=None):
+
+def _remotefctxannotate(
+    orig,
+    self,
+    follow=False,
+    linenumber=None,
+    skiprevs=None,
+    diffopts=None,
+    prefetchskip=None,
+):
     # skipset: a set-like used to test if a fctx needs to be downloaded
     skipset = None
     with context.fctxannotatecontext(self, follow, diffopts) as ac:
         skipset = revmap.revmap(ac.revmappath)
-    return orig(self, follow, linenumber, skiprevs=skiprevs, diffopts=diffopts,
-                prefetchskip=skipset)
+    return orig(
+        self,
+        follow,
+        linenumber,
+        skiprevs=skiprevs,
+        diffopts=diffopts,
+        prefetchskip=skipset,
+    )
+
 
 def replacehgwebannotate():
-    extensions.wrapfunction(hgweb.webutil, 'annotate', _hgwebannotate)
+    extensions.wrapfunction(hgweb.webutil, "annotate", _hgwebannotate)
+
 
 def replacefctxannotate():
-    extensions.wrapfunction(hgcontext.basefilectx, 'annotate', _fctxannotate)
+    extensions.wrapfunction(hgcontext.basefilectx, "annotate", _fctxannotate)
+
 
 def replaceremotefctxannotate():
     try:
-        r = extensions.find('remotefilelog')
+        r = extensions.find("remotefilelog")
     except KeyError:
         return
     else:
-        extensions.wrapfunction(r.remotefilectx.remotefilectx, 'annotate',
-                                _remotefctxannotate)
+        extensions.wrapfunction(
+            r.remotefilectx.remotefilectx, "annotate", _remotefctxannotate
+        )

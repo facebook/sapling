@@ -259,7 +259,6 @@ class FileRangeHandler(urlreq.filehandler):
 
 
 class FTPRangeHandler(urlreq.ftphandler):
-
     def ftp_open(self, req):
         host = urllibcompat.gethost(req)
         if not host:

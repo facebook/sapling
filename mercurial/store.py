@@ -426,7 +426,6 @@ class basicstore(object):
 
 
 class encodedstore(basicstore):
-
     def __init__(self, path, vfstype):
         vfs = vfstype(path + "/store")
         self.path = vfs.base
@@ -514,7 +513,6 @@ class fncache(object):
 
 
 class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs):
-
     def __init__(self, vfs, fnc, encode):
         vfsmod.proxyvfs.__init__(self, vfs)
         self.fncache = fnc
@@ -535,7 +533,6 @@ class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs):
 
 
 class fncachestore(basicstore):
-
     def __init__(self, path, vfstype, dotencode):
         if dotencode:
             encode = _pathencode

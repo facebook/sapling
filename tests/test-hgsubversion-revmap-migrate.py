@@ -3,7 +3,6 @@ from hgext.hgsubversion import maps, svnmeta
 
 
 class TestRevMapMigrate(test_hgsubversion_util.TestBase):
-
     def tearDown(self):
         # revert changes to defaultrevmapclass
         svnmeta.SVNMeta._defaultrevmapclass = maps.RevMap

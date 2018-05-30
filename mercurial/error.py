@@ -47,7 +47,6 @@ class FilteredIndexError(IndexError):
 
 
 class LookupError(RevlogError, KeyError):
-
     def __init__(self, name, index, message):
         self.name = name
         self.index = index
@@ -77,16 +76,19 @@ class ManifestLookupError(LookupError):
 
 class CommandError(Exception):
     """Exception raised on errors in parsing the command line."""
+
     __bytes__ = _tobytes
 
 
 class InterventionRequired(Hint, Exception):
     """Exception raised when a command requires human intervention."""
+
     __bytes__ = _tobytes
 
 
 class Abort(Hint, Exception):
     """Raised if a command needs to print an error and exit."""
+
     __bytes__ = _tobytes
 
 
@@ -139,11 +141,13 @@ class ResponseExpected(Abort):
 
 class OutOfBandError(Hint, Exception):
     """Exception raised when a remote repo reports failure"""
+
     __bytes__ = _tobytes
 
 
 class ParseError(Hint, Exception):
     """Raised when parsing config files and {rev,file}sets (msg[, pos])"""
+
     __bytes__ = _tobytes
 
 
@@ -196,7 +200,6 @@ class StdioError(IOError):
 
 
 class UnsupportedMergeRecords(Abort):
-
     def __init__(self, recordtypes):
         from .i18n import _
 
@@ -222,7 +225,6 @@ class UnknownVersion(Abort):
 
 
 class LockError(IOError):
-
     def __init__(self, errno, strerror, filename, desc):
         IOError.__init__(self, errno, strerror, filename)
         self.desc = desc
@@ -235,7 +237,6 @@ class MalformedLock(Abort):
 
 
 class LockHeld(LockError):
-
     def __init__(self, errno, filename, desc, locker):
         LockError.__init__(self, errno, "Lock held", filename, desc)
         self.locker = locker
@@ -252,22 +253,26 @@ class LockInheritanceContractViolation(RuntimeError):
 
 class ResponseError(Exception):
     """Raised to print an error with part of output and exit."""
+
     __bytes__ = _tobytes
 
 
 class UnknownCommand(Exception):
     """Exception raised if command is not in the command table."""
+
     __bytes__ = _tobytes
 
 
 class AmbiguousCommand(Exception):
     """Exception raised if command shortcut matches more than one command."""
+
     __bytes__ = _tobytes
 
 
 class UnknownSubcommand(Exception):
     """Exception raised if a subcommand is not in the subcommand table of a
     command that requires subcommands."""
+
     __bytes__ = _tobytes
 
 
@@ -282,11 +287,13 @@ class SignatureError(Exception):
 
 class PushRaced(RuntimeError):
     """An exception raised during unbundling that indicate a push race"""
+
     __bytes__ = _tobytes
 
 
 class ProgrammingError(Hint, RuntimeError):
     """Raised if a mercurial (core or extension) developer made a mistake"""
+
     __bytes__ = _tobytes
 
 
@@ -296,17 +303,18 @@ class ForeignImportError(ProgrammingError):
 
 class WdirUnsupported(Exception):
     """An exception which is raised when 'wdir()' is not supported"""
+
     __bytes__ = _tobytes
 
 
 # bundle2 related errors
 class BundleValueError(ValueError):
     """error raised when bundle2 cannot be processed"""
+
     __bytes__ = _tobytes
 
 
 class BundleUnknownFeatureError(BundleValueError):
-
     def __init__(self, parttype=None, params=(), values=()):
         self.parttype = parttype
         self.params = params
@@ -332,6 +340,7 @@ class BundleUnknownFeatureError(BundleValueError):
 
 class ReadOnlyPartError(RuntimeError):
     """error raised when code tries to alter a part being generated"""
+
     __bytes__ = _tobytes
 
 
@@ -376,16 +385,19 @@ class InvalidBundleSpecification(Exception):
 
     This is used for syntax errors as opposed to support errors.
     """
+
     __bytes__ = _tobytes
 
 
 class UnsupportedBundleSpecification(Exception):
     """error raised when a bundle specification is not supported."""
+
     __bytes__ = _tobytes
 
 
 class CorruptedState(Exception):
     """error raised when a command is not able to read its state from file"""
+
     __bytes__ = _tobytes
 
 
@@ -395,4 +407,5 @@ class PeerTransportError(Abort):
 
 class InMemoryMergeConflictsError(Exception):
     """Exception raised when merge conflicts arose during an in-memory merge."""
+
     __bytes__ = _tobytes

@@ -47,7 +47,6 @@ _entrypoint = None  # record who calls "run"
 
 
 class request(object):
-
     def __init__(
         self,
         args,
@@ -452,7 +451,6 @@ def dispatch(req):
 
 
 def _runcatch(req):
-
     def catchterm(*args):
         raise error.SignalInterrupt
 
@@ -705,7 +703,6 @@ def aliasinterpolate(name, args, cmd):
 
 
 class cmdalias(object):
-
     def __init__(self, name, definition, cmdtable, source):
         self.name = self.cmd = name
         self.cmdname = ""

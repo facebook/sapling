@@ -16,7 +16,6 @@ from mercurial.node import nullid
 
 
 class uniondatapackstoretests(unittest.TestCase):
-
     def setUp(self):
         random.seed(0)
         self.tempdirs = []
@@ -178,7 +177,6 @@ class uniondatapackstoretests(unittest.TestCase):
 
 
 class uniondatastorepythontests(uniondatapackstoretests):
-
     def createPackStore(self, packdir, revisions=None):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]

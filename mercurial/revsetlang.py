@@ -518,6 +518,7 @@ def _parsewith(spec, lookup=None, syminitletters=None):
 
 class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of revset aliases"""
+
     _section = _("revset alias")
 
     @staticmethod

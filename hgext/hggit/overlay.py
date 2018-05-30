@@ -4,20 +4,15 @@
 #
 # incomplete, implemented on demand
 
-from mercurial import (
-    ancestor,
-    changelog,
-    manifest,
-    match as matchmod,
-    context,
-    util,
-)
+from mercurial import ancestor, changelog, manifest, match as matchmod, context, util
 from mercurial.node import bin, hex, nullid
+
 
 def _maybehex(n):
     if len(n) == 20:
         return hex(n)
     return n
+
 
 class overlaymanifest(object):
     def __init__(self, repo, sha):
@@ -28,8 +23,7 @@ class overlaymanifest(object):
 
     def withflags(self):
         self.load()
-        return set([path for path, flag in self._flags.iteritems()
-                    if flag != ''])
+        return set([path for path, flag in self._flags.iteritems() if flag != ""])
 
     def copy(self):
         return overlaymanifest(self.repo, self.tree.id)
@@ -50,27 +44,27 @@ class overlaymanifest(object):
 
         def hgflag(gitflag):
             if gitflag & 0o100:
-                return 'x'
+                return "x"
             elif gitflag & 0o20000:
-                return 'l'
+                return "l"
             else:
-                return ''
+                return ""
 
         def addtree(tree, dirname):
             for entry in tree.iteritems():
                 if entry.mode & 0o40000:
                     # expand directory
                     subtree = self.repo.handler.git.get_object(entry.sha)
-                    addtree(subtree, dirname + entry.path + '/')
+                    addtree(subtree, dirname + entry.path + "/")
                 else:
                     path = dirname + entry.path
                     self._map[path] = bin(entry.sha)
                     self._flags[path] = hgflag(entry.mode)
 
-        addtree(self.tree, '')
+        addtree(self.tree, "")
 
     def matches(self, match):
-        '''generate a new manifest filtered by the match argument'''
+        """generate a new manifest filtered by the match argument"""
         if match.always():
             return self.copy()
 
@@ -121,15 +115,15 @@ class overlaymanifest(object):
             m2flagget = m2._flags.get
 
         if match is None:
-            match = matchmod.always('', '')
+            match = matchmod.always("", "")
         for fn, n1 in self.iteritems():
             if not match(fn):
                 continue
-            fl1 = self._flags.get(fn, '')
+            fl1 = self._flags.get(fn, "")
             n2 = m2.get(fn, None)
-            fl2 = m2flagget(fn, '')
+            fl2 = m2flagget(fn, "")
             if n2 is None:
-                fl2 = ''
+                fl2 = ""
             if n1 != n2 or fl1 != fl2:
                 diff[fn] = ((n1, fl1), (n2, fl2))
             elif clean:
@@ -139,29 +133,28 @@ class overlaymanifest(object):
             if fn not in self:
                 if not match(fn):
                     continue
-                fl2 = m2flagget(fn, '')
-                diff[fn] = ((None, ''), (n2, fl2))
+                fl2 = m2flagget(fn, "")
+                diff[fn] = ((None, ""), (n2, fl2))
 
         return diff
 
     def __delitem__(self, path):
         del self._map[path]
 
+
 def wrapmanifestdictdiff(orig, self, m2, match=None, clean=False):
-    '''avoid calling into lazymanifest code if m2 is an overlaymanifest'''
+    """avoid calling into lazymanifest code if m2 is an overlaymanifest"""
     # Older mercurial clients used diff(m2, clean=False). If a caller failed
     # to specify clean as a keyword arg, it might get passed as match here.
     if isinstance(match, bool):
         clean = match
         match = None
 
-    kwargs = {
-        'clean' : clean
-    }
+    kwargs = {"clean": clean}
     # Older versions of mercurial don't support the match arg, so only add it if
     # it exists.
     if match is not None:
-        kwargs['match'] = match
+        kwargs["match"] = match
     if isinstance(m2, overlaymanifest):
         diff = m2.diff(self, **kwargs)
         # since we calculated the diff with m2 vs m1, flip it around
@@ -171,6 +164,7 @@ def wrapmanifestdictdiff(orig, self, m2, match=None, clean=False):
         return diff
     else:
         return orig(self, m2, **kwargs)
+
 
 class overlayfilectx(object):
     def __init__(self, repo, path, fileid=None):
@@ -204,6 +198,7 @@ class overlayfilectx(object):
     def isbinary(self):
         return util.binary(self.data())
 
+
 class overlaychangectx(context.changectx):
     def __init__(self, repo, sha):
         # Can't store this in self._repo because the base class uses that field
@@ -211,7 +206,7 @@ class overlaychangectx(context.changectx):
         if not isinstance(sha, basestring):
             sha = sha.hex()
         self.commit = repo.handler.git.get_object(_maybehex(sha))
-        self._overlay = getattr(repo, 'gitoverlay', repo)
+        self._overlay = getattr(repo, "gitoverlay", repo)
         self._rev = self._overlay.rev(bin(self.commit.id))
         self._node = bin(self.commit.id)
 
@@ -228,7 +223,7 @@ class overlaychangectx(context.changectx):
         return self.commit.author_time, self.commit.author_timezone
 
     def branch(self):
-        return 'default'
+        return "default"
 
     def user(self):
         return self.commit.author
@@ -246,7 +241,7 @@ class overlaychangectx(context.changectx):
         cl = self._hgrepo.changelog
         parents = cl.parents(cl.node(self._rev))
         if not parents:
-            return [self._hgrepo['null']]
+            return [self._hgrepo["null"]]
         if parents[1] == nullid:
             parents = parents[:-1]
         return [self._hgrepo[sha] for sha in parents]
@@ -280,13 +275,21 @@ class overlaychangectx(context.changectx):
     def phase(self):
         try:
             from mercurial import phases
+
             return phases.draft
         except (AttributeError, ImportError):
             return 1
 
     def totuple(self):
-        return (self.commit.tree, self.user(), self.date(), self.files(),
-                self.description(), self.extra())
+        return (
+            self.commit.tree,
+            self.user(),
+            self.date(),
+            self.files(),
+            self.description(),
+            self.extra(),
+        )
+
 
 class overlayrevlog(object):
     def __init__(self, repo, base):
@@ -346,6 +349,7 @@ class overlayrevlog(object):
     def __len__(self):
         return len(self.repo.handler.repo) + len(self.repo.revmap)
 
+
 class overlayoldmanifestlog(overlayrevlog):
     def read(self, sha):
         if sha == nullid:
@@ -355,8 +359,10 @@ class overlayoldmanifestlog(overlayrevlog):
     def __getitem__(self, sha):
         return overlaymanifestctx(self.repo, sha)
 
+
 class overlaymanifestrevlog(overlayrevlog):
     pass
+
 
 class overlaymanifestctx(object):
     def __init__(self, repo, node):
@@ -366,7 +372,9 @@ class overlaymanifestctx(object):
     def read(self):
         return overlaymanifest(self._repo, self._node)
 
+
 try:
+
     class overlaymanifestlog(manifest.manifestlog):
         def __init__(self, repo):
             self._repo = repo
@@ -374,7 +382,7 @@ try:
         # Needed for 4.0, since __getitem__ did not redirect to get() in that
         # release.
         def __getitem__(self, node):
-            return self.get('', node)
+            return self.get("", node)
 
         def get(self, dir, node):
             if dir:
@@ -382,9 +390,12 @@ try:
             if node == nullid:
                 return manifest.manifestctx()
             return overlaymanifestctx(self._repo, node)
+
+
 except AttributeError:
     # manifestlog did not exist prior to 4.0
     pass
+
 
 class overlaychangelog(overlayrevlog):
     def read(self, sha):
@@ -408,12 +419,13 @@ class overlaychangelog(overlayrevlog):
             extra=values[5],
         )
 
+
 class overlayrepo(object):
     def __init__(self, handler, commits, refs):
         self.handler = handler
 
         self.changelog = overlaychangelog(self, handler.repo.changelog)
-        if util.safehasattr(handler.repo, 'manifest'):
+        if util.safehasattr(handler.repo, "manifest"):
             self.manifest = overlayoldmanifestlog(self, handler.repo.manifest)
             # new as of mercurial 3.9+
             self.manifestlog = self.manifest
@@ -437,13 +449,13 @@ class overlayrepo(object):
         try:
             # Mercurial >= 3.3
             from mercurial import namespaces
+
             self.names = namespaces.namespaces()
         except (AttributeError, ImportError):
             pass
 
     def _constructmanifest(self):
-        return overlaymanifestrevlog(self,
-                self.handler.repo._constructmanifest())
+        return overlaymanifestrevlog(self, self.handler.repo._constructmanifest())
 
     def __getitem__(self, n):
         if n not in self.revmap:
@@ -453,8 +465,8 @@ class overlayrepo(object):
     def _handlerhack(self, method, *args, **kwargs):
         nothing = object()
         r = self.handler.repo
-        oldhandler = getattr(r, 'handler', nothing)
-        oldoverlay = getattr(r, 'gitoverlay', nothing)
+        oldhandler = getattr(r, "handler", nothing)
+        oldoverlay = getattr(r, "gitoverlay", nothing)
         r.handler = self.handler
         r.gitoverlay = self
         try:
@@ -470,7 +482,7 @@ class overlayrepo(object):
                 r.gitoverlay = oldoverlay
 
     def status(self, *args, **kwargs):
-        return self._handlerhack('status', *args, **kwargs)
+        return self._handlerhack("status", *args, **kwargs)
 
     def node(self, n):
         """Returns an Hg or Git hash for the specified Git hash"""
@@ -494,7 +506,7 @@ class overlayrepo(object):
         return self.handler.repo.unfiltered()
 
     def _makemaps(self, commits, refs):
-        baserev = self.handler.repo['tip'].rev()
+        baserev = self.handler.repo["tip"].rev()
         self.revmap = {}
         self.nodemap = {}
         for i, n in enumerate(commits):
@@ -505,9 +517,9 @@ class overlayrepo(object):
         self.refmap = {}
         self.tagmap = {}
         for ref in refs:
-            if ref.startswith('refs/heads/'):
+            if ref.startswith("refs/heads/"):
                 refname = ref[11:]
                 self.refmap.setdefault(bin(refs[ref]), []).append(refname)
-            elif ref.startswith('refs/tags/'):
+            elif ref.startswith("refs/tags/"):
                 tagname = ref[10:]
                 self.tagmap.setdefault(bin(refs[ref]), []).append(tagname)

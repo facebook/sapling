@@ -7,22 +7,21 @@ import stat
 
 import dulwich.objects as dulobjs
 from mercurial.i18n import _
-from mercurial import (
-    util as hgutil,
-)
+from mercurial import util as hgutil
 
 import compat
 import util
 
+
 def parse_subrepos(ctx):
     sub = util.OrderedDict()
-    if '.hgsub' in ctx:
-        sub = util.parse_hgsub(ctx['.hgsub'].data().splitlines())
+    if ".hgsub" in ctx:
+        sub = util.parse_hgsub(ctx[".hgsub"].data().splitlines())
     substate = util.OrderedDict()
-    if '.hgsubstate' in ctx:
-        substate = util.parse_hgsubstate(
-            ctx['.hgsubstate'].data().splitlines())
+    if ".hgsubstate" in ctx:
+        substate = util.parse_hgsubstate(ctx[".hgsubstate"].data().splitlines())
     return sub, substate
+
 
 def audit_git_path(ui, path):
     r"""Check for path components that case-fold to .git.
@@ -47,24 +46,32 @@ def audit_git_path(ui, path):
     """
     dangerous = False
     for c in path.split(os.path.sep):
-        if compat.hfsignoreclean(c) == '.git':
+        if compat.hfsignoreclean(c) == ".git":
             dangerous = True
             break
-        elif '~' in c:
-            base, tail = c.split('~', 1)
-            if tail.isdigit() and base.upper().startswith('GIT'):
+        elif "~" in c:
+            base, tail = c.split("~", 1)
+            if tail.isdigit() and base.upper().startswith("GIT"):
                 dangerous = True
                 break
     if dangerous:
-        if compat.config(ui, 'bool', 'git', 'blockdotgit'):
+        if compat.config(ui, "bool", "git", "blockdotgit"):
             raise hgutil.Abort(
-                _('Refusing to export likely-dangerous path %r') % path,
-                hint=_("If you need to continue, read about CVE-2014-9390 and "
-                      "then set '[git] blockdotgit = false' in your hgrc."))
-        ui.warn(_('warning: path %r contains a dangerous path component.\n'
-                'It may not be legal to check out in Git.\n'
-                'It may also be rejected by some git server configurations.\n')
-                % path)
+                _("Refusing to export likely-dangerous path %r") % path,
+                hint=_(
+                    "If you need to continue, read about CVE-2014-9390 and "
+                    "then set '[git] blockdotgit = false' in your hgrc."
+                ),
+            )
+        ui.warn(
+            _(
+                "warning: path %r contains a dangerous path component.\n"
+                "It may not be legal to check out in Git.\n"
+                "It may also be rejected by some git server configurations.\n"
+            )
+            % path
+        )
+
 
 class IncrementalChangesetExporter(object):
     """Incrementally export Mercurial changesets to Git trees.
@@ -132,16 +139,16 @@ class IncrementalChangesetExporter(object):
             return
         dirkind = stat.S_IFDIR
         # depth-first order, chosen arbitrarily
-        todo = [('', store[commit.tree])]
+        todo = [("", store[commit.tree])]
         while todo:
             path, tree = todo.pop()
             self._dirs[path] = tree
             for entry in tree.iteritems():
                 if entry.mode == dirkind:
-                    if path == '':
+                    if path == "":
                         newpath = entry.path
                     else:
-                        newpath = path + '/' + entry.path
+                        newpath = path + "/" + entry.path
                     todo.append((newpath, store[entry.sha]))
 
     @property
@@ -150,7 +157,7 @@ class IncrementalChangesetExporter(object):
 
         This is needed to construct a Git commit object.
         """
-        return self._dirs[''].id
+        return self._dirs[""].id
 
     def update_changeset(self, newctx):
         """Set the tree to track a new Mercurial changeset.
@@ -195,7 +202,7 @@ class IncrementalChangesetExporter(object):
         subadded, subremoved = [], []
 
         for s in modified, added, removed:
-            if '.hgsub' in s or '.hgsubstate' in s:
+            if ".hgsub" in s or ".hgsubstate" in s:
                 subadded, subremoved = self._handle_subrepos(newctx)
                 break
 
@@ -205,7 +212,7 @@ class IncrementalChangesetExporter(object):
             self._remove_path(path, dirty_trees)
 
         for path in removed:
-            if path == '.hgsubstate' or path == '.hgsub':
+            if path == ".hgsubstate" or path == ".hgsub":
                 continue
 
             self._remove_path(path, dirty_trees)
@@ -221,7 +228,7 @@ class IncrementalChangesetExporter(object):
         # immediately and update trees to be aware of its presence.
         for path in set(modified) | set(added):
             audit_git_path(self._hg.ui, path)
-            if path == '.hgsubstate' or path == '.hgsub':
+            if path == ".hgsubstate" or path == ".hgsub":
                 continue
 
             d = os.path.dirname(path)
@@ -277,7 +284,7 @@ class IncrementalChangesetExporter(object):
             return
 
         # Now we traverse up to the parent and delete any references.
-        if path == '':
+        if path == "":
             return
 
         basename = os.path.basename(path)
@@ -300,20 +307,20 @@ class IncrementalChangesetExporter(object):
             # The parent tree is empty. Se, we can delete it.
             del self._dirs[parent]
 
-            if parent == '':
+            if parent == "":
                 return
 
             basename = os.path.basename(parent)
             parent = os.path.dirname(parent)
 
     def _populate_tree_entries(self, dirty_trees):
-        self._dirs.setdefault('', dulobjs.Tree())
+        self._dirs.setdefault("", dulobjs.Tree())
 
         # Fill in missing directories.
         for path in self._dirs.keys():
             parent = os.path.dirname(path)
 
-            while parent != '':
+            while parent != "":
                 parent_tree = self._dirs.get(parent, None)
 
                 if parent_tree is not None:
@@ -325,7 +332,7 @@ class IncrementalChangesetExporter(object):
         for dirty in list(dirty_trees):
             parent = os.path.dirname(dirty)
 
-            while parent != '':
+            while parent != "":
                 if parent in dirty_trees:
                     break
 
@@ -333,7 +340,7 @@ class IncrementalChangesetExporter(object):
                 parent = os.path.dirname(parent)
 
         # The root tree is always dirty but doesn't always get updated.
-        dirty_trees.add('')
+        dirty_trees.add("")
 
         # We only need to recalculate and export dirty trees.
         for d in sorted(dirty_trees, key=len, reverse=True):
@@ -345,7 +352,7 @@ class IncrementalChangesetExporter(object):
 
             yield tree
 
-            if d == '':
+            if d == "":
                 continue
 
             parent_tree = self._dirs[os.path.dirname(d)]
@@ -381,7 +388,7 @@ class IncrementalChangesetExporter(object):
         added, removed = [], []
 
         def isgit(sub, path):
-            return path not in sub or sub[path].startswith('[git]')
+            return path not in sub or sub[path].startswith("[git]")
 
         for path, sha in substate.iteritems():
             if not isgit(sub, path):
@@ -421,12 +428,11 @@ class IncrementalChangesetExporter(object):
 
         flags = fctx.flags()
 
-        if 'l' in flags:
+        if "l" in flags:
             mode = 0o120000
-        elif 'x' in flags:
+        elif "x" in flags:
             mode = 0o100755
         else:
             mode = 0o100644
 
-        return (dulobjs.TreeEntry(os.path.basename(fctx.path()), mode,
-                                  blob_id), blob)
+        return (dulobjs.TreeEntry(os.path.basename(fctx.path()), mode, blob_id), blob)

@@ -108,7 +108,6 @@ def screen_size():
 
 
 class histeditrule(object):
-
     def __init__(self, ctx, pos, action="pick"):
         self.ctx = ctx
         self.action = action

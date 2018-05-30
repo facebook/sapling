@@ -49,7 +49,6 @@ def escape(s, quote=None):
 
 
 class passwordmgr(object):
-
     def __init__(self, ui, passwddb):
         self.ui = ui
         self.passwddb = passwddb
@@ -103,7 +102,6 @@ class passwordmgr(object):
 
 
 class proxyhandler(urlreq.proxyhandler):
-
     def __init__(self, ui):
         proxyurl = ui.config("http_proxy", "host") or encoding.environ.get("http_proxy")
         # XXX proxyauthinfo = None
@@ -156,7 +154,6 @@ class proxyhandler(urlreq.proxyhandler):
 
 
 def _gen_sendfile(orgsend):
-
     def _sendfile(self, data):
         # send a file
         if isinstance(data, httpconnectionmod.httpsendfile):
@@ -305,7 +302,6 @@ def _generic_proxytunnel(self):
 
 
 class httphandler(keepalive.HTTPHandler):
-
     def http_open(self, req):
         return self.do_open(httpconnection, req)
 
@@ -347,7 +343,6 @@ if has_https:
             sslutil.validatesocket(self.sock)
 
     class httpshandler(keepalive.KeepAliveHandler, urlreq.httpshandler):
-
         def __init__(self, ui):
             keepalive.KeepAliveHandler.__init__(self)
             urlreq.httpshandler.__init__(self)
@@ -394,7 +389,6 @@ if has_https:
 
 
 class httpdigestauthhandler(urlreq.httpdigestauthhandler):
-
     def __init__(self, *args, **kwargs):
         urlreq.httpdigestauthhandler.__init__(self, *args, **kwargs)
         self.retried_req = None
@@ -416,7 +410,6 @@ class httpdigestauthhandler(urlreq.httpdigestauthhandler):
 
 
 class httpbasicauthhandler(urlreq.httpbasicauthhandler):
-
     def __init__(self, *args, **kwargs):
         self.auth = None
         urlreq.httpbasicauthhandler.__init__(self, *args, **kwargs)
@@ -464,7 +457,6 @@ class httpbasicauthhandler(urlreq.httpbasicauthhandler):
 
 
 class cookiehandler(urlreq.basehandler):
-
     def __init__(self, ui):
         self.cookiejar = None
 

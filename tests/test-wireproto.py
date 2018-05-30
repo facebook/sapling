@@ -7,7 +7,6 @@ stringio = util.stringio
 
 
 class proto(object):
-
     def __init__(self, args):
         self.args = args
 
@@ -19,7 +18,6 @@ class proto(object):
 
 
 class clientpeer(wireproto.wirepeer):
-
     def __init__(self, serverrepo):
         self.serverrepo = serverrepo
 
@@ -59,7 +57,6 @@ class clientpeer(wireproto.wirepeer):
 
 
 class serverrepo(object):
-
     def __init__(self):
         self.ui = ui.ui()
 

@@ -5,7 +5,7 @@ import sys
 
 import test_hgsubversion_util
 
-test_push_command = test_hgsubversion_util.import_test('test_push_command')
+test_push_command = test_hgsubversion_util.import_test("test_push_command")
 
 
 class ObsstoreOnMixIn(object):
@@ -15,27 +15,27 @@ class ObsstoreOnMixIn(object):
 
     def setUp(self):
         super(ObsstoreOnMixIn, self).setUp()
-        hgrcpath = os.environ.get('HGRCPATH')
+        hgrcpath = os.environ.get("HGRCPATH")
         assert hgrcpath
-        with open(hgrcpath, 'a') as f:
-            f.write('\n[experimental]\nevolution=createmarkers\n')
+        with open(hgrcpath, "a") as f:
+            f.write("\n[experimental]\nevolution=createmarkers\n")
 
     def shortDescription(self):
         text = super(ObsstoreOnMixIn, self).shortDescription()
         if text:
-            text += ' (obsstore on)'
+            text += " (obsstore on)"
         return text
 
 
 def buildtestclass(cls):
-    name = 'ObsstoreOn%s' % cls.__name__
-    newcls = type(name, (ObsstoreOnMixIn, cls,), {})
+    name = "ObsstoreOn%s" % cls.__name__
+    newcls = type(name, (ObsstoreOnMixIn, cls), {})
     globals()[name] = newcls
 
 
 buildtestclass(test_push_command.PushTests)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import silenttestrunner
-    silenttestrunner.main(__name__)
 
+    silenttestrunner.main(__name__)

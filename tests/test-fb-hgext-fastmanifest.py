@@ -7,7 +7,6 @@ from mercurial import error, manifest, ui, util, vfs as vfsmod
 
 
 class mockmanifest(object):
-
     def __init__(self, text):
         self.text = text
 
@@ -16,7 +15,6 @@ class mockmanifest(object):
 
 
 class mockondiskcache(object):
-
     def __init__(self):
         self.data = {}
 
@@ -53,7 +51,6 @@ class mockondiskcache(object):
 
 
 class HybridManifest(unittest.TestCase):
-
     def test_wrap(self):
         """If a new magic method is added to manifestdict, we want to make sure
         that hybridmanifest implement it, this test validates that all magic

@@ -32,7 +32,6 @@ configitem("gpg", ".*", default=None, generic=True)
 
 
 class gpg(object):
-
     def __init__(self, path, key=None):
         self.path = path
         self.key = (key and ' --local-user "%s"' % key) or ""

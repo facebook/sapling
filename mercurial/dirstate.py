@@ -62,7 +62,6 @@ def _getfsnow(vfs):
 
 
 class dirstate(object):
-
     def __init__(self, opener, ui, root, validate, sparsematchfn):
         """Create a new dirstate object.
 

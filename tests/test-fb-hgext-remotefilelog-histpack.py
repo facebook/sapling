@@ -24,7 +24,6 @@ except NameError:
 
 
 class histpacktests(unittest.TestCase):
-
     def setUp(self):
         self.tempdirs = []
 
@@ -313,12 +312,10 @@ class histpacktests(unittest.TestCase):
         """
 
         class fakerepo(object):
-
             def __init__(self):
                 self.changelog = fakechangelog()
 
         class fakechangelog(object):
-
             def __init__(self):
                 self.commits = []
 

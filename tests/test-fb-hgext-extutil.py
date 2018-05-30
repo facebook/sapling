@@ -15,7 +15,6 @@ locksuccess = 24
 
 
 class ExtutilTests(unittest.TestCase):
-
     def testbgcommandnoblock(self):
         """runbgcommand() should return without waiting for the process to
         finish."""

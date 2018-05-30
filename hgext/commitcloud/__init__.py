@@ -114,7 +114,6 @@ def extsetup(ui):
 
 
 def reposetup(ui, repo):
-
     def finalize(tr):
         if util.safehasattr(tr, "_commitcloudskippendingobsmarkers"):
             return
@@ -123,7 +122,6 @@ def reposetup(ui, repo):
             commitcloudutil.addpendingobsmarkers(repo, markers)
 
     class commitcloudrepo(repo.__class__):
-
         def transaction(self, *args, **kwargs):
             tr = super(commitcloudrepo, self).transaction(*args, **kwargs)
             tr.addfinalize("commitcloudobsmarkers", finalize)

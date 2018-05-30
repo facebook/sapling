@@ -88,7 +88,6 @@ def reposetup(ui, repo):
         if repo.ui.configbool("perftweaks", "disableupdatebranchcacheoncommit"):
 
             class perftweaksrepo(repo.__class__):
-
                 @localrepo.unfilteredmethod
                 def updatecaches(self, tr=None):
                     # Disable "branchmap.updatecache(self.filtered('served'))"

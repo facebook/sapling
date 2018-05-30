@@ -259,7 +259,6 @@ indexformatv0_unpack = indexformatv0.unpack
 
 
 class revlogoldio(object):
-
     def __init__(self):
         self.size = indexformatv0.size
 
@@ -330,7 +329,6 @@ _maxentrysize = 0x7fffffff
 
 
 class revlogio(object):
-
     def __init__(self):
         self.size = indexformatng.size
 
@@ -804,7 +802,6 @@ class revlog(object):
 
         # we want the ancestors, but inclusive
         class lazyset(object):
-
             def __init__(self, lazyvalues):
                 self.addedvalues = set()
                 self.lazyvalues = lazyvalues

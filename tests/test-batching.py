@@ -12,14 +12,12 @@ from mercurial import error, peer, util, wireproto
 
 # equivalent of repo.repository
 class thing(object):
-
     def hello(self):
         return "Ready."
 
 
 # equivalent of localrepo.localrepository
 class localthing(thing):
-
     def foo(self, one, two=None):
         if one:
             return "%s and %s" % (one, two)
@@ -128,7 +126,6 @@ def unescapearg(escaped):
 
 # equivalent of wireproto's global functions
 class server(object):
-
     def __init__(self, local):
         self.local = local
 
@@ -183,7 +180,6 @@ def unmangle(s):
 
 # equivalent of wireproto.wirerepository and something like http's wire format
 class remotething(thing):
-
     def __init__(self, server):
         self.server = server
 

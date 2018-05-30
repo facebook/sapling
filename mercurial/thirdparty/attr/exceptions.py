@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+
 class FrozenInstanceError(AttributeError):
     """
     A frozen/immutable instance has been attempted to be modified.
@@ -9,8 +10,10 @@ class FrozenInstanceError(AttributeError):
 
     .. versionadded:: 16.1.0
     """
+
     msg = "can't set attribute"
     args = [msg]
+
 
 class AttrsAttributeNotFoundError(ValueError):
     """
@@ -19,12 +22,14 @@ class AttrsAttributeNotFoundError(ValueError):
     .. versionadded:: 16.2.0
     """
 
+
 class NotAnAttrsClassError(ValueError):
     """
     A non-``attrs`` class has been passed into an ``attrs`` function.
 
     .. versionadded:: 16.2.0
     """
+
 
 class DefaultAlreadySetError(RuntimeError):
     """

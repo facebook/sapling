@@ -13,7 +13,6 @@ checkers = []
 
 
 def scanner():
-
     def decorator(func):
         scanners.append(func)
         return func
@@ -22,7 +21,6 @@ def scanner():
 
 
 def levelchecker(level, msgidpat):
-
     def decorator(func):
         if msgidpat:
             match = re.compile(msgidpat).search
@@ -255,7 +253,6 @@ be separated by whitespaces::
 
     # replace polib._POFileParser to show linenum of problematic msgstr
     class ExtPOFileParser(polib._POFileParser):
-
         def process(self, symbol, linenum):
             super(ExtPOFileParser, self).process(symbol, linenum)
             if symbol == "MS":  # msgstr

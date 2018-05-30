@@ -167,9 +167,7 @@ class hashstate(object):
 
 
 def _newchgui(srcui, csystem, attachio):
-
     class chgui(srcui.__class__):
-
         def __init__(self, src=None):
             super(chgui, self).__init__(src)
             if src:
@@ -297,7 +295,6 @@ _iochannels = [
 
 
 class chgcmdserver(commandserver.server):
-
     def __init__(self, ui, repo, fin, fout, sock, hashstate, baseaddress):
         super(chgcmdserver, self).__init__(
             _newchgui(ui, channeledsystem(fin, fout, "S"), self.attachio),

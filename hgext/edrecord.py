@@ -19,7 +19,6 @@ originalrecordfilter = cmdutil.recordfilter
 def uisetup(ui):
     # "editor" is otherwise not allowed as a valid option for "ui.interface"
     class edrecordui(ui.__class__):
-
         def interface(self, feature):
             if feature == "chunkselector":
                 configvalue = self.config("ui", "interface.%s" % feature)

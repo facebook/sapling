@@ -4,7 +4,6 @@ import silenttestrunner
 
 
 class BisectTests(unittest.TestCase):
-
     def testSimple(self):
         self._assertBisect([1], 1, 0)
         self._assertBisect([1, 2], 1, 0)
@@ -40,7 +39,6 @@ class BisectTests(unittest.TestCase):
         self._assertBisect(array, 1, None)
 
     def _assertBisect(self, array, value, result):
-
         def comp(index, value):
             if array[index] < value:
                 return -1

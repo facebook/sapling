@@ -9,9 +9,7 @@ import time
 
 
 def reposetup(ui, repo):
-
     class delayedlockrepo(repo.__class__):
-
         def lock(self):
             delay = float(os.environ.get("HGPRELOCKDELAY", "0.0"))
             if delay:

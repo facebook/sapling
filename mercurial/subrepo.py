@@ -71,7 +71,6 @@ class SubrepoAbort(error.Abort):
 
 
 def annotatesubrepoerror(func):
-
     def decoratedmethod(self, *args, **kargs):
         try:
             res = func(self, *args, **kargs)
@@ -583,7 +582,6 @@ def newcommitphase(ui, ctx):
 
 
 class abstractsubrepo(object):
-
     def __init__(self, ctx, path):
         """Initialize abstractsubrepo part
 
@@ -800,7 +798,6 @@ class abstractsubrepo(object):
 
 
 class hgsubrepo(abstractsubrepo):
-
     def __init__(self, ctx, path, state, allowcreate):
         super(hgsubrepo, self).__init__(ctx, path)
         self._state = state
@@ -1340,7 +1337,6 @@ class hgsubrepo(abstractsubrepo):
 
 
 class svnsubrepo(abstractsubrepo):
-
     def __init__(self, ctx, path, state, allowcreate):
         super(svnsubrepo, self).__init__(ctx, path)
         self._state = state
@@ -1580,7 +1576,6 @@ class svnsubrepo(abstractsubrepo):
 
 
 class gitsubrepo(abstractsubrepo):
-
     def __init__(self, ctx, path, state, allowcreate):
         super(gitsubrepo, self).__init__(ctx, path)
         self._state = state

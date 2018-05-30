@@ -1,12 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from ._funcs import (
-    asdict,
-    assoc,
-    astuple,
-    evolve,
-    has,
-)
+from ._funcs import asdict, assoc, astuple, evolve, has
 from ._make import (
     Attribute,
     Factory,
@@ -17,10 +11,7 @@ from ._make import (
     make_class,
     validate,
 )
-from ._config import (
-    get_run_validators,
-    set_run_validators,
-)
+from ._config import get_run_validators, set_run_validators
 from . import exceptions
 from . import filters
 from . import converters

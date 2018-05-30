@@ -32,7 +32,6 @@ gengrouppostfinalize = "postfinalize"
 
 
 def active(func):
-
     def _active(self, *args, **kwds):
         if self.count == 0:
             raise error.Abort(
@@ -110,7 +109,6 @@ def _playback(
 
 
 class transaction(util.transactional):
-
     def __init__(
         self,
         report,

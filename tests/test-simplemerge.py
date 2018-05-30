@@ -124,7 +124,6 @@ MERGED_RESULT = split_lines(
 
 
 class TestMerge3(TestCase):
-
     def log(self, msg):
         pass
 

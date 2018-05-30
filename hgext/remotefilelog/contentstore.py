@@ -2,11 +2,7 @@ from __future__ import absolute_import
 
 import threading
 
-from . import (
-    basestore,
-    constants,
-    shallowutil,
-)
+from . import basestore, constants, shallowutil
 
 from mercurial import manifest, mdiff, revlog, util
 from mercurial.node import hex, nullid
@@ -16,9 +12,11 @@ try:
 except NameError:
     xrange = range
 
+
 class ChainIndicies(object):
     """A static class for easy reference to the delta chain indicies.
     """
+
     # The filename of this revision delta
     NAME = 0
     # The mercurial file node for this revision delta
@@ -33,15 +31,16 @@ class ChainIndicies(object):
     # The actual delta or full text data.
     DATA = 4
 
+
 class unioncontentstore(object):
     def __init__(self, *args, **kwargs):
         self.stores = list(args)
-        self.writestore = kwargs.get('writestore')
+        self.writestore = kwargs.get("writestore")
 
         # If allowincomplete==True then the union store can return partial
         # delta chains, otherwise it will throw a KeyError if a full
         # deltachain can't be found.
-        self.allowincomplete = kwargs.get('allowincomplete', False)
+        self.allowincomplete = kwargs.get("allowincomplete", False)
 
     def get(self, name, node):
         """Fetches the full text revision contents of the given name+node pair.
@@ -129,8 +128,7 @@ class unioncontentstore(object):
         raise KeyError((name, hex(node)))
 
     def add(self, name, node, data):
-        raise RuntimeError("cannot add content only to remotefilelog "
-                           "contentstore")
+        raise RuntimeError("cannot add content only to remotefilelog " "contentstore")
 
     def getmissing(self, keys):
         missing = keys
@@ -151,7 +149,7 @@ class unioncontentstore(object):
 
     def markforrefresh(self):
         for store in self.stores:
-            if util.safehasattr(store, 'markforrefresh'):
+            if util.safehasattr(store, "markforrefresh"):
                 store.markforrefresh()
 
     def addstore(self, store):
@@ -159,6 +157,7 @@ class unioncontentstore(object):
 
     def removestore(self, store):
         self.stores.remove(store)
+
 
 class remotefilelogcontentstore(basestore.basestore):
     def __init__(self, *args, **kwargs):
@@ -170,7 +169,7 @@ class remotefilelogcontentstore(basestore.basestore):
         data = self._getdata(name, node)
 
         offset, size, flags = shallowutil.parsesizeflags(data)
-        content = data[offset:offset + size]
+        content = data[offset : offset + size]
 
         ancestormap = shallowutil.ancestormap(data)
         p1, p2, linknode, copyfrom = ancestormap[node]
@@ -210,21 +209,20 @@ class remotefilelogcontentstore(basestore.basestore):
         return self._threaddata.metacache[1]
 
     def add(self, name, node, data):
-        raise RuntimeError("cannot add content only to remotefilelog "
-                           "contentstore")
+        raise RuntimeError("cannot add content only to remotefilelog " "contentstore")
 
     def _sanitizemetacache(self):
-        metacache = getattr(self._threaddata, 'metacache', None)
+        metacache = getattr(self._threaddata, "metacache", None)
         if metacache is None:
-            self._threaddata.metacache = (None, None) # (node, meta)
+            self._threaddata.metacache = (None, None)  # (node, meta)
 
     def _updatemetacache(self, node, size, flags):
         self._sanitizemetacache()
         if node == self._threaddata.metacache[0]:
             return
-        meta = {constants.METAKEYFLAG: flags,
-                constants.METAKEYSIZE: size}
+        meta = {constants.METAKEYFLAG: flags, constants.METAKEYSIZE: size}
         self._threaddata.metacache = (node, meta)
+
 
 class remotecontentstore(object):
     def __init__(self, ui, fileservice, shared):
@@ -233,8 +231,7 @@ class remotecontentstore(object):
         self._shared = shared
 
     def get(self, name, node):
-        self._fileservice.prefetch([(name, hex(node))], force=True,
-                                   fetchdata=True)
+        self._fileservice.prefetch([(name, hex(node))], force=True, fetchdata=True)
         return self._shared.get(name, node)
 
     def getdelta(self, name, node):
@@ -250,8 +247,7 @@ class remotecontentstore(object):
         return [(name, node, None, nullid, revision)]
 
     def getmeta(self, name, node):
-        self._fileservice.prefetch([(name, hex(node))], force=True,
-                                   fetchdata=True)
+        self._fileservice.prefetch([(name, hex(node))], force=True, fetchdata=True)
         return self._shared.getmeta(name, node)
 
     def add(self, name, node, data):
@@ -263,12 +259,13 @@ class remotecontentstore(object):
     def markledger(self, ledger, options=None):
         pass
 
+
 class manifestrevlogstore(object):
     def __init__(self, repo):
         self._store = repo.store
         self._svfs = repo.svfs
         self._revlogs = dict()
-        self._cl = revlog.revlog(self._svfs, '00changelog.i')
+        self._cl = revlog.revlog(self._svfs, "00changelog.i")
         self._repackstartlinkrev = 0
 
     def get(self, name, node):
@@ -285,8 +282,10 @@ class manifestrevlogstore(object):
     def getmeta(self, name, node):
         rl = self._revlog(name)
         rev = rl.rev(node)
-        return {constants.METAKEYFLAG: rl.flags(rev),
-                constants.METAKEYSIZE: rl.rawsize(rev)}
+        return {
+            constants.METAKEYFLAG: rl.flags(rev),
+            constants.METAKEYSIZE: rl.rawsize(rev),
+        }
 
     def getancestors(self, name, node, known=None):
         if known is None:
@@ -308,7 +307,7 @@ class manifestrevlogstore(object):
                 missing.add(p2)
 
             linknode = self._cl.node(rl.linkrev(ancrev))
-            ancestors[rl.node(ancrev)] = (p1, p2, linknode, '')
+            ancestors[rl.node(ancrev)] = (p1, p2, linknode, "")
             if not missing:
                 break
         return ancestors
@@ -327,10 +326,11 @@ class manifestrevlogstore(object):
         rl = self._revlogs.get(name)
         if rl is None:
             indexfile = None
-            if name == '':
-                indexfile = '00manifesttree.i'
-            rl = manifest.manifestrevlog(self._svfs, dir=name,
-                    indexfile=indexfile, treemanifest=True)
+            if name == "":
+                indexfile = "00manifesttree.i"
+            rl = manifest.manifestrevlog(
+                self._svfs, dir=name, indexfile=indexfile, treemanifest=True
+            )
             self._revlogs[name] = rl
         return rl
 
@@ -350,8 +350,8 @@ class manifestrevlogstore(object):
     def markledger(self, ledger, options=None):
         if options and options.get(constants.OPTION_PACKSONLY):
             return
-        treename = ''
-        rl = revlog.revlog(self._svfs, '00manifesttree.i')
+        treename = ""
+        rl = revlog.revlog(self._svfs, "00manifesttree.i")
         startlinkrev = self._repackstartlinkrev
         endlinkrev = self._repackendlinkrev
         for rev in xrange(len(rl) - 1, -1, -1):
@@ -365,10 +365,10 @@ class manifestrevlogstore(object):
             ledger.markhistoryentry(self, treename, node)
 
         for path, encoded, size in self._store.datafiles():
-            if path[:5] != 'meta/' or path[-2:] != '.i':
+            if path[:5] != "meta/" or path[-2:] != ".i":
                 continue
 
-            treename = path[5:-len('/00manifest.i')]
+            treename = path[5 : -len("/00manifest.i")]
 
             rl = revlog.revlog(self._svfs, path)
             for rev in xrange(len(rl) - 1, -1, -1):

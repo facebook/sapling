@@ -9,37 +9,32 @@ from __future__ import absolute_import
 import os
 import errno
 
-from mercurial import (
-    encoding,
-    error,
-    extensions,
-    revlog,
-    scmutil,
-    util,
-)
+from mercurial import encoding, error, extensions, revlog, scmutil, util
 
 from ..extlib import cfastmanifest
 from . import constants, concurrency
 from .metrics import metricscollector
 from .implementation import fastmanifestcache, CacheFullException
 
+
 def _relevantremonamesrevs(repo):
     revs = set()
     remotenames = None
     try:
-        remotenames = extensions.find('remotenames')
-    except KeyError: # remotenames not loaded
+        remotenames = extensions.find("remotenames")
+    except KeyError:  # remotenames not loaded
         pass
     if remotenames is not None:
         # interesting remotenames to fetch
-        relevantnames = set(repo.ui.configlist("fastmanifest",
-                                               "relevantremotenames",
-                                               ["master"]))
+        relevantnames = set(
+            repo.ui.configlist("fastmanifest", "relevantremotenames", ["master"])
+        )
         names = remotenames.readremotenames(repo)
         for rev, kind, prefix, name in names:
             if name in relevantnames and kind == "bookmarks":
                 revs.add(repo[rev].rev())
     return revs
+
 
 def fastmanifestcached(repo, subset, x):
     """Revset encompassing all revisions whose manifests are cached"""
@@ -54,11 +49,11 @@ def fastmanifestcached(repo, subset, x):
     # 3) From this minimum, we inspect all the more recent and visible changelog
     # revisions and keep track of the one whose manifest is cached.
     cache = fastmanifestcache.getinstance(repo.store.opener, repo.ui)
-    manifestsbinnodes = set([revlog.bin(u.replace("fast",""))
-                            for u in cache.ondiskcache])
+    manifestsbinnodes = set(
+        [revlog.bin(u.replace("fast", "")) for u in cache.ondiskcache]
+    )
     mfrevlog = repo.manifestlog._revlog
-    manifestslinkrevs = [mfrevlog.linkrev(mfrevlog.rev(k))
-                         for k in manifestsbinnodes]
+    manifestslinkrevs = [mfrevlog.linkrev(mfrevlog.rev(k)) for k in manifestsbinnodes]
     cachedrevs = set()
     if manifestslinkrevs:
         for u in repo.changelog.revs(min(manifestslinkrevs)):
@@ -66,6 +61,7 @@ def fastmanifestcached(repo, subset, x):
             if revmanifestbin in manifestsbinnodes:
                 cachedrevs.add(u)
     return subset & cachedrevs
+
 
 def fastmanifesttocache(repo, subset, x):
     """Revset of the interesting revisions to cache. This returns:
@@ -83,29 +79,35 @@ def fastmanifesttocache(repo, subset, x):
     # Add all the other relevant revs
     query = "(not public() & not hidden()) + bookmark()"
     cutoff = repo.ui.configint("fastmanifest", "cachecutoffdays", 60)
-    if cutoff == -1: # no cutoff
+    if cutoff == -1:  # no cutoff
         datelimit = ""
     else:
         datelimit = "and date(-%d)" % cutoff
 
-    revs.update(scmutil.revrange(repo,["(%s + parents(%s)) %s"
-                % (query, query, datelimit)]))
+    revs.update(
+        scmutil.revrange(repo, ["(%s + parents(%s)) %s" % (query, query, datelimit)])
+    )
 
     metricscollector.get().recordsample("revsetsize", size=len(revs))
     return subset & revs
 
-GB = 1024**3
-MB = 1024**2
+
+GB = 1024 ** 3
+MB = 1024 ** 2
+
 
 class _systemawarecachelimit(object):
     """A limit that will be tighter as the free disk space reduces"""
+
     def parseconfig(self, ui):
-        configkeys = set([
-            'lowgrowthslope',
-            'lowgrowththresholdgb',
-            'maxcachesizegb',
-            'highgrowthslope',
-        ])
+        configkeys = set(
+            [
+                "lowgrowthslope",
+                "lowgrowththresholdgb",
+                "maxcachesizegb",
+                "highgrowthslope",
+            ]
+        )
         configs = {}
         for configkey in configkeys:
             strconfig = ui.config("fastmanifest", configkey)
@@ -115,7 +117,7 @@ class _systemawarecachelimit(object):
                 configs[configkey] = float(strconfig)
             except ValueError:
                 # Keep default value and print a warning when config is invalid
-                msg = ("Invalid config for fastmanifest.%s, expected a number")
+                msg = "Invalid config for fastmanifest.%s, expected a number"
                 ui.warn((msg % strconfig))
         return configs
 
@@ -125,7 +127,7 @@ class _systemawarecachelimit(object):
             if repo is None and (opener is None or ui is None):
                 raise error.Abort("Need to specify repo or (opener and ui)")
             st = None
-            if not util.safehasattr(os, 'statvfs'):
+            if not util.safehasattr(os, "statvfs"):
                 self.free = 0
                 self.total = 0
             elif repo is not None:
@@ -153,11 +155,12 @@ class _systemawarecachelimit(object):
 
     @staticmethod
     def cacheallocation(
-            freespace,
-            lowgrowththresholdgb=constants.DEFAULT_LOWGROWTH_TRESHOLDGB,
-            lowgrowthslope=constants.DEFAULT_LOWGROWTH_SLOPE,
-            maxcachesizegb=constants.DEFAULT_MAXCACHESIZEGB,
-            highgrowthslope=constants.DEFAULT_HIGHGROWTHSLOPE):
+        freespace,
+        lowgrowththresholdgb=constants.DEFAULT_LOWGROWTH_TRESHOLDGB,
+        lowgrowthslope=constants.DEFAULT_LOWGROWTH_SLOPE,
+        maxcachesizegb=constants.DEFAULT_MAXCACHESIZEGB,
+        highgrowthslope=constants.DEFAULT_HIGHGROWTHSLOPE,
+    ):
         """Given the free space available in bytes, return the size of the cache
 
         When disk space is limited (less than lowgrowththreshold), we increase
@@ -190,9 +193,11 @@ class _systemawarecachelimit(object):
         else:
             return min(maxcachesizegb * GB, highgrowthslope * freespace)
 
+
 def cachemanifestpruneall(ui, repo):
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
     cache.pruneall()
+
 
 def cachemanifestlist(ui, repo):
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
@@ -203,32 +208,33 @@ def cachemanifestlist(ui, repo):
     if ui.debug:
         revs = set(repo.revs("fastmanifestcached()"))
         import collections
+
         revstoman = collections.defaultdict(list)
         for r in revs:
             mannode = revlog.hex(repo.changelog.changelogrevision(r).manifest)
             revstoman[mannode].append(str(r))
         if revs:
             ui.status(("Most relevant cache entries appear first\n"))
-            ui.status(("="*80))
+            ui.status(("=" * 80))
             ui.status(("\nmanifest node                           |revs\n"))
             for h in cache.ondiskcache:
-                l = h.replace("fast","")
-                ui.status("%s|%s\n" % (l, ",".join(revstoman.get(l,[]))))
+                l = h.replace("fast", "")
+                ui.status("%s|%s\n" % (l, ",".join(revstoman.get(l, []))))
+
 
 def cachemanifestfillandtrim(ui, repo, revset):
     """Cache the manifests described by `revset`.  This priming is subject to
     limits imposed by the cache, and thus not all the entries may be written.
     """
     try:
-        with concurrency.looselock(repo.vfs,
-                "fastmanifest",
-                constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT):
+        with concurrency.looselock(
+            repo.vfs, "fastmanifest", constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT
+        ):
             cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
             computedrevs = scmutil.revrange(repo, revset)
-            sortedrevs = sorted(computedrevs, key=lambda x:-x)
-            repo.ui.log("fastmanifest", "FM: trying to cache %s\n"
-                        % str(sortedrevs))
+            sortedrevs = sorted(computedrevs, key=lambda x: -x)
+            repo.ui.log("fastmanifest", "FM: trying to cache %s\n" % str(sortedrevs))
 
             if len(sortedrevs) == 0:
                 # normally, we prune as we make space for new revisions to add
@@ -240,25 +246,26 @@ def cachemanifestfillandtrim(ui, repo, revset):
                 after = cache.ondiskcache.items()
                 diff = set(after) - set(before)
                 if diff:
-                    ui.log("fastmanifest", "FM: removed entries %s\n" %
-                           str(diff))
+                    ui.log("fastmanifest", "FM: removed entries %s\n" % str(diff))
                 else:
                     ui.log("fastmanifest", "FM: no entries removed\n")
             else:
                 revstomannodes = {}
                 mannodesprocessed = set()
                 for rev in sortedrevs:
-                    mannode = revlog.hex(
-                        repo.changelog.changelogrevision(rev).manifest)
+                    mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
                     revstomannodes[rev] = mannode
                     mannodesprocessed.add(mannode)
 
                     if mannode in cache.ondiskcache:
-                        ui.debug("[FM] skipped %s, already cached "
-                                "(fast path)\n" % (mannode,))
-                        repo.ui.log("fastmanifest",
-                                "FM: skip(rev, man) %s->%s\n" %
-                                (rev, mannode))
+                        ui.debug(
+                            "[FM] skipped %s, already cached "
+                            "(fast path)\n" % (mannode,)
+                        )
+                        repo.ui.log(
+                            "fastmanifest",
+                            "FM: skip(rev, man) %s->%s\n" % (rev, mannode),
+                        )
 
                         # Account for the fact that we access this manifest
                         cache.ondiskcache.touch(mannode)
@@ -270,9 +277,10 @@ def cachemanifestfillandtrim(ui, repo, revset):
 
                     try:
                         cache[mannode] = fastmanifest
-                        repo.ui.log("fastmanifest", "FM: cached(rev,man) "
-                                    "%s->%s\n" %
-                                    (rev, mannode))
+                        repo.ui.log(
+                            "fastmanifest",
+                            "FM: cached(rev,man) " "%s->%s\n" % (rev, mannode),
+                        )
                     except CacheFullException:
                         repo.ui.log("fastmanifest", "FM: overflow\n")
                         break
@@ -289,11 +297,9 @@ def cachemanifestfillandtrim(ui, repo, revset):
                 for offset, rev in enumerate(sortedrevs):
                     if rev in revstomannodes:
                         hexnode = revstomannodes[rev]
-                        cache.ondiskcache.touch(hexnode,
-                                delay=offset * mtimemultiplier)
+                        cache.ondiskcache.touch(hexnode, delay=offset * mtimemultiplier)
                     else:
-                        metricscollector.get().recordsample("cacheoverflow",
-                                hit=True)
+                        metricscollector.get().recordsample("cacheoverflow", hit=True)
                         # We didn't have enough space for that rev
     except error.LockHeld:
         return
@@ -307,20 +313,24 @@ def cachemanifestfillandtrim(ui, repo, revset):
 
     total, numentries = cache.ondiskcache.totalsize()
     if isinstance(cache.limit, _systemawarecachelimit):
-        free = cache.limit.free / 1024**2
+        free = cache.limit.free / 1024 ** 2
     else:
         free = -1
-    metricscollector.get().recordsample("ondiskcachestats",
-                                        bytes=total,
-                                        numentries=numentries,
-                                        limit=(cache.limit.bytes() / 1024**2),
-                                        freespace=free)
+    metricscollector.get().recordsample(
+        "ondiskcachestats",
+        bytes=total,
+        numentries=numentries,
+        limit=(cache.limit.bytes() / 1024 ** 2),
+        freespace=free,
+    )
+
 
 class cacher(object):
     @staticmethod
     def cachemanifest(repo):
         revset = ["fastmanifesttocache()"]
         cachemanifestfillandtrim(repo.ui, repo, revset)
+
 
 class triggers(object):
     repos_to_update = set()
@@ -330,15 +340,11 @@ class triggers(object):
         result = orig(*args, **kwargs)
 
         for repo in triggers.repos_to_update:
-            repo.ui.log("fastmanifest", "FM: triggering caching for %s\n"
-                        % repo.root)
-            bg = repo.ui.configbool("fastmanifest",
-                                    "cacheonchangebackground",
-                                    True)
+            repo.ui.log("fastmanifest", "FM: triggering caching for %s\n" % repo.root)
+            bg = repo.ui.configbool("fastmanifest", "cacheonchangebackground", True)
 
             if bg:
-                silent_worker = repo.ui.configbool(
-                    "fastmanifest", "silentworker", True)
+                silent_worker = repo.ui.configbool("fastmanifest", "silentworker", True)
 
                 # see if the user wants us to invoke a specific instance of
                 # mercurial.
@@ -348,9 +354,7 @@ class triggers(object):
                 if workerexe is not None:
                     cmd[0] = workerexe
 
-                cmd.extend(["--repository",
-                            repo.root,
-                            "cachemanifest"])
+                cmd.extend(["--repository", repo.root, "cachemanifest"])
 
                 repo.ui.log("fastmanifest", "FM: running command %s\n" % cmd)
                 concurrency.runshellcommand(cmd, silent_worker=silent_worker)

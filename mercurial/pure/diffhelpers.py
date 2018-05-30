@@ -12,6 +12,7 @@ try:
 except NameError:
     xrange = range
 
+
 def addlines(fp, hunk, lena, lenb, a, b):
     while True:
         todoa = lena - len(a)
@@ -39,10 +40,11 @@ def addlines(fp, hunk, lena, lenb, a, b):
                 a.append(s)
     return 0
 
+
 def fix_newline(hunk, a, b):
     l = hunk[-1]
     # tolerate CRLF in last line
-    if l.endswith('\r\n'):
+    if l.endswith("\r\n"):
         hline = l[:-2]
     else:
         hline = l[:-1]
@@ -54,6 +56,7 @@ def fix_newline(hunk, a, b):
         a[-1] = hline
     hunk[-1] = hline
     return 0
+
 
 def testhunk(a, b, bstart):
     alen = len(a)

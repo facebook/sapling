@@ -47,7 +47,6 @@ def defineactions():
         ["stop", "s"], _("pick changeset, and stop after committing changes")
     )
     class stop(histedit.histeditaction):
-
         def run(self):
             parentctx, replacements = super(stop, self).run()
             self.state.read()
@@ -69,7 +68,6 @@ def defineactions():
 
     @histedit.action(["exec", "x"], _("execute given command"))
     class execute(histedit.histeditaction):
-
         def __init__(self, state, command):
             self.state = state
             self.repo = state.repo
@@ -159,14 +157,12 @@ def defineactions():
         ["execr", "xr"], _("execute given command relative to current directory")
     )
     class executerelative(execute):
-
         def __init__(self, state, command):
             super(executerelative, self).__init__(state, command)
             self.cwd = pycompat.getcwd()
 
     @histedit.action(["graft", "g"], _("graft a commit from elsewhere"))
     class graft(histedit.histeditaction):
-
         def _verifynodeconstraints(self, prev, expected, seen):
             if self.node in expected:
                 msg = _('%s "%s" changeset was an edited list candidate')

@@ -203,7 +203,6 @@ if ispy3:
         return sysbytes(doc)
 
     def _wrapattrfunc(f):
-
         @functools.wraps(f)
         def w(object, name, *args):
             return f(object, sysstr(name), *args)

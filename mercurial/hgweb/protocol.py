@@ -10,24 +10,19 @@ from __future__ import absolute_import
 import cgi
 import struct
 
-from .common import (
-    HTTP_OK,
-)
+from .common import HTTP_OK
 
-from .. import (
-    error,
-    pycompat,
-    util,
-    wireproto,
-)
+from .. import error, pycompat, util, wireproto
+
 stringio = util.stringio
 
 urlerr = util.urlerr
 urlreq = util.urlreq
 
-HGTYPE = 'application/mercurial-0.1'
-HGTYPE2 = 'application/mercurial-0.2'
-HGERRTYPE = 'application/hg-error'
+HGTYPE = "application/mercurial-0.1"
+HGTYPE2 = "application/mercurial-0.2"
+HGERRTYPE = "application/hg-error"
+
 
 def decodevaluefromheaders(req, headerprefix):
     """Decode a long value from multiple HTTP request headers.
@@ -36,71 +31,78 @@ def decodevaluefromheaders(req, headerprefix):
     """
     chunks = []
     i = 1
-    prefix = headerprefix.upper().replace(r'-', r'_')
+    prefix = headerprefix.upper().replace(r"-", r"_")
     while True:
-        v = req.env.get(r'HTTP_%s_%d' % (prefix, i))
+        v = req.env.get(r"HTTP_%s_%d" % (prefix, i))
         if v is None:
             break
         chunks.append(pycompat.bytesurl(v))
         i += 1
 
-    return ''.join(chunks)
+    return "".join(chunks)
+
 
 class webproto(wireproto.abstractserverproto):
     def __init__(self, req, ui):
         self.req = req
-        self.response = ''
+        self.response = ""
         self.ui = ui
-        self.name = 'http'
+        self.name = "http"
 
     def getargs(self, args):
         knownargs = self._args()
         data = {}
         keys = args.split()
         for k in keys:
-            if k == '*':
+            if k == "*":
                 star = {}
                 for key in knownargs.keys():
-                    if key != 'cmd' and key not in keys:
+                    if key != "cmd" and key not in keys:
                         star[key] = knownargs[key][0]
-                data['*'] = star
+                data["*"] = star
             else:
                 data[k] = knownargs[k][0]
         return [data[k] for k in keys]
+
     def _args(self):
         args = self.req.form.copy()
         if pycompat.ispy3:
-            args = {k.encode('ascii'): [v.encode('ascii') for v in vs]
-                    for k, vs in args.items()}
-        postlen = int(self.req.env.get(r'HTTP_X_HGARGS_POST', 0))
+            args = {
+                k.encode("ascii"): [v.encode("ascii") for v in vs]
+                for k, vs in args.items()
+            }
+        postlen = int(self.req.env.get(r"HTTP_X_HGARGS_POST", 0))
         if postlen:
-            args.update(cgi.parse_qs(
-                self.req.read(postlen), keep_blank_values=True))
+            args.update(cgi.parse_qs(self.req.read(postlen), keep_blank_values=True))
             return args
 
-        argvalue = decodevaluefromheaders(self.req, r'X-HgArg')
+        argvalue = decodevaluefromheaders(self.req, r"X-HgArg")
         args.update(cgi.parse_qs(argvalue, keep_blank_values=True))
         return args
+
     def getfile(self, fp):
-        length = int(self.req.env[r'CONTENT_LENGTH'])
+        length = int(self.req.env[r"CONTENT_LENGTH"])
         # If httppostargs is used, we need to read Content-Length
         # minus the amount that was consumed by args.
-        length -= int(self.req.env.get(r'HTTP_X_HGARGS_POST', 0))
+        length -= int(self.req.env.get(r"HTTP_X_HGARGS_POST", 0))
         for s in util.filechunkiter(self.req, limit=length):
             fp.write(s)
+
     def redirect(self):
         self.oldio = self.ui.fout, self.ui.ferr
         self.ui.ferr = self.ui.fout = stringio()
+
     def restore(self):
         val = self.ui.fout.getvalue()
         self.ui.ferr, self.ui.fout = self.oldio
         return val
 
     def _client(self):
-        return 'remote:%s:%s:%s' % (
-            self.req.env.get('wsgi.url_scheme') or 'http',
-            urlreq.quote(self.req.env.get('REMOTE_HOST', '')),
-            urlreq.quote(self.req.env.get('REMOTE_USER', '')))
+        return "remote:%s:%s:%s" % (
+            self.req.env.get("wsgi.url_scheme") or "http",
+            urlreq.quote(self.req.env.get("REMOTE_HOST", "")),
+            urlreq.quote(self.req.env.get("REMOTE_USER", "")),
+        )
 
     def responsetype(self, v1compressible=False):
         """Determine the appropriate response type and compression settings.
@@ -118,25 +120,25 @@ class webproto(wireproto.abstractserverproto):
 
         # Determine the response media type and compression engine based
         # on the request parameters.
-        protocaps = decodevaluefromheaders(self.req, r'X-HgProto').split(' ')
+        protocaps = decodevaluefromheaders(self.req, r"X-HgProto").split(" ")
 
-        if '0.2' in protocaps:
+        if "0.2" in protocaps:
             # Default as defined by wire protocol spec.
-            compformats = ['zlib', 'none']
+            compformats = ["zlib", "none"]
             for cap in protocaps:
-                if cap.startswith('comp='):
-                    compformats = cap[5:].split(',')
+                if cap.startswith("comp="):
+                    compformats = cap[5:].split(",")
                     break
 
             # Now find an agreed upon compression format.
-            for engine in wireproto.supportedcompengines(self.ui, self,
-                                                         util.SERVERROLE):
+            for engine in wireproto.supportedcompengines(
+                self.ui, self, util.SERVERROLE
+            ):
                 if engine.wireprotosupport().name in compformats:
                     opts = {}
-                    level = self.ui.configint('server',
-                                              '%slevel' % engine.name())
+                    level = self.ui.configint("server", "%slevel" % engine.name())
                     if level is not None:
-                        opts['level'] = level
+                        opts["level"] = level
 
                     return HGTYPE2, engine, opts
 
@@ -146,11 +148,13 @@ class webproto(wireproto.abstractserverproto):
         # Don't allow untrusted settings because disabling compression or
         # setting a very high compression level could lead to flooding
         # the server's network or CPU.
-        opts = {'level': self.ui.configint('server', 'zliblevel')}
-        return HGTYPE, util.compengines['zlib'], opts
+        opts = {"level": self.ui.configint("server", "zliblevel")}
+        return HGTYPE, util.compengines["zlib"], opts
+
 
 def iscmd(cmd):
     return cmd in wireproto.commands
+
 
 def call(repo, req, cmd):
     p = webproto(req, repo.ui)
@@ -160,7 +164,7 @@ def call(repo, req, cmd):
         # identifying the compression engine.
         name = engine.wireprotosupport().name
         assert 0 < len(name) < 256
-        yield struct.pack('B', len(name))
+        yield struct.pack("B", len(name))
         yield name
 
         if compress:
@@ -176,7 +180,7 @@ def call(repo, req, cmd):
         return []
     elif isinstance(rsp, wireproto.streamres):
         if rsp.reader:
-            gen = iter(lambda: rsp.reader.read(32768), '')
+            gen = iter(lambda: rsp.reader.read(32768), "")
         else:
             gen = rsp.gen
 
@@ -193,18 +197,18 @@ def call(repo, req, cmd):
         return gen
     elif isinstance(rsp, wireproto.pushres):
         val = p.restore()
-        rsp = '%d\n%s' % (rsp.res, val)
+        rsp = "%d\n%s" % (rsp.res, val)
         req.respond(HTTP_OK, HGTYPE, body=rsp)
         return []
     elif isinstance(rsp, wireproto.pusherr):
         # drain the incoming bundle
         req.drain()
         p.restore()
-        rsp = '0\n%s\n' % rsp.res
+        rsp = "0\n%s\n" % rsp.res
         req.respond(HTTP_OK, HGTYPE, body=rsp)
         return []
     elif isinstance(rsp, wireproto.ooberror):
         rsp = rsp.message
         req.respond(HTTP_OK, HGERRTYPE, body=rsp)
         return []
-    raise error.ProgrammingError('hgweb.protocol internal failure', rsp)
+    raise error.ProgrammingError("hgweb.protocol internal failure", rsp)

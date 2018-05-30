@@ -115,6 +115,7 @@ class cg1unpacker(object):
     A few other public methods exist. Those are used only for
     bundlerepo and some debug commands - their use is discouraged.
     """
+
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
     version = "01"
@@ -456,6 +457,7 @@ class cg2unpacker(cg1unpacker):
     format is slightly different. All other features about the data
     remain the same.
     """
+
     deltaheader = _CHANGEGROUPV2_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
     version = "02"
@@ -473,6 +475,7 @@ class cg3unpacker(cg2unpacker):
     flags. It adds the revlog flags to the delta header and an empty chunk
     separating manifests and files.
     """
+
     deltaheader = _CHANGEGROUPV3_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
     version = "03"
@@ -499,7 +502,6 @@ class cg3unpacker(cg2unpacker):
 
 
 class headerlessfixup(object):
-
     def __init__(self, fh, h):
         self._h = h
         self._fh = fh

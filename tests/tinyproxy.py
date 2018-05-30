@@ -163,7 +163,6 @@ class ProxyHandler(httpserver.basehttprequesthandler):
 
 
 class ThreadingHTTPServer(socketserver.ThreadingMixIn, httpserver.httpserver):
-
     def __init__(self, *args, **kwargs):
         httpserver.httpserver.__init__(self, *args, **kwargs)
         a = open("proxy.pid", "w")

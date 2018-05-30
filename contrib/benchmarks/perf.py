@@ -9,17 +9,21 @@ from __future__ import absolute_import
 
 from . import perfbench
 
+
 @perfbench()
 def track_tags(perf):
     return perf("perftags")
+
 
 @perfbench()
 def track_status(perf):
     return perf("perfstatus", unknown=False)
 
-@perfbench(params=[('rev', ['1000', '10000', 'tip'])])
+
+@perfbench(params=[("rev", ["1000", "10000", "tip"])])
 def track_manifest(perf, rev):
     return perf("perfmanifest", rev)
+
 
 @perfbench()
 def track_heads(perf):

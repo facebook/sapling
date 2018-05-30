@@ -31,15 +31,17 @@ from . import common
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+
 def _getmetadata(**opts):
     metadata = {}
-    date = opts.get('date')
-    user = opts.get('user')
+    date = opts.get("date")
+    user = opts.get("user")
     if date:
-        metadata['date'] = '%i %i' % util.parsedate(date)
+        metadata["date"] = "%i %i" % util.parsedate(date)
     if user:
-        metadata['user'] = user
+        metadata["user"] = user
     return metadata
+
 
 def _reachablefrombookmark(repo, revs, bookmarks):
     """filter revisions and bookmarks reachable from the given bookmark
@@ -47,8 +49,10 @@ def _reachablefrombookmark(repo, revs, bookmarks):
     """
     repomarks = repo._bookmarks
     if not bookmarks.issubset(repomarks):
-        raise error.Abort(_("bookmark '%s' not found") %
-                          ','.join(sorted(bookmarks - set(repomarks.keys()))))
+        raise error.Abort(
+            _("bookmark '%s' not found")
+            % ",".join(sorted(bookmarks - set(repomarks.keys())))
+        )
 
     # If the requested bookmark is not the only one pointing to a
     # a revision we have to only delete the bookmark and not strip
@@ -64,15 +68,16 @@ def _reachablefrombookmark(repo, revs, bookmarks):
             revs = sorted(revs)
     return repomarks, revs
 
+
 def _deletebookmark(repo, repomarks, bookmarks):
     wlock = lock = tr = None
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        tr = repo.transaction('prune')
+        tr = repo.transaction("prune")
         changes = []
         for bookmark in bookmarks:
-            changes.append((bookmark, None)) # delete the bookmark
+            changes.append((bookmark, None))  # delete the bookmark
         repomarks.applychanges(repo, tr, changes)
         tr.close()
         for bookmark in sorted(bookmarks):
@@ -80,21 +85,22 @@ def _deletebookmark(repo, repomarks, bookmarks):
     finally:
         lockmod.release(tr, lock, wlock)
 
+
 @command(
-    '^prune',
-    [('s', 'succ', [], _("successor changeset")),
-     ('r', 'rev', [], _("revisions to prune")),
-     ('k', 'keep', None, _("does not modify working copy during prune")),
-     ('', 'biject', False, _("do a 1-1 map between rev and successor ranges")),
-     ('', 'fold', False,
-      _("record a fold (multiple precursors, one successors)")),
-     ('', 'split', False,
-      _("record a split (on precursor, multiple successors)")),
-     ('B', 'bookmark', [], _("remove revs only reachable from given"
-                             " bookmark")),
-     ('d', 'date', '', _('record the specified date in metadata'), _('DATE')),
-     ('u', 'user', '', _('record the specified user in metadata'), _('USER'))],
-    _('[OPTION]... [-r] [REV]...'))
+    "^prune",
+    [
+        ("s", "succ", [], _("successor changeset")),
+        ("r", "rev", [], _("revisions to prune")),
+        ("k", "keep", None, _("does not modify working copy during prune")),
+        ("", "biject", False, _("do a 1-1 map between rev and successor ranges")),
+        ("", "fold", False, _("record a fold (multiple precursors, one successors)")),
+        ("", "split", False, _("record a split (on precursor, multiple successors)")),
+        ("B", "bookmark", [], _("remove revs only reachable from given" " bookmark")),
+        ("d", "date", "", _("record the specified date in metadata"), _("DATE")),
+        ("u", "user", "", _("record the specified user in metadata"), _("USER")),
+    ],
+    _("[OPTION]... [-r] [REV]..."),
+)
 # XXX -U  --noupdate option to prevent wc update and or bookmarks update ?
 def prune(ui, repo, *revs, **opts):
     """hide changesets by marking them obsolete
@@ -122,23 +128,23 @@ def prune(ui, repo, *revs, **opts):
     prune multiple changesets with a single successor, you must pass the
     ``--fold`` option.
     """
-    if opts.get('keep', False):
-        hint = 'strip-uncommit'
+    if opts.get("keep", False):
+        hint = "strip-uncommit"
     else:
-        hint = 'strip-hide'
+        hint = "strip-hide"
     hintutil.trigger(hint)
 
-    revs = scmutil.revrange(repo, list(revs) + opts.get('rev', []))
-    succs = opts.get('succ', [])
-    bookmarks = set(opts.get('bookmark', ()))
+    revs = scmutil.revrange(repo, list(revs) + opts.get("rev", []))
+    succs = opts.get("succ", [])
+    bookmarks = set(opts.get("bookmark", ()))
     metadata = _getmetadata(**opts)
-    biject = opts.get('biject')
-    fold = opts.get('fold')
-    split = opts.get('split')
+    biject = opts.get("biject")
+    fold = opts.get("fold")
+    split = opts.get("split")
 
-    options = [o for o in ('biject', 'fold', 'split') if opts.get(o)]
+    options = [o for o in ("biject", "fold", "split") if opts.get(o)]
     if 1 < len(options):
-        raise error.Abort(_("can only specify one of %s") % ', '.join(options))
+        raise error.Abort(_("can only specify one of %s") % ", ".join(options))
 
     if bookmarks:
         repomarks, revs = _reachablefrombookmark(repo, revs, bookmarks)
@@ -147,13 +153,13 @@ def prune(ui, repo, *revs, **opts):
             _deletebookmark(repo, repomarks, bookmarks)
 
     if not revs:
-        raise error.Abort(_('nothing to prune'))
+        raise error.Abort(_("nothing to prune"))
 
     wlock = lock = tr = None
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        tr = repo.transaction('prune')
+        tr = repo.transaction("prune")
         # defines pruned changesets
         precs = []
         revs.sort()
@@ -161,11 +167,13 @@ def prune(ui, repo, *revs, **opts):
             cp = repo[p]
             if not cp.mutable():
                 # note: createmarkers() would have raised something anyway
-                raise error.Abort('cannot prune immutable changeset: %s' % cp,
-                                  hint="see 'hg help phases' for details")
+                raise error.Abort(
+                    "cannot prune immutable changeset: %s" % cp,
+                    hint="see 'hg help phases' for details",
+                )
             precs.append(cp)
         if not precs:
-            raise error.Abort('nothing to prune')
+            raise error.Abort("nothing to prune")
 
         # defines successors changesets
         sucs = scmutil.revrange(repo, succs)
@@ -173,12 +181,10 @@ def prune(ui, repo, *revs, **opts):
         sucs = tuple(repo[n] for n in sucs)
         if not biject and len(sucs) > 1 and len(precs) > 1:
             msg = "Can't use multiple successors for multiple precursors"
-            hint = _("use --biject to mark a series as a replacement"
-                     " for another")
+            hint = _("use --biject to mark a series as a replacement" " for another")
             raise error.Abort(msg, hint=hint)
         elif biject and len(sucs) != len(precs):
-            msg = "Can't use %d successors for %d precursors" \
-                % (len(sucs), len(precs))
+            msg = "Can't use %d successors for %d precursors" % (len(sucs), len(precs))
             raise error.Abort(msg)
         elif (len(precs) == 1 and len(sucs) > 1) and not split:
             msg = "please add --split if you want to do a split"
@@ -191,7 +197,7 @@ def prune(ui, repo, *revs, **opts):
         else:
             relations = [(p, sucs) for p in precs]
 
-        wdp = repo['.']
+        wdp = repo["."]
 
         if len(sucs) == 1 and len(precs) == 1 and wdp in precs:
             # '.' killed, so update to the successor
@@ -204,7 +210,7 @@ def prune(ui, repo, *revs, **opts):
                 newnode = newnode.parents()[0]
 
         if newnode.node() != wdp.node():
-            if opts.get('keep', False):
+            if opts.get("keep", False):
                 # This is largely the same as the implementation in
                 # strip.stripcmd(). We might want to refactor this somewhere
                 # common at some point.
@@ -220,10 +226,9 @@ def prune(ui, repo, *revs, **opts):
 
                 # reset files that only changed in the dirstate too
                 dirstate = repo.dirstate
-                dirchanges = [f for f in dirstate if dirstate[f] != 'n']
+                dirchanges = [f for f in dirstate if dirstate[f] != "n"]
                 changedfiles.extend(dirchanges)
-                repo.dirstate.rebuild(newnode.node(), newnode.manifest(),
-                                      changedfiles)
+                repo.dirstate.rebuild(newnode.node(), newnode.manifest(), changedfiles)
                 dirstate.write(tr)
             else:
                 bookactive = repo._activebookmark
@@ -236,8 +241,10 @@ def prune(ui, repo, *revs, **opts):
                     changes = [(bookactive, newnode.node())]
                     repo._bookmarks.applychanges(repo, tr, changes)
                 commands.update(ui, repo, newnode.rev())
-                ui.status(_('working directory now at %s\n')
-                          % ui.label(str(newnode), 'evolve.node'))
+                ui.status(
+                    _("working directory now at %s\n")
+                    % ui.label(str(newnode), "evolve.node")
+                )
                 if movebookmark:
                     bookmarksmod.activate(repo, bookactive)
 
@@ -246,13 +253,12 @@ def prune(ui, repo, *revs, **opts):
             _deletebookmark(repo, repomarks, bookmarks)
 
         # create markers
-        obsolete.createmarkers(repo, relations, metadata=metadata,
-                               operation='prune')
+        obsolete.createmarkers(repo, relations, metadata=metadata, operation="prune")
 
         # informs that changeset have been pruned
-        ui.status(_('%i changesets pruned\n') % len(precs))
+        ui.status(_("%i changesets pruned\n") % len(precs))
 
-        for ctx in repo.unfiltered().set('bookmark() and %ld', precs):
+        for ctx in repo.unfiltered().set("bookmark() and %ld", precs):
             # used to be:
             #
             #   ldest = list(repo.set('max((::%d) - obsolete())', ctx))
@@ -263,8 +269,7 @@ def prune(ui, repo, *revs, **opts):
             # slower. The new forms makes as much sense and a much faster.
             for dest in ctx.ancestors():
                 if not dest.obsolete():
-                    updatebookmarks = common.bookmarksupdater(
-                        repo, ctx.node(), tr)
+                    updatebookmarks = common.bookmarksupdater(repo, ctx.node(), tr)
                     updatebookmarks(dest.node())
                     break
 
@@ -272,21 +277,24 @@ def prune(ui, repo, *revs, **opts):
     finally:
         lockmod.release(tr, lock, wlock)
 
+
 def safestrip(orig, ui, repo, *revs, **kwargs):
-    revs = list(revs) + kwargs.pop('rev', [])
+    revs = list(revs) + kwargs.pop("rev", [])
     revs = set(scmutil.revrange(repo, revs))
     revs = repo.revs("(%ld)::", revs)
     return prune(ui, repo, *revs, **kwargs)
 
+
 def wrapstrip(loaded):
     try:
-        stripmod = extensions.find('strip')
+        stripmod = extensions.find("strip")
     except KeyError:
         pass
     else:
-        extensions.wrapcommand(stripmod.cmdtable, 'strip', safestrip)
+        extensions.wrapcommand(stripmod.cmdtable, "strip", safestrip)
+
 
 def uisetup(ui):
     # developer config: fbamend.safestrip
-    if ui.configbool('fbamend', 'safestrip'):
-        extensions.afterloaded('strip', wrapstrip)
+    if ui.configbool("fbamend", "safestrip"):
+        extensions.afterloaded("strip", wrapstrip)

@@ -10,43 +10,38 @@ from __future__ import absolute_import
 from hgext import extutil
 
 from mercurial.node import short
-from mercurial import (
-    dispatch,
-    error,
-    extensions,
-    obsolete,
-    repoview,
-    scmutil,
-    util,
-)
+from mercurial import dispatch, error, extensions, obsolete, repoview, scmutil, util
+
 
 def uisetup(ui):
-    extensions.wrapfunction(repoview, 'pinnedrevs', pinnedrevs)
-    extensions.wrapfunction(dispatch, 'runcommand', runcommand)
-    extensions.wrapfunction(obsolete, 'createmarkers', createmarkers)
-    extensions.wrapfunction(scmutil, 'cleanupnodes', cleanupnodes)
+    extensions.wrapfunction(repoview, "pinnedrevs", pinnedrevs)
+    extensions.wrapfunction(dispatch, "runcommand", runcommand)
+    extensions.wrapfunction(obsolete, "createmarkers", createmarkers)
+    extensions.wrapfunction(scmutil, "cleanupnodes", cleanupnodes)
+
 
 def pinnedrevs(orig, repo):
     revs = orig(repo)
     nodemap = repo.changelog.nodemap
     pinnednodes = set(loadpinnednodes(repo))
-    tounpin = getattr(repo, '_tounpinnodes', set())
+    tounpin = getattr(repo, "_tounpinnodes", set())
     pinnednodes -= tounpin
     revs.update(nodemap[n] for n in pinnednodes)
     return revs
+
 
 def loadpinnednodes(repo):
     """yield pinned nodes that are obsoleted and should be visible"""
     if repo is None or not repo.local():
         return
     # the "pinned nodes" file name is "obsinhibit" for compatibility reason
-    content = repo.svfs.tryread('obsinhibit') or ''
+    content = repo.svfs.tryread("obsinhibit") or ""
     unfi = repo.unfiltered()
     nodemap = unfi.changelog.nodemap
     offset = 0
     result = []
     while True:
-        node = content[offset:offset + 20]
+        node = content[offset : offset + 20]
         if not node:
             break
         if node in nodemap:
@@ -54,13 +49,14 @@ def loadpinnednodes(repo):
         offset += 20
     return result
 
+
 def shouldpinnodes(repo):
     """get nodes that should be pinned: working parent + bookmarks for now"""
     result = set()
     if repo and repo.local():
         # working copy parent
         try:
-            wnode = repo.vfs('dirstate').read(20)
+            wnode = repo.vfs("dirstate").read(20)
             result.add(wnode)
         except Exception:
             pass
@@ -68,20 +64,28 @@ def shouldpinnodes(repo):
         result.update(repo.unfiltered()._bookmarks.values())
     return result
 
+
 def savepinnednodes(repo, newpin, newunpin, fullargs):
     # take a narrowed lock so it does not affect repo lock
-    with extutil.flock(repo.svfs.join('obsinhibit.lock'), 'save pinned nodes'):
+    with extutil.flock(repo.svfs.join("obsinhibit.lock"), "save pinned nodes"):
         orignodes = loadpinnednodes(repo)
         nodes = set(orignodes)
         nodes |= set(newpin)
         nodes -= set(newunpin)
-        with util.atomictempfile(repo.svfs.join('obsinhibit')) as f:
-            f.write(''.join(nodes))
+        with util.atomictempfile(repo.svfs.join("obsinhibit")) as f:
+            f.write("".join(nodes))
 
         desc = lambda s: [short(n) for n in s]
-        repo.ui.log('pinnednodes', 'pinnednodes: %r newpin=%r newunpin=%r '
-                    'before=%r after=%r\n', fullargs, desc(newpin),
-                    desc(newunpin), desc(orignodes), desc(nodes))
+        repo.ui.log(
+            "pinnednodes",
+            "pinnednodes: %r newpin=%r newunpin=%r " "before=%r after=%r\n",
+            fullargs,
+            desc(newpin),
+            desc(newunpin),
+            desc(orignodes),
+            desc(nodes),
+        )
+
 
 def runcommand(orig, lui, repo, cmd, fullargs, *args):
     # return directly for non-repo command
@@ -93,25 +97,25 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
     # after a command completes, make sure working copy parent and all
     # bookmarks get "pinned".
     newpin = shouldpinnodes(repo) - shouldpinbefore
-    newunpin = getattr(repo.unfiltered(), '_tounpinnodes', set())
+    newunpin = getattr(repo.unfiltered(), "_tounpinnodes", set())
     # filter newpin by obsolte - ex. if newpin is on a non-obsoleted commit,
     # ignore it.
     if newpin:
         unfi = repo.unfiltered()
-        obsoleted = unfi.revs('obsolete()')
+        obsoleted = unfi.revs("obsolete()")
         nodemap = unfi.changelog.nodemap
-        newpin = set(n for n in newpin
-                     if n in nodemap and nodemap[n] in obsoleted)
+        newpin = set(n for n in newpin if n in nodemap and nodemap[n] in obsoleted)
     # only do a write if something has changed
     if newpin or newunpin:
         savepinnednodes(repo, newpin, newunpin, fullargs)
     return result
 
+
 def createmarkers(orig, repo, rels, *args, **kwargs):
     # this is a way to unpin revs - precursors are unpinned
     # note: hg debugobsolete does not call this function
     unfi = repo.unfiltered()
-    tounpin = getattr(unfi, '_tounpinnodes', set())
+    tounpin = getattr(unfi, "_tounpinnodes", set())
     for r in rels:
         try:
             tounpin.add(r[0].node())
@@ -120,11 +124,12 @@ def createmarkers(orig, repo, rels, *args, **kwargs):
     unfi._tounpinnodes = tounpin
     return orig(repo, rels, *args, **kwargs)
 
+
 def cleanupnodes(orig, repo, mapping, *args, **kwargs):
     # this catches cases where cleanupnodes is called but createmarkers is not
     # called. unpin nodes from mapping
     unfi = repo.unfiltered()
-    tounpin = getattr(unfi, '_tounpinnodes', set())
+    tounpin = getattr(unfi, "_tounpinnodes", set())
     tounpin.update(mapping)
     unfi._tounpinnodes = tounpin
     return orig(repo, mapping, *args, **kwargs)

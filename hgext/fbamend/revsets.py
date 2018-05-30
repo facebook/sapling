@@ -8,15 +8,10 @@
 from __future__ import absolute_import
 
 from mercurial.node import nullrev
-from mercurial import (
-    obsutil,
-    phases,
-    registrar,
-    revset,
-    smartset,
-)
+from mercurial import obsutil, phases, registrar, revset, smartset
 
 revsetpredicate = registrar.revsetpredicate()
+
 
 def _calculateset(repo, subset, x, f):
     """f is a function that converts input nodes to output nodes
@@ -30,43 +25,47 @@ def _calculateset(repo, subset, x, f):
     torev = cl.rev
     tonode = cl.node
     nodemap = cl.nodemap
-    resultrevs = set(torev(n)
-                     for n in f(tonode(r) for r in revs)
-                     if n in nodemap)
+    resultrevs = set(torev(n) for n in f(tonode(r) for r in revs) if n in nodemap)
     s = smartset.baseset(resultrevs - set(revs) - repo.changelog.filteredrevs)
     s.sort()
     return subset & s
 
-@revsetpredicate('precursors(set)')
-@revsetpredicate('predecessors(set)')
+
+@revsetpredicate("precursors(set)")
+@revsetpredicate("predecessors(set)")
 def predecessors(repo, subset, x):
     """Immediate predecessors for given set"""
     getpredecessors = repo.obsstore.predecessors.get
+
     def f(nodes):
         for n in nodes:
             for m in getpredecessors(n, ()):
                 # m[0]: predecessor, m[1]: successors
                 yield m[0]
+
     return _calculateset(repo, subset, x, f)
 
-@revsetpredicate('allsuccessors(set)')
+
+@revsetpredicate("allsuccessors(set)")
 def allsuccessors(repo, subset, x):
     """All changesets which are successors for given set, recursively"""
     f = lambda nodes: obsutil.allsuccessors(repo.obsstore, nodes)
     return _calculateset(repo, subset, x, f)
 
-@revsetpredicate('allprecursors(set)')
-@revsetpredicate('allpredecessors(set)')
+
+@revsetpredicate("allprecursors(set)")
+@revsetpredicate("allpredecessors(set)")
 def allpredecessors(repo, subset, x):
     """All changesets which are predecessors for given set, recursively"""
     f = lambda nodes: obsutil.allpredecessors(repo.obsstore, nodes)
     return _calculateset(repo, subset, x, f)
 
-@revsetpredicate('_destrestack(SRC)')
+
+@revsetpredicate("_destrestack(SRC)")
 def _destrestack(repo, subset, x):
     """restack destination for given single source revision"""
     unfi = repo.unfiltered()
-    obsoleted = unfi.revs('obsolete()')
+    obsoleted = unfi.revs("obsolete()")
     getparents = unfi.changelog.parentrevs
     getphase = unfi._phasecache.phase
     nodemap = unfi.changelog.nodemap
@@ -91,12 +90,14 @@ def _destrestack(repo, subset, x):
     # case. However it does not support cycles (unamend) well. So we use
     # allsuccessors and pick non-obsoleted successors manually as a workaround.
     basenode = repo[base].node()
-    succnodes = [n for n in obsutil.allsuccessors(repo.obsstore, [basenode])
-                 if (n != basenode and n in nodemap
-                     and nodemap[n] not in obsoleted)]
+    succnodes = [
+        n
+        for n in obsutil.allsuccessors(repo.obsstore, [basenode])
+        if (n != basenode and n in nodemap and nodemap[n] not in obsoleted)
+    ]
 
     # In case of a split, only keep its heads
-    succrevs = list(unfi.revs('heads(%ln)', succnodes))
+    succrevs = list(unfi.revs("heads(%ln)", succnodes))
 
     if len(succrevs) == 0:
         # Prune - Find the first non-obsoleted ancestor

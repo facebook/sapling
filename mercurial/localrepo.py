@@ -883,7 +883,6 @@ class localrepository(object):
         # This simplifies its cache management by having one decorated
         # function (this one) and the rest simply fetch things from it.
         class tagscache(object):
-
             def __init__(self):
                 # These two define the set of tags for this repository. tags
                 # maps tag name to node; tagtypes maps tag name to 'global' or

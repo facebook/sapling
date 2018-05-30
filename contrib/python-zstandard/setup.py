@@ -23,54 +23,54 @@ if "--legacy" in sys.argv:
 
 # Code for obtaining the Extension instance is in its own module to
 # facilitate reuse in other projects.
-extensions = [setup_zstd.get_c_extension(SUPPORT_LEGACY, 'zstd')]
+extensions = [setup_zstd.get_c_extension(SUPPORT_LEGACY, "zstd")]
 
 install_requires = []
 
 if cffi:
     import make_cffi
+
     extensions.append(make_cffi.ffi.distutils_extension())
 
     # Need change in 1.8 for ffi.from_buffer() behavior.
-    install_requires.append('cffi>=1.8')
+    install_requires.append("cffi>=1.8")
 
 version = None
 
-with open('c-ext/python-zstandard.h', 'r') as fh:
+with open("c-ext/python-zstandard.h", "r") as fh:
     for line in fh:
-        if not line.startswith('#define PYTHON_ZSTANDARD_VERSION'):
+        if not line.startswith("#define PYTHON_ZSTANDARD_VERSION"):
             continue
 
         version = line.split()[2][1:-1]
         break
 
 if not version:
-    raise Exception('could not resolve package version; '
-                    'this should never happen')
+    raise Exception("could not resolve package version; " "this should never happen")
 
 setup(
-    name='zstandard',
+    name="zstandard",
     version=version,
-    description='Zstandard bindings for Python',
-    long_description=open('README.rst', 'r').read(),
-    url='https://github.com/indygreg/python-zstandard',
-    author='Gregory Szorc',
-    author_email='gregory.szorc@gmail.com',
-    license='BSD',
+    description="Zstandard bindings for Python",
+    long_description=open("README.rst", "r").read(),
+    url="https://github.com/indygreg/python-zstandard",
+    author="Gregory Szorc",
+    author_email="gregory.szorc@gmail.com",
+    license="BSD",
     classifiers=[
-        'Development Status :: 4 - Beta',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: BSD License',
-        'Programming Language :: C',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: BSD License",
+        "Programming Language :: C",
+        "Programming Language :: Python :: 2.6",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
     ],
-    keywords='zstandard zstd compression',
+    keywords="zstandard zstd compression",
     ext_modules=extensions,
-    test_suite='tests',
+    test_suite="tests",
     install_requires=install_requires,
 )

@@ -23,7 +23,6 @@ from .i18n import _
 
 
 class parser(object):
-
     def __init__(self, elements, methods=None):
         self._elements = elements
         self._methods = methods
@@ -435,6 +434,7 @@ class basealiasrules(object):
         h = heads(default)
         b($1) = ancestors($1) - ancestors(default)
     """
+
     # typically a config section, which will be included in error messages
     _section = None
     # tag of symbol node

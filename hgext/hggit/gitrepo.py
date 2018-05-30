@@ -1,26 +1,25 @@
 from util import isgitsshuri
-from mercurial import (
-    error,
-    util,
-)
+from mercurial import error, util
 from mercurial.error import RepoError
 
 peerapi = False
 try:
     from mercurial.repository import peer as peerrepository
+
     peerapi = True
 except ImportError:
     from mercurial.peer import peerrepository
 
+
 class gitrepo(peerrepository):
     def __init__(self, ui, path, create):
         if create:  # pragma: no cover
-            raise error.Abort('Cannot create a git repository.')
+            raise error.Abort("Cannot create a git repository.")
         self._ui = ui
         self.path = path
         self.localrepo = None
 
-    _peercapabilities = ['lookup']
+    _peercapabilities = ["lookup"]
 
     def _capabilities(self):
         return self._peercapabilities
@@ -47,17 +46,20 @@ class gitrepo(peerrepository):
         return []
 
     def listkeys(self, namespace):
-        if namespace == 'namespaces':
-            return {'bookmarks': ''}
-        elif namespace == 'bookmarks':
+        if namespace == "namespaces":
+            return {"bookmarks": ""}
+        elif namespace == "bookmarks":
             if self.localrepo is not None:
                 handler = self.localrepo.githandler
                 refs = handler.fetch_pack(self.path, heads=[])
                 # map any git shas that exist in hg to hg shas
-                stripped_refs = dict([
-                    (ref[11:], handler.map_hg_get(refs[ref]) or refs[ref])
-                    for ref in refs.keys() if ref.startswith('refs/heads/')
-                ])
+                stripped_refs = dict(
+                    [
+                        (ref[11:], handler.map_hg_get(refs[ref]) or refs[ref])
+                        for ref in refs.keys()
+                        if ref.startswith("refs/heads/")
+                    ]
+                )
                 return stripped_refs
         return {}
 
@@ -65,6 +67,7 @@ class gitrepo(peerrepository):
         return False
 
     if peerapi:
+
         def branchmap(self):
             raise NotImplementedError
 
@@ -95,11 +98,13 @@ class gitrepo(peerrepository):
         def unbundle(self):
             raise NotImplementedError
 
+
 instance = gitrepo
+
 
 def islocal(path):
     if isgitsshuri(path):
         return True
 
     u = util.url(path)
-    return not u.scheme or u.scheme == 'file'
+    return not u.scheme or u.scheme == "file"

@@ -11,30 +11,25 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
-    commands,
-    error,
-    hg,
-    lock as lockmod,
-    phases,
-    registrar,
-    scmutil,
-)
+from mercurial import commands, error, hg, lock as lockmod, phases, registrar, scmutil
 from mercurial.i18n import _
 
-from . import (
-    common,
-    fold,
-)
+from . import common, fold
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-@command('^metaedit',
-         [('r', 'rev', [], _("revision to split")),
-          ('', 'fold', False, _("fold specified revisions into one")),
-         ] + commands.commitopts + commands.commitopts2,
-         _('hg metaedit [OPTION]... [-r] [REV]'))
+
+@command(
+    "^metaedit",
+    [
+        ("r", "rev", [], _("revision to split")),
+        ("", "fold", False, _("fold specified revisions into one")),
+    ]
+    + commands.commitopts
+    + commands.commitopts2,
+    _("hg metaedit [OPTION]... [-r] [REV]"),
+)
 def metaedit(ui, repo, *revs, **opts):
     """edit commit information
 
@@ -65,11 +60,11 @@ def metaedit(ui, repo, *revs, **opts):
        :hg:`help revsets` for more about the `draft()` and `only()` keywords.
     """
     revs = list(revs)
-    revs.extend(opts['rev'])
+    revs.extend(opts["rev"])
     if not revs:
-        if opts['fold']:
-            raise error.Abort(_('revisions must be specified with --fold'))
-        revs = ['.']
+        if opts["fold"]:
+            raise error.Abort(_("revisions must be specified with --fold"))
+        revs = ["."]
 
     wlock = lock = None
     try:
@@ -78,34 +73,37 @@ def metaedit(ui, repo, *revs, **opts):
 
         revs = scmutil.revrange(repo, revs)
 
-        if opts['fold']:
+        if opts["fold"]:
             root, head = fold._foldcheck(repo, revs)
         else:
             if repo.revs("%ld and public()", revs):
-                raise error.Abort(_('cannot edit commit information for public '
-                                    'revisions'))
+                raise error.Abort(
+                    _("cannot edit commit information for public " "revisions")
+                )
             root = head = repo[revs.first()]
 
         wctx = repo[None]
         p1 = wctx.p1()
-        tr = repo.transaction('metaedit')
+        tr = repo.transaction("metaedit")
         newp1 = None
         try:
             commitopts = opts.copy()
             allctx = [repo[r] for r in revs]
 
-            if commitopts.get('message') or commitopts.get('logfile'):
-                commitopts['edit'] = False
+            if commitopts.get("message") or commitopts.get("logfile"):
+                commitopts["edit"] = False
             else:
-                if opts['fold']:
-                    msgs = [_("HG: This is a fold of %d changesets.")
-                            % len(allctx)]
-                    msgs += [_("HG: Commit message of changeset %s.\n\n%s\n")
-                             % (c.rev(), c.description()) for c in allctx]
+                if opts["fold"]:
+                    msgs = [_("HG: This is a fold of %d changesets.") % len(allctx)]
+                    msgs += [
+                        _("HG: Commit message of changeset %s.\n\n%s\n")
+                        % (c.rev(), c.description())
+                        for c in allctx
+                    ]
                 else:
                     msgs = [head.description()]
-                commitopts['message'] = "\n".join(msgs)
-                commitopts['edit'] = True
+                commitopts["message"] = "\n".join(msgs)
+                commitopts["edit"] = True
 
             if root == head:
                 # fast path: use metarewrite
@@ -114,39 +112,50 @@ def metaedit(ui, repo, *revs, **opts):
                 allctx = sorted(allctx, key=lambda c: c.rev())
                 # all descendats that can be safely rewritten
                 newunstable = common.newunstable(repo, revs)
-                newunstablectx = sorted([repo[r] for r in newunstable],
-                                        key=lambda c: c.rev())
+                newunstablectx = sorted(
+                    [repo[r] for r in newunstable], key=lambda c: c.rev()
+                )
 
                 def _rewritesingle(c, _commitopts):
-                    if _commitopts.get('edit', False):
-                        _commitopts['message'] = \
-                            "HG: Commit message of changeset %s\n%s" %\
-                            (str(c), c.description())
+                    if _commitopts.get("edit", False):
+                        _commitopts["message"] = (
+                            "HG: Commit message of changeset %s\n%s"
+                            % (str(c), c.description())
+                        )
                     bases = [
                         replacemap.get(c.p1().node(), c.p1().node()),
                         replacemap.get(c.p2().node(), c.p2().node()),
                     ]
-                    newid, created = common.metarewrite(repo, c, bases,
-                                                        commitopts=_commitopts)
+                    newid, created = common.metarewrite(
+                        repo, c, bases, commitopts=_commitopts
+                    )
                     if created:
                         replacemap[c.node()] = newid
+
                 for c in allctx:
                     _rewritesingle(c, commitopts)
 
                 if _histediting(repo):
-                    ui.note(_('during histedit, the descendants of '
-                              'the edited commit weren\'t auto-rebased\n'))
+                    ui.note(
+                        _(
+                            "during histedit, the descendants of "
+                            "the edited commit weren't auto-rebased\n"
+                        )
+                    )
                 else:
                     for c in newunstablectx:
-                        _rewritesingle(c,
-                                       {'date': commitopts.get('date') or None})
+                        _rewritesingle(c, {"date": commitopts.get("date") or None})
 
                 if p1.node() in replacemap:
                     repo.setparents(replacemap[p1.node()])
                 if len(replacemap) > 0:
-                    mapping = dict(map(lambda oldnew: (oldnew[0], [oldnew[1]]),
-                                       replacemap.iteritems()))
-                    scmutil.cleanupnodes(repo, mapping, 'metaedit')
+                    mapping = dict(
+                        map(
+                            lambda oldnew: (oldnew[0], [oldnew[1]]),
+                            replacemap.iteritems(),
+                        )
+                    )
+                    scmutil.cleanupnodes(repo, mapping, "metaedit")
                     # TODO: set poroper phase boundaries (affects secret
                     # phase only)
                 else:
@@ -160,16 +169,19 @@ def metaedit(ui, repo, *revs, **opts):
                 # new hash. Right now we create a new hash because the date can
                 # be different.
                 newid, created = common.rewrite(
-                    repo, root, allctx, head,
+                    repo,
+                    root,
+                    allctx,
+                    head,
                     [root.p1().node(), root.p2().node()],
-                    commitopts=commitopts)
+                    commitopts=commitopts,
+                )
                 if created:
                     if p1.rev() in revs:
                         newp1 = newid
                     phases.retractboundary(repo, tr, targetphase, [newid])
-                    mapping = dict(
-                        [(repo[rev].node(), [newid]) for rev in revs])
-                    scmutil.cleanupnodes(repo, mapping, 'metaedit')
+                    mapping = dict([(repo[rev].node(), [newid]) for rev in revs])
+                    scmutil.cleanupnodes(repo, mapping, "metaedit")
                 else:
                     ui.status(_("nothing changed\n"))
                     return 1
@@ -177,12 +189,13 @@ def metaedit(ui, repo, *revs, **opts):
         finally:
             tr.release()
 
-        if opts['fold']:
-            ui.status(_('%i changesets folded\n') % len(revs))
+        if opts["fold"]:
+            ui.status(_("%i changesets folded\n") % len(revs))
         if newp1 is not None:
             hg.update(repo, newp1)
     finally:
         lockmod.release(lock, wlock)
 
+
 def _histediting(repo):
-    return repo.vfs.exists('histedit-state')
+    return repo.vfs.exists("histedit-state")

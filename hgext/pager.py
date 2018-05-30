@@ -39,7 +39,6 @@ configitem("pager", "attend", default=lambda: attended)
 
 
 def uisetup(ui):
-
     def pagecmd(orig, ui, options, cmd, cmdfunc):
         auto = options["pager"] == "auto"
         if auto and not ui.pageractive:

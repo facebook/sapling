@@ -244,6 +244,7 @@ class revsetpredicate(_funcregistrarbase):
 
     Otherwise, explicit 'revset.loadpredicate()' is needed.
     """
+
     _getname = _funcregistrarbase._parsefuncdecl
     _docformat = "``%s``\n    %s"
 
@@ -285,6 +286,7 @@ class filesetpredicate(_funcregistrarbase):
 
     Otherwise, explicit 'fileset.loadpredicate()' is needed.
     """
+
     _getname = _funcregistrarbase._parsefuncdecl
     _docformat = "``%s``\n    %s"
 
@@ -296,6 +298,7 @@ class filesetpredicate(_funcregistrarbase):
 class _templateregistrarbase(_funcregistrarbase):
     """Base of decorator to register functions as template specific one
     """
+
     _docformat = ":%s: %s"
 
 
@@ -379,6 +382,7 @@ class templatefunc(_templateregistrarbase):
 
     Otherwise, explicit 'templater.loadfunction()' is needed.
     """
+
     _getname = _funcregistrarbase._parsefuncdecl
 
     def _extrasetup(self, name, func, argspec=None):
@@ -433,6 +437,7 @@ class internalmerge(_funcregistrarbase):
 
     Otherwise, explicit 'filemerge.loadinternalmerge()' is needed.
     """
+
     _docformat = "``:%s``\n    %s"
 
     # merge type definitions:

@@ -100,7 +100,6 @@ class shelvedfile(object):
         return self.vfs.join(self.fname)
 
     def backupfilename(self):
-
         def gennames(base):
             yield base
             base, ext = base.rsplit(".", 1)
@@ -176,6 +175,7 @@ class shelvedstate(object):
     Handles saving and restoring a shelved state. Ensures that different
     versions of a shelved state are possible and handles them appropriately.
     """
+
     _version = 2
     _filename = "shelvedstate"
     _keep = "keep"
@@ -417,7 +417,6 @@ def mutableancestors(ctx):
 
 
 def getcommitfunc(extra, interactive, editor=False):
-
     def commitfunc(ui, repo, message, match, opts):
         hasmq = util.safehasattr(repo, "mq")
         if hasmq:

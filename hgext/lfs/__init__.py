@@ -54,81 +54,73 @@ from mercurial import (
     vfs as vfsmod,
 )
 
-from . import (
-    blobstore,
-    pointer,
-    wrapper,
-)
+from . import blobstore, pointer, wrapper
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
+testedwith = "ships-with-hg-core"
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('experimental', 'lfs.user-agent',
-    default=None,
-)
+configitem("experimental", "lfs.user-agent", default=None)
 
-configitem('lfs', 'url',
-    default='',
-)
-configitem('lfs', 'usercache',
-    default=None,
-)
-configitem('lfs', 'threshold',
-    default=None,
-)
-configitem('lfs', 'retry',
-    default=5,
-)
+configitem("lfs", "url", default="")
+configitem("lfs", "usercache", default=None)
+configitem("lfs", "threshold", default=None)
+configitem("lfs", "retry", default=5)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 
 templatekeyword = registrar.templatekeyword()
 
+
 def featuresetup(ui, supported):
     # don't die on seeing a repo with the lfs requirement
-    supported |= {'lfs'}
+    supported |= {"lfs"}
+
 
 def uisetup(ui):
     localrepo.localrepository.featuresetupfuncs.add(featuresetup)
+
 
 def reposetup(ui, repo):
     # Nothing to do with a remote repo
     if not repo.local():
         return
 
-    threshold = repo.ui.configbytes('lfs', 'threshold')
+    threshold = repo.ui.configbytes("lfs", "threshold")
 
-    repo.svfs.options['lfsthreshold'] = threshold
+    repo.svfs.options["lfsthreshold"] = threshold
     repo.svfs.lfslocalblobstore = blobstore.local(repo)
     repo.svfs.lfsremoteblobstore = blobstore.remote(repo.ui)
 
     # Push hook
-    repo.prepushoutgoinghooks.add('lfs', wrapper.prepush)
+    repo.prepushoutgoinghooks.add("lfs", wrapper.prepush)
 
-    if 'lfs' not in repo.requirements:
+    if "lfs" not in repo.requirements:
+
         def checkrequireslfs(ui, repo, **kwargs):
-            if 'lfs' not in repo.requirements:
-                ctx = repo[kwargs['node']]
+            if "lfs" not in repo.requirements:
+                ctx = repo[kwargs["node"]]
                 # TODO: is there a way to just walk the files in the commit?
                 if any(ctx[f].islfs() for f in ctx.files() if f in ctx):
-                    repo.requirements.add('lfs')
+                    repo.requirements.add("lfs")
                     repo._writerequirements()
 
-        ui.setconfig('hooks', 'commit.lfs', checkrequireslfs, 'lfs')
+        ui.setconfig("hooks", "commit.lfs", checkrequireslfs, "lfs")
+
 
 def wrapfilelog(filelog):
     wrapfunction = extensions.wrapfunction
 
-    wrapfunction(filelog, 'addrevision', wrapper.filelogaddrevision)
-    wrapfunction(filelog, 'renamed', wrapper.filelogrenamed)
-    wrapfunction(filelog, 'size', wrapper.filelogsize)
+    wrapfunction(filelog, "addrevision", wrapper.filelogaddrevision)
+    wrapfunction(filelog, "renamed", wrapper.filelogrenamed)
+    wrapfunction(filelog, "size", wrapper.filelogsize)
+
 
 def extsetup(ui):
     wrapfilelog(filelog.filelog)
@@ -139,76 +131,75 @@ def extsetup(ui):
         # Older Mercurial does not have wrapconvertsink. These methods are
         # "convert"-related and missing them is not fatal.  Ignore them so
         # bootstrapping from an old Mercurial works.
-        wrapfunction(scmutil, 'wrapconvertsink', wrapper.convertsink)
-        wrapfunction(upgrade, '_finishdatamigration',
-                     wrapper.upgradefinishdatamigration)
-        wrapfunction(upgrade, 'preservedrequirements',
-                     wrapper.upgraderequirements)
-        wrapfunction(upgrade, 'supporteddestrequirements',
-                     wrapper.upgraderequirements)
+        wrapfunction(scmutil, "wrapconvertsink", wrapper.convertsink)
+        wrapfunction(
+            upgrade, "_finishdatamigration", wrapper.upgradefinishdatamigration
+        )
+        wrapfunction(upgrade, "preservedrequirements", wrapper.upgraderequirements)
+        wrapfunction(upgrade, "supporteddestrequirements", wrapper.upgraderequirements)
     except AttributeError:
         pass
 
-    wrapfunction(changegroup,
-                 'supportedoutgoingversions',
-                 wrapper.supportedoutgoingversions)
-    wrapfunction(changegroup,
-                 'allsupportedversions',
-                 wrapper.allsupportedversions)
+    wrapfunction(
+        changegroup, "supportedoutgoingversions", wrapper.supportedoutgoingversions
+    )
+    wrapfunction(changegroup, "allsupportedversions", wrapper.allsupportedversions)
 
-    wrapfunction(context.basefilectx, 'cmp', wrapper.filectxcmp)
-    wrapfunction(context.basefilectx, 'isbinary', wrapper.filectxisbinary)
+    wrapfunction(context.basefilectx, "cmp", wrapper.filectxcmp)
+    wrapfunction(context.basefilectx, "isbinary", wrapper.filectxisbinary)
     context.basefilectx.islfs = wrapper.filectxislfs
 
     revlog.addflagprocessor(
         revlog.REVIDX_EXTSTORED,
-        (
-            wrapper.readfromstore,
-            wrapper.writetostore,
-            wrapper.bypasscheckhash,
-        ),
+        (wrapper.readfromstore, wrapper.writetostore, wrapper.bypasscheckhash),
     )
 
-    wrapfunction(hg, 'clone', wrapper.hgclone)
-    wrapfunction(hg, 'postshare', wrapper.hgpostshare)
+    wrapfunction(hg, "clone", wrapper.hgclone)
+    wrapfunction(hg, "postshare", wrapper.hgpostshare)
 
     # Make bundle choose changegroup3 instead of changegroup2. This affects
     # "hg bundle" command. Note: it does not cover all bundle formats like
     # "packed1". Using "packed1" with lfs will likely cause trouble.
-    names = [k for k, v in exchange._bundlespeccgversions.items() if v == '02']
+    names = [k for k, v in exchange._bundlespeccgversions.items() if v == "02"]
     for k in names:
-        exchange._bundlespeccgversions[k] = '03'
+        exchange._bundlespeccgversions[k] = "03"
 
     # bundlerepo uses "vfsmod.readonlyvfs(othervfs)", we need to make sure lfs
     # options and blob stores are passed from othervfs to the new readonlyvfs.
-    wrapfunction(vfsmod.readonlyvfs, '__init__', wrapper.vfsinit)
+    wrapfunction(vfsmod.readonlyvfs, "__init__", wrapper.vfsinit)
 
     # when writing a bundle via "hg bundle" command, upload related LFS blobs
-    wrapfunction(bundle2, 'writenewbundle', wrapper.writenewbundle)
+    wrapfunction(bundle2, "writenewbundle", wrapper.writenewbundle)
 
-@templatekeyword('lfs_files')
+
+@templatekeyword("lfs_files")
 def lfsfiles(repo, ctx, **args):
     """List of strings. LFS files added or modified by the changeset."""
-    pointers = wrapper.pointersfromctx(ctx) # {path: pointer}
+    pointers = wrapper.pointersfromctx(ctx)  # {path: pointer}
     return sorted(pointers.keys())
 
-@command('debuglfsupload',
-         [('r', 'rev', [], _('upload large files introduced by REV'))])
+
+@command(
+    "debuglfsupload", [("r", "rev", [], _("upload large files introduced by REV"))]
+)
 def debuglfsupload(ui, repo, **opts):
     """upload lfs blobs added by the working copy parent or given revisions"""
-    revs = opts.get('rev', [])
+    revs = opts.get("rev", [])
     pointers = wrapper.extractpointers(repo, scmutil.revrange(repo, revs))
     wrapper.uploadblobs(repo, pointers)
 
+
 # Ad-hoc commands to upload / download blobs without requiring an hg repo
+
 
 def _adhocstores(ui, url):
     """return local and remote stores for ad-hoc (outside repo) uses"""
     if url is not None:
-        ui.setconfig('lfs', 'url', url)
+        ui.setconfig("lfs", "url", url)
     return blobstore.memlocal(), blobstore.remote(ui)
 
-@command('debuglfssend', [], _('hg debuglfssend [URL]'), norepo=True)
+
+@command("debuglfssend", [], _("hg debuglfssend [URL]"), norepo=True)
 def debuglfssend(ui, url=None):
     """read from stdin, send it as a single file to LFS server
 
@@ -218,31 +209,46 @@ def debuglfssend(ui, url=None):
 
     data = ui.fin.read()
     oid = hashlib.sha256(data).hexdigest()
-    longoid = 'sha256:%s' % oid
+    longoid = "sha256:%s" % oid
     size = len(data)
     pointers = [pointer.gitlfspointer(oid=longoid, size=str(size))]
 
     local.write(oid, data)
     remote.writebatch(pointers, local)
-    ui.write(('%s %s\n') % (oid, size))
+    ui.write(("%s %s\n") % (oid, size))
 
-@command('debuglfsreceive|debuglfsrecv', [],
-         _('hg debuglfsreceive OID SIZE [URL]'), norepo=True)
+
+@command(
+    "debuglfsreceive|debuglfsrecv",
+    [],
+    _("hg debuglfsreceive OID SIZE [URL]"),
+    norepo=True,
+)
 def debuglfsreceive(ui, oid, size, url=None):
     """receive a single object from LFS server, write it to stdout"""
     local, remote = _adhocstores(ui, url)
 
-    longoid = 'sha256:%s' % oid
+    longoid = "sha256:%s" % oid
     pointers = [pointer.gitlfspointer(oid=longoid, size=size)]
     remote.readbatch(pointers, local)
 
     ui.write((local.read(oid)))
 
-@command('debuglfsdownload', [
-         ('r', 'rev', [], _('revision'), _('REV')),
-         ('', 'sparse', True, _('respect sparse profile, '
-                                        '(otherwise check all files)')),
-         ], _('hg debuglfsdownload -r REV1 -r REV2'), norepo=False)
+
+@command(
+    "debuglfsdownload",
+    [
+        ("r", "rev", [], _("revision"), _("REV")),
+        (
+            "",
+            "sparse",
+            True,
+            _("respect sparse profile, " "(otherwise check all files)"),
+        ),
+    ],
+    _("hg debuglfsdownload -r REV1 -r REV2"),
+    norepo=False,
+)
 def debuglfsdownload(ui, repo, *pats, **opts):
     """calculate the LFS download size when updating between REV1 and REV2
 
@@ -251,19 +257,20 @@ def debuglfsdownload(ui, repo, *pats, **opts):
 
     With -v also prints which files are to be downloaded and the size of
     each file."""
-    revs = opts.get('rev')
+    revs = opts.get("rev")
 
     node1, node2 = scmutil.revpair(repo, revs)
     match = lambda s: True
-    if not opts.get('sparse'):
-        ui.debug('will ignore sparse profile in this repo\n')
+    if not opts.get("sparse"):
+        ui.debug("will ignore sparse profile in this repo\n")
     else:
-        if not util.safehasattr(repo, 'sparsematch'):
-            raise error.Abort(_('--ignore-sparse makes no sense in a non-sparse'
-                                ' repository'))
+        if not util.safehasattr(repo, "sparsematch"):
+            raise error.Abort(
+                _("--ignore-sparse makes no sense in a non-sparse" " repository")
+            )
         match = repo.sparsematch(node2)
 
-    with ui.configoverride({('remotefilelog', 'dolfsprefetch'): False}):
+    with ui.configoverride({("remotefilelog", "dolfsprefetch"): False}):
         ctx1, ctx2 = repo[node1], repo[node2]
         mfdiff = ctx2.manifest().diff(ctx1.manifest())
         lfsflogs = util.sortdict()  # LFS filelogs
@@ -284,9 +291,11 @@ def debuglfsdownload(ui, repo, *pats, **opts):
             rawtext = flog.revision(ctx2.filenode(fname), raw=True)
             p = pointer.deserialize(rawtext)
             present = repo.svfs.lfslocalblobstore.has(p.oid())
-            lfssize = int(p['size'])
+            lfssize = int(p["size"])
             ui.note(_("%s: %i (present=%r)\n") % (fname, lfssize, present))
             totalsize += lfssize
             presentsize += lfssize if present else 0
-        ui.status(_("Total size: %i, to download: %i, already exists: %r\n") %
-                  (totalsize, totalsize - presentsize, presentsize))
+        ui.status(
+            _("Total size: %i, to download: %i, already exists: %r\n")
+            % (totalsize, totalsize - presentsize, presentsize)
+        )

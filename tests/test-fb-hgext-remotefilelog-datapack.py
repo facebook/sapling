@@ -35,7 +35,6 @@ except NameError:
 
 
 class datapacktestsbase(object):
-
     def __init__(self, datapackreader, paramsavailable, iscdatapack):
         self.datapackreader = datapackreader
         self.iscdatapack = iscdatapack
@@ -474,14 +473,12 @@ class datapacktestsbase(object):
 
 
 class datapacktests(datapacktestsbase, unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         datapacktestsbase.__init__(self, datapack, True, False)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 
 class fastdatapacktests(datapacktestsbase, unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         datapacktestsbase.__init__(self, fastdatapack, False, True)
         unittest.TestCase.__init__(self, *args, **kwargs)

@@ -7,24 +7,20 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
-    error,
-    extensions,
-    obsolete,
-    obsutil,
-    registrar,
-)
+from mercurial import error, extensions, obsolete, obsutil, registrar
 from mercurial.i18n import _
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+
 
 def predecessormarkers(ctx):
     """yields the obsolete markers marking the given changeset as a successor"""
     for data in ctx.repo().obsstore.predecessors.get(ctx.node(), ()):
         yield obsutil.marker(ctx.repo(), data)
 
-@command('^unamend', [])
+
+@command("^unamend", [])
 def unamend(ui, repo, **opts):
     """undo the amend operation on a current changeset
 
@@ -33,7 +29,7 @@ def unamend(ui, repo, **opts):
     `hg amend` (e.g. files modified as part of an amend will be
     marked as modified `hg status`)"""
     try:
-        extensions.find('inhibit')
+        extensions.find("inhibit")
     except KeyError:
         hint = _("please add inhibit to the list of enabled extensions")
         e = _("unamend requires inhibit extension to be enabled")
@@ -42,7 +38,7 @@ def unamend(ui, repo, **opts):
     unfi = repo.unfiltered()
 
     # identify the commit from which to unamend
-    curctx = repo['.']
+    curctx = repo["."]
 
     # identify the commit to which to unamend
     markers = list(predecessormarkers(curctx))
@@ -66,7 +62,7 @@ def unamend(ui, repo, **opts):
         diff = cm.diff(wm)
         changedfiles.extend(diff.iterkeys())
 
-        tr = repo.transaction('unamend')
+        tr = repo.transaction("unamend")
         with dirstate.parentchange():
             dirstate.rebuild(prednode, cm, changedfiles)
             # we want added and removed files to be shown

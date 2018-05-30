@@ -205,7 +205,6 @@ def replacefilecache(cls, propname, replacement):
 
 
 def _setupupdates(ui):
-
     def _calculateupdates(
         orig, repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs
     ):
@@ -322,7 +321,6 @@ def _setupupdates(ui):
 
 
 def _setupcommit(ui):
-
     def _refreshoncommit(orig, self, node):
         """Refresh the checkout when commits touch .hgsparse
         """
@@ -454,7 +452,6 @@ def _setupdirstate(ui):
     # The atrocity below is needed to wrap dirstate._ignore. It is a cached
     # property, which means normal function wrapping doesn't work.
     class ignorewrapper(object):
-
         def __init__(self, orig):
             self.orig = orig
             self.origignore = None
@@ -623,7 +620,6 @@ def _wraprepo(ui, repo):
     metadata_key_value = re.compile(r"(?P<key>.*)\s*[:=]\s*(?P<value>.*)")
 
     class SparseRepo(repo.__class__):
-
         def readsparseconfig(self, raw, filename=None, warn=True):
             """Takes a string sparse config and returns a SparseConfig
 
@@ -2264,7 +2260,6 @@ class forceincludematcher(matchmod.basematcher):
 
 
 class unionmatcher(matchmod.unionmatcher):
-
     def hash(self):
         sha1 = hashlib.sha1()
         for m in self._matchers:
@@ -2273,7 +2268,6 @@ class unionmatcher(matchmod.unionmatcher):
 
 
 class negatematcher(matchmod.basematcher):
-
     def __init__(self, matcher):
         super(negatematcher, self).__init__(matcher._root, matcher._cwd)
         self._matcher = matcher

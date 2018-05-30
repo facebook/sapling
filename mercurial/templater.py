@@ -416,7 +416,6 @@ def runstring(context, mapping, data):
 
 
 def _recursivesymbolblocker(key):
-
     def showrecursion(**args):
         raise error.Abort(_("recursive reference '%s' in template") % key)
 
@@ -1460,6 +1459,7 @@ methods["integer"] = exprmethods["symbol"]  # '{1}' as variable
 
 class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of template aliases"""
+
     _section = _("template alias")
     _parse = staticmethod(_parseexpr)
 
@@ -1650,7 +1650,6 @@ class TemplateNotFound(error.Abort):
 
 
 class templater(object):
-
     def __init__(
         self,
         filters=None,

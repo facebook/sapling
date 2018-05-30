@@ -13,11 +13,7 @@ import errno
 import mimetypes
 import os
 
-from .. import (
-    encoding,
-    pycompat,
-    util,
-)
+from .. import encoding, pycompat, util
 
 httpserver = util.httpserver
 
@@ -30,6 +26,7 @@ HTTP_NOT_FOUND = 404
 HTTP_METHOD_NOT_ALLOWED = 405
 HTTP_SERVER_ERROR = 500
 
+
 def ismember(ui, username, userlist):
     """Check if username is a member of userlist.
 
@@ -37,46 +34,48 @@ def ismember(ui, username, userlist):
     Can be overridden by extensions to provide more complex authorization
     schemes.
     """
-    return userlist == ['*'] or username in userlist
+    return userlist == ["*"] or username in userlist
+
 
 def checkauthz(hgweb, req, op):
-    '''Check permission for operation based on request data (including
+    """Check permission for operation based on request data (including
     authentication info). Return if op allowed, else raise an ErrorResponse
-    exception.'''
+    exception."""
 
-    user = req.env.get('REMOTE_USER')
+    user = req.env.get("REMOTE_USER")
 
-    deny_read = hgweb.configlist('web', 'deny_read')
+    deny_read = hgweb.configlist("web", "deny_read")
     if deny_read and (not user or ismember(hgweb.repo.ui, user, deny_read)):
-        raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
+        raise ErrorResponse(HTTP_UNAUTHORIZED, "read not authorized")
 
-    allow_read = hgweb.configlist('web', 'allow_read')
+    allow_read = hgweb.configlist("web", "allow_read")
     if allow_read and (not ismember(hgweb.repo.ui, user, allow_read)):
-        raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
+        raise ErrorResponse(HTTP_UNAUTHORIZED, "read not authorized")
 
-    if op == 'pull' and not hgweb.allowpull:
-        raise ErrorResponse(HTTP_UNAUTHORIZED, 'pull not authorized')
-    elif op == 'pull' or op is None: # op is None for interface requests
+    if op == "pull" and not hgweb.allowpull:
+        raise ErrorResponse(HTTP_UNAUTHORIZED, "pull not authorized")
+    elif op == "pull" or op is None:  # op is None for interface requests
         return
 
     # enforce that you can only push using POST requests
-    if req.env['REQUEST_METHOD'] != 'POST':
-        msg = 'push requires POST request'
+    if req.env["REQUEST_METHOD"] != "POST":
+        msg = "push requires POST request"
         raise ErrorResponse(HTTP_METHOD_NOT_ALLOWED, msg)
 
     # require ssl by default for pushing, auth info cannot be sniffed
     # and replayed
-    scheme = req.env.get('wsgi.url_scheme')
-    if hgweb.configbool('web', 'push_ssl') and scheme != 'https':
-        raise ErrorResponse(HTTP_FORBIDDEN, 'ssl required')
+    scheme = req.env.get("wsgi.url_scheme")
+    if hgweb.configbool("web", "push_ssl") and scheme != "https":
+        raise ErrorResponse(HTTP_FORBIDDEN, "ssl required")
 
-    deny = hgweb.configlist('web', 'deny_push')
+    deny = hgweb.configlist("web", "deny_push")
     if deny and (not user or ismember(hgweb.repo.ui, user, deny)):
-        raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
+        raise ErrorResponse(HTTP_UNAUTHORIZED, "push not authorized")
 
-    allow = hgweb.configlist('web', 'allow-push')
+    allow = hgweb.configlist("web", "allow-push")
     if not (allow and ismember(hgweb.repo.ui, user, allow)):
-        raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
+        raise ErrorResponse(HTTP_UNAUTHORIZED, "push not authorized")
+
 
 # Hooks for hgweb permission checks; extensions can add hooks here.
 # Each hook is invoked like this: hook(hgweb, request, operation),
@@ -86,6 +85,7 @@ def checkauthz(hgweb, req, op):
 # It is possible to do both authentication and authorization through
 # this.
 permhooks = [checkauthz]
+
 
 class ErrorResponse(Exception):
     def __init__(self, code, message=None, headers=None):
@@ -97,6 +97,7 @@ class ErrorResponse(Exception):
             headers = []
         self.headers = headers
 
+
 class continuereader(object):
     def __init__(self, f, write):
         self.f = f
@@ -106,20 +107,23 @@ class continuereader(object):
     def read(self, amt=-1):
         if not self.continued:
             self.continued = True
-            self._write('HTTP/1.1 100 Continue\r\n\r\n')
+            self._write("HTTP/1.1 100 Continue\r\n\r\n")
         return self.f.read(amt)
 
     def __getattr__(self, attr):
-        if attr in ('close', 'readline', 'readlines', '__iter__'):
+        if attr in ("close", "readline", "readlines", "__iter__"):
             return getattr(self.f, attr)
         raise AttributeError
 
+
 def _statusmessage(code):
     responses = httpserver.basehttprequesthandler.responses
-    return responses.get(code, ('Error', 'Unknown error'))[0]
+    return responses.get(code, ("Error", "Unknown error"))[0]
+
 
 def statusmessage(code, message=None):
-    return '%d %s' % (code, message or _statusmessage(code))
+    return "%d %s" % (code, message or _statusmessage(code))
+
 
 def get_stat(spath, fn):
     """stat fn if it exists, spath otherwise"""
@@ -129,19 +133,25 @@ def get_stat(spath, fn):
     else:
         return os.stat(spath)
 
+
 def get_mtime(spath):
     return get_stat(spath, "00changelog.i").st_mtime
 
+
 def ispathsafe(path):
     """Determine if a path is safe to use for filesystem access."""
-    parts = path.split('/')
+    parts = path.split("/")
     for part in parts:
-        if (part in ('', os.curdir, os.pardir) or
-            pycompat.ossep in part or
-            pycompat.osaltsep is not None and pycompat.osaltsep in part):
+        if (
+            part in ("", os.curdir, os.pardir)
+            or pycompat.ossep in part
+            or pycompat.osaltsep is not None
+            and pycompat.osaltsep in part
+        ):
             return False
 
     return True
+
 
 def staticfile(directory, fname, req):
     """return a file inside directory with guessed Content-Type header
@@ -155,7 +165,7 @@ def staticfile(directory, fname, req):
     if not ispathsafe(fname):
         return
 
-    fpath = os.path.join(*fname.split('/'))
+    fpath = os.path.join(*fname.split("/"))
     if isinstance(directory, str):
         directory = [directory]
     for d in directory:
@@ -165,18 +175,18 @@ def staticfile(directory, fname, req):
     try:
         os.stat(path)
         ct = mimetypes.guess_type(pycompat.fsdecode(path))[0] or "text/plain"
-        with open(path, 'rb') as fh:
+        with open(path, "rb") as fh:
             data = fh.read()
 
         req.respond(HTTP_OK, ct, body=data)
     except TypeError:
-        raise ErrorResponse(HTTP_SERVER_ERROR, 'illegal filename')
+        raise ErrorResponse(HTTP_SERVER_ERROR, "illegal filename")
     except OSError as err:
         if err.errno == errno.ENOENT:
             raise ErrorResponse(HTTP_NOT_FOUND)
         else:
-            raise ErrorResponse(HTTP_SERVER_ERROR,
-                                encoding.strtolocal(err.strerror))
+            raise ErrorResponse(HTTP_SERVER_ERROR, encoding.strtolocal(err.strerror))
+
 
 def paritygen(stripecount, offset=0):
     """count parity of horizontal stripes for easier reading"""
@@ -194,21 +204,27 @@ def paritygen(stripecount, offset=0):
             parity = 1 - parity
             count = 0
 
+
 def get_contact(config):
     """Return repo contact information or empty string.
 
     web.contact is the primary source, but if that is not set, try
     ui.username or $EMAIL as a fallback to display something useful.
     """
-    return (config("web", "contact") or
-            config("ui", "username") or
-            encoding.environ.get("EMAIL") or "")
+    return (
+        config("web", "contact")
+        or config("ui", "username")
+        or encoding.environ.get("EMAIL")
+        or ""
+    )
+
 
 def caching(web, req):
     tag = r'W/"%d"' % web.mtime
-    if req.env.get('HTTP_IF_NONE_MATCH') == tag:
+    if req.env.get("HTTP_IF_NONE_MATCH") == tag:
         raise ErrorResponse(HTTP_NOT_MODIFIED)
-    req.headers.append(('ETag', tag))
+    req.headers.append(("ETag", tag))
+
 
 def cspvalues(ui):
     """Obtain the Content-Security-Policy header and nonce value.
@@ -237,11 +253,11 @@ def cspvalues(ui):
 
     # Don't allow untrusted CSP setting since it be disable protections
     # from a trusted/global source.
-    csp = ui.config('web', 'csp', untrusted=False)
+    csp = ui.config("web", "csp", untrusted=False)
     nonce = None
 
-    if csp and '%nonce%' in csp:
-        nonce = base64.urlsafe_b64encode(uuid.uuid4().bytes).rstrip('=')
-        csp = csp.replace('%nonce%', nonce)
+    if csp and "%nonce%" in csp:
+        nonce = base64.urlsafe_b64encode(uuid.uuid4().bytes).rstrip("=")
+        csp = csp.replace("%nonce%", nonce)
 
     return csp, nonce

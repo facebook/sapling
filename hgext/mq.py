@@ -125,7 +125,6 @@ except KeyError:
     # note: load is lazy so we could avoid the try-except,
     # but I (marmoute) prefer this explicit code.
     class dummyui(object):
-
         def debug(self, msg):
             pass
 
@@ -141,7 +140,6 @@ normname = util.normpath
 
 
 class statusentry(object):
-
     def __init__(self, node, name):
         self.node, self.name = node, name
 
@@ -245,9 +243,7 @@ def insertplainheader(lines, header, value):
 
 
 class patchheader(object):
-
     def __init__(self, pf, plainmode=False):
-
         def eatdiff(lines):
             while lines:
                 l = lines[-1]
@@ -444,7 +440,6 @@ class AbortNoCleanup(error.Abort):
 
 
 class queue(object):
-
     def __init__(self, ui, baseui, path, patchdir=None):
         self.basepath = path
         try:
@@ -484,7 +479,6 @@ class queue(object):
 
     @util.propertycache
     def applied(self):
-
         def parselines(lines):
             for l in lines:
                 entry = l.split(":", 1)
@@ -571,7 +565,6 @@ class queue(object):
         return os.path.join(self.path, *p)
 
     def findseries(self, patch):
-
         def matchpatch(l):
             l = l.split("#", 1)[0]
             return l.strip() == patch
@@ -708,7 +701,6 @@ class queue(object):
                     write(_("skipping %s - no matching guards\n") % self.series[idx])
 
     def savedirty(self):
-
         def writelist(items, path):
             fp = self.opener(path, "w")
             for i in items:
@@ -1377,7 +1369,6 @@ class queue(object):
     # 2) a unique substring of the patch name was given
     # 3) patchname[-+]num to indicate an offset in the series file
     def lookup(self, patch, strict=False):
-
         def partialname(s):
             if s in self.series:
                 return s
@@ -2015,7 +2006,6 @@ class queue(object):
     def qseries(
         self, repo, missing=None, start=0, length=None, status=None, summary=False
     ):
-
         def displayname(pfx, patchname, state):
             if pfx:
                 self.ui.write(pfx)
@@ -2231,7 +2221,6 @@ class queue(object):
         force=None,
         git=False,
     ):
-
         def checkseries(patchname):
             if patchname in self.series:
                 raise error.Abort(
@@ -3745,9 +3734,7 @@ def mqphasedefaults(repo, roots):
 
 
 def reposetup(ui, repo):
-
     class mqrepo(repo.__class__):
-
         @localrepo.unfilteredpropertycache
         def mq(self):
             return queue(self.ui, self.baseui, self.path)

@@ -3,14 +3,13 @@ from __future__ import absolute_import
 
 import re
 
-from mercurial import (
-    context,
-)
+from mercurial import context
 
 from . import importer, lfs, p4
 
-SYNC_COMMIT_MSG = 'p4fastimport synchronizing client view'
-P4_ADMIN_USER = 'p4admin'
+SYNC_COMMIT_MSG = "p4fastimport synchronizing client view"
+P4_ADMIN_USER = "p4admin"
+
 
 def get_filelogs_to_sync(ui, oldclient, oldcl, newclient, newcl):
     newp4filelogs = p4.get_filelogs_at_cl(newclient, newcl)
@@ -25,9 +24,7 @@ def get_filelogs_to_sync(ui, oldclient, oldcl, newclient, newcl):
 
     num_addfiles = len(addp4filepaths)
     num_delfiles = len(delp4filepaths)
-    ui.debug(
-        '%d added files\n%d removed files\n' % (num_addfiles, num_delfiles)
-    )
+    ui.debug("%d added files\n%d removed files\n" % (num_addfiles, num_delfiles))
 
     headcl_to_origcl = {}
     # {hgpath: (p4filelog, p4cl)}
@@ -71,11 +68,10 @@ class SyncImporter(object):
             islfs, oid = lfs.getlfsinfo(flog, fnode)
             if islfs:
                 largefiles.append((self._cl, p4fl.depotfile, oid))
-                self._ui.debug('largefile: %s, oid: %s\n' % (hgpath, oid))
+                self._ui.debug("largefile: %s, oid: %s\n" % (hgpath, oid))
         return largefiles
 
     def _create_commit(self):
-
         def getfile(repo, memctx, path):
             if path in self._filesdel:
                 # A path that shows up in files (below) but returns None in this
@@ -84,12 +80,9 @@ class SyncImporter(object):
 
             p4flog, p4cl = self._filesadd[path]
             data, src = importer.get_p4_file_content(
-                self._storepath,
-                p4flog,
-                p4cl,
-                skipp4revcheck=True,
+                self._storepath, p4flog, p4cl, skipp4revcheck=True
             )
-            self._ui.debug('file: %s, src: %s\n' % (p4flog._depotfile, src))
+            self._ui.debug("file: %s, src: %s\n" % (p4flog._depotfile, src))
 
             islink = p4flog.issymlink(self._cl)
             if islink:
@@ -97,28 +90,22 @@ class SyncImporter(object):
                 # cannot end with newline
                 data = data.rstrip()
             if p4flog.iskeyworded(self._cl):
-                data = re.sub(importer.KEYWORD_REGEX, r'$\1$', data)
-            isexec=p4flog.isexec(self._cl)
+                data = re.sub(importer.KEYWORD_REGEX, r"$\1$", data)
+            isexec = p4flog.isexec(self._cl)
 
             return context.memfilectx(
-                repo,
-                memctx,
-                path,
-                data,
-                islink=islink,
-                isexec=isexec,
-                copied=None,
+                repo, memctx, path, data, islink=islink, isexec=isexec, copied=None
             )
 
         files_affected = self._filesadd.keys() + self._filesdel
 
         return context.memctx(
             self._repo,
-            (self._node, None), # parents
+            (self._node, None),  # parents
             SYNC_COMMIT_MSG,
             files_affected,
-            getfile,            # fn - see above
+            getfile,  # fn - see above
             user=P4_ADMIN_USER,
             date=None,
-            extra={'p4fullimportbasechangelist': self._cl},
+            extra={"p4fullimportbasechangelist": self._cl},
         ).commit()

@@ -561,7 +561,6 @@ methods = {
 
 
 class matchctx(object):
-
     def __init__(self, ctx, subset, status=None):
         self.ctx = ctx
         self.subset = subset

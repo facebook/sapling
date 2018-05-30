@@ -54,7 +54,6 @@ BULLET_SECTION = _("Other Changes")
 
 
 class parsedreleasenotes(object):
-
     def __init__(self):
         self.sections = {}
 
@@ -148,7 +147,6 @@ class parsedreleasenotes(object):
 
 
 class releasenotessections(object):
-
     def __init__(self, ui, repo=None):
         if repo:
             sections = util.sortdict(DEFAULT_SECTIONS)

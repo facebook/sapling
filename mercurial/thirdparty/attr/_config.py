@@ -4,6 +4,7 @@ __all__ = ["set_run_validators", "get_run_validators"]
 
 _run_validators = True
 
+
 def set_run_validators(run):
     """
     Set whether or not validators are run.  By default, they are run.
@@ -12,6 +13,7 @@ def set_run_validators(run):
         raise TypeError("'run' must be bool.")
     global _run_validators
     _run_validators = run
+
 
 def get_run_validators():
     """

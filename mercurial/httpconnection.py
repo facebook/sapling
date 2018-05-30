@@ -114,7 +114,6 @@ def readauthforuri(ui, uri, user):
 # that the http response object be sufficiently file-like, so we
 # provide a close() method here.
 class HTTPResponse(httpclient.HTTPResponse):
-
     def close(self):
         pass
 
@@ -136,7 +135,6 @@ LOGFMT = "%(levelname)s:%(name)s:%(lineno)d:%(message)s"
 # reinserts them since it notices we don't include any subclasses of
 # them.
 class http2handler(urlreq.httphandler, urlreq.httpshandler):
-
     def __init__(self, ui, pwmgr):
         global _configuredlogging
         urlreq.abstracthttphandler.__init__(self)

@@ -10,38 +10,40 @@ import posixpath
 import shlex
 
 from mercurial.i18n import _
-from mercurial import (
-    error,
-)
+from mercurial import error
 from . import common
+
 SKIPREV = common.SKIPREV
 
+
 def rpairs(path):
-    '''Yield tuples with path split at '/', starting with the full path.
+    """Yield tuples with path split at '/', starting with the full path.
     No leading, trailing or double '/', please.
     >>> for x in rpairs(b'foo/bar/baz'): print(x)
     ('foo/bar/baz', '')
     ('foo/bar', 'baz')
     ('foo', 'bar/baz')
     ('.', 'foo/bar/baz')
-    '''
+    """
     i = len(path)
     while i != -1:
-        yield path[:i], path[i + 1:]
-        i = path.rfind('/', 0, i)
-    yield '.', path
+        yield path[:i], path[i + 1 :]
+        i = path.rfind("/", 0, i)
+    yield ".", path
+
 
 def normalize(path):
-    ''' We use posixpath.normpath to support cross-platform path format.
-    However, it doesn't handle None input. So we wrap it up. '''
+    """ We use posixpath.normpath to support cross-platform path format.
+    However, it doesn't handle None input. So we wrap it up. """
     if path is None:
         return None
     return posixpath.normpath(path)
 
+
 class filemapper(object):
-    '''Map and filter filenames when importing.
+    """Map and filter filenames when importing.
     A name can be mapped to itself, a new name, or None (omit from new
-    repository).'''
+    repository)."""
 
     def __init__(self, ui, path=None):
         self.ui = ui
@@ -51,49 +53,56 @@ class filemapper(object):
         self.targetprefixes = None
         if path:
             if self.parse(path):
-                raise error.Abort(_('errors in filemap'))
+                raise error.Abort(_("errors in filemap"))
 
     def parse(self, path):
         errs = 0
+
         def check(name, mapping, listname):
             if not name:
-                self.ui.warn(_('%s:%d: path to %s is missing\n') %
-                             (lex.infile, lex.lineno, listname))
+                self.ui.warn(
+                    _("%s:%d: path to %s is missing\n")
+                    % (lex.infile, lex.lineno, listname)
+                )
                 return 1
             if name in mapping:
-                self.ui.warn(_('%s:%d: %r already in %s list\n') %
-                             (lex.infile, lex.lineno, name, listname))
+                self.ui.warn(
+                    _("%s:%d: %r already in %s list\n")
+                    % (lex.infile, lex.lineno, name, listname)
+                )
                 return 1
-            if (name.startswith('/') or
-                name.endswith('/') or
-                '//' in name):
-                self.ui.warn(_('%s:%d: superfluous / in %s %r\n') %
-                             (lex.infile, lex.lineno, listname, name))
+            if name.startswith("/") or name.endswith("/") or "//" in name:
+                self.ui.warn(
+                    _("%s:%d: superfluous / in %s %r\n")
+                    % (lex.infile, lex.lineno, listname, name)
+                )
                 return 1
             return 0
+
         lex = shlex.shlex(open(path), path, True)
-        lex.wordchars += '!@#$%^&*()-=+[]{}|;:,./<>?'
+        lex.wordchars += "!@#$%^&*()-=+[]{}|;:,./<>?"
         cmd = lex.get_token()
         while cmd:
-            if cmd == 'include':
+            if cmd == "include":
                 name = normalize(lex.get_token())
-                errs += check(name, self.exclude, 'exclude')
+                errs += check(name, self.exclude, "exclude")
                 self.include[name] = name
-            elif cmd == 'exclude':
+            elif cmd == "exclude":
                 name = normalize(lex.get_token())
-                errs += check(name, self.include, 'include')
-                errs += check(name, self.rename, 'rename')
+                errs += check(name, self.include, "include")
+                errs += check(name, self.rename, "rename")
                 self.exclude[name] = name
-            elif cmd == 'rename':
+            elif cmd == "rename":
                 src = normalize(lex.get_token())
                 dest = normalize(lex.get_token())
-                errs += check(src, self.exclude, 'exclude')
+                errs += check(src, self.exclude, "exclude")
                 self.rename[src] = dest
-            elif cmd == 'source':
+            elif cmd == "source":
                 errs += self.parse(normalize(lex.get_token()))
             else:
-                self.ui.warn(_('%s:%d: unknown directive %r\n') %
-                             (lex.infile, lex.lineno, cmd))
+                self.ui.warn(
+                    _("%s:%d: unknown directive %r\n") % (lex.infile, lex.lineno, cmd)
+                )
                 errs += 1
             cmd = lex.get_token()
         return errs
@@ -105,7 +114,7 @@ class filemapper(object):
                 return mapping[pre], pre, suf
             except KeyError:
                 pass
-        return '', name, ''
+        return "", name, ""
 
     def istargetfile(self, filename):
         """Return true if the given target filename is covered as a destination
@@ -118,7 +127,7 @@ class filemapper(object):
 
         # If "." is a target, then all target files are considered from the
         # source.
-        if not self.targetprefixes or '.' in self.targetprefixes:
+        if not self.targetprefixes or "." in self.targetprefixes:
             return True
 
         filename = normalize(filename)
@@ -139,22 +148,23 @@ class filemapper(object):
         if self.exclude:
             exc = self.lookup(name, self.exclude)[0]
         else:
-            exc = ''
+            exc = ""
         if (not self.include and exc) or (len(inc) <= len(exc)):
             return None
         newpre, pre, suf = self.lookup(name, self.rename)
         if newpre:
-            if newpre == '.':
+            if newpre == ".":
                 return suf
             if suf:
-                if newpre.endswith('/'):
+                if newpre.endswith("/"):
                     return newpre + suf
-                return newpre + '/' + suf
+                return newpre + "/" + suf
             return newpre
         return name
 
     def active(self):
         return bool(self.include or self.exclude or self.rename)
+
 
 # This class does two additional things compared to a regular source:
 #
@@ -169,6 +179,7 @@ class filemapper(object):
 #   This set of revisions includes not only revisions that directly
 #   touch files we're interested in, but also merges that merge two
 #   or more interesting revisions.
+
 
 class filemap_source(common.converter_source):
     def __init__(self, ui, baseconverter, filemap):
@@ -188,8 +199,7 @@ class filemap_source(common.converter_source):
         self.children = {}
         self.seenchildren = {}
         # experimental config: convert.ignoreancestorcheck
-        self.ignoreancestorcheck = self.ui.configbool('convert',
-                                                      'ignoreancestorcheck')
+        self.ignoreancestorcheck = self.ui.configbool("convert", "ignoreancestorcheck")
 
     def before(self):
         self.base.before()
@@ -249,7 +259,7 @@ class filemap_source(common.converter_source):
             try:
                 parents = self.origparents[rev]
             except KeyError:
-                continue # unknown revmap source
+                continue  # unknown revmap source
             if wanted:
                 self.mark_wanted(rev, parents)
             else:
@@ -333,8 +343,7 @@ class filemap_source(common.converter_source):
             if p in self.wantedancestors:
                 wrev.update(self.wantedancestors[p])
             else:
-                self.ui.warn(_('warning: %s parent %s is missing\n') %
-                             (rev, p))
+                self.ui.warn(_("warning: %s parent %s is missing\n") % (rev, p))
         wrev.add(rev)
         self.wantedancestors[rev] = wrev
 
@@ -367,10 +376,13 @@ class filemap_source(common.converter_source):
             if mp1 == SKIPREV or mp1 in knownparents:
                 continue
 
-            isancestor = (not self.ignoreancestorcheck and
-                          any(p2 for p2 in parents
-                              if p1 != p2 and mp1 != self.parentmap[p2]
-                                 and mp1 in self.wantedancestors[p2]))
+            isancestor = not self.ignoreancestorcheck and any(
+                p2
+                for p2 in parents
+                if p1 != p2
+                and mp1 != self.parentmap[p2]
+                and mp1 in self.wantedancestors[p2]
+            )
             if not isancestor and not hasbranchparent and len(parents) > 1:
                 # This could be expensive, avoid unnecessary calls.
                 if self._cachedcommit(p1).branch == branch:
@@ -391,7 +403,7 @@ class filemap_source(common.converter_source):
         self.origparents[rev] = parents
 
         closed = False
-        if 'close' in self.commits[rev].extra:
+        if "close" in self.commits[rev].extra:
             # A branch closing revision is only useful if one of its
             # parents belong to the branch being closed
             pbranches = [self._cachedcommit(p).branch for p in mparents]

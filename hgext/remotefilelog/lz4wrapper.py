@@ -4,8 +4,10 @@ from mercurial.i18n import _
 
 import lz4
 
+
 def missing(*args, **kwargs):
-    raise error.Abort(_('remotefilelog extension requires lz4 support'))
+    raise error.Abort(_("remotefilelog extension requires lz4 support"))
+
 
 lz4compress = lzcompresshc = lz4decompress = missing
 
@@ -13,8 +15,10 @@ try:
     # newer python-lz4 has these functions deprecated as top-level ones,
     # so we are trying to import from lz4.block first
     from lz4 import block as lz4block
+
     def _compressHC(*args, **kwargs):
-        return lz4block.compress(*args, mode='high_compression', **kwargs)
+        return lz4block.compress(*args, mode="high_compression", **kwargs)
+
     lzcompresshc = _compressHC
     lz4compress = lz4block.compress
     lz4decompress = lz4block.decompress
