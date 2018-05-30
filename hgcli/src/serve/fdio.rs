@@ -18,9 +18,8 @@ use futures::{Future, Sink, Stream};
 use futures::sync::mpsc::{channel, Receiver, Sender};
 use futures_ext::{StreamExt, BoxStream};
 
-
 const BUFSZ: usize = 8192;
-const NUMBUFS: usize = 2;
+const NUMBUFS: usize = 50000;
 
 /// Async adapter for `Read`
 #[derive(Debug)]
