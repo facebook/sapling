@@ -18,7 +18,7 @@ use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
-use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
+use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, future::Either};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use futures_trace::{self, Traced};
@@ -35,6 +35,7 @@ use slog_scuba::ScubaDrain;
 
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
+use filenodes::FilenodeInfo;
 use mercurial::{self, HgBlobNode, HgManifestId, HgNodeHash, HgParents, NodeHashConversion,
                 RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
@@ -1002,6 +1003,7 @@ fn get_file_history(
     repo: Arc<BlobRepo>,
     startnode: DNodeHash,
     path: MPath,
+    prefetched_history: HashMap<DNodeHash, FilenodeInfo>,
 ) -> BoxStream<(DNodeHash, DParents, DNodeHash, Option<(MPath, DNodeHash)>), Error> {
     if startnode == D_NULL_HASH {
         return stream::empty().boxify();
@@ -1017,10 +1019,42 @@ fn get_file_history(
             let (mut nodes, mut seen_nodes) = cur_data;
             let node = nodes.pop_front()?;
 
-            let parents = repo.get_parents(&path, &node);
-            let parents = parents.traced_global("fetching parents", trace_args!());
+            let futs = if prefetched_history.contains_key(&node) {
+                let filenode = prefetched_history.get(&node).unwrap();
 
-            let copy = repo.get_file_copy(&path, &node).and_then({
+                let p1 = filenode.p1.map(|p| p.into_nodehash());
+                let p2 = filenode.p2.map(|p| p.into_nodehash());
+                let parents = Ok(DParents::new(p1.as_ref(), p2.as_ref())).into_future();
+
+                let linknode = Ok(filenode.linknode.into_nodehash()).into_future();
+
+                let copy =
+                    Ok(filenode
+                        .copyfrom
+                        .clone()
+                        .map(|(frompath, node)| (frompath, node.into_nodehash())))
+                        .into_future();
+
+                (Either::A(parents), Either::A(linknode), Either::A(copy))
+            } else {
+                let parents = repo.get_parents(&path, &node);
+                let parents = parents.traced_global("fetching parents", trace_args!());
+
+                let copy = repo.get_file_copy(&path, &node);
+                let copy = copy.traced_global("fetching copy info", trace_args!());
+
+                let linknode = Ok(path.clone()).into_future().and_then({
+                    let repo = repo.clone();
+                    move |path| repo.get_linknode(path, &node)
+                });
+                let linknode = linknode.traced_global("fetching linknode info", trace_args!());
+
+                (Either::B(parents), Either::B(linknode), Either::B(copy))
+            };
+
+            let (parents, linknode, copy) = futs;
+
+            let copy = copy.and_then({
                 let path = path.clone();
                 move |filecopy| match filecopy {
                     Some((RepoPath::FilePath(copyto), rev)) => Ok(Some((copyto, rev))),
@@ -1028,13 +1062,6 @@ fn get_file_history(
                     None => Ok(None),
                 }
             });
-            let copy = copy.traced_global("fetching copy info", trace_args!());
-
-            let linknode = Ok(path.clone()).into_future().and_then({
-                let repo = repo.clone();
-                move |path| repo.get_linknode(path, &node)
-            });
-            let linknode = linknode.traced_global("fetching linknode info", trace_args!());
 
             let joined = parents
                 .join(linknode)
@@ -1049,6 +1076,8 @@ fn get_file_history(
     ).boxify()
 }
 
+/// Remotefilelog blob consists of file content in `node` revision and all the history
+/// of the file up to `node`
 fn create_remotefilelog_blob(
     repo: Arc<BlobRepo>,
     node: DNodeHash,
@@ -1081,8 +1110,24 @@ fn create_remotefilelog_blob(
         })
         .traced_global("fetching remotefilelog content", trace_args!());
 
-    let file_history_bytes = get_file_history(repo, node, path)
-        .collect()
+    // Do bulk prefetch of the filenodes first. That saves lots of db roundtrips.
+    // Prefetched filenodes are used as a cache. If filenode is not in the cache, then it will
+    // be fetched again.
+    let prefetched_filenodes = repo.get_all_filenodes(RepoPath::FilePath(path.clone()))
+        .map(|filenodes| {
+            filenodes
+                .into_iter()
+                .map(|filenode| (filenode.filenode.into_nodehash(), filenode))
+                .collect()
+        });
+
+    let file_history_bytes = prefetched_filenodes
+        .and_then({
+            let node = node.clone();
+            move |prefetched_filenodes| {
+                get_file_history(repo, node, path, prefetched_filenodes).collect()
+            }
+        })
         .and_then(|history| {
             let approximate_history_entry_size = 81;
             let mut writer = Cursor::new(Vec::with_capacity(

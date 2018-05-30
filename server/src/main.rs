@@ -47,6 +47,7 @@ extern crate blobrepo;
 extern crate bundle2_resolver;
 extern crate bytes;
 extern crate cache_warmup;
+extern crate filenodes;
 extern crate hgproto;
 #[cfg(test)]
 extern crate many_files_dirs;

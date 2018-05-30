@@ -30,7 +30,7 @@ use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets,
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use delayblob::DelayBlob;
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
-use filenodes::{CachingFilenodes, Filenodes};
+use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use mercurial::{HgBlobNode, HgNodeHash, HgParents, NodeHashConversion};
@@ -379,6 +379,10 @@ impl BlobRepo {
                 }
             })
             .boxify()
+    }
+
+    pub fn get_all_filenodes(&self, path: RepoPath) -> BoxFuture<Vec<FilenodeInfo>, Error> {
+        self.filenodes.get_all_filenodes(&path, &self.repoid)
     }
 
     pub fn get_generation_number(&self, cs: &DChangesetId) -> BoxFuture<Option<u64>, Error> {
