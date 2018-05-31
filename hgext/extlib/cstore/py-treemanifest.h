@@ -1429,17 +1429,23 @@ static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
                                        PyObject *kwargs)
 {
   PyObject *p1treeObj = NULL;
+  PyObject *p2treeObj = NULL;
 
-  static char const *kwlist[] = {"p1tree", NULL};
+  static char const *kwlist[] = {"p1tree", "p2tree", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", (char **)kwlist,
-                                   &p1treeObj)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO", (char **)kwlist,
+                                   &p1treeObj, &p2treeObj)) {
     return NULL;
   }
 
   py_treemanifest *p1tree = NULL;
   if (p1treeObj && p1treeObj != Py_None) {
     p1tree = (py_treemanifest *)p1treeObj;
+  }
+
+  py_treemanifest *p2tree = NULL;
+  if (p2treeObj && p2treeObj != Py_None) {
+    p2tree = (py_treemanifest *)p2treeObj;
   }
 
   try {
@@ -1449,6 +1455,11 @@ static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
       assert(p1tree->tm.root.node);
       cmpNodes.push_back(p1tree->tm.root.node);
       cmpManifests.push_back(p1tree->tm.getRootManifest());
+    }
+    if (p2tree) {
+      assert(p2tree->tm.root.node);
+      cmpNodes.push_back(p2tree->tm.root.node);
+      cmpManifests.push_back(p2tree->tm.getRootManifest());
     }
 
     return (PyObject *)newtreeiter_create(self, self->tm.getRootManifest(),

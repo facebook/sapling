@@ -595,10 +595,14 @@ class basetreemanifestlog(object):
             self._createmutablepack()
 
         p1tree = self[p1node].read()
+        p2tree = self[p2node].read()
         if util.safehasattr(p1tree, "_treemanifest"):
             # Detect hybrid manifests and unwrap them
             p1tree = p1tree._treemanifest()
-        newtreeiter = newtree.finalize(p1tree)
+        if util.safehasattr(p2tree, "_treemanifest"):
+            # Detect hybrid manifests and unwrap them
+            p2tree = p2tree._treemanifest()
+        newtreeiter = newtree.finalize(p1tree, p2tree)
 
         dpack = self._mutabledatapack
         hpack = self._mutablehistorypack
@@ -645,10 +649,15 @@ class basetreemanifestlog(object):
         if util.safehasattr(p1tree, "_treemanifest"):
             # Detect hybrid manifests and unwrap them
             p1tree = p1tree._treemanifest()
+        p2tree = self[p2node].read()
+        if util.safehasattr(p2tree, '_treemanifest'):
+            # Detect hybrid manifests and unwrap them
+            p2tree = p2tree._treemanifest()
 
         revlogstore = self.revlogstore
         node = overridenode
-        for nname, nnode, ntext, np1text, np1, np2 in newtree.finalize(p1tree):
+        for nname, nnode, ntext, np1text, np1, np2 in (
+                newtree.finalize(p1tree, p2tree)):
             revlog = revlogstore._revlog(nname)
             override = None
             if nname == "":

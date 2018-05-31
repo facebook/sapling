@@ -247,7 +247,7 @@ Test stripping merge commits where filelogs arent affected
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
        1        44      54      0       2 126c4ddee02e bc0c2c938b92 000000000000
        2        98      54      0       3 abeda9251d1d bc0c2c938b92 000000000000
-       3       152      54      2       4 55daa4591d61 abeda9251d1d 000000000000
+       3       152      54      2       4 d1018f351d1e abeda9251d1d 126c4ddee02e
 - Verify rev 3 (from the merge commit) is gone after the strip
   $ hg strip -r tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
