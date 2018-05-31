@@ -606,6 +606,11 @@ class StartCmd(Subcmd):
             "--daemon-binary", help="Path to the binary for the Eden daemon."
         )
         parser.add_argument(
+            "--if-necessary",
+            action="store_true",
+            help="Only start edenfs if there are Eden checkouts configured.",
+        )
+        parser.add_argument(
             "--foreground",
             "-F",
             action="store_true",
@@ -640,6 +645,11 @@ class StartCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
+
+        if args.if_necessary and not config.get_mount_paths():
+            print("No Eden mount points configured.")
+            return 0
+
         return daemon.start_daemon(
             config,
             args.daemon_binary,
