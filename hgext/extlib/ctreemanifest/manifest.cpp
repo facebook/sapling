@@ -235,7 +235,7 @@ void Manifest::computeNode(const char *p1, const char *p2, char *result) {
   fbhg_sha1_ctx_t ctx;
   fbhg_sha1_init(&ctx);
 
-  if (memcmp(p1, p2, BIN_NODE_SIZE) == -1) {
+  if (memcmp(p1, p2, BIN_NODE_SIZE) < 0) {
     fbhg_sha1_update(&ctx, p1, BIN_NODE_SIZE);
     fbhg_sha1_update(&ctx, p2, BIN_NODE_SIZE);
   } else {
