@@ -8,6 +8,7 @@ use std::collections::{HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 
+use futures::IntoFuture;
 use futures::future::Future;
 use futures::stream::{empty, once, Stream};
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -204,13 +205,29 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
         return once(Ok(changed_entry)).boxify();
     }
 
-    match changed_entry.status {
-        EntryStatus::Added(entry) => recursive_entry_stream(changed_entry.path, entry)
-            .map(|(path, entry)| ChangedEntry::new_added(path, entry))
-            .boxify(),
-        EntryStatus::Deleted(entry) => recursive_entry_stream(changed_entry.path, entry)
-            .map(|(path, entry)| ChangedEntry::new_deleted(path, entry))
-            .boxify(),
+    let (to_mf, from_mf, path) = match &changed_entry.status {
+        EntryStatus::Added(entry) => {
+            let empty_mf: Box<Manifest> = Box::new(EmptyManifest {});
+            let to_mf = entry.get_content().map(get_tree_content).boxify();
+            let from_mf = Ok(empty_mf).into_future().boxify();
+
+            let path = changed_entry.path.clone();
+            let entry_path = entry.get_name().cloned();
+            let path = MPath::join_element_opt(path.as_ref(), entry_path.as_ref());
+
+            (to_mf, from_mf, path)
+        }
+        EntryStatus::Deleted(entry) => {
+            let empty_mf: Box<Manifest> = Box::new(EmptyManifest {});
+            let to_mf = Ok(empty_mf).into_future().boxify();
+            let from_mf = entry.get_content().map(get_tree_content).boxify();
+
+            let path = changed_entry.path.clone();
+            let entry_path = entry.get_name().cloned();
+            let path = MPath::join_element_opt(path.as_ref(), entry_path.as_ref());
+
+            (to_mf, from_mf, path)
+        }
         EntryStatus::Modified {
             to_entry,
             from_entry,
@@ -218,32 +235,27 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
             debug_assert!(to_entry.get_type().is_tree() == from_entry.get_type().is_tree());
             debug_assert!(to_entry.get_type().is_tree());
 
-            let contents = to_entry.get_content().join(from_entry.get_content());
+            let to_mf = to_entry.get_content().map(get_tree_content).boxify();
+            let from_mf = from_entry.get_content().map(get_tree_content).boxify();
+
             let path = changed_entry.path.clone();
             let entry_path = to_entry.get_name().cloned();
+            let path = MPath::join_element_opt(path.as_ref(), entry_path.as_ref());
 
-            let substream = contents
-                .map(move |(to_content, from_content)| {
-                    let to_manifest = get_tree_content(to_content);
-                    let from_manifest = get_tree_content(from_content);
-
-                    diff_manifests(
-                        MPath::join_element_opt(path.as_ref(), entry_path.as_ref()),
-                        &to_manifest,
-                        &from_manifest,
-                    ).map(|diff| select_all(diff.into_iter().map(recursive_changed_entry_stream)))
-                        .flatten_stream()
-                })
-                .flatten_stream();
-
-            let current_entry = once(Ok(ChangedEntry::new_modified(
-                changed_entry.path.clone(),
-                to_entry,
-                from_entry,
-            )));
-            current_entry.chain(substream).boxify()
+            (to_mf, from_mf, path)
         }
-    }
+    };
+
+    let substream = to_mf
+        .join(from_mf)
+        .map(move |(to_mf, from_mf)| {
+            diff_manifests(path, &to_mf, &from_mf)
+                .map(|diff| select_all(diff.into_iter().map(recursive_changed_entry_stream)))
+                .flatten_stream()
+        })
+        .flatten_stream();
+
+    once(Ok(changed_entry)).chain(substream).boxify()
 }
 
 /// Given an entry and path from the root of the repo to this entry, returns all subentries with
