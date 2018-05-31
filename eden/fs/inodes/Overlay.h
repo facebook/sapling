@@ -32,6 +32,7 @@ struct InodeMetadata;
 template <typename T>
 class InodeTable;
 using InodeMetadataTable = InodeTable<InodeMetadata>;
+struct SerializedInodeMap;
 
 /** Manages the write overlay storage area.
  *
@@ -61,9 +62,54 @@ class Overlay {
    * InodeMetadataTable concurrently or call any other Overlay method
    * concurrently with or after calling close(). The Overlay will try to detect
    * this with assertions but cannot always detect concurrent access.
+   *
+   * Returns the next available InodeNumber to be passed to any process taking
+   * over an Eden mount.
    */
-  void close();
+  uint64_t close();
 
+  /**
+   * For now, this method exists to populate the next inode number from takeover
+   * data. Eventually, it will be unnecessary - the Overlay, upon a clean
+   * shutdown, will remember its next inode number in a file on disk.
+   */
+  void setNextInodeNumber(InodeNumber nextInodeNumber);
+
+  /**
+   * Scans the Overlay for all inode numbers currently in use and sets the next
+   * inode number to the maximum plus one. Either this or setNextInodeNumber
+   * should be called when opening a mount point to ensure that any future
+   * allocated inode numbers are always greater than those already tracked in
+   * the overlay.
+   *
+   * Returns the maximum existing inode number.
+   */
+  InodeNumber scanForNextInodeNumber();
+
+  /**
+   * allocateInodeNumber() should only be called by TreeInode.
+   *
+   * This can be called:
+   * - To allocate an inode number for an existing tree entry that does not
+   *   need to be loaded yet.
+   * - To allocate an inode number for a brand new inode being created by
+   *   TreeInode::create() or TreeInode::mkdir().  In this case
+   *   inodeCreated() should be called immediately afterwards to register the
+   *   new child Inode object.
+   *
+   * It is illegal to call allocateInodeNumber prior to
+   * setNextInodeNumber or scanForNextInodeNumber.
+   *
+   * TODO: It would be easy to extend this function to allocate a range of
+   * inode values in one atomic operation.
+   */
+  InodeNumber allocateInodeNumber();
+
+  /**
+   * Returns an InodeMetadataTable for accessing and storing inode metadata.
+   * Owned by the Overlay so records can be removed when the Overlay discovers
+   * it no longer needs data for an inode or its children.
+   */
   InodeMetadataTable* getInodeMetadataTable() const {
     return inodeMetadataTable_.get();
   }
@@ -73,8 +119,7 @@ class Overlay {
       const TreeInode::Dir& dir,
       const InodeTimestamps& timestamps);
   folly::Optional<std::pair<TreeInode::Dir, InodeTimestamps>> loadOverlayDir(
-      InodeNumber inodeNumber,
-      InodeMap* inodeMap);
+      InodeNumber inodeNumber);
 
   void removeOverlayData(InodeNumber inodeNumber);
 
@@ -133,15 +178,6 @@ class Overlay {
   static void updateTimestampToHeader(
       int fd,
       const InodeTimestamps& timeStamps);
-
-  /**
-   * Get the maximum inode number stored in the overlay.
-   *
-   * This is called when opening a mount point, to make sure that new inodes
-   * handed out from this point forwards are always greater than any inodes
-   * already tracked in the overlay.
-   */
-  InodeNumber getMaxRecordedInode();
 
   /**
    * Constants for an header in overlay file.
@@ -232,6 +268,14 @@ class Overlay {
 
   /** path to ".eden/CLIENT/local" */
   const AbsolutePath localDir_;
+
+  /**
+   * The next inode number to allocate.  Zero indicates that neither
+   * initializeFromTakeover nor getMaxRecordedInode have been called.
+   *
+   * This value will never be 1.
+   */
+  std::atomic<uint64_t> nextInodeNumber_{0};
 
   /**
    * An open file descriptor to the overlay info file.

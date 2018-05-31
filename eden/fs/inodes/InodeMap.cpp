@@ -107,12 +107,6 @@ InodeMap::~InodeMap() {
   // destroy the EdenMount.
 }
 
-void InodeMap::setMaximumExistingInodeNumber(InodeNumber max) {
-  DCHECK_GE(max, kRootNodeId);
-  auto previous = nextInodeNumber_.exchange(max.get() + 1);
-  DCHECK_EQ(0, previous) << "setMaximumExistingInodeNumber called twice";
-}
-
 void InodeMap::initialize(TreeInodePtr root) {
   auto data = data_.wlock();
   CHECK(!root_);
@@ -130,14 +124,11 @@ void InodeMap::initializeFromTakeover(
       << "cannot load InodeMap data over a populated instance";
   CHECK_EQ(data->unloadedInodes_.size(), 0)
       << "cannot load InodeMap data over a populated instance";
-  CHECK_EQ(nextInodeNumber_.load(), 0)
-      << "cannot load InodeMap data over a populated instance";
 
   CHECK(!root_);
   root_ = std::move(root);
   auto ret = data->loadedInodes_.emplace(kRootNodeId, root_.get());
   CHECK(ret.second);
-  nextInodeNumber_.store(takeover.nextInodeNumber);
   for (const auto& entry : takeover.unloadedInodes) {
     if (entry.numFuseReferences < 0) {
       auto message = folly::to<std::string>(
@@ -171,8 +162,8 @@ void InodeMap::initializeFromTakeover(
   }
 
   XLOG(DBG2) << "InodeMap initialized mount " << mount_->getPath()
-             << " from takeover: nextInodeNumber=" << nextInodeNumber_.load()
-             << ", " << data->unloadedInodes_.size() << " inodes registered";
+             << " from takeover, " << data->unloadedInodes_.size()
+             << " inodes registered";
 }
 
 Future<InodePtr> InodeMap::lookupInode(InodeNumber number) {
@@ -623,9 +614,6 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
     }
 
     SerializedInodeMap result;
-    // Therefore, at this point, nobody is calling allocateInodeNumber(), so
-    // it's safe to read nextInodeNumber_.
-    result.nextInodeNumber = nextInodeNumber_.load();
     XLOG(DBG5) << "InodeMap::save nextInodeNumber: " << result.nextInodeNumber;
     result.unloadedInodes.reserve(data->unloadedInodes_.size());
     for (const auto& it : data->unloadedInodes_) {
@@ -881,8 +869,6 @@ bool InodeMap::shouldLoadChild(
     InodeNumber childInode,
     folly::Promise<InodePtr> promise) {
   auto data = data_.wlock();
-  // This is a sanity check - no big deal if we race with allocateInodeNumber.
-  CHECK_LT(childInode.get(), nextInodeNumber_.load());
   auto iter = data->unloadedInodes_.find(childInode);
   UnloadedInode* unloadedData{nullptr};
   if (iter == data->unloadedInodes_.end()) {
@@ -906,25 +892,6 @@ bool InodeMap::shouldLoadChild(
   // to start the load operation.  Otherwise someone else (whoever added the
   // first promise) has already started loading the inode.
   return isFirstPromise;
-}
-
-InodeNumber InodeMap::allocateInodeNumber() {
-  // InodeNumber should generally be 64-bits wide, in which case it isn't even
-  // worth bothering to handle the case where nextInodeNumber_ wraps.  We don't
-  // need to bother checking for conflicts with existing inode numbers since
-  // this can only happen if we wrap around.  We don't currently support
-  // platforms with 32-bit inode numbers.
-  static_assert(
-      sizeof(nextInodeNumber_) == sizeof(InodeNumber),
-      "expected nextInodeNumber_ and InodeNumber to have the same size");
-  static_assert(
-      sizeof(InodeNumber) >= 8, "expected InodeNumber to be at least 64 bits");
-
-  // This could be a relaxed atomic operation.  It doesn't matter on x86 but
-  // might on ARM.
-  auto previous = nextInodeNumber_++;
-  DCHECK_NE(0, previous) << "allocateInodeNumber called before initialize";
-  return InodeNumber{previous};
 }
 
 void InodeMap::inodeCreated(const InodePtr& inode) {

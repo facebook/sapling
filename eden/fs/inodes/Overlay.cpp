@@ -90,11 +90,11 @@ Overlay::~Overlay() {
   close();
 }
 
-void Overlay::close() {
+uint64_t Overlay::close() {
   CHECK_NE(std::this_thread::get_id(), gcThread_.get_id());
 
   if (!infoFile_) {
-    return;
+    return nextInodeNumber_.load(std::memory_order_relaxed);
   }
 
   // Make sure everything is shut down in reverse of construction order.
@@ -106,6 +106,8 @@ void Overlay::close() {
   inodeMetadataTable_.reset();
   dirFile_.close();
   infoFile_.close();
+
+  return nextInodeNumber_.load(std::memory_order_relaxed);
 }
 
 void Overlay::initOverlay() {
@@ -212,11 +214,39 @@ void Overlay::initNewOverlay() {
   auto infoPath = localDir_ + PathComponentPiece{kInfoFile};
   folly::writeFileAtomic(
       infoPath.stringPiece(), ByteRange(infoHeader.data(), infoHeader.size()));
+
+  // kRootNodeId is reserved - start at the next one.
+  setNextInodeNumber(InodeNumber{kRootNodeId.get() + 1});
+}
+
+void Overlay::setNextInodeNumber(InodeNumber nextInodeNumber) {
+  DCHECK_GT(nextInodeNumber, kRootNodeId);
+  auto previous = nextInodeNumber_.exchange(nextInodeNumber.get());
+  DCHECK_EQ(0, previous) << "setNextInodeNumber called after "
+                            "nextInodeNumber_ was already initialized";
+}
+
+InodeNumber Overlay::allocateInodeNumber() {
+  // InodeNumber should generally be 64-bits wide, in which case it isn't even
+  // worth bothering to handle the case where nextInodeNumber_ wraps.  We don't
+  // need to bother checking for conflicts with existing inode numbers since
+  // this can only happen if we wrap around.  We don't currently support
+  // platforms with 32-bit inode numbers.
+  static_assert(
+      sizeof(nextInodeNumber_) == sizeof(InodeNumber),
+      "expected nextInodeNumber_ and InodeNumber to have the same size");
+  static_assert(
+      sizeof(InodeNumber) >= 8, "expected InodeNumber to be at least 64 bits");
+
+  // This could be a relaxed atomic operation.  It doesn't matter on x86 but
+  // might on ARM.
+  auto previous = nextInodeNumber_++;
+  DCHECK_NE(0, previous) << "allocateInodeNumber called before initialize";
+  return InodeNumber{previous};
 }
 
 Optional<std::pair<TreeInode::Dir, InodeTimestamps>> Overlay::loadOverlayDir(
-    InodeNumber inodeNumber,
-    InodeMap* inodeMap) {
+    InodeNumber inodeNumber) {
   TreeInode::Dir result;
   InodeTimestamps timestamps;
   auto dirData = deserializeOverlayDir(inodeNumber, timestamps);
@@ -236,7 +266,7 @@ Optional<std::pair<TreeInode::Dir, InodeTimestamps>> Overlay::loadOverlayDir(
     if (value.inodeNumber) {
       ino = InodeNumber::fromThrift(value.inodeNumber);
     } else {
-      ino = inodeMap->allocateInodeNumber();
+      ino = allocateInodeNumber();
       shouldMigrateToNewFormat = true;
     }
 
@@ -351,7 +381,13 @@ bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
   }
 }
 
-InodeNumber Overlay::getMaxRecordedInode() {
+InodeNumber Overlay::scanForNextInodeNumber() {
+  if (auto ino = nextInodeNumber_.load(std::memory_order_relaxed)) {
+    // Already defined.
+    CHECK_GT(ino, 1);
+    return InodeNumber{ino - 1};
+  }
+
   // TODO: We should probably store the max inode number in the header file
   // during graceful unmount.  When opening an overlay we can then simply read
   // back the max inode number from this file if the overlay was shut down
@@ -412,6 +448,8 @@ InodeNumber Overlay::getMaxRecordedInode() {
       }
     }
   }
+
+  setNextInodeNumber(InodeNumber{maxInode.get() + 1});
 
   return maxInode;
 }

@@ -674,7 +674,7 @@ class TreeInode : public InodeBase {
 
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
-  static Dir buildDirFromTree(const Tree* tree, InodeMap* inodeMap);
+  static Dir buildDirFromTree(const Tree* tree, Overlay* overlay);
 
   /**
    * Get a TreeInodePtr to ourself.

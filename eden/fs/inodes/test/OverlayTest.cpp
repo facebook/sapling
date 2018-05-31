@@ -138,8 +138,7 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
 
   overlay->saveOverlayDir(10_ino, dir, InodeTimestamps{});
 
-  auto result =
-      overlay->loadOverlayDir(10_ino, mount_.getEdenMount()->getInodeMap());
+  auto result = overlay->loadOverlayDir(10_ino);
   ASSERT_TRUE(result);
   const auto* newDir = &result->first;
 
@@ -187,7 +186,8 @@ class RawOverlayTest : public ::testing::Test {
 };
 
 TEST_F(RawOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
-  EXPECT_EQ(kRootNodeId, overlay->getMaxRecordedInode());
+  EXPECT_EQ(kRootNodeId, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(2_ino, overlay->allocateInodeNumber());
 }
 
 TEST_F(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
@@ -196,7 +196,7 @@ TEST_F(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
 
   recreate();
 
-  EXPECT_EQ(2_ino, overlay->getMaxRecordedInode());
+  EXPECT_EQ(2_ino, overlay->scanForNextInodeNumber());
 }
 
 TEST_F(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
@@ -207,7 +207,7 @@ TEST_F(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
 
   recreate();
 
-  EXPECT_EQ(4_ino, overlay->getMaxRecordedInode());
+  EXPECT_EQ(4_ino, overlay->scanForNextInodeNumber());
 }
 
 TEST_F(RawOverlayTest, remembers_max_inode_number_of_file) {
@@ -219,7 +219,7 @@ TEST_F(RawOverlayTest, remembers_max_inode_number_of_file) {
 
   recreate();
 
-  EXPECT_EQ(3_ino, overlay->getMaxRecordedInode());
+  EXPECT_EQ(3_ino, overlay->scanForNextInodeNumber());
 }
 
 TEST_F(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
@@ -238,7 +238,7 @@ TEST_F(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
 
   recreate();
 
-  EXPECT_EQ(5_ino, overlay->getMaxRecordedInode());
+  EXPECT_EQ(5_ino, overlay->scanForNextInodeNumber());
 }
 
 TEST_F(RawOverlayTest, inode_numbers_after_takeover) {
@@ -265,7 +265,7 @@ TEST_F(RawOverlayTest, inode_numbers_after_takeover) {
 
   // Ensure an inode in the overlay but not referenced by the previous session
   // counts.
-  EXPECT_EQ(5_ino, overlay->getMaxRecordedInode());
+  EXPECT_EQ(5_ino, overlay->scanForNextInodeNumber());
 }
 
 } // namespace eden

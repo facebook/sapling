@@ -381,8 +381,7 @@ void TreeInode::loadUnlinkedChildInode(
       Dir dir;
       folly::Optional<InodeTimestamps> fromOverlay;
 
-      auto overlayContents =
-          getOverlay()->loadOverlayDir(number, getMount()->getInodeMap());
+      auto overlayContents = getOverlay()->loadOverlayDir(number);
       if (overlayContents) {
         fromOverlay = overlayContents->second;
       }
@@ -831,7 +830,7 @@ Overlay* TreeInode::getOverlay() const {
 
 folly::Optional<std::pair<TreeInode::Dir, InodeTimestamps>>
 TreeInode::loadOverlayDir(InodeNumber inodeNumber) const {
-  return getOverlay()->loadOverlayDir(inodeNumber, getInodeMap());
+  return getOverlay()->loadOverlayDir(inodeNumber);
 }
 
 void TreeInode::saveOverlayDir(const Dir& contents) const {
@@ -856,28 +855,32 @@ TreeInode::Dir TreeInode::saveDirFromTree(
     InodeNumber inodeNumber,
     const Tree* tree,
     EdenMount* mount) {
-  auto dir = buildDirFromTree(tree, mount->getInodeMap());
+  auto overlay = mount->getOverlay();
+  auto dir = buildDirFromTree(tree, overlay);
   // buildDirFromTree just allocated inode numbers; they should be saved.
-  mount->getOverlay()->saveOverlayDir(
+  overlay->saveOverlayDir(
       inodeNumber, dir, InodeTimestamps{mount->getLastCheckoutTime()});
   return dir;
 }
 
-TreeInode::Dir TreeInode::buildDirFromTree(
-    const Tree* tree,
-    InodeMap* inodeMap) {
+TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree, Overlay* overlay) {
   // Now build out the Dir based on what we know.
   Dir dir;
   if (!tree) {
     return dir;
   }
 
+  // A future optimization is for this code to allocate all of the inode numbers
+  // at once and then dole them out, one per entry. It would reduce the number
+  // of atomic operations from N to 1, though if the atomic is issued with the
+  // other work this loop is doing it may not matter much.
+
   dir.treeHash = tree->getHash();
   for (const auto& treeEntry : tree->getTreeEntries()) {
     dir.entries.emplace(
         treeEntry.getName(),
         modeFromTreeEntryType(treeEntry.getType()),
-        inodeMap->allocateInodeNumber(),
+        overlay->allocateInodeNumber(),
         treeEntry.getHash());
   }
   return dir;
@@ -926,8 +929,7 @@ FileInodePtr TreeInode::createImpl(
     targetName = myPath.value() + name;
 
     // Generate an inode number for this new entry.
-    auto* inodeMap = this->getInodeMap();
-    auto childNumber = inodeMap->allocateInodeNumber();
+    auto childNumber = getOverlay()->allocateInodeNumber();
 
     // Create the overlay file before we insert the file into our entries map.
     auto currentTime = getNow();
@@ -958,7 +960,7 @@ FileInodePtr TreeInode::createImpl(
     }
 
     entry.setInode(inode.get());
-    inodeMap->inodeCreated(inode);
+    getInodeMap()->inodeCreated(inode);
 
     auto timestamps = updateMtimeAndCtime(getNow());
     saveOverlayDir(*contents, timestamps);
@@ -1089,8 +1091,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     }
 
     // Allocate an inode number
-    auto* inodeMap = this->getInodeMap();
-    auto childNumber = inodeMap->allocateInodeNumber();
+    auto childNumber = getOverlay()->allocateInodeNumber();
 
     // The mode passed in by the caller may not have the file type bits set.
     // Ensure that we mark this as a directory.
@@ -1118,7 +1119,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
         childTimestamps,
         std::move(emptyDir));
     entry.setInode(newChild.get());
-    inodeMap->inodeCreated(newChild);
+    getInodeMap()->inodeCreated(newChild);
 
     // Save our updated overlay data
     auto timestamps = updateMtimeAndCtime(now);
@@ -2445,7 +2446,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
         contents.entries.emplace(
             newScmEntry->getName(),
             modeFromTreeEntryType(newScmEntry->getType()),
-            getInodeMap()->allocateInodeNumber(),
+            getOverlay()->allocateInodeNumber(),
             newScmEntry->getHash());
         invalidateFuseCache(newScmEntry->getName());
         contentsUpdated = true;
@@ -2467,7 +2468,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
         contents.entries.emplace(
             newScmEntry->getName(),
             modeFromTreeEntryType(newScmEntry->getType()),
-            getInodeMap()->allocateInodeNumber(),
+            getOverlay()->allocateInodeNumber(),
             newScmEntry->getHash());
         invalidateFuseCache(newScmEntry->getName());
         contentsUpdated = true;
@@ -2562,7 +2563,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     contents.entries.erase(it);
   } else {
     entry = Entry{modeFromTreeEntryType(newScmEntry->getType()),
-                  getInodeMap()->allocateInodeNumber(),
+                  getOverlay()->allocateInodeNumber(),
                   newScmEntry->getHash()};
   }
 
@@ -2634,7 +2635,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
         DCHECK_EQ(newScmEntry->getName(), name);
         it->second = Entry(
             modeFromTreeEntryType(newScmEntry->getType()),
-            getInodeMap()->allocateInodeNumber(),
+            getOverlay()->allocateInodeNumber(),
             newScmEntry->getHash());
       } else {
         contents->entries.erase(it);
@@ -2701,7 +2702,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
           auto ret = contents->entries.emplace(
               name,
               modeFromTreeEntryType(newScmEntry->getType()),
-              parentInode->getInodeMap()->allocateInodeNumber(),
+              parentInode->getOverlay()->allocateInodeNumber(),
               newScmEntry->getHash());
           inserted = ret.second;
         }

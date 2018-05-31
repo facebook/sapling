@@ -87,3 +87,17 @@ class PersistenceTest(testcase.EdenRepoTest):
                 new_stat.st_ctime,
                 f"ctime must line up for path {path}",
             )
+
+    def test_does_not_reuse_inode_numbers_after_cold_restart(self):
+        newdir1 = os.path.join(self.mount, "subdir", "newdir1")
+        os.mkdir(newdir1)
+        newdir_stat1 = os.lstat(newdir1)
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        newdir2 = os.path.join(self.mount, "subdir", "newdir2")
+        os.mkdir(newdir2)
+        newdir_stat2 = os.lstat(newdir2)
+
+        self.assertGreater(newdir_stat2.st_ino, newdir_stat1.st_ino)

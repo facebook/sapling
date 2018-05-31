@@ -109,18 +109,6 @@ class InodeMap {
   InodeMap& operator=(InodeMap&&) = default;
 
   /**
-   * Set the maximum existing inode number.  This must be called prior to
-   * calling allocateInodeNumber() and must not be called twice.
-   *
-   * @param max The maximum inode number currently assigned to
-   *     any inode in the filesystem.  For newly created file systems this
-   *     should be FUSE_ROOT_ID.  If this is a mount point that has been
-   *     mounted before, this should be the maximum value across all the
-   *     outstanding inodes.
-   */
-  void setMaximumExistingInodeNumber(InodeNumber max);
-
-  /**
    * Initialize the InodeMap
    *
    * This method must be called shortly after constructing an InodeMap object,
@@ -386,25 +374,6 @@ class InodeMap {
       InodeNumber number,
       const folly::exception_wrapper& exception);
 
-  /**
-   * allocateInodeNumber() should only be called by TreeInode.
-   *
-   * This can be called:
-   * - To allocate an inode number for an existing tree entry that does not
-   *   need to be loaded yet.
-   * - To allocate an inode number for a brand new inode being created by
-   *   TreeInode::create() or TreeInode::mkdir().  In this case
-   *   inodeCreated() should be called immediately afterwards to register the
-   *   new child Inode object.
-   *
-   * It is illegal to call allocateInodeNumber prior to
-   * setMaximumExistingInodeNumber.
-   *
-   * TODO: It would be easy to extend this function to allocate a range of
-   * inode values in one atomic operation.
-   */
-  InodeNumber allocateInodeNumber();
-
   void inodeCreated(const InodePtr& inode);
 
   struct LoadedInodeCounts {
@@ -659,12 +628,6 @@ class InodeMap {
    * the InodeMap while holding their own lock.)
    */
   folly::Synchronized<Members> data_;
-
-  /**
-   * The next inode number to allocate.  Zero indicates that
-   * setMaximumExistingInodeNumber has not been called.
-   */
-  std::atomic<uint64_t> nextInodeNumber_{0};
 };
 
 /**
