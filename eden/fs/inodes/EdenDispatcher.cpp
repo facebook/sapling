@@ -288,6 +288,8 @@ folly::Future<fuse_entry_out> EdenDispatcher::link(
       newParent,
       newName);
 
+  validatePathComponentLength(newName);
+
   // We intentionally do not support hard links.
   // These generally cannot be tracked in source control (git or mercurial)
   // and are not portable to non-Unix platforms.

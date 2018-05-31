@@ -978,6 +978,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
   std::shared_ptr<EdenFileHandle> handle;
   FileInodePtr inode;
 
+  validatePathComponentLength(name);
   materialize();
 
   // We need to scope the write lock as the getattr call below implicitly
@@ -1014,6 +1015,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
 FileInodePtr TreeInode::symlink(
     PathComponentPiece name,
     folly::StringPiece symlinkTarget) {
+  validatePathComponentLength(name);
   materialize();
 
   {
@@ -1026,6 +1028,8 @@ FileInodePtr TreeInode::symlink(
 }
 
 FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
+  validatePathComponentLength(name);
+
   // Compute the effective name of the node they want to create.
   RelativePath targetName;
   std::shared_ptr<EdenFileHandle> handle;
@@ -1058,6 +1062,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     throw InodeError(EPERM, inodePtrFromThis(), name);
   }
+  validatePathComponentLength(name);
 
   RelativePath targetName;
   // Compute the effective name of the node they want to create.
@@ -1433,6 +1438,7 @@ Future<Unit> TreeInode::rename(
   if (destParent->getNodeId() == getMount()->getDotEdenInodeNumber()) {
     return makeFuture<Unit>(InodeError(EPERM, destParent, destName));
   }
+  validatePathComponentLength(destName);
 
   bool needSrc = false;
   bool needDest = false;

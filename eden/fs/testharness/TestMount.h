@@ -160,6 +160,8 @@ class TestMount {
     return backingStore_;
   }
 
+  Dispatcher* getDispatcher() const;
+
   /**
    * Access to the TestMount's FakeClock which is referenced by the underlying
    * EdenMount (and thus inodes).

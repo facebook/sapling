@@ -36,6 +36,13 @@ folly::StringPiece dirname(folly::StringPiece path);
 enum : char { kDirSeparator = '/' };
 constexpr folly::StringPiece kDirSeparatorStr{"/"};
 
+/**
+ * FUSE supports components up to 1024 (FUSE_NAME_MAX) by default. For
+ * compatibility with other filesystems, Eden will limit to 255.
+ * https://en.wikipedia.org/wiki/Comparison_of_file_systems
+ */
+enum : size_t { kMaxPathComponentLength = 255 };
+
 /* Some helpers for working with path composition.
  * Goals:
  *
@@ -1635,6 +1642,12 @@ typename std::enable_if<folly::IsSomeString<T>::value, AbsolutePath>::type
 normalizeBestEffort(const T& path) {
   return normalizeBestEffort(path.c_str());
 }
+
+/**
+ * Throws std::system_error with ENAMETOOLONG if the given PathComponent is
+ * longer than kMaxPathComponentLength.
+ */
+void validatePathComponentLength(PathComponentPiece name);
 
 /**
  * Convenient literals for constructing path types.

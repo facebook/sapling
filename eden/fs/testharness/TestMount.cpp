@@ -189,6 +189,10 @@ void TestMount::initTestDirectory() {
   backingStore_ = make_shared<FakeBackingStore>(localStore_);
 }
 
+Dispatcher* TestMount::getDispatcher() const {
+  return edenMount_->getDispatcher();
+}
+
 void TestMount::remount() {
   // Create a new copy of the ClientConfig
   auto config = make_unique<ClientConfig>(*edenMount_->getConfig());

@@ -239,5 +239,12 @@ AbsolutePath normalizeBestEffort(folly::StringPiece path) {
   return normalizeBestEffort(path.str().c_str());
 }
 
+void validatePathComponentLength(PathComponentPiece name) {
+  if (name.value().size() > kMaxPathComponentLength) {
+    folly::throwSystemErrorExplicit(
+        ENAMETOOLONG, "path component too long: ", name);
+  }
+}
+
 } // namespace eden
 } // namespace facebook
