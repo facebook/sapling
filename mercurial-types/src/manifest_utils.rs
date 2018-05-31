@@ -32,6 +32,25 @@ pub enum EntryStatus {
     },
 }
 
+impl EntryStatus {
+    fn is_tree(&self) -> bool {
+        match self {
+            EntryStatus::Added(entry) => entry.get_type().is_tree(),
+            EntryStatus::Deleted(entry) => entry.get_type().is_tree(),
+            EntryStatus::Modified {
+                to_entry,
+                from_entry,
+            } => {
+                debug_assert_eq!(
+                    to_entry.get_type().is_tree(),
+                    from_entry.get_type().is_tree()
+                );
+                to_entry.get_type().is_tree()
+            }
+        }
+    }
+}
+
 pub struct ChangedEntry {
     pub path: Option<MPath>,
     pub status: EntryStatus,
@@ -181,6 +200,10 @@ where
 /// that differ. If input isn't a tree, then a stream with a single entry is returned, otherwise
 /// subtrees are recursively compared.
 fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<ChangedEntry, Error> {
+    if !changed_entry.status.is_tree() {
+        return once(Ok(changed_entry)).boxify();
+    }
+
     match changed_entry.status {
         EntryStatus::Added(entry) => recursive_entry_stream(changed_entry.path, entry)
             .map(|(path, entry)| ChangedEntry::new_added(path, entry))
@@ -193,32 +216,25 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
             from_entry,
         } => {
             debug_assert!(to_entry.get_type().is_tree() == from_entry.get_type().is_tree());
+            debug_assert!(to_entry.get_type().is_tree());
 
-            let substream = if to_entry.get_type().is_tree() {
-                let contents = to_entry.get_content().join(from_entry.get_content());
-                let path = changed_entry.path.clone();
-                let entry_path = to_entry.get_name().cloned();
+            let contents = to_entry.get_content().join(from_entry.get_content());
+            let path = changed_entry.path.clone();
+            let entry_path = to_entry.get_name().cloned();
 
-                let substream = contents
-                    .map(move |(to_content, from_content)| {
-                        let to_manifest = get_tree_content(to_content);
-                        let from_manifest = get_tree_content(from_content);
+            let substream = contents
+                .map(move |(to_content, from_content)| {
+                    let to_manifest = get_tree_content(to_content);
+                    let from_manifest = get_tree_content(from_content);
 
-                        diff_manifests(
-                            MPath::join_element_opt(path.as_ref(), entry_path.as_ref()),
-                            &to_manifest,
-                            &from_manifest,
-                        ).map(|diff| {
-                            select_all(diff.into_iter().map(recursive_changed_entry_stream))
-                        })
-                            .flatten_stream()
-                    })
-                    .flatten_stream();
-
-                substream.boxify()
-            } else {
-                empty().boxify()
-            };
+                    diff_manifests(
+                        MPath::join_element_opt(path.as_ref(), entry_path.as_ref()),
+                        &to_manifest,
+                        &from_manifest,
+                    ).map(|diff| select_all(diff.into_iter().map(recursive_changed_entry_stream)))
+                        .flatten_stream()
+                })
+                .flatten_stream();
 
             let current_entry = once(Ok(ChangedEntry::new_modified(
                 changed_entry.path.clone(),
