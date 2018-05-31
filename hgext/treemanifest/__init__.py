@@ -95,8 +95,6 @@ import shutil
 import struct
 import time
 
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid, short
 from mercurial import (
     bundle2,
     bundlerepo,
@@ -121,6 +119,8 @@ from mercurial import (
     util,
     wireproto,
 )
+from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid, short
 
 from ..extlib import cstore
 from ..remotefilelog import (
@@ -132,7 +132,6 @@ from ..remotefilelog import (
     wirepack,
 )
 from ..remotefilelog.contentstore import manifestrevlogstore, unioncontentstore
-from ..remotefilelog.metadatastore import unionmetadatastore
 from ..remotefilelog.datapack import (
     datapack,
     datapackstore,
@@ -145,6 +144,7 @@ from ..remotefilelog.historypack import (
     memhistorypack,
     mutablehistorypack,
 )
+from ..remotefilelog.metadatastore import unionmetadatastore
 from ..remotefilelog.repack import (
     _computeincrementaldatapack,
     _computeincrementalhistorypack,
@@ -152,6 +152,7 @@ from ..remotefilelog.repack import (
     _topacks,
     backgroundrepack,
 )
+
 
 osutil = policy.importmod(r"osutil")
 
@@ -650,14 +651,13 @@ class basetreemanifestlog(object):
             # Detect hybrid manifests and unwrap them
             p1tree = p1tree._treemanifest()
         p2tree = self[p2node].read()
-        if util.safehasattr(p2tree, '_treemanifest'):
+        if util.safehasattr(p2tree, "_treemanifest"):
             # Detect hybrid manifests and unwrap them
             p2tree = p2tree._treemanifest()
 
         revlogstore = self.revlogstore
         node = overridenode
-        for nname, nnode, ntext, np1text, np1, np2 in (
-                newtree.finalize(p1tree, p2tree)):
+        for nname, nnode, ntext, np1text, np1, np2 in newtree.finalize(p1tree, p2tree):
             revlog = revlogstore._revlog(nname)
             override = None
             if nname == "":
