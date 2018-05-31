@@ -22,6 +22,7 @@
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
 
+using namespace folly::string_piece_literals;
 using folly::Future;
 using folly::makeFuture;
 using folly::StringPiece;
@@ -167,6 +168,104 @@ TEST_F(OverlayTest, getFilePath) {
   EXPECT_STREQ("0f/15", path.data());
   Overlay::getFilePath(16_ino, path);
   EXPECT_STREQ("10/16", path.data());
+}
+
+class RawOverlayTest : public ::testing::Test {
+ public:
+  RawOverlayTest()
+      : testDir_{"eden_raw_overlay_test_"},
+        overlay{std::make_unique<Overlay>(
+            AbsolutePathPiece{testDir_.path().string()})} {}
+
+  void recreate() {
+    overlay.reset();
+    overlay.reset(new Overlay{AbsolutePathPiece{testDir_.path().string()}});
+  }
+
+  folly::test::TemporaryDirectory testDir_;
+  std::unique_ptr<Overlay> overlay;
+};
+
+TEST_F(RawOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
+  EXPECT_EQ(kRootNodeId, overlay->getMaxRecordedInode());
+}
+
+TEST_F(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
+  TreeInode::Dir dir;
+  overlay->saveOverlayDir(2_ino, dir, InodeTimestamps{});
+
+  recreate();
+
+  EXPECT_EQ(2_ino, overlay->getMaxRecordedInode());
+}
+
+TEST_F(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
+  TreeInode::Dir dir;
+  dir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, 3_ino);
+  dir.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
+  overlay->saveOverlayDir(kRootNodeId, dir, InodeTimestamps{});
+
+  recreate();
+
+  EXPECT_EQ(4_ino, overlay->getMaxRecordedInode());
+}
+
+TEST_F(RawOverlayTest, remembers_max_inode_number_of_file) {
+  // When materializing, overlay data is written leaf-to-root.
+
+  // The File is written first.
+  overlay->createOverlayFile(
+      3_ino, InodeTimestamps{}, folly::ByteRange{"contents"_sp});
+
+  recreate();
+
+  EXPECT_EQ(3_ino, overlay->getMaxRecordedInode());
+}
+
+TEST_F(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
+  // When materializing, overlay data is written leaf-to-root.
+
+  // The File is written first.
+  overlay->createOverlayFile(
+      5_ino, InodeTimestamps{}, folly::ByteRange{"contents"_sp});
+
+  // The subdir is written next.
+  TreeInode::Dir subdir;
+  subdir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, 5_ino);
+  overlay->saveOverlayDir(4_ino, subdir, InodeTimestamps{});
+
+  // Crashed before root was written.
+
+  recreate();
+
+  EXPECT_EQ(5_ino, overlay->getMaxRecordedInode());
+}
+
+TEST_F(RawOverlayTest, inode_numbers_after_takeover) {
+  // Write a subdir.
+  TreeInode::Dir subdir;
+  subdir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, 5_ino);
+  overlay->saveOverlayDir(4_ino, subdir, InodeTimestamps{});
+
+  // Write the root.
+  TreeInode::Dir dir;
+  dir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, 3_ino);
+  dir.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
+  overlay->saveOverlayDir(kRootNodeId, dir, InodeTimestamps{});
+
+  recreate();
+
+  // Rewrite the root (say, after a takeover) without the file.
+
+  TreeInode::Dir newroot;
+  newroot.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
+  overlay->saveOverlayDir(kRootNodeId, newroot, InodeTimestamps{});
+
+  recreate();
+
+  // Ensure an inode in the overlay but not referenced by the previous session
+  // counts.
+  EXPECT_EQ(5_ino, overlay->getMaxRecordedInode());
 }
 
 } // namespace eden
