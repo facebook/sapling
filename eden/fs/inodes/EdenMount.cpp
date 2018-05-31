@@ -350,11 +350,11 @@ EdenMount::shutdownImpl(bool doTakeover) {
       .then([this, fileHandleMap = std::move(fileHandleMap)](
                 SerializedInodeMap inodeMap) {
         XLOG(DBG1) << "shutdown complete for EdenMount " << getPath();
-        // Destroy the Overlay object to make sure we have released its lock.
+        // Close the Overlay object to make sure we have released its lock.
         // This is important during graceful restart to ensure that we have
         // released the lock before the new edenfs process begins to take over
         // the mount piont.
-        overlay_.reset();
+        overlay_->close();
         state_.store(State::SHUT_DOWN);
         return std::make_tuple(fileHandleMap, inodeMap);
       });

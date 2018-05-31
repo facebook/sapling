@@ -56,6 +56,14 @@ class Overlay {
   explicit Overlay(AbsolutePathPiece localDir);
   ~Overlay();
 
+  /**
+   * Closes the overlay. It is undefined behavior to access the
+   * InodeMetadataTable concurrently or call any other Overlay method
+   * concurrently with or after calling close(). The Overlay will try to detect
+   * this with assertions but cannot always detect concurrent access.
+   */
+  void close();
+
   InodeMetadataTable* getInodeMetadataTable() const {
     return inodeMetadataTable_.get();
   }
@@ -223,13 +231,14 @@ class Overlay {
   void handleGCRequest(GCRequest& request);
 
   /** path to ".eden/CLIENT/local" */
-  AbsolutePath localDir_;
+  const AbsolutePath localDir_;
 
   /**
    * An open file descriptor to the overlay info file.
    *
    * This is primarily used to hold a lock on the overlay for as long as we are
-   * using it.  We want to ensure that only one eden process
+   * using it.  We want to ensure that only one eden process accesses the
+   * Overlay directory at a time.
    */
   folly::File infoFile_;
 

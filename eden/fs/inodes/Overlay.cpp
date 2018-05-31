@@ -87,10 +87,25 @@ Overlay::Overlay(AbsolutePathPiece localDir) : localDir_(localDir) {
 }
 
 Overlay::~Overlay() {
+  close();
+}
+
+void Overlay::close() {
   CHECK_NE(std::this_thread::get_id(), gcThread_.get_id());
+
+  if (!infoFile_) {
+    return;
+  }
+
+  // Make sure everything is shut down in reverse of construction order.
+
   gcQueue_.lock()->stop = true;
   gcCondVar_.notify_one();
   gcThread_.join();
+
+  inodeMetadataTable_.reset();
+  dirFile_.close();
+  infoFile_.close();
 }
 
 void Overlay::initOverlay() {
@@ -671,6 +686,7 @@ void Overlay::parseHeader(
   timestamps.ctime = ctime;
   timestamps.mtime = mtime;
 }
+
 // Helper function to update timestamps into overlay file
 void Overlay::updateTimestampToHeader(
     int fd,
