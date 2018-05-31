@@ -2253,9 +2253,17 @@ class ondemandtreedatastore(generatingdatastore):
 
         if isinstance(repo, bundlerepo.bundlerepository):
             # bundlerepos do an entirely inmemory conversion. No transaction
-            # necessary.
+            # necessary. This is used for converting flat-only infinitepush
+            # bundles to have trees.
             convert(None)
         else:
+            if repo.svfs.treemanifestserver:
+                # tree servers shouldn't be trying to build non-bundle
+                # treemanifests on the fly, so let's abort early.
+                # When using hgsql, the transaction below causes an exception
+                # during readonly mode. So aborting early prevents that.
+                raise shallowutil.MissingNodesError([(name, node)])
+
             with repo.wlock(), repo.lock():
                 with repo.transaction("demandtreegen") as tr:
                     convert(tr)
