@@ -11,27 +11,12 @@
 
 use super::Hook;
 use super::HookChangeset;
-use super::HookRunner;
 
-use failure::{Error, Result};
-use futures_ext::{asynchronize, BoxFuture};
+use failure::Result;
 use std::sync::Arc;
-
-pub struct RustHookRunner {}
 
 pub struct RustHook {
     pub name: String,
-}
-
-impl HookRunner for RustHookRunner {
-    fn run_hook(
-        self: &Self,
-        hook: Box<Hook>,
-        changeset: Arc<HookChangeset>,
-    ) -> BoxFuture<bool, Error> {
-        let fut = asynchronize(move || hook.run(changeset));
-        Box::new(fut)
-    }
 }
 
 impl Hook for RustHook {
@@ -43,11 +28,5 @@ impl Hook for RustHook {
             .iter()
             .for_each(|file| println!("{}", file));
         Ok(true)
-    }
-}
-
-impl RustHook {
-    pub fn new(name: String) -> RustHook {
-        RustHook { name }
     }
 }

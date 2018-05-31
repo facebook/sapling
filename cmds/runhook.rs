@@ -9,6 +9,9 @@
 //! It's main purpose is to allow easy testing of hooks without having to run them as part of
 //! a push in a Mononoke server
 //! It currently supports hooks written in Lua only
+
+#![deny(warnings)]
+
 extern crate clap;
 extern crate failure_ext as failure;
 extern crate futures;
@@ -28,8 +31,8 @@ extern crate slog_glog_fmt;
 
 extern crate hooks;
 
-use hooks::{HookChangeset, HookRunner};
-use hooks::lua_hook::LuaHookRunner;
+use hooks::{HookChangeset, HookManager};
+use hooks::lua_hook::LuaHook;
 use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -43,6 +46,7 @@ use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
 
+use futures::Future;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -87,17 +91,25 @@ fn run() -> Result<()> {
     println!("hook code is {}", code);
     println!("changeset user: {:?} ", user);
 
-    let hook_runner = LuaHookRunner::new();
     let files = changeset.files();
     let vec_files = files
         .iter()
         .map(|arr| String::from_utf8_lossy(&arr.to_vec()).into_owned())
         .collect();
-    let hook = hook_runner.new_hook(String::from("testhook"), code);
-    let changeset = HookChangeset::new(user.to_string(), vec_files);
-    let fut = hook_runner.run_hook(Box::new(hook), Arc::new(changeset));
-    let res = core.run(fut).unwrap();
-    println!("Hook passed? {}", res);
+    let hook_cs = HookChangeset::new(user.to_string(), vec_files);
+    let mut hook_manager = HookManager::new();
+    let hook = LuaHook {
+        name: String::from("testhook"),
+        code,
+    };
+    hook_manager.install_hook("testhook", Arc::new(hook));
+    let fut = hook_manager.run_hooks(Arc::new(hook_cs));
+    let res = fut.wait().unwrap();
+    let hook_result = &res[0];
+    println!(
+        "Hook {} passed? {}",
+        hook_result.hook_name, hook_result.passed
+    );
     Ok(())
 }
 
