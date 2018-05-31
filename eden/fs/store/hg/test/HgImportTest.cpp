@@ -40,25 +40,48 @@ vector<PathComponent> getTreeEntryNames(const Tree* tree) {
   }
   return results;
 }
-} // namespace
 
-class HgImportTest : public ::testing::Test {
+enum class RepoType {
+  FLAT_MANIFEST,
+  TREE_MANIFEST,
+};
+
+class HgImportTest : public ::testing::TestWithParam<RepoType> {
  public:
   HgImportTest() {
     // Create the test repository
     repo_.hgInit();
+
+    if (GetParam() == RepoType::TREE_MANIFEST) {
+      repo_.appendToHgrc({"[extensions]",
+                          "fastmanifest=",
+                          "treemanifest=",
+                          "",
+                          "[remotefilelog]",
+                          "reponame=eden_test_hg_import",
+                          "",
+                          "[fastmanifest]",
+                          "usetree=True",
+                          "cacheonchange=True",
+                          "usecache=True",
+                          ""
+                          "[treemanifest]",
+                          "usecunionstore=True",
+                          "autocreatetrees=True"});
+    }
   }
 
  protected:
-  void importTest(bool treemanifest);
-
   TemporaryDirectory testDir_{"eden_test"};
   AbsolutePath testPath_{testDir_.path().string()};
   HgRepo repo_{testPath_ + "repo"_pc};
   MemoryLocalStore localStore_;
 };
 
-void HgImportTest::importTest(bool treemanifest) {
+} // namespace
+
+TEST_P(HgImportTest, importTest) {
+  bool treemanifest = GetParam() == RepoType::TREE_MANIFEST;
   // Set up the initial commit
   repo_.mkdir("foo");
   StringPiece barData = "this is a test file\n";
@@ -185,29 +208,14 @@ void HgImportTest::importTest(bool treemanifest) {
       "value not present in store");
 }
 
-TEST_F(HgImportTest, importFlatManifest) {
-  importTest(false);
-}
-
-TEST_F(HgImportTest, importTreeManifest) {
-  repo_.appendToHgrc({"[extensions]",
-                      "fastmanifest=",
-                      "treemanifest=",
-                      "",
-                      "[remotefilelog]",
-                      "reponame=eden_test_hg_import",
-                      "",
-                      "[fastmanifest]",
-                      "usetree=True",
-                      "cacheonchange=True",
-                      "usecache=True",
-                      ""
-                      "[treemanifest]",
-                      "usecunionstore=True",
-                      "autocreatetrees=True"});
-
-  importTest(true);
-}
+INSTANTIATE_TEST_CASE_P(
+    FlatManifest,
+    HgImportTest,
+    ::testing::Values(RepoType::FLAT_MANIFEST));
+INSTANTIATE_TEST_CASE_P(
+    TreeManifest,
+    HgImportTest,
+    ::testing::Values(RepoType::TREE_MANIFEST));
 
 int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
