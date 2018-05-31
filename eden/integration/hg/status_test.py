@@ -12,7 +12,7 @@ import os
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
-@hg_test
+@hg_test("Flatmanifest", "Treemanifest", "TreeOnly")
 class StatusTest(EdenHgTestCase):
     def populate_backing_repo(self, repo):
         repo.write_file("hello.txt", "hola")
@@ -52,6 +52,21 @@ class StatusTest(EdenHgTestCase):
         self.hg("rm", "--force", "hello.txt")
         self.assert_status({"hello.txt": "R", "world.txt": "A"})
         self.assertFalse(os.path.exists(self.get_path("hello.txt")))
+
+    def test_manual_revert(self):
+        self.assert_status_empty()
+        self.write_file("dir1/a.txt", "original contents\n")
+        self.hg("add", "dir1/a.txt")
+        self.repo.commit("create a.txt")
+        self.assert_status_empty()
+
+        self.write_file("dir1/a.txt", "updated contents\n")
+        self.repo.commit("modify a.txt")
+        self.assert_status_empty()
+
+        self.write_file("dir1/a.txt", "original contents\n")
+        self.repo.commit("revert a.txt")
+        self.assert_status_empty()
 
 
 # Define a separate TestCase class purely to test with different initial
