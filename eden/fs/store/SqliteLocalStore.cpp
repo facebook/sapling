@@ -140,6 +140,13 @@ void SqliteLocalStore::close() {
   db_.close();
 }
 
+void SqliteLocalStore::clearKeySpace(KeySpace keySpace) {
+  auto db = db_.lock();
+
+  SqliteStatement stmt(db, "delete from ", tableNames[keySpace]);
+  stmt.step();
+}
+
 StoreResult SqliteLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)
     const {
   auto db = db_.lock();

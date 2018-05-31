@@ -25,6 +25,7 @@ class MemoryLocalStore : public LocalStore {
  public:
   MemoryLocalStore();
   void close() override;
+  void clearKeySpace(KeySpace keySpace) override;
   StoreResult get(LocalStore::KeySpace keySpace, folly::ByteRange key)
       const override;
   bool hasKey(LocalStore::KeySpace keySpace, folly::ByteRange key)

@@ -24,7 +24,8 @@
 #include "eden/fs/store/StoreResult.h"
 
 using namespace facebook::eden;
-
+using namespace std::chrono_literals;
+using namespace folly::string_piece_literals;
 using folly::IOBuf;
 using folly::StringPiece;
 using folly::unhexlify;
@@ -210,6 +211,16 @@ TEST_P(LocalStoreTest, testMultipleBlobWriters) {
   EXPECT_EQ("hello world1_1", result1_1.piece());
   EXPECT_EQ("hello world2_1", result2_1.piece());
   EXPECT_EQ("hello world1_4", result1_4.piece());
+}
+
+TEST_P(LocalStoreTest, testClearKeySpace) {
+  store_->put(KeySpace::BlobFamily, "key1"_sp, "blob1"_sp);
+  store_->put(KeySpace::BlobFamily, "key2"_sp, "blob2"_sp);
+  store_->put(KeySpace::TreeFamily, "tree"_sp, "treeContents"_sp);
+  store_->clearKeySpace(KeySpace::BlobFamily);
+  EXPECT_FALSE(store_->hasKey(KeySpace::BlobFamily, "key1"_sp));
+  EXPECT_FALSE(store_->hasKey(KeySpace::BlobFamily, "key2"_sp));
+  EXPECT_TRUE(store_->hasKey(KeySpace::TreeFamily, "tree"_sp));
 }
 
 INSTANTIATE_TEST_CASE_P(

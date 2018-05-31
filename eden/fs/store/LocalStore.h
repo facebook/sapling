@@ -73,6 +73,17 @@ class LocalStore {
   virtual void close() = 0;
 
   /**
+   * Delete every object from the store that cannot be repopulated from the
+   * backing store. Notably, this does not include proxy hashes.
+   */
+  void clearCaches();
+
+  /**
+   * Clears all entries from the given KeySpace.
+   */
+  virtual void clearKeySpace(KeySpace keySpace) = 0;
+
+  /**
    * Get arbitrary unserialized data from the store.
    *
    * StoreResult::isValid() will be true if the key was found, and false

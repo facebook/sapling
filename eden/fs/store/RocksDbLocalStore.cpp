@@ -206,10 +206,20 @@ void RocksDbLocalStore::close() {
   dbHandles_.db.reset();
 }
 
+void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
+  auto columnFamily = dbHandles_.columns[keySpace].get();
+  std::unique_ptr<rocksdb::Iterator> it{
+      dbHandles_.db->NewIterator(ReadOptions(), columnFamily)};
+  const WriteOptions writeOptions;
+  for (it->SeekToFirst(); it->Valid(); it->Next()) {
+    dbHandles_.db->Delete(writeOptions, columnFamily, it->key());
+  }
+}
+
 StoreResult RocksDbLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)
     const {
   string value;
-  auto status = dbHandles_.db.get()->Get(
+  auto status = dbHandles_.db->Get(
       ReadOptions(),
       dbHandles_.columns[keySpace].get(),
       _createSlice(key),

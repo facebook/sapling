@@ -89,6 +89,12 @@ class SerializedBlobMetadata {
 namespace facebook {
 namespace eden {
 
+void LocalStore::clearCaches() {
+  clearKeySpace(BlobFamily);
+  clearKeySpace(BlobMetaDataFamily);
+  clearKeySpace(TreeFamily);
+}
+
 StoreResult LocalStore::get(KeySpace keySpace, const Hash& id) const {
   return get(keySpace, id.getBytes());
 }
