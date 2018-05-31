@@ -225,6 +225,15 @@ def do_buildinfo(config: config_mod.Config, out: Optional[IO[bytes]] = None) -> 
         out.write(b"%s: %s\n" % (key.encode(), value.encode()))
 
 
+@debug_cmd("clear_local_caches", "Clears local caches of objects stored in RocksDB")
+class ClearLocalCachesCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        config = cmd_util.create_config(args)
+        with config.get_thrift_client() as client:
+            client.debugClearLocalStoreCaches()
+        return 0
+
+
 @debug_cmd("uptime", "Check how long edenfs has been running")
 class UptimeCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:

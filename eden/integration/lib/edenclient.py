@@ -286,6 +286,10 @@ class EdenFS(object):
                 "eden exited unsuccessfully with status {}".format(return_code)
             )
 
+    def restart(self) -> None:
+        self.shutdown()
+        self.start()
+
     def graceful_restart(self, timeout: float = 30) -> None:
         assert self._process is not None
         # Get the process ID of the old edenfs process.

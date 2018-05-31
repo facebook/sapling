@@ -627,6 +627,12 @@ service EdenService extends fb303.FacebookService {
   ) throws (1: EdenError ex)
 
   /**
+   * Clears all data from the LocalStore that can be populated from the upstream
+   * backing store.
+   */
+  void debugClearLocalStoreCaches() throws (1: EdenError ex)
+
+  /**
   * Unloads unused Inodes from a directory inside a mountPoint whose last
   * access time is older than the specified age.
   *

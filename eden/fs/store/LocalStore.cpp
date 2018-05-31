@@ -92,7 +92,17 @@ namespace eden {
 void LocalStore::clearCaches() {
   clearKeySpace(BlobFamily);
   clearKeySpace(BlobMetaDataFamily);
-  clearKeySpace(TreeFamily);
+
+  // If the trees were imported from a flatmanifest, we cannot delete them.
+  // See test_contents_are_the_same_if_handle_is_held_open when running against
+  // a flatmanifest repository.
+  // clearKeySpace(TreeFamily);
+
+  // Proxy hashes are required to fetch objects from hg from a hash. Deleting
+  // them breaks re-importing after an inode is unloaded.
+  // clearKeySpace(HgProxyHashFamily);
+
+  clearKeySpace(HgCommitToTreeFamily);
 }
 
 StoreResult LocalStore::get(KeySpace keySpace, const Hash& id) const {
