@@ -40,3 +40,12 @@
   x/l/j
   x/z/b
   y/d/e
+
+Set startcommit=0 and confirm it creates a commit off of 0.
+  $ setconfig repogenerator.startcommit=0
+  $ hg repogenerator --seed 1 --config extensions.repogenerator= -n 1
+  starting commit is: 0 (goal is 2)
+  created 0, * sec elapsed (* commits/sec, * per hour, * per day) (glob)
+  generated 1 commits; quitting
+  $ hg log -r tip~1+tip -T '{rev} '
+  0 3  (no-eol)

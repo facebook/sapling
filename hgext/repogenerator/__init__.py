@@ -9,10 +9,11 @@ import random
 import time
 import traceback
 
+from mercurial import context, error, registrar, scmutil
 from mercurial.i18n import _
-from mercurial import context, error, registrar
 
 from ..perfsuite import editsgenerator
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -24,7 +25,7 @@ def _mainloop(repo, ui, tr, count, batchsize):
     i = 0
     batchcount = 0
     start = time.time()
-    base = repo["tip"]
+    base = scmutil.revsingle(repo, ui.config("repogenerator", "startcommit", "tip"))
     goalrev = ui.configint("repogenerator", "numcommits", 10000) - 1
     ui.write(_("starting commit is: %d (goal is %d)\n") % (base.rev(), goalrev))
     generator = editsgenerator.randomeditsgenerator(base)
@@ -77,6 +78,11 @@ def _mainloop(repo, ui, tr, count, batchsize):
 )
 def repogenerator(ui, repo, *revs, **opts):
     """Generates random commits for large-scale repo generation
+
+    The starting revision is configurable::
+
+       [repogenerator]
+       startcommit = tip
 
     The number of commits is configurable::
 
