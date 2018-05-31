@@ -1770,6 +1770,16 @@ def mktempcopy(name, emptyok=False, createmode=None):
     return temp
 
 
+def truncate(fd, offset):
+    # Workaround ftruncate returning 1. See
+    # https://www.spinics.net/lists/linux-btrfs/msg78417.html
+    try:
+        fd.truncate(offset)
+    except IOError as ex:
+        if ex.errno != 0:
+            raise
+
+
 class filestat(object):
     """help to exactly detect change of a file
 

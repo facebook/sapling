@@ -57,7 +57,7 @@ def _playback(
             checkambig = checkambigfiles and (f, "") in checkambigfiles
             try:
                 fp = opener(f, "a", checkambig=checkambig)
-                fp.truncate(o)
+                util.truncate(fp, o)
                 fp.close()
             except IOError:
                 report(_("failed to truncate %s\n") % f)

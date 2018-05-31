@@ -1881,7 +1881,7 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
         for i in xrange(offset, len(tr.entries)):
             file, troffset, ignore = tr.entries[i]
             with repo.svfs(file, "a", checkambig=True) as fp:
-                fp.truncate(troffset)
+                util.truncate(fp, troffset)
             if troffset == 0:
                 repo.store.markremoved(file)
 
