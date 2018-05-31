@@ -20,6 +20,7 @@
 
 #include "lib/cdatapack/cdatapack.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <memory.h>
@@ -114,6 +115,16 @@ static void unpack_disk_deltachunk(
       disk_deltachunk->deltabase_index_offset);
 }
 
+static inline uint16_t get_fanout_index(
+    const datapack_handle_t* handle,
+    const uint8_t node[NODE_SZ]) {
+  if (handle->large_fanout) {
+    return (node[0] << 8) | node[1];
+  } else {
+    return node[0];
+  }
+}
+
 /**
  * Finds a node using the index, and fills out the packindex pointer.
  * Returns true iff the node is found.
@@ -122,14 +133,7 @@ bool find(
     const datapack_handle_t *handle,
     const uint8_t node[NODE_SZ],
     pack_index_entry_t *packindex) {
-  uint16_t fanout_idx;
-  if (handle->large_fanout) {
-    uint16_t* fanout_idx_ptr = (uint16_t*) &node[0];
-    fanout_idx = ntohs(*fanout_idx_ptr);
-  } else {
-    fanout_idx = node[0];
-  }
-
+  uint16_t fanout_idx = get_fanout_index(handle, node);
   index_offset_t start = handle->fanout_table[fanout_idx].start_index;
   index_offset_t end = handle->fanout_table[fanout_idx].end_index;
 
@@ -157,6 +161,40 @@ bool find(
 
   // nope, no good.
   return false;
+}
+
+static void backfill_fanout_entries(
+    datapack_handle_t* handle,
+    size_t fanout_idx_start,
+    size_t fanout_idx_end,
+    size_t last_offset,
+    size_t new_offset) {
+  if (last_offset == 0) {
+    assert(fanout_idx_start == 0);
+    // bucket0_idx is the only prior bucket that contains any nodes.
+    uint16_t bucket0_idx =
+        get_fanout_index(handle, handle->index_table[0].node);
+    for (int ix = fanout_idx_start; ix < fanout_idx_end; ++ix) {
+      if (ix == bucket0_idx) {
+        handle->fanout_table[ix].start_index = 0;
+        handle->fanout_table[ix].end_index = new_offset - 1;
+      } else {
+        handle->fanout_table[ix].start_index = 1;
+        handle->fanout_table[ix].end_index = 0;
+      }
+    }
+  } else {
+    // The bucket at fanout_idx_start needs its end_index updated to the
+    // current index.
+    handle->fanout_table[fanout_idx_start].end_index = new_offset - 1;
+
+    // All buckets from fanout_idx_start to the fanout_idx_end are empty and
+    // don't have any nodes.
+    for (int ix = fanout_idx_start + 1; ix < fanout_idx_end; ++ix) {
+      handle->fanout_table[ix].start_index = 1;
+      handle->fanout_table[ix].end_index = 0;
+    }
+  }
 }
 
 datapack_handle_t *open_datapack(
@@ -271,66 +309,51 @@ datapack_handle_t *open_datapack(
     goto error_cleanup;
   }
 
-  // build a clean and easy table to bisect.
+  // Convert the index data in the file into a fanout table allowing find()
+  // to easily lookup the area where it needs to perform bisection.
+  //
+  // The index data is interpreted as follows:
+  // - If the index is 0 we can't really tell if this bucket actually has data
+  //   or not.  It might be empty, or it might have data from location 0 up to
+  //   the next entry that has a non-zero index.
+  //
+  //   In order to figure out which bucket actually has data at offset 0
+  //   we look at handle->index_table[0].node
+  //
+  // - If the index is non-zero but the same as the previous node, then no nodes
+  //   are present starting with this fanout value.
+  //
+  // - If the index is different from the previous node, then this bucket has
+  //   data starting from this node up to the next entry that has a non-zero
+  //   bucket.
   index_offset_t *index = (index_offset_t *)
       (((const char *) handle->index_mmap) +
        sizeof(disk_index_header_t));
-  index_offset_t prev_index_offset = 0;
-  int last_fanout_increment = 0;
+  // We don't know the end location yet for entries starting at need_end_idx
+  size_t need_end_idx = 0;
+  size_t last_idx = 0;
 
   for (int ix = 0; ix < fanout_count; ix++) {
     index_offset_t index_offset =
             ntoh_index_offset(index[ix]) / sizeof(disk_index_entry_t);
-    if (index_offset != prev_index_offset) {
-      // backfill the start & end offsets
-      for (int jx = last_fanout_increment; jx < ix; jx ++) {
-        index_offset_t written_index;
-
-        if (prev_index_offset == 0) {
-          // this is an unfortunate case because we cannot tell the
-          // difference between an empty fanout entry and the fanout
-          // entry for the first index entry.  they will both show '0'.
-          // therefore, if prev_index_offset is 0, we have to bisect from 0.
-          written_index = 0;
-        } else {
-          written_index = index_offset;
-        }
-
-        // fill the "start" except for the last time we changed the index
-        // offset.
-        if (jx != last_fanout_increment) {
-          handle->fanout_table[jx].start_index = written_index;
-        }
-        handle->fanout_table[jx].end_index = index_offset;
-      }
-
-      handle->fanout_table[ix].start_index = index_offset;
-      last_fanout_increment = ix;
-
-      prev_index_offset = index_offset;
+    if (index_offset == last_idx) {
+      continue;
     }
+    if (index_offset < last_idx) {
+      handle->status = DATAPACK_HANDLE_CORRUPT;
+      goto error_cleanup;
+    }
+    backfill_fanout_entries(handle, need_end_idx, ix, last_idx, index_offset);
+    handle->fanout_table[ix].start_index = index_offset;
+    need_end_idx = ix;
+    last_idx = index_offset;
   }
 
-  // we may need to backfill the remaining offsets.
-  index_offset_t last_offset = (index_offset_t)
-      (index_end - handle->index_table - 1);
-  if (prev_index_offset == 0) {
-    // Exactly one entry contains nodes, but we can't tell which one.
-    // All entries need to search the entire file.
-    for (int jx = 0; jx < fanout_count; jx++) {
-      handle->fanout_table[jx].start_index = 0;
-      handle->fanout_table[jx].end_index = last_offset;
-    }
-  } else {
-    for (int jx = last_fanout_increment; jx < fanout_count; jx++) {
-      // fill the "start" except for the last time we changed the index
-      // offset.
-      if (jx != last_fanout_increment) {
-        handle->fanout_table[jx].start_index = last_offset;
-      }
-      handle->fanout_table[jx].end_index = last_offset;
-    }
-  }
+  // Finish filling out data for the buckets from need_end_idx to the end
+  index_offset_t end_offset = (index_offset_t)(index_end - handle->index_table);
+  backfill_fanout_entries(
+      handle, need_end_idx, fanout_count, last_idx, end_offset);
+
   handle->status = DATAPACK_HANDLE_OK;
 
   goto success_cleanup;
