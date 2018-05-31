@@ -84,6 +84,11 @@ class LocalStore {
   virtual void clearKeySpace(KeySpace keySpace) = 0;
 
   /**
+   * Ask the storage engine to compact itself.
+   */
+  virtual void compactStorage() = 0;
+
+  /**
    * Get arbitrary unserialized data from the store.
    *
    * StoreResult::isValid() will be true if the key was found, and false

@@ -147,6 +147,8 @@ void SqliteLocalStore::clearKeySpace(KeySpace keySpace) {
   stmt.step();
 }
 
+void SqliteLocalStore::compactStorage() {}
+
 StoreResult SqliteLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)
     const {
   auto db = db_.lock();

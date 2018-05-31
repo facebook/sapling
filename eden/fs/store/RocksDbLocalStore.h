@@ -24,6 +24,7 @@ class RocksDbLocalStore : public LocalStore {
   ~RocksDbLocalStore();
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
+  void compactStorage() override;
   StoreResult get(LocalStore::KeySpace keySpace, folly::ByteRange key)
       const override;
   FOLLY_NODISCARD folly::Future<StoreResult> getFuture(

@@ -234,6 +234,15 @@ class ClearLocalCachesCmd(Subcmd):
         return 0
 
 
+@debug_cmd("compact_local_storage", "Asks RocksDB to compact its storage")
+class CompactLocalStorageCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        config = cmd_util.create_config(args)
+        with config.get_thrift_client() as client:
+            client.debugCompactLocalStorage()
+        return 0
+
+
 @debug_cmd("uptime", "Check how long edenfs has been running")
 class UptimeCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:

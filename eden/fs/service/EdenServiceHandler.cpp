@@ -869,6 +869,11 @@ void EdenServiceHandler::debugClearLocalStoreCaches() {
   server_->getLocalStore()->clearCaches();
 }
 
+void EdenServiceHandler::debugCompactLocalStorage() {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
+  server_->getLocalStore()->compactStorage();
+}
+
 int64_t EdenServiceHandler::unloadInodeForPath(
     unique_ptr<string> mountPoint,
     std::unique_ptr<std::string> path,

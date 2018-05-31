@@ -68,6 +68,8 @@ void MemoryLocalStore::clearKeySpace(KeySpace keySpace) {
   (*storage_.wlock())[keySpace].clear();
 }
 
+void MemoryLocalStore::compactStorage() {}
+
 StoreResult MemoryLocalStore::get(
     LocalStore::KeySpace keySpace,
     folly::ByteRange key) const {

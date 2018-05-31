@@ -633,6 +633,11 @@ service EdenService extends fb303.FacebookService {
   void debugClearLocalStoreCaches() throws (1: EdenError ex)
 
   /**
+   * Asks RocksDB to perform a compaction.
+   */
+  void debugCompactLocalStorage() throws (1: EdenError ex)
+
+  /**
   * Unloads unused Inodes from a directory inside a mountPoint whose last
   * access time is older than the specified age.
   *
