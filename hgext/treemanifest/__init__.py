@@ -1178,23 +1178,6 @@ def _getnewtree(parenttree, added, removed):
 
 
 def _getflatdiff(mfl, mfctx):
-    p1node, p2node = mfctx.parents
-    if p1node != nullid:
-        try:
-            parentflat = mfl[p1node].read()
-        except KeyError:
-            raise error.Abort(
-                _("unable to find flat parent nodes %s %s") % (hex(p1node), hex(p2node))
-            )
-    else:
-        parentflat = manifest.manifestdict()
-
-    newflat = mfctx.read()
-    diff = parentflat.diff(newflat)
-    return _difftoaddremove(diff)
-
-
-def _getfastflatdiff(mfl, mfctx):
     mfrevlog = mfl._revlog
     rev = mfrevlog.rev(mfctx.node())
     p1, p2 = mfrevlog.parentrevs(rev)
@@ -1462,7 +1445,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
                 builttrees.pop(p1node, None)
             refcount[p1node] = p1refcount
 
-            adds, deletes = _getfastflatdiff(mfl, mfl[node])
+            adds, deletes = _getflatdiff(mfl, mfl[node])
 
             # Apply the changes on top of the parent tree
             newtree = _getnewtree(origtree, adds, deletes)
