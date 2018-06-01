@@ -67,8 +67,9 @@ extern crate stats;
 extern crate time_ext;
 
 mod errors;
-mod repo;
 mod listener;
+mod monitoring;
+mod repo;
 
 use std::collections::HashMap;
 use std::io;
@@ -181,40 +182,6 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
         drain.fuse(),
         o!(kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
     )
-}
-
-fn start_stats() -> Result<JoinHandle<!>> {
-    Ok(thread::Builder::new()
-        .name("stats_aggregation".to_owned())
-        .spawn(move || {
-            let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
-            let scheduler = stats::schedule_stats_aggregation(&core.handle())
-                .expect("failed to create stats aggregation scheduler");
-            core.run(scheduler).expect("stats scheduler failed");
-            // stats scheduler shouldn't finish successfully
-            unreachable!()
-        })?)
-}
-
-fn start_thrift_service<'a>(
-    logger: &Logger,
-    matches: &ArgMatches<'a>,
-) -> Option<Result<JoinHandle<!>>> {
-    matches.value_of("thrift_port").map(|port| {
-        let port = port.parse().expect("Failed to parse thrift_port as number");
-        info!(logger, "Initializing thrift server on port {}", port);
-
-        thread::Builder::new()
-            .name("thrift_service".to_owned())
-            .spawn(move || {
-                services::run_service_framework(
-                    "mononoke_server",
-                    port,
-                    0, // Disables separate status http server
-                ).expect("failure while running thrift service framework")
-            })
-            .map_err(Error::from)
-    })
 }
 
 fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
@@ -519,8 +486,8 @@ fn main() {
     fn run_server<'a>(root_log: &Logger, matches: ArgMatches<'a>) -> Result<!> {
         info!(root_log, "Starting up");
 
-        let stats_aggregation = start_stats()?;
-        let maybe_thrift = match start_thrift_service(&root_log, &matches) {
+        let stats_aggregation = monitoring::start_stats()?;
+        let maybe_thrift = match monitoring::start_thrift_service(&root_log, &matches) {
             None => None,
             Some(handle) => Some(handle?),
         };
