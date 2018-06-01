@@ -314,7 +314,7 @@ void InodeBase::onPtrRefZero() const {
 }
 
 ParentInodeInfo InodeBase::getParentInfo() const {
-  using ParentContentsPtr = folly::Synchronized<TreeInode::Dir>::LockedPtr;
+  using ParentContentsPtr = folly::Synchronized<TreeInodeState>::LockedPtr;
 
   // Grab our parent's contents_ lock.
   //

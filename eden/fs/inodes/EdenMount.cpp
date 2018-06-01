@@ -223,8 +223,12 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
   // Load the overlay, if present.
   auto rootOverlayDir = overlay_->loadOverlayDir(kRootNodeId);
   if (rootOverlayDir) {
+    // No hash is necessary because the root is always materialized.
     return TreeInodePtr::makeNew(
-        this, std::move(rootOverlayDir->first), rootOverlayDir->second);
+        this,
+        rootOverlayDir->second,
+        std::move(rootOverlayDir->first),
+        folly::none);
   }
   return objectStore_->getTreeForCommit(parentCommits.parent1())
       .then([this](std::shared_ptr<const Tree> tree) {

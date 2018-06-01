@@ -136,7 +136,7 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   auto ino2 = overlay->allocateInodeNumber();
   auto ino3 = overlay->allocateInodeNumber();
 
-  TreeInode::Dir dir;
+  DirContents dir;
   dir.entries.emplace("one"_pc, S_IFREG | 0644, ino2, hash);
   dir.entries.emplace("two"_pc, S_IFDIR | 0755, ino3);
 
@@ -223,7 +223,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
 
-  TreeInode::Dir dir;
+  DirContents dir;
   overlay->saveOverlayDir(ino2, dir, InodeTimestamps{});
 
   recreate();
@@ -237,7 +237,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
   auto ino3 = overlay->allocateInodeNumber();
   auto ino4 = overlay->allocateInodeNumber();
 
-  TreeInode::Dir dir;
+  DirContents dir;
   dir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
   dir.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
   overlay->saveOverlayDir(kRootNodeId, dir, InodeTimestamps{});
@@ -277,7 +277,7 @@ TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
       ino5, InodeTimestamps{}, folly::ByteRange{"contents"_sp});
 
   // The subdir is written next.
-  TreeInode::Dir subdir;
+  DirContents subdir;
   subdir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
   overlay->saveOverlayDir(ino4, subdir, InodeTimestamps{});
 
@@ -296,12 +296,12 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
   auto ino5 = overlay->allocateInodeNumber();
 
   // Write a subdir.
-  TreeInode::Dir subdir;
+  DirContents subdir;
   subdir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
   overlay->saveOverlayDir(ino4, subdir, InodeTimestamps{});
 
   // Write the root.
-  TreeInode::Dir dir;
+  DirContents dir;
   dir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
   dir.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
   overlay->saveOverlayDir(kRootNodeId, dir, InodeTimestamps{});
@@ -312,7 +312,7 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
 
   // Rewrite the root (say, after a takeover) without the file.
 
-  TreeInode::Dir newroot;
+  DirContents newroot;
   newroot.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
   overlay->saveOverlayDir(kRootNodeId, newroot, InodeTimestamps{});
 

@@ -12,10 +12,8 @@
 #include <folly/Optional.h>
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
+#include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
-#include "eden/fs/model/Hash.h"
-#include "eden/fs/utils/DirType.h"
-#include "eden/fs/utils/PathMap.h"
 
 namespace facebook {
 namespace eden {
@@ -38,6 +36,32 @@ class TreeInodeDebugInfo;
 constexpr folly::StringPiece kDotEdenName{".eden"};
 
 /**
+ * The state of a TreeInode as held in memory.
+ */
+struct TreeInodeState : DirContents {
+  explicit TreeInodeState(DirContents&& dir, folly::Optional<Hash> hash)
+      : DirContents(std::forward<DirContents>(dir)), treeHash(hash) {}
+
+  bool isMaterialized() const {
+    return !treeHash.hasValue();
+  }
+  void setMaterialized() {
+    treeHash = folly::none;
+  }
+
+  /**
+   * If this TreeInode is unmaterialized (identical to an existing source
+   * control Tree), treeHash contains the ID of the source control Tree
+   * that this TreeInode is identical to.
+   *
+   * If this TreeInode is materialized (possibly modified from source
+   * control, and backed by the Overlay instead of a source control Tree),
+   * treeHash will be none.
+   */
+  folly::Optional<Hash> treeHash;
+};
+
+/**
  * Represents a directory in the file system.
  */
 class TreeInode : public InodeBase {
@@ -47,245 +71,6 @@ class TreeInode : public InodeBase {
   enum class Recurse {
     SHALLOW,
     DEEP,
-  };
-
-  /**
-   * Represents a directory entry.
-   *
-   * A directory entry can be in one of several states:
-   *
-   * - An InodeBase object for the entry may or may not exist.  If it does
-   *   exist, it is the authoritative source of data for the entry.
-   *
-   * - If the child InodeBase object does not exist, we may or may not have an
-   *   inode number already allocated for the child.  An inode number can be
-   *   allocated on-demand if necessary, without fully creating a child
-   *   InodeBase object.
-   *
-   * - The child may or may not be materialized in the overlay.
-   *
-   *   If the child contents are identical to an existing source control Tree
-   *   or Blob then it does not need to be materialized, and the Entry may only
-   *   contain the hash identifying the Tree/Blob.
-   *
-   *   If the child is materialized in the overlay, then it must have an inode
-   *   number allocated to it.
-   */
-  class Entry {
-   public:
-    /**
-     * Create a hash for a non-materialized entry.
-     */
-    Entry(mode_t m, InodeNumber number, Hash hash)
-        : mode_{m}, hasHash_{true}, hash_{hash}, inodeNumber_{number} {
-      DCHECK(number.hasValue());
-    }
-
-    /**
-     * Create a hash for a materialized entry.
-     */
-    Entry(mode_t m, InodeNumber number) : mode_{m}, inodeNumber_{number} {
-      DCHECK(number.hasValue());
-    }
-
-    Entry(Entry&& e) = default;
-    Entry& operator=(Entry&& e) = default;
-    Entry(const Entry& e) = delete;
-    Entry& operator=(const Entry& e) = delete;
-
-    bool isMaterialized() const {
-      // TODO: In the future we should probably only allow callers to invoke
-      // this method when inode is not set.  If inode is set it should be the
-      // authoritative source of data.
-      return !hasHash_;
-    }
-
-    Hash getHash() const {
-      // TODO: In the future we should probably only allow callers to invoke
-      // this method when inode is not set.  If inode is set it should be the
-      // authoritative source of data.
-      DCHECK(hasHash_);
-      return hash_;
-    }
-
-    folly::Optional<Hash> getOptionalHash() const {
-      if (hasHash_) {
-        return hash_;
-      } else {
-        return folly::none;
-      }
-    }
-
-    InodeNumber getInodeNumber() const {
-      return hasInodePointer_ ? inode_->getNodeId() : inodeNumber_;
-    }
-
-    void setMaterialized() {
-      hasHash_ = false;
-    }
-
-    void setDematerialized(Hash hash) {
-      DCHECK(hasInodePointer_);
-      hasHash_ = true;
-      hash_ = hash;
-    }
-
-    mode_t getMode() const {
-      // Callers should not check getMode() if an inode is loaded.
-      // If the child inode is loaded it is the authoritative source for
-      // the mode bits.
-      DCHECK(!hasInodePointer_);
-      return mode_;
-    }
-
-    mode_t getModeUnsafe() const {
-      // TODO: T20354866 Remove this method once all callers are refactored.
-      //
-      // Callers should always call getMode() instead. This method only exists
-      // for supporting legacy code which will be refactored eventually.
-      return mode_;
-    }
-
-    /**
-     * Get the file type, as a dtype_t value as used by readdir()
-     *
-     * It is okay for callers to call getDtype() even if the inode is
-     * loaded.  The file type for an existing entry never changes.
-     */
-    dtype_t getDtype() const {
-      return mode_to_dtype(mode_);
-    }
-
-    /**
-     * Check if the entry is a directory or not.
-     *
-     * It is okay for callers to call isDirectory() even if the inode is
-     * loaded.  The file type for an existing entry never changes.
-     */
-    bool isDirectory() const {
-      return dtype_t::Dir == getDtype();
-    }
-
-    InodeBase* getInode() const {
-      return hasInodePointer_ ? inode_ : nullptr;
-    }
-
-    InodePtr getInodePtr() const {
-      // It's safe to call newPtrLocked because calling getInode() implies the
-      // TreeInode's contents_ lock is held.
-      return hasInodePointer_ ? InodePtr::newPtrLocked(inode_) : InodePtr{};
-    }
-
-    /**
-     * Same as getInodePtr().asFilePtrOrNull() except it avoids constructing
-     * a FileInodePtr if the entry does not point to a FileInode.
-     */
-    FileInodePtr asFilePtrOrNull() const;
-
-    /**
-     * Same as getInodePtr().asTreePtrOrNull() except it avoids constructing
-     * a TreeInodePtr if the entry does not point to a FileInode.
-     */
-    TreeInodePtr asTreePtrOrNull() const;
-
-    void setInode(InodeBase* inode) {
-      DCHECK(!hasInodePointer_);
-      DCHECK(inode);
-      DCHECK_EQ(inodeNumber_, inode->getNodeId());
-      hasInodePointer_ = true;
-      inode_ = inode;
-    }
-
-    void clearInode() {
-      DCHECK(hasInodePointer_);
-      hasInodePointer_ = false;
-      auto inode = inode_;
-      inodeNumber_ = inode->getNodeId();
-    }
-
-   private:
-    /**
-     * The initial entry type for this entry.
-     */
-    mode_t mode_{0};
-
-    // Can we borrow some bits from mode_t? :) If so, Entry would fit in 4
-    // words.
-    bool hasHash_{false};
-    bool hasInodePointer_{false};
-
-    /**
-     * If the entry is not materialized, this contains the hash
-     * identifying the source control Tree (if this is a directory) or Blob
-     * (if this is a file) that contains the entry contents.
-     *
-     * If the entry is materialized, hasHash_ is false.
-     *
-     * TODO: If inode is set, this field generally should not be used, and the
-     * child InodeBase should be consulted instead.
-     */
-    Hash hash_;
-
-    union {
-      /**
-       * The inode number, if one is allocated for this entry, or 0 if one is
-       * not allocated.
-       *
-       * An inode number is required for materialized entries, so this is always
-       * non-zero if hash_ is not set.  (It may also be non-zero even when hash_
-       * is set.)
-       */
-      InodeNumber inodeNumber_{0};
-
-      /**
-       * A pointer to the child inode, if it is loaded, or null if it is not
-       * loaded.
-       *
-       * Note that we store this as a raw pointer.  Children inodes hold a
-       * reference to their parent TreeInode, not the other way around.
-       * Children inodes can be destroyed only in one of two ways:
-       * - Being unlinked, then having their last reference go away.
-       *   In this case they will be removed from our entries list when they are
-       *   unlinked.
-       * - Being unloaded (after their reference count is already 0).  In this
-       *   case the parent TreeInodes responsible for triggering unloading of
-       *   its children, so it resets this pointer to null when it unloads the
-       *   child.
-       */
-      InodeBase* inode_;
-    };
-  };
-
-  // TODO: We can do better than this. When mode_t is stored in the InodeTable,
-  // an entry can be in one of two states:
-  // 1. Non-materialized, where we only need to store
-  //    (TreeEntryType, Hash, InodeNumber)
-  // 2. Materialized, where hash is unset. We'd still want to store dtype_t.
-  // I think that could fit in 32 bytes, which would be a material savings
-  // given how many trees Eden tends to keep loaded.
-  static_assert(sizeof(Entry) == 40, "Entry is five words");
-
-  /** Represents a directory in the overlay */
-  struct Dir {
-    /** The direct children of this directory */
-    PathMap<Entry> entries;
-    /**
-     * If this TreeInode is unmaterialized (identical to an existing source
-     * control Tree), treeHash contains the ID of the source control Tree
-     * that this TreeInode is identical to.
-     *
-     * If this TreeInode is materialized (possibly modified from source
-     * control, and backed by the Overlay instead of a source control Tree),
-     * treeHash will be none.
-     */
-    folly::Optional<Hash> treeHash;
-
-    bool isMaterialized() const {
-      return !treeHash.hasValue();
-    }
-    void setMaterialized() {
-      treeHash = folly::none;
-    }
   };
 
   /** Holds the results of a create operation. */
@@ -319,7 +104,8 @@ class TreeInode : public InodeBase {
       PathComponentPiece name,
       mode_t initialMode,
       folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
-      Dir&& dir);
+      DirContents&& dir,
+      folly::Optional<Hash> treeHash);
 
   /**
    * Construct an inode that only has backing in the Overlay area.
@@ -330,16 +116,22 @@ class TreeInode : public InodeBase {
       PathComponentPiece name,
       mode_t initialMode,
       folly::Optional<InodeTimestamps> initialTimestamps,
-      Dir&& dir);
+      DirContents&& dir,
+      folly::Optional<Hash> treeHash);
 
   /**
    * Construct the root TreeInode from a source control commit's root.
    */
   TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree);
+
+  /**
+   * Construct the root inode from data saved in the overlay.
+   */
   TreeInode(
       EdenMount* mount,
-      Dir&& tree,
-      folly::Optional<InodeTimestamps> initialTimestamps);
+      folly::Optional<InodeTimestamps> initialTimestamps,
+      DirContents&& dir,
+      folly::Optional<Hash> treeHash);
 
   ~TreeInode() override;
 
@@ -347,7 +139,7 @@ class TreeInode : public InodeBase {
   folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
   folly::Future<folly::Unit> prefetch() override;
   void updateOverlayHeader() override;
-  Dispatcher::Attr getAttrLocked(const Dir& contents);
+  Dispatcher::Attr getAttrLocked(const DirContents& contents);
 
   /** Implements the InodeBase method used by the Dispatcher
    * to create the Inode instance for a given name */
@@ -377,10 +169,10 @@ class TreeInode : public InodeBase {
       TreeInodePtr newParent,
       PathComponentPiece newName);
 
-  const folly::Synchronized<Dir>& getContents() const {
+  const folly::Synchronized<TreeInodeState>& getContents() const {
     return contents_;
   }
-  folly::Synchronized<Dir>& getContents() {
+  folly::Synchronized<TreeInodeState>& getContents() {
     return contents_;
   }
 
@@ -614,7 +406,7 @@ class TreeInode : public InodeBase {
   class TreeRenameLocks;
   class IncompleteInodeLoad;
 
-  InodeMetadata getMetadataLocked(const Dir&) const;
+  InodeMetadata getMetadataLocked(const DirContents&) const;
 
   /**
    * The InodeMap is guaranteed to remain valid for at least the lifetime of
@@ -637,11 +429,11 @@ class TreeInode : public InodeBase {
       std::unique_ptr<InodeBase> childInode);
 
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInodeNoThrow(
-      const Entry& entry,
+      const DirEntry& entry,
       PathComponentPiece name) noexcept;
 
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInode(
-      const Entry& entry,
+      const DirEntry& entry,
       PathComponentPiece name);
 
   /**
@@ -655,7 +447,7 @@ class TreeInode : public InodeBase {
   FOLLY_NODISCARD folly::Future<folly::Unit> doRename(
       TreeRenameLocks&& locks,
       PathComponentPiece srcName,
-      PathMap<Entry>::iterator srcIter,
+      PathMap<DirEntry>::iterator srcIter,
       TreeInodePtr destParent,
       PathComponentPiece destName);
 
@@ -664,38 +456,39 @@ class TreeInode : public InodeBase {
   /**
    * Loads a tree from the overlay given an inode number.
    */
-  folly::Optional<std::pair<Dir, InodeTimestamps>> loadOverlayDir(
+  folly::Optional<std::pair<DirContents, InodeTimestamps>> loadOverlayDir(
       InodeNumber inodeNumber) const;
 
   /**
    * Saves the entries of this inode to the overlay.
    */
-  void saveOverlayDir(const Dir& contents) const;
+  void saveOverlayDir(const DirContents& contents) const;
 
   /**
    * Saves the entries of this inode to the overlay.
    */
-  void saveOverlayDir(const Dir& contents, const InodeTimestamps& timestamps)
-      const;
+  void saveOverlayDir(
+      const DirContents& contents,
+      const InodeTimestamps& timestamps) const;
 
   /**
    * Saves the entries for a specified inode number.
    */
   void saveOverlayDir(
       InodeNumber inodeNumber,
-      const Dir& contents,
+      const DirContents& contents,
       const InodeTimestamps& timestamps) const;
 
   /**
    * Converts a Tree to a Dir and saves it to the Overlay under the given inode
    * number.
    */
-  static Dir
+  static DirContents
   saveDirFromTree(InodeNumber inodeNumber, const Tree* tree, EdenMount* mount);
 
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
-  static Dir buildDirFromTree(const Tree* tree, Overlay* overlay);
+  static DirContents buildDirFromTree(const Tree* tree, Overlay* overlay);
 
   /**
    * Get a TreeInodePtr to ourself.
@@ -719,7 +512,7 @@ class TreeInode : public InodeBase {
    * returned via this parameter.
    */
   FileInodePtr createImpl(
-      folly::Synchronized<Dir>::LockedPtr contentsLock,
+      folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
       PathComponentPiece name,
       mode_t mode,
       folly::ByteRange fileContents,
@@ -793,9 +586,9 @@ class TreeInode : public InodeBase {
    * lock.)
    */
   folly::Future<InodePtr> loadChildLocked(
-      Dir& dir,
+      DirContents& dir,
       PathComponentPiece name,
-      Entry& entry,
+      DirEntry& entry,
       std::vector<IncompleteInodeLoad>* pendingLoads);
 
   /**
@@ -819,7 +612,7 @@ class TreeInode : public InodeBase {
    * diff once all .gitignore data is loaded.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> computeDiff(
-      folly::Synchronized<Dir>::LockedPtr contentsLock,
+      folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
       const DiffContext* context,
       RelativePathPiece currentPath,
       std::shared_ptr<const Tree> tree,
@@ -854,7 +647,7 @@ class TreeInode : public InodeBase {
       std::vector<IncompleteInodeLoad>* pendingLoads);
   std::unique_ptr<CheckoutAction> processCheckoutEntry(
       CheckoutContext* ctx,
-      Dir& contents,
+      DirContents& contents,
       const TreeEntry* oldScmEntry,
       const TreeEntry* newScmEntry,
       std::vector<IncompleteInodeLoad>* pendingLoads);
@@ -888,7 +681,7 @@ class TreeInode : public InodeBase {
    */
   FOLLY_NODISCARD bool checkoutTryRemoveEmptyDir(CheckoutContext* ctx);
 
-  folly::Synchronized<Dir> contents_;
+  folly::Synchronized<TreeInodeState> contents_;
 };
 
 /**
@@ -896,7 +689,7 @@ class TreeInode : public InodeBase {
  * as a set of strings starting with + and - followed by the entry name.
  */
 folly::Optional<std::vector<std::string>> findEntryDifferences(
-    const TreeInode::Dir& dir,
+    const DirContents& dir,
     const Tree& tree);
 
 } // namespace eden

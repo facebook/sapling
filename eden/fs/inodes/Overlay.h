@@ -11,10 +11,12 @@
 #include <folly/File.h>
 #include <folly/Optional.h>
 #include <folly/Range.h>
+#include <folly/futures/Promise.h>
 #include <gtest/gtest_prod.h>
 #include <condition_variable>
 #include <thread>
-#include "TreeInode.h"
+#include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -27,6 +29,7 @@ namespace overlay {
 class OverlayDir;
 }
 
+struct DirContents;
 class InodeMap;
 struct InodeMetadata;
 template <typename T>
@@ -121,10 +124,10 @@ class Overlay {
 
   void saveOverlayDir(
       InodeNumber inodeNumber,
-      const TreeInode::Dir& dir,
+      const DirContents& dir,
       const InodeTimestamps& timestamps);
 
-  folly::Optional<std::pair<TreeInode::Dir, InodeTimestamps>> loadOverlayDir(
+  folly::Optional<std::pair<DirContents, InodeTimestamps>> loadOverlayDir(
       InodeNumber inodeNumber);
 
   void removeOverlayData(InodeNumber inodeNumber);

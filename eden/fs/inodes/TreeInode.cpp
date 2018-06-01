@@ -63,24 +63,6 @@ namespace eden {
 TreeInode::CreateResult::CreateResult(const EdenMount* mount)
     : attr(mount->initStatData()) {}
 
-FileInodePtr TreeInode::Entry::asFilePtrOrNull() const {
-  if (hasInodePointer_) {
-    if (auto file = dynamic_cast<FileInode*>(inode_)) {
-      return FileInodePtr::newPtrLocked(file);
-    }
-  }
-  return FileInodePtr{};
-}
-
-TreeInodePtr TreeInode::Entry::asTreePtrOrNull() const {
-  if (hasInodePointer_) {
-    if (auto tree = dynamic_cast<TreeInode*>(inode_)) {
-      return TreeInodePtr::newPtrLocked(tree);
-    }
-  }
-  return TreeInodePtr{};
-}
-
 /**
  * A helper class to track info about inode loads that we started while holding
  * the contents_ lock.
@@ -153,7 +135,8 @@ TreeInode::TreeInode(
           name,
           initialMode,
           folly::none,
-          saveDirFromTree(ino, tree.get(), parent->getMount())) {}
+          saveDirFromTree(ino, tree.get(), parent->getMount()),
+          tree->getHash()) {}
 
 TreeInode::TreeInode(
     InodeNumber ino,
@@ -161,9 +144,10 @@ TreeInode::TreeInode(
     PathComponentPiece name,
     mode_t initialMode,
     folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
-    Dir&& dir)
+    DirContents&& dir,
+    folly::Optional<Hash> treeHash)
     : InodeBase(ino, initialMode, std::move(initialTimestampsFn), parent, name),
-      contents_(std::move(dir)) {
+      contents_(folly::in_place, std::move(dir), treeHash) {
   DCHECK_NE(ino, kRootNodeId);
 }
 
@@ -173,23 +157,27 @@ TreeInode::TreeInode(
     PathComponentPiece name,
     mode_t initialMode,
     folly::Optional<InodeTimestamps> initialTimestamps,
-    Dir&& dir)
+    DirContents&& dir,
+    folly::Optional<Hash> treeHash)
     : InodeBase(ino, initialMode, initialTimestamps, parent, name),
-      contents_(std::move(dir)) {
+      contents_(folly::in_place, std::move(dir), treeHash) {
   DCHECK_NE(ino, kRootNodeId);
 }
 
 TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
     : TreeInode(
           mount,
+          folly::none,
           saveDirFromTree(kRootNodeId, tree.get(), mount),
-          folly::none) {}
+          tree->getHash()) {}
 
 TreeInode::TreeInode(
     EdenMount* mount,
-    Dir&& dir,
-    folly::Optional<InodeTimestamps> initialTimestamps)
-    : InodeBase(mount, initialTimestamps), contents_(std::move(dir)) {}
+    folly::Optional<InodeTimestamps> initialTimestamps,
+    DirContents&& dir,
+    folly::Optional<Hash> treeHash)
+    : InodeBase(mount, initialTimestamps),
+      contents_(folly::in_place, std::move(dir), treeHash) {}
 
 TreeInode::~TreeInode() {}
 
@@ -197,7 +185,7 @@ folly::Future<Dispatcher::Attr> TreeInode::getattr() {
   return getAttrLocked(*contents_.rlock());
 }
 
-Dispatcher::Attr TreeInode::getAttrLocked(const Dir& contents) {
+Dispatcher::Attr TreeInode::getAttrLocked(const DirContents& contents) {
   Dispatcher::Attr attr(getMount()->initStatData());
 
   attr.st.st_ino = getNodeId().get();
@@ -380,20 +368,16 @@ void TreeInode::loadUnlinkedChildInode(
       promises = getInodeMap()->inodeLoadComplete(file.get());
       inodePtr = InodePtr::takeOwnership(std::move(file));
     } else {
-      Dir dir;
+      DirContents dir;
       folly::Optional<InodeTimestamps> fromOverlay;
 
       auto overlayContents = getOverlay()->loadOverlayDir(number);
       if (overlayContents) {
+        dir = std::move(overlayContents.value().first);
         fromOverlay = overlayContents->second;
       }
 
-      if (hash) {
-        // Copy in the hash but we leave dir.entries empty
-        // because a directory can only be unlinked if it
-        // is empty.
-        dir.treeHash = hash;
-      } else {
+      if (!hash) {
         // Note that the .value() call will throw if we couldn't
         // load the dir data; we'll catch and propagate that in
         // the containing try/catch block.
@@ -407,7 +391,13 @@ void TreeInode::loadUnlinkedChildInode(
       }
 
       auto tree = std::make_unique<TreeInode>(
-          number, inodePtrFromThis(), name, mode, fromOverlay, std::move(dir));
+          number,
+          inodePtrFromThis(),
+          name,
+          mode,
+          fromOverlay,
+          std::move(dir),
+          hash);
       promises = getInodeMap()->inodeLoadComplete(tree.get());
       inodePtr = InodePtr::takeOwnership(std::move(tree));
     }
@@ -523,7 +513,7 @@ void TreeInode::inodeLoadComplete(
 }
 
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
-    const Entry& entry,
+    const DirEntry& entry,
     PathComponentPiece name) noexcept {
   // The callers of startLoadingInodeNoThrow() need to make sure that they
   // always call InodeMap::inodeLoadComplete() or InodeMap::inodeLoadFailed()
@@ -555,7 +545,7 @@ inline std::ostream& operator<<(
 }
 
 static std::vector<std::string> computeEntryDifferences(
-    const TreeInode::Dir& dir,
+    const DirContents& dir,
     const Tree& tree) {
   std::set<std::string> differences;
   for (const auto& entry : dir.entries) {
@@ -572,7 +562,7 @@ static std::vector<std::string> computeEntryDifferences(
 }
 
 folly::Optional<std::vector<std::string>> findEntryDifferences(
-    const TreeInode::Dir& dir,
+    const DirContents& dir,
     const Tree& tree) {
   // Avoid allocations in the case where the tree and dir agree.
   if (dir.entries.size() != tree.getTreeEntries().size()) {
@@ -587,7 +577,7 @@ folly::Optional<std::vector<std::string>> findEntryDifferences(
 }
 
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
-    const Entry& entry,
+    const DirEntry& entry,
     PathComponentPiece name) {
   XLOG(DBG5) << "starting to load inode " << entry.getInodeNumber() << ": "
              << getLogPath() << " / \"" << name << "\"";
@@ -636,7 +626,6 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
               // numbers stored in the overlay.
               auto overlayDir = self->loadOverlayDir(number);
               if (overlayDir) {
-                overlayDir->first.treeHash = treeHash;
                 // Compare the Tree and the Dir from the overlay.  If they
                 // differ, something is wrong, so log the difference.
                 if (auto differences =
@@ -662,7 +651,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     childName,
                     entryMode,
                     overlayDir->second,
-                    std::move(overlayDir->first));
+                    std::move(overlayDir->first),
+                    treeHash);
               }
 
               return make_unique<TreeInode>(
@@ -683,7 +673,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
       name,
       entry.getMode(),
       overlayDir->second,
-      std::move(overlayDir->first));
+      std::move(overlayDir->first),
+      folly::none);
 } // namespace eden
 
 std::shared_ptr<DirHandle> TreeInode::opendir() {
@@ -830,30 +821,30 @@ Overlay* TreeInode::getOverlay() const {
   return getMount()->getOverlay();
 }
 
-folly::Optional<std::pair<TreeInode::Dir, InodeTimestamps>>
+folly::Optional<std::pair<DirContents, InodeTimestamps>>
 TreeInode::loadOverlayDir(InodeNumber inodeNumber) const {
   return getOverlay()->loadOverlayDir(inodeNumber);
 }
 
-void TreeInode::saveOverlayDir(const Dir& contents) const {
+void TreeInode::saveOverlayDir(const DirContents& contents) const {
   return saveOverlayDir(
       getNodeId(), contents, getMetadataLocked(contents).timestamps);
 }
 
 void TreeInode::saveOverlayDir(
-    const Dir& contents,
+    const DirContents& contents,
     const InodeTimestamps& timestamps) const {
   return saveOverlayDir(getNodeId(), contents, timestamps);
 }
 
 void TreeInode::saveOverlayDir(
     InodeNumber inodeNumber,
-    const Dir& contents,
+    const DirContents& contents,
     const InodeTimestamps& timestamps) const {
   return getOverlay()->saveOverlayDir(inodeNumber, contents, timestamps);
 }
 
-TreeInode::Dir TreeInode::saveDirFromTree(
+DirContents TreeInode::saveDirFromTree(
     InodeNumber inodeNumber,
     const Tree* tree,
     EdenMount* mount) {
@@ -865,19 +856,16 @@ TreeInode::Dir TreeInode::saveDirFromTree(
   return dir;
 }
 
-TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree, Overlay* overlay) {
-  // Now build out the Dir based on what we know.
-  Dir dir;
-  if (!tree) {
-    return dir;
-  }
+DirContents TreeInode::buildDirFromTree(const Tree* tree, Overlay* overlay) {
+  CHECK(tree);
 
   // A future optimization is for this code to allocate all of the inode numbers
   // at once and then dole them out, one per entry. It would reduce the number
   // of atomic operations from N to 1, though if the atomic is issued with the
   // other work this loop is doing it may not matter much.
 
-  dir.treeHash = tree->getHash();
+  DirContents dir;
+  // TODO: O(N^2)
   for (const auto& treeEntry : tree->getTreeEntries()) {
     dir.entries.emplace(
         treeEntry.getName(),
@@ -889,7 +877,7 @@ TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree, Overlay* overlay) {
 }
 
 FileInodePtr TreeInode::createImpl(
-    folly::Synchronized<Dir>::LockedPtr contents,
+    folly::Synchronized<TreeInodeState>::LockedPtr contents,
     PathComponentPiece name,
     mode_t mode,
     ByteRange fileContents,
@@ -1100,7 +1088,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     mode = S_IFDIR | (07777 & mode);
 
     // Store the overlay entry for this dir
-    Dir emptyDir;
+    DirContents emptyDir;
     // Update timeStamps of newly created directory and current directory.
     auto now = getNow();
     InodeTimestamps childTimestamps{now};
@@ -1119,7 +1107,8 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
         name,
         mode,
         childTimestamps,
-        std::move(emptyDir));
+        std::move(emptyDir),
+        folly::none);
     entry.setInode(newChild.get());
     getInodeMap()->inodeCreated(newChild);
 
@@ -1362,15 +1351,15 @@ class TreeInode::TreeRenameLocks {
     return renameLock_;
   }
 
-  Dir* srcContents() {
+  DirContents* srcContents() {
     return srcContents_;
   }
 
-  Dir* destContents() {
+  DirContents* destContents() {
     return destContents_;
   }
 
-  const PathMap<Entry>::iterator& destChildIter() const {
+  const PathMap<DirEntry>::iterator& destChildIter() const {
     return destChildIter_;
   }
   InodeBase* destChild() const {
@@ -1408,9 +1397,9 @@ class TreeInode::TreeRenameLocks {
    * always both set, so that destContents_ can be used regardless of wether
    * the source and destination are both the same directory or not.
    */
-  folly::Synchronized<Dir>::LockedPtr srcContentsLock_;
-  folly::Synchronized<Dir>::LockedPtr destContentsLock_;
-  folly::Synchronized<Dir>::LockedPtr destChildContentsLock_;
+  folly::Synchronized<TreeInodeState>::LockedPtr srcContentsLock_;
+  folly::Synchronized<TreeInodeState>::LockedPtr destContentsLock_;
+  folly::Synchronized<TreeInodeState>::LockedPtr destChildContentsLock_;
 
   /**
    * Pointers to the source and destination directory contents.
@@ -1418,9 +1407,9 @@ class TreeInode::TreeRenameLocks {
    * These may both point to the same contents when the source and destination
    * directory are the same.
    */
-  Dir* srcContents_{nullptr};
-  Dir* destContents_{nullptr};
-  Dir* destChildContents_{nullptr};
+  DirContents* srcContents_{nullptr};
+  DirContents* destContents_{nullptr};
+  DirContents* destChildContents_{nullptr};
 
   /**
    * An iterator pointing to the destination child entry in
@@ -1428,7 +1417,7 @@ class TreeInode::TreeRenameLocks {
    * This may point to destContents_->entries.end() if the destination child
    * does not exist.
    */
-  PathMap<Entry>::iterator destChildIter_;
+  PathMap<DirEntry>::iterator destChildIter_;
 };
 
 Future<Unit> TreeInode::rename(
@@ -1463,7 +1452,7 @@ Future<Unit> TreeInode::rename(
       // The source path does not exist.  Fail the rename.
       return makeFuture<Unit>(InodeError(ENOENT, inodePtrFromThis(), name));
     }
-    Entry& srcEntry = srcIter->second;
+    DirEntry& srcEntry = srcIter->second;
 
     // Perform as much input validation as possible now, before starting inode
     // loads that might be necessary.
@@ -1564,10 +1553,10 @@ bool isAncestor(const RenameLock& renameLock, TreeInode* a, TreeInode* b) {
 Future<Unit> TreeInode::doRename(
     TreeRenameLocks&& locks,
     PathComponentPiece srcName,
-    PathMap<Entry>::iterator srcIter,
+    PathMap<DirEntry>::iterator srcIter,
     TreeInodePtr destParent,
     PathComponentPiece destName) {
-  Entry& srcEntry = srcIter->second;
+  DirEntry& srcEntry = srcIter->second;
 
   // If the source and destination refer to exactly the same file,
   // then just succeed immediately.  Nothing needs to be done in this case.
@@ -1807,7 +1796,7 @@ Future<Unit> TreeInode::diff(
     // When there is no .gitignore file we avoid acquiring and releasing the
     // contents_ lock twice, and we avoid creating a Future to load the
     // .gitignore data.
-    Entry* inodeEntry = nullptr;
+    DirEntry* inodeEntry = nullptr;
     auto iter = contents->entries.find(kIgnoreFilename);
     if (iter != contents->entries.end()) {
       inodeEntry = &iter->second;
@@ -1943,7 +1932,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
 }
 
 Future<Unit> TreeInode::computeDiff(
-    folly::Synchronized<Dir>::LockedPtr contentsLock,
+    folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
     const DiffContext* context,
     RelativePathPiece currentPath,
     shared_ptr<const Tree> tree,
@@ -1979,7 +1968,7 @@ Future<Unit> TreeInode::computeDiff(
     // their entry state.
     auto contents = std::move(contentsLock);
 
-    auto processUntracked = [&](PathComponentPiece name, Entry* inodeEntry) {
+    auto processUntracked = [&](PathComponentPiece name, DirEntry* inodeEntry) {
       bool entryIgnored = isIgnored;
       auto fileType = inodeEntry->isDirectory() ? GitIgnore::TYPE_DIR
                                                 : GitIgnore::TYPE_FILE;
@@ -2044,7 +2033,7 @@ Future<Unit> TreeInode::computeDiff(
     };
 
     auto processBothPresent = [&](const TreeEntry& scmEntry,
-                                  Entry* inodeEntry) {
+                                  DirEntry* inodeEntry) {
       // We only need to know the ignored status if this is a directory.
       // If this is a regular file on disk and in source control, then it
       // is always included since it is already tracked in source control.
@@ -2409,7 +2398,7 @@ void TreeInode::computeCheckoutActions(
 
 unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     CheckoutContext* ctx,
-    Dir& contents,
+    DirContents& contents,
     const TreeEntry* oldScmEntry,
     const TreeEntry* newScmEntry,
     vector<IncompleteInodeLoad>* pendingLoads) {
@@ -2564,9 +2553,9 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     // and TreeInode::checkoutUpdateEntry.
     contents.entries.erase(it);
   } else {
-    entry = Entry{modeFromTreeEntryType(newScmEntry->getType()),
-                  getOverlay()->allocateInodeNumber(),
-                  newScmEntry->getHash()};
+    entry = DirEntry{modeFromTreeEntryType(newScmEntry->getType()),
+                     getOverlay()->allocateInodeNumber(),
+                     newScmEntry->getHash()};
   }
 
   // Contents have changed and the entry is not materialized, but we may have
@@ -2635,7 +2624,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
       deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
       if (newScmEntry) {
         DCHECK_EQ(newScmEntry->getName(), name);
-        it->second = Entry(
+        it->second = DirEntry(
             modeFromTreeEntryType(newScmEntry->getType()),
             getOverlay()->allocateInodeNumber(),
             newScmEntry->getHash());
@@ -2899,9 +2888,9 @@ folly::Future<folly::Unit> recursivelyLoadMaterializedChildren(
 } // namespace
 
 folly::Future<InodePtr> TreeInode::loadChildLocked(
-    Dir& /* contents */,
+    DirContents& /* contents */,
     PathComponentPiece name,
-    Entry& entry,
+    DirEntry& entry,
     std::vector<IncompleteInodeLoad>* pendingLoads) {
   DCHECK(!entry.getInode());
 
@@ -3208,7 +3197,7 @@ void TreeInode::updateAtime() {
   InodeBase::updateAtime();
 }
 
-InodeMetadata TreeInode::getMetadataLocked(const Dir&) const {
+InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {
   return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
 }
 

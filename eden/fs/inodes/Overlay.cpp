@@ -17,6 +17,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+#include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -321,9 +322,8 @@ InodeNumber Overlay::allocateInodeNumber() {
   return InodeNumber{previous};
 }
 
-Optional<std::pair<TreeInode::Dir, InodeTimestamps>> Overlay::loadOverlayDir(
+Optional<std::pair<DirContents, InodeTimestamps>> Overlay::loadOverlayDir(
     InodeNumber inodeNumber) {
-  TreeInode::Dir result;
   InodeTimestamps timestamps;
   auto dirData = deserializeOverlayDir(inodeNumber, timestamps);
   if (!dirData.hasValue()) {
@@ -333,6 +333,7 @@ Optional<std::pair<TreeInode::Dir, InodeTimestamps>> Overlay::loadOverlayDir(
 
   bool shouldMigrateToNewFormat = false;
 
+  DirContents result;
   for (auto& iter : dir.entries) {
     const auto& name = iter.first;
     const auto& value = iter.second;
@@ -358,13 +359,12 @@ Optional<std::pair<TreeInode::Dir, InodeTimestamps>> Overlay::loadOverlayDir(
     saveOverlayDir(inodeNumber, result, timestamps);
   }
 
-  return std::pair<TreeInode::Dir, InodeTimestamps>{std::move(result),
-                                                    timestamps};
+  return std::pair<DirContents, InodeTimestamps>{std::move(result), timestamps};
 }
 
 void Overlay::saveOverlayDir(
     InodeNumber inodeNumber,
-    const TreeInode::Dir& dir,
+    const DirContents& dir,
     const InodeTimestamps& timestamps) {
   auto nextInodeNumber = nextInodeNumber_.load(std::memory_order_relaxed);
   CHECK_LT(inodeNumber.get(), nextInodeNumber)

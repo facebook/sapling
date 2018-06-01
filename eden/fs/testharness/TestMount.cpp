@@ -24,6 +24,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"

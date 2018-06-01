@@ -15,8 +15,8 @@
 
 using namespace facebook::eden;
 
-static TreeInode::Entry makeDirEntry() {
-  return TreeInode::Entry{S_IFREG | 0644, 1_ino, Hash{}};
+static DirEntry makeDirEntry() {
+  return DirEntry{S_IFREG | 0644, 1_ino, Hash{}};
 }
 
 static TreeEntry makeTreeEntry(folly::StringPiece name) {
@@ -24,7 +24,7 @@ static TreeEntry makeTreeEntry(folly::StringPiece name) {
 }
 
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
-  TreeInode::Dir dir;
+  DirContents dir;
   dir.entries.emplace("one"_pc, makeDirEntry());
   dir.entries.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one"), makeTreeEntry("two")}};
@@ -33,7 +33,7 @@ TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
 }
 
 TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
-  TreeInode::Dir dir;
+  DirContents dir;
   dir.entries.emplace("one"_pc, makeDirEntry());
   dir.entries.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one"), makeTreeEntry("three")}};
@@ -44,7 +44,7 @@ TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
 }
 
 TEST(TreeInode, findEntryDifferencesWithOneSubtraction) {
-  TreeInode::Dir dir;
+  DirContents dir;
   dir.entries.emplace("one"_pc, makeDirEntry());
   dir.entries.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one")}};
@@ -55,7 +55,7 @@ TEST(TreeInode, findEntryDifferencesWithOneSubtraction) {
 }
 
 TEST(TreeInode, findEntryDifferencesWithOneAddition) {
-  TreeInode::Dir dir;
+  DirContents dir;
   dir.entries.emplace("one"_pc, makeDirEntry());
   dir.entries.emplace("two"_pc, makeDirEntry());
   Tree tree{

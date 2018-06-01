@@ -51,7 +51,7 @@ struct TreeInodePtrRoot {
    * return a pointer to the child with that name, or nullptr
    * if there is no match */
   template <typename CONTENTS>
-  const TreeInode::Entry* FOLLY_NULLABLE
+  const DirEntry* FOLLY_NULLABLE
   lookupEntry(CONTENTS& contents, PathComponentPiece name) {
     auto it = contents->entries.find(name);
     if (it != contents->entries.end()) {
@@ -80,7 +80,7 @@ struct TreeInodePtrRoot {
   bool entryShouldLoadChildTree(const ENTRY& entry) {
     return entry.second.isMaterialized();
   }
-  bool entryShouldLoadChildTree(const TreeInode::Entry* entry) {
+  bool entryShouldLoadChildTree(const DirEntry* entry) {
     return entry->isMaterialized();
   }
 
@@ -97,7 +97,7 @@ struct TreeInodePtrRoot {
   }
 
   /** Returns true if the given ENTRY is a tree (pointer version) */
-  bool entryIsTree(const TreeInode::Entry* entry) {
+  bool entryIsTree(const DirEntry* entry) {
     return entry->isDirectory();
   }
 
@@ -107,7 +107,7 @@ struct TreeInodePtrRoot {
   bool entryShouldPrefetch(const ENTRY& entry) {
     return !entry.second.isMaterialized();
   }
-  bool entryShouldPrefetch(const TreeInode::Entry* entry) {
+  bool entryShouldPrefetch(const DirEntry* entry) {
     return !entry->isMaterialized();
   }
 
@@ -116,7 +116,7 @@ struct TreeInodePtrRoot {
   const Hash entryHash(const ENTRY& entry) {
     return entry.second.getHash();
   }
-  const Hash entryHash(const TreeInode::Entry* entry) {
+  const Hash entryHash(const DirEntry* entry) {
     return entry->getHash();
   }
 };

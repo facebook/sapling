@@ -37,7 +37,7 @@ class ParentInodeInfo {
       PathComponentPiece name,
       TreeInodePtr parent,
       bool isUnlinked,
-      folly::Synchronized<TreeInode::Dir>::LockedPtr contents)
+      folly::Synchronized<TreeInodeState>::LockedPtr contents)
       : name_(name),
         parent_(std::move(parent)),
         isUnlinked_(isUnlinked),
@@ -80,7 +80,7 @@ class ParentInodeInfo {
    * This returns a null pointer if this is the root inode, or if this inode is
    * unlinked.
    */
-  const folly::Synchronized<TreeInode::Dir>::LockedPtr& getParentContents()
+  const folly::Synchronized<TreeInodeState>::LockedPtr& getParentContents()
       const {
     return parentContents_;
   }
@@ -95,7 +95,7 @@ class ParentInodeInfo {
   PathComponent name_;
   TreeInodePtr parent_;
   bool isUnlinked_;
-  folly::Synchronized<TreeInode::Dir>::LockedPtr parentContents_;
+  folly::Synchronized<TreeInodeState>::LockedPtr parentContents_;
 };
 } // namespace eden
 } // namespace facebook
