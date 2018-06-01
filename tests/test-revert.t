@@ -1077,6 +1077,194 @@ check resulting directory against the --all run
   $ diff -U 0 -- content-base-all.txt content-base-explicit.txt | grep _
   [1]
 
+Test revert to parent content with explicit file name but ignored files
+-----------------------------------------------------------------------
+
+(setup from reference repo)
+
+  $ cp -R revert-ref revert-parent-explicit-ignored
+  $ cd revert-parent-explicit-ignored
+  $ echo '.*' > .hgignore
+
+revert all files individually and check the output
+(output is expected to be different than in the --all case)
+
+  $ for file in `$PYTHON $TESTDIR/generate-working-copy-states.py filelist 2`; do
+  >   echo '### revert for:' $file;
+  >   hg revert $file;
+  >   echo
+  > done
+  ### revert for: content1_content1_content1-tracked
+  no changes needed to content1_content1_content1-tracked
+  
+  ### revert for: content1_content1_content1-untracked
+  
+  ### revert for: content1_content1_content3-tracked
+  
+  ### revert for: content1_content1_content3-untracked
+  
+  ### revert for: content1_content1_missing-tracked
+  
+  ### revert for: content1_content1_missing-untracked
+  
+  ### revert for: content1_content2_content1-tracked
+  
+  ### revert for: content1_content2_content1-untracked
+  
+  ### revert for: content1_content2_content2-tracked
+  no changes needed to content1_content2_content2-tracked
+  
+  ### revert for: content1_content2_content2-untracked
+  
+  ### revert for: content1_content2_content3-tracked
+  
+  ### revert for: content1_content2_content3-untracked
+  
+  ### revert for: content1_content2_missing-tracked
+  
+  ### revert for: content1_content2_missing-untracked
+  
+  ### revert for: content1_missing_content1-tracked
+  
+  ### revert for: content1_missing_content1-untracked
+  file not managed: content1_missing_content1-untracked
+  
+  ### revert for: content1_missing_content3-tracked
+  
+  ### revert for: content1_missing_content3-untracked
+  file not managed: content1_missing_content3-untracked
+  
+  ### revert for: content1_missing_missing-tracked
+  
+  ### revert for: content1_missing_missing-untracked
+  content1_missing_missing-untracked: no such file in rev * (glob)
+  
+  ### revert for: missing_content2_content2-tracked
+  no changes needed to missing_content2_content2-tracked
+  
+  ### revert for: missing_content2_content2-untracked
+  
+  ### revert for: missing_content2_content3-tracked
+  
+  ### revert for: missing_content2_content3-untracked
+  
+  ### revert for: missing_content2_missing-tracked
+  
+  ### revert for: missing_content2_missing-untracked
+  
+  ### revert for: missing_missing_content3-tracked
+  
+  ### revert for: missing_missing_content3-untracked
+  file not managed: missing_missing_content3-untracked
+  
+  ### revert for: missing_missing_missing-tracked
+  
+  ### revert for: missing_missing_missing-untracked
+  missing_missing_missing-untracked: no such file in rev * (glob)
+  
+
+check resulting directory against the --all run
+(There should be no difference)
+
+  $ $PYTHON ../dircontent.py > ../content-parent-explicit-ignored.txt
+  $ cd ..
+  $ diff -U 0 -- content-parent-all.txt content-parent-explicit-ignored.txt | grep _
+  [1]
+
+Test revert to "base" content with explicit file name
+-----------------------------------------------------
+
+(setup from reference repo)
+
+  $ cp -R revert-ref revert-base-explicit-ignored
+  $ cd revert-base-explicit-ignored
+  $ echo '.*' > .hgignore
+
+revert all files individually and check the output
+(output is expected to be different than in the --all case)
+
+  $ for file in `$PYTHON $TESTDIR/generate-working-copy-states.py filelist 2`; do
+  >   echo '### revert for:' $file;
+  >   hg revert $file --rev 'desc(base)';
+  >   echo
+  > done
+  ### revert for: content1_content1_content1-tracked
+  no changes needed to content1_content1_content1-tracked
+  
+  ### revert for: content1_content1_content1-untracked
+  
+  ### revert for: content1_content1_content3-tracked
+  
+  ### revert for: content1_content1_content3-untracked
+  
+  ### revert for: content1_content1_missing-tracked
+  
+  ### revert for: content1_content1_missing-untracked
+  
+  ### revert for: content1_content2_content1-tracked
+  no changes needed to content1_content2_content1-tracked
+  
+  ### revert for: content1_content2_content1-untracked
+  
+  ### revert for: content1_content2_content2-tracked
+  
+  ### revert for: content1_content2_content2-untracked
+  
+  ### revert for: content1_content2_content3-tracked
+  
+  ### revert for: content1_content2_content3-untracked
+  
+  ### revert for: content1_content2_missing-tracked
+  
+  ### revert for: content1_content2_missing-untracked
+  
+  ### revert for: content1_missing_content1-tracked
+  no changes needed to content1_missing_content1-tracked
+  
+  ### revert for: content1_missing_content1-untracked
+  
+  ### revert for: content1_missing_content3-tracked
+  
+  ### revert for: content1_missing_content3-untracked
+  
+  ### revert for: content1_missing_missing-tracked
+  
+  ### revert for: content1_missing_missing-untracked
+  
+  ### revert for: missing_content2_content2-tracked
+  
+  ### revert for: missing_content2_content2-untracked
+  no changes needed to missing_content2_content2-untracked
+  
+  ### revert for: missing_content2_content3-tracked
+  
+  ### revert for: missing_content2_content3-untracked
+  no changes needed to missing_content2_content3-untracked
+  
+  ### revert for: missing_content2_missing-tracked
+  
+  ### revert for: missing_content2_missing-untracked
+  no changes needed to missing_content2_missing-untracked
+  
+  ### revert for: missing_missing_content3-tracked
+  
+  ### revert for: missing_missing_content3-untracked
+  file not managed: missing_missing_content3-untracked
+  
+  ### revert for: missing_missing_missing-tracked
+  
+  ### revert for: missing_missing_missing-untracked
+  missing_missing_missing-untracked: no such file in rev * (glob)
+  
+
+check resulting directory against the --all run
+(There should be no difference)
+
+  $ $PYTHON ../dircontent.py > ../content-base-explicit-ignored.txt
+  $ cd ..
+  $ diff -U 0 -- content-base-all.txt content-base-explicit-ignored.txt | grep _
+  [1]
+
 Revert to an ancestor of P2 during a merge (issue5052)
 -----------------------------------------------------
 
