@@ -1097,15 +1097,26 @@ def wraprepo(repo):
             finally:
                 del self.pendingrevs[:]
 
-        def _addrevstosql(self, revisions):
+        def _addrevstosql(self, revisions, ignoreduplicates=False):
+            """Inserts the given revisions into the `revisions` table. If
+            `ignoreduplicates` is True, the insert for that row is a no-op
+            to allow ignoring existing rows during a bulk update.
+            """
             def insert(args, values):
-                argstring = ",".join(args)
-                cursor.execute(
+                query = (
                     "INSERT INTO revisions(repo, path, "
                     "chunk, chunkcount, linkrev, rev, node, entry, "
-                    "data0, data1, createdtime) VALUES %s" % argstring,
-                    values,
+                    "data0, data1, createdtime) VALUES %s"
                 )
+                if ignoreduplicates:
+                    # Do nothing
+                    query += " ON DUPLICATE KEY UPDATE repo = %%s"
+                    args = list(args)
+                    values = list(values)
+                    values.append(values[0])
+
+                argstring = ",".join(args)
+                cursor.execute(query % argstring, values)
 
             reponame = self.sqlreponame
             cursor = self.sqlcursor
@@ -1884,6 +1895,135 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
                 util.truncate(fp, troffset)
             if troffset == 0:
                 repo.store.markremoved(file)
+
+
+def _parsecompressedrevision(data):
+    """Takes a compressed revision and parses it into the data0 (compression
+    indicator) and data1 (payload). Ideally we'd refactor revlog.decompress to
+    have this logic be separate, but there are comments in the code about perf
+    implications of the hotpath."""
+    t = data[0:1]
+
+    if t == "u":
+        return "u", data[1:]
+    else:
+        return "", data
+
+
+def _discoverrevisions(repo, startrev):
+    # Tuple of revlog name and rev number for revisions introduced by commits
+    # greater than or equal to startrev (path, rlrev)
+    revisions = []
+
+    mfrevlog = repo.manifestlog._revlog
+    for rev in repo.revs("%s:", startrev):
+        # Changelog
+        revisions.append(("00changelog.i", rev))
+
+        # Manifestlog
+        mfrev = mfrevlog.rev(repo[rev].manifestnode())
+        revisions.append(("00manifest.i", mfrev))
+
+    files = repair._collectfiles(repo, startrev)
+
+    # Trees
+    if repo.ui.configbool("treemanifest", "server"):
+        rootmflog = repo.manifestlog.treemanifestlog._revlog
+        striprev, brokenrevs = rootmflog.getstrippoint(startrev)
+        for mfrev in range(striprev, len(rootmflog)):
+            revisions.append((rootmflog.indexfile, mfrev))
+
+        for dir in util.dirs(files):
+            submflog = rootmflog.dirlog(dir)
+            striprev, brokenrevs = submflog.getstrippoint(startrev)
+            for mfrev in range(striprev, len(submflog)):
+                revisions.append((submflog.indexfile, mfrev))
+
+    # Files
+    for file in files:
+        filelog = repo.file(file)
+        striprev, brokenrevs = filelog.getstrippoint(startrev)
+        for filerev in range(striprev, len(filelog)):
+            revisions.append((filelog.indexfile, filerev))
+
+    return revisions
+
+
+@command(
+    "sqlrefill",
+    [
+        (
+            "",
+            "i-know-what-i-am-doing",
+            None,
+            _("only run sqlrefill if you know exactly what you're doing"),
+        ),
+        (
+            "",
+            "skip-initial-sync",
+            None,
+            _(
+                "skips the initial sync; useful when the "
+                "local repo is correct and the database "
+                "is incorrect"
+            ),
+        ),
+    ],
+    _("hg sqlrefill REV"),
+    norepo=True,
+)
+def sqlrefill(ui, startrev, **opts):
+    """Inserts the given revs into the database
+    """
+    if not opts.get("i_know_what_i_am_doing"):
+
+        raise util.Abort(
+            "You must pass --i-know-what-i-am-doing to run this "
+            "command. If you have multiple servers using the database, you "
+            "will need to run sqlreplay on the other servers to get this "
+            "data onto them as well."
+        )
+
+    if not opts.get("skip_initial_sync"):
+        global initialsync
+        initialsync = INITIAL_SYNC_DISABLE
+        repo = hg.repository(ui, ui.environ["PWD"])
+        repo.disablesync = True
+
+    startrev = int(startrev)
+
+    repo = repo.unfiltered()
+    repo.sqlconnect()
+    repo.sqllock(writelock)
+    try:
+        totalrevs = len(repo.changelog)
+
+        revlogs = {}
+        pendingrevs = []
+        # with progress.bar(ui, 'refilling', total=totalrevs - startrev) as prog:
+        # prog.value += 1
+        revlogrevs = _discoverrevisions(repo, startrev)
+
+        for path, rlrev in revlogrevs:
+            rl = revlogs.get(path)
+            if rl is None:
+                rl = revlog.revlog(repo.svfs, path)
+                revlogs[path] = rl
+
+            entry = rl.index[rlrev]
+            _, _, _, baserev, linkrev, p1r, p2r, node = entry
+            data = rl._getsegmentforrevs(rlrev, rlrev)[1]
+            data0, data1 = _parsecompressedrevision(data)
+
+            sqlentry = rl._io.packentry(entry, node, rl.version, rlrev)
+            revdata = (path, linkrev, rlrev, node, sqlentry, data0, data1)
+            pendingrevs.append(revdata)
+
+        repo._addrevstosql(pendingrevs, ignoreduplicates=True)
+        repo.sqlconn.commit()
+    finally:
+        repo.sqlunlock(writelock)
+        repo.sqlclose()
 
 
 @command(

@@ -117,6 +117,8 @@ Test that sqltreestrip deletes trees from history
   remote:     b3adfc03d09d  d
   remote:     fc50e1c24ca2  d2
 
+  $ hg -R ../master-alreadysynced log -r tip --forcesync > /dev/null
+
   $ cd ../master
   $ hg log -G -T '{rev} {desc}' --forcesync
   o  4 d2
@@ -147,6 +149,57 @@ Test that sqltreestrip deletes trees from history
   $ hg status --change 4 --config treemanifest.treeonly=True
   abort: "unable to find the following nodes locally or on the server: ('', 8b833dfa4cc566bfd4bcb4d85e4a128be5e49334)"
   [255]
+
+Refill the repository from the non-stripped master
+  $ cd ../master-alreadysynced
+  $ hg debugindex .hg/store/meta/dir2/00manifest.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       3 d0729cbab2a9 000000000000 000000000000
+       1        44      44     -1       4 cc280c5b788f d0729cbab2a9 000000000000
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 8515d4bfda76 000000000000 000000000000
+       1        44      58      0       1 898d94054864 8515d4bfda76 000000000000
+       2       102      58      1       2 7cdc42a14359 898d94054864 000000000000
+       3       160      59      2       3 0c96405fb5c3 7cdc42a14359 000000000000
+       4       219     *     -1       4 8b833dfa4cc5 0c96405fb5c3 000000000000 (glob)
+  $ hg debugdata .hg/store/meta/dir2/00manifest.i 1
+  d\x0028ad8a7cbb9ee7a7f5f50d46539b8dab63835959 (esc)
+  $ hg sqlverify
+  corruption: 'meta/dir/00manifest.i:f90dfbe4b2fd56ac55a98b322cf4dd420c5c07e5' with linkrev 2 exists on local disk, but not in sql
+  corruption: 'meta/dir2/00manifest.i:cc280c5b788f79ee2ec4479fc2e3daa3972dc0af' with linkrev 4 exists on local disk, but not in sql
+  corruption: 'meta/dir2/00manifest.i:d0729cbab2a9dece7b82fc241de6a62ecdd4a8b7' with linkrev 3 exists on local disk, but not in sql
+  corruption: '00manifesttree.i:8b833dfa4cc566bfd4bcb4d85e4a128be5e49334' with linkrev 4 exists on local disk, but not in sql
+  corruption: '00manifesttree.i:0c96405fb5c3fa57c048560e68bf33b87058ca1d' with linkrev 3 exists on local disk, but not in sql
+  corruption: '00manifesttree.i:7cdc42a143599f196ad3e5e6e2dd5a1f78475d82' with linkrev 2 exists on local disk, but not in sql
+  abort: Verification failed
+  [255]
+  $ hg sqlrefill --i-know-what-i-am-doing 1
+  $ hg sqlverify
+  Verification passed
+  $ cd ../master
+  $ hg sqlreplay
+  $ hg debugindex .hg/store/meta/dir2/00manifest.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       3 d0729cbab2a9 000000000000 000000000000
+       1        44      44     -1       4 cc280c5b788f d0729cbab2a9 000000000000
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 8515d4bfda76 000000000000 000000000000
+       1        44      58      0       1 898d94054864 8515d4bfda76 000000000000
+       2       102      58      1       2 7cdc42a14359 898d94054864 000000000000
+       3       160      59      2       3 0c96405fb5c3 7cdc42a14359 000000000000
+       4       219     *     -1       4 8b833dfa4cc5 0c96405fb5c3 000000000000 (glob)
+  $ hg debugdata .hg/store/meta/dir2/00manifest.i 1
+  d\x0028ad8a7cbb9ee7a7f5f50d46539b8dab63835959 (esc)
+  $ hg status --change 4 --config treemanifest.treeonly=True
+  M dir2/d
+
+# Restrip
+  $ hg sqltreestrip 2 --i-know-what-i-am-doing
+  *** YOU ARE ABOUT TO DELETE TREE HISTORY INCLUDING AND AFTER 2 (MANDATORY 5 SECOND WAIT) ***
+  mysql: deleting trees with linkrevs >= 2
+  local: deleting trees with linkrevs >= 2
 
 Test local only strip
   $ cd ../master-alreadysynced
