@@ -53,32 +53,32 @@ impl EntryStatus {
 }
 
 pub struct ChangedEntry {
-    pub path: Option<MPath>,
+    pub dirname: Option<MPath>,
     pub status: EntryStatus,
 }
 
 impl ChangedEntry {
-    pub fn new_added(path: Option<MPath>, entry: Box<Entry + Sync>) -> Self {
+    pub fn new_added(dirname: Option<MPath>, entry: Box<Entry + Sync>) -> Self {
         ChangedEntry {
-            path,
+            dirname,
             status: EntryStatus::Added(entry),
         }
     }
 
-    pub fn new_deleted(path: Option<MPath>, entry: Box<Entry + Sync>) -> Self {
+    pub fn new_deleted(dirname: Option<MPath>, entry: Box<Entry + Sync>) -> Self {
         ChangedEntry {
-            path,
+            dirname,
             status: EntryStatus::Deleted(entry),
         }
     }
 
     pub fn new_modified(
-        path: Option<MPath>,
+        dirname: Option<MPath>,
         to_entry: Box<Entry + Sync>,
         from_entry: Box<Entry + Sync>,
     ) -> Self {
         ChangedEntry {
-            path,
+            dirname,
             status: EntryStatus::Modified {
                 to_entry,
                 from_entry,
@@ -88,30 +88,30 @@ impl ChangedEntry {
 }
 
 struct NewEntry {
-    path: Option<MPath>,
+    dirname: Option<MPath>,
     entry: Box<Entry + Sync>,
 }
 
 impl NewEntry {
     fn from_changed_entry(ce: ChangedEntry) -> Option<Self> {
-        let path = ce.path;
+        let dirname = ce.dirname;
         match ce.status {
             EntryStatus::Deleted(_) => None,
             EntryStatus::Added(entry)
             | EntryStatus::Modified {
                 to_entry: entry, ..
-            } => Some(Self { path, entry }),
+            } => Some(Self { dirname, entry }),
         }
     }
 
     fn into_tuple(self) -> (Option<MPath>, Box<Entry + Sync>) {
-        (self.path, self.entry)
+        (self.dirname, self.entry)
     }
 }
 
 impl PartialEq for NewEntry {
     fn eq(&self, other: &Self) -> bool {
-        self.path == other.path
+        self.dirname == other.dirname
     }
 }
 impl Eq for NewEntry {}
@@ -121,7 +121,7 @@ impl Hash for NewEntry {
     where
         H: Hasher,
     {
-        self.path.hash(state);
+        self.dirname.hash(state);
     }
 }
 
@@ -211,9 +211,9 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
             let to_mf = entry.get_content().map(get_tree_content).boxify();
             let from_mf = Ok(empty_mf).into_future().boxify();
 
-            let path = changed_entry.path.clone();
+            let dirname = changed_entry.dirname.clone();
             let entry_path = entry.get_name().cloned();
-            let path = MPath::join_element_opt(path.as_ref(), entry_path.as_ref());
+            let path = MPath::join_element_opt(dirname.as_ref(), entry_path.as_ref());
 
             (to_mf, from_mf, path)
         }
@@ -222,9 +222,9 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
             let to_mf = Ok(empty_mf).into_future().boxify();
             let from_mf = entry.get_content().map(get_tree_content).boxify();
 
-            let path = changed_entry.path.clone();
+            let dirname = changed_entry.dirname.clone();
             let entry_path = entry.get_name().cloned();
-            let path = MPath::join_element_opt(path.as_ref(), entry_path.as_ref());
+            let path = MPath::join_element_opt(dirname.as_ref(), entry_path.as_ref());
 
             (to_mf, from_mf, path)
         }
@@ -238,9 +238,9 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
             let to_mf = to_entry.get_content().map(get_tree_content).boxify();
             let from_mf = from_entry.get_content().map(get_tree_content).boxify();
 
-            let path = changed_entry.path.clone();
+            let dirname = changed_entry.dirname.clone();
             let entry_path = to_entry.get_name().cloned();
-            let path = MPath::join_element_opt(path.as_ref(), entry_path.as_ref());
+            let path = MPath::join_element_opt(dirname.as_ref(), entry_path.as_ref());
 
             (to_mf, from_mf, path)
         }

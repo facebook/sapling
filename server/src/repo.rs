@@ -884,14 +884,14 @@ fn get_changed_entry_stream(
         changed_entries.filter_map(move |entry_status| match entry_status.status {
             EntryStatus::Added(entry) => {
                 if entry.get_type() == Type::Tree {
-                    Some((entry, entry_status.path))
+                    Some((entry, entry_status.dirname))
                 } else {
                     None
                 }
             }
             EntryStatus::Modified { to_entry, .. } => {
                 if to_entry.get_type() == Type::Tree {
-                    Some((to_entry, entry_status.path))
+                    Some((to_entry, entry_status.dirname))
                 } else {
                     None
                 }

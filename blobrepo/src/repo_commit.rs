@@ -356,7 +356,7 @@ fn compute_changed_files_pair(
                 if entry.get_type() == manifest::Type::Tree {
                     None
                 } else {
-                    MPath::join_element_opt(change.path.as_ref(), entry.get_name())
+                    MPath::join_element_opt(change.dirname.as_ref(), entry.get_name())
                 }
             }
         })

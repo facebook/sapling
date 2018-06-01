@@ -220,13 +220,13 @@ fn check_changed_paths(
         match changed_entry.status {
             EntryStatus::Added(entry) => {
                 paths_added.push(MPath::join_element_opt(
-                    changed_entry.path.as_ref(),
+                    changed_entry.dirname.as_ref(),
                     entry.get_name(),
                 ));
             }
             EntryStatus::Deleted(entry) => {
                 paths_deleted.push(MPath::join_element_opt(
-                    changed_entry.path.as_ref(),
+                    changed_entry.dirname.as_ref(),
                     entry.get_name(),
                 ));
             }
@@ -236,7 +236,7 @@ fn check_changed_paths(
             } => {
                 assert_eq!(to_entry.get_type(), from_entry.get_type());
                 paths_modified.push(MPath::join_element_opt(
-                    changed_entry.path.as_ref(),
+                    changed_entry.dirname.as_ref(),
                     to_entry.get_name(),
                 ));
             }
