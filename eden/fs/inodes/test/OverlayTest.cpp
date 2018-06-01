@@ -132,22 +132,26 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
 
   auto overlay = mount_.getEdenMount()->getOverlay();
 
+  auto ino1 = overlay->allocateInodeNumber();
+  auto ino2 = overlay->allocateInodeNumber();
+  auto ino3 = overlay->allocateInodeNumber();
+
   TreeInode::Dir dir;
-  dir.entries.emplace("one"_pc, S_IFREG | 0644, 11_ino, hash);
-  dir.entries.emplace("two"_pc, S_IFDIR | 0755, 12_ino);
+  dir.entries.emplace("one"_pc, S_IFREG | 0644, ino2, hash);
+  dir.entries.emplace("two"_pc, S_IFDIR | 0755, ino3);
 
-  overlay->saveOverlayDir(10_ino, dir, InodeTimestamps{});
+  overlay->saveOverlayDir(ino1, dir, InodeTimestamps{});
 
-  auto result = overlay->loadOverlayDir(10_ino);
+  auto result = overlay->loadOverlayDir(ino1);
   ASSERT_TRUE(result);
   const auto* newDir = &result->first;
 
   EXPECT_EQ(2, newDir->entries.size());
   const auto& one = newDir->entries.find("one"_pc)->second;
   const auto& two = newDir->entries.find("two"_pc)->second;
-  EXPECT_EQ(11_ino, one.getInodeNumber());
+  EXPECT_EQ(ino2, one.getInodeNumber());
   EXPECT_FALSE(one.isMaterialized());
-  EXPECT_EQ(12_ino, two.getInodeNumber());
+  EXPECT_EQ(ino3, two.getInodeNumber());
   EXPECT_TRUE(two.isMaterialized());
 }
 
@@ -169,15 +173,30 @@ TEST_F(OverlayTest, getFilePath) {
   EXPECT_STREQ("10/16", path.data());
 }
 
-class RawOverlayTest : public ::testing::Test {
+enum class OverlayRestartMode {
+  CLEAN,
+  UNCLEAN,
+};
+
+class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
  public:
   RawOverlayTest()
       : testDir_{"eden_raw_overlay_test_"},
         overlay{std::make_unique<Overlay>(
             AbsolutePathPiece{testDir_.path().string()})} {}
 
-  void recreate() {
+  void recreate(folly::Optional<OverlayRestartMode> restartMode = folly::none) {
+    overlay->close();
     overlay.reset();
+    switch (restartMode.value_or(GetParam())) {
+      case OverlayRestartMode::CLEAN:
+        break;
+      case OverlayRestartMode::UNCLEAN:
+        if (unlink((testDir_.path() / "next-inode-number").c_str())) {
+          folly::throwSystemError("removing saved inode numebr");
+        }
+        break;
+    }
     overlay.reset(new Overlay{AbsolutePathPiece{testDir_.path().string()}});
   }
 
@@ -185,24 +204,42 @@ class RawOverlayTest : public ::testing::Test {
   std::unique_ptr<Overlay> overlay;
 };
 
-TEST_F(RawOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
+TEST_P(RawOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
+  EXPECT_EQ(kRootNodeId, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(2_ino, overlay->allocateInodeNumber());
+
+  recreate(OverlayRestartMode::CLEAN);
+
+  EXPECT_EQ(2_ino, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(3_ino, overlay->allocateInodeNumber());
+
+  recreate(OverlayRestartMode::UNCLEAN);
+
   EXPECT_EQ(kRootNodeId, overlay->scanForNextInodeNumber());
   EXPECT_EQ(2_ino, overlay->allocateInodeNumber());
 }
 
-TEST_F(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
+TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
+  auto ino2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, ino2);
+
   TreeInode::Dir dir;
-  overlay->saveOverlayDir(2_ino, dir, InodeTimestamps{});
+  overlay->saveOverlayDir(ino2, dir, InodeTimestamps{});
 
   recreate();
 
   EXPECT_EQ(2_ino, overlay->scanForNextInodeNumber());
 }
 
-TEST_F(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
+TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
+  auto ino2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, ino2);
+  auto ino3 = overlay->allocateInodeNumber();
+  auto ino4 = overlay->allocateInodeNumber();
+
   TreeInode::Dir dir;
-  dir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, 3_ino);
-  dir.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
+  dir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
+  dir.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
   overlay->saveOverlayDir(kRootNodeId, dir, InodeTimestamps{});
 
   recreate();
@@ -210,29 +247,39 @@ TEST_F(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
   EXPECT_EQ(4_ino, overlay->scanForNextInodeNumber());
 }
 
-TEST_F(RawOverlayTest, remembers_max_inode_number_of_file) {
+TEST_P(RawOverlayTest, remembers_max_inode_number_of_file) {
+  auto ino2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, ino2);
+  auto ino3 = overlay->allocateInodeNumber();
+
   // When materializing, overlay data is written leaf-to-root.
 
   // The File is written first.
   overlay->createOverlayFile(
-      3_ino, InodeTimestamps{}, folly::ByteRange{"contents"_sp});
+      ino3, InodeTimestamps{}, folly::ByteRange{"contents"_sp});
 
   recreate();
 
   EXPECT_EQ(3_ino, overlay->scanForNextInodeNumber());
 }
 
-TEST_F(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
+TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
+  auto ino2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, ino2);
+  overlay->allocateInodeNumber();
+  auto ino4 = overlay->allocateInodeNumber();
+  auto ino5 = overlay->allocateInodeNumber();
+
   // When materializing, overlay data is written leaf-to-root.
 
   // The File is written first.
   overlay->createOverlayFile(
-      5_ino, InodeTimestamps{}, folly::ByteRange{"contents"_sp});
+      ino5, InodeTimestamps{}, folly::ByteRange{"contents"_sp});
 
   // The subdir is written next.
   TreeInode::Dir subdir;
-  subdir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, 5_ino);
-  overlay->saveOverlayDir(4_ino, subdir, InodeTimestamps{});
+  subdir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
+  overlay->saveOverlayDir(ino4, subdir, InodeTimestamps{});
 
   // Crashed before root was written.
 
@@ -241,19 +288,27 @@ TEST_F(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
   EXPECT_EQ(5_ino, overlay->scanForNextInodeNumber());
 }
 
-TEST_F(RawOverlayTest, inode_numbers_after_takeover) {
+TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
+  auto ino2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, ino2);
+  auto ino3 = overlay->allocateInodeNumber();
+  auto ino4 = overlay->allocateInodeNumber();
+  auto ino5 = overlay->allocateInodeNumber();
+
   // Write a subdir.
   TreeInode::Dir subdir;
-  subdir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, 5_ino);
-  overlay->saveOverlayDir(4_ino, subdir, InodeTimestamps{});
+  subdir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
+  overlay->saveOverlayDir(ino4, subdir, InodeTimestamps{});
 
   // Write the root.
   TreeInode::Dir dir;
-  dir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, 3_ino);
-  dir.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
+  dir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
+  dir.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
   overlay->saveOverlayDir(kRootNodeId, dir, InodeTimestamps{});
 
   recreate();
+
+  overlay->scanForNextInodeNumber();
 
   // Rewrite the root (say, after a takeover) without the file.
 
@@ -261,12 +316,22 @@ TEST_F(RawOverlayTest, inode_numbers_after_takeover) {
   newroot.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
   overlay->saveOverlayDir(kRootNodeId, newroot, InodeTimestamps{});
 
-  recreate();
+  recreate(OverlayRestartMode::CLEAN);
 
   // Ensure an inode in the overlay but not referenced by the previous session
   // counts.
   EXPECT_EQ(5_ino, overlay->scanForNextInodeNumber());
 }
+
+INSTANTIATE_TEST_CASE_P(
+    Clean,
+    RawOverlayTest,
+    ::testing::Values(OverlayRestartMode::CLEAN));
+
+INSTANTIATE_TEST_CASE_P(
+    Unclean,
+    RawOverlayTest,
+    ::testing::Values(OverlayRestartMode::UNCLEAN));
 
 } // namespace eden
 } // namespace facebook

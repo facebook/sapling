@@ -40,6 +40,7 @@ using std::string;
  */
 constexpr StringPiece kInfoFile{"info"};
 constexpr StringPiece kMetadataFile{"metadata.table"};
+constexpr const char* kNextInodeNumberFile{"next-inode-number"};
 
 /**
  * 4-byte magic identifier to put at the start of the info file.
@@ -82,6 +83,7 @@ constexpr size_t Overlay::kHeaderLength;
 
 Overlay::Overlay(AbsolutePathPiece localDir) : localDir_(localDir) {
   initOverlay();
+  tryLoadNextInodeNumber();
 
   gcThread_ = std::thread([this] { gcThread(); });
 }
@@ -102,6 +104,8 @@ uint64_t Overlay::close() {
   gcQueue_.lock()->stop = true;
   gcCondVar_.notify_one();
   gcThread_.join();
+
+  saveNextInodeNumber();
 
   inodeMetadataTable_.reset();
   dirFile_.close();
@@ -143,6 +147,69 @@ void Overlay::initOverlay() {
   // its own lock, which should be released prior to infoFile_.
   inodeMetadataTable_ = InodeMetadataTable::open(
       (localDir_ + PathComponentPiece{kMetadataFile}).c_str());
+}
+
+void Overlay::tryLoadNextInodeNumber() {
+  // If we ever want to extend this file, it should be renamed and a proper
+  // header with version number added. In the meantime, we enforce the file is
+  // 8 bytes.
+
+  int fd = openat(dirFile_.fd(), kNextInodeNumberFile, O_RDONLY | O_CLOEXEC);
+  if (fd == -1) {
+    if (errno == ENOENT) {
+      // No max inode number file was written which usually means either Eden
+      // was not shut down cleanly or an old overlay is being loaded.
+      // Either way, a full scan of the overlay is necessary, so leave
+      // nextInodeNumber_ at 0.
+      return;
+    } else {
+      folly::throwSystemError("Failed to open ", kNextInodeNumberFile);
+    }
+  }
+
+  folly::File nextInodeNumberFile{fd, /* ownsFd */ true};
+
+  // Immediately unlink - the presence of the file indicates a clean shutdown.
+  if (unlinkat(dirFile_.fd(), kNextInodeNumberFile, 0)) {
+    folly::throwSystemError(
+        "Failed to unlink ", kNextInodeNumberFile, " in overlay");
+  }
+
+  uint64_t nextInodeNumber;
+  auto readResult =
+      folly::readFull(fd, &nextInodeNumber, sizeof(nextInodeNumber));
+  if (readResult < 0) {
+    folly::throwSystemError(
+        "Failed to read ", kNextInodeNumberFile, " from overlay");
+  }
+  if (readResult != sizeof(nextInodeNumber)) {
+    XLOG(WARN) << "Failed to read entire inode number. Only read " << readResult
+               << " bytes. Full overlay scan required.";
+    return;
+  }
+
+  if (nextInodeNumber <= kRootNodeId.get()) {
+    XLOG(WARN) << "Invalid max inode number " << nextInodeNumber
+               << ". Full overlay scan required.";
+    return;
+  }
+
+  nextInodeNumber_.store(nextInodeNumber, std::memory_order_relaxed);
+}
+
+void Overlay::saveNextInodeNumber() {
+  auto nextInodeNumber = nextInodeNumber_.load(std::memory_order_relaxed);
+  if (!nextInodeNumber) {
+    return;
+  }
+
+  auto nextInodeNumberPath =
+      localDir_ + PathComponentPiece{kNextInodeNumberFile};
+  folly::writeFileAtomic(
+      nextInodeNumberPath.value().c_str(),
+      ByteRange(
+          reinterpret_cast<const uint8_t*>(&nextInodeNumber),
+          reinterpret_cast<const uint8_t*>(&nextInodeNumber + 1)));
 }
 
 void Overlay::readExistingOverlay(int infoFD) {
@@ -215,15 +282,24 @@ void Overlay::initNewOverlay() {
   folly::writeFileAtomic(
       infoPath.stringPiece(), ByteRange(infoHeader.data(), infoHeader.size()));
 
-  // kRootNodeId is reserved - start at the next one.
+  // kRootNodeId is reserved - start at the next one. No scan is necessary.
   setNextInodeNumber(InodeNumber{kRootNodeId.get() + 1});
 }
 
 void Overlay::setNextInodeNumber(InodeNumber nextInodeNumber) {
+  if (auto ino = nextInodeNumber_.load(std::memory_order_relaxed)) {
+    // It's okay to allow setNextInodeNumber as long as the values are
+    // consistent. This code path will disappear when takeover transitions to
+    // relying on the Overlay efficiently remembering the next inode number
+    // itself.
+    DCHECK_EQ(ino, nextInodeNumber.get())
+        << "Overlay nextInodeNumber already initialized with " << ino
+        << " so it should not be initialized with " << nextInodeNumber;
+    return;
+  }
+
   DCHECK_GT(nextInodeNumber, kRootNodeId);
-  auto previous = nextInodeNumber_.exchange(nextInodeNumber.get());
-  DCHECK_EQ(0, previous) << "setNextInodeNumber called after "
-                            "nextInodeNumber_ was already initialized";
+  nextInodeNumber_.store(nextInodeNumber.get(), std::memory_order_relaxed);
 }
 
 InodeNumber Overlay::allocateInodeNumber() {
@@ -290,6 +366,10 @@ void Overlay::saveOverlayDir(
     InodeNumber inodeNumber,
     const TreeInode::Dir& dir,
     const InodeTimestamps& timestamps) {
+  auto nextInodeNumber = nextInodeNumber_.load(std::memory_order_relaxed);
+  CHECK_LT(inodeNumber.get(), nextInodeNumber)
+      << "saveOverlayDir called with unallocated inode number";
+
   // TODO: T20282158 clean up access of child inode information.
   //
   // Translate the data to the thrift equivalents
@@ -298,6 +378,9 @@ void Overlay::saveOverlayDir(
   for (auto& entIter : dir.entries) {
     const auto& entName = entIter.first;
     const auto& ent = entIter.second;
+
+    CHECK_LT(ent.getInodeNumber().get(), nextInodeNumber)
+        << "saveOverlayDir called with entry using unallocated inode number";
 
     overlay::OverlayEntry oent;
     oent.mode = ent.getModeUnsafe();
@@ -589,6 +672,9 @@ folly::File Overlay::createOverlayFileImpl(
     InodeNumber inodeNumber,
     iovec* iov,
     size_t iovCount) {
+  CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
+      << "createOverlayFile called with unallocated inode number";
+
   // We do not use mkstemp() to create the temporary file, since there is no
   // mkstempat() equivalent that can create files relative to dirFile_.  We
   // simply create the file with a fixed suffix, and do not use O_EXCL.  This

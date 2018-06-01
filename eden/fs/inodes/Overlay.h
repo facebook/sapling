@@ -57,6 +57,11 @@ class Overlay {
   explicit Overlay(AbsolutePathPiece localDir);
   ~Overlay();
 
+  Overlay(const Overlay&) = delete;
+  Overlay(Overlay&&) = delete;
+  Overlay& operator=(const Overlay&) = delete;
+  Overlay& operator=(Overlay&&) = delete;
+
   /**
    * Closes the overlay. It is undefined behavior to access the
    * InodeMetadataTable concurrently or call any other Overlay method
@@ -118,6 +123,7 @@ class Overlay {
       InodeNumber inodeNumber,
       const TreeInode::Dir& dir,
       const InodeTimestamps& timestamps);
+
   folly::Optional<std::pair<TreeInode::Dir, InodeTimestamps>> loadOverlayDir(
       InodeNumber inodeNumber);
 
@@ -227,6 +233,8 @@ class Overlay {
   };
 
   void initOverlay();
+  void tryLoadNextInodeNumber();
+  void saveNextInodeNumber();
   void readExistingOverlay(int infoFD);
   void initNewOverlay();
   folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
