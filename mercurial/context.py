@@ -2007,14 +2007,13 @@ class workingctx(committablectx):
         just use the default match object sent to us.
         """
         if other != self._repo["."]:
+            origbad = match.bad
 
             def bad(f, msg):
                 # 'f' may be a directory pattern from 'match.files()',
                 # so 'f not in ctx1' is not enough
                 if f not in other and not other.hasdir(f):
-                    self._repo.ui.warn(
-                        "%s: %s\n" % (self._repo.dirstate.pathto(f), msg)
-                    )
+                    origbad(f, msg)
 
             match.bad = bad
         return match
