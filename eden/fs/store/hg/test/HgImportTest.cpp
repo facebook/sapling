@@ -221,12 +221,3 @@ INSTANTIATE_TEST_CASE_P(
     TreeManifest,
     HgImportTest,
     ::testing::Values(RepoType::TREE_MANIFEST));
-
-int main(int argc, char* argv[]) {
-  testing::InitGoogleTest(&argc, argv);
-  folly::init(&argc, &argv);
-  gflags::SetCommandLineOptionWithMode(
-      "use_hg_tree_manifest", "true", gflags::SET_FLAGS_DEFAULT);
-
-  return RUN_ALL_TESTS();
-}
