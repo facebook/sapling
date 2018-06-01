@@ -64,19 +64,21 @@ TreeInode::CreateResult::CreateResult(const EdenMount* mount)
     : attr(mount->initStatData()) {}
 
 FileInodePtr TreeInode::Entry::asFilePtrOrNull() const {
-  if (auto file = dynamic_cast<FileInode*>(inode_)) {
-    return FileInodePtr::newPtrLocked(file);
-  } else {
-    return FileInodePtr{};
+  if (hasInodePointer_) {
+    if (auto file = dynamic_cast<FileInode*>(inode_)) {
+      return FileInodePtr::newPtrLocked(file);
+    }
   }
+  return FileInodePtr{};
 }
 
 TreeInodePtr TreeInode::Entry::asTreePtrOrNull() const {
-  if (auto tree = dynamic_cast<TreeInode*>(inode_)) {
-    return TreeInodePtr::newPtrLocked(tree);
-  } else {
-    return TreeInodePtr{};
+  if (hasInodePointer_) {
+    if (auto tree = dynamic_cast<TreeInode*>(inode_)) {
+      return TreeInodePtr::newPtrLocked(tree);
+    }
   }
+  return TreeInodePtr{};
 }
 
 /**

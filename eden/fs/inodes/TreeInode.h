@@ -117,7 +117,7 @@ class TreeInode : public InodeBase {
     }
 
     InodeNumber getInodeNumber() const {
-      return inodeNumber_;
+      return hasInodePointer_ ? inode_->getNodeId() : inodeNumber_;
     }
 
     void setMaterialized() {
@@ -125,7 +125,7 @@ class TreeInode : public InodeBase {
     }
 
     void setDematerialized(Hash hash) {
-      DCHECK(inode_);
+      DCHECK(hasInodePointer_);
       hasHash_ = true;
       hash_ = hash;
     }
@@ -134,7 +134,7 @@ class TreeInode : public InodeBase {
       // Callers should not check getMode() if an inode is loaded.
       // If the child inode is loaded it is the authoritative source for
       // the mode bits.
-      DCHECK(!inode_);
+      DCHECK(!hasInodePointer_);
       return mode_;
     }
 
@@ -167,13 +167,13 @@ class TreeInode : public InodeBase {
     }
 
     InodeBase* getInode() const {
-      return inode_;
+      return hasInodePointer_ ? inode_ : nullptr;
     }
 
     InodePtr getInodePtr() const {
       // It's safe to call newPtrLocked because calling getInode() implies the
       // TreeInode's contents_ lock is held.
-      return inode_ ? InodePtr::newPtrLocked(inode_) : InodePtr{};
+      return hasInodePointer_ ? InodePtr::newPtrLocked(inode_) : InodePtr{};
     }
 
     /**
@@ -189,15 +189,18 @@ class TreeInode : public InodeBase {
     TreeInodePtr asTreePtrOrNull() const;
 
     void setInode(InodeBase* inode) {
-      DCHECK(!inode_);
+      DCHECK(!hasInodePointer_);
       DCHECK(inode);
       DCHECK_EQ(inodeNumber_, inode->getNodeId());
+      hasInodePointer_ = true;
       inode_ = inode;
     }
 
     void clearInode() {
-      DCHECK(inode_);
-      inode_ = nullptr;
+      DCHECK(hasInodePointer_);
+      hasInodePointer_ = false;
+      auto inode = inode_;
+      inodeNumber_ = inode->getNodeId();
     }
 
    private:
@@ -209,6 +212,7 @@ class TreeInode : public InodeBase {
     // Can we borrow some bits from mode_t? :) If so, Entry would fit in 4
     // words.
     bool hasHash_{false};
+    bool hasInodePointer_{false};
 
     /**
      * If the entry is not materialized, this contains the hash
@@ -222,36 +226,44 @@ class TreeInode : public InodeBase {
      */
     Hash hash_;
 
-    /**
-     * The inode number assigned to this entry.  Is never zero.
-     */
-    InodeNumber inodeNumber_{};
+    union {
+      /**
+       * The inode number, if one is allocated for this entry, or 0 if one is
+       * not allocated.
+       *
+       * An inode number is required for materialized entries, so this is always
+       * non-zero if hash_ is not set.  (It may also be non-zero even when hash_
+       * is set.)
+       */
+      InodeNumber inodeNumber_{0};
 
-    /**
-     * A pointer to the child inode, if it is loaded, or null if it is not
-     * loaded.
-     *
-     * Note that we store this as a raw pointer.  Children inodes hold a
-     * reference to their parent TreeInode, not the other way around.
-     * Children inodes can be destroyed only in one of two ways:
-     * - Being unlinked, then having their last reference go away.
-     *   In this case they will be removed from our entries list when they are
-     *   unlinked.
-     * - Being unloaded (after their reference count is already 0).  In this
-     *   case the parent TreeInodes responsible for triggering unloading of its
-     *   children, so it resets this pointer to null when it unloads the child.
-     */
-    InodeBase* inode_{nullptr};
+      /**
+       * A pointer to the child inode, if it is loaded, or null if it is not
+       * loaded.
+       *
+       * Note that we store this as a raw pointer.  Children inodes hold a
+       * reference to their parent TreeInode, not the other way around.
+       * Children inodes can be destroyed only in one of two ways:
+       * - Being unlinked, then having their last reference go away.
+       *   In this case they will be removed from our entries list when they are
+       *   unlinked.
+       * - Being unloaded (after their reference count is already 0).  In this
+       *   case the parent TreeInodes responsible for triggering unloading of
+       *   its children, so it resets this pointer to null when it unloads the
+       *   child.
+       */
+      InodeBase* inode_;
+    };
   };
 
   // TODO: We can do better than this. When mode_t is stored in the InodeTable,
   // an entry can be in one of two states:
   // 1. Non-materialized, where we only need to store
   //    (TreeEntryType, Hash, InodeNumber)
-  // 2. Materialized, where hash is unset and inode_ is non-null.
+  // 2. Materialized, where hash is unset. We'd still want to store dtype_t.
   // I think that could fit in 32 bytes, which would be a material savings
   // given how many trees Eden tends to keep loaded.
-  static_assert(sizeof(Entry) == 48, "Entry is six words");
+  static_assert(sizeof(Entry) == 40, "Entry is five words");
 
   /** Represents a directory in the overlay */
   struct Dir {
