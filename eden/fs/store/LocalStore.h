@@ -20,7 +20,7 @@ template <typename T>
 class Optional;
 template <typename T>
 class Future;
-}
+} // namespace folly
 
 namespace facebook {
 namespace eden {
@@ -133,7 +133,8 @@ class LocalStore {
    * Returns folly::none if this key is not present in the store, or throws an
    * exception on error.
    */
-  folly::Optional<BlobMetadata> getBlobMetadata(const Hash& id) const;
+  folly::Future<folly::Optional<BlobMetadata>> getBlobMetadata(
+      const Hash& id) const;
 
   /**
    * Compute the serialized version of the tree.

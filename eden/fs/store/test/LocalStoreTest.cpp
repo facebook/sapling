@@ -83,7 +83,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
   EXPECT_EQ(
       contents, outBlob->getContents().clone()->moveToFbString().toStdString());
 
-  auto retreivedMetadata = store_->getBlobMetadata(hash);
+  auto retreivedMetadata = store_->getBlobMetadata(hash).get(10s);
   ASSERT_TRUE(retreivedMetadata.hasValue());
   EXPECT_EQ(sha1, retreivedMetadata.value().sha1);
   EXPECT_EQ(contents.size(), retreivedMetadata.value().size);
@@ -92,7 +92,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
 TEST_P(LocalStoreTest, testReadNonexistent) {
   Hash hash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   EXPECT_TRUE(nullptr == store_->getBlob(hash).get(10s));
-  auto retreivedMetadata = store_->getBlobMetadata(hash);
+  auto retreivedMetadata = store_->getBlobMetadata(hash).get(10s);
   EXPECT_FALSE(retreivedMetadata.hasValue());
 }
 

@@ -770,7 +770,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
-    metadata = localStore->getBlobMetadata(id);
+    metadata = localStore->getBlobMetadata(id).get();
   } else {
     metadata = store->getBlobMetadata(id).get();
   }

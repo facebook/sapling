@@ -139,8 +139,7 @@ folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
 
 folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(const Hash& id) const {
   return getFuture(KeySpace::TreeFamily, id.getBytes())
-      .then([id](folly::Try<StoreResult>&& dataTry) {
-        auto& data = dataTry.value();
+      .then([id](StoreResult&& data) {
         if (!data.isValid()) {
           return std::unique_ptr<Tree>(nullptr);
         }
@@ -150,8 +149,7 @@ folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(const Hash& id) const {
 
 folly::Future<std::unique_ptr<Blob>> LocalStore::getBlob(const Hash& id) const {
   return getFuture(KeySpace::BlobFamily, id.getBytes())
-      .then([id](folly::Try<StoreResult>&& dataTry) {
-        auto& data = dataTry.value();
+      .then([id](StoreResult&& data) {
         if (!data.isValid()) {
           return std::unique_ptr<Blob>(nullptr);
         }
@@ -160,12 +158,16 @@ folly::Future<std::unique_ptr<Blob>> LocalStore::getBlob(const Hash& id) const {
       });
 }
 
-Optional<BlobMetadata> LocalStore::getBlobMetadata(const Hash& id) const {
-  auto result = get(KeySpace::BlobMetaDataFamily, id);
-  if (!result.isValid()) {
-    return folly::none;
-  }
-  return SerializedBlobMetadata::parse(id, result);
+folly::Future<Optional<BlobMetadata>> LocalStore::getBlobMetadata(
+    const Hash& id) const {
+  return getFuture(KeySpace::BlobMetaDataFamily, id.getBytes())
+      .then([id](StoreResult&& data) -> Optional<BlobMetadata> {
+        if (!data.isValid()) {
+          return folly::none;
+        } else {
+          return SerializedBlobMetadata::parse(id, data);
+        }
+      });
 }
 
 std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(const Tree* tree) {
