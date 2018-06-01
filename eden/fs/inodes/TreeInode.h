@@ -77,7 +77,7 @@ class TreeInode : public InodeBase {
      * Create a hash for a non-materialized entry.
      */
     Entry(mode_t m, InodeNumber number, Hash hash)
-        : mode_{m}, hash_{hash}, inodeNumber_{number} {
+        : mode_{m}, hasHash_{true}, hash_{hash}, inodeNumber_{number} {
       DCHECK(number.hasValue());
     }
 
@@ -97,19 +97,23 @@ class TreeInode : public InodeBase {
       // TODO: In the future we should probably only allow callers to invoke
       // this method when inode is not set.  If inode is set it should be the
       // authoritative source of data.
-      return !hash_.hasValue();
+      return !hasHash_;
     }
 
     Hash getHash() const {
       // TODO: In the future we should probably only allow callers to invoke
       // this method when inode is not set.  If inode is set it should be the
       // authoritative source of data.
-      DCHECK(hash_.hasValue());
-      return hash_.value();
+      DCHECK(hasHash_);
+      return hash_;
     }
 
-    const folly::Optional<Hash>& getOptionalHash() const {
-      return hash_;
+    folly::Optional<Hash> getOptionalHash() const {
+      if (hasHash_) {
+        return hash_;
+      } else {
+        return folly::none;
+      }
     }
 
     InodeNumber getInodeNumber() const {
@@ -117,11 +121,12 @@ class TreeInode : public InodeBase {
     }
 
     void setMaterialized() {
-      hash_.clear();
+      hasHash_ = false;
     }
 
     void setDematerialized(Hash hash) {
       DCHECK(inode_);
+      hasHash_ = true;
       hash_ = hash;
     }
 
@@ -201,17 +206,21 @@ class TreeInode : public InodeBase {
      */
     mode_t mode_{0};
 
+    // Can we borrow some bits from mode_t? :) If so, Entry would fit in 4
+    // words.
+    bool hasHash_{false};
+
     /**
      * If the entry is not materialized, this contains the hash
      * identifying the source control Tree (if this is a directory) or Blob
      * (if this is a file) that contains the entry contents.
      *
-     * If the entry is materialized, this field is not set.
+     * If the entry is materialized, hasHash_ is false.
      *
      * TODO: If inode is set, this field generally should not be used, and the
      * child InodeBase should be consulted instead.
      */
-    folly::Optional<Hash> hash_;
+    Hash hash_;
 
     /**
      * The inode number assigned to this entry.  Is never zero.
