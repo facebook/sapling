@@ -30,6 +30,106 @@ class EdenFileHandle;
 class Hash;
 class ObjectStore;
 
+/**
+ * The contents of a FileInode.
+ *
+ * This structure exists to allow the entire contents to be protected inside
+ * folly::Synchronized.  This ensures proper synchronization when accessing
+ * any member variables of FileInode.
+ *
+ * A FileInode can be in one of three states:
+ *   - not loaded
+ *   - loading: fetching data from backing store, but it's not available yet
+ *   - loaded: contents has been imported from mercurial and is accessible
+ *   - materialized: contents are written into overlay and file handle is open
+ *
+ * Valid state transitions:
+ *   - not loaded -> loading
+ *   - not loaded -> materialized (O_TRUNC)
+ *   - loading -> loaded
+ *   - loading -> materialized (O_TRUNC)
+ *   - loaded -> materialized
+ */
+struct FileInodeState {
+  using FileHandlePtr = std::shared_ptr<EdenFileHandle>;
+
+  enum Tag : uint8_t {
+    NOT_LOADED,
+    BLOB_LOADING,
+    BLOB_LOADED,
+    MATERIALIZED_IN_OVERLAY,
+  };
+
+  explicit FileInodeState(const folly::Optional<Hash>& hash);
+  explicit FileInodeState();
+  ~FileInodeState();
+
+  /**
+   * In lieu of std::variant, enforce the state machine invariants.
+   * Called after construction and each time we unlock the state.
+   */
+  void checkInvariants();
+
+  /**
+   * Returns true if the file is materialized in the overlay.
+   */
+  bool isMaterialized() const {
+    return tag == MATERIALIZED_IN_OVERLAY;
+  }
+
+  /**
+   * Returns true if we're maintaining an open file.
+   */
+  bool isFileOpen() const {
+    return bool(file);
+  }
+
+  /**
+   * Decrement the openCount, releasing the blob or file if the open count is
+   * now zero.
+   */
+  void decOpenCount();
+
+  /**
+   * Increment the open count.
+   */
+  void incOpenCount();
+
+  Tag tag;
+
+  /**
+   * Set only in 'not loaded', 'loading', and 'loaded' states, none otherwise.
+   * TODO: Perhaps we ought to simply leave this defined...
+   */
+  folly::Optional<Hash> hash;
+
+  /**
+   * Set if 'loading'.
+   */
+  folly::Optional<folly::SharedPromise<FileHandlePtr>> blobLoadingPromise;
+
+  /**
+   * Set if 'loaded', references immutable data from the backing store.
+   */
+  std::shared_ptr<const Blob> blob;
+
+  /**
+   * If backed by an overlay file, whether the sha1 xattr is valid
+   */
+  bool sha1Valid{false};
+
+  /**
+   * Set if 'materialized', holds the open file descriptor backed by an
+   * overlay file.
+   */
+  folly::File file;
+
+  /**
+   * Number of open file handles referencing us.
+   */
+  size_t openCount{0};
+};
+
 class FileInode : public InodeBase {
  public:
   using FileHandlePtr = std::shared_ptr<EdenFileHandle>;
@@ -150,103 +250,7 @@ class FileInode : public InodeBase {
   folly::Future<size_t> write(folly::StringPiece data, off_t off);
 
  private:
-  /**
-   * The contents of a FileInode.
-   *
-   * This structure exists to allow the entire contents to be protected inside
-   * folly::Synchronized.  This ensures proper synchronization when accessing
-   * any member variables of FileInode.
-   *
-   * A FileInode can be in one of three states:
-   *   - not loaded
-   *   - loading: fetching data from backing store, but it's not available yet
-   *   - loaded: contents has been imported from mercurial and is accessible
-   *   - materialized: contents are written into overlay and file handle is open
-   *
-   * Valid state transitions:
-   *   - not loaded -> loading
-   *   - not loaded -> materialized (O_TRUNC)
-   *   - loading -> loaded
-   *   - loading -> materialized (O_TRUNC)
-   *   - loaded -> materialized
-   */
-  struct State {
-    enum Tag : uint8_t {
-      NOT_LOADED,
-      BLOB_LOADING,
-      BLOB_LOADED,
-      MATERIALIZED_IN_OVERLAY,
-    };
-
-    explicit State(const folly::Optional<Hash>& hash);
-    explicit State();
-    ~State();
-
-    /**
-     * In lieu of std::variant, enforce the state machine invariants.
-     * Called after construction and each time we unlock the state.
-     */
-    void checkInvariants();
-
-    /**
-     * Returns true if the file is materialized in the overlay.
-     */
-    bool isMaterialized() const {
-      return tag == MATERIALIZED_IN_OVERLAY;
-    }
-
-    /**
-     * Returns true if we're maintaining an open file.
-     */
-    bool isFileOpen() const {
-      return bool(file);
-    }
-
-    /**
-     * Decrement the openCount, releasing the blob or file if the open count is
-     * now zero.
-     */
-    void decOpenCount();
-
-    /**
-     * Increment the open count.
-     */
-    void incOpenCount();
-
-    Tag tag;
-
-    /**
-     * Set only in 'not loaded', 'loading', and 'loaded' states, none otherwise.
-     * TODO: Perhaps we ought to simply leave this defined...
-     */
-    folly::Optional<Hash> hash;
-
-    /**
-     * Set if 'loading'.
-     */
-    folly::Optional<folly::SharedPromise<FileHandlePtr>> blobLoadingPromise;
-
-    /**
-     * Set if 'loaded', references immutable data from the backing store.
-     */
-    std::shared_ptr<const Blob> blob;
-
-    /**
-     * If backed by an overlay file, whether the sha1 xattr is valid
-     */
-    bool sha1Valid{false};
-
-    /**
-     * Set if 'materialized', holds the open file descriptor backed by an
-     * overlay file.
-     */
-    folly::File file;
-
-    /**
-     * Number of open file handles referencing us.
-     */
-    size_t openCount{0};
-  };
+  using State = FileInodeState;
   class LockedState;
 
   /**

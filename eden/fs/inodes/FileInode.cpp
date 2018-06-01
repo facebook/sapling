@@ -411,23 +411,23 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
  * FileInode::State methods
  ********************************************************************/
 
-FileInode::State::State(const folly::Optional<Hash>& h) : hash(h) {
+FileInodeState::FileInodeState(const folly::Optional<Hash>& h) : hash(h) {
   tag = hash ? NOT_LOADED : MATERIALIZED_IN_OVERLAY;
 
   checkInvariants();
 }
 
-FileInode::State::State() : tag(MATERIALIZED_IN_OVERLAY) {
+FileInodeState::FileInodeState() : tag(MATERIALIZED_IN_OVERLAY) {
   checkInvariants();
 }
 
 /*
- * Defined State Destructor explicitly to avoid including
+ * Define FileInodeState destructor explicitly to avoid including
  * some header files in FileInode.h
  */
-FileInode::State::~State() = default;
+FileInodeState::~FileInodeState() = default;
 
-void FileInode::State::State::checkInvariants() {
+void FileInodeState::checkInvariants() {
   switch (tag) {
     case NOT_LOADED:
       CHECK(hash);
@@ -470,20 +470,20 @@ void FileInode::State::State::checkInvariants() {
   XLOG(FATAL) << "Unexpected tag value: " << tag;
 }
 
-void FileInode::State::incOpenCount() {
+void FileInodeState::incOpenCount() {
   ++openCount;
 }
 
-void FileInode::State::decOpenCount() {
+void FileInodeState::decOpenCount() {
   DCHECK_GT(openCount, 0);
   --openCount;
   if (openCount == 0) {
     switch (tag) {
-      case State::BLOB_LOADED:
+      case BLOB_LOADED:
         blob.reset();
-        tag = State::NOT_LOADED;
+        tag = NOT_LOADED;
         break;
-      case State::MATERIALIZED_IN_OVERLAY:
+      case MATERIALIZED_IN_OVERLAY:
         // TODO: Before closing the file handle, it might make sense to write
         // in-memory timestamps into the overlay, even if the inode remains in
         // memory. This would ensure timestamps persist even if the edenfs
