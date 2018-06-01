@@ -13,7 +13,7 @@ $file=$args[0]
 
 function Get-Lines
 {
-  Select-String "^<<<<<<" $file | % {"$($_.LineNumber)"}
+  Select-String "^<<<<<<" $file | Select-Object -ExpandProperty 'LineNumber'
 }
 
 $ed = $Env:HGEDITOR;
@@ -35,28 +35,47 @@ if ($ed -eq $nil)
   exit 1
 }
 
+# if we have an editor with a full path we need to be careful of quotes
+$full_path = $ed -match "^\`"(.+)\`"(.*)$"
+if ($full_path)
+{
+  $process = $Matches[1]
+  $process_args = $Matches[2]
+}
+else
+{
+  $process = ($ed -split (" ", 2))[0]
+  $process_args = $ed -split (" ", 2) | select -skip 1
+}
+
 if (($ed -eq "vim") -or ($ed -eq "emacs") -or `
-    ($ed -eq "nano") -or ($ed -eq "notepad++"))
+    ($ed -eq "nano") -or ($ed -eq "notepad++") -or `
+    ($process -eq "subl"))
 {
   $lines = Get-Lines
   $firstline = if ($lines.Length -gt 0) { $lines[0] } else { $nil }
   $previousline = $nil;
 
-
   # open the editor to the first conflict until there are no more
   # or the user stops editing the file
   while (($firstline -ne $nil) -and ($firstline -ne $previousline))
   {
-    if ($ed -eq "notepad++")
+    if ($process -eq "subl")
     {
-        $linearg = "-n$firstline"
+      $line_arg = ":$firstline"
+      Start-Process -Wait -NoNewWindow $process -ArgumentList "$process_args $file$line_arg"
+    }
+    elseif ($ed -eq "notepad++")
+    {
+      $line_arg = "-n$firstline"
+      Start-Process -Wait -NoNewWindow $ed $line_arg,$file
     }
     else
     {
-        $linearg = "+$firstline"
+      $line_arg = "+$firstline"
+      Start-Process -Wait -NoNewWindow $ed $line_arg,$file
     }
 
-    Start-Process -Wait -NoNewWindow $ed $linearg,$file
     $previousline = $firstline
     $lines = Get-Lines
     $firstline = if ($lines.Length -gt 0) { $lines[0] } else { $nil }
@@ -64,10 +83,18 @@ if (($ed -eq "vim") -or ($ed -eq "emacs") -or `
 }
 else
 {
-  & "$ed" $file
+  # powershell assumes that start means Start-Process but it probably doesn't
+  if ($process -ne 'START')
+  {
+    Start-Process -Wait -NoNewWindow $process -ArgumentList "$process_args $file"
+  }
+  else
+  {
+    cmd /c ''$ed $file''
+  }
 }
 
-$conflicts=Get-Lines
+$conflicts = Get-Lines
 if ($conflicts.Length -ne 0)
 {
   Write-Output "merge failed - resolve the conflicts (line $conflicts) then use 'hg resolve --mark'"
@@ -75,4 +102,3 @@ if ($conflicts.Length -ne 0)
 }
 
 exit 0
-
