@@ -233,3 +233,19 @@ class TakeoverTest(testcase.EdenRepoTest):
             self.assertEqual(inode_number, os.fstat(fd).st_ino)
         finally:
             os.close(fd)
+
+    def test_contents_are_the_same_if_handle_is_held_open(self) -> None:
+        with open(os.path.join(self.mount, "tree", "hello")) as c2_hello_file, open(
+            os.path.join(self.mount, "src", "main.c")
+        ) as c2_mainc_file:
+
+            self.eden.graceful_restart()
+            self.eden.run_cmd(
+                "debug", "flush_cache", os.path.join("tree", "hello"), cwd=self.mount
+            )
+            self.eden.run_cmd(
+                "debug", "flush_cache", os.path.join("src", "main.c"), cwd=self.mount
+            )
+
+            self.assertEqual(self.page1 + self.page2, c2_hello_file.read())
+            self.assertEqual("hello world v2", c2_mainc_file.read())

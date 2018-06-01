@@ -944,6 +944,7 @@ void EdenServiceHandler::flushStatsNow() {
 Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> path) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, *path);
   auto edenMount = server_->getMount(*mountPoint);
   InodePtr inode;
   if (path->empty()) {
