@@ -146,12 +146,12 @@ private:
 public:
   // The constructor does a shallow copy of the delta chain and since the
   // ownership is taken by this class it is responsible for memory management
-  CDeltaChain(delta_chain_t chain) : _chain(chain)
+  explicit CDeltaChain(delta_chain_t chain) : _chain(chain)
   {
   }
 
-  CDeltaChain(get_delta_chain_code_t /*error*/)
-      : _chain(COMPOUND_LITERAL(delta_chain_t){GET_DELTA_CHAIN_NOT_FOUND})
+  explicit CDeltaChain(get_delta_chain_code_t /*error*/)
+      : _chain{GET_DELTA_CHAIN_NOT_FOUND, nullptr, 0}
   {
   }
 
@@ -188,7 +188,7 @@ protected:
   DeltaChainIterator() : _index(0)
   {
   }
-  virtual std::shared_ptr<DeltaChain> getNextChain(const Key& /*key*/)
+  virtual std::shared_ptr<DeltaChain> getNextChain(const Key & /*key*/)
   {
     return std::make_shared<CDeltaChain>(GET_DELTA_CHAIN_NOT_FOUND);
   }
