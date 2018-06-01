@@ -23,10 +23,10 @@
 //! of variant-length binary key, some escaping is needed to avoid the prefix conflict. The
 //! escaping logic might be implemented as key read/write functions.
 
-use errors::{Result, ErrorKind};
+use errors::{ErrorKind, Result};
+use std::io::{Cursor, Seek, SeekFrom, Write};
 use traits::Resize;
-use vlqencoding::{VLQEncode, VLQDecode};
-use std::io::{Write, Cursor, Seek, SeekFrom};
+use vlqencoding::{VLQDecode, VLQEncode};
 
 /// Integer that maps to a key (`[u8]`).
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Default)]
@@ -127,7 +127,7 @@ impl VariantKey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{thread_rng, Rng};
+    use quickcheck::rand::{thread_rng, Rng};
 
     #[test]
     fn test_variant_key_round_trip() {

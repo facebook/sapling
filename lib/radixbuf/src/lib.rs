@@ -10,9 +10,6 @@ extern crate error_chain;
 #[macro_use]
 extern crate quickcheck;
 
-#[cfg(test)]
-extern crate rand;
-
 extern crate vlqencoding;
 
 pub mod errors;

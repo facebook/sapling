@@ -163,7 +163,7 @@ impl TreeState {
 mod tests {
     use super::*;
     use filestate::StateFlags;
-    use rand::{ChaChaRng, Rng};
+    use quickcheck::rand::{ChaChaRng, Rng};
     use tempdir::TempDir;
 
     #[test]

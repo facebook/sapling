@@ -102,7 +102,7 @@ pub struct FileStateV2 {
 }
 
 #[cfg(test)]
-use rand;
+use quickcheck::rand;
 
 #[cfg(test)]
 impl rand::Rand for FileStateV2 {
