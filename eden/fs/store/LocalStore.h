@@ -128,10 +128,7 @@ class LocalStore {
    * May throw exceptions on error (e.g., if this ID refers to a non-blob
    * object).
    */
-  std::unique_ptr<Blob> getBlob(const Hash& id) const;
-
-  FOLLY_NODISCARD folly::Future<std::unique_ptr<Blob>> getBlobFuture(
-      const Hash& id) const;
+  folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) const;
 
   /**
    * Get the size of a blob and the SHA-1 hash of its contents.

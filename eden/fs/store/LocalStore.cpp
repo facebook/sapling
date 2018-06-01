@@ -157,19 +157,7 @@ folly::Future<std::unique_ptr<Tree>> LocalStore::getTreeFuture(
       });
 }
 
-std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
-  // We have to hold this string in scope while we deserialize and build
-  // the blob; otherwise, the results are undefined.
-  auto result = get(KeySpace::BlobFamily, id.getBytes());
-  if (!result.isValid()) {
-    return nullptr;
-  }
-  auto buf = result.extractIOBuf();
-  return deserializeGitBlob(id, &buf);
-}
-
-folly::Future<std::unique_ptr<Blob>> LocalStore::getBlobFuture(
-    const Hash& id) const {
+folly::Future<std::unique_ptr<Blob>> LocalStore::getBlob(const Hash& id) const {
   return getFuture(KeySpace::BlobFamily, id.getBytes())
       .then([id](folly::Try<StoreResult>&& dataTry) {
         auto& data = dataTry.value();

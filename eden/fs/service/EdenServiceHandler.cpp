@@ -745,7 +745,7 @@ void EdenServiceHandler::debugGetScmBlob(
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
-    blob = localStore->getBlob(id);
+    blob = localStore->getBlob(id).get();
   } else {
     blob = store->getBlob(id).get();
   }

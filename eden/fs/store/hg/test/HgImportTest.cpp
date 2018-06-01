@@ -8,6 +8,7 @@
  *
  */
 #include <folly/experimental/TestUtil.h>
+#include <folly/futures/Future.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
@@ -27,6 +28,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
+using namespace std::chrono_literals;
 using folly::StringPiece;
 using folly::test::TemporaryDirectory;
 using std::vector;
@@ -135,8 +137,8 @@ TEST_P(HgImportTest, importTest) {
   ASSERT_EQ(TreeEntryType::REGULAR_FILE, testEntry.getType());
 
   // The blobs should not have been imported yet, though
-  EXPECT_FALSE(localStore_.getBlob(barEntry.getHash()));
-  EXPECT_FALSE(localStore_.getBlob(testEntry.getHash()));
+  EXPECT_FALSE(localStore_.getBlob(barEntry.getHash()).get(0ms));
+  EXPECT_FALSE(localStore_.getBlob(testEntry.getHash()).get(0ms));
 
   // Get the "src" tree from the LocalStore.
   auto srcEntry = rootTree->getEntryAt("src"_pc);

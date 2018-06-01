@@ -11,6 +11,7 @@
 #include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
 #include <stdexcept>
@@ -77,7 +78,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
   auto inBlob = Blob{hash, std::move(buf)};
   store_->putBlob(hash, &inBlob);
 
-  auto outBlob = store_->getBlob(hash);
+  auto outBlob = store_->getBlob(hash).get(10s);
   EXPECT_EQ(hash, outBlob->getHash());
   EXPECT_EQ(
       contents, outBlob->getContents().clone()->moveToFbString().toStdString());
@@ -90,7 +91,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
 
 TEST_P(LocalStoreTest, testReadNonexistent) {
   Hash hash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-  EXPECT_TRUE(nullptr == store_->getBlob(hash));
+  EXPECT_TRUE(nullptr == store_->getBlob(hash).get(10s));
   auto retreivedMetadata = store_->getBlobMetadata(hash);
   EXPECT_FALSE(retreivedMetadata.hasValue());
 }
