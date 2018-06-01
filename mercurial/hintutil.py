@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import os
+
 from . import rcutil, util
 from .i18n import _
 
@@ -71,7 +73,10 @@ def show(ui):
 
 def silence(ui, names):
     """Silence given hints"""
-    path = rcutil.userrcpath()[0]
+    paths = rcutil.userrcpath()
+    # In case there are multiple candidate paths, pick the one that exists.
+    # Otherwise, use the first one.
+    path = ([p for p in paths if os.path.exists(p)] + [paths[0]])[0]
     acked = ui.configlist("hint", "ack")
     for name in names:
         if name not in acked:
