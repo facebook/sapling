@@ -265,7 +265,7 @@ void EdenServiceHandler::getSHA1(
     futures.emplace_back(getSHA1ForPathDefensively(*mountPoint, path));
   }
 
-  auto results = folly::collectAll(std::move(futures)).get();
+  auto results = folly::collectAllSemiFuture(std::move(futures)).get();
   for (auto& result : results) {
     out.emplace_back();
     SHA1Result& sha1Result = out.back();
