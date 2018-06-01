@@ -81,21 +81,23 @@ Future<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
   return storedTreeHash->getFuture().then(
       [this, commitID](const std::unique_ptr<Hash>& hash) {
         // Check in the LocalStore for the tree first.
-        auto localValue = localStore_->getTree(*hash);
-        if (localValue) {
-          return makeFuture(std::move(localValue));
-        }
+        return localStore_->getTree(*hash).then(
+            [this, commitID, hash = *hash](std::unique_ptr<Tree> localValue) {
+              if (localValue) {
+                return makeFuture(std::move(localValue));
+              }
 
-        // Next look up the tree in our BackingStore data
-        auto data = data_.rlock();
-        auto treeIter = data->trees.find(*hash);
-        if (treeIter == data->trees.end()) {
-          return makeFuture<unique_ptr<Tree>>(std::domain_error(
-              "tree " + hash->toString() + " for commit " +
-              commitID.toString() + " not found"));
-        }
+              // Next look up the tree in our BackingStore data
+              auto data = data_.rlock();
+              auto treeIter = data->trees.find(hash);
+              if (treeIter == data->trees.end()) {
+                return makeFuture<unique_ptr<Tree>>(std::domain_error(
+                    "tree " + hash.toString() + " for commit " +
+                    commitID.toString() + " not found"));
+              }
 
-        return treeIter->second->getFuture();
+              return treeIter->second->getFuture();
+            });
       });
 }
 

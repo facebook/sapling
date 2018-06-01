@@ -148,7 +148,8 @@ Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
       .via(serverThreadPool_);
 }
 
-unique_ptr<Tree> HgBackingStore::getTreeForCommitImpl(const Hash& commitID) {
+folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
+    const Hash& commitID) {
   Hash rootTreeHash;
   auto result = localStore_->get(KeySpace::HgCommitToTreeFamily, commitID);
   if (result.isValid()) {

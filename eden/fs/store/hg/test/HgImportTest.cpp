@@ -104,7 +104,7 @@ TEST_P(HgImportTest, importTest) {
   auto rootTreeHash = treemanifest
       ? importer.importTreeManifest(commit1.toString())
       : importer.importFlatManifest(commit1.toString());
-  auto rootTree = localStore_.getTree(rootTreeHash);
+  auto rootTree = localStore_.getTree(rootTreeHash).get(10s);
   EXPECT_EQ(rootTreeHash, rootTree->getHash());
   EXPECT_EQ(rootTreeHash, rootTree->getHash());
   ASSERT_THAT(
@@ -117,8 +117,9 @@ TEST_P(HgImportTest, importTest) {
   // importer.importTree().
   auto fooEntry = rootTree->getEntryAt("foo"_pc);
   ASSERT_EQ(TreeEntryType::TREE, fooEntry.getType());
-  auto fooTree = treemanifest ? importer.importTree(fooEntry.getHash())
-                              : localStore_.getTree(fooEntry.getHash());
+  auto fooTree = treemanifest
+      ? importer.importTree(fooEntry.getHash())
+      : localStore_.getTree(fooEntry.getHash()).get(10s);
   ASSERT_TRUE(fooTree);
   ASSERT_THAT(
       getTreeEntryNames(fooTree.get()),
@@ -126,7 +127,7 @@ TEST_P(HgImportTest, importTest) {
   if (treemanifest) {
     // HgImporter::importTree() is currently responsible for inserting the tree
     // into the LocalStore.
-    auto fooTree2 = localStore_.getTree(fooEntry.getHash());
+    auto fooTree2 = localStore_.getTree(fooEntry.getHash()).get(10s);
     ASSERT_TRUE(fooTree2);
     EXPECT_EQ(*fooTree, *fooTree2);
   }
@@ -143,14 +144,15 @@ TEST_P(HgImportTest, importTest) {
   // Get the "src" tree from the LocalStore.
   auto srcEntry = rootTree->getEntryAt("src"_pc);
   ASSERT_EQ(TreeEntryType::TREE, srcEntry.getType());
-  auto srcTree = treemanifest ? importer.importTree(srcEntry.getHash())
-                              : localStore_.getTree(srcEntry.getHash());
+  auto srcTree = treemanifest
+      ? importer.importTree(srcEntry.getHash())
+      : localStore_.getTree(srcEntry.getHash()).get(10ms);
   ASSERT_TRUE(srcTree);
   ASSERT_THAT(
       getTreeEntryNames(srcTree.get()),
       ElementsAre(PathComponent{"eden"}, PathComponent{"somelink"}));
   if (treemanifest) {
-    auto srcTree2 = localStore_.getTree(srcEntry.getHash());
+    auto srcTree2 = localStore_.getTree(srcEntry.getHash()).get(10ms);
     ASSERT_TRUE(srcTree2);
     EXPECT_EQ(*srcTree, *srcTree2);
   }
@@ -161,13 +163,14 @@ TEST_P(HgImportTest, importTest) {
   // Get the "src/eden" tree from the LocalStore
   auto edenEntry = srcTree->getEntryAt("eden"_pc);
   ASSERT_EQ(TreeEntryType::TREE, edenEntry.getType());
-  auto edenTree = treemanifest ? importer.importTree(edenEntry.getHash())
-                               : localStore_.getTree(edenEntry.getHash());
+  auto edenTree = treemanifest
+      ? importer.importTree(edenEntry.getHash())
+      : localStore_.getTree(edenEntry.getHash()).get(10s);
   ASSERT_TRUE(edenTree);
   ASSERT_THAT(
       getTreeEntryNames(edenTree.get()), ElementsAre(PathComponent{"main.py"}));
   if (treemanifest) {
-    auto edenTree2 = localStore_.getTree(edenEntry.getHash());
+    auto edenTree2 = localStore_.getTree(edenEntry.getHash()).get(10ms);
     ASSERT_TRUE(edenTree2);
     EXPECT_EQ(*edenTree, *edenTree2);
   }

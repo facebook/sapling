@@ -137,7 +137,7 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
 
   store_->put(
       KeySpace::TreeFamily, hash.getBytes(), folly::StringPiece{gitTreeObject});
-  auto tree = store_->getTree(hash);
+  auto tree = store_->getTree(hash).get(10s);
   EXPECT_EQ(Hash("8e073e366ed82de6465d1209d3f07da7eebabb93"), tree->getHash());
   EXPECT_EQ(11, tree->getTreeEntries().size());
 

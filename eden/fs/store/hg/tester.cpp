@@ -11,6 +11,7 @@
 
 #include <folly/Optional.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/futures/Future.h>
 #include <folly/init/Init.h>
 #include <folly/io/Cursor.h>
 #include <folly/logging/Init.h>
@@ -52,8 +53,8 @@ DEFINE_bool(
     "performing a treemanifest import");
 
 using namespace facebook::eden;
+using namespace std::chrono_literals;
 using folly::test::TemporaryDirectory;
-
 using folly::Endian;
 using folly::IOBuf;
 using folly::StringPiece;
@@ -135,7 +136,7 @@ int importTree(
   auto rootHash = importer.importTreeManifest(revName);
   printf("/: %s\n", rootHash.toString().c_str());
 
-  auto tree = store->getTree(rootHash);
+  auto tree = store->getTree(rootHash).get(10s);
   for (const auto& component : subdir.components()) {
     auto entry = tree->getEntryPtr(component);
     if (!entry) {

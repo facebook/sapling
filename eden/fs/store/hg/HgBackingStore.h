@@ -54,7 +54,8 @@ class HgBackingStore : public BackingStore {
   HgBackingStore(HgBackingStore const&) = delete;
   HgBackingStore& operator=(HgBackingStore const&) = delete;
 
-  std::unique_ptr<Tree> getTreeForCommitImpl(const Hash& commitID);
+  folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(
+      const Hash& commitID);
 
   LocalStore* localStore_{nullptr};
   // A set of threads owning HgImporter instances

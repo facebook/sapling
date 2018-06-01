@@ -114,10 +114,7 @@ class LocalStore {
    * May throw exceptions on error (e.g., if this ID refers to a non-tree
    * object).
    */
-  std::unique_ptr<Tree> getTree(const Hash& id) const;
-
-  FOLLY_NODISCARD folly::Future<std::unique_ptr<Tree>> getTreeFuture(
-      const Hash& id) const;
+  folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) const;
 
   /**
    * Get a Blob from the store.

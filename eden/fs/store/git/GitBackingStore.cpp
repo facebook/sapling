@@ -157,10 +157,6 @@ unique_ptr<Blob> GitBackingStore::getBlobImpl(const Hash& id) {
 Future<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
     const Hash& commitID) {
   // TODO: Use a separate thread pool to do the git I/O
-  return makeFuture(getTreeForCommitImpl(commitID));
-}
-
-unique_ptr<Tree> GitBackingStore::getTreeForCommitImpl(const Hash& commitID) {
   XLOG(DBG4) << "resolving tree for commit " << commitID;
 
   // Look up the commit info
@@ -181,13 +177,14 @@ unique_ptr<Tree> GitBackingStore::getTreeForCommitImpl(const Hash& commitID) {
   Hash treeID = oid2Hash(git_commit_tree_id(commit));
 
   // Now get the specified tree.
-  auto tree = localStore_->getTree(treeID);
-  if (tree) {
-    return tree;
-  }
-
-  // We have to import the tree.
-  return getTreeImpl(treeID);
+  return localStore_->getTree(treeID).then(
+      [this, treeID](unique_ptr<Tree> tree) {
+        if (tree) {
+          return tree;
+        } else {
+          return getTreeImpl(treeID);
+        }
+      });
 }
 
 git_oid GitBackingStore::hash2Oid(const Hash& hash) {

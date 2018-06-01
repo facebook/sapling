@@ -137,16 +137,7 @@ folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
 // LocalStore so a vanilla LocalStore has no knowledge of deserializeGitTree()
 // or deserializeGitBlob().
 
-std::unique_ptr<Tree> LocalStore::getTree(const Hash& id) const {
-  auto result = get(KeySpace::TreeFamily, id.getBytes());
-  if (!result.isValid()) {
-    return nullptr;
-  }
-  return deserializeGitTree(id, result.bytes());
-}
-
-folly::Future<std::unique_ptr<Tree>> LocalStore::getTreeFuture(
-    const Hash& id) const {
+folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(const Hash& id) const {
   return getFuture(KeySpace::TreeFamily, id.getBytes())
       .then([id](folly::Try<StoreResult>&& dataTry) {
         auto& data = dataTry.value();

@@ -41,42 +41,41 @@ ObjectStore::~ObjectStore() {}
 
 Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
   // Check in the LocalStore first
-  return localStore_->getTreeFuture(id).then(
-      [id, this](shared_ptr<const Tree> tree) {
-        if (tree) {
-          XLOG(DBG4) << "tree " << id << " found in local store";
-          return makeFuture(std::move(tree));
-        }
+  return localStore_->getTree(id).then([id, this](shared_ptr<const Tree> tree) {
+    if (tree) {
+      XLOG(DBG4) << "tree " << id << " found in local store";
+      return makeFuture(std::move(tree));
+    }
 
-        // Note: We don't currently have logic here to avoid duplicate work if
-        // multiple callers request the same tree at once.  We could store a map
-        // of pending lookups as (Hash --> std::list<Promise<unique_ptr<Tree>>),
-        // and just add a new Promise to the list if this Hash already exists in
-        // the pending list.
-        //
-        // However, de-duplication of object loads will already be done at the
-        // Inode layer.  Therefore we currently don't bother de-duping loads at
-        // this layer.
+    // Note: We don't currently have logic here to avoid duplicate work if
+    // multiple callers request the same tree at once.  We could store a map
+    // of pending lookups as (Hash --> std::list<Promise<unique_ptr<Tree>>),
+    // and just add a new Promise to the list if this Hash already exists in
+    // the pending list.
+    //
+    // However, de-duplication of object loads will already be done at the
+    // Inode layer.  Therefore we currently don't bother de-duping loads at
+    // this layer.
 
-        // Load the tree from the BackingStore.
-        return backingStore_->getTree(id).then(
-            [id](unique_ptr<const Tree> loadedTree) {
-              if (!loadedTree) {
-                // TODO: Perhaps we should do some short-term negative caching?
-                XLOG(DBG2) << "unable to find tree " << id;
-                throw std::domain_error(
-                    folly::to<string>("tree ", id.toString(), " not found"));
-              }
+    // Load the tree from the BackingStore.
+    return backingStore_->getTree(id).then(
+        [id](unique_ptr<const Tree> loadedTree) {
+          if (!loadedTree) {
+            // TODO: Perhaps we should do some short-term negative caching?
+            XLOG(DBG2) << "unable to find tree " << id;
+            throw std::domain_error(
+                folly::to<string>("tree ", id.toString(), " not found"));
+          }
 
-              // TODO: For now, the BackingStore objects actually end up already
-              // saving the Tree object in the LocalStore, so we don't do
-              // anything here.
-              //
-              // localStore_->putTree(loadedTree.get());
-              XLOG(DBG3) << "tree " << id << " retrieved from backing store";
-              return shared_ptr<const Tree>(std::move(loadedTree));
-            });
-      });
+          // TODO: For now, the BackingStore objects actually end up already
+          // saving the Tree object in the LocalStore, so we don't do
+          // anything here.
+          //
+          // localStore_->putTree(loadedTree.get());
+          XLOG(DBG3) << "tree " << id << " retrieved from backing store";
+          return shared_ptr<const Tree>(std::move(loadedTree));
+        });
+  });
 }
 
 Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {

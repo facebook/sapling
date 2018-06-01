@@ -56,7 +56,6 @@ class GitBackingStore : public BackingStore {
 
   std::unique_ptr<Tree> getTreeImpl(const Hash& id);
   std::unique_ptr<Blob> getBlobImpl(const Hash& id);
-  std::unique_ptr<Tree> getTreeForCommitImpl(const Hash& commitID);
 
   static git_oid hash2Oid(const Hash& hash);
   static Hash oid2Hash(const git_oid* oid);

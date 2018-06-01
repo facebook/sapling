@@ -714,7 +714,7 @@ void EdenServiceHandler::debugGetScmTree(
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
-    tree = localStore->getTree(id);
+    tree = localStore->getTree(id).get();
   } else {
     tree = store->getTree(id).get();
   }
