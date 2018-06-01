@@ -44,7 +44,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import error, extensions, localrepo, util
+from mercurial import error, extensions, localrepo, registrar, util
 from mercurial.i18n import _
 
 from . import commitcloudcommands, commitcloudcommon, commitcloudutil
@@ -53,6 +53,8 @@ from . import commitcloudcommands, commitcloudcommon, commitcloudutil
 cmdtable = commitcloudcommands.cmdtable
 
 colortable = {"commitcloud.tag": "yellow", "commitcloud.team": "bold"}
+
+hint = registrar.hint()
 
 
 def _smartlogbackupmessagemap(orig, ui, repo):
@@ -128,3 +130,13 @@ def reposetup(ui, repo):
             return tr
 
     repo.__class__ = commitcloudrepo
+
+
+@hint("commitcloud-update-on-move")
+def hintunpdateonmove():
+    return _(
+        "if you would like to update to the moved version automatically add\n"
+        "[commitcloud]\n"
+        "updateonmove = true\n"
+        "to your .hgrc config file\n"
+    )

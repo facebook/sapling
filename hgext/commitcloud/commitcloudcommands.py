@@ -17,6 +17,7 @@ from mercurial import (
     discovery,
     error,
     hg,
+    hintutil,
     lock as lockmod,
     node,
     obsutil,
@@ -313,6 +314,9 @@ def _maybeupdateworkingcopy(ui, repo, currentnode):
         )
         if ui.configbool("commitcloud", "updateonmove"):
             return _update(ui, repo, destination)
+        else:
+            hintutil.trigger("commitcloud-update-on-move")
+            return 0
     else:
         highlightstatus(
             ui,

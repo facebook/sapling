@@ -28,11 +28,11 @@ This means cloud sync in the repo1, cloud sync in the repo2 and then again in th
 To be run if some test require full sync state before the test
   $ fullsync() {
   >   cd "$1"
-  >   hg cloud sync -q
+  >   HGPLAIN=hint hg cloud sync -q
   >   cd ../"$2"
-  >   hg cloud sync -q
+  >   HGPLAIN=hint hg cloud sync -q
   >   cd ../"$1"
-  >   hg cloud sync -q
+  >   HGPLAIN=hint hg cloud sync -q
   >   cd ..
   > }
 
@@ -243,6 +243,11 @@ Sync the amended commit to the other client
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
   #commitcloud current revision 02f6fc2b7154 has been moved remotely to 48610b1a7ec0
+  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
+  [commitcloud]
+  updateonmove = true
+  to your .hgrc config file
+  hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
   $ hg up -q tip
   $ hg tglog
   @  48610b1a7ec0 'commit2' bookmark1
@@ -303,6 +308,11 @@ Expected result: the message telling that revision has been moved to another rev
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
   #commitcloud current revision 48610b1a7ec0 has been moved remotely to 41f3b9359864
+  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
+  [commitcloud]
+  updateonmove = true
+  to your .hgrc config file
+  hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
   $ hg tglog
   o  41f3b9359864 'commit2 amended' bookmark1
   |
