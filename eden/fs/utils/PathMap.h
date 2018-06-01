@@ -32,14 +32,12 @@ namespace eden {
  * - Since insert and erase operations move the vector contents around,
  *   those operations invalidate iterators.
  */
-template <
-    typename Value,
-    typename Key = PathComponent,
-    typename Allocator = std::allocator<std::pair<Key, Value>>>
-class PathMap : private folly::fbvector<std::pair<Key, Value>, Allocator> {
+template <typename Value, typename Key = PathComponent>
+class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   using Pair = std::pair<Key, Value>;
-  using Vector = folly::fbvector<Pair, Allocator>;
+  using Vector = folly::fbvector<Pair>;
   using Piece = typename Key::piece_type;
+  using Allocator = typename Vector::allocator_type;
 
   // Comparator that knows how compare Stored and Piece in the vector.
   struct Compare {
@@ -270,34 +268,30 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>, Allocator> {
   }
 
   /// Equality operator.
-  template <typename V, typename K, typename A>
-  friend bool operator==(
-      const PathMap<V, K, A>& lhs,
-      const PathMap<V, K, A>& rhs);
+  template <typename V, typename K>
+  friend bool operator==(const PathMap<V, K>& lhs, const PathMap<V, K>& rhs);
 
   /// Inequality operator.
-  template <typename V, typename K, typename A>
-  friend bool operator!=(
-      const PathMap<V, K, A>& lhs,
-      const PathMap<V, K, A>& rhs);
+  template <typename V, typename K>
+  friend bool operator!=(const PathMap<V, K>& lhs, const PathMap<V, K>& rhs);
 };
 
 // Implementations of the equality operators; gcc hates us if we
 // define them inline in the class above.
 
 /// Equality operator.
-template <typename V, typename K, typename A>
-bool operator==(const PathMap<V, K, A>& lhs, const PathMap<V, K, A>& rhs) {
+template <typename V, typename K>
+bool operator==(const PathMap<V, K>& lhs, const PathMap<V, K>& rhs) {
   // reinterpret lhs as the underlying vector type.
-  const folly::fbvector<std::pair<K, V>, A>& vector = lhs;
+  const folly::fbvector<std::pair<K, V>>& vector = lhs;
   return vector == rhs;
 }
 
 /// Inequality operator.
-template <typename V, typename K, typename A>
-bool operator!=(const PathMap<V, K, A>& lhs, const PathMap<V, K, A>& rhs) {
+template <typename V, typename K>
+bool operator!=(const PathMap<V, K>& lhs, const PathMap<V, K>& rhs) {
   // reinterpret lhs as the underlying vector type.
-  const folly::fbvector<std::pair<K, V>, A>& vector = lhs;
+  const folly::fbvector<std::pair<K, V>>& vector = lhs;
   return vector != rhs;
 }
 } // namespace eden
