@@ -20,24 +20,19 @@ namespace eden {
 /**
  * Represents a directory entry.
  *
- * A directory entry can be in one of several states:
+ * A directory entry has two independent state conditions:
  *
- * - An InodeBase object for the entry may or may not exist.  If it does
- *   exist, it is the authoritative source of data for the entry.
- *
- * - If the child InodeBase object does not exist, we may or may not have an
- *   inode number already allocated for the child.  An inode number can be
- *   allocated on-demand if necessary, without fully creating a child
- *   InodeBase object.
+ * - An InodeBase object for the entry may or may not exist. If it does
+ *   exist, it is the authoritative source of data for the entry. If not, the
+ *   type of the entry can be retrieved, but to read or update its contents or
+ *   inode metadata, the InodeBase must be loaded.
  *
  * - The child may or may not be materialized in the overlay.
- *
  *   If the child contents are identical to an existing source control Tree
  *   or Blob then it does not need to be materialized, and the Entry may only
- *   contain the hash identifying the Tree/Blob.
- *
- *   If the child is materialized in the overlay, then it must have an inode
- *   number allocated to it.
+ *   contain the hash identifying the Tree/Blob. If the entry is materialized,
+ *   no hash is set and the entry's materialized contents are available in the
+ *   Overlay under the entry's inode number.
  */
 class DirEntry {
  public:
@@ -45,14 +40,24 @@ class DirEntry {
    * Create a hash for a non-materialized entry.
    */
   DirEntry(mode_t m, InodeNumber number, Hash hash)
-      : mode_{m}, hasHash_{true}, hash_{hash}, inodeNumber_{number} {
+      : initialMode_{m},
+        hasHash_{true},
+        hasInodePointer_{false},
+        hash_{hash},
+        inodeNumber_{number} {
+    CHECK_EQ(m, m & 0x3fffffff);
     DCHECK(number.hasValue());
   }
 
   /**
    * Create a hash for a materialized entry.
    */
-  DirEntry(mode_t m, InodeNumber number) : mode_{m}, inodeNumber_{number} {
+  DirEntry(mode_t m, InodeNumber number)
+      : initialMode_{m},
+        hasHash_{false},
+        hasInodePointer_{false},
+        inodeNumber_{number} {
+    CHECK_EQ(m, m & 0x3fffffff);
     DCHECK(number.hasValue());
   }
 
@@ -96,12 +101,18 @@ class DirEntry {
     hash_ = hash;
   }
 
-  mode_t getMode() const {
+  /**
+   * Returns the mode specified when this inode was created (whether from source
+   * control or via mkdir/mknod/creat).
+   *
+   * Note: when the mode_t for an inode changes, this value does not update.
+   */
+  mode_t getInitialMode() const {
     // Callers should not check getMode() if an inode is loaded.
     // If the child inode is loaded it is the authoritative source for
     // the mode bits.
     DCHECK(!hasInodePointer_);
-    return mode_;
+    return initialMode_;
   }
 
   mode_t getModeUnsafe() const {
@@ -109,7 +120,7 @@ class DirEntry {
     //
     // Callers should always call getMode() instead. This method only exists
     // for supporting legacy code which will be refactored eventually.
-    return mode_;
+    return initialMode_;
   }
 
   /**
@@ -119,7 +130,7 @@ class DirEntry {
    * loaded.  The file type for an existing entry never changes.
    */
   dtype_t getDtype() const {
-    return mode_to_dtype(mode_);
+    return mode_to_dtype(initialMode_);
   }
 
   /**
@@ -160,14 +171,26 @@ class DirEntry {
 
  private:
   /**
-   * The initial entry type for this entry.
+   * The initial entry type for this entry. Two bits are borrowed from the top
+   * so the entire struct fits in four words.
+   *
+   * TODO: This field is not updated when an inode's mode bits are changed.
+   * For now, it's used primarily to migrate data without loss from the old
+   * Overlay Dir storage. After the InodeMetadataTable is in use for a while,
+   * this should be replaced with dtype_t and the bitfields can go away.
    */
-  mode_t mode_{0};
+  mode_t initialMode_ : 30;
 
-  // Can we borrow some bits from mode_t? :) If so, Entry would fit in 4
-  // words.
-  bool hasHash_{false};
-  bool hasInodePointer_{false};
+  /**
+   * Whether the hash_ field matches the contents from source control. If
+   * hasHash_ is false, the entry is materialized.
+   */
+  bool hasHash_ : 1;
+
+  /**
+   * If true, the inode_ field is valid. If false, inodeNumber_ is valid.
+   */
+  bool hasInodePointer_ : 1;
 
   /**
    * If the entry is not materialized, this contains the hash
@@ -211,10 +234,7 @@ class DirEntry {
   };
 };
 
-// TODO: We can still do better than this. When the Entry only holds dtype_t
-// instead of mode_t, this will fit in 32 bytes, which would be a material
-// savings given how many trees Eden tends to keep loaded.
-static_assert(sizeof(DirEntry) == 40, "DirEntry is five words");
+static_assert(sizeof(DirEntry) == 32, "DirEntry is four words");
 
 /**
  * Represents a directory in the overlay.

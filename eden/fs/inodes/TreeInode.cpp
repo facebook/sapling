@@ -593,7 +593,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         entry.getInodeNumber(),
         inodePtrFromThis(),
         name,
-        entry.getMode(),
+        entry.getInitialMode(),
         [&]() -> folly::Optional<InodeTimestamps> {
           // If this inode doesn't have timestamps in the inode metadata table
           // but does in the overlay, use them.
@@ -618,7 +618,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},
              treeHash = entry.getHash(),
-             entryMode = entry.getMode(),
+             entryMode = entry.getInitialMode(),
              number = entry.getInodeNumber()](
                 std::shared_ptr<const Tree> tree) mutable
             -> unique_ptr<InodeBase> {
@@ -671,7 +671,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
       entry.getInodeNumber(),
       inodePtrFromThis(),
       name,
-      entry.getMode(),
+      entry.getInitialMode(),
       overlayDir->second,
       std::move(overlayDir->first),
       folly::none);
@@ -945,7 +945,7 @@ FileInodePtr TreeInode::createImpl(
           childNumber,
           this->inodePtrFromThis(),
           name,
-          entry.getMode(),
+          entry.getInitialMode(),
           InodeTimestamps{currentTime});
     }
 
@@ -2087,7 +2087,8 @@ Future<Unit> TreeInode::computeDiff(
           // not from the directory entry.  However, any source-control-visible
           // metadata changes will cause the inode to be materialized, and
           // the previous path will be taken.
-          treeEntryTypeFromMode(inodeEntry->getMode()) == scmEntry.getType() &&
+          treeEntryTypeFromMode(inodeEntry->getInitialMode()) ==
+              scmEntry.getType() &&
           inodeEntry->getHash() == scmEntry.getHash()) {
         // This file or directory is unchanged.  We can skip it.
         XLOG(DBG9) << "diff: unchanged unloaded file: " << entryPath;
@@ -2134,7 +2135,7 @@ Future<Unit> TreeInode::computeDiff(
         // TODO: Once we build a new backing store and can replace our
         // janky hashing scheme for mercurial data, we should be able just
         // immediately assume the file is different here, without checking.
-        if (treeEntryTypeFromMode(inodeEntry->getMode()) !=
+        if (treeEntryTypeFromMode(inodeEntry->getInitialMode()) !=
             scmEntry.getType()) {
           // The mode is definitely modified
           XLOG(DBG5) << "diff: file modified due to mode change: " << entryPath;
@@ -3142,7 +3143,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
         auto& inodeEntry = entry.second;
         infoEntry.name = entry.first.stringPiece().str();
         infoEntry.inodeNumber = inodeEntry.getInodeNumber().get();
-        infoEntry.mode = inodeEntry.getMode();
+        infoEntry.mode = inodeEntry.getInitialMode();
         infoEntry.loaded = false;
         infoEntry.materialized = inodeEntry.isMaterialized();
         if (!infoEntry.materialized) {
