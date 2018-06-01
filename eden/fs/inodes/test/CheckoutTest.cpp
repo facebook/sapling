@@ -876,7 +876,6 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
                      .asTreePtr();
   auto subInodeNumber = subTree->getNodeId();
   subTree->incFuseRefcount();
-  auto treeHash = subTree->getContents().rlock()->treeHash;
   subTree.reset();
 
   testMount.remountGracefully();
