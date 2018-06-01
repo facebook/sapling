@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use quickcheck::{Arbitrary, Gen};
-use rand::distributions::{IndependentSample, LogNormal};
+use quickcheck::rand::distributions::{IndependentSample, LogNormal};
 
 use errors::*;
 

@@ -303,7 +303,7 @@ mod test {
     use std::cmp;
 
     use quickcheck::{Gen, StdGen};
-    use rand::{self, Rng};
+    use quickcheck::rand::{self, Rng};
 
     use mercurial::mocks::{AS_HASH, BS_HASH};
     use mercurial_types::delta::Fragment;

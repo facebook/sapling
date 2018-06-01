@@ -25,7 +25,7 @@ use futures_trace::{self, Traced};
 use itertools::Itertools;
 use pylz4;
 use rand::Isaac64Rng;
-use rand::distributions::{LogNormal, Sample};
+use rand::distributions::{Distribution, LogNormal};
 use scuba::{ScubaClient, ScubaSample};
 use time_ext::DurationExt;
 use tokio_core::reactor::Remote;
@@ -149,7 +149,7 @@ impl OpenableRepoType for RepoType {
 
                 let mut delay_gen = LogNormalGenerator {
                     // This is a deterministic RNG if not seeded
-                    rng: Isaac64Rng::new_unseeded(),
+                    rng: Isaac64Rng::new_from_u64(0),
                     distribution: LogNormal::new(mu, sigma),
                 };
                 let delay_gen = move |()| {

@@ -56,7 +56,6 @@ mod test {
     pub extern crate ascii;
     pub extern crate async_unit;
     pub extern crate quickcheck;
-    pub extern crate rand;
 
     pub extern crate branch_even;
     pub extern crate branch_uneven;

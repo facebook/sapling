@@ -24,7 +24,7 @@ use mercurial::{HgNodeHash, NULL_HASH};
 use mercurial_types::{MPath, RepoPath};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
 use quickcheck::{QuickCheck, StdGen};
-use rand;
+use quickcheck::rand;
 
 use Bundle2Item;
 use bundle2::{Bundle2Stream, StreamEvent};

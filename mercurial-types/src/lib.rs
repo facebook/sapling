@@ -56,7 +56,6 @@ extern crate diesel;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate itertools;
-extern crate rand;
 extern crate rust_crypto;
 #[macro_use]
 extern crate url;

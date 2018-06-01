@@ -49,7 +49,7 @@ mod test {
 
     use futures::Stream;
     use quickcheck::{QuickCheck, StdGen, TestResult};
-    use rand;
+    use quickcheck::rand;
     use slog::{Drain, Logger};
     use slog_term;
     use tokio_core::reactor::Core;
