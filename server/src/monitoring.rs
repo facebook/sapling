@@ -12,7 +12,7 @@ use clap::ArgMatches;
 use slog::Logger;
 use tokio_core::reactor::Core;
 
-use services;
+use services::{self, Fb303Service, FbStatus};
 use stats;
 
 use errors::*;
@@ -30,6 +30,15 @@ pub(crate) fn start_stats() -> Result<JoinHandle<!>> {
         })?)
 }
 
+struct MononokeService;
+
+impl Fb303Service for MononokeService {
+    fn getStatus(&self) -> FbStatus {
+        // TODO: return Starting while precaching is active.
+        FbStatus::Alive
+    }
+}
+
 pub(crate) fn start_thrift_service<'a>(
     logger: &Logger,
     matches: &ArgMatches<'a>,
@@ -45,6 +54,7 @@ pub(crate) fn start_thrift_service<'a>(
                     "mononoke_server",
                     port,
                     0, // Disables separate status http server
+                    Box::new(MononokeService),
                 ).expect("failure while running thrift service framework")
             })
             .map_err(Error::from)

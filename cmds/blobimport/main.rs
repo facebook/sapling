@@ -56,6 +56,7 @@ use filenodes::{FilenodeInfo, Filenodes};
 use futures::{stream, Future, IntoFuture, Stream};
 use futures::sync::mpsc::unbounded;
 use futures_cpupool::CpuPool;
+use services::AliveService;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 use stats::Timeseries;
@@ -443,6 +444,7 @@ fn start_thrift_service<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result
                 "mononoke_server",
                 port,
                 0, // Disables separate status http server
+                AliveService::new(),
             ).expect("failure while running thrift service framework")
         })
         .map(|_| ()) // detaches the thread
