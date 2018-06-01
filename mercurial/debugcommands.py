@@ -2924,7 +2924,7 @@ def debugprogress(ui, number, spinner=False, nototal=False, bytes=False):
 
 @command(
     b"debugcheckcasecollisions",
-    [("r", "rev", [], _("check the specified revision"), _("REV"))],
+    [("r", "rev", "", _("check the specified revision"), _("REV"))],
     _("[-r REV]... FILENAMES"),
 )
 def debugcheckcasecollisions(ui, repo, *testfiles, **opts):

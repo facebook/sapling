@@ -30,3 +30,8 @@ Check self-conflicts
   NEWdir (directory for NEWdir/newfile) conflicts with newdir (directory for newdir/newfile)
   newdir/NEWFILE conflicts with newdir/newfile
   [1]
+
+Check against a particular revision
+  $ hg debugcheckcasecollisions -r 0 FILE4
+  file4 conflicts with FILE4
+  [1]
