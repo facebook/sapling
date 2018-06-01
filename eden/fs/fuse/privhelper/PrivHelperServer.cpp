@@ -219,8 +219,8 @@ void PrivHelperServer::processUnmountMsg(PrivHelperConn::Message* msg) {
     }
 
     const auto range = bindMountPoints_.equal_range(mountPath);
-    for (auto it = range.first; it != range.second; ++it) {
-      bindUnmount(it->second.c_str());
+    for (auto it2 = range.first; it2 != range.second; ++it2) {
+      bindUnmount(it2->second.c_str());
     }
     bindMountPoints_.erase(range.first, range.second);
 
@@ -300,7 +300,7 @@ void PrivHelperServer::processBindMountMsg(PrivHelperConn::Message* msg) {
   conn_.sendMsg(msg);
 }
 
-void PrivHelperServer::messageLoop() {
+[[noreturn]] void PrivHelperServer::messageLoop() {
   PrivHelperConn::Message msg;
 
   while (true) {

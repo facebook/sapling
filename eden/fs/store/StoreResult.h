@@ -131,7 +131,7 @@ class StoreResult {
   StoreResult(StoreResult const&) = delete;
   StoreResult& operator=(StoreResult const&) = delete;
 
-  void throwInvalidError() const;
+  [[noreturn]] void throwInvalidError() const;
 
   // Whether or not the result is value
   // If the key was not found in the store, valid_ will be false.

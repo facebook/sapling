@@ -224,7 +224,7 @@ TEST_F(MononokeBackingStoreTest, testGetTree) {
   auto server = createServer();
   auto blobs = getBlobs();
   auto treehash = this->treehash;
-  server->start([&server, &blobs, treehash, this]() {
+  server->start([&server, treehash, this]() {
     MononokeBackingStore store(
         server->addresses()[0].address,
         "repo",
@@ -266,7 +266,7 @@ TEST_F(MononokeBackingStoreTest, testMalformedGetTree) {
   auto server = createServer();
   auto blobs = getBlobs();
   auto treehash = this->malformedhash;
-  server->start([&server, &blobs, treehash, this]() {
+  server->start([&server, treehash, this]() {
     MononokeBackingStore store(
         server->addresses()[0].address,
         "repo",

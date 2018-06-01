@@ -226,8 +226,6 @@ TEST(InodePtr, baseCasting) {
   }
   {
     // Copy versions
-    auto rawPtr = basePtr.asTree();
-    auto rawPtr2 = basePtr.asTreeOrNull();
     EXPECT_REFCOUNT(kRootRefCount + 1, rootPtr);
     auto ptr2 = basePtr.asTreePtr();
     EXPECT_TRUE(basePtr);

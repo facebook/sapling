@@ -274,7 +274,8 @@ class FakeTreeBuilder {
   StoredTree* finalizedRoot_{nullptr};
 };
 
-struct FakeTreeBuilder::FileInfo {
+class FakeTreeBuilder::FileInfo {
+ public:
   RelativePath path;
   std::string contents;
   bool executable;

@@ -132,15 +132,6 @@ void basicAttrChecks(const FileInodePtr& inode, const Dispatcher::Attr& attr) {
 }
 
 /**
- * Helper function used by BASIC_ATTR_CHECKS()
- */
-Dispatcher::Attr basicAttrChecks(const FileInodePtr& inode) {
-  auto attr = getFileAttr(inode);
-  basicAttrChecks(inode, attr);
-  return attr;
-}
-
-/**
  * Run some basic sanity checks on an inode's attributes.
  *
  * This can be invoked with either a two arguments (an inode and attributes),

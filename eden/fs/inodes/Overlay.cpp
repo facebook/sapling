@@ -841,7 +841,7 @@ void Overlay::updateTimestampToHeader(
   if (wrote == -1) {
     folly::throwSystemError("pwriteNoInt failed");
   }
-  if (wrote != newHeader.size()) {
+  if (wrote != static_cast<ssize_t>(newHeader.size())) {
     folly::throwSystemError(
         "writeNoInt wrote only ", wrote, " of ", newHeader.size(), " bytes");
   }

@@ -809,7 +809,8 @@ folly::Future<struct stat> FileInode::stat() {
           struct stat overlayStat;
           checkUnixError(fstat(state->file.fd(), &overlayStat));
 
-          if (overlayStat.st_size < Overlay::kHeaderLength) {
+          if (overlayStat.st_size <
+              static_cast<off_t>(Overlay::kHeaderLength)) {
             EDEN_BUG() << "Overlay file for " << self->getNodeId()
                        << " is too short for header: size="
                        << overlayStat.st_size;

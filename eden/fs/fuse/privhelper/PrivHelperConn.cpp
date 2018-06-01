@@ -249,7 +249,7 @@ void PrivHelperConn::recvMsg(Message* msg, folly::File* f) {
   }
   // Make sure we got at least a full header before we try
   // accessing the header data
-  if (bytesRead < offsetof(Message, data)) {
+  if (bytesRead < static_cast<ssize_t>(offsetof(Message, data))) {
     throw std::runtime_error(folly::to<string>(
         "received partial message header from privhelper socket: size=",
         bytesRead));
@@ -261,7 +261,7 @@ void PrivHelperConn::recvMsg(Message* msg, folly::File* f) {
         "privhelper socket");
   }
   // Make sure we got the full message
-  if (bytesRead != msg->getFullLength()) {
+  if (static_cast<size_t>(bytesRead) != msg->getFullLength()) {
     throw std::runtime_error(folly::to<string>(
         "privhelper message size mismatch: received ",
         bytesRead,
@@ -439,7 +439,7 @@ void PrivHelperConn::serializeErrorResponse(
   msg->dataSize = buf.length();
 }
 
-void PrivHelperConn::rethrowErrorResponse(const Message* msg) {
+[[noreturn]] void PrivHelperConn::rethrowErrorResponse(const Message* msg) {
   if (msg->msgType != RESP_ERROR) {
     throw std::runtime_error(folly::to<string>(
         "expected error response, but "

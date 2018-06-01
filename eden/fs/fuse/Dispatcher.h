@@ -21,7 +21,7 @@ template <class T, class Tag, class AccessMode>
 class ThreadLocal;
 template <class T>
 class Future;
-}; // namespace folly
+} // namespace folly
 
 namespace facebook {
 namespace eden {

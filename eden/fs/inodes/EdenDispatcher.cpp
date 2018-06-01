@@ -216,7 +216,7 @@ folly::Future<folly::Unit> EdenDispatcher::unlink(
     PathComponentPiece name) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "unlink({}, {})", parent, name);
   return inodeMap_->lookupTreeInode(parent).then(
-      [this, childName = PathComponent{name}](const TreeInodePtr& inode) {
+      [childName = PathComponent{name}](const TreeInodePtr& inode) {
         return inode->unlink(childName);
       });
 }

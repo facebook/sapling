@@ -356,7 +356,8 @@ void EdenServiceHandler::getFilesChangedSince(
   auto edenMount = server_->getMount(*mountPoint);
   auto delta = edenMount->getJournal().getLatest();
 
-  if (fromPosition->mountGeneration != edenMount->getMountGeneration()) {
+  if (fromPosition->mountGeneration !=
+      static_cast<ssize_t>(edenMount->getMountGeneration())) {
     throw newEdenError(
         ERANGE,
         "fromPosition.mountGeneration does not match the current "
@@ -427,7 +428,8 @@ void EdenServiceHandler::debugGetRawJournal(
   auto edenMount = server_->getMount(params->mountPoint);
 
   auto mountGeneration = params->fromPosition.mountGeneration;
-  if (mountGeneration != edenMount->getMountGeneration()) {
+  if (mountGeneration !=
+      static_cast<ssize_t>(edenMount->getMountGeneration())) {
     throw newEdenError(
         ERANGE,
         "fromPosition.mountGeneration does not match the current "
@@ -452,7 +454,7 @@ void EdenServiceHandler::debugGetRawJournal(
   auto current = toPos;
   auto fromPos = params->fromPosition.sequenceNumber;
   while (current) {
-    if (current->toSequence < fromPos) {
+    if (static_cast<ssize_t>(current->toSequence) < fromPos) {
       break;
     }
 
@@ -488,7 +490,7 @@ void EdenServiceHandler::debugGetRawJournal(
     out.deltas.push_back(delta);
     current = current->previous.get();
   }
-};
+}
 
 void EdenServiceHandler::getFileInformation(
     std::vector<FileInformationOrError>& out,

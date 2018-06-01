@@ -241,7 +241,6 @@ BlobMetadata LocalStore::WriteBatch::putBlob(const Hash& id, const Blob* blob) {
   SerializedBlobMetadata metadataBytes(metadata);
 
   auto hashSlice = id.getBytes();
-  ByteRange bodyBytes;
 
   // Add a git-style blob prefix
   auto prefix = folly::to<string>("blob ", contents.computeChainDataLength());

@@ -25,7 +25,7 @@
 namespace folly {
 template <typename T>
 class Future;
-class Unit;
+struct Unit;
 } // namespace folly
 
 namespace facebook {

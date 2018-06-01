@@ -20,7 +20,7 @@ namespace folly {
 class exception_wrapper;
 template <typename T>
 class Future;
-class Unit;
+struct Unit;
 } // namespace folly
 
 namespace facebook {

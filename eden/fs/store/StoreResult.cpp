@@ -45,7 +45,7 @@ folly::IOBuf StoreResult::extractIOBuf() {
       IOBuf::TAKE_OWNERSHIP, data, size, freeString, stringPtr.release());
 }
 
-void StoreResult::throwInvalidError() const {
+[[noreturn]] void StoreResult::throwInvalidError() const {
   // Maybe we should define our own more specific error type in the future
   throw std::domain_error("value not present in store");
 }

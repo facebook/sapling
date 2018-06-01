@@ -18,7 +18,8 @@
 namespace facebook {
 namespace eden {
 
-struct BindMount {
+class BindMount {
+ public:
   BindMount(AbsolutePathPiece clientDirPath, AbsolutePathPiece mountDirPath)
       : pathInClientDir(clientDirPath), pathInMountDir(mountDirPath) {}
 

@@ -595,8 +595,8 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
 
   // Start up the fuse workers.
   return folly::collectAllSemiFuture(futures).toUnsafeFuture().then(
-      [this, edenMount, channelData = std::move(channelData)]() mutable {
-        return edenMount->takeoverFuse(std::move(channelData));
+      [edenMount, chData = std::move(channelData)]() mutable {
+        return edenMount->takeoverFuse(std::move(chData));
       });
 }
 

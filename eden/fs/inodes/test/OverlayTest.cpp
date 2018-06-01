@@ -156,7 +156,6 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
 }
 
 TEST_F(OverlayTest, getFilePath) {
-  auto overlay = mount_.getEdenMount()->getOverlay();
   std::array<char, Overlay::kMaxPathLength> path;
 
   Overlay::getFilePath(1_ino, path);

@@ -564,7 +564,8 @@ bool UnixSocket::trySendMessage(SendQueueEntry* entry) {
     // Update entry->iov and entry->iovIndex to account for the data that was
     // successfully sent.
     while (bytesSent > 0) {
-      if (bytesSent >= entry->iov[entry->iovIndex].iov_len) {
+      if (static_cast<size_t>(bytesSent) >=
+          entry->iov[entry->iovIndex].iov_len) {
         bytesSent -= entry->iov[entry->iovIndex].iov_len;
         ++entry->iovIndex;
       } else {
@@ -861,7 +862,7 @@ bool UnixSocket::tryReceiveData() {
   }
 
   recvMessage_.data.append(bytesReceived);
-  if (bytesReceived == dataToRead) {
+  if (static_cast<size_t>(bytesReceived) == dataToRead) {
     return true;
   }
   return false;

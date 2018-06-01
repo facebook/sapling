@@ -153,7 +153,8 @@ class MappedDiskVector {
     }
 
     if (kMagic != header.magic || header.version != 1 ||
-        sizeof(header) > st.st_size || header.recordSize == 0 ||
+        static_cast<ssize_t>(sizeof(header)) > st.st_size ||
+        header.recordSize == 0 ||
         // careful not to overflow by multiplying entryCount by recordSize
         header.entryCount > (st.st_size - sizeof(header)) / header.recordSize ||
         header.unused != 0) {
@@ -413,7 +414,7 @@ class MappedDiskVector {
     // optimization and it doesn't matter if kPageSize differs from the
     // system page size.
     size_t desiredSize = detail::roundUpToNonzeroPageSize(fileSize);
-    if (fileSize != desiredSize) {
+    if (fileSize != static_cast<ssize_t>(desiredSize)) {
       if (fileSize) {
         XLOG(WARNING)
             << "Warning: MappedDiskVector file size not multiple of page size: "

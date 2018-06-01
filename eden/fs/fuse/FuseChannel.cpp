@@ -225,7 +225,7 @@ static std::string flagsToLabel(
       // Sometimes a define evaluates to zero; it's not useful so skip it
       continue;
     }
-    if ((flags & it.first) == it.first) {
+    if ((static_cast<decltype(it.first)>(flags) & it.first) == it.first) {
       bits.push_back(it.second);
       flags &= ~it.first;
     }
@@ -920,7 +920,7 @@ void FuseChannel::readInitPacket() {
     // We currently don't error out for now if we receive more data: maybe this
     // could happen for future kernel versions that speak a newer FUSE protocol
     // with extra fields in fuse_init_in?
-    if (res < sizeof(init)) {
+    if (static_cast<size_t>(res) < sizeof(init)) {
       throw std::runtime_error(folly::to<string>(
           "received partial FUSE_INIT packet on mount \"",
           mountPath_,
@@ -1068,7 +1068,7 @@ void FuseChannel::processSession() {
     // filesystem call that need the same inode lock.  We will then not be able
     // to resolve this deadlock on kernel inode locks without rebooting the
     // system.
-    if (header->pid == myPid) {
+    if (static_cast<pid_t>(header->pid) == myPid) {
       XLOG(DFATAL) << "Received FUSE request from our own pid: opcode="
                    << header->opcode << " nodeid=" << header->nodeid
                    << " pid=" << header->pid;

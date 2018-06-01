@@ -14,7 +14,7 @@
 namespace folly {
 template <class T, class Tag, class AccessMode>
 class ThreadLocal;
-};
+}
 
 namespace facebook {
 namespace eden {

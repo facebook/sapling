@@ -72,7 +72,7 @@ bool Hash::operator<(const Hash& otherHash) const {
 
 namespace {
 Hash::Storage hexToBytes(StringPiece hex) {
-  auto requiredSize = Hash::RAW_SIZE * 2;
+  size_t requiredSize = Hash::RAW_SIZE * 2;
   if (hex.size() != requiredSize) {
     throw std::invalid_argument(folly::sformat(
         "{} should have size {} but had size {}",

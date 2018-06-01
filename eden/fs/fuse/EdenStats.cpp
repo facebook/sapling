@@ -19,12 +19,6 @@ namespace {
 constexpr std::chrono::microseconds kMinValue{0};
 constexpr std::chrono::microseconds kMaxValue{10000};
 constexpr std::chrono::microseconds kBucketSize{1000};
-constexpr unsigned int kNumTimeseriesBuckets{60};
-constexpr auto kDurations = folly::make_array(
-    std::chrono::seconds(60),
-    std::chrono::seconds(600),
-    std::chrono::seconds(3600),
-    std::chrono::seconds(0));
 } // namespace
 
 namespace facebook {

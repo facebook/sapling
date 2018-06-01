@@ -175,7 +175,7 @@ class PrivHelperConn {
       folly::StringPiece message,
       int errnum = 0,
       folly::StringPiece excType = {});
-  static void rethrowErrorResponse(const Message* msg);
+  [[noreturn]] static void rethrowErrorResponse(const Message* msg);
 
  private:
   int socket_{-1};
