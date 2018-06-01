@@ -146,7 +146,7 @@ TreeInode::TreeInode(
     folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
     DirContents&& dir,
     folly::Optional<Hash> treeHash)
-    : InodeBase(ino, initialMode, std::move(initialTimestampsFn), parent, name),
+    : Base(ino, initialMode, std::move(initialTimestampsFn), parent, name),
       contents_(folly::in_place, std::move(dir), treeHash) {
   DCHECK_NE(ino, kRootNodeId);
 }
@@ -159,7 +159,7 @@ TreeInode::TreeInode(
     folly::Optional<InodeTimestamps> initialTimestamps,
     DirContents&& dir,
     folly::Optional<Hash> treeHash)
-    : InodeBase(ino, initialMode, initialTimestamps, parent, name),
+    : Base(ino, initialMode, initialTimestamps, parent, name),
       contents_(folly::in_place, std::move(dir), treeHash) {
   DCHECK_NE(ino, kRootNodeId);
 }
@@ -176,7 +176,7 @@ TreeInode::TreeInode(
     folly::Optional<InodeTimestamps> initialTimestamps,
     DirContents&& dir,
     folly::Optional<Hash> treeHash)
-    : InodeBase(mount, initialTimestamps),
+    : Base(mount, initialTimestamps),
       contents_(folly::in_place, std::move(dir), treeHash) {}
 
 TreeInode::~TreeInode() {}
@@ -952,7 +952,7 @@ FileInodePtr TreeInode::createImpl(
     entry.setInode(inode.get());
     getInodeMap()->inodeCreated(inode);
 
-    auto timestamps = updateMtimeAndCtime(getNow());
+    auto timestamps = updateMtimeAndCtimeLocked(*contents, getNow());
     saveOverlayDir(*contents, timestamps);
     contents.unlock();
   }
@@ -1113,7 +1113,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     getInodeMap()->inodeCreated(newChild);
 
     // Save our updated overlay data
-    auto timestamps = updateMtimeAndCtime(now);
+    auto timestamps = updateMtimeAndCtimeLocked(*contents, now);
     saveOverlayDir(*contents, timestamps);
   }
 
@@ -1288,7 +1288,7 @@ int TreeInode::tryRemoveChild(
 
     // We want to update mtime and ctime of parent directory after removing the
     // child.
-    auto timestamps = updateMtimeAndCtime(getNow());
+    auto timestamps = updateMtimeAndCtimeLocked(*contents, getNow());
     saveOverlayDir(*contents, timestamps);
   }
   deletedInode.reset();
@@ -3194,7 +3194,7 @@ InodeMetadata TreeInode::getMetadata() const {
 
 void TreeInode::updateAtime() {
   auto lock = contents_.wlock();
-  InodeBase::updateAtime();
+  InodeBaseMetadata::updateAtimeLocked(*lock);
 }
 
 InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {

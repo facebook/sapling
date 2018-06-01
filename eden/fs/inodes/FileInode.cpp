@@ -527,7 +527,7 @@ FileInode::FileInode(
     mode_t initialMode,
     folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
     const folly::Optional<Hash>& hash)
-    : InodeBase(
+    : Base(
           ino,
           initialMode,
           std::move(initialTimestampsFn),
@@ -542,12 +542,7 @@ FileInode::FileInode(
     PathComponentPiece name,
     mode_t initialMode,
     InodeTimestamps initialTimestamps)
-    : InodeBase(
-          ino,
-          initialMode,
-          initialTimestamps,
-          std::move(parentInode),
-          name),
+    : Base(ino, initialMode, initialTimestamps, std::move(parentInode), name),
       state_(folly::in_place) {}
 
 folly::Future<Dispatcher::Attr> FileInode::getattr() {
@@ -689,10 +684,6 @@ mode_t FileInode::getPermissions() const {
 InodeMetadata FileInode::getMetadata() const {
   auto lock = state_.rlock();
   return getMetadataLocked(*lock);
-}
-
-InodeMetadata FileInode::getMetadataLocked(const State&) const {
-  return InodeBase::getMetadata();
 }
 
 folly::Optional<Hash> FileInode::getBlobHash() const {
@@ -906,7 +897,7 @@ Future<string> FileInode::readAll() {
         }
 
         // We want to update atime after the read operation.
-        self->updateAtime();
+        self->updateAtimeLocked(*state);
         return result;
       });
 }
@@ -916,7 +907,7 @@ Future<BufVec> FileInode::read(size_t size, off_t off) {
       LockedState{this},
       [size, off, self = inodePtrFromThis()](LockedState&& state) {
         SCOPE_SUCCESS {
-          self->updateAtime();
+          self->updateAtimeLocked(*state);
         };
 
         if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
@@ -965,7 +956,7 @@ size_t FileInode::writeImpl(
       ::pwritev(state->file.fd(), iov, numIovecs, off + Overlay::kHeaderLength);
   checkUnixError(xfer);
 
-  updateMtimeAndCtime(getNow());
+  updateMtimeAndCtimeLocked(*state, getNow());
 
   return xfer;
 }

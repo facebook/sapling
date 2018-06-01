@@ -36,7 +36,7 @@ class InodeBase {
    * Constructor for the root TreeInode of an EdenMount.
    * type is set to dtype_t::Dir
    */
-  explicit InodeBase(
+  InodeBase(
       EdenMount* mount,
       folly::Optional<InodeTimestamps> initialTimestamps);
 
@@ -367,27 +367,6 @@ class InodeBase {
 
  protected:
   /**
-   * Get this inode's metadata.  The caller is responsible for holding its lock
-   * while calling this method.
-   */
-  InodeMetadata getMetadata() const;
-
-  /**
-   * Helper function to set the atime of this inode.  The caller is responsible
-   * for holding its lock while calling this method.
-   *
-   * Note that FUSE doesn't claim to fully implement atime.
-   * https://sourceforge.net/p/fuse/mailman/message/34448996/
-   */
-  void updateAtime();
-
-  /**
-   * Updates this inode's mtime and ctime to the given timestamp.  The caller is
-   * responsible for holding its lock while calling this method.
-   */
-  InodeTimestamps updateMtimeAndCtime(timespec now);
-
-  /**
    * Returns current time from EdenMount's clock.
    */
   timespec getNow() const;
@@ -403,6 +382,11 @@ class InodeBase {
   void updateJournal();
 
  private:
+  // Private so only InodeBaseMetadata can call them
+  InodeMetadata getMetadata() const;
+  void updateAtime();
+  InodeTimestamps updateMtimeAndCtime(timespec now);
+
   template <typename InodeType>
   friend class InodePtrImpl;
   friend class InodePtrTestHelper;
@@ -573,6 +557,47 @@ class InodeBase {
    * don't ever update parent pointers or names yet.
    */
   folly::Synchronized<LocationInfo> location_;
+
+  template <typename InodeState>
+  friend class InodeBaseMetadata;
+};
+
+/**
+ * Base class for FileInode and TreeInode that ensures access to the metadata
+ * only occurs while the inode's state lock is held.
+ */
+template <typename InodeState>
+class InodeBaseMetadata : public InodeBase {
+ public:
+  // Forward constructors from InodeBase.
+  using InodeBase::InodeBase;
+
+ protected:
+  /**
+   * Get this inode's metadata. The inode's state lock must be held.
+   */
+  InodeMetadata getMetadataLocked(const InodeState&) const {
+    return InodeBase::getMetadata();
+  }
+
+  /**
+   * Helper function to set the atime of this inode. The inode's state lock must
+   * be held.
+   *
+   * Note that FUSE doesn't claim to fully implement atime.
+   * https://sourceforge.net/p/fuse/mailman/message/34448996/
+   */
+  void updateAtimeLocked(InodeState&) {
+    return InodeBase::updateAtime();
+  }
+
+  /**
+   * Updates this inode's mtime and ctime to the given timestamp. The inode's
+   * state lock must be held.
+   */
+  InodeTimestamps updateMtimeAndCtimeLocked(InodeState&, timespec now) {
+    return InodeBase::updateMtimeAndCtime(now);
+  }
 };
 } // namespace eden
 } // namespace facebook

@@ -130,8 +130,9 @@ struct FileInodeState {
   size_t openCount{0};
 };
 
-class FileInode : public InodeBase {
+class FileInode : public InodeBaseMetadata<FileInodeState> {
  public:
+  using Base = InodeBaseMetadata<FileInodeState>;
   using FileHandlePtr = std::shared_ptr<EdenFileHandle>;
 
   enum : int { WRONG_TYPE_ERRNO = EISDIR };
@@ -433,11 +434,6 @@ class FileInode : public InodeBase {
    * Update the st_blocks field in a stat structure based on the st_size value.
    */
   static void updateBlockCount(struct stat& st);
-
-  /**
-   * Returns a copy of this inode's metadata.
-   */
-  InodeMetadata getMetadataLocked(const State&) const;
 
   folly::Synchronized<State> state_;
 
