@@ -108,6 +108,7 @@ use metaconfig::repoconfig::RepoConfig;
 use errors::*;
 
 use listener::{ssh_server_mux, Stdio};
+use monitoring::{ReadyHandle, ReadyState, ReadyStateBuilder};
 
 struct SenderBytesWrite {
     chan: Wait<mpsc::Sender<Bytes>>,
@@ -222,7 +223,7 @@ fn start_repo_listeners<I>(
     repos: I,
     root_log: &Logger,
     sockname: &str,
-) -> Result<Vec<JoinHandle<!>>>
+) -> Result<(Vec<JoinHandle<!>>, ReadyState)>
 where
     I: IntoIterator<Item = (String, RepoConfig)>,
 {
@@ -233,11 +234,13 @@ where
 
     let sockname = String::from(sockname);
     let mut repo_senders = HashMap::new();
+    let mut ready = ReadyStateBuilder::new();
 
     let mut handles: Vec<_> = repos
         .into_iter()
         .map(|(reponame, config)| {
             info!(root_log, "Start listening for repo {:?}", config.repotype);
+            let ready_handle = ready.create_handle(reponame.as_ref());
 
             // Buffer size doesn't make much sense. `.send()` consumes the sender, so we clone
             // the sender. However each clone creates one more entry in the channel.
@@ -249,7 +252,7 @@ where
                 .name(format!("listener_{:?}", config.repotype))
                 .spawn({
                     let root_log = root_log.clone();
-                    move || repo_listen(reponame, config, root_log, receiver)
+                    move || repo_listen(reponame, config, root_log, ready_handle, receiver)
                 })
                 .map_err(Error::from)
         })
@@ -273,7 +276,10 @@ where
         ));
     }
 
-    Ok(handles.into_iter().filter_map(Result::ok).collect())
+    Ok((
+        handles.into_iter().filter_map(Result::ok).collect(),
+        ready.freeze(),
+    ))
 }
 
 // This function accepts connections, reads Preamble and routes request to a thread responsible for
@@ -346,6 +352,7 @@ fn repo_listen(
     reponame: String,
     config: RepoConfig,
     root_log: Logger,
+    ready_handle: ReadyHandle,
     input_stream: mpsc::Receiver<Stdio>,
 ) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
@@ -373,6 +380,7 @@ fn repo_listen(
                     ()
                 }
             });
+    let initial_warmup = ready_handle.wait_for(initial_warmup);
 
     let server = input_stream.for_each(move |stdio| {
         // Have a connection. Extract std{in,out,err} streams for socket
@@ -487,19 +495,20 @@ fn main() {
         info!(root_log, "Starting up");
 
         let stats_aggregation = monitoring::start_stats()?;
-        let maybe_thrift = match monitoring::start_thrift_service(&root_log, &matches) {
-            None => None,
-            Some(handle) => Some(handle?),
-        };
 
         let config = get_config(root_log, &matches)?;
-        let repo_listeners = start_repo_listeners(
+        let (repo_listeners, ready) = start_repo_listeners(
             config.repos.into_iter(),
             root_log,
             matches
                 .value_of("listening-host-port")
                 .expect("listening path must be specified"),
         )?;
+
+        let maybe_thrift = match monitoring::start_thrift_service(&root_log, &matches, ready) {
+            None => None,
+            Some(handle) => Some(handle?),
+        };
 
         for handle in vec![stats_aggregation]
             .into_iter()
