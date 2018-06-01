@@ -435,6 +435,27 @@ TEST_F(RenameTest, renameOverEmptyDirWithPositiveFuseRefcount) {
   EXPECT_EQ(yino, newParent->getChildInodeNumber("emptydir"_pc));
 }
 
+TEST_F(RenameTest, renameUpdatesMtime) {
+  auto bInode = mount_->getTreeInode("a/b");
+  auto cInode = mount_->getTreeInode("a/b/c");
+
+  EXPECT_EQ(
+      mount_->getClock().getRealtime(), bInode->getMetadata().timestamps.mtime);
+  EXPECT_EQ(
+      mount_->getClock().getRealtime(), cInode->getMetadata().timestamps.mtime);
+
+  mount_->getClock().advance(1s);
+
+  auto renameFuture = cInode->rename(
+      PathComponentPiece{"doc.txt"}, bInode, PathComponentPiece{"doc.txt"});
+  EXPECT_TRUE(renameFuture.isReady());
+
+  EXPECT_EQ(
+      mount_->getClock().getRealtime(), bInode->getMetadata().timestamps.mtime);
+  EXPECT_EQ(
+      mount_->getClock().getRealtime(), cInode->getMetadata().timestamps.mtime);
+}
+
 /*
  * Rename tests where the source and destination inode objects
  * are not loaded yet when the rename starts.

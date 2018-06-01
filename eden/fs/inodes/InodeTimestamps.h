@@ -72,12 +72,12 @@ class EdenTimestamp {
     return *this = EdenTimestamp{ts};
   }
 
-  bool operator<(EdenTimestamp ts) const {
-    return nsec_ < ts.nsec_;
+  bool operator==(EdenTimestamp ts) const {
+    return nsec_ == ts.nsec_;
   }
 
-  bool operator<(timespec ts) const {
-    return toTimespec() < ts;
+  bool operator<(EdenTimestamp ts) const {
+    return nsec_ < ts.nsec_;
   }
 
   /**
@@ -95,6 +95,30 @@ class EdenTimestamp {
  private:
   uint64_t nsec_{0};
 };
+
+inline bool operator!=(EdenTimestamp lhs, EdenTimestamp rhs) {
+  return !(lhs == rhs);
+}
+
+inline bool operator==(EdenTimestamp lhs, timespec rhs) {
+  // Widen before comparing.
+  return lhs.toTimespec() == rhs;
+}
+
+inline bool operator==(timespec lhs, EdenTimestamp rhs) {
+  // Widen before comparing.
+  return lhs == rhs.toTimespec();
+}
+
+inline bool operator<(EdenTimestamp lhs, timespec rhs) {
+  // Widen before comparing.
+  return lhs.toTimespec() < rhs;
+}
+
+inline bool operator<(timespec lhs, EdenTimestamp rhs) {
+  // Widen before comparing.
+  return lhs < rhs.toTimespec();
+}
 
 /**
  * Structure for wrapping atime,ctime,mtime

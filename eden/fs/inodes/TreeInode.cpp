@@ -1615,6 +1615,12 @@ Future<Unit> TreeInode::doRename(
   // Now remove the source information
   locks.srcContents()->entries.erase(srcIter);
 
+  auto now = getNow();
+  updateMtimeAndCtimeLocked(*locks.srcContents(), now);
+  if (destParent.get() != this) {
+    destParent->updateMtimeAndCtimeLocked(*locks.destContents(), now);
+  }
+
   // Save the overlay data
   saveOverlayDir(*locks.srcContents());
   if (destParent.get() != this) {

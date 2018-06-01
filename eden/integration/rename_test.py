@@ -9,6 +9,7 @@
 
 import errno
 import os
+import time
 
 from .lib import testcase
 
@@ -171,3 +172,16 @@ class RenameTest(testcase.EdenRepoTest):
 
         os.rename(dir1, dir2)
         self.assertEqual(["dir2"], os.listdir(subdir))
+
+    def test_rename_updates_mtime(self) -> None:
+        adir_path = os.path.join(self.mount, "adir")
+        mtime_root = os.lstat(self.mount).st_mtime
+        mtime_adir = os.lstat(adir_path).st_mtime
+
+        while time.time() < max(mtime_root, mtime_adir):
+            time.sleep(0.01)
+
+        os.rename(os.path.join(self.mount, "hello"), os.path.join(adir_path, "hello"))
+
+        self.assertLess(mtime_root, os.lstat(self.mount).st_mtime)
+        self.assertLess(mtime_adir, os.lstat(adir_path).st_mtime)

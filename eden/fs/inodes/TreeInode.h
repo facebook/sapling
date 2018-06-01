@@ -64,9 +64,9 @@ struct TreeInodeState : DirContents {
 /**
  * Represents a directory in the file system.
  */
-class TreeInode : public InodeBaseMetadata<TreeInodeState> {
+class TreeInode : public InodeBaseMetadata<DirContents> {
  public:
-  using Base = InodeBaseMetadata<TreeInodeState>;
+  using Base = InodeBaseMetadata<DirContents>;
 
   enum : int { WRONG_TYPE_ERRNO = ENOTDIR };
 
