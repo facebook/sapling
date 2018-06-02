@@ -1,7 +1,6 @@
-def create_eden_fs_rules(suffix, subdir, server_srcs, server_deps):
+def create_eden_fs_rules(suffix, server_srcs, server_deps):
     cpp_binary(
         name = "edenfs" + suffix,
-        output_subdir = subdir,
         srcs = [
             "main.cpp",
         ] + server_srcs,
