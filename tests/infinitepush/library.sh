@@ -15,6 +15,7 @@ scratchbookmarks() {
 setupcommon() {
   cat >> $HGRCPATH << EOF
 [extensions]
+commitcloud=
 infinitepush=
 pullcreatemarkers=
 [ui]
