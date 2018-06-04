@@ -249,7 +249,7 @@ fn open_changesets_store(
                 None,
                 Some(ProxyRequirement::Forbidden),
             ).expect("cannot create ConnectionParams");
-            Ok(Arc::new(MysqlChangesets::open(connection_params)?))
+            Ok(Arc::new(MysqlChangesets::open(&connection_params)?))
         }
         None => {
             output.push("changesets");
@@ -270,7 +270,7 @@ fn open_filenodes_store(mut output: PathBuf, xdb_tier: Option<PathBuf>) -> Resul
                 Some(ProxyRequirement::Forbidden),
             ).expect("cannot create ConnectionParams");
             Ok(Arc::new(MysqlFilenodes::open(
-                connection_params,
+                &connection_params,
                 DEFAULT_INSERT_CHUNK_SIZE,
             )?))
         }

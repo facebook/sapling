@@ -188,7 +188,7 @@ impl BlobRepo {
             None,
             Some(ProxyRequirement::Forbidden),
         )?;
-        let bookmarks = MysqlDbBookmarks::open(connection_params.clone())
+        let bookmarks = MysqlDbBookmarks::open(&connection_params)
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
         let mut io_remotes = vec![];
@@ -221,11 +221,11 @@ impl BlobRepo {
         let blobstore = MemcacheBlobstore::new(blobstore);
         let blobstore = MemoizedBlobstore::new(blobstore, usize::MAX, blobstore_cache_size);
 
-        let filenodes = MysqlFilenodes::open(connection_params.clone(), DEFAULT_INSERT_CHUNK_SIZE)
+        let filenodes = MysqlFilenodes::open(&connection_params, DEFAULT_INSERT_CHUNK_SIZE)
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let filenodes = CachingFilenodes::new(Arc::new(filenodes), filenodes_cache_size);
 
-        let changesets = MysqlChangesets::open(connection_params)
+        let changesets = MysqlChangesets::open(&connection_params)
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
         let changesets = CachingChangests::new(Arc::new(changesets), changesets_cache_size);

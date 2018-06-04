@@ -85,7 +85,7 @@ fn main() {
         None,
         Some(db::ProxyRequirement::Forbidden),
     ).expect("cannot create connection params");
-    let filenodes = MysqlFilenodes::open(connection_params, DEFAULT_INSERT_CHUNK_SIZE)
+    let filenodes = MysqlFilenodes::open(&connection_params, DEFAULT_INSERT_CHUNK_SIZE)
         .expect("cannot connect to mysql");
     info!(root_log, "Connected");
 

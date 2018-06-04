@@ -222,7 +222,7 @@ pub struct MysqlChangesets {
 }
 
 impl MysqlChangesets {
-    pub fn open(params: ConnectionParams) -> Result<Self> {
+    pub fn open(params: &ConnectionParams) -> Result<Self> {
         let url = params.to_diesel_url()?;
         let manager = ConnectionManager::new(url);
         let pool = Pool::builder()
@@ -234,10 +234,10 @@ impl MysqlChangesets {
 
     pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
         let params = db::create_test_db(prefix)?;
-        Self::create(params)
+        Self::create(&params)
     }
 
-    fn create(params: ConnectionParams) -> Result<Self> {
+    fn create(params: &ConnectionParams) -> Result<Self> {
         let changesets = Self::open(params)?;
 
         let up_query = include_str!("../schemas/mysql-changesets.sql");
