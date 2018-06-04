@@ -34,22 +34,22 @@ pub enum ErrorKind {
     #[fail(display = "Compression failed")] LZ4CompressFailed,
 }
 
-// Wrapper for the lz4 library context
-struct Context(*mut LZ4StreamDecode);
-impl Context {
+// Wrapper for the lz4 library decompress context
+struct DecompressContext(*mut LZ4StreamDecode);
+impl DecompressContext {
     // Allocate a context; fails if allocation fails
     fn new() -> Result<Self, &'static str> {
         let ctx = unsafe { LZ4_createStreamDecode() };
         if ctx.is_null() {
-            Err("failed to create LZ4 context")
+            Err("failed to create LZ4 decompress context")
         } else {
-            Ok(Context(ctx))
+            Ok(DecompressContext(ctx))
         }
     }
 }
 
 // Make sure C resources for context get freed.
-impl Drop for Context {
+impl Drop for DecompressContext {
     fn drop(&mut self) {
         if !self.0.is_null() {
             unsafe { LZ4_freeStreamDecode(self.0) };
@@ -60,7 +60,7 @@ impl Drop for Context {
 
 // Decompress a raw lz4 block
 fn decompress_block(i: &[u8], out: &mut Vec<u8>) -> Result<usize, String> {
-    let ctx = Context::new()?;
+    let ctx = DecompressContext::new()?;
     unsafe {
         let ret = LZ4_decompress_safe_continue(
             ctx.0,
