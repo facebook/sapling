@@ -110,6 +110,12 @@ impl DataStore for UnionDataStore {
 mod tests {
     use super::*;
 
+    struct BadDataStore;
+
+    #[derive(Debug, Fail)]
+    #[fail(display = "Bad data store always has error which is not KeyError")]
+    struct BadDataStoreError;
+
     struct EmptyDataStore;
 
     #[derive(Debug, Fail)]
@@ -140,6 +146,24 @@ mod tests {
         }
     }
 
+    impl DataStore for BadDataStore {
+        fn get(&self, _key: &Key) -> Result<Vec<u8>> {
+            Err(BadDataStoreError.into())
+        }
+
+        fn getdeltachain(&self, _key: &Key) -> Result<Vec<Delta>> {
+            Err(BadDataStoreError.into())
+        }
+
+        fn getmeta(&self, _key: &Key) -> Result<Metadata> {
+            Err(BadDataStoreError.into())
+        }
+
+        fn getmissing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
+            Err(BadDataStoreError.into())
+        }
+    }
+
     quickcheck! {
         fn test_empty_unionstore_get(key: Key) -> bool {
             match UnionDataStore::new().get(&key) {
@@ -154,6 +178,15 @@ mod tests {
             match unionstore.get(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
+            }
+        }
+
+        fn test_bad_datastore_get(key: Key) -> bool {
+            let mut unionstore = UnionDataStore::new();
+            unionstore.add(Rc::new(BadDataStore));
+            match unionstore.get(&key) {
+                Ok(_) => false,
+                Err(e) => e.downcast_ref::<KeyError>().is_none(),
             }
         }
 
@@ -173,6 +206,15 @@ mod tests {
             }
         }
 
+        fn test_bad_datastore_getdeltachain(key: Key) -> bool {
+            let mut unionstore = UnionDataStore::new();
+            unionstore.add(Rc::new(BadDataStore));
+            match unionstore.getdeltachain(&key) {
+                Ok(_) => false,
+                Err(e) => e.downcast_ref::<KeyError>().is_none(),
+            }
+        }
+
         fn test_empty_unionstore_getmeta(key: Key) -> bool {
             match UnionDataStore::new().getmeta(&key) {
                 Ok(_) => false,
@@ -189,6 +231,15 @@ mod tests {
             }
         }
 
+        fn test_bad_datastore_getmeta(key: Key) -> bool {
+            let mut unionstore = UnionDataStore::new();
+            unionstore.add(Rc::new(BadDataStore));
+            match unionstore.getmeta(&key) {
+                Ok(_) => false,
+                Err(e) => e.downcast_ref::<KeyError>().is_none(),
+            }
+        }
+
         fn test_empty_unionstore_getmissing(keys: Vec<Key>) -> bool {
             keys == UnionDataStore::new().getmissing(&keys).unwrap()
         }
@@ -197,6 +248,15 @@ mod tests {
             let mut unionstore = UnionDataStore::new();
             unionstore.add(Rc::new(EmptyDataStore));
             keys == unionstore.getmissing(&keys).unwrap()
+        }
+
+        fn test_bad_datastore_getmissing(keys: Vec<Key>) -> bool {
+            let mut unionstore = UnionDataStore::new();
+            unionstore.add(Rc::new(BadDataStore));
+            match unionstore.getmissing(&keys) {
+                Ok(_) => false,
+                Err(e) => e.downcast_ref::<KeyError>().is_none(),
+            }
         }
     }
 }
