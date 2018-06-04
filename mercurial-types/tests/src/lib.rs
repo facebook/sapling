@@ -10,6 +10,7 @@
 extern crate async_unit;
 extern crate blobrepo;
 extern crate futures;
+extern crate futures_ext;
 extern crate many_files_dirs;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
@@ -21,12 +22,13 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
-use futures::Future;
+use futures::{Future, Stream};
 use futures::executor::spawn;
+use futures_ext::select_all;
 use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Type, D_NULL_HASH};
 use mercurial_types::manifest::Content;
-use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, ChangedEntry,
-                                      EntryStatus};
+use mercurial_types::manifest_utils::{changed_entry_stream, changed_entry_stream_with_pruner,
+                                      diff_sorted_vecs, visited_pruner, ChangedEntry, EntryStatus};
 use mercurial_types::nodehash::{DChangesetId, DEntryId, DNodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry};
 use mercurial_types_mocks::nodehash;
@@ -188,8 +190,14 @@ fn test_diff_sorted_vecs_one_empty() {
 fn find_changed_entry_status_stream(
     manifest: Box<Manifest>,
     basemanifest: Box<Manifest>,
+    pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
 ) -> Vec<ChangedEntry> {
-    let mut stream = spawn(changed_entry_stream(&manifest, &basemanifest, None));
+    let mut stream = spawn(changed_entry_stream_with_pruner(
+        &manifest,
+        &basemanifest,
+        None,
+        pruner,
+    ));
     let mut res = vec![];
     loop {
         let new_elem = stream.wait_stream();
@@ -268,19 +276,22 @@ fn check_changed_paths(
     compare("modified", paths_modified, expected_modified);
 }
 
-fn do_check(
+fn do_check_with_pruner<P>(
     repo: Arc<BlobRepo>,
     main_hash: DNodeHash,
     base_hash: DNodeHash,
     expected_added: Vec<&str>,
     expected_deleted: Vec<&str>,
     expected_modified: Vec<&str>,
-) {
+    pruner: P,
+) where
+    P: FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+{
     {
         let manifest = get_root_manifest(repo.clone(), &DChangesetId::new(main_hash));
         let base_manifest = get_root_manifest(repo.clone(), &DChangesetId::new(base_hash));
 
-        let res = find_changed_entry_status_stream(manifest, base_manifest);
+        let res = find_changed_entry_status_stream(manifest, base_manifest, pruner.clone());
 
         check_changed_paths(
             res,
@@ -296,7 +307,7 @@ fn do_check(
         let manifest = get_root_manifest(repo.clone(), &DChangesetId::new(base_hash));
         let base_manifest = get_root_manifest(repo.clone(), &DChangesetId::new(main_hash));
 
-        let res = find_changed_entry_status_stream(manifest, base_manifest);
+        let res = find_changed_entry_status_stream(manifest, base_manifest, pruner);
 
         check_changed_paths(
             res,
@@ -305,6 +316,25 @@ fn do_check(
             expected_modified.clone(),
         );
     }
+}
+
+fn do_check(
+    repo: Arc<BlobRepo>,
+    main_hash: DNodeHash,
+    base_hash: DNodeHash,
+    expected_added: Vec<&str>,
+    expected_deleted: Vec<&str>,
+    expected_modified: Vec<&str>,
+) {
+    do_check_with_pruner(
+        repo,
+        main_hash,
+        base_hash,
+        expected_added,
+        expected_deleted,
+        expected_modified,
+        |_| true,
+    )
 }
 
 #[test]
@@ -408,6 +438,131 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
             expected_deleted,
             vec![],
         );
+        Ok(())
+    }).expect("test failed")
+}
+
+#[test]
+fn test_recursive_changed_entry_prune() {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let main_hash = DNodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
+        let base_hash = DNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        // main_hash is a child of base_hash
+        // hg st --change .
+        // A dir1
+        // R dir1/file_1_in_dir1
+        // R dir1/file_2_in_dir1
+        // R dir1/subdir1/file_1
+        // R dir1/subdir1/subsubdir1/file_1
+        // R dir1/subdir1/subsubdir2/file_1
+        // R dir1/subdir1/subsubdir2/file_2
+
+        let expected_added = vec!["dir1"];
+        let expected_deleted = vec!["dir1", "dir1/file_1_in_dir1", "dir1/file_2_in_dir1"];
+        do_check_with_pruner(
+            repo.clone(),
+            main_hash,
+            base_hash,
+            expected_added,
+            expected_deleted,
+            vec![],
+            |entry| {
+                let path = entry.get_full_path().clone();
+                match path {
+                    Some(path) => path.into_iter()
+                        .find(|elem| elem.to_bytes() == "subdir1".as_bytes())
+                        .is_none(),
+                    None => true,
+                }
+            },
+        );
+
+        let expected_added = vec!["dir1"];
+        let expected_deleted = vec![
+            "dir1",
+            "dir1/file_1_in_dir1",
+            "dir1/file_2_in_dir1",
+            "dir1/subdir1",
+            "dir1/subdir1/file_1",
+            "dir1/subdir1/subsubdir1",
+            "dir1/subdir1/subsubdir1/file_1",
+            "dir1/subdir1/subsubdir2",
+            "dir1/subdir1/subsubdir2/file_1",
+        ];
+        do_check_with_pruner(
+            repo,
+            main_hash,
+            base_hash,
+            expected_added,
+            expected_deleted,
+            vec![],
+            |entry| {
+                let path = entry.get_full_path().clone();
+                match path {
+                    Some(path) => path.into_iter()
+                        .find(|elem| elem.to_bytes() == "file_2".as_bytes())
+                        .is_none(),
+                    None => true,
+                }
+            },
+        );
+
+        Ok(())
+    }).expect("test failed")
+}
+
+#[test]
+fn test_recursive_changed_entry_prune_visited() {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let main_hash_1 = DNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let main_hash_2 = DNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let base_hash = DNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
+
+        // VisitedPruner let's us merge stream without producing the same entries twice.
+        // o  473b2e
+        // |  3
+        // |
+        // o  ecafdc
+        // |  2
+        // |
+        // o  5a28e2
+        //    1
+        // $ hg st --change ecafdc
+        // A 2
+        // A dir1/file_1_in_dir1
+        // A dir1/file_2_in_dir1
+        // A dir1/subdir1/file_1
+        // A dir2/file_1_in_dir2
+        // $ hg st --change 473b2e
+        // A dir1/subdir1/subsubdir1/file_1
+        // A dir1/subdir1/subsubdir2/file_1
+        // A dir1/subdir1/subsubdir2/file_2
+
+        let manifest_1 = get_root_manifest(repo.clone(), &DChangesetId::new(main_hash_1));
+        let manifest_2 = get_root_manifest(repo.clone(), &DChangesetId::new(main_hash_2));
+        let basemanifest = get_root_manifest(repo.clone(), &DChangesetId::new(base_hash));
+
+        let pruner = visited_pruner();
+
+        let first_stream =
+            changed_entry_stream_with_pruner(&manifest_1, &basemanifest, None, pruner.clone());
+        let second_stream =
+            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, pruner);
+        let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
+        let res = res.wait_future().unwrap();
+        let unique_len = res.len();
+        assert_eq!(unique_len, 15);
+
+        let first_stream = changed_entry_stream(&manifest_1, &basemanifest, None);
+        let second_stream = changed_entry_stream(&manifest_2, &basemanifest, None);
+        let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
+        let res = res.wait_future().unwrap();
+        // Make sure that more entries are produced without VisitedPruner i.e. some entries are
+        // returned twice.
+        assert!(unique_len < res.len());
+
         Ok(())
     }).expect("test failed")
 }

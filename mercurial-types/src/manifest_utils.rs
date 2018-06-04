@@ -7,6 +7,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
+use std::sync::{Arc, Mutex};
 
 use futures::IntoFuture;
 use futures::future::Future;
@@ -83,6 +84,32 @@ impl ChangedEntry {
                 to_entry,
                 from_entry,
             },
+        }
+    }
+
+    pub fn get_full_path(&self) -> Option<MPath> {
+        match &self.status {
+            EntryStatus::Added(entry) => {
+                let dirname = self.dirname.clone();
+                let entry_path = entry.get_name().cloned();
+                MPath::join_element_opt(dirname.as_ref(), entry_path.as_ref())
+            }
+            EntryStatus::Deleted(entry) => {
+                let dirname = self.dirname.clone();
+                let entry_path = entry.get_name().cloned();
+                MPath::join_element_opt(dirname.as_ref(), entry_path.as_ref())
+            }
+            EntryStatus::Modified {
+                to_entry,
+                from_entry,
+            } => {
+                debug_assert!(to_entry.get_type().is_tree() == from_entry.get_type().is_tree());
+                debug_assert!(to_entry.get_type().is_tree());
+
+                let dirname = self.dirname.clone();
+                let entry_path = to_entry.get_name().cloned();
+                MPath::join_element_opt(dirname.as_ref(), entry_path.as_ref())
+            }
         }
     }
 }
@@ -176,6 +203,27 @@ where
     }
 }
 
+pub fn visited_pruner() -> impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static {
+    let visited = Arc::new(Mutex::new(HashSet::new()));
+    move |entry: &ChangedEntry| {
+        let dirname = entry.dirname.clone();
+
+        let mut visited = visited.lock().unwrap();
+
+        match entry.status {
+            EntryStatus::Added(ref entry) => {
+                visited.insert((dirname, entry.get_hash().into_nodehash()))
+            }
+            EntryStatus::Deleted(ref entry) => {
+                visited.insert((dirname, entry.get_hash().into_nodehash()))
+            }
+            EntryStatus::Modified { ref to_entry, .. } => {
+                visited.insert((dirname, to_entry.get_hash().into_nodehash()))
+            }
+        }
+    }
+}
+
 /// Given two manifests, returns a difference between them. Difference is a stream of
 /// ChangedEntry, each showing whether a file/directory was added, deleted or modified.
 /// Note: Modified entry contains only entries of the same type i.e. if a file was replaced
@@ -191,16 +239,40 @@ where
     TM: Manifest,
     FM: Manifest,
 {
+    changed_entry_stream_with_pruner(to, from, path, |_| true).boxify()
+}
+
+pub fn changed_entry_stream_with_pruner<TM, FM>(
+    to: &TM,
+    from: &FM,
+    path: Option<MPath>,
+    pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+) -> impl Stream<Item = ChangedEntry, Error = Error>
+where
+    TM: Manifest,
+    FM: Manifest,
+{
     diff_manifests(path, to, from)
-        .map(|diff| select_all(diff.into_iter().map(recursive_changed_entry_stream)))
+        .map(move |diff| {
+            select_all(
+                diff.into_iter()
+                    .filter({
+                        let pruner = pruner.clone();
+                        pruner
+                    })
+                    .map(|entry| recursive_changed_entry_stream(entry, pruner.clone())),
+            )
+        })
         .flatten_stream()
-        .boxify()
 }
 
 /// Given a ChangedEntry, return a stream that consists of this entry, and all subentries
 /// that differ. If input isn't a tree, then a stream with a single entry is returned, otherwise
 /// subtrees are recursively compared.
-fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<ChangedEntry, Error> {
+fn recursive_changed_entry_stream(
+    changed_entry: ChangedEntry,
+    pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+) -> BoxStream<ChangedEntry, Error> {
     if !changed_entry.status.is_tree() {
         return once(Ok(changed_entry)).boxify();
     }
@@ -250,7 +322,13 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
         .join(from_mf)
         .map(move |(to_mf, from_mf)| {
             diff_manifests(path, &to_mf, &from_mf)
-                .map(|diff| select_all(diff.into_iter().map(recursive_changed_entry_stream)))
+                .map(move |diff| {
+                    select_all(
+                        diff.into_iter()
+                            .filter(pruner.clone())
+                            .map(|entry| recursive_changed_entry_stream(entry, pruner.clone())),
+                    )
+                })
                 .flatten_stream()
         })
         .flatten_stream();
