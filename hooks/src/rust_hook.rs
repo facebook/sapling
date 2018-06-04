@@ -10,23 +10,18 @@
 #![deny(warnings)]
 
 use super::Hook;
-use super::HookChangeset;
+use super::HookContext;
 
-use failure::Result;
-use std::sync::Arc;
+use failure::Error;
+use futures::finished;
+use futures_ext::{BoxFuture, FutureExt};
 
 pub struct RustHook {
     pub name: String,
 }
 
 impl Hook for RustHook {
-    fn run(&self, changeset: Arc<HookChangeset>) -> Result<bool> {
-        println!("Running hook {}", self.name);
-        println!("Changeset user is {}", changeset.user);
-        (*changeset)
-            .files
-            .iter()
-            .for_each(|file| println!("{}", file));
-        Ok(true)
+    fn run(&self, _context: HookContext) -> BoxFuture<bool, Error> {
+        finished(true).boxify()
     }
 }
