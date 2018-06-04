@@ -49,53 +49,28 @@ Make sure that cache is empty
   $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
   [1]
 
-Small extension to call gettreepack method with a few nodes. At the time of writing this test
-hg prefetch failed for treeonly repos. We can use it instead when it's fixed
-  $ cat >> $TESTTMP/gettreepack.py <<EOF
-  > from mercurial import registrar
-  > from mercurial import (bundle2, extensions)
-  > cmdtable = {}
-  > command = registrar.command(cmdtable)
-  > @command('gettreepack', [
-  >     ('r', 'rev', [], 'specify the revision', 'REV'),
-  >     ('', 'baserev', [], 'specify the base revision', 'REV'),
-  > ], '[-r REV]')
-  > def _gettreepack(ui, repo, **opts):
-  >     treemanifestext = extensions.find('treemanifest')
-  >     fallbackpath = treemanifestext.getfallbackpath(repo)
-  >     ctxs = [repo[r] for r in opts.get('rev')]
-  >     basectxs = [repo[r] for r in opts.get('baserev')]
-  >     with repo.connectionpool.get(fallbackpath) as conn:
-  >         remote = conn.peer
-  >         mfnodes = [ctx.manifestnode() for ctx in ctxs]
-  >         basemfnodes = [ctx.manifestnode() for ctx in basectxs]
-  >         bundle = remote.gettreepack('', mfnodes, basemfnodes, [])
-  >         bundle2.processbundle(repo, bundle, None)
-  > EOF
-
-  $ hgmn --config extensions.gettreepack=$TESTTMP/gettreepack.py gettreepack -r 0 -r 1
-  $ hgmn --config extensions.gettreepack=$TESTTMP/gettreepack.py gettreepack -r 2 --baserev 1 --baserev 0
+  $ hgmn prefetch -r 0 -r1
+  $ hgmn prefetch -r 2
+  $ cat $TESTTMP/mononoke.out | grep 'Got request: Gettreepack'
+  * Got request: Gettreepack(GettreepackArgs { rootdir: b"", mfnodes: [HgNodeHash(Sha1(41b34f08c1356f6ad068e9ab9b43d984245111aa)), HgNodeHash(Sha1(eb79886383871977bccdb3000c275a279f0d4c99))], basemfnodes: [], directories: [] }), repo: $TESTTMP/repo (glob)
+  * Got request: Gettreepack(GettreepackArgs { rootdir: b"", mfnodes: [HgNodeHash(Sha1(7c9b4fd8b49377e2fead2e9610bb8db910a98c53))], basemfnodes: [HgNodeHash(Sha1(eb79886383871977bccdb3000c275a279f0d4c99))], directories: [] }), repo: $TESTTMP/repo (glob)
 
 Make sure that new entries were downloaded
   $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
   $ ls $TESTTMP/cachepath/repo/packs/manifests | wc -l
   8
 
-Update to the revisions. Make sure that gettreepack command is not sent because
-we've already downloaded all the trees
-  $ hgmn up 2 --debug | grep 'sending .* command'
-  sending hello command
-  sending between command
-  sending getfiles command
+Update to the revisions. Change the path to make sure that gettreepack command is
+not sent because we've already downloaded all the trees
+  $ hgmn up 2 --config paths.default=ssh://brokenpath -q
   $ ls
   A
   B
   C
 
-No wireproto commands should be sent at all, because everything has been already
-downloaded
-  $ hgmn up 1 --debug | grep 'sending .* command'
-  [1]
+Change the path to make sure that no wireproto commands should be sent at all,
+because everything has been already downloaded.
+  $ hgmn up 1 --config paths.default=ssh://brokenpath -q
   $ ls
   A
   B

@@ -41,7 +41,8 @@ use mercurial::{self, HgBlobNode, HgManifestId, HgNodeHash, HgParents, NodeHashC
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, Changeset, DChangesetId, DManifestId, DNodeHash, DParents,
                       Entry, MPath, RepoPath, RepositoryId, Type, D_NULL_HASH};
-use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
+use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, visited_pruner,
+                                      ChangedEntry, EntryStatus};
 use metaconfig::repoconfig::RepoType;
 
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
@@ -500,16 +501,17 @@ impl RepoClient {
         // TODO: possibly enable compression support once this is fixed.
         bundle.set_compressor_type(None);
 
-        // TODO(stash): T25850889 same entries will be generated over and over again.
-        // Potentially it can be very inefficient.
+        let pruner = visited_pruner();
+
         let changed_entries = params.mfnodes.iter().map(|h| h.into_mononoke()).fold(
             stream::empty().boxify(),
-            |cur_stream, manifest_id| {
+            move |cur_stream, manifest_id| {
                 let new_stream = get_changed_entry_stream(
                     self.repo.blobrepo.clone(),
                     &manifest_id,
                     &basemfnode,
                     rootpath.clone(),
+                    pruner.clone(),
                 );
                 cur_stream.select(new_stream).boxify()
             },
@@ -866,6 +868,7 @@ fn get_changed_entry_stream(
     mfid: &DNodeHash,
     basemfid: &DNodeHash,
     rootpath: Option<MPath>,
+    pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
     let manifest = repo.get_manifest_by_nodeid(mfid)
         .traced_global("fetch rootmf", trace_args!());
@@ -876,7 +879,7 @@ fn get_changed_entry_stream(
         .join(basemanifest)
         .map({
             let rootpath = rootpath.clone();
-            |(mf, basemf)| changed_entry_stream(&mf, &basemf, rootpath)
+            move |(mf, basemf)| changed_entry_stream_with_pruner(&mf, &basemf, rootpath, pruner)
         })
         .flatten_stream();
 
