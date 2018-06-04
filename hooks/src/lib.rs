@@ -47,10 +47,33 @@ pub struct HookManager {
     hooks: HashMap<String, Arc<Hook>>,
 }
 
-/// Represents the result of running a hook
-pub struct HookResult {
-    pub hook_name: String,
-    pub passed: bool,
+/// Represents the status of a (non error) hook run
+#[derive(Clone, Debug, PartialEq)]
+pub enum HookExecution {
+    Accepted,
+    Rejected(HookRejectionInfo),
+}
+
+/// Extra information on why the hook rejected the changeset
+#[derive(Clone, Debug, PartialEq)]
+pub struct HookRejectionInfo {
+    pub description: String,
+    pub long_description: String,
+    // TODO more fields
+}
+
+impl HookRejectionInfo {
+    pub fn new(description: String, long_description: String) -> HookRejectionInfo {
+        HookRejectionInfo {
+            description,
+            long_description,
+        }
+    }
+}
+
+struct HookExecutionHolder {
+    hook_name: String,
+    hook_execution: HookExecution,
 }
 
 impl HookManager {
@@ -72,9 +95,12 @@ impl HookManager {
         self.hooks.iter()
     }
 
-    pub fn run_hooks(&self, changeset: Arc<HookChangeset>) -> BoxFuture<Vec<HookResult>, Error> {
+    pub fn run_hooks(
+        &self,
+        changeset: Arc<HookChangeset>,
+    ) -> BoxFuture<HashMap<String, HookExecution>, Error> {
         // Run all hooks, potentially in parallel (depending on hook implementation)
-        let v: Vec<BoxFuture<HookResult, _>> = self.hooks
+        let v: Vec<BoxFuture<HookExecutionHolder, _>> = self.hooks
             .iter()
             .map(|(hook_name, hook)| {
                 let hook = hook.clone();
@@ -82,19 +108,28 @@ impl HookManager {
                 let hook_name = hook_name.clone();
                 let hook_context = HookContext::new(hook_name.clone(), changeset);
                 hook.run(hook_context)
-                    .map(move |passed| HookResult {
+                    .map(move |hook_execution| HookExecutionHolder {
                         hook_name: hook_name,
-                        passed,
+                        hook_execution,
                     })
                     .boxify()
             })
             .collect();
-        futures::future::join_all(v).boxify()
+
+        futures::future::join_all(v)
+            .map(|v| {
+                let mut map = HashMap::new();
+                v.iter().for_each(|heh| {
+                    map.insert(heh.hook_name.clone(), heh.hook_execution.clone());
+                });
+                map
+            })
+            .boxify()
     }
 }
 
 pub trait Hook: Send + Sync {
-    fn run(&self, hook_context: HookContext) -> BoxFuture<bool, Error>;
+    fn run(&self, hook_context: HookContext) -> BoxFuture<HookExecution, Error>;
 }
 
 /// Represents a changeset - more user friendly than the blob changeset
@@ -132,12 +167,12 @@ mod test {
     use std::collections::HashSet;
 
     struct TestHook {
-        should_pass: bool,
+        expected_execution: HookExecution,
     }
 
     impl Hook for TestHook {
-        fn run(&self, _: HookContext) -> BoxFuture<bool, Error> {
-            finished(self.should_pass).boxify()
+        fn run(&self, _: HookContext) -> BoxFuture<HookExecution, Error> {
+            finished(self.expected_execution.clone()).boxify()
         }
     }
 
@@ -145,25 +180,32 @@ mod test {
     fn test_run_hooks() {
         async_unit::tokio_unit_test(|| {
             let mut hook_manager = hook_manager();
-            let hook1 = TestHook { should_pass: true };
+            let hook1 = TestHook {
+                expected_execution: HookExecution::Accepted,
+            };
+            let hook1_expected = hook1.expected_execution.clone();
             hook_manager.install_hook("testhook1", Arc::new(hook1));
-            let hook2 = TestHook { should_pass: false };
+            let hook2 = TestHook {
+                expected_execution: HookExecution::Rejected(HookRejectionInfo::new(
+                    "d1".into(),
+                    "d2".into(),
+                )),
+            };
+            let hook2_expected = hook2.expected_execution.clone();
             hook_manager.install_hook("testhook2", Arc::new(hook2));
             let author = String::from("jane bloggs");
             let files = vec![String::from("filec")];
             let change_set = HookChangeset::new(author, files);
-            let fut: BoxFuture<Vec<HookResult>, Error> =
+            let fut: BoxFuture<HashMap<String, HookExecution>, Error> =
                 hook_manager.run_hooks(Arc::new(change_set));
             let res = fut.wait();
             match res {
-                Ok(vec) => {
-                    let mut map: HashMap<String, bool> = HashMap::new();
-                    vec.into_iter().for_each(|hr| {
-                        map.insert(hr.hook_name, hr.passed);
-                    });
+                Ok(map) => {
                     assert_eq!(map.len(), 2);
-                    assert!(map.get("testhook1").unwrap());
-                    assert!(!map.get("testhook2").unwrap());
+                    let hook_execution = map.get("testhook1").unwrap();
+                    assert_eq!(hook1_expected, *hook_execution);
+                    let hook_execution = map.get("testhook2").unwrap();
+                    assert_eq!(hook2_expected, *hook_execution);
                 }
                 Err(e) => {
                     println!("Failed to run hook {}", e);
@@ -176,9 +218,13 @@ mod test {
     #[test]
     fn test_install() {
         let mut hook_manager = hook_manager();
-        let hook1 = TestHook { should_pass: true };
+        let hook1 = TestHook {
+            expected_execution: HookExecution::Accepted,
+        };
         hook_manager.install_hook("testhook1", Arc::new(hook1));
-        let hook2 = TestHook { should_pass: true };
+        let hook2 = TestHook {
+            expected_execution: HookExecution::Accepted,
+        };
         hook_manager.install_hook("testhook2", Arc::new(hook2));
 
         let mut set = HashSet::new();
@@ -194,9 +240,13 @@ mod test {
     #[test]
     fn test_uninstall() {
         let mut hook_manager = hook_manager();
-        let hook1 = TestHook { should_pass: true };
+        let hook1 = TestHook {
+            expected_execution: HookExecution::Accepted,
+        };
         hook_manager.install_hook("testhook1", Arc::new(hook1));
-        let hook2 = TestHook { should_pass: true };
+        let hook2 = TestHook {
+            expected_execution: HookExecution::Accepted,
+        };
         hook_manager.install_hook("testhook2", Arc::new(hook2));
 
         hook_manager.uninstall_hook("testhook1");

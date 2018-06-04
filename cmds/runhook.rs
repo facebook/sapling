@@ -31,7 +31,7 @@ extern crate slog_glog_fmt;
 
 extern crate hooks;
 
-use hooks::{HookChangeset, HookManager};
+use hooks::{HookChangeset, HookExecution, HookManager};
 use hooks::lua_hook::LuaHook;
 use std::str;
 use std::str::FromStr;
@@ -104,12 +104,21 @@ fn run() -> Result<()> {
     };
     hook_manager.install_hook("testhook", Arc::new(hook));
     let fut = hook_manager.run_hooks(Arc::new(hook_cs));
-    let res = fut.wait().unwrap();
-    let hook_result = &res[0];
-    println!(
-        "Hook {} passed? {}",
-        hook_result.hook_name, hook_result.passed
-    );
+    match fut.wait() {
+        Err(e) => {
+            println!("Failed to execute hook {:?}", e);
+            return Ok(());
+        }
+        Ok(executions) => {
+            let hook_execution = executions.get("testhook").unwrap();
+            match hook_execution {
+                HookExecution::Accepted => println!("Hook acccepted the changeset"),
+                HookExecution::Rejected(rejection_info) => {
+                    println!("Hook rejected the changeset {}", rejection_info.description)
+                }
+            }
+        }
+    }
     Ok(())
 }
 

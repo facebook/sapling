@@ -8,9 +8,7 @@
 
 #![deny(warnings)]
 
-use super::Hook;
-use super::HookContext;
-
+use super::{Hook, HookContext, HookExecution, HookRejectionInfo};
 use failure::Error;
 use futures_ext::{asynchronize, BoxFuture};
 use hlua::{Lua, LuaError, LuaFunction};
@@ -23,19 +21,20 @@ pub struct LuaHook {
 }
 
 impl Hook for LuaHook {
-    fn run(&self, context: HookContext) -> BoxFuture<bool, Error> {
+    fn run(&self, context: HookContext) -> BoxFuture<HookExecution, Error> {
         let hook = (*self).clone();
         // The Lua hook function may block waiting for a coroutine to yield
         // (e.g. if the hook makes a network call) so we need to run it on a thread from
         // the thread pool. LuaCoroutines can't be passed to different threads
         // TODO thread pool should be configurable, not always the default
-        let fut: BoxFuture<bool, Error> = asynchronize(move || LuaHook::run_hook(hook, context));
+        let fut: BoxFuture<HookExecution, Error> =
+            asynchronize(move || LuaHook::run_hook(hook, context));
         fut
     }
 }
 
 impl LuaHook {
-    fn run_hook(hook: LuaHook, context: HookContext) -> Result<bool, Error> {
+    fn run_hook(hook: LuaHook, context: HookContext) -> Result<HookExecution, Error> {
         println!("Running lua hook {}", hook.name);
         let mut lua = Lua::new();
         lua.openlibs();
@@ -56,6 +55,17 @@ impl LuaHook {
             .call_with_args((hook_info, context.changeset.files.clone()))
             .map_err(|err| {
                 ErrorKind::HookRuntimeError(hook.name.clone().into(), format!("{:?}", err)).into()
+            })
+            .map(|b| {
+                if b {
+                    HookExecution::Accepted
+                } else {
+                    // TODO allow proper hook rejection to be set from Lua hook
+                    HookExecution::Rejected(HookRejectionInfo::new(
+                        "short desc".into(),
+                        "long desc".into(),
+                    ))
+                }
             })
     }
 }
@@ -84,7 +94,7 @@ mod test {
     return info.author == \"jane bloggs\"
 end",
             );
-            run_hook_test(code, author, files, true);
+            run_hook_test(code, author, files, HookExecution::Accepted);
         });
     }
 
@@ -107,11 +117,11 @@ end",
 end",
             );
             println!("code {}", code);
-            run_hook_test(code, author, files, true);
+            run_hook_test(code, author, files, HookExecution::Accepted);
         });
     }
 
-    fn run_hook_test(code: String, author: String, files: Vec<String>, expected: bool) {
+    fn run_hook_test(code: String, author: String, files: Vec<String>, expected: HookExecution) {
         let hook = LuaHook {
             name: String::from("testhook"),
             code: code.to_string(),
