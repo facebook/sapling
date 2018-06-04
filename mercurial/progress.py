@@ -389,7 +389,15 @@ class fancyrenderer(baserenderer):
         self._flusherr()
 
 
-renderers = {"classic": classicrenderer, "fancy": fancyrenderer}
+class nullrenderer(baserenderer):
+    def __init__(self, bar):
+        super(nullrenderer, self).__init__(bar)
+
+    def show(self, now):
+        pass
+
+
+renderers = {"classic": classicrenderer, "fancy": fancyrenderer, "none": nullrenderer}
 
 
 def getrenderer(bar):

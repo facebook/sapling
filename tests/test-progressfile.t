@@ -41,6 +41,15 @@ no progress with --quiet
   {"state": {}, "topics": []}
   {"state": {}, "topics": []}
 
+progress output suppressed by setting the null renderer
+  $ withprogress hg progresstest --config progress.renderer=none 4 4
+  {"state": {"progress test": {"active": false, "estimate_sec": null, "estimate_str": null, "item": "loop 0", "pos": 0, "speed_str": null, "topic": "progress test", "total": 4, "unit": "cycles", "units_per_sec": null}}, "topics": ["progress test"]}
+  {"state": {"progress test": {"active": true, "estimate_sec": 4, "estimate_str": "04s", "item": "loop 1", "pos": 1, "speed_str": "1 cycles/sec", "topic": "progress test", "total": 4, "unit": "cycles", "units_per_sec": 1}}, "topics": ["progress test"]}
+  {"state": {"progress test": {"active": true, "estimate_sec": 3, "estimate_str": "03s", "item": "loop 2", "pos": 2, "speed_str": "1 cycles/sec", "topic": "progress test", "total": 4, "unit": "cycles", "units_per_sec": 1}}, "topics": ["progress test"]}
+  {"state": {"progress test": {"active": true, "estimate_sec": 2, "estimate_str": "02s", "item": "loop 3", "pos": 3, "speed_str": "1 cycles/sec", "topic": "progress test", "total": 4, "unit": "cycles", "units_per_sec": 1}}, "topics": ["progress test"]}
+  {"state": {"progress test": {"active": true, "estimate_sec": 1, "estimate_str": "01s", "item": "loop 4", "pos": 4, "speed_str": "1 cycles/sec", "topic": "progress test", "total": 4, "unit": "cycles", "units_per_sec": 1}}, "topics": ["progress test"]}
+  {"state": {}, "topics": []}
+
 test nested short-lived topics (which shouldn't display with changedelay)
   $ withprogress hg progresstest --nested 4 4
   \r (no-eol) (esc)
