@@ -97,7 +97,7 @@ impl DataStore for UnionDataStore {
     }
 
     fn getmissing(&self, keys: &[Key]) -> Result<Vec<Key>> {
-        let initial_keys = Ok(keys.iter().map(|k| k.clone()).collect());
+        let initial_keys = Ok(keys.iter().cloned().collect());
         self.into_iter()
             .fold(initial_keys, |missing_keys, store| match missing_keys {
                 Ok(missing_keys) => store.getmissing(&missing_keys),
