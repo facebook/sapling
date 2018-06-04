@@ -85,7 +85,10 @@ def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None):
 
 
 def _smartlogbackuphealthcheckmsg(orig, ui, repo):
-    commitcloudutil.SubscriptionManager(repo).checksubscription()
+    if commitcloudutil.getworkspacename(repo):
+        commitcloudutil.SubscriptionManager(repo).checksubscription()
+    else:
+        return orig(ui, repo)
 
 
 def _smartlogbackupsuggestion(orig, ui, repo):
