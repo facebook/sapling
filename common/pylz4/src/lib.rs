@@ -24,13 +24,14 @@ use failure::Error;
 use std::io::Cursor;
 use std::ptr;
 
-use lz4::liblz4::{LZ4F_compressBound, LZ4StreamDecode, LZ4_compress_continue, LZ4_createStream,
-                  LZ4_createStreamDecode, LZ4_decompress_safe_continue, LZ4_freeStreamDecode};
+use lz4::liblz4::{LZ4F_compressBound, LZ4StreamDecode, LZ4StreamEncode, LZ4_compress_continue,
+                  LZ4_createStream, LZ4_createStreamDecode, LZ4_decompress_safe_continue,
+                  LZ4_freeStream, LZ4_freeStreamDecode};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Bad LZ4: {}", _0)] BadLZ4(String),
-    #[fail(display = "Failed to init LZ4 context")] LZ4InitFailed,
+    #[fail(display = "Failed to init LZ4 context")] LZ4CompressInitFailed,
     #[fail(display = "Compression failed")] LZ4CompressFailed,
 }
 
@@ -53,6 +54,30 @@ impl Drop for DecompressContext {
     fn drop(&mut self) {
         if !self.0.is_null() {
             unsafe { LZ4_freeStreamDecode(self.0) };
+            self.0 = ptr::null_mut();
+        }
+    }
+}
+
+// Wrapper for the lz4 library decompress context
+struct CompressContext(*mut LZ4StreamEncode);
+impl CompressContext {
+    // Allocate a context; fails if allocation fails
+    fn new() -> Result<Self, Error> {
+        let ctx = unsafe { LZ4_createStream() };
+        if ctx.is_null() {
+            Err(ErrorKind::LZ4CompressInitFailed.into())
+        } else {
+            Ok(CompressContext(ctx))
+        }
+    }
+}
+
+// Make sure C resources for context get freed.
+impl Drop for CompressContext {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe { LZ4_freeStream(self.0) };
             self.0 = ptr::null_mut();
         }
     }
@@ -99,10 +124,7 @@ pub fn decompress(i: &[u8]) -> Result<(Vec<u8>, &[u8]), Error> {
 }
 
 pub fn compress(input_data: &[u8]) -> Result<Vec<u8>, Error> {
-    let ctx = unsafe { LZ4_createStream() };
-    if ctx.is_null() {
-        bail_err!(ErrorKind::LZ4InitFailed);
-    }
+    let ctx = CompressContext::new()?;
     // First 4 bytes is an original size stored as le32
     let prefix = 4;
     let mut compressed =
@@ -113,7 +135,7 @@ pub fn compress(input_data: &[u8]) -> Result<Vec<u8>, Error> {
         .unwrap();
     unsafe {
         let dest = compressed.as_mut_ptr().offset(4);
-        let res = LZ4_compress_continue(ctx, input_data.as_ptr(), dest, input_data.len() as i32);
+        let res = LZ4_compress_continue(ctx.0, input_data.as_ptr(), dest, input_data.len() as i32);
         if res == 0 {
             bail_err!(ErrorKind::LZ4CompressFailed);
         }
