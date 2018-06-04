@@ -8,8 +8,13 @@ impl CloudSyncTrigger {
         sid: &String,
         path: P,
         retries: u32,
-        _version: Option<u64>,
+        version: Option<u64>,
     ) -> Result<()> {
+        let version_args = if let Some(version) = version {
+            vec!["--workspace-version".to_owned(), version.to_string()]
+        } else {
+            vec![]
+        };
         for i in 0..retries {
             info!(
                 "{} Fire `hg cloud sync` {}",
@@ -18,7 +23,10 @@ impl CloudSyncTrigger {
             );
             let output = Command::new("hg")
                 .current_dir(&path)
+                .env("HGPLAIN", "hint")
                 .args(vec!["cloud", "sync"])
+                .arg("--check-autosync-enabled")
+                .args(&version_args)
                 .output()?;
             info!(
                 "stdout: \n{}",
