@@ -111,28 +111,28 @@ mod tests {
     use super::*;
 
     quickcheck! {
-        fn test_empty_store_get(key: Key) -> bool {
+        fn test_empty_unionstore_get(key: Key) -> bool {
             match UnionDataStore::new().get(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
         }
 
-        fn test_empty_store_getdeltachain(key: Key) -> bool {
+        fn test_empty_unionstore_getdeltachain(key: Key) -> bool {
             match UnionDataStore::new().getdeltachain(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
         }
 
-        fn test_empty_store_getmeta(key: Key) -> bool {
+        fn test_empty_unionstore_getmeta(key: Key) -> bool {
             match UnionDataStore::new().getmeta(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
         }
 
-        fn test_empty_store_getmissing(keys: Vec<Key>) -> bool {
+        fn test_empty_unionstore_getmissing(keys: Vec<Key>) -> bool {
             keys == UnionDataStore::new().getmissing(&keys).unwrap()
         }
     }
