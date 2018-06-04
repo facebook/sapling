@@ -95,6 +95,13 @@ def cloudleave(ui, repo, **opts):
     Commits and bookmarks will no londer be synchronized with other
     repositories.
     """
+    # do no crash on run cloud leave multiple times
+    if not commitcloudutil.getworkspacename(repo):
+        highlightstatus(
+            ui, _("this repository has been already disconnected from commit cloud\n")
+        )
+        return
+    commitcloudutil.SubscriptionManager(repo).removesubscription()
     commitcloudutil.WorkspaceManager(repo).clearworkspace()
     highlightstatus(ui, _("this repository is now disconnected from commit cloud\n"))
 
@@ -295,6 +302,8 @@ def _docloudsync(ui, repo, **opts):
     elapsed = time.time() - start
     highlightdebug(ui, _("cloudsync completed in %0.2f sec\n") % elapsed)
     highlightstatus(ui, _("commits synchronized\n"))
+    # check that Scm Service is running and a subscription exists
+    commitcloudutil.SubscriptionManager(repo).checksubscription()
 
 
 def _maybeupdateworkingcopy(ui, repo, currentnode):

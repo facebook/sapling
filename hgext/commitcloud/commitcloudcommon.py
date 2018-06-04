@@ -80,7 +80,7 @@ class ServiceError(error.Abort):
     def __init__(self, ui, message, *args):
         topic = highlightmsg(ui, _("error from remote service"))
         details = _("please retry later")
-        contact = _("please let %s know if this error persists") % getownerteam(ui)
+        contact = _("please contact %s if this error persists") % getownerteam(ui)
         message = "%s: '%s'\n%s\n%s" % (topic, message, details, contact)
         super(ServiceError, self).__init__(message, *args)
 

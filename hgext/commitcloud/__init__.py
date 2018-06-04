@@ -40,6 +40,15 @@
     # option to print incoming and outgoing requests to
     # commit cloud http endpoint in json format (with --debug option only)
     debugrequests = true
+
+    # enable subscribing to commit cloud notifications via SCM Daemon
+    subscription_enabled = true
+
+    # path where SCM Daemon looks up current connected subscribers
+    connected_subscribers_path = /path/to/dir
+
+    # SCM Daemon tcp port
+    scm_daemon_tcp_port = 15432
 """
 
 from __future__ import absolute_import
@@ -75,6 +84,10 @@ def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None):
         return orig(ui, repo, dest, command)
 
 
+def _smartlogbackuphealthcheckmsg(orig, ui, repo):
+    commitcloudutil.SubscriptionManager(repo).checksubscription()
+
+
 def _smartlogbackupsuggestion(orig, ui, repo):
     if commitcloudutil.getworkspacename(repo):
         commitcloudcommon.highlightstatus(
@@ -108,6 +121,11 @@ def extsetup(ui):
         infinitepush.backupcommands,
         "_smartlogbackupmessagemap",
         _smartlogbackupmessagemap,
+    )
+    extensions.wrapfunction(
+        infinitepush.backupcommands,
+        "_smartlogbackuphealthcheckmsg",
+        _smartlogbackuphealthcheckmsg,
     )
     commitcloudcommands.infinitepush = infinitepush
     localrepo.localrepository._wlockfreeprefix.update(

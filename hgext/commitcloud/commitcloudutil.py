@@ -6,7 +6,9 @@
 from __future__ import absolute_import
 
 # Standard Library
+import hashlib
 import os
+import socket
 import subprocess
 
 from mercurial import (
@@ -28,56 +30,65 @@ SERVICE = "commitcloud"
 ACCOUNT = "commitcloud"
 
 
+def _gethomevfs(ui, config_option_name):
+    """
+    Check config first.
+    If config override is not given locate home dir
+    Unix:
+        returns the value of the 'HOME' environment variable
+        if it is set and not equal to the empty string
+    Windows:
+        returns the value of the 'APPDATA' environment variable
+        if it is set and not equal to the empty string
+    """
+    path = ui.config("commitcloud", config_option_name)
+    if path and not os.path.isdir(path):
+        raise commitcloudcommon.ConfigurationError(
+            ui, _("invalid commitcloud.%s '%s'") % (config_option_name, path)
+        )
+    if path:
+        return vfsmod.vfs(util.expandpath(path))
+
+    if pycompat.iswindows:
+        envvar = "APPDATA"
+    else:
+        envvar = "HOME"
+    homedir = encoding.environ.get(envvar)
+    if not homedir:
+        raise commitcloudcommon.ConfigurationError(
+            ui, _("$%s environment variable not found") % envvar
+        )
+
+    if not os.path.isdir(homedir):
+        raise commitcloudcommon.ConfigurationError(
+            ui, _("invalid homedir '%s'") % homedir
+        )
+
+    return vfsmod.vfs(homedir)
+
+
 class TokenLocator(object):
 
     filename = ".commitcloudrc"
 
     def __init__(self, ui):
         self.ui = ui
-
-    def _gettokenvfs(self):
-        path = self.ui.config("commitcloud", "user_token_path")
-        if path and not os.path.isdir(path):
-            raise commitcloudcommon.ConfigurationError(
-                self.ui, _("invalid commitcloud.user_token_path '%s'") % path
-            )
-        if path:
-            return vfsmod.vfs(util.expandpath(path))
-
-        if pycompat.iswindows:
-            envvar = "APPDATA"
-        else:
-            envvar = "HOME"
-        homedir = encoding.environ.get(envvar)
-        if not homedir:
-            raise commitcloudcommon.ConfigurationError(
-                self.ui, _("$%s environment variable not found") % envvar
-            )
-
-        if not os.path.isdir(homedir):
-            raise commitcloudcommon.ConfigurationError(
-                self.ui, _("invalid homedir '%s'") % homedir
-            )
-
-        return vfsmod.vfs(homedir)
+        self.vfs = _gethomevfs(self.ui, "user_token_path")
+        self.vfs.createmode = 0o600
 
     def _gettokenfromfile(self):
         """On platforms except macOS tokens are stored in a file"""
-        vfs = self._gettokenvfs()
-        if not os.path.exists(vfs.join(self.filename)):
+        if not self.vfs.exists(self.filename):
             return None
-        with vfs.open(self.filename, r"rb") as f:
+        with self.vfs.open(self.filename, r"rb") as f:
             tokenconfig = config.config()
             tokenconfig.read(self.filename, f)
             return tokenconfig.get("commitcloud", "user_token")
-        return None
 
     def _settokentofile(self, token):
         """On platforms except macOS tokens are stored in a file"""
-        vfs = self._gettokenvfs()
-        with vfs.open(self.filename, "w") as configfile:
-            configfile.writelines(["[commitcloud]\n", "user_token=%s\n" % token])
-        vfs.chmod(self.filename, 0o600)
+        with self.vfs.open(self.filename, "w") as configfile:
+            configfile.write(("[commitcloud]\nuser_token=%s\n") % token)
 
     def _gettokenosx(self):
         """On macOS tokens are stored in keychain
@@ -218,6 +229,81 @@ class WorkspaceManager(object):
     def clearworkspace(self):
         with self.repo.wlock(), self.repo.lock():
             self.repo.svfs.unlink(self.filename)
+
+
+class SubscriptionManager(object):
+
+    dirname = ".commitcloud"
+    joined = "joined"
+    default_scm_daemon_port = 15432
+
+    def __init__(self, repo):
+        self.ui = repo.ui
+        self.repo = repo
+        workspacemanager = WorkspaceManager(self.repo)
+        self.workspace = workspacemanager.workspace
+        self.repo_name = workspacemanager.reponame
+        self.repo_root = self.repo.path
+        self.vfs = vfsmod.vfs(
+            _gethomevfs(self.ui, "connected_subscribers_path").join(
+                self.dirname, self.joined
+            )
+        )
+        self.filename_unique = hashlib.sha256(
+            "\0".join([self.repo_root, self.repo_name, self.workspace])
+        ).hexdigest()[:32]
+        self.subscription_enabled = self.ui.configbool(
+            "commitcloud", "subscription_enabled", False
+        )
+        self.scm_daemon_tcp_port = self.ui.configint(
+            "commitcloud", "scm_daemon_tcp_port", self.default_scm_daemon_port
+        )
+
+    def checksubscription(self):
+        if not self.subscription_enabled:
+            self.removesubscription()
+            return
+        if not self.vfs.exists(self.filename_unique):
+            with self.vfs.open(self.filename_unique, "w") as configfile:
+                configfile.write(
+                    ("[commitcloud]\nworkspace=%s\nrepo_name=%s\nrepo_root=%s\n")
+                    % (self.workspace, self.repo_name, self.repo_root)
+                )
+                self._restart_service_subscriptions()
+        else:
+            self._test_service_is_running()
+
+    def removesubscription(self):
+        if self.vfs.exists(self.filename_unique):
+            self.vfs.tryunlink(self.filename_unique)
+            self._restart_service_subscriptions(warn_service_not_running=False)
+
+    def _warn_service_not_running(self):
+        commitcloudcommon.highlightstatus(
+            self.ui,
+            _(
+                "warning: scm daemon is not running and fully automated synchronization may not work\n"
+                "please contact %s if this warning persists\n"
+            )
+            % commitcloudcommon.getownerteam(self.ui),
+        )
+
+    def _test_service_is_running(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if s.connect_ex(("127.0.0.1", self.scm_daemon_tcp_port)):
+            self._warn_service_not_running()
+        s.close()
+
+    def _restart_service_subscriptions(self, warn_service_not_running=True):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.connect(("127.0.0.1", self.scm_daemon_tcp_port))
+            s.send('["restart"]')
+        except socket.error:
+            if warn_service_not_running:
+                self._warn_service_not_running()
+        finally:
+            s.close()
 
 
 # Obsmarker syncing.

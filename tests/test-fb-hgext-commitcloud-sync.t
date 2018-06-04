@@ -707,3 +707,26 @@ Check '--check_autosync_enabled' option
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+
+Check subscription when join/leave and also scm service health check
+  $ cat >> .hg/hgrc << EOF
+  > [commitcloud]
+  > subscription_enabled = true
+  > subscriber_service_tcp_port = 15432
+  > connected_subscribers_path = $TESTTMP
+  > EOF
+  $ hg cloud sync -q
+  $ cat $TESTTMP/.commitcloud/joined/*
+  [commitcloud]
+  workspace=user/test/default
+  repo_name=server
+  repo_root=$TESTTMP/client2/.hg
+  $ hg cloud leave
+  #commitcloud this repository is now disconnected from commit cloud
+  $ ls $TESTTMP/.commitcloud/joined/
+  $ hg cloud join -q
+  $ cat $TESTTMP/.commitcloud/joined/*
+  [commitcloud]
+  workspace=user/test/default
+  repo_name=server
+  repo_root=$TESTTMP/client2/.hg

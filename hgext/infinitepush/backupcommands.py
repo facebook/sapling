@@ -586,6 +586,10 @@ def _smartlogbackupmessagemap(ui, repo):
     }
 
 
+def _smartlogbackuphealthcheckmsg(ui, repo):
+    return
+
+
 @templatefunc("backupstatusmsg(status)")
 def backupstatusmsg(context, mapping, args):
     if len(args) != 1:
@@ -624,6 +628,8 @@ def smartlogsummary(ui, repo):
                 )
             )
             ui.write(_("so your commits are not being backed up.\n"))
+    else:
+        _smartlogbackuphealthcheckmsg(ui, repo)
 
     # Don't output the summary if a backup is currently in progress.
     srcrepo = shareutil.getsrcrepo(repo)
