@@ -426,7 +426,9 @@ class rebaseruntime(object):
         else:
             self.wctx = self.repo[None]
             self.repo.ui.debug("rebasing on disk\n")
-        self.repo.ui.log("rebase", "", rebase_imm_used=self.wctx.isinmemory())
+        self.repo.ui.log(
+            "rebase", "", rebase_imm_used=str(self.wctx.isinmemory()).lower()
+        )
 
     def _performrebase(self, tr):
         self._assignworkingcopy()
@@ -983,7 +985,7 @@ def rebase(ui, repo, **opts):
             # in-memory merge doesn't support conflicts, so if we hit any, abort
             # and re-run as an on-disk merge.
             ui.warn(("hit merge conflicts; using on-disk merge instead " "(%s)\n" % e))
-            ui.log("rebase", "", rebase_imm_restart=True)
+            ui.log("rebase", "", rebase_imm_restart=str(True).lower())
             cmdutil.bailifchanged(
                 repo, hint=_("commit, shelve or remove them, then rerun the rebase")
             )
@@ -999,7 +1001,10 @@ def rebase(ui, repo, **opts):
             if rbsrt.inmemory:
                 ui.warn(("hit error; using on-disk merge instead " "(%s)\n" % e))
                 ui.log(
-                    "rebase", "", rebase_imm_restart=True, rebase_imm_exception=str(e)
+                    "rebase",
+                    "",
+                    rebase_imm_restart=str(True).lower(),
+                    rebase_imm_exception=str(e),
                 )
                 inmemory = False
                 cmdutil.bailifchanged(
