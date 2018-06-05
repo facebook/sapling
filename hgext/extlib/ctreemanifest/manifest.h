@@ -72,8 +72,8 @@ class Manifest {
     ManifestPtr copy();
 
     bool isMutable() const;
-    void markPermanent(const char *p1, const char *p2, ManifestEntry *entry);
-    void markPermanent(const char *node, ManifestEntry *entry);
+    void markPermanent(const char *p1, const char *p2);
+    void markPermanent(const char *node);
 
     char *node() {
       return _node;

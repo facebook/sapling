@@ -685,7 +685,7 @@ bool FinalizeIterator::next(std::string **path, ManifestPtr *result,
 
       // If mutable root node, always give it new parents and return it
       if (realPath->length() == 0) {
-        realResult->markPermanent(p1Node, p2Node, resultEntry);
+        realResult->markPermanent(p1Node, p2Node);
       // If mutable child has parents, compare with parent contents and return
       // only if different.
       } else if (p1 || p2) {
@@ -699,7 +699,7 @@ bool FinalizeIterator::next(std::string **path, ManifestPtr *result,
           if (p) {
             p->serialize(parentRaw);
             if (mainRaw == parentRaw) {
-              realResult->markPermanent(p->node(), resultEntry);
+              realResult->markPermanent(p->node());
               parentMatch = true;
               break;
             }
@@ -709,10 +709,10 @@ bool FinalizeIterator::next(std::string **path, ManifestPtr *result,
           continue;
         }
 
-        realResult->markPermanent(p1Node, p2Node, resultEntry);
+        realResult->markPermanent(p1Node, p2Node);
       // If mutable child has no parents, always return
       } else {
-        realResult->markPermanent(p1Node, p2Node, resultEntry);
+        realResult->markPermanent(p1Node, p2Node);
       }
     }
 

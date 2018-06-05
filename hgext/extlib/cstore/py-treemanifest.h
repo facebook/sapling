@@ -284,12 +284,6 @@ static PyObject *newtreeiter_iternext(py_newtreeiter *self)
         p1->serialize(p1raw);
       }
 
-      if (path->size() == 0) {
-        // Record the root hash
-        self->treemf->tm.root.updatebinnode(result->node(),
-                                            MANIFEST_DIRECTORY_FLAGPTR);
-      }
-
       const char *p1Node = p1 ? p1->node() : NULLID;
       const char *p2Node = p2 ? p2->node() : NULLID;
       return Py_BuildValue(
@@ -375,12 +369,6 @@ static PyObject *subtreeiter_iternext(py_subtreeiter *self)
         p1raw.erase();
       } else {
         p1->serialize(p1raw);
-      }
-
-      if (path->size() == 0) {
-        // Record the root hash
-        self->treemf->tm.root.updatebinnode(result->node(),
-                                            MANIFEST_DIRECTORY_FLAGPTR);
       }
 
       const char *p1Node = p1 ? p1->node() : NULLID;
