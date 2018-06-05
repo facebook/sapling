@@ -26,6 +26,7 @@ from mercurial.i18n import _
 
 from . import common
 
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -43,10 +44,13 @@ command = registrar.command(cmdtable)
 def split(ui, repo, *revs, **opts):
     """split a changeset into smaller changesets
 
-    By default, split the current revision by prompting for all its hunks to be
-    redistributed into new changesets.
+    Prompt for hunks to be selected until exhausted. Each selection of hunks
+    will form a separate changeset, in order from parent to child: the first
+    selection will form the first changeset, the second selection will form
+    the second changeset, and so on.
 
-    Use --rev to split a given changeset instead.
+    Operates on the current revision by default. Use --rev to split a given
+    changeset instead.
     """
     tr = wlock = lock = None
     newcommits = []
