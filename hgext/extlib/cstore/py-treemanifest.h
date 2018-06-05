@@ -713,6 +713,27 @@ static std::shared_ptr<Store> convert_pystore(PythonObj storeObj)
   return store;
 }
 
+static void convert_pykey(PythonObj key, char **path, size_t *pathlen,
+                          std::string *node)
+{
+  PyObject *pathObj = PyTuple_GetItem((PyObject *)key, 0);
+  PyObject *nodeObj = PyTuple_GetItem((PyObject *)key, 1);
+
+  Py_ssize_t pyPathlen;
+  if (PyString_AsStringAndSize(pathObj, path, &pyPathlen)) {
+    throw pyexception();
+  }
+  *pathlen = pyPathlen;
+
+  char *nodedata;
+  Py_ssize_t nodedatalen;
+  if (PyString_AsStringAndSize(nodeObj, &nodedata, &nodedatalen)) {
+    throw pyexception();
+  }
+
+  *node = std::string(nodedata, (size_t)nodedatalen);
+}
+
 /*
  * Initializes the contents of a treemanifest
  */
@@ -1391,6 +1412,64 @@ static PyObject *treemanifest_walksubtrees(py_treemanifest *self,
   }
 }
 
+static PyObject *treemanifest_walksubdirtrees(PyTypeObject *type,
+                                              PyObject *args, PyObject *kwargs)
+{
+  PyObject *keyObj = NULL;
+  PyObject *storeObj = NULL;
+  PyObject *compareTrees = NULL;
+  static char const *kwlist[] = {"key", "store", "comparetrees", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|O", (char **)kwlist,
+                                   &keyObj, &storeObj, &compareTrees)) {
+    return NULL;
+  }
+
+  try {
+    Py_INCREF(storeObj);
+    PythonObj store = storeObj;
+    Py_INCREF(keyObj);
+    PythonObj key = keyObj;
+
+    char *path;
+    size_t pathlen;
+    std::string node;
+    convert_pykey(key, &path, &pathlen, &node);
+
+    // Get the manifest
+    auto fetcher = ManifestFetcher(convert_pystore(store));
+    auto manifest = fetcher.get(path, pathlen, node);
+
+    std::vector<ManifestPtr> cmpManifests;
+
+    if (compareTrees) {
+      PythonObj iterator = PyObject_GetIter(compareTrees);
+      PyObject *compareKeyObj;
+      while ((compareKeyObj = PyIter_Next(iterator))) {
+        // Assign to PythonObj so its lifecycle is managed.
+        PythonObj compareKey = compareKeyObj;
+
+        char *path;
+        size_t pathlen;
+        std::string node;
+        convert_pykey(compareKey, &path, &pathlen, &node);
+
+        auto cmpManifest = fetcher.get(path, pathlen, node);
+        cmpManifests.push_back(cmpManifest);
+      }
+    }
+
+    auto pathStr = std::string(path, pathlen);
+    return (PyObject *)subtreeiter_create(pathStr, manifest, cmpManifests,
+                                          fetcher);
+  } catch (const pyexception &ex) {
+    return NULL;
+  } catch (const std::exception &ex) {
+    PyErr_SetString(PyExc_RuntimeError, ex.what());
+    return NULL;
+  }
+}
+
 static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args)
 {
   PyObject *matcherObj;
@@ -1506,6 +1585,11 @@ static PyMethodDef treemanifest_methods[] = {
      "returns the text form of the manifest"},
     {"walk", (PyCFunction)treemanifest_walk, METH_VARARGS,
      "returns a iterator for walking the manifest"},
+    {"walksubdirtrees", (PyCFunction)treemanifest_walksubdirtrees,
+     METH_CLASS | METH_VARARGS | METH_KEYWORDS,
+     "Returns a iterator for walking a particular subtree within a manifest."
+     "`comparetrees` is a list of trees to compare against and "
+     "avoid walking down any shared subtree."},
     {"walksubtrees", (PyCFunction)treemanifest_walksubtrees,
      METH_VARARGS | METH_KEYWORDS,
      "Returns a iterator for walking the subtree manifests."

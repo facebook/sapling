@@ -689,6 +689,78 @@ class ctreemanifesttests(unittest.TestCase):
             ],
         )
 
+    def testWalkSubdirtrees(self):
+        a = cstore.treemanifest(FakeDataStore())
+
+        zflags = hashflags()
+        qflags = hashflags()
+        fooflags = hashflags()
+        a.set("abc/def/z", *zflags)
+        a.set("abc/xyz/q", *qflags)
+        a.set("mno/foo", *fooflags)
+
+        # Walk over finalized tree
+        dstore = FakeDataStore()
+        hstore = FakeHistoryStore()
+        for name, node, text, p1text, p1, p2 in a.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, nullid, "")
+            if name == "abc":
+                abcnode = node
+            if name == "abc/xyz":
+                abcxyznode = node
+            if name == "abc/def":
+                abcdefnode = node
+
+        subtrees = list(
+            cstore.treemanifest.walksubdirtrees(("abc/def", abcdefnode), dstore)
+        )
+        self.assertEquals(
+            subtrees,
+            [
+                (
+                    "abc/def",
+                    abcdefnode,
+                    "z\0%s%s\n" % (hex(zflags[0]), zflags[1]),
+                    "",
+                    nullid,
+                    nullid,
+                )
+            ],
+        )
+
+        subtrees = list(cstore.treemanifest.walksubdirtrees(("abc", abcnode), dstore))
+        self.assertEquals(
+            subtrees,
+            [
+                (
+                    "abc/def",
+                    abcdefnode,
+                    "z\0%s%s\n" % (hex(zflags[0]), zflags[1]),
+                    "",
+                    nullid,
+                    nullid,
+                ),
+                (
+                    "abc/xyz",
+                    abcxyznode,
+                    "q\0%s%s\n" % (hex(qflags[0]), qflags[1]),
+                    "",
+                    nullid,
+                    nullid,
+                ),
+                (
+                    "abc",
+                    abcnode,
+                    "def\0%st\n" % (hex(abcdefnode),)
+                    + "xyz\0%st\n" % (hex(abcxyznode),),
+                    "",
+                    nullid,
+                    nullid,
+                ),
+            ],
+        )
+
 
 if __name__ == "__main__":
     silenttestrunner.main(__name__)
