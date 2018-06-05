@@ -1658,10 +1658,4 @@ def pushbackupbundle(ui, repo, other, outgoing, bookmarks):
             _sendbundle(bundler, other)
         return backup
     finally:
-        # cleanup ensures that all pipes are flushed
-        cleanup = getattr(other, "_cleanup", None) or getattr(other, "cleanup")
-        try:
-            cleanup()
-        except Exception:
-            ui.warn(_("remote connection cleanup failed\n"))
         extensions.unwrapfunction(changegroup.cg2packer, "deltaparent", _deltaparent)
