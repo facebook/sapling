@@ -93,6 +93,15 @@ class InvalidWorkspaceDataError(error.Abort):
         super(InvalidWorkspaceDataError, self).__init__(message, *args)
 
 
+class SynchronizationError(error.Abort):
+    def __init__(self, ui, message, *args):
+        topic = highlightmsg(ui, _("failed to synchronize commits"))
+        details = _("please retry 'hg cloud sync'")
+        contact = _("please let %s know if this error persists") % getownerteam(ui)
+        message = "%s: '%s'\n%s\n%s" % (topic, message, details, contact)
+        super(SynchronizationError, self).__init__(message, *args)
+
+
 """
 commit cloud message wrappers
 """

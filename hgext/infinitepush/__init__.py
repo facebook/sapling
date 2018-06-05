@@ -1661,13 +1661,23 @@ def pushbackupbundle(ui, repo, other, outgoing, bookmarks):
         extensions.unwrapfunction(changegroup.cg2packer, "deltaparent", _deltaparent)
 
 
-def pushbackupbundledraftheads(ui, repo, other, heads, bookmarks):
+def pushbackupbundlewithdiscovery(ui, repo, other, heads, bookmarks):
+
+    if heads:
+        with ui.configoverride({("remotenames", "fastheaddiscovery"): False}):
+            outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=heads)
+    else:
+        outgoing = None
+
+    return pushbackupbundle(ui, repo, other, outgoing, bookmarks)
+
+
+def pushbackupbundledraftheads(ui, repo, getconnection, heads):
     """
     push a backup bundle containing draft heads to the server
 
     Pushes an infinitepush bundle containing the commits that are draft
-    ancestors of `heads`, and the bookmarks described in `bookmarks` to the
-    `other` server.
+    ancestors of `heads`, to the `other` server.
     """
     if heads:
         # Calculate the commits to back-up.  The bundle needs to cleanly
@@ -1692,4 +1702,75 @@ def pushbackupbundledraftheads(ui, repo, other, heads, bookmarks):
     else:
         og = None
 
-    return pushbackupbundle(ui, repo, other, og, bookmarks)
+    try:
+        with getconnection() as conn:
+            return pushbackupbundle(ui, repo, conn.peer, og, None)
+    except Exception as e:
+        ui.warn(_("push failed: %s\n") % e)
+        ui.warn(_("retrying push with discovery\n"))
+    with getconnection() as conn:
+        return pushbackupbundlewithdiscovery(ui, repo, conn.peer, heads, None)
+
+
+def pushbackupbundlestacks(ui, repo, getconnection, heads):
+    # Push bundles containing the commits.  Initially attempt to push one
+    # bundle for each stack (commits that share a single root).  If a stack is
+    # too large, or if the push fails, and the stack has multiple heads, push
+    # head-by-head.
+    roots = repo.set("roots(draft() & ::%ls)", heads)
+    newheads = set()
+    failedheads = set()
+    for root in roots:
+        ui.status(_("backing up stack rooted at %s\n") % root)
+        stack = [ctx.hex() for ctx in repo.set("(%n::%ls)", root.node(), heads)]
+        if len(stack) == 0:
+            continue
+
+        stackheads = [ctx.hex() for ctx in repo.set("heads(%ls)", stack)]
+        if len(stack) > 1000:
+            # This stack is too large, something must have gone wrong
+            ui.warn(
+                _("not backing up excessively large stack rooted at %s (%d commits)")
+                % (root, len(stack))
+            )
+            failedheads |= set(stackheads)
+            continue
+
+        if len(stack) < 20 and len(stackheads) > 1:
+            # Attempt to push the whole stack.  This makes it easier on the
+            # server when accessing one of the head commits, as the ancestors
+            # will always be in the same bundle.
+            try:
+                if pushbackupbundledraftheads(
+                    ui, repo, getconnection, [nodemod.bin(h) for h in stackheads]
+                ):
+                    newheads |= set(stackheads)
+                    continue
+                else:
+                    ui.warn(_("failed to push stack bundle rooted at %s\n") % root)
+            except Exception as e:
+                ui.warn(_("push of stack %s failed: %s\n") % (root, e))
+            ui.warn(_("retrying each head individually\n"))
+
+        # The stack only has one head, is large, or pushing the whole stack
+        # failed, push each head in turn.
+        for head in stackheads:
+            try:
+                if pushbackupbundledraftheads(
+                    ui, repo, getconnection, [nodemod.bin(head)]
+                ):
+                    newheads.add(head)
+                    continue
+                else:
+                    ui.warn(
+                        _("failed to push stack bundle with head %s\n")
+                        % nodemod.short(nodemod.bin(head))
+                    )
+            except Exception as e:
+                ui.warn(
+                    _("push of head %s failed: %s\n")
+                    % (nodemod.short(nodemod.bin(head)), e)
+                )
+            failedheads.add(head)
+
+    return newheads, failedheads

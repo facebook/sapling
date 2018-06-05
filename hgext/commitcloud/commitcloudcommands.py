@@ -263,6 +263,7 @@ def _docloudsync(ui, repo, **opts):
     cloudrefs = serv.getreferences(reponame, workspace, lastsyncstate.version)
 
     synced = False
+    pushfailures = set()
     while not synced:
         if cloudrefs.version != lastsyncstate.version:
             _applycloudchanges(ui, repo, lastsyncstate, cloudrefs)
@@ -285,18 +286,48 @@ def _docloudsync(ui, repo, **opts):
             def getconnection():
                 return repo.connectionpool.get(path, opts)
 
-            # First, push commits that the server doesn't have.
+            # Push commits that the server doesn't have.
             newheads = list(set(localheads) - set(lastsyncstate.heads))
-            pushbackupcommits(ui, repo, getconnection, newheads)
+            newheads, failedheads = infinitepush.pushbackupbundlestacks(
+                ui, repo, getconnection, newheads
+            )
 
-            # Next, update the infinitepush backup bookmarks to point to the
-            # new local heads and bookmarks.  This must be done after all
+            if failedheads:
+                pushfailures |= set(failedheads)
+                # Some heads failed to be pushed.  Work out what is actually
+                # available on the server
+                unfi = repo.unfiltered()
+                localheads = [
+                    ctx.hex()
+                    for ctx in unfi.set(
+                        "heads((draft() & ::%ls) + (draft() & ::%ls & not obsolete()))",
+                        newheads,
+                        lastsyncstate.heads,
+                    )
+                ]
+                failedcommits = {
+                    ctx.hex()
+                    for ctx in repo.set(
+                        "(draft() & ::%ls) - (draft() & ::%ls)", failedheads, localheads
+                    )
+                }
+                # Revert any bookmark updates that refer to failed commits to
+                # the available commits.
+                for name, bookmarknode in localbookmarks.items():
+                    if bookmarknode in failedcommits:
+                        if name in lastsyncstate.bookmarks:
+                            localbookmarks[name] = lastsyncstate.bookmarks[name]
+                        else:
+                            del localbookmarks[name]
+
+            # Update the infinitepush backup bookmarks to point to the new
+            # local heads and bookmarks.  This must be done after all
             # referenced commits have been pushed to the server.
             pushbackupbookmarks(
                 ui, repo, getconnection, localheads, localbookmarks, **opts
             )
 
-            # Next, update the cloud heads, bookmarks and obsmarkers.
+            # Update the cloud heads, bookmarks and obsmarkers.
             obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
             synced, cloudrefs = serv.updatereferences(
                 reponame,
@@ -315,6 +346,10 @@ def _docloudsync(ui, repo, **opts):
 
     elapsed = time.time() - start
     highlightdebug(ui, _("cloudsync completed in %0.2f sec\n") % elapsed)
+    if pushfailures:
+        raise commitcloudcommon.SynchronizationError(
+            ui, _("%d heads could not be pushed") % len(pushfailures)
+        )
     highlightstatus(ui, _("commits synchronized\n"))
     # check that Scm Service is running and a subscription exists
     commitcloudutil.SubscriptionManager(repo).checksubscription()
@@ -500,15 +535,6 @@ def finddestinationnode(repo, node):
     if len(nodes) == 0:
         return node
     return None
-
-
-def pushbackupcommits(ui, repo, getconnection, newheads):
-    """Push a backup bundle to the server containing the new heads."""
-    # Push these commits to the server.
-    with getconnection() as conn:
-        infinitepush.pushbackupbundledraftheads(
-            ui, repo, conn.peer, [node.bin(h) for h in newheads], None
-        )
 
 
 def pushbackupbookmarks(ui, repo, getconnection, localheads, localbookmarks, **opts):

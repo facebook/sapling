@@ -116,6 +116,7 @@ Make a commit in the first client, and sync it
   $ mkcommit "commit1"
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at fa5d62c46fd7
   remote: pushing 1 commit:
   remote:     fa5d62c46fd7  commit1
   #commitcloud commits synchronized
@@ -145,6 +146,7 @@ Make a commit from the second client and sync it
   $ mkcommit "commit2"
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at fa5d62c46fd7
   remote: pushing 2 commits:
   remote:     fa5d62c46fd7  commit1
   remote:     02f6fc2b7154  commit2
@@ -217,6 +219,7 @@ Amend a commit
   rebasing 2:02f6fc2b7154 "commit2" (bookmark1)
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     48610b1a7ec0  commit2
@@ -289,6 +292,7 @@ Expected result: the message telling that revision has been moved to another rev
   $ hg amend -m "`hg descr | head -n1` amended"
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     41f3b9359864  commit2 amended
@@ -342,6 +346,7 @@ Expected result: client2 should be moved to the amended version
   8134e74ecdc8
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     8134e74ecdc8  commit2 amended amended
@@ -400,6 +405,7 @@ Expected result: move should not happen, expect a message that move is ambiguous
   cebbb614447e
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at a7bb357e7299
   remote: pushing 3 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     abd5311ab3c6  commit2 amended amended
@@ -462,6 +468,7 @@ Expected result: client2 should be moved to fada67350ab0
   fada67350ab0
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     fada67350ab0  commit2 amended amended amended amended amended
@@ -522,6 +529,7 @@ Expected result: client2 should be moved to 68e035cc1996
   ~
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     68e035cc1996  commit2 amended amended rebased amended rebased am
@@ -563,6 +571,7 @@ Clean up by hiding some commits, and create a new stack
   removing bookmark "bookmark1 (was at: 8134e74ecdc8)"
   removing bookmark "bookmark1-testhost (was at: a7bb357e7299)"
   2 bookmarks removed
+  $ hg bookmark testbookmark
   $ hg cloud sync -q
   $ mkcommit "stack commit 1"
   $ mkcommit "stack commit 2"
@@ -572,7 +581,7 @@ Clean up by hiding some commits, and create a new stack
   $ hg update d20a80d4def3 -q
   $ hg cloud sync -q
   $ hg tglog
-  o  f2ccc2716735 'stack commit 2'
+  o  f2ccc2716735 'stack commit 2' testbookmark
   |
   o  74473a0f136f 'stack commit 1'
   |
@@ -604,10 +613,10 @@ Create an extension that runs a restack command while we're syncing
   hint[amend-restack]: descendants of 74473a0f136f are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg cloud sync -q --config extensions.syncrace=$TESTTMP/syncrace.py
-  rebasing 17:f2ccc2716735 "stack commit 2"
+  rebasing 17:f2ccc2716735 "stack commit 2" (testbookmark)
   $ hg cloud sync -q
   $ hg tglog
-  o  715c1454ae33 'stack commit 2'
+  o  715c1454ae33 'stack commit 2' testbookmark
   |
   @  4b4f26511f8b 'race attempt'
   |
@@ -617,7 +626,7 @@ Create an extension that runs a restack command while we're syncing
   $ cd client2
   $ hg cloud sync -q
   $ hg tglog
-  @  715c1454ae33 'stack commit 2'
+  @  715c1454ae33 'stack commit 2' testbookmark
   |
   o  4b4f26511f8b 'race attempt'
   |
@@ -667,7 +676,7 @@ Check cloud sync in the source repo doesn't need to do anything
   $ hg tglog
   o  2c0ce859e76a 'shared commit'
   |
-  o  715c1454ae33 'stack commit 2'
+  o  715c1454ae33 'stack commit 2' testbookmark
   |
   @  4b4f26511f8b 'race attempt'
   |
@@ -684,7 +693,7 @@ Check cloud sync pulls in the shared commit in the other client
   $ hg tglog
   o  2c0ce859e76a 'shared commit'
   |
-  @  715c1454ae33 'stack commit 2'
+  @  715c1454ae33 'stack commit 2' testbookmark
   |
   o  4b4f26511f8b 'race attempt'
   |
@@ -709,6 +718,232 @@ Check '--check_autosync_enabled' option
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
 
+Check handling of failures
+Simulate failure to backup a commit by setting the server maxbundlesize limit very low
+
+  $ cp ../server/.hg/hgrc $TESTTMP/server-hgrc.bak
+  $ cat >> ../server/.hg/hgrc << EOF
+  > [infinitepush]
+  > maxbundlesize = 0
+  > EOF
+  $ hg up testbookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark testbookmark)
+  $ hg metaedit -r 2c0ce859e76a -m 'shared commit updated'
+  $ mkcommit toobig
+  $ hg book toobig
+  $ hg tglog
+  @  9bd68ef10d6b 'toobig' testbookmark toobig
+  |
+  | o  a6b97eebbf74 'shared commit updated'
+  |/
+  o  715c1454ae33 'stack commit 2'
+  |
+  o  4b4f26511f8b 'race attempt'
+  |
+  o  d20a80d4def3 'base'
+  
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at 4b4f26511f8b
+  remote: pushing 4 commits:
+  remote:     4b4f26511f8b  race attempt
+  remote:     715c1454ae33  stack commit 2
+  remote:     a6b97eebbf74  shared commit updated
+  remote:     9bd68ef10d6b  toobig
+  push failed: bundle is too big: 2219 bytes. max allowed size is 0 MB
+  retrying push with discovery
+  searching for changes
+  remote: pushing 4 commits:
+  remote:     4b4f26511f8b  race attempt
+  remote:     715c1454ae33  stack commit 2
+  remote:     a6b97eebbf74  shared commit updated
+  remote:     9bd68ef10d6b  toobig
+  push of stack 4b4f26511f8b failed: bundle is too big: 2219 bytes. max allowed size is 0 MB
+  retrying each head individually
+  remote: pushing 3 commits:
+  remote:     4b4f26511f8b  race attempt
+  remote:     715c1454ae33  stack commit 2
+  remote:     a6b97eebbf74  shared commit updated
+  push failed: bundle is too big: 1738 bytes. max allowed size is 0 MB
+  retrying push with discovery
+  searching for changes
+  remote: pushing 3 commits:
+  remote:     4b4f26511f8b  race attempt
+  remote:     715c1454ae33  stack commit 2
+  remote:     a6b97eebbf74  shared commit updated
+  push of head a6b97eebbf74 failed: bundle is too big: 1738 bytes. max allowed size is 0 MB
+  remote: pushing 3 commits:
+  remote:     4b4f26511f8b  race attempt
+  remote:     715c1454ae33  stack commit 2
+  remote:     9bd68ef10d6b  toobig
+  push failed: bundle is too big: 1695 bytes. max allowed size is 0 MB
+  retrying push with discovery
+  searching for changes
+  remote: pushing 3 commits:
+  remote:     4b4f26511f8b  race attempt
+  remote:     715c1454ae33  stack commit 2
+  remote:     9bd68ef10d6b  toobig
+  push of head 9bd68ef10d6b failed: bundle is too big: 1695 bytes. max allowed size is 0 MB
+  abort: #commitcloud failed to synchronize commits: '2 heads could not be pushed'
+  please retry 'hg cloud sync'
+  please let The Test Team @ FB know if this error persists
+  [255]
+
+  $ hg isbackedup -r .
+  9bd68ef10d6bdb8ebf3273a7b91bc4f3debe2a87 not backed up
+
+Set the limit back high.  Sync in the other repo and check it still looks ok
+(but with the failed commits missing).
+
+  $ mv $TESTTMP/server-hgrc.bak ../server/.hg/hgrc
+  $ cd ../client1
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud commits synchronized
+  $ hg tglog
+  o  715c1454ae33 'stack commit 2' testbookmark
+  |
+  @  4b4f26511f8b 'race attempt'
+  |
+  o  d20a80d4def3 'base'
+  
+
+Now sync in the repo we failed in.  This time it should work.
+
+  $ cd ../client2
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at 4b4f26511f8b
+  remote: pushing 4 commits:
+  remote:     4b4f26511f8b  race attempt
+  remote:     715c1454ae33  stack commit 2
+  remote:     a6b97eebbf74  shared commit updated
+  remote:     9bd68ef10d6b  toobig
+  #commitcloud commits synchronized
+  $ hg isbackedup -r .
+  9bd68ef10d6bdb8ebf3273a7b91bc4f3debe2a87 backed up
+  $ hg tglog
+  @  9bd68ef10d6b 'toobig' testbookmark toobig
+  |
+  | o  a6b97eebbf74 'shared commit updated'
+  |/
+  o  715c1454ae33 'stack commit 2'
+  |
+  o  4b4f26511f8b 'race attempt'
+  |
+  o  d20a80d4def3 'base'
+  
+
+And the commits should now be availble in the other client.
+
+  $ cd ../client1
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 3 files (+1 heads)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 3 files (+1 heads)
+  new changesets a6b97eebbf74:9bd68ef10d6b
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  #commitcloud commits synchronized
+  $ hg tglog
+  o  9bd68ef10d6b 'toobig' testbookmark toobig
+  |
+  | o  a6b97eebbf74 'shared commit updated'
+  |/
+  o  715c1454ae33 'stack commit 2'
+  |
+  @  4b4f26511f8b 'race attempt'
+  |
+  o  d20a80d4def3 'base'
+  
+Clean up
+
+  $ hg up -q -r 0
+  $ hg hide -q 4b4f26511f8b
+  $ cd ..
+  $ fullsync client1 client2
+  $ cd client1
+
+Make two stacks
+
+  $ mkcommit 'stack 1 first'
+  $ mkcommit 'stack 1 second'
+  $ hg up -q -r 0
+  $ mkcommit 'stack 2 first'
+  $ mkcommit 'stack 2 second'
+  $ hg tglog
+  @  799d22972c4e 'stack 2 second'
+  |
+  o  3597ff85ead0 'stack 2 first'
+  |
+  | o  9a3e7907fd5c 'stack 1 second'
+  | |
+  | o  e58a6603d256 'stack 1 first'
+  |/
+  o  d20a80d4def3 'base'
+  
+Make one of the commits public when it shouldn't be.
+
+  $ hg phase -p e58a6603d256
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at 9a3e7907fd5c
+  remote: abort: 00changelog.i@e58a6603d256: unknown parent!
+  push failed: stream ended unexpectedly (got 0 bytes, expected 4)
+  retrying push with discovery
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     e58a6603d256  stack 1 first
+  remote:     9a3e7907fd5c  stack 1 second
+  backing up stack rooted at 3597ff85ead0
+  remote: pushing 2 commits:
+  remote:     3597ff85ead0  stack 2 first
+  remote:     799d22972c4e  stack 2 second
+  #commitcloud commits synchronized
+
+Commit still becomes available in the other repo
+
+  $ cd ../client2
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 3 changes to 3 files (+1 heads)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  new changesets e58a6603d256:799d22972c4e
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  #commitcloud commits synchronized
+  $ hg tglog
+  o  799d22972c4e 'stack 2 second'
+  |
+  o  3597ff85ead0 'stack 2 first'
+  |
+  | o  9a3e7907fd5c 'stack 1 second'
+  | |
+  | o  e58a6603d256 'stack 1 first'
+  |/
+  | @  9bd68ef10d6b 'toobig'
+  | |
+  | x  715c1454ae33 'stack commit 2'
+  | |
+  | x  4b4f26511f8b 'race attempt'
+  |/
+  o  d20a80d4def3 'base'
+  
 Check subscription when join/leave and also scm service health check
   $ cat >> .hg/hgrc << EOF
   > [commitcloud]
