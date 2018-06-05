@@ -675,7 +675,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 
     // The node is the hex string representation of the hash, but
     // it is not NUL terminated!
-    StringPiece node(entry->node, 40);
+    StringPiece node(entry->get_node(), 40);
     Hash entryHash(node);
 
     StringPiece entryName(entry->filename, entry->filenamelen);
