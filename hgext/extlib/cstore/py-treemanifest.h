@@ -44,8 +44,6 @@ struct py_newtreeiter {
   PyObject_HEAD
 
   FinalizeIterator iter;
-
-  py_treemanifest *treemf;
 };
 // clang-format on
 
@@ -87,8 +85,6 @@ struct py_subtreeiter {
   PyObject_HEAD
 
   SubtreeIterator iter;
-
-  py_treemanifest *treemf;
 };
 // clang-format on
 
@@ -226,12 +222,11 @@ static py_fileiter *createfileiter(py_treemanifest *pytm, bool includenode,
 static void newtreeiter_dealloc(py_newtreeiter *self)
 {
   self->iter.~FinalizeIterator();
-  Py_XDECREF(self->treemf);
   PyObject_Del(self);
 }
 
 static py_newtreeiter *
-newtreeiter_create(py_treemanifest *treemf, ManifestPtr mainManifest,
+newtreeiter_create(ManifestPtr mainManifest,
                    const std::vector<const char *> &cmpNodes,
                    const std::vector<ManifestPtr> &cmpManifests,
                    const ManifestFetcher &fetcher)
@@ -239,9 +234,6 @@ newtreeiter_create(py_treemanifest *treemf, ManifestPtr mainManifest,
   py_newtreeiter *i = PyObject_New(py_newtreeiter, &newtreeiterType);
   if (i) {
     try {
-      i->treemf = treemf;
-      Py_INCREF(treemf);
-
       // The provided created struct hasn't initialized our iter member, so
       // we do it manually.
       new (&i->iter)
@@ -309,21 +301,17 @@ static PyObject *newtreeiter_iternext(py_newtreeiter *self)
 static void subtreeiter_dealloc(py_subtreeiter *self)
 {
   self->iter.~SubtreeIterator();
-  Py_XDECREF(self->treemf);
   PyObject_Del(self);
 }
 
 static py_subtreeiter *
-subtreeiter_create(py_treemanifest *treemf, ManifestPtr mainManifest,
+subtreeiter_create(ManifestPtr mainManifest,
                    const std::vector<ManifestPtr> &cmpManifests,
                    const ManifestFetcher &fetcher)
 {
   py_subtreeiter *pyiter = PyObject_New(py_subtreeiter, &subtreeiterType);
   if (pyiter) {
     try {
-      pyiter->treemf = treemf;
-      Py_INCREF(treemf);
-
       // The provided created struct hasn't initialized our iter member, so
       // we do it manually.
       std::vector<const char *> cmpNodes(cmpManifests.size());
@@ -1387,7 +1375,7 @@ static PyObject *treemanifest_walksubtrees(py_treemanifest *self,
       }
     }
 
-    return (PyObject *)subtreeiter_create(self, self->tm.getRootManifest(),
+    return (PyObject *)subtreeiter_create(self->tm.getRootManifest(),
                                           cmpManifests, self->tm.fetcher);
   } catch (const pyexception &ex) {
     return NULL;
@@ -1449,7 +1437,7 @@ static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
       cmpManifests.push_back(p2tree->tm.getRootManifest());
     }
 
-    return (PyObject *)newtreeiter_create(self, self->tm.getRootManifest(),
+    return (PyObject *)newtreeiter_create(self->tm.getRootManifest(),
                                           cmpNodes, cmpManifests,
                                           self->tm.fetcher);
   } catch (const pyexception &ex) {
