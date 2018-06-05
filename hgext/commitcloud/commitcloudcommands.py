@@ -493,22 +493,6 @@ def finddestinationnode(repo, node):
 
 def pushbackup(ui, repo, newheads, localheads, localbookmarks, dest, **opts):
     """Push a backup bundle to the server containing the new heads."""
-    # Calculate the commits to back-up.  The bundle needs to cleanly apply
-    # to the server, so we need to include the whole draft stack.
-    commitstobackup = repo.set("draft() & ::%ln", [node.bin(h) for h in newheads])
-
-    # Calculate the parent commits of the commits we are backing up.  These
-    # are the public commits that should be on the server.
-    parentcommits = repo.set("parents(roots(%ln))", commitstobackup)
-
-    # Build a discovery object encapsulating the commits to backup.
-    # Skip the actual discovery process, as we know exactly which
-    # commits are missing.  For common commits, include all the
-    # parents of the commits we are sending.
-    og = discovery.outgoing(repo, commonheads=parentcommits, missingheads=newheads)
-    og._missing = [c.node() for c in commitstobackup]
-    og._common = [c.node() for c in parentcommits]
-
     # Build a dictionary of infinitepush bookmarks.  We delete
     # all bookmarks and replace them with the full set each time.
     infinitepushbookmarks = {}
@@ -527,7 +511,9 @@ def pushbackup(ui, repo, newheads, localheads, localbookmarks, dest, **opts):
 
     # Push these commits to the server.
     other = commitcloudutil.getremote(repo, ui, dest, **opts)
-    infinitepush.pushbackupbundle(ui, repo, other, og, infinitepushbookmarks)
+    infinitepush.pushbackupbundledraftheads(
+        ui, repo, other, [node.bin(h) for h in newheads], infinitepushbookmarks
+    )
 
     # Update the infinitepush local state.
     if infinitepushbackup:
