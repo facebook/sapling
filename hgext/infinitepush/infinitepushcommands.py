@@ -30,10 +30,10 @@ from mercurial.i18n import _
 # Mercurial
 from mercurial.node import bin
 
-from . import backupcommands, common
+from . import common
 
 
-cmdtable = backupcommands.cmdtable
+cmdtable = {}
 command = registrar.command(cmdtable)
 
 

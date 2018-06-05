@@ -2,6 +2,7 @@
   > [extensions]
   > fbamend =
   > infinitepush =
+  > infinitepushbackup =
   > commitcloud =
   > rebase =
   > share =

@@ -112,25 +112,30 @@ def extsetup(ui):
     except KeyError:
         msg = _("The commitcloud extension requires the infinitepush extension")
         raise error.Abort(msg)
-    extensions.wrapfunction(
-        infinitepush.backupcommands, "_dobackgroundbackup", _dobackgroundcloudsync
-    )
-    extensions.wrapfunction(
-        infinitepush.backupcommands,
-        "_smartlogbackupsuggestion",
-        _smartlogbackupsuggestion,
-    )
-    extensions.wrapfunction(
-        infinitepush.backupcommands,
-        "_smartlogbackupmessagemap",
-        _smartlogbackupmessagemap,
-    )
-    extensions.wrapfunction(
-        infinitepush.backupcommands,
-        "_smartlogbackuphealthcheckmsg",
-        _smartlogbackuphealthcheckmsg,
-    )
+    try:
+        infinitepushbackup = extensions.find("infinitepushbackup")
+    except KeyError:
+        infinitepushbackup = None
+
+    if infinitepushbackup is not None:
+        extensions.wrapfunction(
+            infinitepushbackup, "_dobackgroundbackup", _dobackgroundcloudsync
+        )
+        extensions.wrapfunction(
+            infinitepushbackup, "_smartlogbackupsuggestion", _smartlogbackupsuggestion
+        )
+        extensions.wrapfunction(
+            infinitepushbackup, "_smartlogbackupmessagemap", _smartlogbackupmessagemap
+        )
+        extensions.wrapfunction(
+            infinitepushbackup,
+            "_smartlogbackuphealthcheckmsg",
+            _smartlogbackuphealthcheckmsg,
+        )
+
     commitcloudcommands.infinitepush = infinitepush
+    commitcloudcommands.infinitepushbackup = infinitepushbackup
+
     localrepo.localrepository._wlockfreeprefix.update(
         [commitcloudutil._obsmarkerssyncing]
     )

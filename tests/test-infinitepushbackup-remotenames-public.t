@@ -8,6 +8,7 @@ test covers the issue.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > infinitepush=
+  > infinitepushbackup=
   > [infinitepush]
   > branchpattern=re:scratch/.+
   > [ui]

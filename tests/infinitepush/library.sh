@@ -17,6 +17,7 @@ setupcommon() {
 [extensions]
 commitcloud=
 infinitepush=
+infinitepushbackup=
 pullcreatemarkers=
 [ui]
 ssh = python "$TESTDIR/dummyssh"

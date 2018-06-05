@@ -4,7 +4,8 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-""" back up commits in the cloud
+""" store draft commits in the cloud
+
     [infinitepush]
     # Server-side and client-side option. Pattern of the infinitepush bookmark
     branchpattern = PATTERN
@@ -134,7 +135,7 @@ from mercurial import (
     wireproto,
 )
 
-from . import backupcommands, bundleparts, common, infinitepushcommands
+from . import bundleparts, common, infinitepushcommands
 
 
 copiedpart = bundleparts.copiedpart
@@ -163,9 +164,6 @@ configscratchpush = "infinitepush-scratchpush"
 confignonforwardmove = "non-forward-move"
 
 cmdtable = infinitepushcommands.cmdtable
-revsetpredicate = backupcommands.revsetpredicate
-templatekeyword = backupcommands.templatekeyword
-templatefunc = backupcommands.templatefunc
 _scratchbranchmatcher = lambda x: False
 _maybehash = re.compile(r"^[a-f0-9]+$").search
 
@@ -293,15 +291,6 @@ def uisetup(ui):
 
 
 def extsetup(ui):
-    # Allow writing backup files outside the normal lock
-    localrepo.localrepository._wlockfreeprefix.update(
-        [
-            backupcommands._backupstatefile,
-            backupcommands._backupgenerationfile,
-            backupcommands._backuplatestinfofile,
-        ]
-    )
-
     commonsetup(ui)
     if _isserver(ui):
         serverextsetup(ui)
@@ -401,21 +390,6 @@ def clientextsetup(ui):
     if pushrebaseparttype in partorder:
         index = min(index, partorder.index(pushrebaseparttype))
     partorder.insert(index, partorder.pop(partorder.index(scratchbranchparttype)))
-
-    def wrapsmartlog(loaded):
-        if not loaded:
-            return
-        smartlogmod = extensions.find("smartlog")
-        wrapcommand(smartlogmod.cmdtable, "smartlog", _smartlog)
-
-    extensions.afterloaded("smartlog", wrapsmartlog)
-    backupcommands.extsetup(ui)
-
-
-def _smartlog(orig, ui, repo, **opts):
-    res = orig(ui, repo, **opts)
-    backupcommands.smartlogsummary(ui, repo)
-    return res
 
 
 def _showbookmarks(ui, bookmarks, **opts):
@@ -1606,3 +1580,88 @@ def _asyncsavemetadata(root, nodes):
             stdout=devnull,
             stderr=devnull,
         )
+
+
+def _deltaparent(orig, self, revlog, rev, p1, p2, prev):
+    # This version of deltaparent prefers p1 over prev to use less space
+    dp = revlog.deltaparent(rev)
+    if dp == nodemod.nullrev and not revlog.storedeltachains:
+        # send full snapshot only if revlog configured to do so
+        return nodemod.nullrev
+    return p1
+
+
+def _createbundler(ui, repo, other):
+    bundler = bundle2.bundle20(ui, bundle2.bundle2caps(other))
+    compress = ui.config("infinitepush", "bundlecompression", "UN")
+    bundler.setcompression(compress)
+    # Disallow pushback because we want to avoid taking repo locks.
+    # And we don't need pushback anyway
+    capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo, allowpushback=False))
+    bundler.newpart("replycaps", data=capsblob)
+    return bundler
+
+
+def _sendbundle(bundler, other):
+    stream = util.chunkbuffer(bundler.getchunks())
+    try:
+        reply = other.unbundle(stream, ["force"], other.url())
+        # Look for an error part in the response.  Note that we don't apply
+        # the reply bundle, as we're not expecting any response, except maybe
+        # an error.  If we receive any extra parts, that is an error.
+        for part in reply.iterparts():
+            if part.type == "error:abort":
+                raise bundle2.AbortFromPart(
+                    part.params["message"], hint=part.params.get("hint")
+                )
+            elif part.type == "reply:changegroup":
+                pass
+            else:
+                raise error.Abort(_("unexpected part in reply: %s") % part.type)
+    except error.BundleValueError as exc:
+        raise error.Abort(_("missing support for %s") % exc)
+
+
+def pushbackupbundle(ui, repo, other, outgoing, bookmarks):
+    """
+    push a backup bundle to the server
+
+    Pushes an infinitepush bundle containing the commits described in `outgoing`
+    and the bookmarks described in `bookmarks` to the `other` server.
+    """
+    # Wrap deltaparent function to make sure that bundle takes less space
+    # See _deltaparent comments for details
+    extensions.wrapfunction(changegroup.cg2packer, "deltaparent", _deltaparent)
+    try:
+        bundler = _createbundler(ui, repo, other)
+        bundler.addparam("infinitepush", "True")
+        backup = False
+        if outgoing and outgoing.missing:
+            backup = True
+            parts = bundleparts.getscratchbranchparts(
+                repo,
+                other,
+                outgoing,
+                confignonforwardmove=False,
+                ui=ui,
+                bookmark=None,
+                create=False,
+            )
+            for part in parts:
+                bundler.addpart(part)
+
+        if bookmarks:
+            backup = True
+            bundler.addpart(bundleparts.getscratchbookmarkspart(other, bookmarks))
+
+        if backup:
+            _sendbundle(bundler, other)
+        return backup
+    finally:
+        # cleanup ensures that all pipes are flushed
+        cleanup = getattr(other, "_cleanup", None) or getattr(other, "cleanup")
+        try:
+            cleanup()
+        except Exception:
+            ui.warn(_("remote connection cleanup failed\n"))
+        extensions.unwrapfunction(changegroup.cg2packer, "deltaparent", _deltaparent)

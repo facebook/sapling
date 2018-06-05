@@ -2,7 +2,8 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""
+""" back up draft commits in the cloud
+
     [infinitepushbackup]
     # Whether to enable automatic backups. If this option is True then a backup
     # process will be started after every mercurial command that modifies the
@@ -58,8 +59,6 @@ import subprocess
 import time
 
 from mercurial import (
-    bundle2,
-    changegroup,
     commands,
     discovery,
     dispatch,
@@ -77,15 +76,13 @@ from mercurial import (
     templater,
     util,
 )
-
-# Mercurial
 from mercurial.i18n import _
 
-from . import bundleparts
-from .. import shareutil
+from . import shareutil
 
 
 osutil = policy.importmod(r"osutil")
+infinitepush = None
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -146,9 +143,37 @@ def autobackupenabled(ui):
 
 # Wraps commands with backup if enabled
 def extsetup(ui):
+    try:
+        infinitepushmod = extensions.find("infinitepush")
+    except KeyError:
+        msg = _("The infinitepushbackup extension requires the infinitepush extension")
+        raise error.Abort(msg)
+
+    global infinitepush
+    infinitepush = infinitepushmod
+
+    # Allow writing backup files outside the normal lock
+    localrepo.localrepository._wlockfreeprefix.update(
+        [_backupstatefile, _backupgenerationfile, _backuplatestinfofile]
+    )
+
     if autobackupenabled(ui):
         extensions.wrapfunction(dispatch, "runcommand", _autobackupruncommandwrapper)
         extensions.wrapfunction(localrepo.localrepository, "transaction", _transaction)
+
+    def wrapsmartlog(loaded):
+        if not loaded:
+            return
+        smartlogmod = extensions.find("smartlog")
+        extensions.wrapcommand(smartlogmod.cmdtable, "smartlog", _smartlog)
+
+    extensions.afterloaded("smartlog", wrapsmartlog)
+
+
+def _smartlog(orig, ui, repo, **opts):
+    res = orig(ui, repo, **opts)
+    smartlogsummary(ui, repo)
+    return res
 
 
 def converttimestamptolocaltime(timestamp):
@@ -423,11 +448,9 @@ def backupdelete(ui, repo, dest=None, **opts):
                 sourcehostname, sourcereporoot
             ): ""
         }
-        _dobackuppush(ui, repo, other, None, bookmarks)
+        infinitepush.pushbackupbundle(ui, repo, other, None, bookmarks)
         ui.status(_("backup deleted\n"))
-        ui.status(
-            _("(you can still access the commits directly " "using their hashes)\n")
-        )
+        ui.status(_("(you can still access the commits directly using their hashes)\n"))
     return 0
 
 
@@ -764,7 +787,7 @@ def _dobackup(ui, repo, dest, **opts):
         bookmarkstobackup[namingmgr.getbackupbookmarkprefix()] = ""
 
     try:
-        if _dobackuppush(ui, repo, other, outgoing, bookmarkstobackup):
+        if infinitepush.pushbackupbundle(ui, repo, other, outgoing, bookmarkstobackup):
             _writelocalbackupstate(
                 repo.vfs, list(afterbackupheads), afterbackuplocalbooks
             )
@@ -774,46 +797,6 @@ def _dobackup(ui, repo, dest, **opts):
             ui.status(_("nothing to backup\n"))
     finally:
         ui.status(_("finished in %f seconds\n") % (time.time() - start))
-
-
-def _dobackuppush(ui, repo, other, outgoing, bookmarks):
-    # Wrap deltaparent function to make sure that bundle takes less space
-    # See _deltaparent comments for details
-    extensions.wrapfunction(changegroup.cg2packer, "deltaparent", _deltaparent)
-    try:
-        bundler = _createbundler(ui, repo, other)
-        bundler.addparam("infinitepush", "True")
-        backup = False
-        if outgoing and outgoing.missing:
-            backup = True
-            parts = bundleparts.getscratchbranchparts(
-                repo,
-                other,
-                outgoing,
-                confignonforwardmove=False,
-                ui=ui,
-                bookmark=None,
-                create=False,
-            )
-            for part in parts:
-                bundler.addpart(part)
-
-        if bookmarks:
-            backup = True
-            bundler.addpart(bundleparts.getscratchbookmarkspart(other, bookmarks))
-
-        if backup:
-            _sendbundle(bundler, other)
-        return backup
-    finally:
-        # cleanup ensures that all pipes are flushed
-        cleanup = getattr(other, "_cleanup", None) or getattr(other, "cleanup")
-        try:
-            cleanup()
-        except Exception:
-            ui.warn(_("remote connection cleanup failed\n"))
-        extensions.unwrapfunction(changegroup.cg2packer, "deltaparent", _deltaparent)
-    return 0
 
 
 def _dobackgroundbackup(ui, repo, dest=None, command=None):
@@ -1130,15 +1113,6 @@ def _getcommandandoptions(command):
 # Backup helper functions
 
 
-def _deltaparent(orig, self, revlog, rev, p1, p2, prev):
-    # This version of deltaparent prefers p1 over prev to use less space
-    dp = revlog.deltaparent(rev)
-    if dp == node.nullrev and not revlog.storedeltachains:
-        # send full snapshot only if revlog configured to do so
-        return node.nullrev
-    return p1
-
-
 def _getbookmarkstobackup(
     repo, newbookmarks, removedbookmarks, newheads, removedheads, namingmgr
 ):
@@ -1161,37 +1135,6 @@ def _getbookmarkstobackup(
         bookmarkstobackup[headbookmarksname] = hexhead
 
     return bookmarkstobackup
-
-
-def _createbundler(ui, repo, other):
-    bundler = bundle2.bundle20(ui, bundle2.bundle2caps(other))
-    compress = ui.config("infinitepush", "bundlecompression", "UN")
-    bundler.setcompression(compress)
-    # Disallow pushback because we want to avoid taking repo locks.
-    # And we don't need pushback anyway
-    capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo, allowpushback=False))
-    bundler.newpart("replycaps", data=capsblob)
-    return bundler
-
-
-def _sendbundle(bundler, other):
-    stream = util.chunkbuffer(bundler.getchunks())
-    try:
-        reply = other.unbundle(stream, ["force"], other.url())
-        # Look for an error part in the response.  Note that we don't apply
-        # the reply bundle, as we're not expecting any response, except maybe
-        # an error.  If we receive any extra parts, that is an error.
-        for part in reply.iterparts():
-            if part.type == "error:abort":
-                raise bundle2.AbortFromPart(
-                    part.params["message"], hint=part.params.get("hint")
-                )
-            elif part.type == "reply:changegroup":
-                pass
-            else:
-                raise error.Abort(_("unexpected part in reply: %s") % part.type)
-    except error.BundleValueError as exc:
-        raise error.Abort(_("missing support for %s") % exc)
 
 
 def findcommonoutgoing(repo, ui, other, heads):

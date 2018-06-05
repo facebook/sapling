@@ -36,6 +36,11 @@ command = registrar.command(cmdtable)
 highlightdebug = commitcloudcommon.highlightdebug
 highlightstatus = commitcloudcommon.highlightstatus
 infinitepush = None
+infinitepushbackup = None
+
+# This must match the name from infinitepushbackup in order to maintain
+# mutual exclusivity with infinitepushbackups.
+_backuplockname = "infinitepushbackup.lock"
 
 
 @command("cloud", [], "SUBCOMMAND ...", subonly=True)
@@ -219,9 +224,7 @@ def cloudsync(ui, repo, **opts):
         # Wait at most 30 seconds, because that's the average backup time
         timeout = 30
         srcrepo = shareutil.getsrcrepo(repo)
-        with lockmod.lock(
-            srcrepo.vfs, infinitepush.backupcommands._backuplockname, timeout=timeout
-        ):
+        with lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
             currentnode = repo["."].node()
             _docloudsync(ui, repo, **opts)
             return _maybeupdateworkingcopy(ui, repo, currentnode)
@@ -508,41 +511,44 @@ def pushbackup(ui, repo, newheads, localheads, localbookmarks, dest, **opts):
 
     # Build a dictionary of infinitepush bookmarks.  We delete
     # all bookmarks and replace them with the full set each time.
-    namingmgr = infinitepush.backupcommands.BackupBookmarkNamingManager(
-        ui, repo, opts.get("user")
-    )
     infinitepushbookmarks = {}
-    infinitepushbookmarks[namingmgr.getbackupheadprefix()] = ""
-    infinitepushbookmarks[namingmgr.getbackupbookmarkprefix()] = ""
-    for bookmark, hexnode in localbookmarks.items():
-        name = namingmgr.getbackupbookmarkname(bookmark)
-        infinitepushbookmarks[name] = hexnode
-    for hexhead in localheads:
-        name = namingmgr.getbackupheadname(hexhead)
-        infinitepushbookmarks[name] = hexhead
+    if infinitepushbackup:
+        namingmgr = infinitepushbackup.BackupBookmarkNamingManager(
+            ui, repo, opts.get("user")
+        )
+        infinitepushbookmarks[namingmgr.getbackupheadprefix()] = ""
+        infinitepushbookmarks[namingmgr.getbackupbookmarkprefix()] = ""
+        for bookmark, hexnode in localbookmarks.items():
+            name = namingmgr.getbackupbookmarkname(bookmark)
+            infinitepushbookmarks[name] = hexnode
+        for hexhead in localheads:
+            name = namingmgr.getbackupheadname(hexhead)
+            infinitepushbookmarks[name] = hexhead
 
     # Push these commits to the server.
-    other = infinitepush.backupcommands._getremote(repo, ui, dest, **opts)
-    infinitepush.backupcommands._dobackuppush(
-        ui, repo, other, og, infinitepushbookmarks
-    )
+    other = commitcloudutil.getremote(repo, ui, dest, **opts)
+    infinitepush.pushbackupbundle(ui, repo, other, og, infinitepushbookmarks)
 
     # Update the infinitepush local state.
-    srcrepo = shareutil.getsrcrepo(repo)
-    infinitepush.backupcommands._writelocalbackupstate(
-        srcrepo.vfs, list(localheads), localbookmarks
-    )
+    if infinitepushbackup:
+        srcrepo = shareutil.getsrcrepo(repo)
+        infinitepushbackup._writelocalbackupstate(
+            srcrepo.vfs, list(localheads), localbookmarks
+        )
 
 
 def recordbackup(ui, repo, newheads):
     """Record that the given heads are already backed up."""
-    backupstate = infinitepush.backupcommands._readlocalbackupstate(ui, repo)
+    if infinitepushbackup is None:
+        return
+
+    backupstate = infinitepushbackup._readlocalbackupstate(ui, repo)
     backupheads = set(backupstate.heads) | set(newheads)
     srcrepo = shareutil.getsrcrepo(repo)
-    infinitepush.backupcommands._writelocalbackupstate(
+    infinitepushbackup._writelocalbackupstate(
         srcrepo.vfs, list(backupheads), backupstate.localbookmarks
     )
 
 
 def autosyncenabled(ui, _repo):
-    return infinitepush.backupcommands.autobackupenabled(ui)
+    return infinitepushbackup is not None and infinitepushbackup.autobackupenabled(ui)

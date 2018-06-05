@@ -14,6 +14,8 @@ import subprocess
 from mercurial import (
     config,
     encoding,
+    error,
+    hg,
     lock as lockmod,
     obsolete,
     pycompat,
@@ -375,3 +377,14 @@ def clearsyncingobsmarkers(repo):
 
 def getworkspacename(repo):
     return WorkspaceManager(repo).workspace
+
+
+def getremote(repo, ui, dest, **opts):
+    path = ui.paths.getpath(dest, default=("infinitepush", "default"))
+    if not path:
+        raise error.Abort(
+            _("default repository not configured!"),
+            hint=_("see 'hg help config.paths'"),
+        )
+    dest = path.pushloc or path.loc
+    return hg.peer(repo, opts, dest)
