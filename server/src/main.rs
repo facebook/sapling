@@ -403,7 +403,7 @@ fn repo_listen(
         let drain = KVFilter::new(drain, Level::Critical).only_pass_any_on_all_keys(hashmap! {
             "remote".into() => hashset!["true".into()],
         });
-        let drain = slog::Duplicate::new(drain, listen_log.clone()).fuse();
+        let drain = slog::Duplicate::new(drain, listen_log.clone()).ignore_res();
         let conn_log = Logger::root(drain, o![]);
 
         let client_log = conn_log.new(o!("session_uuid" => format!("{}", session_uuid)));
