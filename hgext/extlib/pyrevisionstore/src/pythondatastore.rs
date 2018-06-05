@@ -37,7 +37,7 @@ impl DataStore for PythonDataStore {
         Ok(py_bytes.data(py).to_vec())
     }
 
-    fn getdeltachain(&self, key: &Key) -> Result<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
@@ -53,7 +53,7 @@ impl DataStore for PythonDataStore {
         Ok(deltas)
     }
 
-    fn getmeta(&self, key: &Key) -> Result<Metadata> {
+    fn get_meta(&self, key: &Key) -> Result<Metadata> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
@@ -75,7 +75,7 @@ impl DataStore for PythonDataStore {
         })
     }
 
-    fn getmissing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 

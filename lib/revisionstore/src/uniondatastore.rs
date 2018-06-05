@@ -26,9 +26,9 @@ impl From<UnionDataStoreError> for KeyError {
 }
 
 impl UnionDataStore {
-    fn getpartialchain(&self, key: &Key) -> Result<Vec<Delta>> {
+    fn get_partial_chain(&self, key: &Key) -> Result<Vec<Delta>> {
         for store in self {
-            match store.getdeltachain(key) {
+            match store.get_delta_chain(key) {
                 Ok(res) => return Ok(res),
                 Err(e) => match e.downcast_ref::<KeyError>() {
                     Some(_) => continue,
@@ -46,8 +46,8 @@ impl UnionDataStore {
 
 impl DataStore for UnionDataStore {
     fn get(&self, key: &Key) -> Result<Vec<u8>> {
-        let deltachain = self.getdeltachain(key)?;
-        let (basetext, deltas) = deltachain.split_last().ok_or(KeyError::from(
+        let delta_chain = self.get_delta_chain(key)?;
+        let (basetext, deltas) = delta_chain.split_last().ok_or(KeyError::from(
             UnionDataStoreError(format!("No delta chain for key {:?}", key)),
         ))?;
 
@@ -60,28 +60,28 @@ impl DataStore for UnionDataStore {
         get_full_text(basetext.data.as_ref(), &deltas).map_err(|e| err_msg(e))
     }
 
-    fn getdeltachain(&self, key: &Key) -> Result<Vec<Delta>> {
-        let mut currentkey = key.clone();
-        let mut deltachain = Vec::new();
-        while !currentkey.node().is_null() {
-            let partialchain = self.getpartialchain(&currentkey)?;
-            currentkey = partialchain
+    fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
+        let mut current_key = key.clone();
+        let mut delta_chain = Vec::new();
+        while !current_key.node().is_null() {
+            let partial_chain = self.get_partial_chain(&current_key)?;
+            current_key = partial_chain
                 .last()
                 .ok_or(KeyError::from(UnionDataStoreError(format!(
                     "No delta chain for key {:?}",
-                    currentkey
+                    current_key
                 ))))?
                 .base
                 .clone();
-            deltachain.extend(partialchain);
+            delta_chain.extend(partial_chain);
         }
 
-        Ok(deltachain)
+        Ok(delta_chain)
     }
 
-    fn getmeta(&self, key: &Key) -> Result<Metadata> {
+    fn get_meta(&self, key: &Key) -> Result<Metadata> {
         for store in self {
-            match store.getmeta(key) {
+            match store.get_meta(key) {
                 Ok(res) => return Ok(res),
                 Err(e) => match e.downcast_ref::<KeyError>() {
                     Some(_) => continue,
@@ -96,11 +96,11 @@ impl DataStore for UnionDataStore {
         ))).into())
     }
 
-    fn getmissing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.into_iter()
             .fold(initial_keys, |missing_keys, store| match missing_keys {
-                Ok(missing_keys) => store.getmissing(&missing_keys),
+                Ok(missing_keys) => store.get_missing(&missing_keys),
                 Err(e) => Err(e),
             })
     }
@@ -133,15 +133,15 @@ mod tests {
             Err(KeyError::from(EmptyDataStoreError).into())
         }
 
-        fn getdeltachain(&self, _key: &Key) -> Result<Vec<Delta>> {
+        fn get_delta_chain(&self, _key: &Key) -> Result<Vec<Delta>> {
             Err(KeyError::from(EmptyDataStoreError).into())
         }
 
-        fn getmeta(&self, _key: &Key) -> Result<Metadata> {
+        fn get_meta(&self, _key: &Key) -> Result<Metadata> {
             Err(KeyError::from(EmptyDataStoreError).into())
         }
 
-        fn getmissing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+        fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
             Ok(keys.iter().cloned().collect())
         }
     }
@@ -151,15 +151,15 @@ mod tests {
             Err(BadDataStoreError.into())
         }
 
-        fn getdeltachain(&self, _key: &Key) -> Result<Vec<Delta>> {
+        fn get_delta_chain(&self, _key: &Key) -> Result<Vec<Delta>> {
             Err(BadDataStoreError.into())
         }
 
-        fn getmeta(&self, _key: &Key) -> Result<Metadata> {
+        fn get_meta(&self, _key: &Key) -> Result<Metadata> {
             Err(BadDataStoreError.into())
         }
 
-        fn getmissing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
+        fn get_missing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
             Err(BadDataStoreError.into())
         }
     }
@@ -190,70 +190,70 @@ mod tests {
             }
         }
 
-        fn test_empty_unionstore_getdeltachain(key: Key) -> bool {
-            match UnionDataStore::new().getdeltachain(&key) {
+        fn test_empty_unionstore_get_delta_chain(key: Key) -> bool {
+            match UnionDataStore::new().get_delta_chain(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
         }
 
-        fn test_empty_datastore_getdeltachain(key: Key) -> bool {
+        fn test_empty_datastore_get_delta_chain(key: Key) -> bool {
             let mut unionstore = UnionDataStore::new();
             unionstore.add(Rc::new(EmptyDataStore));
-            match unionstore.getdeltachain(&key) {
+            match unionstore.get_delta_chain(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
         }
 
-        fn test_bad_datastore_getdeltachain(key: Key) -> bool {
+        fn test_bad_datastore_get_delta_chain(key: Key) -> bool {
             let mut unionstore = UnionDataStore::new();
             unionstore.add(Rc::new(BadDataStore));
-            match unionstore.getdeltachain(&key) {
+            match unionstore.get_delta_chain(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_none(),
             }
         }
 
-        fn test_empty_unionstore_getmeta(key: Key) -> bool {
-            match UnionDataStore::new().getmeta(&key) {
+        fn test_empty_unionstore_get_meta(key: Key) -> bool {
+            match UnionDataStore::new().get_meta(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
         }
 
-        fn test_empty_datastore_getmeta(key: Key) -> bool {
+        fn test_empty_datastore_get_meta(key: Key) -> bool {
             let mut unionstore = UnionDataStore::new();
             unionstore.add(Rc::new(EmptyDataStore));
-            match unionstore.getmeta(&key) {
+            match unionstore.get_meta(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
         }
 
-        fn test_bad_datastore_getmeta(key: Key) -> bool {
+        fn test_bad_datastore_get_meta(key: Key) -> bool {
             let mut unionstore = UnionDataStore::new();
             unionstore.add(Rc::new(BadDataStore));
-            match unionstore.getmeta(&key) {
+            match unionstore.get_meta(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_none(),
             }
         }
 
-        fn test_empty_unionstore_getmissing(keys: Vec<Key>) -> bool {
-            keys == UnionDataStore::new().getmissing(&keys).unwrap()
+        fn test_empty_unionstore_get_missing(keys: Vec<Key>) -> bool {
+            keys == UnionDataStore::new().get_missing(&keys).unwrap()
         }
 
-        fn test_empty_datastore_getmissing(keys: Vec<Key>) -> bool {
+        fn test_empty_datastore_get_missing(keys: Vec<Key>) -> bool {
             let mut unionstore = UnionDataStore::new();
             unionstore.add(Rc::new(EmptyDataStore));
-            keys == unionstore.getmissing(&keys).unwrap()
+            keys == unionstore.get_missing(&keys).unwrap()
         }
 
-        fn test_bad_datastore_getmissing(keys: Vec<Key>) -> bool {
+        fn test_bad_datastore_get_missing(keys: Vec<Key>) -> bool {
             let mut unionstore = UnionDataStore::new();
             unionstore.add(Rc::new(BadDataStore));
-            match unionstore.getmissing(&keys) {
+            match unionstore.get_missing(&keys) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_none(),
             }
