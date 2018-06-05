@@ -525,20 +525,6 @@ Malformed backup state file
   remote:     cf2adfba1469  headone
   finished in * seconds (glob)
 
-Test backupinfo file generation.
-  $ [ -f .hg/infinitepushlatestbackupinfo ]
-  [1]
-  $ rm .hg/infinitepushbackupstate
-  $ hg pushbackup --config infinitepushbackup.savelatestbackupinfo=True
-  starting backup .* (re)
-  searching for changes
-  remote: pushing 1 commit:
-  remote:     cf2adfba1469  headone
-  finished in \d+\.(\d+)? seconds (re)
-  $ cat .hg/infinitepushlatestbackupinfo
-  backuprevision=(\d+) (re)
-  backuptime=(\d+) (re)
-
 Run command that creates multiple transactions. Make sure that just one backup is started
   $ cd ..
   $ rm -rf client

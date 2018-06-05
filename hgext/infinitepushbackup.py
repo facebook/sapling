@@ -34,11 +34,6 @@
     # of smartlog.
     enablestatus = False
 
-    # Whether or not to save information about the latest successful backup.
-    # This information includes the local revision number and unix timestamp
-    # of the last time we successfully made a backup.
-    savelatestbackupinfo = False
-
     # Enable creating obsolete markers when backup is restored.
     createlandedasmarkers = False
 
@@ -154,7 +149,7 @@ def extsetup(ui):
 
     # Allow writing backup files outside the normal lock
     localrepo.localrepository._wlockfreeprefix.update(
-        [_backupstatefile, _backupgenerationfile, _backuplatestinfofile]
+        [_backupstatefile, _backupgenerationfile]
     )
 
     if autobackupenabled(ui):
@@ -743,10 +738,6 @@ def _dobackup(ui, repo, dest, **opts):
         _writebackupgenerationfile(repo.vfs, newbkpgenerationvalue)
     bkpstate = _readlocalbackupstate(ui, repo)
 
-    # this variable stores the local store info (tip numeric revision and date)
-    # which we use to quickly tell if our backup is stale
-    afterbackupinfo = _getlocalinfo(repo)
-
     # This variable will store what heads will be saved in backup state file
     # if backup finishes successfully
     afterbackupheads = _backupheads(ui, repo)
@@ -791,8 +782,6 @@ def _dobackup(ui, repo, dest, **opts):
             _writelocalbackupstate(
                 repo.vfs, list(afterbackupheads), afterbackuplocalbooks
             )
-            if ui.config("infinitepushbackup", "savelatestbackupinfo"):
-                _writelocalbackupinfo(repo.vfs, **afterbackupinfo)
         else:
             ui.status(_("nothing to backup\n"))
     finally:
@@ -878,18 +867,10 @@ def _dobackupcheck(bkpstate, ui, repo, dest, **opts):
         return False
 
 
-_backuplatestinfofile = "infinitepushlatestbackupinfo"
 _backupstatefile = "infinitepushbackupstate"
 _backupgenerationfile = "infinitepushbackupgeneration"
 
 # Common helper functions
-def _getlocalinfo(repo):
-    localinfo = {}
-    localinfo["rev"] = repo[repo.changelog.tip()].rev()
-    localinfo["time"] = int(time.time())
-    return localinfo
-
-
 def _getlocalbookmarks(repo):
     localbookmarks = {}
     for bookmark, data in repo._bookmarks.iteritems():
@@ -1244,11 +1225,6 @@ def _readbackupgenerationfile(vfs):
 def _writebackupgenerationfile(vfs, backupgenerationvalue):
     with vfs(_backupgenerationfile, "w", atomictemp=True) as f:
         f.write(str(backupgenerationvalue))
-
-
-def _writelocalbackupinfo(vfs, rev, time):
-    with vfs(_backuplatestinfofile, "w", atomictemp=True) as f:
-        f.write(("backuprevision=%d\nbackuptime=%d\n") % (rev, time))
 
 
 # Restore helper functions
