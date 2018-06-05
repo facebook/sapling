@@ -6,11 +6,9 @@ use fs2::FileExt;
 use memmap::Mmap;
 use std::cell::RefCell;
 use std::fs::{File, OpenOptions};
-use std::hash::Hasher;
 use std::io::{self, Cursor, Read, Write};
 use std::path::{Path, PathBuf};
-use twox_hash::XxHash;
-use utils::mmap_readonly;
+use utils::{mmap_readonly, xxhash};
 
 /// `ChecksumTable` provides integrity check for an append-only file.
 ///
@@ -53,13 +51,6 @@ pub struct ChecksumTable {
     // A bitvec about What chunks are checked.
     // Using internal mutability so exposed APIs do not need "mut".
     checked: RefCell<Vec<u64>>,
-}
-
-#[inline]
-fn xxhash<T: AsRef<[u8]>>(buf: T) -> u64 {
-    let mut xx = XxHash::default();
-    xx.write(buf.as_ref());
-    xx.finish()
 }
 
 /// Append extra extension to a Path
