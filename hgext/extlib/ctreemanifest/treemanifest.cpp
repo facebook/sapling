@@ -42,7 +42,7 @@ void treemanifest_diffrecurse(
       cmp--;
       selfentry = selfiter.currentvalue();
       if (selfentry->hasNode()) {
-        selfbinnode = binfromhex(selfentry->node);
+        selfbinnode = binfromhex(selfentry->get_node());
       } else {
         assert(selfentry->isdirectory());
       }
@@ -54,7 +54,7 @@ void treemanifest_diffrecurse(
       cmp++;
       otherentry = otheriter.currentvalue();
       if (otherentry->hasNode()) {
-        otherbinnode = binfromhex(otherentry->node);
+        otherbinnode = binfromhex(otherentry->get_node());
       } else {
         assert(otherentry->isdirectory());
       }
@@ -195,7 +195,7 @@ FindResult treemanifest::find(
     // extra string allocation.
     pathlen = pathlen > 0 ? pathlen - 1 : 0;
     findContext->nodebuffer.erase();
-    appendbinfromhex(manifestentry->node, findContext->nodebuffer);
+    appendbinfromhex(manifestentry->get_node(), findContext->nodebuffer);
     manifestentry->resolved = this->fetcher.get(pathstart, pathlen,
         findContext->nodebuffer);
   }
@@ -288,7 +288,7 @@ FindResult treemanifest::find(
       if (!manifest->isMutable()) {
         throw std::logic_error("attempting to null node on immutable manifest");
       }
-      entry->node = NULL;
+      entry->reset_node();
     }
   }
 
@@ -323,7 +323,7 @@ static FindResult get_callback(
 
   result->resultnode->erase();
   if (entry.hasNode()) {
-    appendbinfromhex(entry.node, *result->resultnode);
+    appendbinfromhex(entry.get_node(), *result->resultnode);
   }
 
   *result->resultflag = entry.flag;
@@ -416,7 +416,7 @@ SetResult treemanifest::set(
 
   this->root.resolved = resultManifest;
   if (changes.invalidate_checksums) {
-    this->root.node = NULL;
+    this->root.reset_node();
   }
 
   switch (result) {
@@ -482,7 +482,7 @@ bool treemanifest::remove(
 
   this->root.resolved = resultManifest;
   if (changes.invalidate_checksums) {
-    this->root.node = NULL;
+    this->root.reset_node();
   }
 
   return (result == FIND_PATH_OK) && extras.found;
@@ -567,7 +567,7 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
         if (cmp == 0) {
           // And the nodes match...
           if (!alreadyExists &&
-              (mainEntry->hasNode() && memcmp(mainEntry->node, cmpEntry->node, HEX_NODE_SIZE) == 0)) {
+              (mainEntry->hasNode() && memcmp(mainEntry->get_node(), cmpEntry->get_node(), HEX_NODE_SIZE) == 0)) {
             // Skip this entry
             alreadyExists = true;
           }

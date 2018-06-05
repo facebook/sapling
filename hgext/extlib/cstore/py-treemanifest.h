@@ -871,7 +871,7 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
         continue;
       }
 
-      std::string binnode = binfromhex(entry->node);
+      std::string binnode = binfromhex(entry->get_node());
       binnode.copy(node, BIN_NODE_SIZE);
       if (entry->flag) {
         *flag = *entry->flag;
@@ -1452,13 +1452,13 @@ static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
     std::vector<const char *> cmpNodes;
     std::vector<ManifestPtr> cmpManifests;
     if (p1tree) {
-      assert(p1tree->tm.root.node);
-      cmpNodes.push_back(p1tree->tm.root.node);
+      assert(p1tree->tm.root.get_node());
+      cmpNodes.push_back(p1tree->tm.root.get_node());
       cmpManifests.push_back(p1tree->tm.getRootManifest());
     }
     if (p2tree) {
-      assert(p2tree->tm.root.node);
-      cmpNodes.push_back(p2tree->tm.root.node);
+      assert(p2tree->tm.root.get_node());
+      cmpNodes.push_back(p2tree->tm.root.get_node());
       cmpManifests.push_back(p2tree->tm.getRootManifest());
     }
 

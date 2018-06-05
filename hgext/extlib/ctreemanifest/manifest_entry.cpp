@@ -14,7 +14,7 @@
 #include "hgext/extlib/ctreemanifest/manifest.h"
 
 ManifestEntry::ManifestEntry()
-    : filename(NULL), filenamelen(0), node(NULL), flag(NULL),
+    : node(NULL), filename(NULL), filenamelen(0), flag(NULL),
       ownedmemory(NULL) {}
 
 void ManifestEntry::initialize(
@@ -130,6 +130,18 @@ bool ManifestEntry::isdirectory() const {
 
 bool ManifestEntry::hasNode() const {
   return this->node;
+}
+
+const char *ManifestEntry::get_node() {
+  if (!this->node && this->flag && *this->flag == MANIFEST_DIRECTORY_FLAG &&
+      !this->resolved.isnull() && !this->resolved->isMutable()) {
+      this->updatebinnode(this->resolved->node(), MANIFEST_DIRECTORY_FLAGPTR);
+  }
+  return this->node;
+}
+
+void ManifestEntry::reset_node() {
+  this->node = NULL;
 }
 
 void ManifestEntry::appendtopath(std::string &path) {

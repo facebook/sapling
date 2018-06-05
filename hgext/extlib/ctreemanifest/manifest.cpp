@@ -220,7 +220,7 @@ void Manifest::serialize(std::string &result) {
   while ((entry = iterator.next()) != NULL) {
     result.append(entry->filename, entry->filenamelen);
     result.append("\0", 1);
-    result.append(entry->node ? entry->node : HEXNULLID, HEX_NODE_SIZE);
+    result.append(entry->get_node() ? entry->get_node() : HEXNULLID, HEX_NODE_SIZE);
     if (entry->flag) {
       result.append(entry->flag, 1);
     }

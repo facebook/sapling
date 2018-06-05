@@ -159,7 +159,7 @@ struct treemanifest {
         std::string binnode;
         binnode.reserve(BIN_NODE_SIZE);
 
-        appendbinfromhex(this->root.node, binnode);
+        appendbinfromhex(this->root.get_node(), binnode);
         this->root.resolved = this->fetcher.get("", 0, binnode);
       }
 

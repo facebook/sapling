@@ -27,10 +27,11 @@
  * single block referenced by the ownedmemory field.
  */
 class ManifestEntry {
+  private:
+    const char *node;
   public:
     const char *filename;
     size_t filenamelen;
-    const char *node;
 
     // unlike filename/node, this is not always a valid pointer.  if the flag
     // is unset, flag will be set to NULL.
@@ -46,6 +47,8 @@ class ManifestEntry {
 
     bool isdirectory() const;
     bool hasNode() const;
+    const char *get_node();
+    void reset_node();
 
     void appendtopath(std::string &path);
 
