@@ -39,7 +39,7 @@ py_class!(class datastore |py| {
         Ok(PyBytes::new(py, &result[..]))
     }
 
-    def get_delta_chain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
         let key = to_key(py, name, node);
         let deltachain = self.store(py).get_delta_chain(&key)
                                        .map_err(|e| to_pyerr(py, &e))?;
@@ -49,7 +49,7 @@ py_class!(class datastore |py| {
         Ok(PyList::new(py, &pychain[..]))
     }
 
-    def get_meta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node);
         let metadata = self.store(py).get_meta(&key)
                                      .map_err(|e| to_pyerr(py, &e))?;
@@ -64,7 +64,7 @@ py_class!(class datastore |py| {
         Ok(metadict)
     }
 
-    def get_missing(&self, keys: &PyList) -> PyResult<PyList> {
+    def getmissing(&self, keys: &PyList) -> PyResult<PyList> {
         // Copy the PyObjects into a vector so we can get a reference iterator.
         // This lets us get a Vector of Keys without copying the strings.
         let keys = keys.iter(py)
