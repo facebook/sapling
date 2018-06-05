@@ -613,10 +613,14 @@ class HgServer(object):
 
     @cmd(CMD_PREFETCH_FILES)
     def prefetch_files(self, request):
-        logging.debug("got prefetch request, parsing")
-        files = json.loads(request.body)
-        logging.debug("will prefetch %d files" % len(files))
-        self.repo.fileservice.prefetch(files)
+        # Some repos may not have remotefilelog enabled; for example,
+        # the watchman integration tests have no remote server and no
+        # remotefilelog.
+        if hasattr(self.repo, "fileservice"):
+            logging.debug("got prefetch request, parsing")
+            files = json.loads(request.body)
+            logging.debug("will prefetch %d files" % len(files))
+            self.repo.fileservice.prefetch(files)
 
         self.send_chunk(request, "")
 
