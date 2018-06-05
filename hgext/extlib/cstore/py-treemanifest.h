@@ -356,13 +356,12 @@ static PyObject *subtreeiter_iternext(py_subtreeiter *self)
 
   std::string *path = NULL;
   ManifestPtr result = ManifestPtr();
-  ManifestEntry *resultEntry = NULL;
   ManifestPtr p1 = ManifestPtr();
   ManifestPtr p2 = ManifestPtr();
   std::string raw;
   std::string p1raw;
   try {
-    while (iterator.next(&path, &result, &p1, &p2, &resultEntry)) {
+    while (iterator.next(&path, &result, &p1, &p2)) {
       result->serialize(raw);
 
       if (!p1) {

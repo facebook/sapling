@@ -267,9 +267,6 @@ class SubtreeIterator {
      * end.
      */
     bool next(std::string **path, ManifestPtr *result,
-              ManifestPtr *p1, ManifestPtr *p2, ManifestEntry **resultEntry);
-
-    bool next(std::string **path, ManifestPtr *result,
               ManifestPtr *p1, ManifestPtr *p2);
 
   private:

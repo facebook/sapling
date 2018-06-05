@@ -606,12 +606,6 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
 
 bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
                            ManifestPtr *p1, ManifestPtr *p2) {
-  ManifestEntry *resultEntry;
-  return this->next(path, result, p1, p2, &resultEntry);
-}
-
-bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
-                           ManifestPtr *p1, ManifestPtr *p2, ManifestEntry **resultEntry) {
   // Pop the last returned directory off the path
   size_t slashoffset = this->path.find_last_of('/', this->path.size() - 1);
   if (slashoffset == std::string::npos) {
@@ -623,7 +617,6 @@ bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
   *result = ManifestPtr();
   *p1 = ManifestPtr();
   *p2 = ManifestPtr();
-  *resultEntry = NULL;
   while (true) {
     if (this->mainStack.empty()) {
       return false;
@@ -638,7 +631,6 @@ bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
       // a cmp parent manifest, which means we should skip it.
       this->popResult(path, result, p1, p2);
       if (this->mainStack.size() > 0) {
-        *resultEntry = this->mainStack.back().currentvalue();
         this->mainStack.back().next();
       }
       if (this->path.size() > 0) {
@@ -671,8 +663,7 @@ FinalizeIterator::FinalizeIterator(ManifestPtr mainRoot,
 
 bool FinalizeIterator::next(std::string **path, ManifestPtr *result,
                             ManifestPtr *p1, ManifestPtr *p2) {
-  ManifestEntry *resultEntry;
-  while (_iterator.next(path, result, p1, p2, &resultEntry)) {
+  while (_iterator.next(path, result, p1, p2)) {
     std::string *realPath = *path;
     ManifestPtr realResult = *result;
     ManifestPtr realP1 = *p1;
