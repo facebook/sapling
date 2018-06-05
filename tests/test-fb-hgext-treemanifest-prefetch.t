@@ -178,12 +178,19 @@ requires tree manifest for the base commit.
   fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via f15c65c6e9bd
   2 trees fetched over * (glob)
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
-  3 trees fetched over * (glob)
+  1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/2ee5caf43a5904f1c2809973b5f95a8d33bf4f76.dataidx
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
   $TESTTMP/hgcache/master/packs/manifests/5f14647c5653622d4c2682648ec82c7193d2a9ab.dataidx
+
+  $ hg debugdatapack $TESTTMP/hgcache/master/packs/manifests/2ee5caf43a5904f1c2809973b5f95a8d33bf4f76.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/2ee5caf43a5904f1c2809973b5f95a8d33bf4f76:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  ddb35f099a64  000000000000  43            (missing)
+  
 #else
   $ hg prefetch -r '2' --base '1'
   2 trees fetched over * (glob)
@@ -483,7 +490,7 @@ Test that prefetch refills just part of a tree when the cache is deleted
   $ rm -rf $CACHEDIR/master/*
   $ hg cat subdir/z
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
-  3 trees fetched over * (glob)
+  1 trees fetched over * (glob)
   z
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
 
@@ -534,7 +541,7 @@ also fetches 3 trees dealing with the tree manifest of the base revision 2.
 
   $ hg prefetch
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
-  3 trees fetched over * (glob)
+  1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 #else
 The tree prefetching code path fetches no trees for revision 5. And there is no

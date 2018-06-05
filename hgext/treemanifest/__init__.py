@@ -1911,34 +1911,6 @@ def localgettreepack(remote, rootdir, mfnodes, basemfnodes, directories):
     return bundle2.getunbundler(remote._repo.ui, cb)
 
 
-class treememoizer(object):
-    """A class that keeps references to trees until they've been consumed the
-    expected number of times.
-    """
-
-    def __init__(self, store):
-        self._store = store
-        self._counts = {}
-        self._cache = {}
-
-    def adduse(self, node):
-        self._counts[node] = self._counts.get(node, 0) + 1
-
-    def get(self, node):
-        tree = self._cache.get(node)
-        if tree is None:
-            tree = cstore.treemanifest(self._store, node)
-            self._cache[node] = tree
-
-        count = self._counts.get(node, 1)
-        count -= 1
-        self._counts[node] = max(count, 0)
-        if count <= 0:
-            del self._cache[node]
-
-        return tree
-
-
 def servergettreepack(repo, proto, args):
     """A server api for requesting a pack of tree information.
     """
@@ -2040,23 +2012,6 @@ def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
     historystore = repo.manifestlog.historystore
     datastore = repo.manifestlog.datastore
 
-    # If asking for a sub-tree, start from the top level tree since the native
-    # treemanifest currently doesn't support
-    if rootdir != "":
-        mfrevlog = repo.manifestlog.treemanifestlog._revlog.dirlog(rootdir)
-        cl = repo.changelog
-        topnodes = []
-        for node in mfnodes:
-            clrev = mfrevlog.linkrev(mfrevlog.rev(node))
-            topnode = cl.changelogrevision(clrev).manifest
-            topnodes.append(topnode)
-        mfnodes = topnodes
-        rootdir = ""
-
-        # Since the native treemanifest implementation currently doesn't support
-        # sub-tree traversals, we can't do base node comparisons correctly.
-        basemfnodes = []
-
     # Only use the first two base trees, since the current tree
     # implementation cannot handle more yet.
     basemfnodes = basemfnodes[:2]
@@ -2068,54 +2023,33 @@ def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
     # passed. This can happen if the remote client passes a base manifest that
     # the server doesn't know about yet.
     def treeexists(mfnode):
-        return bool(not datastore.getmissing([("", mfnode)]))
-
-    # Count how many times we will need each comparison node, so we can keep
-    # trees in memory the appropriate amount of time.
-    trees = treememoizer(datastore)
-    prevmfnode = None
-    for node in mfnodes:
-        p1node, p2node = historystore.getnodeinfo(rootdir, node)[:2]
-        if p1node != nullid and (p1node in mfnodeset or p1node in basemfnodeset):
-            trees.adduse(p1node)
-        elif basemfnodes and any(treeexists(mfnode) for mfnode in basemfnodes):
-            for basenode in basemfnodes:
-                if treeexists(basenode):
-                    trees.adduse(basenode)
-        elif prevmfnode:
-            # If there are no base nodes and the parent isn't one of the
-            # requested mfnodes, then pick another mfnode as a base.
-            trees.adduse(prevmfnode)
-
-        prevmfnode = node
-        if p2node != nullid and (p2node in mfnodeset or p2node in basemfnodeset):
-            trees.adduse(p2node)
+        return bool(not datastore.getmissing([(rootdir, mfnode)]))
 
     prevmfnode = None
     for node in mfnodes:
-        treemf = trees.get(node)
-
         p1node, p2node = historystore.getnodeinfo(rootdir, node)[:2]
         # If p1 is being sent or is already on the client, chances are
         # that's the best thing for us to delta against.
         if p1node != nullid and (p1node in mfnodeset or p1node in basemfnodeset):
-            basetrees = [trees.get(p1node)]
+            basetrees = [(rootdir, p1node)]
         elif basemfnodes and any(treeexists(mfnode) for mfnode in basemfnodes):
             basetrees = [
-                trees.get(basenode) for basenode in basemfnodes if treeexists(basenode)
+                (rootdir, basenode) for basenode in basemfnodes if treeexists(basenode)
             ]
         elif prevmfnode:
             # If there are no base nodes and the parent isn't one of the
             # requested mfnodes, then pick another mfnode as a base.
-            basetrees = [trees.get(prevmfnode)]
+            basetrees = [(rootdir, prevmfnode)]
         else:
             basetrees = []
         prevmfnode = node
 
         if p2node != nullid and (p2node in mfnodeset or p2node in basemfnodeset):
-            basetrees.append(trees.get(p2node))
+            basetrees.append((rootdir, p2node))
 
-        subtrees = treemf.walksubtrees(comparetrees=basetrees)
+        subtrees = cstore.treemanifest.walksubdirtrees(
+            (rootdir, node), datastore, comparetrees=basetrees
+        )
         for subname, subnode, subtext, x, x, x in subtrees:
             # Append data
             data = [(subnode, nullid, subtext)]
