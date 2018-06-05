@@ -283,7 +283,12 @@ def _docloudsync(ui, repo, **opts):
 
             # First, push commits that the server doesn't have.
             newheads = list(set(localheads) - set(lastsyncstate.heads))
-            pushbackup(ui, repo, newheads, localheads, localbookmarks, None, **opts)
+            pushbackupcommits(ui, repo, newheads, None, **opts)
+
+            # Next, update the infinitepush backup bookmarks to point to the
+            # new local heads and bookmarks.  This must be done after all
+            # referenced commits have been pushed to the server.
+            pushbackupbookmarks(ui, repo, localheads, localbookmarks, None, **opts)
 
             # Next, update the cloud heads, bookmarks and obsmarkers.
             obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
@@ -491,12 +496,27 @@ def finddestinationnode(repo, node):
     return None
 
 
-def pushbackup(ui, repo, newheads, localheads, localbookmarks, dest, **opts):
+def pushbackupcommits(ui, repo, newheads, dest, **opts):
     """Push a backup bundle to the server containing the new heads."""
+    # Push these commits to the server.
+    other = commitcloudutil.getremote(repo, ui, dest, **opts)
+    infinitepush.pushbackupbundledraftheads(
+        ui, repo, other, [node.bin(h) for h in newheads], None
+    )
+
+
+def pushbackupbookmarks(ui, repo, localheads, localbookmarks, dest, **opts):
+    """
+    Push a backup bundle to the server that updates the infinitepush backup
+    bookmarks.
+
+    This keeps the old infinitepush backup bookmarks in sync, which means
+    pullbackup still works for users using commit cloud sync.
+    """
     # Build a dictionary of infinitepush bookmarks.  We delete
     # all bookmarks and replace them with the full set each time.
-    infinitepushbookmarks = {}
     if infinitepushbackup:
+        infinitepushbookmarks = {}
         namingmgr = infinitepushbackup.BackupBookmarkNamingManager(
             ui, repo, opts.get("user")
         )
@@ -509,14 +529,11 @@ def pushbackup(ui, repo, newheads, localheads, localbookmarks, dest, **opts):
             name = namingmgr.getbackupheadname(hexhead)
             infinitepushbookmarks[name] = hexhead
 
-    # Push these commits to the server.
-    other = commitcloudutil.getremote(repo, ui, dest, **opts)
-    infinitepush.pushbackupbundledraftheads(
-        ui, repo, other, [node.bin(h) for h in newheads], infinitepushbookmarks
-    )
+        # Push a bundle containing the new bookmarks to the server.
+        other = commitcloudutil.getremote(repo, ui, dest, **opts)
+        infinitepush.pushbackupbundle(ui, repo, other, None, infinitepushbookmarks)
 
-    # Update the infinitepush local state.
-    if infinitepushbackup:
+        # Update the infinitepush local state.
         srcrepo = shareutil.getsrcrepo(repo)
         infinitepushbackup._writelocalbackupstate(
             srcrepo.vfs, list(localheads), localbookmarks
