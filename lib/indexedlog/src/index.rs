@@ -1037,10 +1037,10 @@ impl OpenOptions {
             if root_offset == 0 {
                 // Take the lock to read file length, since that decides root entry location.
                 let mut lock = ScopedFileLock::new(&mut file, false)?;
-                mmap_readonly(lock.as_ref())?
+                mmap_readonly(lock.as_ref(), None)?
             } else {
                 // It's okay to mmap a larger buffer, without locking.
-                mmap_readonly(&file)?
+                mmap_readonly(&file, None)?
             }
         };
 
@@ -1095,7 +1095,7 @@ impl Index {
     /// Clone the index.
     pub fn clone(&self) -> io::Result<Index> {
         let file = self.file.duplicate()?;
-        let mmap = mmap_readonly(&file)?.0;
+        let mmap = mmap_readonly(&file, None)?.0;
         if mmap.len() < self.buf.len() {
             // Break the append-only property
             return Err(InvalidData.into());
@@ -1204,7 +1204,7 @@ impl Index {
             lock.as_mut().write_all(&buf)?;
 
             // Remap and update root since length has changed
-            let (mmap, new_len) = mmap_readonly(lock.as_ref())?;
+            let (mmap, new_len) = mmap_readonly(lock.as_ref(), None)?;
             self.buf = mmap;
 
             // Sanity check - the length should be expected. Otherwise, the lock

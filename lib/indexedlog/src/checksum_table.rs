@@ -127,7 +127,7 @@ impl ChecksumTable {
     pub fn new<P: AsRef<Path>>(path: &P) -> io::Result<Self> {
         // Read the source of truth file as a mmap buffer
         let file = OpenOptions::new().read(true).open(path)?;
-        let (mmap, len) = mmap_readonly(&file)?;
+        let (mmap, len) = mmap_readonly(&file, None)?;
 
         // Read checksum file into memory
         let checksum_path = path_appendext(path.as_ref(), "sum");
@@ -178,11 +178,7 @@ impl ChecksumTable {
     /// Clone the checksum table.
     pub fn clone(&self) -> io::Result<Self> {
         let file = self.file.duplicate()?;
-        let mmap = mmap_readonly(&file)?.0;
-        if mmap.len() < self.buf.len() {
-            // Break the append-only property
-            return Err(io::ErrorKind::InvalidData.into());
-        }
+        let mmap = mmap_readonly(&file, (self.buf.len() as u64).into())?.0;
         Ok(ChecksumTable {
             file,
             buf: mmap,
@@ -213,7 +209,7 @@ impl ChecksumTable {
     /// If multiple processes can write to a same file, the caller is responsible for taking
     /// a lock which covers the appending and checksum updating.
     pub fn update(&mut self, chunk_size_log: Option<u32>) -> io::Result<()> {
-        let (mmap, len) = mmap_readonly(&self.file)?;
+        let (mmap, len) = mmap_readonly(&self.file, None)?;
         let chunk_size_log = chunk_size_log.unwrap_or(self.chunk_size_log);
         if chunk_size_log > MAX_CHUNK_SIZE_LOG {
             return Err(io::ErrorKind::InvalidInput.into());
