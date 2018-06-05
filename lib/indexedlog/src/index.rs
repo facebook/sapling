@@ -260,7 +260,7 @@ trait TypedOffsetMethods: Sized {
 
 // Implement traits for typed offset structs.
 macro_rules! impl_offset {
-    ($type: ident, $type_int: expr, $name: expr) => {
+    ($type:ident, $type_int:expr, $name:expr) => {
         impl TypedOffsetMethods for $type {
             #[inline]
             fn type_int() -> u8 {
@@ -497,13 +497,14 @@ impl LeafOffset {
 pub struct LeafValueIter<'a> {
     index: &'a Index,
     offset: LinkOffset,
+    errored: bool,
 }
 
 impl<'a> Iterator for LeafValueIter<'a> {
     type Item = io::Result<u64>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.offset.is_null() {
+        if self.offset.is_null() || self.errored {
             None
         } else {
             match self.offset.value_and_next(self.index) {
@@ -511,7 +512,10 @@ impl<'a> Iterator for LeafValueIter<'a> {
                     self.offset = next;
                     Some(Ok(value))
                 }
-                Err(e) => Some(Err(e)),
+                Err(e) => {
+                    self.errored = true;
+                    Some(Err(e))
+                }
             }
         }
     }
@@ -521,6 +525,7 @@ impl LinkOffset {
     /// Iterating through values referred by this linked list.
     pub fn values<'a>(self, index: &'a Index) -> LeafValueIter<'a> {
         LeafValueIter {
+            errored: false,
             index,
             offset: self,
         }
@@ -2099,6 +2104,14 @@ mod tests {
 
         // Empty linked list
         assert_eq!(index.get(&[1]).unwrap().values(&index).count(), 0);
+
+        // In case error happens, the iteration still stops.
+        index.insert(&[], 5).expect("insert");
+        index.dirty_links[0].next_link_offset = LinkOffset(Offset(1000));
+        // Note: `collect` can return `io::Result<Vec<u64>>`. But that does not exercises the
+        // infinite loop avoidance logic since `collect` stops iteration at the first error.
+        let list_errored: Vec<io::Result<u64>> = index.get(&[]).unwrap().values(&index).collect();
+        assert!(list_errored[list_errored.len() - 1].is_err());
     }
 
     #[test]
