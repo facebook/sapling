@@ -1449,12 +1449,12 @@ static PyObject *treemanifest_walksubdirtrees(PyTypeObject *type,
         // Assign to PythonObj so its lifecycle is managed.
         PythonObj compareKey = compareKeyObj;
 
-        char *path;
-        size_t pathlen;
-        std::string node;
-        convert_pykey(compareKey, &path, &pathlen, &node);
+        char *cmpPath;
+        size_t cmpPathlen;
+        std::string cmpNode;
+        convert_pykey(compareKey, &cmpPath, &cmpPathlen, &cmpNode);
 
-        auto cmpManifest = fetcher.get(path, pathlen, node);
+        auto cmpManifest = fetcher.get(cmpPath, cmpPathlen, cmpNode);
         cmpManifests.push_back(cmpManifest);
       }
     }
