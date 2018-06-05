@@ -160,7 +160,7 @@ def _handleunavailable(ui, state, ex):
         if ex.warn:
             ui.warn(str(ex) + "\n")
         if ex.invalidate:
-            state.invalidate()
+            state.invalidate(reason="exception")
         ui.log("fsmonitor", "Watchman unavailable: %s\n", ex.msg)
         ui.log("fsmonitor_status", "", fsmonitor_status="unavailable")
     else:
@@ -392,7 +392,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
         state.setlastclock(result["clock"])
         if result["is_fresh_instance"]:
             if state.walk_on_invalidate:
-                state.invalidate()
+                state.invalidate(reason="fresh_instance")
                 return bail("fresh instance")
             fresh_instance = True
             # Ignore any prior noteable files from the state info
@@ -613,7 +613,9 @@ def overridestatus(
         # Because before 1,
         # 0. pid 11 invalidates fsmonitor.state
         # will happen.
-        psbefore = lambda *args, **kwds: self._fsmonitorstate.invalidate()
+        psbefore = lambda *args, **kwds: self._fsmonitorstate.invalidate(
+            reason="dirstate_change"
+        )
         self.addpostdsstatus(psbefore, afterdirstatewrite=False)
         psafter = poststatus(startclock)
         self.addpostdsstatus(psafter, afterdirstatewrite=True)

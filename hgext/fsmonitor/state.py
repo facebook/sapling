@@ -12,8 +12,9 @@ import os
 import socket
 import struct
 
-from mercurial.i18n import _
 from mercurial import pathutil, util
+from mercurial.i18n import _
+
 
 _version = 4
 _versionformat = ">I"
@@ -49,7 +50,7 @@ class state(object):
                 "fsmonitor: state file only has %d bytes, "
                 "nuking state\n" % len(versionbytes),
             )
-            self.invalidate()
+            self.invalidate(reason="state_file_truncated")
             return None, None, None
         try:
             diskversion = struct.unpack(_versionformat, versionbytes)[0]
@@ -60,7 +61,7 @@ class state(object):
                     "fsmonitor: version switch from %d to "
                     "%d, nuking state\n" % (diskversion, _version),
                 )
-                self.invalidate()
+                self.invalidate(reason="state_file_wrong_version")
                 return None, None, None
 
             state = file.read().split("\0")
@@ -73,7 +74,7 @@ class state(object):
                     "3 chunks, found %d), nuking state\n",
                     len(state),
                 )
-                self.invalidate()
+                self.invalidate(reason="state_file_truncated")
                 return None, None, None
             diskhostname = state[0]
             hostname = socket.gethostname()
@@ -85,7 +86,7 @@ class state(object):
                     'different from current "%s", nuking state\n'
                     % (diskhostname, hostname),
                 )
-                self.invalidate()
+                self.invalidate(reason="hostname_mismatch")
                 return None, None, None
 
             clock = state[1]
@@ -105,7 +106,7 @@ class state(object):
 
     def set(self, clock, ignorehash, notefiles):
         if clock is None:
-            self.invalidate()
+            self.invalidate(reason="no_clock")
             return
 
         # Read the identity from the file on disk rather than from the open file
@@ -136,7 +137,9 @@ class state(object):
                 file.write("\0".join(notefiles))
                 file.write("\0")
 
-    def invalidate(self):
+    def invalidate(self, reason=None):
+        if reason:
+            self._ui.log("command_info", watchman_invalidate_reason=reason)
         try:
             os.unlink(os.path.join(self._rootdir, ".hg", "fsmonitor.state"))
         except OSError as inst:
