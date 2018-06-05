@@ -280,15 +280,21 @@ def _docloudsync(ui, repo, **opts):
         if not synced:
             # The local repo has changed.  We must send these changes to the
             # cloud.
+            path = commitcloudutil.getremotepath(repo, ui, None)
+
+            def getconnection():
+                return repo.connectionpool.get(path, opts)
 
             # First, push commits that the server doesn't have.
             newheads = list(set(localheads) - set(lastsyncstate.heads))
-            pushbackupcommits(ui, repo, newheads, None, **opts)
+            pushbackupcommits(ui, repo, getconnection, newheads)
 
             # Next, update the infinitepush backup bookmarks to point to the
             # new local heads and bookmarks.  This must be done after all
             # referenced commits have been pushed to the server.
-            pushbackupbookmarks(ui, repo, localheads, localbookmarks, None, **opts)
+            pushbackupbookmarks(
+                ui, repo, getconnection, localheads, localbookmarks, **opts
+            )
 
             # Next, update the cloud heads, bookmarks and obsmarkers.
             obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
@@ -496,16 +502,16 @@ def finddestinationnode(repo, node):
     return None
 
 
-def pushbackupcommits(ui, repo, newheads, dest, **opts):
+def pushbackupcommits(ui, repo, getconnection, newheads):
     """Push a backup bundle to the server containing the new heads."""
     # Push these commits to the server.
-    other = commitcloudutil.getremote(repo, ui, dest, **opts)
-    infinitepush.pushbackupbundledraftheads(
-        ui, repo, other, [node.bin(h) for h in newheads], None
-    )
+    with getconnection() as conn:
+        infinitepush.pushbackupbundledraftheads(
+            ui, repo, conn.peer, [node.bin(h) for h in newheads], None
+        )
 
 
-def pushbackupbookmarks(ui, repo, localheads, localbookmarks, dest, **opts):
+def pushbackupbookmarks(ui, repo, getconnection, localheads, localbookmarks, **opts):
     """
     Push a backup bundle to the server that updates the infinitepush backup
     bookmarks.
@@ -530,8 +536,10 @@ def pushbackupbookmarks(ui, repo, localheads, localbookmarks, dest, **opts):
             infinitepushbookmarks[name] = hexhead
 
         # Push a bundle containing the new bookmarks to the server.
-        other = commitcloudutil.getremote(repo, ui, dest, **opts)
-        infinitepush.pushbackupbundle(ui, repo, other, None, infinitepushbookmarks)
+        with getconnection() as conn:
+            infinitepush.pushbackupbundle(
+                ui, repo, conn.peer, None, infinitepushbookmarks
+            )
 
         # Update the infinitepush local state.
         srcrepo = shareutil.getsrcrepo(repo)

@@ -379,7 +379,7 @@ def getworkspacename(repo):
     return WorkspaceManager(repo).workspace
 
 
-def getremote(repo, ui, dest, **opts):
+def getremotepath(repo, ui, dest):
     path = ui.paths.getpath(dest, default=("infinitepush", "default"))
     if not path:
         raise error.Abort(
@@ -387,4 +387,4 @@ def getremote(repo, ui, dest, **opts):
             hint=_("see 'hg help config.paths'"),
         )
     dest = path.pushloc or path.loc
-    return hg.peer(repo, opts, dest)
+    return dest
