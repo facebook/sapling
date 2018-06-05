@@ -916,6 +916,9 @@ pub struct Index {
     // For efficient and shared random reading.
     buf: Mmap,
 
+    // Logical length. Could be different from `buf.len()`.
+    len: u64,
+
     // Whether "file" was opened as read-only.
     // Only affects "flush". Do not affect in-memory writes.
     read_only: bool,
@@ -944,7 +947,7 @@ pub enum InsertKey<'a> {
 #[derive(Clone)]
 pub struct OpenOptions {
     checksum_chunk_size: u64,
-    root_offset: u64,
+    len: Option<u64>,
     write: Option<bool>,
     key_buf: Option<Rc<AsRef<[u8]>>>,
 }
@@ -958,7 +961,7 @@ impl OpenOptions {
     pub fn new() -> OpenOptions {
         OpenOptions {
             checksum_chunk_size: 0,
-            root_offset: 0,
+            len: None,
             write: None,
             key_buf: None,
         }
@@ -968,8 +971,9 @@ impl OpenOptions {
     /// - 0: don't do checksums
     /// - >0: size of a checksum chunk and do verify checksums
     /// Checksum is useful for detecting data corruption due to OS crashes.
-    /// For application crashes, explicitly specifying `root_offset`s would avoid data corruption
-    /// issues.
+    /// For application crashes, explicitly recording `logical_len` returned by `flush` in an
+    /// verified atomic-replaced file, and use that explicitly would avoid reading corrupted
+    /// data in case `flush` gets interrupted.
     pub fn checksum_chunk_size(&mut self, checksum_chunk_size: u64) -> &mut Self {
         self.checksum_chunk_size = checksum_chunk_size;
         self
@@ -986,15 +990,15 @@ impl OpenOptions {
         self
     }
 
-    /// Specify the offset of the root entry.
+    /// Specify the logical length of the file.
     ///
-    /// If it's 0, detect the root from the end of file.  This is useful for application to keep
-    /// track of multiple versions of the index, or maintain certain consistency across multiple
-    /// indexes so that read can be done lock-free.
+    /// If it's `None`, use the actual file length. Otherwise, use the explicit length specified.
+    /// This is useful for lock-free reads, or accessing to multiple versions of the index at the
+    /// same time.
     ///
-    /// To get a root entry offset, collect the return value of `index.flush()`.
-    pub fn root_offset(&mut self, root_offset: u64) -> &mut Self {
-        self.root_offset = root_offset;
+    /// To get a valid logical length, use the return value of `index.flush()`.
+    pub fn logical_len(&mut self, len: Option<u64>) -> &mut Self {
+        self.len = len;
         self
     }
 
@@ -1032,15 +1036,17 @@ impl OpenOptions {
             }
         };
 
-        let root_offset = self.root_offset;
         let (mmap, len) = {
-            if root_offset == 0 {
-                // Take the lock to read file length, since that decides root entry location.
-                let mut lock = ScopedFileLock::new(&mut file, false)?;
-                mmap_readonly(lock.as_ref(), None)?
-            } else {
-                // It's okay to mmap a larger buffer, without locking.
-                mmap_readonly(&file, None)?
+            match self.len {
+                None => {
+                    // Take the lock to read file length, since that decides root entry location.
+                    let mut lock = ScopedFileLock::new(&mut file, false)?;
+                    mmap_readonly(lock.as_ref(), None)?
+                }
+                Some(len) => {
+                    // No need to lock for getting file length.
+                    mmap_readonly(&file, Some(len))?
+                }
             }
         };
 
@@ -1051,25 +1057,19 @@ impl OpenOptions {
             None
         };
 
-        let (dirty_radixes, root) = if root_offset == 0 {
-            // Automatically locate the root entry
-            if len == 0 {
-                // Empty file. Create root radix entry as an dirty entry, and
-                // rebuild checksum table (in case it's corrupted).
-                let radix_offset = RadixOffset::from_dirty_index(0);
-                if let Some(ref mut table) = checksum {
-                    table.clear();
-                }
-                (vec![MemRadix::default()], MemRoot { radix_offset })
-            } else {
-                // Verify the header byte.
-                check_type(&mmap, 0, TYPE_HEAD)?;
-                // Load root entry from the end of file.
-                (vec![], MemRoot::read_from_end(&mmap, len, &checksum)?)
+        let (dirty_radixes, root) = if len == 0 {
+            // Empty file. Create root radix entry as an dirty entry, and
+            // rebuild checksum table (in case it's corrupted).
+            let radix_offset = RadixOffset::from_dirty_index(0);
+            if let Some(ref mut table) = checksum {
+                table.clear();
             }
+            (vec![MemRadix::default()], MemRoot { radix_offset })
         } else {
-            // Load root entry from given offset.
-            (vec![], MemRoot::read_from(&mmap, root_offset, &checksum)?)
+            // Verify the header byte.
+            check_type(&mmap, 0, TYPE_HEAD)?;
+            // Load root entry from the end of the file (truncated at the logical length).
+            (vec![], MemRoot::read_from_end(&mmap, len, &checksum)?)
         };
 
         let key_buf = self.key_buf.clone();
@@ -1087,6 +1087,7 @@ impl OpenOptions {
             checksum,
             checksum_chunk_size,
             key_buf: key_buf.unwrap_or(Rc::new(b"")),
+            len,
         })
     }
 }
@@ -1095,11 +1096,7 @@ impl Index {
     /// Clone the index.
     pub fn clone(&self) -> io::Result<Index> {
         let file = self.file.duplicate()?;
-        let mmap = mmap_readonly(&file, None)?.0;
-        if mmap.len() < self.buf.len() {
-            // Break the append-only property
-            return Err(InvalidData.into());
-        }
+        let mmap = mmap_readonly(&file, Some(self.len))?.0;
         let checksum = match self.checksum {
             Some(ref table) => Some(table.clone()?),
             None => None,
@@ -1117,13 +1114,14 @@ impl Index {
             checksum,
             checksum_chunk_size: self.checksum_chunk_size,
             key_buf: self.key_buf.clone(),
+            len: self.len,
         })
     }
 
     /// Flush dirty parts to disk.
     ///
     /// Return 0 if nothing needs to be written. Otherwise return the
-    /// new offset to the root entry.
+    /// new file length.
     ///
     /// Return `PermissionDenied` if the file is read-only.
     pub fn flush(&mut self) -> io::Result<u64> {
@@ -1131,10 +1129,10 @@ impl Index {
             return Err(io::ErrorKind::PermissionDenied.into());
         }
 
-        let mut root_offset = 0;
+        let mut new_len = self.len;
         if !self.root.radix_offset.is_dirty() {
             // Nothing changed
-            return Ok(root_offset);
+            return Ok(new_len);
         }
 
         // Critical section: need write lock
@@ -1199,17 +1197,17 @@ impl Index {
                 offset_map.radix_map.push(offset);
             }
 
-            root_offset = buf.len() as u64 + len;
             self.root.write_to(&mut buf, &offset_map)?;
+            new_len = buf.len() as u64 + len;
             lock.as_mut().write_all(&buf)?;
 
             // Remap and update root since length has changed
-            let (mmap, new_len) = mmap_readonly(lock.as_ref(), None)?;
+            let (mmap, mmap_len) = mmap_readonly(lock.as_ref(), None)?;
             self.buf = mmap;
 
             // Sanity check - the length should be expected. Otherwise, the lock
             // is somehow ineffective.
-            if new_len != buf.len() as u64 + len {
+            if mmap_len != new_len {
                 return Err(io::ErrorKind::UnexpectedEof.into());
             }
 
@@ -1227,8 +1225,9 @@ impl Index {
         self.dirty_links.clear();
         self.dirty_keys.clear();
         self.dirty_ext_keys.clear();
+        self.len = new_len;
 
-        Ok(root_offset)
+        Ok(new_len)
     }
 
     /// Lookup by key. Return the link offset (the head of the linked list), or 0
@@ -1766,7 +1765,7 @@ mod tests {
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // 1st flush.
-        assert_eq!(index.flush().expect("flush"), 19);
+        assert_eq!(index.flush().expect("flush"), 22);
         assert_eq!(
             format!("{:?}", index),
             "Index { len: 22, root: Disk[1] }\n\
@@ -2183,8 +2182,8 @@ mod tests {
             }
 
             if flush {
-                let root_offset = index.flush().expect("flush");
-                index = open_opts().root_offset(root_offset).open(dir.path().join("a")).unwrap();
+                let len = index.flush().expect("flush");
+                index = open_opts().logical_len(len.into()).open(dir.path().join("a")).unwrap();
             }
 
             map.iter().all(|(key, value)| {
