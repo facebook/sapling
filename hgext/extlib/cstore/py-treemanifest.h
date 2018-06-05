@@ -693,6 +693,26 @@ static void treemanifest_dealloc(py_treemanifest *self)
   PyObject_Del(self);
 }
 
+static std::shared_ptr<Store> convert_pystore(PythonObj storeObj)
+{
+  PythonObj cstoreModule = PyImport_ImportModule("hgext.extlib.cstore");
+  PythonObj unionStoreType = cstoreModule.getattr("uniondatapackstore");
+
+  // If it's a cstore, we'll use it directly instead of through python.
+  std::shared_ptr<Store> store;
+  int isinstance =
+      PyObject_IsInstance((PyObject *)storeObj, (PyObject *)unionStoreType);
+  if (isinstance == 1) {
+    store = ((py_uniondatapackstore *)(PyObject *)storeObj)->uniondatapackstore;
+  }
+
+  if (!store) {
+    store = std::make_shared<PythonStore>(storeObj);
+  }
+
+  return store;
+}
+
 /*
  * Initializes the contents of a treemanifest
  */
@@ -709,23 +729,11 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args)
   Py_INCREF(pystore);
   PythonObj storeObj = PythonObj(pystore);
 
-  PythonObj cstoreModule = PyImport_ImportModule("hgext.extlib.cstore");
-  PythonObj unionStoreType = cstoreModule.getattr("uniondatapackstore");
-
-  // If it's a cstore, we'll use it directly instead of through python.
-  std::shared_ptr<Store> store;
-  int isinstance =
-      PyObject_IsInstance((PyObject *)storeObj, (PyObject *)unionStoreType);
-  if (isinstance == 1) {
-    store = ((py_uniondatapackstore *)(PyObject *)storeObj)->uniondatapackstore;
-  }
+  auto store = convert_pystore(storeObj);
 
   // We have to manually call the member constructor, since the provided 'self'
   // is just zerod out memory.
   try {
-    if (!store) {
-      store = std::make_shared<PythonStore>(storeObj);
-    }
     if (node != NULL) {
       new (&self->tm) treemanifest(store, std::string(node, (size_t)nodelen));
     } else {
