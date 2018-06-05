@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import time
+
 from . import extensions, sshpeer, util
 
 
@@ -46,6 +48,13 @@ class connectionpool(object):
                     proc = peer._subprocess
                     if proc.poll() is not None:
                         conn = None
+                # If the connection has expired, close it
+                if conn is not None and conn.expired():
+                    self.repo._ui.debug(
+                        "not reusing expired connection to %s\n" % conn.path
+                    )
+                    conn.close()
+                    conn = None
             except IndexError:
                 pass
 
@@ -63,7 +72,7 @@ class connectionpool(object):
             if util.safehasattr(peer, "cleanup"):
                 extensions.wrapfunction(peer, "cleanup", _cleanup)
 
-            conn = connection(pathpool, peer)
+            conn = connection(self._repo.ui, pathpool, peer, path)
 
         return conn
 
@@ -90,9 +99,15 @@ class standaloneconnection(object):
 
 
 class connection(object):
-    def __init__(self, pool, peer):
+    def __init__(self, ui, pool, peer, path):
+        self._ui = ui
         self._pool = pool
         self.peer = peer
+        self.path = path
+        self.expiry = None
+        lifetime = ui.configint("connectionpool", "lifetime")
+        if lifetime is not None:
+            self.expiry = time.time() + lifetime
 
     def __enter__(self):
         return self
@@ -101,10 +116,16 @@ class connection(object):
         # Only add the connection back to the pool if there was no exception,
         # since an exception could mean the connection is not in a reusable
         # state.
-        if type is None:
-            self._pool.append(self)
-        else:
+        if type is not None:
             self.close()
+        elif self.expired():
+            self._ui.debug("closing expired connection to %s\n" % self.path)
+            self.close()
+        else:
+            self._pool.append(self)
+
+    def expired(self):
+        return self.expiry is not None and time.time() > self.expiry
 
     def close(self):
         if util.safehasattr(self.peer, "cleanup"):

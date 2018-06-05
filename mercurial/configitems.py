@@ -157,6 +157,7 @@ coreconfigitem(
 )
 coreconfigitem("commands", "update.requiredest", default=False)
 coreconfigitem("committemplate", ".*", default=None, generic=True)
+coreconfigitem("connectionpool", "lifetime", default=None)
 coreconfigitem("convert", "cvsps.cache", default=True)
 coreconfigitem("convert", "cvsps.fuzz", default=60)
 coreconfigitem("convert", "cvsps.logencoding", default=None)

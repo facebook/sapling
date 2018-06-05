@@ -593,6 +593,13 @@ below can be referred as ``{listupfiles}``::
        "HG: removed {file}\n"   }{if(files, "",
        "HG: no files changed\n")}
 
+``connectionpool``
+------------------
+
+``lifetime``
+    Number of seconds for which connections in the connection pool can be kept
+    and reused.  Connections that are older than this won't be reused.
+
 ``decode/encode``
 -----------------
 
