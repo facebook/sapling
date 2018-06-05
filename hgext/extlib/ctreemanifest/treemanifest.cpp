@@ -488,12 +488,12 @@ bool treemanifest::remove(
   return (result == FIND_PATH_OK) && extras.found;
 }
 
-SubtreeIterator::SubtreeIterator(ManifestPtr mainRoot,
-                const std::vector<const char*> &cmpNodes,
-                const std::vector<ManifestPtr> &cmpRoots,
-                const ManifestFetcher &fetcher) :
-    cmpNodes(cmpNodes),
-    fetcher(fetcher) {
+SubtreeIterator::SubtreeIterator(std::string path, ManifestPtr mainRoot,
+                                 const std::vector<const char *> &cmpNodes,
+                                 const std::vector<ManifestPtr> &cmpRoots,
+                                 const ManifestFetcher &fetcher)
+    : cmpNodes(cmpNodes), path(path), fetcher(fetcher), firstRun(true)
+{
   this->mainStack.push_back(stackframe(mainRoot, false));
 
   if (cmpRoots.size() > 2) {
@@ -507,6 +507,10 @@ SubtreeIterator::SubtreeIterator(ManifestPtr mainRoot,
     std::vector<stackframe> stack;
     stack.push_back(stackframe(cmpRoot, false));
     this->cmpStacks.push_back(stack);
+  }
+
+  if (this->path.size() > 0 && this->path.back() != '/') {
+    this->path.append(1, '/');
   }
 }
 
@@ -606,12 +610,16 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
 
 bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
                            ManifestPtr *p1, ManifestPtr *p2) {
-  // Pop the last returned directory off the path
-  size_t slashoffset = this->path.find_last_of('/', this->path.size() - 1);
-  if (slashoffset == std::string::npos) {
-    this->path.erase();
+  if (!this->firstRun) {
+    // Pop the last returned directory off the path
+    size_t slashoffset = this->path.find_last_of('/', this->path.size() - 1);
+    if (slashoffset == std::string::npos) {
+      this->path.erase();
+    } else {
+      this->path.erase(slashoffset + 1);
+    }
   } else {
-    this->path.erase(slashoffset + 1);
+    this->firstRun = false;
   }
 
   *result = ManifestPtr();
@@ -655,10 +663,11 @@ bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
 }
 
 FinalizeIterator::FinalizeIterator(ManifestPtr mainRoot,
-                const std::vector<const char*> &cmpNodes,
-                const std::vector<ManifestPtr> &cmpRoots,
-                const ManifestFetcher &fetcher) :
-  _iterator(mainRoot, cmpNodes, cmpRoots, fetcher) {
+                                   const std::vector<const char *> &cmpNodes,
+                                   const std::vector<ManifestPtr> &cmpRoots,
+                                   const ManifestFetcher &fetcher)
+    : _iterator(std::string(""), mainRoot, cmpNodes, cmpRoots, fetcher)
+{
 }
 
 bool FinalizeIterator::next(std::string **path, ManifestPtr *result,

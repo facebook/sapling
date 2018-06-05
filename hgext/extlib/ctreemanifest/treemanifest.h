@@ -250,9 +250,11 @@ class SubtreeIterator {
     std::vector<std::vector<stackframe> > cmpStacks;
     std::string path;
     ManifestFetcher fetcher;
+    bool firstRun;
+
   public:
-    SubtreeIterator(ManifestPtr mainRoot,
-                    const std::vector<const char*> &cmpNodes,
+    SubtreeIterator(std::string path, ManifestPtr mainRoot,
+                    const std::vector<const char *> &cmpNodes,
                     const std::vector<ManifestPtr> &cmpRoots,
                     const ManifestFetcher &fetcher);
 

@@ -305,7 +305,7 @@ static void subtreeiter_dealloc(py_subtreeiter *self)
 }
 
 static py_subtreeiter *
-subtreeiter_create(ManifestPtr mainManifest,
+subtreeiter_create(std::string &path, ManifestPtr mainManifest,
                    const std::vector<ManifestPtr> &cmpManifests,
                    const ManifestFetcher &fetcher)
 {
@@ -319,7 +319,7 @@ subtreeiter_create(ManifestPtr mainManifest,
         cmpNodes.push_back(cmpManifests[i]->node());
       }
       new (&pyiter->iter)
-          SubtreeIterator(mainManifest, cmpNodes, cmpManifests, fetcher);
+          SubtreeIterator(path, mainManifest, cmpNodes, cmpManifests, fetcher);
       return pyiter;
     } catch (const pyexception &ex) {
       Py_DECREF(pyiter);
@@ -1383,7 +1383,8 @@ static PyObject *treemanifest_walksubtrees(py_treemanifest *self,
       }
     }
 
-    return (PyObject *)subtreeiter_create(self->tm.getRootManifest(),
+    auto rootPath = std::string("");
+    return (PyObject *)subtreeiter_create(rootPath, self->tm.getRootManifest(),
                                           cmpManifests, self->tm.fetcher);
   } catch (const pyexception &ex) {
     return NULL;
