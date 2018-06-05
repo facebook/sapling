@@ -1081,7 +1081,7 @@ static PyObject *treemanifest_copy(py_treemanifest *self)
  * The fastpath is for when the matcher contains a small list of specific file
  * names, so we can test each file instead of iterating over the whole manifest.
  */
-static bool canusematchfastpath(py_treemanifest* /*self*/, PythonObj matcher)
+static bool canusematchfastpath(py_treemanifest * /*self*/, PythonObj matcher)
 {
   PythonObj emptyargs = PyTuple_New(0);
   PythonObj files = matcher.callmethod("files", emptyargs);
@@ -1525,9 +1525,8 @@ static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
       cmpManifests.push_back(p2tree->tm.getRootManifest());
     }
 
-    return (PyObject *)newtreeiter_create(self->tm.getRootManifest(),
-                                          cmpNodes, cmpManifests,
-                                          self->tm.fetcher);
+    return (PyObject *)newtreeiter_create(self->tm.getRootManifest(), cmpNodes,
+                                          cmpManifests, self->tm.fetcher);
   } catch (const pyexception &ex) {
     return NULL;
   }

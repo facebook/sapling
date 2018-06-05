@@ -61,7 +61,7 @@ public:
 
   UnionDatapackStore();
 
-  UnionDatapackStore(std::vector<DataStore*> &stores);
+  UnionDatapackStore(std::vector<DataStore *> &stores);
 
   ~UnionDatapackStore() override;
 

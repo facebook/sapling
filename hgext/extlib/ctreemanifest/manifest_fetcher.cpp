@@ -11,17 +11,18 @@
 
 #include "hgext/extlib/ctreemanifest/manifest.h"
 
-ManifestFetcher::ManifestFetcher(std::shared_ptr<Store> store) :
-  _store(store) {
+ManifestFetcher::ManifestFetcher(std::shared_ptr<Store> store) : _store(store)
+{
 }
 
 /**
  * Fetches the Manifest from the store for the provided manifest key.
  * Returns the manifest if found, or throws an exception if not found.
  */
-ManifestPtr ManifestFetcher::get(
-    const char *path, size_t pathlen,
-    std::string &node) const {
-    ConstantStringRef content = _store->get(Key(path, pathlen, node.c_str(), node.size()));
-    return ManifestPtr(new Manifest(content, node.c_str()));
+ManifestPtr ManifestFetcher::get(const char *path, size_t pathlen,
+                                 std::string &node) const
+{
+  ConstantStringRef content =
+      _store->get(Key(path, pathlen, node.c_str(), node.size()));
+  return ManifestPtr(new Manifest(content, node.c_str()));
 }

@@ -464,7 +464,7 @@ static PyObject *uniondatapackstore_markforrefresh(py_uniondatapackstore *self)
   Py_RETURN_NONE;
 }
 
-static PyObject *uniondatapackstore_getmetrics(py_uniondatapackstore* /*self*/)
+static PyObject *uniondatapackstore_getmetrics(py_uniondatapackstore * /*self*/)
 {
   return PyDict_New();
 }

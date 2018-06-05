@@ -548,7 +548,7 @@ class basetreemanifestlog(object):
         """Writes the given tree into the manifestlog. If `overridenode` is
         specified, the tree root is written with that node instead of its actual
         node. If `overridep1node` is specified, the the p1 node for the root
-        tree is also overriden.
+        tree is also overridden.
         """
         if ui.configbool("treemanifest", "server"):
             return self._addtorevlog(

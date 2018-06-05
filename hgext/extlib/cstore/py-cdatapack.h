@@ -258,8 +258,8 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args)
   std::string data_path(node);
   data_path.append(PACKSUFFIX);
 
-  self->handle =
-      open_datapack(idx_path.data(), idx_path.size(), data_path.data(), data_path.size());
+  self->handle = open_datapack(idx_path.data(), idx_path.size(),
+                               data_path.data(), data_path.size());
 
   if (self->handle == NULL) {
     PyErr_NoMemory();

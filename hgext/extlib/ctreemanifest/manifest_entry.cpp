@@ -14,25 +14,23 @@
 #include "hgext/extlib/ctreemanifest/manifest.h"
 
 ManifestEntry::ManifestEntry()
-    : node(NULL), filename(NULL), filenamelen(0), flag(NULL),
-      ownedmemory(NULL) {}
+    : node(NULL), filename(NULL), filenamelen(0), flag(NULL), ownedmemory(NULL)
+{
+}
 
-void ManifestEntry::initialize(
-    const char *filename, const size_t filenamelen,
-    const char *node,
-    const char *flag) {
+void ManifestEntry::initialize(const char *filename, const size_t filenamelen,
+                               const char *node, const char *flag)
+{
   if (flag != NULL && *flag == MANIFEST_DIRECTORY_FLAG) {
     this->resolved = ManifestPtr(new Manifest());
   }
 
   assert(!this->ownedmemory);
 
-  this->ownedmemory = new char[
-  filenamelen +
-  1 +              // null character
-  HEX_NODE_SIZE +  // node hash
-  1 +              // flag
-  1                // NL
+  this->ownedmemory = new char[filenamelen + 1 + // null character
+                               HEX_NODE_SIZE +   // node hash
+                               1 +               // flag
+                               1                 // NL
   ];
 
   // We'll use this as a cursor into the memory blob we just allocated
@@ -70,7 +68,8 @@ void ManifestEntry::initialize(
   this->flag = flagcopy;
 }
 
-const char *ManifestEntry::initialize(const char *entrystart) {
+const char *ManifestEntry::initialize(const char *entrystart)
+{
   // Each entry is of the format:
   //
   //   <filename>\0<40-byte hash><optional 1 byte flag>\n
@@ -97,10 +96,11 @@ const char *ManifestEntry::initialize(const char *entrystart) {
   return nextpointer;
 }
 
-void ManifestEntry::initialize(ManifestEntry *other) {
+void ManifestEntry::initialize(ManifestEntry *other)
+{
   if (other->ownedmemory) {
-    this->initialize(other->filename, other->filenamelen,
-        other->node, other->flag);
+    this->initialize(other->filename, other->filenamelen, other->node,
+                     other->flag);
     if (other->resolved.isnull()) {
       this->resolved = ManifestPtr();
     }
@@ -118,41 +118,48 @@ void ManifestEntry::initialize(ManifestEntry *other) {
   }
 }
 
-ManifestEntry::~ManifestEntry() {
+ManifestEntry::~ManifestEntry()
+{
   if (this->ownedmemory != NULL) {
-    delete [] this->ownedmemory;
+    delete[] this->ownedmemory;
   }
 }
 
-bool ManifestEntry::isdirectory() const {
+bool ManifestEntry::isdirectory() const
+{
   return this->flag && *this->flag == MANIFEST_DIRECTORY_FLAG;
 }
 
-bool ManifestEntry::hasNode() const {
+bool ManifestEntry::hasNode() const
+{
   return this->node;
 }
 
-const char *ManifestEntry::get_node() {
+const char *ManifestEntry::get_node()
+{
   if (!this->node && this->flag && *this->flag == MANIFEST_DIRECTORY_FLAG &&
       !this->resolved.isnull() && !this->resolved->isMutable()) {
-      this->updatebinnode(this->resolved->node(), MANIFEST_DIRECTORY_FLAGPTR);
+    this->updatebinnode(this->resolved->node(), MANIFEST_DIRECTORY_FLAGPTR);
   }
   return this->node;
 }
 
-void ManifestEntry::reset_node() {
+void ManifestEntry::reset_node()
+{
   this->node = NULL;
 }
 
-void ManifestEntry::appendtopath(std::string &path) {
+void ManifestEntry::appendtopath(std::string &path)
+{
   path.append(this->filename, this->filenamelen);
   if (this->isdirectory()) {
     path.append(1, '/');
   }
 }
 
-ManifestPtr ManifestEntry::get_manifest(
-    const ManifestFetcher &fetcher, const char *path, size_t pathlen) {
+ManifestPtr ManifestEntry::get_manifest(const ManifestFetcher &fetcher,
+                                        const char *path, size_t pathlen)
+{
   if (this->resolved.isnull()) {
     std::string binnode = binfromhex(node);
     // Chop off the trailing slash
@@ -166,13 +173,15 @@ ManifestPtr ManifestEntry::get_manifest(
   return this->resolved;
 }
 
-void ManifestEntry::updatebinnode(const char *node, const char *flag) {
+void ManifestEntry::updatebinnode(const char *node, const char *flag)
+{
   std::string hexnode;
   hexfrombin(node, hexnode);
   this->updatehexnode(hexnode.c_str(), flag);
 }
 
-void ManifestEntry::updatehexnode(const char *node, const char *flag) {
+void ManifestEntry::updatehexnode(const char *node, const char *flag)
+{
   // we cannot flip between file and directory.
   bool wasdir = this->flag != NULL && *this->flag == MANIFEST_DIRECTORY_FLAG;
   bool willbedir = flag != NULL && *flag == MANIFEST_DIRECTORY_FLAG;
@@ -208,32 +217,34 @@ void ManifestEntry::updatehexnode(const char *node, const char *flag) {
   }
 }
 
-static size_t mercurialOrderFilenameLength(const ManifestEntry &entry) {
+static size_t mercurialOrderFilenameLength(const ManifestEntry &entry)
+{
   return entry.filenamelen +
-         ((entry.flag != NULL && *entry.flag == MANIFEST_DIRECTORY_FLAG) ?
-          1 : 0);
+         ((entry.flag != NULL && *entry.flag == MANIFEST_DIRECTORY_FLAG) ? 1
+                                                                         : 0);
 }
 
-static char mercurialOrderFilenameCharAt(
-    const ManifestEntry &entry, size_t offset) {
+static char mercurialOrderFilenameCharAt(const ManifestEntry &entry,
+                                         size_t offset)
+{
   if (offset < entry.filenamelen) {
     return entry.filename[offset];
   } else if (offset == entry.filenamelen &&
-      (entry.flag != NULL && *entry.flag == MANIFEST_DIRECTORY_FLAG)) {
+             (entry.flag != NULL && *entry.flag == MANIFEST_DIRECTORY_FLAG)) {
     return '/';
   }
 
   throw std::out_of_range("Illegal index for manifest entry");
 }
 
-bool ManifestEntry::compareMercurialOrder(
-    ManifestEntry * const &left,
-    ManifestEntry * const &right) {
+bool ManifestEntry::compareMercurialOrder(ManifestEntry *const &left,
+                                          ManifestEntry *const &right)
+{
   size_t leftlen = mercurialOrderFilenameLength(*left);
   size_t rightlen = mercurialOrderFilenameLength(*right);
   size_t minlen = (leftlen < rightlen) ? leftlen : rightlen;
 
-  for (size_t ix = 0; ix < minlen; ix ++) {
+  for (size_t ix = 0; ix < minlen; ix++) {
     unsigned char leftchar = mercurialOrderFilenameCharAt(*left, ix);
     unsigned char rightchar = mercurialOrderFilenameCharAt(*right, ix);
 
@@ -252,25 +263,24 @@ bool ManifestEntry::compareMercurialOrder(
   return false;
 }
 
-int ManifestEntry::compareName(ManifestEntry *left, ManifestEntry *right) {
+int ManifestEntry::compareName(ManifestEntry *left, ManifestEntry *right)
+{
   assert(left || right);
 
   // If left is empty, then it is greater than right. This makes this function
   // useful for iterating right after left has already finished.
   if (!left) {
     return 1;
-  }
-  else if (!right) {
+  } else if (!right) {
     return -1;
   }
 
-  size_t minlen = left->filenamelen < right->filenamelen ?
-                  left->filenamelen : right->filenamelen;
+  size_t minlen = left->filenamelen < right->filenamelen ? left->filenamelen
+                                                         : right->filenamelen;
   int cmp = strncmp(left->filename, right->filename, minlen);
   if (cmp == 0 && left->filenamelen == right->filenamelen) {
     return 0;
-  } else if (cmp > 0 ||
-             (cmp == 0 && left->filenamelen > right->filenamelen)) {
+  } else if (cmp > 0 || (cmp == 0 && left->filenamelen > right->filenamelen)) {
     return 1;
   } else {
     return -1;

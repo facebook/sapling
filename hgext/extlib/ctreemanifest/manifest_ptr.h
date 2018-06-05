@@ -11,25 +11,27 @@
 
 class Manifest;
 
-class ManifestPtr {
-  private:
-    Manifest *manifest;
-  public:
-    ManifestPtr();
+class ManifestPtr
+{
+private:
+  Manifest *manifest;
 
-    ManifestPtr(Manifest *manifest);
+public:
+  ManifestPtr();
 
-    ManifestPtr(const ManifestPtr &other);
+  ManifestPtr(Manifest *manifest);
 
-    ~ManifestPtr();
+  ManifestPtr(const ManifestPtr &other);
 
-    ManifestPtr& operator= (const ManifestPtr& other);
+  ~ManifestPtr();
 
-    operator Manifest* () const;
+  ManifestPtr &operator=(const ManifestPtr &other);
 
-    Manifest *operator-> () const;
+  operator Manifest *() const;
 
-    bool isnull() const;
+  Manifest *operator->() const;
+
+  bool isnull() const;
 };
 
 #endif /* FBHGEXT_CTREEMANIFEST_MANIFEST_PTR_H */

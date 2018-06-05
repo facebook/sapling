@@ -21,8 +21,8 @@ UnionDatapackStore::UnionDatapackStore()
 {
 }
 
-UnionDatapackStore::UnionDatapackStore(std::vector<DataStore*> &stores)
-  : _stores(stores)
+UnionDatapackStore::UnionDatapackStore(std::vector<DataStore *> &stores)
+    : _stores(stores)
 {
 }
 

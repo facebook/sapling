@@ -19,19 +19,19 @@
 /**
  * Class used to obtain Manifests, given a path and node.
  */
-class ManifestFetcher {
-  private:
-    std::shared_ptr<Store> _store;
-  public:
-    ManifestFetcher(std::shared_ptr<Store> store);
+class ManifestFetcher
+{
+private:
+  std::shared_ptr<Store> _store;
 
-    /**
-     * Fetches the Manifest from the store for the provided manifest key.
-     * Returns the manifest if found, or throws an exception if not found.
-     */
-    ManifestPtr get(
-        const char *path, size_t pathlen,
-        std::string &node) const;
+public:
+  ManifestFetcher(std::shared_ptr<Store> store);
+
+  /**
+   * Fetches the Manifest from the store for the provided manifest key.
+   * Returns the manifest if found, or throws an exception if not found.
+   */
+  ManifestPtr get(const char *path, size_t pathlen, std::string &node) const;
 };
 
 #endif // FBHGEXT_CTREEMANIFEST_MANIFEST_FETCHER_H
