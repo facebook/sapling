@@ -1192,8 +1192,12 @@ def _getflatdiff(mfl, mfctx):
     p1, p2 = mfrevlog.parentrevs(rev)
     p1node = mfrevlog.node(p1)
     p2node = mfrevlog.node(p2)
+    linkrev = mfrevlog.linkrev(rev)
 
-    if p2node != nullid:
+    # We have to fall back to the slow path for merge commits and for commits
+    # that are currently being made, since they haven't written their changelog
+    # data yet and it is necessary for the fastpath.
+    if p2node != nullid or linkrev >= len(mfl._repo.changelog):
         diff = mfl[p1node].read().diff(mfctx.read())
         deletes = []
         adds = []
@@ -1240,7 +1244,6 @@ def _getflatdiff(mfl, mfctx):
                 fflag = rest[40:]
                 adds.append((fname, bin(fnode), fflag))
 
-        linkrev = mfrevlog.linkrev(rev)
         allfiles = set(mfl._repo.changelog.readfiles(linkrev))
         deletes = allfiles.difference(fname for fname, fnode, fflag in adds)
     return adds, deletes

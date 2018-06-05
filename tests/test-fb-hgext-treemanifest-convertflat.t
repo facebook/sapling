@@ -26,6 +26,36 @@ Make local commits on the server
   $ echo x > subdir/x
   $ hg commit -qAm 'add subdir/x'
 
+Verify server commits produce correct trees during the conversion
+  $ echo tomodify > subdir/tomodify
+  $ echo toremove > subdir/toremove
+  $ echo tomove > subdir/tomove
+  $ echo tocopy > subdir/tocopy
+  $ hg commit -qAm 'create files'
+  $ echo >> subdir/tomodify
+  $ hg rm subdir/toremove
+  $ hg mv subdir/tomove subdir/tomove2
+  $ hg cp subdir/tocopy subdir/tocopy2
+  $ hg commit -qAm 'remove, move, copy'
+  $ hg status --change . -C
+  M subdir/tomodify
+  A subdir/tocopy2
+    subdir/tocopy
+  A subdir/tomove2
+    subdir/tomove
+  R subdir/tomove
+  R subdir/toremove
+  $ hg status --change . -C --config treemanifest.treeonly=True
+  M subdir/tomodify
+  A subdir/tocopy2
+    subdir/tocopy
+  A subdir/tomove2
+    subdir/tomove
+  R subdir/tomove
+  R subdir/toremove
+  $ hg strip -r '.^' --no-backup
+  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
+
 The following will simulate the transition from flat to tree-only
 1. Flat only client, with flat only draft commits
 2. Hybrid client, with some flat and some flat+tree draft commits
