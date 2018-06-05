@@ -399,10 +399,12 @@ impl Bundle2Resolver {
 
         let repo = self.repo.clone();
 
-        debug!(self.logger, "changesets: {:?}", changesets);
-        debug!(self.logger, "filelogs: {:?}", filelogs.keys());
-        debug!(self.logger, "manifests: {:?}", manifests.keys());
-        debug!(self.logger, "content blobs: {:?}", content_blobs.keys());
+        let changesets_hashes: Vec<_> = changesets.iter().map(|(hash, _)| *hash).collect();
+
+        trace!(self.logger, "changesets: {:?}", changesets);
+        trace!(self.logger, "filelogs: {:?}", filelogs.keys());
+        trace!(self.logger, "manifests: {:?}", manifests.keys());
+        trace!(self.logger, "content blobs: {:?}", content_blobs.keys());
 
         stream::iter_ok(changesets)
             .fold(
@@ -429,7 +431,7 @@ impl Bundle2Resolver {
                 ).map_err(Error::from)
                     .for_each(|_| Ok(()))
             })
-            .context("While uploading Changesets to BlobRepo")
+            .context(ErrorKind::WhileUploadingData(changesets_hashes))
             .from_err()
             .boxify()
     }
