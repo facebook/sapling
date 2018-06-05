@@ -29,7 +29,8 @@ use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use delayblob::DelayBlob;
-use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
+use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE,
+                      DEFAULT_POOL_SIZE};
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
@@ -178,6 +179,7 @@ impl BlobRepo {
         blobstore_cache_size: usize,
         changesets_cache_size: usize,
         filenodes_cache_size: usize,
+        filenodes_connection_pool_size: Option<u32>,
         thread_num: usize,
         max_concurrent_requests_per_io_thread: usize,
     ) -> Result<Self> {
@@ -221,8 +223,11 @@ impl BlobRepo {
         let blobstore = MemcacheBlobstore::new(blobstore);
         let blobstore = MemoizedBlobstore::new(blobstore, usize::MAX, blobstore_cache_size);
 
-        let filenodes = MysqlFilenodes::open(&connection_params, DEFAULT_INSERT_CHUNK_SIZE)
-            .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
+        let filenodes = MysqlFilenodes::open(
+            &connection_params,
+            DEFAULT_INSERT_CHUNK_SIZE,
+            filenodes_connection_pool_size.unwrap_or(DEFAULT_POOL_SIZE),
+        ).context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let filenodes = CachingFilenodes::new(Arc::new(filenodes), filenodes_cache_size);
 
         let changesets = MysqlChangesets::open(&connection_params)

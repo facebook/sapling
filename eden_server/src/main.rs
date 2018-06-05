@@ -564,6 +564,7 @@ fn main() {
                     blobstore_cache_size,
                     changesets_cache_size,
                     filenodes_cache_size,
+                    None,
                     io_thread_num,
                     max_concurrent_requests_per_io_thread,
                 ).expect("couldn't open blob state"),

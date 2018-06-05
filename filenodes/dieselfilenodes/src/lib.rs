@@ -49,6 +49,7 @@ mod schema;
 use errors::ErrorKind;
 
 pub const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
+pub const DEFAULT_POOL_SIZE: u32 = 10;
 
 define_stats! {
     prefix = "filenodes";
@@ -121,11 +122,15 @@ pub struct MysqlFilenodes {
 }
 
 impl MysqlFilenodes {
-    pub fn open(params: &ConnectionParams, insert_chunk_size: usize) -> Result<Self> {
+    pub fn open(
+        params: &ConnectionParams,
+        insert_chunk_size: usize,
+        pool_size: u32,
+    ) -> Result<Self> {
         let url = params.to_diesel_url()?;
         let manager = ConnectionManager::new(url);
         let pool = Pool::builder()
-            .max_size(10)
+            .max_size(pool_size)
             .min_idle(Some(1))
             .build(manager)?;
         Ok(Self {
@@ -140,7 +145,7 @@ impl MysqlFilenodes {
     }
 
     fn create(params: &ConnectionParams) -> Result<Self> {
-        let filenodes = Self::open(params, DEFAULT_INSERT_CHUNK_SIZE)?;
+        let filenodes = Self::open(params, DEFAULT_INSERT_CHUNK_SIZE, DEFAULT_POOL_SIZE)?;
 
         let up_query = include_str!("../schemas/mysql-filenodes.sql");
         filenodes.pool.get()?.batch_execute(&up_query)?;

@@ -60,6 +60,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --blobstore-cache-size [SIZE]   'size of the blobstore cache'
             --changesets-cache-size [SIZE]  'size of the changesets cache'
             --filenodes-cache-size [SIZE]   'size of the filenodes cache'
+            --filenodes-connection-pool-size [SIZE] 'number of parallel connections'
             --io-thread-num [NUM]           'num of the io threads to use'
             --max-concurrent-request-per-io-thread [NUM] 'max requests per io thread'
             --parsing-cpupool-size [NUM]    'size of cpupool for parsing revlogs'
@@ -173,6 +174,12 @@ fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
                 get_usize(&matches, "blobstore-cache-size", 100_000_000),
                 get_usize(&matches, "changesets-cache-size", 100_000_000),
                 get_usize(&matches, "filenodes-cache-size", 100_000_000),
+                matches
+                    .value_of("filenodes-connection-pool-size")
+                    .map(|val| {
+                        val.parse::<u32>()
+                            .expect("filenodes-connection-pool-size must be integer")
+                    }),
                 get_usize(&matches, "io-thread-num", 5),
                 get_usize(&matches, "max-concurrent-request-per-io-thread", 5),
             ).expect("failed to create manifold blobrepo")

@@ -50,7 +50,8 @@ use std::thread;
 use changesets::{Changesets, MysqlChangesets, SqliteChangesets};
 use clap::{App, Arg, ArgMatches};
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
-use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
+use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE,
+                      DEFAULT_POOL_SIZE};
 use failure::{Error, Result, ResultExt, SlogKVError};
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::{stream, Future, IntoFuture, Stream};
@@ -272,6 +273,7 @@ fn open_filenodes_store(mut output: PathBuf, xdb_tier: Option<PathBuf>) -> Resul
             Ok(Arc::new(MysqlFilenodes::open(
                 &connection_params,
                 DEFAULT_INSERT_CHUNK_SIZE,
+                DEFAULT_POOL_SIZE,
             )?))
         }
         None => {
