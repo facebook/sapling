@@ -1,6 +1,8 @@
 use error::*;
 use serde_json;
-use std::{thread, collections::HashMap, net::{SocketAddr, TcpListener}};
+use std::collections::HashMap;
+use std::net::{SocketAddr, TcpListener};
+use std::thread;
 
 /// Set of supported commands
 /// All unknown commands will be ignored

@@ -5,8 +5,12 @@ use eventsource::reqwest::Client;
 use receiver::CommandName::{self, *};
 use reqwest::Url;
 use serde_json;
-use std::{str, thread, collections::HashMap, path::PathBuf, sync::mpsc,
-          sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, SystemTime}};
+use std::{str, thread};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::{mpsc, Arc};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, SystemTime};
 use util;
 
 #[allow(unused_macros)]

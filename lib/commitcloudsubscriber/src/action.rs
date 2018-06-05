@@ -1,5 +1,6 @@
 use error::*;
-use std::{path::Path, process::Command};
+use std::path::Path;
+use std::process::Command;
 
 pub struct CloudSyncTrigger;
 

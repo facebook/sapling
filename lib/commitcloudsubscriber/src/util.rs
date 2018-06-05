@@ -1,9 +1,13 @@
 use config::CommitCloudConfig;
 use error::*;
 use ini::Ini;
+use std::{fs, io};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 #[cfg(target_os = "macos")]
-use std::{str, process::Command};
-use std::{fs, io, collections::HashMap, path::{Path, PathBuf}};
+use std::process::Command;
+#[cfg(target_os = "macos")]
+use std::str;
 use subscriber::Subscription;
 
 static JOINED_DIR: &str = ".commitcloud";
