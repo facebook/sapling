@@ -89,13 +89,17 @@ pub fn read_subscriptions(
         }
     }
 
-    info!("Found {} active subscribers.", subscriptions.len());
+    info!(
+        "Found {} active subscription{}",
+        subscriptions.len(),
+        if subscriptions.len() != 1 { "s" } else { "" }
+    );
 
     for (key, value) in &subscriptions {
         info!(
-            "Found {} subscription{} requests for repo '{}' and workspace '{}'",
+            "Found {} subscription request{} for repo '{}' and workspace '{}'",
             value.len(),
-            if value.len() > 1 { "s" } else { "" },
+            if value.len() != 1 { "s" } else { "" },
             key.repo_name,
             key.workspace
         );
