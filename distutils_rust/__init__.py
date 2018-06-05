@@ -33,7 +33,7 @@ def chdir(path):
 class RustExtension(object):
     """Data for a Rust extension.
 
-    'name' is the name of the extension, and must match the 'name' in the Cargo
+    'name' is the name of the target, and must match the 'name' in the Cargo
     manifest.  This will also be the name of the python module that is
     produced.
 
@@ -48,6 +48,59 @@ class RustExtension(object):
         self.name = name
         self.package = package
         self.manifest = manifest or "Cargo.toml"
+        self.type = "library"
+
+    @property
+    def dstnametmp(self):
+        platform = distutils.util.get_platform()
+        if platform.startswith("win-"):
+            name = self.name + ".dll"
+        elif platform.startswith("macosx"):
+            name = "lib" + self.name + ".dylib"
+        else:
+            name = "lib" + self.name + ".so"
+        return name
+
+    @property
+    def dstname(self):
+        platform = distutils.util.get_platform()
+        if platform.startswith("win-"):
+            name = self.name + ".pyd"
+        else:
+            name = self.name + ".so"
+        return name
+
+
+class RustBinary(object):
+    """Data for a Rust binary.
+
+    'name' is the name of the target, and must match the 'name' in the Cargo
+    manifest.  This will also be the name of the binary that is
+    produced.
+
+    'manifest' is the path to the Cargo.toml file for the Rust project.
+    """
+
+    def __init__(self, name, package=None, manifest=None):
+        self.name = name
+        self.manifest = manifest or "Cargo.toml"
+        self.type = "binary"
+
+    @property
+    def dstnametmp(self):
+        platform = distutils.util.get_platform()
+        if platform.startswith("win-"):
+            return self.name + ".exe"
+        else:
+            return self.name
+
+    @property
+    def dstname(self):
+        platform = distutils.util.get_platform()
+        if platform.startswith("win-"):
+            return self.name + ".exe"
+        else:
+            return self.name
 
 
 class RustVendoredCrates(object):
@@ -74,6 +127,7 @@ class BuildRustExt(distutils.core.Command):
 
     user_options = [
         ("build-lib=", "b", "directory for compiled extension modules"),
+        ("build-exe=", "e", "directory for compiled binary targets"),
         ("build-temp=", "t", "directory for temporary files (build by-products)"),
         ("debug", "g", "compile in debug mode"),
         (
@@ -88,6 +142,7 @@ class BuildRustExt(distutils.core.Command):
 
     def initialize_options(self):
         self.build_lib = None
+        self.build_exe = None
         self.build_temp = None
         self.debug = None
         self.inplace = None
@@ -99,6 +154,7 @@ class BuildRustExt(distutils.core.Command):
             ("build_temp", "build_temp"),
             ("debug", "debug"),
         )
+        self.set_undefined_options("build_scripts", ("build_dir", "build_exe"))
 
     def run(self):
         # Download vendored crates
@@ -106,39 +162,40 @@ class BuildRustExt(distutils.core.Command):
             self.download_vendored_crates(ven)
 
         # Build Rust extensions
-        for ext in self.distribution.rust_ext_modules:
-            self.build_ext(ext)
+        for target in self.distribution.rust_ext_modules:
+            self.build_library(target)
 
-    def get_temp_path(self, ext):
+        # Build Rust binaries
+        for target in self.distribution.rust_ext_binaries:
+            self.build_binary(target)
+
+    def get_temp_path(self):
         """Returns the path of the temporary directory to build in."""
         return os.path.join(self.build_temp, "cargo-target")
 
-    def get_temp_output(self, ext):
+    def get_temp_output(self, target):
         """Returns the location in the temp directory of the output file."""
-        platform = distutils.util.get_platform()
-        if platform.startswith("win-"):
-            name = ext.name + ".dll"
-        elif platform.startswith("macosx"):
-            name = "lib" + ext.name + ".dylib"
-        else:
-            name = "lib" + ext.name + ".so"
-        return os.path.join("debug" if self.debug else "release", name)
+        return os.path.join("debug" if self.debug else "release", target.dstnametmp)
 
-    def get_output_filename(self, ext):
+    def get_output_filename(self, target):
         """Returns the filename of the build output."""
-        if self.inplace:
-            # the inplace option requires to find the package directory
-            # using the build_py command for that
-            build_py = self.get_finalized_command("build_py")
-            package_dir = build_py.get_package_dir(ext.package)
+        if target.type == "library":
+            if self.inplace:
+                # the inplace option requires to find the package directory
+                # using the build_py command for that
+                build_py = self.get_finalized_command("build_py")
+                return os.path.join(
+                    build_py.get_package_dir(target.package), target.dstname
+                )
+            else:
+                return os.path.join(
+                    os.path.join(self.build_lib, *target.package.split(".")),
+                    target.dstname,
+                )
+        elif target.type == "binary":
+            return os.path.join(self.build_exe, target.dstname)
         else:
-            package_dir = os.path.join(self.build_lib, *ext.package.split("."))
-        platform = distutils.util.get_platform()
-        if platform.startswith("win-"):
-            name = ext.name + ".pyd"
-        else:
-            name = ext.name + ".so"
-        return os.path.join(package_dir, name)
+            raise distutils.errors.CompileError("Unknown Rust target type")
 
     def download_vendored_crates(self, ven):
         try:
@@ -158,30 +215,29 @@ class BuildRustExt(distutils.core.Command):
             with tarfile.open(ven.filename, "r:gz") as tar:
                 tar.extractall()
 
-    def build_ext(self, ext):
-        distutils.log.info("building '%s' extension", ext.name)
-
+    def build_target(self, target):
+        """Build Rust target"""
         # Cargo.lock may become out-of-date and make complication fail if
         # vendored crates are updated. Remove it so it can be re-generated.
-        cargolockpath = os.path.join(os.path.dirname(ext.manifest), "Cargo.lock")
+        cargolockpath = os.path.join(os.path.dirname(target.manifest), "Cargo.lock")
         if os.path.exists(cargolockpath):
             os.unlink(cargolockpath)
 
-        cmd = ["cargo", "build", "--manifest-path", ext.manifest]
+        cmd = ["cargo", "build", "--manifest-path", target.manifest]
         if not self.debug:
             cmd.append("--release")
 
         env = os.environ.copy()
-        env["CARGO_TARGET_DIR"] = self.get_temp_path(ext)
+        env["CARGO_TARGET_DIR"] = self.get_temp_path()
 
         rc = subprocess.call(cmd, env=env)
         if rc:
             raise distutils.errors.CompileError(
-                "compilation of Rust extension '%s' failed" % ext.name
+                "compilation of Rust targetension '%s' failed" % target.name
             )
 
-        src = os.path.join(self.get_temp_path(ext), self.get_temp_output(ext))
-        dest = self.get_output_filename(ext)
+        src = os.path.join(self.get_temp_path(), self.get_temp_output(target))
+        dest = self.get_output_filename(target)
         try:
             os.makedirs(os.path.dirname(dest))
         except OSError:
@@ -190,8 +246,17 @@ class BuildRustExt(distutils.core.Command):
         shutil.copy(src, desttmp)
         shutil.move(desttmp, dest)
 
+    def build_binary(self, target):
+        distutils.log.info("building '%s' binary", target.name)
+        self.build_target(target)
+
+    def build_library(self, target):
+        distutils.log.info("building '%s' library extension", target.name)
+        self.build_target(target)
+
 
 distutils.dist.Distribution.rust_ext_modules = ()
+distutils.dist.Distribution.rust_ext_binaries = ()
 distutils.dist.Distribution.rust_vendored_crates = ()
 distutils.command.build.build.sub_commands.append(
     ("build_rust_ext", lambda self: bool(self.distribution.rust_ext_modules))

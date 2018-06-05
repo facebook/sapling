@@ -171,7 +171,7 @@ from distutils import file_util
 from distutils.errors import CCompilerError, DistutilsError, DistutilsExecError
 from distutils.sysconfig import get_python_inc, get_config_var
 from distutils.version import StrictVersion, LooseVersion
-from distutils_rust import RustExtension, RustVendoredCrates, BuildRustExt
+from distutils_rust import RustExtension, RustBinary, RustVendoredCrates, BuildRustExt
 import distutils
 
 haverust = False
@@ -1507,6 +1507,8 @@ rustextmodules = [
     ),
 ]
 
+rustextbinaries = [RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml")]
+
 setup(
     name="mercurial",
     version=setupversion,
@@ -1549,6 +1551,7 @@ setup(
     libraries=libraries,
     rust_vendored_crates=rustvendoredcrates,
     rust_ext_modules=rustextmodules,
+    rust_ext_binaries=rustextbinaries,
     data_files=datafiles,
     package_data=packagedata,
     cmdclass=cmdclass,
