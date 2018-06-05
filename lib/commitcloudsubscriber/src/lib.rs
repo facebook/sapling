@@ -18,8 +18,10 @@ extern crate serde_json;
 pub(crate) mod action;
 pub mod config;
 pub mod error;
+pub mod receiver;
 pub mod subscriber;
 pub(crate) mod util;
 
 pub use config::CommitCloudConfig;
-pub use subscriber::WorkspaceSubscriber as CommitCloudWorkspaceSubscriber;
+pub use receiver::TcpReceiverService as CommitCloudTcpReceiverService;
+pub use subscriber::WorkspaceSubscriberService as CommitCloudWorkspaceSubscriberService;

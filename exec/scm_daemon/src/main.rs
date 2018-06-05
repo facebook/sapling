@@ -13,7 +13,8 @@ pub mod error;
 
 use self::error::*;
 use clap::{App, Arg};
-use commitcloudsubscriber::{CommitCloudConfig, CommitCloudWorkspaceSubscriber};
+use commitcloudsubscriber::{CommitCloudConfig, CommitCloudTcpReceiverService,
+                            CommitCloudWorkspaceSubscriberService};
 use std::fs::File;
 use std::io::Read;
 
@@ -55,7 +56,7 @@ fn run() -> Result<()> {
 
     info!("Reading Scm Daemon configuration from {}", configfile);
 
-    // parse toml config
+    // parse the toml config
     let config: Config = toml::from_str(&{
         let mut f = File::open(configfile)?;
         let mut content = String::new();
@@ -63,12 +64,31 @@ fn run() -> Result<()> {
         content
     })?;
 
-    {
-        info!("[commitcloud] starting CommitCloudWorkspaceSubscriber");
-        CommitCloudWorkspaceSubscriber::try_new(&config
-            .commitcloud
-            .unwrap_or_else(|| toml::from_str::<CommitCloudConfig>("").unwrap()))?
-            .run()?;
-    }
+    // commit cloud part of the configuration
+    let commitcloudconfref = &config
+        .commitcloud
+        .unwrap_or_else(|| toml::from_str::<CommitCloudConfig>("").unwrap());
+
+    let commitcloud_workspacesubscriber =
+        CommitCloudWorkspaceSubscriberService::new(commitcloudconfref)?;
+    let commitcloud_tcpreceiver = CommitCloudTcpReceiverService::new(
+        commitcloudconfref.tcp_receiver_port,
+    ).with_actions(commitcloud_workspacesubscriber.actions());
+
+    // start services
+    let commitcloud_tcpreceiver_handler = commitcloud_tcpreceiver.serve()?;
+    let commitcloud_workspacesubscriber_handler = commitcloud_workspacesubscriber.serve()?;
+
+    // join running services, this will block
+    match commitcloud_tcpreceiver_handler.join() {
+        Ok(result) => result?,
+        Err(_) => bail!("commitcloud tcpreceiver panicked"),
+    };
+
+    match commitcloud_workspacesubscriber_handler.join() {
+        Ok(result) => result?,
+        Err(_) => bail!("commitcloud workspace subscriber panicked"),
+    };
+
     Ok(())
 }

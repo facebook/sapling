@@ -58,10 +58,6 @@ mod defaults {
     pub fn error_throttling_rate_sec() -> u64 {
         60 * 5
     }
-
-    pub fn no_subs_throttling_rate_sec() -> u64 {
-        60 * 5
-    }
 }
 
 /// Struct for decoding Commit Cloud configuration from TOML.
@@ -111,8 +107,4 @@ pub struct CommitCloudConfig {
     /// Throttling rate for logging errors
     #[serde(default = "defaults::error_throttling_rate_sec")]
     pub error_throttling_rate_sec: u64,
-
-    /// Throttling rate for logging no active subscriptions
-    #[serde(default = "defaults::no_subs_throttling_rate_sec")]
-    pub no_subs_throttling_rate_sec: u64,
 }

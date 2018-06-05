@@ -300,7 +300,7 @@ class SubscriptionManager(object):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             s.connect(("127.0.0.1", self.scm_daemon_tcp_port))
-            s.send('["restart"]')
+            s.send('["commitcloud::restart_subscriptions", {}]')
         except socket.error:
             if warn_service_not_running:
                 self._warn_service_not_running()

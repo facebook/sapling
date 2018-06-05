@@ -2,11 +2,11 @@ use action::CloudSyncTrigger;
 use config::CommitCloudConfig;
 use error::*;
 use eventsource::reqwest::Client;
-use num::FromPrimitive;
+use receiver::CommandName::{self, *};
 use reqwest::Url;
 use serde_json;
-use std::{str, thread, net::{SocketAddr, TcpListener}, path::PathBuf,
-          sync::{Arc, atomic::{AtomicUsize, Ordering}}, time::{Duration, SystemTime}};
+use std::{str, thread, collections::HashMap, path::PathBuf, sync::mpsc,
+          sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, SystemTime}};
 use util;
 
 #[allow(unused_macros)]
@@ -36,56 +36,23 @@ pub struct Subscription {
     pub(crate) workspace: String,
 }
 
-pub struct WorkspaceSubscriber {
-    /// Server-Sent Events endpoint for Commit Cloud Live Notifications
-    pub(crate) url: String,
-    /// OAuth token valid for Commit Cloud Live Notifications
-    pub(crate) access_token: String,
-    /// Directory with connected subscribers
-    pub(crate) connected_subscribers_path: PathBuf,
-    /// Number of retries for `hg cloud sync`
-    pub(crate) cloudsync_retries: u32,
-    /// Tcp port to run a receiver
-    pub(crate) tcp_receiver_port: u16,
-    /// throttling rate for logging alive notification
-    pub(crate) alive_throttling_rate: Duration,
-    /// throttling rate for logging errors
-    pub(crate) error_throttling_rate: Duration,
-    /// throttling rate for logging no active subscriptions
-    pub(crate) no_subs_throttling_rate: Duration,
-}
-
-// Enum stores last command id in an atomic usize
-// (to allow threads to join)
-enum_from_primitive! {
-#[derive(Debug, PartialEq)]
-enum CommandIds {
-    None = 0,
-    Restart = 1,
-    Stop = 2,
-}
-}
-// Commands
-pub const RESTART: &'static str = "restart";
-pub const STOP: &'static str = "stop";
-#[derive(Default, Debug, Deserialize)]
-pub struct Command(pub (String,));
-
 struct ThrottlingExecutor {
     /// throttling rate in seconds
     rate: Duration,
+
     /// last time of command execution
     last_time: SystemTime,
 }
 
 impl ThrottlingExecutor {
+    /// create ThrottlingExecutor with some duration
     pub fn new(rate: Duration) -> ThrottlingExecutor {
         ThrottlingExecutor {
             rate,
             last_time: SystemTime::now() - rate,
         }
     }
-    /// Run command if it is time, skip otherwise
+    /// Run function if it is time, skip otherwise
     #[inline]
     fn execute(&mut self, f: &Fn()) {
         let now = SystemTime::now();
@@ -104,9 +71,55 @@ impl ThrottlingExecutor {
     }
 }
 
-impl WorkspaceSubscriber {
-    pub fn try_new(config: &CommitCloudConfig) -> Result<WorkspaceSubscriber> {
-        Ok(WorkspaceSubscriber {
+/// WorkspaceSubscriberService manages a set of running subscriptions
+/// and trigger `hg cloud sync` on notifications
+/// The workflow is simple:
+/// * fire `hg cloud sync` on start in every repo
+/// * read and start current set of subscriptions and
+///     fire `hg cloud sync` on notifications
+/// * fire `hg cloud sync` when connection recovers (could missed notifications)
+/// * also provide actions (callbacks) to a few TcpReceiver commands
+///     the commands are:
+///         "start_subscriptions"
+///         "restart_subscriptions"
+///         "cancel_subscriptions"
+///     if a command comes, gracefully cancel all previous subscriptions
+///     and restart if requested
+///     main use case:
+///     if a cient (hg) add itself as a new subscriber (hg cloud join),
+///     it is also client's responsibility to send "restart_subscriptions" command
+///     same for unsubscribing (hg cloud leave)
+/// The serve function starts the service
+
+pub struct WorkspaceSubscriberService {
+    /// Server-Sent Events endpoint for Commit Cloud Live Notifications
+    pub(crate) url: String,
+
+    /// OAuth token valid for Commit Cloud Live Notifications
+    pub(crate) access_token: String,
+
+    /// Directory with connected subscribers
+    pub(crate) connected_subscribers_path: PathBuf,
+
+    /// Number of retries for `hg cloud sync`
+    pub(crate) cloudsync_retries: u32,
+
+    /// Throttling rate for logging alive notification
+    pub(crate) alive_throttling_rate: Duration,
+
+    /// Throttling rate for logging errors
+    pub(crate) error_throttling_rate: Duration,
+
+    /// Channel for communication between threads
+    pub(crate) channel: (mpsc::Sender<CommandName>, mpsc::Receiver<CommandName>),
+
+    /// Interrupt barrier for joining threads
+    pub(crate) interrupt: Arc<AtomicBool>,
+}
+
+impl WorkspaceSubscriberService {
+    pub fn new(config: &CommitCloudConfig) -> Result<WorkspaceSubscriberService> {
+        Ok(WorkspaceSubscriberService {
             url: config.streaminggraph_url.clone().ok_or_else(|| {
                 ErrorKind::CommitCloudConfigError("undefined 'streaminggraph_url'")
             })?,
@@ -115,226 +128,233 @@ impl WorkspaceSubscriber {
                 || ErrorKind::CommitCloudConfigError("undefined 'connected_subscribers_path'"),
             )?,
             cloudsync_retries: config.cloudsync_retries,
-            tcp_receiver_port: config.tcp_receiver_port,
             alive_throttling_rate: Duration::new(config.alive_throttling_rate_sec, 0),
             error_throttling_rate: Duration::new(config.error_throttling_rate_sec, 0),
-            no_subs_throttling_rate: Duration::new(config.no_subs_throttling_rate_sec, 0),
+            channel: mpsc::channel(),
+            interrupt: Arc::new(AtomicBool::new(false)),
         })
     }
 
-    /// Simple cross platform commands receiver working on a Tcp Socket
-    /// Expected commands are in json format
-    /// Example: ["restart", {some optional json request data}]
-
-    fn run_commands_receiver(port: u16, command_id: Arc<AtomicUsize>) -> Result<()> {
-        let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], port))).unwrap();
-        info!("(receiver) Starting listening on port {}", port);
-        for stream in listener.incoming() {
-            match stream {
-                Ok(mut stream) => {
-                    match serde_json::from_reader::<_, Command>(stream) {
-                        Ok(command) => match (command.0).0.as_ref() {
-                            RESTART => {
-                                info!("(receiver) Received restart command");
-                                info!("(receiver) Restart can take a while because it is graceful");
-                                command_id.store(CommandIds::Restart as usize, Ordering::Relaxed);
-                            }
-                            STOP => {
-                                info!("(receiver) Received stop command");
-                                info!("(receiver) Stop can take a while because it is graceful");
-                                command_id.store(CommandIds::Stop as usize, Ordering::Relaxed);
-                                info!("(receiver) Shut down the receiver");
-                                break;
-                            }
-                            _ => {}
-                        },
-                        Err(_) => {}
-                    };
+    pub fn actions(&self) -> HashMap<CommandName, Box<Fn() + Send>> {
+        let mut actions: HashMap<CommandName, Box<Fn() + Send>> = HashMap::new();
+        actions.insert(CommitCloudRestartSubscriptions, {
+            let sender = self.channel.0.clone();
+            let interrupt = self.interrupt.clone();
+            Box::new(move || match sender.send(CommitCloudRestartSubscriptions) {
+                Err(err) => error!(
+                    "Send CommitCloudRestartSubscriptions via mpsc::channel failed, reason: {}",
+                    err
+                ),
+                Ok(_) => {
+                    info!("Restart subscriptions can take a while because it is graceful");
+                    interrupt.store(true, Ordering::Relaxed);
                 }
-                Err(e) => error!("(receiver) Connection failed {}", e),
+            })
+        });
+        actions.insert(CommitCloudCancelSubscriptions, {
+            let sender = self.channel.0.clone();
+            let interrupt = self.interrupt.clone();
+            Box::new(move || match sender.send(CommitCloudCancelSubscriptions) {
+                Err(err) => error!(
+                    "Send CommitCloudCancelSubscriptions via mpsc::channel failed with {}",
+                    err
+                ),
+                Ok(_) => {
+                    info!("Cancel subscriptions can take a while because it is graceful");
+                    interrupt.store(true, Ordering::Relaxed);
+                }
+            })
+        });
+        actions.insert(CommitCloudStartSubscriptions, {
+            let sender = self.channel.0.clone();
+            let interrupt = self.interrupt.clone();
+            Box::new(move || match sender.send(CommitCloudStartSubscriptions) {
+                Err(err) => error!(
+                    "Send CommitCloudStartSubscriptions via mpsc::channel failed with {}",
+                    err
+                ),
+                Ok(_) => interrupt.store(true, Ordering::Relaxed),
+            })
+        });
+        actions
+    }
+
+    pub fn serve(self) -> Result<thread::JoinHandle<Result<()>>> {
+        self.channel.0.send(CommitCloudStartSubscriptions)?;
+        Ok(thread::spawn(move || {
+            info!("Starting CommitCloud WorkspaceSubscriberService");
+            loop {
+                let command = self.channel.1.recv();
+                match command {
+                    Ok(CommitCloudCancelSubscriptions) => {
+                        info!(
+                            "All previous subscriptions have been canceled! \
+                             Waiting for another commands..."
+                        );
+                        self.interrupt.store(false, Ordering::Relaxed);
+                    }
+                    Ok(CommitCloudRestartSubscriptions) => {
+                        info!(
+                            "All previous subscriptions have been canceled! \
+                             Restarting subscriptions..."
+                        );
+                        self.interrupt.store(false, Ordering::Relaxed);
+                        // start subscription threads
+                        let subscriptions = self.run_subscriptions()?;
+                        for child in subscriptions {
+                            let _ = child.join();
+                        }
+                    }
+                    Ok(CommitCloudStartSubscriptions) => {
+                        info!("Starting subscriptions...");
+                        self.interrupt.store(false, Ordering::Relaxed);
+                        // start subscription threads
+                        let subscriptions = self.run_subscriptions()?;
+                        for child in subscriptions {
+                            let _ = child.join();
+                        }
+                    }
+                    Err(e) => {
+                        error!("Receive from mpsc::channel failed with {}", e);
+                        bail!("Receive and wait on mpsc::channel failed with {}", e);
+                    }
+                }
             }
-        }
-        Ok(())
+        }))
     }
 
-    /// This function starts a receiver thread to receive simple commands from the outside
-    /// It also manages set of running subscriptions
-    ///
-    /// The workflow is very simple: the receiver thread accepts few simple commands
-    ///     restart
-    ///     stop
-    /// If a command comes, it gracefully cancels all previous subscriptions
-    /// (and restart if requested)
-    ///
-    /// Main use case:
-    ///
-    /// If a cient add itself as a new subscriber (hg cloud join),
-    /// it is also client's responsibility to send the restart command
-    /// Same for unsubscribing (hg cloud leave)
-    ///
-    /// All synchronization is done through an atomic variable
-
-    pub fn run(&mut self) -> Result<()> {
-        let command_id = Arc::new(AtomicUsize::new(CommandIds::Restart as usize));
-        let commands_receiver = {
-            let command_id = command_id.clone();
-            let port = self.tcp_receiver_port;
-            thread::spawn(move || WorkspaceSubscriber::run_commands_receiver(port, command_id))
-        };
-        let mut throttler_no_subs = ThrottlingExecutor::new(self.no_subs_throttling_rate);
-        loop {
-            match CommandIds::from_usize(command_id.load(Ordering::Relaxed))
-                .unwrap_or(CommandIds::None)
-            {
-                CommandIds::Stop => {
-                    info!("All subscriptions has been canceled!");
-                    break;
-                }
-                CommandIds::Restart => {
-                    info!("All previous subscriptions has been canceled!");
-                    info!("Updating subscriptions");
-                    command_id.store(CommandIds::None as usize, Ordering::Relaxed);
-                    throttler_no_subs.reset();
-                    self.run_subscriptions(command_id.clone())?;
-                }
-                _ => {
-                    tinfo!(
-                        throttler_no_subs,
-                        "No active subscriptions running. Wait in standby"
-                    );
-
-                    thread::sleep(Duration::new(1, 0));
-                }
-            }
-        }
-        let _ = commands_receiver.join();
-        Ok(())
-    }
-
-    #[inline]
-    fn join_time(command_id: Arc<AtomicUsize>) -> bool {
-        let command =
-            CommandIds::from_usize(command_id.load(Ordering::Relaxed)).unwrap_or(CommandIds::None);
-        command == CommandIds::Restart || command == CommandIds::Stop
-    }
-
-    /// This function reads the list of current connected subscribers
+    /// This helper function reads the list of current connected subscribers
     /// It starts all the requested subscriptions by simply runing a separate thread for each one
-    /// All threads keep checking the command flag and will join gracefully if it is restart or stop
+    /// All threads keep checking the interrupt flag and join gracefully if it is restart or stop
 
-    fn run_subscriptions(&mut self, command_id: Arc<AtomicUsize>) -> Result<()> {
-        let mut children = vec![];
-        let url = Url::parse(&self.url)?;
+    fn run_subscriptions(&self) -> Result<Vec<thread::JoinHandle<()>>> {
+        util::read_subscriptions(&self.connected_subscribers_path)?
+            .into_iter()
+            .map(|(subscription, repo_roots)| self.run_subscription(subscription, repo_roots))
+            .collect::<Result<Vec<thread::JoinHandle<()>>>>()
+    }
 
-        for (subscription, repo_roots) in
-            util::read_subscriptions(&self.connected_subscribers_path)?
-        {
-            let mut url = url.clone();
-            let sid = format!("({} @ {})", subscription.repo_name, subscription.workspace);
-            info!("{} Subscribing to {}", sid, url);
+    /// Helper function to run a single subscription
 
-            url.query_pairs_mut()
-                .append_pair("workspace", &subscription.workspace)
-                .append_pair("repo_name", &subscription.repo_name)
-                .append_pair("access_token", &self.access_token);
+    fn run_subscription(
+        &self,
+        subscription: Subscription,
+        repo_roots: Vec<PathBuf>,
+    ) -> Result<thread::JoinHandle<()>> {
+        let mut url = Url::parse(&self.url)?;
 
-            let client = Client::new(url);
+        let sid = format!("({} @ {})", subscription.repo_name, subscription.workspace);
+        info!("{} Subscribing to {}", sid, url);
 
-            info!("{} Spawn a thread to handle the subscription", sid);
+        url.query_pairs_mut()
+            .append_pair("workspace", &subscription.workspace)
+            .append_pair("repo_name", &subscription.repo_name)
+            .append_pair("access_token", &self.access_token);
 
-            let repo_roots = repo_roots.clone();
-            let cloudsync_retries = self.cloudsync_retries;
-            let command_id = command_id.clone();
-            let alive_throttling_rate = self.alive_throttling_rate;
-            let error_throttling_rate = self.error_throttling_rate;
+        let client = Client::new(url);
 
-            children.push(thread::spawn(move || {
-                info!("{} Thread started...", sid);
+        info!("{} Spawn a thread to handle the subscription", sid);
+
+        let cloudsync_retries = self.cloudsync_retries;
+        let alive_throttling_rate = self.alive_throttling_rate;
+        let error_throttling_rate = self.error_throttling_rate;
+        let interrupt = self.interrupt.clone();
+
+        Ok(thread::spawn(move || {
+            info!("{} Thread started...", sid);
+
+            let fire = |reason: &'static str, version: Option<u64>| {
                 for repo_root in repo_roots.iter() {
                     info!(
-                        "{} Fire CloudSyncTrigger in '{}' before starting subscription",
+                        "{} Fire CloudSyncTrigger in '{}' {}",
                         sid,
-                        repo_root.display()
+                        repo_root.display(),
+                        reason,
                     );
                     // log outputs, results and continue even if unsuccessful
-                    let _res = CloudSyncTrigger::fire(&sid, repo_root, cloudsync_retries, None);
-                    if WorkspaceSubscriber::join_time(command_id.clone()) {
-                        return;
+                    let _res = CloudSyncTrigger::fire(&sid, repo_root, cloudsync_retries, version);
+                    if interrupt.load(Ordering::Relaxed) {
+                        break;
                     }
                 }
-                info!("{} Start listening to notifications", sid);
+            };
 
-                let mut throttler_alive = ThrottlingExecutor::new(alive_throttling_rate);
-                let mut throttler_error = ThrottlingExecutor::new(error_throttling_rate);
+            fire("before starting subscription", None);
+            if interrupt.load(Ordering::Relaxed) {
+                return;
+            }
 
-                // the library handles automatic reconnection
-                for event in client {
-                    if WorkspaceSubscriber::join_time(command_id.clone()) {
-                        return;
-                    }
-                    let event = event.map_err(|e| CommitCloudHttpError(format!("{}", e)));
-                    if let Err(e) = event {
-                        terror!(throttler_error, "{} {}. Continue...", sid, e);
-                        throttler_alive.reset();
-                        continue;
-                    }
-                    let data = event.unwrap().data;
-                    if data.is_empty() {
-                        tinfo!(
-                            throttler_alive,
-                            "{} Received empty event. Subscription is alive",
-                            sid
-                        );
-                        throttler_error.reset();
-                        continue;
-                    }
+            info!("{} Start listening to notifications", sid);
 
+            let mut throttler_alive = ThrottlingExecutor::new(alive_throttling_rate);
+            let mut throttler_error = ThrottlingExecutor::new(error_throttling_rate);
+            let mut last_error = false;
+
+            // the library handles automatic reconnection
+            for event in client {
+                if interrupt.load(Ordering::Relaxed) {
+                    return;
+                }
+
+                let event = event.map_err(|e| CommitCloudHttpError(format!("{}", e)));
+                if let Err(e) = event {
+                    terror!(throttler_error, "{} {}. Continue...", sid, e);
                     throttler_alive.reset();
-                    throttler_error.reset();
+                    last_error = true;
+                    continue;
+                }
 
-                    info!("{} Received new notification event", sid);
-                    let notification = serde_json::from_str::<Notification>(&data);
-                    if let Err(e) = notification {
-                        error!(
-                            "{} Unable to decode json data in the event, reason: {}. Continue...",
-                            sid, e
-                        );
-                        continue;
-                    }
-                    let notification = notification.unwrap();
-                    info!(
-                        "{} CommitCloud informs that the latest workspace version is {}",
-                        sid, notification.version
+                let data = event.unwrap().data;
+                if data.is_empty() {
+                    tinfo!(
+                        throttler_alive,
+                        "{} Received empty event. Subscription is alive",
+                        sid
                     );
-                    if let Some(ref new_heads) = notification.new_heads {
-                        if !new_heads.is_empty() {
-                            info!("New heads:\n{}", new_heads.join("\n"));
-                        }
-                    }
-                    if let Some(ref removed_heads) = notification.removed_heads {
-                        if !removed_heads.is_empty() {
-                            info!("Removed heads:\n{}", removed_heads.join("\n"));
-                        }
-                    }
-                    for repo_root in repo_roots.iter() {
-                        info!("{} Fire CloudSyncTrigger in '{}'", sid, repo_root.display());
-                        // log outputs, results and continue even if unsuccessful
-                        let _res = CloudSyncTrigger::fire(
-                            &sid,
-                            repo_root,
-                            cloudsync_retries,
-                            Some(notification.version),
-                        );
-                        if WorkspaceSubscriber::join_time(command_id.clone()) {
+                    throttler_error.reset();
+                    if last_error {
+                        fire("after recover from error", None);
+                        if interrupt.load(Ordering::Relaxed) {
                             return;
                         }
                     }
+                    last_error = false;
+                    continue;
                 }
-            }));
-        }
-        for child in children {
-            let _ = child.join();
-        }
-        Ok(())
+
+                throttler_alive.reset();
+                throttler_error.reset();
+                last_error = false;
+
+                info!("{} Received new notification event", sid);
+                let notification = serde_json::from_str::<Notification>(&data);
+                if let Err(e) = notification {
+                    error!(
+                        "{} Unable to decode json data in the event, reason: {}. Continue...",
+                        sid, e
+                    );
+                    continue;
+                }
+                let notification = notification.unwrap();
+                info!(
+                    "{} CommitCloud informs that the latest workspace version is {}",
+                    sid, notification.version
+                );
+                if let Some(ref new_heads) = notification.new_heads {
+                    if !new_heads.is_empty() {
+                        info!("{} New heads:\n{}", sid, new_heads.join("\n"));
+                    }
+                }
+                if let Some(ref removed_heads) = notification.removed_heads {
+                    if !removed_heads.is_empty() {
+                        info!("{} Removed heads:\n{}", sid, removed_heads.join("\n"));
+                    }
+                }
+                fire("on new version notification", Some(notification.version));
+                if interrupt.load(Ordering::Relaxed) {
+                    return;
+                }
+            }
+        }))
     }
 }

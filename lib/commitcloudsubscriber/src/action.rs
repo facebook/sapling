@@ -29,11 +29,13 @@ impl CloudSyncTrigger {
                 .args(&version_args)
                 .output()?;
             info!(
-                "stdout: \n{}",
+                "{} stdout: \n{}",
+                sid,
                 String::from_utf8_lossy(&output.stdout).trim()
             );
             info!(
-                "stderr: \n{}",
+                "{} stderr: \n{}",
+                sid,
                 String::from_utf8_lossy(&output.stderr).trim()
             );
             if !output.status.success() {
