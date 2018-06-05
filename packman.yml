@@ -1,0 +1,12 @@
+options:
+  prefix: /
+packages:
+  fb-mononoke-admin:
+    summary: Administration tools for Mononoke
+    rules:
+      buck:scm/mononoke:admin:
+        scm/mononoke/admin#binary/admin:
+          owner: 'root'
+          group: 'root'
+          mode: '0755'
+          path: 'bin/mononoke_admin'
