@@ -269,7 +269,35 @@ fn wireprotocaps() -> Vec<String> {
 fn bundle2caps() -> String {
     let caps = vec![
         ("HG20", vec![]),
-        ("listkeys", vec![]),
+        // Note that "listkeys" is *NOT* returned as a bundle2 capability; that's because there's
+        // a race that can happen. Here's how:
+        // 1. The client does discovery to figure out which heads are missing.
+        // 2. At this point, a frequently updated bookmark (say "master") moves forward.
+        // 3. The client requests the heads discovered in step 1 + the latest value of master.
+        // 4. The server returns changesets up to those heads, plus the latest version of master.
+        //
+        // master doesn't point to a commit that will exist on the client at the end of the pull,
+        // so the client ignores it.
+        //
+        // The workaround here is to force bookmarks to be sent before discovery happens. Disabling
+        // the listkeys capabilities causes the Mercurial client to do that.
+        //
+        // A better fix might be to snapshot and maintain the bookmark state on the server at the
+        // start of discovery.
+        //
+        // The best fix here would be to change the protocol to represent bookmark pulls
+        // atomically.
+        //
+        // Some other notes:
+        // * Stock Mercurial doesn't appear to have this problem. @rain1 hasn't verified why, but
+        //   believes it's because bookmarks get loaded up into memory before discovery and then
+        //   don't get reloaded for the duration of the process. (In Mononoke, this is the
+        //   "snapshot and maintain the bookmark state" approach mentioned above.)
+        // * There's no similar race with pushes updating bookmarks, so "pushkey" is still sent
+        //   as a capability.
+        // * To repro the race, run test-bookmark-race.t with the following line enabled.
+
+        // ("listkeys", vec![]),
         ("changegroup", vec!["02"]),
         ("b2x:infinitepush", vec![]),
         ("b2x:infinitepushscratchbookmarks", vec![]),
@@ -451,6 +479,9 @@ impl RepoClient {
             });
 
         bundle.add_part(parts::changegroup_part(changelogentries)?);
+
+        // XXX Note that listkeys is NOT returned as a bundle2 capability -- see comment in
+        // bundle2caps() for why.
 
         // TODO: generalize this to other listkey types
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
