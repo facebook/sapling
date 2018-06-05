@@ -176,12 +176,6 @@ macro_rules! recover_logged_data {
     };
 }
 
-recover_logged_data!(UploadBlobData, UploadBlobTestDrain;
-    path, nodeid;
-    "content_uploaded", "finished";
-    "Upload blob stats"
-);
-
 macro_rules! check_stats {
     ( $records:ident, $data:ident; $( $phase:expr ),+; $data_checks:block ) => {
         for phase in vec![$($phase.into(),)*].into_iter() {
@@ -196,22 +190,6 @@ macro_rules! check_stats {
     ( $records:ident, $data:ident; $( $phase:expr ),+ ) => {
         check_stats!($records, $data; $( $phase, )+; {} );
     }
-}
-
-#[test]
-fn test_upload_blob_stats() {
-    let drain = UploadBlobTestDrain::new();
-    let records = drain.records.clone();
-    let logger = Logger::root(drain.fuse(), o!("drain" => "test"));
-    let repo = get_logging_blob_repo(logger);
-    let fake_path = RepoPath::file("fakefile").expect("Can't generate fake RepoPath");
-
-    let (nodeid, future) = upload_file_no_parents(&repo, "blob", &fake_path);
-    let _ = run_future(future).unwrap();
-
-    check_stats!(records, data; "content_uploaded", "finished";
-        { assert_eq!(data.nodeid, format!("{}", nodeid)); }
-    );
 }
 
 recover_logged_data!(ChangesetsData, ChangesetsTestDrain;

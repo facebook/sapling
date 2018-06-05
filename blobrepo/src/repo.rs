@@ -406,7 +406,7 @@ impl BlobRepo {
         let blobstore_key = id.blobstore_key();
 
         fn log_upload_stats(logger: Logger, blobstore_key: String, phase: &str, stats: Stats) {
-            debug!(logger, "Upload blob stats";
+            trace!(logger, "Upload blob stats";
                 "phase" => String::from(phase),
                 "blobstore_key" => blobstore_key,
                 "poll_count" => stats.poll_count,
@@ -595,7 +595,7 @@ impl UploadHgEntry {
         ) {
             let path = format!("{}", path);
             let nodeid = format!("{}", nodeid);
-            debug!(logger, "Upload blob stats";
+            trace!(logger, "Upload blob stats";
                 "phase" => String::from(phase),
                 "path" => path,
                 "nodeid" => nodeid,
