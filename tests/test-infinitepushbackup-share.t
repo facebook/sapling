@@ -30,7 +30,7 @@ it's not read by infinitepush backup client
   $ echo 'rubbish' > .hg/infinitepushbackupstate
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at b75a450e74d5
   remote: pushing 1 commit:
   remote:     b75a450e74d5  first
   finished in \d+\.(\d+)? seconds (re)

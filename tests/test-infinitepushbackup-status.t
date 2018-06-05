@@ -51,7 +51,7 @@ Setup client
   $ hg commit -d "$commit_time 0" -m "Backed up changeset 2"
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at * (glob)
   remote: pushing 2 commits:
   remote:     *  Backed up changeset (glob)
   remote:     *  Backed up changeset 2 (glob)

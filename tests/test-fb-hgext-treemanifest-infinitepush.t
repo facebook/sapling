@@ -306,7 +306,7 @@ trees
   > EOF
   $ hg pushbackup
   starting backup * (glob)
-  searching for changes
+  backing up stack rooted at 7e75be1136c3
   fetching tree '' 2d6cb11e074d743e23a163127648257bb4f8fe42, based on bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 7e75be1136c3
   remote: pushing 1 commit:
   remote:     7e75be1136c3  add foo

@@ -69,7 +69,7 @@ Create scratch commit and back it up.
   
   $ hg pushbackup
   starting backup * (glob)
-  searching for changes
+  backing up stack rooted at ce87a066ebc2
   remote: pushing 1 commit:
   remote:     ce87a066ebc2  scratch
   finished in * (glob)
@@ -114,7 +114,7 @@ Download scratch commit. It also downloads a few public commits
 Run pushbackup and make sure only scratch commit is backed up.
   $ hg pushbackup
   starting backup * (glob)
-  searching for changes
+  backing up stack rooted at ce87a066ebc2
   remote: pushing 1 commit:
   remote:     ce87a066ebc2  scratch
   finished in * (glob)

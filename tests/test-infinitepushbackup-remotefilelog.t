@@ -87,7 +87,7 @@ Strip commit server-side
 
 Now do a backup, it should not fail
   $ hg pushbackup > /dev/null
-  filtering nodes: ['07e73d09a07862bc2b8beb13b72d2347f83e4981']
+  not backing up commits marked as bad: 07e73d09a07862bc2b8beb13b72d2347f83e4981
 
 Now try to restore it from different client. Make sure bookmark
 `goodbooktobackup` is restored
@@ -116,7 +116,7 @@ Create a commit which deletes a file. Make sure it is backed up correctly
   $ hg log -r . -T '{node}\n'
   507709f4da22941c0471885d8377c48d6dadce21
   $ hg pushbackup > /dev/null
-  filtering nodes: ['07e73d09a07862bc2b8beb13b72d2347f83e4981']
+  not backing up commits marked as bad: 07e73d09a07862bc2b8beb13b72d2347f83e4981
   $ scratchbookmarks
   infinitepush/backups/test/*$TESTTMP/client/bookmarks/goodbooktobackup 22ea264ff89d6891c2889f15f338ac9fa2474f8b (glob)
   infinitepush/backups/test/*$TESTTMP/client/heads/507709f4da22941c0471885d8377c48d6dadce21 507709f4da22941c0471885d8377c48d6dadce21 (glob)
@@ -132,7 +132,7 @@ the client doesn't receive the public commit file data during the pull.
   $ mkcommit draftcommit
   $ hg pushbackup
   starting backup * (glob)
-  searching for changes
+  backing up stack rooted at 1c8212bf302f
   remote: pushing 1 commit:
   remote:     1c8212bf302f  draftcommit
   finished in * seconds (glob)

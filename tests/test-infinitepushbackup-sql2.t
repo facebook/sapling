@@ -18,7 +18,7 @@
   $ mkcommit initialcommit
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 67145f466344
   remote: pushing 1 commit:
   remote:     67145f466344  initialcommit
   finished in \d+\.(\d+)? seconds (re)
@@ -27,7 +27,7 @@
   $ sleep 1 # Resolution of the database is in seconds. This avoid test flakiness
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 67145f466344
   remote: pushing 2 commits:
   remote:     67145f466344  initialcommit
   remote:     5ea4271ca0f0  commitwithbookmark
@@ -75,7 +75,7 @@ Go to client, delete backup state and run pushbackup. Make sure that it doesn't 
   $ rm .hg/infinitepushbackupstate
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 67145f466344
   remote: pushing 4 commits:
   remote:     67145f466344  initialcommit
   remote:     5ea4271ca0f0  commitwithbookmark

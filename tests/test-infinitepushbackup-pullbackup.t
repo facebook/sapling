@@ -29,7 +29,7 @@ Backup
 Actually do a backup, make sure that backup check doesn't fail for empty backup state
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 89ecc969c0ac
   remote: pushing 1 commit:
   remote:     89ecc969c0ac  firstcommit
   finished in \d+\.(\d+)? seconds (re)
@@ -69,7 +69,7 @@ Create second backup source
   $ hg book secondbook
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at c1bfda8efb6e
   remote: pushing 1 commit:
   remote:     c1bfda8efb6e  secondcommit
   finished in \d+\.(\d+)? seconds (re)
@@ -133,7 +133,7 @@ Create a repo with `/bookmarks/` in path
   $ hg book bookbackupsource3
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at a2a9ae518b62
   remote: pushing 1 commit:
   remote:     a2a9ae518b62  commitinweirdrepo
   finished in \d+\.(\d+)? seconds (re)
@@ -156,14 +156,17 @@ Create a repo with `/bookmarks/` in path
 
 Check that correct path is used in pushbackup
   $ cd ../backupsource
+  $ hg book badpathbookmark
   $ hg --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo pushbackup
   starting backup .* (re)
+  finished in \d+\.(\d+)? seconds (re)
   abort: repository $TESTTMP/backupsource/badpath not found!
   [255]
   $ hg pushbackup anotherpath --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo
   starting backup .* (re)
-  nothing to backup
   finished in \d+\.(\d+)? seconds (re)
+  $ hg up -q book/bookmarksbookmarks/somebook
+  $ hg book -d badpathbookmark
   $ cd ../restored
 
 Check that correct path is used in pullbackup
@@ -189,7 +192,7 @@ Backup and restore two commits
   $ mkcommit secondinbatch
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 89ecc969c0ac
   remote: pushing 3 commits:
   remote:     89ecc969c0ac  firstcommit
   remote:     33c1c9df81e9  firstinbatch
@@ -221,7 +224,7 @@ Backup as another user, then restore it
   e0230a60975b38a9014f098fb973199efd25c46f
   $ HGUSER=anotheruser hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 89ecc969c0ac
   remote: pushing 3 commits:
   remote:     89ecc969c0ac  firstcommit
   remote:     0e1a088ff282  secondinbatch
@@ -267,7 +270,7 @@ Make sure that both repos were checked even though check for one of them fails
   $ mkcommit newcommit
   $ HGUSER=anotheruser hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at c1bfda8efb6e
   remote: pushing 2 commits:
   remote:     c1bfda8efb6e  secondcommit
   remote:     c03baa769a20  newcommit
@@ -308,7 +311,7 @@ Make a couple more backup sources
   $ mkcommit commit4
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 56d472a48d80
   remote: pushing 1 commit:
   remote:     56d472a48d80  commit4
   finished in \d+\.(\d+)? seconds (re)
@@ -318,7 +321,7 @@ Make a couple more backup sources
   $ mkcommit commit5
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 6def11a9e22f
   remote: pushing 1 commit:
   remote:     6def11a9e22f  commit5
   finished in \d+\.(\d+)? seconds (re)

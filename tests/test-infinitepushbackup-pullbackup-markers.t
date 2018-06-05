@@ -91,7 +91,7 @@ Push all pulled commit to backup
   obsoleted 1 changesets
   $ hg pushbackup --config extensions.lockfail=$TESTDIR/lockfail.py
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 9b3ead1d8005
   remote: pushing 2 commits:
   remote:     9b3ead1d8005  add b
   remote:     3969cd9723d1  add c

@@ -280,7 +280,8 @@ def backup(ui, repo, dest=None, **opts):
         timeout = 30
         srcrepo = shareutil.getsrcrepo(repo)
         with lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
-            return _dobackup(ui, repo, dest, **opts)
+            _dobackup(ui, repo, dest, **opts)
+            return 0
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
             ui.warn(_("timeout waiting on backup lock\n"))
@@ -725,6 +726,36 @@ def _backupheads(ui, repo):
     return set(backupheads)
 
 
+def _filterbadnodes(ui, repo, heads):
+    """Remove bad nodes from the set of draft ancestors of heads."""
+    badnodes = ui.configlist("infinitepushbackup", "dontbackupnodes", [])
+    badnodes = [n for n in badnodes if n in repo]
+
+    # Work out which badnodes are also draft ancestors of the heads we're
+    # interested in.
+    badnodes = [
+        ctx.hex() for ctx in repo.set("draft() & ::%ls & %ls::", heads, badnodes)
+    ]
+
+    if badnodes:
+        # Log that we're filtering these commits.
+        ui.warn(_("not backing up commits marked as bad: %s\n") % ", ".join(badnodes))
+        ui.log(
+            "infinitepushbackup",
+            "corrupted nodes found",
+            infinitepushbackupcorruptednodes="failure",
+        )
+
+        # Return a new set of heads that include all nodes that are not in
+        # the badnodes set.
+        return {
+            ctx.hex()
+            for ctx in repo.set("heads((draft() & ::%ls) - %ls::)", heads, badnodes)
+        }
+    else:
+        return heads
+
+
 def _dobackup(ui, repo, dest, **opts):
     ui.status(_("starting backup %s\n") % time.strftime("%H:%M:%S %d %b %Y %Z"))
     start = time.time()
@@ -738,54 +769,84 @@ def _dobackup(ui, repo, dest, **opts):
         _writebackupgenerationfile(repo.vfs, newbkpgenerationvalue)
     bkpstate = _readlocalbackupstate(ui, repo)
 
-    # This variable will store what heads will be saved in backup state file
-    # if backup finishes successfully
-    afterbackupheads = _backupheads(ui, repo)
-    other = _getremote(repo, ui, dest, **opts)
-    outgoing, badhexnodes = _getrevstobackup(
-        repo, ui, other, afterbackupheads - set(bkpstate.heads)
-    )
-    # If remotefilelog extension is enabled then there can be nodes that we
-    # can't backup. In this case let's remove them from afterbackupheads
-    afterbackupheads.difference_update(badhexnodes)
+    # Work out what the heads and bookmarks to backup are.
+    headstobackup = _backupheads(ui, repo)
+    localbookmarks = _getlocalbookmarks(repo)
 
-    # Similar to afterbackupheads, this variable stores what bookmarks will be
-    # saved in backup state file if backup finishes successfully
-    afterbackuplocalbooks = _getlocalbookmarks(repo)
-    afterbackuplocalbooks = _filterbookmarks(
-        afterbackuplocalbooks, repo, afterbackupheads
+    # We don't want to backup commits that are marked as bad.
+    headstobackup = _filterbadnodes(ui, repo, headstobackup)
+
+    # Remove heads that are no longer backup heads.
+    backedupheads = set(bkpstate.heads)
+    removedheads = backedupheads - headstobackup
+
+    # We don't need to backup heads that have already been backed up.
+    headstobackup -= backedupheads
+
+    if (
+        (bkpstate.empty() or localbookmarks == bkpstate.localbookmarks)
+        and not headstobackup
+        and not localbookmarks
+    ):
+        # There is nothing to backup, and either no previous backup state, or
+        # the local bookmarks match the backed up ones.  Exit now to save
+        # a connection to the server and to prevent accidentally clearing a
+        # previous backup from the same location.
+        ui.status(_("nothing to backup\n"))
+        return
+
+    # Push bundles for all of the commits, one stack at a time.
+    path = _getremotepath(repo, ui, dest)
+
+    def getconnection():
+        return repo.connectionpool.get(path, opts)
+
+    newheads, failedheads = infinitepush.pushbackupbundlestacks(
+        ui, repo, getconnection, headstobackup
     )
 
-    newheads = afterbackupheads - set(bkpstate.heads)
-    removedheads = set(bkpstate.heads) - afterbackupheads
-    newbookmarks = _dictdiff(afterbackuplocalbooks, bkpstate.localbookmarks)
-    removedbookmarks = _dictdiff(bkpstate.localbookmarks, afterbackuplocalbooks)
+    for head in failedheads:
+        # We failed to push this head.  Don't remove any backup heads that
+        # are ancestors of this head.
+        removedheads -= set(ctx.hex() for ctx in repo.set("draft() & ::%s" % head))
+
+    # Work out what bookmarks we are going to back up.
+    backupbookmarks = _filterbookmarks(
+        localbookmarks, repo, set(n for n in newheads | backedupheads if n in repo)
+    )
+    newbookmarks = _dictdiff(backupbookmarks, bkpstate.localbookmarks)
+    removedbookmarks = _dictdiff(bkpstate.localbookmarks, backupbookmarks)
 
     namingmgr = BackupBookmarkNamingManager(ui, repo)
-    bookmarkstobackup = _getbookmarkstobackup(
+    infinitepushbookmarks = _getinfinitepushbookmarks(
         repo, newbookmarks, removedbookmarks, newheads, removedheads, namingmgr
     )
 
-    # Special cases if backup state is empty.
+    # If the previous backup state was empty, we should clear the server's
+    # view of the previous backup.
     if bkpstate.empty():
-        # If there is nothing to backup, exit now to prevent accidentally
-        # clearing a previous backup.
-        if not afterbackuplocalbooks and not afterbackupheads:
-            ui.status(_("nothing to backup\n"))
-            return
-        # Otherwise, clean all backup bookmarks from the server.
-        bookmarkstobackup[namingmgr.getbackupheadprefix()] = ""
-        bookmarkstobackup[namingmgr.getbackupbookmarkprefix()] = ""
+        infinitepushbookmarks[namingmgr.getbackupheadprefix()] = ""
+        infinitepushbookmarks[namingmgr.getbackupbookmarkprefix()] = ""
 
     try:
-        if infinitepush.pushbackupbundle(ui, repo, other, outgoing, bookmarkstobackup):
-            _writelocalbackupstate(
-                repo.vfs, list(afterbackupheads), afterbackuplocalbooks
-            )
-        else:
-            ui.status(_("nothing to backup\n"))
+        with getconnection() as conn:
+            if infinitepush.pushbackupbundle(
+                ui, repo, conn.peer, [], infinitepushbookmarks
+            ):
+                ui.debug("backup complete\n")
+                ui.debug("heads added: %s\n" % ", ".join(newheads))
+                ui.debug("heads removed: %s\n" % ", ".join(removedheads))
+                _writelocalbackupstate(
+                    repo.vfs,
+                    list((set(bkpstate.heads) | newheads) - removedheads),
+                    backupbookmarks,
+                )
+            else:
+                ui.status(_("nothing to backup\n"))
     finally:
-        ui.status(_("finished in %f seconds\n") % (time.time() - start))
+        ui.status(_("finished in %.2f seconds\n") % (time.time() - start))
+    if failedheads:
+        raise error.Abort(_("failed to backup %d heads\n") % len(failedheads))
 
 
 def _dobackgroundbackup(ui, repo, dest=None, command=None):
@@ -1074,7 +1135,7 @@ def _unescapebookmark(bookmark):
     return bookmark.replace("bookmarksbookmarks", "bookmarks")
 
 
-def _getremote(repo, ui, dest, **opts):
+def _getremotepath(repo, ui, dest):
     path = ui.paths.getpath(dest, default=("infinitepush", "default"))
     if not path:
         raise error.Abort(
@@ -1082,6 +1143,11 @@ def _getremote(repo, ui, dest, **opts):
             hint=_("see 'hg help config.paths'"),
         )
     dest = path.pushloc or path.loc
+    return dest
+
+
+def _getremote(repo, ui, dest, **opts):
+    dest = _getremotepath(repo, ui, dest)
     return hg.peer(repo, opts, dest)
 
 
@@ -1094,88 +1160,28 @@ def _getcommandandoptions(command):
 # Backup helper functions
 
 
-def _getbookmarkstobackup(
+def _getinfinitepushbookmarks(
     repo, newbookmarks, removedbookmarks, newheads, removedheads, namingmgr
 ):
-    bookmarkstobackup = {}
+    infinitepushbookmarks = {}
 
     for bookmark, hexnode in removedbookmarks.items():
         backupbookmark = namingmgr.getbackupbookmarkname(bookmark)
-        bookmarkstobackup[backupbookmark] = ""
+        infinitepushbookmarks[backupbookmark] = ""
 
     for bookmark, hexnode in newbookmarks.items():
         backupbookmark = namingmgr.getbackupbookmarkname(bookmark)
-        bookmarkstobackup[backupbookmark] = hexnode
+        infinitepushbookmarks[backupbookmark] = hexnode
 
     for hexhead in removedheads:
         headbookmarksname = namingmgr.getbackupheadname(hexhead)
-        bookmarkstobackup[headbookmarksname] = ""
+        infinitepushbookmarks[headbookmarksname] = ""
 
     for hexhead in newheads:
         headbookmarksname = namingmgr.getbackupheadname(hexhead)
-        bookmarkstobackup[headbookmarksname] = hexhead
+        infinitepushbookmarks[headbookmarksname] = hexhead
 
-    return bookmarkstobackup
-
-
-def findcommonoutgoing(repo, ui, other, heads):
-    if heads:
-        # Avoid using remotenames fastheaddiscovery heuristic. It uses
-        # remotenames file to quickly find commonoutgoing set, but it can
-        # result in sending public commits to infinitepush servers.
-        # For example:
-        #
-        #        o draft
-        #       /
-        #      o C1
-        #      |
-        #     ...
-        #      |
-        #      o remote/master
-        #
-        # pushbackup in that case results in sending to the infinitepush server
-        # all public commits from 'remote/master' to C1. It increases size of
-        # the bundle + it may result in storing data about public commits
-        # in infinitepush table.
-
-        with ui.configoverride({("remotenames", "fastheaddiscovery"): False}):
-            nodes = map(repo.changelog.node, heads)
-            return discovery.findcommonoutgoing(repo, other, onlyheads=nodes)
-    else:
-        return None
-
-
-def _getrevstobackup(repo, ui, other, headstobackup):
-    # In rare cases it's possible to have a local node without filelogs.
-    # This is possible if remotefilelog is enabled and if the node was
-    # stripped server-side. We want to filter out these bad nodes and all
-    # of their descendants.
-    badnodes = ui.configlist("infinitepushbackup", "dontbackupnodes", [])
-    badnodes = [node for node in badnodes if node in repo]
-    badrevs = [repo[node].rev() for node in badnodes]
-    badnodesdescendants = repo.set("%ld::", badrevs) if badrevs else set()
-    badnodesdescendants = set(ctx.hex() for ctx in badnodesdescendants)
-    filteredheads = filter(lambda head: head in badnodesdescendants, headstobackup)
-
-    if filteredheads:
-        ui.warn(_("filtering nodes: %s\n") % filteredheads)
-        ui.log(
-            "infinitepushbackup",
-            "corrupted nodes found",
-            infinitepushbackupcorruptednodes="failure",
-        )
-    headstobackup = filter(lambda head: head not in badnodesdescendants, headstobackup)
-
-    revs = list(repo[hexnode].rev() for hexnode in headstobackup)
-    outgoing = findcommonoutgoing(repo, ui, other, revs)
-    nodeslimit = 1000
-    if outgoing and len(outgoing.missing) > nodeslimit:
-        # trying to push too many nodes usually means that there is a bug
-        # somewhere. Let's be safe and avoid pushing too many nodes at once
-        raise error.Abort(
-            "trying to back up too many nodes: %d" % (len(outgoing.missing),)
-        )
-    return outgoing, set(filteredheads)
+    return infinitepushbookmarks
 
 
 def _localbackupstateexists(repo):

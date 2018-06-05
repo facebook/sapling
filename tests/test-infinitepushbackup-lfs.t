@@ -72,10 +72,12 @@ Make pushbackup that contains bundle with 2 heads
   $ mkcommit newcommit2
   $ hg pushbackup
   starting backup * (glob)
-  searching for changes
-  remote: pushing 3 commits:
+  backing up stack rooted at 0da81a72db1a
+  remote: pushing 2 commits:
   remote:     0da81a72db1a  commit
   remote:     5f9d85f9e1c6  newcommit
+  backing up stack rooted at eca66fbd9785
+  remote: pushing 1 commit:
   remote:     eca66fbd9785  newcommit2
   finished in * seconds (glob)
   $ hg isbackedup -r .

@@ -44,7 +44,7 @@ Check that logging works for b2x:infinitepushscratchbookmarks part
   $ cd client
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 7e6a6fd9c7c8
   remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit

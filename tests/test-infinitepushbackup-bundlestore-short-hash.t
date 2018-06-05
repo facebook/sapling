@@ -51,7 +51,7 @@ We will also run few checks with `hg hide` / `hg up` commands.
 Backup commit
   $ hg pushbackup
   starting backup * (glob)
-  searching for changes
+  backing up stack rooted at c1b6fe8fce73
   remote: pushing 1 commit:
   remote:     c1b6fe8fce73  someothercommit
   finished in * seconds (glob)
@@ -174,7 +174,7 @@ With no configuration it should abort
 
   $ hg pushbackup
   starting backup * (glob)
-  searching for changes
+  backing up stack rooted at * (glob)
   remote: pushing 5 commits:
   remote:     *  someothercommit1 (glob)
   remote:     *  someothercommit2 (glob)

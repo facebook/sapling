@@ -18,7 +18,7 @@ Backup a commit
   $ mkcommit commit
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 7e6a6fd9c7c8
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
   finished in \d+\.(\d+)? seconds (re)

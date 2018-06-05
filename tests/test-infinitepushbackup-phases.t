@@ -40,10 +40,12 @@ the history but is stored on disk
   
   $ hg pushbackup
   starting backup * (glob)
-  searching for changes
-  remote: pushing 4 commits:
+  backing up stack rooted at bc62325caa65
+  remote: pushing 2 commits:
   remote:     bc62325caa65  stack 1 - commit 1
   remote:     d567dbbdd271  stack 1 - commit 2
+  backing up stack rooted at f13337e62e40
+  remote: pushing 2 commits:
   remote:     f13337e62e40  stack 2 - commit 1
   remote:     ccd5ee66f08a  stack 2 - commit 2
   finished in * seconds (glob)

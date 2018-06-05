@@ -37,7 +37,7 @@ Backup empty repo
   $ mkcommit newcommit
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 606a357e69ad
   remote: pushing 1 commit:
   remote:     606a357e69ad  newcommit
   finished in \d+\.(\d+)? seconds (re)
@@ -63,7 +63,7 @@ pushbackup
   $ mkcommit commit
   $ hg pushbackup --config extensions.lockfail=$TESTDIR/lockfail.py
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 7e6a6fd9c7c8
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
   finished in \d+\.(\d+)? seconds (re)
@@ -84,7 +84,7 @@ Make first commit public (by doing push) and then backup new commit
   $ mkcommit newcommit
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 94a60f5ad8b2
   remote: pushing 1 commit:
   remote:     94a60f5ad8b2  newcommit
   finished in \d+\.(\d+)? seconds (re)
@@ -108,7 +108,7 @@ Make obsoleted commit non-extinct by committing on top of it
 Backup both of them
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 94a60f5ad8b2
   remote: pushing 3 commits:
   remote:     94a60f5ad8b2  newcommit
   remote:     361e89f06232  obsoletedcommit
@@ -123,7 +123,7 @@ Create one more head and run `hg pushbackup`. Make sure that only new head is pu
   $ mkcommit newhead
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 3a30e220fe42
   remote: pushing 1 commit:
   remote:     3a30e220fe42  newhead
   finished in \d+\.(\d+)? seconds (re)
@@ -137,9 +137,11 @@ Create two more heads and backup them
   $ mkcommit newhead2
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
-  remote: pushing 2 commits:
+  backing up stack rooted at f79c5017def3
+  remote: pushing 1 commit:
   remote:     f79c5017def3  newhead1
+  backing up stack rooted at 667453c0787e
+  remote: pushing 1 commit:
   remote:     667453c0787e  newhead2
   finished in \d+\.(\d+)? seconds (re)
 
@@ -162,7 +164,7 @@ Backup with bookmark
   $ hg book abook
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 667453c0787e
   remote: pushing 3 commits:
   remote:     667453c0787e  newhead2
   remote:     773a3ba2e7c2  newcommit
@@ -203,7 +205,7 @@ Obsolete a head, make sure backup happens
   hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 667453c0787e
   remote: pushing 2 commits:
   remote:     667453c0787e  newhead2
   remote:     773a3ba2e7c2  newcommit
@@ -238,7 +240,7 @@ Rebase + backup. Make sure that two heads were deleted and head was saved
   rebasing 5:f79c5017def3 "newhead1"
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 667453c0787e
   remote: pushing 3 commits:
   remote:     667453c0787e  newhead2
   remote:     773a3ba2e7c2  newcommit
@@ -320,6 +322,7 @@ Backup to different path
   $ hg book somebook
   $ hg --config paths.default=brokenpath pushbackup
   starting backup .* (re)
+  finished in \d+\.(\d+)? seconds (re)
   abort: repository $TESTTMP/client/brokenpath not found!
   [255]
   $ hg pushbackup nondefault --traceback
@@ -404,7 +407,7 @@ Create two heads, set maxheadstobackup to 1, make sure only latest head was back
   $ mkcommit headtwo
   $ hg pushbackup --config infinitepushbackup.maxheadstobackup=1
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 6c4f4b30ae4c
   remote: pushing 1 commit:
   remote:     6c4f4b30ae4c  headtwo
   finished in \d+\.(\d+)? seconds (re)
@@ -422,9 +425,11 @@ Now set maxheadstobackup to 0 and backup again. Make sure nothing is backed up n
 Test isbackedup command
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
-  remote: pushing 2 commits:
+  backing up stack rooted at cf2adfba1469
+  remote: pushing 1 commit:
   remote:     cf2adfba1469  headone
+  backing up stack rooted at 6c4f4b30ae4c
+  remote: pushing 1 commit:
   remote:     6c4f4b30ae4c  headtwo
   finished in \d+\.(\d+)? seconds (re)
   $ hg isbackedup
@@ -453,9 +458,11 @@ Delete backup state file and try again
 Prune commit and then inhibit obsmarkers. Make sure isbackedup still works
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
-  remote: pushing 2 commits:
+  backing up stack rooted at cf2adfba1469
+  remote: pushing 1 commit:
   remote:     cf2adfba1469  headone
+  backing up stack rooted at 6c4f4b30ae4c
+  remote: pushing 1 commit:
   remote:     6c4f4b30ae4c  headtwo
   finished in \d+\.(\d+)? seconds (re)
   $ hg prune 6c4f4b30ae4c2dd928d551836c70c741ee836650
@@ -474,7 +481,7 @@ new full backup should be made.
   finished in \d+\.(\d+)? seconds (re)
   $ hg pushbackup --config infinitepushbackup.backupgeneration=1
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at cf2adfba1469
   remote: pushing 1 commit:
   remote:     cf2adfba1469  headone
   finished in \d+\.(\d+)? seconds (re)
@@ -498,7 +505,7 @@ Delete infinitepushbackupstate and set backupgeneration. Make sure it doesn't fa
   $ rm .hg/infinitepushbackupstate
   $ hg pushbackup --config infinitepushbackup.backupgeneration=2
   starting backup * (glob)
-  searching for changes
+  backing up stack rooted at cf2adfba1469
   remote: pushing 1 commit:
   remote:     cf2adfba1469  headone
   finished in * seconds (glob)
@@ -507,7 +514,7 @@ Test hostname option
   $ rm .hg/infinitepushbackupstate
   $ hg pushbackup --config infinitepushbackup.hostname=hostname
   starting backup * (glob)
-  searching for changes
+  backing up stack rooted at cf2adfba1469
   remote: pushing 1 commit:
   remote:     cf2adfba1469  headone
   finished in \d+\.(\d+)? seconds (re)
@@ -520,7 +527,7 @@ Malformed backup state file
   $ hg pushbackup
   starting backup * (glob)
   corrupt file: infinitepushbackupstate (No JSON object could be decoded)
-  searching for changes
+  backing up stack rooted at cf2adfba1469
   remote: pushing 1 commit:
   remote:     cf2adfba1469  headone
   finished in * seconds (glob)
@@ -555,7 +562,7 @@ Create logs directory and set correct permissions
 
   $ hg pushbackup --config infinitepushbackup.logdir=$TESTTMP/logs
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 426bada5c675
   remote: pushing 4 commits:
   remote:     426bada5c675  A
   remote:     112478962961  B
@@ -594,7 +601,7 @@ Create logs directory and set correct permissions
 Check the logs, make sure just one process was started
   $ cat $TESTTMP/logs/test/*
   starting backup .* (re)
-  searching for changes
+  backing up stack rooted at 426bada5c675
   remote: pushing 4 commits:
   remote:     426bada5c675  A
   remote:     b18e25de2cf5  D
@@ -603,8 +610,10 @@ Check the logs, make sure just one process was started
   finished in \d+\.(\d+)? seconds (re)
 
 Check if ssh batch mode enables only for background backup and not for foreground
+  $ mkcommit ssh1
   $ hg pushbackup --debug | debugsshcall
   running .* ".*/dummyssh" 'user@dummy' 'hg -R repo serve --stdio' (re)
+  $ mkcommit ssh2
   $ hg pushbackup --background --config infinitepushbackup.logdir=$TESTTMP/logs --config infinitepushbackup.bgdebug=yes
   $ waitbgbackup
   $ cat $TESTTMP/logs/test/* | debugsshcall
@@ -619,14 +628,26 @@ Fail to push a backup by setting the server maxbundlesize very low
   $ mkcommit toobig
   $ hg pushbackup
   starting backup .* (re)
+  backing up stack rooted at acf5bae70f50
+  remote: pushing 3 commits:
+  remote:     acf5bae70f50  ssh1
+  remote:     cb352c98cec7  ssh2
+  remote:     b226c8ca23a2  toobig
+  push failed: bundle is too big: 1488 bytes. max allowed size is 0 MB
+  retrying push with discovery
   searching for changes
-  remote: pushing 1 commit:
-  remote:     034e9a5a003f  toobig
+  remote: pushing 3 commits:
+  remote:     acf5bae70f50  ssh1
+  remote:     cb352c98cec7  ssh2
+  remote:     b226c8ca23a2  toobig
+  push of head b226c8ca23a2 failed: bundle is too big: 1488 bytes. max allowed size is 0 MB
+  nothing to backup
   finished in \d+\.(\d+)? seconds (re)
-  abort: bundle is too big: 546 bytes. max allowed size is 0 MB
+  abort: failed to backup 1 heads
+  
   [255]
   $ hg isbackedup -r .
-  034e9a5a003f9f7dd44ab4b35187e833d0aad5c3 not backed up
+  b226c8ca23a2db9b70a50978c6d30658683d9e9f not backed up
   $ scratchnodes | grep 034e9a5a003f9f7dd44ab4b35187e833d0aad5c3
   [1]
 
@@ -634,11 +655,13 @@ Set the limit back high, and try again
   $ mv $TESTTMP/server-hgrc.bak ../repo/.hg/hgrc
   $ hg pushbackup
   starting backup .* (re)
-  searching for changes
-  remote: pushing 1 commit:
-  remote:     034e9a5a003f  toobig
+  backing up stack rooted at acf5bae70f50
+  remote: pushing 3 commits:
+  remote:     acf5bae70f50  ssh1
+  remote:     cb352c98cec7  ssh2
+  remote:     b226c8ca23a2  toobig
   finished in \d+\.(\d+)? seconds (re)
   $ hg isbackedup -r .
-  034e9a5a003f9f7dd44ab4b35187e833d0aad5c3 backed up
-  $ scratchnodes | grep 034e9a5a003f9f7dd44ab4b35187e833d0aad5c3
-  034e9a5a003f9f7dd44ab4b35187e833d0aad5c3 78f78c7dbb5ec659cc375e5cabf70fc9f485a89d
+  b226c8ca23a2db9b70a50978c6d30658683d9e9f backed up
+  $ scratchnodes | grep b226c8ca23a2db9b70a50978c6d30658683d9e9f
+  b226c8ca23a2db9b70a50978c6d30658683d9e9f 17b31b46303cad87ba9dc939fcd19ce0f31c6df8
