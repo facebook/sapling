@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate enum_primitive;
 extern crate eventsource;
 #[macro_use]
 extern crate failure;
@@ -8,7 +6,6 @@ extern crate ini;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-extern crate num;
 extern crate regex;
 extern crate reqwest;
 #[macro_use]
