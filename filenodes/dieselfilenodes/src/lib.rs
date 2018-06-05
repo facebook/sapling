@@ -244,16 +244,14 @@ macro_rules! impl_filenodes {
                 filenodes: &Vec<FilenodeInfo>,
                 repo_id: &RepositoryId,
             ) -> Result<()> {
-                connection.transaction::<_, Error, _>(|| {
-                    Self::ensure_paths_exists(&*connection, repo_id, &filenodes)?;
+                Self::ensure_paths_exists(&*connection, repo_id, &filenodes)?;
 
-                    Self::insert_filenodes(
-                        &*connection,
-                        &filenodes,
-                        repo_id,
-                    )?;
-                    Ok(())
-                })
+                Self::insert_filenodes(
+                    &*connection,
+                    &filenodes,
+                    repo_id,
+                )?;
+                Ok(())
             }
 
             fn ensure_paths_exists(
