@@ -52,6 +52,7 @@ def get_test_env_and_deps(suffix=''):
             {
                 'EDEN_HG_BINARY': '//scm/telemetry/hg:hg',
                 'HG_REAL_BIN': '//scm/hg:hg',
+                'CHG_BIN': '//scm/hg:chg',
             }
         )
 
