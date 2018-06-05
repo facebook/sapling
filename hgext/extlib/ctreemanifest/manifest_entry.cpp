@@ -139,7 +139,7 @@ void ManifestEntry::appendtopath(std::string &path) {
   }
 }
 
-Manifest *ManifestEntry::get_manifest(
+ManifestPtr ManifestEntry::get_manifest(
     const ManifestFetcher &fetcher, const char *path, size_t pathlen) {
   if (this->resolved.isnull()) {
     std::string binnode = binfromhex(node);

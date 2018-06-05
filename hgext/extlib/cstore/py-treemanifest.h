@@ -231,9 +231,9 @@ static void newtreeiter_dealloc(py_newtreeiter *self)
 }
 
 static py_newtreeiter *
-newtreeiter_create(py_treemanifest *treemf, Manifest *mainManifest,
+newtreeiter_create(py_treemanifest *treemf, ManifestPtr mainManifest,
                    const std::vector<const char *> &cmpNodes,
-                   const std::vector<Manifest *> &cmpManifests,
+                   const std::vector<ManifestPtr> &cmpManifests,
                    const ManifestFetcher &fetcher)
 {
   py_newtreeiter *i = PyObject_New(py_newtreeiter, &newtreeiterType);
@@ -269,9 +269,9 @@ static PyObject *newtreeiter_iternext(py_newtreeiter *self)
   FinalizeIterator &iterator = self->iter;
 
   std::string *path = NULL;
-  Manifest *result = NULL;
-  Manifest *p1 = NULL;
-  Manifest *p2 = NULL;
+  ManifestPtr result = ManifestPtr();
+  ManifestPtr p1 = ManifestPtr();
+  ManifestPtr p2 = ManifestPtr();
   std::string raw;
   std::string p1raw;
   try {
@@ -320,8 +320,8 @@ static void subtreeiter_dealloc(py_subtreeiter *self)
 }
 
 static py_subtreeiter *
-subtreeiter_create(py_treemanifest *treemf, Manifest *mainManifest,
-                   const std::vector<Manifest *> &cmpManifests,
+subtreeiter_create(py_treemanifest *treemf, ManifestPtr mainManifest,
+                   const std::vector<ManifestPtr> &cmpManifests,
                    const ManifestFetcher &fetcher)
 {
   py_subtreeiter *pyiter = PyObject_New(py_subtreeiter, &subtreeiterType);
@@ -361,10 +361,10 @@ static PyObject *subtreeiter_iternext(py_subtreeiter *self)
   SubtreeIterator &iterator = self->iter;
 
   std::string *path = NULL;
-  Manifest *result = NULL;
+  ManifestPtr result = ManifestPtr();
   ManifestEntry *resultEntry = NULL;
-  Manifest *p1 = NULL;
-  Manifest *p2 = NULL;
+  ManifestPtr p1 = ManifestPtr();
+  ManifestPtr p2 = ManifestPtr();
   std::string raw;
   std::string p1raw;
   try {
@@ -1387,7 +1387,7 @@ static PyObject *treemanifest_walksubtrees(py_treemanifest *self,
   }
 
   try {
-    std::vector<Manifest *> cmpManifests;
+    std::vector<ManifestPtr> cmpManifests;
 
     if (compareTrees) {
       PythonObj iterator = PyObject_GetIter(compareTrees);
@@ -1450,7 +1450,7 @@ static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
 
   try {
     std::vector<const char *> cmpNodes;
-    std::vector<Manifest *> cmpManifests;
+    std::vector<ManifestPtr> cmpManifests;
     if (p1tree) {
       assert(p1tree->tm.root.node);
       cmpNodes.push_back(p1tree->tm.root.node);

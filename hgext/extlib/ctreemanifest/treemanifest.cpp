@@ -488,9 +488,9 @@ bool treemanifest::remove(
   return (result == FIND_PATH_OK) && extras.found;
 }
 
-SubtreeIterator::SubtreeIterator(Manifest *mainRoot,
+SubtreeIterator::SubtreeIterator(ManifestPtr mainRoot,
                 const std::vector<const char*> &cmpNodes,
-                const std::vector<Manifest*> &cmpRoots,
+                const std::vector<ManifestPtr> &cmpRoots,
                 const ManifestFetcher &fetcher) :
     cmpNodes(cmpNodes),
     fetcher(fetcher) {
@@ -502,7 +502,7 @@ SubtreeIterator::SubtreeIterator(Manifest *mainRoot,
   }
 
   for (size_t i = 0; i < cmpRoots.size(); i++) {
-    Manifest *cmpRoot = cmpRoots[i];
+    ManifestPtr cmpRoot = cmpRoots[i];
 
     std::vector<stackframe> stack;
     stack.push_back(stackframe(cmpRoot, false));
@@ -510,13 +510,13 @@ SubtreeIterator::SubtreeIterator(Manifest *mainRoot,
   }
 }
 
-void SubtreeIterator::popResult(std::string **path, Manifest **result,
-                                Manifest **p1, Manifest **p2) {
+void SubtreeIterator::popResult(std::string **path, ManifestPtr *result,
+                                ManifestPtr *p1, ManifestPtr *p2) {
   stackframe &mainFrame = this->mainStack.back();
-  Manifest *mainManifest = mainFrame.manifest;
+  ManifestPtr mainManifest = mainFrame.manifest;
 
   // Record the comparison manifests of the level we're processing.
-  Manifest *cmpManifests[2] { NULL, NULL };
+  ManifestPtr cmpManifests[2] { ManifestPtr(), ManifestPtr() };
   for (size_t i = 0; i < cmpStacks.size(); i++) {
     // If a cmpstack is at the same level as the main stack, it represents
     // the same diretory and should be inspected.
@@ -588,7 +588,7 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
 
   // Otherwise, push to the main stack
   mainEntry->appendtopath(this->path);
-  Manifest *mainManifest = mainEntry->get_manifest(this->fetcher,
+  ManifestPtr mainManifest = mainEntry->get_manifest(this->fetcher,
       this->path.c_str(), this->path.size());
   this->mainStack.push_back(stackframe(mainManifest, false));
 
@@ -596,7 +596,7 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
   for (size_t i = 0; i < requirePush.size(); i++) {
     std::vector<stackframe> *cmpStack = requirePush[i];
     ManifestEntry *cmpEntry = cmpStack->back().currentvalue();
-    Manifest *cmpManifest = cmpEntry->get_manifest(this->fetcher,
+    ManifestPtr cmpManifest = cmpEntry->get_manifest(this->fetcher,
         this->path.c_str(), this->path.size());
     cmpStack->push_back(stackframe(cmpManifest, false));
   }
@@ -604,14 +604,14 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
   return true;
 }
 
-bool SubtreeIterator::next(std::string **path, Manifest **result,
-                           Manifest **p1, Manifest **p2) {
+bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
+                           ManifestPtr *p1, ManifestPtr *p2) {
   ManifestEntry *resultEntry;
   return this->next(path, result, p1, p2, &resultEntry);
 }
 
-bool SubtreeIterator::next(std::string **path, Manifest **result,
-                           Manifest **p1, Manifest **p2, ManifestEntry **resultEntry) {
+bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
+                           ManifestPtr *p1, ManifestPtr *p2, ManifestEntry **resultEntry) {
   // Pop the last returned directory off the path
   size_t slashoffset = this->path.find_last_of('/', this->path.size() - 1);
   if (slashoffset == std::string::npos) {
@@ -620,9 +620,9 @@ bool SubtreeIterator::next(std::string **path, Manifest **result,
     this->path.erase(slashoffset + 1);
   }
 
-  *result = NULL;
-  *p1 = NULL;
-  *p2 = NULL;
+  *result = ManifestPtr();
+  *p1 = ManifestPtr();
+  *p2 = ManifestPtr();
   *resultEntry = NULL;
   while (true) {
     if (this->mainStack.empty()) {
@@ -662,21 +662,21 @@ bool SubtreeIterator::next(std::string **path, Manifest **result,
   }
 }
 
-FinalizeIterator::FinalizeIterator(Manifest *mainRoot,
+FinalizeIterator::FinalizeIterator(ManifestPtr mainRoot,
                 const std::vector<const char*> &cmpNodes,
-                const std::vector<Manifest*> &cmpRoots,
+                const std::vector<ManifestPtr> &cmpRoots,
                 const ManifestFetcher &fetcher) :
   _iterator(mainRoot, cmpNodes, cmpRoots, fetcher) {
 }
 
-bool FinalizeIterator::next(std::string **path, Manifest **result,
-                            Manifest **p1, Manifest **p2) {
+bool FinalizeIterator::next(std::string **path, ManifestPtr *result,
+                            ManifestPtr *p1, ManifestPtr *p2) {
   ManifestEntry *resultEntry;
   while (_iterator.next(path, result, p1, p2, &resultEntry)) {
     std::string *realPath = *path;
-    Manifest *realResult = *result;
-    Manifest *realP1 = *p1;
-    Manifest *realP2 = *p2;
+    ManifestPtr realResult = *result;
+    ManifestPtr realP1 = *p1;
+    ManifestPtr realP2 = *p2;
 
     // If it's mutable, mark it permanent and check it against parents.
     if (realResult->isMutable()) {
@@ -693,7 +693,7 @@ bool FinalizeIterator::next(std::string **path, Manifest **result,
         realResult->serialize(mainRaw);
 
         bool parentMatch = false;
-        Manifest *parents[2] { realP1, realP2 };
+        ManifestPtr parents[2] { realP1, realP2 };
         for (int i = 0; i < 2; ++i) {
           Manifest *p = parents[i];
           if (p) {

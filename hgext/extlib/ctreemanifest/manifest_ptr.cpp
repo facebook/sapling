@@ -53,7 +53,7 @@ ManifestPtr::operator Manifest* () const {
   return this->manifest;
 }
 
-Manifest *ManifestPtr::operator-> () {
+Manifest *ManifestPtr::operator-> () const {
   return this->manifest;
 }
 

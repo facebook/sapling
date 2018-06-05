@@ -49,7 +49,7 @@ class ManifestEntry {
 
     void appendtopath(std::string &path);
 
-    Manifest *get_manifest(
+    ManifestPtr get_manifest(
         const ManifestFetcher &fetcher, const char *path, size_t pathlen);
 
     void initialize(

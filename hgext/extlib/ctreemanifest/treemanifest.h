@@ -154,7 +154,7 @@ struct treemanifest {
      */
     bool remove(const std::string &filename);
 
-    Manifest *getRootManifest() {
+    ManifestPtr getRootManifest() {
       if (this->root.resolved.isnull()) {
         std::string binnode;
         binnode.reserve(BIN_NODE_SIZE);
@@ -200,10 +200,10 @@ struct stackframe {
     SortedManifestIterator sortedIterator;
 
   public:
-    Manifest *manifest;
+    ManifestPtr manifest;
     bool sorted;
 
-    stackframe(Manifest *manifest, bool sorted) :
+    stackframe(ManifestPtr manifest, bool sorted) :
         manifest(manifest),
         sorted(sorted) {
       if (sorted) {
@@ -251,9 +251,9 @@ class SubtreeIterator {
     std::string path;
     ManifestFetcher fetcher;
   public:
-    SubtreeIterator(Manifest *mainRoot,
+    SubtreeIterator(ManifestPtr mainRoot,
                     const std::vector<const char*> &cmpNodes,
-                    const std::vector<Manifest*> &cmpRoots,
+                    const std::vector<ManifestPtr> &cmpRoots,
                     const ManifestFetcher &fetcher);
 
     /**
@@ -266,19 +266,19 @@ class SubtreeIterator {
      * Return true if a manifest was returned, or false if we've reached the
      * end.
      */
-    bool next(std::string **path, Manifest **result,
-              Manifest **p1, Manifest **p2, ManifestEntry **resultEntry);
+    bool next(std::string **path, ManifestPtr *result,
+              ManifestPtr *p1, ManifestPtr *p2, ManifestEntry **resultEntry);
 
-    bool next(std::string **path, Manifest **result,
-              Manifest **p1, Manifest **p2);
+    bool next(std::string **path, ManifestPtr *result,
+              ManifestPtr *p1, ManifestPtr *p2);
 
   private:
     /**
      * Pops the current Manifest, populating the output values and returning true
      * if the current Manifest is different from all comparison manifests.
      */
-    void popResult(std::string **path, Manifest **result,
-                   Manifest **p1, Manifest **p2);
+    void popResult(std::string **path, ManifestPtr *result,
+                   ManifestPtr *p1, ManifestPtr *p2);
 
     /** Pushes the given Manifest onto the stacks. If the given Manifest equals
      * one of the comparison Manifests, the function does nothing.
@@ -290,13 +290,13 @@ class FinalizeIterator {
   private:
     SubtreeIterator _iterator;
   public:
-    FinalizeIterator(Manifest *mainRoot,
+    FinalizeIterator(ManifestPtr mainRoot,
                     const std::vector<const char*> &cmpNodes,
-                    const std::vector<Manifest*> &cmpRoots,
+                    const std::vector<ManifestPtr> &cmpRoots,
                     const ManifestFetcher &fetcher);
 
-    bool next(std::string **path, Manifest **result,
-              Manifest **p1, Manifest **p2);
+    bool next(std::string **path, ManifestPtr *result,
+              ManifestPtr *p1, ManifestPtr *p2);
 };
 
 /**

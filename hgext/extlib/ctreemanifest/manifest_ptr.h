@@ -27,7 +27,7 @@ class ManifestPtr {
 
     operator Manifest* () const;
 
-    Manifest *operator-> ();
+    Manifest *operator-> () const;
 
     bool isnull() const;
 };
