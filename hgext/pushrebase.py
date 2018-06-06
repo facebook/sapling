@@ -197,21 +197,9 @@ def _peerorrepo(orig, ui, path, create=False, **kwargs):
 
         # Add hook pack paths to the store
         if packpaths:
-            bundledatastores = []
-            bundlehiststores = []
             paths = packpaths.split(":")
-            for path in paths:
-                datastore, histstore = _createpackstore(repo.ui, path)
-                bundledatastores.append(datastore)
-                bundlehiststores.append(histstore)
+            _addbundlepacks(ui, repo.manifestlog, paths)
 
-            # Point the bundle repo at the temp stores
-            repo.manifestlog.datastore = contentstore.unioncontentstore(
-                repo.manifestlog.datastore, *bundledatastores
-            )
-            repo.manifestlog.historystore = metadatastore.unionmetadatastore(
-                repo.manifestlog.historystore, *bundlehiststores
-            )
         return repo
 
     return orig(ui, path, create, **kwargs)
@@ -916,23 +904,29 @@ def _createbundlerepo(op, bundlepath):
     bundle = hg.repository(op.repo.ui, bundlepath)
 
     # Create stores for any received pack files
-    bundledatastores = []
-    bundlehiststores = []
     if op.records[treepackrecords]:
-        for path in op.records[treepackrecords]:
-            datastore, histstore = _createpackstore(op.repo.ui, path)
-            bundledatastores.append(datastore)
-            bundlehiststores.append(histstore)
-
-        # Point the bundle repo at the temp stores
-        bundle.manifestlog.datastore = contentstore.unioncontentstore(
-            bundle.manifestlog.datastore, *bundledatastores
-        )
-        bundle.manifestlog.historystore = metadatastore.unionmetadatastore(
-            bundle.manifestlog.historystore, *bundlehiststores
-        )
+        _addbundlepacks(op.repo.ui, bundle.manifestlog, op.records[treepackrecords])
 
     return bundle
+
+
+def _addbundlepacks(ui, mfl, packpaths):
+    bundledatastores = []
+    bundlehiststores = []
+    for path in packpaths:
+        datastore, histstore = _createpackstore(ui, path)
+        bundledatastores.append(datastore)
+        bundlehiststores.append(histstore)
+
+    # Point the bundle repo at the temp stores
+    bundledatastores.append(mfl.datastore)
+    mfl.datastore = contentstore.unioncontentstore(
+        *bundledatastores
+    )
+    bundlehiststores.append(mfl.historystore)
+    mfl.historystore = metadatastore.unionmetadatastore(
+        *bundlehiststores
+    )
 
 
 @bundle2.parthandler(
