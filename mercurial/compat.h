@@ -8,7 +8,7 @@
 #if defined(_WIN64)
 typedef __int64 ssize_t;
 typedef unsigned __int64 uintptr_t;
-#else  /* if defined(_WIN64) */
+#else /* if defined(_WIN64) */
 typedef int ssize_t;
 typedef unsigned int uintptr_t;
 #endif /* if defined(_WIN64) */
@@ -24,7 +24,7 @@ typedef unsigned __int64 uint64_t;
 #endif /* if _MSC_VER < 1600 */
 #include <stdint.h>
 #endif /* ifdef _MSC_VER */
-#else  /* ifdef _WIN32 */
+#else /* ifdef _WIN32 */
 /* not windows */
 #include <sys/types.h>
 #if defined __BEOS__ && !defined __HAIKU__

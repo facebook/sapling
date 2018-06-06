@@ -9,28 +9,25 @@
 
 #include "hgext/extlib/cstore/datapackstore.h"
 
-#include <stdexcept>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <stdexcept>
 
 #include "hgext/extlib/cstore/key.h"
 #include "lib/clib/portability/dirent.h"
 
-namespace
-{
+namespace {
 
 // This deleter helps us be more exception safe without needing
 // to add explicit try/catch statements
 struct Deleter {
-  void operator()(DIR *dir)
-  {
+  void operator()(DIR* dir) {
     closedir(dir);
   }
 };
 
-std::unordered_set<std::string>
-getAvailablePackFileNames(const std::string &path)
-{
+std::unordered_set<std::string> getAvailablePackFileNames(
+    const std::string& path) {
   std::unordered_set<std::string> results;
 
   std::string packpath(path);
@@ -44,7 +41,7 @@ getAvailablePackFileNames(const std::string &path)
     return results;
   }
 
-  dirent *entry;
+  dirent* entry;
   while ((entry = readdir(dirp.get())) != nullptr) {
     size_t fileLength = strlen(entry->d_name);
     if (fileLength < PACKSUFFIXLEN) {
@@ -62,27 +59,30 @@ getAvailablePackFileNames(const std::string &path)
 }
 } // namespace
 
-DatapackStore::DatapackStore(const std::string &path,
-                             bool removeDeadPackFilesOnRefresh)
-    : path_(path), lastRefresh_(0),
-      removeOnRefresh_(removeDeadPackFilesOnRefresh)
-{
+DatapackStore::DatapackStore(
+    const std::string& path,
+    bool removeDeadPackFilesOnRefresh)
+    : path_(path),
+      lastRefresh_(0),
+      removeOnRefresh_(removeDeadPackFilesOnRefresh) {
   // Find pack files in path
   auto files = getAvailablePackFileNames(path);
-  for (const auto &packpath : files) {
+  for (const auto& packpath : files) {
     addPack(packpath);
   }
 }
 
-std::shared_ptr<datapack_handle_t>
-DatapackStore::addPack(const std::string &path)
-{
+std::shared_ptr<datapack_handle_t> DatapackStore::addPack(
+    const std::string& path) {
   std::string idxPath(path + INDEXSUFFIX);
   std::string dataPath(path + PACKSUFFIX);
 
   std::shared_ptr<datapack_handle_t> pack(
-      open_datapack((char *)idxPath.c_str(), idxPath.size(),
-                    (char *)dataPath.c_str(), dataPath.size()),
+      open_datapack(
+          (char*)idxPath.c_str(),
+          idxPath.size(),
+          (char*)dataPath.c_str(),
+          dataPath.size()),
       // set up the shared_ptr Deleter to close the datapack
       // when there are no more references
       close_datapack);
@@ -93,12 +93,9 @@ DatapackStore::addPack(const std::string &path)
   return nullptr;
 }
 
-DatapackStore::~DatapackStore()
-{
-}
+DatapackStore::~DatapackStore() {}
 
-DeltaChainIterator DatapackStore::getDeltaChain(const Key &key)
-{
+DeltaChainIterator DatapackStore::getDeltaChain(const Key& key) {
   std::shared_ptr<DeltaChain> chain = this->getDeltaChainRaw(key);
   if (chain->status() == GET_DELTA_CHAIN_OK) {
     return DeltaChainIterator(chain);
@@ -106,11 +103,10 @@ DeltaChainIterator DatapackStore::getDeltaChain(const Key &key)
   throw MissingKeyError("unable to find delta chain");
 }
 
-std::shared_ptr<DeltaChain> DatapackStore::getDeltaChainRaw(const Key &key)
-{
-  for (const auto &it : packs_) {
-    auto &pack = it.second;
-    auto chain = getdeltachain(pack.get(), (const uint8_t *)key.node);
+std::shared_ptr<DeltaChain> DatapackStore::getDeltaChainRaw(const Key& key) {
+  for (const auto& it : packs_) {
+    auto& pack = it.second;
+    auto chain = getdeltachain(pack.get(), (const uint8_t*)key.node);
 
     if (chain.code == GET_DELTA_CHAIN_OOM) {
       throw std::runtime_error("out of memory");
@@ -128,8 +124,8 @@ std::shared_ptr<DeltaChain> DatapackStore::getDeltaChainRaw(const Key &key)
 
   // Check if there are new packs available
   auto refreshed = refresh();
-  for (const auto &pack : refreshed) {
-    auto chain = getdeltachain(pack.get(), (const uint8_t *)key.node);
+  for (const auto& pack : refreshed) {
+    auto chain = getdeltachain(pack.get(), (const uint8_t*)key.node);
     if (chain.code == GET_DELTA_CHAIN_OOM) {
       throw std::runtime_error("out of memory");
     } else if (chain.code == GET_DELTA_CHAIN_NOT_FOUND) {
@@ -146,9 +142,8 @@ std::shared_ptr<DeltaChain> DatapackStore::getDeltaChainRaw(const Key &key)
   return std::make_shared<CDeltaChain>(GET_DELTA_CHAIN_NOT_FOUND);
 }
 
-Key *DatapackStoreKeyIterator::next()
-{
-  Key *key;
+Key* DatapackStoreKeyIterator::next() {
+  Key* key;
   while ((key = _missing.next()) != NULL) {
     if (!_store.contains(*key)) {
       return key;
@@ -158,21 +153,20 @@ Key *DatapackStoreKeyIterator::next()
   return NULL;
 }
 
-bool DatapackStore::contains(const Key &key)
-{
-  for (auto &it : packs_) {
-    auto &pack = it.second;
+bool DatapackStore::contains(const Key& key) {
+  for (auto& it : packs_) {
+    auto& pack = it.second;
     pack_index_entry_t packindex;
-    if (find(pack.get(), (uint8_t *)key.node, &packindex)) {
+    if (find(pack.get(), (uint8_t*)key.node, &packindex)) {
       return true;
     }
   }
 
   // Check if there are new packs available
   auto refreshed = refresh();
-  for (auto &pack : refreshed) {
+  for (auto& pack : refreshed) {
     pack_index_entry_t packindex;
-    if (find(pack.get(), (uint8_t *)key.node, &packindex)) {
+    if (find(pack.get(), (uint8_t*)key.node, &packindex)) {
       return true;
     }
   }
@@ -180,13 +174,11 @@ bool DatapackStore::contains(const Key &key)
   return false;
 }
 
-std::shared_ptr<KeyIterator> DatapackStore::getMissing(KeyIterator &missing)
-{
+std::shared_ptr<KeyIterator> DatapackStore::getMissing(KeyIterator& missing) {
   return std::make_shared<DatapackStoreKeyIterator>(*this, missing);
 }
 
-std::vector<std::shared_ptr<datapack_handle_t>> DatapackStore::refresh()
-{
+std::vector<std::shared_ptr<datapack_handle_t>> DatapackStore::refresh() {
   clock_t now = clock();
 
   std::vector<std::shared_ptr<datapack_handle_t>> newPacks;
@@ -208,7 +200,7 @@ std::vector<std::shared_ptr<datapack_handle_t>> DatapackStore::refresh()
     }
 
     // Add any newly discovered files
-    for (const auto &packPath : availablePacks) {
+    for (const auto& packPath : availablePacks) {
       if (packs_.find(packPath) == packs_.end()) {
         // We haven't loaded this path yet, do so now
         auto newPack = addPack(packPath);
@@ -224,7 +216,6 @@ std::vector<std::shared_ptr<datapack_handle_t>> DatapackStore::refresh()
   return newPacks;
 }
 
-void DatapackStore::markForRefresh()
-{
+void DatapackStore::markForRefresh() {
   lastRefresh_ = 0;
 }

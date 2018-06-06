@@ -47,36 +47,37 @@ struct py_newtreeiter {
 };
 // clang-format on
 
-static void newtreeiter_dealloc(py_newtreeiter *self);
-static PyObject *newtreeiter_iternext(py_newtreeiter *self);
+static void newtreeiter_dealloc(py_newtreeiter* self);
+static PyObject* newtreeiter_iternext(py_newtreeiter* self);
 static PyTypeObject newtreeiterType = {
-    PyObject_HEAD_INIT(NULL) 0,      /*ob_size */
-    "treemanifest.newtreeiter",      /*tp_name */
-    sizeof(py_newtreeiter),          /*tp_basicsize */
-    0,                               /*tp_itemsize */
+    PyObject_HEAD_INIT(NULL) 0, /*ob_size */
+    "treemanifest.newtreeiter", /*tp_name */
+    sizeof(py_newtreeiter), /*tp_basicsize */
+    0, /*tp_itemsize */
     (destructor)newtreeiter_dealloc, /*tp_dealloc */
-    0,                               /*tp_print */
-    0,                               /*tp_getattr */
-    0,                               /*tp_setattr */
-    0,                               /*tp_compare */
-    0,                               /*tp_repr */
-    0,                               /*tp_as_number */
-    0,                               /*tp_as_sequence */
-    0,                               /*tp_as_mapping */
-    0,                               /*tp_hash */
-    0,                               /*tp_call */
-    0,                               /*tp_str */
-    0,                               /*tp_getattro */
-    0,                               /*tp_setattro */
-    0,                               /*tp_as_buffer */
+    0, /*tp_print */
+    0, /*tp_getattr */
+    0, /*tp_setattr */
+    0, /*tp_compare */
+    0, /*tp_repr */
+    0, /*tp_as_number */
+    0, /*tp_as_sequence */
+    0, /*tp_as_mapping */
+    0, /*tp_hash */
+    0, /*tp_call */
+    0, /*tp_str */
+    0, /*tp_getattro */
+    0, /*tp_setattro */
+    0, /*tp_as_buffer */
     /* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
        use tp_iter and tp_iternext fields. */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER, "TODO", /* tp_doc */
-    0,                                                 /* tp_traverse */
-    0,                                                 /* tp_clear */
-    0,                                                 /* tp_richcompare */
-    0,                                                 /* tp_weaklistoffset */
-    PyObject_SelfIter,                  /* tp_iter: __iter__() method */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+    "TODO", /* tp_doc */
+    0, /* tp_traverse */
+    0, /* tp_clear */
+    0, /* tp_richcompare */
+    0, /* tp_weaklistoffset */
+    PyObject_SelfIter, /* tp_iter: __iter__() method */
     (iternextfunc)newtreeiter_iternext, /* tp_iternext: next() method */
 };
 
@@ -88,36 +89,37 @@ struct py_subtreeiter {
 };
 // clang-format on
 
-static void subtreeiter_dealloc(py_subtreeiter *self);
-static PyObject *subtreeiter_iternext(py_subtreeiter *self);
+static void subtreeiter_dealloc(py_subtreeiter* self);
+static PyObject* subtreeiter_iternext(py_subtreeiter* self);
 static PyTypeObject subtreeiterType = {
-    PyObject_HEAD_INIT(NULL) 0,      /*ob_size */
-    "treemanifest.subtreeiter",      /*tp_name */
-    sizeof(py_subtreeiter),          /*tp_basicsize */
-    0,                               /*tp_itemsize */
+    PyObject_HEAD_INIT(NULL) 0, /*ob_size */
+    "treemanifest.subtreeiter", /*tp_name */
+    sizeof(py_subtreeiter), /*tp_basicsize */
+    0, /*tp_itemsize */
     (destructor)subtreeiter_dealloc, /*tp_dealloc */
-    0,                               /*tp_print */
-    0,                               /*tp_getattr */
-    0,                               /*tp_setattr */
-    0,                               /*tp_compare */
-    0,                               /*tp_repr */
-    0,                               /*tp_as_number */
-    0,                               /*tp_as_sequence */
-    0,                               /*tp_as_mapping */
-    0,                               /*tp_hash */
-    0,                               /*tp_call */
-    0,                               /*tp_str */
-    0,                               /*tp_getattro */
-    0,                               /*tp_setattro */
-    0,                               /*tp_as_buffer */
+    0, /*tp_print */
+    0, /*tp_getattr */
+    0, /*tp_setattr */
+    0, /*tp_compare */
+    0, /*tp_repr */
+    0, /*tp_as_number */
+    0, /*tp_as_sequence */
+    0, /*tp_as_mapping */
+    0, /*tp_hash */
+    0, /*tp_call */
+    0, /*tp_str */
+    0, /*tp_getattro */
+    0, /*tp_setattro */
+    0, /*tp_as_buffer */
     /* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
        use tp_iter and tp_iternext fields. */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER, "TODO", /* tp_doc */
-    0,                                                 /* tp_traverse */
-    0,                                                 /* tp_clear */
-    0,                                                 /* tp_richcompare */
-    0,                                                 /* tp_weaklistoffset */
-    PyObject_SelfIter,                  /* tp_iter: __iter__() method */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+    "TODO", /* tp_doc */
+    0, /* tp_traverse */
+    0, /* tp_clear */
+    0, /* tp_richcompare */
+    0, /* tp_weaklistoffset */
+    PyObject_SelfIter, /* tp_iter: __iter__() method */
     (iternextfunc)subtreeiter_iternext, /* tp_iternext: next() method */
 };
 /**
@@ -140,44 +142,47 @@ struct py_fileiter {
 };
 // clang-format on
 
-static void fileiter_dealloc(py_fileiter *self);
-static PyObject *fileiter_iterentriesnext(py_fileiter *self);
+static void fileiter_dealloc(py_fileiter* self);
+static PyObject* fileiter_iterentriesnext(py_fileiter* self);
 static PyTypeObject fileiterType = {
-    PyObject_HEAD_INIT(NULL) 0,   /*ob_size */
-    "treemanifest.keyiter",       /*tp_name */
-    sizeof(py_fileiter),          /*tp_basicsize */
-    0,                            /*tp_itemsize */
+    PyObject_HEAD_INIT(NULL) 0, /*ob_size */
+    "treemanifest.keyiter", /*tp_name */
+    sizeof(py_fileiter), /*tp_basicsize */
+    0, /*tp_itemsize */
     (destructor)fileiter_dealloc, /*tp_dealloc */
-    0,                            /*tp_print */
-    0,                            /*tp_getattr */
-    0,                            /*tp_setattr */
-    0,                            /*tp_compare */
-    0,                            /*tp_repr */
-    0,                            /*tp_as_number */
-    0,                            /*tp_as_sequence */
-    0,                            /*tp_as_mapping */
-    0,                            /*tp_hash */
-    0,                            /*tp_call */
-    0,                            /*tp_str */
-    0,                            /*tp_getattro */
-    0,                            /*tp_setattro */
-    0,                            /*tp_as_buffer */
+    0, /*tp_print */
+    0, /*tp_getattr */
+    0, /*tp_setattr */
+    0, /*tp_compare */
+    0, /*tp_repr */
+    0, /*tp_as_number */
+    0, /*tp_as_sequence */
+    0, /*tp_as_mapping */
+    0, /*tp_hash */
+    0, /*tp_call */
+    0, /*tp_str */
+    0, /*tp_getattro */
+    0, /*tp_setattro */
+    0, /*tp_as_buffer */
     /* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
        use tp_iter and tp_iternext fields. */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER, "TODO", /* tp_doc */
-    0,                                                 /* tp_traverse */
-    0,                                                 /* tp_clear */
-    0,                                                 /* tp_richcompare */
-    0,                                                 /* tp_weaklistoffset */
-    PyObject_SelfIter,                      /* tp_iter: __iter__() method */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+    "TODO", /* tp_doc */
+    0, /* tp_traverse */
+    0, /* tp_clear */
+    0, /* tp_richcompare */
+    0, /* tp_weaklistoffset */
+    PyObject_SelfIter, /* tp_iter: __iter__() method */
     (iternextfunc)fileiter_iterentriesnext, /* tp_iternext: next() method */
 };
 
-static py_fileiter *createfileiter(py_treemanifest *pytm, bool includenode,
-                                   bool includeflag, bool sorted,
-                                   PythonObj matcher)
-{
-  py_fileiter *i = PyObject_New(py_fileiter, &fileiterType);
+static py_fileiter* createfileiter(
+    py_treemanifest* pytm,
+    bool includenode,
+    bool includeflag,
+    bool sorted,
+    PythonObj matcher) {
+  py_fileiter* i = PyObject_New(py_fileiter, &fileiterType);
   if (i) {
     try {
       i->treemf = pytm;
@@ -192,10 +197,10 @@ static py_fileiter *createfileiter(py_treemanifest *pytm, bool includenode,
         i->iter.matcher = std::make_shared<PythonMatcher>(matcher);
       }
       return i;
-    } catch (const pyexception &ex) {
+    } catch (const pyexception& ex) {
       Py_DECREF(i);
       return NULL;
-    } catch (const std::exception &ex) {
+    } catch (const std::exception& ex) {
       Py_DECREF(i);
       PyErr_SetString(PyExc_RuntimeError, ex.what());
       return NULL;
@@ -205,12 +210,14 @@ static py_fileiter *createfileiter(py_treemanifest *pytm, bool includenode,
   }
 }
 
-static py_fileiter *createfileiter(py_treemanifest *pytm, bool includenode,
-                                   bool includeflag)
-{
-  return createfileiter(pytm, includenode, includeflag,
-                        true, // we care about sort order.
-                        PythonObj());
+static py_fileiter*
+createfileiter(py_treemanifest* pytm, bool includenode, bool includeflag) {
+  return createfileiter(
+      pytm,
+      includenode,
+      includeflag,
+      true, // we care about sort order.
+      PythonObj());
 }
 
 // ==== py_newtreeiter functions ====
@@ -219,19 +226,17 @@ static py_fileiter *createfileiter(py_treemanifest *pytm, bool includenode,
  * Destructor for the newtree iterator. Cleans up all the member data of the
  * iterator.
  */
-static void newtreeiter_dealloc(py_newtreeiter *self)
-{
+static void newtreeiter_dealloc(py_newtreeiter* self) {
   self->iter.~FinalizeIterator();
   PyObject_Del(self);
 }
 
-static py_newtreeiter *
-newtreeiter_create(ManifestPtr mainManifest,
-                   const std::vector<const char *> &cmpNodes,
-                   const std::vector<ManifestPtr> &cmpManifests,
-                   const ManifestFetcher &fetcher)
-{
-  py_newtreeiter *i = PyObject_New(py_newtreeiter, &newtreeiterType);
+static py_newtreeiter* newtreeiter_create(
+    ManifestPtr mainManifest,
+    const std::vector<const char*>& cmpNodes,
+    const std::vector<ManifestPtr>& cmpManifests,
+    const ManifestFetcher& fetcher) {
+  py_newtreeiter* i = PyObject_New(py_newtreeiter, &newtreeiterType);
   if (i) {
     try {
       // The provided created struct hasn't initialized our iter member, so
@@ -239,10 +244,10 @@ newtreeiter_create(ManifestPtr mainManifest,
       new (&i->iter)
           FinalizeIterator(mainManifest, cmpNodes, cmpManifests, fetcher);
       return i;
-    } catch (const pyexception &ex) {
+    } catch (const pyexception& ex) {
       Py_DECREF(i);
       return NULL;
-    } catch (const std::exception &ex) {
+    } catch (const std::exception& ex) {
       Py_DECREF(i);
       PyErr_SetString(PyExc_RuntimeError, ex.what());
       return NULL;
@@ -256,11 +261,10 @@ newtreeiter_create(ManifestPtr mainManifest,
  * Returns the next new tree. If it's the final root node, it marks the tree as
  * complete and immutable.
  */
-static PyObject *newtreeiter_iternext(py_newtreeiter *self)
-{
-  FinalizeIterator &iterator = self->iter;
+static PyObject* newtreeiter_iternext(py_newtreeiter* self) {
+  FinalizeIterator& iterator = self->iter;
 
-  std::string *path = NULL;
+  std::string* path = NULL;
   ManifestPtr result = ManifestPtr();
   ManifestPtr p1 = ManifestPtr();
   ManifestPtr p2 = ManifestPtr();
@@ -276,15 +280,24 @@ static PyObject *newtreeiter_iternext(py_newtreeiter *self)
         p1->serialize(p1raw);
       }
 
-      const char *p1Node = p1 ? p1->node() : NULLID;
-      const char *p2Node = p2 ? p2->node() : NULLID;
+      const char* p1Node = p1 ? p1->node() : NULLID;
+      const char* p2Node = p2 ? p2->node() : NULLID;
       return Py_BuildValue(
-          "(s#s#s#s#s#s#)", path->c_str(), (Py_ssize_t)path->size(),
-          result->node(), (Py_ssize_t)BIN_NODE_SIZE, raw.c_str(),
-          (Py_ssize_t)raw.size(), p1raw.c_str(), (Py_ssize_t)p1raw.size(),
-          p1Node, (Py_ssize_t)BIN_NODE_SIZE, p2Node, (Py_ssize_t)BIN_NODE_SIZE);
+          "(s#s#s#s#s#s#)",
+          path->c_str(),
+          (Py_ssize_t)path->size(),
+          result->node(),
+          (Py_ssize_t)BIN_NODE_SIZE,
+          raw.c_str(),
+          (Py_ssize_t)raw.size(),
+          p1raw.c_str(),
+          (Py_ssize_t)p1raw.size(),
+          p1Node,
+          (Py_ssize_t)BIN_NODE_SIZE,
+          p2Node,
+          (Py_ssize_t)BIN_NODE_SIZE);
     }
-  } catch (const std::exception &ex) {
+  } catch (const std::exception& ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return NULL;
   }
@@ -298,33 +311,32 @@ static PyObject *newtreeiter_iternext(py_newtreeiter *self)
  * Destructor for the subtree iterator. Cleans up all the member data of the
  * iterator.
  */
-static void subtreeiter_dealloc(py_subtreeiter *self)
-{
+static void subtreeiter_dealloc(py_subtreeiter* self) {
   self->iter.~SubtreeIterator();
   PyObject_Del(self);
 }
 
-static py_subtreeiter *
-subtreeiter_create(std::string &path, ManifestPtr mainManifest,
-                   const std::vector<ManifestPtr> &cmpManifests,
-                   const ManifestFetcher &fetcher)
-{
-  py_subtreeiter *pyiter = PyObject_New(py_subtreeiter, &subtreeiterType);
+static py_subtreeiter* subtreeiter_create(
+    std::string& path,
+    ManifestPtr mainManifest,
+    const std::vector<ManifestPtr>& cmpManifests,
+    const ManifestFetcher& fetcher) {
+  py_subtreeiter* pyiter = PyObject_New(py_subtreeiter, &subtreeiterType);
   if (pyiter) {
     try {
       // The provided created struct hasn't initialized our iter member, so
       // we do it manually.
-      std::vector<const char *> cmpNodes(cmpManifests.size());
+      std::vector<const char*> cmpNodes(cmpManifests.size());
       for (size_t i = 0; i < cmpManifests.size(); ++i) {
         cmpNodes.push_back(cmpManifests[i]->node());
       }
       new (&pyiter->iter)
           SubtreeIterator(path, mainManifest, cmpNodes, cmpManifests, fetcher);
       return pyiter;
-    } catch (const pyexception &ex) {
+    } catch (const pyexception& ex) {
       Py_DECREF(pyiter);
       return NULL;
-    } catch (const std::exception &ex) {
+    } catch (const std::exception& ex) {
       Py_DECREF(pyiter);
       PyErr_SetString(PyExc_RuntimeError, ex.what());
       return NULL;
@@ -338,11 +350,10 @@ subtreeiter_create(std::string &path, ManifestPtr mainManifest,
  * Returns the next new tree. If it's the final root node, it marks the tree as
  * complete and immutable.
  */
-static PyObject *subtreeiter_iternext(py_subtreeiter *self)
-{
-  SubtreeIterator &iterator = self->iter;
+static PyObject* subtreeiter_iternext(py_subtreeiter* self) {
+  SubtreeIterator& iterator = self->iter;
 
-  std::string *path = NULL;
+  std::string* path = NULL;
   ManifestPtr result = ManifestPtr();
   ManifestPtr p1 = ManifestPtr();
   ManifestPtr p2 = ManifestPtr();
@@ -358,15 +369,24 @@ static PyObject *subtreeiter_iternext(py_subtreeiter *self)
         p1->serialize(p1raw);
       }
 
-      const char *p1Node = p1 ? p1->node() : NULLID;
-      const char *p2Node = p2 ? p2->node() : NULLID;
+      const char* p1Node = p1 ? p1->node() : NULLID;
+      const char* p2Node = p2 ? p2->node() : NULLID;
       return Py_BuildValue(
-          "(s#s#s#s#s#s#)", path->c_str(), (Py_ssize_t)path->size(),
-          result->node(), (Py_ssize_t)BIN_NODE_SIZE, raw.c_str(),
-          (Py_ssize_t)raw.size(), p1raw.c_str(), (Py_ssize_t)p1raw.size(),
-          p1Node, (Py_ssize_t)BIN_NODE_SIZE, p2Node, (Py_ssize_t)BIN_NODE_SIZE);
+          "(s#s#s#s#s#s#)",
+          path->c_str(),
+          (Py_ssize_t)path->size(),
+          result->node(),
+          (Py_ssize_t)BIN_NODE_SIZE,
+          raw.c_str(),
+          (Py_ssize_t)raw.size(),
+          p1raw.c_str(),
+          (Py_ssize_t)p1raw.size(),
+          p1Node,
+          (Py_ssize_t)BIN_NODE_SIZE,
+          p2Node,
+          (Py_ssize_t)BIN_NODE_SIZE);
     }
-  } catch (const std::exception &ex) {
+  } catch (const std::exception& ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return NULL;
   }
@@ -380,45 +400,47 @@ static PyObject *subtreeiter_iternext(py_subtreeiter *self)
  * Implementation of treemanifest.__iter__
  * Returns a PyObject iterator instance.
  */
-static PyObject *treemanifest_getkeysiter(py_treemanifest *self)
-{
-  return (PyObject *)createfileiter(self, false, false);
+static PyObject* treemanifest_getkeysiter(py_treemanifest* self) {
+  return (PyObject*)createfileiter(self, false, false);
 }
 
-static PyObject *treemanifest_keys(py_treemanifest *self)
-{
-  PythonObj iter = (PyObject *)createfileiter(self, false, false);
-  PythonObj args = Py_BuildValue("(O)", (PyObject *)iter);
-  PyObject *result =
-      PyEval_CallObject((PyObject *)&PyList_Type, (PyObject *)args);
+static PyObject* treemanifest_keys(py_treemanifest* self) {
+  PythonObj iter = (PyObject*)createfileiter(self, false, false);
+  PythonObj args = Py_BuildValue("(O)", (PyObject*)iter);
+  PyObject* result =
+      PyEval_CallObject((PyObject*)&PyList_Type, (PyObject*)args);
   return result;
 }
 
-static PyObject *treemanifest_dirs(py_treemanifest *self)
-{
+static PyObject* treemanifest_dirs(py_treemanifest* self) {
   PythonObj module = PyImport_ImportModule("mercurial.util");
   PythonObj dirstype = module.getattr("dirs");
 
-  PyObject *args = Py_BuildValue("(O)", self);
+  PyObject* args = Py_BuildValue("(O)", self);
   PythonObj result = dirstype.call(args);
   return result.returnval();
 }
 
-static PyObject *treemanifest_diff(PyObject *o, PyObject *args,
-                                   PyObject *kwargs)
-{
-  py_treemanifest *self = (py_treemanifest *)o;
-  PyObject *otherObj;
-  PyObject *matcherObj = NULL;
-  PyObject *cleanObj = NULL;
-  static char const *kwlist[] = {"m2", "match", "clean", NULL};
+static PyObject*
+treemanifest_diff(PyObject* o, PyObject* args, PyObject* kwargs) {
+  py_treemanifest* self = (py_treemanifest*)o;
+  PyObject* otherObj;
+  PyObject* matcherObj = NULL;
+  PyObject* cleanObj = NULL;
+  static char const* kwlist[] = {"m2", "match", "clean", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OO", (char **)kwlist,
-                                   &otherObj, &matcherObj, &cleanObj)) {
+  if (!PyArg_ParseTupleAndKeywords(
+          args,
+          kwargs,
+          "O|OO",
+          (char**)kwlist,
+          &otherObj,
+          &matcherObj,
+          &cleanObj)) {
     return NULL;
   }
 
-  py_treemanifest *other = (py_treemanifest *)otherObj;
+  py_treemanifest* other = (py_treemanifest*)otherObj;
 
   PythonObj matcher;
   if (matcherObj && matcherObj != Py_None) {
@@ -428,7 +450,7 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args,
 
   PythonMatcher pythonMatcher(matcher);
   AlwaysMatcher alwaysMatcher;
-  Matcher *matcherPtr = &alwaysMatcher;
+  Matcher* matcherPtr = &alwaysMatcher;
   if (matcher) {
     matcherPtr = &pythonMatcher;
   }
@@ -446,13 +468,18 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args,
   try {
     path.reserve(1024);
 
-    treemanifest_diffrecurse(self->tm.getRootManifest(),
-                             other->tm.getRootManifest(), path, results,
-                             fetcher, clean, *matcherPtr);
-  } catch (const pyexception &ex) {
+    treemanifest_diffrecurse(
+        self->tm.getRootManifest(),
+        other->tm.getRootManifest(),
+        path,
+        results,
+        fetcher,
+        clean,
+        *matcherPtr);
+  } catch (const pyexception& ex) {
     // Python has already set the error message
     return NULL;
-  } catch (const std::exception &ex) {
+  } catch (const std::exception& ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return NULL;
   }
@@ -460,27 +487,32 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args,
   return results.getDiff().returnval();
 }
 
-static PyObject *treemanifest_get(py_treemanifest *self, PyObject *args,
-                                  PyObject *kwargs)
-{
-  char *filename;
+static PyObject*
+treemanifest_get(py_treemanifest* self, PyObject* args, PyObject* kwargs) {
+  char* filename;
   Py_ssize_t filenamelen;
 
-  PyObject *defaultObj = NULL;
-  static char const *kwlist[] = {"key", "default", NULL};
+  PyObject* defaultObj = NULL;
+  static char const* kwlist[] = {"key", "default", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|O", (char **)kwlist,
-                                   &filename, &filenamelen, &defaultObj)) {
+  if (!PyArg_ParseTupleAndKeywords(
+          args,
+          kwargs,
+          "s#|O",
+          (char**)kwlist,
+          &filename,
+          &filenamelen,
+          &defaultObj)) {
     return NULL;
   }
 
   std::string resultnode;
-  const char *resultflag;
+  const char* resultflag;
   bool found;
   try {
-    found = self->tm.get(std::string(filename, (size_t)filenamelen),
-                         &resultnode, &resultflag);
-  } catch (const pyexception &ex) {
+    found = self->tm.get(
+        std::string(filename, (size_t)filenamelen), &resultnode, &resultflag);
+  } catch (const pyexception& ex) {
     return NULL;
   }
 
@@ -495,14 +527,13 @@ static PyObject *treemanifest_get(py_treemanifest *self, PyObject *args,
     }
     Py_RETURN_NONE;
   } else {
-    return Py_BuildValue("s#", resultnode.c_str(),
-                         (Py_ssize_t)resultnode.length());
+    return Py_BuildValue(
+        "s#", resultnode.c_str(), (Py_ssize_t)resultnode.length());
   }
 }
 
-static PyObject *treemanifest_hasdir(py_treemanifest *self, PyObject *args)
-{
-  char *directory;
+static PyObject* treemanifest_hasdir(py_treemanifest* self, PyObject* args) {
+  char* directory;
   Py_ssize_t directorylen;
 
   if (!PyArg_ParseTuple(args, "s#", &directory, &directorylen)) {
@@ -512,12 +543,12 @@ static PyObject *treemanifest_hasdir(py_treemanifest *self, PyObject *args)
   std::string directorystr(directory, directorylen);
 
   std::string resultnode;
-  const char *resultflag = NULL;
+  const char* resultflag = NULL;
   bool found;
   try {
     found =
         self->tm.get(directorystr, &resultnode, &resultflag, RESULT_DIRECTORY);
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return NULL;
   }
 
@@ -533,10 +564,9 @@ static PyObject *treemanifest_hasdir(py_treemanifest *self, PyObject *args)
  * Takes a filename and returns a tuple of the binary hash and flag,
  * or (None, None) if it doesn't exist.
  */
-static PyObject *treemanifest_find(PyObject *o, PyObject *args)
-{
-  py_treemanifest *self = (py_treemanifest *)o;
-  char *filename;
+static PyObject* treemanifest_find(PyObject* o, PyObject* args) {
+  py_treemanifest* self = (py_treemanifest*)o;
+  char* filename;
   Py_ssize_t filenamelen;
 
   if (!PyArg_ParseTuple(args, "s#", &filename, &filenamelen)) {
@@ -544,21 +574,21 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args)
   }
 
   std::string resultnode;
-  const char *resultflag;
+  const char* resultflag;
   bool found;
   try {
     // Grab the root node's data
 
-    found = self->tm.get(std::string(filename, (size_t)filenamelen),
-                         &resultnode, &resultflag);
-  } catch (const pyexception &ex) {
+    found = self->tm.get(
+        std::string(filename, (size_t)filenamelen), &resultnode, &resultflag);
+  } catch (const pyexception& ex) {
     return NULL;
   }
 
   if (!found) {
     if (!PyErr_Occurred()) {
-      PyErr_Format(PyExc_KeyError, "cannot find file '%s' in manifest",
-                   filename);
+      PyErr_Format(
+          PyExc_KeyError, "cannot find file '%s' in manifest", filename);
     }
     return NULL;
   } else {
@@ -569,8 +599,12 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args)
     } else {
       flaglen = 1;
     }
-    return Py_BuildValue("s#s#", resultnode.c_str(),
-                         (Py_ssize_t)resultnode.length(), resultflag, flaglen);
+    return Py_BuildValue(
+        "s#s#",
+        resultnode.c_str(),
+        (Py_ssize_t)resultnode.length(),
+        resultflag,
+        flaglen);
   }
 }
 
@@ -578,19 +612,25 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args)
  * Implementation of treemanifest.set()
  * Takes a binary hash and flag and sets it for a given filename.
  */
-static PyObject *treemanifest_set(PyObject *o, PyObject *args)
-{
-  py_treemanifest *self = (py_treemanifest *)o;
-  char *filename;
+static PyObject* treemanifest_set(PyObject* o, PyObject* args) {
+  py_treemanifest* self = (py_treemanifest*)o;
+  char* filename;
   Py_ssize_t filenamelen;
-  char *hash;
+  char* hash;
   Py_ssize_t hashlen;
-  char *flagstr;
+  char* flagstr;
   Py_ssize_t flagstrlen;
-  const char *flag;
+  const char* flag;
 
-  if (!PyArg_ParseTuple(args, "s#z#z#", &filename, &filenamelen, &hash,
-                        &hashlen, &flagstr, &flagstrlen)) {
+  if (!PyArg_ParseTuple(
+          args,
+          "s#z#z#",
+          &filename,
+          &filenamelen,
+          &hash,
+          &hashlen,
+          &flagstr,
+          &flagstrlen)) {
     return NULL;
   }
 
@@ -600,8 +640,8 @@ static PyObject *treemanifest_set(PyObject *o, PyObject *args)
     self->tm.remove(std::string(filename, (size_t)filenamelen));
     Py_RETURN_NONE;
   } else if (hashlen != (ssize_t)BIN_NODE_SIZE) {
-    PyErr_Format(PyExc_ValueError, "hash length must be %zu bytes long",
-                 BIN_NODE_SIZE);
+    PyErr_Format(
+        PyExc_ValueError, "hash length must be %zu bytes long", BIN_NODE_SIZE);
     return NULL;
   } else if (flagstrlen > 1) {
     PyErr_Format(PyExc_ValueError, "flags must either be 0 or 1 byte long");
@@ -628,21 +668,20 @@ static PyObject *treemanifest_set(PyObject *o, PyObject *args)
       PyErr_Format(PyExc_TypeError, "unexpected stuff happened");
       return NULL;
     }
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return NULL;
   }
 }
 
-static PyObject *treemanifest_setflag(PyObject *o, PyObject *args)
-{
-  py_treemanifest *self = (py_treemanifest *)o;
-  char *filename;
+static PyObject* treemanifest_setflag(PyObject* o, PyObject* args) {
+  py_treemanifest* self = (py_treemanifest*)o;
+  char* filename;
   Py_ssize_t filenamelen;
-  char *flag;
+  char* flag;
   Py_ssize_t flaglen;
 
-  if (!PyArg_ParseTuple(args, "s#s#", &filename, &filenamelen, &flag,
-                        &flaglen)) {
+  if (!PyArg_ParseTuple(
+          args, "s#s#", &filename, &filenamelen, &flag, &flaglen)) {
     return NULL;
   }
 
@@ -650,20 +689,20 @@ static PyObject *treemanifest_setflag(PyObject *o, PyObject *args)
 
   // Get the current node so we don't overwrite it
   std::string existingnode;
-  const char *existingflag = NULL;
+  const char* existingflag = NULL;
   try {
     std::string existingbinnode;
     self->tm.get(filenamestr, &existingbinnode, &existingflag);
     if (!existingbinnode.empty()) {
       hexfrombin(existingbinnode.c_str(), existingnode);
     }
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return NULL;
   }
 
   if (existingnode.empty()) {
-    PyErr_Format(PyExc_KeyError,
-                 "cannot setflag on file that is not in manifest");
+    PyErr_Format(
+        PyExc_KeyError, "cannot setflag on file that is not in manifest");
     return NULL;
   }
 
@@ -679,7 +718,7 @@ static PyObject *treemanifest_setflag(PyObject *o, PyObject *args)
       PyErr_Format(PyExc_TypeError, "unexpected error during setitem");
       return NULL;
     }
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return NULL;
   }
 }
@@ -687,23 +726,21 @@ static PyObject *treemanifest_setflag(PyObject *o, PyObject *args)
 /*
  * Deallocates the contents of the treemanifest
  */
-static void treemanifest_dealloc(py_treemanifest *self)
-{
+static void treemanifest_dealloc(py_treemanifest* self) {
   self->tm.~treemanifest();
   PyObject_Del(self);
 }
 
-static std::shared_ptr<Store> convert_pystore(PythonObj storeObj)
-{
+static std::shared_ptr<Store> convert_pystore(PythonObj storeObj) {
   PythonObj cstoreModule = PyImport_ImportModule("hgext.extlib.cstore");
   PythonObj unionStoreType = cstoreModule.getattr("uniondatapackstore");
 
   // If it's a cstore, we'll use it directly instead of through python.
   std::shared_ptr<Store> store;
   int isinstance =
-      PyObject_IsInstance((PyObject *)storeObj, (PyObject *)unionStoreType);
+      PyObject_IsInstance((PyObject*)storeObj, (PyObject*)unionStoreType);
   if (isinstance == 1) {
-    store = ((py_uniondatapackstore *)(PyObject *)storeObj)->uniondatapackstore;
+    store = ((py_uniondatapackstore*)(PyObject*)storeObj)->uniondatapackstore;
   }
 
   if (!store) {
@@ -713,11 +750,10 @@ static std::shared_ptr<Store> convert_pystore(PythonObj storeObj)
   return store;
 }
 
-static void convert_pykey(PythonObj key, char **path, size_t *pathlen,
-                          std::string *node)
-{
-  PyObject *pathObj = PyTuple_GetItem((PyObject *)key, 0);
-  PyObject *nodeObj = PyTuple_GetItem((PyObject *)key, 1);
+static void
+convert_pykey(PythonObj key, char** path, size_t* pathlen, std::string* node) {
+  PyObject* pathObj = PyTuple_GetItem((PyObject*)key, 0);
+  PyObject* nodeObj = PyTuple_GetItem((PyObject*)key, 1);
 
   Py_ssize_t pyPathlen;
   if (PyString_AsStringAndSize(pathObj, path, &pyPathlen)) {
@@ -725,7 +761,7 @@ static void convert_pykey(PythonObj key, char **path, size_t *pathlen,
   }
   *pathlen = pyPathlen;
 
-  char *nodedata;
+  char* nodedata;
   Py_ssize_t nodedatalen;
   if (PyString_AsStringAndSize(nodeObj, &nodedata, &nodedatalen)) {
     throw pyexception();
@@ -737,10 +773,9 @@ static void convert_pykey(PythonObj key, char **path, size_t *pathlen,
 /*
  * Initializes the contents of a treemanifest
  */
-static int treemanifest_init(py_treemanifest *self, PyObject *args)
-{
-  PyObject *pystore;
-  char *node = NULL;
+static int treemanifest_init(py_treemanifest* self, PyObject* args) {
+  PyObject* pystore;
+  char* node = NULL;
   Py_ssize_t nodelen;
 
   if (!PyArg_ParseTuple(args, "O|s#", &pystore, &node, &nodelen)) {
@@ -760,7 +795,7 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args)
     } else {
       new (&self->tm) treemanifest(store);
     }
-  } catch (const std::exception &ex) {
+  } catch (const std::exception& ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return -1;
   }
@@ -774,8 +809,7 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args)
  * Destructor for the file iterator. Cleans up all the member data of the
  * iterator.
  */
-static void fileiter_dealloc(py_fileiter *self)
-{
+static void fileiter_dealloc(py_fileiter* self) {
   self->iter.~fileiter();
   Py_XDECREF(self->treemf);
   PyObject_Del(self);
@@ -787,9 +821,8 @@ static void fileiter_dealloc(py_fileiter *self)
  *
  * Returns false if we've reached the end, or true if there's more work.
  */
-static bool fileiter_popfinished(fileiter *iter)
-{
-  stackframe *frame = &iter->frames.back();
+static bool fileiter_popfinished(fileiter* iter) {
+  stackframe* frame = &iter->frames.back();
 
   // Pop the stack of trees until we find one we haven't finished iterating
   // over.
@@ -826,9 +859,12 @@ static bool fileiter_popfinished(fileiter *iter)
  * If the function return false, the buffers are left alone and we've reached
  * the end of the iterator.
  */
-static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
-                          char *node, char *flag)
-{
+static bool fileiter_next(
+    fileiter& iter,
+    char* path,
+    size_t pathcapacity,
+    char* node,
+    char* flag) {
   // Iterate over the current directory contents
   while (true) {
     // Pop off any directories that we're done processing
@@ -837,9 +873,9 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
       return false;
     }
 
-    stackframe &frame = iter.frames.back();
+    stackframe& frame = iter.frames.back();
 
-    ManifestEntry *entry;
+    ManifestEntry* entry;
     entry = frame.next();
 
     // If a directory, push it and loop again
@@ -854,7 +890,7 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
 
       iter.path.append(1, '/');
 
-      Manifest *submanifest = entry->get_manifest(
+      Manifest* submanifest = entry->get_manifest(
           iter.fetcher, iter.path.c_str(), iter.path.size());
 
       // TODO: memory cleanup here is probably broken.
@@ -890,9 +926,8 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
 /**
  * Returns the next object in the iteration.
  */
-static PyObject *fileiter_iterentriesnext(py_fileiter *self)
-{
-  fileiter &iter = self->iter;
+static PyObject* fileiter_iterentriesnext(py_fileiter* self) {
+  fileiter& iter = self->iter;
 
   try {
     char path[FILENAME_BUFFER_SIZE];
@@ -904,8 +939,8 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self)
         if (flag[0] != '\0') {
           flaglen = 1;
         }
-        return Py_BuildValue("(s#s#s#)", path, strlen(path), node,
-                             BIN_NODE_SIZE, flag, flaglen);
+        return Py_BuildValue(
+            "(s#s#s#)", path, strlen(path), node, BIN_NODE_SIZE, flag, flaglen);
       }
       if (self->includenode) {
         return Py_BuildValue("(s#s#)", path, strlen(path), node, BIN_NODE_SIZE);
@@ -921,7 +956,7 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self)
       }
     }
     return NULL;
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return NULL;
   }
 }
@@ -930,21 +965,20 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self)
  * Implements treemanifest.__getitem__(path)
  * Returns the node of the given file.
  */
-static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key)
-{
-  char *filename;
+static PyObject* treemanifest_getitem(py_treemanifest* self, PyObject* key) {
+  char* filename;
   Py_ssize_t filenamelen;
   if (PyString_AsStringAndSize(key, &filename, &filenamelen)) {
     return NULL;
   }
 
   std::string resultnode;
-  const char *resultflag;
+  const char* resultflag;
   bool found;
   try {
-    found = self->tm.get(std::string(filename, (size_t)filenamelen),
-                         &resultnode, &resultflag);
-  } catch (const pyexception &ex) {
+    found = self->tm.get(
+        std::string(filename, (size_t)filenamelen), &resultnode, &resultflag);
+  } catch (const pyexception& ex) {
     return NULL;
   }
 
@@ -956,15 +990,14 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key)
     PyErr_Format(PyExc_KeyError, "file '%s' not found", filename);
     return NULL;
   } else {
-    return Py_BuildValue("s#", resultnode.c_str(),
-                         (Py_ssize_t)resultnode.length());
+    return Py_BuildValue(
+        "s#", resultnode.c_str(), (Py_ssize_t)resultnode.length());
   }
 }
 
-static int treemanifest_setitem(py_treemanifest *self, PyObject *key,
-                                PyObject *value)
-{
-  char *filename;
+static int
+treemanifest_setitem(py_treemanifest* self, PyObject* key, PyObject* value) {
+  char* filename;
   Py_ssize_t filenamelen;
   if (PyString_AsStringAndSize(key, &filename, &filenamelen)) {
     return -1;
@@ -976,12 +1009,12 @@ static int treemanifest_setitem(py_treemanifest *self, PyObject *key,
     try {
       self->tm.remove(std::string(filename, (size_t)filenamelen));
       return 0;
-    } catch (const pyexception &ex) {
+    } catch (const pyexception& ex) {
       return -1;
     }
   }
 
-  char *node;
+  char* node;
   Py_ssize_t nodelen;
   if (PyString_AsStringAndSize(value, &node, &nodelen)) {
     return -1;
@@ -994,10 +1027,10 @@ static int treemanifest_setitem(py_treemanifest *self, PyObject *key,
 
   // Get the current flag so we don't overwrite it
   std::string existingnode;
-  const char *existingflag = NULL;
+  const char* existingflag = NULL;
   try {
     self->tm.get(filenamestr, &existingnode, &existingflag);
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return -1;
   }
 
@@ -1014,7 +1047,7 @@ static int treemanifest_setitem(py_treemanifest *self, PyObject *key,
       PyErr_Format(PyExc_TypeError, "unexpected error during setitem");
       return -1;
     }
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return -1;
   }
 }
@@ -1023,28 +1056,33 @@ static int treemanifest_setitem(py_treemanifest *self, PyObject *key,
  * Implements treemanifest.flags(path)
  * Returns the flag of the given file.
  */
-static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args,
-                                    PyObject *kwargs)
-{
-  char *filename;
+static PyObject*
+treemanifest_flags(py_treemanifest* self, PyObject* args, PyObject* kwargs) {
+  char* filename;
   Py_ssize_t filenamelen;
-  char *defaultval = NULL;
+  char* defaultval = NULL;
   Py_ssize_t defaultvallen;
-  static char const *kwlist[] = {"key", "default", NULL};
+  static char const* kwlist[] = {"key", "default", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|s#", (char **)kwlist,
-                                   &filename, &filenamelen, &defaultval,
-                                   &defaultvallen)) {
+  if (!PyArg_ParseTupleAndKeywords(
+          args,
+          kwargs,
+          "s#|s#",
+          (char**)kwlist,
+          &filename,
+          &filenamelen,
+          &defaultval,
+          &defaultvallen)) {
     return NULL;
   }
 
   std::string resultnode;
-  const char *resultflag = NULL;
+  const char* resultflag = NULL;
   bool found;
   try {
-    found = self->tm.get(std::string(filename, (size_t)filenamelen),
-                         &resultnode, &resultflag);
-  } catch (const pyexception &ex) {
+    found = self->tm.get(
+        std::string(filename, (size_t)filenamelen), &resultnode, &resultflag);
+  } catch (const pyexception& ex) {
     return NULL;
   }
 
@@ -1063,13 +1101,12 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args,
   }
 }
 
-static PyObject *treemanifest_copy(py_treemanifest *self)
-{
+static PyObject* treemanifest_copy(py_treemanifest* self) {
   PythonObj module = PyImport_ImportModule("hgext.extlib.cstore");
   PythonObj treetype = module.getattr("treemanifest");
-  py_treemanifest *copy =
-      PyObject_New(py_treemanifest, (PyTypeObject *)(PyObject *)treetype);
-  PythonObj copyObj((PyObject *)copy);
+  py_treemanifest* copy =
+      PyObject_New(py_treemanifest, (PyTypeObject*)(PyObject*)treetype);
+  PythonObj copyObj((PyObject*)copy);
 
   new (&copy->tm) treemanifest(self->tm);
 
@@ -1081,8 +1118,7 @@ static PyObject *treemanifest_copy(py_treemanifest *self)
  * The fastpath is for when the matcher contains a small list of specific file
  * names, so we can test each file instead of iterating over the whole manifest.
  */
-static bool canusematchfastpath(py_treemanifest * /*self*/, PythonObj matcher)
-{
+static bool canusematchfastpath(py_treemanifest* /*self*/, PythonObj matcher) {
   PythonObj emptyargs = PyTuple_New(0);
   PythonObj files = matcher.callmethod("files", emptyargs);
 
@@ -1105,9 +1141,9 @@ static bool canusematchfastpath(py_treemanifest * /*self*/, PythonObj matcher)
  * iterates over the files in the matcher, instead of iterating over the entire
  * manifest.
  */
-static PyObject *treemanifest_matchesfastpath(py_treemanifest *self,
-                                              PythonObj matcher)
-{
+static PyObject* treemanifest_matchesfastpath(
+    py_treemanifest* self,
+    PythonObj matcher) {
   PythonObj emptyargs = PyTuple_New(0);
   PythonObj manifestmod = PyImport_ImportModule("mercurial.manifest");
   PythonObj manifestdict = manifestmod.getattr("manifestdict");
@@ -1118,18 +1154,18 @@ static PyObject *treemanifest_matchesfastpath(py_treemanifest *self,
   std::string pathstring;
   std::string resultnode;
 
-  PythonObj iterator = PyObject_GetIter((PyObject *)files);
-  PyObject *fileObj;
+  PythonObj iterator = PyObject_GetIter((PyObject*)files);
+  PyObject* fileObj;
   PythonObj file;
   while ((fileObj = PyIter_Next(iterator))) {
     file = fileObj;
-    char *path;
+    char* path;
     Py_ssize_t pathlen;
     if (PyString_AsStringAndSize(file, &path, &pathlen)) {
       throw pyexception();
     }
 
-    const char *resultflag = NULL;
+    const char* resultflag = NULL;
 
     pathstring.assign(path, (size_t)pathlen);
     if (!self->tm.get(path, &resultnode, &resultflag)) {
@@ -1160,9 +1196,8 @@ static PyObject *treemanifest_matchesfastpath(py_treemanifest *self,
   return result.returnval();
 }
 
-static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args)
-{
-  PyObject *matcherObj;
+static PyObject* treemanifest_matches(py_treemanifest* self, PyObject* args) {
+  PyObject* matcherObj;
 
   if (!PyArg_ParseTuple(args, "O", &matcherObj)) {
     return NULL;
@@ -1209,9 +1244,9 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args)
     }
 
     return result.returnval();
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return NULL;
-  } catch (const std::exception &ex) {
+  } catch (const std::exception& ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return NULL;
   }
@@ -1219,16 +1254,17 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args)
   return NULL;
 }
 
-static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args,
-                                         PyObject *kwargs)
-{
-  py_treemanifest *other;
-  PyObject *matcherObj = NULL;
+static PyObject* treemanifest_filesnotin(
+    py_treemanifest* self,
+    PyObject* args,
+    PyObject* kwargs) {
+  py_treemanifest* other;
+  PyObject* matcherObj = NULL;
 
-  static char const *kwlist[] = {"m2", "match", NULL};
+  static char const* kwlist[] = {"m2", "match", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O", (char **)kwlist, &other,
-                                   &matcherObj)) {
+  if (!PyArg_ParseTupleAndKeywords(
+          args, kwargs, "O|O", (char**)kwlist, &other, &matcherObj)) {
     return NULL;
   }
 
@@ -1244,7 +1280,7 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args,
 
   PythonMatcher pythonMatcher(matcher);
   AlwaysMatcher alwaysMatcher;
-  Matcher *matcherPtr = &alwaysMatcher;
+  Matcher* matcherPtr = &alwaysMatcher;
   if (matcher) {
     matcherPtr = &pythonMatcher;
   }
@@ -1252,13 +1288,18 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args,
   std::string path;
   try {
     path.reserve(1024);
-    treemanifest_diffrecurse(self->tm.getRootManifest(),
-                             other->tm.getRootManifest(), path, diffresults,
-                             fetcher, /*clean=*/false, *matcherPtr);
-  } catch (const pyexception &ex) {
+    treemanifest_diffrecurse(
+        self->tm.getRootManifest(),
+        other->tm.getRootManifest(),
+        path,
+        diffresults,
+        fetcher,
+        /*clean=*/false,
+        *matcherPtr);
+  } catch (const pyexception& ex) {
     // Python has already set the error message
     return NULL;
-  } catch (const std::exception &ex) {
+  } catch (const std::exception& ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return NULL;
   }
@@ -1268,17 +1309,17 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args,
   // All of the PyObjects below are borrowed references, so no ref counting is
   // required.
   Py_ssize_t iterpos = 0;
-  PyObject *pathkey;
-  PyObject *diffentry;
+  PyObject* pathkey;
+  PyObject* diffentry;
   PythonObj diff = diffresults.getDiff();
   while (PyDict_Next(diff, &iterpos, &pathkey, &diffentry)) {
     // Each value is a `((m1node, m1flag), (m2node, m2flag))` tuple.
     // If m2node is None, then this file doesn't exist in m2.
-    PyObject *targetvalue = PyTuple_GetItem(diffentry, 1);
+    PyObject* targetvalue = PyTuple_GetItem(diffentry, 1);
     if (!targetvalue) {
       return NULL;
     }
-    PyObject *targetnode = PyTuple_GetItem(targetvalue, 0);
+    PyObject* targetnode = PyTuple_GetItem(targetvalue, 0);
     if (!targetnode) {
       return NULL;
     }
@@ -1290,51 +1331,47 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args,
   return result.returnval();
 }
 
-static int treemanifest_contains(py_treemanifest *self, PyObject *key)
-{
+static int treemanifest_contains(py_treemanifest* self, PyObject* key) {
   if (key == Py_None) {
     return 0;
   }
 
-  char *filename;
+  char* filename;
   Py_ssize_t filenamelen;
   if (PyString_AsStringAndSize(key, &filename, &filenamelen)) {
     return -1;
   }
 
   std::string resultnode;
-  const char *resultflag;
+  const char* resultflag;
   try {
-    bool found = self->tm.get(std::string(filename, (size_t)filenamelen),
-                              &resultnode, &resultflag);
+    bool found = self->tm.get(
+        std::string(filename, (size_t)filenamelen), &resultnode, &resultflag);
     if (!found) {
       return 0;
     } else {
       return 1;
     }
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return -1;
   }
 }
 
-static PyObject *treemanifest_getentriesiter(py_treemanifest *self)
-{
-  return (PyObject *)createfileiter(self, true, true);
+static PyObject* treemanifest_getentriesiter(py_treemanifest* self) {
+  return (PyObject*)createfileiter(self, true, true);
 }
 
-static PyObject *treemanifest_iteritems(py_treemanifest *self)
-{
-  return (PyObject *)createfileiter(self, true, false);
+static PyObject* treemanifest_iteritems(py_treemanifest* self) {
+  return (PyObject*)createfileiter(self, true, false);
 }
 
-static PyObject *treemanifest_text(py_treemanifest *self, PyObject *args,
-                                   PyObject *kwargs)
-{
-  PyObject *usemanifestv2 = NULL;
-  static char const *kwlist[] = {"usemanifestv2", NULL};
+static PyObject*
+treemanifest_text(py_treemanifest* self, PyObject* args, PyObject* kwargs) {
+  PyObject* usemanifestv2 = NULL;
+  static char const* kwlist[] = {"usemanifestv2", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", (char **)kwlist,
-                                   &usemanifestv2)) {
+  if (!PyArg_ParseTupleAndKeywords(
+          args, kwargs, "|O", (char**)kwlist, &usemanifestv2)) {
     return NULL;
   }
 
@@ -1351,7 +1388,7 @@ static PyObject *treemanifest_text(py_treemanifest *self, PyObject *args,
 
       PythonObj iterator = treemanifest_getentriesiter(self);
       PythonObj textargs =
-          Py_BuildValue("(OO)", (PyObject *)iterator, usemanifestv2);
+          Py_BuildValue("(OO)", (PyObject*)iterator, usemanifestv2);
       return textfunc.call(textargs).returnval();
     }
 
@@ -1374,19 +1411,20 @@ static PyObject *treemanifest_text(py_treemanifest *self, PyObject *args,
     }
 
     return PyString_FromStringAndSize(result.c_str(), result.size());
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return NULL;
   }
 }
 
-static PyObject *treemanifest_walksubtrees(py_treemanifest *self,
-                                           PyObject *args, PyObject *kwargs)
-{
-  PyObject *compareTrees = NULL;
-  static char const *kwlist[] = {"comparetrees", NULL};
+static PyObject* treemanifest_walksubtrees(
+    py_treemanifest* self,
+    PyObject* args,
+    PyObject* kwargs) {
+  PyObject* compareTrees = NULL;
+  static char const* kwlist[] = {"comparetrees", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", (char **)kwlist,
-                                   &compareTrees)) {
+  if (!PyArg_ParseTupleAndKeywords(
+          args, kwargs, "|O", (char**)kwlist, &compareTrees)) {
     return NULL;
   }
 
@@ -1395,33 +1433,40 @@ static PyObject *treemanifest_walksubtrees(py_treemanifest *self,
 
     if (compareTrees) {
       PythonObj iterator = PyObject_GetIter(compareTrees);
-      PyObject *pyCompareTreeObj;
+      PyObject* pyCompareTreeObj;
       while ((pyCompareTreeObj = PyIter_Next(iterator))) {
         // Assign to PythonObj so its lifecycle is managed.
         PythonObj pyCompareTree = pyCompareTreeObj;
-        py_treemanifest *compareTree = (py_treemanifest *)pyCompareTreeObj;
+        py_treemanifest* compareTree = (py_treemanifest*)pyCompareTreeObj;
         cmpManifests.push_back(compareTree->tm.getRootManifest());
       }
     }
 
     auto rootPath = std::string("");
-    return (PyObject *)subtreeiter_create(rootPath, self->tm.getRootManifest(),
-                                          cmpManifests, self->tm.fetcher);
-  } catch (const pyexception &ex) {
+    return (PyObject*)subtreeiter_create(
+        rootPath, self->tm.getRootManifest(), cmpManifests, self->tm.fetcher);
+  } catch (const pyexception& ex) {
     return NULL;
   }
 }
 
-static PyObject *treemanifest_walksubdirtrees(PyTypeObject *type,
-                                              PyObject *args, PyObject *kwargs)
-{
-  PyObject *keyObj = NULL;
-  PyObject *storeObj = NULL;
-  PyObject *compareTrees = NULL;
-  static char const *kwlist[] = {"key", "store", "comparetrees", NULL};
+static PyObject* treemanifest_walksubdirtrees(
+    PyTypeObject* type,
+    PyObject* args,
+    PyObject* kwargs) {
+  PyObject* keyObj = NULL;
+  PyObject* storeObj = NULL;
+  PyObject* compareTrees = NULL;
+  static char const* kwlist[] = {"key", "store", "comparetrees", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|O", (char **)kwlist,
-                                   &keyObj, &storeObj, &compareTrees)) {
+  if (!PyArg_ParseTupleAndKeywords(
+          args,
+          kwargs,
+          "OO|O",
+          (char**)kwlist,
+          &keyObj,
+          &storeObj,
+          &compareTrees)) {
     return NULL;
   }
 
@@ -1431,7 +1476,7 @@ static PyObject *treemanifest_walksubdirtrees(PyTypeObject *type,
     Py_INCREF(keyObj);
     PythonObj key = keyObj;
 
-    char *path;
+    char* path;
     size_t pathlen;
     std::string node;
     convert_pykey(key, &path, &pathlen, &node);
@@ -1444,12 +1489,12 @@ static PyObject *treemanifest_walksubdirtrees(PyTypeObject *type,
 
     if (compareTrees) {
       PythonObj iterator = PyObject_GetIter(compareTrees);
-      PyObject *compareKeyObj;
+      PyObject* compareKeyObj;
       while ((compareKeyObj = PyIter_Next(iterator))) {
         // Assign to PythonObj so its lifecycle is managed.
         PythonObj compareKey = compareKeyObj;
 
-        char *cmpPath;
+        char* cmpPath;
         size_t cmpPathlen;
         std::string cmpNode;
         convert_pykey(compareKey, &cmpPath, &cmpPathlen, &cmpNode);
@@ -1460,19 +1505,18 @@ static PyObject *treemanifest_walksubdirtrees(PyTypeObject *type,
     }
 
     auto pathStr = std::string(path, pathlen);
-    return (PyObject *)subtreeiter_create(pathStr, manifest, cmpManifests,
-                                          fetcher);
-  } catch (const pyexception &ex) {
+    return (PyObject*)subtreeiter_create(
+        pathStr, manifest, cmpManifests, fetcher);
+  } catch (const pyexception& ex) {
     return NULL;
-  } catch (const std::exception &ex) {
+  } catch (const std::exception& ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return NULL;
   }
 }
 
-static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args)
-{
-  PyObject *matcherObj;
+static PyObject* treemanifest_walk(py_treemanifest* self, PyObject* args) {
+  PyObject* matcherObj;
 
   if (!PyArg_ParseTuple(args, "O", &matcherObj)) {
     return NULL;
@@ -1482,37 +1526,38 @@ static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args)
   Py_INCREF(matcherObj);
   PythonObj matcher = matcherObj;
 
-  return (PyObject *)createfileiter(
-      self, false, false,
+  return (PyObject*)createfileiter(
+      self,
+      false,
+      false,
       false, // walk does not care about sort order.
       matcher);
 }
 
-static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
-                                       PyObject *kwargs)
-{
-  PyObject *p1treeObj = NULL;
-  PyObject *p2treeObj = NULL;
+static PyObject*
+treemanifest_finalize(py_treemanifest* self, PyObject* args, PyObject* kwargs) {
+  PyObject* p1treeObj = NULL;
+  PyObject* p2treeObj = NULL;
 
-  static char const *kwlist[] = {"p1tree", "p2tree", NULL};
+  static char const* kwlist[] = {"p1tree", "p2tree", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO", (char **)kwlist,
-                                   &p1treeObj, &p2treeObj)) {
+  if (!PyArg_ParseTupleAndKeywords(
+          args, kwargs, "|OO", (char**)kwlist, &p1treeObj, &p2treeObj)) {
     return NULL;
   }
 
-  py_treemanifest *p1tree = NULL;
+  py_treemanifest* p1tree = NULL;
   if (p1treeObj && p1treeObj != Py_None) {
-    p1tree = (py_treemanifest *)p1treeObj;
+    p1tree = (py_treemanifest*)p1treeObj;
   }
 
-  py_treemanifest *p2tree = NULL;
+  py_treemanifest* p2tree = NULL;
   if (p2treeObj && p2treeObj != Py_None) {
-    p2tree = (py_treemanifest *)p2treeObj;
+    p2tree = (py_treemanifest*)p2treeObj;
   }
 
   try {
-    std::vector<const char *> cmpNodes;
+    std::vector<const char*> cmpNodes;
     std::vector<ManifestPtr> cmpManifests;
     if (p1tree) {
       assert(p1tree->tm.root.get_node());
@@ -1525,22 +1570,21 @@ static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
       cmpManifests.push_back(p2tree->tm.getRootManifest());
     }
 
-    return (PyObject *)newtreeiter_create(self->tm.getRootManifest(), cmpNodes,
-                                          cmpManifests, self->tm.fetcher);
-  } catch (const pyexception &ex) {
+    return (PyObject*)newtreeiter_create(
+        self->tm.getRootManifest(), cmpNodes, cmpManifests, self->tm.fetcher);
+  } catch (const pyexception& ex) {
     return NULL;
   }
 }
 
-static int treemanifest_nonzero(py_treemanifest *self)
-{
+static int treemanifest_nonzero(py_treemanifest* self) {
   try {
     if (self->tm.getRootManifest()->children() > 0) {
       return 1;
     } else {
       return 0;
     }
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     return -1;
   }
 }
@@ -1548,129 +1592,165 @@ static int treemanifest_nonzero(py_treemanifest *self)
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
-    {"copy", (PyCFunction)treemanifest_copy, METH_NOARGS,
+    {"copy",
+     (PyCFunction)treemanifest_copy,
+     METH_NOARGS,
      "copies the treemanifest"},
-    {"diff", (PyCFunction)treemanifest_diff, METH_VARARGS | METH_KEYWORDS,
+    {"diff",
+     (PyCFunction)treemanifest_diff,
+     METH_VARARGS | METH_KEYWORDS,
      "performs a diff of the given two manifests\n"},
-    {"dirs", (PyCFunction)treemanifest_dirs, METH_NOARGS,
+    {"dirs",
+     (PyCFunction)treemanifest_dirs,
+     METH_NOARGS,
      "gets a collection of all the directories in this manifest"},
-    {"filesnotin", (PyCFunction)treemanifest_filesnotin,
+    {"filesnotin",
+     (PyCFunction)treemanifest_filesnotin,
      METH_VARARGS | METH_KEYWORDS,
      "returns the set of files in m1 but not m2\n"},
-    {"find", treemanifest_find, METH_VARARGS,
+    {"find",
+     treemanifest_find,
+     METH_VARARGS,
      "returns the node and flag for the given filepath\n"},
-    {"flags", (PyCFunction)treemanifest_flags, METH_VARARGS | METH_KEYWORDS,
+    {"flags",
+     (PyCFunction)treemanifest_flags,
+     METH_VARARGS | METH_KEYWORDS,
      "returns the flag for the given filepath\n"},
-    {"get", (PyCFunction)treemanifest_get, METH_VARARGS | METH_KEYWORDS,
+    {"get",
+     (PyCFunction)treemanifest_get,
+     METH_VARARGS | METH_KEYWORDS,
      "gets the node for the given filename; returns default if it doesn't "
      "exist"},
-    {"hasdir", (PyCFunction)treemanifest_hasdir, METH_VARARGS,
+    {"hasdir",
+     (PyCFunction)treemanifest_hasdir,
+     METH_VARARGS,
      "returns true if the directory exists in the manifest"},
-    {"iterentries", (PyCFunction)treemanifest_getentriesiter, METH_NOARGS,
+    {"iterentries",
+     (PyCFunction)treemanifest_getentriesiter,
+     METH_NOARGS,
      "iterate over (path, nodeid, flags) tuples in this manifest."},
-    {"iterkeys", (PyCFunction)treemanifest_getkeysiter, METH_NOARGS,
+    {"iterkeys",
+     (PyCFunction)treemanifest_getkeysiter,
+     METH_NOARGS,
      "iterate over file names in this manifest."},
-    {"iteritems", (PyCFunction)treemanifest_iteritems, METH_NOARGS,
+    {"iteritems",
+     (PyCFunction)treemanifest_iteritems,
+     METH_NOARGS,
      "iterate over file names and nodes in this manifest."},
-    {"keys", (PyCFunction)treemanifest_keys, METH_NOARGS,
+    {"keys",
+     (PyCFunction)treemanifest_keys,
+     METH_NOARGS,
      "list of the file names in this manifest."},
-    {"matches", (PyCFunction)treemanifest_matches, METH_VARARGS,
+    {"matches",
+     (PyCFunction)treemanifest_matches,
+     METH_VARARGS,
      "returns a manifest filtered by the matcher"},
-    {"set", treemanifest_set, METH_VARARGS,
+    {"set",
+     treemanifest_set,
+     METH_VARARGS,
      "sets the node and flag for the given filepath\n"},
-    {"setflag", treemanifest_setflag, METH_VARARGS,
+    {"setflag",
+     treemanifest_setflag,
+     METH_VARARGS,
      "sets the flag for the given filepath\n"},
-    {"text", (PyCFunction)treemanifest_text, METH_VARARGS | METH_KEYWORDS,
+    {"text",
+     (PyCFunction)treemanifest_text,
+     METH_VARARGS | METH_KEYWORDS,
      "returns the text form of the manifest"},
-    {"walk", (PyCFunction)treemanifest_walk, METH_VARARGS,
+    {"walk",
+     (PyCFunction)treemanifest_walk,
+     METH_VARARGS,
      "returns a iterator for walking the manifest"},
-    {"walksubdirtrees", (PyCFunction)treemanifest_walksubdirtrees,
+    {"walksubdirtrees",
+     (PyCFunction)treemanifest_walksubdirtrees,
      METH_CLASS | METH_VARARGS | METH_KEYWORDS,
      "Returns a iterator for walking a particular subtree within a manifest."
      "`comparetrees` is a list of trees to compare against and "
      "avoid walking down any shared subtree."},
-    {"walksubtrees", (PyCFunction)treemanifest_walksubtrees,
+    {"walksubtrees",
+     (PyCFunction)treemanifest_walksubtrees,
      METH_VARARGS | METH_KEYWORDS,
      "Returns a iterator for walking the subtree manifests."
      "`comparetrees` is a list of trees to compare against and "
      "avoid walking down any shared subtree."},
-    {"finalize", (PyCFunction)treemanifest_finalize,
+    {"finalize",
+     (PyCFunction)treemanifest_finalize,
      METH_VARARGS | METH_KEYWORDS,
      "Returns an iterator that outputs each piece of the tree that is new."
      "When the iterator completes, the tree is marked as immutable."},
     {NULL, NULL}};
 
 static PyMappingMethods treemanifest_mapping_methods = {
-    0,                                   /* mp_length */
-    (binaryfunc)treemanifest_getitem,    /* mp_subscript */
+    0, /* mp_length */
+    (binaryfunc)treemanifest_getitem, /* mp_subscript */
     (objobjargproc)treemanifest_setitem, /* mp_ass_subscript */
 };
 
 static PySequenceMethods treemanifest_sequence_methods = {
-    0,                                 /* sq_length */
-    0,                                 /* sq_concat */
-    0,                                 /* sq_repeat */
-    0,                                 /* sq_item */
-    0,                                 /* sq_slice */
-    0,                                 /* sq_ass_item */
-    0,                                 /* sq_ass_slice */
+    0, /* sq_length */
+    0, /* sq_concat */
+    0, /* sq_repeat */
+    0, /* sq_item */
+    0, /* sq_slice */
+    0, /* sq_ass_item */
+    0, /* sq_ass_slice */
     (objobjproc)treemanifest_contains, /* sq_contains */
-    0,                                 /* sq_inplace_concat */
-    0,                                 /* sq_inplace_repeat */
+    0, /* sq_inplace_concat */
+    0, /* sq_inplace_repeat */
 };
 
 static PyNumberMethods treemanifest_number_methods = {
-    0,                             /* binaryfunc nb_add; */
-    0,                             /* binaryfunc nb_subtract; */
-    0,                             /* binaryfunc nb_multiply; */
-    0,                             /* binaryfunc nb_divide; */
-    0,                             /* binaryfunc nb_remainder; */
-    0,                             /* binaryfunc nb_divmod; */
-    0,                             /* ternaryfunc nb_power; */
-    0,                             /* unaryfunc nb_negative; */
-    0,                             /* unaryfunc nb_positive; */
-    0,                             /* unaryfunc nb_absolute; */
+    0, /* binaryfunc nb_add; */
+    0, /* binaryfunc nb_subtract; */
+    0, /* binaryfunc nb_multiply; */
+    0, /* binaryfunc nb_divide; */
+    0, /* binaryfunc nb_remainder; */
+    0, /* binaryfunc nb_divmod; */
+    0, /* ternaryfunc nb_power; */
+    0, /* unaryfunc nb_negative; */
+    0, /* unaryfunc nb_positive; */
+    0, /* unaryfunc nb_absolute; */
     (inquiry)treemanifest_nonzero, /* inquiry nb_nonzero; */
 };
 
 static PyTypeObject treemanifestType = {
-    PyObject_HEAD_INIT(NULL) 0,       /* ob_size */
-    "cstore.treemanifest",            /* tp_name */
-    sizeof(py_treemanifest),          /* tp_basicsize */
-    0,                                /* tp_itemsize */
+    PyObject_HEAD_INIT(NULL) 0, /* ob_size */
+    "cstore.treemanifest", /* tp_name */
+    sizeof(py_treemanifest), /* tp_basicsize */
+    0, /* tp_itemsize */
     (destructor)treemanifest_dealloc, /* tp_dealloc */
-    0,                                /* tp_print */
-    0,                                /* tp_getattr */
-    0,                                /* tp_setattr */
-    0,                                /* tp_compare */
-    0,                                /* tp_repr */
-    &treemanifest_number_methods,     /* tp_as_number */
-    &treemanifest_sequence_methods,   /* tp_as_sequence - length/contains */
-    &treemanifest_mapping_methods,    /* tp_as_mapping - getitem/setitem */
-    0,                                /* tp_hash */
-    0,                                /* tp_call */
-    0,                                /* tp_str */
-    0,                                /* tp_getattro */
-    0,                                /* tp_setattro */
-    0,                                /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,               /* tp_flags */
-    "TODO",                           /* tp_doc */
-    0,                                /* tp_traverse */
-    0,                                /* tp_clear */
-    0,                                /* tp_richcompare */
-    0,                                /* tp_weaklistoffset */
+    0, /* tp_print */
+    0, /* tp_getattr */
+    0, /* tp_setattr */
+    0, /* tp_compare */
+    0, /* tp_repr */
+    &treemanifest_number_methods, /* tp_as_number */
+    &treemanifest_sequence_methods, /* tp_as_sequence - length/contains */
+    &treemanifest_mapping_methods, /* tp_as_mapping - getitem/setitem */
+    0, /* tp_hash */
+    0, /* tp_call */
+    0, /* tp_str */
+    0, /* tp_getattro */
+    0, /* tp_setattro */
+    0, /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT, /* tp_flags */
+    "TODO", /* tp_doc */
+    0, /* tp_traverse */
+    0, /* tp_clear */
+    0, /* tp_richcompare */
+    0, /* tp_weaklistoffset */
     (getiterfunc)treemanifest_getkeysiter, /* tp_iter */
-    0,                                     /* tp_iternext */
-    treemanifest_methods,                  /* tp_methods */
-    0,                                     /* tp_members */
-    0,                                     /* tp_getset */
-    0,                                     /* tp_base */
-    0,                                     /* tp_dict */
-    0,                                     /* tp_descr_get */
-    0,                                     /* tp_descr_set */
-    0,                                     /* tp_dictoffset */
-    (initproc)treemanifest_init,           /* tp_init */
-    0,                                     /* tp_alloc */
+    0, /* tp_iternext */
+    treemanifest_methods, /* tp_methods */
+    0, /* tp_members */
+    0, /* tp_getset */
+    0, /* tp_base */
+    0, /* tp_dict */
+    0, /* tp_descr_get */
+    0, /* tp_descr_set */
+    0, /* tp_dictoffset */
+    (initproc)treemanifest_init, /* tp_init */
+    0, /* tp_alloc */
 };
 
 #endif /* FBHGEXT_CSTORE_PY_TREEMANIFEST_H */

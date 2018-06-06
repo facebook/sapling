@@ -25,13 +25,10 @@ struct Key {
   /* The byte node portion of the key. */
   char node[BIN_NODE_SIZE];
 
-  Key() : node()
-  {
-  }
+  Key() : node() {}
 
-  Key(const char *name, size_t namelen, const char *node, size_t nodelen)
-      : name(name, namelen)
-  {
+  Key(const char* name, size_t namelen, const char* node, size_t nodelen)
+      : name(name, namelen) {
     if (nodelen != BIN_NODE_SIZE) {
       throw std::logic_error("invalid node length");
     }
@@ -40,24 +37,18 @@ struct Key {
   }
 };
 
-class MissingKeyError : public std::runtime_error
-{
-public:
-  MissingKeyError(const char *what_arg) : std::runtime_error(what_arg)
-  {
-  }
+class MissingKeyError : public std::runtime_error {
+ public:
+  MissingKeyError(const char* what_arg) : std::runtime_error(what_arg) {}
 };
 
-class KeyIterator
-{
-protected:
-  KeyIterator()
-  {
-  }
+class KeyIterator {
+ protected:
+  KeyIterator() {}
 
-public:
+ public:
   virtual ~KeyIterator() = default;
-  virtual Key *next() = 0;
+  virtual Key* next() = 0;
 };
 
 #endif // FBHGEXT_CSTORE_KEY_H

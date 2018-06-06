@@ -10,6 +10,6 @@
 
 #include "hgext/extlib/cfastmanifest/tree.h"
 
-extern void update_checksums(tree_t *tree);
+extern void update_checksums(tree_t* tree);
 
 #endif /* #ifndef __FASTMANIFEST_CHECKSUM_H__ */

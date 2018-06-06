@@ -4,17 +4,21 @@
 //
 // no-check-code
 
-#include <stdio.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "bsearch.h"
 
-size_t bsearch_between(const void *needle,
-    const void *base, const size_t nel, const size_t width,
-    int (*compare)(const void *needle,
-        const void *fromarray,
-        const void *context),
-    const void *context) {
+size_t bsearch_between(
+    const void* needle,
+    const void* base,
+    const size_t nel,
+    const size_t width,
+    int (*compare)(
+        const void* needle,
+        const void* fromarray,
+        const void* context),
+    const void* context) {
   ptrdiff_t start = 0;
   ptrdiff_t end = nel;
 
@@ -25,7 +29,7 @@ size_t bsearch_between(const void *needle,
       return nel;
     }
 
-    const void *ptr = (const void *)((char*)base + (midpoint * width));
+    const void* ptr = (const void*)((char*)base + (midpoint * width));
 
     int cmp = compare(needle, ptr, context);
 

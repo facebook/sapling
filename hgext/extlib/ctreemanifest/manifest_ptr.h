@@ -11,25 +11,24 @@
 
 class Manifest;
 
-class ManifestPtr
-{
-private:
-  Manifest *manifest;
+class ManifestPtr {
+ private:
+  Manifest* manifest;
 
-public:
+ public:
   ManifestPtr();
 
-  ManifestPtr(Manifest *manifest);
+  ManifestPtr(Manifest* manifest);
 
-  ManifestPtr(const ManifestPtr &other);
+  ManifestPtr(const ManifestPtr& other);
 
   ~ManifestPtr();
 
-  ManifestPtr &operator=(const ManifestPtr &other);
+  ManifestPtr& operator=(const ManifestPtr& other);
 
-  operator Manifest *() const;
+  operator Manifest*() const;
 
-  Manifest *operator->() const;
+  Manifest* operator->() const;
 
   bool isnull() const;
 };

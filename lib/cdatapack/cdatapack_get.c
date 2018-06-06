@@ -16,7 +16,7 @@
 #include "clib/convert.h"
 #include "clib/sha1.h"
 
-#define DATAIDX_EXT  ".dataidx"
+#define DATAIDX_EXT ".dataidx"
 #define DATAPACK_EXT ".datapack"
 
 // if the platform uses XMM registers to run strlen, then we might load
@@ -24,7 +24,7 @@
 // valgrind happy, we pad the strings with extra space and initialize the areas.
 #define XMM_SZ 16
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   if (argc < 3) {
     fprintf(stderr, "%s <path> <node>\n", argv[0]);
     return 1;
@@ -36,21 +36,20 @@ int main(int argc, char *argv[]) {
   }
 
   long len = strlen(argv[1]);
-  char* idx_path = (char*) malloc(len + sizeof(DATAIDX_EXT));
-  char* data_path = (char*) malloc(len + sizeof(DATAPACK_EXT));
+  char* idx_path = (char*)malloc(len + sizeof(DATAIDX_EXT));
+  char* data_path = (char*)malloc(len + sizeof(DATAPACK_EXT));
   if (idx_path == NULL || data_path == NULL) {
-      free(idx_path);
-      free(data_path);
-      fprintf(stderr, "Failed to allocate memory for idx_path or data_path\n");
-      exit(1);
+    free(idx_path);
+    free(data_path);
+    fprintf(stderr, "Failed to allocate memory for idx_path or data_path\n");
+    exit(1);
   }
 
   sprintf(idx_path, "%s%s", argv[1], DATAIDX_EXT);
   sprintf(data_path, "%s%s", argv[1], DATAPACK_EXT);
 
-  datapack_handle_t *handle = open_datapack(
-      idx_path, strlen(idx_path),
-      data_path, strlen(data_path));
+  datapack_handle_t* handle =
+      open_datapack(idx_path, strlen(idx_path), data_path, strlen(data_path));
   free(data_path);
   free(idx_path);
   if (handle->status != DATAPACK_HANDLE_OK) {
@@ -69,14 +68,14 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  const char *last_filename = NULL;
+  const char* last_filename = NULL;
   uint16_t last_filename_sz = 0;
 
   uint8_t sha[NODE_SZ];
 
   char node_buffer[NODE_SZ * 2 + XMM_SZ];
   char deltabase_buffer[NODE_SZ * 2 + XMM_SZ];
-  char sha_buffer[NODE_SZ * 2 + + XMM_SZ];
+  char sha_buffer[NODE_SZ * 2 + +XMM_SZ];
 
   // to keep valgrind happy, we initialize the memory *beyond* what hexlify
   // will write to.  that way, when a parallelized strnlen comes along, it
@@ -85,8 +84,8 @@ int main(int argc, char *argv[]) {
   memset(&deltabase_buffer[NODE_SZ * 2], 0, XMM_SZ);
   memset(&sha_buffer[NODE_SZ * 2], 0, XMM_SZ);
 
-  for (int ix = 0; ix < chain.links_count; ix ++) {
-    delta_chain_link_t *link = &chain.delta_chain_links[ix];
+  for (int ix = 0; ix < chain.links_count; ix++) {
+    delta_chain_link_t* link = &chain.delta_chain_links[ix];
 
     fbhg_sha1_ctx_t ctx;
     fbhg_sha1_init(&ctx);
@@ -105,19 +104,18 @@ int main(int argc, char *argv[]) {
     hexlify(link->deltabase_node, NODE_SZ, deltabase_buffer);
     hexlify(sha, NODE_SZ, sha_buffer);
 
-    printf("%-*s  %-*s  %-*s  %s\n",
-        NODE_SZ * 2, "Node",
-        NODE_SZ * 2, "Delta Base",
-        NODE_SZ * 2, "Delta SHA1",
+    printf(
+        "%-*s  %-*s  %-*s  %s\n",
+        NODE_SZ * 2,
+        "Node",
+        NODE_SZ * 2,
+        "Delta Base",
+        NODE_SZ * 2,
+        "Delta SHA1",
         "Delta Length");
-    printf("%-.*s  ",
-        NODE_SZ * 2, node_buffer);
-    printf("%-.*s  ",
-        NODE_SZ * 2, deltabase_buffer);
-    printf("%-.*s  ",
-        NODE_SZ * 2, sha_buffer);
-    printf("%" PRIu64 "\n",
-        link->delta_sz);
-
+    printf("%-.*s  ", NODE_SZ * 2, node_buffer);
+    printf("%-.*s  ", NODE_SZ * 2, deltabase_buffer);
+    printf("%-.*s  ", NODE_SZ * 2, sha_buffer);
+    printf("%" PRIu64 "\n", link->delta_sz);
   }
 }

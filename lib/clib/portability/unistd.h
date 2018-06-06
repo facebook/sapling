@@ -10,14 +10,14 @@
 #define FBHGEXT_CLIB_PORTABILITY_UNISTD_H
 
 #if defined(_MSC_VER)
-	#include <io.h>
-	/* MSVC's io.h header shows deprecation
-	warnings on these without underscore */
-	#define lseek _lseek
-	#define open _open
-	#define close _close
+#include <io.h>
+/* MSVC's io.h header shows deprecation
+warnings on these without underscore */
+#define lseek _lseek
+#define open _open
+#define close _close
 #else
-	#include <unistd.h>
+#include <unistd.h>
 #endif
 
 #endif /* FBHGEXT_CLIB_PORTABILITY_UNISTD_H */

@@ -28,34 +28,30 @@ extern "C" {
 const clock_t PACK_REFRESH_RATE = 0.1 * CLOCKS_PER_SEC;
 
 class DatapackStore;
-class DatapackStoreKeyIterator : public KeyIterator
-{
-private:
-  DatapackStore &_store;
-  KeyIterator &_missing;
+class DatapackStoreKeyIterator : public KeyIterator {
+ private:
+  DatapackStore& _store;
+  KeyIterator& _missing;
 
-public:
-  DatapackStoreKeyIterator(DatapackStore &store, KeyIterator &missing)
-      : _store(store), _missing(missing)
-  {
-  }
+ public:
+  DatapackStoreKeyIterator(DatapackStore& store, KeyIterator& missing)
+      : _store(store), _missing(missing) {}
 
-  Key *next() override;
+  Key* next() override;
 };
 
 /* Manages access to a directory of datapack files. */
-class DatapackStore : public DataStore
-{
-private:
+class DatapackStore : public DataStore {
+ private:
   std::string path_;
   clock_t lastRefresh_;
   bool removeOnRefresh_;
   std::unordered_map<std::string, std::shared_ptr<datapack_handle_t>> packs_;
 
-  std::shared_ptr<datapack_handle_t> addPack(const std::string &path);
+  std::shared_ptr<datapack_handle_t> addPack(const std::string& path);
   std::vector<std::shared_ptr<datapack_handle_t>> refresh();
 
-public:
+ public:
   ~DatapackStore();
   /** Initialize the store for the specified path.
    * If removeDeadPackFilesOnRefresh is set to true (NOT the default),
@@ -68,16 +64,17 @@ public:
    * managed correctly as it cannot be enforced automatically without
    * restructing this API.
    */
-  explicit DatapackStore(const std::string &path,
-                         bool removeDeadPackFilesOnRefresh = false);
+  explicit DatapackStore(
+      const std::string& path,
+      bool removeDeadPackFilesOnRefresh = false);
 
-  DeltaChainIterator getDeltaChain(const Key &key) override;
+  DeltaChainIterator getDeltaChain(const Key& key) override;
 
-  std::shared_ptr<KeyIterator> getMissing(KeyIterator &missing) override;
+  std::shared_ptr<KeyIterator> getMissing(KeyIterator& missing) override;
 
-  std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key &key) override;
+  std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key& key) override;
 
-  bool contains(const Key &key) override;
+  bool contains(const Key& key) override;
 
   void markForRefresh() override;
 };

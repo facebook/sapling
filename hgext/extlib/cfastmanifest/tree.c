@@ -13,12 +13,12 @@
 #include "tree_arena.h"
 #include "tree_path.h"
 
-bool valid_path(const char *path, const size_t path_sz) {
+bool valid_path(const char* path, const size_t path_sz) {
   if (path_sz > 0 && (path[0] == '/' || path[path_sz] == '/')) {
     return false;
   }
 
-  size_t last_slash = (size_t) -1;
+  size_t last_slash = (size_t)-1;
   for (size_t off = 0; off < path_sz; off++) {
     if (path[off] == '/') {
       if (last_slash == off - 1) {
@@ -56,15 +56,13 @@ bool valid_path(const char *path, const size_t path_sz) {
 }
 */
 
-tree_t *alloc_tree() {
+tree_t* alloc_tree() {
   // do all the memory allocations.
-  node_t *shadow_root = alloc_node("/", 1, 1);
-  node_t *real_root = alloc_node("/", 1, 0);
-  tree_t *tree = (tree_t *) calloc(1, sizeof(tree_t));
+  node_t* shadow_root = alloc_node("/", 1, 1);
+  node_t* real_root = alloc_node("/", 1, 0);
+  tree_t* tree = (tree_t*)calloc(1, sizeof(tree_t));
 
-  if (shadow_root == NULL ||
-      real_root == NULL ||
-      tree == NULL) {
+  if (shadow_root == NULL || real_root == NULL || tree == NULL) {
     goto fail;
   }
 
@@ -94,7 +92,7 @@ fail:
   return NULL;
 }
 
-static void destroy_tree_helper(tree_t *tree, node_t *node) {
+static void destroy_tree_helper(tree_t* tree, node_t* node) {
   for (int ix = 0; ix < node->num_children; ix++) {
     destroy_tree_helper(tree, get_child_by_index(node, ix));
   }
@@ -104,7 +102,7 @@ static void destroy_tree_helper(tree_t *tree, node_t *node) {
   }
 }
 
-void destroy_tree(tree_t *tree) {
+void destroy_tree(tree_t* tree) {
   if (tree == NULL) {
     return;
   }
@@ -119,55 +117,53 @@ void destroy_tree(tree_t *tree) {
 }
 
 typedef struct _get_path_metadata_t {
-  const node_t *node;
+  const node_t* node;
 } get_path_metadata_t;
 
 find_path_callback_result_t get_path_callback(
-    tree_t *tree,
-    node_t *const root_parent,
-    node_t *root,
-    const char *name, const size_t name_sz,
-    tree_state_changes_t *changes,
-    void *context) {
-  get_path_metadata_t *metadata =
-      (get_path_metadata_t *) context;
+    tree_t* tree,
+    node_t* const root_parent,
+    node_t* root,
+    const char* name,
+    const size_t name_sz,
+    tree_state_changes_t* changes,
+    void* context) {
+  get_path_metadata_t* metadata = (get_path_metadata_t*)context;
 
   // does the path already exist?
-  node_t *child = get_child_by_name(root, name, name_sz);
+  node_t* child = get_child_by_name(root, name, name_sz);
   if (child == NULL || child->type != TYPE_LEAF) {
-    return COMPOUND_LITERAL(find_path_callback_result_t) {
-        FIND_PATH_NOT_FOUND, root};
+    return COMPOUND_LITERAL(find_path_callback_result_t){FIND_PATH_NOT_FOUND,
+                                                         root};
   }
 
   metadata->node = child;
 
-  return COMPOUND_LITERAL(find_path_callback_result_t) {FIND_PATH_OK, root};
+  return COMPOUND_LITERAL(find_path_callback_result_t){FIND_PATH_OK, root};
 }
 
-get_path_result_t get_path(
-    tree_t *tree,
-    const char *path,
-    const size_t path_sz) {
+get_path_result_t
+get_path(tree_t* tree, const char* path, const size_t path_sz) {
   tree_state_changes_t changes = {0};
   get_path_metadata_t metadata;
 
-  node_t *shadow_root = tree->shadow_root;
-  node_t *real_root = get_child_by_index(shadow_root, 0);
+  node_t* shadow_root = tree->shadow_root;
+  node_t* real_root = get_child_by_index(shadow_root, 0);
 
   if (real_root == NULL) {
-    return COMPOUND_LITERAL(get_path_result_t) {GET_PATH_WTF, NULL};
+    return COMPOUND_LITERAL(get_path_result_t){GET_PATH_WTF, NULL};
   }
 
-  find_path_result_t result =
-      find_path(
-          tree,
-          shadow_root,
-          real_root,
-          path, path_sz,
-          BASIC_WALK,
-          &changes,
-          get_path_callback,
-          &metadata);
+  find_path_result_t result = find_path(
+      tree,
+      shadow_root,
+      real_root,
+      path,
+      path_sz,
+      BASIC_WALK,
+      &changes,
+      get_path_callback,
+      &metadata);
 
   assert(changes.size_change == 0);
   assert(changes.num_leaf_node_change == 0);
@@ -175,56 +171,55 @@ get_path_result_t get_path(
 
   switch (result) {
     case FIND_PATH_OK:
-      return COMPOUND_LITERAL(get_path_result_t) {
-          GET_PATH_OK,
-          metadata.node->checksum,
-          metadata.node->checksum_sz,
-          metadata.node->flags
-      };
+      return COMPOUND_LITERAL(get_path_result_t){GET_PATH_OK,
+                                                 metadata.node->checksum,
+                                                 metadata.node->checksum_sz,
+                                                 metadata.node->flags};
     case FIND_PATH_NOT_FOUND:
     case FIND_PATH_CONFLICT:
       // `FIND_PATH_CONFLICT` is returned if there is a leaf node where we
       // expect a directory node.  this is treated the same as a NOT_FOUND.
-      return COMPOUND_LITERAL(get_path_result_t) {GET_PATH_NOT_FOUND, NULL};
+      return COMPOUND_LITERAL(get_path_result_t){GET_PATH_NOT_FOUND, NULL};
     default:
-      return COMPOUND_LITERAL(get_path_result_t) {GET_PATH_WTF, NULL};
+      return COMPOUND_LITERAL(get_path_result_t){GET_PATH_WTF, NULL};
   }
 }
 
 typedef struct _add_or_update_path_metadata_t {
-  const uint8_t *checksum;
+  const uint8_t* checksum;
   const uint8_t checksum_sz;
   const uint8_t flags;
 } add_or_update_path_metadata_t;
 
 find_path_callback_result_t add_or_update_path_callback(
-    tree_t *tree,
-    node_t *const root_parent,
-    node_t *root,
-    const char *name, const size_t name_sz,
-    tree_state_changes_t *changes,
-    void *context) {
-  add_or_update_path_metadata_t *metadata =
-      (add_or_update_path_metadata_t *) context;
+    tree_t* tree,
+    node_t* const root_parent,
+    node_t* root,
+    const char* name,
+    const size_t name_sz,
+    tree_state_changes_t* changes,
+    void* context) {
+  add_or_update_path_metadata_t* metadata =
+      (add_or_update_path_metadata_t*)context;
 
   // does the path already exist?
-  node_t *child = get_child_by_name(root, name, name_sz);
+  node_t* child = get_child_by_name(root, name, name_sz);
   if (child == NULL) {
-    tree_add_child_result_t tree_add_child_result =
-        tree_add_child(
-            tree,
-            root_parent,
-            root,
-            name, name_sz,
-            0, // leaf nodes don't have children.
-            changes);
+    tree_add_child_result_t tree_add_child_result = tree_add_child(
+        tree,
+        root_parent,
+        root,
+        name,
+        name_sz,
+        0, // leaf nodes don't have children.
+        changes);
     switch (tree_add_child_result.code) {
       case TREE_ADD_CHILD_OOM:
-        return COMPOUND_LITERAL(find_path_callback_result_t) {
-            FIND_PATH_OOM, NULL};
+        return COMPOUND_LITERAL(find_path_callback_result_t){FIND_PATH_OOM,
+                                                             NULL};
       case TREE_ADD_CHILD_WTF:
-        return COMPOUND_LITERAL(find_path_callback_result_t) {
-            FIND_PATH_WTF, NULL};
+        return COMPOUND_LITERAL(find_path_callback_result_t){FIND_PATH_WTF,
+                                                             NULL};
       case TREE_ADD_CHILD_OK:
         break;
     }
@@ -239,15 +234,14 @@ find_path_callback_result_t add_or_update_path_callback(
   } else {
     if (child->type == TYPE_IMPLICIT) {
       // was previously a directory
-      return COMPOUND_LITERAL(find_path_callback_result_t) {
-          FIND_PATH_CONFLICT, NULL};
+      return COMPOUND_LITERAL(find_path_callback_result_t){FIND_PATH_CONFLICT,
+                                                           NULL};
     }
   }
 
   // update the node.
   if (metadata->checksum_sz > CHECKSUM_BYTES) {
-    return COMPOUND_LITERAL(find_path_callback_result_t) {
-        FIND_PATH_WTF, NULL};
+    return COMPOUND_LITERAL(find_path_callback_result_t){FIND_PATH_WTF, NULL};
   }
 
   memcpy(child->checksum, metadata->checksum, metadata->checksum_sz);
@@ -257,14 +251,14 @@ find_path_callback_result_t add_or_update_path_callback(
 
   changes->checksum_dirty = true;
 
-  return COMPOUND_LITERAL(find_path_callback_result_t) {FIND_PATH_OK, root};
+  return COMPOUND_LITERAL(find_path_callback_result_t){FIND_PATH_OK, root};
 }
 
 add_update_path_result_t add_or_update_path(
-    tree_t *tree,
-    const char *path,
+    tree_t* tree,
+    const char* path,
     const size_t path_sz,
-    const uint8_t *checksum,
+    const uint8_t* checksum,
     const uint8_t checksum_sz,
     const uint8_t flags) {
   tree_state_changes_t changes = {0};
@@ -274,23 +268,23 @@ add_update_path_result_t add_or_update_path(
       flags,
   };
 
-  node_t *shadow_root = tree->shadow_root;
-  node_t *real_root = get_child_by_index(shadow_root, 0);
+  node_t* shadow_root = tree->shadow_root;
+  node_t* real_root = get_child_by_index(shadow_root, 0);
 
   if (real_root == NULL) {
     return ADD_UPDATE_PATH_WTF;
   }
 
-  find_path_result_t result =
-      find_path(
-          tree,
-          shadow_root,
-          real_root,
-          path, path_sz,
-          CREATE_IF_MISSING,
-          &changes,
-          add_or_update_path_callback,
-          &metadata);
+  find_path_result_t result = find_path(
+      tree,
+      shadow_root,
+      real_root,
+      path,
+      path_sz,
+      CREATE_IF_MISSING,
+      &changes,
+      add_or_update_path_callback,
+      &metadata);
 
   // apply the changes back to the tree struct
   tree->consumed_memory += changes.size_change;
@@ -312,19 +306,20 @@ add_update_path_result_t add_or_update_path(
 }
 
 find_path_callback_result_t remove_path_callback(
-    tree_t *tree,
-    node_t *const root_parent,
-    node_t *root,
-    const char *name, const size_t name_sz,
-    tree_state_changes_t *changes,
-    void *context) {
+    tree_t* tree,
+    node_t* const root_parent,
+    node_t* root,
+    const char* name,
+    const size_t name_sz,
+    tree_state_changes_t* changes,
+    void* context) {
   // does the path already exist?
   node_search_children_result_t search_result =
       search_children(root, name, name_sz);
 
   if (search_result.child == NULL) {
-    return COMPOUND_LITERAL(find_path_callback_result_t) {
-        FIND_PATH_NOT_FOUND, NULL};
+    return COMPOUND_LITERAL(find_path_callback_result_t){FIND_PATH_NOT_FOUND,
+                                                         NULL};
   }
 
   // record the metadata changes.
@@ -336,35 +331,33 @@ find_path_callback_result_t remove_path_callback(
       remove_child(root, search_result.child_num);
 
   if (remove_result == REMOVE_CHILD_OK) {
-    return COMPOUND_LITERAL(find_path_callback_result_t) {FIND_PATH_OK, root};
+    return COMPOUND_LITERAL(find_path_callback_result_t){FIND_PATH_OK, root};
   } else {
-    return COMPOUND_LITERAL(find_path_callback_result_t) {FIND_PATH_WTF, root};
+    return COMPOUND_LITERAL(find_path_callback_result_t){FIND_PATH_WTF, root};
   }
 }
 
-remove_path_result_t remove_path(
-    tree_t *tree,
-    const char *path,
-    const size_t path_sz) {
+remove_path_result_t
+remove_path(tree_t* tree, const char* path, const size_t path_sz) {
   tree_state_changes_t changes = {0};
 
-  node_t *shadow_root = tree->shadow_root;
-  node_t *real_root = get_child_by_index(shadow_root, 0);
+  node_t* shadow_root = tree->shadow_root;
+  node_t* real_root = get_child_by_index(shadow_root, 0);
 
   if (real_root == NULL) {
     return REMOVE_PATH_WTF;
   }
 
-  find_path_result_t result =
-      find_path(
-          tree,
-          shadow_root,
-          real_root,
-          path, path_sz,
-          REMOVE_EMPTY_IMPLICIT_NODES,
-          &changes,
-          remove_path_callback,
-          NULL);
+  find_path_result_t result = find_path(
+      tree,
+      shadow_root,
+      real_root,
+      path,
+      path_sz,
+      REMOVE_EMPTY_IMPLICIT_NODES,
+      &changes,
+      remove_path_callback,
+      NULL);
 
   // apply the changes back to the tree struct
   tree->consumed_memory += changes.size_change;
@@ -383,30 +376,27 @@ remove_path_result_t remove_path(
   }
 }
 
-bool contains_path(
-    tree_t *tree,
-    const char *path,
-    const size_t path_sz) {
+bool contains_path(tree_t* tree, const char* path, const size_t path_sz) {
   tree_state_changes_t changes = {0};
   get_path_metadata_t metadata;
 
-  node_t *shadow_root = tree->shadow_root;
-  node_t *real_root = get_child_by_index(shadow_root, 0);
+  node_t* shadow_root = tree->shadow_root;
+  node_t* real_root = get_child_by_index(shadow_root, 0);
 
   if (real_root == NULL) {
     return false;
   }
 
-  find_path_result_t result =
-      find_path(
-          (tree_t *) tree,
-          shadow_root,
-          real_root,
-          path, path_sz,
-          BASIC_WALK,
-          &changes,
-          get_path_callback,
-          &metadata);
+  find_path_result_t result = find_path(
+      (tree_t*)tree,
+      shadow_root,
+      real_root,
+      path,
+      path_sz,
+      BASIC_WALK,
+      &changes,
+      get_path_callback,
+      &metadata);
 
   assert(changes.size_change == 0);
   assert(changes.num_leaf_node_change == 0);

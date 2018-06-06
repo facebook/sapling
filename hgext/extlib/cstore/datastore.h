@@ -15,25 +15,20 @@
 #include "hgext/extlib/cstore/deltachain.h"
 #include "hgext/extlib/cstore/key.h"
 
-class DataStore
-{
-protected:
-  DataStore()
-  {
-  }
+class DataStore {
+ protected:
+  DataStore() {}
 
-public:
-  virtual ~DataStore()
-  {
-  }
+ public:
+  virtual ~DataStore() {}
 
-  virtual DeltaChainIterator getDeltaChain(const Key &key) = 0;
+  virtual DeltaChainIterator getDeltaChain(const Key& key) = 0;
 
-  virtual std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key &key) = 0;
+  virtual std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key& key) = 0;
 
-  virtual std::shared_ptr<KeyIterator> getMissing(KeyIterator &missing) = 0;
+  virtual std::shared_ptr<KeyIterator> getMissing(KeyIterator& missing) = 0;
 
-  virtual bool contains(const Key &key) = 0;
+  virtual bool contains(const Key& key) = 0;
 
   virtual void markForRefresh() = 0;
 };

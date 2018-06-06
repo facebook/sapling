@@ -22,9 +22,8 @@ static PyMethodDef mod_methods[] = {{NULL, NULL}};
 static char mod_description[] =
     "Module containing a native store implementation";
 
-PyMODINIT_FUNC initcstore(void)
-{
-  PyObject *mod;
+PyMODINIT_FUNC initcstore(void) {
+  PyObject* mod;
 
   mod = Py_InitModule3("cstore", mod_methods, mod_description);
 
@@ -34,7 +33,7 @@ PyMODINIT_FUNC initcstore(void)
     return;
   }
   Py_INCREF(&cdatapack_type);
-  PyModule_AddObject(mod, "datapack", (PyObject *)&cdatapack_type);
+  PyModule_AddObject(mod, "datapack", (PyObject*)&cdatapack_type);
 
   // Init treemanifest
   treemanifestType.tp_new = PyType_GenericNew;
@@ -42,7 +41,7 @@ PyMODINIT_FUNC initcstore(void)
     return;
   }
   Py_INCREF(&treemanifestType);
-  PyModule_AddObject(mod, "treemanifest", (PyObject *)&treemanifestType);
+  PyModule_AddObject(mod, "treemanifest", (PyObject*)&treemanifestType);
 
   // Init datapackstore
   datapackstoreType.tp_new = PyType_GenericNew;
@@ -50,7 +49,7 @@ PyMODINIT_FUNC initcstore(void)
     return;
   }
   Py_INCREF(&datapackstoreType);
-  PyModule_AddObject(mod, "datapackstore", (PyObject *)&datapackstoreType);
+  PyModule_AddObject(mod, "datapackstore", (PyObject*)&datapackstoreType);
 
   // Init datapackstore
   uniondatapackstoreType.tp_new = PyType_GenericNew;
@@ -58,6 +57,6 @@ PyMODINIT_FUNC initcstore(void)
     return;
   }
   Py_INCREF(&uniondatapackstoreType);
-  PyModule_AddObject(mod, "uniondatapackstore",
-                     (PyObject *)&uniondatapackstoreType);
+  PyModule_AddObject(
+      mod, "uniondatapackstore", (PyObject*)&uniondatapackstoreType);
 }

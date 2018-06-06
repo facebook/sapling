@@ -17,53 +17,53 @@
 extern char linelog_assert_sizet_[1 / (sizeof(size_t) >= 4)];
 
 typedef uint32_t linelog_linenum; /* line number, starting from 0 */
-typedef uint32_t linelog_revnum;  /* rev x is the only parent of rev x + 1 */
-typedef uint32_t linelog_offset;  /* index of linelog_buf.data */
+typedef uint32_t linelog_revnum; /* rev x is the only parent of rev x + 1 */
+typedef uint32_t linelog_offset; /* index of linelog_buf.data */
 
 typedef int linelog_result; /* return value of some apis */
 
-#define LINELOG_RESULT_OK (0)           /* success */
-#define LINELOG_RESULT_ENOMEM (-1)      /* failed to malloc or realloc */
-#define LINELOG_RESULT_EILLDATA (-2)    /* illegal data, unexpected values */
-#define LINELOG_RESULT_EOVERFLOW (-3)   /* hard limit exceeded */
+#define LINELOG_RESULT_OK (0) /* success */
+#define LINELOG_RESULT_ENOMEM (-1) /* failed to malloc or realloc */
+#define LINELOG_RESULT_EILLDATA (-2) /* illegal data, unexpected values */
+#define LINELOG_RESULT_EOVERFLOW (-3) /* hard limit exceeded */
 #define LINELOG_RESULT_ENEEDRESIZE (-4) /* buf.size should >= neededsize */
 
 /* main storage (memory buffer) for linelog data, allocated by caller
    same on-disk and in-memory format, endianness-insensitive.
    designed to be used with mmap for efficient updates. */
 typedef struct {
-	uint8_t *data;     /* mmap-friendly, set by caller */
-	size_t size;       /* bytes, set by caller */
-	size_t neededsize; /* set by callee on ENEEDRESIZE */
+  uint8_t* data; /* mmap-friendly, set by caller */
+  size_t size; /* bytes, set by caller */
+  size_t neededsize; /* set by callee on ENEEDRESIZE */
 } linelog_buf;
 
 /* an annotated line */
 typedef struct {
-	linelog_revnum rev;      /* revision number at the first appearance */
-	linelog_linenum linenum; /* line number at the first appearance */
-	linelog_offset offset;   /* index of linelog_buf.data */
+  linelog_revnum rev; /* revision number at the first appearance */
+  linelog_linenum linenum; /* line number at the first appearance */
+  linelog_offset offset; /* index of linelog_buf.data */
 } linelog_lineinfo;
 
 /* annotate result, an dynamic array of linelog_lineinfo, allocated by callee
    memset to 0 before use, call linelog_annotateresult_clear to free memory */
 typedef struct {
-	linelog_lineinfo *lines;
-	linelog_linenum linecount;
-	linelog_linenum maxlinecount;
+  linelog_lineinfo* lines;
+  linelog_linenum linecount;
+  linelog_linenum maxlinecount;
 } linelog_annotateresult;
 
 /* free memory used by ar, useful to reset ar from an invalid state */
-void linelog_annotateresult_clear(linelog_annotateresult *ar);
+void linelog_annotateresult_clear(linelog_annotateresult* ar);
 
 /* (re-)initialize the buffer, make it represent an empty file */
-linelog_result linelog_clear(linelog_buf *buf);
+linelog_result linelog_clear(linelog_buf* buf);
 
 /* get the actual size needed for buf->data */
-size_t linelog_getactualsize(const linelog_buf *buf);
+size_t linelog_getactualsize(const linelog_buf* buf);
 
 /* get the max revision number covered by this linelog
    return 0 if buf is not initialized (by linelog_clear). */
-linelog_revnum linelog_getmaxrev(const linelog_buf *buf);
+linelog_revnum linelog_getmaxrev(const linelog_buf* buf);
 
 /* note: some notations are from Python:
    - range(p, q) means from p (inclusive) to q (exclusive), p <= q
@@ -76,8 +76,10 @@ linelog_revnum linelog_getmaxrev(const linelog_buf *buf);
      ar->lines[i].linenum is the corresponding line number at ar->lines[i].rev
 
    on error, ar may be in an invalid state and needs to be cleared */
-linelog_result linelog_annotate(const linelog_buf *buf,
-                                linelog_annotateresult *ar, linelog_revnum rev);
+linelog_result linelog_annotate(
+    const linelog_buf* buf,
+    linelog_annotateresult* ar,
+    linelog_revnum rev);
 
 /* update buf and ar, replace existing lines[a1:a2] with lines[b1:b2] in brev
 
@@ -100,11 +102,14 @@ linelog_result linelog_annotate(const linelog_buf *buf,
    the corresponding ar, obtained by calling linelog_annotate(brev).
 
    on error, ar may be in an invalid state and needs to be cleared */
-linelog_result linelog_replacelines(linelog_buf *buf,
-                                    linelog_annotateresult *ar,
-                                    linelog_revnum brev, linelog_linenum a1,
-                                    linelog_linenum a2, linelog_linenum b1,
-                                    linelog_linenum b2);
+linelog_result linelog_replacelines(
+    linelog_buf* buf,
+    linelog_annotateresult* ar,
+    linelog_revnum brev,
+    linelog_linenum a1,
+    linelog_linenum a2,
+    linelog_linenum b1,
+    linelog_linenum b2);
 
 /* like linelog_replacelines, but control details about lines being inserted
 
@@ -139,9 +144,14 @@ linelog_result linelog_replacelines(linelog_buf *buf,
    linelog_annotate(rev=3) works as if rev 2 is stored. be aware that
    linelog_annotate(rev=2) will be the same as linelog_annotate(rev=1). */
 linelog_result linelog_replacelines_vec(
-    linelog_buf *buf, linelog_annotateresult *ar, linelog_revnum brev,
-    linelog_linenum a1, linelog_linenum a2, linelog_linenum blinecount,
-    const linelog_revnum *brevs, const linelog_linenum *blinenums);
+    linelog_buf* buf,
+    linelog_annotateresult* ar,
+    linelog_revnum brev,
+    linelog_linenum a1,
+    linelog_linenum a2,
+    linelog_linenum blinecount,
+    const linelog_revnum* brevs,
+    const linelog_linenum* blinenums);
 
 /* get all lines, include deleted ones, output to ar
 
@@ -150,8 +160,10 @@ linelog_result linelog_replacelines_vec(
 
    internally, this is a traversal from offset1 (inclusive) to offset2
    (exclusive) and conditional jumps are ignored. */
-linelog_result linelog_getalllines(linelog_buf *buf, linelog_annotateresult *ar,
-                                   linelog_offset offset1,
-                                   linelog_offset offset2);
+linelog_result linelog_getalllines(
+    linelog_buf* buf,
+    linelog_annotateresult* ar,
+    linelog_offset offset1,
+    linelog_offset offset2);
 
 #endif /* end of include guard: LINELOG_H_ZUJREV4L */

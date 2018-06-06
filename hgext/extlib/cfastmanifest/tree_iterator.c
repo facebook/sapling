@@ -12,13 +12,13 @@
 #include "path_buffer.h"
 #include "tree_iterator.h"
 
-#define DEFAULT_PATH_RECORDS_SZ      1024
+#define DEFAULT_PATH_RECORDS_SZ 1024
 
-iterator_t *create_iterator(const tree_t *tree, bool construct_paths) {
-  iterator_t *result = malloc(sizeof(iterator_t));
-  path_record_t *path_records = malloc(sizeof(path_record_t) *
-                                       DEFAULT_PATH_RECORDS_SZ);
-  char *path = malloc(DEFAULT_PATH_BUFFER_SZ);
+iterator_t* create_iterator(const tree_t* tree, bool construct_paths) {
+  iterator_t* result = malloc(sizeof(iterator_t));
+  path_record_t* path_records =
+      malloc(sizeof(path_record_t) * DEFAULT_PATH_RECORDS_SZ);
+  char* path = malloc(DEFAULT_PATH_BUFFER_SZ);
 
   if (result == NULL || path_records == NULL || path == NULL ||
       (result->copy = copy_tree(tree)) == NULL) {
@@ -58,7 +58,7 @@ typedef enum {
   ITERATOR_ERROR,
 } iterator_progress_t;
 
-static iterator_progress_t iterator_find_next(iterator_t *iterator) {
+static iterator_progress_t iterator_find_next(iterator_t* iterator) {
   if (iterator->path_records_idx == DEFAULT_PATH_RECORDS_SZ) {
     // we've traversed too deep.
     abort();
@@ -68,25 +68,23 @@ static iterator_progress_t iterator_find_next(iterator_t *iterator) {
     size_t read_idx = iterator->path_records_idx - 1;
 
     if (iterator->path_records[read_idx].child_idx <
-            iterator->path_records[read_idx].node->num_children) {
+        iterator->path_records[read_idx].node->num_children) {
       if (!VERIFY_CHILD_NUM(iterator->path_records[read_idx].child_idx)) {
         return ITERATOR_ERROR;
       }
 
-      node_t *candidate = get_child_by_index(
+      node_t* candidate = get_child_by_index(
           iterator->path_records[read_idx].node,
-          (child_num_t) iterator->path_records[read_idx].child_idx
-      );
+          (child_num_t)iterator->path_records[read_idx].child_idx);
 
-      if (iterator->construct_paths &&
-          candidate->type != TYPE_ROOT) {
+      if (iterator->construct_paths && candidate->type != TYPE_ROOT) {
         // if it's not a root node, we need to slap on the name.
         if (PATH_APPEND(
-            &iterator->path,
-            &iterator->path_idx,
-            &iterator->path_sz,
-            candidate->name,
-            candidate->name_sz) == false) {
+                &iterator->path,
+                &iterator->path_idx,
+                &iterator->path_sz,
+                candidate->name,
+                candidate->name_sz) == false) {
           return ITERATOR_OOM;
         }
       }
@@ -126,12 +124,12 @@ static iterator_progress_t iterator_find_next(iterator_t *iterator) {
   return ITERATOR_NOT_FOUND;
 }
 
-iterator_result_t iterator_next(iterator_t *iterator) {
+iterator_result_t iterator_next(iterator_t* iterator) {
   // special case: if we haven't started iterating yet, then there will be no
   // path records.
   if (iterator->path_records_idx == 0) {
     // search for the first leaf node.
-    const node_t *search_start =
+    const node_t* search_start =
         get_child_by_index(iterator->copy->shadow_root, 0);
 
     // record the progress into the iterator struct
@@ -146,8 +144,7 @@ iterator_result_t iterator_next(iterator_t *iterator) {
     iterator->path_records[read_idx].child_idx++;
 
     // truncate the path up to the last directory.
-    iterator->path_idx = iterator->
-        path_records[read_idx].previous_path_idx;
+    iterator->path_idx = iterator->path_records[read_idx].previous_path_idx;
   }
 
   iterator_progress_t progress = iterator_find_next(iterator);
@@ -156,12 +153,12 @@ iterator_result_t iterator_next(iterator_t *iterator) {
   if (progress == ITERATOR_FOUND) {
     size_t read_idx = iterator->path_records_idx - 1;
 
-    path_record_t *record = &iterator->path_records[read_idx];
+    path_record_t* record = &iterator->path_records[read_idx];
     if (!VERIFY_CHILD_NUM(record->child_idx)) {
       abort();
     }
-    node_t *child = get_child_by_index(
-        record->node, (child_num_t) record->child_idx);
+    node_t* child =
+        get_child_by_index(record->node, (child_num_t)record->child_idx);
 
     result.valid = true;
     if (iterator->construct_paths) {
@@ -193,7 +190,7 @@ iterator_result_t iterator_next(iterator_t *iterator) {
   return result;
 }
 
-void destroy_iterator(iterator_t *iterator) {
+void destroy_iterator(iterator_t* iterator) {
   destroy_tree(iterator->copy);
   free(iterator->path_records);
   free(iterator->path);

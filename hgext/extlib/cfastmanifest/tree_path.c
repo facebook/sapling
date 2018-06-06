@@ -19,7 +19,7 @@
  * first_component('abc/def') => 'abc/'
  * first_component('abc') => ''
  */
-static size_t first_component(const char *path, size_t path_sz) {
+static size_t first_component(const char* path, size_t path_sz) {
   for (size_t off = 0; off < path_sz; off++) {
     if (path[off] == '/') {
       return off + 1;
@@ -30,7 +30,7 @@ static size_t first_component(const char *path, size_t path_sz) {
 }
 
 /**
- * Adds a child to `root`.  Because `root` may need to be resized to accomodate
+ * Adds a child to `root`.  Because `root` may need to be resized to accommodate
  * the new child, we need the *parent* of `root`.  On success (`result.code` ==
  * TREE_ADD_CHILD_OK), `result.newchild` will be set to the new node created.
  * Because the root may also have been moved, `result.newroot` will be set to
@@ -40,17 +40,17 @@ static size_t first_component(const char *path, size_t path_sz) {
  * accounting structure.
  */
 tree_add_child_result_t tree_add_child(
-    tree_t *tree,
-    node_t *const root_parent,
-    node_t *root,
-    const char *name, const size_t name_sz,
+    tree_t* tree,
+    node_t* const root_parent,
+    node_t* root,
+    const char* name,
+    const size_t name_sz,
     size_t num_children_hint,
-    tree_state_changes_t *changes) {
+    tree_state_changes_t* changes) {
   tree_add_child_result_t result;
 
-  if (!VERIFY_CHILD_NUM(num_children_hint) ||
-      !VERIFY_NAME_SZ(name_sz)) {
-    return COMPOUND_LITERAL(tree_add_child_result_t) {
+  if (!VERIFY_CHILD_NUM(num_children_hint) || !VERIFY_NAME_SZ(name_sz)) {
+    return COMPOUND_LITERAL(tree_add_child_result_t){
         TREE_ADD_CHILD_WTF, NULL, NULL};
   }
 
@@ -62,10 +62,10 @@ tree_add_child_result_t tree_add_child(
   // this is a potential optimization opportunity.  we could theoretically try
   // to allocate the new node in the arena and maintain compacted state of the
   // tree.
-  node_t *node = alloc_node(name, (name_sz_t) name_sz,
-      (child_num_t) num_children_hint);
+  node_t* node =
+      alloc_node(name, (name_sz_t)name_sz, (child_num_t)num_children_hint);
   if (node == NULL) {
-    return COMPOUND_LITERAL(tree_add_child_result_t) {
+    return COMPOUND_LITERAL(tree_add_child_result_t){
         TREE_ADD_CHILD_OOM, NULL, NULL};
   }
 
@@ -86,17 +86,17 @@ tree_add_child_result_t tree_add_child(
     // children, and a binary search for nodes with a lot of children.
     uint32_t index = get_child_index(root_parent, root);
     if (index == UINT32_MAX) {
-      return COMPOUND_LITERAL(tree_add_child_result_t) {
+      return COMPOUND_LITERAL(tree_add_child_result_t){
           TREE_ADD_CHILD_WTF, NULL, NULL};
     }
     node_enlarge_child_capacity_result_t enlarge_result =
         enlarge_child_capacity(root_parent, index);
 
     if (enlarge_result.code == ENLARGE_OOM) {
-      return COMPOUND_LITERAL(tree_add_child_result_t) {
+      return COMPOUND_LITERAL(tree_add_child_result_t){
           TREE_ADD_CHILD_OOM, NULL, NULL};
     } else if (enlarge_result.code != ENLARGE_OK) {
-      return COMPOUND_LITERAL(tree_add_child_result_t) {
+      return COMPOUND_LITERAL(tree_add_child_result_t){
           TREE_ADD_CHILD_WTF, NULL, NULL};
     }
 
@@ -114,11 +114,11 @@ tree_add_child_result_t tree_add_child(
     // add the child again.
     add_child_result = add_child(root, node);
     if (add_child_result != ADD_CHILD_OK) {
-      return COMPOUND_LITERAL(tree_add_child_result_t) {
+      return COMPOUND_LITERAL(tree_add_child_result_t){
           TREE_ADD_CHILD_WTF, NULL, NULL};
     }
   } else if (add_child_result != ADD_CHILD_OK) {
-    return COMPOUND_LITERAL(tree_add_child_result_t) {
+    return COMPOUND_LITERAL(tree_add_child_result_t){
         TREE_ADD_CHILD_WTF, NULL, NULL};
   }
 
@@ -141,47 +141,49 @@ tree_add_child_result_t tree_add_child(
  * internally, the caller is responsible for ensuring it.
  */
 find_path_result_t find_path(
-    tree_t *tree,
-    node_t *const root_parent,
-    node_t *root,
-    const char *path, const size_t path_sz,
+    tree_t* tree,
+    node_t* const root_parent,
+    node_t* root,
+    const char* path,
+    const size_t path_sz,
     find_path_operation_type operation_type,
-    tree_state_changes_t *changes,
+    tree_state_changes_t* changes,
     find_path_callback_result_t (*callback)(
-        tree_t *tree,
-        node_t *const dir_parent,
-        node_t *dir,
-        const char *path, const size_t path_sz,
-        tree_state_changes_t *changes,
-        void *context),
-    void *context) {
+        tree_t* tree,
+        node_t* const dir_parent,
+        node_t* dir,
+        const char* path,
+        const size_t path_sz,
+        tree_state_changes_t* changes,
+        void* context),
+    void* context) {
   size_t first_component_sz = first_component(path, path_sz);
   find_path_result_t result;
   if (first_component_sz == 0 ||
       (operation_type == BASIC_WALK_ALLOW_IMPLICIT_NODES &&
        first_component_sz == path_sz)) {
     // found it!  apply the magic function.
-    find_path_callback_result_t callback_result = callback(tree,
-        root_parent, root,
-        path, path_sz,
-        changes,
-        context);
+    find_path_callback_result_t callback_result =
+        callback(tree, root_parent, root, path, path_sz, changes, context);
 
     result = callback_result.code;
     root = callback_result.newroot;
   } else {
     // resolve the first component.
-    node_t *child = get_child_by_name(root, path, first_component_sz);
+    node_t* child = get_child_by_name(root, path, first_component_sz);
     if (child == NULL) {
       if (operation_type == CREATE_IF_MISSING) {
         // create the new child.
-        tree_add_child_result_t tree_add_child_result =
-            tree_add_child(
-                tree, root_parent, root, path, first_component_sz,
-                // since we're creating the intermediate nodes that lead to a
-                // leaf node, we'll have at least one child.
-                1,
-                changes);
+        tree_add_child_result_t tree_add_child_result = tree_add_child(
+            tree,
+            root_parent,
+            root,
+            path,
+            first_component_sz,
+            // since we're creating the intermediate nodes that lead to a
+            // leaf node, we'll have at least one child.
+            1,
+            changes);
         switch (tree_add_child_result.code) {
           case TREE_ADD_CHILD_OOM:
             return FIND_PATH_OOM;
@@ -227,13 +229,12 @@ find_path_result_t find_path(
     }
 
     if (operation_type == REMOVE_EMPTY_IMPLICIT_NODES &&
-        root->type == TYPE_IMPLICIT &&
-        root->num_children == 0) {
+        root->type == TYPE_IMPLICIT && root->num_children == 0) {
       // update metadata before we free the node.
       changes->size_change -= root->block_sz;
 
-      node_remove_child_result_t remove_result = remove_child(
-          root_parent, get_child_index(root_parent, root));
+      node_remove_child_result_t remove_result =
+          remove_child(root_parent, get_child_index(root_parent, root));
 
       if (remove_result != REMOVE_CHILD_OK) {
         result = FIND_PATH_WTF;
@@ -247,4 +248,3 @@ find_path_result_t find_path(
 
   return result;
 }
-

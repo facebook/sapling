@@ -9,7 +9,7 @@
 #include "lib/clib/sha1.h"
 #include "node.h"
 
-static void update_checksum(node_t *node) {
+static void update_checksum(node_t* node) {
   fbhg_sha1_ctx_t ctx;
   fbhg_sha1_init(&ctx);
 
@@ -30,6 +30,6 @@ static void update_checksum(node_t *node) {
   node->checksum_valid = true;
 }
 
-void update_checksums(tree_t *tree) {
+void update_checksums(tree_t* tree) {
   update_checksum(tree->shadow_root);
 }

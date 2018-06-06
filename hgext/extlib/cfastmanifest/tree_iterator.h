@@ -29,13 +29,13 @@ struct _iterator_t {
   bool construct_paths;
 
   // track where we are in the iteration process.
-  path_record_t *path_records;
+  path_record_t* path_records;
 
   // this is where the next path record should be written to.
   size_t path_records_idx;
 
   // track the path, if path construction is requested.
-  char *path;
+  char* path;
   size_t path_idx;
   size_t path_sz;
 };

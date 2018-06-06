@@ -569,26 +569,6 @@ txtpats = [
 
 cpats = [
     [
-        (r"//", "don't use //-style comments"),
-        (r"\S\t", "don't use tabs except for indent"),
-        (r"(\S[ \t]+|^[ \t]+)\n", "trailing whitespace"),
-        (r".{81}", "line too long"),
-        (r"(while|if|do|for)\(", "use space after while/if/do/for"),
-        (r"return\(", "return is not a function"),
-        (r" ;", "no space before ;"),
-        (r"[^;] \)", "no space before )"),
-        (r"[)][{]", "space between ) and {"),
-        (r"\w+\* \w+", "use int *foo, not int* foo"),
-        (r"\W\([^\)]+\) \w+", "use (int)foo, not (int) foo"),
-        (r"\w+ (\+\+|--)", "use foo++, not foo ++"),
-        (r"\w,\w", "missing whitespace after ,"),
-        (r"^[^#]\w[+/*]\w", "missing whitespace in expression"),
-        (r"\w\s=\s\s+\w", "gratuitous whitespace after ="),
-        (r"^#\s+\w", "use #foo, not # foo"),
-        (r"[^\n]\Z", "no trailing newline"),
-        (r"^\s*#import\b", "use only #include in standard C code"),
-        (r"strcpy\(", "don't use strcpy, use strlcpy or memcpy"),
-        (r"strcat\(", "don't use strcat"),
         # rules depending on implementation of repquote()
     ],
     # warnings

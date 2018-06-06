@@ -14,11 +14,14 @@
 /**
  * Helper function that performs the actual recursion on the tree entries.
  */
-void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
-                              std::string &path, DiffResult &diff,
-                              const ManifestFetcher &fetcher, bool clean,
-                              Matcher &matcher)
-{
+void treemanifest_diffrecurse(
+    Manifest* selfmf,
+    Manifest* othermf,
+    std::string& path,
+    DiffResult& diff,
+    const ManifestFetcher& fetcher,
+    bool clean,
+    Matcher& matcher) {
   ManifestIterator selfiter;
   ManifestIterator otheriter;
 
@@ -33,7 +36,7 @@ void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
   while (!selfiter.isfinished() || !otheriter.isfinished()) {
     int cmp = 0;
 
-    ManifestEntry *selfentry = NULL;
+    ManifestEntry* selfentry = NULL;
     std::string selfbinnode;
     if (!selfiter.isfinished()) {
       cmp--;
@@ -45,7 +48,7 @@ void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
       }
     }
 
-    ManifestEntry *otherentry = NULL;
+    ManifestEntry* otherentry = NULL;
     std::string otherbinnode;
     if (!otheriter.isfinished()) {
       cmp++;
@@ -68,10 +71,10 @@ void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
       selfentry->appendtopath(path);
       if (selfentry->isdirectory()) {
         if (matcher.visitdir(path)) {
-          Manifest *selfchildmanifest =
+          Manifest* selfchildmanifest =
               selfentry->get_manifest(fetcher, path.c_str(), path.size());
-          treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher,
-                                   clean, matcher);
+          treemanifest_diffrecurse(
+              selfchildmanifest, NULL, path, diff, fetcher, clean, matcher);
         }
       } else if (matcher.matches(path)) {
         diff.add(path, selfbinnode.c_str(), selfentry->flag, NULL, NULL);
@@ -82,10 +85,10 @@ void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
       otherentry->appendtopath(path);
       if (otherentry->isdirectory()) {
         if (matcher.visitdir(path)) {
-          Manifest *otherchildmanifest =
+          Manifest* otherchildmanifest =
               otherentry->get_manifest(fetcher, path.c_str(), path.size());
-          treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff,
-                                   fetcher, clean, matcher);
+          treemanifest_diffrecurse(
+              NULL, otherchildmanifest, path, diff, fetcher, clean, matcher);
         }
       } else if (matcher.matches(path)) {
         diff.add(path, NULL, NULL, otherbinnode.c_str(), otherentry->flag);
@@ -104,13 +107,19 @@ void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
         // Both are directories - recurse
         if (matcher.visitdir(path) &&
             (selfbinnode != otherbinnode || clean || selfbinnode.size() == 0)) {
-          Manifest *selfchildmanifest =
+          Manifest* selfchildmanifest =
               selfentry->get_manifest(fetcher, path.c_str(), path.size());
-          Manifest *otherchildmanifest =
+          Manifest* otherchildmanifest =
               otherentry->get_manifest(fetcher, path.c_str(), path.size());
 
-          treemanifest_diffrecurse(selfchildmanifest, otherchildmanifest, path,
-                                   diff, fetcher, clean, matcher);
+          treemanifest_diffrecurse(
+              selfchildmanifest,
+              otherchildmanifest,
+              path,
+              diff,
+              fetcher,
+              clean,
+              matcher);
         }
       } else if (selfentry->isdirectory() && !otherentry->isdirectory()) {
         if (matcher.matches(path)) {
@@ -120,10 +129,10 @@ void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
 
         if (matcher.visitdir(path)) {
           path.append(1, '/');
-          Manifest *selfchildmanifest =
+          Manifest* selfchildmanifest =
               selfentry->get_manifest(fetcher, path.c_str(), path.size());
-          treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher,
-                                   clean, matcher);
+          treemanifest_diffrecurse(
+              selfchildmanifest, NULL, path, diff, fetcher, clean, matcher);
         }
       } else if (!selfentry->isdirectory() && otherentry->isdirectory()) {
         if (matcher.matches(path)) {
@@ -133,10 +142,10 @@ void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
 
         if (matcher.visitdir(path)) {
           path.append(1, '/');
-          Manifest *otherchildmanifest =
+          Manifest* otherchildmanifest =
               otherentry->get_manifest(fetcher, path.c_str(), path.size());
-          treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff,
-                                   fetcher, clean, matcher);
+          treemanifest_diffrecurse(
+              NULL, otherchildmanifest, path, diff, fetcher, clean, matcher);
         }
       } else {
         // both are files
@@ -147,8 +156,12 @@ void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
                ((bool)selfentry->flag != (bool)otherentry->flag));
 
           if (selfbinnode != otherbinnode || flagsdiffer) {
-            diff.add(path, selfbinnode.c_str(), selfentry->flag,
-                     otherbinnode.c_str(), otherentry->flag);
+            diff.add(
+                path,
+                selfbinnode.c_str(),
+                selfentry->flag,
+                otherbinnode.c_str(),
+                otherentry->flag);
           } else if (clean) {
             diff.addclean(path);
           }
@@ -163,15 +176,19 @@ void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
 }
 
 FindResult treemanifest::find(
-    ManifestEntry *manifestentry, PathIterator &path, FindMode findMode,
-    FindContext *findContext,
-    FindResult (*callback)(Manifest *manifest, const char *filename,
-                           size_t filenamelen, FindContext *findContext,
-                           ManifestPtr *resultManifest),
-    ManifestPtr *resultManifest)
-{
+    ManifestEntry* manifestentry,
+    PathIterator& path,
+    FindMode findMode,
+    FindContext* findContext,
+    FindResult (*callback)(
+        Manifest* manifest,
+        const char* filename,
+        size_t filenamelen,
+        FindContext* findContext,
+        ManifestPtr* resultManifest),
+    ManifestPtr* resultManifest) {
   if (manifestentry->resolved.isnull()) {
-    const char *pathstart;
+    const char* pathstart;
     size_t pathlen;
 
     path.getPathToPosition(&pathstart, &pathlen);
@@ -191,7 +208,7 @@ FindResult treemanifest::find(
 
   FindResult result;
 
-  const char *word = NULL;
+  const char* word = NULL;
   size_t wordlen = 0;
 
   path.next(&word, &wordlen);
@@ -204,7 +221,7 @@ FindResult treemanifest::find(
     std::list<ManifestEntry>::iterator iterator =
         manifest->findChild(word, wordlen, RESULT_DIRECTORY, &exacthit);
 
-    ManifestEntry *entry;
+    ManifestEntry* entry;
 
     if (!exacthit) {
       // do we create the intermediate node?
@@ -219,8 +236,8 @@ FindResult treemanifest::find(
       }
 
       // create the intermediate node...
-      entry = manifest->addChild(iterator, word, wordlen, NULL,
-                                 MANIFEST_DIRECTORY_FLAGPTR);
+      entry = manifest->addChild(
+          iterator, word, wordlen, NULL, MANIFEST_DIRECTORY_FLAGPTR);
     } else {
       entry = &(*iterator);
     }
@@ -275,16 +292,18 @@ FindResult treemanifest::find(
 }
 
 struct GetResult {
-  std::string *resultnode;
-  const char **resultflag;
+  std::string* resultnode;
+  const char** resultflag;
   FindResultType resulttype;
 };
 
-static FindResult get_callback(Manifest *manifest, const char *filename,
-                               size_t filenamelen, FindContext *context,
-                               ManifestPtr * /*resultManifest*/)
-{
-  GetResult *result = (GetResult *)context->extras;
+static FindResult get_callback(
+    Manifest* manifest,
+    const char* filename,
+    size_t filenamelen,
+    FindContext* context,
+    ManifestPtr* /*resultManifest*/) {
+  GetResult* result = (GetResult*)context->extras;
 
   // position the iterator at the right location
   bool exacthit;
@@ -296,7 +315,7 @@ static FindResult get_callback(Manifest *manifest, const char *filename,
     return FIND_PATH_NOT_FOUND;
   }
 
-  ManifestEntry &entry = *iterator;
+  ManifestEntry& entry = *iterator;
 
   result->resultnode->erase();
   if (entry.hasNode()) {
@@ -308,9 +327,11 @@ static FindResult get_callback(Manifest *manifest, const char *filename,
   return FIND_PATH_OK;
 }
 
-bool treemanifest::get(const std::string &filename, std::string *resultnode,
-                       const char **resultflag, FindResultType resulttype)
-{
+bool treemanifest::get(
+    const std::string& filename,
+    std::string* resultnode,
+    const char** resultflag,
+    FindResultType resulttype) {
   getRootManifest();
 
   GetResult extras = {resultnode, resultflag, resulttype};
@@ -320,22 +341,29 @@ bool treemanifest::get(const std::string &filename, std::string *resultnode,
   changes.extras = &extras;
 
   ManifestPtr resultManifest;
-  FindResult result = this->find(&this->root, pathiter, BASIC_WALK, &changes,
-                                 get_callback, &resultManifest);
+  FindResult result = this->find(
+      &this->root,
+      pathiter,
+      BASIC_WALK,
+      &changes,
+      get_callback,
+      &resultManifest);
 
   return result == FIND_PATH_OK;
 }
 
 struct SetParams {
-  const std::string &resultnode;
-  const char *resultflag;
+  const std::string& resultnode;
+  const char* resultflag;
 };
 
-static FindResult set_callback(Manifest *manifest, const char *filename,
-                               size_t filenamelen, FindContext *context,
-                               ManifestPtr *resultManifest)
-{
-  SetParams *params = (SetParams *)context->extras;
+static FindResult set_callback(
+    Manifest* manifest,
+    const char* filename,
+    size_t filenamelen,
+    FindContext* context,
+    ManifestPtr* resultManifest) {
+  SetParams* params = (SetParams*)context->extras;
 
   if (!manifest->isMutable()) {
     *resultManifest = ManifestPtr(manifest->copy());
@@ -349,10 +377,14 @@ static FindResult set_callback(Manifest *manifest, const char *filename,
 
   if (!exacthit) {
     // create the entry, insert it.
-    manifest->addChild(iterator, filename, filenamelen,
-                       params->resultnode.c_str(), params->resultflag);
+    manifest->addChild(
+        iterator,
+        filename,
+        filenamelen,
+        params->resultnode.c_str(),
+        params->resultflag);
   } else {
-    ManifestEntry *entry = &(*iterator);
+    ManifestEntry* entry = &(*iterator);
 
     entry->updatehexnode(params->resultnode.c_str(), params->resultflag);
   }
@@ -361,10 +393,10 @@ static FindResult set_callback(Manifest *manifest, const char *filename,
   return FIND_PATH_OK;
 }
 
-SetResult treemanifest::set(const std::string &filename,
-                            const std::string &resultnode,
-                            const char *resultflag)
-{
+SetResult treemanifest::set(
+    const std::string& filename,
+    const std::string& resultnode,
+    const char* resultflag) {
   SetParams extras = {resultnode, resultflag};
   PathIterator pathiter(filename);
   FindContext changes;
@@ -372,8 +404,13 @@ SetResult treemanifest::set(const std::string &filename,
   changes.extras = &extras;
 
   ManifestPtr resultManifest;
-  FindResult result = this->find(&this->root, pathiter, CREATE_IF_MISSING,
-                                 &changes, set_callback, &resultManifest);
+  FindResult result = this->find(
+      &this->root,
+      pathiter,
+      CREATE_IF_MISSING,
+      &changes,
+      set_callback,
+      &resultManifest);
 
   this->root.resolved = resultManifest;
   if (changes.invalidate_checksums) {
@@ -381,12 +418,12 @@ SetResult treemanifest::set(const std::string &filename,
   }
 
   switch (result) {
-  case FIND_PATH_OK:
-    return SET_OK;
-  case FIND_PATH_CONFLICT:
-    return SET_CONFLICT;
-  default:
-    return SET_WTF;
+    case FIND_PATH_OK:
+      return SET_OK;
+    case FIND_PATH_CONFLICT:
+      return SET_CONFLICT;
+    default:
+      return SET_WTF;
   }
 }
 
@@ -394,11 +431,13 @@ struct RemoveResult {
   bool found;
 };
 
-static FindResult remove_callback(Manifest *manifest, const char *filename,
-                                  size_t filenamelen, FindContext *context,
-                                  ManifestPtr *resultManifest)
-{
-  RemoveResult *params = (RemoveResult *)context->extras;
+static FindResult remove_callback(
+    Manifest* manifest,
+    const char* filename,
+    size_t filenamelen,
+    FindContext* context,
+    ManifestPtr* resultManifest) {
+  RemoveResult* params = (RemoveResult*)context->extras;
 
   // position the iterator at the right location
   bool exacthit;
@@ -422,8 +461,7 @@ static FindResult remove_callback(Manifest *manifest, const char *filename,
   return FIND_PATH_OK;
 }
 
-bool treemanifest::remove(const std::string &filename)
-{
+bool treemanifest::remove(const std::string& filename) {
   RemoveResult extras = {false};
   PathIterator pathiter(filename);
   FindContext changes;
@@ -431,9 +469,13 @@ bool treemanifest::remove(const std::string &filename)
   changes.extras = &extras;
 
   ManifestPtr resultManifest;
-  FindResult result =
-      this->find(&this->root, pathiter, REMOVE_EMPTY_IMPLICIT_NODES, &changes,
-                 remove_callback, &resultManifest);
+  FindResult result = this->find(
+      &this->root,
+      pathiter,
+      REMOVE_EMPTY_IMPLICIT_NODES,
+      &changes,
+      remove_callback,
+      &resultManifest);
 
   this->root.resolved = resultManifest;
   if (changes.invalidate_checksums) {
@@ -443,17 +485,19 @@ bool treemanifest::remove(const std::string &filename)
   return (result == FIND_PATH_OK) && extras.found;
 }
 
-SubtreeIterator::SubtreeIterator(std::string path, ManifestPtr mainRoot,
-                                 const std::vector<const char *> &cmpNodes,
-                                 const std::vector<ManifestPtr> &cmpRoots,
-                                 const ManifestFetcher &fetcher)
-    : cmpNodes(cmpNodes), path(path), fetcher(fetcher), firstRun(true)
-{
+SubtreeIterator::SubtreeIterator(
+    std::string path,
+    ManifestPtr mainRoot,
+    const std::vector<const char*>& cmpNodes,
+    const std::vector<ManifestPtr>& cmpRoots,
+    const ManifestFetcher& fetcher)
+    : cmpNodes(cmpNodes), path(path), fetcher(fetcher), firstRun(true) {
   this->mainStack.push_back(stackframe(mainRoot, false));
 
   if (cmpRoots.size() > 2) {
-    throw std::logic_error("Tree comparison only supports 2 comparisons at "
-                           "once for now");
+    throw std::logic_error(
+        "Tree comparison only supports 2 comparisons at "
+        "once for now");
   }
 
   for (size_t i = 0; i < cmpRoots.size(); i++) {
@@ -469,10 +513,12 @@ SubtreeIterator::SubtreeIterator(std::string path, ManifestPtr mainRoot,
   }
 }
 
-void SubtreeIterator::popResult(std::string **path, ManifestPtr *result,
-                                ManifestPtr *p1, ManifestPtr *p2)
-{
-  stackframe &mainFrame = this->mainStack.back();
+void SubtreeIterator::popResult(
+    std::string** path,
+    ManifestPtr* result,
+    ManifestPtr* p1,
+    ManifestPtr* p2) {
+  stackframe& mainFrame = this->mainStack.back();
   ManifestPtr mainManifest = mainFrame.manifest;
 
   // Record the comparison manifests of the level we're processing.
@@ -481,7 +527,7 @@ void SubtreeIterator::popResult(std::string **path, ManifestPtr *result,
     // If a cmpstack is at the same level as the main stack, it represents
     // the same diretory and should be inspected.
     if (this->mainStack.size() == cmpStacks[i].size()) {
-      std::vector<stackframe> &cmpStack = cmpStacks[i];
+      std::vector<stackframe>& cmpStack = cmpStacks[i];
       cmpManifests[i] = cmpStack.back().manifest;
       cmpStack.pop_back();
     }
@@ -495,16 +541,15 @@ void SubtreeIterator::popResult(std::string **path, ManifestPtr *result,
   *p2 = cmpManifests[1];
 }
 
-bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry)
-{
+bool SubtreeIterator::processDirectory(ManifestEntry* mainEntry) {
   // mainEntry is a new entry we need to compare against each cmpEntry, and
   // then push if it is different from all of them.
 
   // First move all the cmp iterators forward to the same name as mainEntry.
   bool alreadyExists = false;
-  std::vector<std::vector<stackframe> *> requirePush;
+  std::vector<std::vector<stackframe>*> requirePush;
   for (size_t i = 0; i < cmpStacks.size(); i++) {
-    std::vector<stackframe> &cmpStack = cmpStacks[i];
+    std::vector<stackframe>& cmpStack = cmpStacks[i];
 
     // If the cmpStack is at a different level, it is not at the same
     // location as main, so don't bother searching it.
@@ -512,12 +557,12 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry)
       continue;
     }
 
-    stackframe &cmpFrame = cmpStack.back();
+    stackframe& cmpFrame = cmpStack.back();
 
     // Move cmp iterator forward until we match or pass the current
     // mainEntry filename.
     while (!cmpFrame.isfinished()) {
-      ManifestEntry *cmpEntry = cmpFrame.currentvalue();
+      ManifestEntry* cmpEntry = cmpFrame.currentvalue();
       if (!cmpEntry->isdirectory()) {
         cmpFrame.next();
         continue;
@@ -529,8 +574,10 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry)
           // And the nodes match...
           if (!alreadyExists &&
               (mainEntry->hasNode() &&
-               memcmp(mainEntry->get_node(), cmpEntry->get_node(),
-                      HEX_NODE_SIZE) == 0)) {
+               memcmp(
+                   mainEntry->get_node(),
+                   cmpEntry->get_node(),
+                   HEX_NODE_SIZE) == 0)) {
             // Skip this entry
             alreadyExists = true;
           }
@@ -557,8 +604,8 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry)
 
   // And push all cmp stacks we remembered that have the same directory.
   for (size_t i = 0; i < requirePush.size(); i++) {
-    std::vector<stackframe> *cmpStack = requirePush[i];
-    ManifestEntry *cmpEntry = cmpStack->back().currentvalue();
+    std::vector<stackframe>* cmpStack = requirePush[i];
+    ManifestEntry* cmpEntry = cmpStack->back().currentvalue();
     ManifestPtr cmpManifest = cmpEntry->get_manifest(
         this->fetcher, this->path.c_str(), this->path.size());
     cmpStack->push_back(stackframe(cmpManifest, false));
@@ -567,9 +614,11 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry)
   return true;
 }
 
-bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
-                           ManifestPtr *p1, ManifestPtr *p2)
-{
+bool SubtreeIterator::next(
+    std::string** path,
+    ManifestPtr* result,
+    ManifestPtr* p1,
+    ManifestPtr* p2) {
   if (!this->firstRun) {
     // Pop the last returned directory off the path
     size_t slashoffset = this->path.find_last_of('/', this->path.size() - 1);
@@ -590,7 +639,7 @@ bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
       return false;
     }
 
-    stackframe &mainFrame = this->mainStack.back();
+    stackframe& mainFrame = this->mainStack.back();
 
     // If we've reached the end of this manifest, we've processed all the
     // children, so we can now return it.
@@ -608,7 +657,7 @@ bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
     } else {
       // Use currentvalue instead of next so that the stack of frames match the
       // actual current filepath.
-      ManifestEntry *mainEntry = mainFrame.currentvalue();
+      ManifestEntry* mainEntry = mainFrame.currentvalue();
       if (mainEntry->isdirectory()) {
         // If we're at a directory, process it, either by pushing it on the
         // stack, or by skipping it if it already matches a cmp parent.
@@ -622,27 +671,28 @@ bool SubtreeIterator::next(std::string **path, ManifestPtr *result,
   }
 }
 
-FinalizeIterator::FinalizeIterator(ManifestPtr mainRoot,
-                                   const std::vector<const char *> &cmpNodes,
-                                   const std::vector<ManifestPtr> &cmpRoots,
-                                   const ManifestFetcher &fetcher)
-    : _iterator(std::string(""), mainRoot, cmpNodes, cmpRoots, fetcher)
-{
-}
+FinalizeIterator::FinalizeIterator(
+    ManifestPtr mainRoot,
+    const std::vector<const char*>& cmpNodes,
+    const std::vector<ManifestPtr>& cmpRoots,
+    const ManifestFetcher& fetcher)
+    : _iterator(std::string(""), mainRoot, cmpNodes, cmpRoots, fetcher) {}
 
-bool FinalizeIterator::next(std::string **path, ManifestPtr *result,
-                            ManifestPtr *p1, ManifestPtr *p2)
-{
+bool FinalizeIterator::next(
+    std::string** path,
+    ManifestPtr* result,
+    ManifestPtr* p1,
+    ManifestPtr* p2) {
   while (_iterator.next(path, result, p1, p2)) {
-    std::string *realPath = *path;
+    std::string* realPath = *path;
     ManifestPtr realResult = *result;
     ManifestPtr realP1 = *p1;
     ManifestPtr realP2 = *p2;
 
     // If it's mutable, mark it permanent and check it against parents.
     if (realResult->isMutable()) {
-      const char *p1Node = realP1 ? realP1->node() : NULLID;
-      const char *p2Node = realP2 ? realP2->node() : NULLID;
+      const char* p1Node = realP1 ? realP1->node() : NULLID;
+      const char* p2Node = realP2 ? realP2->node() : NULLID;
 
       // If mutable root node, always give it new parents and return it
       if (realPath->length() == 0) {
@@ -656,7 +706,7 @@ bool FinalizeIterator::next(std::string **path, ManifestPtr *result,
         bool parentMatch = false;
         ManifestPtr parents[2]{realP1, realP2};
         for (int i = 0; i < 2; ++i) {
-          Manifest *p = parents[i];
+          Manifest* p = parents[i];
           if (p) {
             p->serialize(parentRaw);
             if (mainRaw == parentRaw) {

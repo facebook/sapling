@@ -25,8 +25,8 @@ typedef enum {
 } tree_add_child_code_t;
 typedef struct _tree_add_child_result_t {
   tree_add_child_code_t code;
-  node_t *newroot;
-  node_t *newchild;
+  node_t* newroot;
+  node_t* newchild;
 } tree_add_child_result_t;
 
 typedef enum {
@@ -58,31 +58,34 @@ typedef enum {
 } find_path_result_t;
 typedef struct _find_path_callback_result_t {
   find_path_result_t code;
-  node_t *newroot;
+  node_t* newroot;
 } find_path_callback_result_t;
 
 extern tree_add_child_result_t tree_add_child(
-    tree_t *tree,
-    node_t *const root_parent,
-    node_t *root,
-    const char *name, const size_t name_sz,
+    tree_t* tree,
+    node_t* const root_parent,
+    node_t* root,
+    const char* name,
+    const size_t name_sz,
     size_t num_children_hint,
-    tree_state_changes_t *changes);
+    tree_state_changes_t* changes);
 
 extern find_path_result_t find_path(
-    tree_t *tree,
-    node_t *const root_parent,
-    node_t *root,
-    const char *path, const size_t path_sz,
+    tree_t* tree,
+    node_t* const root_parent,
+    node_t* root,
+    const char* path,
+    const size_t path_sz,
     find_path_operation_type operation_type,
-    tree_state_changes_t *changes,
+    tree_state_changes_t* changes,
     find_path_callback_result_t (*callback)(
-        tree_t *tree,
-        node_t *const dir_parent,
-        node_t *dir,
-        const char *path, const size_t path_sz,
-        tree_state_changes_t *changes,
-        void *context),
-    void *context);
+        tree_t* tree,
+        node_t* const dir_parent,
+        node_t* dir,
+        const char* path,
+        const size_t path_sz,
+        tree_state_changes_t* changes,
+        void* context),
+    void* context);
 
 #endif // #ifndef __FASTMANIFEST_TREE_PATH_H__

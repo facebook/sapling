@@ -24,37 +24,30 @@
 /*
  * Wrapper around python delta chain
  */
-class PyDeltaChain : public DeltaChain
-{
-private:
+class PyDeltaChain : public DeltaChain {
+ private:
   std::shared_ptr<std::vector<DeltaChainLink>> _chain;
   std::shared_ptr<std::vector<PythonObj>> _pythonChainLinks;
 
-public:
-  PyDeltaChain(std::shared_ptr<std::vector<DeltaChainLink>> chain,
-               std::shared_ptr<std::vector<PythonObj>> pythonChainLinks)
-      : _chain(chain), _pythonChainLinks(pythonChainLinks)
-  {
-  }
+ public:
+  PyDeltaChain(
+      std::shared_ptr<std::vector<DeltaChainLink>> chain,
+      std::shared_ptr<std::vector<PythonObj>> pythonChainLinks)
+      : _chain(chain), _pythonChainLinks(pythonChainLinks) {}
 
   // Default destructor is used, because the destructor of _chain
   // and _tuples objects will free the allocated memory automatically.
-  ~PyDeltaChain()
-  {
-  }
+  ~PyDeltaChain() {}
 
-  const DeltaChainLink getlink(const size_t idx) const override
-  {
+  const DeltaChainLink getlink(const size_t idx) const override {
     return _chain->at(idx);
   }
 
-  size_t linkcount() const override
-  {
+  size_t linkcount() const override {
     return _chain->size();
   }
 
-  get_delta_chain_code_t status() const override
-  {
+  get_delta_chain_code_t status() const override {
     if (_chain->size()) {
       return GET_DELTA_CHAIN_OK;
     } else {
@@ -63,25 +56,24 @@ public:
   }
 };
 
-class PythonDataStore : public DataStore
-{
-private:
+class PythonDataStore : public DataStore {
+ private:
   PythonObj _store; // pointer to python object
 
-public:
+ public:
   PythonDataStore(PythonObj store);
 
   ~PythonDataStore() = default;
 
   PythonObj getStore();
 
-  DeltaChainIterator getDeltaChain(const Key &key) override;
+  DeltaChainIterator getDeltaChain(const Key& key) override;
 
-  std::shared_ptr<KeyIterator> getMissing(KeyIterator &missing) override;
+  std::shared_ptr<KeyIterator> getMissing(KeyIterator& missing) override;
 
-  std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key &key) override;
+  std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key& key) override;
 
-  bool contains(const Key &key) override;
+  bool contains(const Key& key) override;
 
   void markForRefresh() override;
 };

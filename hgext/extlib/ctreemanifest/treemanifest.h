@@ -58,30 +58,27 @@ struct FindContext {
   std::string nodebuffer;
 
   // any extra data the callback needs to complete the operation.
-  void *extras;
+  void* extras;
 
   FindContext()
-      : invalidate_checksums(false), num_leaf_node_changes(0), mode(BASIC_WALK),
-        extras(NULL)
-  {
-  }
+      : invalidate_checksums(false),
+        num_leaf_node_changes(0),
+        mode(BASIC_WALK),
+        extras(NULL) {}
 };
 
-class PathIterator
-{
-private:
+class PathIterator {
+ private:
   std::string path;
   size_t position;
 
-public:
-  PathIterator(std::string path)
-  {
+ public:
+  PathIterator(std::string path) {
     this->path = path;
     this->position = 0;
   }
 
-  bool next(char const **word, size_t *wordlen)
-  {
+  bool next(char const** word, size_t* wordlen) {
     if (this->isfinished()) {
       return false;
     }
@@ -99,13 +96,11 @@ public:
     return true;
   }
 
-  bool isfinished()
-  {
+  bool isfinished() {
     return this->position >= this->path.length();
   }
 
-  void getPathToPosition(const char **word, size_t *wordlen)
-  {
+  void getPathToPosition(const char** word, size_t* wordlen) {
     *word = path.c_str();
     *wordlen = this->position;
   }
@@ -121,8 +116,7 @@ struct treemanifest {
   ManifestEntry root;
 
   treemanifest(std::shared_ptr<Store> store, std::string rootNode)
-      : fetcher(store)
-  {
+      : fetcher(store) {
     std::string hexnode;
     hexnode.reserve(HEX_NODE_SIZE);
 
@@ -135,30 +129,32 @@ struct treemanifest {
     root.resolved = ManifestPtr();
   }
 
-  treemanifest(std::shared_ptr<Store> store) : fetcher(store)
-  {
+  treemanifest(std::shared_ptr<Store> store) : fetcher(store) {
     root.initialize(NULL, 0, HEXNULLID, MANIFEST_DIRECTORY_FLAGPTR);
   }
 
-  treemanifest(treemanifest &other) : fetcher(other.fetcher)
-  {
+  treemanifest(treemanifest& other) : fetcher(other.fetcher) {
     root.initialize(&other.root);
   }
 
-  bool get(const std::string &filename, std::string *resultnode,
-           const char **resultflag, FindResultType resulttype = RESULT_FILE);
+  bool get(
+      const std::string& filename,
+      std::string* resultnode,
+      const char** resultflag,
+      FindResultType resulttype = RESULT_FILE);
 
-  SetResult set(const std::string &filename, const std::string &resultnode,
-                const char *resultflag);
+  SetResult set(
+      const std::string& filename,
+      const std::string& resultnode,
+      const char* resultflag);
 
   /**
    * Removes a file from the treemanifest.  Returns true iff the file was
    * found and removed.
    */
-  bool remove(const std::string &filename);
+  bool remove(const std::string& filename);
 
-  ManifestPtr getRootManifest()
-  {
+  ManifestPtr getRootManifest() {
     if (this->root.resolved.isnull()) {
       std::string binnode;
       binnode.reserve(BIN_NODE_SIZE);
@@ -170,7 +166,7 @@ struct treemanifest {
     return this->root.resolved;
   }
 
-private:
+ private:
   /**
    * Basic mechanism to traverse a tree.  Once the deepest directory in the
    * path has been located, the supplied callback is executed.  That callback
@@ -181,30 +177,34 @@ private:
    * callback is executed with the manifest of /abc/def, and the filename
    * passed in will be "ghi".
    */
-  FindResult
-  find(ManifestEntry *manifestentry, PathIterator &path, FindMode findMode,
-       FindContext *findContext,
-       FindResult (*callback)(Manifest *manifest, const char *filename,
-                              size_t filenamelen, FindContext *findContext,
-                              ManifestPtr *resultManifest),
-       ManifestPtr *resultManifest);
+  FindResult find(
+      ManifestEntry* manifestentry,
+      PathIterator& path,
+      FindMode findMode,
+      FindContext* findContext,
+      FindResult (*callback)(
+          Manifest* manifest,
+          const char* filename,
+          size_t filenamelen,
+          FindContext* findContext,
+          ManifestPtr* resultManifest),
+      ManifestPtr* resultManifest);
 };
 
 /**
  * Represents a single stack frame in an iteration of the contents of the tree.
  */
 struct stackframe {
-private:
+ private:
   ManifestIterator iterator;
   SortedManifestIterator sortedIterator;
 
-public:
+ public:
   ManifestPtr manifest;
   bool sorted;
 
   stackframe(ManifestPtr manifest, bool sorted)
-      : manifest(manifest), sorted(sorted)
-  {
+      : manifest(manifest), sorted(sorted) {
     if (sorted) {
       sortedIterator = manifest->getSortedIterator();
     } else {
@@ -212,8 +212,7 @@ public:
     }
   }
 
-  ManifestEntry *next()
-  {
+  ManifestEntry* next() {
     if (sorted) {
       return sortedIterator.next();
     } else {
@@ -221,8 +220,7 @@ public:
     }
   }
 
-  ManifestEntry *currentvalue() const
-  {
+  ManifestEntry* currentvalue() const {
     if (sorted) {
       return sortedIterator.currentvalue();
     } else {
@@ -230,8 +228,7 @@ public:
     }
   }
 
-  bool isfinished() const
-  {
+  bool isfinished() const {
     if (sorted) {
       return sortedIterator.isfinished();
     } else {
@@ -245,21 +242,22 @@ public:
  * treemanifests and iterates over the Manifests that only exist in the main
  * treemanifest.
  */
-class SubtreeIterator
-{
-private:
+class SubtreeIterator {
+ private:
   std::vector<stackframe> mainStack;
-  std::vector<const char *> cmpNodes;
+  std::vector<const char*> cmpNodes;
   std::vector<std::vector<stackframe>> cmpStacks;
   std::string path;
   ManifestFetcher fetcher;
   bool firstRun;
 
-public:
-  SubtreeIterator(std::string path, ManifestPtr mainRoot,
-                  const std::vector<const char *> &cmpNodes,
-                  const std::vector<ManifestPtr> &cmpRoots,
-                  const ManifestFetcher &fetcher);
+ public:
+  SubtreeIterator(
+      std::string path,
+      ManifestPtr mainRoot,
+      const std::vector<const char*>& cmpNodes,
+      const std::vector<ManifestPtr>& cmpRoots,
+      const ManifestFetcher& fetcher);
 
   /**
    * Outputs the next new Manifest and its corresponding path and node.
@@ -271,36 +269,45 @@ public:
    * Return true if a manifest was returned, or false if we've reached the
    * end.
    */
-  bool next(std::string **path, ManifestPtr *result, ManifestPtr *p1,
-            ManifestPtr *p2);
+  bool next(
+      std::string** path,
+      ManifestPtr* result,
+      ManifestPtr* p1,
+      ManifestPtr* p2);
 
-private:
+ private:
   /**
    * Pops the current Manifest, populating the output values and returning true
    * if the current Manifest is different from all comparison manifests.
    */
-  void popResult(std::string **path, ManifestPtr *result, ManifestPtr *p1,
-                 ManifestPtr *p2);
+  void popResult(
+      std::string** path,
+      ManifestPtr* result,
+      ManifestPtr* p1,
+      ManifestPtr* p2);
 
   /** Pushes the given Manifest onto the stacks. If the given Manifest equals
    * one of the comparison Manifests, the function does nothing.
    */
-  bool processDirectory(ManifestEntry *mainEntry);
+  bool processDirectory(ManifestEntry* mainEntry);
 };
 
-class FinalizeIterator
-{
-private:
+class FinalizeIterator {
+ private:
   SubtreeIterator _iterator;
 
-public:
-  FinalizeIterator(ManifestPtr mainRoot,
-                   const std::vector<const char *> &cmpNodes,
-                   const std::vector<ManifestPtr> &cmpRoots,
-                   const ManifestFetcher &fetcher);
+ public:
+  FinalizeIterator(
+      ManifestPtr mainRoot,
+      const std::vector<const char*>& cmpNodes,
+      const std::vector<ManifestPtr>& cmpRoots,
+      const ManifestFetcher& fetcher);
 
-  bool next(std::string **path, ManifestPtr *result, ManifestPtr *p1,
-            ManifestPtr *p2);
+  bool next(
+      std::string** path,
+      ManifestPtr* result,
+      ManifestPtr* p1,
+      ManifestPtr* p2);
 };
 
 /**
@@ -310,24 +317,21 @@ struct fileiter {
   ManifestFetcher fetcher; // Instance to fetch tree content
   std::vector<stackframe> frames;
   std::string path; // The fullpath for the top entry in the stack.
-  bool sorted;      // enable mercurial sorting?
+  bool sorted; // enable mercurial sorting?
 
   // If provided, the given matcher filters the results by path
   std::shared_ptr<Matcher> matcher;
 
-  fileiter(treemanifest &tm, bool sorted) : fetcher(tm.fetcher), sorted(sorted)
-  {
+  fileiter(treemanifest& tm, bool sorted)
+      : fetcher(tm.fetcher), sorted(sorted) {
     this->frames.push_back(stackframe(tm.getRootManifest(), this->sorted));
     this->path.reserve(1024);
   }
 
-  fileiter(const fileiter &old)
-      : fetcher(old.fetcher), frames(old.frames), path(old.path)
-  {
-  }
+  fileiter(const fileiter& old)
+      : fetcher(old.fetcher), frames(old.frames), path(old.path) {}
 
-  fileiter &operator=(const fileiter &other)
-  {
+  fileiter& operator=(const fileiter& other) {
     this->fetcher = other.fetcher;
     this->frames = other.frames;
     this->path = other.path;
@@ -337,18 +341,23 @@ struct fileiter {
 };
 
 struct DiffResult {
-  virtual ~DiffResult()
-  {
-  }
-  virtual void add(const std::string &path, const char *beforeNode,
-                   const char *beforeFlag, const char *afterNode,
-                   const char *afterFlag) = 0;
-  virtual void addclean(const std::string &path) = 0;
+  virtual ~DiffResult() {}
+  virtual void add(
+      const std::string& path,
+      const char* beforeNode,
+      const char* beforeFlag,
+      const char* afterNode,
+      const char* afterFlag) = 0;
+  virtual void addclean(const std::string& path) = 0;
 };
 
-extern void treemanifest_diffrecurse(Manifest *selfmf, Manifest *othermf,
-                                     std::string &path, DiffResult &diff,
-                                     const ManifestFetcher &fetcher, bool clean,
-                                     Matcher &matcher);
+extern void treemanifest_diffrecurse(
+    Manifest* selfmf,
+    Manifest* othermf,
+    std::string& path,
+    DiffResult& diff,
+    const ManifestFetcher& fetcher,
+    bool clean,
+    Matcher& matcher);
 
 #endif // FBHGEXT_CTREEMANIFEST_TREEMANIFEST_H

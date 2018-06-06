@@ -13,7 +13,7 @@
 #include "tree_iterator.h"
 
 typedef struct _iterator_expectations_t {
-  char *path;
+  char* path;
   size_t path_sz;
   bool path_present;
   uint32_t checksum_primer;
@@ -21,8 +21,8 @@ typedef struct _iterator_expectations_t {
 } iterator_expectations_t;
 
 static bool match_expectations(
-    iterator_t *iterator,
-    iterator_expectations_t *expectations,
+    iterator_t* iterator,
+    iterator_expectations_t* expectations,
     size_t expectations_sz) {
   size_t ix = 0;
   uint8_t expected_checksum[SHA1_BYTES];
@@ -38,13 +38,12 @@ static bool match_expectations(
       return false;
     }
 
-    iterator_expectations_t *expectation = &expectations[ix];
+    iterator_expectations_t* expectation = &expectations[ix];
     ix++;
 
     if (expectation->path_present &&
         (expectation->path_sz != result.path_sz ||
-         memcmp(expectation->path, result.path, expectation->path_sz) !=
-         0)) {
+         memcmp(expectation->path, result.path, expectation->path_sz) != 0)) {
       return false;
     }
 
@@ -61,11 +60,13 @@ static bool match_expectations(
 }
 
 void test_empty_tree() {
-  tree_t *tree = alloc_tree();
-  iterator_t *iterator = create_iterator(tree, false);
+  tree_t* tree = alloc_tree();
+  iterator_t* iterator = create_iterator(tree, false);
   iterator_expectations_t expectations[] = {};
 
-  ASSERT(match_expectations(iterator, expectations,
+  ASSERT(match_expectations(
+      iterator,
+      expectations,
       sizeof(expectations) / sizeof(iterator_expectations_t)));
 
   destroy_iterator(iterator);
@@ -73,7 +74,7 @@ void test_empty_tree() {
 }
 
 void test_simple_tree() {
-  tree_t *tree = alloc_tree();
+  tree_t* tree = alloc_tree();
 
   add_to_tree_t toadd[] = {
       {STRPLUSLEN("abc"), 12345, 5},
@@ -81,13 +82,13 @@ void test_simple_tree() {
 
   add_to_tree(tree, toadd, sizeof(toadd) / sizeof(add_to_tree_t));
 
-  iterator_t *iterator = create_iterator(tree, true);
-  iterator_expectations_t expectations[] =
-      {
-          {STRPLUSLEN("abc"), true, 12345, 5}
-      };
+  iterator_t* iterator = create_iterator(tree, true);
+  iterator_expectations_t expectations[] = {
+      {STRPLUSLEN("abc"), true, 12345, 5}};
 
-  ASSERT(match_expectations(iterator, expectations,
+  ASSERT(match_expectations(
+      iterator,
+      expectations,
       sizeof(expectations) / sizeof(iterator_expectations_t)));
 
   destroy_iterator(iterator);
@@ -95,7 +96,7 @@ void test_simple_tree() {
 }
 
 void test_complicated_tree() {
-  tree_t *tree = alloc_tree();
+  tree_t* tree = alloc_tree();
 
   add_to_tree_t toadd[] = {
       {STRPLUSLEN("abc"), 12345, 5},
@@ -108,24 +109,25 @@ void test_complicated_tree() {
 
   add_to_tree(tree, toadd, sizeof(toadd) / sizeof(add_to_tree_t));
 
-  iterator_t *iterator = create_iterator(tree, true);
-  iterator_expectations_t expectations[] =
-      {
-          {STRPLUSLEN("a"), true, 577, 14},
-          {STRPLUSLEN("ab/cdef/gh"), true, 64342, 55},
-          {STRPLUSLEN("ab/cdef/ghi/jkl"), true, 51545, 57},
-          {STRPLUSLEN("ab/cdef/ghi/jklm"), true, 54774, 12},
-          {STRPLUSLEN("ab/cdef/ghi/jklmn"), true, 48477, 252},
-          {STRPLUSLEN("abc"), true, 12345, 5},
-      };
+  iterator_t* iterator = create_iterator(tree, true);
+  iterator_expectations_t expectations[] = {
+      {STRPLUSLEN("a"), true, 577, 14},
+      {STRPLUSLEN("ab/cdef/gh"), true, 64342, 55},
+      {STRPLUSLEN("ab/cdef/ghi/jkl"), true, 51545, 57},
+      {STRPLUSLEN("ab/cdef/ghi/jklm"), true, 54774, 12},
+      {STRPLUSLEN("ab/cdef/ghi/jklmn"), true, 48477, 252},
+      {STRPLUSLEN("abc"), true, 12345, 5},
+  };
 
-  ASSERT(match_expectations(iterator, expectations,
+  ASSERT(match_expectations(
+      iterator,
+      expectations,
       sizeof(expectations) / sizeof(iterator_expectations_t)));
 
   destroy_iterator(iterator);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   test_empty_tree();
   test_simple_tree();
   test_complicated_tree();

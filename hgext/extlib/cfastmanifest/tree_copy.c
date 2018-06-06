@@ -24,9 +24,9 @@ typedef enum {
  * `child_num` must be <= `dst_parent->num_children`.
  */
 copy_helper_result_t copy_helper(
-    tree_t *dst_tree,
-    const node_t *src,
-    node_t *dst_parent,
+    tree_t* dst_tree,
+    const node_t* src,
+    node_t* dst_parent,
     size_t child_num) {
   arena_alloc_node_result_t alloc_result = arena_alloc_node_strict(
       dst_tree, src->name, src->name_sz, src->num_children);
@@ -40,7 +40,7 @@ copy_helper_result_t copy_helper(
   }
 
   // copy the attributes
-  node_t *dst = alloc_result.node;
+  node_t* dst = alloc_result.node;
   if (src->checksum_valid) {
     memcpy(dst->checksum, src->checksum, src->checksum_sz);
     dst->checksum_sz = src->checksum_sz;
@@ -58,11 +58,7 @@ copy_helper_result_t copy_helper(
   } else {
     for (int ix = 0; ix < src->num_children; ix++) {
       copy_helper_result_t copy_result =
-          copy_helper(
-              dst_tree,
-              get_child_by_index(src, ix),
-              dst,
-              ix);
+          copy_helper(dst_tree, get_child_by_index(src, ix), dst, ix);
 
       if (copy_result != COPY_OK) {
         return copy_result;
@@ -75,8 +71,8 @@ copy_helper_result_t copy_helper(
   return COPY_OK;
 }
 
-tree_t *copy_tree(const tree_t *src) {
-  tree_t *dst = alloc_tree_with_arena(src->consumed_memory);
+tree_t* copy_tree(const tree_t* src) {
+  tree_t* dst = alloc_tree_with_arena(src->consumed_memory);
 
   // prerequisite for using copy_helper is that child_num must be <
   // dst_parent->num_children, so we artificially bump up the num_chlidren
@@ -85,10 +81,7 @@ tree_t *copy_tree(const tree_t *src) {
   dst->shadow_root->num_children = 1;
 
   copy_helper_result_t copy_result = copy_helper(
-      dst,
-      get_child_by_index(src->shadow_root, 0),
-      dst->shadow_root,
-      0);
+      dst, get_child_by_index(src->shadow_root, 0), dst->shadow_root, 0);
 
   switch (copy_result) {
     case COPY_OK:
@@ -116,10 +109,10 @@ typedef enum {
 } filter_copy_helper_result_t;
 
 typedef struct {
-  bool (*filter)(char *path, size_t path_sz, void *callback_context);
+  bool (*filter)(char* path, size_t path_sz, void* callback_context);
 
   // use this buffer to construct the paths.
-  char *path;
+  char* path;
   size_t path_idx;
   size_t path_sz;
 
@@ -133,10 +126,10 @@ typedef struct {
  * `child_num` must be <= `dst_parent->num_children`.
  */
 filter_copy_helper_result_t filter_copy_helper(
-    tree_t *dst_tree,
-    filter_copy_context_t *context,
-    const node_t *src,
-    node_t *dst_parent,
+    tree_t* dst_tree,
+    filter_copy_context_t* context,
+    const node_t* src,
+    node_t* dst_parent,
     size_t child_num) {
   filter_copy_helper_result_t result;
 
@@ -149,7 +142,7 @@ filter_copy_helper_result_t filter_copy_helper(
             &context->path,
             &context->path_idx,
             &context->path_sz,
-            (char *) src->name,
+            (char*)src->name,
             src->name_sz) == false) {
       return FILTER_COPY_OOM;
     }
@@ -157,8 +150,8 @@ filter_copy_helper_result_t filter_copy_helper(
 
   if (src->type == TYPE_LEAF) {
     // call the filter and determine whether this node should be added.
-    if (context->filter(context->path, context->path_idx,
-        context->callback_context)) {
+    if (context->filter(
+            context->path, context->path_idx, context->callback_context)) {
       dst_tree->num_leaf_nodes++;
 
       arena_alloc_node_result_t alloc_result = arena_alloc_node_strict(
@@ -173,7 +166,7 @@ filter_copy_helper_result_t filter_copy_helper(
       }
 
       // copy the attributes
-      node_t *dst = alloc_result.node;
+      node_t* dst = alloc_result.node;
       if (src->checksum_valid) {
         memcpy(dst->checksum, src->checksum, src->checksum_sz);
         dst->checksum_sz = src->checksum_sz;
@@ -195,7 +188,7 @@ filter_copy_helper_result_t filter_copy_helper(
   }
 
   // allocate a temporary node to hold the entries.
-  node_t *temp_node = alloc_node(NULL, 0, src->num_children);
+  node_t* temp_node = alloc_node(NULL, 0, src->num_children);
   if (temp_node == NULL) {
     return FILTER_COPY_OOM;
   }
@@ -212,13 +205,12 @@ filter_copy_helper_result_t filter_copy_helper(
   bool recursive = true;
 
   for (child_num_t ix = 0; ix < src->num_children; ix++) {
-    filter_copy_helper_result_t filter_copy_result =
-        filter_copy_helper(
-            dst_tree,
-            context,
-            get_child_by_index(src, ix),
-            temp_node,
-            dst_child_index);
+    filter_copy_helper_result_t filter_copy_result = filter_copy_helper(
+        dst_tree,
+        context,
+        get_child_by_index(src, ix),
+        temp_node,
+        dst_child_index);
 
     switch (filter_copy_result) {
       case FILTER_COPY_OK:
@@ -257,7 +249,7 @@ filter_copy_helper_result_t filter_copy_helper(
     }
 
     // copy the attributes
-    node_t *dst = alloc_result.node;
+    node_t* dst = alloc_result.node;
     if (src->checksum_valid && recursive) {
       memcpy(dst->checksum, src->checksum, src->checksum_sz);
       dst->checksum_sz = src->checksum_sz;
@@ -273,7 +265,7 @@ filter_copy_helper_result_t filter_copy_helper(
     dst->num_children = dst_child_index;
 
     for (child_num_t ix = 0; ix < dst_child_index; ix++) {
-      const node_t *child = get_child_by_index(temp_node, ix);
+      const node_t* child = get_child_by_index(temp_node, ix);
       set_child_by_index(dst, ix, child);
     }
 
@@ -288,11 +280,11 @@ filter_copy_helper_result_t filter_copy_helper(
   return result;
 }
 
-tree_t *filter_copy(
-    const tree_t *src,
-    bool (*filter)(char *path, size_t path_sz, void *callback_context),
-    void *context) {
-  tree_t *dst = alloc_tree_with_arena(src->consumed_memory);
+tree_t* filter_copy(
+    const tree_t* src,
+    bool (*filter)(char* path, size_t path_sz, void* callback_context),
+    void* context) {
+  tree_t* dst = alloc_tree_with_arena(src->consumed_memory);
   filter_copy_context_t filter_copy_context;
 
   filter_copy_context.path = malloc(DEFAULT_PATH_BUFFER_SZ);

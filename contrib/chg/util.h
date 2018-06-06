@@ -18,18 +18,18 @@
 #define UNUSED_
 #endif
 
-void abortmsg(const char *fmt, ...) PRINTF_FORMAT_;
-void abortmsgerrno(const char *fmt, ...) PRINTF_FORMAT_;
+void abortmsg(const char* fmt, ...) PRINTF_FORMAT_;
+void abortmsgerrno(const char* fmt, ...) PRINTF_FORMAT_;
 
 void enablecolor(void);
 void enabledebugmsg(void);
-void debugmsg(const char *fmt, ...) PRINTF_FORMAT_;
+void debugmsg(const char* fmt, ...) PRINTF_FORMAT_;
 
 void fchdirx(int dirfd);
 void fsetcloexec(int fd);
-void *chg_mallocx(size_t size);
-void *chg_reallocx(void *ptr, size_t size);
+void* chg_mallocx(size_t size);
+void* chg_reallocx(void* ptr, size_t size);
 
-int runshellcmd(const char *cmd, const char *envp[], const char *cwd);
+int runshellcmd(const char* cmd, const char* envp[], const char* cwd);
 
-#endif  /* UTIL_H_ */
+#endif /* UTIL_H_ */

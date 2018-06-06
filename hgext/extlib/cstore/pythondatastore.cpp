@@ -10,18 +10,14 @@
 #include "hgext/extlib/cstore/pythondatastore.h"
 #include "hgext/extlib/cstore/pythonkeyiterator.h"
 
-PythonDataStore::PythonDataStore(PythonObj store) : _store(store)
-{
-}
+PythonDataStore::PythonDataStore(PythonObj store) : _store(store) {}
 
-DeltaChainIterator PythonDataStore::getDeltaChain(const Key &key)
-{
+DeltaChainIterator PythonDataStore::getDeltaChain(const Key& key) {
   std::shared_ptr<DeltaChain> chain = getDeltaChainRaw(key);
   return DeltaChainIterator(chain);
 }
 
-std::shared_ptr<DeltaChain> PythonDataStore::getDeltaChainRaw(const Key &key)
-{
+std::shared_ptr<DeltaChain> PythonDataStore::getDeltaChainRaw(const Key& key) {
   // Extract the delta chain from the list of tuples
   // and build a DeltaChain object from them
   std::shared_ptr<std::vector<DeltaChainLink>> links =
@@ -32,12 +28,12 @@ std::shared_ptr<DeltaChain> PythonDataStore::getDeltaChainRaw(const Key &key)
 
   // Build (name, node) tuple and call getdeltachain
   // method of the underlying store
-  PythonObj pyKey = Py_BuildValue("(s#s#)", (key.name).c_str(),
-                                  (key.name).size(), key.node, 20);
+  PythonObj pyKey = Py_BuildValue(
+      "(s#s#)", (key.name).c_str(), (key.name).size(), key.node, 20);
   PythonObj list;
   try {
     list = _store.callmethod("getdeltachain", pyKey);
-  } catch (const pyexception &ex) {
+  } catch (const pyexception& ex) {
     if (PyErr_ExceptionMatches(PyExc_KeyError)) {
       // Clear the exception, otherwise next method call will exit immediately
       PyErr_Clear();
@@ -50,7 +46,7 @@ std::shared_ptr<DeltaChain> PythonDataStore::getDeltaChainRaw(const Key &key)
   }
 
   PythonObj iter = PyObject_GetIter(list);
-  PyObject *item;
+  PyObject* item;
   while ((item = PyIter_Next(iter)) != NULL) {
     PythonObj tuple(item);
 
@@ -59,15 +55,31 @@ std::shared_ptr<DeltaChain> PythonDataStore::getDeltaChainRaw(const Key &key)
     uint16_t filenamesz, deltabasefilenamesz;
     uint64_t deltasz, nodesz, deltabasenodesz;
 
-    if (!PyArg_ParseTuple(tuple, "s#z#s#z#z#", &filename, &filenamesz, &node,
-                          &nodesz, &deltabasefilename, &deltabasefilenamesz,
-                          &deltabasenode, &deltabasenodesz, &delta, &deltasz)) {
+    if (!PyArg_ParseTuple(
+            tuple,
+            "s#z#s#z#z#",
+            &filename,
+            &filenamesz,
+            &node,
+            &nodesz,
+            &deltabasefilename,
+            &deltabasefilenamesz,
+            &deltabasenode,
+            &deltabasenodesz,
+            &delta,
+            &deltasz)) {
       throw pyexception();
     }
 
-    links->push_back(DeltaChainLink(filename, deltabasefilename, node,
-                                    deltabasenode, delta, filenamesz,
-                                    deltabasefilenamesz, deltasz));
+    links->push_back(DeltaChainLink(
+        filename,
+        deltabasefilename,
+        node,
+        deltabasenode,
+        delta,
+        filenamesz,
+        deltabasefilenamesz,
+        deltasz));
 
     tuples->push_back(tuple);
   }
@@ -75,55 +87,47 @@ std::shared_ptr<DeltaChain> PythonDataStore::getDeltaChainRaw(const Key &key)
   return std::make_shared<PyDeltaChain>(links, tuples);
 }
 
-std::shared_ptr<KeyIterator> PythonDataStore::getMissing(KeyIterator &missing)
-{
+std::shared_ptr<KeyIterator> PythonDataStore::getMissing(KeyIterator& missing) {
   PythonObj list = PyList_New(0);
 
-  Key *key;
+  Key* key;
   while ((key = missing.next()) != NULL) {
-    PythonObj pyKey = Py_BuildValue("(s#s#)", key->name.c_str(),
-                                    key->name.size(), key->node, 20);
-    if (PyList_Append(list, (PyObject *)pyKey)) {
+    PythonObj pyKey = Py_BuildValue(
+        "(s#s#)", key->name.c_str(), key->name.size(), key->node, 20);
+    if (PyList_Append(list, (PyObject*)pyKey)) {
       throw pyexception();
     }
   }
 
-  PythonObj arg = Py_BuildValue("(O)", (PyObject *)list);
+  PythonObj arg = Py_BuildValue("(O)", (PyObject*)list);
   PythonObj keys = _store.callmethod("getmissing", arg);
 
-  PythonObj iter = PyObject_GetIter((PyObject *)keys);
+  PythonObj iter = PyObject_GetIter((PyObject*)keys);
   return std::make_shared<PythonKeyIterator>(iter);
 }
 
-void PythonDataStore::markForRefresh()
-{
+void PythonDataStore::markForRefresh() {
   PythonObj args = Py_BuildValue("");
   _store.callmethod("markforrefresh", args);
 }
 
-class Single : public KeyIterator
-{
-public:
-  Key *_k;
-  Single(Key *k) : _k(k)
-  {
-  }
-  Key *next()
-  {
-    Key *tmp = _k;
+class Single : public KeyIterator {
+ public:
+  Key* _k;
+  Single(Key* k) : _k(k) {}
+  Key* next() {
+    Key* tmp = _k;
     _k = NULL;
     return tmp;
   }
 };
 
-bool PythonDataStore::contains(const Key &key)
-{
-  Single iter((Key *)&key);
+bool PythonDataStore::contains(const Key& key) {
+  Single iter((Key*)&key);
   std::shared_ptr<KeyIterator> it = getMissing(iter);
   return (!it->next());
 }
 
-PythonObj PythonDataStore::getStore()
-{
+PythonObj PythonDataStore::getStore() {
   return this->_store;
 }

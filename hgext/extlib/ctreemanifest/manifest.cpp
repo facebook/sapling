@@ -11,11 +11,10 @@
 
 #include "lib/clib/sha1.h"
 
-Manifest::Manifest(ConstantStringRef &rawobj, const char *node)
-    : _rawobj(rawobj), _refcount(0), _mutable(false)
-{
-  const char *parseptr = _rawobj.content();
-  const char *endptr = parseptr + _rawobj.size();
+Manifest::Manifest(ConstantStringRef& rawobj, const char* node)
+    : _rawobj(rawobj), _refcount(0), _mutable(false) {
+  const char* parseptr = _rawobj.content();
+  const char* endptr = parseptr + _rawobj.size();
 
   while (parseptr < endptr) {
     ManifestEntry entry;
@@ -30,40 +29,39 @@ Manifest::Manifest(ConstantStringRef &rawobj, const char *node)
   memcpy(this->_node, node, BIN_NODE_SIZE);
 }
 
-ManifestPtr Manifest::copy()
-{
+ManifestPtr Manifest::copy() {
   ManifestPtr copied(new Manifest());
   copied->_rawobj = this->_rawobj;
 
   for (std::list<ManifestEntry>::iterator thisIter = this->entries.begin();
-       thisIter != this->entries.end(); thisIter++) {
+       thisIter != this->entries.end();
+       thisIter++) {
     copied->addChild(copied->entries.end(), &(*thisIter));
   }
 
   return copied;
 }
 
-ManifestIterator Manifest::getIterator()
-{
+ManifestIterator Manifest::getIterator() {
   return ManifestIterator(this->entries.begin(), this->entries.end());
 }
 
-SortedManifestIterator Manifest::getSortedIterator()
-{
+SortedManifestIterator Manifest::getSortedIterator() {
   // populate the sorted list if it's not present.
   if (this->entries.size() != this->mercurialSortedEntries.size()) {
     this->mercurialSortedEntries.clear();
 
     for (std::list<ManifestEntry>::iterator iterator = this->entries.begin();
-         iterator != this->entries.end(); iterator++) {
+         iterator != this->entries.end();
+         iterator++) {
       this->mercurialSortedEntries.push_back(&(*iterator));
     }
 
     this->mercurialSortedEntries.sort(ManifestEntry::compareMercurialOrder);
   }
 
-  return SortedManifestIterator(this->mercurialSortedEntries.begin(),
-                                this->mercurialSortedEntries.end());
+  return SortedManifestIterator(
+      this->mercurialSortedEntries.begin(), this->mercurialSortedEntries.end());
 }
 
 /**
@@ -71,12 +69,14 @@ SortedManifestIterator Manifest::getSortedIterator()
  * filename.  If a child with the same name already exists, *exacthit will
  * be set to true.  Otherwise, it will be set to false.
  */
-std::list<ManifestEntry>::iterator
-Manifest::findChild(const char *filename, const size_t filenamelen,
-                    FindResultType resulttype, bool *exacthit)
-{
+std::list<ManifestEntry>::iterator Manifest::findChild(
+    const char* filename,
+    const size_t filenamelen,
+    FindResultType resulttype,
+    bool* exacthit) {
   for (std::list<ManifestEntry>::iterator iter = this->entries.begin();
-       iter != this->entries.end(); iter++) {
+       iter != this->entries.end();
+       iter++) {
     size_t minlen =
         filenamelen < iter->filenamelen ? filenamelen : iter->filenamelen;
 
@@ -108,11 +108,12 @@ Manifest::findChild(const char *filename, const size_t filenamelen,
   return this->entries.end();
 }
 
-ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
-                                  const char *filename,
-                                  const size_t filenamelen, const char *node,
-                                  const char *flag)
-{
+ManifestEntry* Manifest::addChild(
+    std::list<ManifestEntry>::iterator iterator,
+    const char* filename,
+    const size_t filenamelen,
+    const char* node,
+    const char* flag) {
   if (!this->isMutable()) {
     throw std::logic_error("attempting to mutate immutable Manifest");
   }
@@ -124,7 +125,7 @@ ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
   --iterator;
 
   // return a reference to the element we added, not the one on the stack.
-  ManifestEntry *result = &(*iterator);
+  ManifestEntry* result = &(*iterator);
 
   result->initialize(filename, filenamelen, node, flag);
 
@@ -134,9 +135,9 @@ ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
   return result;
 }
 
-ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
-                                  ManifestEntry *otherChild)
-{
+ManifestEntry* Manifest::addChild(
+    std::list<ManifestEntry>::iterator iterator,
+    ManifestEntry* otherChild) {
   if (!this->isMutable()) {
     throw std::logic_error("attempting to mutate immutable Manifest");
   }
@@ -145,7 +146,7 @@ ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
   iterator = this->entries.insert(iterator, entry);
 
   // return a reference to the element we added, not the one on the stack.
-  ManifestEntry *result = &(*iterator);
+  ManifestEntry* result = &(*iterator);
 
   result->initialize(otherChild);
 
@@ -155,26 +156,23 @@ ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
   return result;
 }
 
-ManifestIterator::ManifestIterator(std::list<ManifestEntry>::iterator iterator,
-                                   std::list<ManifestEntry>::const_iterator end)
-    : iterator(iterator), end(end)
-{
-}
+ManifestIterator::ManifestIterator(
+    std::list<ManifestEntry>::iterator iterator,
+    std::list<ManifestEntry>::const_iterator end)
+    : iterator(iterator), end(end) {}
 
-ManifestEntry *ManifestIterator::next()
-{
+ManifestEntry* ManifestIterator::next() {
   if (this->isfinished()) {
     return NULL;
   }
 
-  ManifestEntry *result = &(*this->iterator);
+  ManifestEntry* result = &(*this->iterator);
   this->iterator++;
 
   return result;
 }
 
-ManifestEntry *ManifestIterator::currentvalue() const
-{
+ManifestEntry* ManifestIterator::currentvalue() const {
   if (this->isfinished()) {
     throw std::logic_error("iterator has no current value");
   }
@@ -182,31 +180,26 @@ ManifestEntry *ManifestIterator::currentvalue() const
   return &(*iterator);
 }
 
-bool ManifestIterator::isfinished() const
-{
+bool ManifestIterator::isfinished() const {
   return iterator == end;
 }
 
 SortedManifestIterator::SortedManifestIterator(
-    std::list<ManifestEntry *>::iterator iterator,
-    std::list<ManifestEntry *>::const_iterator end)
-    : iterator(iterator), end(end)
-{
-}
+    std::list<ManifestEntry*>::iterator iterator,
+    std::list<ManifestEntry*>::const_iterator end)
+    : iterator(iterator), end(end) {}
 
-ManifestEntry *SortedManifestIterator::next()
-{
+ManifestEntry* SortedManifestIterator::next() {
   if (this->isfinished()) {
     return NULL;
   }
 
-  ManifestEntry *result = *this->iterator;
+  ManifestEntry* result = *this->iterator;
   this->iterator++;
   return result;
 }
 
-ManifestEntry *SortedManifestIterator::currentvalue() const
-{
+ManifestEntry* SortedManifestIterator::currentvalue() const {
   if (this->isfinished()) {
     throw std::logic_error("iterator has no current value");
   }
@@ -214,22 +207,20 @@ ManifestEntry *SortedManifestIterator::currentvalue() const
   return *iterator;
 }
 
-bool SortedManifestIterator::isfinished() const
-{
+bool SortedManifestIterator::isfinished() const {
   return iterator == end;
 }
 
-void Manifest::serialize(std::string &result)
-{
+void Manifest::serialize(std::string& result) {
   result.erase();
   result.reserve(16 * 1024 * 1024);
   ManifestIterator iterator = this->getIterator();
-  ManifestEntry *entry;
+  ManifestEntry* entry;
   while ((entry = iterator.next()) != NULL) {
     result.append(entry->filename, entry->filenamelen);
     result.append("\0", 1);
-    result.append(entry->get_node() ? entry->get_node() : HEXNULLID,
-                  HEX_NODE_SIZE);
+    result.append(
+        entry->get_node() ? entry->get_node() : HEXNULLID, HEX_NODE_SIZE);
     if (entry->flag) {
       result.append(entry->flag, 1);
     }
@@ -237,8 +228,7 @@ void Manifest::serialize(std::string &result)
   }
 }
 
-void Manifest::computeNode(const char *p1, const char *p2, char *result)
-{
+void Manifest::computeNode(const char* p1, const char* p2, char* result) {
   std::string content;
   this->serialize(content);
 
@@ -254,27 +244,23 @@ void Manifest::computeNode(const char *p1, const char *p2, char *result)
   }
   fbhg_sha1_update(&ctx, content.c_str(), content.size());
 
-  fbhg_sha1_final((unsigned char *)result, &ctx);
+  fbhg_sha1_final((unsigned char*)result, &ctx);
 }
 
-void Manifest::incref()
-{
+void Manifest::incref() {
   this->_refcount++;
 }
 
-size_t Manifest::decref()
-{
+size_t Manifest::decref() {
   this->_refcount--;
   return this->_refcount;
 }
 
-bool Manifest::isMutable() const
-{
+bool Manifest::isMutable() const {
   return this->_mutable;
 }
 
-void Manifest::markPermanent(const char *p1, const char *p2)
-{
+void Manifest::markPermanent(const char* p1, const char* p2) {
   if (!this->isMutable()) {
     throw std::logic_error("attempting to double mark manifest immutable");
   }
@@ -282,8 +268,7 @@ void Manifest::markPermanent(const char *p1, const char *p2)
   this->computeNode(p1, p2, this->_node);
 }
 
-void Manifest::markPermanent(const char *node)
-{
+void Manifest::markPermanent(const char* node) {
   if (!this->isMutable()) {
     throw std::logic_error("attempting to double mark manifest immutable");
   }

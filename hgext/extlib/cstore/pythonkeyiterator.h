@@ -12,26 +12,22 @@
 
 #include "hgext/extlib/cstore/pythonutil.h"
 
-class PythonKeyIterator : public KeyIterator
-{
-private:
+class PythonKeyIterator : public KeyIterator {
+ private:
   PythonObj _input;
   Key _current;
 
-public:
-  PythonKeyIterator(PythonObj input) : _input(input)
-  {
-  }
+ public:
+  PythonKeyIterator(PythonObj input) : _input(input) {}
 
-  Key *next()
-  {
-    PyObject *item;
-    while ((item = PyIter_Next((PyObject *)_input)) != NULL) {
+  Key* next() {
+    PyObject* item;
+    while ((item = PyIter_Next((PyObject*)_input)) != NULL) {
       PythonObj itemObj(item);
 
-      char *name;
+      char* name;
       Py_ssize_t namelen;
-      char *node;
+      char* node;
       Py_ssize_t nodelen;
       if (!PyArg_ParseTuple(item, "s#s#", &name, &namelen, &node, &nodelen)) {
         throw pyexception();

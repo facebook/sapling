@@ -26,20 +26,19 @@
  * class may refer to that it does not own.  If it owns any memory, it is a
  * single block referenced by the ownedmemory field.
  */
-class ManifestEntry
-{
-private:
-  const char *node;
+class ManifestEntry {
+ private:
+  const char* node;
 
-public:
-  const char *filename;
+ public:
+  const char* filename;
   size_t filenamelen;
 
   // unlike filename/node, this is not always a valid pointer.  if the flag
   // is unset, flag will be set to NULL.
-  const char *flag;
+  const char* flag;
   ManifestPtr resolved;
-  char *ownedmemory;
+  char* ownedmemory;
 
   // TODO: add hint storage here as well
 
@@ -49,35 +48,41 @@ public:
 
   bool isdirectory() const;
   bool hasNode() const;
-  const char *get_node();
+  const char* get_node();
   void reset_node();
 
-  void appendtopath(std::string &path);
+  void appendtopath(std::string& path);
 
-  ManifestPtr get_manifest(const ManifestFetcher &fetcher, const char *path,
-                           size_t pathlen);
+  ManifestPtr get_manifest(
+      const ManifestFetcher& fetcher,
+      const char* path,
+      size_t pathlen);
 
-  void initialize(const char *filename, const size_t filenamelen,
-                  const char *node, const char *flag);
+  void initialize(
+      const char* filename,
+      const size_t filenamelen,
+      const char* node,
+      const char* flag);
 
-  const char *initialize(const char *entrystart);
+  const char* initialize(const char* entrystart);
 
-  void initialize(ManifestEntry *other);
+  void initialize(ManifestEntry* other);
 
-  void updatebinnode(const char *node, const char *flag);
-  void updatehexnode(const char *node, const char *flag);
+  void updatebinnode(const char* node, const char* flag);
+  void updatehexnode(const char* node, const char* flag);
 
   /**
    * Returns true iff the left precedes right.
    */
-  static bool compareMercurialOrder(ManifestEntry *const &left,
-                                    ManifestEntry *const &right);
+  static bool compareMercurialOrder(
+      ManifestEntry* const& left,
+      ManifestEntry* const& right);
 
   /**
    * Compares the name of two entries. This is useful when
    * iterating through ManifestEntries simultaneously.
    */
-  static int compareName(ManifestEntry *left, ManifestEntry *right);
+  static int compareName(ManifestEntry* left, ManifestEntry* right);
 };
 
 #endif // FBHGEXT_CTREEMANIFEST_MANIFEST_ENTRY_H

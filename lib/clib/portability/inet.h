@@ -10,11 +10,11 @@
 #define FBHGEXT_CLIB_PORTABILITY_INET_H
 
 #if defined(_MSC_VER)
-	#include <winsock2.h>
-	#pragma comment(lib, "Ws2_32.lib")
-	/* See https://fburl.com/7hd350j8 for more details about Ws2_32.lib */
+#include <winsock2.h>
+#pragma comment(lib, "Ws2_32.lib")
+/* See https://fburl.com/7hd350j8 for more details about Ws2_32.lib */
 #else
-	#include <arpa/inet.h>
+#include <arpa/inet.h>
 #endif
 
 #endif /* FBHGEXT_CLIB_PORTABILITY_INET_H */

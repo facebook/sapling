@@ -23,60 +23,54 @@ extern "C" {
 #include "hgext/extlib/cstore/store.h"
 
 class UnionDatapackStore;
-class UnionDatapackStoreKeyIterator : public KeyIterator
-{
-private:
-  UnionDatapackStore &_store;
-  KeyIterator &_missing;
+class UnionDatapackStoreKeyIterator : public KeyIterator {
+ private:
+  UnionDatapackStore& _store;
+  KeyIterator& _missing;
 
-public:
-  UnionDatapackStoreKeyIterator(UnionDatapackStore &store, KeyIterator &missing)
-      : _store(store), _missing(missing)
-  {
-  }
+ public:
+  UnionDatapackStoreKeyIterator(UnionDatapackStore& store, KeyIterator& missing)
+      : _store(store), _missing(missing) {}
 
-  Key *next() override;
+  Key* next() override;
 };
 
-class UnionDeltaChainIterator : public DeltaChainIterator
-{
-private:
-  UnionDatapackStore &_store;
+class UnionDeltaChainIterator : public DeltaChainIterator {
+ private:
+  UnionDatapackStore& _store;
 
-protected:
-  std::shared_ptr<DeltaChain> getNextChain(const Key &key) override;
+ protected:
+  std::shared_ptr<DeltaChain> getNextChain(const Key& key) override;
 
-public:
-  UnionDeltaChainIterator(UnionDatapackStore &store, const Key &key)
-      : DeltaChainIterator(), _store(store)
-  {
+ public:
+  UnionDeltaChainIterator(UnionDatapackStore& store, const Key& key)
+      : DeltaChainIterator(), _store(store) {
     _chains.push_back(this->getNextChain(key));
   }
 };
 
-class UnionDatapackStore : public Store
-{
-public:
-  std::vector<DataStore *> _stores;
+class UnionDatapackStore : public Store {
+ public:
+  std::vector<DataStore*> _stores;
 
   UnionDatapackStore();
 
-  UnionDatapackStore(std::vector<DataStore *> &stores);
+  UnionDatapackStore(std::vector<DataStore*>& stores);
 
   ~UnionDatapackStore() override;
 
-  ConstantStringRef get(const Key &key) override;
+  ConstantStringRef get(const Key& key) override;
 
-  UnionDeltaChainIterator getDeltaChain(const Key &key);
+  UnionDeltaChainIterator getDeltaChain(const Key& key);
 
-  bool contains(const Key &key);
+  bool contains(const Key& key);
 
-  UnionDatapackStoreKeyIterator getMissing(KeyIterator &missing);
+  UnionDatapackStoreKeyIterator getMissing(KeyIterator& missing);
 
   void markForRefresh();
 
-  void addStore(DataStore *store);
-  void removeStore(DataStore *store);
+  void addStore(DataStore* store);
+  void removeStore(DataStore* store);
 };
 
 #endif // FBHGEXT_CSTORE_UNIONDATAPACKSTORE_H

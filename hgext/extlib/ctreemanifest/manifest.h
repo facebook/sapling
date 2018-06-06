@@ -44,24 +44,22 @@ enum FindResultType {
  * time of that InMemoryManifest is managed elsewhere, and is unaffected by the
  * existence of Manifest objects that view into it.
  */
-class Manifest
-{
-private:
+class Manifest {
+ private:
   ConstantStringRef _rawobj;
   size_t _refcount;
   bool _mutable;
   char _node[BIN_NODE_SIZE];
 
   std::list<ManifestEntry> entries;
-  std::list<ManifestEntry *> mercurialSortedEntries;
+  std::list<ManifestEntry*> mercurialSortedEntries;
 
-public:
-  Manifest() : _refcount(0), _mutable(true)
-  {
+ public:
+  Manifest() : _refcount(0), _mutable(true) {
     memcpy(this->_node, NULLID, BIN_NODE_SIZE);
   }
 
-  Manifest(ConstantStringRef &rawobj, const char *node);
+  Manifest(ConstantStringRef& rawobj, const char* node);
 
   void incref();
   size_t decref();
@@ -72,11 +70,10 @@ public:
   ManifestPtr copy();
 
   bool isMutable() const;
-  void markPermanent(const char *p1, const char *p2);
-  void markPermanent(const char *node);
+  void markPermanent(const char* p1, const char* p2);
+  void markPermanent(const char* node);
 
-  char *node()
-  {
+  char* node() {
     return _node;
   }
 
@@ -90,10 +87,11 @@ public:
    * and directory/file status already exists, *exacthit will be set to
    * true.  Otherwise, it will be set to false.
    */
-  std::list<ManifestEntry>::iterator findChild(const char *filename,
-                                               const size_t filenamelen,
-                                               FindResultType resulttype,
-                                               bool *exacthit);
+  std::list<ManifestEntry>::iterator findChild(
+      const char* filename,
+      const size_t filenamelen,
+      FindResultType resulttype,
+      bool* exacthit);
 
   /**
    * Adds a child with a given name.
@@ -102,18 +100,21 @@ public:
    * @param filename
    * @param filenamelen
    */
-  ManifestEntry *addChild(std::list<ManifestEntry>::iterator iterator,
-                          const char *filename, const size_t filenamelen,
-                          const char *node, const char *flag);
+  ManifestEntry* addChild(
+      std::list<ManifestEntry>::iterator iterator,
+      const char* filename,
+      const size_t filenamelen,
+      const char* node,
+      const char* flag);
 
   /**
    * Adds a deep copy of the given ManifestEntry as a child.
    */
-  ManifestEntry *addChild(std::list<ManifestEntry>::iterator iterator,
-                          ManifestEntry *otherChild);
+  ManifestEntry* addChild(
+      std::list<ManifestEntry>::iterator iterator,
+      ManifestEntry* otherChild);
 
-  size_t children() const
-  {
+  size_t children() const {
     return entries.size();
   }
 
@@ -122,8 +123,7 @@ public:
    * @param iterator iterator for this->entries, correctly positioned for
    *                 the child.
    */
-  void removeChild(std::list<ManifestEntry>::iterator iterator)
-  {
+  void removeChild(std::list<ManifestEntry>::iterator iterator) {
     if (!this->isMutable()) {
       throw std::logic_error("attempting to mutate immutable Manifest");
     }
@@ -138,37 +138,35 @@ public:
    * Computes the hash of this manifest, given the two parent nodes. The input
    * and output nodes are 20 bytes.
    */
-  void computeNode(const char *p1, const char *p2, char *result);
+  void computeNode(const char* p1, const char* p2, char* result);
 
   /**
    * Serializes the current manifest into the given string. The serialization
    * format matches upstream Mercurial's Manifest format and is appropriate
    * for putting in a store.
    */
-  void serialize(std::string &result);
+  void serialize(std::string& result);
 };
 
 /**
  * Class that represents an iterator over the entries of an individual
  * manifest.
  */
-class ManifestIterator
-{
-private:
+class ManifestIterator {
+ private:
   std::list<ManifestEntry>::iterator iterator;
   std::list<ManifestEntry>::const_iterator end;
 
-public:
-  ManifestIterator()
-  {
-  }
+ public:
+  ManifestIterator() {}
 
-  ManifestIterator(std::list<ManifestEntry>::iterator iterator,
-                   std::list<ManifestEntry>::const_iterator end);
+  ManifestIterator(
+      std::list<ManifestEntry>::iterator iterator,
+      std::list<ManifestEntry>::const_iterator end);
 
-  ManifestEntry *next();
+  ManifestEntry* next();
 
-  ManifestEntry *currentvalue() const;
+  ManifestEntry* currentvalue() const;
 
   bool isfinished() const;
 };
@@ -177,23 +175,21 @@ public:
  * Class that represents an iterator over the entries of an individual
  * manifest, sorted by mercurial's ordering.
  */
-class SortedManifestIterator
-{
-private:
-  std::list<ManifestEntry *>::iterator iterator;
-  std::list<ManifestEntry *>::const_iterator end;
+class SortedManifestIterator {
+ private:
+  std::list<ManifestEntry*>::iterator iterator;
+  std::list<ManifestEntry*>::const_iterator end;
 
-public:
-  SortedManifestIterator()
-  {
-  }
+ public:
+  SortedManifestIterator() {}
 
-  SortedManifestIterator(std::list<ManifestEntry *>::iterator iterator,
-                         std::list<ManifestEntry *>::const_iterator end);
+  SortedManifestIterator(
+      std::list<ManifestEntry*>::iterator iterator,
+      std::list<ManifestEntry*>::const_iterator end);
 
-  ManifestEntry *next();
+  ManifestEntry* next();
 
-  ManifestEntry *currentvalue() const;
+  ManifestEntry* currentvalue() const;
 
   bool isfinished() const;
 };
