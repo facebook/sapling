@@ -210,6 +210,7 @@ Clean up repo1
 
 Test that rebasing and pushing works as expected
 
+  $ setconfig remotenames.fastheaddiscovery=1
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)
   searching for changes
