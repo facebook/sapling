@@ -2,7 +2,8 @@ use action::CloudSyncTrigger;
 use config::CommitCloudConfig;
 use error::*;
 use eventsource::reqwest::Client;
-use receiver::CommandName::{self, *};
+use receiver::CommandName::{self, CommitCloudCancelSubscriptions, CommitCloudRestartSubscriptions,
+                            CommitCloudStartSubscriptions};
 use reqwest::Url;
 use serde_json;
 use std::{str, thread};
