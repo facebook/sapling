@@ -69,6 +69,7 @@ struct hgclient_tag_ {
   context_t ctx;
   unsigned int capflags;
   unsigned long long versionhash;
+  double connectedat;
 };
 
 static const size_t defaultdatasize = 4096;
@@ -474,6 +475,7 @@ hgclient_t* hgc_open(const char* sockname) {
 
   hgclient_t* hgc = chg_mallocx(sizeof(hgclient_t));
   memset(hgc, 0, sizeof(*hgc));
+  hgc->connectedat = chg_now();
   hgc->sockfd = fd;
   initcontext(&hgc->ctx);
 
@@ -592,4 +594,11 @@ void hgc_setenv(hgclient_t* hgc, const char* const envp[]) {
     return;
   packcmdargs(&hgc->ctx, envp, /*argsize*/ -1);
   writeblockrequest(hgc, "setenv");
+}
+
+/*!
+ * How many seconds have passed since connection.
+ */
+double hgc_elapsed(hgclient_t* hgc) {
+  return chg_now() - hgc->connectedat;
 }

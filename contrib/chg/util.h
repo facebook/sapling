@@ -30,6 +30,8 @@ void fsetcloexec(int fd);
 void* chg_mallocx(size_t size);
 void* chg_reallocx(void* ptr, size_t size);
 
+double chg_now();
+
 int runshellcmd(const char* cmd, const char* envp[], const char* cwd);
 
 #endif /* UTIL_H_ */

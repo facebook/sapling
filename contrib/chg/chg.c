@@ -30,6 +30,12 @@
 #define PATH_MAX 4096
 #endif
 
+/* Maximum time waiting for the hello message.
+ * Start a new server if exceeds. */
+#ifndef CHG_HELLO_THRESHOLD
+#define CHG_HELLO_THRESHOLD 0.05
+#endif
+
 struct cmdserveropts {
   char sockname[PATH_MAX];
   char initsockname[PATH_MAX];
@@ -313,9 +319,12 @@ static hgclient_t* connectcmdserver(struct cmdserveropts* opts) {
 
 static void killcmdserver(const struct cmdserveropts* opts) {
   /* resolve config hash */
-  char* resolvedpath = realpath(opts->sockname, NULL);
+  const char* sockname =
+      opts->redirectsockname[0] ? opts->redirectsockname : opts->sockname;
+  char* resolvedpath = realpath(sockname, NULL);
   if (resolvedpath) {
-    unlink(resolvedpath);
+    int ret = unlink(resolvedpath);
+    debugmsg("unlink(\"%s\") = %d", resolvedpath, ret);
     free(resolvedpath);
   }
 }
@@ -387,8 +396,17 @@ static void execoriginalhg(const char* argv[]) {
     abortmsgerrno("failed to exec original hg");
 }
 
+static int configint(const char* name, int fallback) {
+  const char* str = getenv(name);
+  int value = fallback;
+  if (str) {
+    sscanf(str, "%d", &value);
+  }
+  return value;
+}
+
 int main(int argc, const char* argv[], const char* envp[]) {
-  if (getenv("CHGDEBUG"))
+  if (configint("CHGDEBUG", 0))
     enabledebugmsg();
 
   if (!getenv("HGPLAIN") && isatty(fileno(stderr)))
@@ -430,15 +448,18 @@ int main(int argc, const char* argv[], const char* envp[]) {
           "version mismatch (client %llu, server %llu)",
           HGVERSIONHASH,
           versionhash);
-      const char* sockname =
-          opts.redirectsockname[0] ? opts.redirectsockname : opts.sockname;
-      int ret = unlink(sockname);
-      debugmsg("unlink(\"%s\") = %d", sockname, ret);
+      killcmdserver(&opts);
       needreconnect = 1;
     } else {
       debugmsg("version matched (%llu)", versionhash);
     }
 #endif
+    if (!needreconnect && retry == 0 && configint("CHGSTARTTIMECHECK", 1) &&
+        hgc_elapsed(hgc) > CHG_HELLO_THRESHOLD) {
+      debugmsg("server too slow - killing");
+      killcmdserver(&opts);
+      needreconnect = 1;
+    }
     if (!needreconnect) {
       hgc_setenv(hgc, envp);
       const char** insts = hgc_validate(hgc, argv + 1, argc - 1);

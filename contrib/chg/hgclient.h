@@ -28,4 +28,6 @@ int hgc_runcommand(hgclient_t* hgc, const char* const args[], size_t argsize);
 void hgc_attachio(hgclient_t* hgc);
 void hgc_setenv(hgclient_t* hgc, const char* const envp[]);
 
+double hgc_elapsed(hgclient_t* hgc);
+
 #endif /* HGCLIENT_H_ */

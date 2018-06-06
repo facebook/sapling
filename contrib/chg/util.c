@@ -64,6 +64,10 @@ static double now() {
   return t.tv_usec / 1e6 + t.tv_sec;
 }
 
+double chg_now() {
+  return now();
+}
+
 void enablecolor(void) {
   colorenabled = 1;
 }
