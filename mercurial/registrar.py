@@ -139,6 +139,13 @@ class command(_funcregistrarbase):
     potential repository locations. See ``findrepo()``. If a repository is
     found, it will be used and passed to the decorated function.
 
+    The `cmdtemplate` argument defines whether to enable command-level template
+    support. Once turned on, the command's output can be redefined by `-T`
+    template language entirely. If `-T` is provided, traditional `ui.write`
+    outputs are suppressed. The command entry point would get a `templ`
+    argument after `repo` for manipulating the data source to render the
+    template.
+
     There are three constants in the class which tells what type of the command
     that is. That information will be helpful at various places. It will be also
     be used to decide what level of access the command has on hidden commits.
@@ -182,6 +189,7 @@ class command(_funcregistrarbase):
         norepo=False,
         optionalrepo=False,
         inferrepo=False,
+        cmdtemplate=False,
         cmdtype=unrecoverablewrite,
         subonly=False,
     ):
@@ -193,6 +201,7 @@ class command(_funcregistrarbase):
         func.norepo = norepo
         func.optionalrepo = optionalrepo
         func.inferrepo = inferrepo
+        func.cmdtemplate = cmdtemplate
         func.cmdtype = cmdtype
         func.subcommand = functools.partial(command, parentcommand=func)
         func.subcommands = {}

@@ -786,6 +786,7 @@ class cmdalias(object):
             if self.help.startswith("hg " + cmd):
                 # drop prefix in old-style help lines so hg shows the alias
                 self.help = self.help[4 + len(cmd) :]
+            self.cmdtemplate = self.fn.cmdtemplate
             self.norepo = self.fn.norepo
             self.__doc__ = self.fn.__doc__
 
@@ -814,6 +815,7 @@ class cmdalias(object):
     def __getattr__(self, name):
         adefaults = {
             r"norepo": True,
+            r"cmdtemplate": False,
             r"cmdtype": unrecoverablewrite,
             r"optionalrepo": False,
             r"inferrepo": False,
@@ -878,6 +880,34 @@ class lazyaliasentry(object):
 
     def __len__(self):
         return 3
+
+
+class cmdtemplatestate(object):
+    """Template-related state for a command.
+
+    Used together with cmdtemplate=True.
+
+    In MVC's sense, this is the "M". The template language takes the "M" and
+    renders the "V".
+    """
+
+    def __init__(self, ui, opts):
+        self._ui = ui
+        self._templ = opts.get("template")
+        if self._templ:
+            # Suppress traditional outputs.
+            ui.pushbuffer()
+        self._props = {}
+
+    def setprop(self, name, value):
+        self._props[name] = value
+
+    def end(self):
+        if self._templ:
+            ui = self._ui
+            ui.popbuffer()
+            text = cmdutil.rendertemplate(self._ui, self._templ, self._props)
+            self._ui.write(text)
 
 
 def addaliases(ui, cmdtable):
@@ -1220,6 +1250,11 @@ def _dispatch(req):
             return commands.help_(ui, "shortlist")
 
         repo = None
+        deferred = []
+        if func.cmdtemplate:
+            templ = cmdtemplatestate(ui, cmdoptions)
+            args.insert(0, templ)
+            deferred.append(lambda: templ.end())
         cmdpats = args[:]
         if not func.norepo:
             # use the repo from the request only if we don't have -R
@@ -1261,6 +1296,8 @@ def _dispatch(req):
                 ui = repo.ui
                 if options["hidden"]:
                     repo = repo.unfiltered()
+                if repo != req.repo:
+                    deferred.append(repo.close)
             args.insert(0, repo)
         elif rpath:
             ui.warn(_("warning: --repository ignored\n"))
@@ -1278,8 +1315,8 @@ def _dispatch(req):
                 lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions
             )
         finally:
-            if repo and repo != req.repo:
-                repo.close()
+            for func in deferred:
+                func()
 
 
 def _runcommand(ui, options, cmd, cmdfunc):
