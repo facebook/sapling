@@ -1,10 +1,10 @@
-  rev: 2 svnrev: svnpath: svnuuid:
+  rev: 2 svnrev:
 @
 |
-  rev: 1 svnrev:3 svnpath:/trunk svnuuid:df2126f7-00ab-4d49-b42c-7e981dde0bcf
+  rev: 1 svnrev:3
 o
 |
-  rev: 0 svnrev:2 svnpath:/trunk svnuuid:df2126f7-00ab-4d49-b42c-7e981dde0bcf
+  rev: 0 svnrev:2
 o
 
 

@@ -4,13 +4,13 @@ verifying 34bdb5088d6e against file:///[\w/]*svnwrap_test/testrepo-1/branches/fe
 verifying c4dcdb393137 against file:///[\w/]*svnwrap_test/testrepo-1/trunk@2 (re)
 verifying d4c6ea579d09 against file:///[\w/]*svnwrap_test/testrepo-1/branches/badname@3 (re)
 verifying 34bdb5088d6e against file:///[\w/]*svnwrap_test/testrepo-1/branches/feature@4 (re)
-  rev: 2 svnrev: svnpath: svnuuid:
+  rev: 2 svnrev:
 @
 |
-  rev: 1 svnrev:3 svnpath:/trunk svnuuid:df2126f7-00ab-4d49-b42c-7e981dde0bcf
+  rev: 1 svnrev:3
 o
 |
-  rev: 0 svnrev:2 svnpath:/trunk svnuuid:df2126f7-00ab-4d49-b42c-7e981dde0bcf
+  rev: 0 svnrev:2
 o
 
 

@@ -37,18 +37,17 @@ class TestLogKeywords(test_hgsubversion_util.TestBase):
         self.commitchanges([('foo', 'foo', 'frobnicate\n')])
 
         ui = CapturingUI()
-        commands.log(ui, repo, template=('  rev: {rev} svnrev:{svnrev} '
-                                         'svnpath:{svnpath} svnuuid:{svnuuid}\n'),
-                     **defaults)
+        commands.log(
+            ui, repo, template=('  rev: {rev} svnrev:{svnrev}\n'), **defaults)
         print ui._output
         self.assertEqual(ui._output.strip(), '''
-  rev: 2 svnrev: svnpath: svnuuid:
+  rev: 2 svnrev:
 @
 |
-  rev: 1 svnrev:3 svnpath:/trunk svnuuid:df2126f7-00ab-4d49-b42c-7e981dde0bcf
+  rev: 1 svnrev:3
 o
 |
-  rev: 0 svnrev:2 svnpath:/trunk svnuuid:df2126f7-00ab-4d49-b42c-7e981dde0bcf
+  rev: 0 svnrev:2
 o
 '''.strip())
 

@@ -402,41 +402,15 @@ configitem("hgsubversion", "sqlitepragmas", default=list)
 configitem("hgsubversion", "failonmissing", default=configitem.dynamicdefault)
 
 
-def _templatehelper(ctx, kw):
-    """
-    Helper function for displaying information about converted changesets.
-    """
-    convertinfo = util.getsvnrev(ctx, "")
+@templatekeyword("svnrev")
+def svnrevkw(**args):
+    """:svnrev: String. Converted subversion revision number."""
+    convertinfo = util.getsvnrev(args['ctx'], "")
 
     if not convertinfo or not convertinfo.startswith("svn:"):
         return ""
 
-    if kw == "svnuuid":
-        return convertinfo[4:40]
-    elif kw == "svnpath":
-        return convertinfo[40:].rsplit("@", 1)[0]
-    elif kw == "svnrev":
-        return convertinfo[40:].rsplit("@", 1)[-1]
-    else:
-        raise hgutil.Abort("unrecognized hgsubversion keyword %s" % kw)
-
-
-@templatekeyword("svnrev")
-def svnrevkw(**args):
-    """:svnrev: String. Converted subversion revision number."""
-    return _templatehelper(args["ctx"], "svnrev")
-
-
-@templatekeyword("svnpath")
-def svnpathkw(**args):
-    """:svnpath: String. Converted subversion revision project path."""
-    return _templatehelper(args["ctx"], "svnpath")
-
-
-@templatekeyword("svnuuid")
-def svnuuidkw(**args):
-    """:svnuuid: String. Converted subversion revision repository identifier."""
-    return _templatehelper(args["ctx"], "svnuuid")
+    return convertinfo[40:].rsplit("@", 1)[-1]
 
 
 loadkeyword(templatekeyword)
