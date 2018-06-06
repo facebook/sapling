@@ -1,5 +1,9 @@
 #require git
 
+Disable this test until t30174052 is fixed (git 2.17.1 issue w/ pushing to
+different dirs)
+  $ exit 80
+
 make git commits repeatable
 
   $ cat >> $HGRCPATH <<EOF
@@ -749,7 +753,7 @@ check differences made by most recent change
   $ cd s
   $ cat > foobar << EOF
   > woopwoop
-  > 
+  >
   > foo
   > bar
   > EOF
@@ -815,7 +819,7 @@ add new changes, including whitespace
   $ cd s
   $ cat > foobar << EOF
   > woop    woop
-  > 
+  >
   > foo
   > bar
   > EOF
@@ -839,7 +843,7 @@ add new changes, including whitespace
   @@ -1,4 +1,4 @@
   -woopwoop
   +woop    woop
-   
+
    foo
    bar
 
@@ -860,7 +864,7 @@ adding an include should ignore the other elements
   @@ -1,4 +1,4 @@
   -woopwoop
   +woop    woop
-   
+
    foo
    bar
 
@@ -1210,7 +1214,7 @@ whitelisting of ext should be respected (that's the git submodule behaviour)
   > malicious-subrepository malicious-subrepository-clone-allowed
   Cloning into '$TESTTMP/tc/malicious-subrepository-clone-allowed/s'...
   fatal: Could not read from remote repository.
-  
+
   Please make sure you have the correct access rights
   and the repository exists.
   updating to branch default
