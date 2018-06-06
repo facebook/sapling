@@ -3,9 +3,9 @@
 import os
 import sys
 
-from mercurial import hg
 import test_hgsubversion_util
 from hgext.hgsubversion import svnwrap
+from mercurial import hg
 
 
 def _do_case(self, name, stupid):
@@ -16,9 +16,7 @@ def _do_case(self, name, stupid):
     )
     assert (
         test_hgsubversion_util.repolen(self.repo) > 0
-    ), (
-        "Repo had no changes, maybe you need to add a subdir entry in test_hgsubversion_util?"
-    )
+    ), "Repo had no changes, maybe you need to add a subdir entry in test_hgsubversion_util?"
     wc2_path = self.wc_path + "_custom"
     checkout_path = repo_path
     if subdir:

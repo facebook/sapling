@@ -467,8 +467,7 @@ pypats = [
 
 # XXX: Historic foo_bar naming. This is to make test-check-code clean, free
 # from line numbers. Avoid adding new methods here if possible.
-underscorenames = (
-    """
+underscorenames = """
 abort_report add_dirs add_files add_password annotate_highlight audit_git_path
 audit_hg_path auth_getkey auth_getuserpasswd build_opener call_conduit
 check_heads check_min_time check_perm clone_sparse close_all close_connection
@@ -514,7 +513,6 @@ tree_entry update_changeset update_hg_bookmarks update_references
 update_remote_branches upload_pack upstream_revs wrap_socket write_err
 write_rej zc_create_server
 """.split()
-)
 
 # ported from check-commit
 pycorepats = [

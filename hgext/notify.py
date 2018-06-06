@@ -170,8 +170,7 @@ configitem("notify", "template", default=None)
 configitem("notify", "test", default=True)
 
 # template for single changeset can include email headers.
-single_template = (
-    """
+single_template = """
 Subject: changeset in {webroot}: {desc|firstline|strip}
 From: {author}
 
@@ -180,7 +179,6 @@ details: {baseurl}{webroot}?cmd=changeset;node={node|short}
 description:
 \t{desc|tabindent|strip}
 """.lstrip()
-)
 
 # template for multiple changesets should not contain email headers,
 # because only first set of headers will be used and result will look

@@ -1102,6 +1102,7 @@ def wraprepo(repo):
             `ignoreduplicates` is True, the insert for that row is a no-op
             to allow ignoring existing rows during a bulk update.
             """
+
             def insert(args, values):
                 query = (
                     "INSERT INTO revisions(repo, path, "

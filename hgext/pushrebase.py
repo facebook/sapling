@@ -920,13 +920,9 @@ def _addbundlepacks(ui, mfl, packpaths):
 
     # Point the bundle repo at the temp stores
     bundledatastores.append(mfl.datastore)
-    mfl.datastore = contentstore.unioncontentstore(
-        *bundledatastores
-    )
+    mfl.datastore = contentstore.unioncontentstore(*bundledatastores)
     bundlehiststores.append(mfl.historystore)
-    mfl.historystore = metadatastore.unionmetadatastore(
-        *bundlehiststores
-    )
+    mfl.historystore = metadatastore.unionmetadatastore(*bundlehiststores)
 
 
 @bundle2.parthandler(
