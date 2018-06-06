@@ -966,6 +966,26 @@ def isstdiofilename(pat):
     return not pat or pat == "-"
 
 
+def rendertemplate(ui, tmpl, props=None):
+    """Render tmpl written in the template language. props provides the
+    "environment" which the template program runs in.
+
+    Return the rendered string.
+
+    >>> import mercurial.ui as uimod
+    >>> rendertemplate(uimod.ui(), '{a} {b|json}', {'a': 'x', 'b': [3, None]})
+    'x [3, null]'
+    """
+    t = formatter.maketemplater(ui, tmpl, cache=templatekw.defaulttempl)
+    mapping = {"ui": ui, "templ": t}
+    if props:
+        if "ctx" in props:
+            mapping["revcache"] = {}
+        mapping.update(props)
+    mapping.update(templatekw.keywords)
+    return t.render(mapping)
+
+
 class _unclosablefile(object):
     def __init__(self, fp):
         self._fp = fp

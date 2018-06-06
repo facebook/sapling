@@ -49,6 +49,7 @@ def testmod(name, optionflags=0, testtarget=None):
 
 testmod("mercurial.changegroup")
 testmod("mercurial.changelog")
+testmod("mercurial.cmdutil")
 testmod("mercurial.color")
 testmod("mercurial.config")
 testmod("mercurial.context")
