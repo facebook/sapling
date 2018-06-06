@@ -440,7 +440,13 @@ def runsymbol(context, mapping, key, default=""):
         except TemplateNotFound:
             v = default
     if callable(v):
-        return v(**pycompat.strkwargs(mapping))
+        try:
+            v = util.checksignature(v)(**pycompat.strkwargs(mapping))
+        except error.SignatureError:
+            # If certain data requested is missing. Pretend the template
+            # function does not exist.
+            v = default
+
     return v
 
 

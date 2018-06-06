@@ -52,6 +52,10 @@ Getting the JSON output for nodechanges
   $ hg rebase -s 6 -d 4 -q -T "{nodechanges % '{oldnode}:{newnodes % ' {newnode}'}'}"
   d9d6773efc831c274eace04bc13e8e6412517139: f48cd65c6dc3d2acb55da54402a5b029546e546f (no-eol)
 
+  $ hg rebase -s 4 -d 4 -q -T "{nodechanges}"
+  abort: source and destination form a cycle
+  [255]
+
 A more complex case, multiple replacements with a prune:
 
   $ testtemplate() {
