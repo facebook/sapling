@@ -102,11 +102,11 @@ pub struct FileStateV2 {
 }
 
 #[cfg(test)]
-use quickcheck::rand;
+use rand;
 
 #[cfg(test)]
-impl rand::Rand for FileStateV2 {
-    fn rand<R: rand::Rng>(rng: &mut R) -> Self {
+impl rand::distributions::Distribution<FileStateV2> for rand::distributions::Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> FileStateV2 {
         let mode = rng.gen();
         let size = rng.gen();
         let mtime = rng.gen();

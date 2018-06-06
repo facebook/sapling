@@ -163,7 +163,7 @@ impl TreeState {
 mod tests {
     use super::*;
     use filestate::StateFlags;
-    use quickcheck::rand::{ChaChaRng, Rng};
+    use rand::{ChaChaRng, Rng, SeedableRng};
     use tempdir::TempDir;
 
     #[test]
@@ -235,7 +235,7 @@ mod tests {
 
     fn new_treestate<P: AsRef<Path>>(path: P) -> TreeState {
         let mut state = TreeState::open(path, None).expect("open");
-        let mut rng = ChaChaRng::new_unseeded();
+        let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
             let file = rng.gen();
             state.insert(path, &file).expect("insert");
@@ -247,7 +247,7 @@ mod tests {
     fn test_insert() {
         let dir = TempDir::new("treestate").expect("tempdir");
         let mut state = new_treestate(dir.path().join("1"));
-        let mut rng = ChaChaRng::new_unseeded();
+        let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
             let file: FileStateV2 = rng.gen();
             assert_eq!(state.get(path).unwrap().unwrap(), &file);
@@ -276,7 +276,7 @@ mod tests {
             let file = state.get_mut(path).unwrap().unwrap();
             file.mode ^= 3;
         }
-        let mut rng = ChaChaRng::new_unseeded();
+        let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
             let mut file: FileStateV2 = rng.gen();
             file.mode ^= 3;
@@ -290,7 +290,7 @@ mod tests {
         let mut state = new_treestate(dir.path().join("1"));
         let block_id = state.flush().expect("flush");
         let mut state = TreeState::open(dir.path().join("1"), block_id.into()).expect("open");
-        let mut rng = ChaChaRng::new_unseeded();
+        let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
             let file: FileStateV2 = rng.gen();
             assert_eq!(state.get(path).unwrap().unwrap(), &file);
@@ -304,7 +304,7 @@ mod tests {
         let mut state = new_treestate(dir.path().join("1"));
         let block_id = state.write_as(dir.path().join("as")).expect("write_as");
         let mut state = TreeState::open(dir.path().join("as"), block_id.into()).expect("open");
-        let mut rng = ChaChaRng::new_unseeded();
+        let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
             let file: FileStateV2 = rng.gen();
             assert_eq!(state.get(path).unwrap().unwrap(), &file);
@@ -343,7 +343,7 @@ mod tests {
     fn test_visit_query_by_flags() {
         let dir = TempDir::new("treestate").expect("tempdir");
         let mut state = TreeState::open(dir.path().join("1"), None).expect("open");
-        let mut rng = ChaChaRng::new_unseeded();
+        let mut rng = ChaChaRng::from_seed([0; 32]);
         let mut file: FileStateV2 = rng.gen();
         file.state = StateFlags::IGNORED | StateFlags::NEED_CHECK;
         state.insert(b"a/b/1", &file).expect("insert");
@@ -376,7 +376,7 @@ mod tests {
             let dir = TempDir::new("treestate").expect("tempdir");
             // First, write the start state.
             let mut state = TreeState::open(dir.path().join("1"), None).expect("open");
-            let mut rng = ChaChaRng::new_unseeded();
+            let mut rng = ChaChaRng::from_seed([0; 32]);
             for (i, path) in paths.iter().enumerate() {
                 let mut file: FileStateV2 = rng.gen();
                 if ((1 << i) & start_bits) == 0 {
