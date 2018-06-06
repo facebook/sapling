@@ -9,9 +9,6 @@
  */
 #include <folly/experimental/TestUtil.h>
 #include <folly/futures/Future.h>
-#include <folly/init/Init.h>
-#include <folly/logging/Init.h>
-#include <folly/logging/xlog.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -35,14 +32,6 @@ using std::vector;
 using testing::ElementsAre;
 
 namespace {
-vector<PathComponent> getTreeEntryNames(const Tree* tree) {
-  vector<PathComponent> results;
-  for (const auto& entry : tree->getTreeEntries()) {
-    results.push_back(entry.getName());
-  }
-  return results;
-}
-
 enum class RepoType {
   FLAT_MANIFEST,
   TREE_MANIFEST,
@@ -74,7 +63,7 @@ class HgImportTest : public ::testing::TestWithParam<RepoType> {
   }
 
  protected:
-  TemporaryDirectory testDir_{"eden_test"};
+  TemporaryDirectory testDir_{"eden_hg_import_test"};
   AbsolutePath testPath_{testDir_.path().string()};
   HgRepo repo_{testPath_ + "repo"_pc};
   MemoryLocalStore localStore_;
@@ -108,7 +97,7 @@ TEST_P(HgImportTest, importTest) {
   EXPECT_EQ(rootTreeHash, rootTree->getHash());
   EXPECT_EQ(rootTreeHash, rootTree->getHash());
   ASSERT_THAT(
-      getTreeEntryNames(rootTree.get()),
+      rootTree->getEntryNames(),
       ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 
   // Get the "foo" tree.
@@ -122,7 +111,7 @@ TEST_P(HgImportTest, importTest) {
       : localStore_.getTree(fooEntry.getHash()).get(10s);
   ASSERT_TRUE(fooTree);
   ASSERT_THAT(
-      getTreeEntryNames(fooTree.get()),
+      fooTree->getEntryNames(),
       ElementsAre(PathComponent{"bar.txt"}, PathComponent{"test.txt"}));
   if (treemanifest) {
     // HgImporter::importTree() is currently responsible for inserting the tree
@@ -149,7 +138,7 @@ TEST_P(HgImportTest, importTest) {
       : localStore_.getTree(srcEntry.getHash()).get(10ms);
   ASSERT_TRUE(srcTree);
   ASSERT_THAT(
-      getTreeEntryNames(srcTree.get()),
+      srcTree->getEntryNames(),
       ElementsAre(PathComponent{"eden"}, PathComponent{"somelink"}));
   if (treemanifest) {
     auto srcTree2 = localStore_.getTree(srcEntry.getHash()).get(10ms);
@@ -167,8 +156,7 @@ TEST_P(HgImportTest, importTest) {
       ? importer.importTree(edenEntry.getHash())
       : localStore_.getTree(edenEntry.getHash()).get(10s);
   ASSERT_TRUE(edenTree);
-  ASSERT_THAT(
-      getTreeEntryNames(edenTree.get()), ElementsAre(PathComponent{"main.py"}));
+  ASSERT_THAT(edenTree->getEntryNames(), ElementsAre(PathComponent{"main.py"}));
   if (treemanifest) {
     auto edenTree2 = localStore_.getTree(edenEntry.getHash()).get(10ms);
     ASSERT_TRUE(edenTree2);

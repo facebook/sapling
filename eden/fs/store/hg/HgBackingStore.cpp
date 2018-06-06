@@ -20,6 +20,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 using folly::ByteRange;
@@ -45,12 +46,12 @@ namespace eden {
 
 namespace {
 // Thread local HgImporter. This is only initialized on HgImporter threads.
-static folly::ThreadLocalPtr<HgImporter> threadLocalImporter;
+static folly::ThreadLocalPtr<Importer> threadLocalImporter;
 
 /**
  * Checks that the thread local HgImporter is present and returns it.
  */
-HgImporter& getThreadLocalImporter() {
+Importer& getThreadLocalImporter() {
   if (!threadLocalImporter) {
     throw std::logic_error(
         "Attempting to get HgImporter from non-HgImporter thread");
@@ -81,6 +82,21 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
   AbsolutePath repository_;
   LocalStore* localStore_;
 };
+
+/**
+ * An inline executor that, while it exists, keeps a thread-local HgImporter
+ * instance.
+ */
+class HgImporterTestExecutor : public folly::InlineExecutor {
+ public:
+  explicit HgImporterTestExecutor(Importer* importer) {
+    threadLocalImporter.reset(importer);
+  }
+
+  ~HgImporterTestExecutor() {
+    threadLocalImporter.release();
+  }
+};
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -101,6 +117,16 @@ HgBackingStore::HgBackingStore(
               /* max_capacity */ FLAGS_num_hg_import_threads * 128),
           std::make_shared<HgImporterThreadFactory>(repository, localStore))),
       serverThreadPool_(serverThreadPool) {}
+
+/**
+ * Create an HgBackingStore suitable for use in unit tests. It uses an inline
+ * executor to process loaded objects rather than the thread pools used in
+ * production Eden.
+ */
+HgBackingStore::HgBackingStore(Importer* importer, LocalStore* localStore)
+    : localStore_{localStore},
+      importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
+      serverThreadPool_{importThreadPool_.get()} {}
 
 HgBackingStore::~HgBackingStore() {}
 
@@ -150,22 +176,54 @@ Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
 
 folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
     const Hash& commitID) {
-  Hash rootTreeHash;
-  auto result = localStore_->get(KeySpace::HgCommitToTreeFamily, commitID);
-  if (result.isValid()) {
-    rootTreeHash = Hash{result.bytes()};
-    XLOG(DBG5) << "found existing tree " << rootTreeHash.toString()
-               << " for mercurial commit " << commitID.toString();
-  } else {
-    rootTreeHash = getThreadLocalImporter().importManifest(commitID.toString());
-    XLOG(DBG1) << "imported mercurial commit " << commitID.toString()
-               << " as tree " << rootTreeHash.toString();
+  return localStore_
+      ->getFuture(KeySpace::HgCommitToTreeFamily, commitID.getBytes())
+      .then(
+          [this,
+           commitID](StoreResult result) -> folly::Future<unique_ptr<Tree>> {
+            if (!result.isValid()) {
+              return nullptr;
+            }
 
-    localStore_->put(
-        KeySpace::HgCommitToTreeFamily, commitID, rootTreeHash.getBytes());
-  }
+            auto rootTreeHash = Hash{result.bytes()};
+            XLOG(DBG5) << "found existing tree " << rootTreeHash.toString()
+                       << " for mercurial commit " << commitID.toString();
 
-  return localStore_->getTree(rootTreeHash);
+            return localStore_->getTree(rootTreeHash)
+                .then(
+                    [rootTreeHash, commitID](std::unique_ptr<Tree> tree)
+                        -> folly::Future<unique_ptr<Tree>> {
+                      if (tree) {
+                        return tree;
+                      }
+                      // No corresponding tree for this commit ID! Must
+                      // re-import. This could happen if RocksDB is corrupted
+                      // in some way or deleting entries races with
+                      // population.
+                      XLOG(WARN) << "No corresponding tree " << rootTreeHash
+                                 << " for commit " << commitID
+                                 << "; will import again";
+                      return nullptr;
+                    });
+          })
+      .then(
+          [this,
+           commitID](unique_ptr<Tree> tree) -> folly::Future<unique_ptr<Tree>> {
+            if (tree) {
+              return tree;
+            } else {
+              auto rootTreeHash =
+                  getThreadLocalImporter().importManifest(commitID.toString());
+              XLOG(DBG1) << "imported mercurial commit " << commitID.toString()
+                         << " as tree " << rootTreeHash.toString();
+
+              localStore_->put(
+                  KeySpace::HgCommitToTreeFamily,
+                  commitID,
+                  rootTreeHash.getBytes());
+              return localStore_->getTree(rootTreeHash);
+            }
+          });
 }
 } // namespace eden
 } // namespace facebook
