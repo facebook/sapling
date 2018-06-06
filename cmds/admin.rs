@@ -76,9 +76,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
              <PATH>            'path to fetch'",
         );
 
-    App::new("revlog to blob importer")
+    App::new("Mononoke admin command line tool")
         .version("0.0.0")
-        .about("make blobs")
+        .about("Poke at mononoke internals for debugging and investigating data structures.")
         .args_from_usage(
             "--manifold-bucket [BUCKET] 'manifold bucket (default: mononoke_prod)' \
              --manifold-prefix [PREFIX] 'manifold prefix (default empty)' \
