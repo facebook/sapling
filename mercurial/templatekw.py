@@ -381,6 +381,8 @@ defaulttempl = {
     "file_copy": "{name} ({source})",
     "envvar": "{key}={value}",
     "extra": "{key}={value|stringescape}",
+    "nodechange": "{oldnode|short} -> "
+    '{join(newnodes % "{newnode|short}", ", ")|nonempty}\n',
 }
 # filecopy is preserved for compatibility reasons
 defaulttempl["filecopy"] = defaulttempl["file_copy"]
@@ -747,6 +749,24 @@ def showmanifest(**args):
     # TODO: perhaps 'ctx' should be dropped from mapping because manifest
     # rev and node are completely different from changeset's.
     return _mappable(f, None, f, lambda x: {"rev": mrev, "node": mhex})
+
+
+@templatekeyword("nodechanges")
+def shownodechanges(nodereplacements, **args):
+    """List. Rewritten nodes after a command."""
+    hexmapping = util.sortdict()
+    for oldnode, newnodes in nodereplacements.items():
+        hexmapping[hex(oldnode)] = showlist(
+            "newnodes", [hex(n) for n in newnodes], args, element="newnode"
+        )
+    return showdict(
+        "nodechange",
+        hexmapping,
+        args,
+        plural="nodechanges",
+        key="oldnode",
+        value="newnodes",
+    )
 
 
 @templatekeyword("obsfate")

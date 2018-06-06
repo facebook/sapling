@@ -13,7 +13,10 @@
   >             if k in ('templ', 'ctx', 'repo', 'revcache', 'cache', 'troubles'):
   >                 continue
   >             if hasattr(v, '__call__'):
-  >                 v = v(**map)
+  >                 try:
+  >                     v = v(**map)
+  >                 except Exception:
+  >                     continue
   >             v = templater.stringify(v)
   >             tmpl = tmpl.replace('{{%s}}' % k, v)
   >         yield tmpl
