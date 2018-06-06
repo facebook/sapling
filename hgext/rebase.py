@@ -153,7 +153,7 @@ def _ctxdesc(ctx):
 class rebaseruntime(object):
     """This class is a container for rebase runtime state"""
 
-    def __init__(self, repo, ui, inmemory=False, opts=None):
+    def __init__(self, repo, ui, templ, inmemory=False, opts=None):
         if opts is None:
             opts = {}
 
@@ -169,6 +169,7 @@ class rebaseruntime(object):
         self._repo = repo
 
         self.ui = ui
+        self.templ = templ
         self.opts = opts
         self.originalwd = None
         self.external = nullrev
@@ -620,8 +621,6 @@ class rebaseruntime(object):
 
     def _finishrebase(self):
         repo, ui, opts = self.repo, self.ui, self.opts
-        fm = ui.formatter("rebase", opts)
-        fm.startitem()
         if self.collapsef and not self.keepopen:
             p1, p2, _base = defineparents(
                 repo,
@@ -718,12 +717,12 @@ class rebaseruntime(object):
         clearrebased(
             ui,
             repo,
+            self.templ,
             self.destmap,
             self.state,
             self.skipped,
             collapsedas,
             self.keepf,
-            fm=fm,
         )
 
         clearstatus(repo)
@@ -734,7 +733,6 @@ class rebaseruntime(object):
         if self.skipped:
             skippedlen = len(self.skipped)
             ui.note(_("%d revisions have been skipped\n") % skippedlen)
-        fm.end()
 
         if (
             self.activebookmark
@@ -777,8 +775,9 @@ class rebaseruntime(object):
     ]
     + cmdutil.formatteropts,
     _("[-s REV | -b REV] [-d REV] [OPTION]"),
+    cmdtemplate=True,
 )
-def rebase(ui, repo, **opts):
+def rebase(ui, repo, templ=None, **opts):
     """move changeset (and descendants) to a different branch
 
     Rebase uses repeated merging to graft changesets from one part of
@@ -957,7 +956,7 @@ def rebase(ui, repo, **opts):
             inmemory = False
 
     opts = pycompat.byteskwargs(opts)
-    rbsrt = rebaseruntime(repo, ui, inmemory, opts)
+    rbsrt = rebaseruntime(repo, ui, templ, inmemory, opts)
 
     if rbsrt.inmemory:
         try:
@@ -1015,7 +1014,7 @@ def rebase(ui, repo, **opts):
                     _origrebase(ui, repo, rbsrt, **{"abort": True})
                 except Exception as e:
                     ui.warn(_("(couldn't abort rebase: %s)\n") % e.message)
-                rbsrt = rebaseruntime(repo, ui, inmemory, opts)
+                rbsrt = rebaseruntime(repo, ui, templ, inmemory, opts)
                 return _origrebase(ui, repo, rbsrt, **opts)
             else:
                 raise
@@ -2032,7 +2031,7 @@ def buildstate(repo, destmap, collapse):
 
 
 def clearrebased(
-    ui, repo, destmap, state, skipped, collapsedas=None, keepf=False, fm=None
+    ui, repo, templ, destmap, state, skipped, collapsedas=None, keepf=False
 ):
     """dispose of rebased revision at the end of the rebase
 
@@ -2043,7 +2042,7 @@ def clearrebased(
     removed (but bookmarks still need to be moved).
     """
     tonode = repo.changelog.node
-    replacements = {}
+    replacements = util.sortdict()
     moves = {}
     for rev, newrev in sorted(state.items()):
         if newrev >= 0 and newrev != rev:
@@ -2057,19 +2056,8 @@ def clearrebased(
                     succs = (newnode,)
                 replacements[oldnode] = succs
     scmutil.cleanupnodes(repo, replacements, "rebase", moves)
-    if fm:
-        hf = fm.hexfunc
-        fl = fm.formatlist
-        fd = fm.formatdict
-        nodechanges = fd(
-            {
-                hf(oldn): fl([hf(n) for n in newn], name="node")
-                for oldn, newn in replacements.iteritems()
-            },
-            key="oldnode",
-            value="newnodes",
-        )
-        fm.data(nodechanges=nodechanges)
+    if templ:
+        templ.setprop("nodereplacements", replacements)
 
 
 def pullrebase(orig, ui, repo, *args, **opts):
@@ -2201,7 +2189,7 @@ def summaryhook(ui, repo):
     if not repo.vfs.exists("rebasestate"):
         return
     try:
-        rbsrt = rebaseruntime(repo, ui, {})
+        rbsrt = rebaseruntime(repo, ui, None, {})
         rbsrt.restorestatus()
         state = rbsrt.state
     except error.RepoLookupError:

@@ -342,7 +342,7 @@ def showplan(ui, state):
         ui.write("    %s\n" % action.torule())
 
 
-def _rebase(orig, ui, repo, **opts):
+def _rebase(orig, ui, repo, *pats, **opts):
     histedit = extensions.find("histedit")
 
     contf = opts.get("continue")
@@ -361,7 +361,7 @@ def _rebase(orig, ui, repo, **opts):
         raise error.Abort(msg, hint=hint)
 
     if not opts.get("interactive"):
-        return orig(ui, repo, **opts)
+        return orig(ui, repo, *pats, **opts)
 
     # the argument parsing has as lot of copy-paste from rebase.py
     # Validate input and define rebasing points

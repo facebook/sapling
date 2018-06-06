@@ -432,7 +432,7 @@ def amendtocommit(ui, repo, commitspec):
             fp.close()
 
 
-def wraprebase(orig, ui, repo, **opts):
+def wraprebase(orig, ui, repo, *pats, **opts):
     """Wrapper around `hg rebase` adding the `--restack` option, which rebases
        all "unstable" descendants of an obsolete changeset onto the latest
        version of that changeset. This is similar to (and intended as a
@@ -463,7 +463,7 @@ def wraprebase(orig, ui, repo, **opts):
 
         return restack.restack(ui, repo, opts)
 
-    return orig(ui, repo, **opts)
+    return orig(ui, repo, *pats, **opts)
 
 
 def _preamendname(repo, node):

@@ -25,11 +25,7 @@ Setup
 Getting the JSON output for nodechanges
 
   $ hg rebase -s 2 -d 0 -q -Tjson
-  [
-   {
-    "nodechanges": {"28ad74487de9599d00d81085be739c61fc340652": ["849767420fd5519cf0026232411a943ed03cc9fb"], "62615734edd52f06b6fb9c2beb429e4fe30d57b8": ["df21b32134ba85d86bca590cbe9b8b7cbc346c53"]}
-   }
-  ]
+  json (no-eol)
 
   $ hg log -G -T "{rev}:{node|short} {desc}"
   @  5:df21b32134ba Added d
@@ -53,5 +49,38 @@ Getting the JSON output for nodechanges
   o  0:18d04c59bb5d Added a
   
 
-  $ hg rebase -s 6 -d 4 -q -T "{nodechanges % '{oldnode}:{newnodes % ' {node} '}'}"
-  d9d6773efc831c274eace04bc13e8e6412517139: f48cd65c6dc3d2acb55da54402a5b029546e546f  (no-eol)
+  $ hg rebase -s 6 -d 4 -q -T "{nodechanges % '{oldnode}:{newnodes % ' {newnode}'}'}"
+  d9d6773efc831c274eace04bc13e8e6412517139: f48cd65c6dc3d2acb55da54402a5b029546e546f (no-eol)
+
+A more complex case, multiple replacements with a prune:
+
+  $ testtemplate() {
+  >   newrepo
+  >   drawdag <<'EOS'
+  >   B C D  # D/B = B
+  >    \|/
+  >     A
+  > EOS
+  >   hg rebase -q -r $B+$C -d $D -T "$1" 2>/dev/null
+  > }
+
+  $ testtemplate 'nodechanges default style:\n{nodechanges}'
+  nodechanges default style:
+  112478962961 -> (none)
+  dc0947a82db8 -> 32d20c29f74a
+
+  $ testtemplate '{nodechanges % "{nodechange}"}'
+  112478962961 -> (none)
+  dc0947a82db8 -> 32d20c29f74a
+
+  $ testtemplate '{nodechanges % "OLD {oldnode} NEW {newnodes|nonempty}\n"}'
+  OLD 112478962961147124edd43549aedd1a335e44bf NEW (none)
+  OLD dc0947a82db884575bb76ea10ac97b08536bfa03 NEW 32d20c29f74a9f207416d66fbcaf72abddf1d21a
+
+  $ testtemplate '{nodechanges % "{index} -{oldnode|short} {newnodes % '"'"'+{newnode|short}'"'"'}\n"}'
+  0 -112478962961 
+  1 -dc0947a82db8 +32d20c29f74a
+
+  $ testtemplate '{nodechanges|json}'
+  {"112478962961147124edd43549aedd1a335e44bf": [], "dc0947a82db884575bb76ea10ac97b08536bfa03": ["32d20c29f74a9f207416d66fbcaf72abddf1d21a"]} (no-eol)
+

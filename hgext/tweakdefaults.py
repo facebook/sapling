@@ -849,12 +849,12 @@ def _analyzewrapper(orig, x, ui):
     return result
 
 
-def _rebase(orig, ui, repo, **opts):
+def _rebase(orig, ui, repo, *pats, **opts):
     if not opts.get("date") and not ui.configbool("tweakdefaults", "rebasekeepdate"):
         opts["date"] = currentdate()
 
     if opts.get("continue") or opts.get("abort") or opts.get("restack"):
-        return orig(ui, repo, **opts)
+        return orig(ui, repo, *pats, **opts)
 
     # 'hg rebase' w/o args should do nothing
     if not opts.get("dest"):
@@ -875,7 +875,7 @@ def _rebase(orig, ui, repo, **opts):
                     bookmarks.update(repo, [prev.node()], dest.node())
             return result
 
-    return orig(ui, repo, **opts)
+    return orig(ui, repo, *pats, **opts)
 
 
 # set of commands which define their own formatter and prints the hash changes

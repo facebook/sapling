@@ -717,7 +717,7 @@ def _branchesenabled(ui):
     return ui.configbool("remotenames", "branches")
 
 
-def exrebasecmd(orig, ui, repo, **opts):
+def exrebasecmd(orig, ui, repo, *pats, **opts):
     dest = opts["dest"]
     source = opts["source"]
     revs = opts["rev"]
@@ -732,7 +732,7 @@ def exrebasecmd(orig, ui, repo, **opts):
         if current in tracking:
             opts["dest"] = tracking[current]
 
-    ret = orig(ui, repo, **opts)
+    ret = orig(ui, repo, *pats, **opts)
     precachedistance(repo)
     return ret
 

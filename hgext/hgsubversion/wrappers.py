@@ -1,4 +1,5 @@
 # no-check-code -- see T24862348
+# isort:skip_file
 
 import inspect
 import os
@@ -596,7 +597,7 @@ def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=(), **kw
         return orig(repo, remote, heads, force, bookmarks=bookmarks, **kwargs)
 
 
-def rebase(orig, ui, repo, **opts):
+def rebase(orig, ui, repo, *pats, **opts):
     """rebase current unpushed revisions onto the Subversion head
 
     This moves a line of development from making its own head to the top of
@@ -607,7 +608,7 @@ def rebase(orig, ui, repo, **opts):
     Also looks for svnextrafn and svnsourcerev in **opts.
     """
     if not opts.get("svn", False):
-        return orig(ui, repo, **opts)
+        return orig(ui, repo, *pats, **opts)
 
     def extrafn2(ctx, extra):
         """defined here so we can add things easily.
@@ -640,13 +641,12 @@ def rebase(orig, ui, repo, **opts):
     if parent_rev == target_rev:
         ui.status("already up to date!\n")
         return 0
-    return orig(
-        ui,
-        repo,
-        dest=node.hex(target_rev.node()),
-        base=node.hex(sourcerev),
-        extrafn=extrafn,
-    )
+    opts = {
+        "dest": node.hex(target_rev.node()),
+        "base": node.hex(sourcerev),
+        "extrafn": extrafn,
+    }
+    return orig(ui, repo, *pats, **opts)
 
 
 optionmap = {
