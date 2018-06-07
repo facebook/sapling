@@ -1,2 +1,0 @@
-include Makefile hgsubversion/help/*.rst tests/fixtures/invalid_utf8.tar.gz
-recursive-include tests *.py *.sh *.svndump *.txt
