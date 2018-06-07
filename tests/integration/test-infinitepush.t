@@ -36,6 +36,7 @@ Do infinitepush (aka commit cloud) push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > infinitepush=
+  > infinitepushbackup=
   > [infinitepush]
   > server=False
   > EOF
@@ -98,26 +99,29 @@ Pushbackup also works
   adding aa
   $ hgmn pushbackup ssh://user@dummy/repo --debug
   starting backup* (glob)
+  backing up stack rooted at 47da8b81097c
   running * (glob)
   sending hello command
   sending between command
   remote: * (glob)
   remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
   remote: 1
-  query 1; heads
-  sending batch command
-  searching for changes
-  all remote heads known locally
   2 changesets found
   list of changesets:
   47da8b81097c5534f3eb7947a8764dd323cffe3d
   95cad53aab1b0b33eceee14473b3983312721529
   sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 4 parts total
+  bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "replycaps" 250 bytes payload
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 0 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
+  sending unbundle command
+  bundle2-output-bundle: "HG20", (1 params) 2 parts total
+  bundle2-output-part: "replycaps" 250 bytes payload
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
+  backup complete
+  heads added: 95cad53aab1b0b33eceee14473b3983312721529
+  heads removed: 
   finished in * seconds (glob)
 
   $ cd ../repo-pull
@@ -149,4 +153,7 @@ Pushbackup that pushes only bookmarks
   bundle2-output-bundle: "HG20", (1 params) 2 parts total
   bundle2-output-part: "replycaps" 250 bytes payload
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
+  backup complete
+  heads added: 
+  heads removed: 
   finished in * seconds (glob)

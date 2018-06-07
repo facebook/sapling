@@ -60,7 +60,6 @@ Update the bookmark
   $ hgmn push --to withbook
   pushing rev 66b9c137712a to destination ssh://user@dummy/repo bookmark withbook
   searching for changes
-  remote has heads that are not known locally
   updating bookmark withbook
   $ cd ../repo-pull
   $ hgmn pull -q
