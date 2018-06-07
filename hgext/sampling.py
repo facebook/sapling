@@ -153,6 +153,16 @@ def reposetup(ui, repo):
                 remotefilelog=str("remotefilelog" in repo.requirements).lower(),
             )
 
+        try:
+            maxrss = util.getmaxrss()
+
+            # Log maxrss from within the hg process. The wrapper logs its own
+            # value (which is incorrect if chg is used) so the column is
+            # prefixed.
+            ui.log("command_info", hg_maxrss=maxrss)
+        except NotImplementedError:
+            pass
+
     # Log other information that we don't want to log in the wrapper, if it's
     # cheap to do so.
 

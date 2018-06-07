@@ -112,6 +112,7 @@ expandglobs = platform.expandglobs
 explainexit = platform.explainexit
 findexe = platform.findexe
 gethgcmd = platform.gethgcmd
+getmaxrss = platform.getmaxrss
 getuser = platform.getuser
 getpid = os.getpid
 groupmembers = platform.groupmembers

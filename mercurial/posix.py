@@ -14,6 +14,7 @@ import grp
 import os
 import pwd
 import re
+import resource
 import select
 import stat
 import sys
@@ -381,6 +382,17 @@ def samedevice(fpath1, fpath2):
     st1 = os.lstat(fpath1)
     st2 = os.lstat(fpath2)
     return st1.st_dev == st2.st_dev
+
+
+def getmaxrss():
+    """Returns the maximum resident set size of this process, in bytes"""
+    res = resource.getrusage(resource.RUSAGE_SELF)
+
+    # Linux returns the maxrss in KB, whereas macOS returns in bytes.
+    if pycompat.isdarwin:
+        return res.ru_maxrss
+    else:
+        return res.ru_maxrss * 1024
 
 
 if pycompat.isdarwin:

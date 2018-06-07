@@ -694,3 +694,11 @@ def makedir(path, notindexed):
     os.mkdir(path)
     if notindexed:
         _kernel32.SetFileAttributesA(path, _FILE_ATTRIBUTE_NOT_CONTENT_INDEXED)
+
+
+def getmaxmemoryusage():
+    """Returns the maximum memory used by the process in bytes, similar to
+    maxrss in Unix.
+    """
+    # TODO(phillco): Implement via GetProcessMemoryInfo().
+    raise NotImplementedError

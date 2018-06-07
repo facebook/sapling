@@ -29,6 +29,7 @@ except ImportError:
 osutil = policy.importmod(r"osutil")
 
 executablepath = win32.executablepath
+getmaxrss = win32.getmaxmemoryusage
 getuser = win32.getuser
 hidewindow = win32.hidewindow
 makedir = win32.makedir
