@@ -131,6 +131,22 @@ Test that sqltreestrip deletes trees from history
   |
   o  0 a
   
+
+# First strip just the root treemanifest
+  $ hg sqltreestrip 2 --i-know-what-i-am-doing --root-only
+  *** YOU ARE ABOUT TO DELETE TREE HISTORY INCLUDING AND AFTER 2 (MANDATORY 5 SECOND WAIT) ***
+  mysql: deleting root trees with linkrevs >= 2
+  local: deleting root trees with linkrevs >= 2
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 8515d4bfda76 000000000000 000000000000
+       1        44      58      0       1 898d94054864 8515d4bfda76 000000000000
+  $ hg debugindex .hg/store/meta/dir2/00manifest.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       3 d0729cbab2a9 000000000000 000000000000
+       1        44      44     -1       4 cc280c5b788f d0729cbab2a9 000000000000
+
+# Then strip all treemanifests
   $ hg sqltreestrip 2 --i-know-what-i-am-doing
   *** YOU ARE ABOUT TO DELETE TREE HISTORY INCLUDING AND AFTER 2 (MANDATORY 5 SECOND WAIT) ***
   mysql: deleting trees with linkrevs >= 2
@@ -139,6 +155,8 @@ Test that sqltreestrip deletes trees from history
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 8515d4bfda76 000000000000 000000000000
        1        44      58      0       1 898d94054864 8515d4bfda76 000000000000
+  $ hg debugindex .hg/store/meta/dir2/00manifest.i
+     rev    offset  length   base linkrev nodeid       p1           p2
   $ hg debugindex .hg/store/00manifest.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 8515d4bfda76 000000000000 000000000000

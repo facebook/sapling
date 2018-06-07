@@ -1817,6 +1817,12 @@ def sqlrecover(ui, *args, **opts):
         ),
         (
             "",
+            "root-only",
+            None,
+            _("only strip the root tree manifest, not the sub-trees"),
+        ),
+        (
+            "",
             "i-know-what-i-am-doing",
             None,
             _("only run sqltreestrip if you " "know exactly what you're doing"),
@@ -1845,6 +1851,7 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
             + "Only the Mercurial server admins should ever run this."
         )
 
+    rootonly = opts.get("root_only")
     rev = int(rev)
 
     ui.warn(
@@ -1865,12 +1872,18 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
         repo.sqllock(writelock)
         try:
             cursor = repo.sqlcursor
-            ui.status(_("mysql: deleting trees with linkrevs >= %s\n") % rev)
+
+            if rootonly:
+                ui.status(_("mysql: deleting root trees with linkrevs >= %s\n") % rev)
+                pathfilter = "(path = '00manifesttree.i')"
+            else:
+                ui.status(_("mysql: deleting trees with linkrevs >= %s\n") % rev)
+                pathfilter = "(path LIKE 'meta/%%' OR path = '00manifesttree.i')"
+
             cursor.execute(
-                """DELETE FROM revisions
-                              WHERE repo = %s AND linkrev >= %s AND
-                                    (path LIKE 'meta/%%' OR
-                                     path = '00manifesttree.i')""",
+                """DELETE FROM revisions WHERE repo = %s AND linkrev >= %s
+                   AND """
+                + pathfilter,
                 (reponame, rev),
             )
             repo.sqlconn.commit()
@@ -1879,15 +1892,20 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
             repo.sqlclose()
 
     # strip from local
-    ui.status(_("local: deleting trees with linkrevs >= %s\n") % rev)
     with repo.wlock(), repo.lock(), repo.transaction("treestrip") as tr:
         repo.disablesync = True
 
         # Duplicating some logic from repair.py
         offset = len(tr.entries)
         tr.startgroup()
-        files = treemfmod.collectfiles(None, repo, rev)
-        treemfmod.striptrees(None, repo, tr, rev, files)
+        if opts.get("root_only"):
+            ui.status(_("local: deleting root trees with linkrevs >= %s\n") % rev)
+            treerevlog = repo.manifestlog.treemanifestlog._revlog
+            treerevlog.strip(rev, tr)
+        else:
+            ui.status(_("local: deleting trees with linkrevs >= %s\n") % rev)
+            files = treemfmod.collectfiles(None, repo, rev)
+            treemfmod.striptrees(None, repo, tr, rev, files)
         tr.endgroup()
 
         for i in xrange(offset, len(tr.entries)):
