@@ -48,7 +48,7 @@ use mercurial_types::RepositoryId;
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     App::new("revlog to blob importer")
         .version("0.0.0")
-        .about("make blobs")
+        .about("Import a revlog-backed Mercurial repo into Mononoke blobstore.")
         .args_from_usage(
             r#"
             <INPUT>                         'input revlog repo'
