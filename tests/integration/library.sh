@@ -25,7 +25,7 @@ function mononoke {
 
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
-  local attempts=100
+  local attempts=150
   for _ in $(seq 1 $attempts); do
     curl 127.0.0.1:"$MONONOKE_SOCKET" 2>&1 | grep -q 'Empty reply' && break
     sleep 0.1
