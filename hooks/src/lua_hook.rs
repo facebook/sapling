@@ -13,6 +13,8 @@ use failure::Error;
 use futures_ext::{asynchronize, BoxFuture};
 use hlua::{Lua, LuaError, LuaFunction};
 
+use std::string::ToString;
+
 #[derive(Clone)]
 pub struct LuaHook {
     pub name: String,
@@ -39,22 +41,22 @@ impl LuaHook {
         let mut lua = Lua::new();
         lua.openlibs();
         let res: Result<(), LuaError> = lua.execute::<()>(&hook.code);
-        let res: Result<(), Error> =
-            res.map_err(|_| ErrorKind::HookDefinitionError("failed to parse hook".into()).into());
+        let res: Result<(), Error> = res.map_err(|e| {
+            ErrorKind::HookParseError(hook.name.clone().into(), e.to_string()).into()
+        });
         res?;
         let mut hook_func: LuaFunction<_> = match lua.get("hook") {
             Some(val) => val,
-            None => bail_err!(ErrorKind::HookDefinitionError(
-                "global variable 'hook' not found".into(),
-            )),
+            None => bail_err!(ErrorKind::NoHookFunctionError(hook.name.clone().into())),
         };
         let hook_info = hashmap! {
             "author" => context.changeset.author.to_string(),
         };
         hook_func
             .call_with_args((hook_info, context.changeset.files.clone()))
-            .map_err(|err| {
-                ErrorKind::HookRuntimeError(hook.name.clone().into(), format!("{:?}", err)).into()
+            .map_err(|e| {
+                ErrorKind::HookRuntimeError(hook.name.clone().into(), format!("{:?}", e).into())
+                    .into()
             })
             .map(|b| {
                 if b {
@@ -72,7 +74,8 @@ impl LuaHook {
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "Hook definition error: {}", _0)] HookDefinitionError(String),
+    #[fail(display = "No hook function found for hook '{}'", _0)] NoHookFunctionError(String),
+    #[fail(display = "Error while parsing hook '{}': {}", _0, _1)] HookParseError(String, String),
     #[fail(display = "Error while running hook '{}': {}", _0, _1)] HookRuntimeError(String, String),
 }
 
@@ -94,7 +97,7 @@ mod test {
     return info.author == \"jane bloggs\"
 end",
             );
-            run_hook_test(code, author, files, HookExecution::Accepted);
+            assert_matches!(run_hook(code, author, files), Ok(HookExecution::Accepted));
         });
     }
 
@@ -116,25 +119,87 @@ end",
                          files[4] == \"filez\" and files[5] == nil
 end",
             );
-            println!("code {}", code);
-            run_hook_test(code, author, files, HookExecution::Accepted);
+            assert_matches!(run_hook(code, author, files), Ok(HookExecution::Accepted));
         });
     }
 
-    fn run_hook_test(code: String, author: String, files: Vec<String>, expected: HookExecution) {
+    #[test]
+    fn test_no_hook_func() {
+        async_unit::tokio_unit_test(|| {
+            let code = String::from(
+                "elephants = function (info, files)
+                    return true
+                end",
+            );
+            let (author, files) = default_author_and_files();
+            assert_matches!(
+                run_hook(code, author, files).unwrap_err().downcast::<ErrorKind>(),
+                Ok(ErrorKind::NoHookFunctionError(ref hook_name)) if hook_name == "testhook"
+             );
+        });
+    }
+
+    // TODO add rejected hook
+
+    #[test]
+    fn test_invalid_hook() {
+        async_unit::tokio_unit_test(|| {
+            let code = String::from("invalid code");
+            let (author, files) = default_author_and_files();
+            assert_matches!(
+                run_hook(code, author, files).unwrap_err().downcast::<ErrorKind>(),
+                Ok(ErrorKind::HookParseError(ref hook_name, ref err_msg))
+                    if hook_name == "testhook" && err_msg.starts_with("Syntax error:")
+             );
+        });
+    }
+
+    #[test]
+    fn test_hook_exception() {
+        async_unit::tokio_unit_test(|| {
+            let code = String::from(
+                "hook = function (info, files)
+                    error(\"fubar\")
+                    return true
+                end",
+            );
+            let (author, files) = default_author_and_files();
+            assert_matches!(
+                run_hook(code, author, files).unwrap_err().downcast::<ErrorKind>(),
+                Ok(ErrorKind::HookRuntimeError(ref hook_name, ref err_msg))
+                    if hook_name == "testhook" && err_msg.starts_with("LuaError")
+             );
+        });
+    }
+
+    #[test]
+    fn test_invalid_return_val() {
+        async_unit::tokio_unit_test(|| {
+            let code = String::from(
+                "hook = function (info, files)
+                        return \"aardvarks\"
+                    end",
+            );
+            let (author, files) = default_author_and_files();
+            assert_matches!(
+                run_hook(code, author, files).unwrap_err().downcast::<ErrorKind>(),
+                Ok(ErrorKind::HookRuntimeError(ref hook_name, ref err_msg))
+                    if hook_name == "testhook" && err_msg.starts_with("LuaError")
+             );
+        });
+    }
+
+    fn default_author_and_files() -> (String, Vec<String>) {
+        (String::from("jane bloggs"), vec![String::from("filec")])
+    }
+
+    fn run_hook(code: String, author: String, files: Vec<String>) -> Result<HookExecution, Error> {
         let hook = LuaHook {
             name: String::from("testhook"),
             code: code.to_string(),
         };
         let changeset = HookChangeset::new(author, files);
         let context = HookContext::new(hook.name.clone(), Arc::new(changeset));
-        let res = hook.run(context).wait();
-        match res {
-            Ok(r) => assert!(r == expected),
-            Err(e) => {
-                println!("Failed to run hook {}", e);
-                assert!(false); // Just fail
-            }
-        }
+        hook.run(context).wait()
     }
 }

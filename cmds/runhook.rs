@@ -46,7 +46,6 @@ use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
 
-use futures::Future;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -82,21 +81,23 @@ fn run() -> Result<()> {
     let mut core = Core::new().unwrap();
     let changeset = core.run(future).unwrap();
 
-    let user = str::from_utf8(changeset.user()).unwrap();
+    let author = str::from_utf8(changeset.user()).unwrap();
     let mut file = File::open(hook_file).expect("Unable to open the hook file");
     let mut code = String::new();
     file.read_to_string(&mut code)
         .expect("Unable to read the file");
-    println!("hook_file is {} revision is {:?}", hook_file, revstr);
-    println!("hook code is {}", code);
-    println!("changeset user: {:?} ", user);
+    println!("======= Running hook =========");
+    println!("Hook file is {} revision is {:?}", hook_file, revstr);
+    println!("Hook code is {}", code);
+    println!("Changeset author: {:?} ", author);
+    println!("==============================");
 
     let files = changeset.files();
     let vec_files = files
         .iter()
         .map(|arr| String::from_utf8_lossy(&arr.to_vec()).into_owned())
         .collect();
-    let hook_cs = HookChangeset::new(user.to_string(), vec_files);
+    let hook_cs = HookChangeset::new(author.to_string(), vec_files);
     let mut hook_manager = HookManager::new();
     let hook = LuaHook {
         name: String::from("testhook"),
@@ -104,7 +105,7 @@ fn run() -> Result<()> {
     };
     hook_manager.install_hook("testhook", Arc::new(hook));
     let fut = hook_manager.run_hooks(Arc::new(hook_cs));
-    match fut.wait() {
+    match core.run(fut) {
         Err(e) => {
             println!("Failed to execute hook {:?}", e);
             return Ok(());

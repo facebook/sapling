@@ -23,6 +23,9 @@ extern crate hlua_futures;
 extern crate maplit;
 
 #[cfg(test)]
+#[macro_use]
+extern crate assert_matches;
+#[cfg(test)]
 extern crate async_unit;
 #[cfg(test)]
 extern crate linear;
@@ -71,6 +74,7 @@ impl HookRejectionInfo {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
 struct HookExecutionHolder {
     hook_name: String,
     hook_execution: HookExecution,
