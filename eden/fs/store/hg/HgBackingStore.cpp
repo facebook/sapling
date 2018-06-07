@@ -194,7 +194,7 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
                     [rootTreeHash, commitID](std::unique_ptr<Tree> tree)
                         -> folly::Future<unique_ptr<Tree>> {
                       if (tree) {
-                        return tree;
+                        return std::move(tree);
                       }
                       // No corresponding tree for this commit ID! Must
                       // re-import. This could happen if RocksDB is corrupted
@@ -210,7 +210,7 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
           [this,
            commitID](unique_ptr<Tree> tree) -> folly::Future<unique_ptr<Tree>> {
             if (tree) {
-              return tree;
+              return std::move(tree);
             } else {
               auto rootTreeHash =
                   getThreadLocalImporter().importManifest(commitID.toString());
