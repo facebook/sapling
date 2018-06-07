@@ -329,6 +329,12 @@ REVLOGV2_REQUIREMENT = "exp-revlogv2.0"
 
 
 class localrepository(object):
+    """local repository object
+
+    ``unsafe.wvfsauditorcache`` config option allows the user to enable
+    the auditor caching for the repo's working copy. This significantly
+    reduces the amount of stat-like system calls and thus saves time.
+    This option should be safe if symlinks are not used in the repo"""
 
     supportedformats = {
         "revlogv1",
@@ -375,7 +381,10 @@ class localrepository(object):
         self.requirements = set()
         self.filtername = None
         # wvfs: rooted at the repository root, used to access the working copy
-        self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True)
+        cacheaudited = baseui.configbool("unsafe", "wvfsauditorcache")
+        self.wvfs = vfsmod.vfs(
+            path, expandpath=True, realpath=True, cacheaudited=cacheaudited
+        )
         # vfs: rooted at .hg, used to access repo files outside of .hg/store
         self.vfs = None
         # svfs: usually rooted at .hg/store, used to access repository history
