@@ -10,7 +10,6 @@ extern crate ascii;
 extern crate blobrepo;
 extern crate bookmarks;
 extern crate bytes;
-extern crate changesets;
 extern crate clap;
 #[macro_use]
 extern crate failure_ext as failure;
@@ -41,7 +40,6 @@ use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
 
 use blobrepo::BlobRepo;
-use changesets::SqliteChangesets;
 use mercurial::RevlogRepo;
 use mercurial_types::RepositoryId;
 
@@ -114,7 +112,7 @@ fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
                 output
             );
 
-            for subdir in &[".hg", "blobs", "heads"] {
+            for subdir in &["blobs"] {
                 let subdir = output.join(subdir);
                 if subdir.exists() {
                     assert!(
@@ -138,16 +136,6 @@ fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
                     fs::create_dir(&subdir)
                         .expect(&format!("Failed to create directory {:?}", subdir));
                 }
-            }
-
-            {
-                let changesets_path = output.join("changesets");
-                assert!(
-                    !changesets_path.exists(),
-                    "Failed to start Rocksdb BlobRepo: {:?} already exists"
-                );
-                SqliteChangesets::create(changesets_path.to_string_lossy())
-                    .expect("Failed to initialize changests sqlite database");
             }
 
             BlobRepo::new_rocksdb(
