@@ -21,12 +21,12 @@ use uuid::Uuid;
 
 use blobstore::Blobstore;
 use filenodes::{FilenodeInfo, Filenodes};
-use mercurial::{file, HgNodeKey, NodeHashConversion};
-use mercurial_types::{Changeset, DChangesetId, DEntryId, DNodeHash, DParents, Entry, MPath,
-                      Manifest, RepoPath, RepositoryId, D_NULL_HASH};
+use mercurial::file;
+use mercurial_types::{Changeset, Entry, HgChangesetId, HgEntryId, HgNodeHash, HgNodeKey,
+                      HgParents, MPath, Manifest, RepoPath, RepositoryId, NULL_HASH};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
-use mercurial_types::nodehash::{DFileNodeId, DManifestId};
+use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
 use mononoke_types::DateTime;
 
 use BlobChangeset;
@@ -43,7 +43,7 @@ use utils::get_node_key;
 /// See `get_completed_changeset()` for the public API you can use to extract the final changeset
 #[derive(Clone)]
 pub struct ChangesetHandle {
-    can_be_parent: Shared<oneshot::Receiver<(DNodeHash, DManifestId)>>,
+    can_be_parent: Shared<oneshot::Receiver<(HgNodeHash, HgManifestId)>>,
     // * Shared is required here because a single changeset can have more than one child, and
     //   all of those children will want to refer to the corresponding future for their parents.
     // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
@@ -54,7 +54,7 @@ pub struct ChangesetHandle {
 
 impl ChangesetHandle {
     pub fn new_pending(
-        can_be_parent: Shared<oneshot::Receiver<(DNodeHash, DManifestId)>>,
+        can_be_parent: Shared<oneshot::Receiver<(HgNodeHash, HgManifestId)>>,
         completion_future: Shared<BoxFuture<BlobChangeset, Compat<Error>>>,
     ) -> Self {
         Self {
@@ -106,7 +106,7 @@ impl From<BoxFuture<BlobChangeset, Error>> for ChangesetHandle {
 struct UploadEntriesState {
     /// Listing of blobs that we need, based on parsing the root manifest and all the newly
     /// uploaded child manifests
-    required_entries: HashMap<RepoPath, DEntryId>,
+    required_entries: HashMap<RepoPath, HgEntryId>,
     /// All the blobs that have been uploaded in this changeset
     uploaded_entries: HashMap<RepoPath, HgBlobEntry>,
     /// Parent hashes (if any) of the blobs that have been uploaded in this changeset. Used for
@@ -185,7 +185,7 @@ impl UploadEntries {
                 let mut inner = inner_mutex.lock().expect("Lock poisoned");
                 let node_keys = parents.into_iter().map(move |hash| HgNodeKey {
                     path: path.clone(),
-                    hash: hash.into_mercurial(),
+                    hash,
                 });
                 inner.parents.extend(node_keys);
 
@@ -227,7 +227,7 @@ impl UploadEntries {
         }
     }
 
-    pub fn finalize(self, filenodes: Arc<Filenodes>, cs_id: DNodeHash) -> BoxFuture<(), Error> {
+    pub fn finalize(self, filenodes: Arc<Filenodes>, cs_id: HgNodeHash) -> BoxFuture<(), Error> {
         let required_checks = {
             let inner = self.inner.lock().expect("Lock poisoned");
             let checks: Vec<_> = inner
@@ -259,7 +259,7 @@ impl UploadEntries {
                 .parents
                 .iter()
                 .map(|node_key| {
-                    let key = get_node_key(node_key.hash.into_mononoke());
+                    let key = get_node_key(node_key.hash);
                     let blobstore = inner.blobstore.clone();
                     let node_key = node_key.clone();
                     blobstore
@@ -284,11 +284,11 @@ impl UploadEntries {
                             let (p1, p2) = parents.get_nodes();
                             FilenodeInfo {
                                 path,
-                                filenode: DFileNodeId::new(blobentry.get_hash().into_nodehash()),
-                                p1: p1.cloned().map(DFileNodeId::new),
-                                p2: p2.cloned().map(DFileNodeId::new),
+                                filenode: HgFileNodeId::new(blobentry.get_hash().into_nodehash()),
+                                p1: p1.cloned().map(HgFileNodeId::new),
+                                p2: p2.cloned().map(HgFileNodeId::new),
                                 copyfrom,
-                                linknode: DChangesetId::new(cs_id),
+                                linknode: HgChangesetId::new(cs_id),
                             }
                         })
                     })
@@ -307,8 +307,8 @@ impl UploadEntries {
 fn compute_copy_from_info(
     path: &RepoPath,
     blobentry: &HgBlobEntry,
-    parents: &DParents,
-) -> BoxFuture<Option<(RepoPath, DFileNodeId)>, Error> {
+    parents: &HgParents,
+) -> BoxFuture<Option<(RepoPath, HgFileNodeId)>, Error> {
     let parents = parents.clone();
     match path {
         &RepoPath::FilePath(_) => blobentry
@@ -320,16 +320,11 @@ fn compute_copy_from_info(
                     // (None, Some(hash)), which is what BlobNode relies on to figure out
                     // whether a node is copied.
                     let (p1, p2) = parents.get_nodes();
-                    let p1 = p1.map(|p| p.into_mercurial());
-                    let p2 = p2.map(|p| p.into_mercurial());
-                    file::File::new(blob, p1.as_ref(), p2.as_ref())
+                    file::File::new(blob, p1, p2)
                         .copied_from()
                         .map(|copiedfrom| {
                             copiedfrom.map(|(path, node)| {
-                                (
-                                    RepoPath::FilePath(path),
-                                    DFileNodeId::new(node.into_mononoke()),
-                                )
+                                (RepoPath::FilePath(path), HgFileNodeId::new(node))
                             })
                         })
                 }
@@ -417,7 +412,7 @@ pub fn process_entries(
     entry_processor: &UploadEntries,
     root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     new_child_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
-) -> BoxFuture<(Box<Manifest + Sync>, DManifestId), Error> {
+) -> BoxFuture<(Box<Manifest + Sync>, HgManifestId), Error> {
     let root_manifest_fut = root_manifest.and_then({
         let entry_processor = entry_processor.clone();
         move |root_manifest| match root_manifest {
@@ -449,10 +444,10 @@ pub fn process_entries(
         .and_then(move |(root_hash, ())| match root_hash {
             None => future::ok((
                 manifest::EmptyManifest.boxed(),
-                DManifestId::new(D_NULL_HASH),
+                HgManifestId::new(NULL_HASH),
             )).boxify(),
             Some(root_hash) => repo.get_manifest_by_nodeid(&root_hash)
-                .map(move |m| (m, DManifestId::new(root_hash)))
+                .map(move |m| (m, HgManifestId::new(root_hash)))
                 .boxify(),
         })
         .timed(move |stats, result| {
@@ -501,7 +496,7 @@ pub fn handle_parents(
     p2: Option<ChangesetHandle>,
 ) -> BoxFuture<
     (
-        DParents,
+        HgParents,
         (Option<Box<Manifest + Sync>>),
         (Option<Box<Manifest + Sync>>),
     ),
@@ -529,7 +524,7 @@ pub fn handle_parents(
         })
         .map_err(|e| Error::from(e))
         .and_then(move |((p1_hash, p1_manifest), (p2_hash, p2_manifest))| {
-            let parents = DParents::new(p1_hash.as_ref(), p2_hash.as_ref());
+            let parents = HgParents::new(p1_hash.as_ref(), p2_hash.as_ref());
             let p1_manifest = p1_manifest.map(|m| repo.get_manifest_by_nodeid(&m.into_nodehash()));
             let p2_manifest = p2_manifest.map(|m| repo.get_manifest_by_nodeid(&m.into_nodehash()));
             p1_manifest
@@ -546,8 +541,8 @@ pub fn handle_parents(
 }
 
 pub fn make_new_changeset(
-    parents: DParents,
-    root_hash: DManifestId,
+    parents: HgParents,
+    root_hash: HgManifestId,
     user: String,
     time: DateTime,
     extra: BTreeMap<Vec<u8>, Vec<u8>>,

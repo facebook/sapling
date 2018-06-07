@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use common::blake2_path_hash;
-use mercurial_types::{DChangesetId, DFileNodeId, RepositoryId};
+use mercurial_types::{HgChangesetId, HgFileNodeId, RepositoryId};
 use schema::{filenodes, fixedcopyinfo, paths};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -17,11 +17,11 @@ pub(crate) struct FilenodeRow {
     pub repo_id: RepositoryId,
     pub path_hash: Vec<u8>,
     pub is_tree: i32,
-    pub filenode: DFileNodeId,
+    pub filenode: HgFileNodeId,
     // TODO(stash): shouldn't it be Mononoke changeset id?
-    pub linknode: DChangesetId,
-    pub p1: Option<DFileNodeId>,
-    pub p2: Option<DFileNodeId>,
+    pub linknode: HgChangesetId,
+    pub p1: Option<HgFileNodeId>,
+    pub p2: Option<HgFileNodeId>,
     pub has_copyinfo: i32,
 }
 
@@ -30,10 +30,10 @@ impl FilenodeRow {
         repo_id: &RepositoryId,
         path: &Vec<u8>,
         is_tree: i32,
-        filenode: &DFileNodeId,
-        linknode: &DChangesetId,
-        p1: Option<DFileNodeId>,
-        p2: Option<DFileNodeId>,
+        filenode: &HgFileNodeId,
+        linknode: &HgChangesetId,
+        p1: Option<HgFileNodeId>,
+        p2: Option<HgFileNodeId>,
         has_copyinfo: bool,
     ) -> Self {
         let has_copyinfo = if has_copyinfo { 1 } else { 0 };
@@ -75,20 +75,20 @@ impl PathRow {
 pub(crate) struct FixedCopyInfoRow {
     pub repo_id: RepositoryId,
     pub frompath_hash: Vec<u8>,
-    pub fromnode: DFileNodeId,
+    pub fromnode: HgFileNodeId,
     is_tree: i32,
     pub topath_hash: Vec<u8>,
-    pub tonode: DFileNodeId,
+    pub tonode: HgFileNodeId,
 }
 
 impl FixedCopyInfoRow {
     pub(crate) fn new(
         repo_id: &RepositoryId,
         frompath: &Vec<u8>,
-        fromnode: &DFileNodeId,
+        fromnode: &HgFileNodeId,
         is_tree: i32,
         topath: &Vec<u8>,
-        tonode: &DFileNodeId,
+        tonode: &HgFileNodeId,
     ) -> Self {
         let frompath_hash = blake2_path_hash(frompath);
         let topath_hash = blake2_path_hash(topath);

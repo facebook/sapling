@@ -4,8 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial::HgNodeHash;
-use mercurial_types::{Delta, MPath};
+use mercurial_types::{Delta, HgNodeHash, MPath};
 
 pub mod packer;
 pub mod unpacker;

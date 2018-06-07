@@ -44,8 +44,8 @@ use failure::ResultExt;
 use db::ConnectionParams;
 use futures::Future;
 use futures_ext::{asynchronize, BoxFuture, FutureExt};
-use mercurial_types::{DChangesetId, RepositoryId};
-use mercurial_types::sql_types::DChangesetIdSql;
+use mercurial_types::{HgChangesetId, RepositoryId};
+use mercurial_types::sql_types::HgChangesetIdSql;
 use stats::Timeseries;
 
 mod errors;
@@ -66,16 +66,16 @@ define_stats! {
 #[derive(Clone, Debug, Eq, Hash, HeapSizeOf, PartialEq)]
 pub struct ChangesetEntry {
     pub repo_id: RepositoryId,
-    pub cs_id: DChangesetId,
-    pub parents: Vec<DChangesetId>,
+    pub cs_id: HgChangesetId,
+    pub parents: Vec<HgChangesetId>,
     pub gen: u64,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChangesetInsert {
     pub repo_id: RepositoryId,
-    pub cs_id: DChangesetId,
-    pub parents: Vec<DChangesetId>,
+    pub cs_id: HgChangesetId,
+    pub parents: Vec<HgChangesetId>,
 }
 
 /// Interface to storage of changesets that have been completely stored in Mononoke.
@@ -88,7 +88,7 @@ pub trait Changesets: Send + Sync {
     fn get(
         &self,
         repo_id: RepositoryId,
-        cs_id: DChangesetId,
+        cs_id: HgChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error>;
 }
 
@@ -116,7 +116,7 @@ impl Changesets for CachingChangests {
     fn get(
         &self,
         repo_id: RepositoryId,
-        cs_id: DChangesetId,
+        cs_id: HgChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
         self.cache
             .get((repo_id, cs_id))
@@ -140,7 +140,7 @@ impl ChangesetsFiller {
 }
 
 impl Filler for ChangesetsFiller {
-    type Key = (RepositoryId, DChangesetId);
+    type Key = (RepositoryId, HgChangesetId);
     type Value = Box<Future<Item = ChangesetEntry, Error = Option<Error>> + Send>;
 
     fn fill(&self, _cache: &Asyncmemo<Self>, &(ref repo_id, ref cs_id): &Self::Key) -> Self::Value {
@@ -261,7 +261,7 @@ macro_rules! impl_changesets {
             fn get(
                 &self,
                 repo_id: RepositoryId,
-                cs_id: DChangesetId,
+                cs_id: HgChangesetId,
             ) -> BoxFuture<Option<ChangesetEntry>, Error> {
                 STATS::gets.add_value(1);
                 let db = self.clone();
@@ -429,11 +429,11 @@ impl_changesets!(SqliteChangesets);
 
 fn changeset_query<DB>(
     repo_id: RepositoryId,
-    cs_id: DChangesetId,
+    cs_id: HgChangesetId,
 ) -> changesets::BoxedQuery<'static, DB>
 where
     DB: Backend,
-    DB: HasSqlType<DChangesetIdSql>,
+    DB: HasSqlType<HgChangesetIdSql>,
 {
     changesets::table
         .filter(changesets::repo_id.eq(repo_id))
@@ -452,7 +452,7 @@ fn map_add_result(result: result::Result<usize, DieselError>) -> Result<bool> {
 }
 
 fn check_missing_rows(
-    expected: &[DChangesetId],
+    expected: &[HgChangesetId],
     actual: &[ChangesetRow],
 ) -> result::Result<(), ErrorKind> {
     // Could just count the number here and report an error if any are missing, but the reporting

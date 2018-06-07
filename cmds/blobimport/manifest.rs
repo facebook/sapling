@@ -13,10 +13,10 @@ use futures::{self, stream, Future, IntoFuture, Stream};
 
 use blobrepo::RawNodeBlob;
 use futures_ext::StreamExt;
-use mercurial::{self, HgNodeHash, HgParents, RevlogEntry, RevlogRepo};
+use mercurial::{self, RevlogEntry, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{HgBlob, MPath, RepoPath, Type};
+use mercurial_types::{HgBlob, HgNodeHash, HgParents, MPath, RepoPath, Type};
 
 use BlobstoreEntry;
 

@@ -11,9 +11,8 @@ use bincode;
 
 pub use failure::{Error, ResultExt};
 
-use mercurial::HgNodeHash;
-use mercurial_types::{DChangesetId, DFileNodeId, DNodeHash, DParents, HgBlob, HgBlobHash, MPath,
-                      RepoPath, Type};
+use mercurial_types::{HgBlob, HgBlobHash, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents,
+                      MPath, RepoPath, Type};
 
 use BlobChangeset;
 
@@ -45,13 +44,13 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Error while opening state for {}", _0)] StateOpen(StateOpenError),
-    #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(DChangesetId),
-    #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(DNodeHash),
-    #[fail(display = "Node id {} is missing", _0)] NodeMissing(DNodeHash),
+    #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(HgChangesetId),
+    #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(HgNodeHash),
+    #[fail(display = "Node id {} is missing", _0)] NodeMissing(HgNodeHash),
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]
-    ContentMissing(DNodeHash, HgBlobHash),
+    ContentMissing(HgNodeHash, HgBlobHash),
     #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(HgBlob),
-    #[fail(display = "DParents are not in blob store {:?}", _0)] ParentsUnknown(DParents),
+    #[fail(display = "HgParents are not in blob store {:?}", _0)] ParentsUnknown(HgParents),
     #[fail(display = "Serialization of node failed {} ({})", _0, _1)]
     SerializationFailed(HgNodeHash, bincode::Error),
     #[fail(display = "Root manifest is not a manifest (type {})", _0)] BadRootManifest(Type),
@@ -59,13 +58,13 @@ pub enum ErrorKind {
     ManifestTypeMismatch(Type, Type),
     #[fail(display = "Node generation failed for unknown reason")] NodeGenerationFailed,
     #[fail(display = "Path {} appears multiple times in manifests", _0)] DuplicateEntry(RepoPath),
-    #[fail(display = "Duplicate manifest hash {}", _0)] DuplicateManifest(DNodeHash),
-    #[fail(display = "Missing entries in new changeset {}", _0)] MissingEntries(DNodeHash),
-    #[fail(display = "Filenode is missing: {} {}", _0, _1)] MissingFilenode(RepoPath, DFileNodeId),
+    #[fail(display = "Duplicate manifest hash {}", _0)] DuplicateManifest(HgNodeHash),
+    #[fail(display = "Missing entries in new changeset {}", _0)] MissingEntries(HgNodeHash),
+    #[fail(display = "Filenode is missing: {} {}", _0, _1)] MissingFilenode(RepoPath, HgFileNodeId),
     #[fail(display = "Some manifests do not exist")] MissingManifests,
-    #[fail(display = "DParents failed to complete")] ParentsFailed,
+    #[fail(display = "HgParents failed to complete")] ParentsFailed,
     #[fail(display = "Expected {} to be a manifest, found a {} instead", _0, _1)]
-    NotAManifest(DNodeHash, Type),
+    NotAManifest(HgNodeHash, Type),
     #[fail(display = "Inconsistent node hash for entry: path {}, provided: {}, computed: {}", _0,
            _1, _2)]
     InconsistentEntryHash(RepoPath, HgNodeHash, HgNodeHash),

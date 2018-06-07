@@ -15,7 +15,6 @@ use slog::Logger;
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use mercurial::RevlogRepo;
-use mercurial_types::DChangesetId;
 
 pub fn upload_bookmarks(
     logger: &Logger,
@@ -34,7 +33,7 @@ pub fn upload_bookmarks(
                 v.ok_or_else(|| format_err!("Bookmark value missing: {:?}", key))
                     .into_future()
                     .and_then(move |(cs_id, _)| {
-                        blobrepo.changeset_exists(&DChangesetId::new(cs_id.into_nodehash().into_mononoke()))
+                        blobrepo.changeset_exists(&cs_id)
                             .map(move |exists| (key, cs_id, exists))
                     })
             })
@@ -66,7 +65,6 @@ pub fn upload_bookmarks(
 
             for (key, value) in vec {
                 let key = Bookmark::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
-                let value = DChangesetId::new(value.into_nodehash().into_mononoke());
                 try_boxfuture!(transaction.force_set(&key, &value))
             }
 

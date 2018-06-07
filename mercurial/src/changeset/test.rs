@@ -8,12 +8,10 @@ use std::collections::BTreeMap;
 
 use quickcheck::{QuickCheck, TestResult};
 
-use mercurial_types::{HgBlob, MPath};
+use mercurial_types::{HgBlob, HgBlobNode, HgManifestId, HgNodeHash, MPath};
 use mononoke_types::DateTime;
 
-use blobnode::HgBlobNode;
 use changeset::{escape, serialize_extras, unescape, Extra, RevlogChangeset};
-use nodehash::{HgManifestId, HgNodeHash};
 
 use bytes::Bytes;
 

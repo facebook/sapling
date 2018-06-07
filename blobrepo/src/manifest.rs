@@ -15,7 +15,7 @@ use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial_types::{Entry, FileType, MPathElement, Manifest, Type};
-use mercurial_types::nodehash::{DEntryId, DManifestId, DNodeHash, D_NULL_HASH};
+use mercurial_types::nodehash::{HgEntryId, HgManifestId, HgNodeHash, NULL_HASH};
 
 use blobstore::Blobstore;
 
@@ -25,7 +25,7 @@ use utils::{get_node, EnvelopeBlob};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {
-    entryid: DEntryId,
+    entryid: HgEntryId,
     flag: Type,
 }
 
@@ -92,10 +92,10 @@ pub struct BlobManifest {
 impl BlobManifest {
     pub fn load(
         blobstore: &Arc<Blobstore>,
-        manifestid: &DManifestId,
+        manifestid: &HgManifestId,
     ) -> BoxFuture<Option<Self>, Error> {
         let nodehash = manifestid.clone().into_nodehash();
-        if nodehash == D_NULL_HASH {
+        if nodehash == NULL_HASH {
             Ok(Some(BlobManifest {
                 blobstore: blobstore.clone(),
                 content: ManifestContent::new_empty(),
@@ -171,9 +171,9 @@ impl Details {
         let (hash, flags) = data.split_at(40);
         let hash = str::from_utf8(hash)
             .map_err(|err| Error::from(err))
-            .and_then(|hash| hash.parse::<DNodeHash>())
+            .and_then(|hash| hash.parse::<HgNodeHash>())
             .with_context(|_| format!("malformed hash: {:?}", hash))?;
-        let entryid = DEntryId::new(hash);
+        let entryid = HgEntryId::new(hash);
 
         ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
@@ -194,7 +194,7 @@ impl Details {
         })
     }
 
-    pub fn entryid(&self) -> &DEntryId {
+    pub fn entryid(&self) -> &HgEntryId {
         &self.entryid
     }
 

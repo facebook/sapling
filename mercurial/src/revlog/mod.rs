@@ -20,11 +20,8 @@ use failure;
 use memmap::Mmap;
 use nom::IResult;
 
-pub use mercurial_types::{delta, HgBlob};
+pub use mercurial_types::{delta, HgBlob, HgBlobNode, HgEntryId, HgNodeHash};
 pub use mercurial_types::bdiff::{self, Delta};
-
-use blobnode::HgBlobNode;
-use nodehash::{HgEntryId, HgNodeHash};
 
 // Submodules
 mod parser;

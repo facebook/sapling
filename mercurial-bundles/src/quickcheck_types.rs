@@ -19,8 +19,7 @@ use bytes::Bytes;
 use futures::stream;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
-use mercurial::HgNodeHash;
-use mercurial_types::{Delta, MPath};
+use mercurial_types::{Delta, HgNodeHash, MPath};
 
 use changegroup;
 #[cfg(test)]

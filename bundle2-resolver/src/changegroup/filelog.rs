@@ -18,9 +18,10 @@ use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry, UploadHgEntry,
                UploadHgNodeHash};
-use mercurial::{self, file, HgNodeHash, HgNodeKey};
+use mercurial::file;
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, RepoPath};
+use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, HgNodeHash, HgNodeKey, MPath,
+                      RepoPath, NULL_HASH};
 
 use errors::*;
 use stats::*;
@@ -186,7 +187,7 @@ impl DeltaCache {
                                 })
                                 .boxify(),
                             None => self.repo
-                                .get_raw_filenode_content(&base.into_mononoke())
+                                .get_raw_filenode_content(&base)
                                 .and_then(move |bytes| {
                                     let bytes = bytes.into_bytes();
                                     delta::apply(bytes.as_ref(), &delta)
@@ -250,9 +251,9 @@ impl Arbitrary for Filelog {
 
         let mut result = Vec::new();
 
-        if self.node_key.hash != mercurial::NULL_HASH {
+        if self.node_key.hash != NULL_HASH {
             let mut f = self.clone();
-            f.node_key.hash = mercurial::NULL_HASH;
+            f.node_key.hash = NULL_HASH;
             append(&mut result, f);
         }
 
@@ -268,9 +269,9 @@ impl Arbitrary for Filelog {
             append(&mut result, f);
         }
 
-        if self.linknode != mercurial::NULL_HASH {
+        if self.linknode != NULL_HASH {
             let mut f = self.clone();
-            f.linknode = mercurial::NULL_HASH;
+            f.linknode = NULL_HASH;
             append(&mut result, f);
         }
 
@@ -294,9 +295,9 @@ mod tests {
     use futures::stream::iter_ok;
     use itertools::{assert_equal, EitherOrBoth, Itertools};
 
-    use mercurial::NULL_HASH;
-    use mercurial::mocks::*;
+    use mercurial_types::NULL_HASH;
     use mercurial_types::delta::Fragment;
+    use mercurial_types_mocks::nodehash::*;
 
     struct NodeHashGen {
         bytes: Vec<u8>,

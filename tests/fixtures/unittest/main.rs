@@ -18,7 +18,7 @@ use ascii::AsciiString;
 use futures::executor::spawn;
 use mercurial_types::{Changeset, FileType, MPathElement};
 use mercurial_types::manifest::{Content, Type};
-use mercurial_types::nodehash::{DChangesetId, DNodeHash};
+use mercurial_types::nodehash::{HgChangesetId, HgNodeHash};
 use mononoke_types::FileContents;
 
 #[test]
@@ -26,14 +26,14 @@ fn check_head_exists() {
     async_unit::tokio_unit_test(|| {
         let repo = linear::getrepo(None);
 
-        let nodehash = DNodeHash::from_ascii_str(&AsciiString::from_ascii(
+        let nodehash = HgNodeHash::from_ascii_str(&AsciiString::from_ascii(
             "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
         ).expect("Can't turn string to AsciiString"))
             .expect(
-            "Can't turn AsciiString to DNodeHash",
+            "Can't turn AsciiString to HgNodeHash",
         );
 
-        let exists_future = repo.changeset_exists(&DChangesetId::new(nodehash));
+        let exists_future = repo.changeset_exists(&HgChangesetId::new(nodehash));
 
         let exists = spawn(exists_future)
             .wait_future()
@@ -48,10 +48,10 @@ fn check_head_has_file() {
         let repo = linear::getrepo(None);
 
         let changeset_future =
-            repo.get_changeset_by_changesetid(&DChangesetId::from_ascii_str(
+            repo.get_changeset_by_changesetid(&HgChangesetId::from_ascii_str(
                 &AsciiString::from_ascii("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
                     .expect("Can't turn string to AsciiString"),
-            ).expect("Can't turn AsciiString to DNodeHash"));
+            ).expect("Can't turn AsciiString to HgNodeHash"));
         let changeset = spawn(changeset_future)
             .wait_future()
             .expect("Can't get changeset");

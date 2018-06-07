@@ -17,7 +17,7 @@ extern crate mercurial_types;
 extern crate repoinfo;
 
 use futures::stream::Stream;
-use mercurial_types::DNodeHash;
+use mercurial_types::HgNodeHash;
 
 mod setcommon;
 
@@ -36,7 +36,7 @@ pub use setdifferencenodestream::SetDifferenceNodeStream;
 pub mod errors;
 pub use errors::{Error, ErrorKind};
 
-pub type NodeStream = Stream<Item = DNodeHash, Error = errors::Error> + Send + 'static;
+pub type NodeStream = Stream<Item = HgNodeHash, Error = errors::Error> + Send + 'static;
 
 mod validation;
 pub use validation::ValidateNodeStream;

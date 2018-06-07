@@ -8,17 +8,17 @@ use std::collections::BTreeMap;
 
 use mononoke_types::{DateTime, MPath};
 
-use blobnode::DParents;
-use nodehash::DManifestId;
+use blobnode::HgParents;
+use nodehash::HgManifestId;
 
 pub trait Changeset: Send + 'static {
-    fn manifestid(&self) -> &DManifestId;
+    fn manifestid(&self) -> &HgManifestId;
     fn user(&self) -> &[u8];
     fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>>;
     fn comments(&self) -> &[u8];
     fn files(&self) -> &[MPath];
     fn time(&self) -> &DateTime;
-    fn parents(&self) -> &DParents;
+    fn parents(&self) -> &HgParents;
 
     fn boxed(self) -> Box<Changeset>
     where
@@ -29,7 +29,7 @@ pub trait Changeset: Send + 'static {
 }
 
 impl Changeset for Box<Changeset> {
-    fn manifestid(&self) -> &DManifestId {
+    fn manifestid(&self) -> &HgManifestId {
         (**self).manifestid()
     }
 
@@ -53,7 +53,7 @@ impl Changeset for Box<Changeset> {
         (**self).time()
     }
 
-    fn parents(&self) -> &DParents {
+    fn parents(&self) -> &HgParents {
         (**self).parents()
     }
 }

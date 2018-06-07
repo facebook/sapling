@@ -5,55 +5,55 @@
 // GNU General Public License version 2 or any later version.
 
 use hash::{self, Context};
-use nodehash::DNodeHash;
+use nodehash::HgNodeHash;
 
 use blob::HgBlob;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
-pub enum DParents {
+pub enum HgParents {
     None,
-    One(DNodeHash),
-    Two(DNodeHash, DNodeHash),
+    One(HgNodeHash),
+    Two(HgNodeHash, HgNodeHash),
 }
 
-impl DParents {
-    pub fn new(p1: Option<&DNodeHash>, p2: Option<&DNodeHash>) -> Self {
+impl HgParents {
+    pub fn new(p1: Option<&HgNodeHash>, p2: Option<&HgNodeHash>) -> Self {
         match (p1, p2) {
-            (None, None) => DParents::None,
-            (Some(p1), None) => DParents::One(*p1),
-            (None, Some(p2)) => DParents::One(*p2),
-            (Some(p1), Some(p2)) => DParents::Two(*p1, *p2),
+            (None, None) => HgParents::None,
+            (Some(p1), None) => HgParents::One(*p1),
+            (None, Some(p2)) => HgParents::One(*p2),
+            (Some(p1), Some(p2)) => HgParents::Two(*p1, *p2),
         }
     }
 
-    pub fn get_nodes(&self) -> (Option<&DNodeHash>, Option<&DNodeHash>) {
+    pub fn get_nodes(&self) -> (Option<&HgNodeHash>, Option<&HgNodeHash>) {
         match self {
-            &DParents::None => (None, None),
-            &DParents::One(ref p1) => (Some(p1), None),
-            &DParents::Two(ref p1, ref p2) => (Some(p1), Some(p2)),
+            &HgParents::None => (None, None),
+            &HgParents::One(ref p1) => (Some(p1), None),
+            &HgParents::Two(ref p1, ref p2) => (Some(p1), Some(p2)),
         }
     }
 }
 
-impl<'a> IntoIterator for &'a DParents {
+impl<'a> IntoIterator for &'a HgParents {
     type IntoIter = ParentIter;
-    type Item = DNodeHash;
+    type Item = HgNodeHash;
     fn into_iter(self) -> ParentIter {
         ParentIter(*self)
     }
 }
 
 #[derive(Debug)]
-pub struct ParentIter(DParents);
+pub struct ParentIter(HgParents);
 
 impl Iterator for ParentIter {
-    type Item = DNodeHash;
+    type Item = HgNodeHash;
     fn next(&mut self) -> Option<Self::Item> {
         let (ret, new) = match self.0 {
-            DParents::None => (None, DParents::None),
-            DParents::One(p1) => (Some(p1), DParents::None),
-            DParents::Two(p1, p2) => (Some(p1), DParents::One(p2)),
+            HgParents::None => (None, HgParents::None),
+            HgParents::One(p1) => (Some(p1), HgParents::None),
+            HgParents::Two(p1, p2) => (Some(p1), HgParents::One(p2)),
         };
         self.0 = new;
         ret
@@ -64,13 +64,13 @@ impl Iterator for ParentIter {
 /// blob.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize)]
-pub struct DBlobNode {
+pub struct HgBlobNode {
     blob: HgBlob,
-    parents: DParents,
+    parents: HgParents,
     maybe_copied: bool,
 }
 
-impl DBlobNode {
+impl HgBlobNode {
     /// Construct a node with the given content and parents.
     /// NOTE: Mercurial encodes the fact that a file has been copied from some other path
     /// in metadata. The possible presence of metadata is signaled by marking p1 as None.
@@ -80,14 +80,14 @@ impl DBlobNode {
     ///   parent that's copied.
     /// * If both p1 and p2 are None, it shouldn't really be possible to have copy info. But
     ///   the Mercurial Python client tries to parse metadata anyway, so match that behavior.
-    pub fn new<B>(blob: B, p1: Option<&DNodeHash>, p2: Option<&DNodeHash>) -> DBlobNode
+    pub fn new<B>(blob: B, p1: Option<&HgNodeHash>, p2: Option<&HgNodeHash>) -> HgBlobNode
     where
         B: Into<HgBlob>,
     {
         let blob = blob.into();
-        DBlobNode {
+        HgBlobNode {
             blob: blob,
-            parents: DParents::new(p1, p2),
+            parents: HgParents::new(p1, p2),
             maybe_copied: p1.is_none(),
         }
     }
@@ -100,7 +100,7 @@ impl DBlobNode {
         &self.blob
     }
 
-    pub fn parents(&self) -> &DParents {
+    pub fn parents(&self) -> &HgParents {
         &self.parents
     }
 
@@ -111,14 +111,14 @@ impl DBlobNode {
     // Annoyingly, filenode is defined as sha1(p1 || p2 || content), not
     // sha1(p1 || p2 || sha1(content)), so we can't compute a filenode for
     // a blob we don't have
-    pub fn nodeid(&self) -> Option<DNodeHash> {
+    pub fn nodeid(&self) -> Option<HgNodeHash> {
         let null = hash::NULL;
 
         let (h1, h2) = match &self.parents {
-            &DParents::None => (&null, &null),
-            &DParents::One(ref p1) => (&null, &p1.0),
-            &DParents::Two(ref p1, ref p2) if p1 > p2 => (&p2.0, &p1.0),
-            &DParents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
+            &HgParents::None => (&null, &null),
+            &HgParents::One(ref p1) => (&null, &p1.0),
+            &HgParents::Two(ref p1, ref p2) if p1 > p2 => (&p2.0, &p1.0),
+            &HgParents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
         };
 
         self.as_blob().as_slice().map(|data| {
@@ -128,7 +128,7 @@ impl DBlobNode {
             ctxt.update(h2);
             ctxt.update(data);
 
-            DNodeHash(ctxt.finish())
+            HgNodeHash(ctxt.finish())
         })
     }
 }
@@ -142,31 +142,31 @@ mod test {
     #[test]
     fn test_node_none() {
         let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
-        let n = DBlobNode::new(blob, None, None);
-        assert_eq!(n.parents, DParents::None);
+        let n = HgBlobNode::new(blob, None, None);
+        assert_eq!(n.parents, HgParents::None);
     }
 
     #[test]
     fn test_node_one() {
         let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
-        let p = &DBlobNode::new(blob.clone(), None, None);
+        let p = &HgBlobNode::new(blob.clone(), None, None);
         assert!(p.maybe_copied);
         {
-            let pid: Option<DNodeHash> = p.nodeid();
-            let n = DBlobNode::new(blob.clone(), pid.as_ref(), None);
-            assert_eq!(n.parents, DParents::One(pid.unwrap()));
+            let pid: Option<HgNodeHash> = p.nodeid();
+            let n = HgBlobNode::new(blob.clone(), pid.as_ref(), None);
+            assert_eq!(n.parents, HgParents::One(pid.unwrap()));
             assert!(!n.maybe_copied);
         }
         {
-            let pid: Option<DNodeHash> = p.nodeid();
-            let n = DBlobNode::new(blob.clone(), None, pid.as_ref());
-            assert_eq!(n.parents, DParents::One(pid.unwrap()));
+            let pid: Option<HgNodeHash> = p.nodeid();
+            let n = HgBlobNode::new(blob.clone(), None, pid.as_ref());
+            assert_eq!(n.parents, HgParents::One(pid.unwrap()));
             assert!(n.maybe_copied);
         }
         {
-            let pid: Option<DNodeHash> = p.nodeid();
-            let n = DBlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
-            assert_eq!(n.parents, DParents::Two(pid.unwrap(), pid.unwrap()));
+            let pid: Option<HgNodeHash> = p.nodeid();
+            let n = HgBlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
+            assert_eq!(n.parents, HgParents::Two(pid.unwrap(), pid.unwrap()));
             assert!(!n.maybe_copied);
         }
     }
@@ -174,8 +174,8 @@ mod test {
     #[test]
     fn test_node_two() {
         use std::mem;
-        let mut p1 = DBlobNode::new(HgBlob::from(Bytes::from(&b"foo1"[..])), None, None);
-        let mut p2 = DBlobNode::new(HgBlob::from(Bytes::from(&b"foo2"[..])), None, None);
+        let mut p1 = HgBlobNode::new(HgBlob::from(Bytes::from(&b"foo1"[..])), None, None);
+        let mut p2 = HgBlobNode::new(HgBlob::from(Bytes::from(&b"foo2"[..])), None, None);
         assert!(p1.maybe_copied);
         assert!(p2.maybe_copied);
 
@@ -183,26 +183,26 @@ mod test {
             mem::swap(&mut p1, &mut p2);
         }
 
-        let pid1: Option<DNodeHash> = (&p1).nodeid();
-        let pid2: Option<DNodeHash> = (&p2).nodeid();
+        let pid1: Option<HgNodeHash> = (&p1).nodeid();
+        let pid2: Option<HgNodeHash> = (&p2).nodeid();
 
         let node1 = {
-            let n = DBlobNode::new(
+            let n = HgBlobNode::new(
                 HgBlob::from(Bytes::from(&b"bar"[..])),
                 pid1.as_ref(),
                 pid2.as_ref(),
             );
-            assert_eq!(n.parents, DParents::Two(pid1.unwrap(), pid2.unwrap()));
+            assert_eq!(n.parents, HgParents::Two(pid1.unwrap(), pid2.unwrap()));
             assert!(!n.maybe_copied);
             n.nodeid().expect("no nodeid 1")
         };
         let node2 = {
-            let n = DBlobNode::new(
+            let n = HgBlobNode::new(
                 HgBlob::from(Bytes::from(&b"bar"[..])),
                 pid2.as_ref(),
                 pid1.as_ref(),
             );
-            assert_eq!(n.parents, DParents::Two(pid2.unwrap(), pid1.unwrap()));
+            assert_eq!(n.parents, HgParents::Two(pid2.unwrap(), pid1.unwrap()));
             assert!(!n.maybe_copied);
             n.nodeid().expect("no nodeid 2")
         };

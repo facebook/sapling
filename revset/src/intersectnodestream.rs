@@ -8,7 +8,7 @@ use blobrepo::BlobRepo;
 use futures::Async;
 use futures::Poll;
 use futures::stream::Stream;
-use mercurial_types::DNodeHash;
+use mercurial_types::HgNodeHash;
 use repoinfo::{Generation, RepoGenCache};
 use std::boxed::Box;
 use std::collections::HashMap;
@@ -22,10 +22,10 @@ use errors::*;
 use setcommon::*;
 
 pub struct IntersectNodeStream {
-    inputs: Vec<(InputStream, Poll<Option<(DNodeHash, Generation)>, Error>)>,
+    inputs: Vec<(InputStream, Poll<Option<(HgNodeHash, Generation)>, Error>)>,
     current_generation: Option<Generation>,
-    accumulator: HashMap<DNodeHash, usize>,
-    drain: Option<IntoIter<DNodeHash, usize>>,
+    accumulator: HashMap<HgNodeHash, usize>,
+    drain: Option<IntoIter<HgNodeHash, usize>>,
 }
 
 impl IntersectNodeStream {
@@ -101,7 +101,7 @@ impl IntersectNodeStream {
 }
 
 impl Stream for IntersectNodeStream {
-    type Item = DNodeHash;
+    type Item = HgNodeHash;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         // This feels wrong, but in practice it's fine - it should be quick to hit a return, and

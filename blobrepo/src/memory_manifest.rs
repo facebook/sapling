@@ -17,8 +17,8 @@ use futures_ext::{BoxFuture, FutureExt};
 
 use slog::Logger;
 
-use mercurial::{HgNodeHash, NodeHashConversion};
-use mercurial_types::{DManifestId, Entry, MPath, MPathElement, Manifest, RepoPath, Type};
+use mercurial_types::{Entry, HgManifestId, HgNodeHash, MPath, MPathElement, Manifest, RepoPath,
+                      Type};
 
 use blobstore::Blobstore;
 use file::HgBlobEntry;
@@ -255,12 +255,12 @@ impl MemoryManifestEntry {
                                 match path.mpath().map(MPath::basename) {
                                     None => Ok(HgBlobEntry::new_root(
                                         blobstore,
-                                        DManifestId::new(base_manifest_id.into_mononoke()),
+                                        HgManifestId::new(base_manifest_id),
                                     )),
                                     Some(path) => Ok(HgBlobEntry::new(
                                         blobstore,
                                         path.clone(),
-                                        base_manifest_id.into_mononoke(),
+                                        base_manifest_id,
                                         Type::Tree,
                                     )),
                                 }
@@ -302,9 +302,9 @@ impl MemoryManifestEntry {
                 ..
             } => match base_manifest_id {
                 Some(manifest_id) => Either::B(
-                    BlobManifest::load(blobstore, &DManifestId::new(manifest_id.into_mononoke()))
+                    BlobManifest::load(blobstore, &HgManifestId::new(*manifest_id))
                         .and_then({
-                            let manifest_id = manifest_id.into_mononoke();
+                            let manifest_id = *manifest_id;
                             move |m| m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
                         })
                         .and_then({
@@ -319,8 +319,7 @@ impl MemoryManifestEntry {
                                         match entry.get_type() {
                                             Type::Tree => Ok(Self::convert_treenode(&entry
                                                 .get_hash()
-                                                .into_nodehash()
-                                                .into_mercurial())),
+                                                .into_nodehash())),
                                             _ => Ok(MemoryManifestEntry::Blob(HgBlobEntry::new(
                                                 blobstore.clone(),
                                                 name.clone(),
@@ -425,9 +424,7 @@ impl MemoryManifestEntry {
         use self::MemoryManifestEntry::*;
         if self.is_modified() {
             return self.save(&blobstore, &logger, repo_path.clone())
-                .map(|entry| {
-                    Self::convert_treenode(&entry.get_hash().into_nodehash().into_mercurial())
-                })
+                .map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
                 .and_then(move |saved| {
                     saved.merge_with_conflicts(other, blobstore, logger, repo_path)
                 })
@@ -436,9 +433,7 @@ impl MemoryManifestEntry {
         if other.is_modified() {
             return other
                 .save(&blobstore, &logger, repo_path.clone())
-                .map(|entry| {
-                    Self::convert_treenode(&entry.get_hash().into_nodehash().into_mercurial())
-                })
+                .map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
                 .and_then(move |saved| {
                     self.merge_with_conflicts(saved, blobstore, logger, repo_path)
                 })
@@ -538,7 +533,7 @@ impl MemoryManifestEntry {
                         *base_manifest_id
                     }
                     MemoryManifestEntry::Blob(blob) if blob.get_type() == Type::Tree => {
-                        Some(blob.get_hash().into_nodehash().into_mercurial())
+                        Some(blob.get_hash().into_nodehash())
                     }
                     _ => None,
                 })
@@ -578,9 +573,7 @@ impl MemoryManifestEntry {
         manifest.lookup(&element).map(move |entry| {
             if let Some(entry) = entry {
                 let entry = match entry.get_type() {
-                    Type::Tree => {
-                        Self::convert_treenode(&entry.get_hash().into_nodehash().into_mercurial())
-                    }
+                    Type::Tree => Self::convert_treenode(&entry.get_hash().into_nodehash()),
                     _ => MemoryManifestEntry::Blob(HgBlobEntry::new(
                         blobstore,
                         element.clone(),
@@ -627,13 +620,13 @@ impl MemoryManifestEntry {
                         } else {
                             // Do the lookup in base_manifest_id
                             if let Some(manifest_id) = base_manifest_id {
-                                BlobManifest::load(
-                                    &blobstore,
-                                    &DManifestId::new(manifest_id.into_mononoke()),
-                                ).and_then({
-                                    let manifest_id = manifest_id.into_mononoke();
-                                    move |m| m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
-                                })
+                                BlobManifest::load(&blobstore, &HgManifestId::new(*manifest_id))
+                                    .and_then({
+                                        let manifest_id = *manifest_id;
+                                        move |m| {
+                                            m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
+                                        }
+                                    })
                                     .and_then({
                                         let entry_changes = entry_changes.clone();
                                         let element = element.clone();
@@ -781,7 +774,7 @@ mod test {
     use super::*;
     use async_unit;
     use many_files_dirs;
-    use mercurial_types::{DNodeHash, FileType, nodehash::DEntryId};
+    use mercurial_types::{FileType, HgNodeHash, nodehash::HgEntryId};
     use mercurial_types_mocks::nodehash;
     use slog::Discard;
 
@@ -830,10 +823,9 @@ mod test {
             let blobstore = many_files_dirs::getrepo(None).get_blobstore();
             let logger = Logger::root(Discard, o![]);
 
-            let manifest_id = DNodeHash::from_static_str(
+            let manifest_id = HgNodeHash::from_static_str(
                 "b267a6869fcc39b37741408b5823cc044233201d",
-            ).expect("Could not get nodehash")
-                .into_mercurial();
+            ).expect("Could not get nodehash");
 
             // Load a memory manifest
             let memory_manifest =
@@ -886,12 +878,12 @@ mod test {
                     .expect("Could not create empty manifest");
 
             // Add an unmodified entry
-            let dir_nodehash = DNodeHash::from_static_str(
+            let dir_nodehash = HgNodeHash::from_static_str(
                 "b267a6869fcc39b37741408b5823cc044233201d",
             ).expect("Could not get nodehash");
             let dir = MemoryManifestEntry::MemTree {
-                base_manifest_id: Some(dir_nodehash.into_mercurial()),
-                p1: Some(dir_nodehash.into_mercurial()),
+                base_manifest_id: Some(dir_nodehash),
+                p1: Some(dir_nodehash),
                 p2: None,
                 changes: Arc::new(Mutex::new(BTreeMap::new())),
             };
@@ -926,10 +918,9 @@ mod test {
             let blobstore = repo.get_blobstore();
             let logger = Logger::root(Discard, o![]);
 
-            let manifest_id = DNodeHash::from_static_str(
+            let manifest_id = HgNodeHash::from_static_str(
                 "b267a6869fcc39b37741408b5823cc044233201d",
-            ).expect("Could not get nodehash")
-                .into_mercurial();
+            ).expect("Could not get nodehash");
 
             let dir2 = MPathElement::new(b"dir2".to_vec()).expect("Can't create MPathElement dir2");
 
@@ -1002,10 +993,9 @@ mod test {
             let blobstore = repo.get_blobstore();
             let logger = Logger::root(Discard, o![]);
 
-            let manifest_id = DNodeHash::from_static_str(
+            let manifest_id = HgNodeHash::from_static_str(
                 "b267a6869fcc39b37741408b5823cc044233201d",
-            ).expect("Could not get nodehash")
-                .into_mercurial();
+            ).expect("Could not get nodehash");
 
             let new_file = MPathElement::new(b"new_file".to_vec())
                 .expect("Can't create MPathElement new_file");
@@ -1017,7 +1007,7 @@ mod test {
                     .expect("Could not load manifest");
 
             // Add a file
-            let nodehash = DNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+            let nodehash = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
                 .expect("Could not get nodehash");
             memory_manifest
                 .change_entry(
@@ -1058,10 +1048,9 @@ mod test {
             let blobstore = repo.get_blobstore();
             let logger = Logger::root(Discard, o![]);
 
-            let manifest_id = DNodeHash::from_static_str(
+            let manifest_id = HgNodeHash::from_static_str(
                 "b267a6869fcc39b37741408b5823cc044233201d",
-            ).expect("Could not get nodehash")
-                .into_mercurial();
+            ).expect("Could not get nodehash");
 
             let new_file = MPathElement::new(b"1".to_vec()).expect("Can't create MPathElement 1");
 
@@ -1072,7 +1061,7 @@ mod test {
                     .expect("Could not load manifest");
 
             // Add a file
-            let nodehash = DNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+            let nodehash = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
                 .expect("Could not get nodehash");
             memory_manifest
                 .change_entry(
@@ -1147,7 +1136,7 @@ mod test {
                 );
                 MemoryManifestEntry::MemTree {
                     base_manifest_id: None,
-                    p1: Some(nodehash::ONES_HASH.into_mercurial()),
+                    p1: Some(nodehash::ONES_HASH),
                     p2: None,
                     changes: Arc::new(Mutex::new(changes)),
                 }
@@ -1187,7 +1176,7 @@ mod test {
                 );
                 MemoryManifestEntry::MemTree {
                     base_manifest_id: None,
-                    p1: Some(nodehash::TWOS_HASH.into_mercurial()),
+                    p1: Some(nodehash::TWOS_HASH),
                     p2: None,
                     changes: Arc::new(Mutex::new(changes)),
                 }
@@ -1205,7 +1194,7 @@ mod test {
                 {
                     assert_eq!(
                         blob.get_hash(),
-                        &DEntryId::new(nodehash::ONES_HASH),
+                        &HgEntryId::new(nodehash::ONES_HASH),
                         "Wrong hash for shared"
                     );
                 } else {
@@ -1216,7 +1205,7 @@ mod test {
                 {
                     assert_eq!(
                         blob.get_hash(),
-                        &DEntryId::new(nodehash::ONES_HASH),
+                        &HgEntryId::new(nodehash::ONES_HASH),
                         "Wrong hash for base"
                     );
                 } else {
@@ -1227,7 +1216,7 @@ mod test {
                 {
                     assert_eq!(
                         blob.get_hash(),
-                        &DEntryId::new(nodehash::TWOS_HASH),
+                        &HgEntryId::new(nodehash::TWOS_HASH),
                         "Wrong hash for other"
                     );
                 } else {

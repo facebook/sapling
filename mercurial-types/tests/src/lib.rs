@@ -25,15 +25,15 @@ use blobrepo::BlobRepo;
 use futures::{Future, Stream};
 use futures::executor::spawn;
 use futures_ext::select_all;
-use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Type, D_NULL_HASH};
+use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest::Content;
 use mercurial_types::manifest_utils::{changed_entry_stream, changed_entry_stream_with_pruner,
                                       diff_sorted_vecs, visited_pruner, ChangedEntry, EntryStatus};
-use mercurial_types::nodehash::{DChangesetId, DEntryId, DNodeHash};
+use mercurial_types::nodehash::{HgChangesetId, HgEntryId, HgNodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry};
 use mercurial_types_mocks::nodehash;
 
-fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &DChangesetId) -> Box<Manifest> {
+fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &HgChangesetId) -> Box<Manifest> {
     let cs = repo.get_changeset_by_changesetid(changesetid)
         .wait()
         .unwrap();
@@ -43,12 +43,12 @@ fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &DChangesetId) -> Box<Man
         .unwrap()
 }
 
-fn get_hash(c: char) -> DEntryId {
+fn get_hash(c: char) -> HgEntryId {
     let hash: String = repeat(c).take(40).collect();
-    DEntryId::new(DNodeHash::from_str(&hash).unwrap())
+    HgEntryId::new(HgNodeHash::from_str(&hash).unwrap())
 }
 
-fn get_entry(ty: Type, hash: DEntryId, path: RepoPath) -> Box<Entry + Sync> {
+fn get_entry(ty: Type, hash: HgEntryId, path: RepoPath) -> Box<Entry + Sync> {
     let content_factory: ContentFactory = Arc::new(|| -> Content {
         panic!("should not be called");
     });
@@ -278,8 +278,8 @@ fn check_changed_paths(
 
 fn do_check_with_pruner<P>(
     repo: Arc<BlobRepo>,
-    main_hash: DNodeHash,
-    base_hash: DNodeHash,
+    main_hash: HgNodeHash,
+    base_hash: HgNodeHash,
     expected_added: Vec<&str>,
     expected_deleted: Vec<&str>,
     expected_modified: Vec<&str>,
@@ -288,8 +288,8 @@ fn do_check_with_pruner<P>(
     P: FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
 {
     {
-        let manifest = get_root_manifest(repo.clone(), &DChangesetId::new(main_hash));
-        let base_manifest = get_root_manifest(repo.clone(), &DChangesetId::new(base_hash));
+        let manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash));
+        let base_manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
 
         let res = find_changed_entry_status_stream(manifest, base_manifest, pruner.clone());
 
@@ -304,8 +304,8 @@ fn do_check_with_pruner<P>(
     // Vice-versa: compare base_hash to main_hash. Deleted paths become added, added become
     // deleted.
     {
-        let manifest = get_root_manifest(repo.clone(), &DChangesetId::new(base_hash));
-        let base_manifest = get_root_manifest(repo.clone(), &DChangesetId::new(main_hash));
+        let manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
+        let base_manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash));
 
         let res = find_changed_entry_status_stream(manifest, base_manifest, pruner);
 
@@ -320,8 +320,8 @@ fn do_check_with_pruner<P>(
 
 fn do_check(
     repo: Arc<BlobRepo>,
-    main_hash: DNodeHash,
-    base_hash: DNodeHash,
+    main_hash: HgNodeHash,
+    base_hash: HgNodeHash,
     expected_added: Vec<&str>,
     expected_deleted: Vec<&str>,
     expected_modified: Vec<&str>,
@@ -341,8 +341,8 @@ fn do_check(
 fn test_recursive_changed_entry_stream_simple() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = DNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
-        let base_hash = DNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
+        let main_hash = HgNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let base_hash = HgNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
         // A 2
@@ -374,8 +374,8 @@ fn test_recursive_changed_entry_stream_simple() {
 fn test_recursive_changed_entry_stream_changed_dirs() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = DNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-        let base_hash = DNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let main_hash = HgNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let base_hash = HgNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
         // A dir1/subdir1/subsubdir1/file_1
@@ -405,8 +405,8 @@ fn test_recursive_changed_entry_stream_changed_dirs() {
 fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = DNodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
-        let base_hash = DNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let main_hash = HgNodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
+        let base_hash = HgNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
         // A dir1
@@ -446,8 +446,8 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
 fn test_recursive_changed_entry_prune() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = DNodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
-        let base_hash = DNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let main_hash = HgNodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
+        let base_hash = HgNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
         // A dir1
@@ -516,9 +516,9 @@ fn test_recursive_changed_entry_prune() {
 fn test_recursive_changed_entry_prune_visited() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash_1 = DNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
-        let main_hash_2 = DNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-        let base_hash = DNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
+        let main_hash_1 = HgNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let main_hash_2 = HgNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let base_hash = HgNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
 
         // VisitedPruner let's us merge stream without producing the same entries twice.
         // o  473b2e
@@ -540,9 +540,9 @@ fn test_recursive_changed_entry_prune_visited() {
         // A dir1/subdir1/subsubdir2/file_1
         // A dir1/subdir1/subsubdir2/file_2
 
-        let manifest_1 = get_root_manifest(repo.clone(), &DChangesetId::new(main_hash_1));
-        let manifest_2 = get_root_manifest(repo.clone(), &DChangesetId::new(main_hash_2));
-        let basemanifest = get_root_manifest(repo.clone(), &DChangesetId::new(base_hash));
+        let manifest_1 = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash_1));
+        let manifest_2 = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash_2));
+        let basemanifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
 
         let pruner = visited_pruner();
 
@@ -569,12 +569,12 @@ fn test_recursive_changed_entry_prune_visited() {
 
 #[test]
 fn nodehash_option() {
-    assert_eq!(D_NULL_HASH.into_option(), None);
-    assert_eq!(DNodeHash::from(None), D_NULL_HASH);
+    assert_eq!(NULL_HASH.into_option(), None);
+    assert_eq!(HgNodeHash::from(None), NULL_HASH);
 
     assert_eq!(nodehash::ONES_HASH.into_option(), Some(nodehash::ONES_HASH));
     assert_eq!(
-        DNodeHash::from(Some(nodehash::ONES_HASH)),
+        HgNodeHash::from(Some(nodehash::ONES_HASH)),
         nodehash::ONES_HASH
     );
 }

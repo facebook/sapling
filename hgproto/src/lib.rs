@@ -37,6 +37,8 @@ extern crate mercurial_bundles;
 extern crate mercurial_types;
 extern crate revset;
 
+#[cfg(test)]
+extern crate mercurial_types_mocks;
 // QuickCheck for randomized testing.
 #[cfg(test)]
 #[macro_use]
@@ -48,7 +50,7 @@ use std::sync::Mutex;
 
 use bytes::Bytes;
 
-use mercurial::HgNodeHash;
+use mercurial_types::HgNodeHash;
 
 mod batch;
 mod dechunker;

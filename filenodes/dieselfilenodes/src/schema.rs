@@ -11,16 +11,16 @@
 table! {
     use diesel::sql_types::{Binary, Integer, Nullable};
 
-    use mercurial_types::sql_types::{DChangesetIdSql, DFileNodeIdSql};
+    use mercurial_types::sql_types::{HgChangesetIdSql, HgFileNodeIdSql};
 
     filenodes (repo_id, path_hash, is_tree, filenode) {
         repo_id -> Integer,
         path_hash -> Binary,
         is_tree -> Integer,
-        filenode -> DFileNodeIdSql,
-        linknode -> DChangesetIdSql,
-        p1 -> Nullable<DFileNodeIdSql>,
-        p2 -> Nullable<DFileNodeIdSql>,
+        filenode -> HgFileNodeIdSql,
+        linknode -> HgChangesetIdSql,
+        p1 -> Nullable<HgFileNodeIdSql>,
+        p2 -> Nullable<HgFileNodeIdSql>,
         has_copyinfo -> Integer,
     }
 }
@@ -38,14 +38,14 @@ table! {
 table! {
     use diesel::sql_types::{Binary, Integer};
 
-    use mercurial_types::sql_types::DFileNodeIdSql;
+    use mercurial_types::sql_types::HgFileNodeIdSql;
 
     fixedcopyinfo (repo_id, frompath_hash, fromnode, is_tree) {
         repo_id -> Integer,
         frompath_hash -> Binary,
-        fromnode -> DFileNodeIdSql,
+        fromnode -> HgFileNodeIdSql,
         is_tree -> Integer,
         topath_hash -> Binary,
-        tonode -> DFileNodeIdSql,
+        tonode -> HgFileNodeIdSql,
     }
 }

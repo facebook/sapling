@@ -11,7 +11,7 @@ use blobrepo::BlobRepo;
 use failure::Error;
 use futures::{Async, Poll};
 use futures::stream::Stream;
-use mercurial_types::DNodeHash;
+use mercurial_types::HgNodeHash;
 use repoinfo::{Generation, RepoGenCache};
 
 use NodeStream;
@@ -24,7 +24,7 @@ use setcommon::{add_generations, InputStream};
 pub struct ValidateNodeStream {
     wrapped: InputStream,
     last_generation: Option<Generation>,
-    seen_hashes: HashSet<DNodeHash>,
+    seen_hashes: HashSet<HgNodeHash>,
 }
 
 impl ValidateNodeStream {
@@ -46,7 +46,7 @@ impl ValidateNodeStream {
 }
 
 impl Stream for ValidateNodeStream {
-    type Item = DNodeHash;
+    type Item = HgNodeHash;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {

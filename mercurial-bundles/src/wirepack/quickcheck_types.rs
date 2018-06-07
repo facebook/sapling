@@ -8,8 +8,7 @@
 
 use quickcheck::{Arbitrary, Gen};
 
-use mercurial::{HgNodeHash, NULL_HASH};
-use mercurial_types::{Delta, MPath, RepoPath};
+use mercurial_types::{Delta, HgNodeHash, MPath, RepoPath, NULL_HASH};
 
 use super::{DataEntry, HistoryEntry, Kind};
 

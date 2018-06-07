@@ -13,32 +13,32 @@ use diesel::deserialize::{self, FromSql};
 use diesel::serialize::{self, IsNull, Output, ToSql};
 use diesel::sql_types::{Binary, Integer};
 
-use {DChangesetId, DFileNodeId, DManifestId, DNodeHash, RepositoryId};
+use {HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, RepositoryId};
 use errors::*;
 
 #[derive(QueryId, SqlType)]
 #[mysql_type = "Blob"]
 #[sqlite_type = "Binary"]
-pub struct DChangesetIdSql;
+pub struct HgChangesetIdSql;
 
 #[derive(QueryId, SqlType)]
 #[mysql_type = "Blob"]
 #[sqlite_type = "Binary"]
-pub struct DManifestIdSql;
+pub struct HgManifestIdSql;
 
 #[derive(QueryId, SqlType)]
 #[mysql_type = "Blob"]
 #[sqlite_type = "Binary"]
-pub struct DFileNodeIdSql;
+pub struct HgFileNodeIdSql;
 
-impl<DB: Backend> ToSql<DChangesetIdSql, DB> for DChangesetId {
+impl<DB: Backend> ToSql<HgChangesetIdSql, DB> for HgChangesetId {
     fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
         out.write_all(self.as_nodehash().0.as_ref())?;
         Ok(IsNull::No)
     }
 }
 
-impl<DB: Backend> FromSql<DChangesetIdSql, DB> for DChangesetId
+impl<DB: Backend> FromSql<HgChangesetIdSql, DB> for HgChangesetId
 where
     *const [u8]: FromSql<Binary, DB>,
 {
@@ -46,19 +46,19 @@ where
         // Using unsafe here saves on a heap allocation. See https://goo.gl/K6hapb.
         let raw_bytes: *const [u8] = FromSql::<Binary, DB>::from_sql(bytes)?;
         let raw_bytes: &[u8] = unsafe { &*raw_bytes };
-        let hash = DNodeHash::from_bytes(raw_bytes).compat()?;
+        let hash = HgNodeHash::from_bytes(raw_bytes).compat()?;
         Ok(Self::new(hash))
     }
 }
 
-impl<DB: Backend> ToSql<DManifestIdSql, DB> for DManifestId {
+impl<DB: Backend> ToSql<HgManifestIdSql, DB> for HgManifestId {
     fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
         out.write_all(self.as_nodehash().0.as_ref())?;
         Ok(IsNull::No)
     }
 }
 
-impl<DB: Backend> FromSql<DManifestIdSql, DB> for DManifestId
+impl<DB: Backend> FromSql<HgManifestIdSql, DB> for HgManifestId
 where
     *const [u8]: FromSql<Binary, DB>,
 {
@@ -66,19 +66,19 @@ where
         // Using unsafe here saves on a heap allocation. See https://goo.gl/K6hapb.
         let raw_bytes: *const [u8] = FromSql::<Binary, DB>::from_sql(bytes)?;
         let raw_bytes: &[u8] = unsafe { &*raw_bytes };
-        let hash = DNodeHash::from_bytes(raw_bytes).compat()?;
+        let hash = HgNodeHash::from_bytes(raw_bytes).compat()?;
         Ok(Self::new(hash))
     }
 }
 
-impl<DB: Backend> ToSql<DFileNodeIdSql, DB> for DFileNodeId {
+impl<DB: Backend> ToSql<HgFileNodeIdSql, DB> for HgFileNodeId {
     fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
         out.write_all(self.as_nodehash().0.as_ref())?;
         Ok(IsNull::No)
     }
 }
 
-impl<DB: Backend> FromSql<DFileNodeIdSql, DB> for DFileNodeId
+impl<DB: Backend> FromSql<HgFileNodeIdSql, DB> for HgFileNodeId
 where
     *const [u8]: FromSql<Binary, DB>,
 {
@@ -86,7 +86,7 @@ where
         // Using unsafe here saves on a heap allocation. See https://goo.gl/K6hapb.
         let raw_bytes: *const [u8] = FromSql::<Binary, DB>::from_sql(bytes)?;
         let raw_bytes: &[u8] = unsafe { &*raw_bytes };
-        let hash = DNodeHash::from_bytes(raw_bytes).compat()?;
+        let hash = HgNodeHash::from_bytes(raw_bytes).compat()?;
         Ok(Self::new(hash))
     }
 }

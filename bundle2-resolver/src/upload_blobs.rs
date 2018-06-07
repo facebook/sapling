@@ -11,7 +11,7 @@ use futures::Stream;
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::BlobRepo;
-use mercurial::HgNodeKey;
+use mercurial_types::HgNodeKey;
 
 use errors::*;
 

@@ -8,13 +8,13 @@ use NodeStream;
 use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
-use mercurial_types::DNodeHash;
+use mercurial_types::HgNodeHash;
 use repoinfo::RepoGenCache;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-pub fn string_to_nodehash(hash: &'static str) -> DNodeHash {
-    DNodeHash::from_static_str(hash).expect("Can't turn string to DNodeHash")
+pub fn string_to_nodehash(hash: &'static str) -> HgNodeHash {
+    HgNodeHash::from_static_str(hash).expect("Can't turn string to HgNodeHash")
 }
 
 /// Accounting for reordering within generations, ensure that a NodeStream gives the expected
@@ -25,7 +25,7 @@ pub fn assert_node_sequence<I>(
     hashes: I,
     stream: Box<NodeStream>,
 ) where
-    I: IntoIterator<Item = DNodeHash>,
+    I: IntoIterator<Item = HgNodeHash>,
 {
     let mut nodestream = spawn(stream);
     let mut received_hashes = HashSet::new();

@@ -7,7 +7,7 @@
 use blobrepo::BlobRepo;
 use futures::{Async, Poll};
 use futures::stream::Stream;
-use mercurial_types::DNodeHash;
+use mercurial_types::HgNodeHash;
 use repoinfo::{Generation, RepoGenCache};
 use std::boxed::Box;
 use std::collections::HashSet;
@@ -19,12 +19,12 @@ use setcommon::*;
 
 pub struct SetDifferenceNodeStream {
     keep_input: InputStream,
-    next_keep: Async<Option<(DNodeHash, Generation)>>,
+    next_keep: Async<Option<(HgNodeHash, Generation)>>,
 
     remove_input: InputStream,
-    next_remove: Async<Option<(DNodeHash, Generation)>>,
+    next_remove: Async<Option<(HgNodeHash, Generation)>>,
 
-    remove_nodes: HashSet<DNodeHash>,
+    remove_nodes: HashSet<HgNodeHash>,
     remove_generation: Option<Generation>,
 }
 
@@ -50,14 +50,14 @@ impl SetDifferenceNodeStream {
         return Box::new(self);
     }
 
-    fn next_keep(&mut self) -> Result<&Async<Option<(DNodeHash, Generation)>>> {
+    fn next_keep(&mut self) -> Result<&Async<Option<(HgNodeHash, Generation)>>> {
         if self.next_keep.is_not_ready() {
             self.next_keep = self.keep_input.poll()?;
         }
         Ok(&self.next_keep)
     }
 
-    fn next_remove(&mut self) -> Result<&Async<Option<(DNodeHash, Generation)>>> {
+    fn next_remove(&mut self) -> Result<&Async<Option<(HgNodeHash, Generation)>>> {
         if self.next_remove.is_not_ready() {
             self.next_remove = self.remove_input.poll()?;
         }
@@ -66,7 +66,7 @@ impl SetDifferenceNodeStream {
 }
 
 impl Stream for SetDifferenceNodeStream {
-    type Item = DNodeHash;
+    type Item = HgNodeHash;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         // This feels wrong, but in practice it's fine - it should be quick to hit a return, and

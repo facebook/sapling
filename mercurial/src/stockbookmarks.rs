@@ -15,9 +15,9 @@ use futures::future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
 
-use storage_types::Version;
+use mercurial_types::HgChangesetId;
 
-use nodehash::HgChangesetId;
+use storage_types::Version;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -117,7 +117,7 @@ mod tests {
     use failure::Context;
     use futures::Future;
 
-    use mocks::*;
+    use mercurial_types_mocks::nodehash::*;
 
     use super::*;
 

@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use futures_ext::BoxFuture;
-use mercurial_types::{DChangesetId, RepositoryId};
+use mercurial_types::{HgChangesetId, RepositoryId};
 
 use {ChangesetEntry, ChangesetInsert, Changesets};
 use errors::*;
@@ -22,7 +22,7 @@ impl Changesets for Arc<Changesets> {
     fn get(
         &self,
         repo_id: RepositoryId,
-        cs_id: DChangesetId,
+        cs_id: HgChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
         (**self).get(repo_id, cs_id)
     }

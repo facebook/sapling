@@ -34,11 +34,10 @@ use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
-use mercurial::{HgBlobNode, HgNodeHash, HgParents, NodeHashConversion};
-use mercurial_types::{Changeset, DChangesetId, DFileNodeId, DNodeHash, DParents, Entry, HgBlob,
-                      Manifest, RepoPath, RepositoryId, Type};
+use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileNodeId,
+                      HgNodeHash, HgParents, Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest;
-use mercurial_types::nodehash::DManifestId;
+use mercurial_types::nodehash::HgManifestId;
 use mononoke_types::{Blob, BlobstoreBytes, BonsaiChangeset, ContentId, DateTime, FileChange,
                      FileContents, MPath, MononokeId};
 use rocksblob::Rocksblob;
@@ -237,7 +236,7 @@ impl BlobRepo {
         ))
     }
 
-    pub fn get_file_content(&self, key: &DNodeHash) -> BoxFuture<FileContents, Error> {
+    pub fn get_file_content(&self, key: &HgNodeHash) -> BoxFuture<FileContents, Error> {
         fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
             .map(|contentrename| contentrename.0)
             .boxify()
@@ -245,13 +244,13 @@ impl BlobRepo {
 
     /// The raw filenode content is crucial for operation like delta application. It is stored in
     /// untouched represenation that came from Mercurial client
-    pub fn get_raw_filenode_content(&self, key: &DNodeHash) -> BoxFuture<BlobstoreBytes, Error> {
+    pub fn get_raw_filenode_content(&self, key: &HgNodeHash) -> BoxFuture<BlobstoreBytes, Error> {
         fetch_raw_filenode_bytes(&self.blobstore, *key)
     }
 
-    pub fn get_parents(&self, path: &RepoPath, node: &DNodeHash) -> BoxFuture<DParents, Error> {
+    pub fn get_parents(&self, path: &RepoPath, node: &HgNodeHash) -> BoxFuture<HgParents, Error> {
         let path = path.clone();
-        let node = DFileNodeId::new(*node);
+        let node = HgFileNodeId::new(*node);
         self.filenodes
             .get_filenode(&path, &node, &self.repoid)
             .and_then({
@@ -261,7 +260,7 @@ impl BlobRepo {
                         .map(|filenode| {
                             let p1 = filenode.p1.map(|p| p.into_nodehash());
                             let p2 = filenode.p2.map(|p| p.into_nodehash());
-                            DParents::new(p1.as_ref(), p2.as_ref())
+                            HgParents::new(p1.as_ref(), p2.as_ref())
                         })
                 }
             })
@@ -271,10 +270,10 @@ impl BlobRepo {
     pub fn get_file_copy(
         &self,
         path: &RepoPath,
-        node: &DNodeHash,
-    ) -> BoxFuture<Option<(RepoPath, DNodeHash)>, Error> {
+        node: &HgNodeHash,
+    ) -> BoxFuture<Option<(RepoPath, HgNodeHash)>, Error> {
         let path = path.clone();
-        let node = DFileNodeId::new(*node);
+        let node = HgFileNodeId::new(*node);
         self.filenodes
             .get_filenode(&path, &node, &self.repoid)
             .and_then({
@@ -291,7 +290,7 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn get_changesets(&self) -> BoxStream<DNodeHash, Error> {
+    pub fn get_changesets(&self) -> BoxStream<HgNodeHash, Error> {
         BlobChangesetStream {
             repo: self.clone(),
             state: BCState::Idle,
@@ -300,13 +299,13 @@ impl BlobRepo {
         }.boxify()
     }
 
-    pub fn get_heads(&self) -> impl Stream<Item = DNodeHash, Error = Error> {
+    pub fn get_heads(&self) -> impl Stream<Item = HgNodeHash, Error = Error> {
         self.bookmarks
             .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
             .map(|(_, cs)| cs.into_nodehash())
     }
 
-    pub fn changeset_exists(&self, changesetid: &DChangesetId) -> BoxFuture<bool, Error> {
+    pub fn changeset_exists(&self, changesetid: &HgChangesetId) -> BoxFuture<bool, Error> {
         self.changesets
             .get(self.repoid, *changesetid)
             .map(|res| res.is_some())
@@ -315,8 +314,8 @@ impl BlobRepo {
 
     pub fn get_changeset_parents(
         &self,
-        changesetid: &DChangesetId,
-    ) -> BoxFuture<Vec<DChangesetId>, Error> {
+        changesetid: &HgChangesetId,
+    ) -> BoxFuture<Vec<HgChangesetId>, Error> {
         let changesetid = *changesetid;
         self.changesets
             .get(self.repoid, changesetid.clone())
@@ -327,7 +326,7 @@ impl BlobRepo {
 
     pub fn get_changeset_by_changesetid(
         &self,
-        changesetid: &DChangesetId,
+        changesetid: &HgChangesetId,
     ) -> BoxFuture<BlobChangeset, Error> {
         let chid = changesetid.clone();
         BlobChangeset::load(&self.blobstore, &chid)
@@ -337,26 +336,26 @@ impl BlobRepo {
 
     pub fn get_manifest_by_nodeid(
         &self,
-        nodeid: &DNodeHash,
+        nodeid: &HgNodeHash,
     ) -> BoxFuture<Box<Manifest + Sync>, Error> {
         let nodeid = *nodeid;
-        let manifestid = DManifestId::new(nodeid);
+        let manifestid = HgManifestId::new(nodeid);
         BlobManifest::load(&self.blobstore, &manifestid)
             .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(nodeid).into()))
             .map(|m| m.boxed())
             .boxify()
     }
 
-    pub fn get_root_entry(&self, manifestid: &DManifestId) -> Box<Entry + Sync> {
+    pub fn get_root_entry(&self, manifestid: &HgManifestId) -> Box<Entry + Sync> {
         Box::new(HgBlobEntry::new_root(self.blobstore.clone(), *manifestid))
     }
 
-    pub fn get_bookmark(&self, name: &Bookmark) -> BoxFuture<Option<DChangesetId>, Error> {
+    pub fn get_bookmark(&self, name: &Bookmark) -> BoxFuture<Option<HgChangesetId>, Error> {
         self.bookmarks.get(name, &self.repoid)
     }
 
     // TODO(stash): rename to get_all_bookmarks()?
-    pub fn get_bookmarks(&self) -> BoxStream<(Bookmark, DChangesetId), Error> {
+    pub fn get_bookmarks(&self) -> BoxStream<(Bookmark, HgChangesetId), Error> {
         self.bookmarks
             .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
     }
@@ -365,8 +364,8 @@ impl BlobRepo {
         self.bookmarks.create_transaction(&self.repoid)
     }
 
-    pub fn get_linknode(&self, path: RepoPath, node: &DNodeHash) -> BoxFuture<DNodeHash, Error> {
-        let node = DFileNodeId::new(*node);
+    pub fn get_linknode(&self, path: RepoPath, node: &HgNodeHash) -> BoxFuture<HgNodeHash, Error> {
+        let node = HgFileNodeId::new(*node);
         self.filenodes
             .get_filenode(&path, &node, &self.repoid)
             .and_then({
@@ -383,7 +382,7 @@ impl BlobRepo {
         self.filenodes.get_all_filenodes(&path, &self.repoid)
     }
 
-    pub fn get_generation_number(&self, cs: &DChangesetId) -> BoxFuture<Option<u64>, Error> {
+    pub fn get_generation_number(&self, cs: &HgChangesetId) -> BoxFuture<Option<u64>, Error> {
         self.changesets
             .get(self.repoid, *cs)
             .map(|res| res.map(|res| res.gen))
@@ -442,7 +441,7 @@ impl BlobRepo {
         bcs: BonsaiChangeset,
         manifest_p1: Option<&HgNodeHash>,
         manifest_p2: Option<&HgNodeHash>,
-    ) -> BoxFuture<DNodeHash, Error> {
+    ) -> BoxFuture<HgNodeHash, Error> {
         MemoryRootManifest::new(
             self.blobstore.clone(),
             self.logger.clone(),
@@ -561,20 +560,13 @@ impl UploadHgEntry {
         let blob_entry = match path.mpath().and_then(|m| m.into_iter().last()) {
             Some(m) => {
                 let entry_path = m.clone();
-                HgBlobEntry::new(
-                    blobstore.clone(),
-                    entry_path,
-                    nodeid.into_mononoke(),
-                    content_type,
-                )
+                HgBlobEntry::new(blobstore.clone(), entry_path, nodeid, content_type)
             }
             None => {
                 if content_type != Type::Tree {
-                    return Err(
-                        ErrorKind::NotAManifest(nodeid.into_mononoke(), content_type).into(),
-                    );
+                    return Err(ErrorKind::NotAManifest(nodeid, content_type).into());
                 }
-                HgBlobEntry::new_root(blobstore.clone(), DManifestId::new(nodeid.into_mononoke()))
+                HgBlobEntry::new_root(blobstore.clone(), HgManifestId::new(nodeid))
             }
         };
 
@@ -612,10 +604,7 @@ impl UploadHgEntry {
                 }
             });
         // Upload the new node
-        let node_upload = blobstore.put(
-            get_node_key(nodeid.into_mononoke()),
-            raw_node.serialize(&nodeid)?.into(),
-        );
+        let node_upload = blobstore.put(get_node_key(nodeid), raw_node.serialize(&nodeid)?.into());
 
         Ok((
             nodeid,
@@ -736,7 +725,6 @@ impl CreateChangeset {
                                 let manifest_id = *blobcs.manifestid();
 
                                 if let Some(expected_nodeid) = expected_nodeid {
-                                    let cs_id = cs_id.into_mercurial();
                                     if cs_id != expected_nodeid {
                                         return future::err(
                                             ErrorKind::InconsistentChangesetHash(
@@ -804,7 +792,7 @@ impl CreateChangeset {
                         cs_id: cs.get_changeset_id(),
                         parents: cs.parents()
                             .into_iter()
-                            .map(|n| DChangesetId::new(n))
+                            .map(|n| HgChangesetId::new(n))
                             .collect(),
                     };
                     complete_changesets.add(completion_record).map(|_| cs)
@@ -840,18 +828,18 @@ impl Clone for BlobRepo {
 
 pub struct BlobChangesetStream {
     repo: BlobRepo,
-    seen: HashSet<DNodeHash>,
-    heads: BoxStream<DNodeHash, Error>,
+    seen: HashSet<HgNodeHash>,
+    heads: BoxStream<HgNodeHash, Error>,
     state: BCState,
 }
 
 enum BCState {
     Idle,
-    WaitCS(DNodeHash, BoxFuture<BlobChangeset, Error>),
+    WaitCS(HgNodeHash, BoxFuture<BlobChangeset, Error>),
 }
 
 impl Stream for BlobChangesetStream {
-    type Item = DNodeHash;
+    type Item = HgNodeHash;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
@@ -866,7 +854,7 @@ impl Stream for BlobChangesetStream {
                             WaitCS(
                                 next,
                                 self.repo
-                                    .get_changeset_by_changesetid(&DChangesetId::new(next)),
+                                    .get_changeset_by_changesetid(&HgChangesetId::new(next)),
                             )
                         } else {
                             Idle // already done it

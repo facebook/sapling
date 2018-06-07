@@ -15,8 +15,8 @@ use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
 
 use blobrepo::BlobRepo;
-use mercurial_types::{Changeset, DNodeHash};
-use mercurial_types::nodehash::DChangesetId;
+use mercurial_types::{Changeset, HgNodeHash};
+use mercurial_types::nodehash::HgChangesetId;
 use repoinfo::{Generation, RepoGenCache};
 
 use NodeStream;
@@ -24,7 +24,7 @@ use errors::*;
 
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct HashGen {
-    hash: DNodeHash,
+    hash: HgNodeHash,
     generation: Generation,
 }
 
@@ -37,13 +37,13 @@ struct ParentChild {
 pub struct RangeNodeStream {
     repo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,
-    start_node: DNodeHash,
+    start_node: HgNodeHash,
     start_generation: Box<Stream<Item = Generation, Error = Error> + Send>,
     children: HashMap<HashGen, HashSet<HashGen>>,
     // Child, parent
     pending_nodes: Box<Stream<Item = ParentChild, Error = Error> + Send>,
-    output_nodes: Option<BTreeMap<Generation, HashSet<DNodeHash>>>,
-    drain: Option<IntoIter<DNodeHash>>,
+    output_nodes: Option<BTreeMap<Generation, HashSet<HgNodeHash>>>,
+    drain: Option<IntoIter<HgNodeHash>>,
 }
 
 fn make_pending(
@@ -54,7 +54,7 @@ fn make_pending(
     Box::new(
         {
             let repo = repo.clone();
-            repo.get_changeset_by_changesetid(&DChangesetId::new(child.hash))
+            repo.get_changeset_by_changesetid(&HgChangesetId::new(child.hash))
                 .map(move |cs| (child, cs.parents().clone()))
                 .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
         }.map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
@@ -78,8 +78,8 @@ impl RangeNodeStream {
     pub fn new(
         repo: &Arc<BlobRepo>,
         repo_generation: RepoGenCache,
-        start_node: DNodeHash,
-        end_node: DNodeHash,
+        start_node: HgNodeHash,
+        end_node: HgNodeHash,
     ) -> Self {
         let start_generation = Box::new(
             repo_generation
@@ -157,7 +157,7 @@ impl RangeNodeStream {
 }
 
 impl Stream for RangeNodeStream {
-    type Item = DNodeHash;
+    type Item = HgNodeHash;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         // Empty the drain; this can only happen once we're in Stage 2

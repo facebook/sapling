@@ -65,8 +65,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
-use mercurial_types::{Changeset, DNodeHash, FileType, RepositoryId};
-use mercurial_types::nodehash::DChangesetId;
+use mercurial_types::{Changeset, HgNodeHash, FileType, RepositoryId};
+use mercurial_types::nodehash::HgChangesetId;
 use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
 use openssl::ssl::{SSL_VERIFY_FAIL_IF_NO_PEER_CERT, SSL_VERIFY_PEER};
@@ -111,25 +111,25 @@ where
 
 fn parse_root_treemanifest_id_url(caps: Captures) -> Result<ParsedUrl> {
     let repo = parse_capture::<String>(&caps, 1)?;
-    let hash = parse_capture::<DNodeHash>(&caps, 2)?;
+    let hash = parse_capture::<HgNodeHash>(&caps, 2)?;
     Ok(ParsedUrl::RootTreeHgManifestId(repo, hash))
 }
 
 fn parse_tree_content_url(caps: Captures) -> Result<ParsedUrl> {
     let repo = parse_capture::<String>(&caps, 1)?;
-    let hash = parse_capture::<DNodeHash>(&caps, 2)?;
+    let hash = parse_capture::<HgNodeHash>(&caps, 2)?;
     Ok(ParsedUrl::TreeContent(repo, hash))
 }
 
 fn parse_tree_content_light_url(caps: Captures) -> Result<ParsedUrl> {
     let repo = parse_capture::<String>(&caps, 1)?;
-    let hash = parse_capture::<DNodeHash>(&caps, 2)?;
+    let hash = parse_capture::<HgNodeHash>(&caps, 2)?;
     Ok(ParsedUrl::TreeContentLight(repo, hash))
 }
 
 fn parse_blob_content_url(caps: Captures) -> Result<ParsedUrl> {
     let repo = parse_capture::<String>(&caps, 1)?;
-    let hash = parse_capture::<DNodeHash>(&caps, 2)?;
+    let hash = parse_capture::<HgNodeHash>(&caps, 2)?;
     Ok(ParsedUrl::BlobContent(repo, hash))
 }
 
@@ -146,10 +146,10 @@ fn parse_url(url: &str, routes: &[Route]) -> Result<ParsedUrl> {
 }
 
 enum ParsedUrl {
-    RootTreeHgManifestId(String, DNodeHash),
-    TreeContent(String, DNodeHash),
-    TreeContentLight(String, DNodeHash),
-    BlobContent(String, DNodeHash),
+    RootTreeHgManifestId(String, HgNodeHash),
+    TreeContent(String, HgNodeHash),
+    TreeContentLight(String, HgNodeHash),
+    BlobContent(String, HgNodeHash),
 }
 
 lazy_static! {
@@ -188,7 +188,7 @@ impl From<mercurial_types::Type> for MetadataType {
 }
 #[derive(Serialize)]
 struct TreeMetadata {
-    hash: DNodeHash,
+    hash: HgNodeHash,
     path: PathBuf,
     #[serde(rename = "type")]
     ty: MetadataType,
@@ -253,7 +253,7 @@ where
     fn get_root_tree_manifest_id(
         &self,
         reponame: String,
-        changesetid: &DChangesetId,
+        changesetid: &HgChangesetId,
     ) -> Box<futures::Future<Item = Bytes, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
@@ -278,7 +278,7 @@ where
     fn get_tree_content(
         &self,
         reponame: String,
-        hash: &DNodeHash,
+        hash: &HgNodeHash,
         options: TreeMetadataOptions,
     ) -> Box<futures::Future<Item = Bytes, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
@@ -313,7 +313,7 @@ where
     fn get_blob_content(
         &self,
         reponame: String,
-        hash: &DNodeHash,
+        hash: &HgNodeHash,
     ) -> Box<futures::Future<Item = Bytes, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
@@ -367,7 +367,7 @@ impl Service for EdenServer {
                 sample.add(SCUBA_COL_HASH, hash.to_string());
                 sample.add(SCUBA_COL_OPERATION, SCUBA_OPERATION_GET_MENIFEST);
                 sample.add(SCUBA_COL_REPO, reponame.clone());
-                self.get_root_tree_manifest_id(reponame, &DChangesetId::new(hash))
+                self.get_root_tree_manifest_id(reponame, &HgChangesetId::new(hash))
             }
             ParsedUrl::TreeContent(reponame, hash) => {
                 sample.add(SCUBA_COL_HASH, hash.to_string());

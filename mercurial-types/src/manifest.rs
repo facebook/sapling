@@ -13,9 +13,9 @@ use futures::stream::{self, Stream};
 use mononoke_types::{FileContents, FileType, MPathElement};
 
 use blob::HgBlob;
-use blobnode::DParents;
+use blobnode::HgParents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use nodehash::DEntryId;
+use nodehash::HgEntryId;
 
 /// Interface for a manifest
 ///
@@ -192,7 +192,7 @@ pub trait Entry: Send + 'static {
     fn get_type(&self) -> Type;
 
     /// Get the parents (in the history graph) of the referred-to object
-    fn get_parents(&self) -> BoxFuture<DParents, Error>;
+    fn get_parents(&self) -> BoxFuture<HgParents, Error>;
 
     /// Get the raw content of the object as it exists in the blobstore,
     /// without any interpretation. This is only really useful for doing a bit-level duplication.
@@ -205,7 +205,7 @@ pub trait Entry: Send + 'static {
     fn get_size(&self) -> BoxFuture<Option<usize>, Error>;
 
     /// Get the identity of the object this entry refers to.
-    fn get_hash(&self) -> &DEntryId;
+    fn get_hash(&self) -> &HgEntryId;
 
     /// Get the name of the entry. None means that this is a root entry
     fn get_name(&self) -> Option<&MPathElement>;
@@ -247,7 +247,7 @@ where
         self.entry.get_type()
     }
 
-    fn get_parents(&self) -> BoxFuture<DParents, Error> {
+    fn get_parents(&self) -> BoxFuture<HgParents, Error> {
         self.entry.get_parents().boxify()
     }
 
@@ -263,7 +263,7 @@ where
         self.entry.get_size().boxify()
     }
 
-    fn get_hash(&self) -> &DEntryId {
+    fn get_hash(&self) -> &HgEntryId {
         self.entry.get_hash()
     }
 
@@ -277,7 +277,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_type()
     }
 
-    fn get_parents(&self) -> BoxFuture<DParents, Error> {
+    fn get_parents(&self) -> BoxFuture<HgParents, Error> {
         (**self).get_parents()
     }
 
@@ -293,7 +293,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_size()
     }
 
-    fn get_hash(&self) -> &DEntryId {
+    fn get_hash(&self) -> &HgEntryId {
         (**self).get_hash()
     }
 

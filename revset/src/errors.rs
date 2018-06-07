@@ -6,11 +6,11 @@
 
 pub use failure::{Error, Result};
 
-use mercurial_types::DNodeHash;
+use mercurial_types::HgNodeHash;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "repo error checking for node: {}", _0)] RepoError(DNodeHash),
+    #[fail(display = "repo error checking for node: {}", _0)] RepoError(HgNodeHash),
     #[fail(display = "could not fetch node generation")] GenerationFetchFailed,
     #[fail(display = "failed to fetch parent nodes")] ParentsFetchFailed,
 }

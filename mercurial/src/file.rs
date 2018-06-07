@@ -9,10 +9,9 @@ use std::str;
 
 use itertools::Itertools;
 
-use mercurial_types::{HgBlob, MPath};
+use mercurial_types::{HgBlob, HgBlobNode, HgNodeHash, MPath};
 use mononoke_types::FileContents;
 
-use {HgBlobNode, HgNodeHash};
 use errors::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -35,7 +34,7 @@ impl File {
         Self::new(blob, None, None)
     }
 
-    // DBlobNode should probably go away eventually, probably? So mark this private.
+    // HgBlobNode should probably go away eventually, probably? So mark this private.
     #[inline]
     pub(crate) fn from_blobnode(node: HgBlobNode) -> Self {
         File { node }
@@ -133,7 +132,7 @@ impl File {
     }
 
     pub fn size(&self) -> usize {
-        // XXX This doesn't really help because the DBlobNode will have already been constructed
+        // XXX This doesn't really help because the HgBlobNode will have already been constructed
         // with the content so a size-only query will have already done too much work.
         if self.node.maybe_copied() {
             self.content().len()

@@ -17,8 +17,7 @@ use super::wirepack;
 use super::wirepack::packer::WirePackPacker;
 
 use errors::*;
-use mercurial::{HgBlobNode, HgNodeHash, NULL_HASH};
-use mercurial_types::{Delta, MPath, MPathElement, RepoPath};
+use mercurial_types::{Delta, HgBlobNode, HgNodeHash, MPath, MPathElement, RepoPath, NULL_HASH};
 use part_encode::PartEncodeBuilder;
 use part_header::PartHeaderType;
 

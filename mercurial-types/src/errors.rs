@@ -11,6 +11,7 @@ pub enum ErrorKind {
     #[fail(display = "invalid sha-1 input: {}", _0)] InvalidSha1Input(String),
     #[fail(display = "invalid fragment list: {}", _0)] InvalidFragmentList(String),
     #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)] InvalidThrift(String, String),
+    #[fail(display = "error while deserializing blob for '{}'", _0)] BlobDeserializeError(String),
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;

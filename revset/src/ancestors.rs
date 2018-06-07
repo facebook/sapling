@@ -17,8 +17,8 @@ use futures::future::Future;
 use futures::stream::{iter_ok, Stream};
 
 use blobrepo::BlobRepo;
-use mercurial_types::{Changeset, DNodeHash};
-use mercurial_types::nodehash::DChangesetId;
+use mercurial_types::{Changeset, HgNodeHash};
+use mercurial_types::nodehash::HgChangesetId;
 use repoinfo::{Generation, RepoGenCache};
 
 use IntersectNodeStream;
@@ -28,16 +28,16 @@ use errors::*;
 pub struct AncestorsNodeStream {
     repo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,
-    next_generation: BTreeMap<Generation, HashSet<DNodeHash>>,
-    pending_changesets: Box<Stream<Item = (DNodeHash, Generation), Error = Error> + Send>,
-    drain: IntoIter<DNodeHash>,
+    next_generation: BTreeMap<Generation, HashSet<HgNodeHash>>,
+    pending_changesets: Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send>,
+    drain: IntoIter<HgNodeHash>,
 }
 
 fn make_pending(
     repo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,
-    hashes: IntoIter<DNodeHash>,
-) -> Box<Stream<Item = (DNodeHash, Generation), Error = Error> + Send> {
+    hashes: IntoIter<HgNodeHash>,
+) -> Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send> {
     let size = hashes.size_hint().0;
     let new_repo = repo.clone();
 
@@ -45,7 +45,7 @@ fn make_pending(
         iter_ok::<_, Error>(hashes)
             .map(move |hash| {
                 new_repo
-                    .get_changeset_by_changesetid(&DChangesetId::new(hash))
+                    .get_changeset_by_changesetid(&HgChangesetId::new(hash))
                     .map(|cs| cs.parents().clone())
                     .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
             })
@@ -62,8 +62,8 @@ fn make_pending(
 }
 
 impl AncestorsNodeStream {
-    pub fn new(repo: &Arc<BlobRepo>, repo_generation: RepoGenCache, hash: DNodeHash) -> Self {
-        let node_set: HashSet<DNodeHash> = hashset!{hash};
+    pub fn new(repo: &Arc<BlobRepo>, repo_generation: RepoGenCache, hash: HgNodeHash) -> Self {
+        let node_set: HashSet<HgNodeHash> = hashset!{hash};
         AncestorsNodeStream {
             repo: repo.clone(),
             repo_generation: repo_generation.clone(),
@@ -83,7 +83,7 @@ impl AncestorsNodeStream {
 }
 
 impl Stream for AncestorsNodeStream {
-    type Item = DNodeHash;
+    type Item = HgNodeHash;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         // Empty the drain if any - return all items for this generation
@@ -137,7 +137,7 @@ pub fn common_ancestors<I>(
     nodes: I,
 ) -> Box<NodeStream>
 where
-    I: IntoIterator<Item = DNodeHash>,
+    I: IntoIterator<Item = HgNodeHash>,
 {
     let nodes_iter = nodes.into_iter().map({
         let repo_generation = repo_generation.clone();
@@ -152,7 +152,7 @@ pub fn greatest_common_ancestor<I>(
     nodes: I,
 ) -> Box<NodeStream>
 where
-    I: IntoIterator<Item = DNodeHash>,
+    I: IntoIterator<Item = HgNodeHash>,
 {
     Box::new(common_ancestors(repo, repo_generation, nodes).take(1))
 }

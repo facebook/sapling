@@ -19,7 +19,7 @@ use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
-use mercurial_types::nodehash::DChangesetId;
+use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::FileContents;
 use toml;
 use vfs::{vfs_from_manifest, ManifestVfsDir, ManifestVfsFile, VfsDir, VfsFile, VfsNode, VfsWalker};
@@ -113,7 +113,7 @@ impl RepoConfigs {
     /// Read the config repo and generate RepoConfigs based on it
     pub fn read_config_repo(
         repo: BlobRepo,
-        changesetid: DChangesetId,
+        changesetid: HgChangesetId,
     ) -> Box<Future<Item = Self, Error = Error> + Send> {
         Box::new(
             repo.get_changeset_by_changesetid(&changesetid)

@@ -11,19 +11,19 @@ use failure::Error;
 use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::Stream;
-use mercurial_types::DNodeHash;
-use mercurial_types::nodehash::DChangesetId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::nodehash::HgChangesetId;
 
 use NodeStream;
 
 pub struct SingleNodeHash {
-    nodehash: Option<DNodeHash>,
+    nodehash: Option<HgNodeHash>,
     exists: Box<Future<Item = bool, Error = Error> + Send>,
 }
 
 impl SingleNodeHash {
-    pub fn new(nodehash: DNodeHash, repo: &BlobRepo) -> Self {
-        let changesetid = DChangesetId::new(nodehash);
+    pub fn new(nodehash: HgNodeHash, repo: &BlobRepo) -> Self {
+        let changesetid = HgChangesetId::new(nodehash);
         let exists = Box::new(repo.changeset_exists(&changesetid));
         let nodehash = Some(nodehash);
         SingleNodeHash { nodehash, exists }
@@ -35,7 +35,7 @@ impl SingleNodeHash {
 }
 
 impl Stream for SingleNodeHash {
-    type Item = DNodeHash;
+    type Item = HgNodeHash;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         if self.nodehash.is_none() {

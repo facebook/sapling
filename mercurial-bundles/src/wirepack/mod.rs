@@ -11,8 +11,7 @@ use std::fmt;
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, BytesMut};
 
-use mercurial::{HgNodeHash, NULL_HASH};
-use mercurial_types::{Delta, RepoPath};
+use mercurial_types::{Delta, HgNodeHash, RepoPath, NULL_HASH};
 
 use delta;
 use errors::*;
@@ -305,8 +304,8 @@ mod test {
     use quickcheck::{Gen, StdGen};
     use quickcheck::rand::{self, Rng};
 
-    use mercurial::mocks::{AS_HASH, BS_HASH};
     use mercurial_types::delta::Fragment;
+    use mercurial_types_mocks::nodehash::{AS_HASH, BS_HASH};
 
     use super::*;
 

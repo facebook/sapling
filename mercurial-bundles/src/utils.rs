@@ -13,8 +13,7 @@ use byteorder::{BigEndian, ByteOrder};
 use bytes::{Bytes, BytesMut};
 
 use async_compression::{CompressorType, DecompressorType};
-use mercurial::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::{HgNodeHash, MPath};
 
 use errors::*;
 

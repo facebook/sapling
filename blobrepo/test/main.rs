@@ -30,8 +30,8 @@ use futures::Future;
 use futures_ext::FutureExt;
 
 use blobrepo::{compute_changed_files, BlobRepo};
-use mercurial_types::{manifest, Changeset, DChangesetId, DEntryId, DManifestId, Entry, FileType,
-                      MPath, MPathElement, RepoPath};
+use mercurial_types::{manifest, Changeset, Entry, FileType, HgChangesetId, HgEntryId,
+                      HgManifestId, MPath, MPathElement, RepoPath};
 use mononoke_types::FileContents;
 
 mod stats_units;
@@ -51,12 +51,12 @@ fn upload_blob_no_parents(repo: BlobRepo) {
 
     // We upload it...
     let (hash, future) = upload_file_no_parents(&repo, "blob", &fake_path);
-    assert!(hash.into_mononoke() == expected_hash);
+    assert!(hash == expected_hash);
 
     // The entry we're given is correct...
     let (entry, path) = run_future(future).unwrap();
     assert!(path == fake_path);
-    assert!(entry.get_hash() == &DEntryId::new(expected_hash));
+    assert!(entry.get_hash() == &HgEntryId::new(expected_hash));
     assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
     assert!(
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
@@ -90,13 +90,13 @@ fn upload_blob_one_parent(repo: BlobRepo) {
 
     // We upload it...
     let (hash, future2) = upload_file_one_parent(&repo, "blob", &fake_path, p1);
-    assert!(hash.into_mononoke() == expected_hash);
+    assert!(hash == expected_hash);
 
     // The entry we're given is correct...
     let (entry, path) = run_future(future2.join(future).map(|(item, _)| item)).unwrap();
 
     assert!(path == fake_path);
-    assert!(entry.get_hash() == &DEntryId::new(expected_hash));
+    assert!(entry.get_hash() == &HgEntryId::new(expected_hash));
     assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
     assert!(
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
@@ -145,7 +145,7 @@ fn create_one_changeset(repo: BlobRepo) {
     );
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
-    assert!(cs.manifestid() == &DManifestId::new(roothash.into_mononoke()));
+    assert!(cs.manifestid() == &HgManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
     let files: Vec<_> = cs.files().into();
@@ -155,7 +155,7 @@ fn create_one_changeset(repo: BlobRepo) {
     );
 
     // And check the file blob is present
-    let bytes = run_future(repo.get_file_content(&filehash.into_mononoke())).unwrap();
+    let bytes = run_future(repo.get_file_content(&filehash)).unwrap();
     assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
@@ -204,7 +204,7 @@ fn create_two_changesets(repo: BlobRepo) {
             .join(commit2.get_completed_changeset()),
     ).unwrap();
 
-    assert!(commit2.manifestid() == &DManifestId::new(roothash.into_mononoke()));
+    assert!(commit2.manifestid() == &HgManifestId::new(roothash));
     assert!(commit2.user() == utf_author.as_bytes());
     let files: Vec<_> = commit2.files().into();
     let expected_files = vec![MPath::new("dir/file").unwrap(), MPath::new("file").unwrap()];
@@ -218,8 +218,7 @@ fn create_two_changesets(repo: BlobRepo) {
     let expected_parents = (commit1_id.as_ref(), None);
     assert!(commit2.parents().get_nodes() == expected_parents);
 
-    let linknode =
-        run_future(repo.get_linknode(fake_file_path, &filehash.into_mononoke())).unwrap();
+    let linknode = run_future(repo.get_linknode(fake_file_path, &filehash)).unwrap();
     assert!(
         linknode == commit1.get_changeset_id().into_nodehash(),
         "Bad linknode {} - should be {}",
@@ -293,8 +292,7 @@ fn create_double_linknode(repo: BlobRepo) {
     let child = run_future(child_commit.get_completed_changeset()).unwrap();
     let parent = run_future(parent_commit.get_completed_changeset()).unwrap();
 
-    let linknode =
-        run_future(repo.get_linknode(fake_file_path, &filehash.into_mononoke())).unwrap();
+    let linknode = run_future(repo.get_linknode(fake_file_path, &filehash)).unwrap();
     assert!(
         linknode != child.get_changeset_id().into_nodehash(),
         "Linknode on child commit = should be on parent"
@@ -348,14 +346,14 @@ fn check_linknode_creation(repo: BlobRepo) {
         create_changeset_no_parents(&repo, root_manifest_future.map(Some).boxify(), uploads);
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
-    assert!(cs.manifestid() == &DManifestId::new(roothash.into_mononoke()));
+    assert!(cs.manifestid() == &HgManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
 
     let cs_id = cs.get_changeset_id().into_nodehash();
     // And check all the linknodes got created
     metadata.into_iter().for_each(|(hash, path)| {
-        let linknode = run_future(repo.get_linknode(path, &hash.into_mononoke())).unwrap();
+        let linknode = run_future(repo.get_linknode(path, &hash)).unwrap();
         assert!(
             linknode == cs_id,
             "Linknode is {}, should be {}",
@@ -384,7 +382,7 @@ fn test_compute_changed_files_no_parents() {
         ];
 
         let cs =
-            run_future(repo.get_changeset_by_changesetid(&DChangesetId::new(nodehash))).unwrap();
+            run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
         let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid().into_nodehash())).unwrap();
 
         let diff = run_future(compute_changed_files(&mf, None, None)).unwrap();
@@ -417,11 +415,11 @@ fn test_compute_changed_files_one_parent() {
         ];
 
         let cs =
-            run_future(repo.get_changeset_by_changesetid(&DChangesetId::new(nodehash))).unwrap();
+            run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
         let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid().into_nodehash())).unwrap();
 
         let parent_cs =
-            run_future(repo.get_changeset_by_changesetid(&DChangesetId::new(parenthash))).unwrap();
+            run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(parenthash))).unwrap();
         let parent_mf = run_future(repo.get_manifest_by_nodeid(
             &parent_cs.manifestid().into_nodehash(),
         )).unwrap();

@@ -25,7 +25,7 @@ use bookmarks::Bookmark;
 use futures::{Future, IntoFuture, Stream};
 use futures::future::{loop_fn, Loop};
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{Changeset, DChangesetId, MPath, RepoPath};
+use mercurial_types::{Changeset, HgChangesetId, MPath, RepoPath};
 use mercurial_types::manifest::{Entry, Type};
 use mercurial_types::manifest_utils::recursive_entry_stream;
 use metaconfig::CacheWarmupParams;
@@ -46,7 +46,7 @@ use failure::Error;
 // there can be too many of them.
 fn blobstore_and_filenodes_warmup(
     repo: Arc<BlobRepo>,
-    revision: DChangesetId,
+    revision: HgChangesetId,
     logger: Logger,
 ) -> BoxFuture<(), Error> {
     // TODO(stash): Arbitrary number. Tweak somehow?
@@ -87,7 +87,7 @@ fn blobstore_and_filenodes_warmup(
 
 // Iterate over first parents, and fetch them
 fn changesets_warmup(
-    start_rev: DChangesetId,
+    start_rev: HgChangesetId,
     repo: Arc<BlobRepo>,
     cs_limit: usize,
     logger: Logger,

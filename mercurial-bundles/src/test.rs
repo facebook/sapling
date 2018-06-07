@@ -20,8 +20,7 @@ use tokio_io::AsyncRead;
 
 use async_compression::{Bzip2Compression, CompressorType, FlateCompression};
 use async_compression::membuf::MemBuf;
-use mercurial::{HgNodeHash, NULL_HASH};
-use mercurial_types::{MPath, RepoPath};
+use mercurial_types::{HgNodeHash, MPath, RepoPath, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
 use quickcheck::{QuickCheck, StdGen};
 use quickcheck::rand;

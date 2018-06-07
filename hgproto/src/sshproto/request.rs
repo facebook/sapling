@@ -502,7 +502,7 @@ fn parse_with_params(
 #[cfg(test)]
 mod test {
     use super::*;
-    use mercurial::NULL_HASH;
+    use mercurial_types_mocks::nodehash::NULL_HASH;
 
     #[test]
     fn test_integer() {

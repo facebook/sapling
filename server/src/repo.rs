@@ -36,11 +36,10 @@ use slog_scuba::ScubaDrain;
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
 use filenodes::FilenodeInfo;
-use mercurial::{self, HgBlobNode, HgManifestId, HgNodeHash, HgParents, NodeHashConversion,
-                RevlogChangeset};
+use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{percent_encode, Changeset, DChangesetId, DManifestId, DNodeHash, DParents,
-                      Entry, MPath, RepoPath, RepositoryId, Type, D_NULL_HASH};
+use mercurial_types::{percent_encode, Changeset, Entry, HgBlobNode, HgChangesetId, HgManifestId,
+                      HgNodeHash, HgParents, MPath, RepoPath, RepositoryId, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, visited_pruner,
                                       ChangedEntry, EntryStatus};
 use metaconfig::repoconfig::RepoType;
@@ -410,7 +409,6 @@ impl RepoClient {
             .iter()
             .filter(|head| !common_heads.contains(head))
             .cloned()
-            .map(|head| head.into_mononoke())
             .collect();
 
         info!(self.logger, "{} heads requested", heads.len());
@@ -420,7 +418,7 @@ impl RepoClient {
 
         let excludes: Vec<_> = args.common
             .iter()
-            .map(|node| node.clone().into_mononoke().into_option())
+            .map(|node| node.clone().into_option())
             .filter_map(|maybe_node| maybe_node)
             .collect();
         let nodestosend = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
@@ -438,30 +436,19 @@ impl RepoClient {
 
         let buffer_size = 100; // TODO(stash): make it configurable
         let changelogentries = nodestosend
-            .map(|node| (node.into_mercurial(), node))
             .map({
                 let blobrepo = blobrepo.clone();
-                move |(mercurial_node, node)| {
+                move |node| {
                     blobrepo
-                        .get_changeset_by_changesetid(&DChangesetId::new(node))
-                        .map(move |cs| (mercurial_node, cs))
+                        .get_changeset_by_changesetid(&HgChangesetId::new(node))
+                        .map(move |cs| (node, cs))
                 }
             })
             .buffered(buffer_size)
-            .and_then(|(mercurial_node, cs)| {
-                let parents = {
-                    let (p1, p2) = cs.parents().get_nodes();
-                    let p1 = p1.map(|p| p.into_mercurial());
-                    let p2 = p2.map(|p| p.into_mercurial());
-                    HgParents::new(p1.as_ref(), p2.as_ref())
-                };
-
-                let manifestid =
-                    HgManifestId::new(cs.manifestid().into_nodehash().into_mercurial());
-
+            .and_then(|(node, cs)| {
                 let revlogcs = RevlogChangeset::new_from_parts(
-                    parents,
-                    manifestid,
+                    cs.parents().clone(),
+                    cs.manifestid().clone(),
                     cs.user().into(),
                     cs.time().clone(),
                     cs.extra().clone(),
@@ -472,10 +459,7 @@ impl RepoClient {
                 let mut v = Vec::new();
                 mercurial::changeset::serialize_cs(&revlogcs, &mut v)?;
                 let parents = revlogcs.parents().get_nodes();
-                Ok((
-                    mercurial_node,
-                    HgBlobNode::new(Bytes::from(v), parents.0, parents.1),
-                ))
+                Ok((node, HgBlobNode::new(Bytes::from(v), parents.0, parents.1)))
             });
 
         bundle.add_part(parts::changegroup_part(changelogentries)?);
@@ -488,7 +472,7 @@ impl RepoClient {
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
             let blobrepo = self.repo.blobrepo.clone();
             let items = blobrepo.get_bookmarks().map(|(name, cs)| {
-                let hash: Vec<u8> = cs.into_nodehash().into_mercurial().to_hex().into();
+                let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
                 (name.to_string(), hash)
             });
             bundle.add_part(parts::listkey_part("bookmarks", items)?);
@@ -515,11 +499,7 @@ impl RepoClient {
 
         // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
         // already has can be sent to the client.
-        let basemfnode = params
-            .basemfnodes
-            .get(0)
-            .map(|h| h.into_mononoke())
-            .unwrap_or(D_NULL_HASH);
+        let basemfnode = params.basemfnodes.get(0).cloned().unwrap_or(NULL_HASH);
 
         let rootpath = if params.rootdir.is_empty() {
             None
@@ -536,7 +516,7 @@ impl RepoClient {
 
         let pruner = visited_pruner();
 
-        let changed_entries = params.mfnodes.iter().map(|h| h.into_mononoke()).fold(
+        let changed_entries = params.mfnodes.iter().fold(
             stream::empty().boxify(),
             move |cur_stream, manifest_id| {
                 let new_stream = get_changed_entry_stream(
@@ -581,13 +561,13 @@ impl HgCommands for RepoClient {
 
         struct ParentStream<CS> {
             repo: Arc<MononokeRepo>,
-            n: DNodeHash,
-            bottom: DNodeHash,
+            n: HgNodeHash,
+            bottom: HgNodeHash,
             wait_cs: Option<CS>,
         };
 
         impl<CS> ParentStream<CS> {
-            fn new(repo: &Arc<MononokeRepo>, top: DNodeHash, bottom: DNodeHash) -> Self {
+            fn new(repo: &Arc<MononokeRepo>, top: HgNodeHash, bottom: HgNodeHash) -> Self {
                 ParentStream {
                     repo: repo.clone(),
                     n: top,
@@ -598,11 +578,11 @@ impl HgCommands for RepoClient {
         }
 
         impl Stream for ParentStream<BoxFuture<BlobChangeset, hgproto::Error>> {
-            type Item = DNodeHash;
+            type Item = HgNodeHash;
             type Error = hgproto::Error;
 
             fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-                if self.n == self.bottom || self.n == D_NULL_HASH {
+                if self.n == self.bottom || self.n == NULL_HASH {
                     return Ok(Async::Ready(None));
                 }
 
@@ -610,16 +590,16 @@ impl HgCommands for RepoClient {
                     Some(
                         self.repo
                             .blobrepo
-                            .get_changeset_by_changesetid(&DChangesetId::new(self.n)),
+                            .get_changeset_by_changesetid(&HgChangesetId::new(self.n)),
                     )
                 });
                 let cs = try_ready!(self.wait_cs.as_mut().unwrap().poll());
                 self.wait_cs = None; // got it
 
                 let p = match cs.parents() {
-                    &DParents::None => D_NULL_HASH,
-                    &DParents::One(ref p) => *p,
-                    &DParents::Two(ref p, _) => *p,
+                    &HgParents::None => NULL_HASH,
+                    &HgParents::One(ref p) => *p,
+                    &HgParents::Two(ref p, _) => *p,
                 };
 
                 let prev_n = mem::replace(&mut self.n, p);
@@ -635,25 +615,22 @@ impl HgCommands for RepoClient {
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
         let repo = self.repo.clone();
-        stream::iter_ok(
-            pairs
-                .into_iter()
-                .map(|(h1, h2)| (h1.into_mononoke(), h2.into_mononoke())),
-        ).and_then(move |(top, bottom)| {
-            let mut f = 1;
-            ParentStream::new(&repo, top, bottom)
-                .enumerate()
-                .filter(move |&(i, _)| {
-                    if i == f {
-                        f *= 2;
-                        true
-                    } else {
-                        false
-                    }
-                })
-                .map(|(_, v)| v.into_mercurial())
-                .collect()
-        })
+        stream::iter_ok(pairs.into_iter())
+            .and_then(move |(top, bottom)| {
+                let mut f = 1;
+                ParentStream::new(&repo, top, bottom)
+                    .enumerate()
+                    .filter(move |&(i, _)| {
+                        if i == f {
+                            f *= 2;
+                            true
+                        } else {
+                            false
+                        }
+                    })
+                    .map(|(_, v)| v)
+                    .collect()
+            })
             .collect()
             .timed(move |stats, _| {
                 add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
@@ -673,8 +650,8 @@ impl HgCommands for RepoClient {
             .blobrepo
             .get_heads()
             .collect()
+            .map(|v| v.into_iter().collect())
             .from_err()
-            .and_then(|v| Ok(v.into_iter().map(|h| h.into_mercurial()).collect()))
             .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
             .timed(move |stats, _| {
                 add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
@@ -692,11 +669,10 @@ impl HgCommands for RepoClient {
         let remote = self.repo.remote.clone();
         HgNodeHash::from_str(&key)
             .into_future()
-            .map(|h| (h, h.into_mononoke()))
-            .and_then(move |(mercurial_node, node)| {
-                let csid = DChangesetId::new(node);
+            .and_then(move |node| {
+                let csid = HgChangesetId::new(node);
                 repo.changeset_exists(&csid)
-                    .map(move |exists| (mercurial_node, exists))
+                    .map(move |exists| (node, exists))
             })
             .and_then(|(node, exists)| {
                 if exists {
@@ -737,8 +713,7 @@ impl HgCommands for RepoClient {
         future::join_all(
             nodes
                 .into_iter()
-                .map(|h| h.into_mononoke())
-                .map(move |node| blobrepo.changeset_exists(&DChangesetId::new(node))),
+                .map(move |node| blobrepo.changeset_exists(&HgChangesetId::new(node))),
         ).timed(move |stats, _| {
             add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
         })
@@ -787,9 +762,8 @@ impl HgCommands for RepoClient {
             self.repo
                 .blobrepo
                 .get_bookmarks()
-                .map(|(name, cs)| (name, cs.into_nodehash().into_mercurial()))
                 .map(|(name, cs)| {
-                    let hash: Vec<u8> = cs.to_hex().into();
+                    let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
                     (name, hash)
                 })
                 .collect()
@@ -870,7 +844,6 @@ impl HgCommands for RepoClient {
         let repo = self.repo.clone();
         let getfiles_buffer_size = 100; // TODO(stash): make it configurable
         params
-            .map(|(node, path)| (node.into_mononoke(), path))
             .map(move |(node, path)| {
                 trace!(logger, "get file request: {:?} {}", path, node);
                 let repo = repo.clone();
@@ -898,8 +871,8 @@ impl HgCommands for RepoClient {
 
 fn get_changed_entry_stream(
     repo: Arc<BlobRepo>,
-    mfid: &DNodeHash,
-    basemfid: &DNodeHash,
+    mfid: &HgNodeHash,
+    basemfid: &HgNodeHash,
     rootpath: Option<MPath>,
     pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
@@ -937,7 +910,7 @@ fn get_changed_entry_stream(
 
     // Append root manifest
     let root_entry_stream = stream::once(Ok((
-        repo.get_root_entry(&DManifestId::new(*mfid)),
+        repo.get_root_entry(&HgManifestId::new(*mfid)),
         rootpath,
     )));
 
@@ -960,45 +933,19 @@ fn fetch_treepack_part_input(
         }
         None => RepoPath::RootPath,
     };
-    let is_root = basepath.is_none();
 
     let node = entry.get_hash().clone();
-    let mercurial_node = if is_root {
-        // TODO(luk) this is a root manifest, so it requires remapping
-        node.into_nodehash().into_mercurial()
-    } else {
-        node.into_nodehash().into_mercurial()
-    };
-
     let path = repo_path.clone();
 
-    let parents = entry
-        .get_parents()
-        .map(move |parents| {
-            let (p1, p2) = parents.get_nodes();
-            if is_root {
-                // TODO(luk) this is a root manifest, so it requires remapping
-                (
-                    p1.map(|p| p.into_mercurial()),
-                    p2.map(|p| p.into_mercurial()),
-                )
-            } else {
-                (
-                    p1.map(|p| p.into_mercurial()),
-                    p2.map(|p| p.into_mercurial()),
-                )
-            }
-        })
-        .traced_global(
-            "fetching parents",
-            trace_args!(
+    let parents = entry.get_parents().traced_global(
+        "fetching parents",
+        trace_args!(
                 "node" => format!("{}", node),
                 "path" => format!("{}", path)
             ),
-        );
+    );
 
     let linknode_fut = repo.get_linknode(repo_path, &entry.get_hash().into_nodehash())
-        .map(|h| h.into_mercurial())
         .traced_global(
             "fetching linknode",
             trace_args!(
@@ -1021,27 +968,36 @@ fn fetch_treepack_part_input(
     parents
         .join(linknode_fut)
         .join(content_fut)
-        .map(
-            move |(((p1, p2), linknode), content)| parts::TreepackPartInput {
-                node: mercurial_node,
-                p1,
-                p2,
+        .map(move |((parents, linknode), content)| {
+            let (p1, p2) = parents.get_nodes();
+            parts::TreepackPartInput {
+                node: node.into_nodehash(),
+                p1: p1.cloned(),
+                p2: p2.cloned(),
                 content,
                 name: entry.get_name().cloned(),
                 linknode,
                 basepath,
-            },
-        )
+            }
+        })
         .boxify()
 }
 
 fn get_file_history(
     repo: Arc<BlobRepo>,
-    startnode: DNodeHash,
+    startnode: HgNodeHash,
     path: MPath,
-    prefetched_history: HashMap<DNodeHash, FilenodeInfo>,
-) -> BoxStream<(DNodeHash, DParents, DNodeHash, Option<(MPath, DNodeHash)>), Error> {
-    if startnode == D_NULL_HASH {
+    prefetched_history: HashMap<HgNodeHash, FilenodeInfo>,
+) -> BoxStream<
+    (
+        HgNodeHash,
+        HgParents,
+        HgNodeHash,
+        Option<(MPath, HgNodeHash)>,
+    ),
+    Error,
+> {
+    if startnode == NULL_HASH {
         return stream::empty().boxify();
     }
     let mut startstate = VecDeque::new();
@@ -1051,7 +1007,7 @@ fn get_file_history(
 
     stream::unfold(
         (startstate, seen_nodes),
-        move |cur_data: (VecDeque<DNodeHash>, HashSet<DNodeHash>)| {
+        move |cur_data: (VecDeque<HgNodeHash>, HashSet<HgNodeHash>)| {
             let (mut nodes, mut seen_nodes) = cur_data;
             let node = nodes.pop_front()?;
 
@@ -1060,7 +1016,7 @@ fn get_file_history(
 
                 let p1 = filenode.p1.map(|p| p.into_nodehash());
                 let p2 = filenode.p2.map(|p| p.into_nodehash());
-                let parents = Ok(DParents::new(p1.as_ref(), p2.as_ref())).into_future();
+                let parents = Ok(HgParents::new(p1.as_ref(), p2.as_ref())).into_future();
 
                 let linknode = Ok(filenode.linknode.into_nodehash()).into_future();
 
@@ -1116,7 +1072,7 @@ fn get_file_history(
 /// of the file up to `node`
 fn create_remotefilelog_blob(
     repo: Arc<BlobRepo>,
-    node: DNodeHash,
+    node: HgNodeHash,
     path: MPath,
 ) -> BoxFuture<Bytes, Error> {
     // raw_content includes copy information
@@ -1172,9 +1128,9 @@ fn create_remotefilelog_blob(
 
             for (node, parents, linknode, copy) in history {
                 let (p1, p2) = match parents {
-                    DParents::None => (D_NULL_HASH, D_NULL_HASH),
-                    DParents::One(p) => (p, D_NULL_HASH),
-                    DParents::Two(p1, p2) => (p1, p2),
+                    HgParents::None => (NULL_HASH, NULL_HASH),
+                    HgParents::One(p) => (p, NULL_HASH),
+                    HgParents::Two(p1, p2) => (p1, p2),
                 };
 
                 let (p1, p2, copied_from) = if let Some((copied_from, copied_rev)) = copy {
@@ -1187,10 +1143,10 @@ fn create_remotefilelog_blob(
                     (p1, p2, None)
                 };
 
-                writer.write_all(node.into_mercurial().as_bytes())?;
-                writer.write_all(p1.into_mercurial().as_bytes())?;
-                writer.write_all(p2.into_mercurial().as_bytes())?;
-                writer.write_all(linknode.into_mercurial().as_bytes())?;
+                writer.write_all(node.as_bytes())?;
+                writer.write_all(p1.as_bytes())?;
+                writer.write_all(p2.as_bytes())?;
+                writer.write_all(linknode.as_bytes())?;
                 if let Some(copied_from) = copied_from {
                     writer.write_all(&copied_from.to_vec())?;
                 }

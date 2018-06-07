@@ -35,8 +35,8 @@ use failure::{Error, Result, ResultExt};
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::{Future, Stream};
 use futures_ext::{asynchronize, BoxFuture, BoxStream};
-use mercurial_types::{DFileNodeId, RepoPath, RepositoryId};
-use mercurial_types::sql_types::DFileNodeIdSql;
+use mercurial_types::{HgFileNodeId, RepoPath, RepositoryId};
+use mercurial_types::sql_types::HgFileNodeIdSql;
 use stats::Timeseries;
 
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -184,7 +184,7 @@ macro_rules! impl_filenodes {
             fn get_filenode(
                 &self,
                 path: &RepoPath,
-                filenode: &DFileNodeId,
+                filenode: &HgFileNodeId,
                 repo_id: &RepositoryId,
             ) -> BoxFuture<Option<FilenodeInfo>, Error> {
                 STATS::gets.add_value(1);
@@ -361,10 +361,10 @@ macro_rules! impl_filenodes {
 
             fn fetch_copydata(
                 connection: &$connection,
-                filenode: &DFileNodeId,
+                filenode: &HgFileNodeId,
                 path: &RepoPath,
                 repo_id: &RepositoryId,
-            ) -> Result<(RepoPath, DFileNodeId)> {
+            ) -> Result<(RepoPath, HgFileNodeId)> {
                 let is_tree = match path {
                     &RepoPath::RootPath | &RepoPath::DirectoryPath(_) => true,
                     &RepoPath::FilePath(_) => false,
@@ -407,7 +407,7 @@ fn all_filenodes_query<DB>(
 ) -> schema::filenodes::BoxedQuery<'static, DB>
 where
     DB: Backend,
-    DB: HasSqlType<DFileNodeIdSql>,
+    DB: HasSqlType<HgFileNodeIdSql>,
 {
     let (path_bytes, is_tree) = convert_from_repo_path(path);
 
@@ -422,12 +422,12 @@ where
 
 fn single_filenode_query<DB>(
     repo_id: &RepositoryId,
-    filenode: &DFileNodeId,
+    filenode: &HgFileNodeId,
     path: &RepoPath,
 ) -> schema::filenodes::BoxedQuery<'static, DB>
 where
     DB: Backend,
-    DB: HasSqlType<DFileNodeIdSql>,
+    DB: HasSqlType<HgFileNodeIdSql>,
 {
     let (path_bytes, is_tree) = convert_from_repo_path(path);
 
@@ -444,12 +444,12 @@ where
 
 fn copyinfo_query<DB>(
     repo_id: &RepositoryId,
-    tonode: &DFileNodeId,
+    tonode: &HgFileNodeId,
     topath: &RepoPath,
 ) -> schema::fixedcopyinfo::BoxedQuery<'static, DB>
 where
     DB: Backend,
-    DB: HasSqlType<DFileNodeIdSql>,
+    DB: HasSqlType<HgFileNodeIdSql>,
 {
     let (topath_bytes, is_tree) = convert_from_repo_path(topath);
 
@@ -470,7 +470,7 @@ fn path_query<DB>(
 ) -> schema::paths::BoxedQuery<'static, DB>
 where
     DB: Backend,
-    DB: HasSqlType<DFileNodeIdSql>,
+    DB: HasSqlType<HgFileNodeIdSql>,
 {
     schema::paths::table
         .filter(schema::paths::repo_id.eq(*repo_id))

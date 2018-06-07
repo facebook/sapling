@@ -14,11 +14,10 @@ use futures::future::Shared;
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::{BlobRepo, HgBlobEntry, UploadHgEntry, UploadHgNodeHash};
-use mercurial::{self, HgNodeHash, HgNodeKey};
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
-use mercurial_types::{delta, manifest, HgBlob, RepoPath};
+use mercurial_types::{delta, manifest, HgBlob, HgNodeHash, HgNodeKey, RepoPath, NULL_HASH};
 
 use errors::*;
 use upload_blobs::UploadableHgBlob;
@@ -170,7 +169,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
     }
 
     fn data(&mut self, data_entry: &DataEntry) -> Result<Option<Self::Data>> {
-        if data_entry.delta_base != mercurial::NULL_HASH {
+        if data_entry.delta_base != NULL_HASH {
             let msg = format!("unexpected delta base: {:?}", data_entry.delta_base);
             return Err(ErrorKind::MalformedTreemanifestPart(msg).into());
         }
@@ -214,9 +213,9 @@ mod test {
     use futures::{stream, Future};
 
     use mercurial::manifest::Details;
-    use mercurial::mocks as nodehash_mocks;
-    use mercurial_types::{FileType, MPath};
+    use mercurial_types::{FileType, HgEntryId, MPath};
     use mercurial_types::manifest::Type;
+    use mercurial_types_mocks::nodehash::*;
 
     #[test]
     fn test_simple() {
@@ -281,10 +280,10 @@ mod test {
     }
 
     fn get_history_entry() -> Part {
-        let node = nodehash_mocks::ONES_HASH;
-        let p1 = nodehash_mocks::TWOS_HASH;
-        let p2 = nodehash_mocks::THREES_HASH;
-        let linknode = nodehash_mocks::FOURS_HASH;
+        let node = ONES_HASH;
+        let p1 = TWOS_HASH;
+        let p2 = THREES_HASH;
+        let linknode = FOURS_HASH;
 
         Part::History(HistoryEntry {
             node,
@@ -307,12 +306,12 @@ mod test {
             files: btreemap!{
                 MPath::new("test_dir/test_file").unwrap() =>
                 Details::new(
-                    mercurial::HgEntryId::new(nodehash_mocks::ONES_HASH),
+                    HgEntryId::new(ONES_HASH),
                     Type::File(FileType::Regular),
                 ),
                 MPath::new("test_dir2/test_manifest").unwrap() =>
                 Details::new(
-                    mercurial::HgEntryId::new(nodehash_mocks::TWOS_HASH),
+                    HgEntryId::new(TWOS_HASH),
                     Type::Tree,
                 ),
             },
@@ -320,7 +319,7 @@ mod test {
     }
 
     fn get_data_entry() -> Part {
-        let node = nodehash_mocks::ONES_HASH;
+        let node = ONES_HASH;
 
         let data = {
             let mut data = Vec::new();
@@ -330,7 +329,7 @@ mod test {
 
         Part::Data(DataEntry {
             node,
-            delta_base: mercurial::NULL_HASH,
+            delta_base: NULL_HASH,
             delta: delta::Delta::new_fulltext(data),
         })
     }
@@ -344,10 +343,10 @@ mod test {
     fn get_expected_entry() -> TreemanifestEntry {
         let node_key = HgNodeKey {
             path: RepoPath::root(),
-            hash: nodehash_mocks::ONES_HASH,
+            hash: ONES_HASH,
         };
-        let p1 = nodehash_mocks::TWOS_HASH;
-        let p2 = nodehash_mocks::THREES_HASH;
+        let p1 = TWOS_HASH;
+        let p2 = THREES_HASH;
 
         let data = {
             let mut data = Vec::new();

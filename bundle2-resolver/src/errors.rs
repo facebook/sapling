@@ -6,7 +6,7 @@
 
 pub use failure::{Error, Result, ResultExt};
 
-use mercurial::HgNodeHash;
+use mercurial_types::HgNodeHash;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {

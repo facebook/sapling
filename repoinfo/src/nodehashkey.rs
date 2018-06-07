@@ -9,12 +9,12 @@ use std::sync::Arc;
 
 use asyncmemo::Weight;
 use heapsize::HeapSizeOf;
-use mercurial_types::DNodeHash;
+use mercurial_types::HgNodeHash;
 
 use ptrwrap::PtrWrap;
 
 #[derive(Debug)]
-pub struct Key<R>(pub PtrWrap<R>, pub DNodeHash);
+pub struct Key<R>(pub PtrWrap<R>, pub HgNodeHash);
 
 impl<R> Clone for Key<R> {
     fn clone(&self) -> Self {
@@ -48,14 +48,14 @@ impl<R> Weight for Key<R> {
     }
 }
 
-impl<'a, R> From<(&'a Arc<R>, DNodeHash)> for Key<R> {
-    fn from((repo, hash): (&'a Arc<R>, DNodeHash)) -> Self {
+impl<'a, R> From<(&'a Arc<R>, HgNodeHash)> for Key<R> {
+    fn from((repo, hash): (&'a Arc<R>, HgNodeHash)) -> Self {
         Key(From::from(repo), hash)
     }
 }
 
-impl<'a, R> From<(&'a PtrWrap<R>, DNodeHash)> for Key<R> {
-    fn from((repo, hash): (&'a PtrWrap<R>, DNodeHash)) -> Self {
+impl<'a, R> From<(&'a PtrWrap<R>, HgNodeHash)> for Key<R> {
+    fn from((repo, hash): (&'a PtrWrap<R>, HgNodeHash)) -> Self {
         Key(repo.clone(), hash)
     }
 }

@@ -21,7 +21,7 @@ use futures_ext::FutureExt;
 
 use asyncmemo::{Asyncmemo, Filler, Weight};
 use blobrepo::BlobRepo;
-use mercurial_types::{DChangesetId, DNodeHash, D_NULL_HASH};
+use mercurial_types::{HgChangesetId, HgNodeHash, NULL_HASH};
 
 use nodehashkey::Key;
 
@@ -77,9 +77,9 @@ impl RepoGenCache {
     pub fn get(
         &self,
         repo: &Arc<BlobRepo>,
-        nodeid: DNodeHash,
+        nodeid: HgNodeHash,
     ) -> impl Future<Item = Generation, Error = Error> + Send {
-        if nodeid == D_NULL_HASH {
+        if nodeid == NULL_HASH {
             Either::A(Ok(Generation(0)).into_future())
         } else {
             Either::B(self.cache.get((repo, nodeid.clone())))
@@ -104,7 +104,7 @@ impl Filler for GenFiller {
         _cache: &Asyncmemo<Self>,
         &Key(ref repo, ref nodeid): &Self::Key,
     ) -> Self::Value {
-        let cs = DChangesetId::new(*nodeid);
+        let cs = HgChangesetId::new(*nodeid);
         repo.get_generation_number(&cs)
             .and_then(move |genopt| genopt.ok_or_else(|| err_msg(format!("{} not found", cs))))
             .map(|gen| Generation(gen))

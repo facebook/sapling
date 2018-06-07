@@ -11,9 +11,9 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{DManifestId, DNodeHash, DParents, FileType, HgBlob, MPath, MPathElement};
+use mercurial_types::{FileType, HgBlob, HgManifestId, HgNodeHash, HgParents, MPath, MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
-use mercurial_types::nodehash::DEntryId;
+use mercurial_types::nodehash::HgEntryId;
 use mononoke_types::{BlobstoreBytes, FileContents};
 
 use blobstore::Blobstore;
@@ -28,7 +28,7 @@ use utils::{get_node, RawNodeBlob};
 pub struct HgBlobEntry {
     blobstore: Arc<Blobstore>,
     name: Option<MPathElement>,
-    id: DEntryId,
+    id: HgEntryId,
     ty: Type,
 }
 
@@ -42,7 +42,7 @@ impl Eq for HgBlobEntry {}
 
 pub fn fetch_raw_filenode_bytes(
     blobstore: &Arc<Blobstore>,
-    nodeid: DNodeHash,
+    nodeid: HgNodeHash,
 ) -> BoxFuture<BlobstoreBytes, Error> {
     get_node(blobstore, nodeid)
         .and_then({
@@ -60,8 +60,8 @@ pub fn fetch_raw_filenode_bytes(
 
 pub fn fetch_file_content_and_renames_from_blobstore(
     blobstore: &Arc<Blobstore>,
-    nodeid: DNodeHash,
-) -> BoxFuture<(FileContents, Option<(MPath, DNodeHash)>), Error> {
+    nodeid: HgNodeHash,
+) -> BoxFuture<(FileContents, Option<(MPath, HgNodeHash)>), Error> {
     get_node(blobstore, nodeid)
         .and_then({
             let blobstore = blobstore.clone();
@@ -78,12 +78,7 @@ pub fn fetch_file_content_and_renames_from_blobstore(
                             let (p1, p2) = parents.get_nodes();
                             let file = file::File::new(HgBlob::from(blob), p1, p2);
 
-                            file.copied_from().map(|from| {
-                                (
-                                    file.file_contents(),
-                                    from.map(|(path, hash)| (path, hash.into_mononoke())),
-                                )
-                            })
+                            file.copied_from().map(|from| (file.file_contents(), from))
                         })
                 })
             }
@@ -92,20 +87,25 @@ pub fn fetch_file_content_and_renames_from_blobstore(
 }
 
 impl HgBlobEntry {
-    pub fn new(blobstore: Arc<Blobstore>, name: MPathElement, nodeid: DNodeHash, ty: Type) -> Self {
+    pub fn new(
+        blobstore: Arc<Blobstore>,
+        name: MPathElement,
+        nodeid: HgNodeHash,
+        ty: Type,
+    ) -> Self {
         Self {
             blobstore,
             name: Some(name),
-            id: DEntryId::new(nodeid),
+            id: HgEntryId::new(nodeid),
             ty,
         }
     }
 
-    pub fn new_root(blobstore: Arc<Blobstore>, manifestid: DManifestId) -> Self {
+    pub fn new_root(blobstore: Arc<Blobstore>, manifestid: HgManifestId) -> Self {
         Self {
             blobstore,
             name: None,
-            id: DEntryId::new(manifestid.into_nodehash()),
+            id: HgEntryId::new(manifestid.into_nodehash()),
             ty: Type::Tree,
         }
     }
@@ -124,10 +124,8 @@ impl Entry for HgBlobEntry {
         self.ty
     }
 
-    fn get_parents(&self) -> BoxFuture<DParents, Error> {
-        self.get_node()
-            .map(|node| node.parents.into_mononoke())
-            .boxify()
+    fn get_parents(&self) -> BoxFuture<HgParents, Error> {
+        self.get_node().map(|node| node.parents).boxify()
     }
 
     fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
@@ -175,7 +173,7 @@ impl Entry for HgBlobEntry {
             .boxify()
     }
 
-    fn get_hash(&self) -> &DEntryId {
+    fn get_hash(&self) -> &HgEntryId {
         &self.id
     }
 

@@ -15,7 +15,7 @@ use std::iter::Iterator;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
-use mercurial_types::DNodeHash;
+use mercurial_types::HgNodeHash;
 use repoinfo::RepoGenCache;
 
 use branch_even;
@@ -38,7 +38,7 @@ use validation::ValidateNodeStream;
 
 #[derive(Clone, Copy, Debug)]
 enum RevsetEntry {
-    SingleNode(Option<DNodeHash>),
+    SingleNode(Option<HgNodeHash>),
     SetDifference,
     Intersect(usize),
     Union(usize),
@@ -49,9 +49,9 @@ pub struct RevsetSpec {
     rp_entries: Vec<RevsetEntry>,
 }
 
-fn get_changesets_from_repo(repo: &BlobRepo) -> Vec<DNodeHash> {
+fn get_changesets_from_repo(repo: &BlobRepo) -> Vec<HgNodeHash> {
     let mut all_changesets_executor = spawn(repo.get_changesets());
-    let mut all_changesets: Vec<DNodeHash> = Vec::new();
+    let mut all_changesets: Vec<HgNodeHash> = Vec::new();
     loop {
         all_changesets.push(match all_changesets_executor.wait_stream() {
             None => break,
@@ -76,8 +76,8 @@ impl RevsetSpec {
         }
     }
 
-    pub fn as_hashes(&self) -> HashSet<DNodeHash> {
-        let mut output: Vec<HashSet<DNodeHash>> = Vec::new();
+    pub fn as_hashes(&self) -> HashSet<HgNodeHash> {
+        let mut output: Vec<HashSet<HgNodeHash>> = Vec::new();
         for entry in self.rp_entries.iter() {
             match entry {
                 &RevsetEntry::SingleNode(None) => panic!("You need to add_hashes first!"),
@@ -217,8 +217,8 @@ impl Arbitrary for RevsetSpec {
 }
 
 fn match_streams(
-    expected: BoxStream<DNodeHash, Error>,
-    actual: BoxStream<DNodeHash, Error>,
+    expected: BoxStream<HgNodeHash, Error>,
+    actual: BoxStream<HgNodeHash, Error>,
 ) -> bool {
     let mut expected = {
         let mut nodestream = spawn(expected);
@@ -309,16 +309,16 @@ quickcheck_setops!(setops_unshared_merge_uneven, unshared_merge_uneven);
 // ([], [h1])
 // ([], [])
 struct IncludeExcludeDiscardCombinationsIterator {
-    hashes: Vec<DNodeHash>,
+    hashes: Vec<HgNodeHash>,
     index: u64,
 }
 
 impl IncludeExcludeDiscardCombinationsIterator {
-    fn new(hashes: Vec<DNodeHash>) -> Self {
+    fn new(hashes: Vec<HgNodeHash>) -> Self {
         Self { hashes, index: 0 }
     }
 
-    fn generate_include_exclude(&self) -> (Vec<DNodeHash>, Vec<DNodeHash>) {
+    fn generate_include_exclude(&self) -> (Vec<HgNodeHash>, Vec<HgNodeHash>) {
         let mut val = self.index;
         let mut include = vec![];
         let mut exclude = vec![];
@@ -343,7 +343,7 @@ impl IncludeExcludeDiscardCombinationsIterator {
 }
 
 impl Iterator for IncludeExcludeDiscardCombinationsIterator {
-    type Item = (Vec<DNodeHash>, Vec<DNodeHash>);
+    type Item = (Vec<HgNodeHash>, Vec<HgNodeHash>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let res = if self.index >= 3_u64.pow(self.hashes.len() as u32) {

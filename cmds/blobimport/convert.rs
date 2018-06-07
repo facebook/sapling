@@ -20,11 +20,11 @@ use failure::{Error, Result};
 use filenodes::FilenodeInfo;
 use futures::sync::mpsc::UnboundedSender;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use mercurial::{self, HgChangesetId, HgEntryId, HgNodeHash, HgParents, RevlogManifest, RevlogRepo};
+use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{DFileNodeId, HgBlob, RepoPath, RepositoryId};
-use mercurial_types::nodehash::DChangesetId;
+use mercurial_types::{HgBlob, HgChangesetId, HgEntryId, HgFileNodeId, HgNodeHash, HgParents,
+                      RepoPath, RepositoryId};
 use stats::Timeseries;
 
 use BlobstoreEntry;
@@ -97,12 +97,11 @@ impl ConvertContext {
             .for_each(move |(cs, node)| {
                 let parents = cs.parents()
                     .into_iter()
-                    .map(|p| DChangesetId::new(p.into_mononoke()))
+                    .map(|p| HgChangesetId::new(p))
                     .collect();
-                let node = node.into_mononoke();
                 let insert = ChangesetInsert {
                     repo_id,
-                    cs_id: DChangesetId::new(node),
+                    cs_id: HgChangesetId::new(node),
                     parents,
                 };
                 changesets_store.add(insert).map(|_| ())
@@ -150,7 +149,6 @@ where
             .get_changeset(&csid)
             .from_err()
             .and_then(move |cs| {
-                let csid = DChangesetId::new(csid.into_nodehash().into_mononoke());
                 let bcs = BlobChangeset::new_with_id(&csid, ChangesetContent::from_revlogcs(cs));
                 sender
                     .send(BlobstoreEntry::Changeset(bcs))
@@ -287,22 +285,17 @@ fn create_filenode(
     let copyfrom = mercurial::file::File::new(blob, p1, p2)
         .copied_from()
         .map(|copiedfrom| {
-            copiedfrom.map(|(path, node)| {
-                (
-                    RepoPath::FilePath(path),
-                    DFileNodeId::new(node.into_mononoke()),
-                )
-            })
+            copiedfrom.map(|(path, node)| (RepoPath::FilePath(path), HgFileNodeId::new(node)))
         })
         .expect("cannot create filenode");
 
     FilenodeInfo {
         path: repopath.clone(),
-        filenode: DFileNodeId::new(filenode_hash.into_mononoke()),
-        p1: p1.map(|p| DFileNodeId::new(p.into_mononoke())),
-        p2: p2.map(|p| DFileNodeId::new(p.into_mononoke())),
+        filenode: HgFileNodeId::new(filenode_hash),
+        p1: p1.map(|p| HgFileNodeId::new(*p)),
+        p2: p2.map(|p| HgFileNodeId::new(*p)),
         copyfrom,
-        linknode: DChangesetId::new(linknode.into_mononoke()),
+        linknode: HgChangesetId::new(linknode),
     }
 }
 

@@ -39,8 +39,8 @@ use hlua::{AnyLuaValue, Lua, LuaError, PushGuard};
 
 use blobrepo::BlobRepo;
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
-use mercurial_types::{Changeset, DNodeHash};
-use mercurial_types::nodehash::DChangesetId;
+use mercurial_types::{Changeset, HgNodeHash};
+use mercurial_types::nodehash::HgChangesetId;
 
 pub use errors::*;
 
@@ -48,8 +48,8 @@ pub use errors::*;
 pub struct HookInfo {
     pub repo: String,
     pub bookmark: String,
-    pub old_hash: DNodeHash,
-    pub new_hash: DNodeHash,
+    pub old_hash: HgNodeHash,
+    pub new_hash: HgNodeHash,
 }
 
 pub struct HookManager<'lua> {
@@ -75,7 +75,7 @@ impl<'hook> HookContext<'hook> {
         let get_author = move |hash: String| -> Result<AnyFuture> {
             let hash = hash.into_ascii_string()
                 .map_err(|hash| ErrorKind::InvalidHash(name.clone(), hash.into_source()))?;
-            let changesetid = DChangesetId::from_ascii_str(&hash)
+            let changesetid = HgChangesetId::from_ascii_str(&hash)
                 .with_context(|_| ErrorKind::InvalidHash(name.clone(), hash.into()))?;
 
             let future = repo.get_changeset_by_changesetid(&changesetid)

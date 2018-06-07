@@ -33,8 +33,8 @@ use futures::stream::{self, empty, iter_ok, Peekable, Stream};
 use futures_ext::{SelectAll, StreamExt};
 
 use blobrepo::BlobRepo;
-use mercurial_types::DNodeHash;
-use mercurial_types::nodehash::DChangesetId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::nodehash::HgChangesetId;
 use repoinfo::{Generation, RepoGenCache};
 
 use NodeStream;
@@ -46,8 +46,8 @@ use setcommon::*;
 /// In Mononoke revset's terms it's equivalent to
 ///
 /// ```
-///   let include: Vec<DNodeHash> = vec![ ... ];
-///   let exclude: Vec<DNodeHash> = vec![ ... ];
+///   let include: Vec<HgNodeHash> = vec![ ... ];
+///   let exclude: Vec<HgNodeHash> = vec![ ... ];
 ///   ...
 ///   let mut include_ancestors = vec![];
 ///   for i in include.clone() {
@@ -80,7 +80,7 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     repo_generation: RepoGenCache,
 
     // Nodes that we know about, grouped by generation.
-    next_generation: BTreeMap<Generation, HashSet<DNodeHash>>,
+    next_generation: BTreeMap<Generation, HashSet<HgNodeHash>>,
 
     // The generation of the nodes in `drain`. All nodes with bigger generation has already been
     // returned
@@ -88,21 +88,21 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
 
     // Parents of entries from `drain`. We fetch generation number for them.
     pending_changesets:
-        SelectAll<Box<Stream<Item = (DNodeHash, Generation), Error = Error> + Send>>,
+        SelectAll<Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send>>,
 
     // Stream of (Hashset, Generation) that needs to be excluded
     exclude_ancestors: Peekable<stream::Fuse<GroupedByGenenerationStream>>,
 
     // Nodes which generation is equal to `current_generation`. They will be returned from the
     // stream unless excluded.
-    drain: iter::Peekable<IntoIter<DNodeHash>>,
+    drain: iter::Peekable<IntoIter<HgNodeHash>>,
 }
 
 fn make_pending(
     repo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,
-    hash: DNodeHash,
-) -> Box<Stream<Item = (DNodeHash, Generation), Error = Error> + Send> {
+    hash: HgNodeHash,
+) -> Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send> {
     let new_repo = repo.clone();
 
     Box::new(
@@ -110,7 +110,7 @@ fn make_pending(
             .into_future()
             .and_then(move |hash| {
                 new_repo
-                    .get_changeset_parents(&DChangesetId::new(hash))
+                    .get_changeset_parents(&HgChangesetId::new(hash))
                     .map(|parents| parents.into_iter().map(|cs| cs.into_nodehash()))
                     .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
             })
@@ -129,7 +129,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
     pub fn new(
         repo: &Arc<BlobRepo>,
         repo_generation: RepoGenCache,
-        hash: DNodeHash,
+        hash: HgNodeHash,
     ) -> Box<NodeStream> {
         Self::new_with_excludes(repo, repo_generation, vec![hash], vec![])
     }
@@ -137,7 +137,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
     pub fn new_union(
         repo: &Arc<BlobRepo>,
         repo_generation: RepoGenCache,
-        hashes: Vec<DNodeHash>,
+        hashes: Vec<HgNodeHash>,
     ) -> Box<NodeStream> {
         Self::new_with_excludes(repo, repo_generation, hashes, vec![])
     }
@@ -145,8 +145,8 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
     pub fn new_with_excludes(
         repo: &Arc<BlobRepo>,
         repo_generation: RepoGenCache,
-        hashes: Vec<DNodeHash>,
-        excludes: Vec<DNodeHash>,
+        hashes: Vec<HgNodeHash>,
+        excludes: Vec<HgNodeHash>,
     ) -> Box<NodeStream> {
         let excludes = if !excludes.is_empty() {
             Self::new_union(repo, repo_generation.clone(), excludes)
@@ -194,7 +194,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 
     fn exclude_node(
         &mut self,
-        node: DNodeHash,
+        node: HgNodeHash,
         current_generation: Generation,
     ) -> Poll<bool, Error> {
         loop {
@@ -231,7 +231,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 }
 
 impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
-    type Item = DNodeHash;
+    type Item = HgNodeHash;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
@@ -294,7 +294,7 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
 struct GroupedByGenenerationStream {
     input: stream::Fuse<InputStream>,
     current_generation: Option<Generation>,
-    hashes: HashSet<DNodeHash>,
+    hashes: HashSet<HgNodeHash>,
 }
 
 impl GroupedByGenenerationStream {
@@ -308,7 +308,7 @@ impl GroupedByGenenerationStream {
 }
 
 impl Stream for GroupedByGenenerationStream {
-    type Item = (HashSet<DNodeHash>, Generation);
+    type Item = (HashSet<HgNodeHash>, Generation);
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {

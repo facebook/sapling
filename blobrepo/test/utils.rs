@@ -17,8 +17,7 @@ use futures_ext::{BoxFuture, StreamExt};
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgEntry,
                UploadHgNodeHash};
 use memblob::{EagerMemblob, LazyMemblob};
-use mercurial::HgNodeHash;
-use mercurial_types::{manifest, DNodeHash, FileType, HgBlob, RepoPath};
+use mercurial_types::{manifest, FileType, HgBlob, HgNodeHash, RepoPath};
 use mononoke_types::DateTime;
 use std::sync::Arc;
 
@@ -203,8 +202,8 @@ pub fn create_changeset_one_parent(
     create_changeset.create(repo)
 }
 
-pub fn string_to_nodehash(hash: &str) -> DNodeHash {
-    DNodeHash::from_ascii_str(hash.as_ascii_str().unwrap()).unwrap()
+pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
+    HgNodeHash::from_ascii_str(hash.as_ascii_str().unwrap()).unwrap()
 }
 
 pub fn run_future<F>(future: F) -> Result<F::Item, F::Error>

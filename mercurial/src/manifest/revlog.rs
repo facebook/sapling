@@ -17,11 +17,9 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use errors::*;
 use failure;
 use file;
-use mercurial_types::{FileType, HgBlob, MPath, MPathElement, RepoPath};
+use mercurial_types::{FileType, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents, MPath,
+                      MPathElement, RepoPath};
 use mercurial_types::manifest::Type;
-
-use blobnode::{HgBlobNode, HgParents};
-use nodehash::{HgEntryId, HgNodeHash};
 
 use RevlogRepo;
 
@@ -432,7 +430,7 @@ fn strip_file_metadata(blob: &HgBlob) -> HgBlob {
 mod test {
     use super::*;
 
-    use mocks::*;
+    use mercurial_types_mocks::nodehash::*;
 
     #[test]
     fn test_find() {

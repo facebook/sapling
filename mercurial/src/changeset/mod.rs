@@ -11,11 +11,8 @@ use std::str::{self, FromStr};
 use bytes::Bytes;
 use errors::*;
 use failure;
-use mercurial_types::MPath;
+use mercurial_types::{HgBlobNode, HgManifestId, HgNodeHash, HgParents, MPath, NULL_HASH};
 use mononoke_types::DateTime;
-
-use blobnode::{HgBlobNode, HgParents};
-use nodehash::{HgManifestId, HgNodeHash, NULL_HASH};
 
 #[cfg(test)]
 mod test;

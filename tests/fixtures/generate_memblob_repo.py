@@ -64,7 +64,7 @@ use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use memblob::EagerMemblob;
 use dbbookmarks::SqliteDbBookmarks;
 use dieselfilenodes::SqliteFilenodes;
-use mercurial_types::{DChangesetId, DNodeHash, RepositoryId};
+use mercurial_types::{HgChangesetId, HgNodeHash, RepositoryId};
 use mononoke_types::BlobstoreBytes;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
@@ -105,7 +105,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
 
                 commit_hash = split[0]
                 writeline(
-                    'let cs_id = DChangesetId::new(DNodeHash::from_str("{}").unwrap());'.
+                    'let cs_id = HgChangesetId::new(HgNodeHash::from_str("{}").unwrap());'.
                     format(commit_hash)
                 )
                 writeline('let parents = vec![')
@@ -113,12 +113,12 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                     indent += 1
                     for p in split[1:-1]:
                         writeline(
-                            'DChangesetId::new(DNodeHash::from_str("{}").unwrap()), '.
+                            'HgChangesetId::new(HgNodeHash::from_str("{}").unwrap()), '.
                             format(p)
                         )
 
                     writeline(
-                        'DChangesetId::new(DNodeHash::from_str("{}").unwrap())'.
+                        'HgChangesetId::new(HgNodeHash::from_str("{}").unwrap())'.
                         format(split[-1])
                     )
                     indent -= 1
@@ -141,7 +141,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
             writeline(
                 '''book_txn.create(
                     &Bookmark::new("head-{0}".to_string()).unwrap(),
-                    &DChangesetId::new(DNodeHash::from_ascii_str(
+                    &HgChangesetId::new(HgNodeHash::from_ascii_str(
                         &AsciiString::from_ascii("{0}").unwrap(),
                     ).unwrap()),
                 ).expect("Bookmark creation failed");'''.format(head)

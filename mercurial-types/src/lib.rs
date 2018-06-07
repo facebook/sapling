@@ -57,6 +57,7 @@ extern crate diesel;
 extern crate failure_ext as failure;
 extern crate itertools;
 extern crate rust_crypto;
+extern crate rust_thrift;
 #[macro_use]
 extern crate url;
 
@@ -74,6 +75,7 @@ extern crate serde;
 extern crate serde_derive;
 
 extern crate futures_ext;
+extern crate mercurial_thrift;
 extern crate mononoke_types;
 extern crate mononoke_types_thrift;
 extern crate storage_types;
@@ -93,15 +95,19 @@ pub mod changeset;
 pub mod repo;
 pub mod sql_types;
 mod node;
+mod envelope;
 
 pub use blob::{HgBlob, HgBlobHash};
-pub use blobnode::{DBlobNode, DParents};
+pub use blobnode::{HgBlobNode, HgParents};
 pub use changeset::Changeset;
 pub use delta::Delta;
+pub use envelope::{HgChangesetEnvelope, HgChangesetEnvelopeMut, HgFileEnvelope, HgFileEnvelopeMut,
+                   HgManifestEnvelope, HgManifestEnvelopeMut};
 pub use fsencode::{fncache_fsencode, simple_fsencode};
 pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
-pub use nodehash::{DChangesetId, DEntryId, DFileNodeId, DManifestId, DNodeHash, D_NULL_HASH};
+pub use nodehash::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey,
+                   NULL_HASH};
 pub use repo::RepositoryId;
 pub use utils::percent_encode;
 
@@ -115,18 +121,19 @@ pub use errors::{Error, ErrorKind};
 mod test;
 
 mod thrift {
+    pub use mercurial_thrift::*;
     pub use mononoke_types_thrift::*;
 }
 
-impl asyncmemo::Weight for DChangesetId {
+impl asyncmemo::Weight for HgChangesetId {
     fn get_weight(&self) -> usize {
-        std::mem::size_of::<DChangesetId>()
+        std::mem::size_of::<HgChangesetId>()
     }
 }
 
-impl asyncmemo::Weight for DFileNodeId {
+impl asyncmemo::Weight for HgFileNodeId {
     fn get_weight(&self) -> usize {
-        std::mem::size_of::<DFileNodeId>()
+        std::mem::size_of::<HgFileNodeId>()
     }
 }
 

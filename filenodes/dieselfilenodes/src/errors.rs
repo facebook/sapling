@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 pub use failure::{Error, Result};
-use mercurial_types::{DFileNodeId, RepoPath};
+use mercurial_types::{HgFileNodeId, RepoPath};
 
 #[derive(Debug, Eq, Fail, PartialEq)]
 pub enum ErrorKind {
@@ -13,11 +13,11 @@ pub enum ErrorKind {
     InvalidCopy(RepoPath, RepoPath),
     #[fail(display = "Internal error: path with hash {:?} not found", _0)] PathNotFound(Vec<u8>),
     #[fail(display = "Internal error: failure while fetching file node {} {}", _0, _1)]
-    FailFetchFilenode(DFileNodeId, RepoPath),
+    FailFetchFilenode(HgFileNodeId, RepoPath),
     #[fail(display = "Internal error: failure while fetching copy information {} {}", _0, _1)]
-    FailFetchCopydata(DFileNodeId, RepoPath),
+    FailFetchCopydata(HgFileNodeId, RepoPath),
     #[fail(display = "Internal error: copy information is not found for {} {}", _0, _1)]
-    CopydataNotFound(DFileNodeId, RepoPath),
+    CopydataNotFound(HgFileNodeId, RepoPath),
     #[fail(display = "Internal error: failure while fetching file nodes for {}", _0)]
     FailRangeFetch(RepoPath),
 }

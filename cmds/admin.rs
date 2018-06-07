@@ -36,7 +36,7 @@ use blobrepo::{BlobRepo, RawNodeBlob};
 use blobstore::{Blobstore, MemcacheBlobstore};
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
-use mercurial_types::{Changeset, DChangesetId, MPath, MPathElement, Manifest, RepositoryId};
+use mercurial_types::{Changeset, HgChangesetId, MPath, MPathElement, Manifest, RepositoryId};
 use mercurial_types::manifest::Content;
 use mononoke_types::FileContents;
 use slog::{Drain, Level, Logger};
@@ -150,7 +150,7 @@ fn fetch_content(
     rev: &str,
     path: &str,
 ) -> BoxFuture<Content, Error> {
-    let cs_id = try_boxfuture!(DChangesetId::from_str(rev));
+    let cs_id = try_boxfuture!(HgChangesetId::from_str(rev));
     let path = try_boxfuture!(MPath::new(path));
 
     let mf = repo.get_changeset_by_changesetid(&cs_id)

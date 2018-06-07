@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use futures_ext::{BoxFuture, BoxStream};
 
-use mercurial_types::nodehash::DChangesetId;
+use mercurial_types::nodehash::HgChangesetId;
 use storage_types::Version;
 
 use failure::Error;
@@ -26,13 +26,13 @@ use failure::Error;
 /// of names to commit identifiers. Consistency is maintained using versioning.
 pub trait Bookmarks: Sync + Send + 'static {
     // Basic operations.
-    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(DChangesetId, Version)>, Error>;
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(HgChangesetId, Version)>, Error>;
     fn keys(&self) -> BoxStream<Vec<u8>, Error>;
 }
 
 // Implement Bookmarks for boxed Bookmarks trait object
 impl Bookmarks for Box<Bookmarks> {
-    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(DChangesetId, Version)>, Error> {
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
         (**self).get(key)
     }
 
@@ -43,7 +43,7 @@ impl Bookmarks for Box<Bookmarks> {
 
 // Implement Bookmarks for Arced Bookmarks trait object
 impl Bookmarks for Arc<Bookmarks> {
-    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(DChangesetId, Version)>, Error> {
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
         (**self).get(key)
     }
 
@@ -57,7 +57,7 @@ impl<B> Bookmarks for Arc<B>
 where
     B: Bookmarks,
 {
-    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(DChangesetId, Version)>, Error> {
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
         (**self).get(key)
     }
 
@@ -72,11 +72,11 @@ pub trait BookmarksMut: Bookmarks {
     // Return type for updating a bookmark value. Must be a future that resolves to either
     // a new version or None if the operation couldn't be completed due to a version mismatch.
     // Basic operations.
-    fn set(&self, key: &AsRef<[u8]>, &DChangesetId, &Version) -> BoxFuture<Option<Version>, Error>;
+    fn set(&self, key: &AsRef<[u8]>, &HgChangesetId, &Version) -> BoxFuture<Option<Version>, Error>;
     fn delete(&self, key: &AsRef<[u8]>, &Version) -> BoxFuture<Option<Version>, Error>;
 
     // Convenience function for creating new bookmarks (since initial version is always "absent").
-    fn create(&self, key: &AsRef<[u8]>, value: &DChangesetId) -> BoxFuture<Option<Version>, Error> {
+    fn create(&self, key: &AsRef<[u8]>, value: &HgChangesetId) -> BoxFuture<Option<Version>, Error> {
         self.set(key, value, &Version::absent())
     }
 }

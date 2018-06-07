@@ -19,16 +19,16 @@ use asyncmemo::{Asyncmemo, Filler};
 use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
-use mercurial_types::{DChangesetId, DFileNodeId, RepoPath, RepositoryId};
+use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath, RepositoryId};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FilenodeInfo {
     pub path: RepoPath,
-    pub filenode: DFileNodeId,
-    pub p1: Option<DFileNodeId>,
-    pub p2: Option<DFileNodeId>,
-    pub copyfrom: Option<(RepoPath, DFileNodeId)>,
-    pub linknode: DChangesetId,
+    pub filenode: HgFileNodeId,
+    pub p1: Option<HgFileNodeId>,
+    pub p2: Option<HgFileNodeId>,
+    pub copyfrom: Option<(RepoPath, HgFileNodeId)>,
+    pub linknode: HgChangesetId,
 }
 
 impl asyncmemo::Weight for FilenodeInfo {
@@ -66,7 +66,7 @@ impl Filenodes for CachingFilenodes {
     fn get_filenode(
         &self,
         path: &RepoPath,
-        filenode: &DFileNodeId,
+        filenode: &HgFileNodeId,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error> {
         self.cache
@@ -99,7 +99,7 @@ impl FilenodesFiller {
 }
 
 impl Filler for FilenodesFiller {
-    type Key = (RepoPath, DFileNodeId, RepositoryId);
+    type Key = (RepoPath, HgFileNodeId, RepositoryId);
     type Value = Box<Future<Item = FilenodeInfo, Error = Option<Error>> + Send>;
 
     fn fill(
@@ -128,7 +128,7 @@ pub trait Filenodes: Send + Sync {
     fn get_filenode(
         &self,
         path: &RepoPath,
-        filenode: &DFileNodeId,
+        filenode: &HgFileNodeId,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error>;
 

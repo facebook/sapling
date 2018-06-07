@@ -13,8 +13,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use bincode;
 
 use blobstore::Blobstore;
-use mercurial::{HgNodeHash, HgParents};
-use mercurial_types::{DNodeHash, DParents, HgBlobHash};
+use mercurial_types::{HgBlobHash, HgNodeHash, HgParents};
 use mononoke_types::BlobstoreBytes;
 
 use errors::*;
@@ -47,7 +46,7 @@ impl RawNodeBlob {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
 pub struct RawCSBlob<'a> {
-    pub parents: DParents,
+    pub parents: HgParents,
     pub blob: Cow<'a, [u8]>,
 }
 
@@ -94,11 +93,11 @@ impl From<EnvelopeBlob> for BlobstoreBytes {
     }
 }
 
-pub fn get_node_key(nodeid: DNodeHash) -> String {
+pub fn get_node_key(nodeid: HgNodeHash) -> String {
     format!("node-{}.bincode", nodeid)
 }
 
-pub fn get_node(blobstore: &Blobstore, nodeid: DNodeHash) -> BoxFuture<RawNodeBlob, Error> {
+pub fn get_node(blobstore: &Blobstore, nodeid: HgNodeHash) -> BoxFuture<RawNodeBlob, Error> {
     let key = get_node_key(nodeid);
 
     blobstore

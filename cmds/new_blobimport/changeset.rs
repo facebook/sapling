@@ -20,9 +20,9 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry,
                UploadHgEntry, UploadHgNodeHash};
-use mercurial::{manifest, HgChangesetId, HgManifestId, HgNodeHash, RevlogChangeset, RevlogEntry,
-                RevlogRepo, NULL_HASH};
-use mercurial_types::{DChangesetId, HgBlob, MPath, RepoPath, Type};
+use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
+use mercurial_types::{HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
+                      NULL_HASH};
 
 use super::get_usize;
 
@@ -285,9 +285,9 @@ pub fn upload_changesets<'a>(
                         maybe_handle.expect(&format!("parent {} not found for {}", p, csid))
                     } else {
                         maybe_handle.unwrap_or_else(|| {
-                            ChangesetHandle::from(blobrepo.get_changeset_by_changesetid(
-                                &DChangesetId::new(p.into_mononoke()),
-                            ))
+                            ChangesetHandle::from(
+                                blobrepo.get_changeset_by_changesetid(&HgChangesetId::new(p)),
+                            )
                         })
                     }
                 });

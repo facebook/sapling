@@ -15,11 +15,11 @@ use futures::future::{Either, Future, IntoFuture};
 
 use blobstore::Blobstore;
 
-use mercurial::{self, HgBlobNode, NodeHashConversion};
+use mercurial;
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
-use mercurial_types::{Changeset, DBlobNode, DParents, HgBlob, MPath};
-use mercurial_types::nodehash::{DChangesetId, DManifestId, D_NULL_HASH};
+use mercurial_types::{Changeset, HgBlob, HgBlobNode, HgParents, MPath};
+use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NULL_HASH};
 use mononoke_types::DateTime;
 
 use errors::*;
@@ -27,8 +27,8 @@ use utils::{EnvelopeBlob, RawCSBlob};
 
 #[derive(Debug)]
 pub struct ChangesetContent {
-    parents: DParents,
-    manifestid: DManifestId,
+    parents: HgParents,
+    manifestid: HgManifestId,
     user: Vec<u8>,
     time: DateTime,
     extra: Extra,
@@ -38,8 +38,8 @@ pub struct ChangesetContent {
 
 impl ChangesetContent {
     pub fn new_from_parts(
-        parents: DParents,
-        manifestid: DManifestId,
+        parents: HgParents,
+        manifestid: HgManifestId,
         user: Vec<u8>,
         time: DateTime,
         extra: BTreeMap<Vec<u8>, Vec<u8>>,
@@ -58,22 +58,9 @@ impl ChangesetContent {
     }
 
     pub fn from_revlogcs(revlogcs: RevlogChangeset) -> Self {
-        // TODO(luk): T28348119 Following usages of into_mononoke are valid, because we use
-        // RevlogChangeset to parse content of Blobstore and immediately create a BlobChangeset out
-        // of it. In future this logic will go away, because we will either retrieve
-        // BonsaiChangesets or we will fetch RevlogChangeset just to pass it to client untouched.
-        let parents = {
-            let (p1, p2) = revlogcs.parents.get_nodes();
-            let p1 = p1.map(|p| p.into_mononoke());
-            let p2 = p2.map(|p| p.into_mononoke());
-            DParents::new(p1.as_ref(), p2.as_ref())
-        };
-
-        let manifestid = DManifestId::new(revlogcs.manifestid.into_nodehash().into_mononoke());
-
         Self {
-            parents,
-            manifestid,
+            parents: revlogcs.parents,
+            manifestid: revlogcs.manifestid,
             user: revlogcs.user,
             time: revlogcs.time,
             extra: revlogcs.extra,
@@ -82,17 +69,17 @@ impl ChangesetContent {
         }
     }
 
-    pub fn compute_hash(&self) -> Result<DChangesetId> {
+    pub fn compute_hash(&self) -> Result<HgChangesetId> {
         let mut v = Vec::new();
 
         self.generate(&mut v)?;
         let (p1, p2) = self.parents.get_nodes();
-        let blobnode = DBlobNode::new(Bytes::from(v), p1, p2);
+        let blobnode = HgBlobNode::new(Bytes::from(v), p1, p2);
 
         let nodeid = blobnode
             .nodeid()
             .ok_or(Error::from(ErrorKind::NodeGenerationFailed))?;
-        Ok(DChangesetId::new(nodeid))
+        Ok(HgChangesetId::new(nodeid))
     }
 
     /// Generate a serialized changeset. This is the counterpart to parse, and generates
@@ -126,11 +113,11 @@ impl ChangesetContent {
 
 #[derive(Debug)]
 pub struct BlobChangeset {
-    changesetid: DChangesetId, // redundant - can be computed from revlogcs?
+    changesetid: HgChangesetId, // redundant - can be computed from revlogcs?
     content: ChangesetContent,
 }
 
-fn cskey(changesetid: &DChangesetId) -> String {
+fn cskey(changesetid: &HgChangesetId) -> String {
     format!("changeset-{}.bincode", changesetid)
 }
 
@@ -139,23 +126,23 @@ impl BlobChangeset {
         Ok(Self::new_with_id(&content.compute_hash()?, content))
     }
 
-    pub fn new_with_id(changesetid: &DChangesetId, content: ChangesetContent) -> Self {
+    pub fn new_with_id(changesetid: &HgChangesetId, content: ChangesetContent) -> Self {
         Self {
             changesetid: *changesetid,
             content,
         }
     }
 
-    pub fn get_changeset_id(&self) -> DChangesetId {
+    pub fn get_changeset_id(&self) -> HgChangesetId {
         self.changesetid
     }
 
     pub fn load(
         blobstore: &Arc<Blobstore>,
-        changesetid: &DChangesetId,
+        changesetid: &HgChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
         let changesetid = *changesetid;
-        if changesetid == DChangesetId::new(D_NULL_HASH) {
+        if changesetid == HgChangesetId::new(NULL_HASH) {
             let revlogcs = RevlogChangeset::new_null();
             let cs =
                 BlobChangeset::new_with_id(&changesetid, ChangesetContent::from_revlogcs(revlogcs));
@@ -174,11 +161,9 @@ impl BlobChangeset {
                     let RawCSBlob { parents, blob } =
                         RawCSBlob::deserialize(&EnvelopeBlob::from(bytes))?;
                     let (p1, p2) = parents.get_nodes();
-                    let p1 = p1.map(|p| p.into_mercurial());
-                    let p2 = p2.map(|p| p.into_mercurial());
 
                     let blob = HgBlob::from(Bytes::from(blob.into_owned()));
-                    let node = HgBlobNode::new(blob, p1.as_ref(), p2.as_ref());
+                    let node = HgBlobNode::new(blob, p1, p2);
                     let cs = BlobChangeset::new_with_id(
                         &changesetid,
                         ChangesetContent::from_revlogcs(RevlogChangeset::new(node)?),
@@ -201,7 +186,7 @@ impl BlobChangeset {
 
             self.content.generate(&mut v).map(|()| {
                 let (p1, p2) = self.content.parents.get_nodes();
-                DBlobNode::new(Bytes::from(v), p1, p2)
+                HgBlobNode::new(Bytes::from(v), p1, p2)
             })
         };
 
@@ -222,7 +207,7 @@ impl BlobChangeset {
 }
 
 impl Changeset for BlobChangeset {
-    fn manifestid(&self) -> &DManifestId {
+    fn manifestid(&self) -> &HgManifestId {
         &self.content.manifestid
     }
 
@@ -246,7 +231,7 @@ impl Changeset for BlobChangeset {
         &self.content.time
     }
 
-    fn parents(&self) -> &DParents {
+    fn parents(&self) -> &HgParents {
         &self.content.parents
     }
 }

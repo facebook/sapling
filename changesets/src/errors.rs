@@ -6,7 +6,7 @@
 
 pub use failure::{Error, Result};
 
-use mercurial_types::DChangesetId;
+use mercurial_types::HgChangesetId;
 
 use models::ChangesetRow;
 
@@ -14,7 +14,7 @@ use models::ChangesetRow;
 pub enum ErrorKind {
     #[fail(display = "Connection error")] ConnectionError,
     #[fail(display = "Duplicate changeset {} has different parents: {:?} vs {:?}", _0, _1, _2)]
-    DuplicateInsertionInconsistency(DChangesetId, Vec<ChangesetRow>, Vec<ChangesetRow>),
+    DuplicateInsertionInconsistency(HgChangesetId, Vec<ChangesetRow>, Vec<ChangesetRow>),
     #[fail(display = "Invalid data in database")] InvalidStoredData,
-    #[fail(display = "Missing parents")] MissingParents(Vec<DChangesetId>),
+    #[fail(display = "Missing parents")] MissingParents(Vec<HgChangesetId>),
 }

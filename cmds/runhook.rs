@@ -45,7 +45,7 @@ use clap::{App, ArgMatches};
 use failure::{Error, Result};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{Changeset, DChangesetId, RepositoryId};
+use mercurial_types::{Changeset, HgChangesetId, RepositoryId};
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
@@ -141,7 +141,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
 }
 
 fn fetch_changeset(repo: Arc<BlobRepo>, rev: &str) -> BoxFuture<BlobChangeset, Error> {
-    let cs_id = try_boxfuture!(DChangesetId::from_str(rev));
+    let cs_id = try_boxfuture!(HgChangesetId::from_str(rev));
     repo.get_changeset_by_changesetid(&cs_id)
 }
 

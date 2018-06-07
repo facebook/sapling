@@ -23,7 +23,7 @@ use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes};
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::future::Future;
 use futures_ext::StreamExt;
-use mercurial_types::{DFileNodeId, RepoPath, RepositoryId};
+use mercurial_types::{HgFileNodeId, RepoPath, RepositoryId};
 use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID, THREES_CSID, THREES_FNID, TWOS_CSID,
                                       TWOS_FNID};
 use mercurial_types_mocks::repo::{REPO_ONE, REPO_ZERO};
@@ -117,7 +117,7 @@ fn do_add_filenode(filenodes: &Filenodes, node: FilenodeInfo, repo_id: &Reposito
 fn assert_no_filenode(
     filenodes: &Filenodes,
     path: &RepoPath,
-    hash: &DFileNodeId,
+    hash: &HgFileNodeId,
     repo_id: &RepositoryId,
 ) {
     let res = filenodes
@@ -130,7 +130,7 @@ fn assert_no_filenode(
 fn assert_filenode(
     filenodes: &Filenodes,
     path: &RepoPath,
-    hash: &DFileNodeId,
+    hash: &HgFileNodeId,
     repo_id: &RepositoryId,
     expected: FilenodeInfo,
 ) {

@@ -12,9 +12,8 @@ use std::io::Read;
 use flate2::read::ZlibDecoder;
 use nom::{ErrorKind, IResult, Needed, be_u16, be_u32};
 
-use mercurial_types::bdiff::Delta;
+use mercurial_types::{HgNodeHash, bdiff::Delta};
 
-use nodehash::HgNodeHash;
 use revlog::revidx::RevIdx;
 
 use super::lz4;

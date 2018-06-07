@@ -202,7 +202,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
                 .wait()?
                 .expect("bookmark not found")
         }
-        None => mercurial_types::nodehash::DChangesetId::from_str(
+        None => mercurial_types::nodehash::HgChangesetId::from_str(
             matches
                 .value_of("crhash")
                 .expect("crhash and crbook are not specified"),
