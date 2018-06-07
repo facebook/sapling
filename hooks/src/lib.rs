@@ -27,10 +27,7 @@ extern crate maplit;
 extern crate assert_matches;
 #[cfg(test)]
 extern crate async_unit;
-#[cfg(test)]
-extern crate linear;
-#[cfg(test)]
-extern crate tempdir;
+
 #[cfg(test)]
 extern crate tokio_core;
 

@@ -29,6 +29,9 @@ extern crate mononoke_types;
 extern crate slog;
 extern crate slog_glog_fmt;
 
+#[cfg(test)]
+extern crate tempdir;
+
 extern crate hooks;
 
 use hooks::{HookChangeset, HookExecution, HookManager};
@@ -40,18 +43,20 @@ use std::sync::Arc;
 use blobrepo::{BlobChangeset, BlobRepo};
 use clap::{App, ArgMatches};
 use failure::{Error, Result};
+use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, DChangesetId, RepositoryId};
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
 
+use std::env::args;
 use std::fs::File;
 use std::io::prelude::*;
 
 const MAX_CONCURRENT_REQUESTS_PER_IO_THREAD: usize = 4;
 
-fn run() -> Result<()> {
+fn run_hook(args: Vec<String>) -> Result<HookExecution> {
     // Define command line args and parse command line
     let matches = App::new("runhook")
         .version("0.0.0")
@@ -60,7 +65,7 @@ fn run() -> Result<()> {
             "<HOOK_FILE>           'file containing hook code\n",
             "<REV>                 'revision hash'"
         ))
-        .get_matches();
+        .get_matches_from(args);
 
     let logger = {
         let level = if matches.is_present("debug") {
@@ -104,23 +109,10 @@ fn run() -> Result<()> {
         code,
     };
     hook_manager.install_hook("testhook", Arc::new(hook));
-    let fut = hook_manager.run_hooks(Arc::new(hook_cs));
-    match core.run(fut) {
-        Err(e) => {
-            println!("Failed to execute hook {:?}", e);
-            return Ok(());
-        }
-        Ok(executions) => {
-            let hook_execution = executions.get("testhook").unwrap();
-            match hook_execution {
-                HookExecution::Accepted => println!("Hook acccepted the changeset"),
-                HookExecution::Rejected(rejection_info) => {
-                    println!("Hook rejected the changeset {}", rejection_info.description)
-                }
-            }
-        }
-    }
-    Ok(())
+    let fut = hook_manager
+        .run_hooks(Arc::new(hook_cs))
+        .map(|executions| executions.get("testhook").unwrap().clone());
+    core.run(fut)
 }
 
 fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
@@ -155,5 +147,71 @@ fn fetch_changeset(repo: Arc<BlobRepo>, rev: &str) -> BoxFuture<BlobChangeset, E
 
 // It all starts here
 fn main() -> Result<()> {
-    run()
+    let args_vec = args().collect();
+    match run_hook(args_vec) {
+        Ok(HookExecution::Accepted) => println!("Hook accepted the changeset"),
+        Ok(HookExecution::Rejected(rejection_info)) => {
+            println!("Hook rejected the changeset {}", rejection_info.description)
+        }
+        Err(e) => println!("Failed to run hook {:?}", e),
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use std::fs::File;
+    use tempdir::TempDir;
+
+    #[test]
+    fn test_hook_accepted() {
+        let code = String::from(
+            "hook = function (info, files)\n
+                return info.author == \"Tim Fox <tfox@fb.com>\"\n
+            end",
+        );
+        let changeset_id = String::from("50f849250f42436ee0db142aab721a12b7d95672");
+        let f = |execution| match execution {
+            Ok(HookExecution::Accepted) => (),
+            Ok(HookExecution::Rejected(rejection_info)) => {
+                assert!(rejection_info.description.starts_with("iuwehuweh"))
+            }
+            _ => assert!(false),
+        };
+        test_hook(code, changeset_id, &f);
+    }
+
+    #[test]
+    fn test_hook_rejected() {
+        let code = String::from(
+            "hook = function (info, files)\n
+                return info.author == \"Mahatma Ghandi\"\n
+            end",
+        );
+        let changeset_id = String::from("50f849250f42436ee0db142aab721a12b7d95672");
+        let f = |execution| match execution {
+            Ok(HookExecution::Accepted) => assert!(false),
+            Ok(HookExecution::Rejected(rejection_info)) => {
+                assert!(rejection_info.description.starts_with("short desc"))
+            }
+            _ => assert!(false),
+        };
+        test_hook(code, changeset_id, &f);
+    }
+
+    fn test_hook(code: String, changeset_id: String, f: &Fn(Result<HookExecution>) -> ()) {
+        let dir = TempDir::new("runhook").unwrap();
+        let file_path = dir.path().join("testhook.lua");
+        let mut file = File::create(file_path.clone()).unwrap();
+        file.write(code.as_bytes()).unwrap();
+        let args = vec![
+            String::from("runhook"),
+            file_path.to_str().unwrap().into(),
+            changeset_id,
+        ];
+        f(run_hook(args));
+    }
+
 }
