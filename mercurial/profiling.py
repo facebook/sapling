@@ -8,8 +8,9 @@
 from __future__ import absolute_import, print_function
 
 import contextlib
+import errno
 
-from . import encoding, error, extensions, util
+from . import encoding, error, extensions, pycompat, util
 from .i18n import _
 
 
@@ -209,7 +210,19 @@ class profile(object):
                 self._fp = util.stringio()
             elif self._output:
                 path = self._ui.expandpath(self._output)
-                self._fp = open(path, "wb")
+                try:
+                    self._fp = open(path, "wb")
+                except IOError as e:
+                    # Needed for the case when we create a tempfile
+                    # in Rust and then we try to write to that file.
+                    # Safe since we only run this if the previous
+                    # open failed and if it is on windows and we get
+                    # the Permission Denied error.
+                    # See D8099420.
+                    if pycompat.iswindows and e.errno == errno.EACCES:
+                        self._fp = open(path, "r+b")
+                    else:
+                        raise
             else:
                 self._fpdoclose = False
                 self._fp = self._ui.ferr
