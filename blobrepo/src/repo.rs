@@ -82,28 +82,11 @@ impl BlobRepo {
     }
 
     pub fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
-        let bookmarks = SqliteDbBookmarks::open_or_create(path.join("books").to_string_lossy())
-            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
-
         let options = rocksdb::Options::new().create_if_missing(true);
         let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-        let filenodes = SqliteFilenodes::open_or_create(
-            path.join("filenodes").to_string_lossy(),
-            DEFAULT_INSERT_CHUNK_SIZE,
-        ).context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
-        let changesets = SqliteChangesets::open_or_create(
-            path.join("changesets").to_string_lossy(),
-        ).context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
-        Ok(Self::new(
-            logger,
-            Arc::new(bookmarks),
-            Arc::new(blobstore),
-            Arc::new(filenodes),
-            Arc::new(changesets),
-            repoid,
-        ))
+        Self::new_local(logger, path, Arc::new(blobstore), repoid)
     }
 
     pub fn new_rocksdb_delayed<F>(
@@ -119,20 +102,9 @@ impl BlobRepo {
     where
         F: FnMut(()) -> Duration + 'static + Send + Sync,
     {
-        let bookmarks = SqliteDbBookmarks::open_or_create(path.join("books").to_string_lossy())
-            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
-
         let options = rocksdb::Options::new().create_if_missing(true);
         let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-        let filenodes = SqliteFilenodes::open_or_create(
-            path.join("filenodes").to_string_lossy(),
-            DEFAULT_INSERT_CHUNK_SIZE,
-        ).context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
-        let changesets = SqliteChangesets::open_or_create(
-            path.join("changesets").to_string_lossy(),
-        ).context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
-
         let blobstore = DelayBlob::new(
             Box::new(blobstore),
             delay_gen,
@@ -142,10 +114,30 @@ impl BlobRepo {
             assert_present_roundtrips,
         );
 
+        Self::new_local(logger, path, Arc::new(blobstore), repoid)
+    }
+
+    /// Create a new BlobRepo with purely local state.
+    fn new_local(
+        logger: Logger,
+        path: &Path,
+        blobstore: Arc<Blobstore>,
+        repoid: RepositoryId,
+    ) -> Result<Self> {
+        let bookmarks = SqliteDbBookmarks::open_or_create(path.join("books").to_string_lossy())
+            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
+        let filenodes = SqliteFilenodes::open_or_create(
+            path.join("filenodes").to_string_lossy(),
+            DEFAULT_INSERT_CHUNK_SIZE,
+        ).context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
+        let changesets = SqliteChangesets::open_or_create(
+            path.join("changesets").to_string_lossy(),
+        ).context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+
         Ok(Self::new(
             logger,
             Arc::new(bookmarks),
-            Arc::new(blobstore),
+            blobstore,
             Arc::new(filenodes),
             Arc::new(changesets),
             repoid,
