@@ -55,8 +55,13 @@ fn run() -> Result<()> {
 
     // write pidfile
     // do not rely on existence of this file to check if program running
-    if let Some(path) = matches.value_of("pidfile") {
-        File::create(path)?.write_fmt(format_args!("{}", std::process::id()))?;
+    // std::process::id unstable feature for old compiler
+    // so add #[cfg(target_os = "macos")] temporary
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(path) = matches.value_of("pidfile") {
+            File::create(path)?.write_fmt(format_args!("{}", std::process::id()))?;
+        }
     }
 
     // read required config path
