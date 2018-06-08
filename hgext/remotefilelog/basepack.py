@@ -7,11 +7,12 @@ import os
 import struct
 import time
 
-from mercurial.i18n import _
 from mercurial import error, policy, pycompat, util, vfs as vfsmod
+from mercurial.i18n import _
 
-from ..extlib import litemmap
 from . import constants, shallowutil
+from ..extlib import litemmap
+
 
 osutil = policy.importmod(r"osutil")
 
@@ -136,7 +137,12 @@ class basepackstore(object):
                 # Someone could have removed the file since we retrieved the
                 # list of paths.
                 if getattr(ex, "errno", None) != errno.ENOENT:
-                    ui.warn(_("unable to load pack %s: %s\n") % (filepath, ex))
+                    if self.deletecorruptpacks:
+                        self.ui.warn(_("deleting corrupt pack '%s'\n") % filepath)
+                        util.tryunlink(filepath + self.PACKSUFFIX)
+                        util.tryunlink(filepath + self.INDEXSUFFIX)
+                    else:
+                        ui.warn(_("unable to load pack %s: %s\n") % (filepath, ex))
                 continue
             packs.append(pack)
 
@@ -232,7 +238,18 @@ class basepackstore(object):
             return
 
         for pack in self.packs:
-            pack.markledger(ledger, options)
+            try:
+                pack.markledger(ledger, options)
+            except Exception as ex:
+                if self.deletecorruptpacks:
+                    self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path)
+                    util.tryunlink(filepath + self.PACKSUFFIX)
+                    util.tryunlink(filepath + self.INDEXSUFFIX)
+                else:
+                    self.ui.warn(_("unable to load pack %s: %s\n") % (pack.path, ex))
+                # Re-raise the exception anyway, since the ledger may have been
+                # tainted by the corrupt packs.
+                raise
 
     def markforrefresh(self):
         """Tells the store that there may be new pack files, so the next time it
@@ -255,9 +272,21 @@ class basepackstore(object):
             previous = set(p.path for p in self.packs)
             for filepath, __, __ in self._getavailablepackfilessorted():
                 if filepath not in previous:
-                    newpack = self.getpack(filepath)
-                    newpacks.append(newpack)
-                    self.packs.add(newpack)
+                    try:
+                        newpack = self.getpack(filepath)
+                        newpacks.append(newpack)
+                        self.packs.add(newpack)
+                    except Exception:
+                        # The pack file is likely corrupt
+                        if self.deletecorruptpacks:
+                            self.ui.warn(_("deleting corrupt pack '%s'\n") % filepath)
+                            util.tryunlink(filepath + self.PACKSUFFIX)
+                            util.tryunlink(filepath + self.INDEXSUFFIX)
+                        else:
+                            self.ui.warn(
+                                _("detected corrupt pack '%s' - ignoring it\n")
+                                % filepath
+                            )
 
         return newpacks
 

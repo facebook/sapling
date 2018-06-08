@@ -340,6 +340,7 @@ class datapacktestsbase(object):
         revisionsperpack = 100
 
         firstpack = None
+        secondindex = None
         for i in range(numpacks):
             chain = []
             revision = (str(i), self.getFakeHash(), nullid, "content")
@@ -351,6 +352,9 @@ class datapacktestsbase(object):
             pack = self.createPack(chain, packdir)
             if firstpack is None:
                 firstpack = pack.packpath
+            elif secondindex is None:
+                secondindex = pack.indexpath
+
             deltachains.append(chain)
 
         ui = mercurial.ui.ui()
@@ -363,7 +367,7 @@ class datapacktestsbase(object):
         # Read key
         store.getdelta(*key)
 
-        # Corrupt pack
+        # Corrupt the pack
         os.chmod(firstpack, 0o644)
         f = open(firstpack, "w")
         f.truncate(1)
@@ -379,6 +383,22 @@ class datapacktestsbase(object):
         ui.popbuffer()
 
         # Count packs
+        newpackcount = len(os.listdir(packdir))
+
+        # Assert the corrupt pack was removed
+        self.assertEquals(origpackcount - 2, newpackcount)
+
+        # Corrupt the index
+        os.chmod(secondindex, 0o644)
+        f = open(secondindex, "w")
+        f.truncate(1)
+        f.close()
+
+        # Load the packs
+        origpackcount = len(os.listdir(packdir))
+        ui.pushbuffer(error=True)
+        store = datapackstore(ui, packdir, self.iscdatapack, deletecorruptpacks=True)
+        ui.popbuffer()
         newpackcount = len(os.listdir(packdir))
 
         # Assert the corrupt pack was removed
