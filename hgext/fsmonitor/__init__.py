@@ -306,12 +306,14 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     ignore = self._ignore
     dirignore = self._dirignore
     if unknown:
-        if _hashignore(ignore) != ignorehash and clock != "c:0:0":
-            # ignore list changed -- can't rely on Watchman state any more
-            if state.walk_on_invalidate:
-                return bail("ignore rules changed")
-            notefiles = []
-            clock = "c:0:0"
+        # experimental config: experimental.fsmonitor.skipignore
+        if self._ui.configbool("experimental", "fsmonitor.skipignore"):
+            if _hashignore(ignore) != ignorehash and clock != "c:0:0":
+                # ignore list changed -- can't rely on Watchman state any more
+                if state.walk_on_invalidate:
+                    return bail("ignore rules changed")
+                notefiles = []
+                clock = "c:0:0"
     else:
         # always ignore
         ignore = util.always
