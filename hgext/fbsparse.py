@@ -204,6 +204,19 @@ def replacefilecache(cls, propname, replacement):
         raise AttributeError(_("type '%s' has no property '%s'") % (origcls, propname))
 
 
+def _checksparse(repo):
+    if "eden" in repo.requirements:
+        raise error.Abort(
+            _(
+                "You're using an Eden repo and thus don't need sparse profiles.  "
+                "See https://fburl.com/new-to-eden and enjoy!"
+            )
+        )
+
+    if not util.safehasattr(repo, "sparsematch"):
+        raise error.Abort(_("this is not a sparse repository"))
+
+
 def _setupupdates(ui):
     def _calculateupdates(
         orig, repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs
@@ -1341,8 +1354,7 @@ def sparse(ui, repo, *pats, **opts):
     See :hg:`help -e sparse` and :hg:`help sparse [subcommand]` to get
     additional information.
     """
-    if not util.safehasattr(repo, "sparsematch"):
-        raise error.Abort(_("this is not a sparse repository"))
+    _checksparse(repo)
 
     include = opts.get("include")
     exclude = opts.get("exclude")
@@ -1518,6 +1530,8 @@ def _listprofiles(ui, repo, *pats, **opts):
     switch to include hidden profiles.
 
     """
+    _checksparse(repo)
+
     rev = scmutil.revsingle(repo, opts.get("rev")).hex()
     tocanon = functools.partial(pathutil.canonpath, repo.root, repo.getcwd())
     filters = {
@@ -1612,6 +1626,8 @@ def _explainprofile(ui, repo, *profiles, **opts):
 
     If --verbose is given, calculates the file size impact of a profile (slow).
     """
+    _checksparse(repo)
+
     if ui.plain() and not opts.get("template"):
         hint = _("invoke with -T/--template to control output format")
         raise error.Abort(_("must specify a template in plain mode"), hint=hint)
@@ -1737,6 +1753,8 @@ def _listfilessubcmd(ui, repo, *profiles, **opts):
     files in a profile that match those patterns.
 
     """
+    _checksparse(repo)
+
     if not profiles:
         raise error.Abort(_("no profiles specified"))
 
@@ -1847,6 +1865,8 @@ def _refreshsubcmd(ui, repo, *pats, **opts):
     This is only necessary if .hg/sparse was changed by hand.
 
     """
+    _checksparse(repo)
+
     force = opts.get("force")
     with repo.wlock():
         c = _refresh(ui, repo, repo.status(), repo.sparsematch(), force)
@@ -1878,6 +1898,8 @@ def _config(
     disableprofile=False,
     force=False,
 ):
+    _checksparse(repo)
+
     """
     Perform a sparse config update. Only one of the kwargs may be specified.
     """
@@ -1959,6 +1981,8 @@ def _config(
 
 
 def _import(ui, repo, files, opts, force=False):
+    _checksparse(repo)
+
     with repo.wlock():
         # load union of current active profile
         revs = [
@@ -2019,6 +2043,8 @@ def _import(ui, repo, files, opts, force=False):
 
 
 def _clear(ui, repo, files, force=False):
+    _checksparse(repo)
+
     with repo.wlock():
         raw = ""
         if repo.vfs.exists("sparse"):
@@ -2193,6 +2219,8 @@ def _cwdlist(repo):
     """ List the contents in the current directory. Annotate
     the files in the sparse profile.
     """
+    _checksparse(repo)
+
     ctx = repo["."]
     mf = ctx.manifest()
 
