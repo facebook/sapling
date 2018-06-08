@@ -216,10 +216,23 @@ def getrepoworkspace(ui, repo):
                 "(some external services can run `cloud sync` on behalf of the user)"
             ),
         ),
+        (
+            "",
+            "use-bgssh",
+            None,
+            _(
+                "(EXPERIMENTAL) fail ssh if the password-less login is not enabled "
+                "(some external services can run `cloud sync` on behalf of the user)"
+            ),
+        ),
     ],
 )
 def cloudsync(ui, repo, **opts):
     """synchronize commits with the commit cloud service"""
+    if opts.get("use_bgssh"):
+        bgssh = ui.config("infinitepush", "bgssh")
+        if bgssh:
+            ui.setconfig("ui", "ssh", bgssh)
     try:
         # Wait at most 30 seconds, because that's the average backup time
         timeout = 30

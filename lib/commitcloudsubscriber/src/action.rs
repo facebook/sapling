@@ -27,6 +27,7 @@ impl CloudSyncTrigger {
                 .env("HGPLAIN", "hint")
                 .args(vec!["cloud", "sync"])
                 .arg("--check-autosync-enabled")
+                .arg("--use-bgssh")
                 .args(&version_args)
                 .output()?;
             info!(
