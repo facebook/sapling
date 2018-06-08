@@ -103,20 +103,34 @@ impl BlobManifest {
                 .boxify()
         } else {
             get_node(blobstore, nodehash)
+                .context("While fetching node for manifest")
+                .map_err(Error::from)
                 .and_then({
                     let blobstore = blobstore.clone();
                     move |nodeblob| {
                         let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
-                        blobstore.get(blobkey)
+                        blobstore
+                            .get(blobkey.clone())
+                            .context(format!(
+                                "While fetching content for manifest with key {}",
+                                blobkey
+                            ))
+                            .from_err()
+                            .map(|got| (got, blobkey))
                     }
                 })
                 .and_then({
                     let blobstore = blobstore.clone();
-                    move |got| match got {
+                    move |(got, blobkey)| match got {
                         None => Ok(None),
-                        Some(blob) => Ok(Some(Self::parse(blobstore, EnvelopeBlob::from(blob))?)),
+                        Some(blob) => Ok(Some(Self::parse(blobstore, EnvelopeBlob::from(blob))
+                            .with_context(move |_| {
+                                format!("While parsing blob {} as manifest", blobkey)
+                            })?)),
                     }
                 })
+                .context(format!("When loading manifest {} from blobstore", nodehash))
+                .from_err()
                 .boxify()
         }
     }

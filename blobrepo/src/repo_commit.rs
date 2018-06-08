@@ -220,11 +220,28 @@ impl UploadEntries {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             inner.uploaded_entries.insert(path.clone(), entry.clone());
         }
-        if entry.get_type() == manifest::Type::Tree {
-            self.process_manifest(entry, path)
+
+        let (err_context, fut) = if entry.get_type() == manifest::Type::Tree {
+            (
+                format!(
+                    "While processing manifest with id {} and path {}",
+                    entry.get_hash(),
+                    path
+                ),
+                self.process_manifest(entry, path),
+            )
         } else {
-            self.find_parents(&entry, path)
-        }
+            (
+                format!(
+                    "While processing file with id {} and path {}",
+                    entry.get_hash(),
+                    path
+                ),
+                self.find_parents(&entry, path),
+            )
+        };
+
+        fut.context(err_context).from_err().boxify()
     }
 
     pub fn finalize(self, filenodes: Arc<Filenodes>, cs_id: HgNodeHash) -> BoxFuture<(), Error> {
@@ -413,25 +430,31 @@ pub fn process_entries(
     root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     new_child_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
 ) -> BoxFuture<(Box<Manifest + Sync>, HgManifestId), Error> {
-    let root_manifest_fut = root_manifest.and_then({
-        let entry_processor = entry_processor.clone();
-        move |root_manifest| match root_manifest {
-            None => future::ok(None).boxify(),
-            Some((entry, path)) => {
-                let hash = entry.get_hash().into_nodehash();
-                if entry.get_type() == manifest::Type::Tree && path == RepoPath::RootPath {
-                    entry_processor
-                        .process_root_manifest(&entry)
-                        .map(move |_| Some(hash))
-                        .boxify()
-                } else {
-                    future::err(Error::from(ErrorKind::BadRootManifest(entry.get_type()))).boxify()
+    let root_manifest_fut = root_manifest
+        .context("While uploading root manifest")
+        .from_err()
+        .and_then({
+            let entry_processor = entry_processor.clone();
+            move |root_manifest| match root_manifest {
+                None => future::ok(None).boxify(),
+                Some((entry, path)) => {
+                    let hash = entry.get_hash().into_nodehash();
+                    if entry.get_type() == manifest::Type::Tree && path == RepoPath::RootPath {
+                        entry_processor
+                            .process_root_manifest(&entry)
+                            .map(move |_| Some(hash))
+                            .boxify()
+                    } else {
+                        future::err(Error::from(ErrorKind::BadRootManifest(entry.get_type())))
+                            .boxify()
+                    }
                 }
             }
-        }
-    });
+        });
 
     let child_entries_fut = new_child_entries
+        .context("While uploading child entries")
+        .from_err()
         .map({
             let entry_processor = entry_processor.clone();
             move |(entry, path)| entry_processor.process_one_entry(&entry, path)
@@ -447,6 +470,8 @@ pub fn process_entries(
                 HgManifestId::new(NULL_HASH),
             )).boxify(),
             Some(root_hash) => repo.get_manifest_by_nodeid(&root_hash)
+                .context("While fetching root manifest")
+                .from_err()
                 .map(move |m| (m, HgManifestId::new(root_hash)))
                 .boxify(),
         })

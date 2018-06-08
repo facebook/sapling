@@ -45,16 +45,25 @@ pub fn fetch_raw_filenode_bytes(
     nodeid: HgNodeHash,
 ) -> BoxFuture<BlobstoreBytes, Error> {
     get_node(blobstore, nodeid)
+        .context("While fetching node for blob")
+        .map_err(Error::from)
         .and_then({
             let blobstore = blobstore.clone();
             move |node| {
                 let key = format!("sha1-{}", node.blob.sha1());
+                let err_context = format!("While fetching content for blob key {}", key);
 
-                blobstore.get(key).and_then(move |blob| {
-                    blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
-                })
+                blobstore
+                    .get(key)
+                    .and_then(move |blob| {
+                        blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
+                    })
+                    .context(err_context)
+                    .from_err()
             }
         })
+        .context(format!("While fetching raw bytes for {}", nodeid))
+        .from_err()
         .boxify()
 }
 
@@ -159,6 +168,11 @@ impl Entry for HgBlobEntry {
                     Ok(res)
                 }
             })
+            .context(format!(
+                "While HgBlobEntry::get_content for id {}, name {:?}, type {:?}",
+                self.id, self.name, self.ty
+            ))
+            .from_err()
             .boxify()
     }
 
