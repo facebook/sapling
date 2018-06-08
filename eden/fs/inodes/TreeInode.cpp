@@ -1375,7 +1375,7 @@ class TreeInode::TreeRenameLocks {
     return destChildIter_->second.isDirectory();
   }
   bool destChildIsEmpty() const {
-    DCHECK_NOTNULL(destChildContents_);
+    DCHECK(destChildContents_);
     return destChildContents_->entries.empty();
   }
 
