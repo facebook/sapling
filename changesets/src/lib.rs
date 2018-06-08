@@ -277,7 +277,7 @@ macro_rules! impl_changesets {
                             None => Ok(None),
                             Some(row) => {
                                 // Diesel can't express unsigned ints, so convert manually.
-                                // TODO: (sid0) T26215455 hide i64/u64 Diesel conversions behind an
+                                // TODO: (rain1) T26215455 hide i64/u64 Diesel conversions behind an
                                 // interface
                                 let gen = u64::try_from(row.gen)
                                     .context(ErrorKind::InvalidStoredData)?;
@@ -386,7 +386,7 @@ macro_rules! impl_changesets {
                             // Diesel doesn't expose them. Using it isn't strictly necessary, because
                             // inserts can be later queried from selects within the same transaction.
                             // But doing so would probably save a roundtrip.
-                            // TODO: (sid0) T26215642 expose last_insert_id in Diesel and use it.
+                            // TODO: (rain1) T26215642 expose last_insert_id in Diesel and use it.
                             let new_cs_row = cs_query.first::<ChangesetRow>(&*connection)?;
 
                             // parent_rows might not be in the same order as cs.parents.

@@ -13,7 +13,7 @@ use schema::{filenodes, fixedcopyinfo, paths};
 #[table_name = "filenodes"]
 pub(crate) struct FilenodeRow {
     // Diesel doesn't support unsigned types.
-    // TODO (sid0) T26215455: use a custom type here
+    // TODO (rain1) T26215455: use a custom type here
     pub repo_id: RepositoryId,
     pub path_hash: Vec<u8>,
     pub is_tree: i32,

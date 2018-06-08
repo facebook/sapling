@@ -92,7 +92,7 @@ pub trait FutureExt: Future + Sized {
     where
         Self: 'static + Send,
     {
-        // TODO: (sid0) T21801845 rename to 'boxed' once gone from upstream.
+        // TODO: (rain1) T21801845 rename to 'boxed' once gone from upstream.
         Box::new(self)
     }
 
@@ -185,7 +185,7 @@ pub trait StreamExt: Stream {
     where
         Self: 'static + Send + Sized,
     {
-        // TODO: (sid0) T21801845 rename to 'boxed' once gone from upstream.
+        // TODO: (rain1) T21801845 rename to 'boxed' once gone from upstream.
         Box::new(self)
     }
 

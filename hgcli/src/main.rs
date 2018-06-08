@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
+// TODO: (rain1) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
 #![allow(deprecated)]
 
 extern crate clap;
