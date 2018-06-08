@@ -13,7 +13,6 @@ use std::time::Duration;
 use std::usize;
 
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
-use failure::{Fail, ResultExt};
 use futures::{Async, Poll};
 use futures::future::{self, Future};
 use futures::stream::{self, Stream};
@@ -668,6 +667,7 @@ impl CreateChangeset {
         // This is used for logging, so that we can tie up all our pieces without knowing about
         // the final commit hash
         let uuid = Uuid::new_v4();
+        let expected_nodeid = self.expected_nodeid;
 
         let upload_entries = process_entries(
             repo.logger.clone(),
@@ -676,20 +676,21 @@ impl CreateChangeset {
             &entry_processor,
             self.root_manifest,
             self.sub_entries,
-        );
+        ).context("While processing entries");
 
         let parents_complete = extract_parents_complete(&self.p1, &self.p2);
         let parents_data =
-            handle_parents(repo.logger.clone(), uuid, repo.clone(), self.p1, self.p2);
+            handle_parents(repo.logger.clone(), uuid, repo.clone(), self.p1, self.p2)
+                .context("While waiting for parents to upload data");
         let changeset = {
             let logger = repo.logger.clone();
             upload_entries
                 .join(parents_data)
+                .from_err()
                 .and_then({
                     let filenodes = repo.filenodes.clone();
                     let blobstore = repo.blobstore.clone();
                     let logger = repo.logger.clone();
-                    let expected_nodeid = self.expected_nodeid;
                     let expected_files = self.expected_files;
                     let user = self.user;
                     let time = self.time;
@@ -709,55 +710,74 @@ impl CreateChangeset {
                             )
                         };
 
-                        files.and_then({
-                            move |files| {
-                                let blobcs = try_boxfuture!(make_new_changeset(
-                                    parents,
-                                    root_hash,
-                                    user,
-                                    time,
-                                    extra,
-                                    files,
-                                    comments,
-                                ));
+                        files
+                            .context("While computing changed files")
+                            .and_then({
+                                move |files| {
+                                    let fut: BoxFuture<
+                                        BlobChangeset,
+                                        Error,
+                                    > = (move || {
+                                        let blobcs = try_boxfuture!(make_new_changeset(
+                                            parents,
+                                            root_hash,
+                                            user,
+                                            time,
+                                            extra,
+                                            files,
+                                            comments,
+                                        ));
 
-                                let cs_id = blobcs.get_changeset_id().into_nodehash();
-                                let manifest_id = *blobcs.manifestid();
+                                        let cs_id = blobcs.get_changeset_id().into_nodehash();
+                                        let manifest_id = *blobcs.manifestid();
 
-                                if let Some(expected_nodeid) = expected_nodeid {
-                                    if cs_id != expected_nodeid {
-                                        return future::err(
-                                            ErrorKind::InconsistentChangesetHash(
-                                                expected_nodeid,
-                                                cs_id,
-                                                blobcs,
-                                            ).into(),
-                                        ).boxify();
-                                    }
+                                        if let Some(expected_nodeid) = expected_nodeid {
+                                            if cs_id != expected_nodeid {
+                                                return future::err(
+                                                    ErrorKind::InconsistentChangesetHash(
+                                                        expected_nodeid,
+                                                        cs_id,
+                                                        blobcs,
+                                                    ).into(),
+                                                ).boxify();
+                                            }
+                                        }
+
+                                        debug!(logger, "Changeset uuid to hash mapping";
+                                        "changeset_uuid" => format!("{}", uuid),
+                                        "changeset_id" => format!("{}", cs_id));
+
+                                        // NOTE(luk): an attempt was made in D8187210 to split the
+                                        // upload_entries signal into upload_entries and
+                                        // processed_entries and to signal_parent_ready after
+                                        // upload_entries, so that one doesn't need to wait for the
+                                        // entries to be processed. There were no performance gains
+                                        // from that experiment
+                                        //
+                                        // We deliberately eat this error - this is only so that
+                                        // another changeset can start verifying data in the blob
+                                        // store while we verify this one
+                                        let _ = signal_parent_ready.send((cs_id, manifest_id));
+
+                                        blobcs
+                                            .save(blobstore)
+                                            .context("While writing to blobstore")
+                                            .join(
+                                                entry_processor
+                                                    .finalize(filenodes, cs_id)
+                                                    .context("While finalizing processing"),
+                                            )
+                                            .from_err()
+                                            .map(move |_| blobcs)
+                                            .boxify()
+                                    })();
+
+                                    fut.context(
+                                        "While creating and verifying Changeset for blobstore",
+                                    )
                                 }
-
-                                debug!(logger, "Changeset uuid to hash mapping";
-                                    "changeset_uuid" => format!("{}", uuid),
-                                    "changeset_id" => format!("{}", cs_id));
-
-                                // NOTE(luk): an attempt was made in D8187210 to split the
-                                // upload_entries signal into upload_entries and processed_entries
-                                // and to signal_parent_ready after upload_entries, so that one
-                                // doesn't need to wait for the entries to be processed. There were
-                                // no performance gains from that experiment
-                                //
-                                // We deliberately eat this error - this is only so that another
-                                // changeset can start verifying data in the blob store while we
-                                // verify this one
-                                let _ = signal_parent_ready.send((cs_id, manifest_id));
-
-                                blobcs
-                                    .save(blobstore)
-                                    .join(entry_processor.finalize(filenodes, cs_id))
-                                    .map(move |_| blobcs)
-                                    .boxify()
-                            }
-                        })
+                            })
+                            .from_err()
                     }
                 })
                 .timed(move |stats, result| {
@@ -769,7 +789,7 @@ impl CreateChangeset {
         };
 
         let parents_complete = parents_complete
-            .map_err(|e| ErrorKind::ParentsFailed.context(e).into())
+            .context("While waiting for parents to complete")
             .timed({
                 let logger = repo.logger.clone();
                 move |stats, result| {
@@ -795,9 +815,18 @@ impl CreateChangeset {
                             .map(|n| HgChangesetId::new(n))
                             .collect(),
                     };
-                    complete_changesets.add(completion_record).map(|_| cs)
+                    complete_changesets
+                        .add(completion_record)
+                        .map(|_| cs)
+                        .context("While inserting into changeset table")
                 })
-                .map_err(Error::compat)
+                .with_context(move |_| {
+                    format!(
+                        "While creating Changeset {:?}, uuid: {}",
+                        expected_nodeid, uuid
+                    )
+                })
+                .map_err(|e| Error::from(e).compat())
                 .timed({
                     let logger = repo.logger.clone();
                     move |stats, result| {

@@ -392,11 +392,17 @@ impl Bundle2Resolver {
             ));
             // XXX just wait for the content blobs to be uploaded for now -- this will actually
             // be used in the future.
-            let content_blob_fut =
-                future::join_all(content_blobs.into_iter().map(|(_cbinfo, fut)| fut));
+            let content_blob_fut = future::join_all(
+                content_blobs.into_iter().map(|(_cbinfo, fut)| fut),
+            ).with_context(move |_| {
+                format!("While uploading content blobs for Changeset {}", node)
+            });
 
-            p1.join3(p2, content_blob_fut)
-                .and_then(move |(p1, p2, _content_blob_result)| {
+            p1.join(p2)
+                .with_context(move |_| format!("While fetching parents for Changeset {}", node))
+                .join(content_blob_fut)
+                .from_err()
+                .and_then(move |((p1, p2), _content_blob_result)| {
                     let create_changeset = CreateChangeset {
                         expected_nodeid: Some(node),
                         expected_files: None,
@@ -439,9 +445,7 @@ impl Bundle2Resolver {
                         &filelogs,
                         &manifests,
                         &content_blobs,
-                    ).with_context(move |_| {
-                        format!("While trying to upload Changeset with id {:?}", node)
-                    })
+                    )
                 },
             )
             .and_then(|uploaded_changesets| {

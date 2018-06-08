@@ -9,7 +9,7 @@ use std::fmt;
 use ascii::AsciiString;
 use bincode;
 
-pub use failure::{Error, ResultExt};
+pub use failure::prelude::*;
 
 use mercurial_types::{HgBlob, HgBlobHash, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents,
                       MPath, RepoPath, Type};
@@ -62,7 +62,6 @@ pub enum ErrorKind {
     #[fail(display = "Missing entries in new changeset {}", _0)] MissingEntries(HgNodeHash),
     #[fail(display = "Filenode is missing: {} {}", _0, _1)] MissingFilenode(RepoPath, HgFileNodeId),
     #[fail(display = "Some manifests do not exist")] MissingManifests,
-    #[fail(display = "HgParents failed to complete")] ParentsFailed,
     #[fail(display = "Expected {} to be a manifest, found a {} instead", _0, _1)]
     NotAManifest(HgNodeHash, Type),
     #[fail(display = "Inconsistent node hash for entry: path {}, provided: {}, computed: {}", _0,
