@@ -73,50 +73,71 @@ pub fn resolve(
                     })
             }
         })
-        .and_then(move |(cg_push, bookmark_push, bundle2)| {
-            let mut changegroup_id = None;
-            let bundle2 = if let Some(cg_push) = cg_push {
-                changegroup_id = Some(cg_push.part_id);
-
+        .and_then({
+            let resolver = resolver.clone();
+            move |(cg_push, bookmark_push, bundle2)| {
+                if let Some(cg_push) = cg_push {
+                    resolver
+                        .resolve_b2xtreegroup2(bundle2)
+                        .map(|(manifests, bundle2)| {
+                            (Some((cg_push, manifests)), bookmark_push, bundle2)
+                        })
+                        .boxify()
+                } else {
+                    ok((None, bookmark_push, bundle2)).boxify()
+                }
+            }
+        })
+        .and_then({
+            let resolver = resolver.clone();
+            move |(cg_and_manifests, bookmark_push, bundle2)| {
+                if let Some((cg_push, manifests)) = cg_and_manifests {
+                    let changegroup_id = Some(cg_push.part_id);
+                    resolver
+                        .upload_changesets(cg_push, manifests)
+                        .map(move |()| (changegroup_id, bookmark_push, bundle2))
+                        .boxify()
+                } else {
+                    ok((None, bookmark_push, bundle2)).boxify()
+                }
+            }
+        })
+        .and_then({
+            let resolver = resolver.clone();
+            move |(changegroup_id, bookmark_push, bundle2)| {
                 resolver
-                    .resolve_b2xtreegroup2(bundle2)
-                    .and_then({
-                        let resolver = resolver.clone();
+                    .maybe_resolve_infinitepush_bookmarks(bundle2)
+                    .map(move |((), bundle2)| (changegroup_id, bookmark_push, bundle2))
+            }
+        })
+        .and_then({
+            let resolver = resolver.clone();
+            move |(changegroup_id, bookmark_push, bundle2)| {
+                resolver
+                    .ensure_stream_finished(bundle2)
+                    .map(move |()| (changegroup_id, bookmark_push))
+            }
+        })
+        .and_then({
+            let resolver = resolver.clone();
+            move |(changegroup_id, bookmark_push)| {
+                (move || {
+                    let bookmark_ids: Vec<_> = bookmark_push.iter().map(|bp| bp.part_id).collect();
 
-                        move |(manifests, bundle2)| {
-                            resolver
-                                .upload_changesets(cg_push, manifests)
-                                .map(|()| bundle2)
-                        }
-                    })
-                    .flatten_stream()
-                    .boxify()
-            } else {
-                bundle2
-            };
-
-            resolver
-                .maybe_resolve_infinitepush_bookmarks(bundle2)
-                .and_then({
-                    let resolver = resolver.clone();
-                    move |(_, bundle2)| resolver.ensure_stream_finished(bundle2)
-                })
-                .and_then({
-                    let resolver = resolver.clone();
-                    move |()| {
-                        let bookmark_ids: Vec<_> =
-                            bookmark_push.iter().map(|bp| bp.part_id).collect();
-
-                        let mut txn = resolver.repo.update_bookmark_transaction();
-                        for bp in bookmark_push {
-                            try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp));
-                        }
-                        txn.commit().map(move |()| bookmark_ids).boxify()
+                    let mut txn = resolver.repo.update_bookmark_transaction();
+                    for bp in bookmark_push {
+                        try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp));
                     }
-                })
-                .and_then(move |bookmark_ids| {
-                    resolver.prepare_response(changegroup_id, bookmark_ids)
-                })
+                    txn.commit()
+                        .map(move |()| (changegroup_id, bookmark_ids))
+                        .boxify()
+                })()
+                    .context("While updating Bookmarks")
+                    .from_err()
+            }
+        })
+        .and_then(move |(changegroup_id, bookmark_ids)| {
+            resolver.prepare_response(changegroup_id, bookmark_ids)
         })
         .context("bundle2-resolver error")
         .from_err()
