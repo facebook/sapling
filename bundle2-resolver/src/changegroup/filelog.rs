@@ -123,18 +123,29 @@ where
 
             delta_cache
                 .decode(node.clone(), base.into_option(), delta)
-                .and_then(move |data| {
-                    Ok(Filelog {
-                        node_key: HgNodeKey {
-                            path: RepoPath::FilePath(path),
-                            hash: node,
-                        },
-                        p1: p1.into_option(),
-                        p2: p2.into_option(),
-                        linknode,
-                        data,
-                    })
+                .and_then({
+                    let node = node.clone();
+                    let path = path.clone();
+                    move |data| {
+                        Ok(Filelog {
+                            node_key: HgNodeKey {
+                                path: RepoPath::FilePath(path),
+                                hash: node,
+                            },
+                            p1: p1.into_option(),
+                            p2: p2.into_option(),
+                            linknode,
+                            data,
+                        })
+                    }
                 })
+                .with_context(move |_| {
+                    format!(
+                        "While decoding delta cache for file id {}, path {}",
+                        node, path
+                    )
+                })
+                .from_err()
                 .boxify()
         })
         .boxify()
