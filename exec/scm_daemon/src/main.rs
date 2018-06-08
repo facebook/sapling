@@ -17,6 +17,7 @@ use commitcloudsubscriber::{CommitCloudConfig, CommitCloudTcpReceiverService,
                             CommitCloudWorkspaceSubscriberService};
 use std::fs::File;
 use std::io::Read;
+use std::io::Write;
 
 /// This is what we're going to decode toml config into.
 /// Each field is optional, meaning that it doesn't have to be present in TOML.
@@ -48,8 +49,15 @@ fn run() -> Result<()> {
         .help(help)
         .args(&[
             Arg::from_usage("--config [config file (toml format)]").required(true),
+            Arg::from_usage("--pidfile [specify path to pidfile]").required(false),
         ])
         .get_matches();
+
+    // write pidfile
+    // do not rely on existence of this file to check if program running
+    if let Some(path) = matches.value_of("pidfile") {
+        File::create(path)?.write_fmt(format_args!("{}", std::process::id()))?;
+    }
 
     // read required config path
     let configfile = matches.value_of("config").unwrap();
