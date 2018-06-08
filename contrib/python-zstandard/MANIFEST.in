@@ -1,0 +1,5 @@
+graft c-ext
+graft zstd
+include make_cffi.py
+include setup_zstd.py
+include zstd.c
