@@ -206,6 +206,7 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
                       return nullptr;
                     });
           })
+      .via(importThreadPool_.get())
       .then(
           [this,
            commitID](unique_ptr<Tree> tree) -> folly::Future<unique_ptr<Tree>> {
