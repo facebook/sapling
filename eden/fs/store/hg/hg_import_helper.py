@@ -228,6 +228,13 @@ class HgServer(object):
         repo = mercurial.hg.repository(repo_ui, self.repo_path)
         return repo.unfiltered()
 
+    def _reopen_repo(self):
+        # Close the current repo and make a new one.
+        # We use this to deal with invalidation related errors that are
+        # more likely to bubble to the surface with our long lived use case.
+        self.repo.close()
+        self.repo = self._open_repo()
+
     def serve(self):
         try:
             self.initialize()
@@ -446,7 +453,7 @@ class HgServer(object):
             # These errors come from the server-side; there doesn't seem to be
             # a good way to force the server to re-read the data other than
             # recreating our repo object.
-            self.repo = self._open_repo()
+            self._reopen_repo()
             self._fetch_tree_impl(path, manifest_node)
 
     def _fetch_tree_impl(self, path, manifest_node):
@@ -592,7 +599,7 @@ class HgServer(object):
             # Completely re-initialize our repo object and try again, in hopes
             # that this will make the server return data correctly when we
             # retry.
-            self.repo = self._open_repo()
+            self._reopen_repo()
             fctx = self.repo.filectx(path, fileid=rev_hash)
             return fctx.data()
 
