@@ -52,7 +52,7 @@ pub const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
 pub const DEFAULT_POOL_SIZE: u32 = 10;
 
 define_stats! {
-    prefix = "filenodes";
+    prefix = "mononoke.filenodes";
     gets: timeseries(RATE, SUM),
     range_gets: timeseries(RATE, SUM),
     adds: timeseries(RATE, SUM),

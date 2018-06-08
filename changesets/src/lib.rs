@@ -58,7 +58,7 @@ use models::{ChangesetInsertRow, ChangesetParentRow, ChangesetRow};
 use schema::{changesets, csparents};
 
 define_stats! {
-    prefix = "changesets";
+    prefix = "mononoke.changesets";
     gets: timeseries(RATE, SUM),
     adds: timeseries(RATE, SUM),
 }

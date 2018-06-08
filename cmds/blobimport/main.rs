@@ -76,7 +76,7 @@ use rocksblob::Rocksblob;
 const DEFAULT_MANIFOLD_BUCKET: &str = "mononoke_prod";
 
 define_stats! {
-    prefix = "blobimport";
+    prefix = "mononoke.blobimport";
     changesets: timeseries(RATE, SUM),
     duplicates: timeseries(RATE, SUM),
     failures: timeseries(RATE, SUM),
