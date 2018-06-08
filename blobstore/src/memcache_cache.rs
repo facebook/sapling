@@ -128,4 +128,22 @@ impl<T: Blobstore + Clone> Blobstore for MemcacheBlobstore<T> {
 
         bs_put.and_then(move |_| mc_put).boxify()
     }
+
+    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
+        let mc_check = self.mc_get(&key).map(|blob| blob.is_some());
+        let bs_check = future::lazy({
+            let blobstore = self.blobstore.clone();
+            move || blobstore.is_present(key)
+        });
+
+        mc_check
+            .and_then(|blob| {
+                if blob {
+                    Either::A(Ok(true).into_future())
+                } else {
+                    Either::B(bs_check)
+                }
+            })
+            .boxify()
+    }
 }
