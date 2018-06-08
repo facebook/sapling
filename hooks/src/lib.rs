@@ -12,7 +12,9 @@
 //! The scripting language specific implementation of hooks are in the corresponding sub module.
 
 #![deny(warnings)]
+#![feature(try_from)]
 
+extern crate blobrepo;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -21,6 +23,7 @@ extern crate hlua;
 extern crate hlua_futures;
 #[macro_use]
 extern crate maplit;
+extern crate mercurial_types;
 
 #[cfg(test)]
 #[macro_use]
@@ -34,11 +37,16 @@ extern crate tokio_core;
 pub mod lua_hook;
 pub mod rust_hook;
 
+use blobrepo::BlobChangeset;
 use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use mercurial_types::Changeset;
+use mercurial_types::HgParents;
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
+use std::convert::TryFrom;
+use std::str;
 use std::sync::Arc;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
@@ -54,7 +62,7 @@ pub enum HookExecution {
     Rejected(HookRejectionInfo),
 }
 
-/// Extra information on why the hook rejected the changeset
+/// Information on why the hook rejected the changeset
 #[derive(Clone, Debug, PartialEq)]
 pub struct HookRejectionInfo {
     pub description: String,
@@ -138,11 +146,61 @@ pub trait Hook: Send + Sync {
 pub struct HookChangeset {
     pub author: String,
     pub files: Vec<String>,
+    pub comments: String,
+    pub parents: HookChangesetParents,
 }
 
 impl HookChangeset {
-    pub fn new(author: String, files: Vec<String>) -> HookChangeset {
-        HookChangeset { author, files }
+    pub fn new(
+        author: String,
+        files: Vec<String>,
+        comments: String,
+        parents: HookChangesetParents,
+    ) -> HookChangeset {
+        HookChangeset {
+            author,
+            files,
+            comments,
+            parents,
+        }
+    }
+}
+
+pub enum HookChangesetParents {
+    None,
+    One(String),
+    Two(String, String),
+}
+
+impl TryFrom<BlobChangeset> for HookChangeset {
+    type Error = Error;
+    fn try_from(changeset: BlobChangeset) -> Result<Self, Error> {
+        let author = str::from_utf8(changeset.user())?.into();
+        let files = changeset.files();
+        let files = files
+            .iter()
+            .map(|arr| String::from_utf8_lossy(&arr.to_vec()).into_owned())
+            .collect();
+        let comments = str::from_utf8(changeset.user())?.into();
+        let parents = HookChangesetParents::from(*changeset.parents());
+        Ok(HookChangeset {
+            author,
+            files,
+            comments,
+            parents,
+        })
+    }
+}
+
+impl From<HgParents> for HookChangesetParents {
+    fn from(parents: HgParents) -> Self {
+        match parents {
+            HgParents::None => HookChangesetParents::None,
+            HgParents::One(p1_hash) => HookChangesetParents::One(p1_hash.to_string()),
+            HgParents::Two(p1_hash, p2_hash) => {
+                HookChangesetParents::Two(p1_hash.to_string(), p2_hash.to_string())
+            }
+        }
     }
 }
 
@@ -196,7 +254,9 @@ mod test {
             hook_manager.install_hook("testhook2", Arc::new(hook2));
             let author = String::from("jane bloggs");
             let files = vec![String::from("filec")];
-            let change_set = HookChangeset::new(author, files);
+            let comments = String::from("some comments");
+            let parents = HookChangesetParents::One("somehash".into());
+            let change_set = HookChangeset::new(author, files, comments, parents);
             let fut: BoxFuture<HashMap<String, HookExecution>, Error> =
                 hook_manager.run_hooks(Arc::new(change_set));
             let res = fut.wait();

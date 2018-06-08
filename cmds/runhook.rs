@@ -11,6 +11,7 @@
 //! It currently supports hooks written in Lua only
 
 #![deny(warnings)]
+#![feature(try_from)]
 
 extern crate clap;
 extern crate failure_ext as failure;
@@ -36,6 +37,7 @@ extern crate hooks;
 
 use hooks::{HookChangeset, HookExecution, HookManager};
 use hooks::lua_hook::LuaHook;
+use std::convert::TryFrom;
 use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -45,7 +47,7 @@ use clap::{App, ArgMatches};
 use failure::{Error, Result};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{Changeset, HgChangesetId, RepositoryId};
+use mercurial_types::{HgChangesetId, RepositoryId};
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
@@ -85,8 +87,8 @@ fn run_hook(args: Vec<String>) -> Result<HookExecution> {
     let future = fetch_changeset(Arc::new(repo), revstr);
     let mut core = Core::new().unwrap();
     let changeset = core.run(future).unwrap();
+    let hook_cs = HookChangeset::try_from(changeset)?;
 
-    let author = str::from_utf8(changeset.user()).unwrap();
     let mut file = File::open(hook_file).expect("Unable to open the hook file");
     let mut code = String::new();
     file.read_to_string(&mut code)
@@ -94,15 +96,9 @@ fn run_hook(args: Vec<String>) -> Result<HookExecution> {
     println!("======= Running hook =========");
     println!("Hook file is {} revision is {:?}", hook_file, revstr);
     println!("Hook code is {}", code);
-    println!("Changeset author: {:?} ", author);
+    println!("Changeset author: {:?} ", hook_cs.author);
     println!("==============================");
 
-    let files = changeset.files();
-    let vec_files = files
-        .iter()
-        .map(|arr| String::from_utf8_lossy(&arr.to_vec()).into_owned())
-        .collect();
-    let hook_cs = HookChangeset::new(author.to_string(), vec_files);
     let mut hook_manager = HookManager::new();
     let hook = LuaHook {
         name: String::from("testhook"),
@@ -168,9 +164,9 @@ mod test {
     #[test]
     fn test_hook_accepted() {
         let code = String::from(
-            "hook = function (info, files)\n
-                return info.author == \"Tim Fox <tfox@fb.com>\"\n
-            end",
+            "hook = function (info, files)\n\
+             return info.author == \"Tim Fox <tfox@fb.com>\"\n\
+             end",
         );
         let changeset_id = String::from("50f849250f42436ee0db142aab721a12b7d95672");
         let f = |execution| match execution {
@@ -186,9 +182,9 @@ mod test {
     #[test]
     fn test_hook_rejected() {
         let code = String::from(
-            "hook = function (info, files)\n
-                return info.author == \"Mahatma Ghandi\"\n
-            end",
+            "hook = function (info, files)\n\
+             return info.author == \"Mahatma Ghandi\"\n\
+             end",
         );
         let changeset_id = String::from("50f849250f42436ee0db142aab721a12b7d95672");
         let f = |execution| match execution {

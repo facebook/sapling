@@ -8,12 +8,10 @@
 
 #![deny(warnings)]
 
-use super::{Hook, HookContext, HookExecution, HookRejectionInfo};
+use super::{Hook, HookChangesetParents, HookContext, HookExecution, HookRejectionInfo};
 use failure::Error;
 use futures_ext::{asynchronize, BoxFuture};
 use hlua::{Lua, LuaError, LuaFunction};
-
-use std::string::ToString;
 
 #[derive(Clone)]
 pub struct LuaHook {
@@ -49,9 +47,20 @@ impl LuaHook {
             Some(val) => val,
             None => bail_err!(ErrorKind::NoHookFunctionError(hook.name.clone().into())),
         };
-        let hook_info = hashmap! {
+        let mut hook_info = hashmap! {
             "author" => context.changeset.author.to_string(),
+            "comments" => context.changeset.comments.to_string(),
         };
+        match context.changeset.parents {
+            HookChangesetParents::None => (),
+            HookChangesetParents::One(ref parent1_hash) => {
+                hook_info.insert("parent1_hash", parent1_hash.to_string());
+            }
+            HookChangesetParents::Two(ref parent1_hash, ref parent2_hash) => {
+                hook_info.insert("parent1_hash", parent1_hash.to_string());
+                hook_info.insert("parent2_hash", parent2_hash.to_string());
+            }
+        }
         hook_func
             .call_with_args((hook_info, context.changeset.files.clone()))
             .map_err(|e| {
@@ -82,72 +91,143 @@ pub enum ErrorKind {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::HookChangeset;
+    use super::super::{HookChangeset, HookChangesetParents};
     use async_unit;
     use futures::Future;
     use std::sync::Arc;
 
+    fn default_changeset() -> HookChangeset {
+        let files = vec!["file1".into(), "file2".into(), "file3".into()];
+        HookChangeset::new(
+            "some-author".into(),
+            files,
+            "some-comments".into(),
+            HookChangesetParents::One("p1-hash".into()),
+        )
+    }
+
+    #[test]
+    fn test_rejected() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (info, files)\n\
+                 return info.author == \"mr blobby\"\n\
+                 end",
+            );
+            assert_matches!(run_hook(code, changeset), Ok(HookExecution::Rejected(_)));
+        });
+    }
+
     #[test]
     fn test_author() {
         async_unit::tokio_unit_test(|| {
-            let files = vec![String::from("filec")];
-            let author = String::from("jane bloggs");
+            let changeset = default_changeset();
             let code = String::from(
-                "hook = function (info, files)
-    return info.author == \"jane bloggs\"
-end",
+                "hook = function (info, files)\n\
+                 return info.author == \"some-author\"\n\
+                 end",
             );
-            assert_matches!(run_hook(code, author, files), Ok(HookExecution::Accepted));
+            assert_matches!(run_hook(code, changeset), Ok(HookExecution::Accepted));
         });
     }
 
     #[test]
     fn test_files() {
         async_unit::tokio_unit_test(|| {
-            let files = vec![
-                String::from("filec"),
-                String::from("fileb"),
-                String::from("filed"),
-                String::from("filez"),
-            ];
-            let author = String::from("whatevs");
+            let changeset = default_changeset();
             // Arrays passed from rust -> lua appear to be 1 indexed in Lua land
             let code = String::from(
-                "hook = function (info, files)
-    return files[0] == nil and files[1] == \"filec\" and
-                         files[2] == \"fileb\" and files[3] == \"filed\" and
-                         files[4] == \"filez\" and files[5] == nil
-end",
+                "hook = function (info, files)\n\
+                 return files[0] == nil and files[1] == \"file1\" and\n\
+                 files[2] == \"file2\" and files[3] == \"file3\" and\n\
+                 files[4] == nil\n\
+                 end",
             );
-            assert_matches!(run_hook(code, author, files), Ok(HookExecution::Accepted));
+            assert_matches!(run_hook(code, changeset), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_comments() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (info, files)\n\
+                 return info.comments == \"some-comments\"\n\
+                 end",
+            );
+            assert_matches!(run_hook(code, changeset), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_one_parent() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (info, files)\n\
+                 return info.parent1_hash == \"p1-hash\" and \n\
+                 info.parent2_hash == nil\n\
+                 end",
+            );
+            assert_matches!(run_hook(code, changeset), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_two_parents() {
+        async_unit::tokio_unit_test(|| {
+            let mut changeset = default_changeset();
+            changeset.parents = HookChangesetParents::Two("p1-hash".into(), "p2-hash".into());
+            let code = String::from(
+                "hook = function (info, files)\n\
+                 return info.parent1_hash == \"p1-hash\" and \n\
+                 info.parent2_hash == \"p2-hash\"\n\
+                 end",
+            );
+            assert_matches!(run_hook(code, changeset), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_no_parents() {
+        async_unit::tokio_unit_test(|| {
+            let mut changeset = default_changeset();
+            changeset.parents = HookChangesetParents::None;
+            let code = String::from(
+                "hook = function (info, files)\n\
+                 return info.parent1_hash == nil and \n\
+                 info.parent2_hash == nil\n\
+                 end",
+            );
+            assert_matches!(run_hook(code, changeset), Ok(HookExecution::Accepted));
         });
     }
 
     #[test]
     fn test_no_hook_func() {
         async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
             let code = String::from(
-                "elephants = function (info, files)
-                    return true
-                end",
+                "elephants = function (info, files)\n\
+                 return true\n\
+                 end",
             );
-            let (author, files) = default_author_and_files();
             assert_matches!(
-                run_hook(code, author, files).unwrap_err().downcast::<ErrorKind>(),
+                run_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
                 Ok(ErrorKind::NoHookFunctionError(ref hook_name)) if hook_name == "testhook"
              );
         });
     }
 
-    // TODO add rejected hook
-
     #[test]
     fn test_invalid_hook() {
         async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
             let code = String::from("invalid code");
-            let (author, files) = default_author_and_files();
             assert_matches!(
-                run_hook(code, author, files).unwrap_err().downcast::<ErrorKind>(),
+                run_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
                 Ok(ErrorKind::HookParseError(ref hook_name, ref err_msg))
                     if hook_name == "testhook" && err_msg.starts_with("Syntax error:")
              );
@@ -157,15 +237,15 @@ end",
     #[test]
     fn test_hook_exception() {
         async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
             let code = String::from(
                 "hook = function (info, files)
                     error(\"fubar\")
                     return true
                 end",
             );
-            let (author, files) = default_author_and_files();
             assert_matches!(
-                run_hook(code, author, files).unwrap_err().downcast::<ErrorKind>(),
+                run_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
                 Ok(ErrorKind::HookRuntimeError(ref hook_name, ref err_msg))
                     if hook_name == "testhook" && err_msg.starts_with("LuaError")
              );
@@ -175,30 +255,25 @@ end",
     #[test]
     fn test_invalid_return_val() {
         async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
             let code = String::from(
                 "hook = function (info, files)
                         return \"aardvarks\"
                     end",
             );
-            let (author, files) = default_author_and_files();
             assert_matches!(
-                run_hook(code, author, files).unwrap_err().downcast::<ErrorKind>(),
+                run_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
                 Ok(ErrorKind::HookRuntimeError(ref hook_name, ref err_msg))
                     if hook_name == "testhook" && err_msg.starts_with("LuaError")
              );
         });
     }
 
-    fn default_author_and_files() -> (String, Vec<String>) {
-        (String::from("jane bloggs"), vec![String::from("filec")])
-    }
-
-    fn run_hook(code: String, author: String, files: Vec<String>) -> Result<HookExecution, Error> {
+    fn run_hook(code: String, changeset: HookChangeset) -> Result<HookExecution, Error> {
         let hook = LuaHook {
             name: String::from("testhook"),
             code: code.to_string(),
         };
-        let changeset = HookChangeset::new(author, files);
         let context = HookContext::new(hook.name.clone(), Arc::new(changeset));
         hook.run(context).wait()
     }
