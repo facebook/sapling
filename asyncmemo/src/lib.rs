@@ -453,6 +453,22 @@ where
         }
     }
 
+    /// Check to see if we have a cached result already, and thus that
+    /// get will return quickly.
+    ///
+    /// Be wary of time-of-check to time-of-use changes:
+    ///    `if key_present_in_cache(key) { get(key) }` is an anti-pattern, as the key can be
+    /// evicted before the `get`, and there could be a fetch in progress that will make
+    /// `get` fast.
+    pub fn key_present_in_cache<K: Into<F::Key>>(&self, key: K) -> bool {
+        let mut locked = self.inner.hash.lock();
+        let key = key.into();
+        match locked.get_mut(&key) {
+            Some(Slot::Complete(_)) => true,
+            _ => false,
+        }
+    }
+
     /// Invalidate a specific key
     pub fn invalidate<K: Into<F::Key>>(&self, key: K) {
         let mut locked = self.inner.hash.lock();

@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Error;
-use futures::Future;
+use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
 use asyncmemo::{Asyncmemo, Filler};
@@ -42,6 +42,14 @@ impl<T: Blobstore + Clone> Blobstore for MemoizedBlobstore<T> {
 
     fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         self.blobstore.put(key, value)
+    }
+
+    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
+        if self.cache.key_present_in_cache(key.clone()) {
+            Ok(true).into_future().boxify()
+        } else {
+            self.blobstore.is_present(key)
+        }
     }
 }
 
