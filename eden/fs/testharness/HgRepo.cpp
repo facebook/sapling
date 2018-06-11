@@ -58,7 +58,7 @@ HgRepo::HgRepo(AbsolutePathPiece path) : path_{path} {
   XLOG(DBG1) << "Using hg command: " << hgCmd_;
 
   // Set up hgEnv_
-  hgEnv_.push_back(folly::to<string>("PATH=", path));
+  hgEnv_.push_back(folly::to<string>("PATH=", pathEnv));
   hgEnv_.push_back("HGPLAIN=1");
   hgEnv_.push_back("CHGDISABLE=1");
   hgEnv_.push_back("LOCALE=C");
