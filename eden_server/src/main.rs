@@ -65,7 +65,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
-use mercurial_types::{Changeset, HgNodeHash, FileType, RepositoryId};
+use mercurial_types::{Changeset, FileType, HgNodeHash, RepositoryId};
 use mercurial_types::nodehash::HgChangesetId;
 use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
@@ -564,7 +564,6 @@ fn main() {
                     blobstore_cache_size,
                     changesets_cache_size,
                     filenodes_cache_size,
-                    None,
                     io_thread_num,
                     max_concurrent_requests_per_io_thread,
                 ).expect("couldn't open blob state"),

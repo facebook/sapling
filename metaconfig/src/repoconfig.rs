@@ -80,9 +80,6 @@ pub enum RepoType {
         /// Size of the filenodes cache. If not set in the config, then cache size is set to
         /// a default value.
         filenodes_cache_size: usize,
-        /// Controls how many concurrent connection to filenode related tables can be made. None for
-        /// default size
-        filenodes_connection_pool_size: Option<u32>,
         /// Blobstore io threads to use. Set to a default value if not set in config
         io_thread_num: usize,
         /// This is a (hopefully) short term hack to overcome the problem of overloading Manifold.
@@ -218,7 +215,6 @@ struct RawRepoConfig {
     blobstore_cache_size: Option<usize>,
     changesets_cache_size: Option<usize>,
     filenodes_cache_size: Option<usize>,
-    filenodes_connection_pool_size: Option<u32>,
     io_thread_num: Option<usize>,
     cache_warmup: Option<RawCacheWarmupConfig>,
     max_concurrent_requests_per_io_thread: Option<usize>,
@@ -261,7 +257,6 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
                     blobstore_cache_size: this.blobstore_cache_size.unwrap_or(100_000_000),
                     changesets_cache_size: this.changesets_cache_size.unwrap_or(100_000_000),
                     filenodes_cache_size: this.filenodes_cache_size.unwrap_or(100_000_000),
-                    filenodes_connection_pool_size: this.filenodes_connection_pool_size,
                     io_thread_num: this.io_thread_num.unwrap_or(5),
                     max_concurrent_requests_per_io_thread:
                         this.max_concurrent_requests_per_io_thread.unwrap_or(4),

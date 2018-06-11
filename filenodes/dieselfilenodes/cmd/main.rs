@@ -16,7 +16,7 @@ extern crate slog_glog_fmt;
 extern crate slog_term;
 extern crate time_ext;
 
-use dieselfilenodes::{MysqlFilenodes, DEFAULT_INSERT_CHUNK_SIZE, DEFAULT_POOL_SIZE};
+use dieselfilenodes::{MysqlFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
 use filenodes::Filenodes;
 use futures::future::Future;
 use mercurial_types::{HgFileNodeId, HgNodeHash, RepoPath, RepositoryId};
@@ -85,11 +85,8 @@ fn main() {
         None,
         Some(db::ProxyRequirement::Forbidden),
     ).expect("cannot create connection params");
-    let filenodes = MysqlFilenodes::open(
-        &connection_params,
-        DEFAULT_INSERT_CHUNK_SIZE,
-        DEFAULT_POOL_SIZE,
-    ).expect("cannot connect to mysql");
+    let filenodes = MysqlFilenodes::open(&connection_params, DEFAULT_INSERT_CHUNK_SIZE)
+        .expect("cannot connect to mysql");
     info!(root_log, "Connected");
 
     info!(root_log, "Fetching parents...");

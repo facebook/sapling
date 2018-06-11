@@ -130,7 +130,6 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
         default_cache_size,
         default_cache_size,
         default_cache_size,
-        None,
         io_threads,
         MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
     ).expect("failed to create blobrepo instance")

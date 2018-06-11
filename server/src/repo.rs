@@ -120,7 +120,6 @@ impl OpenableRepoType for RepoType {
                 ref blobstore_cache_size,
                 ref changesets_cache_size,
                 ref filenodes_cache_size,
-                ref filenodes_connection_pool_size,
                 ref io_thread_num,
                 ref max_concurrent_requests_per_io_thread,
                 ..
@@ -133,7 +132,6 @@ impl OpenableRepoType for RepoType {
                 *blobstore_cache_size,
                 *changesets_cache_size,
                 *filenodes_cache_size,
-                *filenodes_connection_pool_size,
                 *io_thread_num,
                 *max_concurrent_requests_per_io_thread,
             )?,

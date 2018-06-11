@@ -49,7 +49,6 @@ mod schema;
 use errors::ErrorKind;
 
 pub const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
-pub const DEFAULT_POOL_SIZE: u32 = 10;
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -113,28 +112,33 @@ impl SqliteFilenodes {
     pub fn get_conn(&self) -> ::std::result::Result<MutexGuard<SqliteConnection>, !> {
         Ok(self.connection.lock().expect("lock poisoned"))
     }
+
+    pub fn get_write_conn(&self) -> ::std::result::Result<MutexGuard<SqliteConnection>, !> {
+        Ok(self.connection.lock().expect("lock poisoned"))
+    }
 }
 
 #[derive(Clone)]
 pub struct MysqlFilenodes {
     pool: Pool<ConnectionManager<MysqlConnection>>,
+    write_pool: Pool<ConnectionManager<MysqlConnection>>,
     insert_chunk_size: usize,
 }
 
 impl MysqlFilenodes {
-    pub fn open(
-        params: &ConnectionParams,
-        insert_chunk_size: usize,
-        pool_size: u32,
-    ) -> Result<Self> {
+    pub fn open(params: &ConnectionParams, insert_chunk_size: usize) -> Result<Self> {
         let url = params.to_diesel_url()?;
-        let manager = ConnectionManager::new(url);
         let pool = Pool::builder()
-            .max_size(pool_size)
+            .max_size(10)
             .min_idle(Some(1))
-            .build(manager)?;
+            .build(ConnectionManager::new(url.clone()))?;
+        let write_pool = Pool::builder()
+            .max_size(1)
+            .min_idle(Some(1))
+            .build(ConnectionManager::new(url.clone()))?;
         Ok(Self {
             pool,
+            write_pool,
             insert_chunk_size,
         })
     }
@@ -145,7 +149,7 @@ impl MysqlFilenodes {
     }
 
     fn create(params: &ConnectionParams) -> Result<Self> {
-        let filenodes = Self::open(params, DEFAULT_INSERT_CHUNK_SIZE, DEFAULT_POOL_SIZE)?;
+        let filenodes = Self::open(params, DEFAULT_INSERT_CHUNK_SIZE)?;
 
         let up_query = include_str!("../schemas/mysql-filenodes.sql");
         filenodes.pool.get()?.batch_execute(&up_query)?;
@@ -155,6 +159,10 @@ impl MysqlFilenodes {
 
     fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
         self.pool.get().map_err(Error::from)
+    }
+
+    fn get_write_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
+        self.write_pool.get().map_err(Error::from)
     }
 }
 
@@ -173,7 +181,7 @@ macro_rules! impl_filenodes {
                 asynchronize(move || {
                     filenodes.chunks(insert_chunk_size).and_then(move |filenodes| {
                         STATS::adds.add_value(filenodes.len() as i64);
-                        let connection = db.get_conn()?;
+                        let connection = db.get_write_conn()?;
                         Self::do_insert(&connection, &filenodes, &repo_id)
                     })
                     .for_each(|()| Ok(()))
