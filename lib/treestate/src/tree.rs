@@ -258,7 +258,24 @@ where
         let id = self.id.expect("Node must have a valid ID to be loaded");
         let data = store.read(id)?;
         let mut cur = Cursor::new(data);
+        self.load_ext(&mut cur)?;
         self.entries = Some(NodeEntryMap::<T>::deserialize(&mut cur)?);
+        Ok(())
+    }
+
+    /// Load only the aggregated_state without entries.
+    fn load_aggregated_state(&mut self, store: &StoreView) -> Result<()> {
+        if self.entries.is_some() {
+            // No need to load aggregated_state, since it was loaded before.
+            return Ok(());
+        } else if self.aggregated_state.get().is_some() {
+            // Already loaded.
+            return Ok(());
+        }
+        let id = self.id
+            .expect("Node must have a valid ID to load aggregated_state");
+        let data = store.read(id)?;
+        let mut cur = Cursor::new(data);
         self.load_ext(&mut cur)?;
         Ok(())
     }
@@ -277,13 +294,13 @@ where
     /// had IDs assigned to them.
     fn write_entries(&mut self, store: &mut Store) -> Result<()> {
         let mut data = Vec::new();
+        self.write_ext(&mut data)?;
         {
             let entries = self.entries
                 .as_ref()
                 .expect("Node should have entries populated before writing out.");
             entries.serialize(&mut data)?;
         }
-        self.write_ext(&mut data)?;
         self.id = Some(store.append(&data)?);
         Ok(())
     }
@@ -338,6 +355,7 @@ where
         &mut self,
         store: &StoreView,
     ) -> Result<AggregatedState> {
+        self.load_aggregated_state(store)?;
         if self.aggregated_state.get().is_none() {
             for (_name, entry) in self.load_entries(store)?.iter_mut() {
                 if let &mut NodeEntry::Directory(ref mut node) = entry {
@@ -371,6 +389,8 @@ where
         VD: Fn(&Vec<KeyRef>, &Node<T>) -> bool,
         VF: Fn(&Vec<KeyRef>, &T) -> bool,
     {
+        // visit_dir wants aggregated_state to be populated to do quick filtering.
+        self.load_aggregated_state(store)?;
         if !visit_dir(path.as_ref(), self) {
             return Ok(VisitorResult::NotChanged);
         }
