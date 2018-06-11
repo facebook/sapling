@@ -178,6 +178,9 @@ class treestatemap(object):
     def nonnormalentries(self):
         return (self.nonnormalset, self.otherparentset)
 
+    def getfiltered(self, path, filterfunc):
+        return self._tree.getfiltered(path, filterfunc, id(filterfunc))
+
     @property
     def filefoldmap(self):
         filterfunc = util.normcase

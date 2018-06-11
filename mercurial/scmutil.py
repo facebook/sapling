@@ -318,8 +318,13 @@ class casecollisionauditor(object):
     def __init__(self, ui, abort, dirstate):
         self._ui = ui
         self._abort = abort
-        allfiles = "\0".join(dirstate._map)
-        self._loweredfiles = set(encoding.lower(allfiles).split("\0"))
+        if not dirstate._istreestate:
+            allfiles = "\0".join(dirstate._map)
+            self._loweredfiles = set(encoding.lower(allfiles).split("\0"))
+        else:
+            # Still need an in-memory set to collect files being tested, but
+            # haven't been added to treestate yet.
+            self._loweredfiles = set()
         self._dirstate = dirstate
         # The purpose of _newfiles is so that we don't complain about
         # case collisions if someone were to call this object with the
@@ -330,12 +335,22 @@ class casecollisionauditor(object):
         if f in self._newfiles:
             return
         fl = encoding.lower(f)
-        if fl in self._loweredfiles and f not in self._dirstate:
+        ds = self._dirstate
+        shouldwarn = False
+        if ds._istreestate:
+            dmap = ds._map
+            existing = dmap.getfiltered(fl, encoding.lower)
+            # Note: fl might be outside dirstate, but got "tested" here. In
+            # that case, the next "if" would catch it.
+            shouldwarn = f not in ds and existing and existing != f
+        if not shouldwarn:
+            shouldwarn = fl in self._loweredfiles and f not in ds
+            self._loweredfiles.add(fl)
+        if shouldwarn:
             msg = _("possible case-folding collision for %s") % f
             if self._abort:
                 raise error.Abort(msg)
             self._ui.warn(_("warning: %s\n") % msg)
-        self._loweredfiles.add(fl)
         self._newfiles.add(f)
 
 
