@@ -1,4 +1,11 @@
 #require no-icasefs
+#testcases treestate-on treestate-off
+
+#if treestate-on
+  $ setconfig format.usetreestate=1
+#else
+  $ setconfig format.usetreestate=0
+#endif
 
 test file addition with colliding case
 

@@ -21,6 +21,7 @@ from . import (
     policy,
     pycompat,
     scmutil,
+    treestate,
     txnutil,
     util,
 )
@@ -62,7 +63,7 @@ def _getfsnow(vfs):
 
 
 class dirstate(object):
-    def __init__(self, opener, ui, root, validate, sparsematchfn):
+    def __init__(self, opener, ui, root, validate, sparsematchfn, istreestate=False):
         """Create a new dirstate object.
 
         opener is an open()-like callable that can be used to open the
@@ -86,7 +87,13 @@ class dirstate(object):
         self._plchangecallbacks = {}
         self._origpl = None
         self._updatedfiles = set()
-        self._mapcls = dirstatemap
+        # TODO(quark): after migrating to treestate, remove legacy code.
+        self._istreestate = istreestate
+        if istreestate:
+            opener.makedirs("treestate")
+            self._mapcls = treestate.treestatemap
+        else:
+            self._mapcls = dirstatemap
 
     @contextlib.contextmanager
     def parentchange(self):
@@ -342,6 +349,7 @@ class dirstate(object):
             self._origpl = self._pl
         self._map.setparents(p1, p2)
         copies = {}
+        copymap = self._map.copymap
         if oldp2 != nullid and p2 == nullid:
             candidatefiles = self._map.nonnormalset.union(self._map.otherparentset)
             for f in candidatefiles:
@@ -351,13 +359,13 @@ class dirstate(object):
 
                 # Discard 'm' markers when moving away from a merge state
                 if s[0] == "m":
-                    source = self._map.copymap.get(f)
+                    source = copymap.get(f)
                     if source:
                         copies[f] = source
                     self.normallookup(f)
                 # Also fix up otherparent markers
                 elif s[0] == "n" and s[2] == -2:
-                    source = self._map.copymap.get(f)
+                    source = copymap.get(f)
                     if source:
                         copies[f] = source
                     self.add(f)
@@ -400,6 +408,12 @@ class dirstate(object):
         if source == dest:
             return
         self._dirty = True
+        if self._istreestate:
+            self._map.copy(source, dest)
+            # treestatemap.copymap needs to be changed via the "copy" method.
+            # _updatedfiles is not used by treestatemap as it's tracked
+            # internally.
+            return
         if source is not None:
             self._map.copymap[dest] = source
             self._updatedfiles.add(source)
@@ -435,7 +449,8 @@ class dirstate(object):
         s = os.lstat(self._join(f))
         mtime = s.st_mtime
         self._addpath(f, "n", s.st_mode, s.st_size & _rangemask, mtime & _rangemask)
-        self._map.copymap.pop(f, None)
+        if not self._istreestate:
+            self._map.copymap.pop(f, None)
         if f in self._map.nonnormalset:
             self._map.nonnormalset.remove(f)
         if mtime > self._lastnormaltime:
@@ -464,7 +479,8 @@ class dirstate(object):
                 if entry[0] == "m" or entry[0] == "n" and entry[2] == -2:
                     return
         self._addpath(f, "n", 0, -1, -1)
-        self._map.copymap.pop(f, None)
+        if not self._istreestate:
+            self._map.copymap.pop(f, None)
 
     def otherparent(self, f):
         """Mark as coming from the other parent, always dirty."""
@@ -478,12 +494,14 @@ class dirstate(object):
         else:
             # add-like
             self._addpath(f, "n", 0, -2, -1)
-        self._map.copymap.pop(f, None)
+        if not self._istreestate:
+            self._map.copymap.pop(f, None)
 
     def add(self, f):
         """Mark a file added."""
         self._addpath(f, "a", 0, -1, -1)
-        self._map.copymap.pop(f, None)
+        if not self._istreestate:
+            self._map.copymap.pop(f, None)
 
     def remove(self, f):
         """Mark a file removed."""
@@ -501,8 +519,9 @@ class dirstate(object):
                     self._map.otherparentset.add(f)
         self._updatedfiles.add(f)
         self._map.removefile(f, oldstate, size)
-        if size == 0:
-            self._map.copymap.pop(f, None)
+        if not self._istreestate:
+            if size == 0:
+                self._map.copymap.pop(f, None)
 
     def merge(self, f):
         """Mark a file merged."""
@@ -515,8 +534,9 @@ class dirstate(object):
         oldstate = self[f]
         if self._map.dropfile(f, oldstate):
             self._dirty = True
-            self._updatedfiles.add(f)
-            self._map.copymap.pop(f, None)
+            if not self._istreestate:
+                self._updatedfiles.add(f)
+                self._map.copymap.pop(f, None)
 
     def _discoverpath(self, path, normed, ignoremissing, exists, storemap):
         if exists is None:

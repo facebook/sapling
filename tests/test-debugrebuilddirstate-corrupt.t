@@ -1,3 +1,11 @@
+#testcases treestate-on treestate-off
+
+#if treestate-on
+  $ setconfig format.usetreestate=1
+#else
+  $ setconfig format.usetreestate=0
+#endif
+
 Setup
 
   $ hg init repo

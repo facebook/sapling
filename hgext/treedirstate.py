@@ -588,7 +588,7 @@ class treedirstatemap(object):
 def istreedirstate(repo):
     requirements = getattr(repo, "requirements", ())
     # Eden has its own dirstate implementation
-    if "eden" in requirements:
+    if "eden" in requirements or "treestate" in requirements:
         return False
     return "treedirstate" in requirements
 
@@ -773,7 +773,7 @@ def wrapclose(orig, self):
 
 def wrapnewreporequirements(orig, repo):
     reqs = orig(repo)
-    if repo.ui.configbool("treedirstate", "useinnewrepos"):
+    if repo.ui.configbool("treedirstate", "useinnewrepos") and "treestate" not in reqs:
         reqs.add("treedirstate")
     return reqs
 

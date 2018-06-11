@@ -1,4 +1,11 @@
 #require symlink
+#testcases treestate-on treestate-off
+
+#if treestate-on
+  $ setconfig format.usetreestate=1
+#else
+  $ setconfig format.usetreestate=0
+#endif
 
 Path conflict checking is currently disabled by default because of issue5716.
 Turn it on for this test.

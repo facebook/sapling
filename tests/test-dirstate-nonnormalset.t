@@ -1,3 +1,11 @@
+#testcases treestate-on treestate-off
+
+#if treestate-on
+  $ setconfig format.usetreestate=1
+#else
+  $ setconfig format.usetreestate=0
+#endif
+
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > logtemplate="{rev}:{node|short} ({phase}) [{tags} {bookmarks}] {desc|firstline}\n"

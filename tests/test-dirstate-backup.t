@@ -1,3 +1,11 @@
+#testcases treestate-on treestate-off
+
+#if treestate-on
+  $ setconfig format.usetreestate=1
+#else
+  $ setconfig format.usetreestate=0
+#endif
+
 Set up
 
   $ hg init repo
@@ -15,5 +23,5 @@ No dirstate backups are left behind
 
   $ ls .hg/dirstate* | sort
   .hg/dirstate
-  .hg/dirstate.tree.* (glob)
+  .hg/dirstate.tree.* (glob) (?)
 

@@ -350,6 +350,7 @@ class localrepository(object):
         "relshared",
         "dotencode",
         "exp-sparse",
+        "treestate",
     }
     openerreqs = {"revlogv1", "generaldelta", "treemanifest", "manifestv2"}
 
@@ -775,9 +776,15 @@ class localrepository(object):
     @repofilecache("dirstate")
     def dirstate(self):
         sparsematchfn = lambda: sparse.matcher(self)
+        istreestate = "treestate" in self.requirements
 
         return dirstate.dirstate(
-            self.vfs, self.ui, self.root, self._dirstatevalidate, sparsematchfn
+            self.vfs,
+            self.ui,
+            self.root,
+            self._dirstatevalidate,
+            sparsematchfn,
+            istreestate=istreestate,
         )
 
     def _dirstatevalidate(self, node):
@@ -2473,6 +2480,8 @@ def newreporequirements(repo):
             % compengine,
             hint=_('run "hg debuginstall" to list available ' "compression engines"),
         )
+    if ui.configbool("format", "usetreestate"):
+        requirements.add("treestate")
 
     # zlib is the historical default and doesn't need an explicit requirement.
     if compengine != "zlib":

@@ -1,3 +1,11 @@
+#testcases treestate-on treestate-off
+
+#if treestate-on
+  $ setconfig format.usetreestate=1
+#else
+  $ setconfig format.usetreestate=0
+#endif
+
 ------ Test dirstate._dirs refcounting
 
   $ hg init t
@@ -43,6 +51,7 @@ Prepare test repo:
   adding a
   $ hg ci -m1
 
+#if treestate-off
 Set mtime of a into the future:
 
   $ touch -t 202101011200 a
@@ -52,6 +61,10 @@ Status must not set a's entry to unset (issue1790):
   $ hg status
   $ hg debugstate
   n 644          2 2021-01-01 12:00:00 a
+
+Note: issue1790 is about thg compatibility. In this case, setting mtime to
+"unset" is also correct since "a" needs to be checked.
+#endif
 
 Test modulo storage/comparison of absurd dates:
 
