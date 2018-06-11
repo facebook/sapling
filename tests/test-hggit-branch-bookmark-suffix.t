@@ -1,7 +1,3 @@
-Disable this test until t30174052 is fixed (git 2.17.1 issue w/ pushing to
-different dirs)
-  $ exit 80
-
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
