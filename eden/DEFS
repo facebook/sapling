@@ -1,24 +1,9 @@
 # This file contains macros that are shared across Eden.
 
 
-def is_facebook_internal():
-    return read_config('codebase', 'mode') != 'public'
-
-
-def get_fb_suffix():
-    '''Build rule suffix to use for Facebook-specific build targets.'''
-    # Internally at Facebook, it is convenient for the canonical version of an
-    # Eden build target to have no special suffix so that it can match the
-    # directory in which it is defined.
-    return '' if is_facebook_internal() else '-fb'
-
-
 def get_oss_suffix():
     '''Build rule suffix to use for open-source-specific build targets.'''
-    # Outside of Facebook, it is convenient for the canonical version of an
-    # Eden build target to have no special suffix so that it can match the
-    # directory in which it is defined.
-    return '-oss' if is_facebook_internal() else ''
+    return '-oss'
 
 
 def get_daemon_versions():
@@ -31,7 +16,7 @@ def get_daemon_versions():
     '''
     return [
         ('//eden/fs/service:edenfs%s' % suffix, suffix)
-        for suffix in [get_fb_suffix(), get_oss_suffix()]
+        for suffix in ["", get_oss_suffix()]
     ]
 
 def get_test_env_and_deps(suffix=''):
@@ -45,16 +30,10 @@ def get_test_env_and_deps(suffix=''):
         'EDENFS_POST_CLONE_PATH': '//eden/hooks/hg:post-clone',
         'EDENFS_FSATTR_BIN': '//eden/integration:fsattr',
         'EDENFS_HG_IMPORT_HELPER': '//eden/fs/store/hg:hg_import_helper',
+        'EDEN_HG_BINARY': '//scm/telemetry/hg:hg',
+        'HG_REAL_BIN': '//scm/hg:hg',
+        'CHG_BIN': '//scm/hg:chg',
     }
-
-    if is_facebook_internal():
-        env_to_target.update(
-            {
-                'EDEN_HG_BINARY': '//scm/telemetry/hg:hg',
-                'HG_REAL_BIN': '//scm/hg:hg',
-                'CHG_BIN': '//scm/hg:chg',
-            }
-        )
 
     envs = {
       'EDENFS_SUFFIX': suffix,
