@@ -518,23 +518,6 @@ where
         }
     }
 
-    fn get_mut<'node>(
-        &'node mut self,
-        store: &StoreView,
-        name: KeyRef,
-    ) -> Result<Option<&'node mut T>> {
-        // Invalidate aggregated_state
-        self.aggregated_state.set(None);
-        match self.path_recurse(store, name)? {
-            PathRecurse::Directory(_dir, path, node) => node.get_mut(store, path),
-            PathRecurse::ExactDirectory(_dir, _node) => Ok(None),
-            PathRecurse::MissingDirectory(_dir, _path) => Ok(None),
-            PathRecurse::File(_name, file) => Ok(Some(file)),
-            PathRecurse::MissingFile(_name) => Ok(None),
-            PathRecurse::ConflictingFile(_name, _path, _file) => Ok(None),
-        }
-    }
-
     /// Returns true if the given path is a directory.
     fn has_dir(&mut self, store: &StoreView, name: KeyRef) -> Result<bool> {
         // This directory exists, without checking entries.
@@ -860,10 +843,6 @@ where
 
     pub fn get<'a>(&'a mut self, store: &StoreView, name: KeyRef) -> Result<Option<&'a T>> {
         Ok(self.root.get(store, name)?)
-    }
-
-    pub fn get_mut<'a>(&'a mut self, store: &StoreView, name: KeyRef) -> Result<Option<&'a mut T>> {
-        Ok(self.root.get_mut(store, name)?)
     }
 
     pub fn visit_advanced<F, VD, VF>(

@@ -95,10 +95,6 @@ impl TreeState {
         self.tree.get_dir(&self.store, path.as_ref())
     }
 
-    pub fn get_mut<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<&mut FileStateV2>> {
-        self.tree.get_mut(&self.store, path.as_ref())
-    }
-
     pub fn len(&self) -> usize {
         self.tree.file_count() as usize
     }
@@ -266,22 +262,6 @@ mod tests {
             assert!(!state.remove(path).unwrap())
         }
         assert_eq!(state.len(), 0);
-    }
-
-    #[test]
-    fn test_get_mut() {
-        let dir = TempDir::new("treestate").expect("tempdir");
-        let mut state = new_treestate(dir.path().join("1"));
-        for path in &SAMPLE_PATHS {
-            let file = state.get_mut(path).unwrap().unwrap();
-            file.mode ^= 3;
-        }
-        let mut rng = ChaChaRng::from_seed([0; 32]);
-        for path in &SAMPLE_PATHS {
-            let mut file: FileStateV2 = rng.gen();
-            file.mode ^= 3;
-            assert_eq!(state.get(path).unwrap().unwrap(), &file);
-        }
     }
 
     #[test]
