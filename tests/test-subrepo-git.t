@@ -324,7 +324,7 @@ pulling new git branch should not create tracking branch named 'origin/b2'
   $ hg up
   From $TESTTMP/tb/s
    * [new branch]      b2         -> origin/b2
-  Previous HEAD position was f47b465... merge
+  Previous HEAD position was f47b465* merge (glob)
   Switched to a new branch 'b2'
   pulling subrepo s from $TESTTMP/tb/s
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -576,8 +576,8 @@ Sticky subrepository, revision updates
   $ cd ..
   $ cd s
   $ git checkout aa84837ccfbdfedcdcdeeedc309d73e6eb069edc
-  Previous HEAD position was 32a3438... fff
-  HEAD is now at aa84837... f
+  Previous HEAD position was 32a3438* fff (glob)
+  HEAD is now at aa84837* f (glob)
   $ cd ..
   $ hg update 1
    subrepository s diverged (local revision: 32a3438, remote revision: da5f5b1)
@@ -627,11 +627,11 @@ Sticky repository, update --clean
 Test subrepo already at intended revision:
   $ cd s
   $ git checkout 32a343883b74769118bb1d3b4b1fbf9156f4dddc
-  HEAD is now at 32a3438... fff
+  HEAD is now at 32a3438* fff (glob)
   $ cd ..
   $ hg update 1
-  Previous HEAD position was 32a3438... fff
-  HEAD is now at da5f5b1... g
+  Previous HEAD position was 32a3438* fff (glob)
+  HEAD is now at da5f5b1* g (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -n
   1
