@@ -96,57 +96,67 @@ class TokenLocator(object):
         """On macOS tokens are stored in keychain
            this function fetches token from keychain
         """
-        p = subprocess.Popen(
-            [
-                "security",
-                "find-generic-password",
-                "-g",
-                "-s",
-                SERVICE,
-                "-a",
-                ACCOUNT,
-                "-w",
-            ],
-            stdin=None,
-            close_fds=util.closefds,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
         try:
-            text = p.stdout.read()
+            p = subprocess.Popen(
+                [
+                    "security",
+                    "find-generic-password",
+                    "-g",
+                    "-s",
+                    SERVICE,
+                    "-a",
+                    ACCOUNT,
+                    "-w",
+                ],
+                stdin=None,
+                close_fds=util.closefds,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            (stdoutdata, stderrdata) = p.communicate()
+            rc = p.returncode
+            if rc != 0:
+                raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
+            text = stdoutdata.strip()
             if text:
                 return text
             else:
                 return None
-        except Exception as e:
+        except OSError as e:
+            raise commitcloudcommon.UnexpectedError(self.ui, e)
+        except ValueError as e:
             raise commitcloudcommon.UnexpectedError(self.ui, e)
 
     def _settokenosx(self, token):
         """On macOS tokens are stored in keychain
            this function puts the token to keychain
         """
-        p = subprocess.Popen(
-            [
-                "security",
-                "add-generic-password",
-                "-a",
-                ACCOUNT,
-                "-s",
-                SERVICE,
-                "-p",
-                token,
-                "-U",
-            ],
-            stdin=None,
-            close_fds=util.closefds,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-
         try:
+            p = subprocess.Popen(
+                [
+                    "security",
+                    "add-generic-password",
+                    "-a",
+                    ACCOUNT,
+                    "-s",
+                    SERVICE,
+                    "-p",
+                    token,
+                    "-U",
+                ],
+                stdin=None,
+                close_fds=util.closefds,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            (stdoutdata, stderrdata) = p.communicate()
+            rc = p.returncode
+            if rc != 0:
+                raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
             self.ui.debug("new token is stored in keychain\n")
-            return p.stdout.read()
-        except Exception as e:
+        except OSError as e:
+            raise commitcloudcommon.UnexpectedError(self.ui, e)
+        except ValueError as e:
             raise commitcloudcommon.UnexpectedError(self.ui, e)
 
     @property

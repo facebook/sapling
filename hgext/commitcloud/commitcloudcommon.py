@@ -102,6 +102,15 @@ class SynchronizationError(error.Abort):
         super(SynchronizationError, self).__init__(message, *args)
 
 
+class SubprocessError(error.Abort):
+    def __init__(self, ui, rc, stderrdata, *args):
+        topic = highlightmsg(ui, _("subprocess error"))
+        message = _("process exited with status %d") % rc
+        contact = _("please contact %s to report the error") % getownerteam(ui)
+        message = "%s: '%s'\n%s\n%s" % (topic, message, stderrdata.strip(), contact)
+        super(SubprocessError, self).__init__(message, *args)
+
+
 """
 commit cloud message wrappers
 """
