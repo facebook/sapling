@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use treestate::errors::{self, ErrorKind};
 use treestate::filestate::{FileState, FileStateV2, StateFlags};
 use treestate::store::BlockId;
-use treestate::tree::{Key, KeyRef};
+use treestate::tree::{Key, KeyRef, VisitorResult};
 use treestate::treedirstate::TreeDirstate;
 use treestate::treestate::TreeState;
 
@@ -102,8 +102,10 @@ py_class!(class treedirstatemap |py| {
                 state.mtime = -1;
                 let filename = PyBytes::new(py, &filepath.concat()).into_object();
                 nonnorm.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
+                Ok(VisitorResult::Changed)
+            } else {
+                Ok(VisitorResult::NotChanged)
             }
-            Ok(())
         };
         dirstate
             .visit_tracked(&mut filter)
@@ -123,8 +125,10 @@ py_class!(class treedirstatemap |py| {
                 state.mtime = -1;
                 let filename = PyBytes::new(py, &filepath.concat()).into_object();
                 nonnorm.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
+                Ok(VisitorResult::Changed)
+            } else {
+                Ok(VisitorResult::NotChanged)
             }
-            Ok(())
         };
         dirstate
             .visit_changed_tracked(&mut filter)
@@ -224,7 +228,7 @@ py_class!(class treedirstatemap |py| {
         let mut visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
             let filename = PyBytes::new(py, &filepath.concat()).into_object();
             target.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
-            Ok(())
+            Ok(VisitorResult::NotChanged)
         };
         dirstate
             .visit_tracked(&mut visitor)
@@ -237,7 +241,7 @@ py_class!(class treedirstatemap |py| {
         let mut visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
             let filename = PyBytes::new(py, &filepath.concat()).into_object();
             target.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
-            Ok(())
+            Ok(VisitorResult::NotChanged)
         };
         dirstate
             .visit_removed(&mut visitor)
@@ -339,7 +343,7 @@ py_class!(class treedirstatemap |py| {
                 let filename = PyBytes::new(py, &filepath.concat()).into_object();
                 otherparent.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
             }
-            Ok(())
+            Ok(VisitorResult::NotChanged)
         };
         dirstate
             .visit_tracked(&mut tracked_visitor)
@@ -348,7 +352,7 @@ py_class!(class treedirstatemap |py| {
         let mut removed_visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
             let filename = PyBytes::new(py, &filepath.concat()).into_object();
             nonnormal.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
-            Ok(())
+            Ok(VisitorResult::NotChanged)
         };
         dirstate
             .visit_removed(&mut removed_visitor)
@@ -552,7 +556,7 @@ py_class!(class treestate |py| {
             &mut |components, _state| {
                 let path = PyBytes::new(py, &components.concat());
                 result.push(path);
-                Ok(())
+                Ok(VisitorResult::NotChanged)
             },
             &|_, dir| match dir.get_aggregated_state() {
                 None => true,
@@ -639,8 +643,10 @@ py_class!(class treestate |py| {
                 if state.mtime >= fsnow {
                     state.mtime = -1;
                     state.state |= StateFlags::NEED_CHECK;
+                    Ok(VisitorResult::Changed)
+                } else {
+                    Ok(VisitorResult::NotChanged)
                 }
-                Ok(())
             },
             &|_, dir| if !dir.is_changed() {
                 false

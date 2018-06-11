@@ -8,7 +8,7 @@ use serialization::Serializable;
 use std::io::Cursor;
 use std::path::Path;
 use store::{BlockId, NullStore, Store, StoreView};
-use tree::{Key, KeyRef, Tree};
+use tree::{Key, KeyRef, Tree, VisitorResult};
 
 /// Selected backend implementation for the treedirstate.
 enum Backend {
@@ -208,7 +208,7 @@ impl TreeDirstate {
     /// Visit all tracked files with a visitor.
     pub fn visit_tracked<F>(&mut self, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<VisitorResult>,
     {
         self.store.cache()?;
         self.tracked.visit(self.store.store_view(), visitor)
@@ -217,7 +217,7 @@ impl TreeDirstate {
     /// Visit all tracked files in changed nodes with a visitor.
     pub fn visit_changed_tracked<F>(&mut self, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<VisitorResult>,
     {
         self.store.cache()?;
         self.tracked.visit_changed(self.store.store_view(), visitor)
@@ -249,7 +249,7 @@ impl TreeDirstate {
     /// Visit all removed files with a visitor.
     pub fn visit_removed<F>(&mut self, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<VisitorResult>,
     {
         self.removed.visit(self.store.store_view(), visitor)
     }

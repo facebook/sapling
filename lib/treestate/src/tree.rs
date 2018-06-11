@@ -22,6 +22,14 @@ pub(crate) enum NodeEntry<T> {
 pub type Key = Box<[u8]>;
 pub type KeyRef<'a> = &'a [u8];
 
+/// Result of a "visitor" function.  Specify whether a file is changed or not. Used to mark
+/// parent directory as "dirty" recursively.
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub enum VisitorResult {
+    NotChanged,
+    Changed,
+}
+
 /// Store the node entries in an ordered map from name to node entry.
 pub(crate) type NodeEntryMap<T> = VecMap<Key, NodeEntry<T>>;
 
@@ -153,11 +161,6 @@ pub trait CompatExt<T> {
 
     /// Calculate `aggregated_state` if it's not calculated yet.
     fn calculate_aggregated_state(&self) -> AggregatedState;
-
-    /// Extract StateFlags from a file.
-    fn get_file_state(_file: &T) -> StateFlags {
-        StateFlags::empty()
-    }
 }
 
 impl CompatExt<FileState> for Node<FileState> {
@@ -205,10 +208,6 @@ impl CompatExt<FileStateV2> for Node<FileStateV2> {
         self.aggregated_state
             .set(Some(AggregatedState::deserialize(data)?));
         Ok(())
-    }
-
-    fn get_file_state(file: &FileStateV2) -> StateFlags {
-        file.state
     }
 }
 
@@ -343,13 +342,16 @@ where
         Ok(self.calculate_aggregated_state())
     }
 
-    // Visit all of the files in under this node, by calling the visitor function on each one.
-    //
-    // `visit_dir` will be called to test if a directory is worth visiting or not.
-    // `visit_file` will be called to test if a file is worth visiting or not.
-    //
-    // Return updated `aggregated_state` for this node, which is then used internally to update
-    // parent `aggregated_state`s.
+    /// Visit all of the files in under this node, by calling the visitor function on each one.
+    ///
+    /// `visit_dir` will be called to test if a directory is worth visiting or not.
+    /// `visit_file` will be called to test if a file is worth visiting or not.
+    ///
+    /// The visitor can change the file, in which case it must return `VisitorResult::Changed` so
+    /// parent nodes can be marked as "changed" correctly.
+    ///
+    /// Return a `VisitorResult` indicating whether this node is changed or not so nodes can be
+    /// marked "changed" recursively.
     fn visit<'a, F, VD, VF>(
         &'a mut self,
         store: &StoreView,
@@ -357,18 +359,17 @@ where
         visitor: &mut F,
         visit_dir: &VD,
         visit_file: &VF,
-    ) -> Result<Option<AggregatedState>>
+    ) -> Result<VisitorResult>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
         VD: Fn(&Vec<KeyRef>, &Node<T>) -> bool,
         VF: Fn(&Vec<KeyRef>, &T) -> bool,
     {
         if !visit_dir(path.as_ref(), self) {
-            return Ok(self.aggregated_state.get());
+            return Ok(VisitorResult::NotChanged);
         }
 
-        // Calculate new aggregated_state - None: cannot be calculated now.
-        let mut aggregated_state = Some(AggregatedState::default());
+        let mut result = VisitorResult::NotChanged;
 
         let entries: &mut NodeEntryMap<T> = {
             self.load_entries(store)?;
@@ -376,30 +377,29 @@ where
         };
 
         for (name, entry) in entries.iter_mut() {
-            let substate = {
-                let mut path = path.push(name);
-                match entry {
-                    &mut NodeEntry::Directory(ref mut node) => {
-                        node.visit(store, &mut path, visitor, visit_dir, visit_file)?
-                    }
-                    &mut NodeEntry::File(ref mut file) => {
-                        if visit_file(path.as_ref(), file) {
-                            visitor(path.as_ref(), file)?;
-                        }
-                        Some(Self::get_file_state(file).into())
+            let mut path = path.push(name);
+            let sub_result = match entry {
+                &mut NodeEntry::Directory(ref mut node) => {
+                    node.visit(store, &mut path, visitor, visit_dir, visit_file)?
+                }
+                &mut NodeEntry::File(ref mut file) => {
+                    if visit_file(path.as_ref(), file) {
+                        visitor(path.as_ref(), file)?
+                    } else {
+                        VisitorResult::NotChanged
                     }
                 }
             };
-            // Propagate aggregated_state from the sub entry.
-            aggregated_state = match substate {
-                None => None,
-                Some(substate) => aggregated_state.map(|state| state.merge(substate)),
-            };
+            if sub_result == VisitorResult::Changed {
+                result = VisitorResult::Changed;
+            }
         }
 
-        aggregated_state = aggregated_state.map(|v| v.normalized());
-        self.aggregated_state.set(aggregated_state);
-        Ok(aggregated_state)
+        if result == VisitorResult::Changed {
+            self.id = None;
+            self.aggregated_state.set(None);
+        }
+        Ok(result)
     }
 
     /// Get the first file in the subtree under this node.  If the subtree is not empty, returns a
@@ -764,7 +764,7 @@ where
                                 if acceptable(state) {
                                     visitor(filepath)?;
                                 }
-                                Ok(())
+                                Ok(VisitorResult::NotChanged)
                             };
                             node.visit(
                                 store,
@@ -853,7 +853,7 @@ where
         visit_file: &VF,
     ) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
         VD: Fn(&Vec<KeyRef>, &Node<T>) -> bool,
         VF: Fn(&Vec<KeyRef>, &T) -> bool,
     {
@@ -866,14 +866,14 @@ where
 
     pub fn visit<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
     {
         self.visit_advanced(store, visitor, &|_, _| true, &|_, _| true)
     }
 
     pub fn visit_changed<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
     {
         self.visit_advanced(
             store,
@@ -964,12 +964,9 @@ where
 
 #[cfg(test)]
 mod tests {
-
-    use errors::*;
-    use filestate::FileState;
+    use super::*;
     use store::NullStore;
     use store::tests::MapStore;
-    use tree::{Key, KeyRef, Tree};
 
     // Test files in order.  Note lexicographic ordering of file9 and file10.
     static TEST_FILES: [(&[u8], u32, i32, i32); 16] = [
@@ -1137,7 +1134,7 @@ mod tests {
         {
             let mut v = |path: &Vec<KeyRef>, _fs: &mut FileState| {
                 files.push(path.concat());
-                Ok(())
+                Ok(VisitorResult::NotChanged)
             };
             t.visit(&mut ms, &mut v).expect("can visit");
         }
@@ -1170,7 +1167,7 @@ mod tests {
         {
             let mut v = |path: &Vec<KeyRef>, _fs: &mut FileState| {
                 files.push(path.concat());
-                Ok(())
+                Ok(VisitorResult::NotChanged)
             };
             t.visit_changed(&mut ms, &mut v).expect("can visit_changed");
         }

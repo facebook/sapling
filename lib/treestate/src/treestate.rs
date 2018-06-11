@@ -8,7 +8,7 @@ use std::io::Cursor;
 use std::ops::Deref;
 use std::path::Path;
 use store::{BlockId, Store, StoreView};
-use tree::{AggregatedState, Key, KeyRef, Node, Tree};
+use tree::{AggregatedState, Key, KeyRef, Node, Tree, VisitorResult};
 
 /// `TreeState` uses a single tree to track an extended state of `TreeDirstate`.
 /// See the comment about `FileStateV2` for the difference.
@@ -118,7 +118,7 @@ impl TreeState {
         visit_file: &VF,
     ) -> Result<()>
     where
-        F: FnMut(&Vec<&[u8]>, &mut FileStateV2) -> Result<()>,
+        F: FnMut(&Vec<&[u8]>, &mut FileStateV2) -> Result<VisitorResult>,
         VD: Fn(&Vec<KeyRef>, &Node<FileStateV2>) -> bool,
         VF: Fn(&Vec<KeyRef>, &FileStateV2) -> bool,
     {
@@ -308,7 +308,7 @@ mod tests {
         tree.visit(
             &mut |ref path_components, _| {
                 result.push(path_components.concat());
-                Ok(())
+                Ok(VisitorResult::NotChanged)
             },
             &|_, dir| match dir.get_aggregated_state() {
                 None => true,
@@ -377,6 +377,7 @@ mod tests {
                 state
                     .visit(
                         &mut |ref _path, ref mut file| {
+                            let old_state = file.state;
                             if ((1 << i) & end_bits) == 0 {
                                 file.state -= bit;
                             } else {
@@ -384,7 +385,11 @@ mod tests {
                                 expected.push(paths[i]);
                             }
                             i += 1;
-                            Ok(())
+                            if old_state == file.state {
+                                Ok(VisitorResult::NotChanged)
+                            } else {
+                                Ok(VisitorResult::Changed)
+                            }
                         },
                         &|_, _| true,
                         &|_, _| true,
