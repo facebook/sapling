@@ -132,9 +132,16 @@ impl TreeDirstate {
     /// Write updated entries in the treedirstate to the store.
     pub fn write_delta(&mut self) -> Result<()> {
         {
-            let store = self.store.store();
-            self.tracked.write_delta(store)?;
-            self.removed.write_delta(store)?;
+            match self.store {
+                Backend::Empty(ref mut store) => {
+                    self.tracked.write_delta(store)?;
+                    self.removed.write_delta(store)?;
+                }
+                Backend::File(ref mut store) => {
+                    self.tracked.write_delta(store)?;
+                    self.removed.write_delta(store)?;
+                }
+            }
         }
         self.write_root()
     }

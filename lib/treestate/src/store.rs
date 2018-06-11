@@ -35,6 +35,16 @@ impl NullStore {
     }
 }
 
+impl Store for NullStore {
+    fn append(&mut self, _: &[u8]) -> Result<BlockId> {
+        panic!("append to NullStore");
+    }
+
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
 impl StoreView for NullStore {
     fn read<'a>(&'a self, id: BlockId) -> Result<Cow<'a, [u8]>> {
         bail!(ErrorKind::InvalidStoreId(id.0))

@@ -173,7 +173,7 @@ impl CompatExt<FileState> for Node<FileState> {
     }
 
     fn calculate_aggregated_state(&self) -> AggregatedState {
-        panic!("should not be called");
+        AggregatedState::default().normalized()
     }
 }
 
@@ -303,7 +303,7 @@ where
 
     /// Perform a delta write of the node and its children to the store.  Entries that are
     /// already in the store will not be written again.
-    fn write_delta(&mut self, store: &mut Store) -> Result<()> {
+    fn write_delta<S: Store + StoreView>(&mut self, store: &mut S) -> Result<()> {
         if self.id.is_none() {
             // This node has been modified, write out a new copy of any children who have
             // also changed.  The entries list must already have been populated when the node
@@ -317,6 +317,12 @@ where
                         node.write_delta(store)?;
                     }
                 }
+            }
+
+            // This is needed. Sometimes subentries have `id` set but not aggregated_state.
+            // That happens with `Node::open`.
+            {
+                self.calculate_aggregated_state_recursive(store)?;
             }
 
             // Write out this node.
@@ -836,7 +842,7 @@ where
         Ok(self.root.id.unwrap())
     }
 
-    pub fn write_delta(&mut self, store: &mut Store) -> Result<BlockId> {
+    pub fn write_delta<S: Store + StoreView>(&mut self, store: &mut S) -> Result<BlockId> {
         self.root.write_delta(store)?;
         Ok(self.root.id.unwrap())
     }
