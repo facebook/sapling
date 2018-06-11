@@ -54,7 +54,7 @@ pub use datetime::DateTime;
 pub use file_change::{FileChange, FileType};
 pub use file_contents::FileContents;
 pub use path::{MPath, MPathElement, RepoPath};
-pub use typed_hash::{ChangesetId, ContentId, MononokeId, UnodeId};
+pub use typed_hash::{ChangesetId, ContentId, MononokeId};
 
 mod thrift {
     pub use mononoke_types_thrift::*;

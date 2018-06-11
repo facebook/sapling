@@ -36,7 +36,6 @@ union IdType {
   1: Blake2 Blake2,
 }
 
-typedef IdType UnodeId (hs.newtype)
 typedef IdType ChangesetId (hs.newtype)
 typedef IdType ContentId (hs.newtype)
 

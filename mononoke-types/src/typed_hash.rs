@@ -31,11 +31,6 @@ pub trait MononokeId: Copy + Send + 'static {
 #[derive(HeapSizeOf)]
 pub struct ChangesetId(Blake2);
 
-/// An identifier for a unode in Mononoke.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf)]
-pub struct UnodeId(Blake2);
-
 /// An identifier for file contents in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
@@ -183,12 +178,6 @@ impl_typed_hash! {
 }
 
 impl_typed_hash! {
-    hash_type => UnodeId,
-    context_type => UnodeIdContext,
-    context_key => "unode",
-}
-
-impl_typed_hash! {
     hash_type => ContentId,
     context_type => ContentIdContext,
     context_key => "content",
@@ -199,13 +188,6 @@ mod test {
     use super::*;
 
     quickcheck! {
-        fn unodeid_thrift_roundtrip(h: UnodeId) -> bool {
-            let v = h.into_thrift();
-            let sh = UnodeId::from_thrift(v)
-                .expect("converting a valid Thrift structure should always work");
-            h == sh
-        }
-
         fn changesetid_thrift_roundtrip(h: ChangesetId) -> bool {
             let v = h.into_thrift();
             let sh = ChangesetId::from_thrift(v)
@@ -227,9 +209,6 @@ mod test {
         // accidentally.
         let id = ChangesetId::new(Blake2::from_byte_array([1; 32]));
         assert_eq!(id.blobstore_key(), format!("changeset.blake2.{}", id));
-
-        let id = UnodeId::new(Blake2::from_byte_array([1; 32]));
-        assert_eq!(id.blobstore_key(), format!("unode.blake2.{}", id));
 
         let id = ContentId::new(Blake2::from_byte_array([1; 32]));
         assert_eq!(id.blobstore_key(), format!("content.blake2.{}", id));
