@@ -208,12 +208,68 @@ impl Log {
 
     /// Build in-memory index for the newly added entry.
     fn update_indexes_for_in_memory_entry(&mut self, data: &[u8], offset: u64) -> io::Result<()> {
-        unimplemented!()
+        for (mut index, def) in self.indexes.iter_mut().zip(&self.index_defs) {
+            for index_output in (def.func)(data) {
+                match index_output {
+                    IndexOutput::Reference(range) => {
+                        assert!(range.start <= range.end && range.end <= data.len() as u64);
+                        // Cannot use InsertKey::Reference here since the index only has
+                        // "log.disk_buf" without "log.mem_buf".
+                        let key = InsertKey::Embed(&data[range.start as usize..range.end as usize]);
+                        index.insert_advanced(key, offset, None)?;
+                    }
+                    IndexOutput::Owned(key) => {
+                        let key = InsertKey::Embed(&key);
+                        index.insert_advanced(key, offset, None)?;
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Build in-memory index so they cover all entries stored in self.disk_buf.
     fn update_indexes_for_on_disk_entries(&mut self) -> io::Result<()> {
-        unimplemented!()
+        // It's a programming error to call this when mem_buf is not empty.
+        assert!(self.mem_buf.is_empty());
+        for (mut index, def) in self.indexes.iter_mut().zip(&self.index_defs) {
+            // The index meta is used to store the next offset the index should be built.
+            let mut offset = {
+                let index_meta = index.get_meta();
+                if index_meta.is_empty() {
+                    // New index. Start processing at the first entry.
+                    PRIMARY_START_OFFSET
+                } else {
+                    index_meta.read_vlq_at(0)?.0
+                }
+            };
+            // PERF: might be worthwhile to cache xxhash verification result.
+            while let Some(entry_result) = Self::read_entry_from_buf(&self.disk_buf, offset)? {
+                let data = entry_result.data;
+                for index_output in (def.func)(data) {
+                    match index_output {
+                        IndexOutput::Reference(range) => {
+                            assert!(range.start <= range.end && range.end <= data.len() as u64);
+                            let start = range.start + entry_result.data_offset;
+                            let end = range.end + entry_result.data_offset;
+                            let key = InsertKey::Reference((start, end - start));
+
+                            index.insert_advanced(key, offset, None)?;
+                        }
+                        IndexOutput::Owned(key) => {
+                            let key = InsertKey::Embed(&key);
+                            index.insert_advanced(key, offset, None)?;
+                        }
+                    }
+                }
+                offset = entry_result.next_offset;
+            }
+            // The index now contains all entries. Write "next_offset" as the index meta.
+            let mut index_meta = Vec::new();
+            index_meta.write_vlq(offset)?;
+            index.set_meta(index_meta);
+        }
+        Ok(())
     }
 
     /// Read `LogMetadata` from given directory. Create an empty one on demand.
