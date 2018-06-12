@@ -40,11 +40,12 @@ use index::{self, Index, InsertKey, LeafValueIter};
 use lock::ScopedFileLock;
 use memmap::Mmap;
 use std::collections::BTreeMap;
-use std::fs;
+use std::fs::{self, File};
 use std::io::{self, Cursor, Read, Write};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
-use utils::xxhash;
+use std::rc::Rc;
+use utils::{mmap_readonly, xxhash};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
 // Constants about file names
@@ -217,7 +218,24 @@ impl Log {
 
     /// Read `LogMetadata` from given directory. Create an empty one on demand.
     fn load_or_create_meta(dir: &Path) -> io::Result<LogMetadata> {
-        unimplemented!()
+        match LogMetadata::read_file(dir.join(META_FILE)) {
+            Err(err) => {
+                if err.kind() == io::ErrorKind::NotFound {
+                    // Create (and truncate) the primary log and indexes.
+                    fs::create_dir_all(dir)?;
+                    let mut primary_file = File::create(dir.join(PRIMARY_FILE))?;
+                    primary_file.write_all(PRIMARY_HEADER)?;
+                    // Start from empty file and indexes.
+                    Ok(LogMetadata {
+                        primary_len: PRIMARY_START_OFFSET,
+                        indexes: BTreeMap::new(),
+                    })
+                } else {
+                    Err(err)
+                }
+            }
+            Ok(meta) => Ok(meta),
+        }
     }
 
     /// Read (log.disk_buf, indexes) from the directory using the metadata.
@@ -226,7 +244,35 @@ impl Log {
         meta: &LogMetadata,
         index_defs: &Vec<IndexDef>,
     ) -> io::Result<(Mmap, Vec<Index>)> {
-        unimplemented!()
+        let primary_file = fs::OpenOptions::new()
+            .read(true)
+            .open(dir.join(PRIMARY_FILE))?;
+
+        let primary_buf = mmap_readonly(&primary_file, meta.primary_len.into())?.0;
+        let key_buf = Rc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0);
+        let mut indexes = Vec::with_capacity(index_defs.len());
+        for def in index_defs.iter() {
+            let index_len = meta.indexes.get(def.name).cloned().unwrap_or(0);
+            indexes.push(Self::load_index(
+                dir,
+                &def.name,
+                index_len,
+                key_buf.clone(),
+            )?);
+        }
+        Ok((primary_buf, indexes))
+    }
+
+    /// Load a single index.
+    fn load_index(dir: &Path, name: &str, len: u64, buf: Rc<AsRef<[u8]>>) -> io::Result<Index> {
+        // 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
+        const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 0x100000;
+        let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
+        index::OpenOptions::new()
+            .checksum_chunk_size(INDEX_CHECKSUM_CHUNK_SIZE)
+            .logical_len(Some(len))
+            .key_buf(Some(buf))
+            .open(path)
     }
 
     /// Read the entry at the given offset. Return `None` if offset is out of bound, or the content
@@ -425,6 +471,16 @@ impl LogMetadata {
 mod tests {
     use super::*;
     use tempdir::TempDir;
+
+    #[test]
+    fn test_empty_log() {
+        let dir = TempDir::new("log").unwrap();
+        let log_path = dir.path().join("log");
+        let log1 = Log::open(&log_path, Vec::new()).unwrap();
+        assert_eq!(log1.iter().count(), 0);
+        let log2 = Log::open(&log_path, Vec::new()).unwrap();
+        assert_eq!(log2.iter().count(), 0);
+    }
 
     quickcheck! {
         fn test_roundtrip_meta(primary_len: u64, indexes: BTreeMap<String, u64>) -> bool {
