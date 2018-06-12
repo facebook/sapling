@@ -32,7 +32,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use clap::{App, Arg, ArgMatches};
-use failure::err_msg;
+use failure::{err_msg, Result, ResultExt};
 use futures::{future, Future, Stream};
 use futures_ext::FutureExt;
 use slog::{Drain, Level, Logger};
@@ -70,7 +70,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("blobstore")
                 .long("blobstore")
                 .takes_value(true)
-                .possible_values(&["rocksdb", "manifold"])
+                .possible_values(&["files", "rocksdb", "manifold"])
                 .required(true)
                 .help("blobstore type"),
         )
@@ -95,47 +95,57 @@ fn get_usize<'a>(matches: &ArgMatches<'a>, key: &str, default: usize) -> usize {
         .unwrap_or(default)
 }
 
+fn setup_local_state(output: &Path) -> Result<()> {
+    if !output.is_dir() {
+        bail_msg!("{:?} does not exist or is not a directory", output);
+    }
+
+    for subdir in &["blobs"] {
+        let subdir = output.join(subdir);
+        if subdir.exists() {
+            if !subdir.is_dir() {
+                bail_msg!("{:?} already exists and is not a directory", subdir);
+            }
+
+            let content: Vec<_> = subdir.read_dir()?.collect();
+            if !content.is_empty() {
+                bail_msg!(
+                    "{:?} already exists and is not empty: {:?}",
+                    subdir,
+                    content
+                );
+            }
+        } else {
+            fs::create_dir(&subdir)
+                .with_context(|_| format!("failed to create subdirectory {:?}", subdir))?;
+        }
+    }
+    Ok(())
+}
+
 fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
     let repo_id = RepositoryId::new(matches.value_of("repo_id").unwrap().parse().unwrap());
 
     match matches.value_of("blobstore").unwrap() {
+        "files" => {
+            let output = matches.value_of("OUTPUT").expect("output is not specified");
+            let output = Path::new(output)
+                .canonicalize()
+                .expect("Failed to read output path");
+            setup_local_state(&output).expect("Setting up file blobrepo failed");
+
+            BlobRepo::new_files(
+                logger.new(o!["BlobRepo:Files" => output.to_string_lossy().into_owned()]),
+                &output,
+                repo_id,
+            ).expect("failed to create file blobrepo")
+        }
         "rocksdb" => {
             let output = matches.value_of("OUTPUT").expect("output is not specified");
             let output = Path::new(output)
                 .canonicalize()
                 .expect("Failed to read output path");
-
-            assert!(
-                output.is_dir(),
-                "The path {:?} does not exist or is not a directory",
-                output
-            );
-
-            for subdir in &["blobs"] {
-                let subdir = output.join(subdir);
-                if subdir.exists() {
-                    assert!(
-                        subdir.is_dir(),
-                        "Failed to start Rocksdb BlobRepo: \
-                         {:?} already exists and is not a directory",
-                        subdir
-                    );
-                    let content: Vec<_> = subdir
-                        .read_dir()
-                        .expect("Failed to read directory content")
-                        .collect();
-                    assert!(
-                        content.is_empty(),
-                        "Failed to start Rocksdb BlobRepo: \
-                         {:?} already exists and is not empty: {:?}",
-                        subdir,
-                        content
-                    );
-                } else {
-                    fs::create_dir(&subdir)
-                        .expect(&format!("Failed to create directory {:?}", subdir));
-                }
-            }
+            setup_local_state(&output).expect("Setting up rocksdb blobrepo failed");
 
             BlobRepo::new_rocksdb(
                 logger.new(o!["BlobRepo:Rocksdb" => output.to_string_lossy().into_owned()]),

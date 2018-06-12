@@ -48,7 +48,7 @@ def get_blobimport(blobimport: Optional[str]) -> str:
             from .facebook import pathutils
         except ImportError:
             raise RuntimeError('--blobimport is required')
-        return pathutils.get_path('//scm/mononoke:blobimport')
+        return pathutils.get_path('//scm/mononoke:new_blobimport')
     else:
         return blobimport
 
@@ -101,15 +101,20 @@ server=True"""
             dir=output_dir, prefix=output_name + '.'
         ) as tmpdest:
             new_dir = os.path.join(tmpdest, 'new')
+            os.mkdir(new_dir)
             subprocess.check_call(
                 [
                     blobimport,
                     '--blobstore',
                     'files',
-                    revlog_repo,
+                    '--repo_id',
+                    '1',
+                    os.path.join(revlog_repo, '.hg'),
                     new_dir,
                 ]
             )
+
+            # clean up
             safe_overwrite_dir(new_dir, abs_dest)
             with open(os.path.join(abs_dest, 'topology'), 'w') as topology_file:
                 hgrepo = repo.Repository(revlog_repo, prefer='hg')

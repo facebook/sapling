@@ -29,6 +29,7 @@ use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets,
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use delayblob::DelayBlob;
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
+use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
@@ -76,6 +77,15 @@ impl BlobRepo {
             changesets,
             repoid,
         }
+    }
+
+    /// Most local use cases should use new_rocksdb instead. This is only meant for test
+    /// fixtures.
+    pub fn new_files(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
+        let blobstore = Fileblob::create(path.join("blobs"))
+            .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
+
+        Self::new_local(logger, path, Arc::new(blobstore), repoid)
     }
 
     pub fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
