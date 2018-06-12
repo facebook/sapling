@@ -86,6 +86,8 @@ bail if the user does not have dulwich
   Already on 'branch1'
   Your branch is up to date with 'origin/branch1'. (?)
   Your branch is up to date with 'origin/branch1'. (?)
+  Your branch is up-to-date with 'origin/branch1'. (?)
+  Your branch is up-to-date with 'origin/branch1'. (?)
   $ echo g1 >> f1
   $ git add f1
   $ commit -m "append f1"
