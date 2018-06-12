@@ -11,13 +11,13 @@
 //! INDEX       := HEADER + ENTRY_LIST
 //! HEADER      := '\0'  (takes offset 0, so 0 is not a valid offset for ENTRY)
 //! ENTRY_LIST  := RADIX | ENTRY_LIST + ENTRY
-//! ENTRY       := RADIX | LEAF | LINK | KEY | ROOT
+//! ENTRY       := RADIX | LEAF | LINK | KEY | ROOT + REVERSED(VLQ(ROOT_LEN))
 //! RADIX       := '\2' + JUMP_TABLE (16 bytes) + PTR(LINK) + PTR(RADIX | LEAF) * N
 //! LEAF        := '\3' + PTR(KEY | EXT_KEY) + PTR(LINK)
 //! LINK        := '\4' + VLQ(VALUE) + PTR(NEXT_LINK | NULL)
 //! KEY         := '\5' + VLQ(KEY_LEN) + KEY_BYTES
 //! EXT_KEY     := '\6' + VLQ(KEY_START) + VLQ(KEY_LEN)
-//! ROOT        := '\1' + PTR(RADIX) + ROOT_LEN (1 byte)
+//! ROOT        := '\1' + PTR(RADIX) + VLQ(META_LEN) + META
 //!
 //! PTR(ENTRY)  := VLQ(the offset of ENTRY)
 //! ```
@@ -42,6 +42,7 @@
 //! - The "EXT_KEY" type has a logically similar function with "KEY". But it refers to an external
 //!   buffer. This is useful to save spaces if the index is not a source of truth and keys are
 //!   long.
+//! - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
@@ -95,6 +96,7 @@ struct MemLink {
 #[derive(Clone, PartialEq)]
 struct MemRoot {
     pub radix_offset: RadixOffset,
+    pub meta: Box<[u8]>,
 }
 
 // Shorter alias to `Option<ChecksumTable>`
@@ -109,6 +111,22 @@ fn verify_checksum(checksum: &Checksum, start: u64, length: u64) -> io::Result<(
         }
     }
     Ok(())
+}
+
+/// Read reversed vlq at the given end offset (exclusive).
+/// Return the decoded integer and the bytes used by the VLQ integer.
+fn read_vlq_reverse(buf: &[u8], end_offset: usize) -> io::Result<(u64, usize)> {
+    let buf = buf.as_ref();
+    let mut int_buf = Vec::new();
+    for i in (0..end_offset).rev() {
+        int_buf.push(buf[i]);
+        if buf[i] <= 127 {
+            break;
+        }
+    }
+    let (value, vlq_size) = int_buf.read_vlq_at(0)?;
+    assert_eq!(vlq_size, int_buf.len());
+    Ok((value, vlq_size))
 }
 
 // Offsets that are >= DIRTY_OFFSET refer to in-memory entries that haven't been
@@ -835,23 +853,38 @@ impl MemRoot {
     fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
+        let mut cur = offset;
         check_type(buf, offset, TYPE_ROOT)?;
-        let (radix_offset, len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
+        cur += TYPE_BYTES;
+
+        let (radix_offset, vlq_len) = buf.read_vlq_at(cur)?;
+        cur += vlq_len;
+
         let radix_offset =
             RadixOffset::from_offset(Offset::from_disk(radix_offset)?, buf, checksum)?;
-        let (len, len2): (usize, _) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
-        if len == TYPE_BYTES + len1 + len2 {
-            verify_checksum(checksum, offset as u64, len as u64)?;
-            Ok(MemRoot { radix_offset })
-        } else {
-            Err(InvalidData.into())
-        }
+
+        let (meta_len, vlq_len): (usize, _) = buf.read_vlq_at(cur)?;
+        cur += vlq_len;
+
+        let meta = match buf.get(cur..cur + meta_len) {
+            Some(meta) => meta,
+            None => return Err(InvalidData.into()),
+        };
+        cur += meta_len;
+
+        verify_checksum(checksum, offset as u64, (cur - offset) as u64)?;
+        Ok(MemRoot {
+            radix_offset,
+            meta: meta.to_vec().into_boxed_slice(),
+        })
     }
 
     fn read_from_end<B: AsRef<[u8]>>(buf: B, end: u64, checksum: &Checksum) -> io::Result<Self> {
         if end > 1 {
-            let (size, _): (u64, _) = buf.as_ref().read_vlq_at(end as usize - 1)?;
-            Self::read_from(buf, end - size, checksum)
+            let (root_size, vlq_size) = read_vlq_reverse(buf.as_ref(), end as usize)?;
+            let vlq_size = vlq_size as u64;
+            verify_checksum(checksum, end - vlq_size, vlq_size)?;
+            Self::read_from(buf, end - vlq_size - root_size, checksum)
         } else {
             Err(InvalidData.into())
         }
@@ -861,8 +894,13 @@ impl MemRoot {
         let mut buf = Vec::with_capacity(16);
         buf.write_all(&[TYPE_ROOT])?;
         buf.write_vlq(self.radix_offset.to_disk(offset_map))?;
-        let len = buf.len() + 1;
-        buf.write_vlq(len)?;
+        buf.write_vlq(self.meta.len())?;
+        buf.write_all(&self.meta)?;
+        let len = buf.len();
+        let mut reversed_vlq = Vec::new();
+        reversed_vlq.write_vlq(len)?;
+        reversed_vlq.reverse();
+        buf.write_all(&reversed_vlq)?;
         writer.write_all(&buf)
     }
 }
@@ -1069,7 +1107,8 @@ impl OpenOptions {
             if let Some(ref mut table) = checksum {
                 table.clear();
             }
-            (vec![MemRadix::default()], MemRoot { radix_offset })
+            let meta = Default::default();
+            (vec![MemRadix::default()], MemRoot { radix_offset, meta })
         } else {
             // Verify the header byte.
             check_type(&mmap, 0, TYPE_HEAD)?;
@@ -1121,6 +1160,16 @@ impl Index {
             key_buf: self.key_buf.clone(),
             len: self.len,
         })
+    }
+
+    /// Get metadata attached to the root node.
+    pub fn get_meta(&self) -> &[u8] {
+        &self.root.meta
+    }
+
+    /// Set metadata attached to the root node. Will be written at `flush` time.
+    pub fn set_meta<B: AsRef<[u8]>>(&mut self, meta: B) {
+        self.root.meta = meta.as_ref().to_vec().into_boxed_slice()
     }
 
     /// Flush dirty parts to disk.
@@ -1606,7 +1655,15 @@ impl Debug for MemExtKey {
 
 impl Debug for MemRoot {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "Root {{ radix: {:?} }}", self.radix_offset)
+        if self.meta.is_empty() {
+            write!(f, "Root {{ radix: {:?} }}", self.radix_offset)
+        } else {
+            write!(
+                f,
+                "Root {{ radix: {:?}, meta: {:?} }}",
+                self.radix_offset, self.meta
+            )
+        }
     }
 }
 
@@ -1770,10 +1827,10 @@ mod tests {
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // 1st flush.
-        assert_eq!(index.flush().expect("flush"), 22);
+        assert_eq!(index.flush().expect("flush"), 23);
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 22, root: Disk[1] }\n\
+            "Index { len: 23, root: Disk[1] }\n\
              Disk[1]: Radix { link: None }\n\
              Disk[19]: Root { radix: Disk[1] }\n"
         );
@@ -1783,7 +1840,7 @@ mod tests {
         index.insert(&[0x12], 77).expect("update");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 22, root: Radix[0] }\n\
+            "Index { len: 23, root: Radix[0] }\n\
              Disk[1]: Radix { link: None }\n\
              Disk[19]: Root { radix: Disk[1] }\n\
              Radix[0]: Radix { link: Link[0], 1: Leaf[0] }\n\
@@ -1801,18 +1858,18 @@ mod tests {
         index.flush().expect("flush");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 66, root: Disk[43] }\n\
+            "Index { len: 68, root: Disk[44] }\n\
              Disk[1]: Radix { link: None }\n\
              Disk[19]: Root { radix: Disk[1] }\n\
-             Disk[22]: Key { key: 12 }\n\
-             Disk[25]: Key { key: 34 }\n\
-             Disk[28]: Link { value: 55, next: None }\n\
-             Disk[31]: Link { value: 77, next: None }\n\
-             Disk[34]: Link { value: 99, next: Disk[31] }\n\
-             Disk[37]: Leaf { key: Disk[22], link: Disk[31] }\n\
-             Disk[40]: Leaf { key: Disk[25], link: Disk[34] }\n\
-             Disk[43]: Radix { link: Disk[28], 1: Disk[37], 3: Disk[40] }\n\
-             Disk[63]: Root { radix: Disk[43] }\n"
+             Disk[23]: Key { key: 12 }\n\
+             Disk[26]: Key { key: 34 }\n\
+             Disk[29]: Link { value: 55, next: None }\n\
+             Disk[32]: Link { value: 77, next: None }\n\
+             Disk[35]: Link { value: 99, next: Disk[32] }\n\
+             Disk[38]: Leaf { key: Disk[23], link: Disk[32] }\n\
+             Disk[41]: Leaf { key: Disk[26], link: Disk[35] }\n\
+             Disk[44]: Radix { link: Disk[29], 1: Disk[38], 3: Disk[41] }\n\
+             Disk[64]: Root { radix: Disk[44] }\n"
         );
     }
 
@@ -1907,7 +1964,7 @@ mod tests {
         index.flush().expect("flush");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 33, root: Disk[11] }\n\
+            "Index { len: 34, root: Disk[11] }\n\
              Disk[1]: Key { key: 12 34 }\n\
              Disk[5]: Link { value: 5, next: None }\n\
              Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
@@ -1917,7 +1974,7 @@ mod tests {
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 33, root: Radix[0] }\n\
+            "Index { len: 34, root: Radix[0] }\n\
              Disk[1]: Key { key: 12 34 }\n\
              Disk[5]: Link { value: 5, next: None }\n\
              Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
@@ -1938,7 +1995,7 @@ mod tests {
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 33, root: Radix[0] }\n\
+            "Index { len: 34, root: Radix[0] }\n\
              Disk[1]: Key { key: 12 34 }\n\
              Disk[5]: Link { value: 5, next: None }\n\
              Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
@@ -1958,7 +2015,7 @@ mod tests {
         index.flush().expect("flush");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 74, root: Disk[52] }\n\
+            "Index { len: 75, root: Disk[52] }\n\
              Disk[1]: Key { key: 12 78 }\n\
              Disk[5]: Link { value: 5, next: None }\n\
              Disk[8]: Link { value: 7, next: None }\n\
@@ -1976,7 +2033,7 @@ mod tests {
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 32, root: Radix[0] }\n\
+            "Index { len: 33, root: Radix[0] }\n\
              Disk[1]: Key { key: 12 }\n\
              Disk[4]: Link { value: 5, next: None }\n\
              Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
@@ -1997,7 +2054,7 @@ mod tests {
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 32, root: Radix[0] }\n\
+            "Index { len: 33, root: Radix[0] }\n\
              Disk[1]: Key { key: 12 }\n\
              Disk[4]: Link { value: 5, next: None }\n\
              Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
@@ -2026,7 +2083,7 @@ mod tests {
             .expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 32, root: Radix[0] }\n\
+            "Index { len: 33, root: Radix[0] }\n\
              Disk[1]: ExtKey { start: 1, len: 2 }\n\
              Disk[4]: Link { value: 55, next: None }\n\
              Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
@@ -2183,6 +2240,18 @@ mod tests {
             };
             assert!(detected, "bit flip at {} is not detected", i);
         }
+    }
+
+    fn test_root_meta() {
+        let dir = TempDir::new("rootmeta").expect("tempdir");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
+        assert!(index.get_meta().is_empty());
+        let meta = vec![200; 4000];
+        index.set_meta(&meta);
+        assert_eq!(index.get_meta(), &meta[..]);
+        index.flush().expect("flush");
+        let index = open_opts().open(dir.path().join("a")).expect("open");
+        assert_eq!(index.get_meta(), &meta[..]);
     }
 
     quickcheck! {
