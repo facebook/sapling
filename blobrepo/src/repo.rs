@@ -23,7 +23,7 @@ use slog::{Discard, Drain, Logger};
 use time_ext::DurationExt;
 use uuid::Uuid;
 
-use blobstore::{Blobstore, MemcacheBlobstore, MemoizedBlobstore};
+use blobstore::{Blobstore, EagerMemblob, MemcacheBlobstore, MemoizedBlobstore};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
@@ -32,7 +32,6 @@ use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE
 use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ManifoldBlob;
-use memblob::EagerMemblob;
 use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileNodeId,
                       HgNodeHash, HgParents, Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest;

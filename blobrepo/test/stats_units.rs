@@ -15,7 +15,7 @@ use futures_ext::FutureExt;
 use slog::{self, Drain, Logger, OwnedKVList, Record, Serializer, KV};
 
 use blobrepo::BlobRepo;
-use memblob::LazyMemblob;
+use blobstore::LazyMemblob;
 use mercurial_types::RepoPath;
 
 use utils::{create_changeset_no_parents, run_future, upload_file_no_parents,

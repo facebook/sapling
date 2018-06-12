@@ -40,7 +40,6 @@ extern crate filenodes;
 #[macro_use]
 extern crate futures_ext;
 extern crate manifoldblob;
-extern crate memblob;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate mononoke_types;

@@ -43,7 +43,6 @@ if __name__ == '__main__':
 
 extern crate bookmarks;
 extern crate changesets;
-extern crate memblob;
 extern crate dbbookmarks;
 extern crate dieselfilenodes;
 extern crate mercurial_types;
@@ -61,13 +60,12 @@ use std::str::FromStr;
 use ascii::AsciiString;
 use bookmarks::{Bookmark, Bookmarks};
 use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
-use memblob::EagerMemblob;
 use dbbookmarks::SqliteDbBookmarks;
 use dieselfilenodes::SqliteFilenodes;
 use mercurial_types::{HgChangesetId, HgNodeHash, RepositoryId};
 use mononoke_types::BlobstoreBytes;
 use blobrepo::BlobRepo;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, EagerMemblob};
 use futures::future::Future;
 use slog::{Discard, Drain, Logger};
 use std::sync::Arc;

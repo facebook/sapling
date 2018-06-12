@@ -16,7 +16,7 @@ use futures_ext::{BoxFuture, StreamExt};
 
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgEntry,
                UploadHgNodeHash};
-use memblob::{EagerMemblob, LazyMemblob};
+use blobstore::{EagerMemblob, LazyMemblob};
 use mercurial_types::{manifest, FileType, HgBlob, HgNodeHash, RepoPath};
 use mononoke_types::DateTime;
 use std::sync::Arc;

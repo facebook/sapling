@@ -27,6 +27,9 @@ use mononoke_types::BlobstoreBytes;
 mod in_memory_cache;
 pub use in_memory_cache::MemoizedBlobstore;
 
+mod memblob;
+pub use memblob::{EagerMemblob, LazyMemblob};
+
 mod memcache_cache;
 pub use memcache_cache::MemcacheBlobstore;
 

@@ -4,16 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#![deny(warnings)]
-#![feature(never_type)]
-
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-
-extern crate blobstore;
-extern crate mononoke_types;
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -21,8 +11,9 @@ use failure::Error;
 use futures::future::{lazy, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobstore::Blobstore;
 use mononoke_types::BlobstoreBytes;
+
+use Blobstore;
 
 /// In-memory "blob store"
 ///

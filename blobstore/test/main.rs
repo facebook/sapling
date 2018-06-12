@@ -17,7 +17,6 @@ extern crate tempdir;
 
 extern crate blobstore;
 extern crate fileblob;
-extern crate memblob;
 extern crate mononoke_types;
 extern crate rocksblob;
 
@@ -25,9 +24,8 @@ use bytes::Bytes;
 use futures::Future;
 use tempdir::TempDir;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, EagerMemblob};
 use fileblob::Fileblob;
-use memblob::EagerMemblob;
 use mononoke_types::BlobstoreBytes;
 use rocksblob::Rocksblob;
 
