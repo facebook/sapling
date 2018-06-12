@@ -66,11 +66,7 @@ def metaedit(ui, repo, *revs, **opts):
             raise error.Abort(_("revisions must be specified with --fold"))
         revs = ["."]
 
-    wlock = lock = None
-    try:
-        wlock = repo.wlock()
-        lock = repo.lock()
-
+    with repo.wlock(), repo.lock():
         revs = scmutil.revrange(repo, revs)
 
         if opts["fold"]:
@@ -193,8 +189,6 @@ def metaedit(ui, repo, *revs, **opts):
             ui.status(_("%i changesets folded\n") % len(revs))
         if newp1 is not None:
             hg.update(repo, newp1)
-    finally:
-        lockmod.release(lock, wlock)
 
 
 def _histediting(repo):
