@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate atomicwrites;
 extern crate byteorder;
 extern crate fs2;
@@ -16,6 +18,7 @@ pub mod base16;
 mod checksum_table;
 pub mod index;
 mod lock;
+mod log;
 mod utils;
 
 pub use index::Index;
