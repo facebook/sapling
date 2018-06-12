@@ -66,13 +66,6 @@ impl<'a> RawCSBlob<'a> {
 #[derive(Debug)]
 pub struct EnvelopeBlob(Bytes);
 
-impl EnvelopeBlob {
-    #[deprecated(note = "this should only be used by blobimport")]
-    pub fn new<B: Into<Bytes>>(data: B) -> Self {
-        EnvelopeBlob(data.into())
-    }
-}
-
 impl AsRef<[u8]> for EnvelopeBlob {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()

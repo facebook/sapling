@@ -15,21 +15,20 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-use bytes::Bytes;
 use futures::{Async, IntoFuture, Poll, Stream};
 use futures::future;
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{fncache_fsencode, simple_fsencode, HgBlobNode, HgChangesetId, HgEntryId,
-                      HgManifestId, HgNodeHash, MPath, MPathElement, RepoPath, NULL_HASH};
+use mercurial_types::{fncache_fsencode, simple_fsencode, HgChangesetId, HgManifestId, HgNodeHash,
+                      MPath, MPathElement, RepoPath};
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
 pub use changeset::RevlogChangeset;
 use errors::*;
 pub use manifest::RevlogManifest;
-use revlog::{self, RevIdx, Revlog, RevlogIter};
+use revlog::{Revlog, RevlogIter};
 
 const DEFAULT_LOGS_CAPACITY: usize = 1000000;
 
@@ -314,45 +313,6 @@ impl RevlogRepo {
         } else {
             unimplemented!();
         }
-    }
-}
-
-#[deprecated(note = "This is going to be deleted soon. It is used only in blobimport crate")]
-pub trait RevlogRepoBlobimportExt {
-    fn get_changelog_entry_by_id(&self, id: &HgEntryId) -> Result<revlog::Entry>;
-
-    fn get_changelog_entry_by_idx(&self, revidx: RevIdx) -> Result<revlog::Entry>;
-
-    fn get_manifest_blob_by_id(&self, nodeid: &HgNodeHash) -> Result<HgBlobNode>;
-
-    fn get_path_revlog(&self, path: &RepoPath) -> Result<Revlog>;
-}
-
-#[allow(deprecated)]
-impl RevlogRepoBlobimportExt for RevlogRepo {
-    fn get_changelog_entry_by_id(&self, id: &HgEntryId) -> Result<revlog::Entry> {
-        self.changelog.get_entry_by_id(&id)
-    }
-
-    fn get_changelog_entry_by_idx(&self, revidx: RevIdx) -> Result<revlog::Entry> {
-        self.changelog.get_entry(revidx)
-    }
-
-    fn get_manifest_blob_by_id(&self, nodeid: &HgNodeHash) -> Result<HgBlobNode> {
-        // It's possible that commit has null pointer to manifest hash.
-        // In that case we want to return empty blobnode
-        if nodeid == &NULL_HASH {
-            Ok(HgBlobNode::new(Bytes::new(), None, None))
-        } else {
-            let manifest = self.get_path_revlog(&RepoPath::root())?;
-            manifest
-                .get_idx_by_nodeid(nodeid)
-                .and_then(|idx| manifest.get_rev(idx))
-        }
-    }
-
-    fn get_path_revlog(&self, path: &RepoPath) -> Result<Revlog> {
-        RevlogRepo::get_path_revlog(self, path)
     }
 }
 

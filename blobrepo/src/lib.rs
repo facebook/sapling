@@ -66,9 +66,7 @@ mod repo_commit;
 
 pub use errors::*;
 
-// TODO(luk): T28348119 ChangesetContent is made publicly visible here for blobimport, once it's
-// replaced by new blobimport it should be private again
-pub use changeset::{BlobChangeset, ChangesetContent};
+pub use changeset::BlobChangeset;
 pub use file::HgBlobEntry;
 pub use manifest::BlobManifest;
 pub use repo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, CreateChangeset, UploadHgEntry,
@@ -76,7 +74,4 @@ pub use repo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, CreateChangeset, Uplo
 pub use repo_commit::ChangesetHandle;
 // TODO: This is exported for testing - is this the right place for it?
 pub use repo_commit::compute_changed_files;
-//
-// TODO: (jsgf) T21597565 This is exposed here for blobimport -- don't use it for anything else.
-
 pub use utils::RawNodeBlob;
