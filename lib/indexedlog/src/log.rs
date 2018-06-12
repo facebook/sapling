@@ -37,6 +37,7 @@
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use index::{self, Index, InsertKey, LeafValueIter};
+use lock::ScopedFileLock;
 use memmap::Mmap;
 use std::collections::BTreeMap;
 use std::fs;
@@ -45,6 +46,13 @@ use std::ops::Range;
 use std::path::{Path, PathBuf};
 use utils::xxhash;
 use vlqencoding::{VLQDecode, VLQEncode};
+
+// Constants about file names
+const PRIMARY_FILE: &str = "log";
+const PRIMARY_HEADER: &[u8] = b"indexedlog0\0";
+const PRIMARY_START_OFFSET: u64 = 12; // PRIMARY_HEADER.len() as u64;
+const META_FILE: &str = "meta";
+const INDEX_FILE_PREFIX: &str = "index-";
 
 /// An append-only storage with indexes and integrity checks.
 pub struct Log {
@@ -116,27 +124,108 @@ impl Log {
     /// If `index_defs` ever changes, the caller needs to make sure the `name` is changed
     /// if `func` is changed.
     pub fn open<P: AsRef<Path>>(dir: P, index_defs: Vec<IndexDef>) -> io::Result<Self> {
-        unimplemented!()
+        let dir = dir.as_ref();
+        let meta = Self::load_or_create_meta(dir)?;
+        let (disk_buf, indexes) = Self::load_log_and_indexes(dir, &meta, &index_defs)?;
+        let mut log = Log {
+            dir: dir.to_path_buf(),
+            disk_buf,
+            mem_buf: Vec::new(),
+            meta,
+            indexes,
+            index_defs,
+        };
+        log.update_indexes_for_on_disk_entries()?;
+        Ok(log)
     }
 
     /// Append an entry in-memory. To write it on disk, use `flush`.
     pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> io::Result<()> {
-        unimplemented!()
+        let data = data.as_ref();
+        let offset = self.meta.primary_len + self.mem_buf.len() as u64;
+        // ENTRY := LEN(CONTENT) + XXHASH64(CONTENT) + CONTENT
+        self.mem_buf.write_vlq(data.len())?;
+        self.mem_buf.write_vlq(xxhash(data))?;
+        self.mem_buf.write_all(data)?;
+        self.update_indexes_for_in_memory_entry(data, offset)?;
+        Ok(())
     }
 
     /// Write in-memory pending entries to disk.
     pub fn flush(&mut self) -> io::Result<()> {
-        unimplemented!()
+        // Take the lock so no other `flush` runs for this directory. Then reload meta, append
+        // log, then update indexes.
+        let mut dir_file = fs::OpenOptions::new().read(true).open(&self.dir)?;
+        let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+
+        // Step 1: Reload metadata to get the latest view of the files.
+        let mut meta = Self::load_or_create_meta(&self.dir)?;
+
+        // Step 2: Append to the primary log.
+        unimplemented!();
+
+        // Step 3: Reload primary log and indexes to get the latest view.
+        let (disk_buf, indexes) = Self::load_log_and_indexes(&self.dir, &meta, &self.index_defs)?;
+        self.disk_buf = disk_buf;
+        self.indexes = indexes;
+
+        // Step 4: Update the indexes. Optionally flush them.
+        self.update_indexes_for_on_disk_entries()?;
+
+        // Step 5: Write the updated meta file.
+        self.meta.write_file(self.dir.join(META_FILE))?;
+
+        Ok(())
     }
 
     /// Lookup an entry using the given index. Return an iterator of `Result<&[u8]>`.
     /// `open` decides available `index_id`s.
     pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> io::Result<LogLookupIter> {
-        unimplemented!()
+        if let Some(index) = self.indexes.get(index_id) {
+            assert!(key.as_ref().len() > 0);
+            let link_offset = index.get(&key)?;
+            let inner_iter = link_offset.values(index);
+            Ok(LogLookupIter {
+                inner_iter,
+                errored: false,
+                log: self,
+            })
+        } else {
+            let msg = format!("invalid index_id {} (len={})", index_id, self.indexes.len());
+            Err(io::Error::new(io::ErrorKind::InvalidData, msg))
+        }
     }
 
     /// Return an iterator for all entries.
     pub fn iter(&self) -> LogIter {
+        LogIter {
+            log: self,
+            next_offset: PRIMARY_START_OFFSET,
+            errored: false,
+        }
+    }
+
+    /// Build in-memory index for the newly added entry.
+    fn update_indexes_for_in_memory_entry(&mut self, data: &[u8], offset: u64) -> io::Result<()> {
+        unimplemented!()
+    }
+
+    /// Build in-memory index so they cover all entries stored in self.disk_buf.
+    fn update_indexes_for_on_disk_entries(&mut self) -> io::Result<()> {
+        unimplemented!()
+    }
+
+    /// Read `LogMetadata` from given directory. Create an empty one on demand.
+    fn load_or_create_meta(dir: &Path) -> io::Result<LogMetadata> {
+        unimplemented!()
+    }
+
+    /// Read (log.disk_buf, indexes) from the directory using the metadata.
+    fn load_log_and_indexes(
+        dir: &Path,
+        meta: &LogMetadata,
+        index_defs: &Vec<IndexDef>,
+    ) -> io::Result<(Mmap, Vec<Index>)> {
         unimplemented!()
     }
 }
