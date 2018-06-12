@@ -100,6 +100,7 @@ from mercurial import (
     bundlerepo,
     changegroup,
     commands,
+    debugcommands,
     error,
     exchange,
     extensions,
@@ -212,6 +213,9 @@ def uisetup(ui):
     wireproto.wirepeer.gettreepack = clientgettreepack
     localrepo.localpeer.gettreepack = localgettreepack
 
+    extensions.wrapfunction(
+        debugcommands, "_findtreemanifest", _debugcmdfindtreemanifest
+    )
     extensions.wrapfunction(repair, "_collectfiles", collectfiles)
     extensions.wrapfunction(repair, "striptrees", striptrees)
     extensions.wrapfunction(repair, "_collectmanifest", _collectmanifest)
@@ -2251,6 +2255,20 @@ def serverrepack(repo, incremental=False, options=None):
 
     revlogstore.setrepacklinkrevrange(startrev, endrev)
     _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY, options=options)
+
+
+def _debugcmdfindtreemanifest(orig, ctx):
+    manifest = ctx.manifest()
+    # Check if the manifest we have is a treemanifest.
+    if isinstance(manifest, cstore.treemanifest):
+        return manifest
+    try:
+        # Look up the treemanifest in the treemanifestlog.  There might not be
+        # one, so ignore any failures.
+        return ctx.repo().manifestlog.treemanifestlog.get("", ctx.manifestnode()).read()
+    except Exception:
+        pass
+    return orig(ctx)
 
 
 def collectfiles(orig, repo, striprev):

@@ -5,23 +5,23 @@
 
 Check basic case collisions
   $ hg debugcheckcasecollisions DIRA/subdira/FILE1 DIRA/SUBDIRB/file2 DIRB/FILE3
-  dirA/subdirA/file1 conflicts with DIRA/subdira/FILE1
-  dirA/subdirA (directory for dirA/subdirA/file1) conflicts with DIRA/subdira (directory for DIRA/subdira/FILE1)
-  dirA (directory for dirA/subdirA/file1) conflicts with DIRA (directory for DIRA/SUBDIRB/file2)
-  dirA/subdirB/file2 conflicts with DIRA/SUBDIRB/file2
-  dirA/subdirB (directory for dirA/subdirB/file2) conflicts with DIRA/SUBDIRB (directory for DIRA/SUBDIRB/file2)
-  dirB/file3 conflicts with DIRB/FILE3
-  dirB (directory for dirB/file3) conflicts with DIRB (directory for DIRB/FILE3)
+  DIRA/subdira/FILE1 conflicts with dirA/subdirA/file1
+  DIRA/subdira (directory for DIRA/subdira/FILE1) conflicts with dirA/subdirA (directory for dirA/subdirA/file1)
+  DIRA (directory for DIRA/SUBDIRB/file2) conflicts with dirA (directory for dirA/subdirA/file1)
+  DIRA/SUBDIRB/file2 conflicts with dirA/subdirB/file2
+  DIRA/SUBDIRB (directory for DIRA/SUBDIRB/file2) conflicts with dirA/subdirB (directory for dirA/subdirB/file2)
+  DIRB/FILE3 conflicts with dirB/file3
+  DIRB (directory for DIRB/FILE3) conflicts with dirB (directory for dirB/file3)
   [1]
 
 Check a dir that collides with a file
   $ hg debugcheckcasecollisions FILE4/foo
-  file4 conflicts with FILE4 (directory for FILE4/foo)
+  FILE4 (directory for FILE4/foo) conflicts with file4
   [1]
 
 Check a file that collides with a dir
   $ hg debugcheckcasecollisions DIRb
-  dirB (directory for dirB/file3) conflicts with DIRb
+  DIRb conflicts with dirB (directory for dirB/file3)
   [1]
 
 Check self-conflicts
@@ -33,5 +33,5 @@ Check self-conflicts
 
 Check against a particular revision
   $ hg debugcheckcasecollisions -r 0 FILE4
-  file4 conflicts with FILE4
+  FILE4 conflicts with file4
   [1]

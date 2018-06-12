@@ -2922,6 +2922,10 @@ def debugprogress(ui, number, spinner=False, nototal=False, bytes=False):
                 p.value = (i, "item %s" % i)
 
 
+def _findtreemanifest(ctx):
+    return None
+
+
 @command(
     b"debugcheckcasecollisions",
     [("r", "rev", "", _("check the specified revision"), _("REV"))],
@@ -2960,20 +2964,38 @@ def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
                 lowertfs[lowertf] = (tf, tff)
 
     # Now check nothing in the manifest (including path prefixes) conflict
-    # with anything in the list of files.
-    seen = set()
-    for mfnf in ctx.manifest().iterkeys():
-        for mfn in [mfnf] + list(util.finddirs(mfnf)):
-            if mfn in seen:
-                continue
-            seen.add(mfn)
-            lowermfn = mfn.lower()
-            if lowermfn in lowertfs and mfn != lowertfs[lowermfn][0]:
-                tf, tff = lowertfs[lowermfn]
-                ui.status(
-                    _("%s conflicts with %s\n")
-                    % (name(mfn, mfnf), name(*lowertfs[lowermfn]))
-                )
-                res = 1
+    # with anything in the list of files.  We can do this faster with a
+    # treemanifest, so let's see if we've got one of those.
+    treemanifest = _findtreemanifest(ctx)
+    if treemanifest and util.safehasattr(treemanifest, "listdir"):
+        for lowertf, (tf, tff) in lowertfs.items():
+            if "/" in tf:
+                dir, base = tf.rsplit("/", 1)
+            else:
+                dir, base = "", tf
+            dirlist = treemanifest.listdir(dir)
+            if dirlist:
+                lowerdirlist = {f.lower(): f for f in dirlist}
+                conflict = lowerdirlist.get(base.lower())
+                if conflict is not None and base != conflict:
+                    if dir:
+                        conflict = dir + "/" + conflict
+                    ui.status(_("%s conflicts with %s\n") % (name(tf, tff), conflict))
+                    res = 1
+    else:
+        seen = set()
+        for mfnf in ctx.manifest().iterkeys():
+            for mfn in [mfnf] + list(util.finddirs(mfnf)):
+                if mfn in seen:
+                    continue
+                seen.add(mfn)
+                lowermfn = mfn.lower()
+                if lowermfn in lowertfs and mfn != lowertfs[lowermfn][0]:
+                    tf, tff = lowertfs[lowermfn]
+                    ui.status(
+                        _("%s conflicts with %s\n")
+                        % (name(*lowertfs[lowermfn]), name(mfn, mfnf))
+                    )
+                    res = 1
 
     return res
