@@ -52,14 +52,14 @@ class GlobNode {
   // prefetched via the ObjectStore layer.  This will not change the
   // materialization or overlay state for children that already have
   // inodes assigned.
-  folly::Future<std::unordered_set<RelativePath>> evaluate(
+  folly::Future<std::vector<RelativePath>> evaluate(
       const ObjectStore* store,
       RelativePathPiece rootPath,
       TreeInodePtr root,
       PrefetchList fileBlobsToPrefetch);
 
   // This is the Tree version of the method above
-  folly::Future<std::unordered_set<RelativePath>> evaluate(
+  folly::Future<std::vector<RelativePath>> evaluate(
       const ObjectStore* store,
       RelativePathPiece rootPath,
       const std::shared_ptr<const Tree>& tree,
@@ -90,15 +90,14 @@ class GlobNode {
   // The difference is because a pattern like "**/foo" must be recursively
   // matched against all the children of the inode.
   template <typename ROOT>
-  folly::Future<std::unordered_set<RelativePath>>
-  evaluateRecursiveComponentImpl(
+  folly::Future<std::vector<RelativePath>> evaluateRecursiveComponentImpl(
       const ObjectStore* store,
       RelativePathPiece rootPath,
       ROOT&& root,
       PrefetchList fileBlobsToPrefetch);
 
   template <typename ROOT>
-  folly::Future<std::unordered_set<RelativePath>> evaluateImpl(
+  folly::Future<std::vector<RelativePath>> evaluateImpl(
       const ObjectStore* store,
       RelativePathPiece rootPath,
       ROOT&& root,

@@ -17,7 +17,6 @@ using folly::StringPiece;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
-using std::unordered_set;
 using std::vector;
 
 namespace facebook {
@@ -265,14 +264,14 @@ void GlobNode::parse(StringPiece pattern) {
 }
 
 template <typename ROOT>
-Future<unordered_set<RelativePath>> GlobNode::evaluateImpl(
+Future<vector<RelativePath>> GlobNode::evaluateImpl(
     const ObjectStore* store,
     RelativePathPiece rootPath,
     ROOT&& root,
     GlobNode::PrefetchList fileBlobsToPrefetch) {
-  unordered_set<RelativePath> results;
+  vector<RelativePath> results;
   vector<std::pair<PathComponentPiece, GlobNode*>> recurse;
-  std::vector<Future<unordered_set<RelativePath>>> futures;
+  vector<Future<vector<RelativePath>>> futures;
   futures.emplace_back(evaluateRecursiveComponentImpl(
       store, rootPath, root, fileBlobsToPrefetch));
 
@@ -286,7 +285,7 @@ Future<unordered_set<RelativePath>> GlobNode::evaluateImpl(
         if (entry) {
           // Matched!
           if (node->isLeaf_) {
-            results.emplace((rootPath + name));
+            results.emplace_back((rootPath + name));
             continue;
           }
 
@@ -320,7 +319,7 @@ Future<unordered_set<RelativePath>> GlobNode::evaluateImpl(
           auto name = root.entryName(entry);
           if (node->alwaysMatch_ || node->matcher_.match(name.stringPiece())) {
             if (node->isLeaf_) {
-              results.emplace((rootPath + name));
+              results.emplace_back((rootPath + name));
               continue;
             }
             // Not the leaf of a pattern; if this is a dir, we need to
@@ -371,15 +370,18 @@ Future<unordered_set<RelativePath>> GlobNode::evaluateImpl(
   }
   return folly::collect(futures).then(
       [shadowResults = std::move(results)](
-          std::vector<std::unordered_set<RelativePath>>&& matchVector) mutable {
+          vector<vector<RelativePath>>&& matchVector) mutable {
         for (auto& matches : matchVector) {
-          shadowResults.insert(matches.begin(), matches.end());
+          shadowResults.insert(
+              shadowResults.end(),
+              std::make_move_iterator(matches.begin()),
+              std::make_move_iterator(matches.end()));
         }
         return shadowResults;
       });
 }
 
-Future<unordered_set<RelativePath>> GlobNode::evaluate(
+Future<vector<RelativePath>> GlobNode::evaluate(
     const ObjectStore* store,
     RelativePathPiece rootPath,
     TreeInodePtr root,
@@ -388,7 +390,7 @@ Future<unordered_set<RelativePath>> GlobNode::evaluate(
       store, rootPath, TreeInodePtrRoot(root), fileBlobsToPrefetch);
 }
 
-folly::Future<std::unordered_set<RelativePath>> GlobNode::evaluate(
+folly::Future<vector<RelativePath>> GlobNode::evaluate(
     const ObjectStore* store,
     RelativePathPiece rootPath,
     const std::shared_ptr<const Tree>& tree,
@@ -435,18 +437,18 @@ GlobNode* GlobNode::lookupToken(
 }
 
 template <typename ROOT>
-Future<unordered_set<RelativePath>> GlobNode::evaluateRecursiveComponentImpl(
+Future<vector<RelativePath>> GlobNode::evaluateRecursiveComponentImpl(
     const ObjectStore* store,
     RelativePathPiece rootPath,
     ROOT&& root,
     GlobNode::PrefetchList fileBlobsToPrefetch) {
-  unordered_set<RelativePath> results;
+  vector<RelativePath> results;
   if (recursiveChildren_.empty()) {
     return results;
   }
 
   vector<RelativePath> subDirNames;
-  std::vector<Future<unordered_set<RelativePath>>> futures;
+  vector<Future<vector<RelativePath>>> futures;
   {
     auto contents = root.lockContents();
     for (auto& entry : root.iterate(contents)) {
@@ -455,7 +457,7 @@ Future<unordered_set<RelativePath>> GlobNode::evaluateRecursiveComponentImpl(
       for (auto& node : recursiveChildren_) {
         if (node->alwaysMatch_ ||
             node->matcher_.match(candidateName.stringPiece())) {
-          results.emplace(candidateName);
+          results.emplace_back(candidateName);
           // No sense running multiple matches for this same file.
           break;
         }
@@ -500,9 +502,12 @@ Future<unordered_set<RelativePath>> GlobNode::evaluateRecursiveComponentImpl(
 
   return folly::collect(futures).then(
       [shadowResults = std::move(results)](
-          std::vector<std::unordered_set<RelativePath>>&& matchVector) mutable {
+          vector<vector<RelativePath>>&& matchVector) mutable {
         for (auto& matches : matchVector) {
-          shadowResults.insert(matches.begin(), matches.end());
+          shadowResults.insert(
+              shadowResults.end(),
+              std::make_move_iterator(matches.begin()),
+              std::make_move_iterator(matches.end()));
         }
         return shadowResults;
       });

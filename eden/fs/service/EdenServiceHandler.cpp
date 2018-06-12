@@ -585,13 +585,17 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
           .then([edenMount,
                  fileBlobsToPrefetch,
                  suppressFileList = params->suppressFileList](
-                    std::unordered_set<RelativePath>&& paths) {
+                    std::vector<RelativePath>&& paths) {
             auto out = std::make_unique<Glob>();
 
             if (!suppressFileList) {
+              std::unordered_set<RelativePathPiece> seenPaths;
               for (auto& fileName : paths) {
-                out->matchingFiles.emplace_back(
-                    fileName.stringPiece().toString());
+                auto ret = seenPaths.insert(fileName);
+                if (ret.second) {
+                  out->matchingFiles.emplace_back(
+                      fileName.stringPiece().toString());
+                }
               }
             }
             if (fileBlobsToPrefetch) {
