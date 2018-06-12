@@ -96,6 +96,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                 rs.write('\n')
 
         indent += 1
+        heads = set()
         with open(os.path.join(args.source, "topology")) as f:
             for line in f.readlines():
                 line = line.strip()
@@ -108,6 +109,8 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                     'let cs_id = HgChangesetId::new(HgNodeHash::from_str("{}").unwrap());'.
                     format(commit_hash)
                 )
+                heads.add(commit_hash)
+
                 writeline('let parents = vec![')
                 if len(split) > 1:
                     indent += 1
@@ -116,6 +119,8 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                             'HgChangesetId::new(HgNodeHash::from_str("{}").unwrap()),'.
                             format(p)
                         )
+                        # Any hashes that are parents aren't heads.
+                        heads.discard(p)
                     indent -= 1
                 writeline('];')
 
@@ -132,8 +137,9 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                 writeline("")
             writeline("")
 
-        for head in glob.glob(os.path.join(args.source, "heads", "head-*")):
-            head = head[-40:]
+        # TODO: (rain1) T30397209 Dump and replay the bookmarks sqlite table
+        # instead: https://stackoverflow.com/q/6677540
+        for head in heads:
             writeline(
                 '''book_txn.create(
                     &Bookmark::new("head-{0}".to_string()).unwrap(),
@@ -143,6 +149,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                 ).expect("Bookmark creation failed");'''.format(head)
             )
         writeline("")
+
         blob_prefix_len = len(os.path.join(args.source, "blobs", "blob-"))
         for blob in glob.glob(os.path.join(args.source, "blobs", "blob-*")):
             key = blob[blob_prefix_len:]
