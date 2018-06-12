@@ -141,7 +141,8 @@ struct treemanifest {
       const std::string& filename,
       std::string* resultnode,
       const char** resultflag,
-      FindResultType resulttype = RESULT_FILE);
+      FindResultType resulttype = RESULT_FILE,
+      ManifestPtr* resultmanifest = nullptr);
 
   SetResult set(
       const std::string& filename,

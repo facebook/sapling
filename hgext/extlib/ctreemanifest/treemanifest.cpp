@@ -292,9 +292,12 @@ FindResult treemanifest::find(
 }
 
 struct GetResult {
+  ManifestFetcher& fetcher;
+  const std::string& filename;
   std::string* resultnode;
   const char** resultflag;
   FindResultType resulttype;
+  ManifestPtr* resultmanifest;
 };
 
 static FindResult get_callback(
@@ -323,6 +326,11 @@ static FindResult get_callback(
   }
 
   *result->resultflag = entry.flag;
+  if (result->resultmanifest && entry.flag &&
+      *entry.flag == MANIFEST_DIRECTORY_FLAG) {
+    *result->resultmanifest = entry.get_manifest(
+        result->fetcher, result->filename.c_str(), result->filename.size());
+  }
 
   return FIND_PATH_OK;
 }
@@ -331,23 +339,20 @@ bool treemanifest::get(
     const std::string& filename,
     std::string* resultnode,
     const char** resultflag,
-    FindResultType resulttype) {
+    FindResultType resulttype,
+    ManifestPtr* resultmanifest) {
   getRootManifest();
 
-  GetResult extras = {resultnode, resultflag, resulttype};
+  GetResult extras = {
+      fetcher, filename, resultnode, resultflag, resulttype, resultmanifest};
   PathIterator pathiter(filename);
   FindContext changes;
   changes.nodebuffer.reserve(BIN_NODE_SIZE);
   changes.extras = &extras;
 
-  ManifestPtr resultManifest;
+  ManifestPtr newManifest;
   FindResult result = this->find(
-      &this->root,
-      pathiter,
-      BASIC_WALK,
-      &changes,
-      get_callback,
-      &resultManifest);
+      &this->root, pathiter, BASIC_WALK, &changes, get_callback, &newManifest);
 
   return result == FIND_PATH_OK;
 }

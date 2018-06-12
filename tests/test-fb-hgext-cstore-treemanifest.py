@@ -549,6 +549,24 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertTrue(a.hasdir("abc"))
         self.assertFalse(a.hasdir("xyz"))
 
+    def testListDir(self):
+        a = cstore.treemanifest(FakeDataStore())
+        zflags = hashflags()
+        a.set("a/b/x", *zflags)
+        a.set("a/b/y/_", *zflags)
+        a.set("a/c/z", *zflags)
+        a.set("1", *zflags)
+        self.assertEquals(a.listdir(""), ["1", "a"])
+        self.assertEquals(a.listdir("a"), ["b", "c"])
+        self.assertEquals(a.listdir("a/b"), ["x", "y"])
+        self.assertEquals(a.listdir("a/b/"), ["x", "y"])
+        self.assertEquals(a.listdir("a/b/y"), ["_"])
+        self.assertEquals(a.listdir("a/c"), ["z"])
+        self.assertEquals(a.listdir("foo"), None)
+        self.assertEquals(a.listdir("1"), None)
+        self.assertEquals(a.listdir("1/"), None)
+        self.assertEquals(a.listdir("a/b/y/_"), None)
+
     def testContains(self):
         a = cstore.treemanifest(FakeDataStore())
         zflags = hashflags()

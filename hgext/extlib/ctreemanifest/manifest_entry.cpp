@@ -162,8 +162,9 @@ ManifestPtr ManifestEntry::get_manifest(
     std::string binnode = binfromhex(node);
     // Chop off the trailing slash
     if (pathlen > 0) {
-      assert(path[pathlen - 1] == '/');
-      --pathlen;
+      if (path[pathlen - 1] == '/') {
+        --pathlen;
+      }
     }
     this->resolved = fetcher.get(path, pathlen, binnode);
   }

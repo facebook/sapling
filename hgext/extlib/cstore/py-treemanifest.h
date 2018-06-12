@@ -560,6 +560,54 @@ static PyObject* treemanifest_hasdir(py_treemanifest* self, PyObject* args) {
 }
 
 /**
+ * Implementation of treemanifest.listdir
+ * Takes a directory name and returns a list of files and directories in
+ * that directory.  If the directory doesn't exist, or is a file, returns
+ * None.
+ */
+static PyObject* treemanifest_listdir(py_treemanifest* self, PyObject* args) {
+  char* directory;
+  Py_ssize_t directorylen;
+
+  if (!PyArg_ParseTuple(args, "s#", &directory, &directorylen)) {
+    return NULL;
+  }
+
+  std::string directorystr(directory, directorylen);
+  ManifestPtr manifest;
+
+  if (directorystr.empty()) {
+    manifest = self->tm.getRootManifest();
+  } else {
+    std::string resultnode;
+    const char* resultflag = NULL;
+    try {
+      self->tm.get(
+          directorystr, &resultnode, &resultflag, RESULT_DIRECTORY, &manifest);
+    } catch (const pyexception& ex) {
+      return NULL;
+    }
+  }
+
+  if (manifest) {
+    PyObject* files = PyList_New(manifest->children());
+    Py_ssize_t i = 0;
+    for (ManifestIterator iterator = manifest->getIterator();
+         !iterator.isfinished();
+         iterator.next()) {
+      ManifestEntry* entry = iterator.currentvalue();
+      PyList_SetItem(
+          files,
+          i++,
+          PyString_FromStringAndSize(entry->filename, entry->filenamelen));
+    }
+    return files;
+  } else {
+    Py_RETURN_NONE;
+  }
+}
+
+/**
  * Implementation of treemanifest.find()
  * Takes a filename and returns a tuple of the binary hash and flag,
  * or (None, None) if it doesn't exist.
@@ -1641,6 +1689,11 @@ static PyMethodDef treemanifest_methods[] = {
      (PyCFunction)treemanifest_keys,
      METH_NOARGS,
      "list of the file names in this manifest."},
+    {"listdir",
+     (PyCFunction)treemanifest_listdir,
+     METH_VARARGS,
+     "returns a list of the files in a directory, or None if the directory "
+     "doesn't exist"},
     {"matches",
      (PyCFunction)treemanifest_matches,
      METH_VARARGS,
