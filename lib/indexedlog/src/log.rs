@@ -296,6 +296,53 @@ impl<'a> EntryResult<'a> {
     }
 }
 
+impl<'a> Iterator for LogLookupIter<'a> {
+    type Item = io::Result<&'a [u8]>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.errored {
+            return None;
+        }
+        match self.inner_iter.next() {
+            None => None,
+            Some(Err(err)) => {
+                self.errored = true;
+                Some(Err(err))
+            }
+            Some(Ok(offset)) => match self.log.read_entry(offset) {
+                Ok(Some(entry)) => Some(Ok(entry.data)),
+                Ok(None) => None,
+                Err(err) => {
+                    self.errored = true;
+                    Some(Err(err))
+                }
+            },
+        }
+    }
+}
+
+impl<'a> Iterator for LogIter<'a> {
+    type Item = io::Result<&'a [u8]>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.errored {
+            return None;
+        }
+        match self.log.read_entry(self.next_offset) {
+            Err(e) => {
+                self.errored = true;
+                Some(Err(e))
+            }
+            Ok(Some(entry_result)) => {
+                assert!(entry_result.next_offset > self.next_offset);
+                self.next_offset = entry_result.next_offset;
+                Some(Ok(entry_result.data))
+            }
+            Ok(None) => None,
+        }
+    }
+}
+
 impl LogMetadata {
     const HEADER: &'static [u8] = b"meta\0";
 
