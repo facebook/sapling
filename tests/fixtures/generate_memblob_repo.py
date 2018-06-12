@@ -111,18 +111,14 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                 writeline('let parents = vec![')
                 if len(split) > 1:
                     indent += 1
-                    for p in split[1:-1]:
+                    for p in split[1:]:
                         writeline(
-                            'HgChangesetId::new(HgNodeHash::from_str("{}").unwrap()), '.
+                            'HgChangesetId::new(HgNodeHash::from_str("{}").unwrap()),'.
                             format(p)
                         )
-
-                    writeline(
-                        'HgChangesetId::new(HgNodeHash::from_str("{}").unwrap())'.
-                        format(split[-1])
-                    )
                     indent -= 1
                 writeline('];')
+
                 writeline('let cs_insert = ChangesetInsert {')
                 indent += 1
                 writeline('repo_id,')
