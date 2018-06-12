@@ -52,12 +52,18 @@ class DoctorTest(unittest.TestCase):
             # In edenfs_path2, we will break the inotify check and the Nuclide
             # subscriptions check.
             edenfs_path2 = os.path.join(tmp_dir, "path2")
+            # In edenfs_path3, we do not create the .hg directory
+            edenfs_path3 = os.path.join(tmp_dir, "path3")
 
-            # Assume both paths are used as root folders in a connected Nuclide.
-            mock_get_roots_for_nuclide.return_value = {edenfs_path1, edenfs_path2}
+            # Assume all paths are used as root folders in a connected Nuclide.
+            mock_get_roots_for_nuclide.return_value = {
+                edenfs_path1,
+                edenfs_path2,
+                edenfs_path3,
+            }
 
             calls.append(call(["watch-list"]))
-            side_effects.append({"roots": [edenfs_path1, edenfs_path2]})
+            side_effects.append({"roots": [edenfs_path1, edenfs_path2, edenfs_path3]})
 
             calls.append(call(["watch-project", edenfs_path1]))
             side_effects.append({"watcher": "eden"})
@@ -81,6 +87,15 @@ class DoctorTest(unittest.TestCase):
                 _create_watchman_subscription(filewatcher_subscription=None)
             )
 
+            calls.append(call(["watch-project", edenfs_path3]))
+            side_effects.append({"watcher": "eden"})
+            calls.append(call(["debug-get-subscriptions", edenfs_path3]))
+            side_effects.append(
+                _create_watchman_subscription(
+                    filewatcher_subscription=f"filewatcher-{edenfs_path3}"
+                )
+            )
+
             mock_watchman.side_effect = side_effects
 
             out = io.StringIO()
@@ -101,10 +116,19 @@ class DoctorTest(unittest.TestCase):
                 "snapshot": "dcba" * 10,
                 "client-dir": "/I_DO_NOT_EXIST2",
             }
+            edenfs_path3_snapshot_hex = "1234" * 10
+            mount_paths[edenfs_path3] = {
+                "bind-mounts": {},
+                "mount": edenfs_path3,
+                "scm_type": "hg",
+                "snapshot": edenfs_path3_snapshot_hex,
+                "client-dir": "/I_DO_NOT_EXIST3",
+            }
             config = FakeConfig(mount_paths, is_healthy=True)
             config.get_thrift_client()._mounts = [
                 eden_ttypes.MountInfo(mountPoint=edenfs_path1),
                 eden_ttypes.MountInfo(mountPoint=edenfs_path2),
+                eden_ttypes.MountInfo(mountPoint=edenfs_path3),
             ]
 
             os.mkdir(edenfs_path1)
@@ -116,9 +140,12 @@ class DoctorTest(unittest.TestCase):
             with open(dirstate, "wb") as f:
                 eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
 
+            os.mkdir(edenfs_path3)
+
             mount_table = FakeMountTable()
             mount_table.stats[edenfs_path1] = mtab.MTStat(st_uid=os.getuid(), st_dev=11)
             mount_table.stats[edenfs_path2] = mtab.MTStat(st_uid=os.getuid(), st_dev=12)
+            mount_table.stats[edenfs_path3] = mtab.MTStat(st_uid=os.getuid(), st_dev=13)
             exit_code = doctor.cure_what_ails_you(
                 config, dry_run, out, mount_table, printer=printer
             )
@@ -145,8 +172,13 @@ This can cause file changes to fail to show up in Nuclide.
 Currently, the only workaround for this is to run
 "Nuclide Remote Projects: Kill And Restart" from the
 command palette in Atom.
+Performing 3 checks for {edenfs_path3}.
+{edenfs_path3}/.hg/dirstate is missing
+The most common cause of this is if you previously tried to manually remove this eden
+mount with "rm -rf".  You should instead remove it using "eden rm {edenfs_path3}",
+and can re-clone the checkout afterwards if desired.
 <yellow>Number of fixes made: 1.<reset>
-<red>Number of issues that could not be fixed: 2.<reset>
+<red>Number of issues that could not be fixed: 3.<reset>
 """,
             out.getvalue(),
         )

@@ -457,8 +457,25 @@ class SnapshotDirstateConsistencyCheck(Check):
             return self._report(CheckResultType.NO_CHECK_BECAUSE_EDEN_WAS_NOT_RUNNING)
 
         dirstate = os.path.join(self._path, ".hg", "dirstate")
-        with open(dirstate, "rb") as f:
-            parents, _tuples_dict, _copymap = eden.dirstate.read(f, dirstate)
+        try:
+            with open(dirstate, "rb") as f:
+                parents, _tuples_dict, _copymap = eden.dirstate.read(f, dirstate)
+        except OSError as ex:
+            if ex.errno == errno.ENOENT:
+                msg = f"""\
+{self._path}/.hg/dirstate is missing
+The most common cause of this is if you previously tried to manually remove this eden
+mount with "rm -rf".  You should instead remove it using "eden rm {self._path}",
+and can re-clone the checkout afterwards if desired.
+"""
+            else:
+                msg = f"""\
+Unable to access {self._path}/.hg/dirstate: {ex}
+Your mercurial data directory appears corrupted.
+Please report this issue in the Eden Users group.
+"""
+            return CheckResult(CheckResultType.FAILED_TO_FIX, msg)
+
         p1 = parents[0]
         self._p1_hex = binascii.hexlify(p1).decode("utf-8")
 
