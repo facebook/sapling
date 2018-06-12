@@ -3824,62 +3824,54 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         # we'll need this later
         targetsubs = sorted(s for s in wctx.substate if m(s))
 
-        if not m.always():
-            badfiles = set()
+        badfiles = set()
 
-            def badfn(path, msg):
-                if path in ctx.substate:
-                    return
-                # We only report errors about paths that do not exist in the original
-                # node.
-                #
-                # For other errors we normally will successfully revert the file anyway.
-                # This includes situations where the file was replaced by an unsupported
-                # file type (e.g., a FIFO, socket, or device node.
-                if path not in ctx:
-                    badfiles.add(path)
-                    msg = _("no such file in rev %s") % short(node)
-                    ui.warn("%s: %s\n" % (m.rel(path), msg))
+        def badfn(path, msg):
+            if path in ctx.substate:
+                return
+            # We only report errors about paths that do not exist in the original
+            # node.
+            #
+            # For other errors we normally will successfully revert the file anyway.
+            # This includes situations where the file was replaced by an unsupported
+            # file type (e.g., a FIFO, socket, or device node.
+            if path not in ctx:
+                badfiles.add(path)
+                msg = _("no such file in rev %s") % short(node)
+                ui.warn("%s: %s\n" % (m.rel(path), msg))
 
-            changes = repo.status(node1=node, match=matchmod.badmatch(m, badfn))
-            for kind in changes:
-                for abs in kind:
-                    names[abs] = m.rel(abs), m.exact(abs)
-
-            # Look for exact filename matches that were not returned in the results.
-            # These will not be returned if they are clean, but we want to include them
-            # to report them as not needing changes.
-            for abs in m.files():
-                if abs in names or abs in badfiles:
-                    continue
-                # Check to see if this looks like a file or directory.
-                # We don't need to report directories in the clean list.
-                try:
-                    st = repo.wvfs.lstat(abs)
-                    if stat.S_ISDIR(st.st_mode):
-                        continue
-                except OSError:
-                    # This is can occur if the file was locally removed and is
-                    # untracked, and did not exist in the node we are reverting from,
-                    # but does exist in the current commit.
-                    # Continue on and report this file as clean.
-                    pass
-
+        changes = repo.status(node1=node, match=matchmod.badmatch(m, badfn))
+        for kind in changes:
+            for abs in kind:
                 names[abs] = m.rel(abs), m.exact(abs)
-                if abs in wctx:
-                    changes.clean.append(abs)
-                else:
-                    # We don't really know if this file is unknown or ignored, but
-                    # fortunately this does not matter.  Revert treats unknown and
-                    # ignored exactly files the same.
-                    changes.unknown.append(abs)
-        else:
-            changes = repo.status(node1=node, match=m)
-            for kind in changes:
-                for abs in kind:
-                    names[abs] = m.rel(abs), m.exact(abs)
 
-        m = scmutil.matchfiles(repo, names)
+        # Look for exact filename matches that were not returned in the results.
+        # These will not be returned if they are clean, but we want to include them
+        # to report them as not needing changes.
+        for abs in m.files():
+            if abs in names or abs in badfiles:
+                continue
+            # Check to see if this looks like a file or directory.
+            # We don't need to report directories in the clean list.
+            try:
+                st = repo.wvfs.lstat(abs)
+                if stat.S_ISDIR(st.st_mode):
+                    continue
+            except OSError:
+                # This is can occur if the file was locally removed and is
+                # untracked, and did not exist in the node we are reverting from,
+                # but does exist in the current commit.
+                # Continue on and report this file as clean.
+                pass
+
+            names[abs] = m.rel(abs), m.exact(abs)
+            if abs in wctx:
+                changes.clean.append(abs)
+            else:
+                # We don't really know if this file is unknown or ignored, but
+                # fortunately this does not matter.  Revert treats unknown and
+                # ignored exactly files the same.
+                changes.unknown.append(abs)
 
         modified = set(changes.modified)
         added = set(changes.added)
@@ -3902,7 +3894,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             localchanges = dsmodified | dsadded
             modified, added, removed = set(), set(), set()
         else:
-            changes = repo.status(node1=parent, match=m)
+            exactfilesmatch = scmutil.matchfiles(repo, names)
+            changes = repo.status(node1=parent, match=exactfilesmatch)
             dsmodified = set(changes.modified)
             dsadded = set(changes.added)
             dsremoved = set(changes.removed)
