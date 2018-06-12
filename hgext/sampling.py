@@ -143,25 +143,25 @@ def gettopdir(repo):
 def reposetup(ui, repo):
     @repo.ui.atexit
     def telemetry():
-        if util.safehasattr(repo, "requirements"):
-            ui.log(
-                "requirements",
-                generaldelta=str("generaldelta" in repo.requirements).lower(),
-            )
-            ui.log(
-                "requirements",
-                remotefilelog=str("remotefilelog" in repo.requirements).lower(),
-            )
-
         try:
+            if util.safehasattr(repo, "requirements"):
+                ui.log(
+                    "requirements",
+                    generaldelta=str("generaldelta" in repo.requirements).lower(),
+                )
+                ui.log(
+                    "requirements",
+                    remotefilelog=str("remotefilelog" in repo.requirements).lower(),
+                )
+
             maxrss = util.getmaxrss()
 
             # Log maxrss from within the hg process. The wrapper logs its own
             # value (which is incorrect if chg is used) so the column is
             # prefixed.
             ui.log("command_info", hg_maxrss=maxrss)
-        except NotImplementedError:
-            pass
+        except Exception as e:
+            ui.log("command_info", sampling_failure=e.message)
 
     # Log other information that we don't want to log in the wrapper, if it's
     # cheap to do so.
