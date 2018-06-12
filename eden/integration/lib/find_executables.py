@@ -94,6 +94,16 @@ class FindExeClass(object):
         )
 
     @cached_property
+    def FAKE_EDENFS(self) -> str:
+        return self._find_exe(
+            "fake_edenfs",
+            env="EDENFS_FAKE_EDENFS",
+            candidates=[
+                os.path.join(self.BUCK_OUT, "gen/eden/integration/helpers/fake_edenfs")
+            ],
+        )
+
+    @cached_property
     def GIT(self) -> str:
         git = distutils.spawn.find_executable(
             "git.real"

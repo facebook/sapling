@@ -27,10 +27,6 @@ from thrift import Thrift
 LOCK_FILE = "lock"
 
 
-class TimeoutError(Exception):
-    pass
-
-
 class EdenStartError(Exception):
     pass
 
@@ -55,6 +51,13 @@ class HealthStatus(object):
 
     def is_healthy(self) -> bool:
         return self.status == fb_status.ALIVE
+
+    def __str__(self) -> str:
+        return "(%s, pid=%s, detail=%r)" % (
+            fb_status._VALUES_TO_NAMES.get(self.status, str(self.status)),
+            self.pid,
+            self.detail,
+        )
 
 
 T = TypeVar("T")
