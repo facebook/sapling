@@ -1,8 +1,13 @@
 from __future__ import absolute_import
-import hashlib, struct
+
+import hashlib
+import struct
+
 from mercurial import error, util
 from mercurial.node import hex, nullid
+
 from . import basepack, constants, shallowutil
+
 
 # (filename hash, offset, size)
 INDEXFORMAT0 = "!20sQQ"
@@ -485,16 +490,6 @@ class mutablehistorypack(basepack.mutablebasepack):
                 reversed(shallowutil.sortnodes(entrymap.iterkeys(), parentfunc))
             )
 
-            # Write the file section header
-            self.writeraw(
-                "%s%s%s"
-                % (
-                    struct.pack("!H", len(filename)),
-                    filename,
-                    struct.pack("!I", len(sortednodes)),
-                )
-            )
-
             sectionlen = constants.FILENAMESIZE + len(filename) + 4
 
             rawstrings = []
@@ -510,10 +505,31 @@ class mutablehistorypack(basepack.mutablebasepack):
                     # repo will not be None because of the assertion in add
                     linknode = repo.changelog.node(linkrev)
                     if linknode == nullid:
+                        if linkrev == len(repo.changelog):
+                            # The node was probably already written in
+                            # changelog. In this case we already have the
+                            # commit and its data. So no need to write the file
+                            # node again.
+                            del entrymap[node]
+                            del locations[node]
+                            continue
                         raise ValueError("attempting to add nullid linknode")
                 raw = "%s%s%s%s%s%s" % (node, p1, p2, linknode, copyfromlen, copyfrom)
                 rawstrings.append(raw)
                 offset += len(raw)
+
+            if not entrymap:
+                continue
+
+            # Write the file section header
+            self.writeraw(
+                "%s%s%s"
+                % (
+                    struct.pack("!H", len(filename)),
+                    filename,
+                    struct.pack("!I", len(sortednodes)),
+                )
+            )
 
             rawdata = "".join(rawstrings)
             sectionlen += len(rawdata)

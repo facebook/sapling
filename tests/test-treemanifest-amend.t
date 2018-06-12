@@ -14,5 +14,21 @@ Crash in histpack code path where the amend destination already exists
   $ echo foo > msg
   $ hg commit --amend -l msg
   $ hg undo -q
-  $ hg commit --amend -l msg 2>&1 | tail -1
-  ValueError: attempting to add nullid linknode
+  $ hg commit --amend -l msg
+
+Make sure no invalid manifests were written:
+
+  $ cd .hg/store/packs/manifests
+  $ for i in *.histidx; do hg debughistorypack $i; done
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  eb7988638387  41b34f08c135  000000000000  220f69710758  
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  eb7988638387  41b34f08c135  000000000000  112478962961  
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  41b34f08c135  000000000000  000000000000  426bada5c675  
