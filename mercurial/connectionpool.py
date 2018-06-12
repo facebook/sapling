@@ -50,7 +50,7 @@ class connectionpool(object):
                         conn = None
                 # If the connection has expired, close it
                 if conn is not None and conn.expired():
-                    self._repo._ui.debug(
+                    self._repo.ui.debug(
                         "not reusing expired connection to %s\n" % conn.path
                     )
                     conn.close()
