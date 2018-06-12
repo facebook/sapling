@@ -80,9 +80,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .version("0.0.0")
         .about("Poke at mononoke internals for debugging and investigating data structures.")
         .args_from_usage(
-            "--manifold-bucket [BUCKET] 'manifold bucket (default: mononoke_prod)' \
-             --manifold-prefix [PREFIX] 'manifold prefix (default empty)' \
-             --xdb-tier        [TIER]   'database tier (default: xdb.mononoke_test_2)' \
+            "--manifold-bucket [BUCKET] 'manifold bucket (default: mononoke_prod)'
+             --manifold-prefix [PREFIX] 'manifold prefix (default empty)'
+             --xdb-tier        [TIER]   'database tier (default: xdb.mononoke_test_2)'
              --repo-id         [REPO_ID]'repo id (default: 0)'
              -d, --debug                'print debug level output'",
         )
