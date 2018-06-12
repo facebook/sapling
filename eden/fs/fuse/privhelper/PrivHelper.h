@@ -15,6 +15,7 @@
 #include <memory>
 
 namespace folly {
+class EventBase;
 class File;
 template <typename T>
 class Future;
@@ -35,6 +36,14 @@ class UserInfo;
 class PrivHelper {
  public:
   virtual ~PrivHelper() {}
+
+  /**
+   * Start the PrivHelper, using the specified EventBase to drive I/O.
+   *
+   * This method must be called before using the PrivHelper, and it must be
+   * called from the EventBase thread.
+   */
+  virtual void start(folly::EventBase* eventBase) = 0;
 
   /**
    * Ask the privileged helper process to perform a fuse mount.
@@ -115,6 +124,14 @@ std::unique_ptr<PrivHelper> startPrivHelper(const UserInfo& userInfo);
 std::unique_ptr<PrivHelper> startPrivHelper(
     PrivHelperServer* server,
     const UserInfo& userInfo);
+
+/**
+ * Create a PrivHelper client object using the specified connection rather than
+ * forking a new privhelper server process.
+ *
+ * This is primarily intended for use in unit tests.
+ */
+std::unique_ptr<PrivHelper> createTestPrivHelper(folly::File&& conn);
 
 } // namespace eden
 } // namespace facebook

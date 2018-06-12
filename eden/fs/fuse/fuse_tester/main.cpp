@@ -10,7 +10,8 @@
 #include <boost/filesystem.hpp>
 #include <folly/Exception.h>
 #include <folly/init/Init.h>
-#include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/io/async/EventBase.h>
+#include <folly/io/async/EventBaseThread.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
 #include <signal.h>
@@ -104,7 +105,15 @@ int main(int argc, char** argv) {
     return EX_DATAERR;
   }
 
+  // For simplicity, start a separate EventBaseThread to drive the privhelper
+  // I/O.  We only really need this for the initial fuseMount() call.  We could
+  // run an EventBase in the current thread until the fuseMount() completes,
+  // but using EventBaseThread is simpler for now.
+  folly::EventBaseThread evbt;
+  evbt.getEventBase()->runInEventBaseThreadAndWait(
+      [&] { privHelper->start(evbt.getEventBase()); });
   auto fuseDevice = privHelper->fuseMount(mountPath.value()).get(100ms);
+
   ThreadLocalEdenStats stats;
   TestDispatcher dispatcher(&stats, identity);
 

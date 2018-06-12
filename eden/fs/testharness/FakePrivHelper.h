@@ -36,6 +36,7 @@ class FakePrivHelper : public PrivHelper {
       std::shared_ptr<FakeFuse> fuse);
 
   // PrivHelper functions
+  void start(folly::EventBase* eventBase) override;
   folly::Future<folly::File> fuseMount(folly::StringPiece mountPath) override;
   folly::Future<folly::Unit> fuseUnmount(folly::StringPiece mountPath) override;
   folly::Future<folly::Unit> bindMount(

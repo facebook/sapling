@@ -12,180 +12,124 @@
 #include <folly/Range.h>
 #include <cinttypes>
 #include <stdexcept>
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/UnixSocket.h"
 
 namespace folly {
 class File;
-}
+namespace io {
+class Appender;
+class Cursor;
+} // namespace io
+} // namespace folly
 
 namespace facebook {
 namespace eden {
 
-/*
- * A helper class for sending and receiving messages on the privhelper socket.
+/**
+ * This class contains static methods for serializing and deserializing
+ * privhelper messages.
  *
  * We use our own simple code for this (rather than thrift, for example)
  * since we need to also pass file descriptors around using SCM_RIGHTS.
  * We also only want to talk over our local socketpair--only the main eden
  * process should be able to make requests to the privileged helper.
- *
- * This class is used by both the client and server side of the socket.
  */
 class PrivHelperConn {
  public:
-  // The maximum body data size allowed for a privhelper message.
-  enum { MAX_MSG_LENGTH = 4000 };
-
   enum MsgType : uint32_t {
     MSG_TYPE_NONE = 0,
     RESP_ERROR = 1,
-    RESP_EMPTY = 2,
-    REQ_MOUNT_FUSE = 3,
-    REQ_MOUNT_BIND = 4,
-    REQ_UNMOUNT_FUSE = 5,
-    REQ_TAKEOVER_SHUTDOWN = 6,
-    REQ_TAKEOVER_STARTUP = 7,
+    REQ_MOUNT_FUSE = 2,
+    REQ_MOUNT_BIND = 3,
+    REQ_UNMOUNT_FUSE = 4,
+    REQ_TAKEOVER_SHUTDOWN = 5,
+    REQ_TAKEOVER_STARTUP = 6,
   };
 
-  struct Message {
-    size_t getFullLength() const {
-      return offsetof(Message, data) + dataSize;
-    }
-
-    uint32_t xid{0}; // transaction ID
-    uint32_t msgType{MSG_TYPE_NONE};
-    uint32_t dataSize{0}; // Number of bytes populated in data[]
-    uint8_t data[MAX_MSG_LENGTH];
-  };
-
-  /*
-   * Create an uninitialized PrivHelperConn object.
-   */
-  PrivHelperConn();
-
-  /*
-   * Construct a PrivHelperConn from a socket object.
+  /**
+   * The length of the message header.
    *
-   * Note that you probably just want to use createConnPair()
-   * rather than calling this function directly.
+   * This consists of a 32-bit transaction ID followed by
+   * the 32-bit request type.
    */
-  explicit PrivHelperConn(int sock);
-
-  /*
-   * Move constructor and move assignment.
-   */
-  PrivHelperConn(PrivHelperConn&& conn) noexcept;
-  PrivHelperConn& operator=(PrivHelperConn&& conn) noexcept;
-
-  ~PrivHelperConn();
+  static constexpr size_t kHeaderSize = 2 * sizeof(uint32_t);
 
   /*
    * Create a pair of connected PrivHelperConn objects to use for privhelper
    * communication.
    */
-  static void createConnPair(PrivHelperConn& client, PrivHelperConn& server);
-
-  void close();
-
-  bool isClosed() const {
-    return socket_ == -1;
-  }
-
-  int getSocket() const {
-    return socket_;
-  }
-
-  /*
-   * Low-level message sending and receiving
-   */
-
-  /*
-   * Send a message, and optionally a file descriptor.
-   *
-   * This takes the file descriptor as a raw integer since it does
-   * not accept ownership of the fd.  The caller still owns the FD and
-   * is responsible for closing it at some later time.
-   */
-  void sendMsg(const Message* msg, int fd = -1);
-
-  /*
-   * Receive a message, and optional a file descriptor.
-   *
-   * This will populate the data in the Message object passed in by the caller.
-   *
-   * The file descriptor is returned using a folly::File object,
-   * since the receiver is given ownership of the file descriptor,
-   * and must close it later.  Use folly::File::release() if you want to
-   * extract the raw file descriptor and manage it using some other mechanism.
-   *
-   * The File argument can be nullptr if you don't expect to receive a file
-   * descriptor.
-   */
-  void recvMsg(Message* msg, folly::File* f);
+  static void createConnPair(folly::File& client, folly::File& server);
 
   /*
    * Message serialization and deserialization functions
+   *
+   * For the parse*() methods the cursor should start at the message body,
+   * immediately after the header.  (The caller must have already read the
+   * header to determine the message type.)
    */
-  static void serializeMountRequest(
-      Message* msg,
+  static UnixSocket::Message serializeMountRequest(
+      uint32_t xid,
       folly::StringPiece mountPoint);
-  static void parseMountRequest(Message* msg, std::string& mountPoint);
+  static void parseMountRequest(
+      folly::io::Cursor& cursor,
+      std::string& mountPoint);
 
-  static void serializeUnmountRequest(
-      Message* msg,
+  static UnixSocket::Message serializeUnmountRequest(
+      uint32_t xid,
       folly::StringPiece mountPoint);
-  static void parseUnmountRequest(Message* msg, std::string& mountPoint);
+  static void parseUnmountRequest(
+      folly::io::Cursor& cursor,
+      std::string& mountPoint);
 
-  static void serializeBindMountRequest(
-      Message* msg,
+  static UnixSocket::Message serializeBindMountRequest(
+      uint32_t xid,
       folly::StringPiece clientPath,
       folly::StringPiece mountPath);
   static void parseBindMountRequest(
-      Message* msg,
+      folly::io::Cursor& cursor,
       std::string& clientPath,
       std::string& mountPath);
 
-  static void serializeTakeoverShutdownRequest(
-      Message* msg,
+  static UnixSocket::Message serializeTakeoverShutdownRequest(
+      uint32_t xid,
       folly::StringPiece mountPoint);
   static void parseTakeoverShutdownRequest(
-      Message* msg,
+      folly::io::Cursor& cursor,
       std::string& mountPoint);
 
-  static void serializeTakeoverStartupRequest(
-      Message* msg,
+  static UnixSocket::Message serializeTakeoverStartupRequest(
+      uint32_t xid,
       folly::StringPiece mountPoint,
       const std::vector<std::string>& bindMounts);
   static void parseTakeoverStartupRequest(
-      Message* msg,
+      folly::io::Cursor& cursor,
       std::string& mountPoint,
       std::vector<std::string>& bindMounts);
 
-  static void serializeEmptyResponse(Message* msg);
-
   /**
    * Parse a response that is expected to be empty.
-   * Will throw an exception if this is actually an error response.
+   *
+   * If the response is an error this will throw an exception from the error
+   * data.  Otherwise if the response does not match the expected request type
+   * this will also throw an error.
    */
-  static void parseEmptyResponse(const Message* msg);
+  static void parseEmptyResponse(
+      MsgType reqType,
+      const UnixSocket::Message& msg);
 
-  static void serializeErrorResponse(Message* msg, const std::exception& ex);
   static void serializeErrorResponse(
-      Message* msg,
+      folly::io::Appender& appender,
+      const std::exception& ex);
+  static void serializeErrorResponse(
+      folly::io::Appender& appender,
       folly::StringPiece message,
       int errnum = 0,
       folly::StringPiece excType = {});
-  [[noreturn]] static void rethrowErrorResponse(const Message* msg);
+  [[noreturn]] static void rethrowErrorResponse(folly::io::Cursor& cursor);
 
- private:
-  int socket_{-1};
-};
-
-class PrivHelperClosedError : public std::exception {
- public:
-  char const* what() const noexcept override {
-    return "privhelper socket closed";
-  }
+  static void checkAtEnd(
+      const folly::io::Cursor& cursor,
+      folly::StringPiece messageType);
 };
 
 class PrivHelperError : public std::exception {

@@ -327,6 +327,9 @@ Future<Unit> EdenServer::prepare() {
   mainEventBase_ = folly::EventBaseManager::get()->getEventBase();
   createThriftServer();
 
+  // Start the PrivHelper client, using our main event base to drive its I/O
+  serverState_->getPrivHelper()->start(mainEventBase_);
+
   // Start stats aggregation
   scheduleFlushStats();
 

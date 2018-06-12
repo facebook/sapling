@@ -17,10 +17,11 @@
 #include <folly/FileUtil.h>
 #include <folly/Format.h>
 #include <folly/String.h>
-#include <folly/logging/GlogStyleFormatter.h>
-#include <folly/logging/ImmediateFileWriter.h>
-#include <folly/logging/LogHandlerConfig.h>
-#include <folly/logging/StandardLogHandler.h>
+#include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
+#include <folly/io/async/EventBase.h>
+#include <folly/logging/LogConfigParser.h>
+#include <folly/logging/LoggerDB.h>
 #include <folly/logging/xlog.h>
 #include <signal.h>
 #include <sys/mount.h>
@@ -34,7 +35,11 @@
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 
 using folly::checkUnixError;
+using folly::IOBuf;
 using folly::throwSystemError;
+using folly::io::Appender;
+using folly::io::Cursor;
+using folly::io::RWPrivateCursor;
 using std::string;
 
 namespace facebook {
@@ -44,38 +49,31 @@ PrivHelperServer::PrivHelperServer() {}
 
 PrivHelperServer::~PrivHelperServer() {}
 
-void PrivHelperServer::init(PrivHelperConn&& conn, uid_t uid, gid_t gid) {
+void PrivHelperServer::init(folly::File&& socket, uid_t uid, gid_t gid) {
   // Make sure init() is only called once.
   CHECK_EQ(uid_, std::numeric_limits<uid_t>::max());
   CHECK_EQ(gid_, std::numeric_limits<gid_t>::max());
 
-  conn_ = std::move(conn);
+  initLogging();
+
+  // eventBase_ is a unique_ptr only so that we can delay constructing it until
+  // init() is called.  We want to avoid creating it in the constructor since
+  // the constructor is often called before we fork, and the EventBase
+  // NotificationQueue code checks to ensure that it isn't used across a fork.
+  eventBase_ = std::make_unique<folly::EventBase>();
+  conn_ = UnixSocket::makeUnique(eventBase_.get(), std::move(socket));
   uid_ = uid;
   gid_ = gid;
-
-  initLogging();
 }
 
 void PrivHelperServer::initLogging() {
   // Initialize the folly logging code for use inside the privhelper process.
-  // For simplicity and safety we always use a fixed logging configuration here
-  // rather than parsing a more complex full logging configuration string.
-  auto* rootCategory = folly::LoggerDB::get().getCategory(".");
-
-  // We always use a non-async file writer, rather than the threaded async
-  // writer.
-  folly::LogHandlerConfig handlerConfig{
-      "file", {{"stream", "stderr"}, {"async", "false"}}};
-  auto writer = std::make_shared<folly::ImmediateFileWriter>(
-      folly::File{STDERR_FILENO, false});
-  auto handler = std::make_shared<folly::StandardLogHandler>(
-      handlerConfig,
-      std::make_shared<folly::GlogStyleFormatter>(),
-      std::move(writer));
-
-  // Add the handler to the root category.
-  rootCategory->setLevel(folly::LogLevel::WARNING);
-  rootCategory->addHandler(std::move(handler));
+  // For simplicity and safety we always use a fixed logging string
+  // rather than parsing an arbitrary user-supplied configuration.
+  auto logConfig = folly::parseLogConfig(
+      "WARN:default, eden=DBG2; "
+      "default=stream:stream=stderr,async=false");
+  folly::LoggerDB::get().resetConfig(logConfig);
 }
 
 folly::File PrivHelperServer::fuseMount(const char* mountPath) {
@@ -164,112 +162,78 @@ void PrivHelperServer::fuseUnmount(const char* mountPath) {
   }
 }
 
-void PrivHelperServer::processTakeoverStartupMsg(PrivHelperConn::Message* msg) {
+UnixSocket::Message PrivHelperServer::processTakeoverStartupMsg(
+    Cursor& cursor) {
   string mountPath;
   std::vector<string> bindMounts;
+  PrivHelperConn::parseTakeoverStartupRequest(cursor, mountPath, bindMounts);
+  XLOG(DBG3) << "takeover startup for \"" << mountPath << "\"; "
+             << bindMounts.size() << " bind mounts";
 
-  conn_.parseTakeoverStartupRequest(msg, mountPath, bindMounts);
-
-  try {
-    mountPoints_.insert(mountPath);
-    for (auto& bindMount : bindMounts) {
-      bindMountPoints_.insert({mountPath, bindMount});
-    }
-    conn_.serializeEmptyResponse(msg);
-  } catch (const std::exception& ex) {
-    // Note that we re-use the request message buffer for the response data
-    conn_.serializeErrorResponse(msg, ex);
-    conn_.sendMsg(msg);
-    return;
+  mountPoints_.insert(mountPath);
+  for (auto& bindMount : bindMounts) {
+    bindMountPoints_.insert({mountPath, bindMount});
   }
-
-  // Note that we re-use the request message buffer for the response data
-  conn_.sendMsg(msg);
+  return makeResponse();
 }
 
-void PrivHelperServer::processMountMsg(PrivHelperConn::Message* msg) {
+UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
   string mountPath;
-  conn_.parseMountRequest(msg, mountPath);
+  PrivHelperConn::parseMountRequest(cursor, mountPath);
+  XLOG(DBG3) << "mount \"" << mountPath << "\"";
 
-  folly::File fuseDev;
-  try {
-    fuseDev = fuseMount(mountPath.c_str());
-    mountPoints_.insert(mountPath);
-    conn_.serializeEmptyResponse(msg);
-  } catch (const std::exception& ex) {
-    // Note that we re-use the request message buffer for the response data
-    conn_.serializeErrorResponse(msg, ex);
-    conn_.sendMsg(msg);
-    return;
-  }
+  auto fuseDev = fuseMount(mountPath.c_str());
+  mountPoints_.insert(mountPath);
 
-  // Note that we re-use the request message buffer for the response data
-  conn_.sendMsg(msg, fuseDev.fd());
+  return makeResponse(std::move(fuseDev));
 }
 
-void PrivHelperServer::processUnmountMsg(PrivHelperConn::Message* msg) {
+UnixSocket::Message PrivHelperServer::processUnmountMsg(Cursor& cursor) {
   string mountPath;
-  conn_.parseUnmountRequest(msg, mountPath);
+  PrivHelperConn::parseUnmountRequest(cursor, mountPath);
+  XLOG(DBG3) << "unmount \"" << mountPath << "\"";
 
-  try {
-    const auto it = mountPoints_.find(mountPath);
-    if (it == mountPoints_.end()) {
-      throw std::domain_error(
-          folly::to<string>("No FUSE mount found for ", mountPath));
-    }
-
-    const auto range = bindMountPoints_.equal_range(mountPath);
-    for (auto it2 = range.first; it2 != range.second; ++it2) {
-      bindUnmount(it2->second.c_str());
-    }
-    bindMountPoints_.erase(range.first, range.second);
-
-    fuseUnmount(mountPath.c_str());
-    mountPoints_.erase(mountPath);
-    conn_.serializeEmptyResponse(msg);
-  } catch (const std::exception& ex) {
-    // Note that we re-use the request message buffer for the response data
-    conn_.serializeErrorResponse(msg, ex);
-    conn_.sendMsg(msg);
-    return;
+  const auto it = mountPoints_.find(mountPath);
+  if (it == mountPoints_.end()) {
+    throw std::domain_error(
+        folly::to<string>("No FUSE mount found for ", mountPath));
   }
 
-  // Note that we re-use the request message buffer for the response data
-  conn_.sendMsg(msg);
+  const auto range = bindMountPoints_.equal_range(mountPath);
+  for (auto bindIter = range.first; bindIter != range.second; ++bindIter) {
+    bindUnmount(bindIter->second.c_str());
+  }
+  bindMountPoints_.erase(range.first, range.second);
+
+  fuseUnmount(mountPath.c_str());
+  mountPoints_.erase(mountPath);
+  return makeResponse();
 }
 
-void PrivHelperServer::processTakeoverShutdownMsg(
-    PrivHelperConn::Message* msg) {
+UnixSocket::Message PrivHelperServer::processTakeoverShutdownMsg(
+    Cursor& cursor) {
   string mountPath;
-  conn_.parseTakeoverShutdownRequest(msg, mountPath);
+  PrivHelperConn::parseTakeoverShutdownRequest(cursor, mountPath);
+  XLOG(DBG3) << "takeover shutdown \"" << mountPath << "\"";
 
-  try {
-    const auto it = mountPoints_.find(mountPath);
-    if (it == mountPoints_.end()) {
-      throw std::domain_error(
-          folly::to<string>("No FUSE mount found for ", mountPath));
-    }
-
-    const auto range = bindMountPoints_.equal_range(mountPath);
-    bindMountPoints_.erase(range.first, range.second);
-
-    mountPoints_.erase(mountPath);
-    conn_.serializeEmptyResponse(msg);
-  } catch (const std::exception& ex) {
-    // Note that we re-use the request message buffer for the response data
-    conn_.serializeErrorResponse(msg, ex);
-    conn_.sendMsg(msg);
-    return;
+  const auto it = mountPoints_.find(mountPath);
+  if (it == mountPoints_.end()) {
+    throw std::domain_error(
+        folly::to<string>("No FUSE mount found for ", mountPath));
   }
 
-  // Note that we re-use the request message buffer for the response data
-  conn_.sendMsg(msg);
+  const auto range = bindMountPoints_.equal_range(mountPath);
+  bindMountPoints_.erase(range.first, range.second);
+
+  mountPoints_.erase(mountPath);
+  return makeResponse();
 }
 
-void PrivHelperServer::processBindMountMsg(PrivHelperConn::Message* msg) {
+UnixSocket::Message PrivHelperServer::processBindMountMsg(Cursor& cursor) {
   string clientPath;
   string mountPath;
-  conn_.parseBindMountRequest(msg, clientPath, mountPath);
+  PrivHelperConn::parseBindMountRequest(cursor, clientPath, mountPath);
+  XLOG(DBG3) << "bind mount \"" << mountPath << "\"";
 
   // Figure out which FUSE mount the mountPath belongs to.
   // (Alternatively, we could just make this part of the Message.)
@@ -285,78 +249,9 @@ void PrivHelperServer::processBindMountMsg(PrivHelperConn::Message* msg) {
         folly::to<string>("No FUSE mount found for ", mountPath));
   }
 
-  try {
-    bindMount(clientPath.c_str(), mountPath.c_str());
-    bindMountPoints_.insert({key, mountPath});
-    conn_.serializeEmptyResponse(msg);
-  } catch (const std::exception& ex) {
-    // Note that we re-use the request message buffer for the response data
-    conn_.serializeErrorResponse(msg, ex);
-    conn_.sendMsg(msg);
-    return;
-  }
-
-  // Note that we re-use the request message buffer for the response data
-  conn_.sendMsg(msg);
-}
-
-[[noreturn]] void PrivHelperServer::messageLoop() {
-  PrivHelperConn::Message msg;
-
-  while (true) {
-    conn_.recvMsg(&msg, nullptr);
-
-    switch (msg.msgType) {
-      case PrivHelperConn::REQ_MOUNT_FUSE:
-        processMountMsg(&msg);
-        continue;
-      case PrivHelperConn::REQ_MOUNT_BIND:
-        processBindMountMsg(&msg);
-        continue;
-      case PrivHelperConn::REQ_UNMOUNT_FUSE:
-        processUnmountMsg(&msg);
-        continue;
-      case PrivHelperConn::REQ_TAKEOVER_SHUTDOWN:
-        processTakeoverShutdownMsg(&msg);
-        continue;
-      case PrivHelperConn::REQ_TAKEOVER_STARTUP:
-        processTakeoverStartupMsg(&msg);
-        continue;
-      case PrivHelperConn::MSG_TYPE_NONE:
-      case PrivHelperConn::RESP_ERROR:
-      case PrivHelperConn::RESP_EMPTY:
-        break;
-    }
-    // This shouldn't ever happen unless we have a bug.
-    // Crash if it does occur.  (We could send back an error message and
-    // continue, but it seems better to fail hard to make sure this bug gets
-    // noticed and debugged.)
-    XLOG(FATAL) << "unsupported privhelper message type: " << msg.msgType;
-  }
-}
-
-void PrivHelperServer::cleanupMountPoints() {
-  int numBindMountsRemoved = 0;
-  for (const auto& mountPoint : mountPoints_) {
-    // Clean up the bind mounts for a FUSE mount before the FUSE mount itself.
-    //
-    // Note that these unmounts might fail if the main eden process has already
-    // exited: these are inside an eden mount, and so accessing the parent
-    // directory will fail with ENOTCONN the eden has already closed the fuse
-    // connection.
-    const auto range = bindMountPoints_.equal_range(mountPoint);
-    for (auto it = range.first; it != range.second; ++it) {
-      bindUnmount(it->second.c_str());
-      ++numBindMountsRemoved;
-    }
-
-    fuseUnmount(mountPoint.c_str());
-  }
-
-  CHECK_EQ(bindMountPoints_.size(), numBindMountsRemoved)
-      << "All bind mounts should have been removed.";
-  bindMountPoints_.clear();
-  mountPoints_.clear();
+  bindMount(clientPath.c_str(), mountPath.c_str());
+  bindMountPoints_.insert({key, mountPath});
+  return makeResponse();
 }
 
 namespace {
@@ -421,15 +316,161 @@ void PrivHelperServer::run() {
                 << folly::errnoStr(errno);
   }
 
-  try {
-    messageLoop();
-  } catch (const PrivHelperClosedError& ex) {
-    // The parent process exited, so we can quit too.
-    XLOG(DBG5) << "privhelper process exiting";
-  }
+  conn_->setReceiveCallback(this);
+  eventBase_->loop();
+
+  // We terminate the event loop when the socket has been closed.
+  // This normally means the parent process exited, so we can clean up and exit
+  // too.
+  XLOG(DBG5) << "privhelper process exiting";
 
   // Unmount all active mount points
   cleanupMountPoints();
+}
+
+void PrivHelperServer::messageReceived(UnixSocket::Message&& message) noexcept {
+  try {
+    processAndSendResponse(std::move(message));
+  } catch (const std::exception& ex) {
+    XLOG(ERR) << "error processing privhelper request: "
+              << folly::exceptionStr(ex);
+  }
+}
+
+void PrivHelperServer::processAndSendResponse(UnixSocket::Message&& message) {
+  Cursor cursor{&message.data};
+  const auto xid = cursor.readBE<uint32_t>();
+  const auto msgType =
+      static_cast<PrivHelperConn::MsgType>(cursor.readBE<uint32_t>());
+  auto responseType = msgType;
+
+  UnixSocket::Message response;
+  try {
+    response = processMessage(msgType, cursor);
+  } catch (const std::exception& ex) {
+    XLOG(ERR) << "error processing privhelper request: "
+              << folly::exceptionStr(ex);
+    responseType = PrivHelperConn::RESP_ERROR;
+    response = makeResponse();
+    Appender appender(&response.data, 1024);
+    PrivHelperConn::serializeErrorResponse(appender, ex);
+  }
+
+  // Put the transaction ID and message type in the response.
+  // The makeResponse() APIs ensure there is enough headroom for the header.
+  if (response.data.headroom() >= PrivHelperConn::kHeaderSize) {
+    response.data.prepend(PrivHelperConn::kHeaderSize);
+  } else {
+    // This is unexpected, but go ahead and allocate more room just in case this
+    // ever does occur.
+    XLOG(WARN) << "insufficient headroom for privhelper response header: "
+               << "making more space";
+    auto body = std::make_unique<IOBuf>(std::move(response.data));
+    response.data = IOBuf(IOBuf::CREATE, PrivHelperConn::kHeaderSize);
+    response.data.append(PrivHelperConn::kHeaderSize);
+    response.data.prependChain(std::move(body));
+  }
+
+  static_assert(
+      PrivHelperConn::kHeaderSize == 2 * sizeof(uint32_t),
+      "This code needs to be updated if we ever change the header format");
+  RWPrivateCursor respCursor(&response.data);
+  respCursor.writeBE<uint32_t>(xid);
+  respCursor.writeBE<uint32_t>(responseType);
+
+  conn_->send(std::move(response));
+}
+
+UnixSocket::Message PrivHelperServer::makeResponse() {
+  // 1024 bytes is enough for most responses.  If the response is longer
+  // we will allocate more room later.
+  constexpr size_t kDefaultBufferSize = 1024;
+
+  UnixSocket::Message msg;
+  msg.data = IOBuf(IOBuf::CREATE, kDefaultBufferSize);
+
+  // Leave enough headroom for the response header that includes the transaction
+  // ID and message type.
+  msg.data.advance(PrivHelperConn::kHeaderSize);
+  return msg;
+}
+
+UnixSocket::Message PrivHelperServer::makeResponse(folly::File&& file) {
+  auto response = makeResponse();
+  response.files.push_back(std::move(file));
+  return response;
+}
+
+UnixSocket::Message PrivHelperServer::processMessage(
+    PrivHelperConn::MsgType msgType,
+    Cursor& cursor) {
+  switch (msgType) {
+    case PrivHelperConn::REQ_MOUNT_FUSE:
+      return processMountMsg(cursor);
+    case PrivHelperConn::REQ_MOUNT_BIND:
+      return processBindMountMsg(cursor);
+    case PrivHelperConn::REQ_UNMOUNT_FUSE:
+      return processUnmountMsg(cursor);
+    case PrivHelperConn::REQ_TAKEOVER_SHUTDOWN:
+      return processTakeoverShutdownMsg(cursor);
+    case PrivHelperConn::REQ_TAKEOVER_STARTUP:
+      return processTakeoverStartupMsg(cursor);
+    case PrivHelperConn::MSG_TYPE_NONE:
+    case PrivHelperConn::RESP_ERROR:
+      break;
+  }
+
+  throw std::runtime_error(
+      folly::to<std::string>("unexpected privhelper message type: ", msgType));
+}
+
+void PrivHelperServer::eofReceived() noexcept {
+  eventBase_->terminateLoopSoon();
+}
+
+void PrivHelperServer::socketClosed() noexcept {
+  eventBase_->terminateLoopSoon();
+}
+
+void PrivHelperServer::receiveError(
+    const folly::exception_wrapper& ew) noexcept {
+  XLOG(ERR) << "receive error in privhelper server: " << ew;
+  eventBase_->terminateLoopSoon();
+}
+
+void PrivHelperServer::cleanupMountPoints() {
+  size_t numBindMountsRemoved = 0;
+  for (const auto& mountPoint : mountPoints_) {
+    // Clean up the bind mounts for a FUSE mount before the FUSE mount itself.
+    //
+    // Note that these unmounts might fail if the main eden process has already
+    // exited: these are inside an eden mount, and so accessing the parent
+    // directory will fail with ENOTCONN the eden has already closed the fuse
+    // connection.
+    const auto range = bindMountPoints_.equal_range(mountPoint);
+    for (auto it = range.first; it != range.second; ++it) {
+      try {
+        bindUnmount(it->second.c_str());
+      } catch (const std::exception& ex) {
+        XLOG(ERR) << "error unmounting bind mount \"" << it->second
+                  << "\": " << folly::exceptionStr(ex);
+      }
+      ++numBindMountsRemoved;
+    }
+
+    try {
+      fuseUnmount(mountPoint.c_str());
+    } catch (const std::exception& ex) {
+      XLOG(ERR) << "error unmounting \"" << mountPoint
+                << "\": " << folly::exceptionStr(ex);
+    }
+  }
+
+  XLOG_IF(ERR, bindMountPoints_.size() != numBindMountsRemoved)
+      << "Not all bind mounts were removed during cleanup: had "
+      << bindMountPoints_.size() << ", removed " << numBindMountsRemoved;
+  bindMountPoints_.clear();
+  mountPoints_.clear();
 }
 
 } // namespace eden

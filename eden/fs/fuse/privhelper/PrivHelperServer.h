@@ -15,9 +15,14 @@
 #include <string>
 #include <unordered_map>
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/utils/UnixSocket.h"
 
 namespace folly {
+class EventBase;
 class File;
+namespace io {
+class Cursor;
+}
 }
 
 namespace facebook {
@@ -34,24 +39,36 @@ namespace eden {
  * The uid and gid parameters specify the user and group ID of the unprivileged
  * process that will be making requests to us.
  */
-class PrivHelperServer {
+class PrivHelperServer : private UnixSocket::ReceiveCallback {
  public:
   PrivHelperServer();
   virtual ~PrivHelperServer();
 
-  void init(PrivHelperConn&& conn, uid_t uid, gid_t gid);
+  void init(folly::File&& socket, uid_t uid, gid_t gid);
   void run();
 
  private:
   void initLogging();
-
-  [[noreturn]] void messageLoop();
   void cleanupMountPoints();
-  void processMountMsg(PrivHelperConn::Message* msg);
-  void processUnmountMsg(PrivHelperConn::Message* msg);
-  void processBindMountMsg(PrivHelperConn::Message* msg);
-  void processTakeoverShutdownMsg(PrivHelperConn::Message* msg);
-  void processTakeoverStartupMsg(PrivHelperConn::Message* msg);
+
+  // UnixSocket::ReceiveCallback methods
+  void messageReceived(UnixSocket::Message&& message) noexcept override;
+  void eofReceived() noexcept override;
+  void socketClosed() noexcept override;
+  void receiveError(const folly::exception_wrapper& ew) noexcept override;
+
+  void processAndSendResponse(UnixSocket::Message&& message);
+  UnixSocket::Message processMessage(
+      PrivHelperConn::MsgType msgType,
+      folly::io::Cursor& cursor);
+  UnixSocket::Message makeResponse();
+  UnixSocket::Message makeResponse(folly::File&& file);
+
+  UnixSocket::Message processMountMsg(folly::io::Cursor& cursor);
+  UnixSocket::Message processUnmountMsg(folly::io::Cursor& cursor);
+  UnixSocket::Message processBindMountMsg(folly::io::Cursor& cursor);
+  UnixSocket::Message processTakeoverShutdownMsg(folly::io::Cursor& cursor);
+  UnixSocket::Message processTakeoverStartupMsg(folly::io::Cursor& cursor);
 
   // These methods are virtual so we can override them during unit tests
   virtual folly::File fuseMount(const char* mountPath);
@@ -60,7 +77,8 @@ class PrivHelperServer {
   virtual void bindMount(const char* clientPath, const char* mountPath);
   virtual void bindUnmount(const char* mountPath);
 
-  PrivHelperConn conn_;
+  std::unique_ptr<folly::EventBase> eventBase_;
+  UnixSocket::UniquePtr conn_;
   uid_t uid_{std::numeric_limits<uid_t>::max()};
   gid_t gid_{std::numeric_limits<gid_t>::max()};
 

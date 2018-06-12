@@ -12,263 +12,430 @@
 #include <boost/filesystem.hpp>
 #include <folly/Exception.h>
 #include <folly/File.h>
-#include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/futures/Future.h>
-#include <folly/io/IOBuf.h>
+#include <folly/io/async/EventBase.h>
+#include <folly/io/async/EventBaseThread.h>
+#include <folly/test/TestUtils.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <sys/socket.h>
 #include <chrono>
-#include <vector>
+#include <unordered_map>
 
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/fuse/privhelper/test/PrivHelperTestServer.h"
-#include "eden/fs/utils/SystemError.h"
 
-using namespace folly::string_piece_literals;
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 using facebook::eden::UserInfo;
-using folly::ByteRange;
 using folly::checkUnixError;
+using folly::EventBaseThread;
 using folly::File;
-using folly::IOBuf;
+using folly::Future;
+using folly::Promise;
 using folly::StringPiece;
+using folly::Unit;
 using folly::test::TemporaryDirectory;
 using folly::test::TemporaryFile;
 using std::string;
-using std::vector;
+using testing::UnorderedElementsAre;
 
-void createTestConns(PrivHelperConn& sender, PrivHelperConn& receiver) {
-  // Use the default createConnPair() function
-  PrivHelperConn::createConnPair(sender, receiver);
+/**
+ * A PrivHelperServer implementation intended to be used in a separate thread in
+ * the same process.
+ *
+ * This is different than PrivHelperTestServer which is intended to be used in a
+ * separate forked process.
+ */
+class PrivHelperThreadedTestServer : public PrivHelperServer {
+ public:
+  Promise<File> setFuseMountResult(StringPiece path) {
+    Promise<File> promise;
+    data_.wlock()->fuseMountResults.emplace(path.str(), promise.getFuture());
+    return promise;
+  }
 
-  // Our tests are single threaded, and don't send and receive simultaneously.
-  // Therefore the kernel socket buffers must be large enough to hold all data
-  // we are trying to send, or our send call will block (since no one is
-  // actively receiving on the other side).
+  Promise<Unit> setFuseUnmountResult(StringPiece path) {
+    Promise<Unit> promise;
+    data_.wlock()->fuseUnmountResults.emplace(path.str(), promise.getFuture());
+    return promise;
+  }
+
+  Promise<Unit> setBindMountResult(StringPiece path) {
+    Promise<Unit> promise;
+    data_.wlock()->bindMountResults.emplace(path.str(), promise.getFuture());
+    return promise;
+  }
+
+  Promise<Unit> setBindUnmountResult(StringPiece path) {
+    Promise<Unit> promise;
+    data_.wlock()->bindUnmountResults.emplace(path.str(), promise.getFuture());
+    return promise;
+  }
+
+  std::vector<string> getUnusedFuseUnmountResults() {
+    return getUnusedResults(data_.rlock()->fuseUnmountResults);
+  }
+
+  std::vector<string> getUnusedBindUnmountResults() {
+    return getUnusedResults(data_.rlock()->bindUnmountResults);
+  }
+
+ private:
+  struct Data {
+    std::unordered_map<string, Future<File>> fuseMountResults;
+    std::unordered_map<string, Future<Unit>> fuseUnmountResults;
+    std::unordered_map<string, Future<Unit>> bindMountResults;
+    std::unordered_map<string, Future<Unit>> bindUnmountResults;
+  };
+
+  template <typename T>
+  folly::Future<T> getResultFuture(
+      std::unordered_map<string, Future<T>>& map,
+      StringPiece path) {
+    auto iter = map.find(path.str());
+    if (iter == map.end()) {
+      throw std::runtime_error(
+          folly::to<string>("no result available for ", path));
+    }
+    auto future = std::move(iter->second);
+    map.erase(iter);
+    return future;
+  }
+
+  template <typename T>
+  std::vector<string> getUnusedResults(
+      const std::unordered_map<std::string, Future<T>>& map) {
+    std::vector<string> results;
+    for (const auto& entry : map) {
+      results.push_back(entry.first);
+    }
+    return results;
+  }
+
+  folly::File fuseMount(const char* mountPath) override {
+    auto future = getResultFuture(data_.wlock()->fuseMountResults, mountPath);
+    return future.get(1s);
+  }
+
+  void fuseUnmount(const char* mountPath) override {
+    auto future = getResultFuture(data_.wlock()->fuseUnmountResults, mountPath);
+    future.get(1s);
+  }
+
+  void bindMount(const char* /* clientPath */, const char* mountPath) override {
+    auto future = getResultFuture(data_.wlock()->bindMountResults, mountPath);
+    future.get(1s);
+  }
+
+  void bindUnmount(const char* mountPath) override {
+    auto future = getResultFuture(data_.wlock()->bindUnmountResults, mountPath);
+    future.get(1s);
+  }
+
+  folly::Synchronized<Data> data_;
+};
+
+class PrivHelperTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    File clientConn;
+    File serverConn;
+    PrivHelperConn::createConnPair(clientConn, serverConn);
+
+    serverThread_ =
+        std::thread([ this, conn = std::move(serverConn) ]() mutable noexcept {
+          server_.init(std::move(conn), getuid(), getgid());
+          server_.run();
+        });
+    client_ = createTestPrivHelper(std::move(clientConn));
+    clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
+        [&] { client_->start(clientIoThread_.getEventBase()); });
+  }
+
+  ~PrivHelperTest() {
+    cleanup();
+  }
+
+  void cleanup() {
+    client_.reset();
+    if (serverThread_.joinable()) {
+      serverThread_.join();
+    }
+  }
+
+  std::unique_ptr<PrivHelper> client_;
+  PrivHelperThreadedTestServer server_;
+  std::thread serverThread_;
+  EventBaseThread clientIoThread_;
+};
+
+TEST_F(PrivHelperTest, fuseMount) {
+  // Prepare a promise to use as the result for trying to mount "/foo/bar"
+  auto filePromise = server_.setFuseMountResult("/foo/bar");
+
+  // Call fuseMount() this should return a future that is not ready yet,
+  // since we have not fulfilled the promise.
+  auto result = client_->fuseMount("/foo/bar");
+  EXPECT_FALSE(result.isReady());
+
+  // Create a temporary file to respond with
+  TemporaryFile tempFile;
+  struct stat origStat;
+  checkUnixError(
+      fstat(tempFile.fd(), &origStat), "failed to stat temporary file");
+
+  // Fulfill the response.
+  filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+
+  // The response should complete quickly now.
+  auto resultFile = result.get(1s);
+
+  // The resulting file object should refer to the same underlying file,
+  // even though the file descriptor should different since it was passed over
+  // a Unix socket.
+  EXPECT_NE(tempFile.fd(), resultFile.fd());
+  struct stat resultStat;
+  checkUnixError(
+      fstat(resultFile.fd(), &resultStat), "failed to stat result file");
+  EXPECT_EQ(origStat.st_dev, resultStat.st_dev);
+  EXPECT_EQ(origStat.st_ino, resultStat.st_ino);
+
+  // When we shut down the privhelper server it remembers that /foo/bar was
+  // unmounted and will try to unmount it.  This will fail since we have not
+  // registered a response for the unmount.  This will cause an error message to
+  // be logged, but this is fine.
   //
-  // Set send timeouts on both sides so the test won't hang forever just
-  // in case the socket buffers aren't large enough.
-  struct timeval tv;
-  tv.tv_sec = 3;
-  tv.tv_usec = 0;
-  int rc =
-      setsockopt(sender.getSocket(), SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-  checkUnixError(rc, "failed to set privhelper socket send timeout");
-  rc = setsockopt(
-      receiver.getSocket(), SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-  checkUnixError(rc, "failed to set privhelper socket send timeout");
-  // Set receive timeouts too, for good measure
-  // createConnPair() will have already set a timeout on the client side
-  // (our sender), but not the receiver.
-  rc = setsockopt(sender.getSocket(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-  checkUnixError(rc, "failed to set privhelper socket receive timeout");
-  rc = setsockopt(
-      receiver.getSocket(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-  checkUnixError(rc, "failed to set privhelper socket receive timeout");
+  // We could register a result for the unmount operation here, but seems nice
+  // for now to test that the privhelper server gracefully handles the exception
+  // from the unmount operation.
 }
 
-void checkReceivedMsg(
-    const PrivHelperConn::Message& expected,
-    const PrivHelperConn::Message& received) {
-  // Make sure the received message header is identical
-  EXPECT_EQ(expected.msgType, received.msgType);
-  EXPECT_EQ(expected.xid, received.xid);
-  EXPECT_EQ(expected.dataSize, received.dataSize);
-
-  // Make sure the received body data is identical
-  EXPECT_EQ(
-      (ByteRange{expected.data, expected.dataSize}),
-      (ByteRange{received.data, received.dataSize}));
+TEST_F(PrivHelperTest, fuseMountError) {
+  // Test calling fuseMount() with a mount path that is not registered.
+  // This will throw an error in the privhelper server thread.  Make sure the
+  // error message is raised in the client correctly.
+  EXPECT_THROW_RE(
+      client_->fuseMount("/foo/bar").get(),
+      std::exception,
+      "no result available for /foo/bar");
 }
 
-void checkReceivedFD(int expected, int received) {
-  EXPECT_NE(-1, received);
+TEST_F(PrivHelperTest, multiplePendingFuseMounts) {
+  // Prepare several promises for various mount points
+  auto abcPromise = server_.setFuseMountResult("/mnt/abc");
+  auto defPromise = server_.setFuseMountResult("/mnt/def");
+  auto foobarPromise = server_.setFuseMountResult("/foo/bar");
 
-  // The received file descriptor shouldn't be numerically the same
-  // as the expected fd, but it should refer to the exact same file.
-  EXPECT_NE(expected, received);
+  // Also set up unmount results for when the privhelper tries to unmount these
+  // mount points during cleanup.
+  server_.setFuseUnmountResult("/mnt/abc").setValue();
+  server_.setFuseUnmountResult("/mnt/def").setValue();
+  server_.setFuseUnmountResult("/foo/bar").setValue();
 
-  struct stat origStatInfo;
-  int rc = fstat(expected, &origStatInfo);
-  checkUnixError(rc, "failed to stat expected file descriptor");
+  // Make several fuseMount() calls
+  auto abcResult = client_->fuseMount("/mnt/abc");
+  auto defResult = client_->fuseMount("/mnt/def");
+  auto foobarResult = client_->fuseMount("/foo/bar");
+  EXPECT_FALSE(abcResult.isReady());
+  EXPECT_FALSE(defResult.isReady());
+  EXPECT_FALSE(foobarResult.isReady());
 
-  struct stat recvStatInfo;
-  rc = fstat(received, &recvStatInfo);
-  checkUnixError(rc, "failed to stat received file descriptor");
-  EXPECT_EQ(origStatInfo.st_dev, recvStatInfo.st_dev);
-  EXPECT_EQ(origStatInfo.st_ino, recvStatInfo.st_ino);
+  // Fulfill the response promises
+  // We fulfill them in a different order than the order of the requests here.
+  // This shouldn't affect the behavior of the code.
+  TemporaryFile tempFile;
+  foobarPromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+  abcPromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+  defPromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+
+  // The responses should be available in the client now.
+  auto results = folly::collect(abcResult, defResult, foobarResult).get(1s);
+  (void)results;
+
+  // Destroy the privhelper
+  cleanup();
+
+  // All of the unmount results should have been used.
+  EXPECT_THAT(server_.getUnusedFuseUnmountResults(), UnorderedElementsAre());
 }
 
-TEST(PrivHelper, SendFD) {
-  PrivHelperConn sender;
-  PrivHelperConn receiver;
-  createTestConns(sender, receiver);
-
-  PrivHelperConn::Message req;
-  req.msgType = 19;
-  req.xid = 92;
-  // Just send some arbitrary bytes to make sure the low-level
-  // sendMsg()/recvMsg() passes them through as-is.
-  // We include a null byte and some other low bytes as well to
-  // make sure it works with arbitrary binary data.
-  uint8_t bodyBytes[] = "test1234\x00\x01\x02\x03\x04test";
-  req.dataSize = sizeof(bodyBytes);
-  memcpy(req.data, bodyBytes, req.dataSize);
-
+TEST_F(PrivHelperTest, bindMounts) {
   TemporaryFile tempFile;
 
-  // Send the message
-  sender.sendMsg(&req, tempFile.fd());
+  // Prepare promises for the mount calls
+  server_.setFuseMountResult("/mnt/abc").setValue(File(tempFile.fd(), false));
+  server_.setBindMountResult("/mnt/abc/buck-out").setValue();
+  server_.setBindMountResult("/mnt/abc/foo/buck-out").setValue();
+  server_.setBindMountResult("/mnt/abc/bar/buck-out").setValue();
 
-  // Receive it on the other socket
-  PrivHelperConn::Message resp;
-  File receivedFile;
-  receiver.recvMsg(&resp, &receivedFile);
+  server_.setFuseMountResult("/data/users/foo/somerepo")
+      .setValue(File(tempFile.fd(), false));
+  server_.setBindMountResult("/data/users/foo/somerepo/buck-out").setValue();
 
-  // Check the received info
-  checkReceivedMsg(req, resp);
-  checkReceivedFD(tempFile.fd(), receivedFile.fd());
+  server_.setFuseMountResult("/data/users/foo/somerepo2")
+      .setValue(File(tempFile.fd(), false));
+
+  // Prepare promises for the unmount calls
+  server_.setFuseUnmountResult("/mnt/abc").setValue();
+  server_.setBindUnmountResult("/mnt/abc/buck-out").setValue();
+  server_.setBindUnmountResult("/mnt/abc/foo/buck-out").setValue();
+  server_.setBindUnmountResult("/mnt/abc/bar/buck-out").setValue();
+  server_.setFuseUnmountResult("/data/users/foo/somerepo").setValue();
+  server_.setFuseUnmountResult("/data/users/foo/somerepo2").setValue();
+  // Leave the promise for somerepo/buck-out unfulfilled for now
+  auto somerepoBuckOutUnmountPromise =
+      server_.setBindUnmountResult("/data/users/foo/somerepo/buck-out");
+
+  // Prepare some extra unmount promises that we don't expect to be used,
+  // just to verify that cleanup happens as expected.
+  server_.setFuseUnmountResult("/never/actually/mounted").setValue();
+  server_.setBindUnmountResult("/bind/never/actually/mounted").setValue();
+
+  // Mount everything
+  client_->fuseMount("/data/users/foo/somerepo").get(1s);
+  client_->bindMount("/bind/mount/source", "/data/users/foo/somerepo/buck-out")
+      .get(1s);
+
+  client_->fuseMount("/mnt/abc").get(1s);
+  client_->bindMount("/bind/mount/source", "/mnt/abc/buck-out").get(1s);
+  client_->bindMount("/bind/mount/source", "/mnt/abc/foo/buck-out").get(1s);
+  client_->fuseMount("/data/users/foo/somerepo2").get(1s);
+  client_->bindMount("/bind/mount/source", "/mnt/abc/bar/buck-out").get(1s);
+
+  // Manually unmount /data/users/foo/somerepo
+  // This shouldn't finish until the bind unmount completes.
+  auto unmountResult = client_->fuseUnmount("/data/users/foo/somerepo");
+  /* sleep override */ std::this_thread::sleep_for(20ms);
+  EXPECT_FALSE(unmountResult.isReady());
+  // Fulfilling the bind unmount promise for the buck-out bind mount should
+  // allow the overall unmount operation to complete.
+  somerepoBuckOutUnmountPromise.setValue();
+  unmountResult.get(1s);
+
+  // Now shut down the privhelper.  It should clean up the remaining mount
+  // points.  The only leftover results should be the extra ones we
+  // intentionally added.
+  cleanup();
+  EXPECT_THAT(
+      server_.getUnusedFuseUnmountResults(),
+      UnorderedElementsAre("/never/actually/mounted"));
+  EXPECT_THAT(
+      server_.getUnusedBindUnmountResults(),
+      UnorderedElementsAre("/bind/never/actually/mounted"));
 }
 
-TEST(PrivHelper, PipelinedSend) {
-  PrivHelperConn sender;
-  PrivHelperConn receiver;
-  createTestConns(sender, receiver);
+TEST_F(PrivHelperTest, takeoverShutdown) {
+  TemporaryFile tempFile;
 
-  PrivHelperConn::Message req1;
-  req1.msgType = 19;
-  req1.xid = 92;
-  req1.dataSize = 20;
-  memset(req1.data, 'a', req1.dataSize);
+  // Set up mount promises
+  server_.setFuseMountResult("/mnt/abc").setValue(File(tempFile.fd(), false));
+  server_.setBindMountResult("/mnt/abc/buck-out").setValue();
+  server_.setBindMountResult("/mnt/abc/foo/buck-out").setValue();
+  server_.setBindMountResult("/mnt/abc/bar/buck-out").setValue();
 
-  PrivHelperConn::Message req2;
-  req2.msgType = 0;
-  req2.xid = 123;
-  req2.dataSize = sizeof(req2.data);
-  memset(req2.data, 'b', req2.dataSize);
+  server_.setFuseMountResult("/mnt/somerepo")
+      .setValue(File(tempFile.fd(), false));
 
-  TemporaryFile tempFile1;
-  TemporaryFile tempFile2;
+  server_.setFuseMountResult("/mnt/somerepo2")
+      .setValue(File(tempFile.fd(), false));
+  server_.setBindMountResult("/mnt/somerepo2/buck-out").setValue();
 
-  // Make two separate sendMsg() calls before we try reading anything
-  // from the receiver.
-  sender.sendMsg(&req1, tempFile1.fd());
-  sender.sendMsg(&req2, tempFile2.fd());
+  // Set up unmount promises
+  server_.setFuseUnmountResult("/mnt/abc").setValue();
+  server_.setBindUnmountResult("/mnt/abc/buck-out").setValue();
+  server_.setBindUnmountResult("/mnt/abc/foo/buck-out").setValue();
+  server_.setBindUnmountResult("/mnt/abc/bar/buck-out").setValue();
+  server_.setFuseUnmountResult("/mnt/somerepo").setValue();
+  server_.setFuseUnmountResult("/mnt/somerepo2").setValue();
+  server_.setBindUnmountResult("/mnt/somerepo2/buck-out").setValue();
 
-  // Now perform the receives, and make sure we receive each message separately
-  PrivHelperConn::Message resp1;
-  File rfile1;
-  receiver.recvMsg(&resp1, &rfile1);
-  {
-    SCOPED_TRACE("request 1");
-    checkReceivedMsg(req1, resp1);
-    checkReceivedFD(tempFile1.fd(), rfile1.fd());
-  }
+  // Mount everything
+  client_->fuseMount("/mnt/abc").get(1s);
+  client_->bindMount("/bind/mount/source", "/mnt/abc/buck-out").get(1s);
+  client_->bindMount("/bind/mount/source", "/mnt/abc/foo/buck-out").get(1s);
+  client_->bindMount("/bind/mount/source", "/mnt/abc/bar/buck-out").get(1s);
+  client_->fuseMount("/mnt/somerepo").get(1s);
+  client_->fuseMount("/mnt/somerepo2").get(1s);
+  client_->bindMount("/bind/mount/source", "/mnt/somerepo2/buck-out").get(1s);
 
-  PrivHelperConn::Message resp2;
-  File rfile2;
-  receiver.recvMsg(&resp2, &rfile2);
-  {
-    SCOPED_TRACE("request 2");
-    checkReceivedMsg(req2, resp2);
-    checkReceivedFD(tempFile2.fd(), rfile2.fd());
-  }
+  // Indicate that /mnt/abc and /mnt/somerepo are being taken over.
+  client_->fuseTakeoverShutdown("/mnt/abc").get(1s);
+  client_->fuseTakeoverShutdown("/mnt/somerepo").get(1s);
+
+  // Destroy the privhelper.
+  // /mnt/somerepo2 should be unmounted, but /mnt/abc and /mnt/somerepo
+  // should not be.
+  cleanup();
+
+  EXPECT_THAT(
+      server_.getUnusedFuseUnmountResults(),
+      UnorderedElementsAre("/mnt/abc", "/mnt/somerepo"));
+  EXPECT_THAT(
+      server_.getUnusedBindUnmountResults(),
+      UnorderedElementsAre(
+          "/mnt/abc/buck-out",
+          "/mnt/abc/foo/buck-out",
+          "/mnt/abc/bar/buck-out"));
 }
 
-TEST(PrivHelper, RecvEOF) {
-  PrivHelperConn sender;
-  PrivHelperConn receiver;
-  createTestConns(sender, receiver);
+TEST_F(PrivHelperTest, takeoverStartup) {
+  TemporaryFile tempFile;
 
-  sender.close();
+  // Indicate that we are taking over some mount points.
+  client_
+      ->fuseTakeoverStartup(
+          "/mnt/abc", {"/mnt/abc/foo/buck-out", "/mnt/abc/xyz/test/buck-out"})
+      .get(1s);
+  client_->fuseTakeoverStartup("/data/users/johndoe/myrepo", {}).get(1s);
+  client_->fuseTakeoverStartup("/mnt/repo_x", {"/mnt/repo_x/y"}).get(1s);
 
-  PrivHelperConn::Message msg;
-  EXPECT_THROW(receiver.recvMsg(&msg, nullptr), PrivHelperClosedError);
+  // Manually mount one other mount point.
+  server_.setFuseMountResult("/mnt/xyz").setValue(File(tempFile.fd(), false));
+  server_.setBindMountResult("/mnt/xyz/buck-out").setValue();
+  client_->fuseMount("/mnt/xyz").get(1s);
+  client_->bindMount("/bind/mount/source", "/mnt/xyz/buck-out").get(1s);
+
+  // Manually unmount /mnt/repo_x
+  server_.setFuseUnmountResult("/mnt/repo_x").setValue();
+  server_.setBindUnmountResult("/mnt/repo_x/y").setValue();
+  client_->fuseUnmount("/mnt/repo_x").get(1s);
+  EXPECT_THAT(server_.getUnusedFuseUnmountResults(), UnorderedElementsAre());
+  EXPECT_THAT(server_.getUnusedBindUnmountResults(), UnorderedElementsAre());
+
+  // Re-register the unmount results for repo_x just to confirm that they are
+  // not re-used on shutdown.
+  server_.setFuseUnmountResult("/mnt/repo_x").setValue();
+  server_.setBindUnmountResult("/mnt/repo_x/y").setValue();
+
+  // Register results for the other unmount operations that should occur.
+  server_.setFuseUnmountResult("/mnt/abc").setValue();
+  server_.setBindUnmountResult("/mnt/abc/foo/buck-out").setValue();
+  server_.setBindUnmountResult("/mnt/abc/xyz/test/buck-out").setValue();
+  server_.setFuseUnmountResult("/mnt/xyz").setValue();
+  server_.setBindUnmountResult("/mnt/xyz/buck-out").setValue();
+  server_.setFuseUnmountResult("/data/users/johndoe/myrepo").setValue();
+
+  // Shut down the privhelper.  It should unmount the registered mount points.
+  cleanup();
+  EXPECT_THAT(
+      server_.getUnusedFuseUnmountResults(),
+      UnorderedElementsAre("/mnt/repo_x"));
+  EXPECT_THAT(
+      server_.getUnusedBindUnmountResults(),
+      UnorderedElementsAre("/mnt/repo_x/y"));
 }
 
-void testSerializeMount(StringPiece mountPath) {
-  PrivHelperConn::Message msg;
-  msg.xid = 1;
-  PrivHelperConn::serializeMountRequest(&msg, mountPath);
-
-  string readMountPath;
-  PrivHelperConn::parseMountRequest(&msg, readMountPath);
-  EXPECT_EQ(mountPath.str(), readMountPath);
-}
-
-TEST(PrivHelper, SerializeMount) {
-  testSerializeMount("/path/to/mount/point");
-  testSerializeMount("foobar");
-  testSerializeMount("");
-  testSerializeMount(StringPiece("foo\0\0\0bar", 9));
-}
-
-void testSerializeTakeoverStartupRequest(
-    StringPiece mountPath,
-    const vector<string>& bindMounts) {
-  PrivHelperConn::Message msg;
-  msg.xid = 1;
-  PrivHelperConn::serializeTakeoverStartupRequest(&msg, mountPath, bindMounts);
-
-  string readMountPath;
-  vector<string> readBindMounts;
-  PrivHelperConn::parseTakeoverStartupRequest(
-      &msg, readMountPath, readBindMounts);
-  EXPECT_EQ(mountPath.str(), readMountPath);
-  EXPECT_EQ(bindMounts, readBindMounts);
-}
-
-TEST(PrivHelper, SerializeTakeoverStartupRequest) {
-  testSerializeTakeoverStartupRequest("/path/to/mount/point", vector<string>{});
-  testSerializeTakeoverStartupRequest("foo", vector<string>{"a", "b"});
-  testSerializeTakeoverStartupRequest(
-      "foo\0\0\0bar"_sp, vector<string>{"a", "b"});
-}
-
-void testSerializeTakeoverShutdown(StringPiece mountPath) {
-  PrivHelperConn::Message msg;
-  msg.xid = 1;
-  PrivHelperConn::serializeTakeoverShutdownRequest(&msg, mountPath);
-
-  string readMountPath;
-  PrivHelperConn::parseTakeoverShutdownRequest(&msg, readMountPath);
-  EXPECT_EQ(mountPath.str(), readMountPath);
-}
-
-TEST(PrivHelper, SerializeTakeoverShutdownRequest) {
-  testSerializeTakeoverShutdown("/path/to/mount/point");
-  testSerializeTakeoverShutdown("foobar");
-  testSerializeTakeoverShutdown("");
-  testSerializeTakeoverShutdown("foo\0\0\0bar"_sp);
-}
-
-TEST(PrivHelper, SerializeError) {
-  PrivHelperConn::Message msg;
-  // Serialize an exception
-  try {
-    folly::throwSystemErrorExplicit(ENOENT, "test error");
-  } catch (const std::exception& ex) {
-    PrivHelperConn::serializeErrorResponse(&msg, ex);
-  }
-
-  // Try parsing it as a mount response
-  try {
-    PrivHelperConn::parseEmptyResponse(&msg);
-    FAIL() << "expected parseEmptyResponse() to throw";
-  } catch (const std::system_error& ex) {
-    EXPECT_TRUE(isErrnoError(ex))
-        << "unexpected error category: " << folly::exceptionStr(ex);
-    EXPECT_EQ(ENOENT, ex.code().value());
-    EXPECT_TRUE(strstr(ex.what(), "test error") != nullptr)
-        << "unexpected error string: " << ex.what();
-  }
-}
-
-TEST(PrivHelper, ServerShutdownTest) {
+/*
+ * A test that actually forks a separate privhelper process and verifies it
+ * cleans up successfully.
+ *
+ * This is different than most of the tests above that simply run the privhelper
+ * server as a separate thread in the same process.
+ */
+TEST(PrivHelper, ForkedServerShutdownTest) {
   TemporaryDirectory tmpDir;
   PrivHelperTestServer server;
 
@@ -290,6 +457,9 @@ TEST(PrivHelper, ServerShutdownTest) {
 
   {
     auto privHelper = startPrivHelper(&server, UserInfo::lookup());
+    EventBaseThread evbt;
+    evbt.getEventBase()->runInEventBaseThreadAndWait(
+        [&] { privHelper->start(evbt.getEventBase()); });
 
     // Create a few mount points
     privHelper->fuseMount(foo).get(50ms);
