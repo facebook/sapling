@@ -497,29 +497,18 @@ class hgdist(Distribution):
 
 # This is ugly as a one-liner. So use a variable.
 buildextnegops = dict(getattr(build_ext, "negative_options", {}))
-buildextnegops["no-zstd"] = "zstd"
 
 
 class hgbuildext(build_ext):
     user_options = build_ext.user_options + [
-        ("zstd", None, "compile zstd bindings [default]"),
-        ("no-zstd", None, "do not compile zstd bindings"),
-        ("re2-src=", None, "directory containing re2 source code"),
+        ("re2-src=", None, "directory containing re2 source code")
     ]
 
-    boolean_options = build_ext.boolean_options + ["zstd"]
-    negative_opt = buildextnegops
-
     def initialize_options(self):
-        self.zstd = True
         self.re2_src = os.environ.get("RE2SRC", "")
         return build_ext.initialize_options(self)
 
     def build_extensions(self):
-        # Filter out zstd if disabled via argument.
-        if not self.zstd:
-            self.extensions = [e for e in self.extensions if e.name != "mercurial.zstd"]
-
         re2path = self.re2_src
         if re2path:
             self.extensions.append(
@@ -1336,11 +1325,6 @@ libraries = [
         },
     ),
 ]
-
-sys.path.insert(0, "contrib/python-zstandard")
-import setup_zstd
-
-extmodules.append(setup_zstd.get_c_extension(name="mercurial.zstd"))
 
 # let's add EXTRA_LIBS to every buildable
 for extmodule in extmodules:
