@@ -23,6 +23,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
+using namespace std::chrono_literals;
 using folly::exceptionStr;
 using folly::makeFuture;
 using std::string;
@@ -103,7 +104,7 @@ int main(int argc, char** argv) {
     return EX_DATAERR;
   }
 
-  auto fuseDevice = privHelper->fuseMount(mountPath.value());
+  auto fuseDevice = privHelper->fuseMount(mountPath.value()).get(100ms);
   ThreadLocalEdenStats stats;
   TestDispatcher dispatcher(&stats, identity);
 

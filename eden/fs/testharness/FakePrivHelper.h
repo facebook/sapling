@@ -36,12 +36,14 @@ class FakePrivHelper : public PrivHelper {
       std::shared_ptr<FakeFuse> fuse);
 
   // PrivHelper functions
-  folly::File fuseMount(folly::StringPiece mountPath) override;
-  void fuseUnmount(folly::StringPiece mountPath) override;
-  void bindMount(folly::StringPiece clientPath, folly::StringPiece mountPath)
-      override;
-  void fuseTakeoverShutdown(folly::StringPiece mountPath) override;
-  void fuseTakeoverStartup(
+  folly::Future<folly::File> fuseMount(folly::StringPiece mountPath) override;
+  folly::Future<folly::Unit> fuseUnmount(folly::StringPiece mountPath) override;
+  folly::Future<folly::Unit> bindMount(
+      folly::StringPiece clientPath,
+      folly::StringPiece mountPath) override;
+  folly::Future<folly::Unit> fuseTakeoverShutdown(
+      folly::StringPiece mountPath) override;
+  folly::Future<folly::Unit> fuseTakeoverStartup(
       folly::StringPiece mountPath,
       const std::vector<std::string>& bindMounts) override;
   int stop() override;

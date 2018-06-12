@@ -84,13 +84,15 @@ class EdenServer : private TakeoverHandler {
   /**
    * Prepare to run the EdenServer.
    *
-   * This acquires the lock on the eden directory, remounts configured mount
-   * points, and prepares the thrift server to run.
+   * This acquires the lock on the eden directory, prepares the thrift server to
+   * run, and begins remounting configured mount points.
    *
    * After prepare returns the caller can call getServer()->serve() to
    * run the thrift server main loop.
+   *
+   * The returned Future will finish once all mount points have been remounted.
    */
-  void prepare();
+  FOLLY_NODISCARD folly::Future<folly::Unit> prepare();
 
   /**
    * Stops this server, which includes the underlying Thrift server.
@@ -297,6 +299,9 @@ class EdenServer : private TakeoverHandler {
   // loading the state from the old incarnation and starting up the
   // thread pool.
   FOLLY_NODISCARD folly::Future<folly::Unit> performTakeoverFuseStart(
+      std::shared_ptr<EdenMount> edenMount,
+      TakeoverData::MountInfo&& takeover);
+  FOLLY_NODISCARD folly::Future<folly::Unit> completeTakeoverFuseStart(
       std::shared_ptr<EdenMount> edenMount,
       TakeoverData::MountInfo&& takeover);
 

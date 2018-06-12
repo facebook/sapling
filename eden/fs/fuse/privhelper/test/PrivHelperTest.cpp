@@ -15,9 +15,11 @@
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
 #include <sys/socket.h>
+#include <chrono>
 #include <vector>
 
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
@@ -27,6 +29,7 @@
 
 using namespace folly::string_piece_literals;
 using namespace facebook::eden;
+using namespace std::chrono_literals;
 using facebook::eden::UserInfo;
 using folly::ByteRange;
 using folly::checkUnixError;
@@ -289,8 +292,8 @@ TEST(PrivHelper, ServerShutdownTest) {
     auto privHelper = startPrivHelper(&server, UserInfo::lookup());
 
     // Create a few mount points
-    privHelper->fuseMount(foo);
-    privHelper->fuseMount(bar);
+    privHelper->fuseMount(foo).get(50ms);
+    privHelper->fuseMount(bar).get(50ms);
     EXPECT_TRUE(server.isMounted(foo));
     EXPECT_TRUE(server.isMounted(bar));
     EXPECT_FALSE(server.isMounted(other));
@@ -298,7 +301,8 @@ TEST(PrivHelper, ServerShutdownTest) {
     // Create a bind mount.
     EXPECT_FALSE(boost::filesystem::exists(mountedBuckOut));
     TemporaryDirectory realBuckOut;
-    privHelper->bindMount(realBuckOut.path().c_str(), mountedBuckOut.c_str());
+    privHelper->bindMount(realBuckOut.path().c_str(), mountedBuckOut.c_str())
+        .get(50ms);
     EXPECT_TRUE(server.isBindMounted(mountedBuckOut.c_str()));
     EXPECT_TRUE(boost::filesystem::exists(mountedBuckOut))
         << "privilegedBindMount() should create the bind mount directory for "

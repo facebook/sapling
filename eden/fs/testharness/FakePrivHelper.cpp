@@ -11,8 +11,13 @@
 
 #include <folly/Conv.h>
 #include <folly/File.h>
+#include <folly/futures/Future.h>
 #include "eden/fs/testharness/FakeFuse.h"
 
+using folly::File;
+using folly::Future;
+using folly::makeFuture;
+using folly::Unit;
 using std::runtime_error;
 using std::string;
 
@@ -31,7 +36,7 @@ void FakePrivHelper::registerMount(
   }
 }
 
-folly::File FakePrivHelper::fuseMount(folly::StringPiece mountPath) {
+Future<File> FakePrivHelper::fuseMount(folly::StringPiece mountPath) {
   auto iter = mounts_.find(mountPath.str());
   if (iter == mounts_.end()) {
     throw std::range_error(folly::to<string>(
@@ -50,24 +55,29 @@ folly::File FakePrivHelper::fuseMount(folly::StringPiece mountPath) {
   return fakeFuse->start();
 }
 
-void FakePrivHelper::fuseUnmount(folly::StringPiece /* mountPath */) {
-  throw runtime_error("FakePrivHelper::fuseUnmount() not implemented");
+Future<Unit> FakePrivHelper::fuseUnmount(folly::StringPiece /* mountPath */) {
+  return makeFuture<Unit>(
+      runtime_error("FakePrivHelper::fuseUnmount() not implemented"));
 }
 
-void FakePrivHelper::bindMount(
+Future<Unit> FakePrivHelper::bindMount(
     folly::StringPiece /* clientPath */,
     folly::StringPiece /* mountPath */) {
-  throw runtime_error("FakePrivHelper::bindMount() not implemented");
+  return makeFuture<Unit>(
+      runtime_error("FakePrivHelper::bindMount() not implemented"));
 }
 
-void FakePrivHelper::fuseTakeoverShutdown(folly::StringPiece /* mountPath */) {
-  throw runtime_error("FakePrivHelper::fuseTakeoverShutdown() not implemented");
+Future<Unit> FakePrivHelper::fuseTakeoverShutdown(
+    folly::StringPiece /* mountPath */) {
+  return makeFuture<Unit>(
+      runtime_error("FakePrivHelper::fuseTakeoverShutdown() not implemented"));
 }
 
-void FakePrivHelper::fuseTakeoverStartup(
+Future<Unit> FakePrivHelper::fuseTakeoverStartup(
     folly::StringPiece /* mountPath */,
     const std::vector<std::string>& /* bindMounts */) {
-  throw runtime_error("FakePrivHelper::fuseTakeoverStartup() not implemented");
+  return makeFuture<Unit>(
+      runtime_error("FakePrivHelper::fuseTakeoverStartup() not implemented"));
 }
 
 int FakePrivHelper::stop() {

@@ -13,6 +13,7 @@
 #include <folly/Expected.h>
 #include <folly/File.h>
 #include <folly/String.h>
+#include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -24,7 +25,12 @@
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 
 using folly::checkUnixError;
+using folly::File;
+using folly::Future;
+using folly::makeFuture;
 using folly::StringPiece;
+using folly::Unit;
+using folly::unit;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
@@ -49,11 +55,12 @@ class PrivHelperClientImpl : public PrivHelper {
     }
   }
 
-  folly::File fuseMount(folly::StringPiece mountPath) override;
-  void fuseUnmount(StringPiece mountPath) override;
-  void bindMount(StringPiece clientPath, StringPiece mountPath) override;
-  void fuseTakeoverShutdown(StringPiece mountPath) override;
-  void fuseTakeoverStartup(
+  Future<File> fuseMount(folly::StringPiece mountPath) override;
+  Future<Unit> fuseUnmount(StringPiece mountPath) override;
+  Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
+      override;
+  Future<Unit> fuseTakeoverShutdown(StringPiece mountPath) override;
+  Future<Unit> fuseTakeoverStartup(
       StringPiece mountPath,
       const vector<string>& bindMounts) override;
   int stop() override;
@@ -148,7 +155,7 @@ class PrivHelperClientImpl : public PrivHelper {
   uint32_t nextXid_{1};
 };
 
-folly::File PrivHelperClientImpl::fuseMount(StringPiece mountPath) {
+Future<File> PrivHelperClientImpl::fuseMount(StringPiece mountPath) {
   PrivHelperConn::Message msg;
   PrivHelperConn::serializeMountRequest(&msg, mountPath);
 
@@ -159,15 +166,16 @@ folly::File PrivHelperClientImpl::fuseMount(StringPiece mountPath) {
   return file;
 }
 
-void PrivHelperClientImpl::fuseUnmount(StringPiece mountPath) {
+Future<Unit> PrivHelperClientImpl::fuseUnmount(StringPiece mountPath) {
   PrivHelperConn::Message msg;
   PrivHelperConn::serializeUnmountRequest(&msg, mountPath);
 
   sendAndRecv(&msg, nullptr);
   PrivHelperConn::parseEmptyResponse(&msg);
+  return unit;
 }
 
-void PrivHelperClientImpl::bindMount(
+Future<Unit> PrivHelperClientImpl::bindMount(
     StringPiece clientPath,
     StringPiece mountPath) {
   PrivHelperConn::Message msg;
@@ -175,17 +183,19 @@ void PrivHelperClientImpl::bindMount(
 
   sendAndRecv(&msg, nullptr);
   PrivHelperConn::parseEmptyResponse(&msg);
+  return unit;
 }
 
-void PrivHelperClientImpl::fuseTakeoverShutdown(StringPiece mountPath) {
+Future<Unit> PrivHelperClientImpl::fuseTakeoverShutdown(StringPiece mountPath) {
   PrivHelperConn::Message msg;
   PrivHelperConn::serializeTakeoverShutdownRequest(&msg, mountPath);
 
   sendAndRecv(&msg, nullptr);
   PrivHelperConn::parseEmptyResponse(&msg);
+  return unit;
 }
 
-void PrivHelperClientImpl::fuseTakeoverStartup(
+Future<Unit> PrivHelperClientImpl::fuseTakeoverStartup(
     StringPiece mountPath,
     const vector<string>& bindMounts) {
   PrivHelperConn::Message msg;
@@ -193,6 +203,7 @@ void PrivHelperClientImpl::fuseTakeoverStartup(
 
   sendAndRecv(&msg, nullptr);
   PrivHelperConn::parseEmptyResponse(&msg);
+  return unit;
 }
 
 int PrivHelperClientImpl::stop() {

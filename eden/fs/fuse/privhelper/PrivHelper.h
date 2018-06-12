@@ -9,12 +9,16 @@
  */
 #pragma once
 
+#include <folly/Portability.h>
 #include <folly/Range.h>
 #include <sys/types.h>
 #include <memory>
 
 namespace folly {
 class File;
+template <typename T>
+class Future;
+class Unit;
 }
 
 namespace facebook {
@@ -36,28 +40,23 @@ class PrivHelper {
    * Ask the privileged helper process to perform a fuse mount.
    *
    * Returns a folly::File object with the file descriptor containing the fuse
-   * connection.  Throws an exception on error.
-   *
-   * The mountFlags and mountOpts parameters here are passed to the mount(2)
-   * system call.
-   * TODO(simpkins): I'm just going to drop these arguments, so that the
-   * unprivileged process doesn't have control of them.  The privhelper process
-   * itself will just pick the right values.
+   * connection.
    */
-  virtual folly::File fuseMount(folly::StringPiece mountPath) = 0;
+  FOLLY_NODISCARD virtual folly::Future<folly::File> fuseMount(
+      folly::StringPiece mountPath) = 0;
 
   /**
-   * Ask the priveleged helper process to perform a fuse unmount. Throws an
-   * exception on error.
+   * Ask the priveleged helper process to perform a fuse unmount.
    */
-  virtual void fuseUnmount(folly::StringPiece mountPath) = 0;
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fuseUnmount(
+      folly::StringPiece mountPath) = 0;
 
   /**
    * @param clientPath Absolute path (that should be under
    *     .eden/clients/<client-name>/bind-mounts/) where the "real" storage is.
    * @param mountPath Absolute path where the bind mount should be applied.
    */
-  virtual void bindMount(
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> bindMount(
       folly::StringPiece clientPath,
       folly::StringPiece mountPath) = 0;
 
@@ -66,13 +65,14 @@ class PrivHelper {
    * graceful restart, and a new edenfs daemon will take over our existing
    * mount points without unmounting them.
    */
-  virtual void fuseTakeoverShutdown(folly::StringPiece mountPath) = 0;
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fuseTakeoverShutdown(
+      folly::StringPiece mountPath) = 0;
 
   /**
    * Inform the privhelper process that we have taken over an existing mount
    * point from another edenfs process.
    */
-  virtual void fuseTakeoverStartup(
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fuseTakeoverStartup(
       folly::StringPiece mountPath,
       const std::vector<std::string>& bindMounts) = 0;
 

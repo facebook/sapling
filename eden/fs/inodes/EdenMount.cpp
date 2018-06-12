@@ -259,7 +259,8 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
 
 EdenMount::~EdenMount() {}
 
-void EdenMount::performBindMounts() {
+Future<Unit> EdenMount::performBindMounts() {
+  vector<Future<Unit>> futures;
   for (const auto& bindMount : bindMounts_) {
     const auto pathInMountDir = bindMount.pathInMountDir.c_str();
     try {
@@ -267,8 +268,9 @@ void EdenMount::performBindMounts() {
       // the bind mount is performed.
       boost::filesystem::create_directories(pathInMountDir);
 
-      serverState_->getPrivHelper()->bindMount(
+      auto bindFuture = serverState_->getPrivHelper()->bindMount(
           bindMount.pathInClientDir.c_str(), pathInMountDir);
+      futures.push_back(std::move(bindFuture));
     } catch (const std::exception& ex) {
       // Consider recording all failed bind mounts in a way that can be
       // communicated back to the caller in a structured way.
@@ -276,6 +278,8 @@ void EdenMount::performBindMounts() {
                 << " due to: " << folly::exceptionStr(ex);
     }
   }
+
+  return folly::collect(futures).unit();
 }
 
 bool EdenMount::doStateTransition(State expected, State newState) {
@@ -668,17 +672,18 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
       throw std::runtime_error("mount point has already been started");
     }
 
-    auto fuseDevice =
-        serverState_->getPrivHelper()->fuseMount(path_.stringPiece());
-
-    createFuseChannel(std::move(fuseDevice));
-    return channel_->initialize()
-        .then([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
-          fuseInitSuccessful(std::move(fuseCompleteFuture));
-        })
-        .onError([this](folly::exception_wrapper&& ew) {
-          doStateTransition(State::STARTING, State::FUSE_ERROR);
-          return makeFuture<folly::Unit>(std::move(ew));
+    return serverState_->getPrivHelper()
+        ->fuseMount(path_.stringPiece())
+        .then([this](folly::File&& fuseDevice) {
+          createFuseChannel(std::move(fuseDevice));
+          return channel_->initialize()
+              .then([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
+                fuseInitSuccessful(std::move(fuseCompleteFuture));
+              })
+              .onError([this](folly::exception_wrapper&& ew) {
+                doStateTransition(State::STARTING, State::FUSE_ERROR);
+                return makeFuture<folly::Unit>(std::move(ew));
+              });
         });
   });
 }

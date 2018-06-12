@@ -449,7 +449,7 @@ class EdenMount {
    * This requires that the filesystem already be mounted, and must not
    * be called in the context of a fuseWorkerThread().
    */
-  void performBindMounts();
+  FOLLY_NODISCARD folly::Future<folly::Unit> performBindMounts();
 
  private:
   friend class RenameLock;
