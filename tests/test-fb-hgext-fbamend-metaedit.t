@@ -112,7 +112,8 @@ Test
   abort: cannot fold non-linear revisions (multiple heads given)
   [255]
 
-  $ hg metaedit --user foobar
+  $ hg metaedit --user foobar  -T "{nodechanges|json}\n"
+  {"587528abfffe33d49f94f9d6223dbbd58d6197c6": ["212b2a2b87cdbae992f001e9baba64db389fbce7"]}
   $ hg log --template '{rev}: {author}\n' -r 'desc(F):' --hidden
   7: test
   8: foobar

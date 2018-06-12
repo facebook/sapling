@@ -11,10 +11,20 @@
 
 from __future__ import absolute_import
 
-from mercurial import commands, error, hg, lock as lockmod, phases, registrar, scmutil
+from mercurial import (
+    cmdutil,
+    commands,
+    error,
+    hg,
+    lock as lockmod,
+    phases,
+    registrar,
+    scmutil,
+)
 from mercurial.i18n import _
 
 from . import common, fold
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -27,10 +37,12 @@ command = registrar.command(cmdtable)
         ("", "fold", False, _("fold specified revisions into one")),
     ]
     + commands.commitopts
-    + commands.commitopts2,
+    + commands.commitopts2
+    + cmdutil.formatteropts,
     _("hg metaedit [OPTION]... [-r] [REV]"),
+    cmdtemplate=True,
 )
-def metaedit(ui, repo, *revs, **opts):
+def metaedit(ui, repo, templ, *revs, **opts):
     """edit commit information
 
     Edits the commit information for the specified revisions. By default, edits
@@ -151,6 +163,7 @@ def metaedit(ui, repo, *revs, **opts):
                             replacemap.iteritems(),
                         )
                     )
+                    templ.setprop("nodereplacements", mapping)
                     scmutil.cleanupnodes(repo, mapping, "metaedit")
                     # TODO: set poroper phase boundaries (affects secret
                     # phase only)
@@ -177,6 +190,7 @@ def metaedit(ui, repo, *revs, **opts):
                         newp1 = newid
                     phases.retractboundary(repo, tr, targetphase, [newid])
                     mapping = dict([(repo[rev].node(), [newid]) for rev in revs])
+                    templ.setprop("nodereplacements", mapping)
                     scmutil.cleanupnodes(repo, mapping, "metaedit")
                 else:
                     ui.status(_("nothing changed\n"))
