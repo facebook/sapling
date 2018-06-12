@@ -1142,7 +1142,7 @@ extmodules = [
         "mercurial.cext.mpatch",
         ["mercurial/mpatch.c", "mercurial/cext/mpatch.c"],
         include_dirs=include_dirs,
-        depends=common_depends,
+        depends=common_depends + ["mercurial/mpatch.h"],
     ),
     Extension(
         "mercurial.cext.parsers",
@@ -1201,6 +1201,23 @@ extmodules = [
             "hgext/extlib/ctreemanifest/manifest_ptr.cpp",
             "hgext/extlib/ctreemanifest/treemanifest.cpp",
         ],
+        depends=[
+            "hgext/extlib/cstore/datapackstore.h",
+            "hgext/extlib/cstore/datastore.h",
+            "hgext/extlib/cstore/deltachain.h",
+            "hgext/extlib/cstore/key.h",
+            "hgext/extlib/cstore/match.h",
+            "hgext/extlib/cstore/py-cdatapack.h",
+            "hgext/extlib/cstore/py-datapackstore.h",
+            "hgext/extlib/cstore/py-structs.h",
+            "hgext/extlib/cstore/py-treemanifest.h",
+            "hgext/extlib/cstore/pythondatastore.h",
+            "hgext/extlib/cstore/pythonkeyiterator.h",
+            "hgext/extlib/cstore/pythonutil.h",
+            "hgext/extlib/cstore/store.h",
+            "hgext/extlib/cstore/uniondatapackstore.h",
+            "hgext/extlib/cstore/util.h",
+        ],
         include_dirs=include_dirs,
         library_dirs=["build/" + distutils_dir_name("lib")] + library_dirs,
         libraries=["datapack", "lz4", "mpatch", SHA1_LIBRARY],
@@ -1222,6 +1239,19 @@ extmodules = [
             "hgext/extlib/cfastmanifest/tree_disk.c",
             "hgext/extlib/cfastmanifest/tree_iterator.c",
             "hgext/extlib/cfastmanifest/tree_path.c",
+        ],
+        depends=[
+            "hgext/extlib/cfastmanifest/bsearch.h",
+            "hgext/extlib/cfastmanifest/checksum.h",
+            "hgext/extlib/cfastmanifest/internal_result.h",
+            "hgext/extlib/cfastmanifest/node.h",
+            "hgext/extlib/cfastmanifest/path_buffer.h",
+            "hgext/extlib/cfastmanifest/result.h",
+            "hgext/extlib/cfastmanifest/tests.h",
+            "hgext/extlib/cfastmanifest/tree_arena.h",
+            "hgext/extlib/cfastmanifest/tree.h",
+            "hgext/extlib/cfastmanifest/tree_iterator.h",
+            "hgext/extlib/cfastmanifest/tree_path.h",
         ],
         include_dirs=include_dirs,
         library_dirs=library_dirs,
@@ -1272,6 +1302,7 @@ libraries = [
         "datapack",
         {
             "sources": ["lib/cdatapack/cdatapack.c"],
+            "depends": ["lib/cdatapack/cdatapack.h"],
             "include_dirs": ["."] + include_dirs,
             "libraries": ["lz4", SHA1_LIBRARY],
             "extra_args": filter(None, [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
@@ -1284,13 +1315,25 @@ libraries = [
                 "lib/third-party/sha1dc/sha1.c",
                 "lib/third-party/sha1dc/ubc_check.c",
             ],
+            "depends": [
+                "lib/third-party/sha1dc/sha1.h",
+                "lib/third-party/sha1dc/ubc_check.h",
+            ],
             "include_dirs": ["lib/third-party"] + include_dirs,
             "extra_args": filter(None, [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
         },
     ),
     (
         "mpatch",
-        {"sources": ["mercurial/mpatch.c"], "include_dirs": ["."] + include_dirs},
+        {
+            "sources": ["mercurial/mpatch.c"],
+            "depends": [
+                "mercurial/bitmanipulation.h",
+                "mercurial/compat.h",
+                "mercurial/mpatch.h",
+            ],
+            "include_dirs": ["."] + include_dirs,
+        },
     ),
 ]
 
@@ -1442,6 +1485,7 @@ if sys.platform == "darwin" and os.path.exists("/usr/bin/xcodebuild"):
             os.environ["CFLAGS"] = os.environ.get("CFLAGS", "") + " -Qunused-arguments"
 
 import distutils.command.build_clib
+from distutils.dep_util import newer_group
 from distutils.errors import DistutilsSetupError
 
 
@@ -1455,6 +1499,14 @@ def build_libraries(self, libraries):
                 + "a list of source filenames"
             ) % lib_name
         sources = list(sources)
+
+        lib_path = self.compiler.library_filename(lib_name, output_dir=self.build_clib)
+        depends = sources + build_info.get("depends", [])
+        if not (self.force or newer_group(depends, lib_path, "newer")):
+            log.debug("skipping '%s' library (up-to-date)", lib_name)
+            continue
+        else:
+            log.info("building '%s' library" % lib_name)
 
         # First, compile the source code to object files in the library
         # directory.  (This should probably change to putting object
