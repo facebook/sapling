@@ -115,7 +115,7 @@ Add commit with a directory
   $ echo "private_key=\"$TESTDIR/edenservertest.key\"" >> $TESTTMP/config
   $ echo "ca_pem_file=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
  
-  $ newblobimport $TESTTMP/repo/.hg $TESTTMP/blobrepo --debug
+  $ blobimport $TESTTMP/repo/.hg $TESTTMP/blobrepo --debug
   $ grep -Eo 'inserted: .*' < $TESTTMP/blobimport.out | sort
   inserted: 3903775176ed42b1458a6281db4a0ccf4d9f287a
   inserted: 4dabaf45f54add88ca2797dfdeb00a7d55144243

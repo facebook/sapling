@@ -48,7 +48,7 @@ def get_blobimport(blobimport: Optional[str]) -> str:
             from .facebook import pathutils
         except ImportError:
             raise RuntimeError('--blobimport is required')
-        return pathutils.get_path('//scm/mononoke:new_blobimport')
+        return pathutils.get_path('//scm/mononoke:blobimport')
     else:
         return blobimport
 

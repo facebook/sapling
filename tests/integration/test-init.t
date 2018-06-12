@@ -112,7 +112,7 @@ setup master bookmarks
 blobimport
 
   $ cd ..
-  $ newblobimport repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
 
 start mononoke
 

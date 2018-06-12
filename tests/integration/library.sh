@@ -78,13 +78,13 @@ CONFIG
 
   # We need to have a RocksDb version of config repo
   mkdir mononoke-config-rocks
-  $MONONOKE_NEWBLOBIMPORT --repo_id 0 --blobstore rocksdb mononoke-config/.hg mononoke-config-rocks >> "$TESTTMP/mononoke-config-blobimport.out" 2>&1
+  $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb mononoke-config/.hg mononoke-config-rocks >> "$TESTTMP/mononoke-config-blobimport.out" 2>&1
 }
 
-function newblobimport {
+function blobimport {
   reponame=$2
   mkdir -p "$reponame"
-  $MONONOKE_NEWBLOBIMPORT --repo_id 0 --blobstore rocksdb "$@" >> "$TESTTMP/blobimport.out" 2>&1
+  $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb "$@" >> "$TESTTMP/blobimport.out" 2>&1
 }
 
 function edenserver {

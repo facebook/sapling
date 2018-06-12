@@ -23,7 +23,7 @@ setup master bookmarks
   $ hg bookmark master_bookmark -r 'tip'
 
   $ cd $TESTTMP
-  $ newblobimport repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
 
 setup two repos: one will be used to pull into, and one will be used to
 update master_bookmark concurrently.

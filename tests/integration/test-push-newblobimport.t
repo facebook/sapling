@@ -42,7 +42,7 @@ verify content
   
 
   $ cd $TESTTMP
-  $ newblobimport repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
 

@@ -23,7 +23,7 @@ setup repo-push and repo-pull
 
 blobimport
 
-  $ newblobimport repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
 
 start mononoke
 

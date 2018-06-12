@@ -34,7 +34,7 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ newblobimport repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
 
 start mononoke
 

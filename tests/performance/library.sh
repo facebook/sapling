@@ -29,7 +29,7 @@ function build_tools {
   echo "Building Mononoke hgcli"
   MONONOKE_HGCLI="$(buck root)/$(buck build @mode/opt '//scm/mononoke/hgcli:hgcli' --show-output | cut -d\  -f2)"
   echo "Building Mononoke blobimport"
-  MONONOKE_BLOBIMPORT="$(buck root)/$(buck build @mode/opt '//scm/mononoke:new_blobimport' --show-output | cut -d\  -f2)"
+  MONONOKE_BLOBIMPORT="$(buck root)/$(buck build @mode/opt '//scm/mononoke:blobimport' --show-output | cut -d\  -f2)"
   export MONONOKE_BLOBIMPORT
   echo "Building Mononoke server"
   MONONOKE_SERVER="$(buck root)/$(buck build @mode/opt '//scm/mononoke:mononoke' --show-output | cut -d\  -f2)"
