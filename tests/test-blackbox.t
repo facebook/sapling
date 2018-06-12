@@ -377,3 +377,12 @@ blackbox writes Request ID if HGREQUESTID is set
   $ HGREQUESTID=aabea740-97d8-49e5-8453-14e5ae3d4099 hg root >/dev/null
   $ hg blackbox | grep aabea740-97d8-49e5-8453-14e5ae3d4099
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)[aabea740-97d8-49e5-8453-14e5ae3d4099]> root
+
+blackbox should not fail with "TypeError: not enough arguments for format string"
+
+  $ hg debugshell --command "ui.log('foo', 'ba' + 'r %s %r')"
+  $ hg debugshell --command "ui.log('foo', 'ba' + 'r %s %r', 'arg1')"
+  $ hg blackbox | grep bar
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> bar %s %r
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> bar %s %r arg1
+

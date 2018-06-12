@@ -156,7 +156,17 @@ def wrapui(ui):
             date = util.datestr(default, "%Y/%m/%d %H:%M:%S")
             user = util.getuser()
             pid = "%d" % util.getpid()
-            formattedmsg = msg[0] % msg[1:]
+            if len(msg) == 1:
+                # Don't even try to format the string if there is only one
+                # argument.
+                formattedmsg = msg[0]
+            else:
+                try:
+                    formattedmsg = msg[0] % msg[1:]
+                except TypeError:
+                    # If fails with `TypeError: not enough arguments for format
+                    # string`, concatenate the arguments gracefully.
+                    formattedmsg = " ".join(msg)
             rev = "(unknown)"
             changed = ""
             if repo:
