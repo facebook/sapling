@@ -1,10 +1,8 @@
 # This file contains macros that are shared across Eden.
 
-
 def get_oss_suffix():
     '''Build rule suffix to use for open-source-specific build targets.'''
     return '-oss'
-
 
 def get_daemon_versions():
     '''List of configurations to aid in creating dual build rules.
