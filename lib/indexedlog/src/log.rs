@@ -45,7 +45,7 @@ use std::io::{self, Cursor, Read, Write};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use utils::xxhash;
-use vlqencoding::{VLQDecode, VLQEncode};
+use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
 // Constants about file names
 const PRIMARY_FILE: &str = "log";
@@ -227,6 +227,72 @@ impl Log {
         index_defs: &Vec<IndexDef>,
     ) -> io::Result<(Mmap, Vec<Index>)> {
         unimplemented!()
+    }
+
+    /// Read the entry at the given offset. Return `None` if offset is out of bound, or the content
+    /// of the data, the real offset of the data, and the next offset. Raise errors if
+    /// integrity-check failed.
+    fn read_entry(&self, offset: u64) -> io::Result<Option<EntryResult>> {
+        let result = if offset < self.meta.primary_len {
+            Self::read_entry_from_buf(&self.disk_buf, offset)?
+        } else {
+            let offset = offset - self.meta.primary_len;
+            if offset >= self.mem_buf.len() as u64 {
+                return Ok(None);
+            }
+            Self::read_entry_from_buf(&self.mem_buf, offset)?
+                .map(|entry_result| entry_result.offset(self.meta.primary_len))
+        };
+        Ok(result)
+    }
+
+    /// Read an entry at the given offset of the given buffer. Verify its integrity. Return the
+    /// data, the real data offset, and the next entry offset. Return None if the offset is at
+    /// the end of the buffer.  Raise errors if there are integrity check issues.
+    fn read_entry_from_buf(buf: &[u8], offset: u64) -> io::Result<Option<EntryResult>> {
+        if offset == buf.len() as u64 {
+            return Ok(None);
+        }
+        let (data_len, vlq_len): (u64, _) = buf.read_vlq_at(offset as usize)?;
+        let offset = offset + vlq_len as u64;
+        let (checksum, vlq_len) = buf.read_vlq_at(offset as usize)?;
+        let offset = offset + vlq_len as u64;
+        let end = offset + data_len;
+        if end > buf.len() as u64 {
+            let msg = format!("entry data out of range");
+            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, msg));
+        }
+        let data = &buf[offset as usize..end as usize];
+        if xxhash(&data) != checksum {
+            let msg = format!("integrity check failed at {}", offset);
+            Err(io::Error::new(io::ErrorKind::InvalidData, msg))
+        } else {
+            Ok(Some(EntryResult {
+                data,
+                data_offset: offset,
+                next_offset: end,
+            }))
+        }
+    }
+}
+
+// Entry data used internally.
+struct EntryResult<'a> {
+    data: &'a [u8],
+    data_offset: u64,
+    next_offset: u64,
+}
+
+impl<'a> EntryResult<'a> {
+    /// Add some value to `next_offset`.
+    fn offset(self, offset: u64) -> EntryResult<'a> {
+        EntryResult {
+            data: self.data,
+            // `data_offset` is relative to the current buffer (disk_buf, or mem_buf).
+            // So it does not need to be changed.
+            data_offset: self.data_offset,
+            next_offset: self.next_offset + offset,
+        }
     }
 }
 
