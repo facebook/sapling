@@ -731,7 +731,9 @@ if PYTHON3:
 def getdiff(expected, output, ref, err):
     servefail = False
     lines = []
-    for line in _unified_diff(expected, output, ref, err):
+    for line in _unified_diff(
+        expected, output, os.path.basename(ref), os.path.basename(err)
+    ):
         if line.startswith(b"+++") or line.startswith(b"---"):
             line = line.replace(b"\\", b"/")
             if line.endswith(b" \n"):

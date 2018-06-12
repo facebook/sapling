@@ -103,8 +103,8 @@ test churn with globs
   > EOF
   $ rt test-failure.t
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,4 +1,4 @@
      $ echo "bar-baz"; echo "bar-bad"; echo foo
   +  bar*baz (glob)
@@ -125,8 +125,8 @@ test diff colorisation
 #if no-windows pygments
   $ rt test-failure.t --color always
   
-  \x1b[38;5;124m--- $TESTTMP/test-failure.t\x1b[39m (esc)
-  \x1b[38;5;34m+++ $TESTTMP/test-failure.t.err\x1b[39m (esc)
+  \x1b[38;5;124m--- test-failure.t\x1b[39m (esc)
+  \x1b[38;5;34m+++ test-failure.t.err\x1b[39m (esc)
   \x1b[38;5;90;01m@@ -1,4 +1,4 @@\x1b[39;00m (esc)
      $ echo "bar-baz"; echo "bar-bad"; echo foo
   \x1b[38;5;34m+  bar*baz (glob)\x1b[39m (esc)
@@ -146,8 +146,8 @@ test diff colorisation
   [1]
   $ cat tmp.log
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,4 +1,4 @@
      $ echo "bar-baz"; echo "bar-bad"; echo foo
   +  bar*baz (glob)
@@ -192,8 +192,8 @@ test diff colorisation
   > EOF
   $ rt test-failure.t
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,11 +1,9 @@
      $ true
   -  should go away (true !)
@@ -250,8 +250,8 @@ basic failing test
 
   $ rt
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -262,8 +262,8 @@ basic failing test
   
   ERROR: test-failure.t output changed
   !.
-  --- $TESTTMP/test-failure-unicode.t
-  +++ $TESTTMP/test-failure-unicode.t.err
+  --- test-failure-unicode.t
+  +++ test-failure-unicode.t.err
   @@ -1,2 +1,2 @@
      $ echo babar\xce\xb1 (esc)
   -  l\xce\xb5\xce\xb5t (esc)
@@ -281,8 +281,8 @@ test --outputdir
   $ mkdir output
   $ rt --outputdir output
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/output/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -293,8 +293,8 @@ test --outputdir
   
   ERROR: test-failure.t output changed
   !.
-  --- $TESTTMP/test-failure-unicode.t
-  +++ $TESTTMP/output/test-failure-unicode.t.err
+  --- test-failure-unicode.t
+  +++ test-failure-unicode.t.err
   @@ -1,2 +1,2 @@
      $ echo babar\xce\xb1 (esc)
   -  l\xce\xb5\xce\xb5t (esc)
@@ -317,8 +317,8 @@ test --outputdir
 test --xunit support
   $ rt --xunit=xunit.xml
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -329,8 +329,8 @@ test --xunit support
   
   ERROR: test-failure.t output changed
   !.
-  --- $TESTTMP/test-failure-unicode.t
-  +++ $TESTTMP/test-failure-unicode.t.err
+  --- test-failure-unicode.t
+  +++ test-failure-unicode.t.err
   @@ -1,2 +1,2 @@
      $ echo babar\xce\xb1 (esc)
   -  l\xce\xb5\xce\xb5t (esc)
@@ -349,8 +349,8 @@ test --xunit support
     <testcase name="test-success.t" time="*"/> (glob)
     <testcase name="test-failure-unicode.t" time="*"> (glob)
       <failure message="output changed" type="output-mismatch">
-  <![CDATA[--- $TESTTMP/test-failure-unicode.t
-  +++ $TESTTMP/test-failure-unicode.t.err
+  <![CDATA[--- test-failure-unicode.t
+  +++ test-failure-unicode.t.err
   @@ -1,2 +1,2 @@
      $ echo babar\xce\xb1 (esc)
   -  l\xce\xb5\xce\xb5t (esc)
@@ -359,8 +359,8 @@ test --xunit support
     </testcase>
     <testcase name="test-failure.t" time="*"> (glob)
       <failure message="output changed" type="output-mismatch">
-  <![CDATA[--- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  <![CDATA[--- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -437,8 +437,8 @@ test for --retest
 
   $ rt --retest
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -460,8 +460,8 @@ test for --retest
   $ mv test-failure.t.err output
   $ rt --retest --outputdir output
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/output/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -495,8 +495,8 @@ failed
 
   $ rt test-failure.t
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -515,8 +515,8 @@ failed
 failure w/ keyword
   $ rt -k rataxes
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -604,8 +604,8 @@ Parallel runs
 failures in parallel with --first should only print one failure
   $ rt --jobs 2 --first test-failure*.t
   
-  --- $TESTTMP/test-failure*.t (glob)
-  +++ $TESTTMP/test-failure*.t.err (glob)
+  --- test-failure-copy.t
+  +++ test-failure-copy.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -635,8 +635,8 @@ Refuse the fix
 
   $ echo 'n' | rt -i
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -700,8 +700,8 @@ Accept the fix
   > EOF
   $ echo 'y' | rt -i 2>&1
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -749,8 +749,8 @@ Race condition - test file was modified when test is running
 
   $ rt -i test-race.t
   
-  --- $TESTTMP/test-race.t
-  +++ $TESTTMP/test-race.t.err
+  --- test-race.t
+  +++ test-race.t.err
   @@ -1,2 +1,3 @@
      $ echo 1
   +  1
@@ -782,8 +782,8 @@ When "#testcases" is used in .t files
   > y
   > EOF
   
-  --- $TESTTMP/test-cases.t
-  +++ $TESTTMP/test-cases.t.a.err
+  --- test-cases.t
+  +++ test-cases.t.a.err
   @@ -1,6 +1,7 @@
    #testcases a b
    #if a
@@ -793,8 +793,8 @@ When "#testcases" is used in .t files
    #if b
      $ echo 2
   Accept this change? [n] .
-  --- $TESTTMP/test-cases.t
-  +++ $TESTTMP/test-cases.t.b.err
+  --- test-cases.t
+  +++ test-cases.t.b.err
   @@ -5,4 +5,5 @@
    #endif
    #if b
@@ -956,8 +956,8 @@ Whitelist trumps blacklist
   $ rt --blacklist=blacklist --whitelist=whitelist --json\
   >   test-failure.t test-bogus.t
   s
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -992,8 +992,8 @@ test for --json
 
   $ rt --json
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -1047,8 +1047,8 @@ test for --json
   $ mkdir output
   $ rt --json --outputdir output
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/output/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -1108,8 +1108,8 @@ Test that failed test accepted through interactive are properly reported:
   $ cp test-failure.t backup
   $ echo y | rt --json -i
   
-  --- $TESTTMP/test-failure.t
-  +++ $TESTTMP/test-failure.t.err
+  --- test-failure.t
+  +++ test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
@@ -1300,8 +1300,8 @@ support for running run-tests.py from another directory
   $ cd ..
   $ rt tmp/test-*.t
   
-  --- $TESTTMP/anothertests/tmp/test-folder-fail.t
-  +++ $TESTTMP/anothertests/tmp/test-folder-fail.t.err
+  --- test-folder-fail.t
+  +++ test-folder-fail.t.err
   @@ -1,2 +1,2 @@
      $ cat $TESTDIR/useful-file.sh
   -  important commando
@@ -1330,8 +1330,8 @@ support for bisecting failed tests automatically
   $ hg ci -m 'bad'
   $ rt --known-good-rev=0 test-bisect.t
   
-  --- $TESTTMP/anothertests/bisect/test-bisect.t
-  +++ $TESTTMP/anothertests/bisect/test-bisect.t.err
+  --- test-bisect.t
+  +++ test-bisect.t.err
   @@ -1,4 +1,4 @@
      $ echo pass
      pass
@@ -1361,8 +1361,8 @@ support bisecting a separate repo
 
   $ rt --known-good-rev=0 test-bisect-dependent.t
   
-  --- $TESTTMP/anothertests/bisect-dependent/test-bisect-dependent.t
-  +++ $TESTTMP/anothertests/bisect-dependent/test-bisect-dependent.t.err
+  --- test-bisect-dependent.t
+  +++ test-bisect-dependent.t.err
   @@ -1,2 +1,2 @@
      $ tail -1 $TESTDIR/../bisect/test-bisect.t
   -    pass
@@ -1383,8 +1383,8 @@ support bisecting a separate repo
 
   $ rt --known-good-rev=0 --bisect-repo=../bisect test-bisect-dependent.t
   
-  --- $TESTTMP/anothertests/bisect-dependent/test-bisect-dependent.t
-  +++ $TESTTMP/anothertests/bisect-dependent/test-bisect-dependent.t.err
+  --- test-bisect-dependent.t
+  +++ test-bisect-dependent.t.err
   @@ -1,2 +1,2 @@
      $ tail -1 $TESTDIR/../bisect/test-bisect.t
   -    pass
@@ -1455,8 +1455,8 @@ Test cases in .t files
   > EOF
   $ rt
   .
-  --- $TESTTMP/anothertests/cases/test-cases-abc.t
-  +++ $TESTTMP/anothertests/cases/test-cases-abc.t.B.err
+  --- test-cases-abc.t
+  +++ test-cases-abc.t.B.err
   @@ -7,7 +7,7 @@
      $ V=C
    #endif
@@ -1478,8 +1478,8 @@ Test cases in .t files
 
   $ rt --restart
   
-  --- $TESTTMP/anothertests/cases/test-cases-abc.t
-  +++ $TESTTMP/anothertests/cases/test-cases-abc.t.B.err
+  --- test-cases-abc.t
+  +++ test-cases-abc.t.B.err
   @@ -7,7 +7,7 @@
      $ V=C
    #endif
@@ -1503,8 +1503,8 @@ Test cases in .t files
   $ mv test-cases-abc.t.B.err output
   $ rt --restart --outputdir output
   
-  --- $TESTTMP/anothertests/cases/test-cases-abc.t
-  +++ $TESTTMP/anothertests/cases/output/test-cases-abc.t.B.err
+  --- test-cases-abc.t
+  +++ test-cases-abc.t.B.err
   @@ -7,7 +7,7 @@
      $ V=C
    #endif
@@ -1547,8 +1547,8 @@ Test automatic pattern replacement
 
   $ rt test-substitution.t
   
-  --- $TESTTMP/anothertests/cases/test-substitution.t
-  +++ $TESTTMP/anothertests/cases/test-substitution.t.err
+  --- test-substitution.t
+  +++ test-substitution.t.err
   @@ -7,3 +7,4 @@
      $ echo lastbar
      last$YYY$
