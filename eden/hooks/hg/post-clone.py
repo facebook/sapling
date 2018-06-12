@@ -147,6 +147,9 @@ def main():
     # Populate a temporary directory first,
     # then rename it to the real location on success.
     tmp_dir = tempfile.mkdtemp(dir=args.eden_checkout, prefix=".hg-")
+    # Ensure that others can read and search the dir, so that we'll be
+    # usable with eg: webserver and other background processes
+    os.chmod(tmp_dir, 0o755)
 
     eden_ext_path = args.eden_extension
     if eden_ext_path is None:
