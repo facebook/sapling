@@ -18,7 +18,7 @@ use blobstore::Blobstore;
 use mercurial;
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
-use mercurial_types::{Changeset, HgBlob, HgBlobNode, HgParents, MPath};
+use mercurial_types::{Changeset, HgBlob, HgBlobNode, HgNodeHash, HgParents, MPath};
 use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NULL_HASH};
 use mononoke_types::DateTime;
 
@@ -27,7 +27,8 @@ use utils::{EnvelopeBlob, RawCSBlob};
 
 #[derive(Debug)]
 pub struct ChangesetContent {
-    parents: HgParents,
+    p1: Option<HgNodeHash>,
+    p2: Option<HgNodeHash>,
     manifestid: HgManifestId,
     user: Vec<u8>,
     time: DateTime,
@@ -38,6 +39,7 @@ pub struct ChangesetContent {
 
 impl ChangesetContent {
     pub fn new_from_parts(
+        // XXX replace parents with p1 and p2
         parents: HgParents,
         manifestid: HgManifestId,
         user: Vec<u8>,
@@ -46,8 +48,10 @@ impl ChangesetContent {
         files: Vec<MPath>,
         comments: Vec<u8>,
     ) -> Self {
+        let (p1, p2) = parents.get_nodes();
         Self {
-            parents,
+            p1: p1.cloned(),
+            p2: p2.cloned(),
             manifestid,
             user,
             time,
@@ -59,7 +63,8 @@ impl ChangesetContent {
 
     pub fn from_revlogcs(revlogcs: RevlogChangeset) -> Self {
         Self {
-            parents: revlogcs.parents,
+            p1: revlogcs.p1,
+            p2: revlogcs.p2,
             manifestid: revlogcs.manifestid,
             user: revlogcs.user,
             time: revlogcs.time,
@@ -73,8 +78,7 @@ impl ChangesetContent {
         let mut v = Vec::new();
 
         self.generate(&mut v)?;
-        let (p1, p2) = self.parents.get_nodes();
-        let blobnode = HgBlobNode::new(Bytes::from(v), p1, p2);
+        let blobnode = HgBlobNode::new(Bytes::from(v), self.p1(), self.p2());
 
         let nodeid = blobnode
             .nodeid()
@@ -108,6 +112,16 @@ impl ChangesetContent {
         out.write_all(&self.comments)?;
 
         Ok(())
+    }
+
+    #[inline]
+    pub fn p1(&self) -> Option<&HgNodeHash> {
+        self.p1.as_ref()
+    }
+
+    #[inline]
+    pub fn p2(&self) -> Option<&HgNodeHash> {
+        self.p2.as_ref()
     }
 }
 
@@ -184,10 +198,9 @@ impl BlobChangeset {
         let blob = {
             let mut v = Vec::new();
 
-            self.content.generate(&mut v).map(|()| {
-                let (p1, p2) = self.content.parents.get_nodes();
-                HgBlobNode::new(Bytes::from(v), p1, p2)
-            })
+            self.content
+                .generate(&mut v)
+                .map(|()| HgBlobNode::new(Bytes::from(v), self.content.p1(), self.content.p2()))
         };
 
         blob.map_err(Error::from)
@@ -196,13 +209,23 @@ impl BlobChangeset {
                     .as_slice()
                     .ok_or(failure::err_msg("missing changeset blob"))?;
                 let blob = RawCSBlob {
-                    parents: self.content.parents,
+                    parents: HgParents::new(self.content.p1(), self.content.p2()),
                     blob: Cow::Borrowed(data),
                 };
                 blob.serialize().into()
             })
             .into_future()
             .and_then(move |blob| blobstore.put(key, blob.into()))
+    }
+
+    #[inline]
+    pub fn p1(&self) -> Option<&HgNodeHash> {
+        self.content.p1()
+    }
+
+    #[inline]
+    pub fn p2(&self) -> Option<&HgNodeHash> {
+        self.content.p2()
     }
 }
 
@@ -231,7 +254,8 @@ impl Changeset for BlobChangeset {
         &self.content.time
     }
 
-    fn parents(&self) -> &HgParents {
-        &self.content.parents
+    fn parents(&self) -> HgParents {
+        // XXX Change this to return p1 and p2 directly.
+        HgParents::new(self.content.p1(), self.content.p2())
     }
 }

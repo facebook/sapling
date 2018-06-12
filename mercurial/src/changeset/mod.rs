@@ -11,7 +11,7 @@ use std::str::{self, FromStr};
 use bytes::Bytes;
 use errors::*;
 use failure;
-use mercurial_types::{HgBlobNode, HgManifestId, HgNodeHash, HgParents, MPath, NULL_HASH};
+use mercurial_types::{HgBlob, HgBlobNode, HgManifestId, HgNodeHash, HgParents, MPath, NULL_HASH};
 use mononoke_types::DateTime;
 
 #[cfg(test)]
@@ -23,7 +23,8 @@ mod test;
 // See https://www.mercurial-scm.org/wiki/EncodingStrategy for details.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct RevlogChangeset {
-    pub parents: HgParents,
+    pub p1: Option<HgNodeHash>,
+    pub p2: Option<HgNodeHash>,
     pub manifestid: HgManifestId,
     pub user: Vec<u8>,
     pub time: DateTime,
@@ -172,6 +173,7 @@ fn parsetimeextra<S: AsRef<[u8]>>(s: S) -> Result<(DateTime, Extra)> {
 
 impl RevlogChangeset {
     pub fn new_from_parts(
+        // XXX replace parents with p1 and p2
         parents: HgParents,
         manifestid: HgManifestId,
         user: Vec<u8>,
@@ -180,8 +182,10 @@ impl RevlogChangeset {
         files: Vec<MPath>,
         comments: Vec<u8>,
     ) -> Self {
+        let (p1, p2) = parents.get_nodes();
         Self {
-            parents,
+            p1: p1.cloned(),
+            p2: p2.cloned(),
             manifestid,
             user,
             time,
@@ -192,12 +196,14 @@ impl RevlogChangeset {
     }
 
     pub fn new(node: HgBlobNode) -> Result<Self> {
-        Self::parse(node)
+        let (p1, p2) = node.parents().get_nodes();
+        Self::parse(node.as_blob().clone(), p1.cloned(), p2.cloned())
     }
 
     pub fn new_null() -> Self {
         Self {
-            parents: HgParents::new(None, None),
+            p1: None,
+            p2: None,
             manifestid: HgManifestId::new(NULL_HASH),
             user: Vec::new(),
             time: DateTime::from_timestamp(0, 0).expect("this is a valid DateTime"),
@@ -223,12 +229,13 @@ impl RevlogChangeset {
     // XXX Files sorted? No escaping?
     // XXX "extra" - how sorted? What encoding?
     // XXX "comment" - line endings normalized at all?
-    fn parse(node: HgBlobNode) -> Result<Self> {
+    fn parse(blob: HgBlob, p1: Option<HgNodeHash>, p2: Option<HgNodeHash>) -> Result<Self> {
         // This is awkward - we want to store the node in the resulting
         // RevlogChangeset but we need to borrow from it to parse its data. Set up a
         // partially initialized RevlogChangeset then fill it in as we go.
         let mut ret = Self {
-            parents: *node.parents(),
+            p1,
+            p2,
             manifestid: HgManifestId::new(NULL_HASH),
             user: Vec::new(),
             time: DateTime::from_timestamp(0, 0).expect("this is a valid DateTime"),
@@ -238,9 +245,7 @@ impl RevlogChangeset {
         };
 
         {
-            let data = node.as_blob()
-                .as_slice()
-                .ok_or(failure::err_msg("node has no data"))?;
+            let data = blob.as_slice().ok_or(failure::err_msg("node has no data"))?;
             let mut lines = data.split(|b| *b == b'\n');
 
             let nodehash = parseline(&mut lines, |l| HgNodeHash::from_str(str::from_utf8(l)?))
@@ -291,10 +296,8 @@ impl RevlogChangeset {
 
     pub fn get_node(&self) -> Result<HgBlobNode> {
         let mut v = Vec::new();
-
         self.generate(&mut v)?;
-        let (p1, p2) = self.parents.get_nodes();
-        Ok(HgBlobNode::new(Bytes::from(v), p1, p2))
+        Ok(HgBlobNode::new(Bytes::from(v), self.p1(), self.p2()))
     }
 
     pub fn manifestid(&self) -> &HgManifestId {
@@ -321,8 +324,19 @@ impl RevlogChangeset {
         &self.time
     }
 
-    pub fn parents(&self) -> &HgParents {
-        &self.parents
+    #[inline]
+    pub fn parents(&self) -> HgParents {
+        HgParents::new(self.p1(), self.p2())
+    }
+
+    #[inline]
+    pub fn p1(&self) -> Option<&HgNodeHash> {
+        self.p1.as_ref()
+    }
+
+    #[inline]
+    pub fn p2(&self) -> Option<&HgNodeHash> {
+        self.p2.as_ref()
     }
 }
 

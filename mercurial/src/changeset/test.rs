@@ -22,15 +22,17 @@ const CHANGESET_NOEXTRA: &[u8] = include_bytes!("cset_noextra.bin");
 fn test_parse() {
     let csid: HgNodeHash = "0849d280663e46b3e247857f4a68fabd2ba503c3".parse().unwrap();
     let p1: HgNodeHash = "169cb9e47f8e86079ee9fd79972092f78fbf68b1".parse().unwrap();
-    let node = HgBlobNode::new(HgBlob::Dirty(Bytes::from(CHANGESET)), Some(&p1), None);
-    let cset = RevlogChangeset::parse(node.clone()).expect("parsed");
+    let cset = RevlogChangeset::parse(HgBlob::Dirty(Bytes::from(CHANGESET)), Some(p1), None)
+        .expect("parsed");
 
+    let node = HgBlobNode::new(HgBlob::Dirty(Bytes::from(CHANGESET)), Some(&p1), None);
     assert_eq!(node.nodeid().expect("no nodeid"), csid);
 
     assert_eq!(
         cset,
         RevlogChangeset {
-            parents: *node.parents(),
+            p1: Some(p1),
+            p2: None,
             manifestid: HgManifestId::new(
                 "497522ef3706a1665bf4140497c65b467454e962".parse().unwrap()
             ),
@@ -52,19 +54,20 @@ the user expected."#.into(),
 
     let csid: HgNodeHash = "526722d24ee5b3b860d4060e008219e083488356".parse().unwrap();
     let p1: HgNodeHash = "db5eb6a86179ce819db03da9ef2090b32f8e3fc4".parse().unwrap();
-    let node = HgBlobNode::new(
+    let cset = RevlogChangeset::parse(
         HgBlob::Dirty(Bytes::from(CHANGESET_NOEXTRA)),
-        Some(&p1),
+        Some(p1),
         None,
-    );
-    let cset = RevlogChangeset::parse(node.clone()).expect("parsed");
+    ).expect("parsed");
 
+    let node = HgBlobNode::new(Bytes::from(CHANGESET_NOEXTRA), Some(&p1), None);
     assert_eq!(node.nodeid().expect("no nodeid"), csid);
 
     assert_eq!(
         cset,
         RevlogChangeset {
-            parents: *node.parents(),
+            p1: Some(p1),
+            p2: None,
             manifestid: HgManifestId::new(
                 "6c0d10b92d045127f9a3846b59480451fe3bbac9".parse().unwrap()
             ),
@@ -82,9 +85,9 @@ clean up html code for w3c validation
 #[test]
 fn test_generate() {
     fn test(csid: HgNodeHash, p1: Option<&HgNodeHash>, blob: HgBlob, cs: &[u8]) {
-        let node = HgBlobNode::new(blob, p1, None);
-        let cset = RevlogChangeset::parse(node.clone()).expect("parsed");
+        let cset = RevlogChangeset::parse(blob.clone(), p1.cloned(), None).expect("parsed");
 
+        let node = HgBlobNode::new(blob, p1, None);
         assert_eq!(node.nodeid().expect("no nodeid"), csid);
 
         let mut new = Vec::new();

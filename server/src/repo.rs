@@ -456,8 +456,10 @@ impl RepoClient {
 
                 let mut v = Vec::new();
                 mercurial::changeset::serialize_cs(&revlogcs, &mut v)?;
-                let parents = revlogcs.parents().get_nodes();
-                Ok((node, HgBlobNode::new(Bytes::from(v), parents.0, parents.1)))
+                Ok((
+                    node,
+                    HgBlobNode::new(Bytes::from(v), revlogcs.p1(), revlogcs.p2()),
+                ))
             });
 
         bundle.add_part(parts::changegroup_part(changelogentries)?);
@@ -594,12 +596,7 @@ impl HgCommands for RepoClient {
                 let cs = try_ready!(self.wait_cs.as_mut().unwrap().poll());
                 self.wait_cs = None; // got it
 
-                let p = match cs.parents() {
-                    &HgParents::None => NULL_HASH,
-                    &HgParents::One(ref p) => *p,
-                    &HgParents::Two(ref p, _) => *p,
-                };
-
+                let p = cs.p1().cloned().unwrap_or(NULL_HASH);
                 let prev_n = mem::replace(&mut self.n, p);
 
                 Ok(Async::Ready(Some(prev_n)))

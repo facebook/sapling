@@ -374,10 +374,9 @@ impl Bundle2Resolver {
             content_blobs: &ContentBlobs,
         ) -> BoxFuture<UploadedChangesets, Error> {
             let (p1, p2) = {
-                let (p1, p2) = revlog_cs.parents().get_nodes();
                 (
-                    get_parent(&repo, &uploaded_changesets, p1.cloned()),
-                    get_parent(&repo, &uploaded_changesets, p2.cloned()),
+                    get_parent(&repo, &uploaded_changesets, revlog_cs.p1),
+                    get_parent(&repo, &uploaded_changesets, revlog_cs.p2),
                 )
             };
             let NewBlobs {

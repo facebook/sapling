@@ -18,7 +18,8 @@ pub trait Changeset: Send + 'static {
     fn comments(&self) -> &[u8];
     fn files(&self) -> &[MPath];
     fn time(&self) -> &DateTime;
-    fn parents(&self) -> &HgParents;
+    // XXX Change this to return p1 and p2 directly.
+    fn parents(&self) -> HgParents;
 
     fn boxed(self) -> Box<Changeset>
     where
@@ -53,7 +54,7 @@ impl Changeset for Box<Changeset> {
         (**self).time()
     }
 
-    fn parents(&self) -> &HgParents {
+    fn parents(&self) -> HgParents {
         (**self).parents()
     }
 }

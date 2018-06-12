@@ -182,7 +182,7 @@ impl TryFrom<BlobChangeset> for HookChangeset {
             .map(|arr| String::from_utf8_lossy(&arr.to_vec()).into_owned())
             .collect();
         let comments = str::from_utf8(changeset.user())?.into();
-        let parents = HookChangesetParents::from(*changeset.parents());
+        let parents = HookChangesetParents::from(changeset.parents());
         Ok(HookChangeset {
             author,
             files,
