@@ -7,6 +7,8 @@
 #![deny(warnings)]
 
 extern crate asyncmemo;
+#[cfg(test)]
+extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -32,6 +34,9 @@ pub use memblob::{EagerMemblob, LazyMemblob};
 
 mod memcache_cache;
 pub use memcache_cache::MemcacheBlobstore;
+
+mod prefix;
+pub use prefix::PrefixBlobstore;
 
 mod errors;
 pub use errors::*;
