@@ -188,7 +188,7 @@ class treestatemap(object):
         def lookup(path):
             tree = self._tree
             f = tree.getfiltered(path, filterfunc, id(filterfunc))
-            if f is not None and not (tree.get(f)[0] & treestate.EXIST_NEXT):
+            if f is not None and not (tree.get(f, None)[0] & treestate.EXIST_NEXT):
                 f = None
             return f
 
@@ -321,7 +321,7 @@ class treestatemap(object):
             f = tree.getfiltered(path + "/", filterfunc, id(filterfunc))
             if f is not None and not self.hastrackeddir(path):
                 f = None
-            return f.rstrip("/")
+            return f.rstrip("/") if f is not None else f
 
         return _overlaydict(lookup)
 
