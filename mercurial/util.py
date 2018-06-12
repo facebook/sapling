@@ -3969,10 +3969,10 @@ class _zstdengine(compressionengine):
         # Not all installs have the zstd module available. So defer importing
         # until first access.
         try:
-            from . import zstd
+            from .rust import zstd
 
             # Force delayed import.
-            zstd.__version__
+            zstd.decode_all
             return zstd
         except ImportError:
             return None
@@ -4008,82 +4008,35 @@ class _zstdengine(compressionengine):
         level = opts.get("level", 3)
 
         zstd = self._module
-        z = zstd.ZstdCompressor(level=level).compressobj()
+        buf = stringio()
         for chunk in it:
-            data = z.compress(chunk)
-            if data:
-                yield data
+            buf.write(chunk)
 
-        yield z.flush()
+        yield zstd.encode_all(buf.getvalue(), level)
 
     def decompressorreader(self, fh):
         zstd = self._module
-        dctx = zstd.ZstdDecompressor()
-        return chunkbuffer(dctx.read_from(fh))
+
+        def itervalues():
+            buf = fh.read()
+            yield zstd.decode_all(buf)
+
+        return chunkbuffer(itervalues())
 
     class zstdrevlogcompressor(object):
         def __init__(self, zstd, level=3):
-            # Writing the content size adds a few bytes to the output. However,
-            # it allows decompression to be more optimal since we can
-            # pre-allocate a buffer to hold the result.
-            self._cctx = zstd.ZstdCompressor(level=level, write_content_size=True)
-            self._dctx = zstd.ZstdDecompressor()
-            self._compinsize = zstd.COMPRESSION_RECOMMENDED_INPUT_SIZE
-            self._decompinsize = zstd.DECOMPRESSION_RECOMMENDED_INPUT_SIZE
+            self._zstd = zstd
+            self._level = level
 
         def compress(self, data):
-            insize = len(data)
-            # Caller handles empty input case.
-            assert insize > 0
-
-            if insize < 50:
-                return None
-
-            elif insize <= 1000000:
-                compressed = self._cctx.compress(data)
-                if len(compressed) < insize:
-                    return compressed
-                return None
-            else:
-                z = self._cctx.compressobj()
-                chunks = []
-                pos = 0
-                while pos < insize:
-                    pos2 = pos + self._compinsize
-                    chunk = z.compress(data[pos:pos2])
-                    if chunk:
-                        chunks.append(chunk)
-                    pos = pos2
-                chunks.append(z.flush())
-
-                if sum(map(len, chunks)) < insize:
-                    return "".join(chunks)
-                return None
+            return self._zstd.encode_all(data, self._level)
 
         def decompress(self, data):
-            insize = len(data)
-
-            try:
-                # This was measured to be faster than other streaming
-                # decompressors.
-                dobj = self._dctx.decompressobj()
-                chunks = []
-                pos = 0
-                while pos < insize:
-                    pos2 = pos + self._decompinsize
-                    chunk = dobj.decompress(data[pos:pos2])
-                    if chunk:
-                        chunks.append(chunk)
-                    pos = pos2
-                # Frame should be exhausted, so no finish() API.
-
-                return "".join(chunks)
-            except Exception as e:
-                raise error.RevlogError(_("revlog decompress error: %s") % str(e))
+            return self._zstd.decode_all(data)
 
     def revlogcompressor(self, opts=None):
         opts = opts or {}
-        return self.zstdrevlogcompressor(self._module, level=opts.get("level", 3))
+        return self.zstdrevlogcompressor(self._module)
 
 
 compengines.register(_zstdengine())

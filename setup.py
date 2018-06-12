@@ -1557,6 +1557,9 @@ rustextmodules = [
         package="mercurial.rust",
         manifest="mercurial/rust/treestate/Cargo.toml",
     ),
+    RustExtension(
+        "zstd", package="mercurial.rust", manifest="mercurial/rust/zstd/Cargo.toml"
+    ),
 ]
 
 rustextbinaries = [RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml")]
