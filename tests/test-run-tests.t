@@ -604,8 +604,8 @@ Parallel runs
 failures in parallel with --first should only print one failure
   $ rt --jobs 2 --first test-failure*.t
   
-  --- test-failure-copy.t
-  +++ test-failure-copy.t.err
+  --- test-failure*.t (glob)
+  +++ test-failure*.t.err (glob)
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
