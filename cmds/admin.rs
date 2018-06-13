@@ -33,12 +33,12 @@ use futures::stream::iter_ok;
 use tokio_core::reactor::Core;
 
 use blobrepo::{BlobRepo, RawNodeBlob};
-use blobstore::{Blobstore, MemcacheBlobstore};
+use blobstore::{Blobstore, MemcacheBlobstore, MemcacheBlobstoreExt};
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
 use mercurial_types::{Changeset, HgChangesetId, MPath, MPathElement, Manifest, RepositoryId};
 use mercurial_types::manifest::Content;
-use mononoke_types::FileContents;
+use mononoke_types::{BlobstoreBytes, FileContents};
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 
@@ -179,6 +179,20 @@ fn fetch_content(
         .boxify()
 }
 
+fn get_memcache<B: MemcacheBlobstoreExt>(
+    blobstore: &B,
+    key: String,
+    mode: String,
+) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    if mode == "cache_only" {
+        blobstore.get_memcache_only(key)
+    } else if mode == "no_fill" {
+        blobstore.get_no_cache_fill(key)
+    } else {
+        blobstore.get(key)
+    }
+}
+
 fn main() {
     let matches = setup_app().get_matches();
 
@@ -216,16 +230,9 @@ fn main() {
 
             match use_memcache {
                 None => blobstore.get(key).boxify(),
-                Some(val) => {
+                Some(mode) => {
                     let blobstore = MemcacheBlobstore::new(blobstore);
-
-                    if val == "cache_only" {
-                        blobstore.get_memcache_only(key)
-                    } else if val == "no_fill" {
-                        blobstore.get_no_cache_fill(key)
-                    } else {
-                        blobstore.get(key)
-                    }
+                    get_memcache(&blobstore, key, mode)
                 }
             }.map(move |value| {
                 println!("{:?}", value);

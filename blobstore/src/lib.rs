@@ -33,7 +33,7 @@ mod memblob;
 pub use memblob::{EagerMemblob, LazyMemblob};
 
 mod memcache_cache;
-pub use memcache_cache::MemcacheBlobstore;
+pub use memcache_cache::{MemcacheBlobstore, MemcacheBlobstoreExt};
 
 mod prefix;
 pub use prefix::PrefixBlobstore;

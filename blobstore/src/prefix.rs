@@ -9,7 +9,7 @@ use futures_ext::BoxFuture;
 
 use mononoke_types::BlobstoreBytes;
 
-use Blobstore;
+use {Blobstore, MemcacheBlobstore, MemcacheBlobstoreExt};
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
 #[derive(Clone)]
@@ -27,6 +27,18 @@ impl<T: Blobstore + Clone> PrefixBlobstore<T> {
     #[inline]
     fn prepend(&self, key: String) -> String {
         [self.prefix.as_str(), key.as_str()].concat()
+    }
+}
+
+impl<T: Blobstore + Clone> MemcacheBlobstoreExt for PrefixBlobstore<MemcacheBlobstore<T>> {
+    #[inline]
+    fn get_no_cache_fill(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.blobstore.get_no_cache_fill(self.prepend(key))
+    }
+
+    #[inline]
+    fn get_memcache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.blobstore.get_memcache_only(self.prepend(key))
     }
 }
 

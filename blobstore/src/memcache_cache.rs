@@ -22,6 +22,15 @@ pub struct MemcacheBlobstore<T: Blobstore + Clone> {
     keygen: KeyGen,
 }
 
+/// Extra operations that can be performed on memcache. Other wrappers can implement this trait for
+/// e.g. all `WrapperBlobstore<MemcacheBlobstore<T>>`.
+///
+/// This is primarily used by the admin command to manually check memcache.
+pub trait MemcacheBlobstoreExt: Blobstore + Clone {
+    fn get_no_cache_fill(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;
+    fn get_memcache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;
+}
+
 const MEMCACHE_MAX_SIZE: usize = 1024000;
 const MC_CODEVER: u32 = 0;
 const MC_SITEVER: u32 = 0;
@@ -78,26 +87,6 @@ impl<T: Blobstore + Clone> MemcacheBlobstore<T> {
             value
         }
     }
-
-    // The following are used by the admin command to manually check on memcache
-    pub fn get_no_cache_fill(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        let mc_get = self.mc_get(&key);
-        let bs_get = self.blobstore.get(key);
-
-        mc_get
-            .and_then(move |blob| {
-                if blob.is_some() {
-                    Ok(blob).into_future().boxify()
-                } else {
-                    bs_get.boxify()
-                }
-            })
-            .boxify()
-    }
-
-    pub fn get_memcache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.mc_get(&key).boxify()
-    }
 }
 
 impl<T: Blobstore + Clone> Blobstore for MemcacheBlobstore<T> {
@@ -145,5 +134,26 @@ impl<T: Blobstore + Clone> Blobstore for MemcacheBlobstore<T> {
                 }
             })
             .boxify()
+    }
+}
+
+impl<T: Blobstore + Clone> MemcacheBlobstoreExt for MemcacheBlobstore<T> {
+    fn get_no_cache_fill(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        let mc_get = self.mc_get(&key);
+        let bs_get = self.blobstore.get(key);
+
+        mc_get
+            .and_then(move |blob| {
+                if blob.is_some() {
+                    Ok(blob).into_future().boxify()
+                } else {
+                    bs_get.boxify()
+                }
+            })
+            .boxify()
+    }
+
+    fn get_memcache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.mc_get(&key).boxify()
     }
 }
