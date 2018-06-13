@@ -42,6 +42,23 @@ Only match the Differential Revision label at the start of a line
   $ hg log -r . --template "{phabdiff}\n"
   D6789
 
+Test reviewers label
+
+  $ echo f > f
+  $ hg commit -Aqm "Differential Revision: http://phabricator.intern.facebook.com/D9876
+  > Reviewers: xlwang, quark durham, rmcelroy"
+  $ hg log -r . --template '{reviewers % "- {reviewer}\n"}\n'
+  - xlwang
+  - quark
+  - durham
+  - rmcelroy
+  
+  $ echo g > g
+  $ hg commit -Aqm "Differential Revision: http://phabricator.intern.facebook.com/D9876
+  > Reviewers: xlwang quark"
+  $ hg log -r . --template "{join(reviewers, ', ')}\n"
+  xlwang, quark
+
 Make sure the template keywords are documented correctly
 
   $ hg help templates | egrep 'phabdiff|tasks'

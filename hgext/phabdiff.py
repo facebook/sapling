@@ -42,3 +42,14 @@ def singlepublicbase(repo, ctx, templ, **args):
     if len(base):
         return hex(repo[base.first()].node())
     return ""
+
+
+@templatekeyword("reviewers")
+def showreviewers(repo, **args):
+    """String. Return the phabricator diff id for a given hg rev."""
+    reviewers = []
+    descr = args["ctx"].description()
+    match = re.search("Reviewers:(.*)", descr)
+    if match:
+        reviewers = filter(None, re.split("[\s,]", match.group(1)))
+    return templatekw.showlist("reviewer", reviewers, args)
