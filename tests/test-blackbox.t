@@ -194,16 +194,16 @@ log rotation
   running: add foo
   result: 0
   running: commit -m commit1 -d 2000-01-01 foo
-  result: None
+  result: 0
   running: commit -m commit2 -d 2000-01-02 foo
-  result: None
+  result: 0
   running: log -r 0
   changeset:   0:0e4634943879
   user:        test
   date:        Sat Jan 01 00:00:00 2000 +0000
   summary:     commit1
   
-  result: None
+  result: 0
   running: log -r tip
   changeset:   1:45589e459b2e
   tag:         tip
@@ -211,7 +211,7 @@ log rotation
   date:        Sun Jan 02 00:00:00 2000 +0000
   summary:     commit2
   
-  result: None
+  result: 0
   $ hg blackbox
   1970/01/01 00:00:00 bob @0e46349438790c460c5c9f7546bfcd39b267bbd2 (5000)> commit -m commit2 -d 2000-01-02 foo
   1970/01/01 00:00:00 bob @45589e459b2edfbf3dbde7e01f611d2c1e7453d7 (5000)> updated served branch cache in * seconds (glob)

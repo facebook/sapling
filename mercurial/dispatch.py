@@ -396,6 +396,8 @@ def dispatch(req):
     msg = _formatargs(req.args)
     starttime = util.timer()
     ret = None
+    retmask = 255
+
     try:
 
         def measuredtimeslogger():
@@ -442,12 +444,15 @@ def dispatch(req):
             duration,
         )
         req.ui._measuredtimes["command_duration"] = duration * 1000
+        retmask = req.ui.configint("ui", "exitcodemask")
 
         try:
             req._runexithandlers()
         except:  # exiting, so no re-raises
             ret = ret or -1
-    return ret
+    if ret is None:
+        ret = 0
+    return ret & retmask
 
 
 def _runcatch(req):

@@ -413,6 +413,10 @@ class ui(object):
         if self.plain("templatealias"):
             for k, v in cfg.items("templatealias"):
                 del cfg["templatealias"][k]
+        # Remove ui.exitcodemask
+        if self.plain("exitcode"):
+            if "exitcodemask" in cfg["ui"]:
+                del cfg["ui"]["exitcodemask"]
 
         if trusted:
             self._tcfg.update(cfg)
