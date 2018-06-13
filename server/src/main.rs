@@ -11,6 +11,7 @@
 extern crate bookmarks;
 #[macro_use]
 extern crate failure_ext as failure;
+extern crate fbwhoami;
 #[macro_use]
 extern crate futures;
 #[macro_use]
@@ -19,6 +20,8 @@ extern crate futures_stats;
 #[macro_use]
 extern crate futures_trace;
 extern crate itertools;
+#[macro_use]
+extern crate lazy_static;
 extern crate tokio;
 extern crate tokio_core;
 extern crate tokio_io;

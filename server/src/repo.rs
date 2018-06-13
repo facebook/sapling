@@ -18,6 +18,7 @@ use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
+use fbwhoami::FbWhoAmI;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, future::Either};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
@@ -56,6 +57,10 @@ use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
 const MAX_NODES_TO_LOG: usize = 5;
+
+lazy_static! {
+    static ref WHOAMI: Option<FbWhoAmI> = FbWhoAmI::new().ok();
+}
 
 mod ops {
     pub const HELLO: &str = "hello";
@@ -236,6 +241,13 @@ fn add_common_stats_and_send_to_scuba(
                 if let Some(args) = args {
                     sample.add("args", args);
                 }
+
+                if let &Some(ref whoami) = &*WHOAMI {
+                    if let Some(hostname) = whoami.get_name() {
+                        sample.add("server_hostname", hostname);
+                    }
+                }
+
                 scuba.log(&sample);
             }
             Ok(())
