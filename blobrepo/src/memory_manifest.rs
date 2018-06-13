@@ -524,17 +524,20 @@ impl MemoryManifestEntry {
         let new = if let MemoryManifestEntry::Conflict(conflicts) = self {
             let mut parents = conflicts
                 .into_iter()
-                .filter_map(|entry| match entry {
-                    MemoryManifestEntry::MemTree {
-                        base_manifest_id, ..
-                    } if !entry.is_modified() =>
-                    {
-                        *base_manifest_id
+                .filter_map(|entry| {
+                    let modified = entry.is_modified();
+                    match entry {
+                        MemoryManifestEntry::MemTree {
+                            base_manifest_id, ..
+                        } if !modified =>
+                        {
+                            *base_manifest_id
+                        }
+                        MemoryManifestEntry::Blob(blob) if blob.get_type() == Type::Tree => {
+                            Some(blob.get_hash().into_nodehash())
+                        }
+                        _ => None,
                     }
-                    MemoryManifestEntry::Blob(blob) if blob.get_type() == Type::Tree => {
-                        Some(blob.get_hash().into_nodehash())
-                    }
-                    _ => None,
                 })
                 .fuse();
             Some(MemoryManifestEntry::MemTree {
