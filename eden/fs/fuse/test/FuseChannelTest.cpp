@@ -326,23 +326,6 @@ TEST_F(FuseChannelTest, testDestroyWithPendingRequests) {
   received = fuse_.recvResponse();
   checkLookupResponse(received, id2, response2);
 
-  // TODO: FuseChannel unfortunately doesn't mark requests as finished when it
-  // sends the response.  It doesn't clean up its outstanding request data
-  // until the folly::future::detail::Core object associated with the request
-  // is destroyed.
-  //
-  // Therefore completeFuture won't get invoked now until we destroy our
-  // promises, even though they have already been fulfilled.
-  //
-  // It would probably be better to make FuseChannel clean up the outstanding
-  // request data when it sends the reply.
-  req1.promise = Promise<fuse_entry_out>::makeEmpty();
-  req2.promise = Promise<fuse_entry_out>::makeEmpty();
-  EXPECT_FALSE(completeFuture.isReady())
-      << "remove this entire TODO block if/when we change FuseChannel "
-      << "to remove outstanding request data when it sends the response";
-  req3.promise = Promise<fuse_entry_out>::makeEmpty();
-
   // The completion future should be ready now that the last request
   // is done.
   EXPECT_TRUE(completeFuture.isReady());
