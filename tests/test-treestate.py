@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import itertools
 import os
+import posixpath
 import random
 import tempfile
 import unittest
@@ -26,7 +27,7 @@ def randpath(path=""):
     # push new components to path
     maxlevel = 4
     for i in range(1 + random.randrange(max([1, maxlevel - path.count("/")]))):
-        path = os.path.join(path, randname())
+        path = posixpath.join(path, randname())
 
     if not path:
         path = randname()
