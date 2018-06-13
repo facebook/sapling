@@ -978,6 +978,7 @@ packages = [
     "mercurial",
     "mercurial.cext",
     "mercurial.cffi",
+    "mercurial.fb",
     "mercurial.hgweb",
     "mercurial.httpclient",
     "mercurial.pure",
