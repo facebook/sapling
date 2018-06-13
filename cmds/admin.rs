@@ -51,20 +51,20 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .about("fetches blobs from manifold")
         .args_from_usage("[KEY]    'key of the blob to be fetched'")
         .arg(
-            Arg::with_name("decode_as")
-                .long("decode_as")
+            Arg::with_name("decode-as")
+                .long("decode-as")
                 .short("d")
                 .takes_value(true)
-                .possible_values(&["raw_node_blob"])
+                .possible_values(&["raw-node-blob"])
                 .required(false)
                 .help("if provided decode the value"),
         )
         .arg(
-            Arg::with_name("use_memcache")
-                .long("use_memcache")
+            Arg::with_name("use-memcache")
+                .long("use-memcache")
                 .short("m")
                 .takes_value(true)
-                .possible_values(&["cache_only", "no_fill", "fill_mc"])
+                .possible_values(&["cache-only", "no-fill", "fill-mc"])
                 .required(false)
                 .help("Use memcache to cache access to the blob store"),
         );
@@ -90,21 +90,50 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(content_fetch)
 }
 
-fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
-    let bucket = matches
-        .value_of("manifold-bucket")
-        .unwrap_or("mononoke_prod");
-    let prefix = matches.value_of("manifold-prefix").unwrap_or("");
-    let xdb_tier = matches
-        .value_of("xdb-tier")
-        .unwrap_or("xdb.mononoke_test_2");
+struct ManifoldArgs<'a> {
+    bucket: &'a str,
+    prefix: &'a str,
+    xdb_tier: &'a str,
+    repo_id: RepositoryId,
+}
+
+impl<'a> ManifoldArgs<'a> {
+    fn parse(matches: &'a ArgMatches) -> Self {
+        let bucket = matches
+            .value_of("manifold-bucket")
+            .unwrap_or("mononoke_prod");
+        let prefix = matches.value_of("manifold-prefix").unwrap_or("");
+        let xdb_tier = matches
+            .value_of("xdb-tier")
+            .unwrap_or("xdb.mononoke_test_2");
+        let repo_id = matches
+            .value_of("repo-id")
+            .map(|id: &str| id.parse::<u32>().expect("expected repo id to be a u32"))
+            .unwrap_or(0);
+        let repo_id = RepositoryId::new(repo_id as i32);
+        Self {
+            bucket,
+            prefix,
+            xdb_tier,
+            repo_id,
+        }
+    }
+}
+
+fn create_blobrepo<'a>(logger: &'a Logger, manifold_args: ManifoldArgs<'a>) -> BlobRepo {
+    let ManifoldArgs {
+        bucket,
+        prefix,
+        xdb_tier,
+        repo_id,
+    } = manifold_args;
     let io_threads = 5;
     let default_cache_size = 1000000;
     BlobRepo::new_test_manifold(
         logger.clone(),
         bucket,
         prefix,
-        RepositoryId::new(0),
+        repo_id,
         xdb_tier,
         default_cache_size,
         default_cache_size,
@@ -184,9 +213,9 @@ fn get_memcache<B: MemcacheBlobstoreExt>(
     key: String,
     mode: String,
 ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-    if mode == "cache_only" {
+    if mode == "cache-only" {
         blobstore.get_memcache_only(key)
-    } else if mode == "no_fill" {
+    } else if mode == "no-fill" {
         blobstore.get_no_cache_fill(key)
     } else {
         blobstore.get(key)
@@ -207,10 +236,7 @@ fn main() {
         slog::Logger::root(drain, o![])
     };
 
-    let bucket = matches
-        .value_of("manifold-bucket")
-        .unwrap_or("mononoke_prod");
-    let prefix = matches.value_of("manifold-prefix").unwrap_or("");
+    let manifold_args = ManifoldArgs::parse(&matches);
 
     let mut core = Core::new().unwrap();
     let remote = core.remote();
@@ -218,12 +244,12 @@ fn main() {
     let future = match matches.subcommand() {
         (BLOBSTORE_FETCH, Some(sub_m)) => {
             let key = sub_m.value_of("KEY").unwrap().to_string();
-            let decode_as = sub_m.value_of("decode_as").map(|val| val.to_string());
-            let use_memcache = sub_m.value_of("use_memcache").map(|val| val.to_string());
+            let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());
+            let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
 
             let blobstore = ManifoldBlob::new_with_prefix(
-                bucket,
-                prefix,
+                manifold_args.bucket,
+                manifold_args.prefix,
                 vec![&remote],
                 MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
             );
@@ -239,7 +265,7 @@ fn main() {
                 if let Some(value) = value {
                     match decode_as {
                         Some(val) => {
-                            if val == "raw_node_blob" {
+                            if val == "raw-node-blob" {
                                 println!("{:?}", RawNodeBlob::deserialize(&value.into()));
                             }
                         }
@@ -253,7 +279,7 @@ fn main() {
             let rev = sub_m.value_of("CHANGESET_ID").unwrap();
             let path = sub_m.value_of("PATH").unwrap();
 
-            let repo = create_blobrepo(&logger, &matches);
+            let repo = create_blobrepo(&logger, manifold_args);
             fetch_content(&mut core, logger.clone(), Arc::new(repo), rev, path)
                 .and_then(|content| match content {
                     Content::Executable(_) => {
