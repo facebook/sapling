@@ -26,6 +26,7 @@
 
 using namespace facebook::eden;
 using folly::StringPiece;
+using namespace std::chrono_literals;
 using std::string;
 using ::testing::UnorderedElementsAre;
 
@@ -1058,4 +1059,172 @@ TEST(DiffTest, ignoreHidden) {
   EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
   EXPECT_THAT(
       result.getModified(), UnorderedElementsAre(RelativePath{"a/c/1.txt"}));
+}
+
+TEST(DiffTest, fileNotReady) {
+  TestMount mount;
+  auto backingStore = mount.getBackingStore();
+
+  // Create two trees to diff
+  FakeTreeBuilder builder1;
+  builder1.setFiles({
+      // In src/ we will have some non-materialized files that are modified
+      // in builder2's tree.
+      {"src/r.txt", "This is src/r.txt.\n"},
+      {"src/s.txt", "This is src/s.txt.\n"},
+      {"src/t.txt", "This is src/t.txt.\n"},
+      {"src/u.txt", "This is src/u.txt.\n"},
+      // In doc/ we will have some materialized files that are modified.
+      {"doc/a.txt", "This is doc/a.txt.\n"},
+      {"doc/b.txt", "This is doc/b.txt.\n"},
+      {"doc/c.txt", "This is doc/c.txt.\n"},
+      {"doc/d.txt", "This is doc/d.txt.\n"},
+      {"other/x/y/z.txt", "other\n"},
+      {"toplevel.txt", "toplevel\n"},
+  });
+  auto builder2 = builder1.clone();
+  builder2.replaceFile("src/r.txt", "src/r.txt has been updated.\n");
+  builder2.replaceFile("src/s.txt", "src/s.txt has also been updated.\n");
+  builder2.replaceFile("src/t.txt", "src/t.txt updated.\n");
+  builder2.replaceFile("src/u.txt", "src/u.txt updated.\n");
+  builder2.replaceFile("doc/a.txt", "a.txt modified in builder2.\n");
+  builder2.replaceFile("doc/b.txt", "b.txt modified in builder2.\n");
+
+  // Set the mount pointing to the first tree
+  mount.initialize(builder1, /*startReady=*/false);
+
+  // Locally modify some of the files under doc/
+  // We need to make the blobs ready in order to modify the inodes,
+  // but mark them not ready again afterwards.
+  builder1.setReady("doc");
+  auto a1 = builder1.getStoredBlob("doc/a.txt"_relpath);
+  auto b1 = builder1.getStoredBlob("doc/b.txt"_relpath);
+  auto c1 = builder1.getStoredBlob("doc/c.txt"_relpath);
+  auto d1 = builder1.getStoredBlob("doc/d.txt"_relpath);
+  a1->setReady();
+  b1->setReady();
+  c1->setReady();
+  d1->setReady();
+  mount.overwriteFile("doc/a.txt", "updated a.txt\n");
+  mount.overwriteFile("doc/b.txt", "updated b.txt\n");
+  mount.overwriteFile("doc/c.txt", "updated c.txt\n");
+  mount.overwriteFile("doc/d.txt", "updated d.txt\n");
+  a1->notReady();
+  b1->notReady();
+  c1->notReady();
+  d1->notReady();
+
+  // Load r.txt and s.txt
+  builder1.setReady("src");
+  auto r1 = builder1.getStoredBlob("src/r.txt"_relpath);
+  auto s1 = builder1.getStoredBlob("src/s.txt"_relpath);
+  r1->setReady();
+  s1->setReady();
+  auto r1inode = mount.getInode("src/r.txt"_relpath);
+  auto s1inode = mount.getInode("src/s.txt"_relpath);
+  r1->notReady();
+  s1->notReady();
+
+  // Add tree2 to the backing store and create a commit pointing to it.
+  auto rootTree2 = builder2.finalize(backingStore, /*startReady=*/false);
+  auto commitHash2 = mount.nextCommitHash();
+  auto* commit2 =
+      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+  commit2->setReady();
+  builder2.getRoot()->setReady();
+
+  // Run the diff
+  DiffResultsCallback callback;
+  auto diffFuture = mount.getEdenMount()->diff(&callback, commitHash2);
+
+  // The diff should not be ready yet
+  EXPECT_FALSE(diffFuture.isReady());
+
+  // other/ and toplevel.txt are not modified, so they share the same objects in
+  // builder1 and builder2.  We only need to mark them ready via one of the two
+  // builders.
+  builder1.setReady("other");
+  builder1.setReady("toplevel.txt");
+
+  // The src/ and doc/ directories are different between the two builders.
+  // Mark them ready in each builder.
+  builder1.setReady("src");
+  builder2.setReady("src");
+  builder1.setReady("doc");
+  builder2.setReady("doc");
+
+  EXPECT_FALSE(diffFuture.isReady());
+
+  // Process the modified files in src/
+  // These inodes are not materialized.  r.txt and s.txt have been loaded.
+  auto r2 = builder2.getStoredBlob("src/r.txt"_relpath);
+  auto s2 = builder2.getStoredBlob("src/s.txt"_relpath);
+  auto t2 = builder2.getStoredBlob("src/t.txt"_relpath);
+  auto u2 = builder2.getStoredBlob("src/u.txt"_relpath);
+  auto t1 = builder1.getStoredBlob("src/t.txt"_relpath);
+  auto u1 = builder1.getStoredBlob("src/u.txt"_relpath);
+
+  // The diff process calls both getBlob() and getBlobMetadata(), which can end
+  // up waiting on these objects to load multiple times.
+  //
+  // trigger these objects multiple times without marking them fully ready yet.
+  // This causes the diff process to make forward progress while still resulting
+  // in non-ready futures internally that must be waited for.
+  const unsigned int numTriggers = 5;
+  for (unsigned int n = 0; n < numTriggers; ++n) {
+    r1->trigger();
+    r2->trigger();
+
+    s2->trigger();
+    s1->trigger();
+
+    t1->trigger();
+    t2->trigger();
+
+    u2->trigger();
+    u1->trigger();
+  }
+
+  EXPECT_FALSE(diffFuture.isReady());
+
+  // Process the modified files under doc/
+  // The inodes for these files are materialized, which triggers a different
+  // code path than for non-materialized files.
+  auto a2 = builder2.getStoredBlob("doc/a.txt"_relpath);
+  auto b2 = builder2.getStoredBlob("doc/b.txt"_relpath);
+  auto c2 = builder2.getStoredBlob("doc/c.txt"_relpath);
+  auto d2 = builder2.getStoredBlob("doc/d.txt"_relpath);
+  for (unsigned int n = 0; n < numTriggers; ++n) {
+    a2->trigger();
+    b2->trigger();
+    c2->trigger();
+    d2->trigger();
+  }
+
+  // The diff should generally be ready at this point
+  // However explicitly mark all objects as ready just in case.
+  builder1.setAllReady();
+  builder2.setAllReady();
+
+  // The diff should be complete now.
+  ASSERT_TRUE(diffFuture.isReady());
+  diffFuture.get(10ms);
+  auto result = callback.extractResults();
+
+  // Check the results
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
+  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getModified(),
+      UnorderedElementsAre(
+          RelativePath{"src/r.txt"},
+          RelativePath{"src/s.txt"},
+          RelativePath{"src/t.txt"},
+          RelativePath{"src/u.txt"},
+          RelativePath{"doc/a.txt"},
+          RelativePath{"doc/b.txt"},
+          RelativePath{"doc/c.txt"},
+          RelativePath{"doc/d.txt"}));
 }

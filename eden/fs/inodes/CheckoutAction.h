@@ -116,7 +116,7 @@ class CheckoutAction {
 
   void allLoadsComplete() noexcept;
   bool ensureDataReady() noexcept;
-  bool hasConflict();
+  folly::Future<bool> hasConflict();
   FOLLY_NODISCARD folly::Future<folly::Unit> doAction();
 
   /**

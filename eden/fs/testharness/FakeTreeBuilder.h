@@ -234,6 +234,16 @@ class FakeTreeBuilder {
 
   StoredTree* getRoot() const;
 
+  /**
+   * Get the StoredTree at the specified path.
+   */
+  StoredTree* getStoredTree(RelativePathPiece path);
+
+  /**
+   * Get the StoredBlob at the specified path.
+   */
+  StoredBlob* getStoredBlob(RelativePathPiece path);
+
  private:
   enum ExplicitClone { CLONE };
   FakeTreeBuilder(ExplicitClone, const FakeTreeBuilder* orig);
@@ -267,7 +277,6 @@ class FakeTreeBuilder {
       TreeEntryType type);
   EntryInfo* getEntry(RelativePathPiece path);
   EntryInfo* getDirEntry(RelativePathPiece path, bool create);
-  StoredTree* getStoredTree(RelativePathPiece path);
 
   std::shared_ptr<FakeBackingStore> store_{nullptr};
   EntryInfo root_{TreeEntryType::TREE};

@@ -650,13 +650,17 @@ folly::Optional<bool> FileInode::isSameAsFast(
   return folly::none;
 }
 
-bool FileInode::isSameAs(const Blob& blob, TreeEntryType entryType) {
+folly::Future<bool> FileInode::isSameAs(
+    const Blob& blob,
+    TreeEntryType entryType) {
   auto result = isSameAsFast(blob.getHash(), entryType);
   if (result.hasValue()) {
     return result.value();
   }
 
-  return getSha1().value() == Hash::sha1(&blob.getContents());
+  auto blobSha1 = Hash::sha1(&blob.getContents());
+  return getSha1().then(
+      [blobSha1](const Hash& sha1) { return sha1 == blobSha1; });
 }
 
 folly::Future<bool> FileInode::isSameAs(
@@ -667,9 +671,11 @@ folly::Future<bool> FileInode::isSameAs(
     return makeFuture(result.value());
   }
 
-  return getMount()->getObjectStore()->getBlobMetadata(blobID).then(
-      [self = inodePtrFromThis()](const BlobMetadata& metadata) {
-        return self->getSha1().value() == metadata.sha1;
+  auto f1 = getSha1();
+  auto f2 = getMount()->getObjectStore()->getBlobMetadata(blobID);
+  return folly::collect(f1, f2).then(
+      [](std::tuple<Hash, BlobMetadata>&& result) {
+        return std::get<0>(result) == std::get<1>(result).sha1;
       });
 }
 

@@ -298,9 +298,15 @@ StoredHash* FakeBackingStore::putCommit(Hash commitHash, Hash treeHash) {
 }
 
 StoredHash* FakeBackingStore::putCommit(
+    Hash commitHash,
+    const FakeTreeBuilder& builder) {
+  return putCommit(commitHash, builder.getRoot()->get().getHash());
+}
+
+StoredHash* FakeBackingStore::putCommit(
     folly::StringPiece commitStr,
     const FakeTreeBuilder& builder) {
-  return putCommit(makeTestHash(commitStr), builder.getRoot()->get().getHash());
+  return putCommit(makeTestHash(commitStr), builder);
 }
 
 StoredTree* FakeBackingStore::getStoredTree(Hash hash) {

@@ -105,7 +105,7 @@ class FakeBackingStore : public BackingStore {
    */
   StoredHash* putCommit(Hash commitHash, const StoredTree* tree);
   StoredHash* putCommit(Hash commitHash, Hash treeHash);
-
+  StoredHash* putCommit(Hash commitHash, const FakeTreeBuilder& builder);
   StoredHash* putCommit(
       folly::StringPiece commitStr,
       const FakeTreeBuilder& builder);

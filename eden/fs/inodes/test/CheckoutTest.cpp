@@ -437,6 +437,71 @@ TEST(Checkout, modifyFile) {
   runModifyFileTests("a/b/zzz.txt");
 }
 
+// Test performing a checkout with a modified file where the ObjectStore data is
+// not immediately ready in the LocalStore even though the inode is loaded.
+TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
+  TestMount mount;
+  auto backingStore = mount.getBackingStore();
+
+  auto builder1 = FakeTreeBuilder();
+  StringPiece contents1 = "test contents\n";
+  builder1.setFile("a/test.txt", contents1);
+
+  auto builder2 = builder1.clone();
+  StringPiece contents2 = "updated contents\n";
+  builder2.replaceFile("a/test.txt", contents2);
+  builder2.finalize(backingStore, /*setReady=*/true);
+  auto commit2Hash = makeTestHash("2");
+  auto commit2 = backingStore->putCommit(commit2Hash, builder2);
+  commit2->setReady();
+
+  auto builder3 = builder1.clone();
+  builder3.replaceFile("a/test.txt", "original conflicting contents\n");
+  builder3.finalize(backingStore, /*setReady=*/true);
+  auto commit3Hash = makeTestHash("3");
+  auto commit3 = backingStore->putCommit(commit3Hash, builder3);
+  commit3->setReady();
+
+  // Initialize the mount with the tree data from builder1
+  mount.initialize(builder1, /*startReady=*/false);
+
+  // Load a/test.txt
+  auto blob1 = builder1.getStoredBlob("a/test.txt"_relpath);
+  builder1.setReady("a");
+  blob1->setReady();
+  auto preInode = mount.getFileInode("a/test.txt");
+  // Mark its blob as not ready again after loading it
+  blob1->notReady();
+
+  // Call resetParent() to make the mount point at commit3, even though
+  // the file state is from commit1.  This will cause a conflict in a
+  // non-materialized file.
+  mount.getEdenMount()->resetParent(commit3Hash);
+
+  // Perform the checkout.
+  auto checkoutFuture = mount.getEdenMount()->checkout(commit2Hash);
+
+  // Trigger blob1 several times to allow the checkout to make forward progress
+  // if it needs to access this blob, without necessarily completing all at
+  // once.
+  for (int n = 0; n < 5; ++n) {
+    blob1->trigger();
+  }
+
+  // Mark builder1 as ready and confirm that the checkout completes
+  builder1.setAllReady();
+  ASSERT_TRUE(checkoutFuture.isReady());
+  auto results = checkoutFuture.get(10ms);
+  EXPECT_THAT(
+      results,
+      UnorderedElementsAre(
+          makeConflict(ConflictType::MODIFIED_MODIFIED, "a/test.txt")));
+
+  // Verify that the inode was not updated
+  auto postInode = mount.getFileInode("a/test.txt");
+  EXPECT_FILE_INODE(postInode, contents1, 0644);
+}
+
 void testModifyConflict(
     folly::StringPiece path,
     LoadBehavior loadType,

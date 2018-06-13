@@ -283,36 +283,37 @@ Future<Unit> CheckoutAction::doAction() {
   // All the data is ready and we're ready to go!
 
   // Check for conflicts first.
-  auto conflictWasAddedToCtx = hasConflict();
-  // Note that even if we know we are not going to apply the changes, we must
-  // still run hasConflict() first because we rely on its side-effects.
-  if (conflictWasAddedToCtx && !ctx_->forceUpdate()) {
-    // We only report conflicts for files, not directories. The only possible
-    // conflict that can occur here if this inode is a TreeInode is that the old
-    // source control state was for a file. There aren't really any other
-    // conflicts than this to report, even if we recurse. Anything inside this
-    // directory is basically just untracked (or possibly ignored) files.
-    return makeFuture();
-  }
+  return hasConflict().then([this](bool conflictWasAddedToCtx) {
+    // Note that even if we know we are not going to apply the changes, we must
+    // still run hasConflict() first because we rely on its side-effects.
+    if (conflictWasAddedToCtx && !ctx_->forceUpdate()) {
+      // We only report conflicts for files, not directories. The only possible
+      // conflict that can occur here if this inode is a TreeInode is that the
+      // old source control state was for a file. There aren't really any other
+      // conflicts than this to report, even if we recurse. Anything inside this
+      // directory is basically just untracked (or possibly ignored) files.
+      return makeFuture();
+    }
 
-  // Call TreeInode::checkoutUpdateEntry() to actually do the work.
-  //
-  // Note that we are moving most of our state into the checkoutUpdateEntry()
-  // arguments.  We have to be slightly careful here: getEntryName() returns a
-  // PathComponentPiece that is pointing into a PathComponent owned either by
-  // oldScmEntry_ or newScmEntry_.  Therefore don't move these scm entries,
-  // to make sure we don't invalidate the PathComponentPiece data.
-  auto parent = inode_->getParent(ctx_->renameLock());
-  return parent->checkoutUpdateEntry(
-      ctx_,
-      getEntryName(),
-      std::move(inode_),
-      std::move(oldTree_),
-      std::move(newTree_),
-      newScmEntry_);
+    // Call TreeInode::checkoutUpdateEntry() to actually do the work.
+    //
+    // Note that we are moving most of our state into the checkoutUpdateEntry()
+    // arguments.  We have to be slightly careful here: getEntryName() returns a
+    // PathComponentPiece that is pointing into a PathComponent owned either by
+    // oldScmEntry_ or newScmEntry_.  Therefore don't move these scm entries,
+    // to make sure we don't invalidate the PathComponentPiece data.
+    auto parent = inode_->getParent(ctx_->renameLock());
+    return parent->checkoutUpdateEntry(
+        ctx_,
+        getEntryName(),
+        std::move(inode_),
+        std::move(oldTree_),
+        std::move(newTree_),
+        newScmEntry_);
+  });
 }
 
-bool CheckoutAction::hasConflict() {
+Future<bool> CheckoutAction::hasConflict() {
   if (oldTree_) {
     auto treeInode = inode_.asTreePtrOrNull();
     if (!treeInode) {
@@ -337,20 +338,24 @@ bool CheckoutAction::hasConflict() {
     }
 
     // Check that the file contents are the same as the old source control entry
-    if (!fileInode->isSameAs(*oldBlob_, oldScmEntry_.value().getType())) {
-      // The file contents or mode bits are different:
-      // - If the file exists in the new tree but differs from what is currently
-      //   in the working copy, then this is a MODIFIED_MODIFIED conflict.
-      // - If the file does not exist in the new tree, then this is a
-      //   MODIFIED_REMOVED conflict.
-      auto conflictType = newScmEntry_ ? ConflictType::MODIFIED_MODIFIED
-                                       : ConflictType::MODIFIED_REMOVED;
-      ctx_->addConflict(conflictType, inode_.get());
-      return true;
-    }
+    return fileInode->isSameAs(*oldBlob_, oldScmEntry_.value().getType())
+        .then([this](bool isSame) {
+          if (isSame) {
+            // no conflict
+            return false;
+          }
 
-    // This file is the same as the old source control state.
-    return false;
+          // The file contents or mode bits are different:
+          // - If the file exists in the new tree but differs from what is
+          //   currently in the working copy, then this is a MODIFIED_MODIFIED
+          //   conflict.
+          // - If the file does not exist in the new tree, then this is a
+          //   MODIFIED_REMOVED conflict.
+          auto conflictType = newScmEntry_ ? ConflictType::MODIFIED_MODIFIED
+                                           : ConflictType::MODIFIED_REMOVED;
+          ctx_->addConflict(conflictType, inode_.get());
+          return true;
+        });
   }
 
   DCHECK(!oldScmEntry_) << "Both oldTree_ and oldBlob_ are nullptr, "

@@ -250,6 +250,18 @@ StoredTree* FakeTreeBuilder::getStoredTree(RelativePathPiece path) {
   return current;
 }
 
+StoredBlob* FakeTreeBuilder::getStoredBlob(RelativePathPiece path) {
+  auto* parent = getStoredTree(path.dirname());
+  const auto& entry = parent->get().getEntryAt(path.basename());
+  if (entry.isTree()) {
+    throw std::runtime_error(folly::to<string>(
+        "tried to look up stored blob at ",
+        path,
+        " but it is a tree rather than a blob"));
+  }
+  return store_->getStoredBlob(entry.getHash());
+}
+
 FakeTreeBuilder::EntryInfo::EntryInfo(TreeEntryType fileType) : type(fileType) {
   if (type == TreeEntryType::TREE) {
     entries = make_unique<PathMap<EntryInfo>>();

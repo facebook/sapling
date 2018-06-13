@@ -83,6 +83,17 @@ class StoredObject {
   }
 
   /**
+   * Mark an object as not ready again.
+   *
+   * Subsequent requests to access it will block until setReady() or trigger()
+   * is called again.
+   */
+  void notReady() {
+    auto data = data_.wlock();
+    data->ready = false;
+  }
+
+  /**
    * Fulfill all pending Futures waiting on this object.
    *
    * This fulfills currently pending Futures, but subsequent calls to

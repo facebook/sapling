@@ -201,10 +201,10 @@ class FileInode : public InodeBaseMetadata<FileInodeState> {
    * Check to see if the file has the same contents as the specified blob
    * and the same tree entry type.
    *
-   * This is more efficient than manually comparing the contents, as it can
-   * perform a simple hash check if the file is not materialized.
+   * This is more efficient than manually comparing the contents, as it may be
+   * able to perform a simple hash check if the file is not materialized.
    */
-  bool isSameAs(const Blob& blob, TreeEntryType entryType);
+  folly::Future<bool> isSameAs(const Blob& blob, TreeEntryType entryType);
   folly::Future<bool> isSameAs(const Hash& blobID, TreeEntryType entryType);
 
   /**
