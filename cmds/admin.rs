@@ -33,7 +33,7 @@ use futures::stream::iter_ok;
 use tokio_core::reactor::Core;
 
 use blobrepo::{BlobRepo, RawNodeBlob};
-use blobstore::{Blobstore, MemcacheBlobstore, MemcacheBlobstoreExt};
+use blobstore::{Blobstore, MemcacheBlobstore, MemcacheBlobstoreExt, PrefixBlobstore};
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
 use mercurial_types::{Changeset, HgChangesetId, MPath, MPathElement, Manifest, RepositoryId};
@@ -67,6 +67,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .possible_values(&["cache-only", "no-fill", "fill-mc"])
                 .required(false)
                 .help("Use memcache to cache access to the blob store"),
+        )
+        .arg(
+            Arg::with_name("no-prefix")
+                .long("no-prefix")
+                .short("P")
+                .takes_value(false)
+                .required(false)
+                .help("Don't prepend a prefix based on the repo id to the key"),
         );
 
     let content_fetch = SubCommand::with_name(CONTENT_FETCH)
@@ -246,6 +254,7 @@ fn main() {
             let key = sub_m.value_of("KEY").unwrap().to_string();
             let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());
             let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
+            let no_prefix = sub_m.is_present("no-prefix");
 
             let blobstore = ManifoldBlob::new_with_prefix(
                 manifold_args.bucket,
@@ -254,9 +263,20 @@ fn main() {
                 MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
             );
 
-            match use_memcache {
-                None => blobstore.get(key).boxify(),
-                Some(mode) => {
+            match (use_memcache, no_prefix) {
+                (None, false) => {
+                    // XXX add a prefix here when ready
+                    let blobstore = PrefixBlobstore::new(blobstore, "");
+                    blobstore.get(key).boxify()
+                }
+                (None, true) => blobstore.get(key).boxify(),
+                (Some(mode), false) => {
+                    let blobstore = MemcacheBlobstore::new(blobstore);
+                    // XXX add a prefix here when ready
+                    let blobstore = PrefixBlobstore::new(blobstore, "");
+                    get_memcache(&blobstore, key, mode)
+                }
+                (Some(mode), true) => {
                     let blobstore = MemcacheBlobstore::new(blobstore);
                     get_memcache(&blobstore, key, mode)
                 }

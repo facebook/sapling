@@ -34,6 +34,7 @@ use BlobRepo;
 use changeset::ChangesetContent;
 use errors::*;
 use file::HgBlobEntry;
+use repo::RepoBlobstore;
 use utils::get_node_key;
 
 /// A handle to a possibly incomplete BlobChangeset. This is used instead of
@@ -113,7 +114,7 @@ struct UploadEntriesState {
     /// validation of this upload - all parents must either have been uploaded in this changeset,
     /// or be present in the blobstore before the changeset can complete.
     parents: HashSet<HgNodeKey>,
-    blobstore: Arc<Blobstore>,
+    blobstore: RepoBlobstore,
     repoid: RepositoryId,
 }
 
@@ -123,7 +124,7 @@ pub struct UploadEntries {
 }
 
 impl UploadEntries {
-    pub fn new(blobstore: Arc<Blobstore>, repoid: RepositoryId) -> Self {
+    pub fn new(blobstore: RepoBlobstore, repoid: RepositoryId) -> Self {
         Self {
             inner: Arc::new(Mutex::new(UploadEntriesState {
                 required_entries: HashMap::new(),

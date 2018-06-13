@@ -23,7 +23,7 @@ use slog::{Discard, Drain, Logger};
 use time_ext::DurationExt;
 use uuid::Uuid;
 
-use blobstore::{Blobstore, EagerMemblob, MemcacheBlobstore, MemoizedBlobstore};
+use blobstore::{Blobstore, EagerMemblob, MemcacheBlobstore, MemoizedBlobstore, PrefixBlobstore};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
@@ -50,9 +50,15 @@ use memory_manifest::MemoryRootManifest;
 use repo_commit::*;
 use utils::{get_node_key, RawNodeBlob};
 
+/// Making PrefixBlobstore part of every blobstore does two things:
+/// 1. It ensures that the prefix applies first, which is important for shared caches like
+///    memcache.
+/// 2. It ensures that all possible blobrepos use a prefix.
+pub type RepoBlobstore = PrefixBlobstore<Arc<Blobstore>>;
+
 pub struct BlobRepo {
     logger: Logger,
-    blobstore: Arc<Blobstore>,
+    blobstore: RepoBlobstore,
     bookmarks: Arc<Bookmarks>,
     filenodes: Arc<Filenodes>,
     changesets: Arc<Changesets>,
@@ -71,7 +77,8 @@ impl BlobRepo {
         BlobRepo {
             logger,
             bookmarks,
-            blobstore,
+            // XXX Switch the second argument to repoid.prefix() when ready
+            blobstore: PrefixBlobstore::new(blobstore, ""),
             filenodes,
             changesets,
             repoid,
@@ -466,13 +473,13 @@ impl BlobRepo {
     }
 
     // This is used by tests in memory_manifest.rs
-    pub fn get_blobstore(&self) -> Arc<Blobstore> {
+    pub fn get_blobstore(&self) -> RepoBlobstore {
         self.blobstore.clone()
     }
 
     // TODO(T29283916): make this save the file change as a Mercurial format HgBlobEntry
     pub fn store_file_change(
-        _blobstore: Arc<Blobstore>,
+        _blobstore: RepoBlobstore,
         _change: Option<&FileChange>,
     ) -> BoxFuture<Option<HgBlobEntry>, Error> {
         unimplemented!()
@@ -555,7 +562,7 @@ impl UploadHgEntry {
 
     pub(crate) fn upload_to_blobstore(
         self,
-        blobstore: &Arc<Blobstore>,
+        blobstore: &RepoBlobstore,
         logger: &Logger,
     ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
         let UploadHgEntry {

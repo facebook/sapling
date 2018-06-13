@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 //! Plain files, symlinks
-use std::sync::Arc;
 
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
@@ -22,11 +21,12 @@ use errors::*;
 
 use manifest::BlobManifest;
 
+use repo::RepoBlobstore;
 use utils::{get_node, RawNodeBlob};
 
 #[derive(Clone)]
 pub struct HgBlobEntry {
-    blobstore: Arc<Blobstore>,
+    blobstore: RepoBlobstore,
     name: Option<MPathElement>,
     id: HgEntryId,
     ty: Type,
@@ -41,7 +41,7 @@ impl PartialEq for HgBlobEntry {
 impl Eq for HgBlobEntry {}
 
 pub fn fetch_raw_filenode_bytes(
-    blobstore: &Arc<Blobstore>,
+    blobstore: &RepoBlobstore,
     nodeid: HgNodeHash,
 ) -> BoxFuture<BlobstoreBytes, Error> {
     get_node(blobstore, nodeid)
@@ -68,7 +68,7 @@ pub fn fetch_raw_filenode_bytes(
 }
 
 pub fn fetch_file_content_and_renames_from_blobstore(
-    blobstore: &Arc<Blobstore>,
+    blobstore: &RepoBlobstore,
     nodeid: HgNodeHash,
 ) -> BoxFuture<(FileContents, Option<(MPath, HgNodeHash)>), Error> {
     get_node(blobstore, nodeid)
@@ -96,12 +96,7 @@ pub fn fetch_file_content_and_renames_from_blobstore(
 }
 
 impl HgBlobEntry {
-    pub fn new(
-        blobstore: Arc<Blobstore>,
-        name: MPathElement,
-        nodeid: HgNodeHash,
-        ty: Type,
-    ) -> Self {
+    pub fn new(blobstore: RepoBlobstore, name: MPathElement, nodeid: HgNodeHash, ty: Type) -> Self {
         Self {
             blobstore,
             name: Some(name),
@@ -110,7 +105,7 @@ impl HgBlobEntry {
         }
     }
 
-    pub fn new_root(blobstore: Arc<Blobstore>, manifestid: HgManifestId) -> Self {
+    pub fn new_root(blobstore: RepoBlobstore, manifestid: HgManifestId) -> Self {
         Self {
             blobstore,
             name: None,

@@ -8,7 +8,6 @@
 
 use std::collections::BTreeMap;
 use std::str;
-use std::sync::Arc;
 
 use futures::future::{Future, IntoFuture};
 use futures::stream;
@@ -21,6 +20,7 @@ use blobstore::Blobstore;
 
 use errors::*;
 use file::HgBlobEntry;
+use repo::RepoBlobstore;
 use utils::{get_node, EnvelopeBlob};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -85,13 +85,13 @@ impl ManifestContent {
 }
 
 pub struct BlobManifest {
-    blobstore: Arc<Blobstore>,
+    blobstore: RepoBlobstore,
     content: ManifestContent,
 }
 
 impl BlobManifest {
     pub fn load(
-        blobstore: &Arc<Blobstore>,
+        blobstore: &RepoBlobstore,
         manifestid: &HgManifestId,
     ) -> BoxFuture<Option<Self>, Error> {
         let nodehash = manifestid.clone().into_nodehash();
@@ -135,11 +135,11 @@ impl BlobManifest {
         }
     }
 
-    pub fn parse<D: AsRef<[u8]>>(blobstore: Arc<Blobstore>, data: D) -> Result<Self> {
+    pub fn parse<D: AsRef<[u8]>>(blobstore: RepoBlobstore, data: D) -> Result<Self> {
         Self::create(blobstore, ManifestContent::parse(data.as_ref())?)
     }
 
-    pub fn create(blobstore: Arc<Blobstore>, content: ManifestContent) -> Result<Self> {
+    pub fn create(blobstore: RepoBlobstore, content: ManifestContent) -> Result<Self> {
         Ok(BlobManifest {
             blobstore: blobstore,
             content: content,

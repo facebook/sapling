@@ -20,9 +20,8 @@ use slog::Logger;
 use mercurial_types::{Entry, HgManifestId, HgNodeHash, MPath, MPathElement, Manifest, RepoPath,
                       Type};
 
-use blobstore::Blobstore;
 use file::HgBlobEntry;
-use repo::{UploadHgEntry, UploadHgNodeHash};
+use repo::{RepoBlobstore, UploadHgEntry, UploadHgNodeHash};
 
 use errors::*;
 use manifest::BlobManifest;
@@ -90,7 +89,7 @@ impl MemoryManifestEntry {
     /// True iff this entry is a tree with no children
     fn is_empty(
         &self,
-        blobstore: &Arc<Blobstore>,
+        blobstore: &RepoBlobstore,
     ) -> impl Future<Item = bool, Error = Error> + Send {
         match self {
             MemoryManifestEntry::MemTree { .. } => Either::A(
@@ -154,7 +153,7 @@ impl MemoryManifestEntry {
     /// Save all manifests represented here to the blobstore
     pub fn save(
         &self,
-        blobstore: &Arc<Blobstore>,
+        blobstore: &RepoBlobstore,
         logger: &Logger,
         path: RepoPath,
     ) -> BoxFuture<HgBlobEntry, Error> {
@@ -293,7 +292,7 @@ impl MemoryManifestEntry {
     // The list of this node's children, or empty if it's not a tree with children.
     fn get_new_children(
         &self,
-        blobstore: &Arc<Blobstore>,
+        blobstore: &RepoBlobstore,
     ) -> impl Future<Item = BTreeMap<MPathElement, Self>, Error = Error> + Send {
         match self {
             MemoryManifestEntry::MemTree {
@@ -361,7 +360,7 @@ impl MemoryManifestEntry {
     fn merge_trees(
         mut children: BTreeMap<MPathElement, MemoryManifestEntry>,
         other_children: BTreeMap<MPathElement, MemoryManifestEntry>,
-        blobstore: Arc<Blobstore>,
+        blobstore: RepoBlobstore,
         logger: Logger,
         repo_path: RepoPath,
         p1: Option<HgNodeHash>,
@@ -417,7 +416,7 @@ impl MemoryManifestEntry {
     pub fn merge_with_conflicts(
         self,
         other: Self,
-        blobstore: Arc<Blobstore>,
+        blobstore: RepoBlobstore,
         logger: Logger,
         repo_path: RepoPath,
     ) -> BoxFuture<Self, Error> {
@@ -568,7 +567,7 @@ impl MemoryManifestEntry {
         manifest: BlobManifest,
         entry_changes: Arc<Mutex<BTreeMap<MPathElement, Option<MemoryManifestEntry>>>>,
         element: MPathElement,
-        blobstore: Arc<Blobstore>,
+        blobstore: RepoBlobstore,
     ) -> impl Future<Item = (), Error = Error> + Send {
         manifest.lookup(&element).map(move |entry| {
             if let Some(entry) = entry {
@@ -594,7 +593,7 @@ impl MemoryManifestEntry {
     pub fn find_mut(
         &self,
         mut path: impl Iterator<Item = MPathElement> + Send + 'static,
-        blobstore: Arc<Blobstore>,
+        blobstore: RepoBlobstore,
     ) -> BoxFuture<Option<Self>, Error> {
         match path.next() {
             None => future::ok(Some(self.clone())).boxify(),
@@ -671,13 +670,13 @@ impl MemoryManifestEntry {
 
 /// An in memory manifest, created from parent manifests (if any)
 pub struct MemoryRootManifest {
-    blobstore: Arc<Blobstore>,
+    blobstore: RepoBlobstore,
     root_entry: MemoryManifestEntry,
     logger: Logger,
 }
 
 impl MemoryRootManifest {
-    fn create(blobstore: Arc<Blobstore>, root_entry: MemoryManifestEntry, logger: Logger) -> Self {
+    fn create(blobstore: RepoBlobstore, root_entry: MemoryManifestEntry, logger: Logger) -> Self {
         Self {
             blobstore,
             root_entry,
@@ -686,7 +685,7 @@ impl MemoryRootManifest {
     }
 
     fn create_conflict(
-        blobstore: Arc<Blobstore>,
+        blobstore: RepoBlobstore,
         p1_root: MemoryManifestEntry,
         p2_root: MemoryManifestEntry,
         logger: Logger,
@@ -699,7 +698,7 @@ impl MemoryRootManifest {
 
     /// Create an in-memory manifest, backed by the given blobstore, and based on mp1 and mp2
     pub fn new(
-        blobstore: Arc<Blobstore>,
+        blobstore: RepoBlobstore,
         logger: Logger,
         mp1: Option<&HgNodeHash>,
         mp2: Option<&HgNodeHash>,

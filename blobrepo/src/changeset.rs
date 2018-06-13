@@ -7,7 +7,6 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::io::Write;
-use std::sync::Arc;
 
 use bytes::Bytes;
 use failure;
@@ -23,6 +22,7 @@ use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NULL_HASH};
 use mononoke_types::DateTime;
 
 use errors::*;
+use repo::RepoBlobstore;
 use utils::{EnvelopeBlob, RawCSBlob};
 
 #[derive(Debug)]
@@ -152,7 +152,7 @@ impl BlobChangeset {
     }
 
     pub fn load(
-        blobstore: &Arc<Blobstore>,
+        blobstore: &RepoBlobstore,
         changesetid: &HgChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
         let changesetid = *changesetid;
@@ -191,7 +191,7 @@ impl BlobChangeset {
 
     pub fn save(
         &self,
-        blobstore: Arc<Blobstore>,
+        blobstore: RepoBlobstore,
     ) -> impl Future<Item = (), Error = Error> + Send + 'static {
         let key = cskey(&self.changesetid);
 
