@@ -172,8 +172,8 @@ Future<Unit> CheckoutAction::run(
 
     // If we were constructed with a Future<InodePtr>, wait for it.
     if (!inode_) {
-      CHECK(inodeFuture_.hasValue());
-      inodeFuture_.value()
+      CHECK(inodeFuture_.valid());
+      inodeFuture_
           .then([rc = LoadingRefcount(this)](InodePtr inode) {
             rc->setInode(std::move(inode));
           })

@@ -71,11 +71,11 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
   folly::Future<folly::Unit> run() override {
     // If we have an inodeFuture_ to wait on, wait for it to finish,
     // then store the resulting inode_ and invoke run() again.
-    if (inodeFuture_.hasValue()) {
+    if (inodeFuture_.valid()) {
       CHECK(!inode_) << "cannot have both inode_ and inodeFuture_ set";
-      return inodeFuture_->then([this](InodePtr inode) {
+      return inodeFuture_.then([this](InodePtr inode) {
         inode_ = std::move(inode);
-        inodeFuture_.clear();
+        inodeFuture_ = folly::Future<InodePtr>::makeEmpty();
         return run();
       });
     }
@@ -95,7 +95,7 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
   const GitIgnoreStack* ignore_{nullptr};
   bool isIgnored_{false};
   InodePtr inode_;
-  folly::Optional<folly::Future<InodePtr>> inodeFuture_;
+  folly::Future<InodePtr> inodeFuture_ = folly::Future<InodePtr>::makeEmpty();
 };
 
 /*
@@ -221,11 +221,11 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     // If we have an inodeFuture_, wait on it to complete.
     // TODO: Load the inode in parallel with loading the source control data
     // below.
-    if (inodeFuture_.hasValue()) {
+    if (inodeFuture_.valid()) {
       CHECK(!inode_) << "cannot have both inode_ and inodeFuture_ set";
-      return inodeFuture_->then([this](InodePtr inode) {
+      return inodeFuture_.then([this](InodePtr inode) {
         inode_ = std::move(inode);
-        inodeFuture_.clear();
+        inodeFuture_ = Future<InodePtr>::makeEmpty();
         return run();
       });
     }
@@ -304,7 +304,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
   const GitIgnoreStack* ignore_{nullptr};
   bool isIgnored_{false};
   TreeEntry scmEntry_;
-  folly::Optional<folly::Future<InodePtr>> inodeFuture_;
+  folly::Future<InodePtr> inodeFuture_ = folly::Future<InodePtr>::makeEmpty();
   InodePtr inode_;
   shared_ptr<const Tree> scmTree_;
 };

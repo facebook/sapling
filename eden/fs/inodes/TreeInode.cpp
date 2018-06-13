@@ -203,8 +203,8 @@ folly::Future<InodePtr> TreeInode::getChildByName(
 }
 
 Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
-  folly::Optional<Future<unique_ptr<InodeBase>>> inodeLoadFuture;
-  folly::Optional<Future<InodePtr>> returnFuture;
+  auto inodeLoadFuture = Future<unique_ptr<InodeBase>>::makeEmpty();
+  auto returnFuture = Future<InodePtr>::makeEmpty();
   InodePtr childInodePtr;
   InodeMap::PromiseVector promises;
   InodeNumber childNumber;
@@ -253,15 +253,15 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     }
   }
 
-  if (inodeLoadFuture) {
-    registerInodeLoadComplete(inodeLoadFuture.value(), name, childNumber);
+  if (inodeLoadFuture.valid()) {
+    registerInodeLoadComplete(inodeLoadFuture, name, childNumber);
   } else {
     for (auto& promise : promises) {
       promise.setValue(childInodePtr);
     }
   }
 
-  return std::move(returnFuture).value();
+  return returnFuture;
 }
 
 Future<TreeInodePtr> TreeInode::getOrLoadChildTree(PathComponentPiece name) {
@@ -420,7 +420,7 @@ void TreeInode::loadUnlinkedChildInode(
 }
 
 void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
-  folly::Optional<folly::Future<unique_ptr<InodeBase>>> future;
+  auto future = Future<unique_ptr<InodeBase>>::makeEmpty();
   {
     auto contents = contents_.rlock();
     auto iter = contents->entries.find(name);
@@ -452,7 +452,7 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
 
     future = startLoadingInodeNoThrow(entry, name);
   }
-  registerInodeLoadComplete(future.value(), name, number);
+  registerInodeLoadComplete(future, name, number);
 }
 
 void TreeInode::registerInodeLoadComplete(

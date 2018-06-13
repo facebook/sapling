@@ -144,7 +144,7 @@ class CheckoutAction {
    * This may be unset if the inode was already available when the
    * CheckoutAction was created (in which case inode_ will be non-null).
    */
-  folly::Optional<folly::Future<InodePtr>> inodeFuture_;
+  folly::Future<InodePtr> inodeFuture_ = folly::Future<InodePtr>::makeEmpty();
 
   /**
    * A reference count tracking number of outstanding futures still
