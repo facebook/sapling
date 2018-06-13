@@ -182,7 +182,7 @@ TreeInode::TreeInode(
 TreeInode::~TreeInode() {}
 
 folly::Future<Dispatcher::Attr> TreeInode::getattr() {
-  return getAttrLocked(*contents_.rlock());
+  return getAttrLocked(contents_.rlock()->entries);
 }
 
 Dispatcher::Attr TreeInode::getAttrLocked(const DirContents& contents) {
@@ -193,7 +193,7 @@ Dispatcher::Attr TreeInode::getAttrLocked(const DirContents& contents) {
 
   // For directories, nlink is the number of entries including the
   // "." and ".." links.
-  attr.st.st_nlink = contents.entries.size() + 2;
+  attr.st.st_nlink = contents.size() + 2;
   return attr;
 }
 
@@ -382,7 +382,7 @@ void TreeInode::loadUnlinkedChildInode(
         // load the dir data; we'll catch and propagate that in
         // the containing try/catch block.
         dir = std::move(overlayContents.value().first);
-        if (!dir.entries.empty()) {
+        if (!dir.empty()) {
           // Should be impossible, but worth checking for
           // defensive purposes!
           throw new std::runtime_error(
@@ -548,13 +548,13 @@ static std::vector<std::string> computeEntryDifferences(
     const DirContents& dir,
     const Tree& tree) {
   std::set<std::string> differences;
-  for (const auto& entry : dir.entries) {
+  for (const auto& entry : dir) {
     if (!tree.getEntryPtr(entry.first)) {
       differences.insert("- " + entry.first.stringPiece().str());
     }
   }
   for (const auto& entry : tree.getTreeEntries()) {
-    if (!dir.entries.count(entry.getName())) {
+    if (!dir.count(entry.getName())) {
       differences.insert("+ " + entry.getName().stringPiece().str());
     }
   }
@@ -565,10 +565,10 @@ folly::Optional<std::vector<std::string>> findEntryDifferences(
     const DirContents& dir,
     const Tree& tree) {
   // Avoid allocations in the case where the tree and dir agree.
-  if (dir.entries.size() != tree.getTreeEntries().size()) {
+  if (dir.size() != tree.getTreeEntries().size()) {
     return computeEntryDifferences(dir, tree);
   }
-  for (const auto& entry : dir.entries) {
+  for (const auto& entry : dir) {
     if (!tree.getEntryPtr(entry.first)) {
       return computeEntryDifferences(dir, tree);
     }
@@ -727,7 +727,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
         return;
       }
       contents->setMaterialized();
-      saveOverlayDir(*contents);
+      saveOverlayDir(contents->entries);
     }
 
     // Mark ourself materialized in our parent directory (if we have one)
@@ -762,7 +762,7 @@ void TreeInode::childMaterialized(
 
     childEntry.setMaterialized();
     contents->setMaterialized();
-    saveOverlayDir(*contents);
+    saveOverlayDir(contents->entries);
   }
 
   // If we have a parent directory, ask our parent to materialize itself
@@ -805,7 +805,7 @@ void TreeInode::childDematerialized(
     // saveOverlayPostCheckout() on this directory, and here we will check to
     // see if we can dematerialize ourself.
     contents->setMaterialized();
-    saveOverlayDir(*contents);
+    saveOverlayDir(contents->entries);
   }
 
   // We are materialized now.
@@ -867,7 +867,7 @@ DirContents TreeInode::buildDirFromTree(const Tree* tree, Overlay* overlay) {
   DirContents dir;
   // TODO: O(N^2)
   for (const auto& treeEntry : tree->getTreeEntries()) {
-    dir.entries.emplace(
+    dir.emplace(
         treeEntry.getName(),
         modeFromTreeEntryType(treeEntry.getType()),
         overlay->allocateInodeNumber(),
@@ -952,8 +952,8 @@ FileInodePtr TreeInode::createImpl(
     entry.setInode(inode.get());
     getInodeMap()->inodeCreated(inode);
 
-    auto timestamps = updateMtimeAndCtimeLocked(*contents, getNow());
-    saveOverlayDir(*contents, timestamps);
+    auto timestamps = updateMtimeAndCtimeLocked(contents->entries, getNow());
+    saveOverlayDir(contents->entries, timestamps);
     contents.unlock();
   }
 
@@ -1113,8 +1113,8 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     getInodeMap()->inodeCreated(newChild);
 
     // Save our updated overlay data
-    auto timestamps = updateMtimeAndCtimeLocked(*contents, now);
-    saveOverlayDir(*contents, timestamps);
+    auto timestamps = updateMtimeAndCtimeLocked(contents->entries, now);
+    saveOverlayDir(contents->entries, timestamps);
   }
 
   invalidateFuseCacheIfRequired(name);
@@ -1288,8 +1288,8 @@ int TreeInode::tryRemoveChild(
 
     // We want to update mtime and ctime of parent directory after removing the
     // child.
-    auto timestamps = updateMtimeAndCtimeLocked(*contents, getNow());
-    saveOverlayDir(*contents, timestamps);
+    auto timestamps = updateMtimeAndCtimeLocked(contents->entries, getNow());
+    saveOverlayDir(contents->entries, timestamps);
   }
   deletedInode.reset();
 
@@ -1368,7 +1368,7 @@ class TreeInode::TreeRenameLocks {
   }
 
   bool destChildExists() const {
-    return destChildIter_ != destContents_->entries.end();
+    return destChildIter_ != destContents_->end();
   }
   bool destChildIsDirectory() const {
     DCHECK(destChildExists());
@@ -1376,7 +1376,7 @@ class TreeInode::TreeRenameLocks {
   }
   bool destChildIsEmpty() const {
     DCHECK(destChildContents_);
-    return destChildContents_->entries.empty();
+    return destChildContents_->empty();
   }
 
  private:
@@ -1447,8 +1447,8 @@ Future<Unit> TreeInode::rename(
 
     // Look up the source entry.  The destination entry info was already
     // loaded by TreeRenameLocks::acquireLocks().
-    auto srcIter = locks.srcContents()->entries.find(name);
-    if (srcIter == locks.srcContents()->entries.end()) {
+    auto srcIter = locks.srcContents()->find(name);
+    if (srcIter == locks.srcContents()->end()) {
       // The source path does not exist.  Fail the rename.
       return makeFuture<Unit>(InodeError(ENOENT, inodePtrFromThis(), name));
     }
@@ -1597,15 +1597,15 @@ Future<Unit> TreeInode::doRename(
     // Replace the destination contents entry with the source data
     locks.destChildIter()->second = std::move(srcIter->second);
   } else {
-    auto ret = locks.destContents()->entries.emplace(
-        destName, std::move(srcIter->second));
+    auto ret =
+        locks.destContents()->emplace(destName, std::move(srcIter->second));
     CHECK(ret.second);
 
     // If the source and destination directory are the same, then inserting the
     // destination entry may have invalidated our source entry iterator, so we
     // have to look it up again.
     if (destParent.get() == this) {
-      srcIter = locks.srcContents()->entries.find(srcName);
+      srcIter = locks.srcContents()->find(srcName);
     }
   }
 
@@ -1613,7 +1613,7 @@ Future<Unit> TreeInode::doRename(
   childInode->updateLocation(destParent, destName, locks.renameLock());
 
   // Now remove the source information
-  locks.srcContents()->entries.erase(srcIter);
+  locks.srcContents()->erase(srcIter);
 
   auto now = getNow();
   updateMtimeAndCtimeLocked(*locks.srcContents(), now);
@@ -1688,17 +1688,17 @@ void TreeInode::TreeRenameLocks::acquireLocks(
     // If the source and destination directories are the same,
     // then there is really only one parent directory to lock.
     srcContentsLock_ = srcTree->contents_.wlock();
-    srcContents_ = &*srcContentsLock_;
-    destContents_ = &*srcContentsLock_;
+    srcContents_ = &srcContentsLock_->entries;
+    destContents_ = &srcContentsLock_->entries;
     // Look up the destination child entry, and lock it if is is a directory
     lockDestChild(destName);
   } else if (isAncestor(renameLock_, srcTree, destTree)) {
     // If srcTree is an ancestor of destTree, we must acquire the lock on
     // srcTree first.
     srcContentsLock_ = srcTree->contents_.wlock();
-    srcContents_ = &*srcContentsLock_;
+    srcContents_ = &srcContentsLock_->entries;
     destContentsLock_ = destTree->contents_.wlock();
-    destContents_ = &*destContentsLock_;
+    destContents_ = &destContentsLock_->entries;
     lockDestChild(destName);
   } else {
     // In all other cases, lock destTree and destChild before srcTree,
@@ -1708,7 +1708,7 @@ void TreeInode::TreeRenameLocks::acquireLocks(
     // since we have confirmed that srcTree is not destTree nor an ancestor of
     // destTree.
     destContentsLock_ = destTree->contents_.wlock();
-    destContents_ = &*destContentsLock_;
+    destContents_ = &destContentsLock_->entries;
     lockDestChild(destName);
 
     // While srcTree cannot be an ancestor of destChild, it might be the
@@ -1723,18 +1723,18 @@ void TreeInode::TreeRenameLocks::acquireLocks(
       srcContents_ = destChildContents_;
     } else {
       srcContentsLock_ = srcTree->contents_.wlock();
-      srcContents_ = &*srcContentsLock_;
+      srcContents_ = &srcContentsLock_->entries;
     }
   }
 }
 
 void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
   // Look up the destination child entry
-  destChildIter_ = destContents_->entries.find(destName);
+  destChildIter_ = destContents_->find(destName);
   if (destChildExists() && destChildIsDirectory() && destChild() != nullptr) {
     auto* childTree = boost::polymorphic_downcast<TreeInode*>(destChild());
     destChildContentsLock_ = childTree->contents_.wlock();
-    destChildContents_ = &*destChildContentsLock_;
+    destChildContents_ = &destChildContentsLock_->entries;
   }
 }
 
@@ -1827,7 +1827,7 @@ Future<Unit> TreeInode::diff(
     inode = inodeEntry->getInodePtr();
     if (!inode) {
       inodeFuture = loadChildLocked(
-          *contents, kIgnoreFilename, *inodeEntry, &pendingLoads);
+          contents->entries, kIgnoreFilename, *inodeEntry, &pendingLoads);
     }
   }
 
@@ -2002,7 +2002,7 @@ Future<Unit> TreeInode::computeDiff(
                     entryIgnored));
           } else {
             auto inodeFuture = self->loadChildLocked(
-                *contents, name, *inodeEntry, &pendingLoads);
+                contents->entries, name, *inodeEntry, &pendingLoads);
             deferredEntries.emplace_back(
                 DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
                     context,
@@ -2073,7 +2073,7 @@ Future<Unit> TreeInode::computeDiff(
         // This inode is not loaded but is materialized.
         // We'll have to load it to confirm if it is the same or different.
         auto inodeFuture = self->loadChildLocked(
-            *contents, scmEntry.getName(), *inodeEntry, &pendingLoads);
+            contents->entries, scmEntry.getName(), *inodeEntry, &pendingLoads);
         deferredEntries.emplace_back(
             DeferredDiffEntry::createModifiedEntryFromInodeFuture(
                 context,
@@ -2096,7 +2096,7 @@ Future<Unit> TreeInode::computeDiff(
         // This is a modified directory.  We have to load it then recurse
         // into it to find files with differences.
         auto inodeFuture = self->loadChildLocked(
-            *contents, scmEntry.getName(), *inodeEntry, &pendingLoads);
+            contents->entries, scmEntry.getName(), *inodeEntry, &pendingLoads);
         deferredEntries.emplace_back(
             DeferredDiffEntry::createModifiedEntryFromInodeFuture(
                 context,
@@ -2371,25 +2371,25 @@ void TreeInode::computeCheckoutActions(
 
       // This entry is present in the new tree but not the old one.
       action = processCheckoutEntry(
-          ctx, *contents, nullptr, &newEntries[newIdx], pendingLoads);
+          ctx, contents->entries, nullptr, &newEntries[newIdx], pendingLoads);
       ++newIdx;
     } else if (newIdx >= newEntries.size()) {
       // This entry is present in the old tree but not the old one.
       action = processCheckoutEntry(
-          ctx, *contents, &oldEntries[oldIdx], nullptr, pendingLoads);
+          ctx, contents->entries, &oldEntries[oldIdx], nullptr, pendingLoads);
       ++oldIdx;
     } else if (oldEntries[oldIdx].getName() < newEntries[newIdx].getName()) {
       action = processCheckoutEntry(
-          ctx, *contents, &oldEntries[oldIdx], nullptr, pendingLoads);
+          ctx, contents->entries, &oldEntries[oldIdx], nullptr, pendingLoads);
       ++oldIdx;
     } else if (oldEntries[oldIdx].getName() > newEntries[newIdx].getName()) {
       action = processCheckoutEntry(
-          ctx, *contents, nullptr, &newEntries[newIdx], pendingLoads);
+          ctx, contents->entries, nullptr, &newEntries[newIdx], pendingLoads);
       ++newIdx;
     } else {
       action = processCheckoutEntry(
           ctx,
-          *contents,
+          contents->entries,
           &oldEntries[oldIdx],
           &newEntries[newIdx],
           pendingLoads);
@@ -2434,14 +2434,14 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   bool contentsUpdated = false;
   const auto& name =
       oldScmEntry ? oldScmEntry->getName() : newScmEntry->getName();
-  auto it = contents.entries.find(name);
-  if (it == contents.entries.end()) {
+  auto it = contents.find(name);
+  if (it == contents.end()) {
     if (!oldScmEntry) {
       // This is a new entry being added, that did not exist in the old tree
       // and does not currently exist in the filesystem.  Go ahead and add it
       // now.
       if (!ctx->isDryRun()) {
-        contents.entries.emplace(
+        contents.emplace(
             newScmEntry->getName(),
             modeFromTreeEntryType(newScmEntry->getType()),
             getOverlay()->allocateInodeNumber(),
@@ -2463,7 +2463,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
           ConflictType::REMOVED_MODIFIED, this, oldScmEntry->getName());
       if (ctx->forceUpdate()) {
         DCHECK(!ctx->isDryRun());
-        contents.entries.emplace(
+        contents.emplace(
             newScmEntry->getName(),
             modeFromTreeEntryType(newScmEntry->getType()),
             getOverlay()->allocateInodeNumber(),
@@ -2558,7 +2558,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     //
     // This logic could potentially be unified with TreeInode::tryRemoveChild
     // and TreeInode::checkoutUpdateEntry.
-    contents.entries.erase(it);
+    contents.erase(it);
   } else {
     entry = DirEntry{modeFromTreeEntryType(newScmEntry->getType()),
                      getOverlay()->allocateInodeNumber(),
@@ -2823,7 +2823,7 @@ void TreeInode::saveOverlayPostCheckout(
                << " isMaterialized=" << isMaterialized;
 
     // Update the overlay to include the new entries, even if dematerialized.
-    saveOverlayDir(*contents);
+    saveOverlayDir(contents->entries);
   }
 
   if (deleteSelf) {
@@ -2938,7 +2938,8 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren(
         continue;
       }
 
-      auto future = loadChildLocked(*contents, name, ent, &pendingLoads);
+      auto future =
+          loadChildLocked(contents->entries, name, ent, &pendingLoads);
       inodeFutures.emplace_back(std::move(future));
     }
   }
@@ -3196,12 +3197,12 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
 
 InodeMetadata TreeInode::getMetadata() const {
   auto lock = contents_.rlock();
-  return getMetadataLocked(*lock);
+  return getMetadataLocked(lock->entries);
 }
 
 void TreeInode::updateAtime() {
   auto lock = contents_.wlock();
-  InodeBaseMetadata::updateAtimeLocked(*lock);
+  InodeBaseMetadata::updateAtimeLocked(lock->entries);
 }
 
 InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {
@@ -3221,7 +3222,7 @@ void TreeInode::updateOverlayHeader() {
     auto file = getOverlay()->openFile(
         getNodeId(), Overlay::kHeaderIdentifierDir, timeStamps);
     Overlay::updateTimestampToHeader(
-        file.fd(), getMetadataLocked(*contents).timestamps);
+        file.fd(), getMetadataLocked(contents->entries).timestamps);
   }
 }
 folly::Future<Dispatcher::Attr> TreeInode::setattr(

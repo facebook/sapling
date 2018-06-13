@@ -38,9 +38,9 @@ constexpr folly::StringPiece kDotEdenName{".eden"};
 /**
  * The state of a TreeInode as held in memory.
  */
-struct TreeInodeState : DirContents {
+struct TreeInodeState {
   explicit TreeInodeState(DirContents&& dir, folly::Optional<Hash> hash)
-      : DirContents(std::forward<DirContents>(dir)), treeHash(hash) {}
+      : entries{std::forward<DirContents>(dir)}, treeHash{hash} {}
 
   bool isMaterialized() const {
     return !treeHash.hasValue();
@@ -48,6 +48,8 @@ struct TreeInodeState : DirContents {
   void setMaterialized() {
     treeHash = folly::none;
   }
+
+  DirContents entries;
 
   /**
    * If this TreeInode is unmaterialized (identical to an existing source

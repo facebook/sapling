@@ -348,10 +348,10 @@ Optional<std::pair<DirContents, InodeTimestamps>> Overlay::loadOverlayDir(
     }
 
     if (isMaterialized) {
-      result.entries.emplace(PathComponentPiece{name}, value.mode, ino);
+      result.emplace(PathComponentPiece{name}, value.mode, ino);
     } else {
       auto hash = Hash{folly::ByteRange{folly::StringPiece{value.hash}}};
-      result.entries.emplace(PathComponentPiece{name}, value.mode, ino, hash);
+      result.emplace(PathComponentPiece{name}, value.mode, ino, hash);
     }
   }
 
@@ -375,7 +375,7 @@ void Overlay::saveOverlayDir(
   // Translate the data to the thrift equivalents
   overlay::OverlayDir odir;
 
-  for (auto& entIter : dir.entries) {
+  for (auto& entIter : dir) {
     const auto& entName = entIter.first;
     const auto& ent = entIter.second;
 

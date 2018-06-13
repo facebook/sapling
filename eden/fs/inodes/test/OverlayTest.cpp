@@ -137,8 +137,8 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   auto ino3 = overlay->allocateInodeNumber();
 
   DirContents dir;
-  dir.entries.emplace("one"_pc, S_IFREG | 0644, ino2, hash);
-  dir.entries.emplace("two"_pc, S_IFDIR | 0755, ino3);
+  dir.emplace("one"_pc, S_IFREG | 0644, ino2, hash);
+  dir.emplace("two"_pc, S_IFDIR | 0755, ino3);
 
   overlay->saveOverlayDir(ino1, dir, InodeTimestamps{});
 
@@ -146,9 +146,9 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   ASSERT_TRUE(result);
   const auto* newDir = &result->first;
 
-  EXPECT_EQ(2, newDir->entries.size());
-  const auto& one = newDir->entries.find("one"_pc)->second;
-  const auto& two = newDir->entries.find("two"_pc)->second;
+  EXPECT_EQ(2, newDir->size());
+  const auto& one = newDir->find("one"_pc)->second;
+  const auto& two = newDir->find("two"_pc)->second;
   EXPECT_EQ(ino2, one.getInodeNumber());
   EXPECT_FALSE(one.isMaterialized());
   EXPECT_EQ(ino3, two.getInodeNumber());
@@ -237,8 +237,8 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
   auto ino4 = overlay->allocateInodeNumber();
 
   DirContents dir;
-  dir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
-  dir.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
+  dir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
+  dir.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
   overlay->saveOverlayDir(kRootNodeId, dir, InodeTimestamps{});
 
   recreate();
@@ -277,7 +277,7 @@ TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
 
   // The subdir is written next.
   DirContents subdir;
-  subdir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
+  subdir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
   overlay->saveOverlayDir(ino4, subdir, InodeTimestamps{});
 
   // Crashed before root was written.
@@ -296,13 +296,13 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
 
   // Write a subdir.
   DirContents subdir;
-  subdir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
+  subdir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
   overlay->saveOverlayDir(ino4, subdir, InodeTimestamps{});
 
   // Write the root.
   DirContents dir;
-  dir.entries.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
-  dir.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
+  dir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
+  dir.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
   overlay->saveOverlayDir(kRootNodeId, dir, InodeTimestamps{});
 
   recreate();
@@ -312,7 +312,7 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
   // Rewrite the root (say, after a takeover) without the file.
 
   DirContents newroot;
-  newroot.entries.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
+  newroot.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
   overlay->saveOverlayDir(kRootNodeId, newroot, InodeTimestamps{});
 
   recreate(OverlayRestartMode::CLEAN);

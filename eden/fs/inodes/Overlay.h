@@ -20,7 +20,6 @@
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/PathMap.h"
 
 namespace facebook {
 namespace eden {
