@@ -296,7 +296,7 @@ Test fetching from the server populates the cache
   $ rm -rf .hg/store/00manifest*
   $ clearcache
   $ hg status --change tip > /dev/null
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
   fetching tree '' 7e680cec965bd202ea244b3c4869181424ca5fe8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
   2 trees fetched over * (glob)
@@ -309,7 +309,7 @@ Test fetching from the server populates the cache
   $ mv ../master/.hg/store/meta ../master/.hg/store/meta.bak
   $ clearcache
   $ hg status --change tip > /dev/null
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
   fetching tree '' 7e680cec965bd202ea244b3c4869181424ca5fe8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
   2 trees fetched over * (glob)
@@ -319,7 +319,7 @@ Test fetching from the server populates the cache
   $ cp ../master/.hg/cache/trees/v2/get/0b/0fa4abc415aa6a46e003c61283b182ccc989b6 ../master/.hg/cache/trees/v2/get/d4/395b5ffa18499864439ac2b1a731ff7b7491fa
   $ clearcache
   $ hg status --change tip > /dev/null
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
   fetching tree '' 7e680cec965bd202ea244b3c4869181424ca5fe8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
   abort: "unable to find the following nodes locally or on the server: ('', 7e680cec965bd202ea244b3c4869181424ca5fe8)"
@@ -330,7 +330,7 @@ Test fetching from the server populates the cache
   $ clearcache
   $ mv ../master/.hg/store/meta.bak ../master/.hg/store/meta
   $ hg status --change tip > /dev/null
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
   fetching tree '' 7e680cec965bd202ea244b3c4869181424ca5fe8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
   2 trees fetched over * (glob)
@@ -348,7 +348,7 @@ Test fetching from the server populates the cache
   \s*16 (re)
   $ clearcache
   $ hg status --change tip
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
   fetching tree '' 7e680cec965bd202ea244b3c4869181424ca5fe8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
   2 trees fetched over * (glob)

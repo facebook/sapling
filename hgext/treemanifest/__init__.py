@@ -536,6 +536,7 @@ class basetreemanifestlog(object):
     def __init__(self):
         self._mutabledatapack = None
         self._mutablehistorypack = None
+        self.recentlinknode = None
 
     def add(
         self,
@@ -2156,8 +2157,14 @@ class remotetreestore(generatingdatastore):
                         raise KeyError((name, node))
 
             if linkrev is None:
-                # TODO: improve linkrev guessing when the revlog isn't available
-                linkrev = self._repo["tip"].rev()
+                # Recentlinknode is set any time a changectx accesses a
+                # manifest. This let's us get an approximate linknode to use for
+                # finding nearby manifests.
+                recentlinknode = self._repo.manifestlog.recentlinknode
+                if recentlinknode is not None:
+                    linkrev = self._repo[recentlinknode].rev()
+                else:
+                    linkrev = self._repo["tip"].rev()
 
             # Find a recent tree that we already have
             basemfnodes = _findrecenttree(self._repo, linkrev)

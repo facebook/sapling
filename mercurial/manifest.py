@@ -1389,6 +1389,7 @@ class manifestlog(object):
         self._dirmancache[""] = util.lrucachedict(cachesize)
 
         self.cachesize = cachesize
+        self.recentlinknode = None
 
     def __nonzero__(self):
         return bool(self._revlog)

@@ -372,6 +372,6 @@ treemanifest data for the public commits.
   
 # Verify the non-infinitepush commit tree data is downloaded on demand
   $ hg manifest -r 0
-  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 02c12aef64ff
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
   x
