@@ -36,8 +36,8 @@ use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFil
                       HgNodeHash, HgParents, Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::HgManifestId;
-use mononoke_types::{Blob, BlobstoreBytes, BonsaiChangeset, ContentId, DateTime, FileChange,
-                     FileContents, MPath, MononokeId};
+use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ContentId, DateTime,
+                     FileChange, FileContents, MPath, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Core;
@@ -237,6 +237,48 @@ impl BlobRepo {
             Arc::new(changesets),
             repoid,
         ))
+    }
+
+    fn fetch<K>(&self, key: &K) -> impl Future<Item = K::Value, Error = Error> + Send
+    where
+        K: MononokeId,
+    {
+        let blobstore_key = key.blobstore_key();
+        self.blobstore
+            .get(blobstore_key.clone())
+            .and_then(move |blob| {
+                blob.ok_or(ErrorKind::MissingTypedKeyEntry(blobstore_key).into())
+                    .and_then(|blob| <<K as MononokeId>::Value>::from_blob(blob.into()))
+            })
+    }
+
+    // this is supposed to be used only from unittest
+    pub fn unittest_fetch<K>(&self, key: &K) -> impl Future<Item = K::Value, Error = Error> + Send
+    where
+        K: MononokeId,
+    {
+        self.fetch(key)
+    }
+
+    fn store<K, V>(&self, value: V) -> impl Future<Item = K, Error = Error> + Send
+    where
+        V: BlobstoreValue<Key = K>,
+        K: MononokeId<Value = V>,
+    {
+        let blob = value.into_blob();
+        let key = *blob.id();
+        self.blobstore
+            .put(key.blobstore_key(), blob.into())
+            .map(move |_| key)
+    }
+
+    // this is supposed to be used only from unittest
+    pub fn unittest_store<K, V>(&self, value: V) -> impl Future<Item = K, Error = Error> + Send
+    where
+        V: BlobstoreValue<Key = K>,
+        K: MononokeId<Value = V>,
+    {
+        self.store(value)
     }
 
     pub fn get_file_content(&self, key: &HgNodeHash) -> BoxFuture<FileContents, Error> {

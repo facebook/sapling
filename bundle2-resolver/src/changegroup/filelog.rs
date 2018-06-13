@@ -22,6 +22,7 @@ use mercurial::file;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, HgNodeHash, HgNodeKey, MPath,
                       RepoPath, NULL_HASH};
+use mononoke_types::BlobstoreValue;
 
 use errors::*;
 use stats::*;

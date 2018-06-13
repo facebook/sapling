@@ -10,7 +10,10 @@ use std::str::FromStr;
 use ascii::{AsciiStr, AsciiString};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
+use blob::BlobstoreValue;
+use bonsai_changeset::BonsaiChangeset;
 use errors::*;
+use file_contents::FileContents;
 use hash::{Blake2, Context};
 use thrift;
 
@@ -19,6 +22,9 @@ use thrift;
 
 /// An identifier used throughout Mononoke.
 pub trait MononokeId: Copy + Send + 'static {
+    /// Blobstore value type associated with given MononokeId type
+    type Value: BlobstoreValue<Key = Self>;
+
     /// Return a key suitable for blobstore use.
     fn blobstore_key(&self) -> String;
 
@@ -40,6 +46,7 @@ pub struct ContentId(Blake2);
 macro_rules! impl_typed_hash {
     {
         hash_type => $typed: ident,
+        value_type => $value_type: ident,
         context_type => $typed_context: ident,
         context_key => $key: expr,
     } => {
@@ -134,6 +141,8 @@ macro_rules! impl_typed_hash {
         }
 
         impl MononokeId for $typed {
+            type Value = $value_type;
+
             #[inline]
             fn blobstore_key(&self) -> String {
                 format!(concat!($key, ".blake2.{}"), self.0)
@@ -173,12 +182,14 @@ macro_rules! impl_typed_hash {
 
 impl_typed_hash! {
     hash_type => ChangesetId,
+    value_type => BonsaiChangeset,
     context_type => ChangesetIdContext,
     context_key => "changeset",
 }
 
 impl_typed_hash! {
     hash_type => ContentId,
+    value_type => FileContents,
     context_type => ContentIdContext,
     context_key => "content",
 }

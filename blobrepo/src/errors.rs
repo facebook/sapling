@@ -43,6 +43,7 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
+    #[fail(display = "Missing typed key entry for key: {}", _0)] MissingTypedKeyEntry(String),
     #[fail(display = "Error while opening state for {}", _0)] StateOpen(StateOpenError),
     #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(HgChangesetId),
     #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(HgNodeHash),

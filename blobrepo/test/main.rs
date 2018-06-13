@@ -14,6 +14,7 @@ extern crate futures;
 extern crate futures_ext;
 #[macro_use]
 extern crate maplit;
+extern crate quickcheck;
 #[macro_use]
 extern crate slog;
 
@@ -28,11 +29,13 @@ extern crate mononoke_types;
 
 use futures::Future;
 use futures_ext::FutureExt;
+use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
+use std::marker::PhantomData;
 
 use blobrepo::{compute_changed_files, BlobRepo};
 use mercurial_types::{manifest, Changeset, Entry, FileType, HgChangesetId, HgEntryId,
                       HgManifestId, MPath, MPathElement, RepoPath};
-use mononoke_types::FileContents;
+use mononoke_types::{ChangesetId, ContentId, FileContents, MononokeId};
 
 mod stats_units;
 #[macro_use]
@@ -367,6 +370,50 @@ test_both_repotypes!(
     check_linknode_creation,
     check_linknode_creation_lazy,
     check_linknode_creation_eager
+);
+
+struct StoreFetchTestable<K> {
+    repo: BlobRepo,
+    _key: PhantomData<K>,
+}
+
+impl<K> StoreFetchTestable<K> {
+    fn new(repo: &BlobRepo) -> Self {
+        StoreFetchTestable {
+            repo: repo.clone(),
+            _key: PhantomData,
+        }
+    }
+}
+
+impl<K> Testable for StoreFetchTestable<K>
+where
+    K: MononokeId,
+    K::Value: PartialEq + Arbitrary,
+{
+    fn result<G: Gen>(&self, g: &mut G) -> TestResult {
+        let value = <K::Value as Arbitrary>::arbitrary(g);
+        let value_cloned = value.clone();
+        let store_fetch_future = self.repo
+            .unittest_store(value)
+            .and_then({
+                let repo = self.repo.clone();
+                move |key| repo.unittest_fetch(&key)
+            })
+            .map(move |value_fetched| TestResult::from_bool(value_fetched == value_cloned));
+        run_future(store_fetch_future).expect("valid mononoke type")
+    }
+}
+
+fn store_fetch_mononoke_types(repo: BlobRepo) {
+    quickcheck(StoreFetchTestable::<ChangesetId>::new(&repo));
+    quickcheck(StoreFetchTestable::<ContentId>::new(&repo));
+}
+
+test_both_repotypes!(
+    store_fetch_mononoke_types,
+    store_fetch_mononoke_types_lazy,
+    store_fetch_mononoke_types_eager
 );
 
 #[test]

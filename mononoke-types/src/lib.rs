@@ -48,7 +48,7 @@ pub mod hash;
 pub mod path;
 pub mod typed_hash;
 
-pub use blob::{Blob, BlobstoreBytes, ChangesetBlob, ContentBlob};
+pub use blob::{Blob, BlobstoreBytes, BlobstoreValue, ChangesetBlob, ContentBlob};
 pub use bonsai_changeset::BonsaiChangeset;
 pub use datetime::DateTime;
 pub use file_change::{FileChange, FileType};

@@ -11,7 +11,7 @@ use quickcheck::{Arbitrary, Gen};
 
 use rust_thrift::compact_protocol;
 
-use blob::{Blob, ChangesetBlob};
+use blob::{Blob, BlobstoreValue, ChangesetBlob};
 use datetime::DateTime;
 use errors::*;
 use file_change::FileChange;
@@ -111,14 +111,6 @@ impl BonsaiChangeset {
         })?)
     }
 
-    pub fn from_blob<T: AsRef<[u8]>>(t: T) -> Result<Self> {
-        // TODO (T27336549) stop using SyncFailure once thrift is converted to failure
-        let thrift_tc = compact_protocol::deserialize(t.as_ref())
-            .map_err(SyncFailure::new)
-            .context(ErrorKind::BlobDeserializeError("BonsaiChangeset".into()))?;
-        Self::from_thrift(thrift_tc)
-    }
-
     /// Get the parents for this changeset. The order of parents is significant.
     pub fn parents(&self) -> impl Iterator<Item = &ChangesetId> {
         self.inner.parents.iter()
@@ -178,16 +170,6 @@ impl BonsaiChangeset {
         self.inner
     }
 
-    /// Serialize this structure into a blob.
-    pub fn into_blob(self) -> ChangesetBlob {
-        let thrift = self.into_thrift();
-        let data = compact_protocol::serialize(&thrift);
-        let mut context = ChangesetIdContext::new();
-        context.update(&data);
-        let id = context.finish();
-        Blob::new(id, data)
-    }
-
     pub(crate) fn into_thrift(self) -> thrift::BonsaiChangeset {
         thrift::BonsaiChangeset {
             parents: self.inner
@@ -207,6 +189,27 @@ impl BonsaiChangeset {
                 .map(|(f, c)| (f.into_thrift(), FileChange::into_thrift_opt(c)))
                 .collect(),
         }
+    }
+}
+
+impl BlobstoreValue for BonsaiChangeset {
+    type Key = ChangesetId;
+
+    fn into_blob(self) -> ChangesetBlob {
+        let thrift = self.into_thrift();
+        let data = compact_protocol::serialize(&thrift);
+        let mut context = ChangesetIdContext::new();
+        context.update(&data);
+        let id = context.finish();
+        Blob::new(id, data)
+    }
+
+    fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
+        // TODO (T27336549) stop using SyncFailure once thrift is converted to failure
+        let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
+            .map_err(SyncFailure::new)
+            .context(ErrorKind::BlobDeserializeError("BonsaiChangeset".into()))?;
+        Self::from_thrift(thrift_tc)
     }
 }
 
@@ -295,7 +298,7 @@ mod test {
 
         fn blob_roundtrip(cs: BonsaiChangeset) -> bool {
             let blob = cs.clone().into_blob();
-            let cs2 = BonsaiChangeset::from_blob(blob.data().as_ref())
+            let cs2 = BonsaiChangeset::from_blob(blob)
                 .expect("blob roundtrips should always be valid");
             cs == cs2
         }

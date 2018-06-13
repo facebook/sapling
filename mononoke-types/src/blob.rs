@@ -10,6 +10,7 @@ use bytes::Bytes;
 
 use asyncmemo::Weight;
 
+use errors::*;
 use typed_hash::{ChangesetId, ContentId, MononokeId};
 
 /// A serialized blob in memory.
@@ -94,4 +95,10 @@ impl<Id> From<Blob<Id>> for BlobstoreBytes {
     fn from(blob: Blob<Id>) -> BlobstoreBytes {
         BlobstoreBytes::from_bytes(blob.data)
     }
+}
+
+pub trait BlobstoreValue: Sized + Send {
+    type Key;
+    fn into_blob(self) -> Blob<Self::Key>;
+    fn from_blob(Blob<Self::Key>) -> Result<Self>;
 }
