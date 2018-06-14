@@ -9,6 +9,7 @@
  */
 #include "eden/fs/inodes/Overlay.h"
 
+#include <folly/FileUtil.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
@@ -30,6 +31,59 @@ using std::string;
 
 namespace facebook {
 namespace eden {
+
+TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
+  Overlay overlay{realpath("eden/test-data/overlay-v2")};
+
+  InodeTimestamps timestamps;
+
+  Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
+  Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};
+  Hash hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
+  Hash hash4{folly::ByteRange{"44444444444444444444"_sp}};
+
+  auto rootTree = overlay.loadOverlayDir(kRootNodeId);
+  auto file =
+      overlay.openFile(2_ino, Overlay::kHeaderIdentifierFile, timestamps);
+  auto subdir = overlay.loadOverlayDir(3_ino);
+  auto emptyDir = overlay.loadOverlayDir(4_ino);
+  auto hello =
+      overlay.openFile(5_ino, Overlay::kHeaderIdentifierFile, timestamps);
+
+  ASSERT_TRUE(rootTree);
+  EXPECT_EQ(2, rootTree->first.entries.size());
+  const auto& fileEntry = rootTree->first.entries.at("file"_pc);
+  EXPECT_EQ(2_ino, fileEntry.getInodeNumber());
+  EXPECT_EQ(hash1, fileEntry.getHash());
+  EXPECT_EQ(S_IFREG | 0644, fileEntry.getInitialMode());
+  const auto& subdirEntry = rootTree->first.entries.at("subdir"_pc);
+  EXPECT_EQ(3_ino, subdirEntry.getInodeNumber());
+  EXPECT_EQ(hash2, subdirEntry.getHash());
+  EXPECT_EQ(S_IFDIR | 0755, subdirEntry.getInitialMode());
+
+  folly::checkUnixError(lseek(file.fd(), Overlay::kHeaderLength, SEEK_SET));
+  std::string result;
+  folly::readFile(file.fd(), result);
+  EXPECT_EQ("contents", result);
+
+  ASSERT_TRUE(subdir);
+  EXPECT_EQ(2, subdir->first.entries.size());
+  const auto& emptyEntry = subdir->first.entries.at("empty"_pc);
+  EXPECT_EQ(4_ino, emptyEntry.getInodeNumber());
+  EXPECT_EQ(hash3, emptyEntry.getHash());
+  EXPECT_EQ(S_IFDIR | 0755, emptyEntry.getInitialMode());
+  const auto& helloEntry = subdir->first.entries.at("hello"_pc);
+  EXPECT_EQ(5_ino, helloEntry.getInodeNumber());
+  EXPECT_EQ(hash4, helloEntry.getHash());
+  EXPECT_EQ(S_IFREG | 0644, helloEntry.getInitialMode());
+
+  ASSERT_TRUE(emptyDir);
+  EXPECT_EQ(0, emptyDir->first.entries.size());
+
+  folly::checkUnixError(lseek(hello.fd(), Overlay::kHeaderLength, SEEK_SET));
+  folly::readFile(file.fd(), result);
+  EXPECT_EQ("", result);
+}
 
 class OverlayTest : public ::testing::Test {
  protected:
