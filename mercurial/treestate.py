@@ -15,6 +15,10 @@ from .i18n import _
 from .rust import treestate
 
 
+# header after the first 40 bytes of dirstate.
+HEADER = b"\ntreestate\n\0"
+
+
 class _overlaydict(dict):
     def __init__(self, lookup, *args, **kwargs):
         super(_overlaydict, self).__init__(*args, **kwargs)
@@ -227,6 +231,9 @@ class treestatemap(object):
         f = util.stringio(dirstate)
         p1 = f.read(20) or node.nullid
         p2 = f.read(20) or node.nullid
+        header = f.read(len(HEADER))
+        if header and header != HEADER:
+            raise error.Abort(_("working directory state appears damaged!"))
         # simple key-value serialization
         metadata = _unpackmetadata(f.read())
         if metadata:
@@ -291,6 +298,7 @@ class treestatemap(object):
         # write .hg/dirstate
         st.write(self._parents[0])
         st.write(self._parents[1])
+        st.write(HEADER)
         st.write(
             _packmetadata(
                 {
