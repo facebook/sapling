@@ -283,11 +283,13 @@ def _docloudsync(ui, repo, **opts):
 
         localheads = _getheads(repo)
         localbookmarks = _getbookmarks(repo)
+        obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
 
         if (
             set(localheads) == set(lastsyncstate.heads)
             and localbookmarks == lastsyncstate.bookmarks
             and lastsyncstate.version != 0
+            and not obsmarkers
         ):
             synced = True
 
@@ -341,7 +343,6 @@ def _docloudsync(ui, repo, **opts):
             )
 
             # Update the cloud heads, bookmarks and obsmarkers.
-            obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
             synced, cloudrefs = serv.updatereferences(
                 reponame,
                 workspace,
