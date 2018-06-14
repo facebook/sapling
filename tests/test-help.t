@@ -1531,7 +1531,7 @@ Separate sections from subsections
   
       "usestore"
   
-      "usetreestate"
+      "dirstate"
   
       "uselz4"
   

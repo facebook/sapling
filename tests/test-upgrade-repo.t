@@ -1,8 +1,8 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > share =
-  > [treedirstate]
-  > useinnewrepos = False
+  > [format]
+  > dirstate = 0
   > EOF
 
 store and revlogv1 are required in source
@@ -528,6 +528,7 @@ repository config is taken in account
   > maxchainlen = 9001
   > EOF
   $ hg config format
+  format.dirstate=0
   format.maxchainlen=9001
   $ hg debugindex file
      rev    offset  length  delta linkrev nodeid       p1           p2

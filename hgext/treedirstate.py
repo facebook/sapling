@@ -7,12 +7,6 @@
 ::
 
     [treedirstate]
-    # Whether treedirstate is currently being used.
-    enabled = False
-
-    # Whether new repos should have treedirstate enabled.
-    useinnewrepos = False
-
     # Whether to upgrade repos to treedirstate on pull.
     upgradeonpull = False
 
@@ -69,7 +63,6 @@ treefileprefix = "dirstate.tree."
 
 configtable = {}
 configitem = registrar.configitem(configtable)
-configitem("treedirstate", "useinnewrepos", default=True)
 configitem("treedirstate", "upgradeonpull", default=False)
 configitem("treedirstate", "downgradeonpull", default=False)
 configitem("treedirstate", "cleanuppercent", default=1)
@@ -771,13 +764,6 @@ def wrapclose(orig, self):
                 cleanup(self.ui, self)
 
 
-def wrapnewreporequirements(orig, repo):
-    reqs = orig(repo)
-    if repo.ui.configbool("treedirstate", "useinnewrepos") and "treestate" not in reqs:
-        reqs.add("treedirstate")
-    return reqs
-
-
 def wrappull(orig, ui, repo, *args, **kwargs):
     if ui.configbool("treedirstate", "downgradeonpull") and istreedirstate(repo):
         ui.status(_("disabling treedirstate...\n"))
@@ -844,11 +830,6 @@ def extsetup(ui):
     if not util.safehasattr(dirstate.dirstatemap, "hasdir"):
         ui.warn(_("this version of Mercurial doesn't support treedirstate\n"))
         return
-
-    if util.safehasattr(localrepo, "newreporequirements"):
-        extensions.wrapfunction(
-            localrepo, "newreporequirements", wrapnewreporequirements
-        )
 
     localrepo.localrepository.featuresetupfuncs.add(featuresetup)
     extensions.wrapfilecache(localrepo.localrepository, "dirstate", wrapdirstate)

@@ -830,9 +830,9 @@ Example for ``~/.hgrc``::
 
     Enabled by default.
 
-``usetreestate``
-    Enable or disable the "treestate" repository format, which improves
-    "status" performance and fsmonitor integration.
+``dirstate``
+    Dirstate format version to use. One of 0 (flat dirstate), 1
+    (treedirstate), and 2 (treestate). Default is 1.
 
 ``uselz4``
     Enable or disable the lz4 compression format on the revlogs.

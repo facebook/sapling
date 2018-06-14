@@ -350,6 +350,7 @@ class localrepository(object):
         "relshared",
         "dotencode",
         "exp-sparse",
+        "treedirstate",
         "treestate",
     }
     openerreqs = {"revlogv1", "generaldelta", "treemanifest", "manifestv2"}
@@ -2480,7 +2481,10 @@ def newreporequirements(repo):
             % compengine,
             hint=_('run "hg debuginstall" to list available ' "compression engines"),
         )
-    if ui.configbool("format", "usetreestate"):
+    dirstateversion = ui.configint("format", "dirstate")
+    if dirstateversion == 1:
+        requirements.add("treedirstate")
+    elif dirstateversion == 2:
         requirements.add("treestate")
 
     # zlib is the historical default and doesn't need an explicit requirement.

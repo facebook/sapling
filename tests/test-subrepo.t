@@ -1250,6 +1250,7 @@ Check that share works with subrepo
   ../shared/subrepo-2/.hg/cache/storehash
   ../shared/subrepo-2/.hg/cache/storehash/* (glob)
   ../shared/subrepo-2/.hg/dirstate
+  ../shared/subrepo-2/.hg/dirstate.tree* (glob)
   ../shared/subrepo-2/.hg/hgrc
   ../shared/subrepo-2/.hg/requires
   ../shared/subrepo-2/.hg/sharedpath

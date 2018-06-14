@@ -1,9 +1,15 @@
-#testcases treestate-on treestate-off
+#testcases v0 v1 v2
 
-#if treestate-on
-  $ setconfig format.usetreestate=1
-#else
-  $ setconfig format.usetreestate=0
+#if v0
+  $ setconfig format.dirstate=0
+#endif
+
+#if v1
+  $ setconfig format.dirstate=1
+#endif
+
+#if v2
+  $ setconfig format.dirstate=2
 #endif
 
   $ cat >> $HGRCPATH << EOF
