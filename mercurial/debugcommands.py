@@ -793,6 +793,8 @@ def debugdeltachain(ui, repo, file_=None, **opts):
 def debugstate(ui, repo, **opts):
     """show the contents of the current dirstate"""
 
+    from .rust import treestate
+
     nodates = opts.get(r"nodates")
     datesort = opts.get(r"datesort")
 
@@ -801,7 +803,9 @@ def debugstate(ui, repo, **opts):
         keyfunc = lambda x: (x[1][3], x[0])  # sort by mtime, then by filename
     else:
         keyfunc = None  # sort by filename
-    for file_, ent in sorted(repo.dirstate._map.iteritems(), key=keyfunc):
+    ds = repo.dirstate
+    dmap = ds._map
+    for path, ent in sorted(dmap.iteritems(), key=keyfunc):
         if ent[3] == -1:
             timestr = "unset               "
         elif nodates:
@@ -813,9 +817,22 @@ def debugstate(ui, repo, **opts):
             mode = "lnk"
         else:
             mode = "%3o" % (ent[1] & 0o777 & ~util.umask)
-        ui.write("%c %s %10d %s%s\n" % (ent[0], mode, ent[2], timestr, file_))
-    for f in repo.dirstate.copies():
-        ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))
+        msg = "%c %s %10d %s%s" % (ent[0], mode, ent[2], timestr, path)
+        if ui.verbose and ds._istreestate:
+            state = dmap._tree.get(path, None)[0]
+            for name in (
+                "EXIST_P1",
+                "EXIST_P2",
+                "EXIST_NEXT",
+                "COPIED",
+                "NEED_CHECK",
+                "IGNORED",
+            ):
+                if state & getattr(treestate, name):
+                    msg += " %s" % name
+        ui.write("%s\n" % (msg,))
+    for dst, src in ds.copies().items():
+        ui.write(_("copy: %s -> %s\n") % (src, dst))
 
 
 @command(
