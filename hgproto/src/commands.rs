@@ -202,7 +202,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .gettreepack(args)
                     .map(SingleResponse::Gettreepack)
                     .map_err(self::Error::into)
-                    .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
             ),
@@ -510,8 +509,8 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
-    fn gettreepack(&self, _params: GettreepackArgs) -> HgCommandRes<Bytes> {
-        unimplemented("gettreepack")
+    fn gettreepack(&self, _params: GettreepackArgs) -> BoxStream<Bytes, Error> {
+        once(Err(ErrorKind::Unimplemented("gettreepack".into()).into())).boxify()
     }
 
     // @wireprotocommand('getfiles', 'files*')

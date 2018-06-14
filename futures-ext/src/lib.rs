@@ -385,6 +385,17 @@ macro_rules! try_boxfuture {
     })
 }
 
+/// Macro that can be used like `?` operator, but in the context where the expected return type is
+/// BoxStream. The result of it is either Ok part of Result or immediate returning the Err part
+/// converted into BoxStream.
+#[macro_export]
+macro_rules! try_boxstream {
+    ($e:expr) => (match $e {
+        Ok(t) => t,
+        Err(e) => return ::futures::stream::once(Err(e.into())).boxify(),
+    })
+}
+
 ///  This method allows us to take synchronous code, schedule it on the default tokio thread pool
 /// and convert it to the future. Func can return anything that is convertable to a future, for
 /// example, Result

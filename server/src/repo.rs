@@ -21,7 +21,7 @@ use failure::err_msg;
 use fbwhoami::FbWhoAmI;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, future::Either};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_stats::{Stats, Timed};
+use futures_stats::{Stats, Timed, TimedStreamTrait};
 use futures_trace::{self, Traced};
 use itertools::Itertools;
 use pylz4;
@@ -499,14 +499,12 @@ impl RepoClient {
             .boxify())
     }
 
-    fn gettreepack_untimed(&self, params: GettreepackArgs) -> HgCommandRes<Bytes> {
+    fn gettreepack_untimed(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
         info!(self.logger, "gettreepack {:?}", params);
 
         if !params.directories.is_empty() {
             // This param is not used by core hg, don't worry about implementing it now
-            return Err(err_msg("directories param is not supported"))
-                .into_future()
-                .boxify();
+            return stream::once(Err(err_msg("directories param is not supported"))).boxify();
         }
 
         // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
@@ -516,7 +514,7 @@ impl RepoClient {
         let rootpath = if params.rootdir.is_empty() {
             None
         } else {
-            Some(try_boxfuture!(MPath::new(params.rootdir)))
+            Some(try_boxstream!(MPath::new(params.rootdir)))
         };
 
         let pruner = if params.mfnodes.len() > 1 {
@@ -559,14 +557,6 @@ impl RepoClient {
         part.into_future()
             .map(move |part| create_bundle_stream(vec![part], compression))
             .flatten_stream()
-            .collect()
-            .map(|values| {
-                let mut res = BytesMut::new();
-                for val in values {
-                    res.extend_from_slice(&val);
-                }
-                res.freeze()
-            })
             .boxify()
     }
 }
@@ -821,21 +811,12 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
-    fn gettreepack(&self, params: GettreepackArgs) -> HgCommandRes<Bytes> {
+    fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::GETTREEPACK);
         let remote = self.repo.remote.clone();
 
-        return self.gettreepack_untimed(params.clone())
-            .traced_global(
-                "gettreepack",
-                trace_args!(
-                    "rootdir" => String::from_utf8_lossy(&params.rootdir),
-                    "mfnodes" => format_nodes_list(params.mfnodes.clone()),
-                    "basemfnodes" => format_nodes_list(params.basemfnodes.clone()),
-                    "directories" => format_utf8_bytes_list(params.directories.clone()),
-                ),
-            )
+        self.gettreepack_untimed(params.clone())
             .timed(move |stats, _| {
                 let args = format!(
                     "rootdir: {}, mfnodes: {}, basemfnodes: {}, directories: {}",
@@ -846,7 +827,7 @@ impl HgCommands for RepoClient {
                 );
                 add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, Some(args))
             })
-            .boxify();
+            .boxify()
     }
 
     // @wireprotocommand('getfiles', 'files*')
