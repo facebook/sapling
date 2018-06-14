@@ -195,13 +195,13 @@ class Overlay {
   static constexpr uint32_t kHeaderVersion = 1;
   static constexpr size_t kHeaderLength = 64;
 
- private:
   /**
    * The number of digits required for a decimal representation of an
    * inode number.
    */
   static constexpr size_t kMaxDecimalInodeNumberLength = 20;
 
+ private:
   /**
    * The maximum path length for the path to a file inside the overlay
    * directory.
@@ -246,6 +246,8 @@ class Overlay {
   void saveNextInodeNumber();
   void readExistingOverlay(int infoFD);
   void initNewOverlay();
+  void ensureTmpDirectoryIsCreated();
+
   folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
       InodeNumber inodeNumber,
       InodeTimestamps& timeStamps) const;
@@ -264,13 +266,9 @@ class Overlay {
   /**
    * Get the path to the file for the given inode, relative to localDir_.
    *
-   * This puts the path name data into the user-supplied InodePath object.  A
-   * null terminator will be added to the path.
-   *
-   * Returns the length of the path name, not including the terminating null
-   * byte.
+   * Returns a null-terminated InodePath value.
    */
-  static size_t getFilePath(InodeNumber inodeNumber, InodePath& outPath);
+  static InodePath getFilePath(InodeNumber inodeNumber);
 
   /**
    * Parses, validates and reads Timestamps from the header.

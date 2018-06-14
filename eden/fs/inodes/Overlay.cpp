@@ -144,25 +144,11 @@ void Overlay::initOverlay() {
       dirFd, "error opening overlay directory handle for ", localDir_.value());
   dirFile_ = File{dirFd, /* ownsFd */ true};
 
-  // Ensure tmp directory is created.
+  // To support migrating from an older Overlay format, unconditionally create
+  // tmp/.
   // TODO: It would be a bit expensive, but it might be worth checking
   // all of the numbered subdirectories here too.
-  struct stat tmpStat;
-  int statResult = fstatat(dirFile_.fd(), "tmp", &tmpStat, AT_SYMLINK_NOFOLLOW);
-  if (statResult == 0) {
-    if (!S_ISDIR(tmpStat.st_mode)) {
-      folly::throwSystemErrorExplicit(
-          ENOTDIR, "overlay tmp is not a directory");
-    }
-  } else {
-    if (errno == ENOENT) {
-      folly::checkUnixError(
-          mkdirat(dirFile_.fd(), "tmp", 0700),
-          "failed to create overlay tmp directory");
-    } else {
-      folly::throwSystemError("fstatat(\"tmp\") failed");
-    }
-  }
+  ensureTmpDirectoryIsCreated();
 
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
@@ -307,6 +293,25 @@ void Overlay::initNewOverlay() {
   setNextInodeNumber(InodeNumber{kRootNodeId.get() + 1});
 }
 
+void Overlay::ensureTmpDirectoryIsCreated() {
+  struct stat tmpStat;
+  int statResult = fstatat(dirFile_.fd(), "tmp", &tmpStat, AT_SYMLINK_NOFOLLOW);
+  if (statResult == 0) {
+    if (!S_ISDIR(tmpStat.st_mode)) {
+      folly::throwSystemErrorExplicit(
+          ENOTDIR, "overlay tmp is not a directory");
+    }
+  } else {
+    if (errno == ENOENT) {
+      folly::checkUnixError(
+          mkdirat(dirFile_.fd(), "tmp", 0700),
+          "failed to create overlay tmp directory");
+    } else {
+      folly::throwSystemError("fstatat(\"tmp\") failed");
+    }
+  }
+}
+
 void Overlay::setNextInodeNumber(InodeNumber nextInodeNumber) {
   if (auto ino = nextInodeNumber_.load(std::memory_order_relaxed)) {
     // It's okay to allow setNextInodeNumber as long as the values are
@@ -435,8 +440,7 @@ void Overlay::removeOverlayData(InodeNumber inodeNumber) {
   // TODO: batch request during GC
   getInodeMetadataTable()->freeInode(inodeNumber);
 
-  InodePath path;
-  getFilePath(inodeNumber, path);
+  auto path = getFilePath(inodeNumber);
   int result = ::unlinkat(dirFile_.fd(), path.data(), 0);
   if (result == 0) {
     XLOG(DBG4) << "removed overlay data for inode " << inodeNumber;
@@ -474,8 +478,7 @@ bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
   // TODO: It might be worth maintaining a memory-mapped set to rapidly
   // query whether the overlay has an entry for a particular inode.  As it is,
   // this function requires a syscall to see if the overlay has an entry.
-  InodePath path;
-  getFilePath(inodeNumber, path);
+  auto path = getFilePath(inodeNumber);
   struct stat st;
   if (0 == fstatat(dirFile_.fd(), path.data(), &st, AT_SYMLINK_NOFOLLOW)) {
     return S_ISREG(st.st_mode);
@@ -557,22 +560,22 @@ InodeNumber Overlay::scanForNextInodeNumber() {
   return maxInode;
 }
 
-size_t Overlay::getFilePath(InodeNumber inodeNumber, InodePath& outPath) {
+Overlay::InodePath Overlay::getFilePath(InodeNumber inodeNumber) {
+  InodePath outPath;
   formatSubdirPath(MutableStringPiece{outPath.data(), 2}, inodeNumber.get());
   outPath[2] = '/';
   auto index =
       folly::uint64ToBufferUnsafe(inodeNumber.get(), outPath.data() + 3);
   DCHECK_LT(index + 3, outPath.size());
   outPath[index + 3] = '\0';
-  return index + 3;
+  return outPath;
 }
 
 Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
     InodeNumber inodeNumber,
     InodeTimestamps& timeStamps) const {
   // Open the file.  Return folly::none if the file does not exist.
-  InodePath path;
-  getFilePath(inodeNumber, path);
+  auto path = getFilePath(inodeNumber);
   int fd = openat(dirFile_.fd(), path.data(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
   if (fd == -1) {
     int err = errno;
@@ -675,8 +678,7 @@ folly::File Overlay::openFile(
 }
 
 folly::File Overlay::openFileNoVerify(InodeNumber inodeNumber) {
-  InodePath path;
-  getFilePath(inodeNumber, path);
+  auto path = getFilePath(inodeNumber);
 
   int fd = openat(dirFile_.fd(), path.data(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
   folly::checkUnixError(
@@ -687,6 +689,26 @@ folly::File Overlay::openFileNoVerify(InodeNumber inodeNumber) {
       localDir_);
   return folly::File{fd, /* ownsFd */ true};
 }
+
+namespace {
+
+constexpr auto tmpPrefix = "tmp/"_sp;
+using InodeTmpPath = std::
+    array<char, tmpPrefix.size() + Overlay::kMaxDecimalInodeNumberLength + 1>;
+
+InodeTmpPath getFileTmpPath(InodeNumber inodeNumber) {
+  // It's substantially faster on XFS to create this temporary file in
+  // an empty directory and then move it into its destination rather
+  // than to create it directly in the subtree.
+  InodeTmpPath tmpPath;
+  memcpy(tmpPath.data(), tmpPrefix.data(), tmpPrefix.size());
+  auto index = folly::uint64ToBufferUnsafe(
+      inodeNumber.get(), tmpPath.data() + tmpPrefix.size());
+  tmpPath[tmpPrefix.size() + index] = '\0';
+  return tmpPath;
+}
+
+} // namespace
 
 folly::File Overlay::createOverlayFileImpl(
     InodeNumber inodeNumber,
@@ -706,18 +728,9 @@ folly::File Overlay::createOverlayFileImpl(
   // We could potentially use O_TMPFILE followed by linkat() to commit the
   // file.  However this may not be supported by all filesystems, and seems to
   // provide minimal benefits for our use case.
-  InodePath path;
-  getFilePath(inodeNumber, path);
+  auto path = getFilePath(inodeNumber);
 
-  // It's substantially faster on XFS to create this temporary file in
-  // an empty directory and then move it into its destination rather
-  // than to create it directly in the subtree.
-  constexpr auto tmpPrefix = "tmp/"_sp;
-  std::array<char, tmpPrefix.size() + kMaxDecimalInodeNumberLength + 1> tmpPath;
-  memcpy(tmpPath.data(), tmpPrefix.data(), tmpPrefix.size());
-  auto index = folly::uint64ToBufferUnsafe(
-      inodeNumber.get(), tmpPath.data() + tmpPrefix.size());
-  tmpPath[tmpPrefix.size() + index] = '\0';
+  auto tmpPath = getFileTmpPath(inodeNumber);
 
   auto tmpFD = openat(
       dirFile_.fd(),

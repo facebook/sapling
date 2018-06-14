@@ -210,19 +210,19 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
 }
 
 TEST_F(OverlayTest, getFilePath) {
-  std::array<char, Overlay::kMaxPathLength> path;
+  Overlay::InodePath path;
 
-  Overlay::getFilePath(1_ino, path);
+  path = Overlay::getFilePath(1_ino);
   EXPECT_STREQ("01/1", path.data());
-  Overlay::getFilePath(1234_ino, path);
+  path = Overlay::getFilePath(1234_ino);
   EXPECT_STREQ("d2/1234", path.data());
 
   // It's slightly unfortunate that we use hexadecimal for the subdirectory
   // name and decimal for the final inode path.  That doesn't seem worth fixing
   // for now.
-  Overlay::getFilePath(15_ino, path);
+  path = Overlay::getFilePath(15_ino);
   EXPECT_STREQ("0f/15", path.data());
-  Overlay::getFilePath(16_ino, path);
+  path = Overlay::getFilePath(16_ino);
   EXPECT_STREQ("10/16", path.data());
 }
 
