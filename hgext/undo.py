@@ -23,6 +23,7 @@ from mercurial import (
     obsolete,
     obsutil,
     phases,
+    pycompat,
     registrar,
     revlog,
     revset,
@@ -36,7 +37,10 @@ from mercurial import (
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 
-from . import interactiveui
+if not pycompat.iswindows:
+    from . import interactiveui
+else:
+    interactiveui = None
 
 
 cmdtable = {}
@@ -780,6 +784,8 @@ def undo(ui, repo, *args, **opts):
     branch = opts.get("branch")
     preview = opts.get("preview")
     interactive = opts.get("interactive")
+    if interactive and interactiveui is None:
+        raise error.Abort(_("interactive ui is not supported on Windows"))
     if interactive:
         preview = True
 
