@@ -69,14 +69,24 @@ class treestatemap(object):
     and an offset.
     """
 
-    def __init__(self, ui, vfs, root):
+    def __init__(self, ui, vfs, root, importdirstate=None):
         self._ui = ui
         self._vfs = vfs
         self._root = root
-        # The original dirstate lazily reads content for performance.
-        # But our dirstate map is lazy anyway. So "_read" during init
-        # should be fine.
-        self._read()
+        if importdirstate:
+            # Import from an old dirstate
+            self.clear()
+            self._parents = importdirstate.parents()
+            self._tree.importmap(importdirstate._map)
+            # Import copymap
+            copymap = importdirstate.copies()
+            for dest, src in copymap.iteritems():
+                self.copy(src, dest)
+        else:
+            # The original dirstate lazily reads content for performance.
+            # But our dirstate map is lazy anyway. So "_read" during init
+            # should be fine.
+            self._read()
 
     @property
     def copymap(self):

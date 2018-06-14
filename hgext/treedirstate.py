@@ -47,6 +47,7 @@ from mercurial import (
     pycompat,
     registrar,
     scmutil,
+    treestate,
     txnutil,
     util,
 )
@@ -646,6 +647,13 @@ def migrate(ui, repo, version):
             # to treedirstate
             newmap = treedirstatemap(ui, vfs, repo.root, importmap=repo.dirstate._map)
             repo.requirements.add("treedirstate")
+        elif wanted == 2 and current in [0, 1]:
+            # to treestate
+            vfs.makedirs("treestate")
+            newmap = treestate.treestatemap(
+                ui, vfs, repo.root, importdirstate=repo.dirstate
+            )
+            repo.requirements.add("treestate")
         elif wanted == 0 and current == 1:
             # treedirstate -> flat dirstate
             repo.dirstate._map.writeflat()
@@ -873,12 +881,24 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 
-@command("debugtreedirstate", [], "hg debugtreedirstate [on|off|status|repack|cleanup]")
-def debugtreedirstate(ui, repo, cmd, **opts):
-    """manage treedirstate"""
-    if cmd == "on":
+@command(
+    "debugtreedirstate|debugtreestate",
+    [],
+    "hg debugtreedirstate [on|off|status|repack|cleanup|v0|v1|v2]",
+)
+def debugtreedirstate(ui, repo, cmd="status", **opts):
+    """manage treedirstate
+
+    v0/off: migrate to flat dirstate
+    v1: migrate to treedirstate
+    v2: migrate to treestate
+    on: migrate to the latest version (v2)
+    """
+    if cmd in ["v2", "on"]:
+        migrate(ui, repo, 2)
+    elif cmd == "v1":
         migrate(ui, repo, 1)
-    elif cmd == "off":
+    elif cmd in ["v0", "off"]:
         migrate(ui, repo, 0)
         cleanup(ui, repo, debug=ui.debug)
     elif cmd == "repack":
@@ -887,15 +907,18 @@ def debugtreedirstate(ui, repo, cmd, **opts):
     elif cmd == "cleanup":
         cleanup(ui, repo, debug=ui.debug)
     elif cmd == "status":
+        dmap = repo.dirstate._map
         if istreedirstate(repo):
             ui.status(
-                _(
-                    "treedirstate enabled "
-                    + "(using dirstate.tree.%s, %s files tracked)"
-                )
-                % (repo.dirstate._map._treeid, len(repo.dirstate._map))
+                _("dirstate v1 (using dirstate.tree.%s, %s files tracked)\n")
+                % (dmap._treeid, len(dmap))
+            )
+        elif "treestate" in repo.requirements:
+            ui.status(
+                _("dirstate v2 (using treestate/%s, offset %s, %s files tracked)\n")
+                % (dmap._filename, dmap._rootid, len(dmap))
             )
         else:
-            ui.status(_("treedirstate not enabled"))
+            ui.status(_("dirstate v0 (flat dirstate, %s files tracked)\n") % len(dmap))
     else:
         raise error.Abort("unrecognised command: %s" % cmd)
