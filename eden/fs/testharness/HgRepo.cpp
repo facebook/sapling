@@ -60,6 +60,7 @@ HgRepo::HgRepo(AbsolutePathPiece path) : path_{path} {
   // Set up hgEnv_
   hgEnv_.push_back(folly::to<string>("PATH=", pathEnv));
   hgEnv_.push_back("HGPLAIN=1");
+  hgEnv_.push_back("HGRCPATH=");
   hgEnv_.push_back("CHGDISABLE=1");
   hgEnv_.push_back("LOCALE=C");
 }

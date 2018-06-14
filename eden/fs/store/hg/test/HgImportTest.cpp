@@ -50,6 +50,7 @@ class HgImportTest : public ::testing::TestWithParam<RepoType> {
                           "",
                           "[remotefilelog]",
                           "reponame=eden_test_hg_import",
+                          "cachepath=" + (testPath_ + "hgcache"_pc).value(),
                           "",
                           "[fastmanifest]",
                           "usetree=True",
