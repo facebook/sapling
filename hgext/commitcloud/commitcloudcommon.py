@@ -97,7 +97,7 @@ class SynchronizationError(error.Abort):
     def __init__(self, ui, message, *args):
         topic = highlightmsg(ui, _("failed to synchronize commits"))
         details = _("please retry 'hg cloud sync'")
-        contact = _("please let %s know if this error persists") % getownerteam(ui)
+        contact = _("please contact %s if this error persists") % getownerteam(ui)
         message = "%s: '%s'\n%s\n%s" % (topic, message, details, contact)
         super(SynchronizationError, self).__init__(message, *args)
 
@@ -109,6 +109,14 @@ class SubprocessError(error.Abort):
         contact = _("please contact %s to report the error") % getownerteam(ui)
         message = "%s: '%s'\n%s\n%s" % (topic, message, stderrdata.strip(), contact)
         super(SubprocessError, self).__init__(message, *args)
+
+
+class KeychainAccessError(error.Abort):
+    def __init__(self, ui, reason, solution, *args):
+        topic = highlightmsg(ui, _("keychain access error"))
+        contact = _("please contact %s if this error persists") % getownerteam(ui)
+        message = "%s: '%s'\n%s\n%s" % (topic, reason, solution, contact)
+        super(KeychainAccessError, self).__init__(message, *args)
 
 
 """

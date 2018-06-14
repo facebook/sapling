@@ -793,7 +793,7 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   push of head 9bd68ef10d6b failed: bundle is too big: 1695 bytes. max allowed size is 0 MB
   abort: #commitcloud failed to synchronize commits: '2 heads could not be pushed'
   please retry 'hg cloud sync'
-  please let The Test Team @ FB know if this error persists
+  please contact The Test Team @ FB if this error persists
   [255]
 
   $ hg isbackedup -r .

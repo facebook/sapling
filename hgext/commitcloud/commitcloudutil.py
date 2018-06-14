@@ -116,6 +116,15 @@ class TokenLocator(object):
             (stdoutdata, stderrdata) = p.communicate()
             rc = p.returncode
             if rc != 0:
+                # security command is unable to show a prompt
+                # from ssh sessions
+                if rc == 36:
+                    raise commitcloudcommon.KeychainAccessError(
+                        self.ui,
+                        "failed to access your keychain",
+                        "please run `security unlock-keychain` "
+                        "to prove your identity",
+                    )
                 raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
             text = stdoutdata.strip()
             if text:
@@ -152,6 +161,15 @@ class TokenLocator(object):
             (stdoutdata, stderrdata) = p.communicate()
             rc = p.returncode
             if rc != 0:
+                # security command is unable to show a prompt
+                # from ssh sessions
+                if rc == 36:
+                    raise commitcloudcommon.KeychainAccessError(
+                        self.ui,
+                        "failed to access your keychain",
+                        "please run `security unlock-keychain` "
+                        "to prove your identity",
+                    )
                 raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
             self.ui.debug("new token is stored in keychain\n")
         except OSError as e:
