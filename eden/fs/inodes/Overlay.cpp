@@ -144,6 +144,26 @@ void Overlay::initOverlay() {
       dirFd, "error opening overlay directory handle for ", localDir_.value());
   dirFile_ = File{dirFd, /* ownsFd */ true};
 
+  // Ensure tmp directory is created.
+  // TODO: It would be a bit expensive, but it might be worth checking
+  // all of the numbered subdirectories here too.
+  struct stat tmpStat;
+  int statResult = fstatat(dirFile_.fd(), "tmp", &tmpStat, AT_SYMLINK_NOFOLLOW);
+  if (statResult == 0) {
+    if (!S_ISDIR(tmpStat.st_mode)) {
+      folly::throwSystemErrorExplicit(
+          ENOTDIR, "overlay tmp is not a directory");
+    }
+  } else {
+    if (errno == ENOENT) {
+      folly::checkUnixError(
+          mkdirat(dirFile_.fd(), "tmp", 0700),
+          "failed to create overlay tmp directory");
+    } else {
+      folly::throwSystemError("fstatat(\"tmp\") failed");
+    }
+  }
+
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
   inodeMetadataTable_ = InodeMetadataTable::open(
@@ -690,12 +710,14 @@ folly::File Overlay::createOverlayFileImpl(
   getFilePath(inodeNumber, path);
 
   // It's substantially faster on XFS to create this temporary file in
-  // the root of the overlay and then move it into its destination
-  // than to create it in the subtree.
-  constexpr auto tmpSuffix = ".tmp\0"_sp;
-  std::array<char, kMaxDecimalInodeNumberLength + tmpSuffix.size()> tmpPath;
-  auto index = folly::uint64ToBufferUnsafe(inodeNumber.get(), tmpPath.data());
-  memcpy(tmpPath.data() + index, tmpSuffix.data(), tmpSuffix.size());
+  // an empty directory and then move it into its destination rather
+  // than to create it directly in the subtree.
+  constexpr auto tmpPrefix = "tmp/"_sp;
+  std::array<char, tmpPrefix.size() + kMaxDecimalInodeNumberLength + 1> tmpPath;
+  memcpy(tmpPath.data(), tmpPrefix.data(), tmpPrefix.size());
+  auto index = folly::uint64ToBufferUnsafe(
+      inodeNumber.get(), tmpPath.data() + tmpPrefix.size());
+  tmpPath[tmpPrefix.size() + index] = '\0';
 
   auto tmpFD = openat(
       dirFile_.fd(),
