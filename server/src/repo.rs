@@ -38,7 +38,7 @@ use blobrepo::BlobChangeset;
 use bundle2_resolver;
 use filenodes::FilenodeInfo;
 use mercurial::{self, RevlogChangeset};
-use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
+use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, Changeset, Entry, HgBlobNode, HgChangesetId, HgManifestId,
                       HgNodeHash, HgParents, MPath, RepoPath, RepositoryId, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, changed_entry_stream_with_pruner,
@@ -519,13 +519,6 @@ impl RepoClient {
             Some(try_boxfuture!(MPath::new(params.rootdir)))
         };
 
-        let writer = Cursor::new(Vec::new());
-        let mut bundle = Bundle2EncodeBuilder::new(writer);
-        // Mercurial currently hangs while trying to read compressed bundles over the wire:
-        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
-        // TODO: possibly enable compression support once this is fixed.
-        bundle.set_compressor_type(None);
-
         let pruner = if params.mfnodes.len() > 1 {
             Some(visited_pruner())
         } else {
@@ -558,14 +551,22 @@ impl RepoClient {
                 }
             });
 
-        parts::treepack_part(changed_entries)
-            .into_future()
-            .and_then(|part| {
-                bundle.add_part(part);
-                bundle.build()
+        let part = parts::treepack_part(changed_entries);
+        // Mercurial currently hangs while trying to read compressed bundles over the wire:
+        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
+        // TODO: possibly enable compression support once this is fixed.
+        let compression = None;
+        part.into_future()
+            .map(move |part| create_bundle_stream(vec![part], compression))
+            .flatten_stream()
+            .collect()
+            .map(|values| {
+                let mut res = BytesMut::new();
+                for val in values {
+                    res.extend_from_slice(&val);
+                }
+                res.freeze()
             })
-            .map(|cursor| Bytes::from(cursor.into_inner()))
-            .from_err()
             .boxify()
     }
 }

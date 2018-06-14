@@ -74,3 +74,30 @@ because everything has been already downloaded.
   $ ls
   A
   B
+
+  $ cat >> $TESTTMP/gettreepack.py <<EOF
+  > from mercurial import registrar
+  > from mercurial.node import bin
+  > from mercurial import (bundle2, extensions)
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('gettreepack', [
+  >     ('', 'mfnode', [], 'specify the manifest revisions', 'REV'),
+  > ], '[-r REV]')
+  > def _gettreepack(ui, repo, **opts):
+  >     treemanifestext = extensions.find('treemanifest')
+  >     fallbackpath = treemanifestext.getfallbackpath(repo)
+  >     with repo.connectionpool.get(fallbackpath) as conn:
+  >         remote = conn.peer
+  >         bundle = remote.gettreepack('', [bin(mfnode) for mfnode in opts.get('mfnode')], [], [])
+  >         bundle2.processbundle(repo, bundle, None)
+  > EOF
+
+  $ hgmn --config extensions.gettreepack=$TESTTMP/gettreepack.py gettreepack --mfnode 1111111111111111111111111111111111111111
+  remote: * ERRO Command failed, remote: true, error: When loading manifest 1111111111111111111111111111111111111111 from blobstore, root_cause: NodeMissing( (glob)
+  remote:     HgNodeHash(
+  remote:         Sha1(1111111111111111111111111111111111111111)
+  remote:     )
+  remote: ), backtrace: , cause: While fetching node for manifest, cause: Node id 1111111111111111111111111111111111111111 is missing
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]

@@ -34,6 +34,7 @@ extern crate quickcheck;
 extern crate slog;
 #[cfg(test)]
 extern crate slog_term;
+extern crate tokio;
 #[cfg(test)]
 extern crate tokio_core;
 extern crate tokio_io;
@@ -72,6 +73,12 @@ mod test;
 mod errors;
 pub use errors::*;
 mod utils;
+
+use bytes::Bytes;
+use failure::err_msg;
+use futures::{Future, Stream};
+use futures::sync::{mpsc, oneshot};
+use futures_ext::SinkToAsyncWrite;
 
 use std::fmt;
 
@@ -130,4 +137,48 @@ impl fmt::Debug for Bundle2Item {
             &Pushkey(ref header, _) => write!(f, "Bundle2Item::Pushkey({:?}, ...)", header),
         }
     }
+}
+
+/// Given bundle parts, returns a stream of Bytes that represent an encoded bundle with these parts
+pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
+    parts: Vec<part_encode::PartEncodeBuilder>,
+    ct: C,
+) -> impl Stream<Item = bytes::Bytes, Error = Error> {
+    let (sender, receiver) = mpsc::channel::<Bytes>(1);
+    // Sends either and empty Bytes if bundle generation was successful or an error.
+    // Empty Bytes are used just to make chaining of streams below easier.
+    let (result_sender, result_receiver) = oneshot::channel::<Result<Bytes>>();
+    // Bundle2EncodeBuilder accepts writer which implements AsyncWrite. To workaround that we
+    // use SinkToAsyncWrite. It implements AsyncWrite trait and sends everything that was written
+    // into the Sender
+    let mut bundle = Bundle2EncodeBuilder::new(SinkToAsyncWrite::new(sender));
+    bundle.set_compressor_type(ct);
+    for part in parts {
+        bundle.add_part(part);
+    }
+
+    tokio::spawn(bundle.build().then(move |val| {
+        // Ignore send errors, because they can only happen if receiver was deallocated already
+        match val {
+            Ok(_) => {
+                // Bundle was successfully generated, so there is nothing add.
+                // So just add empty bytes.
+                let _ = result_sender.send(Ok(Bytes::new()));
+            }
+            Err(err) => {
+                let _ = result_sender.send(Err(err));
+            }
+        };
+        Ok(())
+    }));
+
+    receiver
+        .map(|bytes| Ok(bytes))
+        .chain(result_receiver.into_stream().map_err(|_err| ()))
+        .then(|entry| match entry {
+            Ok(res) => res,
+            Err(()) => Err(err_msg(
+                "error while receiving gettreepack response from the channel",
+            )),
+        })
 }
