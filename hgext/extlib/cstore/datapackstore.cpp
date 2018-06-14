@@ -17,7 +17,6 @@
 #include "lib/clib/portability/dirent.h"
 
 using std::chrono::steady_clock;
-using namespace std::chrono_literals;
 
 namespace {
 
@@ -181,7 +180,7 @@ std::shared_ptr<KeyIterator> DatapackStore::getMissing(KeyIterator& missing) {
 }
 
 std::vector<std::shared_ptr<datapack_handle_t>> DatapackStore::refresh() {
-  constexpr auto PACK_REFRESH_RATE = 100ms;
+  constexpr auto PACK_REFRESH_RATE = std::chrono::milliseconds(100);
   auto now = steady_clock::now();
 
   std::vector<std::shared_ptr<datapack_handle_t>> newPacks;
