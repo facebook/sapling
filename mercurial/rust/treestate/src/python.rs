@@ -82,7 +82,8 @@ py_class!(class treedirstatemap |py| {
                 dirstate
                     .remove_file(filename.data(py), &FileState::new(b'r', 0, size, 0))
                     .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
-            } else {
+            } else if state != b'?' {
+                // Drop "?" entries - treedirstate does not store untracked files.
                 dirstate
                     .add_file(filename.data(py),
                               &FileState::new(state, mode, size, mtime))
@@ -612,6 +613,43 @@ py_class!(class treestate |py| {
         ))?;
 
         Ok(py.None())
+    }
+
+    // Import another map of dirstate tuples into this treestate. Note: copymap is not imported.
+    def importmap(&self, old_map: PyObject) -> PyResult<Option<PyObject>> {
+        let mut tree = self.state(py).borrow_mut();
+        let iter = PyIterator::from_object(
+            py,
+            old_map.call_method(py, "iteritems", NoArgs, None)?)?;
+        for item in iter {
+            let item_tuple = item?.extract::<PyTuple>(py)?;
+            let path = item_tuple.get_item(py, 0).extract::<PyBytes>(py)?;
+            let data = item_tuple.get_item(py, 1).extract::<PySequence>(py)?;
+            let state = *data.get_item(py, 0)?.extract::<PyBytes>(py)?.data(py).first().unwrap();
+            let mode = data.get_item(py, 1)?.extract::<u32>(py)?;
+            let size = data.get_item(py, 2)?.extract::<i32>(py)?;
+            let mtime = data.get_item(py, 3)?.extract::<i32>(py)?;
+            // Mercurial uses special "size"s to represent "otherparent".
+            // See "size = -2" and "size = -1" in mercurial/dirstate.py
+            let flags = match size {
+                -2 => StateFlags::EXIST_P2,
+                -1 => StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
+                _ => StateFlags::EXIST_P1,
+            };
+            let flags = match state {
+                b'n' => flags | StateFlags::EXIST_NEXT,
+                b'm' => StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT,
+                b'r' => flags,
+                b'a' => StateFlags::EXIST_NEXT,
+                _ => StateFlags::empty(),
+            };
+            if !flags.is_empty() {
+                let path = path.data(py);
+                let file = FileStateV2 { mode, size, mtime, copied: None, state: flags };
+                convert_result(py, tree.insert(path, &file))?;
+            }
+        }
+        Ok(None)
     }
 
     def invalidatemtime(&self, fsnow: i32) -> PyResult<PyObject> {
