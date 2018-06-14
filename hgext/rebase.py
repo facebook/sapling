@@ -520,9 +520,42 @@ class rebaseruntime(object):
                 self.state[rev] = dest
             elif self.state[rev] == revtodo:
                 pos += 1
-                ui.status(_("rebasing %s\n") % desc)
                 prog.value = (pos, "%d:%s" % (rev, ctx))
-                self._performrebaseone(rev, ctx, desc, tr, dest)
+                try:
+                    self._performrebaseone(rev, ctx, desc, tr, dest)
+                except error.InMemoryMergeConflictsError as e:
+                    if ui.configbool(
+                        "rebase", "experimental.inmemory.newconflictswitching", False
+                    ):
+                        # in-memory merge doesn't support conflicts, so if we hit any, abort
+                        # and re-run as an on-disk merge.
+                        if cmdutil.uncommittedchanges(repo):
+                            raise error.UncommitedChangesAbort(
+                                _(
+                                    "must use on-disk merge for this rebase (%s), but you have working copy changes"
+                                )
+                                % e,
+                                hint=_("commit, revert, or shelve them"),
+                            )
+                        else:
+                            ui.warn(
+                                _(
+                                    "hit merge conflicts; switching to on-disk merge (%s)\n"
+                                )
+                                % e
+                            )
+                        ui.log(
+                            "rebase",
+                            "",
+                            rebase_imm_new_restart=str(True).lower(),
+                            rebase_imm_restart=str(True).lower(),
+                        )
+                        self.inmemory = False
+                        self._assignworkingcopy()
+                        mergemod.mergestate.clean(repo)
+                        self._performrebaseone(rev, ctx, desc, tr, dest)
+                    else:
+                        raise  # Use the old restart logic in `rebase()`
             else:
                 ui.status(
                     _("already rebased %s as %s\n") % (desc, repo[self.state[rev]])
@@ -530,8 +563,8 @@ class rebaseruntime(object):
         return pos
 
     def _performrebaseone(self, rev, ctx, desc, tr, dest):
-        """Rebases `ctx` onto `dest`"""
         repo, ui, opts = self.repo, self.ui, self.opts
+        ui.status(_("rebasing %s\n") % desc)
         p1, p2, base = defineparents(
             repo, rev, self.destmap, self.state, self.skipped, self.obsoletenotrebased
         )
@@ -913,6 +946,11 @@ def rebase(ui, repo, templ=None, **opts):
 
       [rebase]
       experimental.inmemory.nomergedriver = True
+
+    A newer, faster switching on merge conflicts is controlled by the following::
+
+      [rebase]
+      experimental.inmemory.newconflictswitching = False
 
     Return Values:
 

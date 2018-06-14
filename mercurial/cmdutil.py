@@ -809,6 +809,12 @@ def findrepo(p):
     return p
 
 
+def uncommittedchanges(repo):
+    """Returns if there are uncommitted changes"""
+    modified, added, removed, deleted = repo.status()[:4]
+    return modified or added or removed or deleted
+
+
 def bailifchanged(repo, merge=True, hint=None):
     """ enforce the precondition that working directory must be clean.
 
@@ -817,11 +823,10 @@ def bailifchanged(repo, merge=True, hint=None):
 
     'hint' is the usual hint given to Abort exception.
     """
-
     if merge and repo.dirstate.p2() != nullid:
         raise error.Abort(_("outstanding uncommitted merge"), hint=hint)
-    modified, added, removed, deleted = repo.status()[:4]
-    if modified or added or removed or deleted:
+
+    if uncommittedchanges(repo):
         raise error.UncommitedChangesAbort(_("uncommitted changes"), hint=hint)
     ctx = repo[None]
     for s in sorted(ctx.substate):
