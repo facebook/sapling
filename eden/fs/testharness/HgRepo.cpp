@@ -66,27 +66,51 @@ HgRepo::HgRepo(AbsolutePathPiece path) : path_{path} {
 }
 
 string HgRepo::hg(vector<string> args) {
-  args.insert(args.begin(), "hg");
-
-  XLOG(DBG1) << "repo " << path_ << " running: " << folly::join(" ", args);
-  const auto options{Subprocess::Options().chdir(path_.value()).pipeStdout()};
-  Subprocess p(args, options, hgCmd_.value().c_str(), &hgEnv_);
-  const auto outputs{p.communicate()};
-  p.waitChecked();
+  auto process = invokeHg(std::move(args));
+  const auto outputs{process.communicate()};
+  process.waitChecked();
   return outputs.first;
 }
 
-void HgRepo::hgInit() {
+Subprocess HgRepo::invokeHg(vector<string> args) {
+  return invokeHg(
+      std::move(args), Subprocess::Options().chdir(path_.value()).pipeStdout());
+}
+
+Subprocess HgRepo::invokeHg(
+    vector<string> args,
+    const Subprocess::Options& options) {
+  args.insert(args.begin(), "hg");
+
+  XLOG(DBG1) << "repo " << path_ << " running: " << folly::join(" ", args);
+  return Subprocess(args, options, hgCmd_.value().c_str(), &hgEnv_);
+}
+
+void HgRepo::hgInit(std::vector<std::string> extraArgs) {
   XLOG(DBG1) << "creating new hg repository at " << path_;
 
   // Invoke Subprocess directly here rather than using our hg() helper
   // function.  The hg() function requires the repository directory to already
   // exist.
-  Subprocess p(
-      {"hg", "init", path_.value()},
-      Subprocess::Options(),
-      hgCmd_.value().c_str(),
-      &hgEnv_);
+  std::vector<std::string> args = {"hg", "init", path_.value()};
+  args.insert(args.end(), extraArgs.begin(), extraArgs.end());
+  Subprocess p(args, Subprocess::Options(), hgCmd_.value().c_str(), &hgEnv_);
+  p.waitChecked();
+}
+
+void HgRepo::cloneFrom(
+    StringPiece serverRepoUrl,
+    std::vector<std::string> extraArgs) {
+  XLOG(DBG1) << "cloning new hg repository at " << path_ << " from "
+             << serverRepoUrl;
+
+  std::vector<std::string> args = {"hg", "clone"};
+  args.insert(args.end(), extraArgs.begin(), extraArgs.end());
+  args.push_back(serverRepoUrl.str());
+  args.push_back(path_.value());
+  XLOG(DBG1) << "running: " << folly::join(" ", args);
+
+  Subprocess p(args, Subprocess::Options(), hgCmd_.value().c_str(), &hgEnv_);
   p.waitChecked();
 }
 
@@ -99,7 +123,7 @@ void HgRepo::appendToHgrc(folly::StringPiece data) {
 }
 
 void HgRepo::appendToHgrc(const std::vector<std::string>& lines) {
-  appendToHgrc(folly::join("\n", lines));
+  appendToHgrc(folly::join("\n", lines) + "\n");
 }
 
 Hash HgRepo::commit(StringPiece message) {

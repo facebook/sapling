@@ -1014,24 +1014,47 @@ void HgImporter::sendPrefetchFilesRequest(
   header.requestID = Endian::big<uint32_t>(nextRequestID_++);
   header.flags = 0;
 
-  auto items = folly::dynamic::array();
-  for (auto& pair : files) {
-    auto& revHash = pair.second;
-    auto& fileName = pair.first;
-
-    items.push_back(
-        folly::dynamic::array(fileName.stringPiece(), revHash.toString()));
+  // Compute the length of the body
+  size_t dataLength = sizeof(uint32_t);
+  for (const auto& pair : files) {
+    dataLength += sizeof(uint32_t) + pair.first.stringPiece().size() +
+        (Hash::RAW_SIZE * 2);
   }
+  if (dataLength > std::numeric_limits<uint32_t>::max()) {
+    throw std::runtime_error(
+        folly::to<string>("prefetch files request is too large: ", dataLength));
+  }
+  header.dataLength = Endian::big<uint32_t>(dataLength);
 
-  auto blob = folly::toJson(items);
-
-  header.dataLength = Endian::big<uint32_t>(blob.size());
+  // Serialize the body.
+  // We serialize all of the filename lengths first, then all of the strings and
+  // hashes later.  This is purely to make it easier to deserialize in python
+  // using the struct module.
+  //
+  // The hashes are serialized as hex since that is how the python code needs
+  // them.
+  IOBuf buf(IOBuf::CREATE, dataLength);
+  Appender appender(&buf, 0);
+  appender.writeBE<uint32_t>(files.size());
+  for (const auto& pair : files) {
+    auto fileName = pair.first.stringPiece();
+    appender.writeBE<uint32_t>(fileName.size());
+  }
+  for (const auto& pair : files) {
+    auto fileName = pair.first.stringPiece();
+    appender.push(fileName);
+    // TODO: It would be nice to have a function that can hexlify the hash
+    // data directly into the IOBuf without making a copy in a temporary string.
+    // This isn't really that big of a deal though.
+    appender.push(StringPiece(pair.second.toString()));
+  }
+  DCHECK_EQ(buf.length(), dataLength);
 
   std::array<struct iovec, 2> iov;
   iov[0].iov_base = &header;
   iov[0].iov_len = sizeof(header);
-  iov[1].iov_base = &blob[0];
-  iov[1].iov_len = blob.size();
+  iov[1].iov_base = const_cast<uint8_t*>(buf.data());
+  iov[1].iov_len = buf.length();
 
   folly::writevFull(helperIn_, iov.data(), iov.size());
 }

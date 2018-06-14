@@ -9,10 +9,15 @@
  */
 #pragma once
 
+#include <folly/Subprocess.h>
 #include <string>
 #include <vector>
 
 #include "eden/fs/utils/PathFuncs.h"
+
+namespace folly {
+class Subprocess;
+}
 
 namespace facebook {
 namespace eden {
@@ -61,9 +66,31 @@ class HgRepo {
   std::string hg(std::vector<std::string> args);
 
   /**
+   * Start an hg command and return the folly::Subprocess object without waiting
+   * for it to complete.
+   */
+  template <typename... Args>
+  folly::Subprocess invokeHg(const Args&... args) {
+    std::vector<std::string> argsVector;
+    buildHgArgs(argsVector, args...);
+    return invokeHg(std::move(argsVector));
+  }
+  folly::Subprocess invokeHg(std::vector<std::string> args);
+  folly::Subprocess invokeHg(
+      std::vector<std::string> args,
+      const folly::Subprocess::Options& options);
+
+  /**
    * Call "hg init" to create the repository.
    */
-  void hgInit();
+  void hgInit(std::vector<std::string> extraArgs = {});
+
+  /**
+   * Call "hg clone" to create the repository.
+   */
+  void cloneFrom(
+      folly::StringPiece serverRepoUrl,
+      std::vector<std::string> extraArgs = {});
 
   /**
    * Append data to the repository's hgrc file

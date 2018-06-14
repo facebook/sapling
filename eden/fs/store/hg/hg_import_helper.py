@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 import binascii
 import collections
-import json
 import logging
 import os
 import struct
@@ -623,11 +622,27 @@ class HgServer(object):
         # Some repos may not have remotefilelog enabled; for example,
         # the watchman integration tests have no remote server and no
         # remotefilelog.
-        if hasattr(self.repo, "fileservice"):
-            logging.debug("got prefetch request, parsing")
-            files = json.loads(request.body)
-            logging.debug("will prefetch %d files" % len(files))
-            self.repo.fileservice.prefetch(files)
+        if not hasattr(self.repo, "fileservice"):
+            logging.debug("ignoring prefetch request in non-remotefilelog repository")
+            self.send_chunk(request, "")
+            return
+
+        logging.debug("got prefetch request, parsing")
+        [num_files] = struct.unpack_from(b">I", request.body, 0)
+        offset = 4  # struct.calcsize(">I")
+        lengths_fmt = b">" + (num_files * b"I")
+        path_lengths = struct.unpack_from(lengths_fmt, request.body, offset)
+        offset += num_files * 4  # struct.calcsize(lengths_fmt)
+        data_fmt = b"".join(b"%ds40s" % length for length in path_lengths)
+        files_data = struct.unpack_from(data_fmt, request.body, offset)
+
+        files = []
+        for n in range(num_files):
+            idx = n * 2
+            files.append((files_data[idx], files_data[idx + 1]))
+
+        logging.debug("will prefetch %d files" % len(files))
+        self.repo.fileservice.prefetch(files)
 
         self.send_chunk(request, "")
 
