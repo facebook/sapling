@@ -686,17 +686,21 @@ folly::File Overlay::createOverlayFileImpl(
   // We could potentially use O_TMPFILE followed by linkat() to commit the
   // file.  However this may not be supported by all filesystems, and seems to
   // provide minimal benefits for our use case.
-  constexpr auto tmpSuffix = ".tmp\0"_sp;
   InodePath path;
-  std::array<char, kMaxPathLength + tmpSuffix.size()> tmpPath;
-  auto pathLength = getFilePath(inodeNumber, path);
-  memcpy(tmpPath.data(), path.data(), pathLength);
-  memcpy(tmpPath.data() + pathLength, tmpSuffix.data(), tmpSuffix.size());
+  getFilePath(inodeNumber, path);
+
+  // It's substantially faster on XFS to create this temporary file in
+  // the root of the overlay and then move it into its destination
+  // than to create it in the subtree.
+  constexpr auto tmpSuffix = ".tmp\0"_sp;
+  std::array<char, kMaxDecimalInodeNumberLength + tmpSuffix.size()> tmpPath;
+  auto index = folly::uint64ToBufferUnsafe(inodeNumber.get(), tmpPath.data());
+  memcpy(tmpPath.data() + index, tmpSuffix.data(), tmpSuffix.size());
 
   auto tmpFD = openat(
       dirFile_.fd(),
       tmpPath.data(),
-      O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW,
+      O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW | O_TRUNC,
       0600);
   folly::checkUnixError(
       tmpFD,

@@ -197,13 +197,20 @@ class Overlay {
 
  private:
   /**
+   * The number of digits required for a decimal representation of an
+   * inode number.
+   */
+  static constexpr size_t kMaxDecimalInodeNumberLength = 20;
+
+  /**
    * The maximum path length for the path to a file inside the overlay
    * directory.
    *
    * This is 2 bytes for the initial subdirectory name, 1 byte for the '/',
    * 20 bytes for the inode number, and 1 byte for a null terminator.
    */
-  static constexpr size_t kMaxPathLength = 24;
+  static constexpr size_t kMaxPathLength =
+      2 + 1 + kMaxDecimalInodeNumberLength + 1;
 
   FRIEND_TEST(OverlayTest, getFilePath);
   using InodePath = std::array<char, kMaxPathLength>;
