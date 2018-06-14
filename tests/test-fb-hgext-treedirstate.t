@@ -1,12 +1,5 @@
 Setup
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > treedirstate=
-  > [treedirstate]
-  > useinnewrepos=True
-  > EOF
-
   $ hg init repo
   $ cd repo
   $ echo base > base
@@ -150,8 +143,8 @@ Test downgrade on pull
   $ hg rm dir3/file3
   $ grep treedirstate .hg/requires
   treedirstate
-  $ hg pull --config treedirstate.downgradeonpull=true
-  disabling treedirstate...
+  $ hg pull --config treedirstate.migrateonpull=true --config format.dirstate=0
+  downgrading dirstate format...
   pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
@@ -178,7 +171,7 @@ Test upgrade on pull with conflicting dirstate reimplementation
   > EOF
   $ cp .hg/requires .hg/requires.test-backup
   $ echo sqldirstate >> .hg/requires
-  $ hg pull --config treedirstate.upgradeonpull=true --config extensions.fakesqldirstate=$TESTTMP/fakesqldirstate.py
+  $ hg pull --config treedirstate.migrateonpull=true --config extensions.fakesqldirstate=$TESTTMP/fakesqldirstate.py
   pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
@@ -189,8 +182,8 @@ Test upgrade on pull with conflicting dirstate reimplementation
 
 Test upgrade on pull
 
-  $ hg pull --config treedirstate.upgradeonpull=true
-  please wait while we migrate your repo to treedirstate
+  $ hg pull --config treedirstate.migrateonpull=true --config format.dirstate=1
+  please wait while we migrate dirstate format to version 1
   this will make your hg commands faster...
   pulling from $TESTTMP/repo (glob)
   searching for changes

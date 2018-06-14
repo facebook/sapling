@@ -7,11 +7,8 @@
 ::
 
     [treedirstate]
-    # Whether to upgrade repos to treedirstate on pull.
-    upgradeonpull = False
-
-    # Whether to downgrade repos away from treedirstate on pull.
-    downgradeonpull = False
+    # Migrate dirstate format to ``format.dirstate`` on pull (default: false).
+    migrateonpull = true
 
     # Minimum size before a tree file will be repacked.
     minrepackthreshold = 1048576
@@ -63,8 +60,7 @@ treefileprefix = "dirstate.tree."
 
 configtable = {}
 configitem = registrar.configitem(configtable)
-configitem("treedirstate", "upgradeonpull", default=False)
-configitem("treedirstate", "downgradeonpull", default=False)
+configitem("treedirstate", "migrateonpull", default=False)
 configitem("treedirstate", "cleanuppercent", default=1)
 
 # Sentinel length value for when a nonnormalset or otherparentset is absent.
@@ -616,33 +612,61 @@ def gettreeid(opener, dirstatefile):
     return r.readstr()
 
 
-def upgrade(ui, repo):
-    if istreedirstate(repo):
-        raise error.Abort("repo already has treedirstate")
+def currentversion(repo):
+    """get the current dirstate version"""
+    if "treestate" in repo.requirements:
+        return 2
+    elif "treedirstate" in repo.requirements:
+        return 1
+    else:
+        return 0
+
+
+def migrate(ui, repo, version):
+    """migrate dirstate to specified version"""
+    wanted = version
+    current = currentversion(repo)
+    if current == wanted:
+        return
+
     alternatives = activealternativedirstates(repo)
     if alternatives:
         raise error.Abort(
-            "repo has alternative dirstate active: %s" % ", ".join(alternatives)
+            _("repo has alternative dirstate active: %s") % ", ".join(alternatives)
         )
-    with repo.wlock():
-        newmap = treedirstatemap(
-            ui, repo.dirstate._opener, repo.root, importmap=repo.dirstate._map
-        )
-        f = repo.dirstate._opener("dirstate", "w")
-        newmap.write(f, dirstate._getfsnow(repo.dirstate._opener))
-        repo.requirements.add("treedirstate")
-        repo._writerequirements()
-        del repo.dirstate
 
-
-def downgrade(ui, repo):
-    if not istreedirstate(repo):
-        raise error.Abort("repo doesn't have treedirstate")
     with repo.wlock():
-        repo.dirstate._map.writeflat()
-        repo.requirements.remove("treedirstate")
+        vfs = repo.dirstate._opener
+        newmap = None
+        # Reset repo requirements
+        for req in ["treestate", "treedirstate"]:
+            if req in repo.requirements:
+                repo.requirements.remove(req)
+        if wanted == 1 and current in [0, 2]:
+            # to treedirstate
+            newmap = treedirstatemap(ui, vfs, repo.root, importmap=repo.dirstate._map)
+            repo.requirements.add("treedirstate")
+        elif wanted == 0 and current == 1:
+            # treedirstate -> flat dirstate
+            repo.dirstate._map.writeflat()
+        elif wanted == 0 and current == 2:
+            # treestate does not support writeflat.
+            # downgrade to treedirstate (version 1) first.
+            migrate(ui, repo, 1)
+            return migrate(ui, repo, wanted)
+        else:
+            # unreachable
+            raise error.Abort(
+                _("cannot migrate dirstate from version %s to version %s")
+                % (current, wanted)
+            )
+
+        if newmap is not None:
+            with vfs("dirstate", "w", atomictemp=True) as f:
+                newmap.write(f, dirstate._getfsnow(vfs))
         repo._writerequirements()
-        del repo.dirstate
+        repo.dirstate.invalidate()  # trigger fsmonitor state invalidation
+        repo.invalidatedirstate()
 
 
 def repack(ui, repo):
@@ -765,21 +789,22 @@ def wrapclose(orig, self):
 
 
 def wrappull(orig, ui, repo, *args, **kwargs):
-    if ui.configbool("treedirstate", "downgradeonpull") and istreedirstate(repo):
-        ui.status(_("disabling treedirstate...\n"))
-        downgrade(ui, repo)
-    elif (
-        ui.configbool("treedirstate", "upgradeonpull")
-        and not istreedirstate(repo)
-        and not activealternativedirstates(repo)
-    ):
-        ui.status(
-            _(
-                "please wait while we migrate your repo to treedirstate\n"
-                "this will make your hg commands faster...\n"
+    if ui.configbool(
+        "treedirstate", "migrateonpull"
+    ) and not activealternativedirstates(repo):
+        version = repo.ui.configint("format", "dirstate")
+        current = currentversion(repo)
+        if current > version:
+            ui.status(_("downgrading dirstate format...\n"))
+        elif current < version:
+            ui.status(
+                _(
+                    "please wait while we migrate dirstate format to version %s\n"
+                    "this will make your hg commands faster...\n"
+                )
+                % version
             )
-        )
-        upgrade(ui, repo)
+        migrate(ui, repo, version)
 
     return orig(ui, repo, *args, **kwargs)
 
@@ -852,9 +877,9 @@ command = registrar.command(cmdtable)
 def debugtreedirstate(ui, repo, cmd, **opts):
     """manage treedirstate"""
     if cmd == "on":
-        upgrade(ui, repo)
+        migrate(ui, repo, 1)
     elif cmd == "off":
-        downgrade(ui, repo)
+        migrate(ui, repo, 0)
         cleanup(ui, repo, debug=ui.debug)
     elif cmd == "repack":
         repack(ui, repo)
