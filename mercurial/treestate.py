@@ -278,12 +278,16 @@ class treestatemap(object):
 
     def write(self, st, now):
         # write .hg/treestate/<uuid>
-        metadata = {
-            "clock": self._clock,
-            # for debugging purpose
-            "pid": os.getpid(),
-            "now": now,
-        }
+        metadata = {}
+        if self._clock:
+            metadata.update(
+                {
+                    "clock": self._clock,
+                    # for debugging purpose
+                    "pid": os.getpid(),
+                    "now": now,
+                }
+            )
         if self._parents[0] != node.nullid:
             metadata["p1"] = node.hex(self._parents[0])
         if self._parents[1] != node.nullid:
