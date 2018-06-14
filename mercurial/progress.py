@@ -344,7 +344,7 @@ class fancyrenderer(baserenderer):
                 (termwidth - progpos, "progress.fancy.bar.background"),
             ]
         elif style == "indet":
-            spinnerwidth = min(10, termwidth / 2)
+            spinnerwidth = min(6, termwidth / 2)
             progpos = spinpos % ((termwidth - spinnerwidth) * 2)
             if progpos >= (termwidth - spinnerwidth):
                 progpos = 2 * (termwidth - spinnerwidth) - progpos
@@ -354,28 +354,24 @@ class fancyrenderer(baserenderer):
                 (termwidth - spinnerwidth - progpos, "progress.fancy.bar.background"),
             ]
         elif style == "spinner":
-            spinnerwidth = 10
-            progpos = spinpos % spinnerwidth
-            on = spinpos % (2 * spinnerwidth) < spinnerwidth
-            spans = [
-                (
-                    progpos,
-                    "progress.fancy.bar.spinner"
-                    if on
-                    else "progress.fancy.bar.background",
-                )
-            ]
-            while progpos < termwidth:
-                on = not on
-                spans.append(
-                    (
-                        min(spinnerwidth, termwidth - progpos),
-                        "progress.fancy.bar.spinner"
-                        if on
-                        else "progress.fancy.bar.background",
-                    )
-                )
-                progpos += spinnerwidth
+            spinnerwidth = min(6, termwidth / 2)
+            progpos = spinpos % termwidth
+            spans = []
+            on = "progress.fancy.bar.spinner"
+            off = "progress.fancy.bar.background"
+            if progpos > termwidth - spinnerwidth:
+                spans = [
+                    (spinnerwidth - (termwidth - progpos), on),
+                    (termwidth - spinnerwidth, off),
+                    (termwidth - progpos, on),
+                ]
+            else:
+                spans = [
+                    (progpos, off),
+                    (spinnerwidth, on),
+                    (termwidth - spinnerwidth - progpos, off),
+                ]
+
         spans = self._mergespans(
             spans,
             [
