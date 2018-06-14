@@ -526,6 +526,8 @@ class unixforkingservice(object):
                     conn.close()  # release handle in parent process
             else:
                 try:
+                    selector.close()
+                    self._sock.close()
                     self._runworker(conn)
                     conn.close()
                     os._exit(0)
