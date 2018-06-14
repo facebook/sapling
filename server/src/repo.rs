@@ -41,8 +41,8 @@ use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, Changeset, Entry, HgBlobNode, HgChangesetId, HgManifestId,
                       HgNodeHash, HgParents, MPath, RepoPath, RepositoryId, Type, NULL_HASH};
-use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, visited_pruner,
-                                      ChangedEntry, EntryStatus};
+use mercurial_types::manifest_utils::{changed_entry_stream, changed_entry_stream_with_pruner,
+                                      visited_pruner, ChangedEntry, EntryStatus};
 use metaconfig::repoconfig::RepoType;
 
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
@@ -526,7 +526,11 @@ impl RepoClient {
         // TODO: possibly enable compression support once this is fixed.
         bundle.set_compressor_type(None);
 
-        let pruner = visited_pruner();
+        let pruner = if params.mfnodes.len() > 1 {
+            Some(visited_pruner())
+        } else {
+            None
+        };
 
         let changed_entries = params.mfnodes.iter().fold(
             stream::empty().boxify(),
@@ -881,7 +885,7 @@ fn get_changed_entry_stream(
     mfid: &HgNodeHash,
     basemfid: &HgNodeHash,
     rootpath: Option<MPath>,
-    pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+    pruner: Option<impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static>,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
     let manifest = repo.get_manifest_by_nodeid(mfid)
         .traced_global("fetch rootmf", trace_args!());
@@ -892,7 +896,12 @@ fn get_changed_entry_stream(
         .join(basemanifest)
         .map({
             let rootpath = rootpath.clone();
-            move |(mf, basemf)| changed_entry_stream_with_pruner(&mf, &basemf, rootpath, pruner)
+            move |(mf, basemf)| match pruner {
+                Some(pruner) => {
+                    changed_entry_stream_with_pruner(&mf, &basemf, rootpath, pruner).boxify()
+                }
+                None => changed_entry_stream(&mf, &basemf, rootpath).boxify(),
+            }
         })
         .flatten_stream();
 
