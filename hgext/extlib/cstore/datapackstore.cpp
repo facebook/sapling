@@ -16,6 +16,9 @@
 #include "hgext/extlib/cstore/key.h"
 #include "lib/clib/portability/dirent.h"
 
+using std::chrono::steady_clock;
+using namespace std::chrono_literals;
+
 namespace {
 
 // This deleter helps us be more exception safe without needing
@@ -63,7 +66,6 @@ DatapackStore::DatapackStore(
     const std::string& path,
     bool removeDeadPackFilesOnRefresh)
     : path_(path),
-      lastRefresh_(0),
       removeOnRefresh_(removeDeadPackFilesOnRefresh) {
   // Find pack files in path
   auto files = getAvailablePackFileNames(path);
@@ -179,10 +181,11 @@ std::shared_ptr<KeyIterator> DatapackStore::getMissing(KeyIterator& missing) {
 }
 
 std::vector<std::shared_ptr<datapack_handle_t>> DatapackStore::refresh() {
-  clock_t now = clock();
+  constexpr auto PACK_REFRESH_RATE = 100ms;
+  auto now = steady_clock::now();
 
   std::vector<std::shared_ptr<datapack_handle_t>> newPacks;
-  if (now - lastRefresh_ > PACK_REFRESH_RATE) {
+  if (nextRefresh_ <= now) {
     auto availablePacks = getAvailablePackFileNames(path_);
 
     // Garbage collect removed pack files
@@ -210,12 +213,12 @@ std::vector<std::shared_ptr<datapack_handle_t>> DatapackStore::refresh() {
       }
     }
 
-    lastRefresh_ = now;
+    nextRefresh_ = now + PACK_REFRESH_RATE;
   }
 
   return newPacks;
 }
 
 void DatapackStore::markForRefresh() {
-  lastRefresh_ = 0;
+  nextRefresh_ = steady_clock::time_point();
 }

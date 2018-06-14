@@ -14,7 +14,7 @@ extern "C" {
 #include "lib/cdatapack/cdatapack.h"
 }
 
-#include <ctime>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -24,8 +24,6 @@ extern "C" {
 #include "hgext/extlib/cstore/datastore.h"
 #include "hgext/extlib/cstore/key.h"
 #include "lib/clib/portability/portability.h"
-
-const clock_t PACK_REFRESH_RATE = 0.1 * CLOCKS_PER_SEC;
 
 class DatapackStore;
 class DatapackStoreKeyIterator : public KeyIterator {
@@ -44,8 +42,8 @@ class DatapackStoreKeyIterator : public KeyIterator {
 class DatapackStore : public DataStore {
  private:
   std::string path_;
-  clock_t lastRefresh_;
-  bool removeOnRefresh_;
+  std::chrono::steady_clock::time_point nextRefresh_;
+  bool removeOnRefresh_{false};
   std::unordered_map<std::string, std::shared_ptr<datapack_handle_t>> packs_;
 
   std::shared_ptr<datapack_handle_t> addPack(const std::string& path);
