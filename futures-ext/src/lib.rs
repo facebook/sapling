@@ -23,9 +23,12 @@ extern crate tokio_core;
 extern crate tokio_io;
 
 use bytes::Bytes;
-use futures::{future, Async, Future, IntoFuture, Poll, Sink, Stream};
+use futures::{future, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream};
 use futures::sync::oneshot;
+use tokio_io::AsyncWrite;
 use tokio_io::codec::{Decoder, Encoder};
+
+use std::{io as std_io, fmt::Debug};
 
 mod bytes_stream;
 mod futures_ordered;
@@ -415,6 +418,83 @@ where
     }).boxify()
 }
 
+
+/// Simple adapter from `Sink` interface to `AsyncWrite` interface.
+/// It can be useful to convert from the interface that supports only AsyncWrite, and get
+/// Stream as a result. See pseudocode below
+///
+///  ```
+///     fn async_write_interface(writer: &mut AsyncWrite) -> impl Future<(), Error> {
+///       ...
+///     }
+///
+///     use futures::sync::mpsc;
+///     let (sender, receiver) = mpsc::channel(1);
+///
+///     tokio::spawn(
+///        async_write_interface(SinkToAsyncWrite::new(sender))
+///            .map_err(|err| {})
+///     );
+///
+///     // receiver is a stream of values written from async_write_interface
+///  ```
+
+pub struct SinkToAsyncWrite<S> {
+    sink: S,
+}
+
+impl<S> SinkToAsyncWrite<S> {
+    pub fn new(sink: S) -> Self {
+        SinkToAsyncWrite { sink }
+    }
+}
+
+fn create_std_error<E: Debug>(err: E) -> std_io::Error {
+    std_io::Error::new(std_io::ErrorKind::Other, format!("{:?}", err))
+}
+
+impl<E, S> std_io::Write for SinkToAsyncWrite<S>
+where
+    S: Sink<SinkItem = Bytes, SinkError = E>,
+    E: Debug,
+{
+    fn write(&mut self, buf: &[u8]) -> ::std::io::Result<usize> {
+        let bytes = Bytes::from(buf);
+        match self.sink.start_send(bytes) {
+            Ok(AsyncSink::Ready) => Ok(buf.len()),
+            Ok(AsyncSink::NotReady(_)) => Err(std_io::Error::new(
+                std_io::ErrorKind::WouldBlock,
+                "channel is busy",
+            )),
+            Err(err) => Err(create_std_error(err)),
+        }
+    }
+
+    fn flush(&mut self) -> std_io::Result<()> {
+        match self.sink.poll_complete() {
+            Ok(Async::Ready(())) => Ok(()),
+            Ok(Async::NotReady) => Err(std_io::Error::new(
+                std_io::ErrorKind::WouldBlock,
+                "channel is busy",
+            )),
+            Err(err) => Err(create_std_error(err)),
+        }
+    }
+}
+
+impl<E, S> AsyncWrite for SinkToAsyncWrite<S>
+where
+    S: Sink<SinkItem = Bytes, SinkError = E>,
+    E: Debug,
+{
+    fn shutdown(&mut self) -> Poll<(), std_io::Error> {
+        match self.sink.close() {
+            Ok(res) => Ok(res),
+            Err(err) => Err(create_std_error(err)),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -502,5 +582,72 @@ mod test {
         }));
 
         assert_matches!(res, Ok(()));
+    }
+
+    fn assert_flush<E, S>(sink: &mut SinkToAsyncWrite<S>)
+    where
+        S: Sink<SinkItem = Bytes, SinkError = E>,
+        E: Debug,
+    {
+        use std::io::Write;
+        loop {
+            let flush_res = sink.flush();
+            if let Ok(_) = flush_res {
+                break;
+            }
+            if let Err(ref e) = flush_res {
+                println!("after flush error");
+                assert_eq!(e.kind(), std_io::ErrorKind::WouldBlock);
+            }
+        }
+    }
+
+    fn assert_shutdown<E, S>(sink: &mut SinkToAsyncWrite<S>)
+    where
+        S: Sink<SinkItem = Bytes, SinkError = E>,
+        E: Debug,
+    {
+        loop {
+            let shutdown_res = sink.shutdown();
+            if let Ok(_) = shutdown_res {
+                break;
+            }
+            if let Err(ref e) = shutdown_res {
+                println!("after flush error");
+                assert_eq!(e.kind(), std_io::ErrorKind::WouldBlock);
+            }
+        }
+    }
+
+    #[test]
+    fn sink_to_async_write() {
+        use futures::sync::mpsc;
+        use std::io::Write;
+
+        async_unit::tokio_unit_test(|| {
+            let (tx, rx) = mpsc::channel::<Bytes>(1);
+
+            let messages_num = 10;
+            tokio::spawn(Ok(()).into_future().map(move |()| {
+                let mut async_write = SinkToAsyncWrite::new(tx);
+                for i in 0..messages_num {
+                    loop {
+                        let res = async_write.write(format!("{}", i).as_bytes());
+                        if let Err(ref e) = res {
+                            assert_eq!(e.kind(), std_io::ErrorKind::WouldBlock);
+                            assert_flush(&mut async_write);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+
+                assert_flush(&mut async_write);
+                assert_shutdown(&mut async_write);
+            }));
+
+            let res = rx.collect().wait().unwrap();
+            assert_eq!(res.len(), messages_num);
+        })
     }
 }
