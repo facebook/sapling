@@ -51,12 +51,12 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       overlay.openFile(5_ino, Overlay::kHeaderIdentifierFile, timestamps);
 
   ASSERT_TRUE(rootTree);
-  EXPECT_EQ(2, rootTree->first.entries.size());
-  const auto& fileEntry = rootTree->first.entries.at("file"_pc);
+  EXPECT_EQ(2, rootTree->first.size());
+  const auto& fileEntry = rootTree->first.at("file"_pc);
   EXPECT_EQ(2_ino, fileEntry.getInodeNumber());
   EXPECT_EQ(hash1, fileEntry.getHash());
   EXPECT_EQ(S_IFREG | 0644, fileEntry.getInitialMode());
-  const auto& subdirEntry = rootTree->first.entries.at("subdir"_pc);
+  const auto& subdirEntry = rootTree->first.at("subdir"_pc);
   EXPECT_EQ(3_ino, subdirEntry.getInodeNumber());
   EXPECT_EQ(hash2, subdirEntry.getHash());
   EXPECT_EQ(S_IFDIR | 0755, subdirEntry.getInitialMode());
@@ -67,18 +67,18 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   EXPECT_EQ("contents", result);
 
   ASSERT_TRUE(subdir);
-  EXPECT_EQ(2, subdir->first.entries.size());
-  const auto& emptyEntry = subdir->first.entries.at("empty"_pc);
+  EXPECT_EQ(2, subdir->first.size());
+  const auto& emptyEntry = subdir->first.at("empty"_pc);
   EXPECT_EQ(4_ino, emptyEntry.getInodeNumber());
   EXPECT_EQ(hash3, emptyEntry.getHash());
   EXPECT_EQ(S_IFDIR | 0755, emptyEntry.getInitialMode());
-  const auto& helloEntry = subdir->first.entries.at("hello"_pc);
+  const auto& helloEntry = subdir->first.at("hello"_pc);
   EXPECT_EQ(5_ino, helloEntry.getInodeNumber());
   EXPECT_EQ(hash4, helloEntry.getHash());
   EXPECT_EQ(S_IFREG | 0644, helloEntry.getInitialMode());
 
   ASSERT_TRUE(emptyDir);
-  EXPECT_EQ(0, emptyDir->first.entries.size());
+  EXPECT_EQ(0, emptyDir->first.size());
 
   folly::checkUnixError(lseek(hello.fd(), Overlay::kHeaderLength, SEEK_SET));
   folly::readFile(file.fd(), result);

@@ -47,12 +47,12 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
   auto helloInode = overlay.allocateInodeNumber();
 
   DirContents root;
-  root.entries.emplace("file"_pc, S_IFREG | 0644, fileInode, hash1);
-  root.entries.emplace("subdir"_pc, S_IFDIR | 0755, subdirInode, hash2);
+  root.emplace("file"_pc, S_IFREG | 0644, fileInode, hash1);
+  root.emplace("subdir"_pc, S_IFDIR | 0755, subdirInode, hash2);
 
   DirContents subdir;
-  subdir.entries.emplace("empty"_pc, S_IFDIR | 0755, emptyDirInode, hash3);
-  subdir.entries.emplace("hello"_pc, S_IFREG | 0644, helloInode, hash4);
+  subdir.emplace("empty"_pc, S_IFDIR | 0755, emptyDirInode, hash3);
+  subdir.emplace("hello"_pc, S_IFREG | 0644, helloInode, hash4);
 
   DirContents emptyDir;
 

@@ -35,12 +35,12 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
   Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};
 
   DirContents contents;
-  contents.entries.emplace(
+  contents.emplace(
       PathComponent{"one"},
       S_IFREG | 0644,
       overlay.allocateInodeNumber(),
       hash1);
-  contents.entries.emplace(
+  contents.emplace(
       PathComponent{"two"},
       S_IFDIR | 0755,
       overlay.allocateInodeNumber(),
