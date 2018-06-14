@@ -5,6 +5,7 @@
   > infinitepushbackup =
   > commitcloud =
   > rebase =
+  > remotenames =
   > share =
   > [ui]
   > ssh = python "$TESTDIR/dummyssh"
@@ -14,6 +15,7 @@
   > hostname = testhost
   > [alias]
   > tglog = log -G --template "{node|short} '{desc}' {bookmarks}\n"
+  > trglog = log -G --template "{node|short} '{desc}' {bookmarks} {remotenames}\n"
   > descr = log -r '.' --template "{desc}"
   > [experimental]
   > evolution = createmarkers, allowunstable
@@ -243,6 +245,7 @@ Sync the amended commit to the other client
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
+  obsoleted 2 changesets
   new changesets a7bb357e7299:48610b1a7ec0
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
@@ -309,6 +312,7 @@ Expected result: the message telling that revision has been moved to another rev
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 2 files (+1 heads)
+  obsoleted 1 changesets
   new changesets 41f3b9359864
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
@@ -369,6 +373,7 @@ Expected result: client2 should be moved to the amended version
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files (+1 heads)
+  obsoleted 1 changesets
   new changesets 8134e74ecdc8
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
@@ -486,6 +491,7 @@ Expected result: client2 should be moved to fada67350ab0
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files (+1 heads)
+  obsoleted 1 changesets
   new changesets fada67350ab0
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
@@ -870,7 +876,9 @@ Clean up
   $ hg hide -q 4b4f26511f8b
   $ cd ..
   $ fullsync client1 client2
-  $ cd client1
+  $ cd client2
+  $ hg up -q -r 0
+  $ cd ../client1
 
 Make two stacks
 
@@ -925,7 +933,7 @@ Commit still becomes available in the other repo
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
   new changesets e58a6603d256:799d22972c4e
-  (run 'hg heads' to see heads, 'hg merge' to merge)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
   $ hg tglog
   o  799d22972c4e 'stack 2 second'
@@ -936,11 +944,156 @@ Commit still becomes available in the other repo
   | |
   | o  e58a6603d256 'stack 1 first'
   |/
-  | @  9bd68ef10d6b 'toobig'
+  @  d20a80d4def3 'base'
+  
+Fix up that public commit, set it back to draft
+  $ cd ../client1
+  $ hg phase -fd e58a6603d256
+
+Make a public commit and put two bookmarks on it
+  $ cd ../server
+  $ mkcommit 'public'
+  $ hg bookmark publicbookmark1
+  $ hg bookmark publicbookmark2
+
+Pull it into one of the clients and rebase one of the stacks onto it
+  $ cd ../client1
+  $ hg pull -q
+  $ hg trglog
+  o  acd5b9e8c656 'public'  default/publicbookmark1 default/publicbookmark2 default/default
+  |
+  | @  799d22972c4e 'stack 2 second'
   | |
-  | x  715c1454ae33 'stack commit 2'
+  | o  3597ff85ead0 'stack 2 first'
+  |/
+  | o  9a3e7907fd5c 'stack 1 second'
   | |
-  | x  4b4f26511f8b 'race attempt'
+  | o  e58a6603d256 'stack 1 first'
+  |/
+  o  d20a80d4def3 'base'
+  
+  $ hg rebase -s e58a6603d256 -d publicbookmark1
+  rebasing 23:e58a6603d256 "stack 1 first"
+  rebasing 24:9a3e7907fd5c "stack 1 second"
+  $ hg cloud sync -q
+
+Create another public commit on the server, moving one of the bookmarks
+  $ cd ../server
+  $ mkcommit 'public 2'
+  $ hg tglog
+  @  97250524560a 'public 2' publicbookmark2
+  |
+  o  acd5b9e8c656 'public' publicbookmark1
+  |
+  o  d20a80d4def3 'base'
+  
+Sync this onto the second client, the remote bookmarks don't change.
+  $ cd ../client2
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 3 files
+  obsoleted 2 changesets
+  new changesets acd5b9e8c656:2da6c73964b8
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  #commitcloud commits synchronized
+  $ hg trglog
+  o  2da6c73964b8 'stack 1 second'
+  |
+  o  5df7c1d8d8ab 'stack 1 first'
+  |
+  o  acd5b9e8c656 'public'
+  |
+  | o  799d22972c4e 'stack 2 second'
+  | |
+  | o  3597ff85ead0 'stack 2 first'
+  |/
+  @  d20a80d4def3 'base'  default/default
+  
+Do a pull on this client.  The remote bookmarks now get updated.
+  $ hg pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 97250524560a
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg trglog
+  o  97250524560a 'public 2'  default/publicbookmark2 default/default
+  |
+  | o  2da6c73964b8 'stack 1 second'
+  | |
+  | o  5df7c1d8d8ab 'stack 1 first'
+  |/
+  o  acd5b9e8c656 'public'  default/publicbookmark1
+  |
+  | o  799d22972c4e 'stack 2 second'
+  | |
+  | o  3597ff85ead0 'stack 2 first'
+  |/
+  @  d20a80d4def3 'base'
+  
+Rebase the commits again, and resync to the first client.
+  $ hg rebase -s 5df7c1d8d8ab -d publicbookmark2
+  rebasing 23:5df7c1d8d8ab "stack 1 first"
+  rebasing 24:2da6c73964b8 "stack 1 second"
+  $ hg cloud sync -q
+  $ cd ../client1
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 3 files
+  obsoleted 2 changesets
+  new changesets 97250524560a:af621240884f
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  #commitcloud commits synchronized
+  $ hg trglog
+  o  af621240884f 'stack 1 second'
+  |
+  o  81cd67693e59 'stack 1 first'
+  |
+  o  97250524560a 'public 2'
+  |
+  o  acd5b9e8c656 'public'  default/publicbookmark1 default/publicbookmark2 default/default
+  |
+  | @  799d22972c4e 'stack 2 second'
+  | |
+  | o  3597ff85ead0 'stack 2 first'
+  |/
+  o  d20a80d4def3 'base'
+  
+A final pull gets everything in sync here, too.
+  $ hg pull -q
+  $ hg trglog
+  o  af621240884f 'stack 1 second'
+  |
+  o  81cd67693e59 'stack 1 first'
+  |
+  o  97250524560a 'public 2'  default/publicbookmark2 default/default
+  |
+  o  acd5b9e8c656 'public'  default/publicbookmark1
+  |
+  | @  799d22972c4e 'stack 2 second'
+  | |
+  | o  3597ff85ead0 'stack 2 first'
   |/
   o  d20a80d4def3 'base'
   
@@ -956,7 +1109,7 @@ Check subscription when join/leave and also scm service health check
   [commitcloud]
   workspace=user/test/default
   repo_name=server
-  repo_root=$TESTTMP/client2/.hg
+  repo_root=$TESTTMP/client1/.hg
   $ hg cloud leave
   #commitcloud this repository is now disconnected from commit cloud
   $ ls $TESTTMP/.commitcloud/joined/
@@ -965,4 +1118,5 @@ Check subscription when join/leave and also scm service health check
   [commitcloud]
   workspace=user/test/default
   repo_name=server
-  repo_root=$TESTTMP/client2/.hg
+  repo_root=$TESTTMP/client1/.hg
+

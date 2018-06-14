@@ -14,14 +14,16 @@ import time
 
 from mercurial import (
     commands,
-    discovery,
     error,
+    exchange,
+    extensions,
     hg,
     hintutil,
     lock as lockmod,
     node,
     obsutil,
     registrar,
+    util,
 )
 
 # Mercurial
@@ -417,20 +419,57 @@ def cloudrecover(ui, repo, **opts):
 def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
     pullcmd, pullopts = _getcommandandoptions("^pull")
 
+    try:
+        remotenames = extensions.find("remotenames")
+    except KeyError:
+        remotenames = None
+
     # Pull all the new heads
     # so we need to filter cloudrefs before pull
     # pull does't check if a rev is present locally
     unfi = repo.unfiltered()
     newheads = filter(lambda rev: rev not in unfi, cloudrefs.heads)
+
     if newheads:
+        # Replace the exchange pullbookmarks function with one which updates the
+        # user's synced bookmarks.  This also means we don't partially update a
+        # subset of the remote bookmarks if they happen to be included in the
+        # pull.
+        def _pullbookmarks(orig, pullop):
+            if "bookmarks" in pullop.stepsdone:
+                return
+            pullop.stepsdone.add("bookmarks")
+            tr = pullop.gettransaction()
+            _mergebookmarks(
+                pullop.repo, tr, cloudrefs.bookmarks, lastsyncstate.bookmarks
+            )
+
+        # Replace the exchange pullobsolete function with one which adds the
+        # cloud obsmarkers to the repo.
+        def _pullobsolete(orig, pullop):
+            if "obsmarkers" in pullop.stepsdone:
+                return
+            pullop.stepsdone.add("obsmarkers")
+            tr = pullop.gettransaction()
+            _mergeobsmarkers(pullop.repo, tr, cloudrefs.obsmarkers)
+
+        # Disable pulling of remotenames.
+        def _pullremotenames(orig, repo, remote, bookmarks):
+            pass
+
         pullopts["rev"] = newheads
-        pullcmd(ui, repo, **pullopts)
-
-    # Merge cloud bookmarks into the repo
-    _mergebookmarks(ui, repo, cloudrefs.bookmarks, lastsyncstate.bookmarks)
-
-    # Merge obsmarkers
-    _mergeobsmarkers(ui, repo, cloudrefs.obsmarkers)
+        with extensions.wrappedfunction(
+            exchange, "_pullobsolete", _pullobsolete
+        ), extensions.wrappedfunction(
+            exchange, "_pullbookmarks", _pullbookmarks
+        ), extensions.wrappedfunction(
+            remotenames, "pullremotenames", _pullremotenames
+        ) if remotenames else util.nullcontextmanager():
+            pullcmd(ui, repo, **pullopts)
+    else:
+        with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
+            _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate.bookmarks)
+            _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)
 
     # We have now synced the repo to the cloud version.  Store this.
     lastsyncstate.update(cloudrefs.version, cloudrefs.heads, cloudrefs.bookmarks)
@@ -447,59 +486,57 @@ def _update(ui, repo, destination):
     return hg.updatetotally(ui, repo, destination, destination, updatecheck=updatecheck)
 
 
-def _mergebookmarks(ui, repo, cloudbookmarks, lastsyncbookmarks):
+def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncbookmarks):
     localbookmarks = _getbookmarks(repo)
-    with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
-        changes = []
-        allnames = set(localbookmarks.keys() + cloudbookmarks.keys())
-        newnames = set()
-        for name in allnames:
-            localnode = localbookmarks.get(name)
-            cloudnode = cloudbookmarks.get(name)
-            lastnode = lastsyncbookmarks.get(name)
-            if cloudnode != localnode:
-                if (
-                    localnode is not None
-                    and cloudnode is not None
-                    and localnode != lastnode
-                    and cloudnode != lastnode
-                ):
-                    # Changed both locally and remotely, fork the local
-                    # bookmark
-                    forkname = _forkname(ui, name, allnames | newnames)
-                    newnames.add(forkname)
-                    changes.append((forkname, node.bin(localnode)))
-                    ui.warn(
-                        _(
-                            "%s changed locally and remotely, "
-                            "local bookmark renamed to %s\n"
-                        )
-                        % (name, forkname)
+    changes = []
+    allnames = set(localbookmarks.keys() + cloudbookmarks.keys())
+    newnames = set()
+    for name in allnames:
+        localnode = localbookmarks.get(name)
+        cloudnode = cloudbookmarks.get(name)
+        lastnode = lastsyncbookmarks.get(name)
+        if cloudnode != localnode:
+            if (
+                localnode is not None
+                and cloudnode is not None
+                and localnode != lastnode
+                and cloudnode != lastnode
+            ):
+                # Changed both locally and remotely, fork the local
+                # bookmark
+                forkname = _forkname(repo.ui, name, allnames | newnames)
+                newnames.add(forkname)
+                changes.append((forkname, node.bin(localnode)))
+                repo.ui.warn(
+                    _(
+                        "%s changed locally and remotely, "
+                        "local bookmark renamed to %s\n"
                     )
+                    % (name, forkname)
+                )
 
-                if cloudnode != lastnode:
-                    if cloudnode is not None:
-                        if cloudnode in repo:
-                            changes.append((name, node.bin(cloudnode)))
-                        else:
-                            ui.warn(
-                                _("%s not found, " "not creating %s bookmark\n")
-                                % (cloudnode, name)
-                            )
+            if cloudnode != lastnode:
+                if cloudnode is not None:
+                    if cloudnode in repo:
+                        changes.append((name, node.bin(cloudnode)))
                     else:
-                        if localnode is not None and localnode != lastnode:
-                            # Moved locally, deleted in the cloud, resurrect
-                            # at the new location
-                            pass
-                        else:
-                            changes.append((name, None))
-        repo._bookmarks.applychanges(repo, tr, changes)
+                        repo.ui.warn(
+                            _("%s not found, not creating %s bookmark\n")
+                            % (cloudnode, name)
+                        )
+                else:
+                    if localnode is not None and localnode != lastnode:
+                        # Moved locally, deleted in the cloud, resurrect
+                        # at the new location
+                        pass
+                    else:
+                        changes.append((name, None))
+    repo._bookmarks.applychanges(repo, tr, changes)
 
 
-def _mergeobsmarkers(ui, repo, obsmarkers):
-    with repo.wlock(), repo.lock(), repo.transaction("commitcloud-obs") as tr:
-        tr._commitcloudskippendingobsmarkers = True
-        repo.obsstore.add(tr, obsmarkers)
+def _mergeobsmarkers(repo, tr, obsmarkers):
+    tr._commitcloudskippendingobsmarkers = True
+    repo.obsstore.add(tr, obsmarkers)
 
 
 def _forkname(ui, name, othernames):
