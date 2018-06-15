@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
   $ hg debugextensions --excludedefault
   treedirstate (untested!)
 

@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 Testing cloning with the EOL extension
 
   $ cat >> $HGRCPATH <<EOF

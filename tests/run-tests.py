@@ -65,6 +65,7 @@ import tempfile
 import threading
 import time
 import unittest
+import uuid
 import xml.dom.minidom as minidom
 
 
@@ -362,7 +363,7 @@ def getparser():
     harness.add_argument(
         "--bisect-repo",
         metavar="bisect_repo",
-        help=("Path of a repo to bisect. Use together with " "--known-good-rev"),
+        help=("Path of a repo to bisect. Use together with --known-good-rev"),
     )
     harness.add_argument(
         "-d",
@@ -448,7 +449,7 @@ def getparser():
     )
     harness.add_argument(
         "--tmpdir",
-        help="run tests in the given temporary directory" " (implies --keep-tmpdir)",
+        help="run tests in the given temporary directory (implies --keep-tmpdir)",
     )
     harness.add_argument(
         "-v", "--verbose", action="store_true", help="output verbose messages"
@@ -457,6 +458,9 @@ def getparser():
     hgconf = parser.add_argument_group("Mercurial Configuration")
     hgconf.add_argument(
         "--chg", action="store_true", help="install and use chg wrapper in place of hg"
+    )
+    hgconf.add_argument(
+        "--watchman", action="store_true", help="shortcut for --with-watchman=watchman"
     )
     hgconf.add_argument("--compiler", help="compiler to build with")
     hgconf.add_argument(
@@ -509,14 +513,17 @@ def getparser():
     hgconf.add_argument(
         "--with-hg",
         metavar="HG",
-        help="test using specified hg script rather than a " "temporary installation",
+        help="test using specified hg script rather than a temporary installation",
+    )
+    hgconf.add_argument(
+        "--with-watchman", metavar="WATCHMAN", help="test using specified watchman"
     )
     # This option should be deleted once test-check-py3-compat.t and other
     # Python 3 tests run with Python 3.
     hgconf.add_argument(
         "--with-python3",
         metavar="PYTHON3",
-        help="Python 3 interpreter (if running under Python 2)" " (TEMPORARY)",
+        help="Python 3 interpreter (if running under Python 2) (TEMPORARY)",
     )
 
     reporting = parser.add_argument_group("Results Reporting")
@@ -599,7 +606,7 @@ def parseargs(args, parser):
             binpath = os.path.join(reporootdir, relpath)
             if os.name != "nt" and not os.access(binpath, os.X_OK):
                 parser.error(
-                    "--local specified, but %r not found or " "not executable" % binpath
+                    "--local specified, but %r not found or not executable" % binpath
                 )
             setattr(options, attr, binpath)
 
@@ -618,10 +625,15 @@ def parseargs(args, parser):
             "--chg does not work when --with-hg is specified "
             "(use --with-chg instead)"
         )
+    if options.watchman and options.with_watchman:
+        parser.error(
+            "--watchman does not work when --with-watchman is specified "
+            "(use --with-watchman instead)"
+        )
 
     if options.color == "always" and not pygmentspresent:
         sys.stderr.write(
-            "warning: --color=always ignored because " "pygments is not installed\n"
+            "warning: --color=always ignored because pygments is not installed\n"
         )
 
     if options.bisect_repo and not options.known_good_rev:
@@ -647,12 +659,10 @@ def parseargs(args, parser):
 
     if options.anycoverage and options.local:
         # this needs some path mangling somewhere, I guess
-        parser.error("sorry, coverage options do not work when --local " "is specified")
+        parser.error("sorry, coverage options do not work when --local is specified")
 
     if options.anycoverage and options.with_hg:
-        parser.error(
-            "sorry, coverage options do not work when --with-hg " "is specified"
-        )
+        parser.error("sorry, coverage options do not work when --with-hg is specified")
 
     global verbose
     if options.verbose:
@@ -677,9 +687,7 @@ def parseargs(args, parser):
             parser.error("--py3k-warnings can only be used on Python 2.7")
     if options.with_python3:
         if PYTHON3:
-            parser.error(
-                "--with-python3 cannot be used when executing with " "Python 3"
-            )
+            parser.error("--with-python3 cannot be used when executing with Python 3")
 
         options.with_python3 = canonpath(options.with_python3)
         # Verify Python3 executable is acceptable.
@@ -697,7 +705,7 @@ def parseargs(args, parser):
         vers = version.LooseVersion(out[len("Python ") :])
         if vers < version.LooseVersion("3.5.0"):
             parser.error(
-                "--with-python3 version must be 3.5.0 or greater; " "got %s" % out
+                "--with-python3 version must be 3.5.0 or greater; got %s" % out
             )
 
     if options.blacklist:
@@ -854,6 +862,7 @@ class Test(unittest.TestCase):
         slowtimeout=None,
         usechg=False,
         useipv6=False,
+        watchman=None,
     ):
         """Create a test from parameters.
 
@@ -916,6 +925,7 @@ class Test(unittest.TestCase):
         self._hgcommand = hgcommand or b"hg"
         self._usechg = usechg
         self._useipv6 = useipv6
+        self._watchman = watchman
 
         self._aborted = False
         self._daemonpids = []
@@ -982,6 +992,49 @@ class Test(unittest.TestCase):
         if self._usechg:
             self._chgsockdir = os.path.join(self._threadtmp, b"%s.chgsock" % name)
             os.mkdir(self._chgsockdir)
+
+        if self._watchman:
+            self._watchmandir = os.path.join(self._threadtmp, b"%s.watchman" % name)
+            os.mkdir(self._watchmandir)
+            cfgfile = os.path.join(self._watchmandir, b"config.json")
+
+            if os.name == "nt":
+                sockfile = "\\\\.\\pipe\\watchman-test-%s" % uuid.uuid4().hex
+            else:
+                sockfile = os.path.join(self._watchmandir, b"sock")
+
+            self._watchmansock = sockfile
+
+            clilogfile = os.path.join(self._watchmandir, "cli-log")
+            logfile = os.path.join(self._watchmandir, b"log")
+            pidfile = os.path.join(self._watchmandir, b"pid")
+            statefile = os.path.join(self._watchmandir, b"state")
+
+            with open(cfgfile, "w") as f:
+                f.write(json.dumps({}))
+
+            envb = osenvironb.copy()
+            envb[b"WATCHMAN_CONFIG_FILE"] = _bytespath(cfgfile)
+            envb[b"WATCHMAN_SOCK"] = _bytespath(sockfile)
+
+            argv = [
+                self._watchman,
+                "--sockname",
+                sockfile,
+                "--logfile",
+                logfile,
+                "--pidfile",
+                pidfile,
+                "--statefile",
+                statefile,
+                "--foreground",
+                "--log-level=2",  # debug logging for watchman
+            ]
+
+            with open(clilogfile, "wb") as f:
+                self._watchmanproc = subprocess.Popen(
+                    argv, env=envb, stdin=None, stdout=f, stderr=f
+                )
 
     def run(self, result):
         """Run this test and report results against a TestResult instance."""
@@ -1129,6 +1182,19 @@ class Test(unittest.TestCase):
             # chgservers will stop automatically after they find the socket
             # files are deleted
             shutil.rmtree(self._chgsockdir, True)
+
+        if self._watchman:
+            try:
+                self._watchmanproc.terminate()
+                self._watchmanproc.kill()
+                if self._keeptmpdir:
+                    log(
+                        "Keeping watchman dir: %s\n" % self._watchmandir.decode("utf-8")
+                    )
+                else:
+                    shutil.rmtree(self._watchmandir, ignore_errors=True)
+            except Exception:
+                pass
 
         if (
             (self._ret != 0 or self._out != self._refout)
@@ -1289,6 +1355,10 @@ class Test(unittest.TestCase):
         if self._usechg:
             env["CHGSOCKNAME"] = os.path.join(self._chgsockdir, b"server")
 
+        if self._watchman:
+            env["WATCHMAN_SOCK"] = self._watchmansock
+            env["HGFSMONITOR_TESTS"] = "1"
+
         return env
 
     def _createhgrc(self, path):
@@ -1307,6 +1377,8 @@ class Test(unittest.TestCase):
             hgrc.write(
                 b"usercache = %s\n" % (os.path.join(self._testtmp, b".cache/lfs"))
             )
+            if self._watchman:
+                hgrc.write(b"[extensions]\nfsmonitor=\n")
             hgrc.write(b"[web]\n")
             hgrc.write(b"address = localhost\n")
             hgrc.write(b"ipv6 = %s\n" % str(self._useipv6).encode("ascii"))
@@ -1314,7 +1386,7 @@ class Test(unittest.TestCase):
             for opt in self._extraconfigopts:
                 section, key = opt.encode("utf-8").split(b".", 1)
                 assert b"=" in key, (
-                    "extra config opt %s must " "have an = for assignment" % opt
+                    "extra config opt %s must have an = for assignment" % opt
                 )
                 hgrc.write(b"[%s]\n%s\n" % (section, key))
 
@@ -2024,7 +2096,7 @@ class TestResult(unittest._TextTestResult):
             if self._options.interactive:
                 if test.readrefout() != expected:
                     self.stream.write(
-                        "Reference output has changed (run again to prompt " "changes)"
+                        "Reference output has changed (run again to prompt changes)"
                     )
                 else:
                     self.stream.write("Accept this change? [n] ")
@@ -2745,6 +2817,14 @@ class TestRunner(object):
         elif self.options.with_chg:
             chgbindir = os.path.dirname(os.path.realpath(self.options.with_chg))
             self._hgcommand = os.path.basename(self.options.with_chg)
+        if self.options.with_watchman or self.options.watchman:
+            self._watchman = self.options.with_watchman or "watchman"
+            osenvironb[b"HGFSMONITOR_TESTS"] = b"1"
+        else:
+            osenvironb[b"BINDIR"] = self._bindir
+            self._watchman = None
+            if b"HGFSMONITOR_TESTS" in osenvironb:
+                del osenvironb[b"HGFSMONITOR_TESTS"]
 
         osenvironb[b"BINDIR"] = self._bindir
         osenvironb[b"PYTHON"] = PYTHON
@@ -2822,6 +2902,8 @@ class TestRunner(object):
         vlog("# Using HGTMP", self._hgtmp)
         vlog("# Using PATH", os.environ["PATH"])
         vlog("# Using", IMPL_PATH, osenvironb[IMPL_PATH])
+        if self._watchman:
+            vlog("# Using watchman", self._watchman)
         vlog("# Writing to directory", self._outputdir)
 
         try:
@@ -3014,6 +3096,7 @@ class TestRunner(object):
             hgcommand=self._hgcommand,
             usechg=bool(self.options.with_chg or self.options.chg),
             useipv6=useipv6,
+            watchman=self._watchman,
             **kwds
         )
         t.should_reload = True

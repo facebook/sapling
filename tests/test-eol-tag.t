@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 https://bz.mercurial-scm.org/2493
 
 Testing tagging with the EOL extension

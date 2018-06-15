@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 Create test repository:
 
   $ hg init repo

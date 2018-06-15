@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 Let commit recurse into subrepos by default to match pre-2.0 behavior:
 
   $ echo "[ui]" >> $HGRCPATH

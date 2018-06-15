@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 Test EOL patching
 
   $ cat >> $HGRCPATH <<EOF

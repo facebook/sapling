@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 Test basic extension support
 
   $ cat > foobar.py <<EOF

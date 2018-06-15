@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 Test the EOL hook
 
   $ hg init main

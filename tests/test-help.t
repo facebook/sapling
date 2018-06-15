@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 Short help:
 
   $ hg

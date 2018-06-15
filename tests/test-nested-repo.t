@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
   $ hg init a
   $ cd a
   $ hg init b

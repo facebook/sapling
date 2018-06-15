@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 #require eol-in-paths
 
 https://bz.mercurial-scm.org/352

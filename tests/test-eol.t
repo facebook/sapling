@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 Test EOL extension
 
   $ cat >> $HGRCPATH <<EOF

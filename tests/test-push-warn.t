@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
   $ . helpers-usechg.sh
 
   $ hg init a

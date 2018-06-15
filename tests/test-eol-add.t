@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 Test adding .hgeol
 
   $ cat >> $HGRCPATH <<EOF
