@@ -271,13 +271,21 @@ fn main() {
                 }
                 (None, true) => blobstore.get(key).boxify(),
                 (Some(mode), false) => {
-                    let blobstore = MemcacheBlobstore::new(blobstore);
+                    let blobstore = MemcacheBlobstore::new(
+                        blobstore,
+                        "manifold",
+                        manifold_args.bucket.as_ref(),
+                    ).unwrap();
                     // XXX add a prefix here when ready
                     let blobstore = PrefixBlobstore::new(blobstore, "");
                     get_memcache(&blobstore, key, mode)
                 }
                 (Some(mode), true) => {
-                    let blobstore = MemcacheBlobstore::new(blobstore);
+                    let blobstore = MemcacheBlobstore::new(
+                        blobstore,
+                        "manifold",
+                        manifold_args.bucket.as_ref(),
+                    ).unwrap();
                     get_memcache(&blobstore, key, mode)
                 }
             }.map(move |value| {

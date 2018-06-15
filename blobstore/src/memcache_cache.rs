@@ -53,15 +53,26 @@ fn mc_raw_put(
 }
 
 impl<T: Blobstore + Clone> MemcacheBlobstore<T> {
-    pub fn new(blobstore: T) -> CountedBlobstore<Self> {
-        CountedBlobstore::new(
+    pub fn new<S>(
+        blobstore: T,
+        backing_store_name: S,
+        backing_store_params: S,
+    ) -> Result<CountedBlobstore<Self>, Error>
+    where
+        S: AsRef<str>,
+    {
+        let backing_store_name = backing_store_name.as_ref();
+        let blob_key = "scm.mononoke.blobstore.".to_string() + backing_store_name.as_ref() + "."
+            + backing_store_params.as_ref();
+
+        Ok(CountedBlobstore::new(
             "memcache",
             MemcacheBlobstore {
                 blobstore: blobstore,
                 memcache: MemcacheClient::new(),
-                keygen: KeyGen::new("scm.mononoke.blobstore", MC_CODEVER, MC_SITEVER),
+                keygen: KeyGen::new(blob_key, MC_CODEVER, MC_SITEVER),
             },
-        )
+        ))
     }
 
     // Turns errors to Ok(None)

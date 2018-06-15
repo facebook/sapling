@@ -207,7 +207,7 @@ impl BlobRepo {
         ))
     }
 
-    pub fn new_test_manifold<T: ToString>(
+    pub fn new_test_manifold<T: ToString + AsRef<str>>(
         logger: Logger,
         bucket: T,
         prefix: &str,
@@ -256,7 +256,7 @@ impl BlobRepo {
             io_remotes.iter().collect(),
             max_concurrent_requests_per_io_thread,
         );
-        let blobstore = MemcacheBlobstore::new(blobstore);
+        let blobstore = MemcacheBlobstore::new(blobstore, "manifold", bucket.as_ref())?;
         let blobstore = MemoizedBlobstore::new(blobstore, usize::MAX, blobstore_cache_size);
 
         let filenodes = MysqlFilenodes::open(&connection_params, DEFAULT_INSERT_CHUNK_SIZE)
