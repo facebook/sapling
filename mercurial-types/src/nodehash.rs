@@ -11,7 +11,7 @@ use std::result;
 use std::str::FromStr;
 
 use ascii::{AsciiStr, AsciiString};
-use quickcheck::{single_shrinker, Arbitrary, Gen};
+use quickcheck::{Arbitrary, Gen};
 use serde;
 use thrift;
 
@@ -169,10 +169,6 @@ impl Display for HgNodeHash {
 impl Arbitrary for HgNodeHash {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         HgNodeHash(Sha1::arbitrary(g))
-    }
-
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
-        single_shrinker(NULL_HASH)
     }
 }
 

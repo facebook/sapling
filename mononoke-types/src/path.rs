@@ -188,10 +188,25 @@ impl MPathElement {
                 "path elements cannot contain '\\0'".into(),
             ));
         }
+        if p.contains(&1) {
+            // MPath can not contain '\x01', in particular if mpath ends with '\x01'
+            // and it is part of move metadata, because key-value pairs are separated
+            // by '\n', you will get '\x01\n' which is also metadata separator.
+            bail_err!(ErrorKind::InvalidPath(
+                String::from_utf8_lossy(p).into_owned(),
+                "path elements cannot contain '\\1'".into(),
+            ));
+        }
         if p.contains(&b'/') {
             bail_err!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot contain '/'".into(),
+            ));
+        }
+        if p.contains(&b'\n') {
+            bail_err!(ErrorKind::InvalidPath(
+                String::from_utf8_lossy(p).into_owned(),
+                "path elements cannot contain '\\n'".into(),
             ));
         }
         Ok(())
@@ -277,6 +292,18 @@ impl MPath {
             bail_err!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "paths cannot contain '\\0'".into(),
+            ));
+        }
+        if p.contains(&1) {
+            bail_err!(ErrorKind::InvalidPath(
+                String::from_utf8_lossy(p).into_owned(),
+                "paths cannot contain '\\1'".into(),
+            ));
+        }
+        if p.contains(&b'\n') {
+            bail_err!(ErrorKind::InvalidPath(
+                String::from_utf8_lossy(p).into_owned(),
+                "paths cannot contain '\\n'".into(),
             ));
         }
         Ok(())
@@ -521,7 +548,10 @@ impl<'a> TryFrom<&'a str> for MPath {
 }
 
 lazy_static! {
-    static ref COMPONENT_CHARS: Vec<u8> = (1..b'/').chain((b'/' + 1)..255).collect();
+    static ref COMPONENT_CHARS: Vec<u8> = (2..b'\n')
+        .chain((b'\n' + 1)..b'/')
+        .chain((b'/' + 1)..255)
+        .collect();
 }
 
 impl Arbitrary for MPathElement {

@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::{BTreeMap, HashSet};
+use std::io::Write;
 use std::mem;
 use std::path::Path;
 use std::sync::{mpsc, Arc};
@@ -12,9 +13,10 @@ use std::thread;
 use std::time::Duration;
 use std::usize;
 
+use bytes::Bytes;
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
-use futures::{Async, Poll};
-use futures::future::{self, Future};
+use futures::{Async, IntoFuture, Poll};
+use futures::future::{self, Either, Future};
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -33,12 +35,14 @@ use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE
 use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ManifoldBlob;
+use mercurial::file::File;
 use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileNodeId,
                       HgNodeHash, HgParents, Manifest, RepoPath, RepositoryId, Type};
-use mercurial_types::manifest;
+use mercurial_types::manifest::{self, Content};
 use mercurial_types::nodehash::HgManifestId;
-use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ContentId, DateTime,
-                     FileChange, FileContents, MPath, MononokeId};
+use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
+                     ContentId, DateTime, FileChange, FileContents, MPath, MPathElement,
+                     MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Core;
@@ -523,12 +527,116 @@ impl BlobRepo {
         self.blobstore.clone()
     }
 
-    // TODO(T29283916): make this save the file change as a Mercurial format HgBlobEntry
     pub fn store_file_change(
-        _blobstore: RepoBlobstore,
-        _change: Option<&FileChange>,
-    ) -> BoxFuture<Option<HgBlobEntry>, Error> {
-        unimplemented!()
+        &self,
+        p1: Option<HgNodeHash>,
+        p2: Option<HgNodeHash>,
+        path: &MPath,
+        change: Option<&FileChange>,
+    ) -> impl Future<Item = Option<HgBlobEntry>, Error = Error> + Send {
+        fn prepend_metadata(
+            content: Bytes,
+            _copy_from: Option<&(MPath, ChangesetId)>,
+        ) -> Result<Bytes> {
+            let mut buf = Vec::new();
+            File::generate_copied_from(
+                None, //FIXME: we need external {ChangesetId -> HgNodeHash} mapping
+                &mut buf,
+            )?;
+            buf.write(content.as_ref())?;
+            Ok(buf.into())
+        }
+
+        match change {
+            None => Either::A(future::ok(None)),
+            Some(change) => {
+                let upload_future = self.fetch(change.content_id()).and_then({
+                    let blobstore = self.blobstore.clone();
+                    let change = change.clone();
+                    let logger = self.logger.clone();
+                    let path = path.clone();
+                    move |file_content| {
+                        let hg_content = try_boxfuture!(prepend_metadata(
+                            file_content.into_bytes(),
+                            change.copy_from()
+                        ));
+                        let upload_entry = UploadHgEntry {
+                            upload_nodeid: UploadHgNodeHash::Generate,
+                            raw_content: HgBlob::Dirty(hg_content),
+                            content_type: manifest::Type::File(change.file_type()),
+                            p1,
+                            p2,
+                            path: RepoPath::FilePath(path),
+                        };
+                        let (_, upload_future) =
+                            try_boxfuture!(upload_entry.upload_to_blobstore(&blobstore, &logger));
+                        upload_future.map(|(entry, _)| Some(entry)).boxify()
+                    }
+                });
+                Either::B(upload_future)
+            }
+        }
+    }
+
+    pub fn find_path_in_manifest(
+        &self,
+        path: Option<MPath>,
+        manifest: HgNodeHash,
+    ) -> impl Future<Item = Option<Content>, Error = Error> + Send {
+        // single fold step, converts path elemnt in content to content, if any
+        fn find_content_in_content(
+            content: BoxFuture<Option<Content>, Error>,
+            path_element: MPathElement,
+        ) -> BoxFuture<Option<Content>, Error> {
+            content
+                .and_then(move |content| match content {
+                    None => Either::A(future::ok(None)),
+                    Some(Content::Tree(manifest)) => Either::B(
+                        manifest
+                            .lookup(&path_element)
+                            .and_then(|entry| match entry {
+                                None => Either::A(future::ok(None)),
+                                Some(entry) => Either::B(entry.get_content().map(Some)),
+                            }),
+                    ),
+                    Some(_) => Either::A(future::ok(None)),
+                })
+                .boxify()
+        }
+
+        self.get_manifest_by_nodeid(&manifest)
+            .and_then(move |manifest| {
+                let content_init = future::ok(Some(Content::Tree(manifest))).boxify();
+                match path {
+                    None => content_init,
+                    Some(path) => path.into_iter().fold(content_init, find_content_in_content),
+                }
+            })
+    }
+
+    pub fn find_file_in_manifest(
+        &self,
+        path: &MPath,
+        manifest: HgNodeHash,
+    ) -> impl Future<Item = Option<HgNodeHash>, Error = Error> + Send {
+        let (dirname, basename) = path.split_dirname();
+        self.find_path_in_manifest(dirname, manifest).and_then({
+            let basename = basename.clone();
+            move |content| match content {
+                None => Either::A(future::ok(None)),
+                Some(Content::Tree(manifest)) => {
+                    Either::B(manifest.lookup(&basename).map(|entry| match entry {
+                        None => None,
+                        Some(entry) => if let Type::File(_) = entry.get_type() {
+                            Some(entry.get_hash().into_nodehash())
+                        } else {
+                            None
+                        },
+                    }))
+                }
+                Some(_) => Either::A(future::ok(None)),
+            }
+        })
     }
 
     // TODO(T29283916): Using caching to avoid wasting compute, change this to find the manifest_p1
@@ -546,7 +654,9 @@ impl BlobRepo {
             manifest_p1,
             manifest_p2,
         ).and_then({
-            let blobstore = self.blobstore.clone();
+            let blobrepo = self.clone();
+            let manifest_p1 = manifest_p1.cloned();
+            let manifest_p2 = manifest_p2.cloned();
             move |memory_manifest| {
                 let memory_manifest = Arc::new(memory_manifest);
                 let mut futures = Vec::new();
@@ -554,10 +664,28 @@ impl BlobRepo {
                 for (path, entry) in bcs.file_changes() {
                     let path = path.clone();
                     let memory_manifest = memory_manifest.clone();
-                    futures.push(
-                        Self::store_file_change(blobstore.clone(), entry.clone())
-                            .and_then(move |entry| memory_manifest.change_entry(&path, entry)),
-                    );
+                    let p1 = manifest_p1
+                        .map(|manifest| blobrepo.find_file_in_manifest(&path, manifest))
+                        .into_future();
+                    let p2 = manifest_p2
+                        .map(|manifest| blobrepo.find_file_in_manifest(&path, manifest))
+                        .into_future();
+                    let future = p1.join(p2)
+                        .and_then({
+                            let blobrepo = blobrepo.clone();
+                            let path = path.clone();
+                            let entry = entry.cloned();
+                            move |(p1, p2)| {
+                                blobrepo.store_file_change(
+                                    p1.and_then(|x| x),
+                                    p2.and_then(|x| x),
+                                    &path,
+                                    entry.as_ref(),
+                                )
+                            }
+                        })
+                        .and_then(move |entry| memory_manifest.change_entry(&path, entry));
+                    futures.push(future);
                 }
 
                 future::join_all(futures)
@@ -824,13 +952,7 @@ impl CreateChangeset {
                                         Error,
                                     > = (move || {
                                         let blobcs = try_boxfuture!(make_new_changeset(
-                                            parents,
-                                            root_hash,
-                                            user,
-                                            time,
-                                            extra,
-                                            files,
-                                            comments,
+                                            parents, root_hash, user, time, extra, files, comments,
                                         ));
 
                                         let cs_id = blobcs.get_changeset_id().into_nodehash();

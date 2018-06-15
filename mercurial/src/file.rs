@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
+use std::io::Write;
 use std::str;
 
 use itertools::Itertools;
@@ -20,6 +21,8 @@ pub struct File {
 }
 
 const META_MARKER: &[u8] = b"\x01\n";
+const COPY_PATH_KEY: &[u8] = b"copy";
+const COPY_REV_KEY: &[u8] = b"copyrev";
 const META_SZ: usize = 2;
 
 impl File {
@@ -91,26 +94,53 @@ impl File {
         if !self.node.maybe_copied() {
             return Ok(None);
         }
-
-        let meta = self.node.as_blob().as_slice().map(Self::parse_meta);
-        let ret = meta.and_then(|meta| {
-            let path = meta.get(b"copy".as_ref()).cloned().map(MPath::new);
-            let nodeid = meta.get(b"copyrev".as_ref())
-                .and_then(|rev| str::from_utf8(rev).ok())
-                .and_then(|rev| rev.parse().ok());
-
-            if let (Some(path), Some(nodeid)) = (path, nodeid) {
-                Some((path, nodeid))
-            } else {
-                None
-            }
-        });
-
-        match ret {
-            Some((Ok(path), nodeid)) => Ok(Some((path, nodeid))),
-            Some((Err(e), _nodeid)) => Err(e.context("invalid path in copy metadata").into()),
+        match self.node
+            .as_blob()
+            .as_slice()
+            .map(|buf| Self::get_copied_from(Self::parse_meta(buf)))
+        {
+            Some(result) => result,
             None => Ok(None),
         }
+    }
+
+    pub(crate) fn get_copied_from(
+        meta: HashMap<&[u8], &[u8]>,
+    ) -> Result<Option<(MPath, HgNodeHash)>> {
+        let path = meta.get(COPY_PATH_KEY).cloned().map(MPath::new);
+        let nodeid = meta.get(COPY_REV_KEY)
+            .and_then(|rev| str::from_utf8(rev).ok())
+            .and_then(|rev| rev.parse().ok());
+        match (path, nodeid) {
+            (Some(Ok(path)), Some(nodeid)) => Ok(Some((path, nodeid))),
+            (Some(Err(e)), _) => Err(e.context("invalid path in copy metadata").into()),
+            _ => Ok(None),
+        }
+    }
+
+    pub fn generate_copied_from<T>(
+        copy_info: Option<(MPath, HgNodeHash)>,
+        buf: &mut T,
+    ) -> Result<()>
+    where
+        T: Write,
+    {
+        buf.write_all(META_MARKER)?;
+        match copy_info {
+            None => (),
+            Some((path, version)) => {
+                buf.write_all(COPY_PATH_KEY)?;
+                buf.write_all(b": ")?;
+                path.generate(buf)?;
+                buf.write_all(b"\n")?;
+
+                buf.write_all(COPY_REV_KEY)?;
+                buf.write_all(b": ")?;
+                buf.write_all(version.to_hex().as_ref())?;
+            }
+        };
+        buf.write_all(META_MARKER)?;
+        Ok(())
     }
 
     pub fn content(&self) -> &[u8] {
@@ -145,6 +175,7 @@ impl File {
 #[cfg(test)]
 mod test {
     use super::{File, META_MARKER, META_SZ};
+    use mercurial_types::{HgNodeHash, MPath};
 
     #[test]
     fn extract_meta_sz() {
@@ -230,5 +261,21 @@ mod test {
                 (b"foo".as_ref(), b"bar".as_ref()),
             ]
         )
+    }
+
+    quickcheck! {
+        fn copy_info_roundtrip(copy_info: Option<(MPath, HgNodeHash)>) -> bool {
+            let mut buf = Vec::new();
+            let result = File::generate_copied_from(copy_info.clone(), &mut buf)
+                .and_then(|_| {
+                    File::get_copied_from(File::parse_meta(&buf))
+                });
+            match result {
+                Ok(out_copy_info) => copy_info == out_copy_info,
+                _ => {
+                    false
+                }
+            }
+        }
     }
 }
