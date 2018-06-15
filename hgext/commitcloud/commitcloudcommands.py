@@ -482,7 +482,7 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
 def _update(ui, repo, destination):
     # update to new head with merging local uncommited changes
     ui.status(_("updating to %s\n") % node.short(destination))
-    updatecheck = "none"
+    updatecheck = "noconflict"
     return hg.updatetotally(ui, repo, destination, destination, updatecheck=updatecheck)
 
 
