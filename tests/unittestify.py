@@ -13,7 +13,20 @@ import random
 import re
 import shlex
 import subprocess
+import sys
 import unittest
+
+
+try:
+    import libfb.py.pathutils as pathutils
+
+    chgpath = pathutils.get_build_rule_output_path("//scm/hg:chg")
+    hgpath = pathutils.get_build_rule_output_path("//scm/hg:hg")
+    pythonbinpath = pathutils.get_build_rule_output_path("//scm/hg:hgpython")
+except ImportError:
+    chgpath = os.environ.get("HGTEST_CHG")
+    hgpath = os.environ.get("HGTEST_HG")
+    pythonbinpath = os.environ.get("HGTEST_PYTHON", "python2")
 
 
 try:
@@ -32,25 +45,35 @@ def chdir(path):
         os.chdir(oldpwd)
 
 
+def prepareargsenv(runtestsdir, port=None):
+    """return (args, env) for running run-tests.py"""
+    if not os.path.exists(os.path.join(runtestsdir, "run-tests.py")):
+        raise SystemExit("cannot find run-tests.py from %s" % runtestsdir)
+    env = os.environ.copy()
+    args = [pythonbinpath, "run-tests.py"]
+    if port:
+        args += ["--port", "%s" % port]
+
+    if hgpath:
+        args.append("--with-hg=%s" % hgpath)
+    if chgpath:
+        env["CHG"] = chgpath
+    # set HGDATAPATH
+    datapath = os.path.join(runtestsdir, "../mercurial")
+    env["HGDATAPATH"] = datapath
+    # set HGPYTHONPATH since PYTHONPATH might be discarded
+    pythonpath = os.pathsep.join([runtestsdir])
+    env["HGPYTHONPATH"] = pythonpath
+    # set other environments useful for buck testing
+    env["HGTEST_NORMAL_LAYOUT"] = "0"
+    return args, env
+
+
 def gettestmethod(name, port):
     def runsingletest(self):
         with chdir(self._runtests_dir):
-            env = os.environ.copy()
-            python = os.environ.get("HGTEST_PYTHON")
-            args = [python, "run-tests.py", "--port", "%s" % port]
+            args, env = prepareargsenv(self._runtests_dir)
             args += os.getenv("HGTEST_RUNTESTS_ARGS", "").split()
-            hgpath = os.environ.get("HGTEST_HG")
-            if hgpath:
-                args.append("--with-hg=%s" % hgpath)
-            chgpath = os.environ.get("HGTEST_CHG")
-            if chgpath:
-                env["CHG"] = chgpath
-            # set HGDATAPATH
-            datapath = os.path.join(self._runtests_dir, "../mercurial")
-            env["HGDATAPATH"] = datapath
-            # set HGPYTHONPATH since PYTHONPATH might be discarded
-            pythonpath = os.pathsep.join([self._runtests_dir])
-            env["HGPYTHONPATH"] = pythonpath
             # run run-tests.py for a single test
             p = subprocess.Popen(
                 args + [name], env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE
@@ -95,4 +118,8 @@ class hgtests(unittest.TestCase):
                 setattr(cls, method_name, gettestmethod(name, port))
 
 
-hgtests.collecttests(os.environ.get("HGTEST_DIR", "."))
+if __name__ == "__main__":
+    args, env = prepareargsenv(os.getcwd())
+    os.execvpe(args[0], args + sys.argv[1:], env)
+else:
+    hgtests.collecttests(os.environ.get("HGTEST_DIR", "."))
