@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 use std::io::Cursor;
+use std::ops::AddAssign;
 use std::sync::Arc;
 
 use ascii::AsciiString;
@@ -23,6 +24,7 @@ use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
                       NULL_HASH};
 use slog::Logger;
+use stats::*;
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
                   Filelog};
@@ -68,6 +70,8 @@ pub fn resolve(
                                 Pushkey::BookmarkPush(bp) => Some(bp),
                             })
                             .collect();
+
+                        STATS::bookmark_pushkeys_count.add_value(bookmark_push.len() as i64);
 
                         (cg_push, bookmark_push, bundle2)
                     })
@@ -364,6 +368,11 @@ impl Bundle2Resolver {
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
 
+        STATS::changesets_count.add_value(changesets.len() as i64);
+        STATS::manifests_count.add_value(manifests.len() as i64);
+        STATS::filelogs_count.add_value(filelogs.len() as i64);
+        STATS::content_blobs_count.add_value(content_blobs.len() as i64);
+
         fn upload_changeset(
             repo: Arc<BlobRepo>,
             node: HgNodeHash,
@@ -579,6 +588,22 @@ struct NewBlobs {
     content_blobs: Vec<ContentBlobFuture>,
 }
 
+struct WalkHelperCounters {
+    manifests_count: usize,
+    filelogs_count: usize,
+    content_blobs_count: usize,
+}
+
+impl AddAssign for WalkHelperCounters {
+    fn add_assign(&mut self, other: WalkHelperCounters) {
+        *self = Self {
+            manifests_count: self.manifests_count + other.manifests_count,
+            filelogs_count: self.filelogs_count + other.filelogs_count,
+            content_blobs_count: self.content_blobs_count + other.content_blobs_count,
+        };
+    }
+}
+
 impl NewBlobs {
     fn new(
         manifest_root_id: HgManifestId,
@@ -604,13 +629,17 @@ impl NewBlobs {
             .get(&root_key)
             .ok_or_else(|| format_err!("Missing root tree manifest"))?;
 
-        let (entries, content_blobs) = Self::walk_helper(
+        let (entries, content_blobs, counters) = Self::walk_helper(
             &RepoPath::root(),
             &manifest_content,
             manifests,
             filelogs,
             content_blobs,
         )?;
+
+        STATS::per_changeset_manifests_count.add_value(counters.manifests_count as i64);
+        STATS::per_changeset_filelogs_count.add_value(counters.filelogs_count as i64);
+        STATS::per_changeset_content_blobs_count.add_value(counters.content_blobs_count as i64);
 
         Ok(Self {
             root_manifest: manifest_root
@@ -637,7 +666,13 @@ impl NewBlobs {
         manifests: &Manifests,
         filelogs: &Filelogs,
         content_blobs: &ContentBlobs,
-    ) -> Result<(Vec<HgBlobFuture>, Vec<ContentBlobFuture>)> {
+    ) -> Result<
+        (
+            Vec<HgBlobFuture>,
+            Vec<ContentBlobFuture>,
+            WalkHelperCounters,
+        ),
+    > {
         if path_taken.len() > 4096 {
             bail_msg!(
                 "Exceeded max manifest path during walking with path: {:?}",
@@ -647,6 +682,11 @@ impl NewBlobs {
 
         let mut entries: Vec<HgBlobFuture> = Vec::new();
         let mut cbinfos: Vec<ContentBlobFuture> = Vec::new();
+        let mut counters = WalkHelperCounters {
+            manifests_count: 0,
+            filelogs_count: 0,
+            content_blobs_count: 0,
+        };
 
         for (name, details) in manifest_content.files.iter() {
             let nodehash = details.entryid().clone().into_nodehash();
@@ -663,6 +703,7 @@ impl NewBlobs {
                 };
 
                 if let Some(&(ref manifest_content, ref blobfuture)) = manifests.get(&key) {
+                    counters.manifests_count += 1;
                     entries.push(
                         blobfuture
                             .clone()
@@ -670,15 +711,17 @@ impl NewBlobs {
                             .from_err()
                             .boxify(),
                     );
-                    let (mut walked_entries, mut walked_cbinfos) = Self::walk_helper(
-                        &key.path,
-                        manifest_content,
-                        manifests,
-                        filelogs,
-                        content_blobs,
-                    )?;
+                    let (mut walked_entries, mut walked_cbinfos, sub_counters) =
+                        Self::walk_helper(
+                            &key.path,
+                            manifest_content,
+                            manifests,
+                            filelogs,
+                            content_blobs,
+                        )?;
                     entries.append(&mut walked_entries);
                     cbinfos.append(&mut walked_cbinfos);
+                    counters += sub_counters;
                 }
             } else {
                 let key = HgNodeKey {
@@ -686,6 +729,8 @@ impl NewBlobs {
                     hash: nodehash,
                 };
                 if let Some(blobfuture) = filelogs.get(&key) {
+                    counters.filelogs_count += 1;
+                    counters.content_blobs_count += 1;
                     entries.push(
                         blobfuture
                             .clone()
@@ -708,7 +753,7 @@ impl NewBlobs {
             }
         }
 
-        Ok((entries, cbinfos))
+        Ok((entries, cbinfos, counters))
     }
 }
 
