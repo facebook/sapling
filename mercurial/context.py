@@ -1890,12 +1890,15 @@ class workingctx(committablectx):
                             normal = self._repo.dirstate.normal
                             for f in fixup:
                                 normal(f)
-                            # write changes out explicitly, because nesting
-                            # wlock at runtime may prevent 'wlock.release()'
-                            # after this block from doing so for subsequent
-                            # changing files
-                            tr = self._repo.currenttransaction()
-                            self._repo.dirstate.write(tr)
+
+                        # write changes out explicitly, because nesting
+                        # wlock at runtime may prevent 'wlock.release()'
+                        # after this block from doing so for subsequent
+                        # changing files
+                        #
+                        # This is a no-op if dirstate is not dirty.
+                        tr = self._repo.currenttransaction()
+                        self._repo.dirstate.write(tr)
 
                         if poststatusafter:
                             for ps in poststatusafter:

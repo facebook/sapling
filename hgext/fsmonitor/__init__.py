@@ -308,7 +308,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     if unknown:
         # experimental config: experimental.fsmonitor.skipignore
         if not self._ui.configbool("experimental", "fsmonitor.skipignore"):
-            if _hashignore(ignore) != ignorehash and clock != "c:0:0":
+            if ignorehash and _hashignore(ignore) != ignorehash and clock != "c:0:0":
                 # ignore list changed -- can't rely on Watchman state any more
                 if state.walk_on_invalidate:
                     return bail("ignore rules changed")
@@ -327,6 +327,9 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
         # standard dirstate implementation is in use.
         dmap = dmap._map
     nonnormalset = self._map.nonnormalset
+    self._ui.log(
+        "fsmonitor", "clock = %r len(nonnormal) = %d" % (clock, len(nonnormalset))
+    )
 
     copymap = self._map.copymap
     getkind = stat.S_IFMT
@@ -497,10 +500,24 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
         results[f] = None
 
     nf = iter(auditpass).next
+    droplist = []
+    droplistappend = droplist.append
     for st in util.statfiles([join(f) for f in auditpass]):
         f = nf()
         if st or f in dmap:
             results[f] = st
+        else:
+            # '?' (untracked) file was deleted from the filesystem - remove it
+            # from treestate.
+            #
+            # We can only update the dirstate (and treestate) while holding the
+            # wlock. That happens inside poststatus.__call__ -> state.set. So
+            # buffer what files to "drop" so state.set can clean them up.
+            entry = dmap.get(f, None)
+            if entry and entry[0] == "?":
+                droplistappend(f)
+    # The droplist needs to match setlastclock()
+    state.setdroplist(droplist)
 
     for s in subrepos:
         del results[s]
@@ -606,21 +623,33 @@ def overridestatus(
         stateunknown = listunknown
 
     if updatestate:
-        # Invalidate fsmonitor.state if dirstate changes. This avoids the
-        # following issue:
-        # 1. pid 11 writes dirstate
-        # 2. pid 22 reads dirstate and inconsistent fsmonitor.state
-        # 3. pid 22 calculates a wrong state
-        # 4. pid 11 writes fsmonitor.state
-        # Because before 1,
-        # 0. pid 11 invalidates fsmonitor.state
-        # will happen.
-        psbefore = lambda *args, **kwds: self._fsmonitorstate.invalidate(
-            reason="dirstate_change"
-        )
-        self.addpostdsstatus(psbefore, afterdirstatewrite=False)
-        psafter = poststatus(startclock)
-        self.addpostdsstatus(psafter, afterdirstatewrite=True)
+        if "treestate" in self.requirements:
+            # No need to invalidate fsmonitor state.
+            # state.set needs to run before dirstate write, since it changes
+            # dirstate (treestate).
+            self.addpostdsstatus(poststatustreestate, afterdirstatewrite=False)
+        else:
+            # Invalidate fsmonitor.state if dirstate changes. This avoids the
+            # following issue:
+            # 1. pid 11 writes dirstate
+            # 2. pid 22 reads dirstate and inconsistent fsmonitor.state
+            # 3. pid 22 calculates a wrong state
+            # 4. pid 11 writes fsmonitor.state
+            # Because before 1,
+            # 0. pid 11 invalidates fsmonitor.state
+            # will happen.
+            #
+            # To avoid race conditions when reading without a lock, do things
+            # in this order:
+            # 1. Invalidate fsmonitor state
+            # 2. Write dirstate
+            # 3. Write fsmonitor state
+            psbefore = lambda *args, **kwds: self._fsmonitorstate.invalidate(
+                reason="dirstate_change"
+            )
+            self.addpostdsstatus(psbefore, afterdirstatewrite=False)
+            psafter = poststatus(startclock)
+            self.addpostdsstatus(psafter, afterdirstatewrite=True)
 
     r = orig(node1, node2, match, listignored, listclean, stateunknown, listsubrepos)
     modified, added, removed, deleted, unknown, ignored, clean = r
@@ -654,6 +683,19 @@ def overridestatus(
         modified, added, removed, deleted, unknown, ignored, clean = rv2
 
     return scmutil.status(modified, added, removed, deleted, unknown, ignored, clean)
+
+
+def poststatustreestate(wctx, status):
+    clock = wctx.repo()._fsmonitorstate.getlastclock()
+    hashignore = None
+    notefiles = (
+        status.modified
+        + status.added
+        + status.removed
+        + status.deleted
+        + status.unknown
+    )
+    wctx.repo()._fsmonitorstate.set(clock, hashignore, notefiles)
 
 
 class poststatus(object):

@@ -546,7 +546,7 @@ py_class!(class treestate |py| {
     }
 
     def walk(&self, setbits: u16, unsetbits: u16) -> PyResult<Vec<PyBytes>> {
-        // Get all file paths with `setbits` set and `unsetbits` unset.
+        // Get all file paths with `setbits` all set, `unsetbits` all unset.
         assert_eq!(setbits & unsetbits, 0, "setbits cannot overlap with unsetbits");
         let setbits = StateFlags::from_bits_truncate(setbits);
         let unsetbits = StateFlags::from_bits_truncate(unsetbits);
@@ -565,6 +565,27 @@ py_class!(class treestate |py| {
                     state.union.contains(setbits) && !state.intersection.intersects(unsetbits),
             },
             &|_, file| file.state & mask == setbits,
+        ))?;
+        Ok(result)
+    }
+
+    def tracked(&self) -> PyResult<Vec<PyBytes>> {
+        // Not ideal as a special case. But the returned list is large and it needs to be fast.
+        // It's basically walk(EXIST_P1, 0) + walk(EXIST_P2, 0) + walk(EXIST_NEXT).
+        let mut state = self.state(py).borrow_mut();
+        let mut result = Vec::new();
+        let mask = StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT;
+        convert_result(py, state.visit(
+            &mut |components, _state| {
+                let path = PyBytes::new(py, &components.concat());
+                result.push(path);
+                Ok(VisitorResult::NotChanged)
+            },
+            &|_, dir| match dir.get_aggregated_state() {
+                None => true,
+                Some(state) => state.union.intersects(mask),
+            },
+            &|_, file| file.state.intersects(mask),
         ))?;
         Ok(result)
     }

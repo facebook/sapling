@@ -147,7 +147,9 @@ class treestatemap(object):
         return result
 
     def keys(self):
-        return self._tree.walk(0, 0)
+        # Exclude untracked files, since the matcher interface expects __iter__
+        # to not include untracked files.
+        return self._tree.tracked()
 
     def preload(self):
         pass
@@ -181,8 +183,32 @@ class treestatemap(object):
             size = 0
         self._tree.insert(f, state, mode, size, mtime, copied)
 
-    def dropfile(self, f, oldstate):
-        return self._tree.remove(f)
+    def dropfile(self, f, oldstate, real=False):
+        if real or not self._clock:
+            # If watchman clock is not set, watchman is not used, drop
+            # untracked files directly. This is also correct if watchman
+            # clock is reset to empty, since the next query will do a full
+            # crawl.
+            return self._tree.remove(f)
+        else:
+            # If watchman is used, treestate tracks "untracked" files before
+            # watchman clock. So only remove EXIST_* bits from the file.
+            # fsmonitor will do a stat check and drop(real=True) later.
+            #
+            # Typically, dropfile is used in 2 cases:
+            # - "hg forget": mark the file as "untracked".
+            # - "hg update": remove files only tracked by old commit.
+            entry = self._tree.get(f, None)
+            if not entry:
+                return False
+            else:
+                state, mode, size, mtime, copied = entry
+                state ^= state & (
+                    treestate.EXIST_NEXT | treestate.EXIST_P1 | treestate.EXIST_P2
+                )
+                state |= treestate.NEED_CHECK
+                self._tree.insert(f, state, mode, size, mtime, copied)
+                return True
 
     def clearambiguoustimes(self, _files, now):
         # TODO(quark): could _files be different from those with mtime = -1
@@ -357,3 +383,26 @@ class treestatemap(object):
                 self._tree.insert(dest, state, mode, size, mtime, source)
         else:
             raise error.ProgrammingError("copy dest %r does not exist" % dest)
+
+    # treestate specific methods
+
+    def needcheck(self, path):
+        """Mark a file as NEED_CHECK, so it will be included by 'nonnormalset'
+
+        Return True if the file was changed, False if it's already marked.
+        """
+        existing = self._tree.get(path, None)
+        if not existing:
+            # The file was not in dirstate (untracked). Add it.
+            state = treestate.NEED_CHECK
+            mode = 0o666
+            size = -1
+            mtime = -1
+            copied = None
+        else:
+            state, mode, size, mtime, copied = existing
+            if treestate.NEED_CHECK & state:
+                return False
+            state |= treestate.NEED_CHECK
+        self._tree.insert(path, state, mode, size, mtime, copied)
+        return True

@@ -57,7 +57,7 @@ Prepare test repo:
   adding a
   $ hg ci -m1
 
-#if treestate-off
+#if no-v2
 Set mtime of a into the future:
 
   $ touch -t 202101011200 a

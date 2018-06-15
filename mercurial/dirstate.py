@@ -427,6 +427,29 @@ class dirstate(object):
     def copies(self):
         return self._map.copymap
 
+    def needcheck(self, file):
+        """Mark file as need-check"""
+        if not self._istreestate:
+            raise error.ProgrammingError("needcheck is only supported by treestate")
+        changed = self._map.needcheck(file)
+        self._dirty |= changed
+        return changed
+
+    def setclock(self, clock):
+        """Set fsmonitor clock"""
+        if not self._istreestate:
+            raise error.ProgrammingError("setclock is only supported by treestate")
+        clock = clock or ""
+        if clock != self._map._clock:
+            self._map._clock = clock
+            self._dirty = True
+
+    def getclock(self):
+        """Get fsmonitor clock"""
+        if not self._istreestate:
+            raise error.ProgrammingError("getclock is only supported by treestate")
+        return self._map._clock or None
+
     def _addpath(self, f, state, mode, size, mtime):
         oldstate = self[f]
         if state == "a" or oldstate == "r":
@@ -1101,6 +1124,10 @@ class dirstate(object):
         ).iteritems():
             try:
                 t = dget(fn)
+                # This "?" state is only tracked by treestate, emulate the old
+                # behavior - KeyError.
+                if t[0] == "?":
+                    raise KeyError
             except KeyError:
                 if (listignored or mexact(fn)) and dirignore(fn):
                     if listignored:

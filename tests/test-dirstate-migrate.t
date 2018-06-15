@@ -39,7 +39,8 @@
   R removed
   ! deleted
   ? untracked
-  dirstate v2 (using treestate*, offset *, 4 files tracked) (glob)
+  dirstate v2 (using treestate*, offset *, 4 files tracked) (glob) (no-fsmonitor !)
+  dirstate v2 (using treestate*, offset *, 5 files tracked) (glob) (fsmonitor !)
   ==== Migrating dirstate v1 to v0 ====
   M modified
   R removed
@@ -61,13 +62,15 @@
   R removed
   ! deleted
   ? untracked
-  dirstate v2 (using treestate* offset *, 4 files tracked) (glob)
+  dirstate v2 (using treestate*, offset *, 4 files tracked) (glob) (no-fsmonitor !)
+  dirstate v2 (using treestate*, offset *, 5 files tracked) (glob) (fsmonitor !)
   ==== Migrating dirstate v2 to v0 ====
   M modified
   R removed
   ! deleted
   ? untracked
-  dirstate v2 (using treestate*, offset *, 4 files tracked) (glob)
+  dirstate v2 (using treestate*, offset *, 4 files tracked) (glob) (no-fsmonitor !)
+  dirstate v2 (using treestate*, offset *, 5 files tracked) (glob) (fsmonitor !)
   M modified
   R removed
   ! deleted
@@ -78,7 +81,8 @@
   R removed
   ! deleted
   ? untracked
-  dirstate v2 (using treestate*, offset *, 4 files tracked) (glob)
+  dirstate v2 (using treestate*, offset *, 4 files tracked) (glob) (no-fsmonitor !)
+  dirstate v2 (using treestate*, offset *, 5 files tracked) (glob) (fsmonitor !)
   M modified
   R removed
   ! deleted

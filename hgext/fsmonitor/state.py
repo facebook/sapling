@@ -26,22 +26,30 @@ class state(object):
         self._ui = repo.ui
         self._rootdir = pathutil.normasprefix(repo.root)
         self._lastclock = None
-        self._identity = util.filestat(None)
 
         self.mode = self._ui.config("fsmonitor", "mode")
         self.walk_on_invalidate = self._ui.configbool("fsmonitor", "walk_on_invalidate")
         self.timeout = float(self._ui.config("fsmonitor", "timeout"))
+        self._repo = repo
+        self._usetreestate = "treestate" in repo.requirements
+        self._droplist = []
 
     def get(self):
+        """return clock, ignorehash, notefiles"""
+        if self._usetreestate:
+            clock = self._repo.dirstate.getclock()
+            # XXX: ignorehash is already broken, so return None
+            ignorehash = None
+            # note files are already included in nonnormalset, so they will be
+            # processed anyway, do not return a separate notefiles.
+            notefiles = []
+            return clock, ignorehash, notefiles
         try:
             file = self._vfs("fsmonitor.state", "rb")
         except IOError as inst:
-            self._identity = util.filestat(None)
             if inst.errno != errno.ENOENT:
                 raise
             return None, None, None
-
-        self._identity = util.filestat.fromfp(file)
 
         versionbytes = file.read(4)
         if len(versionbytes) < 4:
@@ -104,17 +112,38 @@ class state(object):
 
         return clock, ignorehash, notefiles
 
+    def setdroplist(self, droplist):
+        """set a list of files to be dropped from dirstate upon 'set'.
+
+        This is used to clean up deleted untracked files from treestate, which
+        tracks untracked files.
+        """
+        self._droplist = droplist
+
     def set(self, clock, ignorehash, notefiles):
+        if self._usetreestate:
+            ds = self._repo.dirstate
+            dmap = ds._map
+            changed = bool(self._droplist)
+            for path in self._droplist:
+                dmap.dropfile(path, None, real=True)
+            self._droplist = []
+            for path in notefiles:
+                changed |= ds.needcheck(path)
+            # Avoid updating dirstate frequently if nothing changed.
+            # But do update dirstate if the clock is reset to None, or is
+            # moving away from None.
+            if not clock or changed or not ds.getclock():
+                ds.setclock(clock)
+            return
+
         if clock is None:
             self.invalidate(reason="no_clock")
             return
 
-        # Read the identity from the file on disk rather than from the open file
-        # pointer below, because the latter is actually a brand new file.
-        identity = util.filestat.frompath(self._vfs.join("fsmonitor.state"))
-        if identity != self._identity:
-            self._ui.debug("skip updating fsmonitor.state: identity mismatch\n")
-            return
+        # The code runs with a wlock taken, and dirstate has passed its
+        # identity check. So we can update both dirstate and fsmonitor state.
+        # See _poststatusfixup in context.py
 
         try:
             file = self._vfs("fsmonitor.state", "wb", atomictemp=True, checkambig=True)
@@ -147,7 +176,6 @@ class state(object):
                 raise
         if "fsmonitor_details" in getattr(self._ui, "track", ()):
             self._ui.log("fsmonitor_details", "fsmonitor state invalidated")
-        self._identity = util.filestat(None)
 
     def setlastclock(self, clock):
         if "fsmonitor_details" in getattr(self._ui, "track", ()):
@@ -157,4 +185,4 @@ class state(object):
     def getlastclock(self):
         if "fsmonitor_details" in getattr(self._ui, "track", ()):
             self._ui.log("fsmonitor_details", "getlastclock: %r" % self._lastclock)
-        return self._lastclock
+        self._lastclock
