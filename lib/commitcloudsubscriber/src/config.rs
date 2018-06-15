@@ -69,7 +69,7 @@ pub struct CommitCloudConfig {
     #[serde(default)]
     pub interngraph_url: Option<String>,
 
-    /// Server-Sent Events endpoint for Commit Cloud Live Notifications
+    /// Server-Sent Events endpoint for real-time Commit Cloud Notifications
     #[serde(default)]
     pub streaminggraph_url: Option<String>,
 

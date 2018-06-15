@@ -1,4 +1,3 @@
-use config::CommitCloudConfig;
 use error::*;
 use ini::Ini;
 use std::{fs, io};
@@ -113,9 +112,9 @@ pub fn read_subscriptions(
 
 static TOKEN_FILENAME: &str = ".commitcloudrc";
 
-pub fn read_access_token(config: &CommitCloudConfig) -> Result<String> {
+pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
     // try to read token from file
-    let token = if let Some(ref user_token_path) = config.user_token_path {
+    let token = if let &Some(ref user_token_path) = user_token_path {
         let mut user_token_path = user_token_path.clone();
         user_token_path.push(TOKEN_FILENAME);
         info!(

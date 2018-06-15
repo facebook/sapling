@@ -97,11 +97,11 @@ impl ThrottlingExecutor {
 /// The serve function starts the service
 
 pub struct WorkspaceSubscriberService {
-    /// Server-Sent Events endpoint for Commit Cloud Live Notifications
+    /// Server-Sent Events endpoint for Commit Cloud Notifications
     pub(crate) url: String,
 
-    /// OAuth token valid for Commit Cloud Live Notifications
-    pub(crate) access_token: String,
+    /// OAuth token path (optional) for access to Commit Cloud SSE endpoint
+    pub(crate) user_token_path: Option<PathBuf>,
 
     /// Directory with connected subscribers
     pub(crate) connected_subscribers_path: PathBuf,
@@ -128,7 +128,7 @@ impl WorkspaceSubscriberService {
             url: config.streaminggraph_url.clone().ok_or_else(|| {
                 ErrorKind::CommitCloudConfigError("undefined 'streaminggraph_url'")
             })?,
-            access_token: util::read_access_token(config)?,
+            user_token_path: config.user_token_path.clone(),
             connected_subscribers_path: config.connected_subscribers_path.clone().ok_or_else(
                 || ErrorKind::CommitCloudConfigError("undefined 'connected_subscribers_path'"),
             )?,
@@ -205,18 +205,30 @@ impl WorkspaceSubscriberService {
                         );
                         self.interrupt.store(false, Ordering::Relaxed);
                         // start subscription threads
-                        let subscriptions = self.run_subscriptions()?;
-                        for child in subscriptions {
-                            let _ = child.join();
+                        let access_token = util::read_access_token(&self.user_token_path);
+                        if let Ok(access_token) = access_token {
+                            let subscriptions = self.run_subscriptions(access_token)?;
+                            for child in subscriptions {
+                                let _ = child.join();
+                            }
+                        } else {
+                            info!("User is not authenticated with Commit Cloud yet");
+                            continue;
                         }
                     }
                     Ok(CommitCloudStartSubscriptions) => {
                         info!("Starting subscriptions...");
                         self.interrupt.store(false, Ordering::Relaxed);
+                        let access_token = util::read_access_token(&self.user_token_path);
                         // start subscription threads
-                        let subscriptions = self.run_subscriptions()?;
-                        for child in subscriptions {
-                            let _ = child.join();
+                        if let Ok(access_token) = access_token {
+                            let subscriptions = self.run_subscriptions(access_token)?;
+                            for child in subscriptions {
+                                let _ = child.join();
+                            }
+                        } else {
+                            info!("User is not authenticated with Commit Cloud yet");
+                            continue;
                         }
                     }
                     Err(e) => {
@@ -232,10 +244,12 @@ impl WorkspaceSubscriberService {
     /// It starts all the requested subscriptions by simply runing a separate thread for each one
     /// All threads keep checking the interrupt flag and join gracefully if it is restart or stop
 
-    fn run_subscriptions(&self) -> Result<Vec<thread::JoinHandle<()>>> {
+    fn run_subscriptions(&self, access_token: String) -> Result<Vec<thread::JoinHandle<()>>> {
         util::read_subscriptions(&self.connected_subscribers_path)?
             .into_iter()
-            .map(|(subscription, repo_roots)| self.run_subscription(subscription, repo_roots))
+            .map(|(subscription, repo_roots)| {
+                self.run_subscription(access_token.clone(), subscription, repo_roots)
+            })
             .collect::<Result<Vec<thread::JoinHandle<()>>>>()
     }
 
@@ -243,6 +257,7 @@ impl WorkspaceSubscriberService {
 
     fn run_subscription(
         &self,
+        access_token: String,
         subscription: Subscription,
         repo_roots: Vec<PathBuf>,
     ) -> Result<thread::JoinHandle<()>> {
@@ -254,7 +269,7 @@ impl WorkspaceSubscriberService {
         url.query_pairs_mut()
             .append_pair("workspace", &subscription.workspace)
             .append_pair("repo_name", &subscription.repo_name)
-            .append_pair("access_token", &self.access_token);
+            .append_pair("access_token", &access_token);
 
         let client = Client::new(url);
 
