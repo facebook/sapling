@@ -185,4 +185,4 @@ class state(object):
     def getlastclock(self):
         if "fsmonitor_details" in getattr(self._ui, "track", ()):
             self._ui.log("fsmonitor_details", "getlastclock: %r" % self._lastclock)
-        self._lastclock
+        return self._lastclock
