@@ -155,7 +155,7 @@ def extsetup(ui):
 
 
 def reposetup(ui, repo):
-    if repo.ui.configbool("pushrebase", "blocknonpushrebase"):
+    if isnonpushrebaseblocked(repo):
         repo.ui.setconfig(
             "hooks", "prechangegroup.blocknonpushrebase", blocknonpushrebase
         )
@@ -168,6 +168,10 @@ def reposetup(ui, repo):
     if "bookmarks" not in legexc:
         legexc.append("bookmarks")
     repo.ui.setconfig("devel", "legacy.exchange", legexc, "pushrebase")
+
+
+def isnonpushrebaseblocked(repo):
+    return repo.ui.configbool("pushrebase", "blocknonpushrebase")
 
 
 def blocknonpushrebase(ui, repo, **kwargs):
