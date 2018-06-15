@@ -72,7 +72,7 @@ def prepareargsenv(runtestsdir, port=None):
 def gettestmethod(name, port):
     def runsingletest(self):
         with chdir(self._runtests_dir):
-            args, env = prepareargsenv(self._runtests_dir)
+            args, env = prepareargsenv(self._runtests_dir, port)
             args += os.getenv("HGTEST_RUNTESTS_ARGS", "").split()
             # run run-tests.py for a single test
             p = subprocess.Popen(
