@@ -8,7 +8,7 @@ zstd-sys = "1.4.3"
 
 [dev-dependencies]
 quickcheck = "0.6"
-rand = "0.4"
+rand = "0.5"
 
 [[bin]]
 name = "zstdelta"

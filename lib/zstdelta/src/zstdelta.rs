@@ -143,7 +143,7 @@ pub fn apply(base: &[u8], delta: &[u8]) -> io::Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{ChaChaRng, Rng};
+    use rand::{ChaChaRng, RngCore, SeedableRng};
 
     fn check_round_trip(base: &[u8], data: &[u8]) -> bool {
         let delta = diff(base, data).expect("delta");
@@ -164,7 +164,7 @@ mod tests {
     fn test_delta_efficiency() {
         // 1 MB incompressible random data
         let mut base = vec![0u8; 1000000];
-        ChaChaRng::new_unseeded().fill_bytes(base.as_mut());
+        ChaChaRng::from_seed([0; 32]).fill_bytes(base.as_mut());
         // Change a few bytes
         let mut data = base.clone();
         data[0] ^= 1;
