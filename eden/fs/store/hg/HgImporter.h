@@ -69,7 +69,8 @@ class Importer {
    */
   virtual folly::IOBuf importFileContents(Hash blobHash) = 0;
 
-  virtual void prefetchFiles(const std::vector<Hash>& blobHashes) = 0;
+  virtual void prefetchFiles(
+      const std::vector<std::pair<RelativePath, Hash>>& files) = 0;
 };
 
 /**
@@ -134,7 +135,8 @@ class HgImporter : public Importer {
 
   std::unique_ptr<Tree> importTree(const Hash& id) override;
   folly::IOBuf importFileContents(Hash blobHash) override;
-  void prefetchFiles(const std::vector<Hash>& blobHashes) override;
+  void prefetchFiles(
+      const std::vector<std::pair<RelativePath, Hash>>& files) override;
 
   /**
    * Resolve the manifest node for the specified revision.

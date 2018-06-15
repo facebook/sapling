@@ -623,9 +623,8 @@ IOBuf HgImporter::importFileContents(Hash blobHash) {
   return buf;
 }
 
-void HgImporter::prefetchFiles(const std::vector<Hash>& blobHashes) {
-  auto files = HgProxyHash::getBatch(store_, blobHashes).get();
-
+void HgImporter::prefetchFiles(
+    const std::vector<std::pair<RelativePath, Hash>>& files) {
   sendPrefetchFilesRequest(files);
 
   // Read the response; throws if there was any error.

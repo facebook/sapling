@@ -21,6 +21,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/store/hg/HgImporter.h"
+#include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 using folly::ByteRange;
@@ -153,14 +154,11 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
 
 folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(
     const std::vector<Hash>& ids) const {
-  return folly::via(
-             importThreadPool_.get(),
-             [ids] {
-               getThreadLocalImporter().prefetchFiles(ids);
-               return folly::unit;
-             })
-      // Ensure that the control moves back to the main thread pool
-      // to process the caller-attached .then routine.
+  return HgProxyHash::getBatch(localStore_, ids)
+      .via(importThreadPool_.get())
+      .then([](std::vector<std::pair<RelativePath, Hash>>&& hgPathHashes) {
+        return getThreadLocalImporter().prefetchFiles(hgPathHashes);
+      })
       .via(serverThreadPool_);
 }
 

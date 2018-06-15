@@ -54,7 +54,7 @@ class HgBackingStore : public BackingStore {
   folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
   folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
-  folly::Future<folly::Unit> prefetchBlobs(
+  FOLLY_NODISCARD folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids) const override;
 
  private:

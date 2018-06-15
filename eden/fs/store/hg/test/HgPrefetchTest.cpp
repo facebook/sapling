@@ -16,11 +16,13 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/MemoryLocalStore.h"
-#include "eden/fs/store/hg/HgImporter.h"
+#include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 using namespace facebook::eden;
+using namespace std::chrono_literals;
 using folly::StringPiece;
 using folly::test::TemporaryDirectory;
 using testing::HasSubstr;
@@ -169,14 +171,19 @@ usecunionstore=True
   EXPECT_THAT(
       catOutputs.second, HasSubstr("no remotefilelog server configured"));
 
+  // Build an HgBackingStore for this repository
+  UnboundedQueueThreadPool resultThreadPool(1, "ResultThread");
+  HgBackingStore store(clientRepo.path(), &localStore, &resultThreadPool);
+
   // Now test running prefetch
   // Build a list of file blob IDs to prefetch.
-  HgImporter importer(clientRepo.path(), &localStore);
-  auto rootTreeHash = importer.importManifest(commit2.toString());
-  auto rootTree = importer.importTree(rootTreeHash);
-  auto srcTree = importer.importTree(rootTree->getEntryAt("src"_pc).getHash());
-  auto edenTree = importer.importTree(srcTree->getEntryAt("eden"_pc).getHash());
-  auto fooTree = importer.importTree(rootTree->getEntryAt("foo"_pc).getHash());
+  auto rootTree = store.getTreeForCommit(commit2).get(10s);
+  auto srcTree =
+      store.getTree(rootTree->getEntryAt("src"_pc).getHash()).get(1s);
+  auto edenTree =
+      store.getTree(srcTree->getEntryAt("eden"_pc).getHash()).get(1s);
+  auto fooTree =
+      store.getTree(rootTree->getEntryAt("foo"_pc).getHash()).get(1s);
 
   std::vector<Hash> blobHashes;
   blobHashes.push_back(edenTree->getEntryAt("main.py"_pc).getHash());
@@ -187,8 +194,8 @@ usecunionstore=True
   blobHashes.push_back(fooTree->getEntryAt("bar.txt"_pc).getHash());
   blobHashes.push_back(fooTree->getEntryAt("test.txt"_pc).getHash());
 
-  // Call prefetch
-  importer.prefetchFiles(blobHashes);
+  // Call prefetchBlobs()
+  store.prefetchBlobs(blobHashes).get(10s);
 
   // Running "hg cat" with ssh disabled and no server repo should succeed now
   // that we have prefetched the data.
