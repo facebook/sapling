@@ -108,6 +108,10 @@ class CorruptionException(Exception):
     pass
 
 
+def ishgsqlbypassed(ui):
+    return ui.configbool("hgsql", "bypass")
+
+
 def issqlrepo(repo):
     return repo.ui.configbool("hgsql", "enabled")
 
@@ -117,8 +121,9 @@ def cansyncwithsql(repo):
 
 
 def uisetup(ui):
-    if ui.configbool("hgsql", "bypass"):
+    if ishgsqlbypassed(ui):
         return
+
     wrapfunction(localrepo, "newreporequirements", newreporequirements)
 
     # Enable SQL for local commands that write to the repository.
@@ -171,7 +176,7 @@ def uisetup(ui):
 
 
 def extsetup(ui):
-    if ui.configbool("hgsql", "bypass"):
+    if ishgsqlbypassed(ui):
         return
 
     if ui.configbool("hgsql", "enabled"):
@@ -197,7 +202,7 @@ def extsetup(ui):
 
 
 def reposetup(ui, repo):
-    if ui.configbool("hgsql", "bypass"):
+    if ishgsqlbypassed(ui):
         return
 
     if issqlrepo(repo):
