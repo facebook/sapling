@@ -773,7 +773,8 @@ def _graft(op, rev, mapping, lastdestnode):
     date = rev.date()
     if repo.ui.configbool("pushrebase", "rewritedates"):
         date = (time.time(), date[1])
-    return context.memctx(
+
+    return _commit(
         repo,
         [newp1, newp2],
         rev.description(),
@@ -782,6 +783,21 @@ def _graft(op, rev, mapping, lastdestnode):
         rev.user(),
         date,
         rev.extra(),
+    )
+
+
+def _commit(repo, parents, desc, files, filectx, user, date, extras):
+    """ Make a commit as defined by the passed in parameters in the repository.
+    All the commits created by the pushrebase extension should ideally go
+    through this method.
+
+    This method exists independently so that it can be easily wrapped around by
+    other extensions for modifying the commit metadata before the actual commit
+    operation.
+    """
+
+    return context.memctx(
+        repo, parents, desc, files, filectx, user, date, extras
     ).commit()
 
 
