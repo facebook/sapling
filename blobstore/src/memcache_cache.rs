@@ -13,6 +13,7 @@ use tokio;
 use mononoke_types::BlobstoreBytes;
 
 use Blobstore;
+use CountedBlobstore;
 
 /// A caching layer over an existing blobstore, backed by memcache
 #[derive(Clone)]
@@ -52,12 +53,15 @@ fn mc_raw_put(
 }
 
 impl<T: Blobstore + Clone> MemcacheBlobstore<T> {
-    pub fn new(blobstore: T) -> Self {
-        MemcacheBlobstore {
-            blobstore: blobstore,
-            memcache: MemcacheClient::new(),
-            keygen: KeyGen::new("scm.mononoke.blobstore", MC_CODEVER, MC_SITEVER),
-        }
+    pub fn new(blobstore: T) -> CountedBlobstore<Self> {
+        CountedBlobstore::new(
+            "memcache",
+            MemcacheBlobstore {
+                blobstore: blobstore,
+                memcache: MemcacheClient::new(),
+                keygen: KeyGen::new("scm.mononoke.blobstore", MC_CODEVER, MC_SITEVER),
+            },
+        )
     }
 
     // Turns errors to Ok(None)

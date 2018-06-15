@@ -12,6 +12,7 @@ use asyncmemo::{Asyncmemo, Filler};
 use mononoke_types::BlobstoreBytes;
 
 use Blobstore;
+use CountedBlobstore;
 
 /// A caching layer over an existing blobstore, backed by an in-memory cache layer
 #[derive(Clone)]
@@ -21,10 +22,10 @@ pub struct MemoizedBlobstore<T: Blobstore + Clone> {
 }
 
 impl<T: Blobstore + Clone> MemoizedBlobstore<T> {
-    pub fn new(blobstore: T, entries_limit: usize, bytes_limit: usize) -> Self {
+    pub fn new(blobstore: T, entries_limit: usize, bytes_limit: usize) -> CountedBlobstore<Self> {
         let filler = BlobstoreCacheFiller::new(blobstore.clone());
         let cache = Asyncmemo::with_limits(filler, entries_limit, bytes_limit);
-        MemoizedBlobstore { cache, blobstore }
+        CountedBlobstore::new("in_memory", MemoizedBlobstore { cache, blobstore })
     }
 }
 

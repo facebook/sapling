@@ -15,8 +15,12 @@ extern crate futures;
 extern crate tokio;
 
 extern crate futures_ext;
+#[macro_use]
+extern crate lazy_static;
 extern crate memcache;
 extern crate mononoke_types;
+#[macro_use]
+extern crate stats;
 
 use std::sync::Arc;
 
@@ -25,6 +29,9 @@ use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
 use mononoke_types::BlobstoreBytes;
+
+mod counted_blobstore;
+pub use counted_blobstore::CountedBlobstore;
 
 mod in_memory_cache;
 pub use in_memory_cache::MemoizedBlobstore;
