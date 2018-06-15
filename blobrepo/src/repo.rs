@@ -20,6 +20,7 @@ use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use slog::{Discard, Drain, Logger};
+use stats::Timeseries;
 use time_ext::DurationExt;
 use uuid::Uuid;
 
@@ -49,6 +50,33 @@ use file::{fetch_file_content_and_renames_from_blobstore, fetch_raw_filenode_byt
 use memory_manifest::MemoryRootManifest;
 use repo_commit::*;
 use utils::{get_node_key, RawNodeBlob};
+
+define_stats! {
+    prefix = "mononoke.blobrepo";
+    get_file_content: timeseries(RATE, SUM),
+    get_raw_filenode_content: timeseries(RATE, SUM),
+    get_parents: timeseries(RATE, SUM),
+    get_file_copy: timeseries(RATE, SUM),
+    get_changesets: timeseries(RATE, SUM),
+    get_heads: timeseries(RATE, SUM),
+    changeset_exists: timeseries(RATE, SUM),
+    get_changeset_parents: timeseries(RATE, SUM),
+    get_changeset_by_changesetid: timeseries(RATE, SUM),
+    get_manifest_by_nodeid: timeseries(RATE, SUM),
+    get_root_entry: timeseries(RATE, SUM),
+    get_bookmark: timeseries(RATE, SUM),
+    get_bookmarks: timeseries(RATE, SUM),
+    update_bookmark_transaction: timeseries(RATE, SUM),
+    get_linknode: timeseries(RATE, SUM),
+    get_all_filenodes: timeseries(RATE, SUM),
+    get_generation_number: timeseries(RATE, SUM),
+    upload_blob: timeseries(RATE, SUM),
+    upload_hg_entry: timeseries(RATE, SUM),
+    create_changeset: timeseries(RATE, SUM),
+    create_changeset_compute_cf: timeseries("create_changeset.compute_changed_files"; RATE, SUM),
+    create_changeset_expected_cf: timeseries("create_changeset.expected_changed_files"; RATE, SUM),
+    create_changeset_cf_count: timeseries("create_changeset.changed_files_count"; AVG, SUM),
+}
 
 /// Making PrefixBlobstore part of every blobstore does two things:
 /// 1. It ensures that the prefix applies first, which is important for shared caches like
@@ -289,6 +317,7 @@ impl BlobRepo {
     }
 
     pub fn get_file_content(&self, key: &HgNodeHash) -> BoxFuture<FileContents, Error> {
+        STATS::get_file_content.add_value(1);
         fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
             .map(|contentrename| contentrename.0)
             .boxify()
@@ -297,10 +326,12 @@ impl BlobRepo {
     /// The raw filenode content is crucial for operation like delta application. It is stored in
     /// untouched represenation that came from Mercurial client
     pub fn get_raw_filenode_content(&self, key: &HgNodeHash) -> BoxFuture<BlobstoreBytes, Error> {
+        STATS::get_raw_filenode_content.add_value(1);
         fetch_raw_filenode_bytes(&self.blobstore, *key)
     }
 
     pub fn get_parents(&self, path: &RepoPath, node: &HgNodeHash) -> BoxFuture<HgParents, Error> {
+        STATS::get_parents.add_value(1);
         let path = path.clone();
         let node = HgFileNodeId::new(*node);
         self.filenodes
@@ -324,6 +355,7 @@ impl BlobRepo {
         path: &RepoPath,
         node: &HgNodeHash,
     ) -> BoxFuture<Option<(RepoPath, HgNodeHash)>, Error> {
+        STATS::get_file_copy.add_value(1);
         let path = path.clone();
         let node = HgFileNodeId::new(*node);
         self.filenodes
@@ -343,6 +375,7 @@ impl BlobRepo {
     }
 
     pub fn get_changesets(&self) -> BoxStream<HgNodeHash, Error> {
+        STATS::get_changesets.add_value(1);
         BlobChangesetStream {
             repo: self.clone(),
             state: BCState::Idle,
@@ -352,12 +385,14 @@ impl BlobRepo {
     }
 
     pub fn get_heads(&self) -> impl Stream<Item = HgNodeHash, Error = Error> {
+        STATS::get_heads.add_value(1);
         self.bookmarks
             .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
             .map(|(_, cs)| cs.into_nodehash())
     }
 
     pub fn changeset_exists(&self, changesetid: &HgChangesetId) -> BoxFuture<bool, Error> {
+        STATS::changeset_exists.add_value(1);
         self.changesets
             .get(self.repoid, *changesetid)
             .map(|res| res.is_some())
@@ -368,6 +403,7 @@ impl BlobRepo {
         &self,
         changesetid: &HgChangesetId,
     ) -> BoxFuture<Vec<HgChangesetId>, Error> {
+        STATS::get_changeset_parents.add_value(1);
         let changesetid = *changesetid;
         self.changesets
             .get(self.repoid, changesetid.clone())
@@ -380,6 +416,7 @@ impl BlobRepo {
         &self,
         changesetid: &HgChangesetId,
     ) -> BoxFuture<BlobChangeset, Error> {
+        STATS::get_changeset_by_changesetid.add_value(1);
         let chid = changesetid.clone();
         BlobChangeset::load(&self.blobstore, &chid)
             .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(chid).into()))
@@ -390,6 +427,7 @@ impl BlobRepo {
         &self,
         nodeid: &HgNodeHash,
     ) -> BoxFuture<Box<Manifest + Sync>, Error> {
+        STATS::get_manifest_by_nodeid.add_value(1);
         let nodeid = *nodeid;
         let manifestid = HgManifestId::new(nodeid);
         BlobManifest::load(&self.blobstore, &manifestid)
@@ -399,24 +437,29 @@ impl BlobRepo {
     }
 
     pub fn get_root_entry(&self, manifestid: &HgManifestId) -> Box<Entry + Sync> {
+        STATS::get_root_entry.add_value(1);
         Box::new(HgBlobEntry::new_root(self.blobstore.clone(), *manifestid))
     }
 
     pub fn get_bookmark(&self, name: &Bookmark) -> BoxFuture<Option<HgChangesetId>, Error> {
+        STATS::get_bookmark.add_value(1);
         self.bookmarks.get(name, &self.repoid)
     }
 
     // TODO(stash): rename to get_all_bookmarks()?
     pub fn get_bookmarks(&self) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+        STATS::get_bookmarks.add_value(1);
         self.bookmarks
             .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
     }
 
     pub fn update_bookmark_transaction(&self) -> Box<bookmarks::Transaction> {
+        STATS::update_bookmark_transaction.add_value(1);
         self.bookmarks.create_transaction(&self.repoid)
     }
 
     pub fn get_linknode(&self, path: RepoPath, node: &HgNodeHash) -> BoxFuture<HgNodeHash, Error> {
+        STATS::get_linknode.add_value(1);
         let node = HgFileNodeId::new(*node);
         self.filenodes
             .get_filenode(&path, &node, &self.repoid)
@@ -431,10 +474,12 @@ impl BlobRepo {
     }
 
     pub fn get_all_filenodes(&self, path: RepoPath) -> BoxFuture<Vec<FilenodeInfo>, Error> {
+        STATS::get_all_filenodes.add_value(1);
         self.filenodes.get_all_filenodes(&path, &self.repoid)
     }
 
     pub fn get_generation_number(&self, cs: &HgChangesetId) -> BoxFuture<Option<u64>, Error> {
+        STATS::get_generation_number.add_value(1);
         self.changesets
             .get(self.repoid, *cs)
             .map(|res| res.map(|res| res.gen))
@@ -445,6 +490,7 @@ impl BlobRepo {
     where
         Id: MononokeId,
     {
+        STATS::upload_blob.add_value(1);
         let id = blob.id().clone();
         let blobstore_key = id.blobstore_key();
 
@@ -565,6 +611,7 @@ impl UploadHgEntry {
         blobstore: &RepoBlobstore,
         logger: &Logger,
     ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
+        STATS::upload_hg_entry.add_value(1);
         let UploadHgEntry {
             upload_nodeid,
             raw_content,
@@ -715,6 +762,7 @@ pub struct CreateChangeset {
 
 impl CreateChangeset {
     pub fn create(self, repo: &BlobRepo) -> ChangesetHandle {
+        STATS::create_changeset.add_value(1);
         let entry_processor = UploadEntries::new(repo.blobstore.clone(), repo.repoid.clone());
         let (signal_parent_ready, can_be_parent) = oneshot::channel();
         // This is used for logging, so that we can tie up all our pieces without knowing about
@@ -752,10 +800,12 @@ impl CreateChangeset {
 
                     move |((root_manifest, root_hash), (parents, p1_manifest, p2_manifest))| {
                         let files = if let Some(expected_files) = expected_files {
+                            STATS::create_changeset_expected_cf.add_value(1);
                             // We are trusting the callee to provide a list of changed files, used
                             // by the import job
                             future::ok(expected_files).boxify()
                         } else {
+                            STATS::create_changeset_compute_cf.add_value(1);
                             compute_changed_files(
                                 &root_manifest,
                                 p1_manifest.as_ref(),
@@ -767,6 +817,8 @@ impl CreateChangeset {
                             .context("While computing changed files")
                             .and_then({
                                 move |files| {
+                                    STATS::create_changeset_cf_count.add_value(files.len() as i64);
+
                                     let fut: BoxFuture<
                                         BlobChangeset,
                                         Error,

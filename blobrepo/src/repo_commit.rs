@@ -16,6 +16,7 @@ use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use slog::Logger;
+use stats::Timeseries;
 use time_ext::DurationExt;
 use uuid::Uuid;
 
@@ -36,6 +37,18 @@ use errors::*;
 use file::HgBlobEntry;
 use repo::RepoBlobstore;
 use utils::get_node_key;
+
+define_stats! {
+    prefix = "mononoke.blobrepo_commit";
+    process_file_entry: timeseries(RATE, SUM),
+    process_tree_entry: timeseries(RATE, SUM),
+    finalize_required: timeseries(RATE, AVG, SUM),
+    finalize_required_found: timeseries(RATE, AVG, SUM),
+    finalize_required_uploading: timeseries(RATE, AVG, SUM),
+    finalize_parent: timeseries(RATE, AVG, SUM),
+    finalize_uploaded: timeseries(RATE, AVG, SUM),
+    finalize_compute_copy_from_info: timeseries(RATE, SUM),
+}
 
 /// A handle to a possibly incomplete BlobChangeset. This is used instead of
 /// Future<Item = BlobChangeset> where we don't want to fully serialize waiting for completion.
@@ -223,6 +236,7 @@ impl UploadEntries {
         }
 
         let (err_context, fut) = if entry.get_type() == manifest::Type::Tree {
+            STATS::process_tree_entry.add_value(1);
             (
                 format!(
                     "While processing manifest with id {} and path {}",
@@ -232,6 +246,7 @@ impl UploadEntries {
                 self.process_manifest(entry, path),
             )
         } else {
+            STATS::process_file_entry.add_value(1);
             (
                 format!(
                     "While processing file with id {} and path {}",
@@ -248,6 +263,8 @@ impl UploadEntries {
     pub fn finalize(self, filenodes: Arc<Filenodes>, cs_id: HgNodeHash) -> BoxFuture<(), Error> {
         let required_checks = {
             let inner = self.inner.lock().expect("Lock poisoned");
+            let required_len = inner.required_entries.len();
+
             let checks: Vec<_> = inner
                 .required_entries
                 .iter()
@@ -267,6 +284,10 @@ impl UploadEntries {
                     }
                 })
                 .collect();
+
+            STATS::finalize_required.add_value(required_len as i64);
+            STATS::finalize_required_found.add_value((required_len - checks.len()) as i64);
+            STATS::finalize_required_uploading.add_value(checks.len() as i64);
 
             future::join_all(checks).boxify()
         };
@@ -289,12 +310,17 @@ impl UploadEntries {
                 })
                 .collect();
 
+            STATS::finalize_parent.add_value(checks.len() as i64);
+
             future::join_all(checks).boxify()
         };
 
         let filenodes = {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             let uploaded_entries = mem::replace(&mut inner.uploaded_entries, HashMap::new());
+
+            STATS::finalize_uploaded.add_value(uploaded_entries.len() as i64);
+
             let filenodeinfos =
                 stream::futures_unordered(uploaded_entries.into_iter().map(|(path, blobentry)| {
                     blobentry.get_parents().and_then(move |parents| {
@@ -329,25 +355,28 @@ fn compute_copy_from_info(
 ) -> BoxFuture<Option<(RepoPath, HgFileNodeId)>, Error> {
     let parents = parents.clone();
     match path {
-        &RepoPath::FilePath(_) => blobentry
-            .get_raw_content()
-            .and_then({
-                let parents = parents.clone();
-                move |blob| {
-                    // XXX this is broken -- parents.get_nodes() will never return
-                    // (None, Some(hash)), which is what BlobNode relies on to figure out
-                    // whether a node is copied.
-                    let (p1, p2) = parents.get_nodes();
-                    file::File::new(blob, p1, p2)
-                        .copied_from()
-                        .map(|copiedfrom| {
-                            copiedfrom.map(|(path, node)| {
-                                (RepoPath::FilePath(path), HgFileNodeId::new(node))
+        &RepoPath::FilePath(_) => {
+            STATS::finalize_compute_copy_from_info.add_value(1);
+            blobentry
+                .get_raw_content()
+                .and_then({
+                    let parents = parents.clone();
+                    move |blob| {
+                        // XXX this is broken -- parents.get_nodes() will never return
+                        // (None, Some(hash)), which is what BlobNode relies on to figure out
+                        // whether a node is copied.
+                        let (p1, p2) = parents.get_nodes();
+                        file::File::new(blob, p1, p2)
+                            .copied_from()
+                            .map(|copiedfrom| {
+                                copiedfrom.map(|(path, node)| {
+                                    (RepoPath::FilePath(path), HgFileNodeId::new(node))
+                                })
                             })
-                        })
-                }
-            })
-            .boxify(),
+                    }
+                })
+                .boxify()
+        }
         &RepoPath::RootPath | &RepoPath::DirectoryPath(_) => {
             // No copy information for directories/repo roots
             Ok(None).into_future().boxify()
