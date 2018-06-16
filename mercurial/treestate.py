@@ -74,6 +74,7 @@ class treestatemap(object):
     """
 
     def __init__(self, ui, vfs, root, importdirstate=None):
+        self._filename = None
         self._ui = ui
         self._vfs = vfs
         self._root = root
@@ -114,8 +115,7 @@ class treestatemap(object):
         self._parents = (node.nullid, node.nullid)
 
         # use a new file
-        self._filename = "%s" % uuid.uuid4()
-        path = self._vfs.join("treestate", self._filename)
+        path = self._setfilename()
         self._tree = treestate.treestate(path, self._rootid)
 
     def iteritems(self):
@@ -279,9 +279,8 @@ class treestatemap(object):
         self._parents = (p1, p2)
         self._threshold = threshold
         self._rootid = rootid
-        self._filename = filename
 
-        path = self._vfs.join("treestate", filename)
+        path = self._setfilename(filename)
         tree = treestate.treestate(path, rootid)
 
         # Double check p1 p2 against metadata stored in the tree. This is
@@ -301,6 +300,17 @@ class treestatemap(object):
             clock = ""
         self._clock = clock
         self._tree = tree
+
+    def _setfilename(self, filename=None):
+        """Return absolute path to the raw treestate file.
+        If filename is None, generate it randomly.
+        """
+        if filename is None:
+            filename = "%s" % uuid.uuid4()
+            assert self._filename != filename
+        self._filename = filename
+        path = self._vfs.join("treestate", self._filename)
+        return path
 
     def write(self, st, now):
         # write .hg/treestate/<uuid>
