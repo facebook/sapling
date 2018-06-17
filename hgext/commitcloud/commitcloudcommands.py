@@ -640,3 +640,11 @@ def recordbackup(ui, repo, newheads):
 
 def autosyncenabled(ui, _repo):
     return infinitepushbackup is not None and infinitepushbackup.autobackupenabled(ui)
+
+
+def backuplockcheck(ui, repo):
+    try:
+        lockmod.trylock(ui, repo.vfs, _backuplockname, 0, 0)
+    except error.LockHeld as e:
+        if e.locker.isrunning():
+            highlightstatus(ui, _("background cloud sync is in progress"))

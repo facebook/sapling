@@ -312,7 +312,8 @@ class SubscriptionManager(object):
         commitcloudcommon.highlightstatus(
             self.ui,
             _(
-                "warning: scm daemon is not running and fully automated synchronization may not work\n"
+                "warning: scm daemon is not running and automatic synchronization may not work\n"
+                "run `hg cloud sync` manually if your workspace is not synchronized\n"
                 "please contact %s if this warning persists\n"
             )
             % commitcloudcommon.getownerteam(self.ui),
