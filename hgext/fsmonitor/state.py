@@ -121,6 +121,12 @@ class state(object):
         self._droplist = droplist
 
     def set(self, clock, ignorehash, notefiles):
+        if "fsmonitor_details" in getattr(self._ui, "track", ()):
+            self._ui.log(
+                "fsmonitor_details",
+                "set clock, notefiles = %r, %r" % (clock, notefiles),
+            )
+
         if self._usetreestate:
             ds = self._repo.dirstate
             dmap = ds._map
@@ -150,12 +156,6 @@ class state(object):
         except (IOError, OSError):
             self._ui.warn(_("warning: unable to write out fsmonitor state\n"))
             return
-
-        if "fsmonitor_details" in getattr(self._ui, "track", ()):
-            self._ui.log(
-                "fsmonitor_details",
-                "set clock, notefiles = %r, %r" % (clock, notefiles),
-            )
 
         with file:
             file.write(struct.pack(_versionformat, _version))
