@@ -95,7 +95,7 @@ fn run_hook(
     println!("Hook code is {}", code);
     println!("==============================");
 
-    let mut hook_manager = HookManager::new(repo.clone());
+    let mut hook_manager = HookManager::new(repo_name, repo.clone(), 1024, 1024 * 1024);
     let hook = LuaHook {
         name: String::from("testhook"),
         code,
@@ -104,7 +104,7 @@ fn run_hook(
 
     match HgChangesetId::from_str(revstr) {
         Ok(id) => hook_manager
-            .run_hooks(repo_name.to_string(), id)
+            .run_hooks(id)
             .map(|executions| executions.get("testhook").unwrap().clone())
             .boxify(),
         Err(e) => Box::new(failed(e)),

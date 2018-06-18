@@ -21,6 +21,7 @@ pub extern crate lua52_sys as ffi;
 extern crate assert_matches;
 #[cfg(test)]
 extern crate async_unit;
+extern crate asyncmemo;
 extern crate blobrepo;
 #[macro_use]
 extern crate failure_ext as failure;
@@ -39,22 +40,25 @@ extern crate tokio_core;
 pub mod lua_hook;
 pub mod rust_hook;
 
+use asyncmemo::{Asyncmemo, Filler, Weight};
 use blobrepo::{BlobChangeset, BlobRepo};
 use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, HgParents};
 use std::collections::HashMap;
-use std::collections::hash_map::Iter;
+use std::collections::hash_map::IntoIter;
 use std::convert::TryFrom;
+use std::mem;
 use std::str;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+type Hooks = Arc<Mutex<HashMap<String, Arc<Hook>>>>;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
 /// Knows how to run hooks
 pub struct HookManager {
-    hooks: HashMap<String, Arc<Hook>>,
-    repo: BlobRepo,
+    cache: Asyncmemo<HookCacheFiller>,
+    hooks: Hooks,
 }
 
 /// Represents the status of a (non error) hook run
@@ -64,12 +68,27 @@ pub enum HookExecution {
     Rejected(HookRejectionInfo),
 }
 
+impl Weight for HookExecution {
+    fn get_weight(&self) -> usize {
+        match self {
+            HookExecution::Accepted => mem::size_of::<Self>(),
+            HookExecution::Rejected(info) => mem::size_of::<Self>() + info.get_weight(),
+        }
+    }
+}
+
 /// Information on why the hook rejected the changeset
 #[derive(Clone, Debug, PartialEq)]
 pub struct HookRejectionInfo {
     pub description: String,
     pub long_description: String,
     // TODO more fields
+}
+
+impl Weight for HookRejectionInfo {
+    fn get_weight(&self) -> usize {
+        mem::size_of::<Self>() + self.description.get_weight() + self.long_description.get_weight()
+    }
 }
 
 impl HookRejectionInfo {
@@ -81,6 +100,42 @@ impl HookRejectionInfo {
     }
 }
 
+struct HookCacheFiller {
+    repo_name: String,
+    hooks: Hooks,
+    repo: BlobRepo,
+}
+
+impl Filler for HookCacheFiller {
+    type Key = (String, HgChangesetId); // (hook_name, hash)
+    type Value = BoxFuture<HookExecution, Error>;
+
+    fn fill(&self, _cache: &Asyncmemo<Self>, key: &Self::Key) -> Self::Value {
+        let hook_name = key.0.clone();
+        let changeset_id = key.1;
+        let hooks = self.hooks.lock().unwrap();
+        let repo_name = self.repo_name.clone();
+        match hooks.get(&hook_name) {
+            Some(arc_hook) => {
+                let arc_hook = arc_hook.clone();
+                self.repo
+                    .get_changeset_by_changesetid(&changeset_id)
+                    .then(|res| match res {
+                        Ok(cs) => HookChangeset::try_from(cs),
+                        Err(e) => Err(e),
+                    })
+                    .and_then(move |hcs| {
+                        let hook_context =
+                            HookContext::new(hook_name.clone(), repo_name, Arc::new(hcs));
+                        arc_hook.run(hook_context)
+                    })
+                    .boxify()
+            }
+            None => panic!("Can't find hook"), // TODO
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 struct HookExecutionHolder {
     hook_name: String,
@@ -88,41 +143,46 @@ struct HookExecutionHolder {
 }
 
 impl HookManager {
-    pub fn new(repo: BlobRepo) -> HookManager {
-        HookManager {
-            hooks: HashMap::new(),
-            repo: repo,
-        }
+    pub fn new(
+        repo_name: String,
+        repo: BlobRepo,
+        entrylimit: usize,
+        weightlimit: usize,
+    ) -> HookManager {
+        let hooks = Arc::new(Mutex::new(HashMap::new()));
+        let filler = HookCacheFiller {
+            hooks: hooks.clone(),
+            repo,
+            repo_name,
+        };
+        let cache = Asyncmemo::with_limits(filler, entrylimit, weightlimit);
+        HookManager { cache, hooks }
     }
 
     pub fn install_hook(&mut self, hook_name: &str, hook: Arc<Hook>) {
-        self.hooks.insert(hook_name.to_string(), hook);
+        let mut hooks = self.hooks.lock().unwrap();
+        hooks.insert(hook_name.to_string(), hook);
     }
 
     pub fn uninstall_hook(&mut self, hook_name: &str) {
-        self.hooks.remove(hook_name);
+        let mut hooks = self.hooks.lock().unwrap();
+        hooks.remove(hook_name);
     }
 
-    pub fn iter(&self) -> Iter<String, Arc<Hook>> {
-        self.hooks.iter()
+    pub fn iter(&self) -> IntoIter<String, Arc<Hook>> {
+        let hooks = self.hooks.lock().unwrap();
+        let cloned = hooks.clone();
+        cloned.into_iter()
     }
 
     pub fn run_hooks(
         &self,
-        repo_name: String,
         changeset_id: HgChangesetId,
     ) -> BoxFuture<HashMap<String, HookExecution>, Error> {
-        // Run all hooks, potentially in parallel (depending on hook implementation)
-        let v: Vec<BoxFuture<HookExecutionHolder, _>> = self.hooks
+        let hooks = self.hooks.lock().unwrap();
+        let v: Vec<BoxFuture<HookExecutionHolder, _>> = hooks
             .iter()
-            .map(|(hook_name, hook)| {
-                self.run_hook(
-                    hook_name.to_string(),
-                    hook.clone(),
-                    repo_name.clone(),
-                    changeset_id.clone(),
-                )
-            })
+            .map(|(hook_name, _)| self.run_hook(hook_name.to_string(), changeset_id.clone()))
             .collect();
         futures::future::join_all(v)
             .map(|v| {
@@ -138,21 +198,11 @@ impl HookManager {
     fn run_hook(
         &self,
         hook_name: String,
-        hook: Arc<Hook>,
-        repo_name: String,
         changeset_id: HgChangesetId,
     ) -> BoxFuture<HookExecutionHolder, Error> {
         let hook_name2 = hook_name.clone();
-        self.repo
-            .get_changeset_by_changesetid(&changeset_id)
-            .then(|res| match res {
-                Ok(cs) => HookChangeset::try_from(cs),
-                Err(e) => Err(e),
-            })
-            .and_then(move |hcs| {
-                let hook_context = HookContext::new(hook_name.clone(), repo_name, Arc::new(hcs));
-                hook.run(hook_context)
-            })
+        self.cache
+            .get((hook_name.to_string(), changeset_id.clone()))
             .map(move |hook_execution| HookExecutionHolder {
                 hook_name: hook_name2,
                 hook_execution,
@@ -282,9 +332,8 @@ mod test {
             hook_manager.install_hook("testhook2", Arc::new(hook2));
             let change_set_id =
                 HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
-            let repo_name = String::from("some-repo");
             let fut: BoxFuture<HashMap<String, HookExecution>, Error> =
-                hook_manager.run_hooks(repo_name, change_set_id);
+                hook_manager.run_hooks(change_set_id);
             let res = fut.wait();
             match res {
                 Ok(map) => {
@@ -297,6 +346,37 @@ mod test {
                 Err(e) => {
                     println!("Failed to run hook {}", e);
                     assert!(false); // Just fail
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn test_run_twice() {
+        async_unit::tokio_unit_test(|| {
+            let mut hook_manager = hook_manager();
+            let hook1 = TestHook {
+                expected_execution: HookExecution::Accepted,
+            };
+            let hook1_expected = hook1.expected_execution.clone();
+            hook_manager.install_hook("testhook1", Arc::new(hook1));
+
+            for _ in 0..2 {
+                let change_set_id =
+                    HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
+                let fut: BoxFuture<HashMap<String, HookExecution>, Error> =
+                    hook_manager.run_hooks(change_set_id);
+                let res = fut.wait();
+                match res {
+                    Ok(map) => {
+                        assert_eq!(map.len(), 1);
+                        let hook_execution = map.get("testhook1").unwrap();
+                        assert_eq!(hook1_expected, *hook_execution);
+                    }
+                    Err(e) => {
+                        println!("Failed to run hook {}", e);
+                        assert!(false); // Just fail
+                    }
                 }
             }
         });
@@ -353,7 +433,7 @@ mod test {
 
     fn hook_manager() -> HookManager {
         let repo = linear::getrepo(None);
-        HookManager::new(repo)
+        HookManager::new("some_repo".into(), repo, 1024, 1024 * 1024)
     }
 
 }
