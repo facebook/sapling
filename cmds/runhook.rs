@@ -13,52 +13,54 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
+extern crate blobrepo;
+extern crate blobstore;
 extern crate clap;
 extern crate failure_ext as failure;
 extern crate futures;
-extern crate tokio_core;
-
-extern crate blobrepo;
-extern crate blobstore;
 #[macro_use]
 extern crate futures_ext;
+extern crate hooks;
 extern crate manifoldblob;
 extern crate mercurial_types;
-
 extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
 extern crate slog_glog_fmt;
+extern crate tokio_core;
 
 #[cfg(test)]
+extern crate async_unit;
+#[cfg(test)]
+extern crate linear;
+#[cfg(test)]
 extern crate tempdir;
-
-extern crate hooks;
-
-use hooks::{HookChangeset, HookExecution, HookManager};
-use hooks::lua_hook::LuaHook;
-use std::convert::TryFrom;
-use std::str;
-use std::str::FromStr;
-use std::sync::Arc;
 
 use blobrepo::{BlobChangeset, BlobRepo};
 use clap::{App, ArgMatches};
 use failure::{Error, Result};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use hooks::{HookChangeset, HookExecution, HookManager};
+use hooks::lua_hook::LuaHook;
 use mercurial_types::{HgChangesetId, RepositoryId};
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
-use tokio_core::reactor::Core;
-
+use std::convert::TryFrom;
 use std::env::args;
 use std::fs::File;
 use std::io::prelude::*;
+use std::str;
+use std::str::FromStr;
+use std::sync::Arc;
+use tokio_core::reactor::Core;
 
 const MAX_CONCURRENT_REQUESTS_PER_IO_THREAD: usize = 4;
 
-fn run_hook(args: Vec<String>) -> Result<HookExecution> {
+fn run_hook(
+    args: Vec<String>,
+    repo_creator: fn(&Logger, &ArgMatches) -> BlobRepo,
+) -> BoxFuture<HookExecution, Error> {
     // Define command line args and parse command line
     let matches = App::new("runhook")
         .version("0.0.0")
@@ -81,15 +83,10 @@ fn run_hook(args: Vec<String>) -> Result<HookExecution> {
         slog::Logger::root(drain, o![])
     };
 
-    let repo_name = matches.value_of("REPO_NAME").unwrap();
+    let repo_name = String::from(matches.value_of("REPO_NAME").unwrap());
     let hook_file = matches.value_of("HOOK_FILE").unwrap();
     let revstr = matches.value_of("REV").unwrap();
-
-    let repo = create_blobrepo(&logger, &matches);
-    let future = fetch_changeset(Arc::new(repo), revstr);
-    let mut core = Core::new().unwrap();
-    let changeset = core.run(future).unwrap();
-    let hook_cs = HookChangeset::try_from(changeset)?;
+    let repo = repo_creator(&logger, &matches);
 
     let mut file = File::open(hook_file).expect("Unable to open the hook file");
     let mut code = String::new();
@@ -99,7 +96,6 @@ fn run_hook(args: Vec<String>) -> Result<HookExecution> {
     println!("Repository name is {}", repo_name);
     println!("Hook file is {} revision is {:?}", hook_file, revstr);
     println!("Hook code is {}", code);
-    println!("Changeset author: {:?} ", hook_cs.author);
     println!("==============================");
 
     let mut hook_manager = HookManager::new();
@@ -108,10 +104,15 @@ fn run_hook(args: Vec<String>) -> Result<HookExecution> {
         code,
     };
     hook_manager.install_hook("testhook", Arc::new(hook));
-    let fut = hook_manager
-        .run_hooks(repo_name.to_string(), Arc::new(hook_cs))
-        .map(|executions| executions.get("testhook").unwrap().clone());
-    core.run(fut)
+
+    fetch_changeset(Arc::new(repo), revstr)
+        .then(|res| match res {
+            Ok(cs) => HookChangeset::try_from(cs),
+            Err(e) => Err(e),
+        })
+        .and_then(move |hcs| hook_manager.run_hooks(repo_name.to_string(), Arc::new(hcs)))
+        .map(|executions| executions.get("testhook").unwrap().clone())
+        .boxify()
 }
 
 fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
@@ -146,7 +147,9 @@ fn fetch_changeset(repo: Arc<BlobRepo>, rev: &str) -> BoxFuture<BlobChangeset, E
 // It all starts here
 fn main() -> Result<()> {
     let args_vec = args().collect();
-    match run_hook(args_vec) {
+    let fut = run_hook(args_vec, create_blobrepo);
+    let mut core = Core::new().unwrap();
+    match core.run(fut) {
         Ok(HookExecution::Accepted) => println!("Hook accepted the changeset"),
         Ok(HookExecution::Rejected(rejection_info)) => {
             println!("Hook rejected the changeset {}", rejection_info.description)
@@ -160,43 +163,46 @@ fn main() -> Result<()> {
 mod test {
     use super::*;
 
+    use linear;
     use std::fs::File;
     use tempdir::TempDir;
 
     #[test]
     fn test_hook_accepted() {
-        let code = String::from(
-            "hook = function (info, files)\n\
-             return info.author == \"Tim Fox <tfox@fb.com>\"\n\
-             end",
-        );
-        let changeset_id = String::from("50f849250f42436ee0db142aab721a12b7d95672");
-        let f = |execution| match execution {
-            Ok(HookExecution::Accepted) => (),
-            Ok(HookExecution::Rejected(rejection_info)) => {
-                assert!(rejection_info.description.starts_with("iuwehuweh"))
-            }
-            _ => assert!(false),
-        };
-        test_hook(code, changeset_id, &f);
+        async_unit::tokio_unit_test(|| {
+            let code = String::from(
+                "hook = function (info, files)\n\
+                 return info.author == \"Jeremy Fitzhardinge <jsgf@fb.com>\"\n\
+                 end",
+            );
+            let changeset_id = String::from("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+            let f = |execution| match execution {
+                Ok(HookExecution::Accepted) => (),
+                Ok(HookExecution::Rejected(_)) => assert!(false, "Hook should be accepted"),
+                Err(e) => assert!(false, format!("Unexpected error {:?}", e)),
+            };
+            test_hook(code, changeset_id, &f);
+        });
     }
 
     #[test]
     fn test_hook_rejected() {
-        let code = String::from(
-            "hook = function (info, files)\n\
-             return info.author == \"Mahatma Ghandi\"\n\
-             end",
-        );
-        let changeset_id = String::from("50f849250f42436ee0db142aab721a12b7d95672");
-        let f = |execution| match execution {
-            Ok(HookExecution::Accepted) => assert!(false),
-            Ok(HookExecution::Rejected(rejection_info)) => {
-                assert!(rejection_info.description.starts_with("short desc"))
-            }
-            _ => assert!(false),
-        };
-        test_hook(code, changeset_id, &f);
+        async_unit::tokio_unit_test(|| {
+            let code = String::from(
+                "hook = function (info, files)\n\
+                 return info.author == \"Mahatma Ghandi\"\n\
+                 end",
+            );
+            let changeset_id = String::from("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+            let f = |execution| match execution {
+                Ok(HookExecution::Accepted) => assert!(false, "Hook should be rejected"),
+                Ok(HookExecution::Rejected(rejection_info)) => {
+                    assert!(rejection_info.description.starts_with("short desc"))
+                }
+                Err(e) => assert!(false, format!("Unexpected error {:?}", e)),
+            };
+            test_hook(code, changeset_id, &f);
+        });
     }
 
     fn test_hook(code: String, changeset_id: String, f: &Fn(Result<HookExecution>) -> ()) {
@@ -210,7 +216,13 @@ mod test {
             file_path.to_str().unwrap().into(),
             changeset_id,
         ];
-        f(run_hook(args));
+        let fut = run_hook(args, test_blobrepo);
+        let result = fut.wait();
+        f(result);
+    }
+
+    fn test_blobrepo(_logger: &Logger, _matches: &ArgMatches) -> BlobRepo {
+        linear::getrepo(None)
     }
 
 }
