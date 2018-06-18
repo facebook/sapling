@@ -29,7 +29,6 @@ use rand::Isaac64Rng;
 use rand::distributions::{Distribution, LogNormal};
 use scuba::{ScubaClient, ScubaSample};
 use time_ext::DurationExt;
-use tokio_core::reactor::Remote;
 
 use slog::{self, Drain, Logger};
 use slog_scuba::ScubaDrain;
@@ -78,7 +77,6 @@ pub fn init_repo(
     parent_logger: &Logger,
     repotype: &RepoType,
     cache_size: usize,
-    remote: &Remote,
     repoid: RepositoryId,
     scuba_table: Option<String>,
 ) -> Result<(PathBuf, MononokeRepo)> {
@@ -86,14 +84,8 @@ pub fn init_repo(
 
     let mut sock = repopath.join(".hg");
 
-    let repo = MononokeRepo::new(
-        parent_logger,
-        repotype,
-        cache_size,
-        remote,
-        repoid,
-        scuba_table,
-    ).with_context(|_| format!("Failed to initialize repo {:?}", repopath))?;
+    let repo = MononokeRepo::new(parent_logger, repotype, cache_size, repoid, scuba_table)
+        .with_context(|_| format!("Failed to initialize repo {:?}", repopath))?;
 
     sock.push("mononoke.sock");
 
@@ -106,12 +98,12 @@ struct LogNormalGenerator {
 }
 
 pub trait OpenableRepoType {
-    fn open(&self, logger: Logger, remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo>;
+    fn open(&self, logger: Logger, repoid: RepositoryId) -> Result<BlobRepo>;
     fn path(&self) -> &Path;
 }
 
 impl OpenableRepoType for RepoType {
-    fn open(&self, logger: Logger, _remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo> {
+    fn open(&self, logger: Logger, repoid: RepositoryId) -> Result<BlobRepo> {
         use hgproto::ErrorKind;
         use metaconfig::repoconfig::RepoType::*;
 
@@ -213,12 +205,11 @@ fn add_common_stats_and_send_to_scuba(
     scuba: Option<Arc<ScubaClient>>,
     mut sample: ScubaSample,
     stats: Stats,
-    remote: Remote,
     args: Option<String>,
 ) -> BoxFuture<(), ()> {
     let trace_upload = if futures_trace::global::is_enabled() {
         futures_trace::global::context()
-            .upload_trace_async(remote)
+            .upload_trace_async()
             .map(|id| Some(id))
             .boxify()
     } else {
@@ -260,7 +251,6 @@ pub struct MononokeRepo {
     blobrepo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,
     scuba: Option<Arc<ScubaClient>>,
-    remote: Remote,
 }
 
 fn wireprotocaps() -> Vec<String> {
@@ -334,7 +324,6 @@ impl MononokeRepo {
         parent_logger: &Logger,
         repo: &RepoType,
         cache_size: usize,
-        remote: &Remote,
         repoid: RepositoryId,
         scuba_table: Option<String>,
     ) -> Result<Self> {
@@ -353,13 +342,12 @@ impl MononokeRepo {
 
         Ok(MononokeRepo {
             path: format!("{}", path.display()),
-            blobrepo: Arc::new(repo.open(logger, remote, repoid)?),
+            blobrepo: Arc::new(repo.open(logger, repoid)?),
             repo_generation: RepoGenCache::new(cache_size),
             scuba: match scuba_table {
                 Some(name) => Some(Arc::new(ScubaClient::new(name))),
                 None => None,
             },
-            remote: remote.clone(),
         })
     }
 
@@ -612,7 +600,6 @@ impl HgCommands for RepoClient {
 
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::BETWEEN);
-        let remote = self.repo.remote.clone();
 
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
@@ -634,9 +621,7 @@ impl HgCommands for RepoClient {
                     .collect()
             })
             .collect()
-            .timed(move |stats, _| {
-                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
-            })
+            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
             .boxify()
     }
 
@@ -647,7 +632,6 @@ impl HgCommands for RepoClient {
         let logger = self.logger.clone();
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::HEADS);
-        let remote = self.repo.remote.clone();
         self.repo
             .blobrepo
             .get_heads()
@@ -655,9 +639,7 @@ impl HgCommands for RepoClient {
             .map(|v| v.into_iter().collect())
             .from_err()
             .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
-            .timed(move |stats, _| {
-                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
-            })
+            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
             .boxify()
     }
 
@@ -668,7 +650,6 @@ impl HgCommands for RepoClient {
         let repo = self.repo.blobrepo.clone();
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::LOOKUP);
-        let remote = self.repo.remote.clone();
         HgNodeHash::from_str(&key)
             .into_future()
             .and_then(move |node| {
@@ -694,9 +675,7 @@ impl HgCommands for RepoClient {
                     Ok(buf.freeze())
                 }
             })
-            .timed(move |stats, _| {
-                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
-            })
+            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
             .boxify()
     }
 
@@ -710,15 +689,12 @@ impl HgCommands for RepoClient {
         let blobrepo = self.repo.blobrepo.clone();
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::KNOWN);
-        let remote = self.repo.remote.clone();
 
         future::join_all(
             nodes
                 .into_iter()
                 .map(move |node| blobrepo.changeset_exists(&HgChangesetId::new(node))),
-        ).timed(move |stats, _| {
-            add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
-        })
+        ).timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
             .boxify()
     }
 
@@ -728,14 +704,11 @@ impl HgCommands for RepoClient {
 
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::GETBUNDLE);
-        let remote = self.repo.remote.clone();
 
         match self.create_bundle(args) {
             Ok(res) => res,
             Err(err) => Err(err).into_future().boxify(),
-        }.timed(move |stats, _| {
-            add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
-        })
+        }.timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
             .boxify()
     }
 
@@ -750,11 +723,8 @@ impl HgCommands for RepoClient {
 
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::HELLO);
-        let remote = self.repo.remote.clone();
         future::ok(res)
-            .timed(move |stats, _| {
-                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
-            })
+            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
             .boxify()
     }
 
@@ -801,12 +771,9 @@ impl HgCommands for RepoClient {
 
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::UNBUNDLE);
-        let remote = self.repo.remote.clone();
 
         res.traced_global("unbundle", trace_args!())
-            .timed(move |stats, _| {
-                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, None)
-            })
+            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
             .boxify()
     }
 
@@ -814,7 +781,6 @@ impl HgCommands for RepoClient {
     fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
         let scuba = self.repo.scuba.clone();
         let sample = self.repo.scuba_sample(ops::GETTREEPACK);
-        let remote = self.repo.remote.clone();
 
         self.gettreepack_untimed(params.clone())
             .timed(move |stats, _| {
@@ -825,7 +791,7 @@ impl HgCommands for RepoClient {
                     format_nodes_list(params.basemfnodes),
                     format_utf8_bytes_list(params.directories),
                 );
-                add_common_stats_and_send_to_scuba(scuba, sample, stats, remote, Some(args))
+                add_common_stats_and_send_to_scuba(scuba, sample, stats, Some(args))
             })
             .boxify()
     }
@@ -852,7 +818,6 @@ impl HgCommands for RepoClient {
                             repo.scuba.clone(),
                             sample,
                             stats,
-                            repo.remote.clone(),
                             Some(args),
                         )
                     })

@@ -364,7 +364,6 @@ fn repo_listen(
         &root_log,
         &config.repotype,
         config.generation_cache_size,
-        &core.remote(),
         RepositoryId::new(config.repoid),
         config.scuba_table.clone(),
     ).expect("failed to initialize repo");
