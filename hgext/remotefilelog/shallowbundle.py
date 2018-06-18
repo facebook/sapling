@@ -6,12 +6,23 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-from . import fileserverclient, remotefilelog, shallowutil
 import os
-from mercurial.node import bin, hex, nullid
-from mercurial import changegroup, mdiff, match, bundlerepo, phases
-from mercurial import util, error, progress
+
+from mercurial import (
+    bundlerepo,
+    changegroup,
+    error,
+    match,
+    mdiff,
+    phases,
+    progress,
+    util,
+)
 from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid
+
+from . import fileserverclient, remotefilelog, shallowutil
+
 
 NoFiles = NoTrees = 0
 LocalFiles = LocalTrees = 1
