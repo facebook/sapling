@@ -257,6 +257,18 @@ def backupdisable(ui, repo, **opts):
             )
         )
     )
+    try:
+        with lockmod.trylock(ui, repo.vfs, _backuplockname, 0, 0):
+            pass
+    except error.LockHeld as e:
+        if e.locker.isrunning():
+            ui.warn(
+                _(
+                    "warning: disable does not affect the running backup process\n"
+                    "kill the process (pid '%s' at %s) gracefully if needed\n"
+                )
+                % (e.locker.uniqueid, e.locker.namespace)
+            )
     return 0
 
 
