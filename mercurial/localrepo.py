@@ -383,10 +383,7 @@ class localrepository(object):
         self.requirements = set()
         self.filtername = None
         # wvfs: rooted at the repository root, used to access the working copy
-        cacheaudited = baseui.configbool("unsafe", "wvfsauditorcache")
-        self.wvfs = vfsmod.vfs(
-            path, expandpath=True, realpath=True, cacheaudited=cacheaudited
-        )
+        self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True, cacheaudited=False)
         # vfs: rooted at .hg, used to access repo files outside of .hg/store
         self.vfs = None
         # svfs: usually rooted at .hg/store, used to access repository history
@@ -421,6 +418,9 @@ class localrepository(object):
             self._loadextensions()
         except IOError:
             pass
+
+        cacheaudited = self.ui.configbool("unsafe", "wvfsauditorcache")
+        self.wvfs.audit._cached = cacheaudited
 
         if self.featuresetupfuncs:
             self.supported = set(self._basesupported)  # use private copy
