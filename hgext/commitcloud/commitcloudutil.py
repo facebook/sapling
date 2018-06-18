@@ -125,6 +125,9 @@ class TokenLocator(object):
                         "please run `security unlock-keychain` "
                         "to prove your identity",
                     )
+                # if not found, not an error
+                if rc == 44:
+                    return None
                 raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
             text = stdoutdata.strip()
             if text:

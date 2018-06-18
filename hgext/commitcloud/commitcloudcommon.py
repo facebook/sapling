@@ -50,8 +50,13 @@ class RegistrationError(error.Abort):
         if authenticationhelp:
             topic = highlightmsg(ui, _("registration error"))
             details = _("authentication instructions:\n%s") % authenticationhelp.strip()
-            contact = _("please contact %s for more information") % getownerteam(ui)
-            message = "%s: %s\n%s\n%s" % (topic, message, details, contact)
+            command = _(
+                "please read `hg cloud authenticate --help` for more information"
+            )
+            contact = _(
+                "please contact %s if you are unable to authenticate"
+            ) % getownerteam(ui)
+            message = "%s: %s\n%s\n%s\n%s" % (topic, message, details, command, contact)
         super(RegistrationError, self).__init__(message, *args, **kwargs)
 
 

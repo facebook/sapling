@@ -71,7 +71,8 @@ Registration:
   abort: #commitcloud registration error: authentication with commit cloud required
   authentication instructions:
   visit htts://localhost/oauth to generate a registration token
-  please contact The Test Team @ FB for more information
+  please read `hg cloud authenticate --help` for more information
+  please contact The Test Team @ FB if you are unable to authenticate
   (use 'hg cloud auth --token TOKEN' to set a token)
   [255]
   $ hg cloud auth -t xxxxxx
