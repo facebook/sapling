@@ -236,9 +236,13 @@ def cloudsync(ui, repo, **opts):
         bgssh = ui.config("infinitepush", "bgssh")
         if bgssh:
             ui.setconfig("ui", "ssh", bgssh)
+
+    # wait at most 30 seconds, because that's the average backup time
+    timeout = 30
+    # interactive run don't require waiting
+    if ui.interactive():
+        timeout = 0
     try:
-        # Wait at most 30 seconds, because that's the average backup time
-        timeout = 30
         srcrepo = shareutil.getsrcrepo(repo)
         with lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
             currentnode = repo["."].node()
@@ -246,7 +250,17 @@ def cloudsync(ui, repo, **opts):
             return _maybeupdateworkingcopy(ui, repo, currentnode)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
-            ui.warn(_("timeout waiting on backup lock\n"))
+            if e.locker.isrunning():
+                highlightstatus(
+                    ui,
+                    _(
+                        "background cloud sync is already in progress\n"
+                        "(running by process with pid '%s' at %s)\n"
+                    )
+                    % (e.locker.uniqueid, e.locker.namespace),
+                )
+            else:
+                ui.warn(_("timeout waiting on backup lock expired\n"))
             return 2
         else:
             raise
