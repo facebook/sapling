@@ -253,10 +253,7 @@ def cloudsync(ui, repo, **opts):
             if e.locker.isrunning():
                 highlightstatus(
                     ui,
-                    _(
-                        "background cloud sync is already in progress\n"
-                        "(running by process with pid '%s' at %s)\n"
-                    )
+                    _("background cloud sync is already in progress (pid %s on %s)\n")
                     % (e.locker.uniqueid, e.locker.namespace),
                 )
             else:
@@ -662,4 +659,18 @@ def backuplockcheck(ui, repo):
         lockmod.trylock(ui, repo.vfs, _backuplockname, 0, 0)
     except error.LockHeld as e:
         if e.locker.isrunning():
-            highlightstatus(ui, _("background cloud sync is in progress\n"))
+            locker = e.locker
+            etime = commitcloudutil.getprocessetime(locker)
+            if etime:
+                minutes, seconds = divmod(etime, 60)
+                etimemsg = _(" (pid %s on %s, running for %d min %d sec)") % (
+                    locker.uniqueid,
+                    locker.namespace,
+                    minutes,
+                    seconds,
+                )
+            else:
+                etimemsg = ""
+            highlightstatus(
+                ui, _("background cloud sync is in progress%s\n") % etimemsg
+            )

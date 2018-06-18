@@ -265,7 +265,7 @@ def backupdisable(ui, repo, **opts):
             ui.warn(
                 _(
                     "warning: disable does not affect the running backup process\n"
-                    "kill the process (pid '%s' at %s) gracefully if needed\n"
+                    "kill the process (pid %s on %s) gracefully if needed\n"
                 )
                 % (e.locker.uniqueid, e.locker.namespace)
             )

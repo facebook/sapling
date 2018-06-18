@@ -417,3 +417,39 @@ def getremotepath(repo, ui, dest):
         )
     dest = path.pushloc or path.loc
     return dest
+
+
+def getprocessetime(locker):
+    """return etime in seconds for the process that is
+     holding the lock
+    """
+    # TODO: support windows in another diff
+    if not pycompat.isposix:
+        return None
+    if not locker.pid or not locker.issamenamespace():
+        return None
+    try:
+        pid = locker.pid
+        p = subprocess.Popen(
+            ["ps", "-o", "etime=", pid],
+            stdin=None,
+            close_fds=util.closefds,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        (stdoutdata, stderrdata) = p.communicate()
+        if p.returncode == 0 and stdoutdata:
+            etime = stdoutdata.strip()
+            # `ps` format for etime is [[dd-]hh:]mm:s
+            # examples:
+            #     '21-18:26:30',
+            #     '06-00:15:30',
+            #     '15:28:37',
+            #      '48:14',
+            #      '00:01'
+            splits = etime.replace("-", ":").split(":")
+            t = [int(i) for i in reversed(splits)] + [0] * (4 - len(splits))
+            etimesec = t[3] * 86400 + t[2] * 3600 + t[1] * 60 + t[0]
+            return etimesec
+    except Exception:
+        return None
