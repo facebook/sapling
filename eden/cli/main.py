@@ -489,6 +489,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
         for mount in mounts:
             print(f"Removing {mount}...")
             try:
+                stop_aux_processes_for_path(mount)
                 config.unmount(mount, delete_config=True)
             except EdenService.EdenError as ex:
                 print_stderr("error: {}", ex)
@@ -662,8 +663,15 @@ class StartCmd(Subcmd):
         )
 
 
+def stop_aux_processes_for_path(repo_path: str) -> None:
+    """Tear down processes that will hold onto file handles and prevent shutdown
+    for a given mount point/repo"""
+    buck.stop_buckd_for_repo(repo_path)
+
+
 def stop_aux_processes(client: eden.thrift.EdenClient) -> None:
-    """Tear down processes that will hold onto file handles and prevent shutdown"""
+    """Tear down processes that will hold onto file handles and prevent shutdown
+    for all mounts"""
 
     active_mount_points: Set[Optional[str]] = {
         mount.mountPoint for mount in client.listMounts()
@@ -671,7 +679,7 @@ def stop_aux_processes(client: eden.thrift.EdenClient) -> None:
 
     for repo in active_mount_points:
         if repo is not None:
-            buck.stop_buckd_for_repo(repo)
+            stop_aux_processes_for_path(repo)
 
     # TODO: intelligently stop nuclide-server associated with eden
     # print('Stopping nuclide-server...')
