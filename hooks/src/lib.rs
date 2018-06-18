@@ -14,6 +14,8 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
+pub extern crate lua52_sys as ffi;
+
 extern crate blobrepo;
 #[macro_use]
 extern crate failure_ext as failure;

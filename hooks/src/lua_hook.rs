@@ -10,8 +10,12 @@
 
 use super::{Hook, HookChangesetParents, HookContext, HookExecution, HookRejectionInfo};
 use failure::Error;
-use futures_ext::{asynchronize, BoxFuture};
-use hlua::{Lua, LuaError, LuaFunction};
+use ffi;
+use futures::{failed, Future};
+use futures_ext::{BoxFuture, FutureExt};
+use hlua::{AsLua, Lua, LuaError, LuaRead, PushGuard};
+use hlua_futures::{LuaCoroutine, LuaCoroutineBuilder};
+use std::ffi::CString;
 
 #[derive(Clone)]
 pub struct LuaHook {
@@ -23,19 +27,35 @@ pub struct LuaHook {
 impl Hook for LuaHook {
     fn run(&self, context: HookContext) -> BoxFuture<HookExecution, Error> {
         let hook = (*self).clone();
-        // The Lua hook function may block waiting for a coroutine to yield
-        // (e.g. if the hook makes a network call) so we need to run it on a thread from
-        // the thread pool. LuaCoroutines can't be passed to different threads
-        // TODO thread pool should be configurable, not always the default
-        let fut: BoxFuture<HookExecution, Error> =
-            asynchronize(move || LuaHook::run_hook(hook, context));
-        fut
+        let hook_name = hook.name.clone();
+        match self.create_coroutine(hook, context) {
+            Ok(cr) => {
+                cr.map(|b| {
+                    if b {
+                        HookExecution::Accepted
+                    } else {
+                        // TODO allow proper hook rejection to be set from Lua hook
+                        HookExecution::Rejected(HookRejectionInfo::new(
+                            "short desc".into(),
+                            "long desc".into(),
+                        ))
+                    }
+                }).map_err(move |err| {
+                        ErrorKind::HookRuntimeError(hook_name.into(), format!("{:?}", err)).into()
+                    })
+                    .boxify()
+            }
+            Err(e) => Box::new(failed(e)),
+        }
     }
 }
 
 impl LuaHook {
-    fn run_hook(hook: LuaHook, context: HookContext) -> Result<HookExecution, Error> {
-        println!("Running lua hook {}", hook.name);
+    fn create_coroutine<'lua>(
+        &self,
+        hook: LuaHook,
+        context: HookContext,
+    ) -> Result<LuaCoroutine<PushGuard<Lua<'lua>>, bool>, Error> {
         let mut lua = Lua::new();
         lua.openlibs();
         let res: Result<(), LuaError> = lua.execute::<()>(&hook.code);
@@ -43,10 +63,16 @@ impl LuaHook {
             ErrorKind::HookParseError(hook.name.clone().into(), e.to_string()).into()
         });
         res?;
-        let mut hook_func: LuaFunction<_> = match lua.get("hook") {
-            Some(val) => val,
-            None => bail_err!(ErrorKind::NoHookFunctionError(hook.name.clone().into())),
-        };
+        let builder: LuaCoroutineBuilder<PushGuard<Lua<'lua>>> =
+            match self.get_function(lua, "hook") {
+                Some(val) => val,
+                None => {
+                    let err: Error =
+                        ErrorKind::NoHookFunctionError(hook.name.clone().into()).into();
+                    bail_err!(err)
+                }
+            };
+
         let mut hook_info = hashmap! {
             "repo_name" => context.repo_name.to_string(),
             "author" => context.changeset.author.to_string(),
@@ -62,23 +88,35 @@ impl LuaHook {
                 hook_info.insert("parent2_hash", parent2_hash.to_string());
             }
         }
-        hook_func
-            .call_with_args((hook_info, context.changeset.files.clone()))
-            .map_err(|e| {
-                ErrorKind::HookRuntimeError(hook.name.clone().into(), format!("{:?}", e).into())
-                    .into()
+        builder
+            .create((hook_info, context.changeset.files.clone()))
+            .map_err(|err| {
+                ErrorKind::HookRuntimeError(hook.name.clone().into(), format!("{:?}", err)).into()
             })
-            .map(|b| {
-                if b {
-                    HookExecution::Accepted
-                } else {
-                    // TODO allow proper hook rejection to be set from Lua hook
-                    HookExecution::Rejected(HookRejectionInfo::new(
-                        "short desc".into(),
-                        "long desc".into(),
-                    ))
-                }
-            })
+    }
+
+    // We can't use the Lua::get method to get the function as this method borrows Lua.
+    // We need a method that moves the Lua instance into the builder and later the coroutine
+    // future, as the future can't refer to structs with non static lifetimes
+    // So this method use the Lua ffi directly to get the function which we pass to the
+    // coroutine builder
+    fn get_function<'lua, V>(&self, lua: Lua<'lua>, index: &str) -> Option<V>
+    where
+        V: LuaRead<PushGuard<Lua<'lua>>>,
+    {
+        let index = CString::new(index).unwrap();
+        let guard = unsafe {
+            ffi::lua_getglobal(lua.as_lua().state_ptr(), index.as_ptr());
+            if ffi::lua_isnil(lua.as_lua().state_ptr(), -1) {
+                let _guard = PushGuard::new(lua, 1);
+                return None;
+            }
+            PushGuard::new(lua, 1)
+        };
+        // Calls lua_read on the coroutine builder
+        // The builder later moves the Lua instance into the actual coroutine future when
+        // create is called
+        LuaRead::lua_read(guard).ok()
     }
 }
 
@@ -253,10 +291,12 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
-                "hook = function (info, files)
-                    error(\"fubar\")
-                    return true
-                end",
+                "hook = function (info, files)\n\
+                 if info.author == \"some-author\" then\n\
+                 error(\"fubar\")\n\
+                 end\n\
+                 return true\n\
+                 end",
             );
             assert_matches!(
                 run_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
@@ -271,9 +311,9 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
-                "hook = function (info, files)
-                        return \"aardvarks\"
-                    end",
+                "hook = function (info, files)\n\
+                 return \"aardvarks\"\n\
+                 end",
             );
             assert_matches!(
                 run_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
