@@ -733,6 +733,9 @@ def cleanup(ui, repo, debug=None):
                         % (treeid, ", ".join(treesinuse[treeid]))
                     )
 
+    if "treestate" in repo.requirements:
+        repo.dirstate._map._gc()
+
 
 def wrapdirstate(orig, self):
     ds = orig(self)

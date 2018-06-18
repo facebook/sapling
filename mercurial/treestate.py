@@ -73,6 +73,9 @@ class treestatemap(object):
     and an offset.
     """
 
+    # Filenames (uuid) that are currently in use. Useful for gc.
+    fileinuse = set()
+
     def __init__(self, ui, vfs, root, importdirstate=None):
         self._filename = None
         self._ui = ui
@@ -251,8 +254,8 @@ class treestatemap(object):
     def setparents(self, p1, p2):
         self._parents = (p1, p2)
 
-    def _read(self):
-        """Read every metadata automatically"""
+    def _parsedirstate(self, filename):
+        """Parse given dirstate metadata file"""
         dirstate = self._vfs.tryread("dirstate")
         f = util.stringio(dirstate)
         p1 = f.read(20) or node.nullid
@@ -275,6 +278,12 @@ class treestatemap(object):
             filename = "%s" % uuid.uuid4()
             rootid = 0
             threshold = 0
+
+        return p1, p2, filename, rootid, threshold
+
+    def _read(self):
+        """Read every metadata automatically"""
+        p1, p2, filename, rootid, threshold = self._parsedirstate("dirstate")
 
         self._parents = (p1, p2)
         self._threshold = threshold
@@ -308,9 +317,26 @@ class treestatemap(object):
         if filename is None:
             filename = "%s" % uuid.uuid4()
             assert self._filename != filename
+        self.fileinuse.add(filename)
         self._filename = filename
         path = self._vfs.join("treestate", self._filename)
         return path
+
+    def _gc(self):
+        """Remove unreferenced treestate files"""
+        for name in ["dirstate", "undo.dirstate", "undo.backup.dirstate"]:
+            try:
+                _p1, _p2, filename = self._parsedirstate(name)[:3]
+                self.fileinuse.add(filename)
+            except Exception:
+                # dirstate file does not exist, or is in an incompatible
+                # format.
+                pass
+        for name in self._vfs.listdir("treestate"):
+            if name in self.fileinuse:
+                continue
+            self._ui.debug("removing unreferenced treestate/%s\n" % name)
+            self._vfs.tryunlink("treestate/%s" % name)
 
     def write(self, st, now):
         # write .hg/treestate/<uuid>
@@ -340,6 +366,7 @@ class treestatemap(object):
             # recalculate threshold
             self._threshold = 0
             rootid = self._tree.saveas(path)
+            self._gc()
         else:
             rootid = self._tree.flush()
 

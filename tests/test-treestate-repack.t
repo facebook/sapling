@@ -56,9 +56,11 @@ Auto repack happens when treestate exceeds size threshold
   .
   .
   creating treestate/00000000-0000-0000-0000-000000000002
+  removing unreferenced treestate/00000000-0000-0000-0000-000000000000
   $ hg debugtreestate
   dirstate v2 (using treestate/00000000-0000-0000-0000-000000000002, offset 88, 5 files tracked)
 
 Cleanup removes the leftover files
 
   $ hg debugtreestate cleanup --debug
+  removing unreferenced treestate/00000000-0000-0000-0000-000000000001
