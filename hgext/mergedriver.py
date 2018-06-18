@@ -9,6 +9,7 @@
 from __future__ import absolute_import
 
 import errno
+import sys
 
 from mercurial import commands, error, extensions, hook, merge
 from mercurial.i18n import _
@@ -113,6 +114,7 @@ def _rundriver(repo, ms, op, wctx, labels):
         raise error.ConfigError(_("merge driver must be a python hook"))
     ms.commit()
     raised = False
+    origmodules = set(sys.modules.keys())
     try:
         res = hook.runhooks(
             ui,
@@ -139,7 +141,14 @@ def _rundriver(repo, ms, op, wctx, labels):
             ui.warn(_("%s\n") % inst)
             r = True
             raised = True
-
+    finally:
+        # Evict the loaded module and all of its imports from memory. This is
+        # necessary to ensure we always use the latest driver code from ., and
+        # prevent cases with a half-loaded driver (where some of the cached
+        # modules were loaded from an older commit.)
+        loadedmodules = set(sys.modules.keys()) - origmodules
+        for mod in loadedmodules:
+            del sys.modules[mod]
     return r, raised
 
 

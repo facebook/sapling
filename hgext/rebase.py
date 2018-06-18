@@ -1045,8 +1045,7 @@ def rebase(ui, repo, templ=None, **opts):
                 )
                 inmemory = False
                 cmdutil.bailifchanged(
-                    repo,
-                    hint=_("commit, shelve or remove them, then rerun the " "rebase"),
+                    repo, hint=_("commit, shelve or remove them, then rerun the rebase")
                 )
                 try:
                     _origrebase(ui, repo, rbsrt, **{"abort": True})
