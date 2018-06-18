@@ -18,7 +18,6 @@ extern crate blobstore;
 extern crate clap;
 extern crate failure_ext as failure;
 extern crate futures;
-#[macro_use]
 extern crate futures_ext;
 extern crate hooks;
 extern crate manifoldblob;
@@ -36,21 +35,19 @@ extern crate linear;
 #[cfg(test)]
 extern crate tempdir;
 
-use blobrepo::{BlobChangeset, BlobRepo};
+use blobrepo::BlobRepo;
 use clap::{App, ArgMatches};
 use failure::{Error, Result};
-use futures::Future;
+use futures::{failed, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use hooks::{HookChangeset, HookExecution, HookManager};
+use hooks::{HookExecution, HookManager};
 use hooks::lua_hook::LuaHook;
 use mercurial_types::{HgChangesetId, RepositoryId};
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
-use std::convert::TryFrom;
 use std::env::args;
 use std::fs::File;
 use std::io::prelude::*;
-use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio_core::reactor::Core;
@@ -98,21 +95,20 @@ fn run_hook(
     println!("Hook code is {}", code);
     println!("==============================");
 
-    let mut hook_manager = HookManager::new();
+    let mut hook_manager = HookManager::new(repo.clone());
     let hook = LuaHook {
         name: String::from("testhook"),
         code,
     };
     hook_manager.install_hook("testhook", Arc::new(hook));
 
-    fetch_changeset(Arc::new(repo), revstr)
-        .then(|res| match res {
-            Ok(cs) => HookChangeset::try_from(cs),
-            Err(e) => Err(e),
-        })
-        .and_then(move |hcs| hook_manager.run_hooks(repo_name.to_string(), Arc::new(hcs)))
-        .map(|executions| executions.get("testhook").unwrap().clone())
-        .boxify()
+    match HgChangesetId::from_str(revstr) {
+        Ok(id) => hook_manager
+            .run_hooks(repo_name.to_string(), id)
+            .map(|executions| executions.get("testhook").unwrap().clone())
+            .boxify(),
+        Err(e) => Box::new(failed(e)),
+    }
 }
 
 fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
@@ -137,11 +133,6 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
         io_threads,
         MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
     ).expect("failed to create blobrepo instance")
-}
-
-fn fetch_changeset(repo: Arc<BlobRepo>, rev: &str) -> BoxFuture<BlobChangeset, Error> {
-    let cs_id = try_boxfuture!(HgChangesetId::from_str(rev));
-    repo.get_changeset_by_changesetid(&cs_id)
 }
 
 // It all starts here

@@ -16,6 +16,11 @@
 
 pub extern crate lua52_sys as ffi;
 
+#[cfg(test)]
+#[macro_use]
+extern crate assert_matches;
+#[cfg(test)]
+extern crate async_unit;
 extern crate blobrepo;
 #[macro_use]
 extern crate failure_ext as failure;
@@ -23,28 +28,22 @@ extern crate futures;
 extern crate futures_ext;
 extern crate hlua;
 extern crate hlua_futures;
+#[cfg(test)]
+extern crate linear;
 #[macro_use]
 extern crate maplit;
 extern crate mercurial_types;
-
-#[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
-#[cfg(test)]
-extern crate async_unit;
-
 #[cfg(test)]
 extern crate tokio_core;
 
 pub mod lua_hook;
 pub mod rust_hook;
 
-use blobrepo::BlobChangeset;
+use blobrepo::{BlobChangeset, BlobRepo};
 use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::Changeset;
-use mercurial_types::HgParents;
+use mercurial_types::{Changeset, HgChangesetId, HgParents};
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::convert::TryFrom;
@@ -55,6 +54,7 @@ use std::sync::Arc;
 /// Knows how to run hooks
 pub struct HookManager {
     hooks: HashMap<String, Arc<Hook>>,
+    repo: BlobRepo,
 }
 
 /// Represents the status of a (non error) hook run
@@ -88,9 +88,10 @@ struct HookExecutionHolder {
 }
 
 impl HookManager {
-    pub fn new() -> HookManager {
+    pub fn new(repo: BlobRepo) -> HookManager {
         HookManager {
             hooks: HashMap::new(),
+            repo: repo,
         }
     }
 
@@ -109,26 +110,20 @@ impl HookManager {
     pub fn run_hooks(
         &self,
         repo_name: String,
-        changeset: Arc<HookChangeset>,
+        changeset_id: HgChangesetId,
     ) -> BoxFuture<HashMap<String, HookExecution>, Error> {
         // Run all hooks, potentially in parallel (depending on hook implementation)
         let v: Vec<BoxFuture<HookExecutionHolder, _>> = self.hooks
             .iter()
             .map(|(hook_name, hook)| {
-                let hook = hook.clone();
-                let changeset = changeset.clone();
-                let hook_name = hook_name.clone();
-                let hook_context =
-                    HookContext::new(hook_name.clone(), repo_name.clone(), changeset);
-                hook.run(hook_context)
-                    .map(move |hook_execution| HookExecutionHolder {
-                        hook_name: hook_name,
-                        hook_execution,
-                    })
-                    .boxify()
+                self.run_hook(
+                    hook_name.to_string(),
+                    hook.clone(),
+                    repo_name.clone(),
+                    changeset_id.clone(),
+                )
             })
             .collect();
-
         futures::future::join_all(v)
             .map(|v| {
                 let mut map = HashMap::new();
@@ -136,6 +131,31 @@ impl HookManager {
                     map.insert(heh.hook_name.clone(), heh.hook_execution.clone());
                 });
                 map
+            })
+            .boxify()
+    }
+
+    fn run_hook(
+        &self,
+        hook_name: String,
+        hook: Arc<Hook>,
+        repo_name: String,
+        changeset_id: HgChangesetId,
+    ) -> BoxFuture<HookExecutionHolder, Error> {
+        let hook_name2 = hook_name.clone();
+        self.repo
+            .get_changeset_by_changesetid(&changeset_id)
+            .then(|res| match res {
+                Ok(cs) => HookChangeset::try_from(cs),
+                Err(e) => Err(e),
+            })
+            .and_then(move |hcs| {
+                let hook_context = HookContext::new(hook_name.clone(), repo_name, Arc::new(hcs));
+                hook.run(hook_context)
+            })
+            .map(move |hook_execution| HookExecutionHolder {
+                hook_name: hook_name2,
+                hook_execution,
             })
             .boxify()
     }
@@ -229,7 +249,9 @@ mod test {
     use super::*;
     use futures::Future;
     use futures::future::finished;
+    use linear;
     use std::collections::HashSet;
+    use std::str::FromStr;
 
     struct TestHook {
         expected_execution: HookExecution,
@@ -258,14 +280,11 @@ mod test {
             };
             let hook2_expected = hook2.expected_execution.clone();
             hook_manager.install_hook("testhook2", Arc::new(hook2));
-            let author = String::from("jane bloggs");
-            let files = vec![String::from("filec")];
-            let comments = String::from("some comments");
-            let parents = HookChangesetParents::One("somehash".into());
-            let change_set = HookChangeset::new(author, files, comments, parents);
+            let change_set_id =
+                HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
             let repo_name = String::from("some-repo");
             let fut: BoxFuture<HashMap<String, HookExecution>, Error> =
-                hook_manager.run_hooks(repo_name, Arc::new(change_set));
+                hook_manager.run_hooks(repo_name, change_set_id);
             let res = fut.wait();
             match res {
                 Ok(map) => {
@@ -285,51 +304,56 @@ mod test {
 
     #[test]
     fn test_install() {
-        let mut hook_manager = hook_manager();
-        let hook1 = TestHook {
-            expected_execution: HookExecution::Accepted,
-        };
-        hook_manager.install_hook("testhook1", Arc::new(hook1));
-        let hook2 = TestHook {
-            expected_execution: HookExecution::Accepted,
-        };
-        hook_manager.install_hook("testhook2", Arc::new(hook2));
+        async_unit::tokio_unit_test(|| {
+            let mut hook_manager = hook_manager();
+            let hook1 = TestHook {
+                expected_execution: HookExecution::Accepted,
+            };
+            hook_manager.install_hook("testhook1", Arc::new(hook1));
+            let hook2 = TestHook {
+                expected_execution: HookExecution::Accepted,
+            };
+            hook_manager.install_hook("testhook2", Arc::new(hook2));
 
-        let mut set = HashSet::new();
-        hook_manager.iter().for_each(|(k, _)| {
-            set.insert(k.clone());
+            let mut set = HashSet::new();
+            hook_manager.iter().for_each(|(k, _)| {
+                set.insert(k.clone());
+            });
+
+            assert_eq!(2, set.len());
+            assert!(set.contains("testhook1"));
+            assert!(set.contains("testhook2"));
         });
-
-        assert_eq!(2, set.len());
-        assert!(set.contains("testhook1"));
-        assert!(set.contains("testhook2"));
     }
 
     #[test]
     fn test_uninstall() {
-        let mut hook_manager = hook_manager();
-        let hook1 = TestHook {
-            expected_execution: HookExecution::Accepted,
-        };
-        hook_manager.install_hook("testhook1", Arc::new(hook1));
-        let hook2 = TestHook {
-            expected_execution: HookExecution::Accepted,
-        };
-        hook_manager.install_hook("testhook2", Arc::new(hook2));
+        async_unit::tokio_unit_test(|| {
+            let mut hook_manager = hook_manager();
+            let hook1 = TestHook {
+                expected_execution: HookExecution::Accepted,
+            };
+            hook_manager.install_hook("testhook1", Arc::new(hook1));
+            let hook2 = TestHook {
+                expected_execution: HookExecution::Accepted,
+            };
+            hook_manager.install_hook("testhook2", Arc::new(hook2));
 
-        hook_manager.uninstall_hook("testhook1");
+            hook_manager.uninstall_hook("testhook1");
 
-        let mut set = HashSet::new();
-        hook_manager.iter().for_each(|(k, _)| {
-            set.insert(k.clone());
+            let mut set = HashSet::new();
+            hook_manager.iter().for_each(|(k, _)| {
+                set.insert(k.clone());
+            });
+
+            assert_eq!(1, set.len());
+            assert!(set.contains("testhook2"));
         });
-
-        assert_eq!(1, set.len());
-        assert!(set.contains("testhook2"));
     }
 
     fn hook_manager() -> HookManager {
-        HookManager::new()
+        let repo = linear::getrepo(None);
+        HookManager::new(repo)
     }
 
 }
