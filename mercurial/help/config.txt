@@ -1997,6 +1997,18 @@ Alias definitions for templates. See :hg:`help templates` for details.
 Use the ``[templates]`` section to define template strings.
 See :hg:`help templates` for details.
 
+``treestate``
+-------------
+
+``minrepackthreshold``
+    Bytes. Minimal size to trigger a repack.
+    (default: 10M)
+
+``repackfactor``
+    Integer. Number of times treestate can grow without being repacked.
+    Set to 0 to disable automatic repack.
+    (default: 3)
+
 ``trusted``
 -----------
 

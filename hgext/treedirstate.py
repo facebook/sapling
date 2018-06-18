@@ -678,12 +678,19 @@ def migrate(ui, repo, version):
 
 
 def repack(ui, repo):
-    if not istreedirstate(repo):
+    version = currentversion(repo)
+    if version == 1:
+        with repo.wlock():
+            repo.dirstate._map._treeid = None
+            repo.dirstate._dirty = True
+    elif version == 2:
+        with repo.wlock(), repo.lock(), repo.transaction("dirstate") as tr:
+            repo.dirstate._map._threshold = 1
+            repo.dirstate._dirty = True
+            repo.dirstate.write(tr)
+    else:
         ui.note(_("not repacking because repo does not have treedirstate"))
         return
-    with repo.wlock():
-        repo.dirstate._map._treeid = None
-        repo.dirstate._dirty = True
 
 
 dirstatefiles = [

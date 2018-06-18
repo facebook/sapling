@@ -331,9 +331,26 @@ class treestatemap(object):
         self._tree.setmetadata(_packmetadata(metadata))
         self._tree.invalidatemtime(now)
 
-        # TODO(quark): add auto repacking - could be using another filename
         self._vfs.makedirs("treestate")
-        rootid = self._tree.flush()
+
+        # repack and gc (with wlock acquired by parent functions)
+        if self._threshold > 0 and self._rootid > self._threshold:
+            path = self._setfilename()
+            self._ui.debug("creating treestate/%s\n" % (self._filename,))
+            # recalculate threshold
+            self._threshold = 0
+            rootid = self._tree.saveas(path)
+        else:
+            rootid = self._tree.flush()
+
+        # calculate self._threshold
+        if self._threshold == 0 and rootid > self._ui.configbytes(
+            "treestate", "minrepackthreshold"
+        ):
+            factor = self._ui.configint("treestate", "repackfactor")
+            if factor:
+                self._threshold = rootid * factor
+            self._ui.debug("treestate repack threshold set to %s\n" % self._threshold)
 
         # write .hg/dirstate
         st.write(self._parents[0])
