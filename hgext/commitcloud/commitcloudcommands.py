@@ -231,6 +231,7 @@ def getrepoworkspace(ui, repo):
 )
 def cloudsync(ui, repo, **opts):
     """synchronize commits with the commit cloud service"""
+    repo.ignoreautobackup = True
     if opts.get("use_bgssh"):
         bgssh = ui.config("infinitepush", "bgssh")
         if bgssh:
