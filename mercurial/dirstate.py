@@ -474,8 +474,8 @@ class dirstate(object):
         self._addpath(f, "n", s.st_mode, s.st_size & _rangemask, mtime & _rangemask)
         if not self._istreestate:
             self._map.copymap.pop(f, None)
-        if f in self._map.nonnormalset:
-            self._map.nonnormalset.remove(f)
+            if f in self._map.nonnormalset:
+                self._map.nonnormalset.remove(f)
         if mtime > self._lastnormaltime:
             # Remember the most recent modification timeslot for status(),
             # to make sure we won't miss future size-preserving file content
@@ -539,7 +539,8 @@ class dirstate(object):
                     size = -1
                 elif entry[0] == "n" and entry[2] == -2:  # other parent
                     size = -2
-                    self._map.otherparentset.add(f)
+                    if not self._istreestate:
+                        self._map.otherparentset.add(f)
         self._updatedfiles.add(f)
         self._map.removefile(f, oldstate, size)
         if not self._istreestate:
