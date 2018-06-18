@@ -87,6 +87,11 @@ function blobimport {
   $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb "$@" >> "$TESTTMP/blobimport.out" 2>&1
 }
 
+function apiserver {
+  $MONONOKE_APISERVER "$@" >> "$TESTTMP/apiserver.out" 2>&1 &
+  echo $! >> "$DAEMON_PIDS"
+}
+
 function edenserver {
   $MONONOKE_EDEN_SERVER "$@" >> "$TESTTMP/edenserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"

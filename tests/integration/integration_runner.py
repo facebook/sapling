@@ -24,6 +24,7 @@ from .third_party import hg_run_tests
 TESTDIR_PATH = 'scm/mononoke/tests/integration'
 
 MONONOKE_BLOBIMPORT_TARGET = '//scm/mononoke:blobimport'
+MONONOKE_APISERVER_TARGET = '//scm/mononoke/apiserver:apiserver'
 MONONOKE_EDEN_SERVER_TARGET = '//scm/mononoke/eden_server:eden_server'
 DUMMYSSH_TARGET = '//scm/mononoke/tests/integration:dummyssh'
 BINARY_HG_TARGET = '//scm/hg:hg'
@@ -115,6 +116,7 @@ def run(
     add_to_environ(
         'DUMMYSSH', DUMMYSSH_TARGET, pathutils.BuildRuleTypes.PYTHON_BINARY
     )
+    add_to_environ('MONONOKE_APISERVER', MONONOKE_APISERVER_TARGET)
     add_to_environ('MONONOKE_EDEN_SERVER', MONONOKE_EDEN_SERVER_TARGET)
     add_to_environ('MONONOKE_HGCLI', MONONOKE_HGCLI_TARGET)
     add_to_environ('MONONOKE_SERVER', MONONOKE_SERVER_TARGET)
