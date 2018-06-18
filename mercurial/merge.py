@@ -1811,9 +1811,10 @@ def recordupdates(repo, actions, branchmerge):
             prog.value += 1
 
         # resolve path conflicts
+        copied = repo.dirstate.copies()
         for f, args, msg in actions.get("pr", []):
             f0, = args
-            origf0 = repo.dirstate.copied(f0) or f0
+            origf0 = copied.get(f0, f0)
             repo.dirstate.add(f)
             repo.dirstate.copy(origf0, f)
             if f0 == origf0:
