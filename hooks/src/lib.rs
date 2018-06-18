@@ -106,6 +106,7 @@ impl HookManager {
 
     pub fn run_hooks(
         &self,
+        repo_name: String,
         changeset: Arc<HookChangeset>,
     ) -> BoxFuture<HashMap<String, HookExecution>, Error> {
         // Run all hooks, potentially in parallel (depending on hook implementation)
@@ -115,7 +116,8 @@ impl HookManager {
                 let hook = hook.clone();
                 let changeset = changeset.clone();
                 let hook_name = hook_name.clone();
-                let hook_context = HookContext::new(hook_name.clone(), changeset);
+                let hook_context =
+                    HookContext::new(hook_name.clone(), repo_name.clone(), changeset);
                 hook.run(hook_context)
                     .map(move |hook_execution| HookExecutionHolder {
                         hook_name: hook_name,
@@ -206,13 +208,15 @@ impl From<HgParents> for HookChangesetParents {
 
 pub struct HookContext {
     pub hook_name: String,
+    pub repo_name: String,
     pub changeset: Arc<HookChangeset>,
 }
 
 impl HookContext {
-    fn new(hook_name: String, changeset: Arc<HookChangeset>) -> HookContext {
+    fn new(hook_name: String, repo_name: String, changeset: Arc<HookChangeset>) -> HookContext {
         HookContext {
             hook_name,
+            repo_name,
             changeset,
         }
     }
@@ -257,8 +261,9 @@ mod test {
             let comments = String::from("some comments");
             let parents = HookChangesetParents::One("somehash".into());
             let change_set = HookChangeset::new(author, files, comments, parents);
+            let repo_name = String::from("some-repo");
             let fut: BoxFuture<HashMap<String, HookExecution>, Error> =
-                hook_manager.run_hooks(Arc::new(change_set));
+                hook_manager.run_hooks(repo_name, Arc::new(change_set));
             let res = fut.wait();
             match res {
                 Ok(map) => {

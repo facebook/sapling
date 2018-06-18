@@ -48,6 +48,7 @@ impl LuaHook {
             None => bail_err!(ErrorKind::NoHookFunctionError(hook.name.clone().into())),
         };
         let mut hook_info = hashmap! {
+            "repo_name" => context.repo_name.to_string(),
             "author" => context.changeset.author.to_string(),
             "comments" => context.changeset.comments.to_string(),
         };
@@ -155,6 +156,19 @@ mod test {
             let code = String::from(
                 "hook = function (info, files)\n\
                  return info.comments == \"some-comments\"\n\
+                 end",
+            );
+            assert_matches!(run_hook(code, changeset), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_repo_name() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (info, files)\n\
+                 return info.repo_name == \"some-repo\"\n\
                  end",
             );
             assert_matches!(run_hook(code, changeset), Ok(HookExecution::Accepted));
@@ -274,7 +288,7 @@ mod test {
             name: String::from("testhook"),
             code: code.to_string(),
         };
-        let context = HookContext::new(hook.name.clone(), Arc::new(changeset));
+        let context = HookContext::new(hook.name.clone(), "some-repo".into(), Arc::new(changeset));
         hook.run(context).wait()
     }
 }

@@ -64,6 +64,7 @@ fn run_hook(args: Vec<String>) -> Result<HookExecution> {
         .version("0.0.0")
         .about("run a hook")
         .args_from_usage(concat!(
+            "<REPO_NAME>           'name of repository\n",
             "<HOOK_FILE>           'file containing hook code\n",
             "<REV>                 'revision hash'"
         ))
@@ -80,6 +81,7 @@ fn run_hook(args: Vec<String>) -> Result<HookExecution> {
         slog::Logger::root(drain, o![])
     };
 
+    let repo_name = matches.value_of("REPO_NAME").unwrap();
     let hook_file = matches.value_of("HOOK_FILE").unwrap();
     let revstr = matches.value_of("REV").unwrap();
 
@@ -94,6 +96,7 @@ fn run_hook(args: Vec<String>) -> Result<HookExecution> {
     file.read_to_string(&mut code)
         .expect("Unable to read the file");
     println!("======= Running hook =========");
+    println!("Repository name is {}", repo_name);
     println!("Hook file is {} revision is {:?}", hook_file, revstr);
     println!("Hook code is {}", code);
     println!("Changeset author: {:?} ", hook_cs.author);
@@ -106,7 +109,7 @@ fn run_hook(args: Vec<String>) -> Result<HookExecution> {
     };
     hook_manager.install_hook("testhook", Arc::new(hook));
     let fut = hook_manager
-        .run_hooks(Arc::new(hook_cs))
+        .run_hooks(repo_name.to_string(), Arc::new(hook_cs))
         .map(|executions| executions.get("testhook").unwrap().clone());
     core.run(fut)
 }
@@ -202,6 +205,7 @@ mod test {
         let mut file = File::create(file_path.clone()).unwrap();
         file.write(code.as_bytes()).unwrap();
         let args = vec![
+            String::from("test_repo"),
             String::from("runhook"),
             file_path.to_str().unwrap().into(),
             changeset_id,
