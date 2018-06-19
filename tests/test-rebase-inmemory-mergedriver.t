@@ -2,6 +2,7 @@ Test mergedriver invalidation with IMM.
 
   $ newrepo
   $ enable rebase
+  $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True
   $ setconfig rebase.experimental.inmemory.nomergedriver=False
   $ setconfig rebase.experimental.inmemory.canrebaseworkingcopy=True

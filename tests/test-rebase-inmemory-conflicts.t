@@ -3,6 +3,7 @@ Test new conflict switching:
   $ newrepo
   $ enable rebase purge fbamend morestatus
   $ setconfig morestatus.show=True
+  $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True
   $ setconfig rebase.experimental.inmemory.nomergedriver=False
   $ setconfig rebase.experimental.inmemory.canrebaseworkingcopy=True
@@ -92,6 +93,8 @@ Rerun it without the config and confirm the created hashes are the same:
   rebasing 4:881eb15e0fdf "e" (e)
   rebasing 5:e692c3b32196 "f"
   merging c
+  transaction abort!
+  rollback completed
   hit merge conflicts; using on-disk merge instead (in-memory merge does not support merge conflicts)
   rebasing 3:f4016ed9f5d0 "d" (d)
   rebasing 4:881eb15e0fdf "e" (e)
@@ -134,6 +137,8 @@ Try it with uncommitted changes, ensure it aborts nicely:
   rebasing in-memory!
   rebasing 4:d82c41319fdd "e"
   rebasing 5:c33e7f678afd "f"
+  transaction abort!
+  rollback completed
   abort: must use on-disk merge for this rebase (in-memory merge does not support file conflicts), but you have working copy changes
   (commit, revert, or shelve them)
   [255]
@@ -149,6 +154,8 @@ Rerun the last test with the old config:
   rebasing in-memory!
   rebasing 4:d82c41319fdd "e"
   rebasing 5:c33e7f678afd "f"
+  transaction abort!
+  rollback completed
   hit merge conflicts; using on-disk merge instead (in-memory merge does not support file conflicts)
   abort: uncommitted changes
   (commit, shelve or remove them, then rerun the rebase)

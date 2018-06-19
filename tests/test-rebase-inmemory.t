@@ -3,6 +3,7 @@
   $ enable amend morestatus purge rebase
   $ setconfig morestatus.show=True
   $ setconfig diff.git=True
+  $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True
 
   $ cat <<EOF >> $HGRCPATH
