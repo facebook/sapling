@@ -619,16 +619,35 @@ class HgServer(object):
 
     @cmd(CMD_PREFETCH_FILES)
     def prefetch_files(self, request):
+        self._do_prefetch(request)
+        self.send_chunk(request, "")
+
+    def _do_prefetch(self, request):
         # Some repos may not have remotefilelog enabled; for example,
         # the watchman integration tests have no remote server and no
         # remotefilelog.
         if not hasattr(self.repo, "fileservice"):
             logging.debug("ignoring prefetch request in non-remotefilelog repository")
-            self.send_chunk(request, "")
             return
 
         logging.debug("got prefetch request, parsing")
         [num_files] = struct.unpack_from(b">I", request.body, 0)
+        if num_files > 4000000:
+            # Ignore requests with an extremely large number of files to prefetch,
+            # to prevent us from consuming logs of memory and CPU trying to deserialize
+            # garbage data.
+            #
+            # This is likely a request from an older edenfs daemon that sends JSON data
+            # here rather than our binary serialization format.  We just return a
+            # successful response and ignore the request in this case rather than
+            # responding with an error.  Responding with an error will cause these older
+            # edenfs versions to propagate the error back to clients in some cases;
+            # ignoring the request will allow things to proceed normally, but just
+            # slower than if the data had been prefetched.
+            logging.debug(
+                "ignoring prefetch request with too many files: %r", num_files
+            )
+            return
         offset = 4  # struct.calcsize(">I")
         lengths_fmt = b">" + (num_files * b"I")
         path_lengths = struct.unpack_from(lengths_fmt, request.body, offset)
@@ -643,8 +662,6 @@ class HgServer(object):
 
         logging.debug("will prefetch %d files" % len(files))
         self.repo.fileservice.prefetch(files)
-
-        self.send_chunk(request, "")
 
 
 def always_allow_pending(root):
