@@ -84,6 +84,10 @@ Future<Unit> FakePrivHelper::fuseTakeoverStartup(
       runtime_error("FakePrivHelper::fuseTakeoverStartup() not implemented"));
 }
 
+Future<Unit> FakePrivHelper::setLogFile(folly::File /* logFile */) {
+  return makeFuture();
+}
+
 int FakePrivHelper::stop() {
   return 0;
 }

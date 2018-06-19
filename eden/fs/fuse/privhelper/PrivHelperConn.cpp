@@ -189,6 +189,20 @@ void PrivHelperConn::parseBindMountRequest(
   checkAtEnd(cursor, "bind mount request");
 }
 
+UnixSocket::Message PrivHelperConn::serializeSetLogFileRequest(
+    uint32_t xid,
+    folly::File logFile) {
+  auto msg = serializeHeader(xid, REQ_SET_LOG_FILE);
+  msg.files.push_back(std::move(logFile));
+  return msg;
+}
+
+void PrivHelperConn::parseSetLogFileRequest(folly::io::Cursor& cursor) {
+  // REQ_SET_LOG_FILE has an empty body.  The only contents
+  // are the file descriptor transferred with the request.
+  checkAtEnd(cursor, "set log file request");
+}
+
 void PrivHelperConn::serializeErrorResponse(
     Appender& appender,
     const std::exception& ex) {

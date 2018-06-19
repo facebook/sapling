@@ -254,6 +254,29 @@ UnixSocket::Message PrivHelperServer::processBindMountMsg(Cursor& cursor) {
   return makeResponse();
 }
 
+UnixSocket::Message PrivHelperServer::processSetLogFileMsg(
+    folly::io::Cursor& cursor,
+    UnixSocket::Message& request) {
+  XLOG(DBG3) << "set log file";
+  PrivHelperConn::parseSetLogFileRequest(cursor);
+  if (request.files.size() != 1) {
+    throw std::runtime_error(folly::to<string>(
+        "expected to receive 1 file descriptor with setLogFile() request ",
+        "received ",
+        request.files.size()));
+  }
+
+  setLogFile(std::move(request.files[0]));
+
+  return makeResponse();
+}
+
+void PrivHelperServer::setLogFile(folly::File&& logFile) {
+  // Replace stdout and stderr with the specified file descriptor
+  folly::checkUnixError(dup2(logFile.fd(), STDOUT_FILENO));
+  folly::checkUnixError(dup2(logFile.fd(), STDERR_FILENO));
+}
+
 namespace {
 /// Get the file system ID, or an errno value on error
 folly::Expected<unsigned long, int> getFSID(const char* path) {
@@ -346,7 +369,7 @@ void PrivHelperServer::processAndSendResponse(UnixSocket::Message&& message) {
 
   UnixSocket::Message response;
   try {
-    response = processMessage(msgType, cursor);
+    response = processMessage(msgType, cursor, message);
   } catch (const std::exception& ex) {
     XLOG(ERR) << "error processing privhelper request: "
               << folly::exceptionStr(ex);
@@ -403,7 +426,8 @@ UnixSocket::Message PrivHelperServer::makeResponse(folly::File&& file) {
 
 UnixSocket::Message PrivHelperServer::processMessage(
     PrivHelperConn::MsgType msgType,
-    Cursor& cursor) {
+    Cursor& cursor,
+    UnixSocket::Message& request) {
   switch (msgType) {
     case PrivHelperConn::REQ_MOUNT_FUSE:
       return processMountMsg(cursor);
@@ -415,6 +439,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processTakeoverShutdownMsg(cursor);
     case PrivHelperConn::REQ_TAKEOVER_STARTUP:
       return processTakeoverStartupMsg(cursor);
+    case PrivHelperConn::REQ_SET_LOG_FILE:
+      return processSetLogFileMsg(cursor, request);
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;

@@ -99,6 +99,24 @@ class PrivHelper {
       folly::StringPiece mountPath,
       const std::vector<std::string>& bindMounts) = 0;
 
+  /**
+   * Tell the privhelper server to write all future log messages to the
+   * specified file descriptor.
+   */
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> setLogFile(
+      folly::File logFile) = 0;
+
+  /**
+   * setLogFileBlocking() is a wrapper around setLogFile() that blocks until
+   * the call has completed.
+   *
+   * This method may only be called if the PrivHelper is not currently attached
+   * to an EventBase.  This is primarily intended as a convenience method to
+   * allow calling setLogFile() before the main process's EventBase loop has
+   * started.
+   */
+  void setLogFileBlocking(folly::File logFile);
+
   /*
    * Explicitly stop the privhelper process.
    *

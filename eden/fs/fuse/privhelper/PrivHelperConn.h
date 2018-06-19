@@ -44,6 +44,7 @@ class PrivHelperConn {
     REQ_UNMOUNT_FUSE = 4,
     REQ_TAKEOVER_SHUTDOWN = 5,
     REQ_TAKEOVER_STARTUP = 6,
+    REQ_SET_LOG_FILE = 7,
   };
 
   /**
@@ -105,6 +106,11 @@ class PrivHelperConn {
       folly::io::Cursor& cursor,
       std::string& mountPoint,
       std::vector<std::string>& bindMounts);
+
+  static UnixSocket::Message serializeSetLogFileRequest(
+      uint32_t xid,
+      folly::File logFile);
+  static void parseSetLogFileRequest(folly::io::Cursor& cursor);
 
   /**
    * Parse a response that is expected to be empty.

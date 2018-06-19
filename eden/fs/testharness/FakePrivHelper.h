@@ -48,6 +48,7 @@ class FakePrivHelper : public PrivHelper {
   folly::Future<folly::Unit> fuseTakeoverStartup(
       folly::StringPiece mountPath,
       const std::vector<std::string>& bindMounts) override;
+  folly::Future<folly::Unit> setLogFile(folly::File logFile) override;
   int stop() override;
 
  private:

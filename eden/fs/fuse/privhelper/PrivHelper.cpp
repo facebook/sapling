@@ -100,6 +100,7 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<Unit> fuseTakeoverStartup(
       StringPiece mountPath,
       const vector<string>& bindMounts) override;
+  Future<Unit> setLogFile(folly::File logFile) override;
   int stop() override;
 
  private:
@@ -398,6 +399,18 @@ Future<Unit> PrivHelperClientImpl::fuseTakeoverStartup(
       });
 }
 
+Future<Unit> PrivHelperClientImpl::setLogFile(folly::File logFile) {
+  auto xid = getNextXid();
+  auto request =
+      PrivHelperConn::serializeSetLogFileRequest(xid, std::move(logFile));
+
+  return sendAndRecv(xid, std::move(request))
+      .then([](UnixSocket::Message&& response) {
+        PrivHelperConn::parseEmptyResponse(
+            PrivHelperConn::REQ_SET_LOG_FILE, response);
+      });
+}
+
 int PrivHelperClientImpl::stop() {
   const auto result = cleanup();
   if (result.hasError()) {
@@ -408,6 +421,21 @@ int PrivHelperClientImpl::stop() {
 }
 
 } // unnamed namespace
+
+void PrivHelper::setLogFileBlocking(folly::File logFile) {
+  EventBase evb;
+  attachEventBase(&evb);
+
+  auto future = setLogFile(std::move(logFile));
+  if (future.isReady()) {
+    future.get();
+    return;
+  }
+
+  future.ensure([&evb] { evb.terminateLoopSoon(); });
+  evb.loopForever();
+  future.get();
+}
 
 unique_ptr<PrivHelper> startPrivHelper(const UserInfo& userInfo) {
   CHECK_EQ(geteuid(), 0) << "must be root in order to start the privhelper";

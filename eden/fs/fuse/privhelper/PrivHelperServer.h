@@ -60,7 +60,8 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   void processAndSendResponse(UnixSocket::Message&& message);
   UnixSocket::Message processMessage(
       PrivHelperConn::MsgType msgType,
-      folly::io::Cursor& cursor);
+      folly::io::Cursor& cursor,
+      UnixSocket::Message& request);
   UnixSocket::Message makeResponse();
   UnixSocket::Message makeResponse(folly::File&& file);
 
@@ -69,6 +70,9 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processBindMountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processTakeoverShutdownMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processTakeoverStartupMsg(folly::io::Cursor& cursor);
+  UnixSocket::Message processSetLogFileMsg(
+      folly::io::Cursor& cursor,
+      UnixSocket::Message& request);
 
   // These methods are virtual so we can override them during unit tests
   virtual folly::File fuseMount(const char* mountPath);
@@ -76,6 +80,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   // Both clientPath and mountPath must be existing directories.
   virtual void bindMount(const char* clientPath, const char* mountPath);
   virtual void bindUnmount(const char* mountPath);
+  virtual void setLogFile(folly::File&& logFile);
 
   std::unique_ptr<folly::EventBase> eventBase_;
   UnixSocket::UniquePtr conn_;

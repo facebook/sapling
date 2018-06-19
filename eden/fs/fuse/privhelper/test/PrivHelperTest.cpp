@@ -84,12 +84,18 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     return getUnusedResults(data_.rlock()->bindUnmountResults);
   }
 
+  std::vector<File> getLogFileRequests() {
+    auto data = data_.wlock();
+    return std::move(data->logFiles);
+  }
+
  private:
   struct Data {
     std::unordered_map<string, Future<File>> fuseMountResults;
     std::unordered_map<string, Future<Unit>> fuseUnmountResults;
     std::unordered_map<string, Future<Unit>> bindMountResults;
     std::unordered_map<string, Future<Unit>> bindUnmountResults;
+    std::vector<File> logFiles;
   };
 
   template <typename T>
@@ -134,6 +140,11 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
   void bindUnmount(const char* mountPath) override {
     auto future = getResultFuture(data_.wlock()->bindUnmountResults, mountPath);
     future.get(1s);
+  }
+
+  void setLogFile(folly::File&& logFile) override {
+    auto data = data_.wlock();
+    data->logFiles.push_back(std::move(logFile));
   }
 
   folly::Synchronized<Data> data_;
@@ -482,6 +493,34 @@ TEST_F(PrivHelperTest, detachEventBase) {
   EXPECT_FALSE(unmountResult.isReady());
   unmountPromise.setValue();
   unmountResult.get(1s);
+}
+
+TEST_F(PrivHelperTest, setLogFile) {
+  // Call setLogFile()
+  TemporaryFile tempFile0;
+  client_->setLogFile(File{tempFile0.fd(), /* ownsFD */ false}).get(1s);
+
+  // Detach from the clientIoThread_ and call all setLogFileBlocking()
+  TemporaryFile tempFile1;
+  clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
+      [&] { client_->detachEventBase(); });
+  client_->setLogFileBlocking(File{tempFile1.fd(), /* ownsFD */ false});
+
+  // Confirm that the server received both requests
+  auto logFiles = server_.getLogFileRequests();
+  ASSERT_EQ(2, logFiles.size());
+
+  struct stat s1;
+  folly::checkUnixError(fstat(logFiles[0].fd(), &s1));
+  struct stat s2;
+  folly::checkUnixError(fstat(tempFile0.fd(), &s2));
+  EXPECT_EQ(s1.st_dev, s2.st_dev);
+  EXPECT_EQ(s1.st_ino, s2.st_ino);
+
+  folly::checkUnixError(fstat(logFiles[1].fd(), &s1));
+  folly::checkUnixError(fstat(tempFile1.fd(), &s2));
+  EXPECT_EQ(s1.st_dev, s2.st_dev);
+  EXPECT_EQ(s1.st_ino, s2.st_ino);
 }
 
 /*
