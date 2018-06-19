@@ -572,11 +572,7 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion, bundlecaps):
 
         missing = outgoing.missing
         if remotefilelog.shallowbundle.cansendtrees(
-            bundlerepo,
-            missing,
-            source="infinitepushpull",
-            bundlecaps=bundlecaps,
-            b2caps=b2caps,
+            bundlerepo, missing, source="pull", bundlecaps=bundlecaps, b2caps=b2caps
         ):
             try:
                 treepart = treemod.createtreepackpart(

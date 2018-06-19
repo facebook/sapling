@@ -25,6 +25,7 @@ from . import fileserverclient, remotefilelog, shallowutil
 
 
 NoFiles = NoTrees = 0
+# Local means: files and trees that are not available on the main server
 LocalFiles = LocalTrees = 1
 AllFiles = AllTrees = 2
 
@@ -118,15 +119,6 @@ class shallowcg1packer(changegroup.cg1packer):
         # so we can inspect which files changed and need to be sent. So let's
         # bulk fetch the trees up front.
         repo = self._repo
-        sendtrees = NoTrees
-        if not fastpathlinkrev and util.safehasattr(repo, "prefetchtrees"):
-            sendtrees = cansendtrees(
-                repo,
-                mfs.values(),
-                source=source,
-                bundlecaps=self._bundlecaps,
-                b2caps=self._b2caps,
-            )
 
         if self._cansendflat(mfs.keys()):
             # In this code path, generating the manifests populates fnodes for
@@ -139,17 +131,33 @@ class shallowcg1packer(changegroup.cg1packer):
         else:
             # If not using the fast path, we need to discover what files to send
             if not fastpathlinkrev:
+                mfstore = repo.manifestlog.datastore
+                localmfstore = None
+                if len(repo.manifestlog.localdatastores) > 0:
+                    localmfstore = repo.manifestlog.localdatastores[0]
+
+                def containslocalfiles(mfnode):
+                    # This is a local tree, then it contains local files.
+                    if localmfstore and not localmfstore.getmissing([("", mfnode)]):
+                        return True
+
+                    # If not a local tree, and it doesn't exist in the store,
+                    # then it is to be generated and may contain local files.
+                    # This can happen while serving an infinitepush bundle that
+                    # contains flat manifests. It will need to generate trees
+                    # for that manifest.
+                    if mfstore.getmissing([("", mfnode)]):
+                        return True
+
+                    return False
+
                 # If we're sending files, we need to process the manifests
                 filestosend = self.shouldaddfilegroups(source)
                 if filestosend is not NoFiles:
                     mflog = repo.manifestlog
                     for mfnode, clnode in mfs.iteritems():
-                        if sendtrees == LocalTrees:
-                            # Don't inspect public commits, since we won't be
-                            # sending them.
-                            ctx = repo[clnode]
-                            if ctx.phase() == phases.public:
-                                continue
+                        if filestosend == LocalFiles and not containslocalfiles(mfnode):
+                            continue
 
                         try:
                             mfctx = mflog[mfnode]
@@ -237,7 +245,10 @@ class shallowcg1packer(changegroup.cg1packer):
 
     def shouldaddfilegroups(self, source):
         repo = self._repo
-        if not requirement in repo.requirements:
+        isclient = requirement in repo.requirements
+        isserver = repo.ui.configbool("remotefilelog", "server")
+
+        if not isclient and not isserver:
             return AllFiles
 
         if source == "push" or source == "bundle":
@@ -249,10 +260,14 @@ class shallowcg1packer(changegroup.cg1packer):
                 return LocalFiles
             else:
                 # Serving to a full repo requires us to serve everything
-                repo.ui.warn(_("pulling from a shallow repo\n"))
+                if isclient:
+                    repo.ui.warn(_("pulling from a shallow repo\n"))
                 return AllFiles
 
-        return NoFiles
+        if isclient:
+            return NoFiles
+        else:
+            return AllFiles
 
     def prune(self, rlog, missing, commonrevs):
         if not isinstance(rlog, remotefilelog.remotefilelog):
@@ -511,7 +526,7 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
     - else send draft trees
 
     Server:
-    - Do not send trees unless it's an infinitepush.
+    - Only send local trees (i.e. infinitepush trees only)
 
     The function also does a prefetch on clients, so all the necessary trees are
     bulk downloaded.
@@ -524,15 +539,17 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
     sendtrees = repo.ui.configbool("treemanifest", "sendtrees")
     treeonly = repo.ui.configbool("treemanifest", "treeonly")
 
+    def clienthascap(cap):
+        return cap in bundlecaps or "True" in b2caps.get(cap, [])
+
     result = AllTrees
     prefetch = AllTrees
 
     if repo.svfs.treemanifestserver:
-        if source == "infinitepushpull" and "True" in b2caps.get("treemanifest", []):
-            result = AllTrees
+        if clienthascap("treemanifest"):
+            return LocalTrees
         else:
-            result = NoTrees
-        return result
+            return NoTrees
 
     # Else, is a client
     if not sendtrees:
@@ -541,9 +558,7 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
         # getting ready to send the flat manifests. This will cause tree
         # manifest lookups, so let's go ahead and bulk prefetch them.
         prefetch = AllTrees
-    elif "treemanifestserver" in bundlecaps or "True" in b2caps.get(
-        "treemanifestserver", []
-    ):
+    elif clienthascap("treemanifestserver"):
         # If we're talking to the main server, always send everything.
         result = AllTrees
         prefetch = AllTrees

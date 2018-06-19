@@ -64,8 +64,6 @@ Pull exactly up to d into the client
   $ hg pull -r 055a42cdd887
   pulling from ssh://user@dummy/master
   searching for changes
-  remote: *** manifestdict is comparing manifests
-  remote: *** manifestdict is comparing manifests
   adding changesets
   adding manifests
   adding file changes

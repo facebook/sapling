@@ -1934,7 +1934,7 @@ def _getbundlechangegrouppart(
         outgoing = _computeoutgoing(repo, heads, common)
         if outgoing.missing:
             cgstream = changegroup.makestream(
-                repo, outgoing, version, source, bundlecaps=bundlecaps
+                repo, outgoing, version, source, bundlecaps=bundlecaps, b2caps=b2caps
             )
 
     if cgstream:

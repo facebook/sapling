@@ -415,9 +415,10 @@ def setuptreestores(repo, mfl):
         ondemandstore.setshared(mfl.datastore, mfl.historystore)
 
         mfl.shareddatastores = []
-        mfl.localdatastores = [mfl.datastore]
+        # Local stores are stores that contain data not on the main server
+        mfl.localdatastores = []
         mfl.sharedhistorystores = []
-        mfl.localhistorystores = [mfl.historystore]
+        mfl.localhistorystores = []
         return
 
     usecdatapack = ui.configbool("remotefilelog", "fastdatapack")
@@ -455,6 +456,7 @@ def setuptreestores(repo, mfl):
     mfl.datastore = unioncontentstore(*datastores, writestore=localdatastore)
 
     mfl.shareddatastores = [datastore]
+    # Local stores are stores that contain data not on the main server
     mfl.localdatastores = [localdatastore]
 
     # History store
@@ -1780,13 +1782,21 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
     basemfnodes = []
     directories = []
 
-    localtrees = sendtrees == shallowbundle.LocalTrees
-    localmfstore = repo.manifestlog.localdatastores[0]
+    localmfstore = None
+    if len(repo.manifestlog.localdatastores) > 0:
+        localmfstore = repo.manifestlog.localdatastores[0]
+
+    def shouldsend(mfnode):
+        if sendtrees == shallowbundle.AllTrees:
+            return True
+
+        # Else LocalTrees
+        return localmfstore and not localmfstore.getmissing([("", mfnode)])
 
     for node in outgoing.missing:
         ctx = repo[node]
         mfnode = ctx.manifestnode()
-        if not localtrees or not localmfstore.getmissing([("", mfnode)]):
+        if shouldsend(mfnode):
             mfnodes.append(mfnode)
     basectxs = repo.set("parents(roots(%ln))", outgoing.missing)
     for basectx in basectxs:
@@ -2343,6 +2353,13 @@ def _handlebundle2part(orig, self, bundle, part):
         mfl = self.manifestlog
         mfl.datastore = unioncontentstore(tempstore, mfl.datastore)
         mfl.historystore = unionmetadatastore(tempstore, mfl.historystore)
+
+        # Add it to the local datastores so server operations know this data is
+        # not available on the server. Like when sending infinitepush data from
+        # the server, this lets it know to send anything that is found in the
+        # bundle.
+        mfl.localdatastores.append(tempstore)
+        mfl.localhistorystores.append(tempstore)
 
         if isinstance(mfl, hybridmanifestlog):
             tmfl = mfl.treemanifestlog
