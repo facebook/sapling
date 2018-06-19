@@ -1008,17 +1008,6 @@ def rebase(ui, repo, templ=None, **opts):
             }
             with ui.configoverride(overrides):
                 return _origrebase(ui, repo, rbsrt, **opts)
-        except error.InterventionRequired:
-            # This can occur if in-memory was turned off and then legitimate
-            # conflicts were raised. Raise as usual.
-            raise
-        except error.UncommitedChangesAbort:
-            # This is a legitimate error with IMM when rebasing the working
-            # copy. Throw it up to the user.
-            raise
-        except error.UpdateAbort:
-            # Same as `UncommitedChangesAbort`.
-            raise
         except error.InMemoryMergeConflictsError as e:
             # in-memory merge doesn't support conflicts, so if we hit any, abort
             # and re-run as an on-disk merge.
@@ -1033,32 +1022,6 @@ def rebase(ui, repo, templ=None, **opts):
             )
             rbsrt.inmemory = False
             return _origrebase(ui, repo, rbsrt, **opts)
-        except Exception as e:
-            # Catch generic exceptions and restart the rebase without IMM. Any
-            # cases that _shouldn't_ restart must be caught above.
-            # In-memory merge can be turned off during `_origrebase` (see
-            # `_shoulddisableimm()`). So we double check the value of
-            # `rbsrt.inmemory`.
-            if rbsrt.inmemory:
-                ui.warn(("hit error; using on-disk merge instead " "(%s)\n" % e))
-                ui.log(
-                    "rebase",
-                    "",
-                    rebase_imm_restart=str(True).lower(),
-                    rebase_imm_exception=str(e),
-                )
-                clearstatus(repo)
-                mergemod.mergestate.clean(repo)
-                if repo.currenttransaction():
-                    repo.currenttransaction().abort()
-                inmemory = False
-                cmdutil.bailifchanged(
-                    repo, hint=_("commit, shelve or remove them, then rerun the rebase")
-                )
-                rbsrt = rebaseruntime(repo, ui, templ, inmemory, opts)
-                return _origrebase(ui, repo, rbsrt, **opts)
-            else:
-                raise
     else:
         return _origrebase(ui, repo, rbsrt, **opts)
 
