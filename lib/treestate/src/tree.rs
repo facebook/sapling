@@ -161,6 +161,12 @@ pub trait CompatExt<T> {
 
     /// Calculate `aggregated_state` if it's not calculated yet.
     fn calculate_aggregated_state(&self) -> AggregatedState;
+
+    /// Calculate `aggregated_state` if it's not calculated yet, recursively.
+    fn calculate_aggregated_state_recursive(
+        &mut self,
+        _store: &StoreView,
+    ) -> Result<AggregatedState>;
 }
 
 impl CompatExt<FileState> for Node<FileState> {
@@ -174,6 +180,13 @@ impl CompatExt<FileState> for Node<FileState> {
 
     fn calculate_aggregated_state(&self) -> AggregatedState {
         AggregatedState::default().normalized()
+    }
+
+    fn calculate_aggregated_state_recursive(
+        &mut self,
+        _store: &StoreView,
+    ) -> Result<AggregatedState> {
+        Ok(AggregatedState::default().normalized())
     }
 }
 
@@ -202,6 +215,21 @@ impl CompatExt<FileStateV2> for Node<FileStateV2> {
             }
             Some(state) => state,
         }
+    }
+
+    fn calculate_aggregated_state_recursive(
+        &mut self,
+        store: &StoreView,
+    ) -> Result<AggregatedState> {
+        self.load_aggregated_state(store)?;
+        if self.aggregated_state.get().is_none() {
+            for (_name, entry) in self.load_entries(store)?.iter_mut() {
+                if let &mut NodeEntry::Directory(ref mut node) = entry {
+                    node.calculate_aggregated_state_recursive(store)?;
+                }
+            }
+        }
+        Ok(self.calculate_aggregated_state())
     }
 
     fn load_ext(&self, data: &mut Read) -> Result<()> {
@@ -348,22 +376,6 @@ where
             // This node and its descendents have not been modified.
             Ok(())
         }
-    }
-
-    /// Calculate `aggregated_state` if it's not calculated yet, recursively.
-    fn calculate_aggregated_state_recursive(
-        &mut self,
-        store: &StoreView,
-    ) -> Result<AggregatedState> {
-        self.load_aggregated_state(store)?;
-        if self.aggregated_state.get().is_none() {
-            for (_name, entry) in self.load_entries(store)?.iter_mut() {
-                if let &mut NodeEntry::Directory(ref mut node) = entry {
-                    node.calculate_aggregated_state_recursive(store)?;
-                }
-            }
-        }
-        Ok(self.calculate_aggregated_state())
     }
 
     /// Visit all of the files in under this node, by calling the visitor function on each one.
