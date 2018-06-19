@@ -403,16 +403,8 @@ class vfs(abstractvfs):
                     )
                 try:
                     if "w" in mode:
-                        if not pycompat.iswindows or util.nlinks(f) > 1:
-                            # this is racy as between the point this
-                            # condition fails and we decide that there
-                            # is no need to unlink anything and the point
-                            # we write something to f, another hardlink
-                            # may be created
-                            # however, performance gains of this change
-                            # on Windows are significant
-                            util.unlink(f)
-                            nlink = 0
+                        util.unlink(f)
+                        nlink = 0
                     else:
                         # nlinks() may behave differently for files on Windows
                         # shares if the file is open.
