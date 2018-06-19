@@ -93,7 +93,6 @@ we expect to see "generators version = NEW".
   generators version = BASE
   base's someFunction() called
   hit merge conflicts; using on-disk merge instead (some of your files require mergedriver to run, which in-memory merge does not support)
-  rebase aborted
   rebasing 2:83615e50cada "prefix FILE with 0" (base_1 tip)
   generators version = NEW
   new_required_arg = new_required

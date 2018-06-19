@@ -529,6 +529,8 @@ class rebaseruntime(object):
                     ):
                         # in-memory merge doesn't support conflicts, so if we hit any, abort
                         # and re-run as an on-disk merge.
+                        clearstatus(repo)
+                        mergemod.mergestate.clean(repo)
                         if cmdutil.uncommittedchanges(repo):
                             raise error.UncommitedChangesAbort(
                                 _(
@@ -552,7 +554,6 @@ class rebaseruntime(object):
                         )
                         self.inmemory = False
                         self._assignworkingcopy()
-                        mergemod.mergestate.clean(repo)
                         self._performrebaseone(rev, ctx, desc, tr, dest)
                     else:
                         raise  # Use the old restart logic in `rebase()`
@@ -1023,11 +1024,14 @@ def rebase(ui, repo, templ=None, **opts):
             # and re-run as an on-disk merge.
             ui.warn(("hit merge conflicts; using on-disk merge instead " "(%s)\n" % e))
             ui.log("rebase", "", rebase_imm_restart=str(True).lower())
+            clearstatus(repo)
+            mergemod.mergestate.clean(repo)
+            if repo.currenttransaction():
+                repo.currenttransaction().abort()
             cmdutil.bailifchanged(
                 repo, hint=_("commit, shelve or remove them, then rerun the rebase")
             )
             rbsrt.inmemory = False
-            _origrebase(ui, repo, rbsrt, **{"abort": True})
             return _origrebase(ui, repo, rbsrt, **opts)
         except Exception as e:
             # Catch generic exceptions and restart the rebase without IMM. Any
@@ -1043,14 +1047,14 @@ def rebase(ui, repo, templ=None, **opts):
                     rebase_imm_restart=str(True).lower(),
                     rebase_imm_exception=str(e),
                 )
+                clearstatus(repo)
+                mergemod.mergestate.clean(repo)
+                if repo.currenttransaction():
+                    repo.currenttransaction().abort()
                 inmemory = False
                 cmdutil.bailifchanged(
                     repo, hint=_("commit, shelve or remove them, then rerun the rebase")
                 )
-                try:
-                    _origrebase(ui, repo, rbsrt, **{"abort": True})
-                except Exception as e:
-                    ui.warn(_("(couldn't abort rebase: %s)\n") % e.message)
                 rbsrt = rebaseruntime(repo, ui, templ, inmemory, opts)
                 return _origrebase(ui, repo, rbsrt, **opts)
             else:

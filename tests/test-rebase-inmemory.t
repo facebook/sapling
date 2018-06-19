@@ -1,17 +1,14 @@
 #require symlink execbit
-  $ cat << EOF >> $HGRCPATH
-  > [extensions]
-  > amend=
-  > purge=
-  > rebase=
-  > [rebase]
-  > experimental.inmemory=1
-  > [diff]
-  > git=1
+
+  $ enable amend morestatus purge rebase
+  $ setconfig morestatus.show=True
+  $ setconfig diff.git=True
+  $ setconfig rebase.experimental.inmemory=True
+
+  $ cat <<EOF >> $HGRCPATH
   > [alias]
   > tglog = log -G --template "{rev}: {node|short} '{desc}'\n"
   > EOF
-
 Rebase a simple DAG:
   $ hg init repo1
   $ cd repo1
@@ -210,7 +207,6 @@ Rerun with merge conflicts:
   rebasing 3:844a7de3e617 "c"
   merging c
   hit merge conflicts; using on-disk merge instead (in-memory merge does not support merge conflicts)
-  rebase aborted
   rebasing 3:844a7de3e617 "c"
   merging c
   warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
@@ -320,3 +316,6 @@ front:
   abort: uncommitted changes
   [255]
   $ hg up -Cq .
+  $ hg st
+  ? c.orig
+  ? i
