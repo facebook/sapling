@@ -36,7 +36,9 @@ void FakePrivHelper::registerMount(
   }
 }
 
-void FakePrivHelper::start(folly::EventBase* /* eventBase */) {}
+void FakePrivHelper::attachEventBase(folly::EventBase* /* eventBase */) {}
+
+void FakePrivHelper::detachEventBase() {}
 
 Future<File> FakePrivHelper::fuseMount(folly::StringPiece mountPath) {
   auto iter = mounts_.find(mountPath.str());

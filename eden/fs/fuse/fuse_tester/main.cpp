@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
   // but using EventBaseThread is simpler for now.
   folly::EventBaseThread evbt;
   evbt.getEventBase()->runInEventBaseThreadAndWait(
-      [&] { privHelper->start(evbt.getEventBase()); });
+      [&] { privHelper->attachEventBase(evbt.getEventBase()); });
   auto fuseDevice = privHelper->fuseMount(mountPath.value()).get(100ms);
 
   ThreadLocalEdenStats stats;

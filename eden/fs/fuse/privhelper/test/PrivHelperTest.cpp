@@ -31,6 +31,7 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 using facebook::eden::UserInfo;
 using folly::checkUnixError;
+using folly::EventBase;
 using folly::EventBaseThread;
 using folly::File;
 using folly::Future;
@@ -152,7 +153,7 @@ class PrivHelperTest : public ::testing::Test {
         });
     client_ = createTestPrivHelper(std::move(clientConn));
     clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
-        [&] { client_->start(clientIoThread_.getEventBase()); });
+        [&] { client_->attachEventBase(clientIoThread_.getEventBase()); });
   }
 
   ~PrivHelperTest() {
@@ -428,6 +429,61 @@ TEST_F(PrivHelperTest, takeoverStartup) {
       UnorderedElementsAre("/mnt/repo_x/y"));
 }
 
+TEST_F(PrivHelperTest, detachEventBase) {
+  // Perform one call using the current EventBase
+  TemporaryFile tempFile;
+  auto filePromise = server_.setFuseMountResult("/foo/bar");
+  auto result = client_->fuseMount("/foo/bar");
+  EXPECT_FALSE(result.isReady());
+  filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+  auto resultFile = result.get(1s);
+
+  // Detach the PrivHelper from the clientIoThread_'s EventBase, and perform a
+  // call using a separate local EventBase
+  clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
+      [&] { client_->detachEventBase(); });
+
+  {
+    EventBase evb;
+    client_->attachEventBase(&evb);
+
+    filePromise = server_.setFuseMountResult("/new/event/base");
+    server_.setFuseUnmountResult("/new/event/base").setValue();
+    result = client_->fuseMount("/new/event/base");
+    // The result should not be immediately ready since we have not fulfilled
+    // the promise yet.  It will only be ready if something unexpected failed.
+    if (result.isReady()) {
+      ADD_FAILURE() << "unmount request was immediately ready";
+      // Call get() so it will throw if the command failed.
+      result.get();
+      return;
+    }
+
+    bool success = false;
+    result.then([&success](folly::File&&) { success = true; }).ensure([&evb] {
+      evb.terminateLoopSoon();
+    });
+
+    filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+    evb.loopForever();
+    EXPECT_TRUE(success);
+
+    // The PrivHelper will be automatically detached from this EventBase
+    // when it goes out of scope and is destroyed.
+  }
+
+  // Re-attach the PrivHelper to the clientIoThread_'s EventBase
+  clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
+      [&] { client_->attachEventBase(clientIoThread_.getEventBase()); });
+
+  // Perform another call with the clientIoThread_ EventBase
+  auto unmountPromise = server_.setFuseUnmountResult("/foo/bar");
+  auto unmountResult = client_->fuseUnmount("/foo/bar");
+  EXPECT_FALSE(unmountResult.isReady());
+  unmountPromise.setValue();
+  unmountResult.get(1s);
+}
+
 /*
  * A test that actually forks a separate privhelper process and verifies it
  * cleans up successfully.
@@ -459,7 +515,7 @@ TEST(PrivHelper, ForkedServerShutdownTest) {
     auto privHelper = startPrivHelper(&server, UserInfo::lookup());
     EventBaseThread evbt;
     evbt.getEventBase()->runInEventBaseThreadAndWait(
-        [&] { privHelper->start(evbt.getEventBase()); });
+        [&] { privHelper->attachEventBase(evbt.getEventBase()); });
 
     // Create a few mount points
     privHelper->fuseMount(foo).get(50ms);

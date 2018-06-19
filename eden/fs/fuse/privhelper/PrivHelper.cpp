@@ -62,7 +62,7 @@ class PrivHelperClientImpl : public PrivHelper,
     DCHECK_EQ(sendPending_, 0);
   }
 
-  void start(EventBase* eventBase) override {
+  void attachEventBase(EventBase* eventBase) override {
     {
       auto state = state_.wlock();
       if (state->status != Status::NOT_STARTED) {
@@ -76,6 +76,20 @@ class PrivHelperClientImpl : public PrivHelper,
     eventBase->runOnDestruction(this);
     conn_->attachEventBase(eventBase);
     conn_->setReceiveCallback(this);
+  }
+
+  void detachEventBase() override {
+    {
+      auto state = state_.wlock();
+      if (state->status != Status::RUNNING) {
+        return;
+      }
+      state->status = Status::NOT_STARTED;
+      state->eventBase = nullptr;
+    }
+    conn_->clearReceiveCallback();
+    conn_->detachEventBase();
+    cancelLoopCallback();
   }
 
   Future<File> fuseMount(folly::StringPiece mountPath) override;
@@ -126,16 +140,17 @@ class PrivHelperClientImpl : public PrivHelper,
       state->status = Status::WAITED;
     }
 
-    // If the state was still RUNNING close the socket and fail
-    // all pending requests.
-    //
-    // Closing the socket will signal the privhelper process to exit.
+    // If the state was still RUNNING detach from the EventBase.
     if (eventBase) {
       eventBase->runImmediatelyOrRunInEventBaseThreadAndWait([this] {
+        conn_->clearReceiveCallback();
+        conn_->detachEventBase();
         cancelLoopCallback();
-        closeSocket(std::runtime_error("privhelper client being destroyed"));
       });
     }
+    // Make sure the socket is closed, and fail any outstanding requests.
+    // Closing the socket will signal the privhelper process to exit.
+    closeSocket(std::runtime_error("privhelper client being destroyed"));
 
     // Wait until the privhelper process exits.
     if (helperPid_ != 0) {
@@ -266,10 +281,9 @@ class PrivHelperClientImpl : public PrivHelper,
 
   void runLoopCallback() noexcept override {
     // Our loop callback is run when the EventBase is destroyed.
-    // This generally means that we are about to be destroyed ourself.
-    // Reset the UnixSocket while we are still in the EventBase thread.
-    handleSocketError(
-        std::runtime_error("privhelper client EventBase destroyed"));
+    // Detach from the EventBase.  We may be restarted later if
+    // attachEventBase() is called again later to attach us to a new EventBase.
+    detachEventBase();
   }
 
   void handleSocketError(const std::exception& ex) {

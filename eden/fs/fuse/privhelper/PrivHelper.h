@@ -38,12 +38,26 @@ class PrivHelper {
   virtual ~PrivHelper() {}
 
   /**
-   * Start the PrivHelper, using the specified EventBase to drive I/O.
+   * Attach the PrivHelper to an EventBase.
+   *
+   * This specifies the EventBase that the PrivHelper will use to drive I/O
+   * operations.
    *
    * This method must be called before using the PrivHelper, and it must be
    * called from the EventBase thread.
    */
-  virtual void start(folly::EventBase* eventBase) = 0;
+  virtual void attachEventBase(folly::EventBase* eventBase) = 0;
+
+  /**
+   * Detach the PrivHelper from its EventBase.
+   *
+   * This method may only be called from the current EventBase thread.
+   *
+   * No further I/O can be performed on this PrivHelper until it is re-attached
+   * to another EventBase.  Any outstanding requests will not complete until the
+   * PrivHelper is attached to another EventBase.
+   */
+  virtual void detachEventBase() = 0;
 
   /**
    * Ask the privileged helper process to perform a fuse mount.

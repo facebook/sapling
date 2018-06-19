@@ -328,7 +328,7 @@ Future<Unit> EdenServer::prepare() {
   createThriftServer();
 
   // Start the PrivHelper client, using our main event base to drive its I/O
-  serverState_->getPrivHelper()->start(mainEventBase_);
+  serverState_->getPrivHelper()->attachEventBase(mainEventBase_);
 
   // Start stats aggregation
   scheduleFlushStats();
