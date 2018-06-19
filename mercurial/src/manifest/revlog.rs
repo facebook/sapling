@@ -20,6 +20,7 @@ use file;
 use mercurial_types::{FileType, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents, MPath,
                       MPathElement, RepoPath};
 use mercurial_types::manifest::Type;
+use mononoke_types::FileContents;
 
 use RevlogRepo;
 
@@ -40,9 +41,11 @@ pub struct RevlogManifest {
 
 /// Concrete representation of various Entry Types.
 pub enum EntryContent {
-    File(HgBlob),       // TODO stream
-    Executable(HgBlob), // TODO stream
-    Symlink(MPath),
+    File(FileContents),       // TODO stream
+    Executable(FileContents), // TODO stream
+    // Symlinks typically point to files but can have arbitrary content, so represent them as
+    // blobs rather than as MPath instances.
+    Symlink(FileContents),
     Tree(RevlogManifest),
 }
 
@@ -356,19 +359,15 @@ impl RevlogEntry {
             .and_then(|node| {
                 let data = node.as_blob();
                 match self.get_type() {
-                    // Mercurial file blob can have metadata, but tree manifest can't
-                    // So strip metdata from everything except for Tree
-                    Type::File(FileType::Regular) => {
-                        Ok(EntryContent::File(strip_file_metadata(data)))
-                    }
-                    Type::File(FileType::Executable) => {
-                        Ok(EntryContent::Executable(strip_file_metadata(data)))
-                    }
-                    Type::File(FileType::Symlink) => {
-                        let data = strip_file_metadata(data);
-                        let data = data.as_slice()
-                            .ok_or(failure::err_msg("missing symlink blob data"))?;
-                        Ok(EntryContent::Symlink(MPath::new(data)?))
+                    Type::File(ft) => {
+                        let f = file::File::data_only(data.clone());
+                        let file_contents = f.file_contents();
+                        let content = match ft {
+                            FileType::Regular => EntryContent::File(file_contents),
+                            FileType::Executable => EntryContent::File(file_contents),
+                            FileType::Symlink => EntryContent::File(file_contents),
+                        };
+                        Ok(content)
                     }
                     Type::Tree => {
                         let data = data.as_slice()
@@ -400,8 +399,9 @@ impl RevlogEntry {
     pub fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         self.get_content()
             .and_then(|content| match content {
-                EntryContent::File(data) | EntryContent::Executable(data) => Ok(data.size()),
-                EntryContent::Symlink(path) => Ok(Some(path.to_vec().len())),
+                EntryContent::File(data)
+                | EntryContent::Executable(data)
+                | EntryContent::Symlink(data) => Ok(Some(data.size())),
                 EntryContent::Tree(_) => Ok(None),
             })
             .boxify()
@@ -413,16 +413,6 @@ impl RevlogEntry {
 
     pub fn get_name(&self) -> Option<&MPathElement> {
         self.name.as_ref()
-    }
-}
-
-fn strip_file_metadata(blob: &HgBlob) -> HgBlob {
-    match blob {
-        &HgBlob::Dirty(ref bytes) => {
-            let (_, off) = file::File::extract_meta(bytes);
-            HgBlob::from(bytes.slice_from(off))
-        }
-        _ => blob.clone(),
     }
 }
 

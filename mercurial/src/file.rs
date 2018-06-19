@@ -43,7 +43,9 @@ impl File {
         File { node }
     }
 
-    pub fn extract_meta(file: &[u8]) -> (&[u8], usize) {
+    // Note that this function drops empty metadata. For lossless preservation, use the metadata
+    // function instead.
+    fn extract_meta(file: &[u8]) -> (&[u8], usize) {
         if file.len() < META_SZ {
             return (&[], 0);
         }
