@@ -13,12 +13,16 @@ extern crate bytes;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate tokio;
+extern crate tokio_timer;
 
+extern crate fbwhoami;
 extern crate futures_ext;
 #[macro_use]
 extern crate lazy_static;
 extern crate memcache;
+extern crate memcache_lock_thrift;
 extern crate mononoke_types;
+extern crate rust_thrift;
 #[macro_use]
 extern crate stats;
 
