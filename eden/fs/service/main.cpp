@@ -40,16 +40,29 @@ using namespace facebook::eden;
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 
 int main(int argc, char** argv) {
+  // Fork the privhelper process, then drop privileges in the main process.
+  // This should be done as early as possible, so that everything else we do
+  // runs only with normal user privileges.
+  //
+  // We do this even before calling folly::init().  The privhelper server
+  // process will call folly::init() on its own.
+  auto identity = UserInfo::lookup();
+  auto originalEUID = geteuid();
+  auto privHelper = startPrivHelper(identity);
+  identity.dropPrivileges();
+
   // Make sure to run this before any flag values are read.
   folly::init(&argc, &argv);
 
-  // Determine the desired user and group ID.
-  if (geteuid() != 0) {
+  // Fail if we were not started as root.  The privhelper needs root
+  // privileges in order to perform mount and unmount operations.
+  // We check this after calling folly::init() so that non-root users
+  // can use the --help argument.
+  if (originalEUID != 0) {
     fprintf(stderr, "error: edenfs must be started as root\n");
     return EX_NOPERM;
   }
 
-  auto identity = UserInfo::lookup();
   if (identity.getUid() == 0 && !FLAGS_allowRoot) {
     fprintf(
         stderr,
@@ -61,42 +74,7 @@ int main(int argc, char** argv) {
     return EX_USAGE;
   }
 
-  // If logPath is set, redirect stdout and stderr.
-  if (!FLAGS_logPath.empty()) {
-    EffectiveUserScope effectiveUserScope(identity);
-    folly::File logHandle(FLAGS_logPath, O_APPEND | O_CREAT | O_WRONLY, 0644);
-    folly::checkUnixError(dup2(logHandle.fd(), STDOUT_FILENO));
-    folly::checkUnixError(dup2(logHandle.fd(), STDERR_FILENO));
-  }
-
-  // Since we are a daemon, and we don't ever want to be in a situation
-  // where we hold any open descriptors through a fuse mount that points
-  // to ourselves (which can happen during takeover), we chdir to `/`
-  // to avoid having our cwd reference ourselves if the user runs
-  // `eden daemon --takeover` from within an eden mount
-  folly::checkPosixError(chdir("/"), "failed to chdir(/)");
-
-  // Set some default glog settings, to be applied unless overridden on the
-  // command line
-  gflags::SetCommandLineOptionWithMode(
-      "logtostderr", "1", gflags::SET_FLAGS_DEFAULT);
-  gflags::SetCommandLineOptionWithMode(
-      "minloglevel", "0", gflags::SET_FLAGS_DEFAULT);
-
-  // Fork the privhelper process, then drop privileges in the main process.
-  // This should be done as early as possible, so that everything else we do
-  // runs only with normal user privileges.
-  //
-  // (It might be better to do this even before calling folly::init() and
-  // parsing command line arguments.  The downside would be that we then
-  // shouldn't really use glog in the privhelper process, since it won't have
-  // been set up and configured based on the command line flags.)
-  auto privHelper = startPrivHelper(identity);
-  identity.dropPrivileges();
-
-  XLOG(INFO) << "Starting edenfs.  UID=" << identity.getUid()
-             << ", GID=" << identity.getGid() << ", PID=" << getpid();
-
+  // Resolve path arguments before we cd to /
   if (FLAGS_edenDir.empty()) {
     fprintf(stderr, "error: the --edenDir argument is required\n");
     return EX_USAGE;
@@ -113,6 +91,31 @@ int main(int argc, char** argv) {
   const AbsolutePath configPath = configPathStr.empty()
       ? identity.getHomeDirectory() + ".edenrc"_pc
       : normalizeBestEffort(configPathStr);
+
+  // If logPath is set, redirect stdout and stderr.
+  if (!FLAGS_logPath.empty()) {
+    folly::File logHandle(FLAGS_logPath, O_APPEND | O_CREAT | O_WRONLY, 0644);
+    folly::checkUnixError(dup2(logHandle.fd(), STDOUT_FILENO));
+    folly::checkUnixError(dup2(logHandle.fd(), STDERR_FILENO));
+    privHelper->setLogFileBlocking(std::move(logHandle));
+  }
+
+  // Since we are a daemon, and we don't ever want to be in a situation
+  // where we hold any open descriptors through a fuse mount that points
+  // to ourselves (which can happen during takeover), we chdir to `/`
+  // to avoid having our cwd reference ourselves if the user runs
+  // `eden daemon --takeover` from within an eden mount
+  folly::checkPosixError(chdir("/"), "failed to chdir(/)");
+
+  // Set some default glog settings, to be applied unless overridden on the
+  // command line
+  gflags::SetCommandLineOptionWithMode(
+      "logtostderr", "1", gflags::SET_FLAGS_DEFAULT);
+  gflags::SetCommandLineOptionWithMode(
+      "minloglevel", "0", gflags::SET_FLAGS_DEFAULT);
+
+  XLOG(INFO) << "Starting edenfs.  UID=" << identity.getUid()
+             << ", GID=" << identity.getGid() << ", PID=" << getpid();
 
   EdenServer server(
       std::move(identity),

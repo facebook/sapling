@@ -25,6 +25,8 @@ class PrivHelperTestServer : public PrivHelperServer {
  public:
   PrivHelperTestServer();
 
+  void init(folly::File&& socket, uid_t uid, gid_t gid) override;
+
   /*
    * Check if the given mount point is mounted.
    *

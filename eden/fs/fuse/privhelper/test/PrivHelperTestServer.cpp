@@ -24,6 +24,13 @@ namespace eden {
 
 PrivHelperTestServer::PrivHelperTestServer() {}
 
+void PrivHelperTestServer::init(folly::File&& socket, uid_t uid, gid_t gid) {
+  // folly::init() has already been called before the unit tests start,
+  // so just call initPartial() rather than init(), to avoid calling
+  // folly::init() twce.
+  initPartial(std::move(socket), uid, gid);
+}
+
 // FUSE mounts.
 
 File PrivHelperTestServer::fuseMount(const char* mountPath) {

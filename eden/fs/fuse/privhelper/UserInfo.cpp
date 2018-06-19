@@ -56,6 +56,14 @@ static void dropToBasicSELinuxPrivileges() {
 }
 
 void UserInfo::dropPrivileges() {
+  // If we are not privileged, there is nothing to do.
+  // Return early in this case; otherwise the initgroups() call below
+  // is likely to fail.
+  if (uid_ == getuid() && uid_ == geteuid() && gid_ == getgid() &&
+      gid_ == getegid()) {
+    return;
+  }
+
   // Configure the correct supplementary groups
   auto rc = initgroups(username_.c_str(), gid_);
   checkUnixError(rc, "failed to set supplementary groups");

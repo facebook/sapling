@@ -438,7 +438,6 @@ void PrivHelper::setLogFileBlocking(folly::File logFile) {
 }
 
 unique_ptr<PrivHelper> startPrivHelper(const UserInfo& userInfo) {
-  CHECK_EQ(geteuid(), 0) << "must be root in order to start the privhelper";
   PrivHelperServer server;
   return startPrivHelper(&server, userInfo);
 }

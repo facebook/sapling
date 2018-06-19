@@ -44,7 +44,23 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   PrivHelperServer();
   virtual ~PrivHelperServer();
 
-  void init(folly::File&& socket, uid_t uid, gid_t gid);
+  /**
+   * Initialize the PrivHelperServer.  This should be called prior to run().
+   *
+   * This calls folly::init().
+   */
+  virtual void init(folly::File&& socket, uid_t uid, gid_t gid);
+
+  /**
+   * Initialize the PrivHelperServer without calling folly::init().
+   *
+   * This can be used if folly::init() has already been called.
+   */
+  void initPartial(folly::File&& socket, uid_t uid, gid_t gid);
+
+  /**
+   * Run the PrivHelperServer main loop.
+   */
   void run();
 
  private:

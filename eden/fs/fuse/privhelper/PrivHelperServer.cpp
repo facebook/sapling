@@ -17,6 +17,7 @@
 #include <folly/FileUtil.h>
 #include <folly/Format.h>
 #include <folly/String.h>
+#include <folly/init/Init.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
@@ -50,11 +51,27 @@ PrivHelperServer::PrivHelperServer() {}
 PrivHelperServer::~PrivHelperServer() {}
 
 void PrivHelperServer::init(folly::File&& socket, uid_t uid, gid_t gid) {
+  // Call folly::init()
+  // For simplicity and safety we always use a fixed set of arguments rather
+  // than processing user-supplied arguments since we are running with root
+  // privileges.
+  std::array<const char*, 3> privhelperArgv = {{
+      "edenfs_privhelper",
+      "--logging",
+      "WARN:default, eden=DBG2; "
+      "default=stream:stream=stderr,async=false",
+  }};
+  char** argv = const_cast<char**>(privhelperArgv.data());
+  int argc = privhelperArgv.size();
+  folly::init(&argc, &argv, false);
+
+  initPartial(std::move(socket), uid, gid);
+}
+
+void PrivHelperServer::initPartial(folly::File&& socket, uid_t uid, gid_t gid) {
   // Make sure init() is only called once.
   CHECK_EQ(uid_, std::numeric_limits<uid_t>::max());
   CHECK_EQ(gid_, std::numeric_limits<gid_t>::max());
-
-  initLogging();
 
   // eventBase_ is a unique_ptr only so that we can delay constructing it until
   // init() is called.  We want to avoid creating it in the constructor since
@@ -64,16 +81,8 @@ void PrivHelperServer::init(folly::File&& socket, uid_t uid, gid_t gid) {
   conn_ = UnixSocket::makeUnique(eventBase_.get(), std::move(socket));
   uid_ = uid;
   gid_ = gid;
-}
 
-void PrivHelperServer::initLogging() {
-  // Initialize the folly logging code for use inside the privhelper process.
-  // For simplicity and safety we always use a fixed logging string
-  // rather than parsing an arbitrary user-supplied configuration.
-  auto logConfig = folly::parseLogConfig(
-      "WARN:default, eden=DBG2; "
-      "default=stream:stream=stderr,async=false");
-  folly::LoggerDB::get().resetConfig(logConfig);
+  folly::checkPosixError(chdir("/"), "privhelper failed to chdir(/)");
 }
 
 folly::File PrivHelperServer::fuseMount(const char* mountPath) {
