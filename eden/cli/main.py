@@ -739,7 +739,10 @@ class RestartCmd(Subcmd):
                     stop_aux_processes(client)
                     # Ask the old edenfs daemon to shutdown
                     self.msg("Stopping the existing edenfs daemon (pid {})...", pid)
-                    client.shutdown()
+                    client.initiateShutdown(
+                        f"`eden restart` requested by pid={os.getpid()} "
+                        f"uid={os.getuid()}"
+                    )
                     stopping = True
         except EdenNotRunningError:
             pass
@@ -832,7 +835,9 @@ class StopCmd(Subcmd):
                 stop_aux_processes(client)
                 # Ask the client to shutdown
                 print(f"Stopping edenfs daemon (pid {pid})...")
-                client.shutdown()
+                client.initiateShutdown(
+                    f"`eden stop` requested by pid={os.getpid()} uid={os.getuid()}"
+                )
         except EdenNotRunningError:
             print_stderr("error: edenfs is not running")
             return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR

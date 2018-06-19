@@ -12,6 +12,7 @@ from typing import Any, cast
 
 from facebook.eden import EdenService
 from thrift.protocol.THeaderProtocol import THeaderProtocol
+from thrift.Thrift import TApplicationException
 from thrift.transport.THeaderTransport import THeaderTransport
 from thrift.transport.TSocket import TSocket
 from thrift.transport.TTransport import TTransportException
@@ -84,6 +85,29 @@ class EdenClient(EdenService.Client):
         if self._transport is not None:
             self._transport.close()
             self._transport = None
+
+    def shutdown(self):
+        self.initiateShutdown(
+            "EdenClient.shutdown() invoked with no reason by pid=%s uid=%s"
+            % (os.getpid(), os.getuid())
+        )
+
+    def initiateShutdown(self, reason):
+        """Helper for stopping the server.
+        To swing through the transition from calling the base shutdown() method
+        with context to the initiateShutdown() method with a reason, we want to
+        try the latter method first, falling back to the old way to handle the
+        case where we deploy a newer client while an older server is still
+        running on the local system."""
+        try:
+            super().initiateShutdown(reason)
+        except TApplicationException as ex:
+            if ex.type == TApplicationException.UNKNOWN_METHOD:
+                # Running an older server build, fall back to the old shutdown
+                # method with no context
+                super().shutdown()
+            else:
+                raise
 
 
 def create_thrift_client(eden_dir=None, socket_path=None):

@@ -981,5 +981,11 @@ void EdenServiceHandler::shutdown() {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO);
   server_->stop();
 }
+
+void EdenServiceHandler::initiateShutdown(std::unique_ptr<std::string> reason) {
+  auto helper = INSTRUMENT_THRIFT_CALL(INFO);
+  XLOG(INFO) << "initiateShutdown requested, reason: " << *reason;
+  server_->stop();
+}
 } // namespace eden
 } // namespace facebook

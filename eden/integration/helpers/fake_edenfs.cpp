@@ -57,6 +57,11 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
   void shutdown() override {
     printf("received shutdown() thrift request\n");
   }
+
+  void initiateShutdown(std::unique_ptr<std::string> reason) override {
+    printf(
+        "received initiateShutdown() thrift requested: %s\n", reason->c_str());
+  }
 };
 
 class SignalHandler : public folly::AsyncSignalHandler {

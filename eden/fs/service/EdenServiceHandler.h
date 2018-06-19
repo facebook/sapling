@@ -166,9 +166,17 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   /**
    * When this Thrift handler is notified to shutdown, it notifies the
-   * EdenServer to shut down, as well.
+   * EdenServer to shut down, as well.  We prefer that external
+   * clients use initiateShutdown() instead so that we can log some
+   * context.
    */
   void shutdown() override;
+
+  /**
+   * A thrift client has requested that we shutdown and provided
+   * the reason why.
+   */
+  void initiateShutdown(std::unique_ptr<std::string> reason) override;
 
  private:
   folly::Future<Hash> getSHA1ForPath(

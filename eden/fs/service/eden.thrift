@@ -676,4 +676,9 @@ service EdenService extends fb303.FacebookService {
    * Gets the number of inodes unloaded by periodic job on an EdenMount.
    */
   InternalStats getStatInfo() throws (1: EdenError ex)
+
+  /**
+   * Ask the server to shutdown and provide it some context for its logs
+   */
+  void initiateShutdown(1: string reason);
 }
