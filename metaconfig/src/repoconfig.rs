@@ -39,6 +39,10 @@ pub struct RepoConfig {
     pub scuba_table: Option<String>,
     /// Parameters of how to warm up the cache
     pub cache_warmup: Option<CacheWarmupParams>,
+    /// Configuration for bookmarks
+    pub bookmarks: Option<Vec<BookmarkParams>>,
+    /// Configuration for hooks
+    pub hooks: Option<Vec<HookParams>>,
 }
 
 /// Configuration of warming up the Mononoke cache. This warmup happens on startup
@@ -49,6 +53,24 @@ pub struct CacheWarmupParams {
     /// Max number to fetch during commit warmup. If not set in the config, then set to a default
     /// value.
     pub commit_limit: usize,
+}
+
+/// Configuration for a bookmark
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct BookmarkParams {
+    /// The name of the bookmark
+    pub name: String,
+    /// The hooks active for the bookmark
+    pub hooks: Option<Vec<String>>,
+}
+
+/// Configuration for a hook
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct HookParams {
+    /// The name of the hook
+    pub name: String,
+    /// The path to the hook
+    pub path: String,
 }
 
 /// Types of repositories supported
@@ -218,12 +240,31 @@ struct RawRepoConfig {
     io_thread_num: Option<usize>,
     cache_warmup: Option<RawCacheWarmupConfig>,
     max_concurrent_requests_per_io_thread: Option<usize>,
+    bookmarks: Option<Vec<RawBookmarkConfig>>,
+    hooks: Option<Vec<RawHookConfig>>,
 }
 
 #[derive(Debug, Deserialize)]
 struct RawCacheWarmupConfig {
     bookmark: String,
     commit_limit: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawBookmarkConfig {
+    name: String,
+    hooks: Option<Vec<RawBookmarkHook>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawBookmarkHook {
+    hook_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawHookConfig {
+    name: String,
+    path: String,
 }
 
 /// Types of repositories supported
@@ -276,6 +317,33 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
             bookmark: Bookmark::new(cache_warmup.bookmark).expect("bookmark name must be ascii"),
             commit_limit: cache_warmup.commit_limit.unwrap_or(200000),
         });
+        let bookmarks = match this.bookmarks {
+            Some(bm) => Some(
+                bm.into_iter()
+                    .map(|bm| BookmarkParams {
+                        name: bm.name,
+                        hooks: match bm.hooks {
+                            Some(hooks) => {
+                                Some(hooks.into_iter().map(|rbmh| rbmh.hook_name).collect())
+                            }
+                            None => None,
+                        },
+                    })
+                    .collect(),
+            ),
+            None => None,
+        };
+        let hooks = match this.hooks {
+            Some(hook) => Some(
+                hook.into_iter()
+                    .map(|hook| HookParams {
+                        name: hook.name,
+                        path: hook.path,
+                    })
+                    .collect(),
+            ),
+            None => None,
+        };
 
         Ok(RepoConfig {
             repotype,
@@ -283,6 +351,8 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
             repoid,
             scuba_table,
             cache_warmup,
+            bookmarks,
+            hooks,
         })
     }
 }
@@ -305,6 +375,20 @@ mod test {
             [cache_warmup]
             bookmark="master"
             commit_limit=100
+            [[bookmarks]]
+            name="bookmark_fbs1"
+            [[bookmarks.hooks]]
+            hook_name="hook_fbs1"
+            [[bookmarks.hooks]]
+            hook_name="hook_fbs2"
+            [[bookmarks]]
+            name="bookmark_fbs2"
+            [[hooks]]
+            name="hook_fbs1"
+            path="blah/hooks/hook_fbs1.lua"
+            [[hooks]]
+            name="hook_fbs2"
+            path="blah/hooks/hook_fbs2.lua"
         "#;
         let www_content = r#"
             path="/tmp/www"
@@ -335,6 +419,26 @@ mod test {
                     bookmark: Bookmark::new("master").unwrap(),
                     commit_limit: 100,
                 }),
+                bookmarks: Some(vec![
+                    BookmarkParams {
+                        name: "bookmark_fbs1".to_string(),
+                        hooks: Some(vec!["hook_fbs1".to_string(), "hook_fbs2".to_string()]),
+                    },
+                    BookmarkParams {
+                        name: "bookmark_fbs2".to_string(),
+                        hooks: None,
+                    },
+                ]),
+                hooks: Some(vec![
+                    HookParams {
+                        name: "hook_fbs1".to_string(),
+                        path: "blah/hooks/hook_fbs1.lua".to_string(),
+                    },
+                    HookParams {
+                        name: "hook_fbs2".to_string(),
+                        path: "blah/hooks/hook_fbs2.lua".to_string(),
+                    },
+                ]),
             },
         );
         repos.insert(
@@ -345,6 +449,8 @@ mod test {
                 repoid: 1,
                 scuba_table: Some("scuba_table".to_string()),
                 cache_warmup: None,
+                bookmarks: None,
+                hooks: None,
             },
         );
         assert_eq!(
