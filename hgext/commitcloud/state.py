@@ -21,27 +21,27 @@ class SyncState(object):
     last sync.
     """
 
-    @staticmethod
-    def _filename(workspace):
+    prefix = "commitcloudstate."
+
+    @classmethod
+    def _filename(cls, workspace):
         # make a unique valid filename
         return (
-            "commitcloudstate."
+            cls.prefix
             + "".join(x for x in workspace if x.isalnum())
             + ".%s" % (hashlib.sha256(workspace).hexdigest()[0:5])
         )
 
-    @staticmethod
-    def erasestate(repo):
+    @classmethod
+    def erasestate(cls, repo):
         # get current workspace
         workspace = commitcloudutil.getworkspacename(repo)
         if not workspace:
             raise commitcloudcommon.WorkspaceError(repo.ui, _("undefined workspace"))
 
-        filename = SyncState._filename(workspace)
+        filename = cls._filename(workspace)
         # clean up the current state in force recover mode
-        if repo.svfs.exists(filename):
-            with repo.wlock(), repo.lock():
-                repo.svfs.unlink(filename)
+        repo.svfs.tryunlink(filename)
 
     def __init__(self, repo):
         # get current workspace
@@ -49,7 +49,7 @@ class SyncState(object):
         if not workspace:
             raise commitcloudcommon.WorkspaceError(repo.ui, _("undefined workspace"))
 
-        self.filename = SyncState._filename(workspace)
+        self.filename = self._filename(workspace)
         repo = shareutil.getsrcrepo(repo)
         self.repo = repo
         if repo.svfs.exists(self.filename):
@@ -73,9 +73,8 @@ class SyncState(object):
 
     def update(self, newversion, newheads, newbookmarks):
         data = {"version": newversion, "heads": newheads, "bookmarks": newbookmarks}
-        with self.repo.wlock(), self.repo.lock():
-            with self.repo.svfs.open(self.filename, "w", atomictemp=True) as f:
-                json.dump(data, f)
+        with self.repo.svfs.open(self.filename, "w", atomictemp=True) as f:
+            json.dump(data, f)
         self.version = newversion
         self.heads = newheads
         self.bookmarks = newbookmarks

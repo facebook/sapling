@@ -56,7 +56,7 @@ from __future__ import absolute_import
 from mercurial import error, extensions, localrepo, registrar, util
 from mercurial.i18n import _
 
-from . import commitcloudcommands, commitcloudcommon, commitcloudutil
+from . import commitcloudcommands, commitcloudcommon, commitcloudutil, state
 
 
 cmdtable = commitcloudcommands.cmdtable
@@ -137,9 +137,8 @@ def extsetup(ui):
     commitcloudcommands.infinitepush = infinitepush
     commitcloudcommands.infinitepushbackup = infinitepushbackup
 
-    localrepo.localrepository._wlockfreeprefix.update(
-        [commitcloudutil._obsmarkerssyncing]
-    )
+    localrepo.localrepository._wlockfreeprefix.add(commitcloudutil._obsmarkerssyncing)
+    localrepo.localrepository._lockfreeprefix.add(state.SyncState.prefix)
 
 
 def reposetup(ui, repo):
