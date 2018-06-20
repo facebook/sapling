@@ -208,19 +208,23 @@ pub fn visited_pruner() -> impl FnMut(&ChangedEntry) -> bool + Send + Clone + 's
     move |entry: &ChangedEntry| {
         let dirname = entry.dirname.clone();
 
-        let mut visited = visited.lock().unwrap();
-
-        match entry.status {
+        let (path, hash) = match entry.status {
             EntryStatus::Added(ref entry) => {
-                visited.insert((dirname, entry.get_hash().into_nodehash()))
+                let fullpath = MPath::join_opt(dirname.as_ref(), entry.get_name());
+                (fullpath, entry.get_hash().into_nodehash())
             }
             EntryStatus::Deleted(ref entry) => {
-                visited.insert((dirname, entry.get_hash().into_nodehash()))
+                let fullpath = MPath::join_opt(dirname.as_ref(), entry.get_name());
+                (fullpath, entry.get_hash().into_nodehash())
             }
             EntryStatus::Modified { ref to_entry, .. } => {
-                visited.insert((dirname, to_entry.get_hash().into_nodehash()))
+                let fullpath = MPath::join_opt(dirname.as_ref(), to_entry.get_name());
+                (fullpath, to_entry.get_hash().into_nodehash())
             }
-        }
+        };
+
+        let mut visited = visited.lock().unwrap();
+        visited.insert((path, hash))
     }
 }
 

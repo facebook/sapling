@@ -12,6 +12,8 @@ extern crate blobrepo;
 extern crate futures;
 extern crate futures_ext;
 extern crate many_files_dirs;
+#[macro_use]
+extern crate maplit;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate tokio;
@@ -26,11 +28,11 @@ use futures::{Future, Stream};
 use futures::executor::spawn;
 use futures_ext::select_all;
 use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Type, NULL_HASH};
-use mercurial_types::manifest::Content;
+use mercurial_types::manifest::{Content, EmptyManifest};
 use mercurial_types::manifest_utils::{changed_entry_stream, changed_entry_stream_with_pruner,
                                       diff_sorted_vecs, visited_pruner, ChangedEntry, EntryStatus};
 use mercurial_types::nodehash::{HgChangesetId, HgEntryId, HgNodeHash};
-use mercurial_types_mocks::manifest::{ContentFactory, MockEntry};
+use mercurial_types_mocks::manifest::{ContentFactory, MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash;
 
 fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &HgChangesetId) -> Box<Manifest> {
@@ -563,6 +565,26 @@ fn test_recursive_changed_entry_prune_visited() {
         // returned twice.
         assert!(unique_len < res.len());
 
+        Ok(())
+    }).expect("test failed")
+}
+
+#[test]
+fn test_visited_pruner_different_files_same_hash() {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let paths = btreemap! {
+            "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
+            "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
+        };
+        let root_manifest = MockManifest::from_path_hashes(paths).expect("manifest is valid");
+
+        let pruner = visited_pruner();
+        let stream =
+            changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner);
+        let mut res = spawn(stream.collect());
+        let res = res.wait_future().unwrap();
+
+        assert_eq!(res.len(), 2);
         Ok(())
     }).expect("test failed")
 }
