@@ -22,8 +22,9 @@
 ///
 /// The stream below aims to solve the aforementioned problems. It's primary usage is in
 /// Mercurial pull to find commits that need to be sent to a client.
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BinaryHeap, HashSet};
 use std::collections::hash_set::IntoIter;
+use std::hash::Hash;
 use std::iter;
 use std::sync::Arc;
 
@@ -75,6 +76,42 @@ use setcommon::*;
 ///    );
 /// ```
 ///
+
+struct UniqueHeap<T>
+where
+    T: Ord + Hash + Eq,
+{
+    sorted_vals: BinaryHeap<T>,
+    unique_vals: HashSet<T>,
+}
+
+impl<T> UniqueHeap<T>
+where
+    T: Ord + Hash + Eq + Clone,
+{
+    fn new() -> Self {
+        UniqueHeap {
+            sorted_vals: BinaryHeap::new(),
+            unique_vals: HashSet::new(),
+        }
+    }
+
+    fn push(&mut self, val: T) {
+        if !self.unique_vals.contains(&val) {
+            self.unique_vals.insert(val.clone());
+            self.sorted_vals.push(val.clone());
+        }
+    }
+
+    fn pop(&mut self) -> Option<T> {
+        if let Some(v) = self.sorted_vals.pop() {
+            self.unique_vals.remove(&v);
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
 pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     repo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,
@@ -96,6 +133,9 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     // Nodes which generation is equal to `current_generation`. They will be returned from the
     // stream unless excluded.
     drain: iter::Peekable<IntoIter<HgNodeHash>>,
+
+    // max heap of all relevant unique generation numbers
+    sorted_unique_generations: UniqueHeap<Generation>,
 }
 
 fn make_pending(
@@ -163,11 +203,14 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                 let repo = repo.clone();
                 move |hashes_generations| {
                     let mut next_generation = BTreeMap::new();
+                    let mut sorted_unique_generations = UniqueHeap::new();
                     for (hash, generation) in hashes_generations {
                         next_generation
                             .entry(generation.clone())
                             .or_insert_with(HashSet::new)
                             .insert(hash);
+                        // insert into our sorted list of generations
+                        sorted_unique_generations.push(generation);
                     }
 
                     let excludes = add_generations(excludes, repo_generation.clone(), repo.clone());
@@ -183,6 +226,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                             .fuse()
                             .peekable(),
                         drain: hashset!{}.into_iter().peekable(),
+                        sorted_unique_generations,
                     }.boxify()
                 }
             })
@@ -218,10 +262,9 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
     }
 
     fn update_generation(&mut self) {
-        let highest_generation = *self.next_generation
-            .keys()
-            .max()
-            .expect("Non-empty map has no keys");
+        let highest_generation = self.sorted_unique_generations
+            .pop()
+            .expect("Expected a non empty heap of generations");
         let new_generation = self.next_generation
             .remove(&highest_generation)
             .expect("Highest generation doesn't exist");
@@ -263,6 +306,8 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
                             .entry(generation)
                             .or_insert_with(HashSet::new)
                             .insert(hash);
+                        // insert into our sorted list of generations
+                        self.sorted_unique_generations.push(generation);
                     }
                     Async::NotReady => return Ok(Async::NotReady),
                     Async::Ready(None) => break,
