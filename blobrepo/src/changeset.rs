@@ -25,7 +25,7 @@ use errors::*;
 use repo::RepoBlobstore;
 use utils::{EnvelopeBlob, RawCSBlob};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ChangesetContent {
     p1: Option<HgNodeHash>,
     p2: Option<HgNodeHash>,
@@ -125,7 +125,7 @@ impl ChangesetContent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BlobChangeset {
     changesetid: HgChangesetId, // redundant - can be computed from revlogcs?
     content: ChangesetContent,

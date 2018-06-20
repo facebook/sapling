@@ -40,7 +40,7 @@ use clap::{App, ArgMatches};
 use failure::{Error, Result};
 use futures::{failed, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use hooks::{HookExecution, HookManager};
+use hooks::{BlobRepoChangesetStore, HookExecution, HookManager};
 use hooks::lua_hook::LuaHook;
 use mercurial_types::{HgChangesetId, RepositoryId};
 use slog::{Drain, Level, Logger};
@@ -95,7 +95,8 @@ fn run_hook(
     println!("Hook code is {}", code);
     println!("==============================");
 
-    let mut hook_manager = HookManager::new(repo_name, repo.clone(), 1024, 1024 * 1024);
+    let store = Box::new(BlobRepoChangesetStore::new(repo.clone()));
+    let mut hook_manager = HookManager::new(repo_name, store, 1024, 1024 * 1024);
     let hook = LuaHook {
         name: String::from("testhook"),
         code,

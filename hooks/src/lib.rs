@@ -43,7 +43,7 @@ pub mod rust_hook;
 use asyncmemo::{Asyncmemo, Filler, Weight};
 use blobrepo::{BlobChangeset, BlobRepo};
 use failure::Error;
-use futures::Future;
+use futures::{failed, finished, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, HgParents};
 use std::collections::HashMap;
@@ -91,6 +91,67 @@ impl Weight for HookRejectionInfo {
     }
 }
 
+pub trait ChangesetStore: Send + Sync {
+    fn get_changeset_by_changesetid(
+        &self,
+        changesetid: &HgChangesetId,
+    ) -> BoxFuture<BlobChangeset, Error>;
+}
+
+pub struct BlobRepoChangesetStore {
+    pub repo: BlobRepo,
+}
+
+impl ChangesetStore for BlobRepoChangesetStore {
+    fn get_changeset_by_changesetid(
+        &self,
+        changesetid: &HgChangesetId,
+    ) -> BoxFuture<BlobChangeset, Error> {
+        self.repo.get_changeset_by_changesetid(changesetid)
+    }
+}
+
+impl BlobRepoChangesetStore {
+    pub fn new(repo: BlobRepo) -> BlobRepoChangesetStore {
+        BlobRepoChangesetStore { repo }
+    }
+}
+
+pub struct InMemoryChangesetStore {
+    map: HashMap<HgChangesetId, BlobChangeset>,
+}
+
+impl ChangesetStore for InMemoryChangesetStore {
+    fn get_changeset_by_changesetid(
+        &self,
+        changesetid: &HgChangesetId,
+    ) -> BoxFuture<BlobChangeset, Error> {
+        match self.map.get(changesetid) {
+            Some(cs) => Box::new(finished(cs.clone())),
+            None => Box::new(failed(
+                ErrorKind::NoSuchChangeset(changesetid.to_string()).into(),
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "No changeset with id '{}'", _0)] NoSuchChangeset(String),
+}
+
+impl InMemoryChangesetStore {
+    pub fn new() -> InMemoryChangesetStore {
+        InMemoryChangesetStore {
+            map: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, changeset_id: &HgChangesetId, changeset: &BlobChangeset) {
+        self.map.insert(changeset_id.clone(), changeset.clone());
+    }
+}
+
 impl HookRejectionInfo {
     pub fn new(description: String, long_description: String) -> HookRejectionInfo {
         HookRejectionInfo {
@@ -103,7 +164,7 @@ impl HookRejectionInfo {
 struct HookCacheFiller {
     repo_name: String,
     hooks: Hooks,
-    repo: BlobRepo,
+    store: Box<ChangesetStore>,
 }
 
 impl Filler for HookCacheFiller {
@@ -118,7 +179,7 @@ impl Filler for HookCacheFiller {
         match hooks.get(&hook_name) {
             Some(arc_hook) => {
                 let arc_hook = arc_hook.clone();
-                self.repo
+                self.store
                     .get_changeset_by_changesetid(&changeset_id)
                     .then(|res| match res {
                         Ok(cs) => HookChangeset::try_from(cs),
@@ -145,14 +206,14 @@ struct HookExecutionHolder {
 impl HookManager {
     pub fn new(
         repo_name: String,
-        repo: BlobRepo,
+        store: Box<ChangesetStore>,
         entrylimit: usize,
         weightlimit: usize,
     ) -> HookManager {
         let hooks = Arc::new(Mutex::new(HashMap::new()));
         let filler = HookCacheFiller {
             hooks: hooks.clone(),
-            repo,
+            store,
             repo_name,
         };
         let cache = Asyncmemo::with_limits(filler, entrylimit, weightlimit);
@@ -314,9 +375,22 @@ mod test {
     }
 
     #[test]
-    fn test_run_hooks() {
-        async_unit::tokio_unit_test(|| {
-            let mut hook_manager = hook_manager();
+    fn test_run_hooks_inmem() {
+        test_run_hooks(true);
+    }
+
+    #[test]
+    fn test_run_hooks_blobrepo() {
+        test_run_hooks(false);
+    }
+
+    fn test_run_hooks(inmem: bool) {
+        async_unit::tokio_unit_test(move || {
+            let mut hook_manager = if inmem {
+                hook_manager_inmem()
+            } else {
+                hook_manager_blobrepo()
+            };
             let hook1 = TestHook {
                 expected_execution: HookExecution::Accepted,
             };
@@ -432,8 +506,25 @@ mod test {
     }
 
     fn hook_manager() -> HookManager {
+        hook_manager_inmem()
+    }
+
+    fn hook_manager_blobrepo() -> HookManager {
         let repo = linear::getrepo(None);
-        HookManager::new("some_repo".into(), repo, 1024, 1024 * 1024)
+        let store = BlobRepoChangesetStore { repo };
+        HookManager::new("some_repo".into(), Box::new(store), 1024, 1024 * 1024)
+    }
+
+    fn hook_manager_inmem() -> HookManager {
+        let repo = linear::getrepo(None);
+
+        // Load up an in memory store with a single commit from the linear store
+        let cs_id = HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
+        let cs = repo.get_changeset_by_changesetid(&cs_id).wait().unwrap();
+
+        let mut store = InMemoryChangesetStore::new();
+        store.insert(&cs_id, &cs);
+        HookManager::new("some_repo".into(), Box::new(store), 1024, 1024 * 1024)
     }
 
 }
