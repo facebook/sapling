@@ -99,14 +99,14 @@ class RemountTest(testcase.EdenRepoTest):
         self.assertFalse(os.path.exists(self.mount))
 
     def test_restart_twice(self) -> None:
-        # Mount multiple clients
+        # Clone multiple checkouts
         for i in range(5):
             self.eden.clone(self.repo_name, self.mount + "-" + str(i))
 
         self.eden.shutdown()
         self.eden.start()
 
-        # Unmount clients
+        # Remove some checkouts
         self.eden.remove(self.mount)
         self.eden.remove(self.mount + "-3")
 
@@ -114,11 +114,22 @@ class RemountTest(testcase.EdenRepoTest):
         self.eden.start()
 
         # Verify that clients that were still mounted at shutdown are remounted
+        checkouts = self.eden.list_cmd()
+        expected_checkouts = {
+            f"{self.mount}-{i}": self.eden.CLIENT_ACTIVE for i in range(5) if i != 3
+        }
+        self.assertEqual(expected_checkouts, checkouts)
+
         for i in range(5):
+            mount_path = self.mount + "-" + str(i)
             if i == 3:
                 continue
-            entries = sorted(os.listdir(self.mount + "-" + str(i)))
-            self.assertEqual([".eden", "adir", "hello", "slink"], entries)
+            entries = sorted(os.listdir(mount_path))
+            self.assertEqual(
+                [".eden", "adir", "hello", "slink"],
+                entries,
+                f"incorrect entries in {mount_path!r}",
+            )
 
         # Verify that unmounted clients are not remounted
         self.assertFalse(os.path.exists(self.mount))
