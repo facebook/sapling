@@ -26,11 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-# no unicode literals
+from __future__ import absolute_import, division, print_function
 
 import inspect
 import math
@@ -38,6 +34,12 @@ import os
 import socket
 import subprocess
 import time
+
+from . import capabilities, compat, encoding
+
+
+# no unicode literals
+
 
 # Sometimes it's really hard to get Python extensions to compile,
 # so fall back to a pure Python implementation.
@@ -50,7 +52,6 @@ try:
 except ImportError:
     from . import pybser as bser
 
-from . import capabilities, compat, encoding, load
 
 if os.name == "nt":
     import ctypes
@@ -854,6 +855,7 @@ class client(object):
         return name in result
 
     def _resolvesockname(self):
+
         # if invoked via a trigger, watchman will set this env var; we
         # should use it unless explicitly set otherwise
         path = os.getenv("WATCHMAN_SOCK")

@@ -9,9 +9,8 @@ from __future__ import absolute_import
 
 import getpass
 
-from mercurial.node import hex
-
 from mercurial import progress, util
+from mercurial.node import hex
 
 from .. import pywatchman
 
