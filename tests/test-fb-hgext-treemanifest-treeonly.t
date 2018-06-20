@@ -471,6 +471,10 @@ Switch back to hybrid mode
 
   $ clearcache
 
+- Force a draft commit to be public, to test if the backfill logic correctly
+- filters it from discovery with the server.
+  $ hg phase -pr 779a137458d0
+
 - Auto-backfill on pull
   $ hg pull
   backfilling missing flat manifests
@@ -489,6 +493,7 @@ Switch back to hybrid mode
 
   $ cp .hg/store/00manifest.i.bak .hg/store/00manifest.i
   $ cp .hg/store/00changelog.i.bak .hg/store/00changelog.i
+  $ hg phase -dfr 779a137458d0
 
 - Manually backfill via command
   $ hg backfillmanifestrevlog

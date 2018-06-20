@@ -1072,13 +1072,17 @@ def backfillmanifestrevlog(ui, repo, *args, **opts):
         # calculate that by saying we need all the public heads, and that we
         # have some of them already. This might result in extra downloading but
         # they become no-ops when attempting to be added to the revlog.
-        publicheads = repo.revs("heads(public())")
+        publicheads = list(repo.revs("heads(public())"))
         clnode = cl.node
         heads = [clnode(r) for r in publicheads]
+
+        # Only request heads the server knows about
+        knownheads = list(remote.known(heads))
+        heads = [n for i, n in enumerate(heads) if knownheads[i]]
         common = [
             clnode(r)
-            for r in publicheads
-            if cl.changelogrevision(r).manifest in mfrevlog.nodemap
+            for i, r in enumerate(publicheads)
+            if knownheads[i] and cl.changelogrevision(r).manifest in mfrevlog.nodemap
         ]
         with repo.wlock(), repo.lock(), (repo.transaction("backfillmanifest")) as tr:
             bundlecaps = exchange.caps20to10(repo)
