@@ -19,7 +19,8 @@ use std::time::Duration;
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
 use fbwhoami::FbWhoAmI;
-use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, future::Either};
+use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, future::Either,
+              stream::empty};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed, TimedStreamTrait};
 use futures_trace::{self, Traced};
@@ -506,25 +507,33 @@ impl RepoClient {
             Some(try_boxstream!(MPath::new(params.rootdir)))
         };
 
-        let pruner = if params.mfnodes.len() > 1 {
-            Some(and_pruner_combinator(&file_pruner, visited_pruner()))
+        let changed_entries = if params.mfnodes.len() > 1 {
+            let visited_pruner = visited_pruner();
+            params
+                .mfnodes
+                .iter()
+                .fold(stream::empty().boxify(), move |cur_stream, manifest_id| {
+                    let new_stream = get_changed_entry_stream(
+                        self.repo.blobrepo.clone(),
+                        &manifest_id,
+                        &basemfnode,
+                        rootpath.clone(),
+                        Some(and_pruner_combinator(&file_pruner, visited_pruner.clone())),
+                    );
+                    cur_stream.select(new_stream).boxify()
+                })
         } else {
-            None
-        };
-
-        let changed_entries = params.mfnodes.iter().fold(
-            stream::empty().boxify(),
-            move |cur_stream, manifest_id| {
-                let new_stream = get_changed_entry_stream(
+            match params.mfnodes.get(0) {
+                Some(mfnode) => get_changed_entry_stream(
                     self.repo.blobrepo.clone(),
-                    &manifest_id,
+                    &mfnode,
                     &basemfnode,
                     rootpath.clone(),
-                    pruner.clone(),
-                );
-                cur_stream.select(new_stream).boxify()
-            },
-        );
+                    Some(&file_pruner),
+                ),
+                None => empty().boxify(),
+            }
+        };
 
         let changed_entries = changed_entries
             .filter({
