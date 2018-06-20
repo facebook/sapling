@@ -379,6 +379,10 @@ class localrepository(object):
         "bisect.state",
     }
 
+    # Set of prefixes of store files which can be written without 'lock'.
+    # Extensions should extend this set when necessary.
+    _lockfreeprefix = set()
+
     def __init__(self, baseui, path, create=False):
         self.requirements = set()
         self.filtername = None
@@ -611,6 +615,9 @@ class localrepository(object):
                 # truncate name relative to the repository (.hg)
                 path = path[len(repo.sharedpath) + 1 :]
             if repo._currentlock(repo._lockref) is None:
+                for prefix in self._lockfreeprefix:
+                    if path.startswith(prefix):
+                        return
                 repo.ui.develwarn('write with no lock: "%s"' % path, stacklevel=3)
             return ret
 
