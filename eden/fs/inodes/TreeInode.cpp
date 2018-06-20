@@ -243,7 +243,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
         // If we finished loading the inode immediately, just call
         // InodeMap::inodeLoadComplete() now, since we still have the data_
         // lock.
-        auto childInode = loadFuture.get();
+        auto childInode = std::move(loadFuture).get();
         entry.setInode(childInode.get());
         promises = getInodeMap()->inodeLoadComplete(childInode.get());
         childInodePtr = InodePtr::takeOwnership(std::move(childInode));

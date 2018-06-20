@@ -144,7 +144,7 @@ TEST(EdenMount, resolveSymlinkDelayed) {
       edenMount->getInodeBlocking(RelativePathPiece{folly::StringPiece{"b"}})};
   EXPECT_EQ(dtype_t::Regular, pB->getType());
 
-  const auto pResolvedB = bFuture.get(1s);
+  const auto pResolvedB = std::move(bFuture).get(1s);
   EXPECT_TRUE(pResolvedB == pB);
 }
 

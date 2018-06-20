@@ -64,7 +64,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   auto expectedSha1 = Hash::sha1(&buf1);
   auto metadataFuture = store.getBlobMetadata(blob2.getHash());
   ASSERT_TRUE(metadataFuture.isReady());
-  auto metadata = metadataFuture.get();
+  auto metadata = std::move(metadataFuture).get();
   EXPECT_EQ(expectedSha1, metadata.sha1);
   EXPECT_EQ(0, metadata.size);
 }

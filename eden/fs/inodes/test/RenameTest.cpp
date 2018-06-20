@@ -97,7 +97,7 @@ void RenameTest::renameFile(
   auto renameFuture = srcDir->rename(srcBase, destDir, destBase);
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
-  renameFuture.get();
+  std::move(renameFuture).get();
 
   // Now get the file post-rename
   // Make sure it is the same inode, but the path is updated
@@ -177,7 +177,7 @@ TEST_F(RenameTest, renameFileToSamePath) {
       parentDir->rename(path.basename(), parentDir, path.basename());
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
-  renameFuture.get();
+  std::move(renameFuture).get();
 
   // Just to be thorough, make sure looking up the path still returns the
   // original inode.
@@ -219,7 +219,7 @@ void RenameTest::renameDir(
   auto renameFuture = srcDir->rename(srcBase, destDir, destBase);
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
-  renameFuture.get();
+  std::move(renameFuture).get();
 
   // Now get the file post-rename
   // Make sure it is the same inode, but the path is updated
@@ -299,7 +299,7 @@ TEST_F(RenameTest, renameDirToSamePath) {
       parentDir->rename(path.basename(), parentDir, path.basename());
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
-  renameFuture.get();
+  std::move(renameFuture).get();
 
   // Just to be thorough, make sure looking up the path still returns the
   // original inode.
@@ -391,7 +391,7 @@ TEST_F(RenameTest, renameIntoUnlinkedDir) {
   auto rmdirFuture = destDirParent->rmdir(destDirPath.basename());
   ASSERT_TRUE(rmdirFuture.isReady());
   EXPECT_FALSE(rmdirFuture.hasException());
-  rmdirFuture.get();
+  std::move(rmdirFuture).get();
 
   // Do the rename
   auto renameFuture =
@@ -496,7 +496,7 @@ TEST_F(RenameLoadingTest, renameDirSameDirectory) {
   builder_.setReady("a/b/c");
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
-  renameFuture.get();
+  std::move(renameFuture).get();
 }
 
 TEST_F(RenameLoadingTest, renameWithLoadPending) {
@@ -522,7 +522,7 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
 
   // The rename should be successful
   EXPECT_FALSE(renameFuture.hasException());
-  renameFuture.get();
+  std::move(renameFuture).get();
 
   // From an API guarantee point of view, it would be fine for the load
   // to succeed or to fail with ENOENT here, since it was happening
@@ -533,7 +533,7 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
   if (inodeFuture.hasException()) {
     EXPECT_THROW_ERRNO(inodeFuture.get(), ENOENT);
   } else {
-    auto cInode = inodeFuture.get();
+    auto cInode = std::move(inodeFuture).get();
     EXPECT_EQ("a/b/x", cInode->getPath().value().stringPiece());
   }
 }
@@ -561,7 +561,7 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
 
   // The rename should be successful
   EXPECT_FALSE(renameFuture.hasException());
-  renameFuture.get();
+  std::move(renameFuture).get();
 
   // From an API guarantee point of view, it would be fine for the load
   // to succeed or to fail with ENOENT here, since it was happening
@@ -572,7 +572,7 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
   if (inodeFuture.hasException()) {
     EXPECT_THROW_ERRNO(inodeFuture.get(), ENOENT);
   } else {
-    auto cInode = inodeFuture.get();
+    auto cInode = std::move(inodeFuture).get();
     EXPECT_EQ("a/b/x", cInode->getPath().value().stringPiece());
   }
 }
@@ -615,7 +615,7 @@ TEST_F(RenameLoadingTest, renameLoadDest) {
   // Both the load and the rename should have completed
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
-  renameFuture.get();
+  std::move(renameFuture).get();
 }
 
 TEST_F(RenameLoadingTest, renameLoadDestOtherOrder) {
@@ -637,7 +637,7 @@ TEST_F(RenameLoadingTest, renameLoadDestOtherOrder) {
   // Both the load and the rename should have completed
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
-  renameFuture.get();
+  std::move(renameFuture).get();
 }
 
 // Test a rename that replaces a destination directory, where neither

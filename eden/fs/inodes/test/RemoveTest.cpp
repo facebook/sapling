@@ -52,7 +52,7 @@ TEST_F(UnlinkTest, notLoaded) {
   // Remove the child when it has not been loaded yet.
   auto unlinkFuture = dir->unlink(childPath);
   ASSERT_TRUE(unlinkFuture.isReady());
-  unlinkFuture.get();
+  std::move(unlinkFuture).get();
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
 }
@@ -65,7 +65,7 @@ TEST_F(UnlinkTest, inodeAssigned) {
   dir->getChildInodeNumber(childPath);
   auto unlinkFuture = dir->unlink(childPath);
   ASSERT_TRUE(unlinkFuture.isReady());
-  unlinkFuture.get();
+  std::move(unlinkFuture).get();
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
 }
@@ -79,7 +79,7 @@ TEST_F(UnlinkTest, loaded) {
   EXPECT_EQ(file->getNodeId(), dir->getChildInodeNumber(childPath));
   auto unlinkFuture = dir->unlink(childPath);
   ASSERT_TRUE(unlinkFuture.isReady());
-  unlinkFuture.get();
+  std::move(unlinkFuture).get();
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
   // We should still be able to read from the FileInode
@@ -105,7 +105,7 @@ TEST_F(UnlinkTest, modified) {
   // Now remove the child
   auto unlinkFuture = dir->unlink(childPath);
   ASSERT_TRUE(unlinkFuture.isReady());
-  unlinkFuture.get();
+  std::move(unlinkFuture).get();
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
   // We should still be able to read from the FileInode
@@ -123,7 +123,7 @@ TEST_F(UnlinkTest, created) {
   // Now remove the child
   auto unlinkFuture = dir->unlink(childPath);
   ASSERT_TRUE(unlinkFuture.isReady());
-  unlinkFuture.get();
+  std::move(unlinkFuture).get();
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
   // We should still be able to read from the FileInode

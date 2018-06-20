@@ -124,7 +124,7 @@ T getFutureResult(folly::Future<T>& future, const char* filename, int line) {
     ADD_FAILURE_AT(filename, line) << "future failed";
     // fall through and let get() throw.
   }
-  return future.get();
+  return std::move(future).get();
 }
 
 #define EXPECT_FUTURE_RESULT(future) getFutureResult(future, __FILE__, __LINE__)
@@ -1208,7 +1208,7 @@ TEST(DiffTest, fileNotReady) {
 
   // The diff should be complete now.
   ASSERT_TRUE(diffFuture.isReady());
-  diffFuture.get(10ms);
+  std::move(diffFuture).get(10ms);
   auto result = callback.extractResults();
 
   // Check the results

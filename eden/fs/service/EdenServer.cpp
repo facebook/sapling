@@ -485,7 +485,7 @@ void EdenServer::run() {
   while (!shutdownFuture.isReady()) {
     mainEventBase_->loopOnce();
   }
-  shutdownFuture.get();
+  std::move(shutdownFuture).get();
 }
 
 Future<Unit> EdenServer::performTakeoverShutdown(folly::File thriftSocket) {

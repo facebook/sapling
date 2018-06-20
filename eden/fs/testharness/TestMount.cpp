@@ -329,7 +329,7 @@ void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
                         srcPath.basename(),
                         getTreeInode(destPath.dirname()),
                         destPath.basename());
-  future.get();
+  std::move(future).get();
 }
 
 std::string TestMount::readFile(folly::StringPiece path) {

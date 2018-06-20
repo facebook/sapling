@@ -236,7 +236,7 @@ void EdenServiceHandler::checkOutRevision(
 
   auto edenMount = server_->getMount(*mountPoint);
   auto checkoutFuture = edenMount->checkout(hashObj, checkoutMode);
-  results = checkoutFuture.get();
+  results = std::move(checkoutFuture).get();
 }
 
 void EdenServiceHandler::resetParentCommits(

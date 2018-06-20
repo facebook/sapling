@@ -169,7 +169,7 @@ TEST_F(FakeBackingStoreTest, getTree) {
   ASSERT_TRUE(future2.isReady());
   ASSERT_TRUE(future3.isReady());
 
-  auto tree2 = future2.get();
+  auto tree2 = std::move(future2).get();
   EXPECT_EQ(rootHash, tree2->getHash());
   EXPECT_EQ(4, tree2->getTreeEntries().size());
   // Tree entries are always alphabetically sorted so we don't have to worry

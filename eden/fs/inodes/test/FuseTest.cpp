@@ -55,7 +55,7 @@ TEST(FuseTest, initMount) {
       sizeof(fuse_out_header) + sizeof(fuse_init_out), response.header.len);
 
   // Wait for the mount to complete
-  initFuture.get(250ms);
+  std::move(initFuture).get(250ms);
 
   // Close the FakeFuse device, and ensure that the mount's FUSE completion
   // future is then signalled.
@@ -140,10 +140,10 @@ TEST(FuseTest, destroyWithInitRace) {
 
   // The initFuture should complete successfully, since we know that
   // FuseChannel sent the INIT response.
-  initFuture.get(250ms);
+  std::move(initFuture).get(250ms);
   // The FUSE completion future should also be signalled when the FuseChannel
   // is destroyed.
-  auto mountInfo = completionFuture.get(250ms);
+  auto mountInfo = std::move(completionFuture).get(250ms);
   // Since we just destroyed the EdenMount and the kernel-side of the FUSE
   // channel was not stopped the returned MountInfo should contain the FUSE
   // device.

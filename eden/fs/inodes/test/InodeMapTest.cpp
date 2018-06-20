@@ -94,8 +94,8 @@ TEST(InodeMap, asyncLookup) {
   builder.setReady("src");
   ASSERT_TRUE(srcFuture.isReady());
   ASSERT_TRUE(srcFuture2.isReady());
-  auto srcTree = srcFuture.get(std::chrono::seconds(1));
-  auto srcTree2 = srcFuture2.get(std::chrono::seconds(1));
+  auto srcTree = std::move(srcFuture).get(std::chrono::seconds(1));
+  auto srcTree2 = std::move(srcFuture2).get(std::chrono::seconds(1));
   EXPECT_EQ(srcTree.get(), srcTree2.get());
 }
 
@@ -134,7 +134,7 @@ TEST(InodeMap, recursiveLookup) {
   // Call EdenMount::getInode() on the root
   auto rootFuture = edenMount->getInode(""_relpath);
   ASSERT_TRUE(rootFuture.isReady());
-  auto rootResult = rootFuture.get();
+  auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
@@ -151,7 +151,7 @@ TEST(InodeMap, recursiveLookup) {
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a/b/c/d");
   ASSERT_TRUE(fileFuture.isReady());
-  auto fileInode = fileFuture.get();
+  auto fileInode = std::move(fileFuture).get();
   EXPECT_EQ("a/b/c/d/file.txt"_relpath, fileInode->getPath().value());
 }
 
@@ -164,7 +164,7 @@ TEST(InodeMap, recursiveLookupError) {
   // Call EdenMount::getInode() on the root
   auto rootFuture = edenMount->getInode(""_relpath);
   ASSERT_TRUE(rootFuture.isReady());
-  auto rootResult = rootFuture.get();
+  auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
@@ -195,7 +195,7 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   // Call EdenMount::getInode() on the root
   auto rootFuture = edenMount->getInode(""_relpath);
   ASSERT_TRUE(rootFuture.isReady());
-  auto rootResult = rootFuture.get();
+  auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
@@ -211,7 +211,7 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
 
   auto bFuture = edenMount->getInode("a/b"_relpath);
   ASSERT_TRUE(bFuture.isReady());
-  auto bInode = bFuture.get().asTreePtr();
+  auto bInode = std::move(bFuture).get().asTreePtr();
 
   // Rename c to x after the recursive resolution should have
   // already looked it up
@@ -224,7 +224,7 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   // The Inode lookup itself doesn't need the blob data yet.
   builder.setReady("a/b/c/d");
   ASSERT_TRUE(fileFuture.isReady());
-  auto fileInode = fileFuture.get();
+  auto fileInode = std::move(fileFuture).get();
   // We should have successfully looked up the inode, but it will report it
   // self (correctly) at its new path now.
   EXPECT_EQ("a/b/x/d/file.txt"_relpath, fileInode->getPath().value());
@@ -239,7 +239,7 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   // Call EdenMount::getInode() on the root
   auto rootFuture = edenMount->getInode(""_relpath);
   ASSERT_TRUE(rootFuture.isReady());
-  auto rootResult = rootFuture.get();
+  auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
@@ -253,7 +253,7 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
 
   auto bFuture = edenMount->getInode("a/b"_relpath);
   ASSERT_TRUE(bFuture.isReady());
-  auto bInode = bFuture.get().asTreePtr();
+  auto bInode = std::move(bFuture).get().asTreePtr();
 
   // Rename c to x while the recursive resolution is still trying
   // to look it up.
@@ -271,7 +271,7 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   // The Inode lookup itself doesn't need the blob data yet.
   builder.setReady("a/b/c/d");
   ASSERT_TRUE(fileFuture.isReady());
-  auto fileInode = fileFuture.get();
+  auto fileInode = std::move(fileFuture).get();
   // We should have successfully looked up the inode, but it will report it
   // self (correctly) at its new path now.
   EXPECT_EQ("a/b/x/d/file.txt"_relpath, fileInode->getPath().value());

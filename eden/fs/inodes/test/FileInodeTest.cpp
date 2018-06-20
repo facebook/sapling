@@ -89,7 +89,7 @@ Dispatcher::Attr getFileAttr(const FileInodePtr& inode) {
     ADD_FAILURE() << "getattr() future is not ready";
     throw std::runtime_error("getattr future is not ready");
   }
-  return attrFuture.get();
+  return std::move(attrFuture).get();
 }
 
 Dispatcher::Attr setFileAttr(
@@ -100,7 +100,7 @@ Dispatcher::Attr setFileAttr(
     ADD_FAILURE() << "setattr() future is not ready";
     throw std::runtime_error("setattr future is not ready");
   }
-  return attrFuture.get();
+  return std::move(attrFuture).get();
 }
 
 /**
@@ -466,7 +466,7 @@ TEST(FileInode, writeDuringLoad) {
   auto inode = mount_.getFileInode("notready.txt");
   auto handleFuture = inode->open(O_WRONLY);
   ASSERT_TRUE(handleFuture.isReady());
-  auto handle = handleFuture.get();
+  auto handle = std::move(handleFuture).get();
 
   auto newContents = "TENTS"_sp;
   auto writeFuture = handle->write(newContents, 3);
@@ -495,7 +495,7 @@ TEST(FileInode, truncateDuringLoad) {
   // Open the file and start reading the contents
   auto handleFuture = inode->open(O_RDWR);
   ASSERT_TRUE(handleFuture.isReady());
-  auto handle = handleFuture.get();
+  auto handle = std::move(handleFuture).get();
   auto dataFuture = handle->read(4096, 0);
   EXPECT_FALSE(dataFuture.isReady());
 
@@ -504,7 +504,7 @@ TEST(FileInode, truncateDuringLoad) {
   // the data from the object store.
   auto truncHandleFuture = inode->open(O_WRONLY | O_TRUNC);
   ASSERT_TRUE(truncHandleFuture.isReady());
-  auto truncHandle = truncHandleFuture.get();
+  auto truncHandle = std::move(truncHandleFuture).get();
 
   // The read should complete now too.
   ASSERT_TRUE(dataFuture.isReady());

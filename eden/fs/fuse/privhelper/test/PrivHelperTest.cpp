@@ -124,22 +124,22 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
 
   folly::File fuseMount(const char* mountPath) override {
     auto future = getResultFuture(data_.wlock()->fuseMountResults, mountPath);
-    return future.get(1s);
+    return std::move(future).get(1s);
   }
 
   void fuseUnmount(const char* mountPath) override {
     auto future = getResultFuture(data_.wlock()->fuseUnmountResults, mountPath);
-    future.get(1s);
+    std::move(future).get(1s);
   }
 
   void bindMount(const char* /* clientPath */, const char* mountPath) override {
     auto future = getResultFuture(data_.wlock()->bindMountResults, mountPath);
-    future.get(1s);
+    std::move(future).get(1s);
   }
 
   void bindUnmount(const char* mountPath) override {
     auto future = getResultFuture(data_.wlock()->bindUnmountResults, mountPath);
-    future.get(1s);
+    std::move(future).get(1s);
   }
 
   void setLogFile(folly::File&& logFile) override {
@@ -203,7 +203,7 @@ TEST_F(PrivHelperTest, fuseMount) {
   filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
 
   // The response should complete quickly now.
-  auto resultFile = result.get(1s);
+  auto resultFile = std::move(result).get(1s);
 
   // The resulting file object should refer to the same underlying file,
   // even though the file descriptor should different since it was passed over
@@ -325,7 +325,7 @@ TEST_F(PrivHelperTest, bindMounts) {
   // Fulfilling the bind unmount promise for the buck-out bind mount should
   // allow the overall unmount operation to complete.
   somerepoBuckOutUnmountPromise.setValue();
-  unmountResult.get(1s);
+  std::move(unmountResult).get(1s);
 
   // Now shut down the privhelper.  It should clean up the remaining mount
   // points.  The only leftover results should be the extra ones we

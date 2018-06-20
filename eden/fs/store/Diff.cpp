@@ -129,7 +129,8 @@ TreeDiffer::diffTrees(RelativePathPiece path, Hash hash1, Hash hash2) {
   // Optimization for the case when both tree objects are immediately ready.
   // We can avoid copying the input path in this case.
   if (treeFuture1.isReady() && treeFuture2.isReady()) {
-    return diffTrees(path, *treeFuture1.get(), *treeFuture2.get());
+    return diffTrees(
+        path, *std::move(treeFuture1).get(), *std::move(treeFuture2).get());
   }
 
   return folly::collect(treeFuture1, treeFuture2)
@@ -197,7 +198,7 @@ Future<Unit> TreeDiffer::diffOneTree(
   // Optimization for the case when the tree object is immediately ready.
   // We can avoid copying the input path in this case.
   if (future.isReady()) {
-    return diffOneTree(path, *future.get(), status);
+    return diffOneTree(path, *std::move(future).get(), status);
   }
 
   return future.then(

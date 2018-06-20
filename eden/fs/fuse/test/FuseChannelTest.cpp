@@ -91,7 +91,7 @@ class FuseChannelTest : public ::testing::Test {
     // The init future should be ready very shortly after we receive the INIT
     // response.  The FuseChannel initialization thread makes the future ready
     // shortly after sending the INIT response.
-    return initFuture.get(100ms);
+    return std::move(initFuture).get(100ms);
   }
 
   FakeFuse fuse_;

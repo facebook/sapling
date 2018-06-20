@@ -356,7 +356,7 @@ TEST_F(DiffTest, blockedFutures) {
   builder2.setAllReady();
   ASSERT_TRUE(resultFuture.isReady());
 
-  auto result = resultFuture.get();
+  auto result = std::move(resultFuture).get();
   EXPECT_THAT(result.errors, UnorderedElementsAre());
   EXPECT_THAT(
       result.entries,
@@ -413,7 +413,7 @@ TEST_F(DiffTest, loadTreeError) {
   builder2.setAllReadyUnderTree("a");
   ASSERT_TRUE(resultFuture.isReady());
 
-  auto result = resultFuture.get();
+  auto result = std::move(resultFuture).get();
   EXPECT_THAT(
       result.errors,
       UnorderedElementsAre(Pair("x/y/z", "std::runtime_error: oh noes")));

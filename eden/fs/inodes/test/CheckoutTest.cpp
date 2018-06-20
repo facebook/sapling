@@ -246,7 +246,7 @@ void testAddFile(
 
   auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = checkoutResult.get();
+  auto results = std::move(checkoutResult).get();
   EXPECT_EQ(0, results.size());
 
   // Confirm that the tree has been updated correctly.
@@ -297,7 +297,7 @@ void testRemoveFile(folly::StringPiece filePath, LoadBehavior loadType) {
 
   auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = checkoutResult.get();
+  auto results = std::move(checkoutResult).get();
   EXPECT_EQ(0, results.size());
 
   // Make sure the path doesn't exist any more.
@@ -363,7 +363,7 @@ void testModifyFile(
   auto checkoutStart = testMount.getClock().getTimePoint();
   auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = checkoutResult.get();
+  auto results = std::move(checkoutResult).get();
   EXPECT_EQ(0, results.size());
 
   // Make sure the path is updated as expected
@@ -491,7 +491,7 @@ TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
   // Mark builder1 as ready and confirm that the checkout completes
   builder1.setAllReady();
   ASSERT_TRUE(checkoutFuture.isReady());
-  auto results = checkoutFuture.get(10ms);
+  auto results = std::move(checkoutFuture).get(10ms);
   EXPECT_THAT(
       results,
       UnorderedElementsAre(
@@ -550,7 +550,7 @@ void testModifyConflict(
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("b"), checkoutMode);
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = checkoutResult.get();
+  auto results = std::move(checkoutResult).get();
   ASSERT_EQ(1, results.size());
 
   EXPECT_EQ(path, results[0].path);
@@ -764,7 +764,7 @@ void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
 
   auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = checkoutResult.get();
+  auto results = std::move(checkoutResult).get();
   EXPECT_EQ(0, results.size());
 
   // Confirm that the tree has been updated correctly.
@@ -812,7 +812,7 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
 
   auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = checkoutResult.get();
+  auto results = std::move(checkoutResult).get();
   EXPECT_EQ(0, results.size());
 
   // Confirm that the tree no longer exists.
@@ -863,10 +863,10 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
   EXPECT_TRUE(inodeFuture.isReady());
 
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = checkoutResult.get();
+  auto results = std::move(checkoutResult).get();
   EXPECT_EQ(0, results.size());
 
-  auto inode = inodeFuture.get().asTreePtr();
+  auto inode = std::move(inodeFuture).get().asTreePtr();
   EXPECT_EQ(0, inode->getContents().rlock()->entries.count("file.txt"_pc));
   EXPECT_EQ(
       1, inode->getContents().rlock()->entries.count("differentfile.txt"_pc));
