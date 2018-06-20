@@ -1022,6 +1022,12 @@ def rebase(ui, repo, templ=None, **opts):
             )
             rbsrt.inmemory = False
             return _origrebase(ui, repo, rbsrt, **opts)
+        except error.AbortMergeToolError as e:
+            ui.status(_("%s; exiting.\n") % e)
+            clearstatus(repo)
+            mergemod.mergestate.clean(repo)
+            if repo.currenttransaction():
+                repo.currenttransaction().abort()
     else:
         return _origrebase(ui, repo, rbsrt, **opts)
 

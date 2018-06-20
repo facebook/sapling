@@ -247,6 +247,18 @@ def _matcheol(file, back):
                 util.writefile(file, newdata)
 
 
+@internaltool("abort", nomerge)
+def _iabort(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
+    if fcd.changectx().isinmemory():
+        raise error.AbortMergeToolError(
+            _("hit merge conflicts, and --tool :abort passed")
+        )
+    else:
+        # Support coming soon; it's tricker to do without IMM and has to be
+        # implemented per-command.
+        raise error.Abort(_("--tool :abort only works with in-memory merge"))
+
+
 @internaltool("prompt", nomerge)
 def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     """Asks the user which of the local `p1()` or the other `p2()` version to
@@ -258,7 +270,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     # conflicts.
     if fcd.changectx().isinmemory():
         raise error.InMemoryMergeConflictsError(
-            "in-memory merge does not " "support file conflicts"
+            "in-memory merge does not support file conflicts"
         )
 
     prompts = partextras(labels)

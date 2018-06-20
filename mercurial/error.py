@@ -409,3 +409,7 @@ class InMemoryMergeConflictsError(Exception):
     """Exception raised when merge conflicts arose during an in-memory merge."""
 
     __bytes__ = _tobytes
+
+
+class AbortMergeToolError(Abort):
+    """User specified :abort and there was a merge conflict; abort the merge."""
