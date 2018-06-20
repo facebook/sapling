@@ -48,7 +48,7 @@ class SqliteDatabase {
   folly::Synchronized<sqlite3*>::LockedPtr lock();
 
  private:
-  folly::Synchronized<sqlite3*> db_;
+  folly::Synchronized<sqlite3*> db_{nullptr};
 };
 
 /** Represents the sqlite vm that will execute a SQL statement.

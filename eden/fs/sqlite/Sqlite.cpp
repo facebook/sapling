@@ -38,8 +38,14 @@ void checkSqliteResult(sqlite3* db, int result) {
 }
 
 SqliteDatabase::SqliteDatabase(AbsolutePathPiece path) {
-  sqlite3* db;
-  checkSqliteResult(nullptr, sqlite3_open(path.copy().c_str(), &db));
+  sqlite3* db = nullptr;
+  auto result = sqlite3_open(path.copy().c_str(), &db);
+  if (result != SQLITE_OK) {
+    // On most error conditions sqlite3_open() does allocate the DB object,
+    // and it needs to be closed afterwards if it is non-null.
+    sqlite3_close(db);
+    checkSqliteResult(nullptr, result);
+  }
   db_ = db;
 }
 
