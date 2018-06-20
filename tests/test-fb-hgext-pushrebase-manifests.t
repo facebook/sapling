@@ -193,6 +193,7 @@ Check that the first push is still running/blocked...
   [client1 push] searching for changes
   [client1 push] remote: read manifest outside the lock :)
   [client1 push] remote: read manifest outside the lock :)
+  [client1 push] remote:  (?)
   [client1 push] remote: pushing 2 changesets:
   [client1 push] remote:     8cf3b846b3a4  c1 => xxx (third)
   [client1 push] remote:     1fe62957ca8a  c1 => baz (fourth)
