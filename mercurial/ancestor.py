@@ -25,6 +25,14 @@ def commonancestorsheads(pfunc, *nodes):
 
     pfunc must return a list of parent vertices for a given vertex.
     """
+    # Each node in 'nodes' is given a unique marker implemented as bit masks.
+    # A node iterates over its parents, passing its set of markers on to them.
+    # When a node receives multiple markers, that indicates it is an ancestor of
+    # the corresponding nodes. A node that receives all the markers is
+    # a common ancestor.
+    #
+    # This process continues until all potential ancestors have been found, and
+    # those which are not heads are ruled out.
     if not isinstance(nodes, set):
         nodes = set(nodes)
     if nullrev in nodes:
