@@ -83,9 +83,9 @@ def _reserved():
         yield x
 
 
-def _buildencodefun():
+def _buildencodefun(forfncache):
     """
-    >>> enc, dec = _buildencodefun()
+    >>> enc, dec = _buildencodefun(False)
 
     >>> enc(b'nothing/special.txt')
     'nothing/special.txt'
@@ -106,6 +106,24 @@ def _buildencodefun():
     'the~07quick~adshot'
     >>> dec(b'the~07quick~adshot')
     'the\\x07quick\\xadshot'
+
+    >>> enc(b'X' * 128)
+    'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    >>> enc(b'X' * 127)
+    '_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x'
+    >>> path = '/'.join([b'Z', b'X' * 128, b'Y' * 127])
+    >>> enc(path)
+    '_z/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y'
+    >>> dec(enc(path)) == path
+    True
+    >>> dec(enc(b'X' * 128)) == 'X' * 128
+    True
+    >>> dec(enc(b'X' * 127)) == 'X' * 127
+    True
+    >>> enc(b'/')
+    '/'
+    >>> dec(b'/')
+    '/'
     """
     e = "_"
     xchr = pycompat.bytechr
@@ -122,6 +140,24 @@ def _buildencodefun():
     for k, v in cmap.iteritems():
         dmap[v] = k
 
+    if not forfncache:
+        cmaplong = cmap.copy()
+
+        for i in capitals:
+            c = chr(i)
+            cmaplong[c] = c
+            assert c not in dmap
+            dmap[c] = c
+
+        def encodecomp(comp):
+            encoded = "".join(cmap[c] for c in comp)
+            if len(encoded) > 255:
+                encoded = "".join(cmaplong[c] for c in comp)
+            return encoded
+
+        def encodemaybelong(path):
+            return "/".join(map(encodecomp, path.split("/")))
+
     def decode(s):
         i = 0
         while i < len(s):
@@ -135,13 +171,19 @@ def _buildencodefun():
             else:
                 raise KeyError
 
-    return (
-        lambda s: "".join([cmap[s[c : c + 1]] for c in xrange(len(s))]),
-        lambda s: "".join(list(decode(s))),
-    )
+    if forfncache:
+        return (
+            lambda s: "".join([cmap[s[c : c + 1]] for c in xrange(len(s))]),
+            lambda s: "".join(list(decode(s))),
+        )
+    else:
+        return (encodemaybelong, lambda s: "".join(list(decode(s))))
 
 
-_encodefname, _decodefname = _buildencodefun()
+_encodefname, _decodefname = _buildencodefun(True)
+
+# Special version that works with long upper-case file names
+_encodefnamelong, _decodefnamelong = _buildencodefun(False)
 
 
 def encodefilename(s):
@@ -149,7 +191,7 @@ def encodefilename(s):
     >>> encodefilename(b'foo.i/bar.d/bla.hg/hi:world?/HELLO')
     'foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o'
     """
-    return _encodefname(encodedir(s))
+    return _encodefnamelong(encodedir(s))
 
 
 def decodefilename(s):
@@ -157,7 +199,7 @@ def decodefilename(s):
     >>> decodefilename(b'foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o')
     'foo.i/bar.d/bla.hg/hi:world?/HELLO'
     """
-    return decodedir(_decodefname(s))
+    return decodedir(_decodefnamelong(s))
 
 
 def _buildlowerencodefun():
