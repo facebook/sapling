@@ -12,6 +12,7 @@
 """
 
 import os
+import posixpath
 
 from indexapi import indexapi, indexexception
 from mercurial import util
@@ -98,7 +99,7 @@ class fileindexapi(indexapi):
         prefixlen = len(self._bookmarkmap) + 1
         for dirpath, _, books in self._repo.vfs.walk(self._bookmarkmap):
             for book in books:
-                bookmark = os.path.join(dirpath, book)[prefixlen:]
+                bookmark = posixpath.join(dirpath, book)[prefixlen:]
                 if not matcher(bookmark):
                     continue
                 yield bookmark, self._read(os.path.join(dirpath, book))
