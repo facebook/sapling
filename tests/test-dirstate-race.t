@@ -197,7 +197,7 @@ the merge tool goes to /dev/null because we're more interested in the results of
   $ cat >> $TESTTMP/mergetool-race.sh << EOF
   > echo "custom merge tool"
   > printf "c2\nc3\nc4\n" > \$1
-  > hg --cwd "$TESTTMP/repo" status > /dev/null
+  > hg --cwd "$TESTTMP/repo" status --pager=off > /dev/null
   > echo "custom merge tool end"
   > EOF
   $ cat >> $HGRCPATH << EOF
