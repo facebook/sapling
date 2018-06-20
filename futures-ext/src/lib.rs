@@ -13,6 +13,7 @@ extern crate assert_matches;
 #[cfg(test)]
 extern crate async_unit;
 extern crate bytes;
+extern crate failure;
 #[macro_use]
 extern crate futures;
 #[cfg(test)]
@@ -25,10 +26,11 @@ extern crate tokio_io;
 use bytes::Bytes;
 use futures::{future, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream};
 use futures::sync::oneshot;
+use tokio::timer::{Deadline, DeadlineError};
 use tokio_io::AsyncWrite;
 use tokio_io::codec::{Decoder, Encoder};
 
-use std::{io as std_io, fmt::Debug};
+use std::{io as std_io, fmt::Debug, time::{Duration, Instant}};
 
 mod bytes_stream;
 mod futures_ordered;
@@ -107,6 +109,68 @@ pub trait FutureExt: Future + Sized {
     {
         Box::new(self)
     }
+
+    fn timeout(self, dur: Duration) -> Deadline<Self> {
+        Deadline::new(self, Instant::now() + dur)
+    }
+
+    fn on_timeout<T, C, R>(
+        self,
+        dur: Duration,
+        callback: C,
+    ) -> BoxFuture<Self::Item, failure::Error>
+    where
+        Self: Send + 'static,
+        Self: Future<Item = T, Error = failure::Error>,
+        C: FnOnce() -> R + Send + 'static,
+        R: IntoFuture<Item = (), Error = ()> + Send + 'static,
+        R::Future: Send + 'static,
+    {
+        on_timeout(self, dur, callback)
+            .map_err(|e| {
+                if e.is_timer() {
+                    e.into_timer().unwrap().into()
+                } else if e.is_inner() {
+                    e.into_inner().unwrap()
+                } else {
+                    failure::err_msg("timed out")
+                }
+            })
+            .boxify()
+    }
+}
+
+/// Set a time limit for a `Future`.
+///
+/// If execution of the `Future` takes longer than the specified `Duration`, the
+/// returned `Future` will resolve to a `DeadlineError`, and the provided callback
+/// will be called. If the wrapped `Future` resolves to an `Error` within the time
+/// limit, the returned `Future` will resolve to a `DeadlineError` wrapping the
+/// returned `Error`.
+///
+/// Most users of this function should call it via the `on_timeout()` method on the
+/// `FuturesExt` trait. That method requires `Self: Send + 'static` in order to
+/// return a trait object, and requires that the `Error` type is `failure::Error`.
+/// For `Futures` that don't meet this critera, this method may be used directly.
+/// (Or the `timeout()` method from `FutureExt` can be used along with the `.then()`
+/// combinator.)
+pub fn on_timeout<F, C, R>(
+    fut: F,
+    dur: Duration,
+    cb: C,
+) -> impl Future<Item = F::Item, Error = DeadlineError<F::Error>>
+where
+    F: Future,
+    C: FnOnce() -> R,
+    R: IntoFuture<Item = (), Error = ()>,
+    R::Future: Send + 'static,
+{
+    Deadline::new(fut, Instant::now() + dur).map_err(move |e| {
+        if e.is_elapsed() {
+            let _ = tokio::spawn(cb().into_future());
+        }
+        e
+    })
 }
 
 impl<T> FutureExt for T
@@ -429,7 +493,6 @@ where
     }).boxify()
 }
 
-
 /// Simple adapter from `Sink` interface to `AsyncWrite` interface.
 /// It can be useful to convert from the interface that supports only AsyncWrite, and get
 /// Stream as a result. See pseudocode below
@@ -509,9 +572,13 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+
+    use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+
     use futures::Stream;
     use futures::stream;
     use futures::sync::mpsc;
+    use tokio::timer::Delay;
     use tokio_core::reactor::Core;
 
     #[derive(Debug)]
@@ -660,5 +727,87 @@ mod test {
             let res = rx.collect().wait().unwrap();
             assert_eq!(res.len(), messages_num);
         })
+    }
+
+    #[test]
+    fn timeout() {
+        let timeout = Duration::from_millis(100);
+
+        let should_time_out = Delay::new(Instant::now() + Duration::from_millis(1000));
+        let should_not_time_out = Delay::new(Instant::now() + Duration::from_millis(10));
+
+        let correctly_timed_out = Arc::new(AtomicBool::new(false));
+        let incorrectly_timed_out = Arc::new(AtomicBool::new(false));
+
+        let should_time_out = should_time_out.timeout(timeout.clone()).then({
+            let correctly_timed_out = Arc::clone(&correctly_timed_out);
+            move |res| match res {
+                Err(ref e) if e.is_elapsed() => {
+                    correctly_timed_out.store(true, Ordering::Relaxed);
+                    Ok(())
+                }
+                _ => Err(()),
+            }
+        });
+
+        let should_not_time_out = should_not_time_out.timeout(timeout.clone()).then({
+            let incorrectly_timed_out = Arc::clone(&incorrectly_timed_out);
+            move |res| match res {
+                Err(ref e) if e.is_elapsed() => {
+                    incorrectly_timed_out.store(true, Ordering::Relaxed);
+                    Ok(())
+                }
+                _ => Err(()),
+            }
+        });
+
+        tokio::run(should_time_out);
+        tokio::run(should_not_time_out);
+
+        assert!(correctly_timed_out.load(Ordering::Relaxed));
+        assert!(!incorrectly_timed_out.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn on_timeout() {
+        let timeout = Duration::from_millis(100);
+
+        let should_time_out = Delay::new(Instant::now() + Duration::from_millis(1000));
+        let should_not_time_out = Delay::new(Instant::now() + Duration::from_millis(10));
+
+        let correctly_timed_out = Arc::new(AtomicBool::new(false));
+        let incorrectly_timed_out = Arc::new(AtomicBool::new(false));
+
+        let should_time_out = should_time_out
+            .map_err(failure::Error::from)
+            .on_timeout(timeout.clone(), {
+                let correctly_timed_out = Arc::clone(&correctly_timed_out);
+                move || {
+                    future::lazy(move || {
+                        correctly_timed_out.store(true, Ordering::Relaxed);
+                        Ok(())
+                    })
+                }
+            })
+            .discard();
+
+        let should_not_time_out = should_not_time_out
+            .map_err(failure::Error::from)
+            .on_timeout(timeout.clone(), {
+                let incorrectly_timed_out = Arc::clone(&incorrectly_timed_out);
+                move || {
+                    future::lazy(move || {
+                        incorrectly_timed_out.store(true, Ordering::Relaxed);
+                        Ok(())
+                    })
+                }
+            })
+            .discard();
+
+        tokio::run(should_time_out);
+        tokio::run(should_not_time_out);
+
+        assert!(correctly_timed_out.load(Ordering::Relaxed));
+        assert!(!incorrectly_timed_out.load(Ordering::Relaxed));
     }
 }
