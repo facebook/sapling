@@ -260,8 +260,16 @@ class basestore(object):
         they want to be kept alive in the store.
         """
         repospath = os.path.join(self._path, "repos")
+        line = os.path.dirname(path) + "\n"
+        # Skip writing to the repos file if the line is already written.
+        try:
+            if line in util.iterfile(open(repospath, "rb")):
+                return
+        except IOError:
+            pass
+
         with util.posixfile(repospath, "a") as reposfile:
-            reposfile.write(os.path.dirname(path) + "\n")
+            reposfile.write(line)
 
         repospathstat = os.stat(repospath)
         if repospathstat.st_uid == self._uid:

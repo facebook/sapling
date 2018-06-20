@@ -103,6 +103,17 @@
   warning: no valid repos in repofile
   $ mv $CACHEDIR/repos.bak $CACHEDIR/repos
 
+# Test repos do not have duplicated entries
+
+  $ cd $TESTTMP/master
+  $ echo y >> x
+  $ hg commit -qAm y
+  $ cd $TESTTMP/shallow
+  $ hg pull -q 2>/dev/null
+
+  $ cat $CACHEDIR/repos
+  $TESTTMP/shallow
+
 # Test that warning is displayed when the repo path is malformed
 
   $ printf "asdas\0das" >> $CACHEDIR/repos
