@@ -81,7 +81,6 @@ Next make a change to the dummy file off BASE.
   $ hg commit -m "prefix FILE with 0"
   $ hg book -r . "base_1"
 
-
 Rebase on top of the new driver, with the old driver checked out.
 - We expect to see "generators version = BASE" as we run preprocess() with the old driver.
 - Then, after restarting and using on-disk merge (and thus, checking out dest, which has the new driver),
@@ -90,12 +89,13 @@ we expect to see "generators version = NEW".
 
   $ hg rebase -d new_driver
   rebasing in-memory!
-  rebasing 2:83615e50cada "prefix FILE with 0" (base_1 tip)
+  rebasing 2:* "prefix FILE with 0" (base_1 tip) (glob)
   generators version = BASE
   base's someFunction() called
   hit merge conflicts; using on-disk merge instead (some of your files require mergedriver to run, which in-memory merge does not support)
-  rebasing 2:83615e50cada "prefix FILE with 0" (base_1 tip)
+  rebasing 2:* "prefix FILE with 0" (base_1 tip) (glob)
   generators version = NEW
   new_required_arg = new_required
-  note: rebase of 2:83615e50cada created no changes to commit
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/83615e50cada-d65b4501-rebase.hg
+  note: rebase of 2:* created no changes to commit (glob)
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/*-rebase.hg (glob)
+
