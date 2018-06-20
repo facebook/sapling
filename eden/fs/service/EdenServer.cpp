@@ -984,11 +984,11 @@ void EdenServer::reportProcStats() {
           kPrivateBytes, privateBytes.value(), stats::AVG);
     }
 
-    auto rssBytes = facebook::eden::proc_util::getUnsignedLongLongValue(
+    auto rssKBytes = facebook::eden::proc_util::getUnsignedLongLongValue(
         proc_util::loadProcStatus(), kVmRSSKey.data(), kKBytes.data());
-    if (rssBytes) {
+    if (rssKBytes) {
       stats::ServiceData::get()->addStatValue(
-          kRssBytes, rssBytes.value(), stats::AVG);
+          kRssBytes, rssKBytes.value() * 1024, stats::AVG);
     }
     lastProcStatsRun_.store(now);
   }
