@@ -27,8 +27,6 @@ extern crate tokio_core;
 extern crate uuid;
 
 extern crate heapsize;
-#[macro_use]
-extern crate heapsize_derive;
 
 extern crate futures_stats;
 

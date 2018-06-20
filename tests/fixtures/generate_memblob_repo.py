@@ -78,7 +78,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
         .expect("cannot create in-memory filenodes"));
     let changesets = Arc::new(SqliteChangesets::in_memory()
         .expect("cannot create in-memory changeset table"));
-    let repo_id = RepositoryId::new(0);
+    let repo_id = RepositoryId::new(1);
     let mut book_txn = bookmarks.create_transaction(&repo_id);
 
 """

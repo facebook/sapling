@@ -46,6 +46,8 @@ pub enum ErrorKind {
     #[fail(display = "Missing typed key entry for key: {}", _0)] MissingTypedKeyEntry(String),
     #[fail(display = "Error while opening state for {}", _0)] StateOpen(StateOpenError),
     #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(HgChangesetId),
+    #[fail(display = "Error while deserializing changeset retrieved from key '{}'", _0)]
+    ChangesetDeserializeFailed(String),
     #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(HgNodeHash),
     #[fail(display = "Node id {} is missing", _0)] NodeMissing(HgNodeHash),
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]

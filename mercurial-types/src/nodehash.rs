@@ -184,7 +184,7 @@ impl HgChangesetId {
     }
 
     #[inline]
-    pub(crate) fn as_nodehash(&self) -> &HgNodeHash {
+    pub fn as_nodehash(&self) -> &HgNodeHash {
         &self.0
     }
 
@@ -199,6 +199,12 @@ impl HgChangesetId {
     #[inline]
     pub fn to_hex(&self) -> AsciiString {
         self.0.to_hex()
+    }
+
+    /// Produce a key suitable for using in a blobstore.
+    #[inline]
+    pub fn blobstore_key(&self) -> String {
+        format!("hgchangeset.sha1.{}", self.0)
     }
 }
 

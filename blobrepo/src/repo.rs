@@ -109,8 +109,7 @@ impl BlobRepo {
         BlobRepo {
             logger,
             bookmarks,
-            // XXX Switch the second argument to repoid.prefix() when ready
-            blobstore: PrefixBlobstore::new(blobstore, ""),
+            blobstore: PrefixBlobstore::new(blobstore, repoid.prefix()),
             filenodes,
             changesets,
             repoid,

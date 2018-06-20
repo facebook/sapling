@@ -4,12 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::io::Write;
 
 use bytes::Bytes;
-use failure;
+use failure::FutureFailureErrorExt;
 use futures::future::{Either, Future, IntoFuture};
 
 use blobstore::Blobstore;
@@ -17,13 +16,13 @@ use blobstore::Blobstore;
 use mercurial;
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
-use mercurial_types::{Changeset, HgBlob, HgBlobNode, HgNodeHash, HgParents, MPath};
+use mercurial_types::{Changeset, HgBlobNode, HgChangesetEnvelope, HgChangesetEnvelopeMut,
+                      HgNodeHash, HgParents, MPath};
 use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NULL_HASH};
 use mononoke_types::DateTime;
 
 use errors::*;
 use repo::RepoBlobstore;
-use utils::{EnvelopeBlob, RawCSBlob};
 
 #[derive(Debug, Clone)]
 pub struct ChangesetContent {
@@ -131,10 +130,6 @@ pub struct BlobChangeset {
     content: ChangesetContent,
 }
 
-fn cskey(changesetid: &HgChangesetId) -> String {
-    format!("changeset-{}.bincode", changesetid)
-}
-
 impl BlobChangeset {
     pub fn new(content: ChangesetContent) -> Result<Self> {
         Ok(Self::new_with_id(&content.compute_hash()?, content))
@@ -162,29 +157,31 @@ impl BlobChangeset {
                 BlobChangeset::new_with_id(&changesetid, ChangesetContent::from_revlogcs(revlogcs));
             Either::A(Ok(Some(cs)).into_future())
         } else {
-            let key = cskey(&changesetid);
+            let key = changesetid.blobstore_key();
 
-            let fut = blobstore.get(key).and_then(move |got| match got {
-                None => Ok(None),
-                Some(bytes) => {
-                    // TODO(luk): T28348119 Following usages of into_mercurial are valid, because
-                    // we use RevlogChangeset to decode content of Blobstore and immediately create
-                    // a BlobChangeset out of it. In future this logic will go away, because we
-                    // will either retrieve BonsaiChangesets or we will fetch RevlogChangeset just
-                    // to pass it to client untouched.
-                    let RawCSBlob { parents, blob } =
-                        RawCSBlob::deserialize(&EnvelopeBlob::from(bytes))?;
-                    let (p1, p2) = parents.get_nodes();
-
-                    let blob = HgBlob::from(Bytes::from(blob.into_owned()));
-                    let node = HgBlobNode::new(blob, p1, p2);
-                    let cs = BlobChangeset::new_with_id(
-                        &changesetid,
-                        ChangesetContent::from_revlogcs(RevlogChangeset::new(node)?),
-                    );
-                    Ok(Some(cs))
-                }
-            });
+            let fut = blobstore
+                .get(key.clone())
+                .and_then(move |got| match got {
+                    None => Ok(None),
+                    Some(bytes) => {
+                        let envelope = HgChangesetEnvelope::from_blob(bytes.into())?;
+                        if changesetid.as_nodehash() != envelope.node_id() {
+                            bail_msg!(
+                                "Changeset ID mismatch (requested: {}, got: {})",
+                                changesetid,
+                                envelope.node_id()
+                            );
+                        }
+                        let revlogcs = RevlogChangeset::from_envelope(envelope)?;
+                        let cs = BlobChangeset::new_with_id(
+                            &changesetid,
+                            ChangesetContent::from_revlogcs(revlogcs),
+                        );
+                        Ok(Some(cs))
+                    }
+                })
+                .with_context(|_| ErrorKind::ChangesetDeserializeFailed(key))
+                .from_err();
             Either::B(fut)
         }
     }
@@ -193,26 +190,24 @@ impl BlobChangeset {
         &self,
         blobstore: RepoBlobstore,
     ) -> impl Future<Item = (), Error = Error> + Send + 'static {
-        let key = cskey(&self.changesetid);
+        let key = self.changesetid.blobstore_key();
 
         let blob = {
             let mut v = Vec::new();
 
-            self.content
-                .generate(&mut v)
-                .map(|()| HgBlobNode::new(Bytes::from(v), self.content.p1(), self.content.p2()))
+            self.content.generate(&mut v).map(|()| Bytes::from(v))
         };
 
         blob.map_err(Error::from)
-            .and_then(|node| {
-                let data = node.as_blob()
-                    .as_slice()
-                    .ok_or(failure::err_msg("missing changeset blob"))?;
-                let blob = RawCSBlob {
-                    parents: HgParents::new(self.content.p1(), self.content.p2()),
-                    blob: Cow::Borrowed(data),
+            .and_then(|contents| {
+                let envelope = HgChangesetEnvelopeMut {
+                    node_id: self.changesetid.into_nodehash(),
+                    p1: self.content.p1().cloned(),
+                    p2: self.content.p2().cloned(),
+                    contents,
                 };
-                blob.serialize().into()
+                let envelope = envelope.freeze();
+                Ok(envelope.into_blob())
             })
             .into_future()
             .and_then(move |blob| blobstore.put(key, blob.into()))

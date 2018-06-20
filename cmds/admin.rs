@@ -265,8 +265,7 @@ fn main() {
 
             match (use_memcache, no_prefix) {
                 (None, false) => {
-                    // XXX add a prefix here when ready
-                    let blobstore = PrefixBlobstore::new(blobstore, "");
+                    let blobstore = PrefixBlobstore::new(blobstore, manifold_args.repo_id.prefix());
                     blobstore.get(key).boxify()
                 }
                 (None, true) => blobstore.get(key).boxify(),
@@ -276,8 +275,7 @@ fn main() {
                         "manifold",
                         manifold_args.bucket.as_ref(),
                     ).unwrap();
-                    // XXX add a prefix here when ready
-                    let blobstore = PrefixBlobstore::new(blobstore, "");
+                    let blobstore = PrefixBlobstore::new(blobstore, manifold_args.repo_id.prefix());
                     get_memcache(&blobstore, key, mode)
                 }
                 (Some(mode), true) => {

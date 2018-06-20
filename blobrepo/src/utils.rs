@@ -4,8 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::borrow::Cow;
-
 use bytes::Bytes;
 use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -33,31 +31,6 @@ impl RawNodeBlob {
     }
 
     pub fn deserialize(blob: &EnvelopeBlob) -> Result<Self> {
-        Ok(bincode::deserialize(blob.0.as_ref())?)
-    }
-}
-
-// In stock mercurial, the revlog acts as an envelope which holds (primarily) the parents
-// for each entry. The changelog itself is encoded as a blob within the entry. This structure
-// replicates this for use within the blob store. In principle the cs blob and the envelope
-// could be stored separately, but I think the disadvantages (more objects, more latency,
-// more brittle) outweigh the advantages (potential for sharing changesets, consistency
-// with file storage).
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Serialize, Deserialize, HeapSizeOf)]
-pub struct RawCSBlob<'a> {
-    pub parents: HgParents,
-    pub blob: Cow<'a, [u8]>,
-}
-
-impl<'a> RawCSBlob<'a> {
-    pub(crate) fn serialize(&self) -> Result<EnvelopeBlob> {
-        let serialized = bincode::serialize(self)?;
-        // XXX better error message?
-        Ok(EnvelopeBlob(serialized.into()))
-    }
-
-    pub(crate) fn deserialize(blob: &EnvelopeBlob) -> Result<Self> {
         Ok(bincode::deserialize(blob.0.as_ref())?)
     }
 }
