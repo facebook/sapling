@@ -91,6 +91,12 @@ impl HgFileEnvelope {
         &self.inner.content_id
     }
 
+    /// The size of the content ID, not counting the metadata.
+    #[inline]
+    pub fn content_size(&self) -> u64 {
+        self.inner.content_size
+    }
+
     /// The metadata for this node, exactly as provided to Mercurial. This is extracted from
     /// and prepended to the content for Mercurial.
     #[inline]

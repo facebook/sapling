@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::str;
 
+use bytes::Bytes;
 use itertools::Itertools;
 
 use mercurial_types::{HgBlob, HgBlobNode, HgNodeHash, MPath};
@@ -152,6 +153,15 @@ impl File {
             .expect("BlobNode should always have data");
         let (_, off) = Self::extract_meta(data);
         &data[off..]
+    }
+
+    pub fn metadata(&self) -> Bytes {
+        let data = self.node
+            .as_blob()
+            .as_inner()
+            .expect("BlobNode should always have data");
+        let (_, off) = Self::extract_meta(data);
+        data.slice_to(off)
     }
 
     pub fn file_contents(&self) -> FileContents {

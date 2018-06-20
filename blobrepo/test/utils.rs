@@ -14,10 +14,10 @@ use futures::future::Future;
 use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
 
-use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgEntry,
+use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgFileEntry,
                UploadHgNodeHash, UploadHgTreeEntry};
 use blobstore::{EagerMemblob, LazyMemblob};
-use mercurial_types::{manifest, FileType, HgBlob, HgNodeHash, RepoPath};
+use mercurial_types::{FileType, HgNodeHash, RepoPath};
 use mononoke_types::DateTime;
 use std::sync::Arc;
 
@@ -74,10 +74,10 @@ pub fn upload_file_no_parents<B>(
 where
     B: Into<Bytes>,
 {
-    upload_hg_entry(
+    upload_hg_file_entry(
         repo,
         data.into(),
-        manifest::Type::File(FileType::Regular),
+        FileType::Regular,
         path.clone(),
         None,
         None,
@@ -93,10 +93,10 @@ pub fn upload_file_one_parent<B>(
 where
     B: Into<Bytes>,
 {
-    upload_hg_entry(
+    upload_hg_file_entry(
         repo,
         data.into(),
-        manifest::Type::File(FileType::Regular),
+        FileType::Regular,
         path.clone(),
         Some(p1),
         None,
@@ -143,25 +143,24 @@ fn upload_hg_tree_entry(
     upload.upload(repo).unwrap()
 }
 
-fn upload_hg_entry(
+fn upload_hg_file_entry(
     repo: &BlobRepo,
-    data: Bytes,
-    content_type: manifest::Type,
+    contents: Bytes,
+    file_type: FileType,
     path: RepoPath,
     p1: Option<HgNodeHash>,
     p2: Option<HgNodeHash>,
 ) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>) {
-    let raw_content = HgBlob::from(data);
-
-    let upload = UploadHgEntry {
-        upload_nodeid: UploadHgNodeHash::Generate,
-        raw_content,
-        content_type,
+    let upload = UploadHgFileEntry {
+        upload_node_id: UploadHgNodeHash::Generate,
+        contents,
+        file_type,
         p1,
         p2,
-        path,
+        path: path.into_mpath().expect("expected a path to be present"),
     };
-    upload.upload(repo).unwrap()
+    let (node_id, _, upload_fut) = upload.upload(repo).unwrap();
+    (node_id, upload_fut)
 }
 
 pub fn create_changeset_no_parents(

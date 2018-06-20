@@ -294,6 +294,12 @@ impl HgFileNodeId {
     pub const fn new(hash: HgNodeHash) -> Self {
         HgFileNodeId(hash)
     }
+
+    /// Produce a key suitable for using in a blobstore.
+    #[inline]
+    pub fn blobstore_key(&self) -> String {
+        format!("hgfilenode.sha1.{}", self.0)
+    }
 }
 
 impl Display for HgFileNodeId {

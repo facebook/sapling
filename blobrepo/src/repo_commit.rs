@@ -36,7 +36,6 @@ use changeset::ChangesetContent;
 use errors::*;
 use file::HgBlobEntry;
 use repo::RepoBlobstore;
-use utils::get_node_key;
 
 define_stats! {
     prefix = "mononoke.blobrepo_commit";
@@ -269,7 +268,7 @@ impl UploadEntries {
         let key = if is_tree {
             HgManifestId::new(node_id).blobstore_key()
         } else {
-            get_node_key(node_id)
+            HgFileNodeId::new(node_id).blobstore_key()
         };
         blobstore.assert_present(key)
     }

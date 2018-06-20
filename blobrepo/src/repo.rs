@@ -36,12 +36,12 @@ use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ManifoldBlob;
 use mercurial::file::File;
-use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileNodeId,
-                      HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents, Manifest,
-                      RepoPath, RepositoryId, Type};
-use mercurial_types::manifest::{self, Content};
+use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileEnvelopeMut,
+                      HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
+                      Manifest, RepoPath, RepositoryId, Type};
+use mercurial_types::manifest::Content;
 use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, DateTime,
-                     FileChange, FileContents, MPath, MPathElement, MononokeId};
+                     FileChange, FileContents, FileType, MPath, MPathElement, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Core;
@@ -52,7 +52,6 @@ use errors::*;
 use file::{fetch_file_content_and_renames_from_blobstore, fetch_raw_filenode_bytes, HgBlobEntry};
 use memory_manifest::MemoryRootManifest;
 use repo_commit::*;
-use utils::{get_node_key, RawNodeBlob};
 
 define_stats! {
     prefix = "mononoke.blobrepo";
@@ -74,7 +73,7 @@ define_stats! {
     get_all_filenodes: timeseries(RATE, SUM),
     get_generation_number: timeseries(RATE, SUM),
     upload_blob: timeseries(RATE, SUM),
-    upload_hg_entry: timeseries(RATE, SUM),
+    upload_hg_file_entry: timeseries(RATE, SUM),
     upload_hg_tree_entry: timeseries(RATE, SUM),
     create_changeset: timeseries(RATE, SUM),
     create_changeset_compute_cf: timeseries("create_changeset.compute_changed_files"; RATE, SUM),
@@ -553,25 +552,23 @@ impl BlobRepo {
             None => Either::A(future::ok(None)),
             Some(change) => {
                 let upload_future = self.fetch(change.content_id()).and_then({
-                    let blobstore = self.blobstore.clone();
+                    let repo = self.clone();
                     let change = change.clone();
-                    let logger = self.logger.clone();
                     let path = path.clone();
                     move |file_content| {
                         let hg_content = try_boxfuture!(prepend_metadata(
                             file_content.into_bytes(),
                             change.copy_from()
                         ));
-                        let upload_entry = UploadHgEntry {
-                            upload_nodeid: UploadHgNodeHash::Generate,
-                            raw_content: HgBlob::Dirty(hg_content),
-                            content_type: manifest::Type::File(change.file_type()),
+                        let upload_entry = UploadHgFileEntry {
+                            upload_node_id: UploadHgNodeHash::Generate,
+                            contents: hg_content,
+                            file_type: change.file_type(),
                             p1,
                             p2,
-                            path: RepoPath::FilePath(path),
+                            path: path,
                         };
-                        let (_, upload_future) =
-                            try_boxfuture!(upload_entry.upload_to_blobstore(&blobstore, &logger));
+                        let (_, _, upload_future) = try_boxfuture!(upload_entry.upload(&repo));
                         upload_future.map(|(entry, _)| Some(entry)).boxify()
                     }
                 });
@@ -786,7 +783,7 @@ impl UploadHgTreeEntry {
         let blob_entry = match path.mpath().and_then(|m| m.into_iter().last()) {
             Some(m) => {
                 let entry_path = m.clone();
-                HgBlobEntry::new(blobstore.clone(), entry_path, node_id, manifest::Type::Tree)
+                HgBlobEntry::new(blobstore.clone(), entry_path, node_id, Type::Tree)
             }
             None => HgBlobEntry::new_root(blobstore.clone(), manifest_id),
         };
@@ -830,151 +827,156 @@ impl UploadHgTreeEntry {
     }
 }
 
-/// Context for uploading a Mercurial entry.
-pub struct UploadHgEntry {
-    pub upload_nodeid: UploadHgNodeHash,
-    pub raw_content: HgBlob,
-    pub content_type: manifest::Type,
+/// Context for uploading a Mercurial file entry.
+pub struct UploadHgFileEntry {
+    pub upload_node_id: UploadHgNodeHash,
+    pub contents: Bytes,
+    pub file_type: FileType,
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
-    pub path: RepoPath,
+    pub path: MPath,
 }
 
-impl UploadHgEntry {
-    // Given content, ensure that there is a matching HgBlobEntry in the repo. This may not upload
-    // the entry or the data blob if the repo is aware of that data already existing in the
-    // underlying store.
-    // Note that the HgBlobEntry may not be consistent - parents do not have to be uploaded at this
-    // point, as long as you know their DNodeHashes; this is also given to you as part of the
-    // result type, so that you can parallelise uploads. Consistency will be verified when
-    // adding the entries to a changeset.
+impl UploadHgFileEntry {
     pub fn upload(
         self,
         repo: &BlobRepo,
-    ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
-        self.upload_to_blobstore(&repo.blobstore, &repo.logger)
-    }
-
-    pub(crate) fn upload_to_blobstore(
-        self,
-        blobstore: &RepoBlobstore,
-        logger: &Logger,
-    ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
-        STATS::upload_hg_entry.add_value(1);
-        let UploadHgEntry {
-            upload_nodeid,
-            raw_content,
-            content_type,
+    ) -> Result<
+        (
+            HgNodeHash,
+            ContentBlobInfo,
+            BoxFuture<(HgBlobEntry, RepoPath), Error>,
+        ),
+    > {
+        STATS::upload_hg_file_entry.add_value(1);
+        let UploadHgFileEntry {
+            upload_node_id,
+            contents,
+            file_type,
             p1,
             p2,
             path,
         } = self;
 
-        let p1 = p1.as_ref();
-        let p2 = p2.as_ref();
-        let raw_content = raw_content.clean();
-
-        let nodeid: HgNodeHash = match upload_nodeid {
-            UploadHgNodeHash::Generate => HgBlobNode::new(raw_content.clone(), p1, p2)
-                .nodeid()
-                .expect("raw_content must have data available"),
-            UploadHgNodeHash::Supplied(nodeid) => nodeid,
-            UploadHgNodeHash::Checked(nodeid) => {
-                let computed_nodeid = HgBlobNode::new(raw_content.clone(), p1, p2)
+        let node_id: HgNodeHash = match upload_node_id {
+            UploadHgNodeHash::Generate => {
+                HgBlobNode::new(contents.clone(), p1.as_ref(), p2.as_ref())
                     .nodeid()
-                    .expect("raw_content must have data available");
-                if nodeid != computed_nodeid {
+                    .expect("contents must have data available")
+            }
+            UploadHgNodeHash::Supplied(node_id) => node_id,
+            UploadHgNodeHash::Checked(node_id) => {
+                let computed_node_id = HgBlobNode::new(contents.clone(), p1.as_ref(), p2.as_ref())
+                    .nodeid()
+                    .expect("contents must have data available");
+                if node_id != computed_node_id {
                     bail_err!(ErrorKind::InconsistentEntryHash(
-                        path,
-                        nodeid,
-                        computed_nodeid
+                        RepoPath::FilePath(path),
+                        node_id,
+                        computed_node_id
                     ));
                 }
-                nodeid
+                node_id
             }
         };
 
-        let parents = HgParents::new(p1, p2);
+        // Split up the file into metadata and file contents.
+        let f = File::new(contents, p1.as_ref(), p2.as_ref());
+        let metadata = f.metadata();
+        let contents = f.file_contents();
 
-        let blob_hash = raw_content
-            .hash()
-            .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?;
-
-        let raw_node = RawNodeBlob {
-            parents,
-            blob: blob_hash,
+        // Upload the contents separately (they'll be used for bonsai changesets as well).
+        let copy_from = match f.copied_from() {
+            Ok(copy_from) => copy_from,
+            // XXX error out if copy-from information couldn't be read?
+            Err(_err) => None,
         };
+        let content_size = contents.size() as u64;
+        let (cbinfo, content_upload) =
+            Self::upload_content_blob(contents, node_id, path.clone(), copy_from, repo)?;
 
-        let blob_entry = match path.mpath().and_then(|m| m.into_iter().last()) {
-            Some(m) => {
-                let entry_path = m.clone();
-                HgBlobEntry::new(blobstore.clone(), entry_path, nodeid, content_type)
-            }
-            None => {
-                if content_type != Type::Tree {
-                    return Err(ErrorKind::NotAManifest(nodeid, content_type).into());
-                }
-                HgBlobEntry::new_root(blobstore.clone(), HgManifestId::new(nodeid))
-            }
+        let file_envelope = HgFileEnvelopeMut {
+            node_id,
+            p1,
+            p2,
+            content_id: cbinfo.meta.id,
+            content_size,
+            metadata,
         };
+        let envelope_blob = file_envelope.freeze().into_blob();
 
-        fn log_upload_stats(
-            logger: Logger,
-            path: RepoPath,
-            nodeid: HgNodeHash,
-            phase: &str,
-            stats: Stats,
-        ) {
-            let path = format!("{}", path);
-            let nodeid = format!("{}", nodeid);
-            trace!(logger, "Upload blob stats";
-                "phase" => String::from(phase),
-                "path" => path,
-                "nodeid" => nodeid,
-                "poll_count" => stats.poll_count,
-                "poll_time_us" => stats.poll_time.as_micros_unchecked(),
-                "completion_time_us" => stats.completion_time.as_micros_unchecked(),
-            );
-        }
+        let blobstore_key = HgFileNodeId::new(node_id).blobstore_key();
 
-        // Ensure that content is in the blobstore
-        let content_upload = blobstore
-            .put(format!("sha1-{}", blob_hash.sha1()), raw_content.into())
+        let blob_entry = HgBlobEntry::new(
+            repo.blobstore.clone(),
+            path.basename().clone(),
+            node_id,
+            Type::File(file_type),
+        );
+
+        let envelope_upload = repo.blobstore
+            .put(blobstore_key, envelope_blob.into())
             .timed({
-                let logger = logger.clone();
+                let logger = repo.logger.clone();
                 let path = path.clone();
-                let nodeid = nodeid.clone();
                 move |stats, result| {
                     if result.is_ok() {
-                        log_upload_stats(logger, path, nodeid, "content_uploaded", stats)
+                        Self::log_stats(logger, path, node_id, "file_envelope_uploaded", stats);
                     }
                     Ok(())
                 }
             });
-        // Upload the new node
-        let node_upload = blobstore.put(get_node_key(nodeid), raw_node.serialize(&nodeid)?.into());
 
-        Ok((
-            nodeid,
-            content_upload
-                .join(node_upload)
-                .map({
-                    let path = path.clone();
-                    |_| (blob_entry, path)
-                })
-                .timed({
-                    let logger = logger.clone();
-                    let path = path.clone();
-                    let nodeid = nodeid.clone();
-                    move |stats, result| {
-                        if result.is_ok() {
-                            log_upload_stats(logger, path, nodeid, "finished", stats)
-                        }
-                        Ok(())
-                    }
-                })
-                .boxify(),
-        ))
+        let fut = envelope_upload
+            .join(content_upload)
+            .map(move |(..)| (blob_entry, RepoPath::FilePath(path)));
+        Ok((node_id, cbinfo, fut.boxify()))
+    }
+
+    fn upload_content_blob(
+        contents: FileContents,
+        node_id: HgNodeHash,
+        path: MPath,
+        copy_from: Option<(MPath, HgNodeHash)>,
+        repo: &BlobRepo,
+    ) -> Result<
+        (
+            ContentBlobInfo,
+            impl Future<Item = (), Error = Error> + Send,
+        ),
+    > {
+        let contents_blob = contents.into_blob();
+        let cbinfo = ContentBlobInfo {
+            path: path.clone(),
+            meta: ContentBlobMeta {
+                id: *contents_blob.id(),
+                copy_from,
+            },
+        };
+
+        let fut = repo.upload_blob(contents_blob).map(move |_id| ()).timed({
+            let logger = repo.logger.clone();
+            move |stats, result| {
+                if result.is_ok() {
+                    Self::log_stats(logger, path, node_id, "content_uploaded", stats);
+                }
+                Ok(())
+            }
+        });
+        Ok((cbinfo, fut))
+    }
+
+    fn log_stats(logger: Logger, path: MPath, nodeid: HgNodeHash, phase: &str, stats: Stats) {
+        let path = format!("{}", path);
+        let nodeid = format!("{}", nodeid);
+        trace!(logger, "Upload blob stats";
+            "phase" => String::from(phase),
+            "path" => path,
+            "nodeid" => nodeid,
+            "poll_count" => stats.poll_count,
+            "poll_time_us" => stats.poll_time.as_micros_unchecked(),
+            "completion_time_us" => stats.completion_time.as_micros_unchecked(),
+        );
     }
 }
 

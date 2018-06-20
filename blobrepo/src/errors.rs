@@ -13,6 +13,7 @@ pub use failure::prelude::*;
 
 use mercurial_types::{HgBlob, HgBlobHash, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents,
                       MPath, RepoPath, Type};
+use mononoke_types::ContentId;
 
 use BlobChangeset;
 
@@ -50,12 +51,17 @@ pub enum ErrorKind {
     ChangesetDeserializeFailed(String),
     #[fail(display = "Error while deserializing manifest retrieved from key '{}'", _0)]
     ManifestDeserializeFailed(String),
+    #[fail(display = "Error while deserializing file node retrieved from key '{}'", _0)]
+    FileNodeDeserializeFailed(String),
     #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(HgNodeHash),
     #[fail(display = "Node id {} is missing", _0)] NodeMissing(HgNodeHash),
     #[fail(display = "Mercurial content missing for node {} (type {})", _0, _1)]
     HgContentMissing(HgNodeHash, Type),
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]
     ContentMissing(HgNodeHash, HgBlobHash),
+    #[fail(display = "Error while deserializing file contents retrieved from key '{}'", _0)]
+    FileContentsDeserializeFailed(String),
+    #[fail(display = "Content blob missing for id: {}", _0)] ContentBlobMissing(ContentId),
     #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(HgBlob),
     #[fail(display = "HgParents are not in blob store {:?}", _0)] ParentsUnknown(HgParents),
     #[fail(display = "Serialization of node failed {} ({})", _0, _1)]

@@ -13,9 +13,9 @@ use ascii::AsciiString;
 use blobrepo::{BlobRepo, ChangesetHandle, ContentBlobInfo, CreateChangeset, HgBlobEntry};
 use bookmarks;
 use bytes::Bytes;
-use failure::{FutureFailureErrorExt, StreamFailureErrorExt};
+use failure::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{Future, IntoFuture, Stream};
-use futures::future::{self, err, ok};
+use futures::future::{self, err, ok, Shared};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial::changeset::RevlogChangeset;
@@ -26,17 +26,15 @@ use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath,
 use slog::Logger;
 use stats::*;
 
-use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
-                  Filelog};
+use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup};
 use errors::*;
-use upload_blobs::{upload_blobs, upload_hg_blobs, UploadBlobsType, UploadableBlob,
-                   UploadableHgBlob};
+use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;
 type Changesets = Vec<(HgNodeHash, RevlogChangeset)>;
-type Filelogs = HashMap<HgNodeKey, <Filelog as UploadableHgBlob>::Value>;
-type ContentBlobs = HashMap<HgNodeKey, <Filelog as UploadableBlob>::Value>;
+type Filelogs = HashMap<HgNodeKey, Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
+type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 type UploadedChangesets = HashMap<HgNodeHash, ChangesetHandle>;
 
@@ -223,11 +221,17 @@ impl Bundle2Resolver {
                     convert_to_revlog_changesets(c)
                         .collect()
                         .and_then(|changesets| {
-                            upload_blobs(
+                            upload_hg_blobs(
                                 repo.clone(),
                                 convert_to_revlog_filelog(repo, f),
                                 UploadBlobsType::EnsureNoDuplicates,
-                            ).map(move |(filelogs, content_blobs)| {
+                            ).map(move |upload_map| {
+                                let mut filelogs = HashMap::new();
+                                let mut content_blobs = HashMap::new();
+                                for (node_key, (cbinfo, file_upload)) in upload_map {
+                                    filelogs.insert(node_key.clone(), file_upload);
+                                    content_blobs.insert(node_key, cbinfo);
+                                }
                                 (changesets, filelogs, content_blobs)
                             })
                                 .context("While uploading File Blobs")
@@ -391,26 +395,19 @@ impl Bundle2Resolver {
             let NewBlobs {
                 root_manifest,
                 sub_entries,
-                content_blobs,
+                // XXX use these content blobs in the future
+                content_blobs: _content_blobs,
             } = try_boxfuture!(NewBlobs::new(
                 *revlog_cs.manifestid(),
                 &manifests,
                 &filelogs,
                 &content_blobs,
             ));
-            // XXX just wait for the content blobs to be uploaded for now -- this will actually
-            // be used in the future.
-            let content_blob_fut = future::join_all(
-                content_blobs.into_iter().map(|(_cbinfo, fut)| fut),
-            ).with_context(move |_| {
-                format!("While uploading content blobs for Changeset {}", node)
-            });
 
             p1.join(p2)
                 .with_context(move |_| format!("While fetching parents for Changeset {}", node))
-                .join(content_blob_fut)
                 .from_err()
-                .and_then(move |((p1, p2), _content_blob_result)| {
+                .and_then(move |(p1, p2)| {
                     let create_changeset = CreateChangeset {
                         expected_nodeid: Some(node),
                         expected_files: None,
@@ -572,7 +569,6 @@ fn get_parent(
 
 type HgBlobFuture = BoxFuture<(HgBlobEntry, RepoPath), Error>;
 type HgBlobStream = BoxStream<(HgBlobEntry, RepoPath), Error>;
-type ContentBlobFuture = (ContentBlobInfo, BoxFuture<(), Error>);
 
 /// In order to generate the DAG of dependencies between Root Manifest and other Manifests and
 /// Filelogs we need to walk that DAG.
@@ -585,7 +581,7 @@ struct NewBlobs {
     // This is returned as a Vec rather than a Stream so that the path and metadata are
     // available before the content blob is uploaded. This will allow creating and uploading
     // changeset blobs without being blocked on content blob uploading being complete.
-    content_blobs: Vec<ContentBlobFuture>,
+    content_blobs: Vec<ContentBlobInfo>,
 }
 
 struct WalkHelperCounters {
@@ -666,13 +662,7 @@ impl NewBlobs {
         manifests: &Manifests,
         filelogs: &Filelogs,
         content_blobs: &ContentBlobs,
-    ) -> Result<
-        (
-            Vec<HgBlobFuture>,
-            Vec<ContentBlobFuture>,
-            WalkHelperCounters,
-        ),
-    > {
+    ) -> Result<(Vec<HgBlobFuture>, Vec<ContentBlobInfo>, WalkHelperCounters)> {
         if path_taken.len() > 4096 {
             bail_msg!(
                 "Exceeded max manifest path during walking with path: {:?}",
@@ -681,7 +671,7 @@ impl NewBlobs {
         }
 
         let mut entries: Vec<HgBlobFuture> = Vec::new();
-        let mut cbinfos: Vec<ContentBlobFuture> = Vec::new();
+        let mut cbinfos: Vec<ContentBlobInfo> = Vec::new();
         let mut counters = WalkHelperCounters {
             manifests_count: 0,
             filelogs_count: 0,
@@ -739,12 +729,7 @@ impl NewBlobs {
                             .boxify(),
                     );
                     match content_blobs.get(&key) {
-                        Some(&(ref cbinfo, ref fut)) => {
-                            cbinfos.push((
-                                cbinfo.clone(),
-                                fut.clone().map(|_| ()).from_err().boxify(),
-                            ));
-                        }
+                        Some(cbinfo) => cbinfos.push(cbinfo.clone()),
                         None => {
                             bail_msg!("internal error: content blob future missing for filenode")
                         }

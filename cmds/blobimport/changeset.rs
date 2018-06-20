@@ -19,7 +19,7 @@ use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry,
-               UploadHgEntry, UploadHgNodeHash, UploadHgTreeEntry};
+               UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
 use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
                       NULL_HASH};
@@ -161,10 +161,6 @@ fn upload_entry(
         }
         Some(path) => path,
     };
-    let path = match ty {
-        Type::Tree => RepoPath::DirectoryPath(path),
-        Type::File(_) => RepoPath::FilePath(path),
-    };
 
     let content = entry.get_raw_content();
     let parents = entry.get_parents();
@@ -183,24 +179,27 @@ fn upload_entry(
                             .expect("contents should always be available"),
                         p1: p1.cloned(),
                         p2: p2.cloned(),
-                        path,
+                        path: RepoPath::DirectoryPath(path),
                     };
-                    upload.upload(&blobrepo)
+                    let (_, upload_fut) = try_boxfuture!(upload.upload(&blobrepo));
+                    upload_fut
                 }
-                Type::File(_) => {
-                    let upload = UploadHgEntry {
-                        upload_nodeid: upload_node_id,
-                        raw_content: content,
-                        content_type: ty,
+                Type::File(ft) => {
+                    let upload = UploadHgFileEntry {
+                        upload_node_id,
+                        contents: content
+                            .into_inner()
+                            .expect("contents should always be available"),
+                        file_type: ft,
                         p1: p1.cloned(),
                         p2: p2.cloned(),
                         path,
                     };
-                    upload.upload(&blobrepo)
+                    let (_, _, upload_fut) = try_boxfuture!(upload.upload(&blobrepo));
+                    upload_fut
                 }
             }
         })
-        .and_then(|(_, entry)| entry)
         .boxify()
 }
 

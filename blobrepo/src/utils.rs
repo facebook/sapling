@@ -5,12 +5,9 @@
 // GNU General Public License version 2 or any later version.
 
 use bytes::Bytes;
-use futures::future::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
 
 use bincode;
 
-use blobstore::Blobstore;
 use mercurial_types::{HgBlobHash, HgNodeHash, HgParents};
 use mononoke_types::BlobstoreBytes;
 
@@ -57,21 +54,4 @@ impl From<EnvelopeBlob> for BlobstoreBytes {
     fn from(blob: EnvelopeBlob) -> BlobstoreBytes {
         BlobstoreBytes::from_bytes(blob.0)
     }
-}
-
-pub fn get_node_key(nodeid: HgNodeHash) -> String {
-    format!("node-{}.bincode", nodeid)
-}
-
-pub fn get_node(blobstore: &Blobstore, nodeid: HgNodeHash) -> BoxFuture<RawNodeBlob, Error> {
-    let key = get_node_key(nodeid);
-
-    blobstore
-        .get(key)
-        .and_then(move |got| got.ok_or(ErrorKind::NodeMissing(nodeid).into()))
-        .and_then(move |blob| {
-            let blob = EnvelopeBlob::from(blob);
-            RawNodeBlob::deserialize(&blob).into_future()
-        })
-        .boxify()
 }

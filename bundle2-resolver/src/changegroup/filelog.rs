@@ -16,17 +16,13 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
-use blobrepo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry, UploadHgEntry,
-               UploadHgNodeHash};
-use mercurial::file;
+use blobrepo::{BlobRepo, ContentBlobInfo, HgBlobEntry, UploadHgFileEntry, UploadHgNodeHash};
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, HgNodeHash, HgNodeKey, MPath,
-                      RepoPath, NULL_HASH};
-use mononoke_types::BlobstoreValue;
+use mercurial_types::{delta, Delta, FileType, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH};
 
 use errors::*;
 use stats::*;
-use upload_blobs::{UploadableBlob, UploadableHgBlob};
+use upload_blobs::UploadableHgBlob;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilelogDeltaed {
@@ -49,60 +45,32 @@ impl UploadableHgBlob for Filelog {
     // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
     //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
     //   implements Error.
-    type Value = Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>;
+    type Value = (
+        ContentBlobInfo,
+        Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>,
+    );
 
     fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
-        let upload = UploadHgEntry {
-            upload_nodeid: UploadHgNodeHash::Checked(node_key.hash),
-            raw_content: HgBlob::from(self.data),
-            content_type: manifest::Type::File(FileType::Regular),
+        let path = match &node_key.path {
+            RepoPath::FilePath(path) => path.clone(),
+            other => bail_msg!("internal error: expected file path, got {}", other),
+        };
+        let upload = UploadHgFileEntry {
+            upload_node_id: UploadHgNodeHash::Checked(node_key.hash),
+            contents: self.data,
+            // XXX should this really be Regular?
+            file_type: FileType::Regular,
             p1: self.p1,
             p2: self.p2,
-            path: node_key.path.clone(),
-        };
-        upload
-            .upload(repo)
-            .map(move |(_node, fut)| (node_key, fut.map_err(Error::compat).boxify().shared()))
-    }
-}
-
-impl UploadableBlob for Filelog {
-    // * Shared is required here because a single content blob can be referred to by more than
-    //   one changeset, and all of those will want to refer to the corresponding future.
-    // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
-    //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
-    //   implements Error.
-    type Value = (ContentBlobInfo, Shared<BoxFuture<(), Compat<Error>>>);
-
-    fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
-        let node_key = self.node_key;
-        let path = match node_key.path.clone() {
-            RepoPath::FilePath(p) => p,
-            other => bail_msg!(
-                "internal error: expected RepoPath::FilePath, found {:?}",
-                other
-            ),
-        };
-
-        let f = file::File::new(self.data, self.p1.as_ref(), self.p2.as_ref());
-        let copy_from = f.copied_from()?;
-        let contents = f.file_contents();
-        let contents_blob = contents.into_blob();
-        let cbinfo = ContentBlobInfo {
             path,
-            meta: ContentBlobMeta {
-                id: *contents_blob.id(),
-                copy_from,
-            },
         };
 
-        let fut = repo.upload_blob(contents_blob)
-            .map(move |_id| ())
-            .map_err(Error::compat)
-            .boxify()
-            .shared();
-        Ok((node_key, (cbinfo, fut)))
+        let (_node, cbinfo, fut) = upload.upload(repo)?;
+        Ok((
+            node_key,
+            (cbinfo, fut.map_err(Error::compat).boxify().shared()),
+        ))
     }
 }
 
@@ -201,8 +169,7 @@ impl DeltaCache {
                             None => self.repo
                                 .get_raw_hg_content(&base)
                                 .and_then(move |blob| {
-                                    let bytes = blob
-                                        .into_inner()
+                                    let bytes = blob.into_inner()
                                         .expect("contents should always be present");
                                     delta::apply(bytes.as_ref(), &delta)
                                         .with_context(|_| {
