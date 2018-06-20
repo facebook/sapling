@@ -40,9 +40,8 @@ use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFil
                       HgNodeHash, HgParents, Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::nodehash::HgManifestId;
-use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
-                     ContentId, DateTime, FileChange, FileContents, MPath, MPathElement,
-                     MononokeId};
+use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, DateTime,
+                     FileChange, FileContents, MPath, MPathElement, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Core;
@@ -58,7 +57,7 @@ use utils::{get_node_key, RawNodeBlob};
 define_stats! {
     prefix = "mononoke.blobrepo";
     get_file_content: timeseries(RATE, SUM),
-    get_raw_filenode_content: timeseries(RATE, SUM),
+    get_raw_hg_content: timeseries(RATE, SUM),
     get_parents: timeseries(RATE, SUM),
     get_file_copy: timeseries(RATE, SUM),
     get_changesets: timeseries(RATE, SUM),
@@ -326,10 +325,13 @@ impl BlobRepo {
             .boxify()
     }
 
+    // TODO: (rain1) T30456231 It should be possible in principle to make the return type a wrapper
+    // around a Chain, but it isn't because of API deficiencies in bytes::Buf. See D8412210.
+
     /// The raw filenode content is crucial for operation like delta application. It is stored in
-    /// untouched represenation that came from Mercurial client
-    pub fn get_raw_filenode_content(&self, key: &HgNodeHash) -> BoxFuture<BlobstoreBytes, Error> {
-        STATS::get_raw_filenode_content.add_value(1);
+    /// untouched represenation that came from Mercurial client.
+    pub fn get_raw_hg_content(&self, key: &HgNodeHash) -> BoxFuture<HgBlob, Error> {
+        STATS::get_raw_hg_content.add_value(1);
         fetch_raw_filenode_bytes(&self.blobstore, *key)
     }
 
@@ -951,7 +953,13 @@ impl CreateChangeset {
                                         Error,
                                     > = (move || {
                                         let blobcs = try_boxfuture!(make_new_changeset(
-                                            parents, root_hash, user, time, extra, files, comments,
+                                            parents,
+                                            root_hash,
+                                            user,
+                                            time,
+                                            extra,
+                                            files,
+                                            comments,
                                         ));
 
                                         let cs_id = blobcs.get_changeset_id().into_nodehash();

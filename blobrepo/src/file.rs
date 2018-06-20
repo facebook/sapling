@@ -13,7 +13,7 @@ use mercurial::file;
 use mercurial_types::{FileType, HgBlob, HgManifestId, HgNodeHash, HgParents, MPath, MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::HgEntryId;
-use mononoke_types::{BlobstoreBytes, FileContents};
+use mononoke_types::FileContents;
 
 use blobstore::Blobstore;
 
@@ -43,7 +43,7 @@ impl Eq for HgBlobEntry {}
 pub fn fetch_raw_filenode_bytes(
     blobstore: &RepoBlobstore,
     nodeid: HgNodeHash,
-) -> BoxFuture<BlobstoreBytes, Error> {
+) -> BoxFuture<HgBlob, Error> {
     get_node(blobstore, nodeid)
         .context("While fetching node for blob")
         .map_err(Error::from)
@@ -58,6 +58,7 @@ pub fn fetch_raw_filenode_bytes(
                     .and_then(move |blob| {
                         blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
                     })
+                    .map(HgBlob::from)
                     .context(err_context)
                     .from_err()
             }
@@ -118,7 +119,7 @@ impl HgBlobEntry {
         get_node(&self.blobstore, self.id.into_nodehash())
     }
 
-    fn get_raw_content_inner(&self) -> BoxFuture<BlobstoreBytes, Error> {
+    fn get_raw_content_inner(&self) -> BoxFuture<HgBlob, Error> {
         fetch_raw_filenode_bytes(&self.blobstore, self.id.into_nodehash())
     }
 }
@@ -133,7 +134,7 @@ impl Entry for HgBlobEntry {
     }
 
     fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
-        self.get_raw_content_inner().map(HgBlob::from).boxify()
+        self.get_raw_content_inner()
     }
 
     fn get_content(&self) -> BoxFuture<Content, Error> {

@@ -199,9 +199,11 @@ impl DeltaCache {
                                 })
                                 .boxify(),
                             None => self.repo
-                                .get_raw_filenode_content(&base)
-                                .and_then(move |bytes| {
-                                    let bytes = bytes.into_bytes();
+                                .get_raw_hg_content(&base)
+                                .and_then(move |blob| {
+                                    let bytes = blob
+                                        .into_inner()
+                                        .expect("contents should always be present");
                                     delta::apply(bytes.as_ref(), &delta)
                                         .with_context(|_| {
                                             format!("File content: {:?} delta: {:?}", bytes, delta)
