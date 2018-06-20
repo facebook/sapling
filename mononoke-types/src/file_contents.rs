@@ -45,6 +45,14 @@ impl FileContents {
         }
     }
 
+    /// Whether this starts with a particular string.
+    #[inline]
+    pub fn starts_with(&self, needle: &[u8]) -> bool {
+        match self {
+            FileContents::Bytes(b) => b.starts_with(needle),
+        }
+    }
+
     pub fn into_bytes(self) -> Bytes {
         match self {
             FileContents::Bytes(bytes) => bytes,

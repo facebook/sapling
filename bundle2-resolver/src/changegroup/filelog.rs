@@ -16,7 +16,8 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
-use blobrepo::{BlobRepo, ContentBlobInfo, HgBlobEntry, UploadHgFileEntry, UploadHgNodeHash};
+use blobrepo::{BlobRepo, ContentBlobInfo, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry,
+               UploadHgNodeHash};
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, Delta, FileType, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH};
 
@@ -58,7 +59,7 @@ impl UploadableHgBlob for Filelog {
         };
         let upload = UploadHgFileEntry {
             upload_node_id: UploadHgNodeHash::Checked(node_key.hash),
-            contents: self.data,
+            contents: UploadHgFileContents::RawBytes(self.data),
             // XXX should this really be Regular?
             file_type: FileType::Regular,
             p1: self.p1,
@@ -66,7 +67,7 @@ impl UploadableHgBlob for Filelog {
             path,
         };
 
-        let (_node, cbinfo, fut) = upload.upload(repo)?;
+        let (cbinfo, fut) = upload.upload(repo)?;
         Ok((
             node_key,
             (cbinfo, fut.map_err(Error::compat).boxify().shared()),

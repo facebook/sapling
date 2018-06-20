@@ -121,17 +121,23 @@ impl File {
         }
     }
 
-    pub fn generate_copied_from<T>(
-        copy_info: Option<(MPath, HgNodeHash)>,
+    pub fn generate_metadata<T>(
+        copy_from: Option<&(MPath, HgNodeHash)>,
+        file_contents: &FileContents,
         buf: &mut T,
     ) -> Result<()>
     where
         T: Write,
     {
-        buf.write_all(META_MARKER)?;
-        match copy_info {
-            None => (),
+        match copy_from {
+            None => if file_contents.starts_with(META_MARKER) {
+                // If the file contents starts with META_MARKER, the metadata must be
+                // written out to avoid ambiguity.
+                buf.write_all(META_MARKER)?;
+                buf.write_all(META_MARKER)?;
+            },
             Some((path, version)) => {
+                buf.write_all(META_MARKER)?;
                 buf.write_all(COPY_PATH_KEY)?;
                 buf.write_all(b": ")?;
                 path.generate(buf)?;
@@ -140,9 +146,9 @@ impl File {
                 buf.write_all(COPY_REV_KEY)?;
                 buf.write_all(b": ")?;
                 buf.write_all(version.to_hex().as_ref())?;
+                buf.write_all(META_MARKER)?;
             }
         };
-        buf.write_all(META_MARKER)?;
         Ok(())
     }
 
@@ -186,8 +192,9 @@ impl File {
 
 #[cfg(test)]
 mod test {
-    use super::{File, META_MARKER, META_SZ};
-    use mercurial_types::{HgNodeHash, MPath};
+    use super::*;
+
+    use mercurial_types_mocks::nodehash::*;
 
     #[test]
     fn extract_meta_sz() {
@@ -275,10 +282,56 @@ mod test {
         )
     }
 
+    #[test]
+    fn generate_metadata_0() {
+        const FILE_CONTENTS: &[u8] = b"foobar";
+        let file_contents = FileContents::Bytes(Bytes::from(FILE_CONTENTS));
+        let mut out: Vec<u8> = vec![];
+        File::generate_metadata(None, &file_contents, &mut out)
+            .expect("Vec::write_all should succeed");
+        assert_eq!(out.as_slice(), &b""[..]);
+
+        let mut out: Vec<u8> = vec![];
+        File::generate_metadata(
+            Some(&(MPath::new("foo").unwrap(), ONES_HASH)),
+            &file_contents,
+            &mut out,
+        ).expect("Vec::write_all should succeed");
+        assert_eq!(
+            out.as_slice(),
+            &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\x01\n"[..]
+        );
+    }
+
+    #[test]
+    fn generate_metadata_1() {
+        // The meta marker in the beginning should cause metadata to unconditionally be emitted.
+        const FILE_CONTENTS: &[u8] = b"\x01\nfoobar";
+        let file_contents = FileContents::Bytes(Bytes::from(FILE_CONTENTS));
+        let mut out: Vec<u8> = vec![];
+        File::generate_metadata(None, &file_contents, &mut out)
+            .expect("Vec::write_all should succeed");
+        assert_eq!(out.as_slice(), &b"\x01\n\x01\n"[..]);
+
+        let mut out: Vec<u8> = vec![];
+        File::generate_metadata(
+            Some(&(MPath::new("foo").unwrap(), ONES_HASH)),
+            &file_contents,
+            &mut out,
+        ).expect("Vec::write_all should succeed");
+        assert_eq!(
+            out.as_slice(),
+            &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\x01\n"[..]
+        );
+    }
+
     quickcheck! {
-        fn copy_info_roundtrip(copy_info: Option<(MPath, HgNodeHash)>) -> bool {
+        fn copy_info_roundtrip(
+            copy_info: Option<(MPath, HgNodeHash)>,
+            contents: FileContents
+        ) -> bool {
             let mut buf = Vec::new();
-            let result = File::generate_copied_from(copy_info.clone(), &mut buf)
+            let result = File::generate_metadata(copy_info.as_ref(), &contents, &mut buf)
                 .and_then(|_| {
                     File::get_copied_from(File::parse_meta(&buf))
                 });

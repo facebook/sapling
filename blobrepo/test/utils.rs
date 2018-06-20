@@ -14,10 +14,10 @@ use futures::future::Future;
 use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
 
-use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgFileEntry,
-               UploadHgNodeHash, UploadHgTreeEntry};
+use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgFileContents,
+               UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
 use blobstore::{EagerMemblob, LazyMemblob};
-use mercurial_types::{FileType, HgNodeHash, RepoPath};
+use mercurial_types::{FileType, HgBlobNode, HgNodeHash, RepoPath};
 use mononoke_types::DateTime;
 use std::sync::Arc;
 
@@ -151,15 +151,22 @@ fn upload_hg_file_entry(
     p1: Option<HgNodeHash>,
     p2: Option<HgNodeHash>,
 ) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>) {
+    // Ideally the node id returned from upload.upload would be used, but that isn't immediately
+    // available -- so compute it ourselves.
+    let node_id = HgBlobNode::new(contents.clone(), p1.as_ref(), p2.as_ref())
+        .nodeid()
+        .expect("contents must have data available");
+
     let upload = UploadHgFileEntry {
-        upload_node_id: UploadHgNodeHash::Generate,
-        contents,
+        upload_node_id: UploadHgNodeHash::Checked(node_id),
+        contents: UploadHgFileContents::RawBytes(contents),
         file_type,
         p1,
         p2,
         path: path.into_mpath().expect("expected a path to be present"),
     };
-    let (node_id, _, upload_fut) = upload.upload(repo).unwrap();
+
+    let (_, upload_fut) = upload.upload(repo).unwrap();
     (node_id, upload_fut)
 }
 

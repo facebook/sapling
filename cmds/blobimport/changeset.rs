@@ -19,7 +19,7 @@ use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry,
-               UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
+               UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
 use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
                       NULL_HASH};
@@ -187,15 +187,17 @@ fn upload_entry(
                 Type::File(ft) => {
                     let upload = UploadHgFileEntry {
                         upload_node_id,
-                        contents: content
-                            .into_inner()
-                            .expect("contents should always be available"),
+                        contents: UploadHgFileContents::RawBytes(
+                            content
+                                .into_inner()
+                                .expect("contents should always be available"),
+                        ),
                         file_type: ft,
                         p1: p1.cloned(),
                         p2: p2.cloned(),
                         path,
                     };
-                    let (_, _, upload_fut) = try_boxfuture!(upload.upload(&blobrepo));
+                    let (_, upload_fut) = try_boxfuture!(upload.upload(&blobrepo));
                     upload_fut
                 }
             }
