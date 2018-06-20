@@ -23,7 +23,7 @@ extern crate tokio;
 use bookmarks::{Bookmark, BookmarkPrefix};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use mercurial_types_mocks::nodehash::{ONES_CSID, TWOS_CSID};
-use mercurial_types_mocks::repo::REPO_ZERO;
+use mercurial_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 
 fn create_bookmark(book: &str) -> Bookmark {
     Bookmark::new(book.to_string()).unwrap()
@@ -311,6 +311,40 @@ macro_rules! bookmarks_test_impl {
                         .unwrap(),
                     vec![(name_2, ONES_CSID)]
                 );
+            }
+
+            #[test]
+            fn test_create_different_repos() {
+                let bookmarks = $new_cb();
+                let name_1 = create_bookmark("book");
+
+                let mut txn = bookmarks.create_transaction(&REPO_ZERO);
+                txn.force_set(&name_1, &ONES_CSID).unwrap();
+                assert!(txn.commit().wait().is_ok());
+
+                // Updating value from another repo, should fail
+                let mut txn = bookmarks.create_transaction(&REPO_ONE);
+                txn.update(&name_1, &TWOS_CSID, &ONES_CSID).unwrap();
+                assert!(txn.commit().wait().is_err());
+
+                // Creating value should succeed
+                let mut txn = bookmarks.create_transaction(&REPO_ONE);
+                txn.create(&name_1, &TWOS_CSID).unwrap();
+                assert!(txn.commit().wait().is_ok());
+
+                assert_eq!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(), Some(ONES_CSID));
+                assert_eq!(bookmarks.get(&name_1, &REPO_ONE).wait().unwrap(), Some(TWOS_CSID));
+
+                // Force deleting should delete only from one repo
+                let mut txn = bookmarks.create_transaction(&REPO_ONE);
+                txn.force_delete(&name_1).unwrap();
+                assert!(txn.commit().wait().is_ok());
+                assert_eq!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(), Some(ONES_CSID));
+
+                // delete should fail for another repo
+                let mut txn = bookmarks.create_transaction(&REPO_ONE);
+                txn.delete(&name_1, &ONES_CSID).unwrap();
+                assert!(txn.commit().wait().is_err());
             }
         }
     }

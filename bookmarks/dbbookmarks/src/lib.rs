@@ -285,6 +285,7 @@ macro_rules! impl_bookmarks {
                         let key = key.to_string();
                         let num_affected_rows = update(
                             schema::bookmarks::table
+                                .filter(schema::bookmarks::repo_id.eq(self.repo_id))
                                 .filter(schema::bookmarks::name.eq(key.clone()))
                                 .filter(schema::bookmarks::changeset_id.eq(old_cs)),
                         ).set(schema::bookmarks::changeset_id.eq(new_cs))
@@ -296,7 +297,10 @@ macro_rules! impl_bookmarks {
 
                     for key in self.force_deletes.iter() {
                         let key = key.to_string();
-                        delete(schema::bookmarks::table.filter(schema::bookmarks::name.eq(key)))
+                        delete(schema::bookmarks::table
+                                .filter(schema::bookmarks::repo_id.eq(self.repo_id))
+                                .filter(schema::bookmarks::name.eq(key))
+                            )
                             .execute(&*connection)?;
                     }
 
@@ -304,6 +308,7 @@ macro_rules! impl_bookmarks {
                         let key = key.to_string();
                         let num_deleted_rows = delete(
                             schema::bookmarks::table
+                                .filter(schema::bookmarks::repo_id.eq(self.repo_id))
                                 .filter(schema::bookmarks::name.eq(key.clone()))
                                 .filter(schema::bookmarks::changeset_id.eq(old_cs)),
                         ).execute(&*connection)?;
