@@ -34,6 +34,9 @@
 #include "folly/experimental/FunctionScheduler.h"
 
 constexpr folly::StringPiece kPeriodicUnloadCounterKey{"PeriodicUnloadCounter"};
+constexpr folly::StringPiece kPrivateBytes{"memory_private_bytes"};
+constexpr folly::StringPiece kRssBytes{"memory_vm_rss_bytes"};
+constexpr std::chrono::seconds kMemoryPollSeconds{30};
 
 namespace apache {
 namespace thrift {
@@ -215,6 +218,12 @@ class EdenServer : private TakeoverHandler {
   void flushStatsNow();
 
   /**
+   * Report Linux specific statistics.  They are computed by parsing
+   * files in the proc file system (eg. /proc/self/smaps).
+   */
+  void reportProcStats();
+
+  /**
    * Get the main thread's EventBase.
    *
    * Callers can use this for scheduling work to be run in the main thread.
@@ -379,6 +388,13 @@ class EdenServer : private TakeoverHandler {
    * this, so we do not need synchronization when reading it.
    */
   folly::EventBase* mainEventBase_;
+
+  /**
+   * Track the last time we calculated the /proc based statistics.
+   * We use this for throttling purposes. Note: we use time since epoch since
+   * std::atomic chokes on time_point.
+   */
+  std::atomic<std::chrono::system_clock::duration> lastProcStatsRun_;
 };
 } // namespace eden
 } // namespace facebook

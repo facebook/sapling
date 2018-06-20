@@ -43,6 +43,7 @@
 #include "eden/fs/store/Diff.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/ProcUtil.h"
 
 using folly::Future;
 using folly::makeFuture;
@@ -935,7 +936,8 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
   result.periodicUnloadCount =
       result.counters[kPeriodicUnloadCounterKey.toString()];
 
-  // TODO: Linux-only
+  // Note: this will be removed in a subsequent commit.
+  // We now report periodically via ServiceData
   std::string smaps;
   if (folly::readFile("/proc/self/smaps", smaps)) {
     result.smaps = std::move(smaps);

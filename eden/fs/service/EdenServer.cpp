@@ -46,6 +46,7 @@
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/ProcUtil.h"
 
 DEFINE_bool(
     debug,
@@ -269,6 +270,7 @@ void EdenServer::scheduleFlushStats() {
   mainEventBase_->timer().scheduleTimeoutFn(
       [this] {
         flushStatsNow();
+        reportProcStats();
         scheduleFlushStats();
       },
       std::chrono::seconds(1));
@@ -968,6 +970,27 @@ void EdenServer::shutdownSubscribers() const {
 void EdenServer::flushStatsNow() {
   for (auto& stats : serverState_->getStats().accessAllThreads()) {
     stats.aggregate();
+  }
+}
+
+void EdenServer::reportProcStats() {
+  auto now = std::chrono::system_clock::now().time_since_epoch();
+  // Throttle stats collection to every kMemoryPollSeconds
+  if (std::chrono::duration_cast<std::chrono::seconds>(
+          now - lastProcStatsRun_.load()) > kMemoryPollSeconds) {
+    auto privateBytes = facebook::eden::proc_util::calculatePrivateBytes();
+    if (privateBytes) {
+      stats::ServiceData::get()->addStatValue(
+          kPrivateBytes, privateBytes.value(), stats::AVG);
+    }
+
+    auto rssBytes = facebook::eden::proc_util::getUnsignedLongLongValue(
+        proc_util::loadProcStatus(), kVmRSSKey.data(), kKBytes.data());
+    if (rssBytes) {
+      stats::ServiceData::get()->addStatValue(
+          kRssBytes, rssBytes.value(), stats::AVG);
+    }
+    lastProcStatsRun_.store(now);
   }
 }
 } // namespace eden
