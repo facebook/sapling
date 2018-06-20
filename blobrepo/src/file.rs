@@ -19,10 +19,10 @@ use blobstore::Blobstore;
 
 use errors::*;
 
-use manifest::BlobManifest;
+use manifest::{fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest};
 
 use repo::RepoBlobstore;
-use utils::{get_node, RawNodeBlob};
+use utils::get_node;
 
 #[derive(Clone)]
 pub struct HgBlobEntry {
@@ -115,12 +115,11 @@ impl HgBlobEntry {
         }
     }
 
-    fn get_node(&self) -> BoxFuture<RawNodeBlob, Error> {
-        get_node(&self.blobstore, self.id.into_nodehash())
-    }
-
     fn get_raw_content_inner(&self) -> BoxFuture<HgBlob, Error> {
-        fetch_raw_filenode_bytes(&self.blobstore, self.id.into_nodehash())
+        match self.ty {
+            Type::Tree => fetch_raw_manifest_bytes(&self.blobstore, self.id.into_nodehash()),
+            Type::File(_) => fetch_raw_filenode_bytes(&self.blobstore, self.id.into_nodehash()),
+        }
     }
 }
 
@@ -130,7 +129,17 @@ impl Entry for HgBlobEntry {
     }
 
     fn get_parents(&self) -> BoxFuture<HgParents, Error> {
-        self.get_node().map(|node| node.parents).boxify()
+        match self.ty {
+            Type::Tree => fetch_manifest_envelope(&self.blobstore, self.id.into_nodehash())
+                .map(move |envelope| {
+                    let (p1, p2) = envelope.parents();
+                    HgParents::new(p1, p2)
+                })
+                .boxify(),
+            Type::File(_) => get_node(&self.blobstore, self.id.into_nodehash())
+                .map(|node| node.parents)
+                .boxify(),
+        }
     }
 
     fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
@@ -139,37 +148,41 @@ impl Entry for HgBlobEntry {
 
     fn get_content(&self) -> BoxFuture<Content, Error> {
         let blobstore = self.blobstore.clone();
-        self.get_raw_content()
-            .and_then({
-                let ty = self.ty;
-                move |blob| {
-                    // Mercurial file blob can have metadata, but tree manifest can't
-                    let res = match ty {
-                        Type::Tree => Content::Tree(
-                            BlobManifest::parse(
-                                blobstore,
-                                blob.as_slice().expect("HgBlob should always have data"),
-                            )?.boxed(),
-                        ),
-                        Type::File(ft) => {
-                            let f = file::File::data_only(blob);
-                            let contents = f.file_contents();
-                            match ft {
-                                FileType::Regular => Content::File(contents),
-                                FileType::Executable => Content::Executable(contents),
-                                FileType::Symlink => Content::Symlink(contents),
-                            }
+        match self.ty {
+            Type::Tree => {
+                BlobManifest::load(&blobstore, &HgManifestId::new(self.id.into_nodehash()))
+                    .and_then({
+                        let node_id = self.id.into_nodehash();
+                        move |blob_manifest| {
+                            let manifest = blob_manifest
+                                .ok_or(ErrorKind::HgContentMissing(node_id, Type::Tree))?;
+                            Ok(Content::Tree(manifest.boxed()))
                         }
-                    };
-                    Ok(res)
-                }
-            })
-            .context(format!(
-                "While HgBlobEntry::get_content for id {}, name {:?}, type {:?}",
-                self.id, self.name, self.ty
-            ))
-            .from_err()
-            .boxify()
+                    })
+                    .context(format!(
+                        "While HgBlobEntry::get_content for id {}, name {:?}, type {:?}",
+                        self.id, self.name, self.ty
+                    ))
+                    .from_err()
+                    .boxify()
+            }
+            Type::File(ft) => self.get_raw_content()
+                .map(move |blob| {
+                    let f = file::File::data_only(blob);
+                    let contents = f.file_contents();
+                    match ft {
+                        FileType::Regular => Content::File(contents),
+                        FileType::Executable => Content::Executable(contents),
+                        FileType::Symlink => Content::Symlink(contents),
+                    }
+                })
+                .context(format!(
+                    "While HgBlobEntry::get_content for id {}, name {:?}, type {:?}",
+                    self.id, self.name, self.ty
+                ))
+                .from_err()
+                .boxify(),
+        }
     }
 
     fn get_size(&self) -> BoxFuture<Option<usize>, Error> {

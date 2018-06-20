@@ -94,10 +94,10 @@ because everything has been already downloaded.
   > EOF
 
   $ hgmn --config extensions.gettreepack=$TESTTMP/gettreepack.py gettreepack --mfnode 1111111111111111111111111111111111111111
-  remote: * ERRO Command failed, remote: true, error: When loading manifest 1111111111111111111111111111111111111111 from blobstore, root_cause: NodeMissing( (glob)
+  remote: * ERRO Command failed, remote: true, error: Manifest id 1111111111111111111111111111111111111111 is missing, root_cause: ManifestMissing( (glob)
   remote:     HgNodeHash(
   remote:         Sha1(1111111111111111111111111111111111111111)
   remote:     )
-  remote: ), backtrace: , cause: While fetching node for manifest, cause: Node id 1111111111111111111111111111111111111111 is missing
+  remote: ), backtrace: 
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

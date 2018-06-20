@@ -260,6 +260,20 @@ impl UploadEntries {
         fut.context(err_context).from_err().boxify()
     }
 
+    // Check the blobstore to see whether a particular node is present.
+    fn assert_in_blobstore(
+        blobstore: RepoBlobstore,
+        node_id: HgNodeHash,
+        is_tree: bool,
+    ) -> BoxFuture<(), Error> {
+        let key = if is_tree {
+            HgManifestId::new(node_id).blobstore_key()
+        } else {
+            get_node_key(node_id)
+        };
+        blobstore.assert_present(key)
+    }
+
     pub fn finalize(self, filenodes: Arc<Filenodes>, cs_id: HgNodeHash) -> BoxFuture<(), Error> {
         let required_checks = {
             let inner = self.inner.lock().expect("Lock poisoned");
@@ -272,12 +286,14 @@ impl UploadEntries {
                     if inner.uploaded_entries.contains_key(path) {
                         None
                     } else {
-                        let key = get_node_key(entryid.into_nodehash());
-                        let blobstore = inner.blobstore.clone();
                         let path = path.clone();
+                        let assert = Self::assert_in_blobstore(
+                            inner.blobstore.clone(),
+                            entryid.into_nodehash(),
+                            path.is_tree(),
+                        );
                         Some(
-                            blobstore
-                                .assert_present(key)
+                            assert
                                 .with_context(move |_| format!("While checking for path: {}", path))
                                 .from_err(),
                         )
@@ -298,11 +314,13 @@ impl UploadEntries {
                 .parents
                 .iter()
                 .map(|node_key| {
-                    let key = get_node_key(node_key.hash);
-                    let blobstore = inner.blobstore.clone();
+                    let assert = Self::assert_in_blobstore(
+                        inner.blobstore.clone(),
+                        node_key.hash,
+                        node_key.path.is_tree(),
+                    );
                     let node_key = node_key.clone();
-                    blobstore
-                        .assert_present(key)
+                    assert
                         .with_context(move |_| {
                             format!("While checking for a parent node: {}", node_key)
                         })

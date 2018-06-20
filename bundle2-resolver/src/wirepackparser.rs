@@ -13,11 +13,11 @@ use futures::{Future, Poll, Stream};
 use futures::future::Shared;
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo::{BlobRepo, HgBlobEntry, UploadHgEntry, UploadHgNodeHash};
+use blobrepo::{BlobRepo, HgBlobEntry, UploadHgNodeHash, UploadHgTreeEntry};
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
-use mercurial_types::{delta, manifest, HgBlob, HgNodeHash, HgNodeKey, RepoPath, NULL_HASH};
+use mercurial_types::{delta, HgNodeHash, HgNodeKey, RepoPath, NULL_HASH};
 
 use errors::*;
 use upload_blobs::UploadableHgBlob;
@@ -94,15 +94,14 @@ impl UploadableHgBlob for TreemanifestEntry {
         let manifest_content = self.manifest_content;
         // The root tree manifest is expected to have the wrong hash in hybrid mode.
         // XXX possibly remove this once hybrid mode is gone
-        let upload_nodeid = if node_key.path.is_root() {
+        let upload_node_id = if node_key.path.is_root() {
             UploadHgNodeHash::Supplied(node_key.hash)
         } else {
             UploadHgNodeHash::Checked(node_key.hash)
         };
-        let upload = UploadHgEntry {
-            upload_nodeid,
-            raw_content: HgBlob::from(self.data),
-            content_type: manifest::Type::Tree,
+        let upload = UploadHgTreeEntry {
+            upload_node_id,
+            contents: self.data,
             p1: self.p1,
             p2: self.p2,
             path: node_key.path.clone(),

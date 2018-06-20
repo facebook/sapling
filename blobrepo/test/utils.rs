@@ -15,7 +15,7 @@ use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
 
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgEntry,
-               UploadHgNodeHash};
+               UploadHgNodeHash, UploadHgTreeEntry};
 use blobstore::{EagerMemblob, LazyMemblob};
 use mercurial_types::{manifest, FileType, HgBlob, HgNodeHash, RepoPath};
 use mononoke_types::DateTime;
@@ -111,14 +111,7 @@ pub fn upload_manifest_no_parents<B>(
 where
     B: Into<Bytes>,
 {
-    upload_hg_entry(
-        repo,
-        data.into(),
-        manifest::Type::Tree,
-        path.clone(),
-        None,
-        None,
-    )
+    upload_hg_tree_entry(repo, data.into(), path.clone(), None, None)
 }
 
 pub fn upload_manifest_one_parent<B>(
@@ -130,14 +123,24 @@ pub fn upload_manifest_one_parent<B>(
 where
     B: Into<Bytes>,
 {
-    upload_hg_entry(
-        repo,
-        data.into(),
-        manifest::Type::Tree,
-        path.clone(),
-        Some(p1),
-        None,
-    )
+    upload_hg_tree_entry(repo, data.into(), path.clone(), Some(p1), None)
+}
+
+fn upload_hg_tree_entry(
+    repo: &BlobRepo,
+    contents: Bytes,
+    path: RepoPath,
+    p1: Option<HgNodeHash>,
+    p2: Option<HgNodeHash>,
+) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>) {
+    let upload = UploadHgTreeEntry {
+        upload_node_id: UploadHgNodeHash::Generate,
+        contents,
+        p1,
+        p2,
+        path,
+    };
+    upload.upload(repo).unwrap()
 }
 
 fn upload_hg_entry(

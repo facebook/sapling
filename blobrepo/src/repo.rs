@@ -37,9 +37,9 @@ use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ManifoldBlob;
 use mercurial::file::File;
 use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileNodeId,
-                      HgNodeHash, HgParents, Manifest, RepoPath, RepositoryId, Type};
+                      HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents, Manifest,
+                      RepoPath, RepositoryId, Type};
 use mercurial_types::manifest::{self, Content};
-use mercurial_types::nodehash::HgManifestId;
 use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, DateTime,
                      FileChange, FileContents, MPath, MPathElement, MononokeId};
 use rocksblob::Rocksblob;
@@ -75,6 +75,7 @@ define_stats! {
     get_generation_number: timeseries(RATE, SUM),
     upload_blob: timeseries(RATE, SUM),
     upload_hg_entry: timeseries(RATE, SUM),
+    upload_hg_tree_entry: timeseries(RATE, SUM),
     create_changeset: timeseries(RATE, SUM),
     create_changeset_compute_cf: timeseries("create_changeset.compute_changed_files"; RATE, SUM),
     create_changeset_expected_cf: timeseries("create_changeset.expected_changed_files"; RATE, SUM),
@@ -708,6 +709,125 @@ pub enum UploadHgNodeHash {
     Supplied(HgNodeHash),
     /// As Supplied, but Verify the supplied hash - if it's wrong, you will get an error.
     Checked(HgNodeHash),
+}
+
+/// Context for uploading a Mercurial manifest entry.
+pub struct UploadHgTreeEntry {
+    pub upload_node_id: UploadHgNodeHash,
+    pub contents: Bytes,
+    pub p1: Option<HgNodeHash>,
+    pub p2: Option<HgNodeHash>,
+    pub path: RepoPath,
+}
+
+impl UploadHgTreeEntry {
+    // Given the content of a manifest, ensure that there is a matching HgBlobEntry in the repo.
+    // This may not upload the entry or the data blob if the repo is aware of that data already
+    // existing in the underlying store.
+    //
+    // Note that the HgBlobEntry may not be consistent - parents do not have to be uploaded at this
+    // point, as long as you know their HgNodeHashes; this is also given to you as part of the
+    // result type, so that you can parallelise uploads. Consistency will be verified when
+    // adding the entries to a changeset.
+    // adding the entries to a changeset.
+    pub fn upload(
+        self,
+        repo: &BlobRepo,
+    ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
+        self.upload_to_blobstore(&repo.blobstore, &repo.logger)
+    }
+
+    pub(crate) fn upload_to_blobstore(
+        self,
+        blobstore: &RepoBlobstore,
+        logger: &Logger,
+    ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
+        STATS::upload_hg_tree_entry.add_value(1);
+        let UploadHgTreeEntry {
+            upload_node_id,
+            contents,
+            p1,
+            p2,
+            path,
+        } = self;
+
+        let computed_node_id = HgBlobNode::new(contents.clone(), p1.as_ref(), p2.as_ref())
+            .nodeid()
+            .expect("impossible state -- contents has data");
+        let node_id: HgNodeHash = match upload_node_id {
+            UploadHgNodeHash::Generate => computed_node_id,
+            UploadHgNodeHash::Supplied(node_id) => node_id,
+            UploadHgNodeHash::Checked(node_id) => {
+                if node_id != computed_node_id {
+                    bail_err!(ErrorKind::InconsistentEntryHash(
+                        path,
+                        node_id,
+                        computed_node_id
+                    ));
+                }
+                node_id
+            }
+        };
+
+        // This is the blob that gets uploaded. Manifest contents are usually small so they're
+        // stored inline.
+        let envelope = HgManifestEnvelopeMut {
+            node_id,
+            p1,
+            p2,
+            computed_node_id,
+            contents,
+        };
+        let envelope_blob = envelope.freeze().into_blob();
+
+        let manifest_id = HgManifestId::new(node_id);
+        let blobstore_key = manifest_id.blobstore_key();
+
+        let blob_entry = match path.mpath().and_then(|m| m.into_iter().last()) {
+            Some(m) => {
+                let entry_path = m.clone();
+                HgBlobEntry::new(blobstore.clone(), entry_path, node_id, manifest::Type::Tree)
+            }
+            None => HgBlobEntry::new_root(blobstore.clone(), manifest_id),
+        };
+
+        fn log_upload_stats(
+            logger: Logger,
+            path: RepoPath,
+            node_id: HgNodeHash,
+            computed_node_id: HgNodeHash,
+            stats: Stats,
+        ) {
+            trace!(logger, "Upload HgManifestEnvelope stats";
+                "phase" => "manifest_envelope_uploaded".to_string(),
+                "path" => format!("{}", path),
+                "node_id" => format!("{}", node_id),
+                "computed_node_id" => format!("{}", computed_node_id),
+                "poll_count" => stats.poll_count,
+                "poll_time_us" => stats.poll_time.as_micros_unchecked(),
+                "completion_time_us" => stats.completion_time.as_micros_unchecked(),
+            );
+        }
+
+        // Upload the blob.
+        let upload = blobstore
+            .put(blobstore_key, envelope_blob.into())
+            .map({
+                let path = path.clone();
+                move |()| (blob_entry, path)
+            })
+            .timed({
+                let logger = logger.clone();
+                move |stats, result| {
+                    if result.is_ok() {
+                        log_upload_stats(logger, path, node_id, computed_node_id, stats);
+                    }
+                    Ok(())
+                }
+            });
+
+        Ok((node_id, upload.boxify()))
+    }
 }
 
 /// Context for uploading a Mercurial entry.

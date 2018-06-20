@@ -13,7 +13,7 @@ use futures::future::{Future, IntoFuture};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{Entry, FileType, MPathElement, Manifest, Type};
+use mercurial_types::{Entry, FileType, HgBlob, HgManifestEnvelope, MPathElement, Manifest, Type};
 use mercurial_types::nodehash::{HgEntryId, HgManifestId, HgNodeHash, NULL_HASH};
 
 use blobstore::Blobstore;
@@ -21,7 +21,6 @@ use blobstore::Blobstore;
 use errors::*;
 use file::HgBlobEntry;
 use repo::RepoBlobstore;
-use utils::{get_node, EnvelopeBlob};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {
@@ -84,8 +83,67 @@ impl ManifestContent {
     }
 }
 
+pub fn fetch_raw_manifest_bytes(
+    blobstore: &RepoBlobstore,
+    node_id: HgNodeHash,
+) -> BoxFuture<HgBlob, Error> {
+    fetch_manifest_envelope(blobstore, node_id)
+        .map(move |envelope| {
+            let envelope = envelope.into_mut();
+            HgBlob::from(envelope.contents)
+        })
+        .from_err()
+        .boxify()
+}
+
+pub fn fetch_manifest_envelope(
+    blobstore: &RepoBlobstore,
+    node_id: HgNodeHash,
+) -> impl Future<Item = HgManifestEnvelope, Error = Error> {
+    fetch_manifest_envelope_opt(blobstore, node_id)
+        .and_then(move |envelope| {
+            let envelope = envelope.ok_or(ErrorKind::HgContentMissing(node_id, Type::Tree))?;
+            Ok(envelope)
+        })
+        .from_err()
+}
+
+/// Like `fetch_manifest_envelope`, but returns None if the manifest wasn't found.
+pub fn fetch_manifest_envelope_opt(
+    blobstore: &RepoBlobstore,
+    node_id: HgNodeHash,
+) -> impl Future<Item = Option<HgManifestEnvelope>, Error = Error> {
+    let blobstore_key = HgManifestId::new(node_id).blobstore_key();
+    blobstore
+        .get(blobstore_key.clone())
+        .context("While fetching manifest envelope blob")
+        .map_err(Error::from)
+        .and_then(move |bytes| {
+            let blobstore_bytes = match bytes {
+                Some(bytes) => bytes,
+                None => return Ok(None),
+            };
+            let envelope = HgManifestEnvelope::from_blob(blobstore_bytes.into())?;
+            if &node_id != envelope.node_id() {
+                bail_msg!(
+                    "Manifest ID mismatch (requested: {}, got: {})",
+                    node_id,
+                    envelope.node_id()
+                );
+            }
+            Ok(Some(envelope))
+        })
+        .with_context(|_| ErrorKind::ManifestDeserializeFailed(blobstore_key))
+        .from_err()
+}
+
 pub struct BlobManifest {
     blobstore: RepoBlobstore,
+    node_id: HgNodeHash,
+    p1: Option<HgNodeHash>,
+    p2: Option<HgNodeHash>,
+    // See the documentation in mercurial-types/if/mercurial.thrift for why this exists.
+    computed_node_id: HgNodeHash,
     content: ManifestContent,
 }
 
@@ -98,35 +156,20 @@ impl BlobManifest {
         if nodehash == NULL_HASH {
             Ok(Some(BlobManifest {
                 blobstore: blobstore.clone(),
+                node_id: NULL_HASH,
+                p1: None,
+                p2: None,
+                computed_node_id: NULL_HASH,
                 content: ManifestContent::new_empty(),
             })).into_future()
                 .boxify()
         } else {
-            get_node(blobstore, nodehash)
-                .context("While fetching node for manifest")
-                .map_err(Error::from)
+            fetch_manifest_envelope_opt(&blobstore, manifestid.into_nodehash())
                 .and_then({
                     let blobstore = blobstore.clone();
-                    move |nodeblob| {
-                        let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
-                        blobstore
-                            .get(blobkey.clone())
-                            .context(format!(
-                                "While fetching content for manifest with key {}",
-                                blobkey
-                            ))
-                            .from_err()
-                            .map(|got| (got, blobkey))
-                    }
-                })
-                .and_then({
-                    let blobstore = blobstore.clone();
-                    move |(got, blobkey)| match got {
+                    move |envelope| match envelope {
+                        Some(envelope) => Ok(Some(Self::parse(blobstore, envelope)?)),
                         None => Ok(None),
-                        Some(blob) => Ok(Some(Self::parse(blobstore, EnvelopeBlob::from(blob))
-                            .with_context(move |_| {
-                                format!("While parsing blob {} as manifest", blobkey)
-                            })?)),
                     }
                 })
                 .context(format!("When loading manifest {} from blobstore", nodehash))
@@ -135,15 +178,42 @@ impl BlobManifest {
         }
     }
 
-    pub fn parse<D: AsRef<[u8]>>(blobstore: RepoBlobstore, data: D) -> Result<Self> {
-        Self::create(blobstore, ManifestContent::parse(data.as_ref())?)
+    pub fn parse(blobstore: RepoBlobstore, envelope: HgManifestEnvelope) -> Result<Self> {
+        let envelope = envelope.into_mut();
+        let content = ManifestContent::parse(envelope.contents.as_ref()).with_context(|_| {
+            format!(
+                "while parsing contents for manifest ID {}",
+                envelope.node_id
+            )
+        })?;
+        Ok(BlobManifest {
+            blobstore,
+            node_id: envelope.node_id,
+            p1: envelope.p1,
+            p2: envelope.p2,
+            computed_node_id: envelope.computed_node_id,
+            content,
+        })
     }
 
-    pub fn create(blobstore: RepoBlobstore, content: ManifestContent) -> Result<Self> {
-        Ok(BlobManifest {
-            blobstore: blobstore,
-            content: content,
-        })
+    #[inline]
+    pub fn node_id(&self) -> &HgNodeHash {
+        &self.node_id
+    }
+
+    #[inline]
+    pub fn p1(&self) -> Option<&HgNodeHash> {
+        self.p1.as_ref()
+    }
+
+    #[inline]
+    pub fn p2(&self) -> Option<&HgNodeHash> {
+        self.p2.as_ref()
+    }
+
+    #[inline]
+    pub fn computed_node_id(&self) -> &HgNodeHash {
+        &self.computed_node_id
     }
 }
 

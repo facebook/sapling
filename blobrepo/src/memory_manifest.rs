@@ -21,7 +21,7 @@ use mercurial_types::{Entry, HgManifestId, HgNodeHash, MPath, MPathElement, Mani
                       Type};
 
 use file::HgBlobEntry;
-use repo::{RepoBlobstore, UploadHgEntry, UploadHgNodeHash};
+use repo::{RepoBlobstore, UploadHgNodeHash, UploadHgTreeEntry};
 
 use errors::*;
 use manifest::BlobManifest;
@@ -222,16 +222,14 @@ impl MemoryManifestEntry {
                                             ).expect("Writing to memory failed!");
                                         });
 
-                                        let upload_entry = UploadHgEntry {
-                                            upload_nodeid: UploadHgNodeHash::Generate,
-                                            raw_content: manifest.into(),
-                                            content_type: Type::Tree,
+                                        let upload_manifest = UploadHgTreeEntry {
+                                            upload_node_id: UploadHgNodeHash::Generate,
+                                            contents: manifest.into(),
                                             p1,
                                             p2,
                                             path,
                                         };
-
-                                        upload_entry
+                                        upload_manifest
                                             .upload_to_blobstore(&blobstore, &logger)
                                             .map(|(_hash, future)| future)
                                             .into_future()

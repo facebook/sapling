@@ -48,8 +48,12 @@ pub enum ErrorKind {
     #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(HgChangesetId),
     #[fail(display = "Error while deserializing changeset retrieved from key '{}'", _0)]
     ChangesetDeserializeFailed(String),
+    #[fail(display = "Error while deserializing manifest retrieved from key '{}'", _0)]
+    ManifestDeserializeFailed(String),
     #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(HgNodeHash),
     #[fail(display = "Node id {} is missing", _0)] NodeMissing(HgNodeHash),
+    #[fail(display = "Mercurial content missing for node {} (type {})", _0, _1)]
+    HgContentMissing(HgNodeHash, Type),
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]
     ContentMissing(HgNodeHash, HgBlobHash),
     #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(HgBlob),

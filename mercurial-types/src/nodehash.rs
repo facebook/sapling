@@ -262,6 +262,12 @@ impl HgManifestId {
     pub const fn new(hash: HgNodeHash) -> Self {
         HgManifestId(hash)
     }
+
+    /// Produce a key suitable for using in a blobstore.
+    #[inline]
+    pub fn blobstore_key(&self) -> String {
+        format!("hgmanifest.sha1.{}", self.0)
+    }
 }
 
 impl Display for HgManifestId {

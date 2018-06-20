@@ -19,7 +19,7 @@ use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry,
-               UploadHgEntry, UploadHgNodeHash};
+               UploadHgEntry, UploadHgNodeHash, UploadHgTreeEntry};
 use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
                       NULL_HASH};
@@ -173,15 +173,32 @@ fn upload_entry(
         .join(parents)
         .and_then(move |(content, parents)| {
             let (p1, p2) = parents.get_nodes();
-            let upload = UploadHgEntry {
-                upload_nodeid: UploadHgNodeHash::Checked(entry.get_hash().into_nodehash()),
-                raw_content: content,
-                content_type: ty,
-                p1: p1.cloned(),
-                p2: p2.cloned(),
-                path,
-            };
-            upload.upload(&blobrepo)
+            let upload_node_id = UploadHgNodeHash::Checked(entry.get_hash().into_nodehash());
+            match ty {
+                Type::Tree => {
+                    let upload = UploadHgTreeEntry {
+                        upload_node_id,
+                        contents: content
+                            .into_inner()
+                            .expect("contents should always be available"),
+                        p1: p1.cloned(),
+                        p2: p2.cloned(),
+                        path,
+                    };
+                    upload.upload(&blobrepo)
+                }
+                Type::File(_) => {
+                    let upload = UploadHgEntry {
+                        upload_nodeid: upload_node_id,
+                        raw_content: content,
+                        content_type: ty,
+                        p1: p1.cloned(),
+                        p2: p2.cloned(),
+                        path,
+                    };
+                    upload.upload(&blobrepo)
+                }
+            }
         })
         .and_then(|(_, entry)| entry)
         .boxify()
@@ -235,15 +252,15 @@ pub fn upload_changesets<'a>(
                         match rootmf {
                             None => future::ok(None).boxify(),
                             Some((manifest_id, blob, p1, p2)) => {
-                                let upload = UploadHgEntry {
+                                let upload = UploadHgTreeEntry {
                                     // The root tree manifest is expected to have the wrong hash in
                                     // hybrid mode. This will probably never go away for
                                     // compatibility with old repositories.
-                                    upload_nodeid: UploadHgNodeHash::Supplied(
+                                    upload_node_id: UploadHgNodeHash::Supplied(
                                         manifest_id.into_nodehash(),
                                     ),
-                                    raw_content: blob,
-                                    content_type: Type::Tree,
+                                    contents: blob.into_inner()
+                                        .expect("contents should always be available"),
                                     p1,
                                     p2,
                                     path: RepoPath::root(),

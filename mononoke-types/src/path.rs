@@ -86,6 +86,16 @@ impl RepoPath {
         }
     }
 
+    /// Whether this patch represents a tree (root or other directory).
+    #[inline]
+    pub fn is_tree(&self) -> bool {
+        match *self {
+            RepoPath::RootPath => true,
+            RepoPath::DirectoryPath(_) => true,
+            _ => false,
+        }
+    }
+
     /// Whether this path represents a file.
     #[inline]
     pub fn is_file(&self) -> bool {
