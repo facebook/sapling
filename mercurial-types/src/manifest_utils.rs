@@ -203,6 +203,10 @@ where
     }
 }
 
+pub fn file_pruner(entry: &ChangedEntry) -> bool {
+    entry.status.is_tree()
+}
+
 pub fn visited_pruner() -> impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static {
     let visited = Arc::new(Mutex::new(HashSet::new()));
     move |entry: &ChangedEntry| {
@@ -226,6 +230,17 @@ pub fn visited_pruner() -> impl FnMut(&ChangedEntry) -> bool + Send + Clone + 's
         let mut visited = visited.lock().unwrap();
         visited.insert((path, hash))
     }
+}
+
+pub fn and_pruner_combinator<P1, P2>(
+    mut p1: P1,
+    mut p2: P2,
+) -> impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static
+where
+    P1: FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+    P2: FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+{
+    move |entry: &ChangedEntry| p1(entry) && p2(entry)
 }
 
 /// Given two manifests, returns a difference between them. Difference is a stream of

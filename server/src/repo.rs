@@ -40,7 +40,8 @@ use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, Changeset, Entry, HgBlobNode, HgChangesetId, HgManifestId,
                       HgNodeHash, HgParents, MPath, RepoPath, RepositoryId, Type, NULL_HASH};
-use mercurial_types::manifest_utils::{changed_entry_stream, changed_entry_stream_with_pruner,
+use mercurial_types::manifest_utils::{and_pruner_combinator, changed_entry_stream,
+                                      changed_entry_stream_with_pruner, file_pruner,
                                       visited_pruner, ChangedEntry, EntryStatus};
 use metaconfig::repoconfig::RepoType;
 
@@ -506,7 +507,7 @@ impl RepoClient {
         };
 
         let pruner = if params.mfnodes.len() > 1 {
-            Some(visited_pruner())
+            Some(and_pruner_combinator(&file_pruner, visited_pruner()))
         } else {
             None
         };

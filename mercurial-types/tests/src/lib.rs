@@ -29,8 +29,9 @@ use futures::executor::spawn;
 use futures_ext::select_all;
 use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest::{Content, EmptyManifest};
-use mercurial_types::manifest_utils::{changed_entry_stream, changed_entry_stream_with_pruner,
-                                      diff_sorted_vecs, visited_pruner, ChangedEntry, EntryStatus};
+use mercurial_types::manifest_utils::{and_pruner_combinator, changed_entry_stream,
+                                      changed_entry_stream_with_pruner, diff_sorted_vecs,
+                                      file_pruner, visited_pruner, ChangedEntry, EntryStatus};
 use mercurial_types::nodehash::{HgChangesetId, HgEntryId, HgNodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash;
@@ -570,6 +571,62 @@ fn test_recursive_changed_entry_prune_visited() {
 }
 
 #[test]
+fn test_recursive_changed_entry_prune_visited_no_files() {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let main_hash_1 = HgNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let main_hash_2 = HgNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let base_hash = HgNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
+
+        // VisitedPruner let's us merge stream without producing the same entries twice.
+        // o  473b2e
+        // |  3
+        // |
+        // o  ecafdc
+        // |  2
+        // |
+        // o  5a28e2
+        //    1
+        // $ hg st --change ecafdc
+        // A 2
+        // A dir1/file_1_in_dir1
+        // A dir1/file_2_in_dir1
+        // A dir1/subdir1/file_1
+        // A dir2/file_1_in_dir2
+        // $ hg st --change 473b2e
+        // A dir1/subdir1/subsubdir1/file_1
+        // A dir1/subdir1/subsubdir2/file_1
+        // A dir1/subdir1/subsubdir2/file_2
+
+        let manifest_1 = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash_1));
+        let manifest_2 = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash_2));
+        let basemanifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
+
+        let pruner = and_pruner_combinator(&file_pruner, visited_pruner());
+        let first_stream =
+            changed_entry_stream_with_pruner(&manifest_1, &basemanifest, None, pruner.clone());
+        let second_stream =
+            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, pruner);
+        let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
+        let res = res.wait_future().unwrap();
+        let unique_len = res.len();
+        assert_eq!(unique_len, 7);
+
+        let first_stream =
+            changed_entry_stream_with_pruner(&manifest_1, &basemanifest, None, &file_pruner);
+        let second_stream =
+            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, &file_pruner);
+        let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
+        let res = res.wait_future().unwrap();
+        // Make sure that more entries are produced without VisitedPruner i.e. some entries are
+        // returned twice.
+        assert!(unique_len < res.len());
+
+        Ok(())
+    }).expect("test failed")
+}
+
+#[test]
 fn test_visited_pruner_different_files_same_hash() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let paths = btreemap! {
@@ -585,6 +642,26 @@ fn test_visited_pruner_different_files_same_hash() {
         let res = res.wait_future().unwrap();
 
         assert_eq!(res.len(), 2);
+        Ok(())
+    }).expect("test failed")
+}
+
+#[test]
+fn test_file_pruner() {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let paths = btreemap! {
+            "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
+            "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
+        };
+        let root_manifest = MockManifest::from_path_hashes(paths).expect("manifest is valid");
+
+        let pruner = file_pruner;
+        let stream =
+            changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner);
+        let mut res = spawn(stream.collect());
+        let res = res.wait_future().unwrap();
+
+        assert_eq!(res.len(), 0);
         Ok(())
     }).expect("test failed")
 }
