@@ -849,9 +849,7 @@ def print_raw_journal_deltas(
         print(entries, end="")  # entries already contains a trailing newline.
 
 
-# We intentionally do not specify a help option for debug, so it
-# does not show up in the --help output.
-@subcmd_mod.subcmd("debug")
+@subcmd_mod.subcmd("debug", "Internal commands for examining eden state")
 class DebugCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         # Save the parser so we can use it to print help in run() if we are
