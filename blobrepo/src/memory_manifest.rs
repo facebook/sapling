@@ -307,28 +307,26 @@ impl MemoryManifestEntry {
                         .and_then({
                             let blobstore = blobstore.clone();
                             move |m| {
-                                m.list()
-                                    .and_then(move |entry| {
-                                        let name = entry
-                                            .get_name()
-                                            .expect("Unnamed entry in a manifest")
-                                            .clone();
-                                        match entry.get_type() {
-                                            Type::Tree => Ok(Self::convert_treenode(&entry
-                                                .get_hash()
-                                                .into_nodehash())),
-                                            _ => Ok(MemoryManifestEntry::Blob(HgBlobEntry::new(
-                                                blobstore.clone(),
-                                                name.clone(),
-                                                entry.get_hash().into_nodehash(),
-                                                entry.get_type(),
-                                            ))),
-                                        }.map(move |entry| (name, entry))
-                                    })
-                                    .fold(BTreeMap::new(), move |mut children, (name, entry)| {
-                                        children.insert(name, entry);
-                                        Ok::<_, Error>(children)
-                                    })
+                                let mut children = BTreeMap::new();
+                                for entry in m.list() {
+                                    let name = entry
+                                        .get_name()
+                                        .expect("Unnamed entry in a manifest")
+                                        .clone();
+                                    let memory_entry = match entry.get_type() {
+                                        Type::Tree => Self::convert_treenode(&entry
+                                            .get_hash()
+                                            .into_nodehash()),
+                                        _ => MemoryManifestEntry::Blob(HgBlobEntry::new(
+                                            blobstore.clone(),
+                                            name.clone(),
+                                            entry.get_hash().into_nodehash(),
+                                            entry.get_type(),
+                                        )),
+                                    };
+                                    children.insert(name, memory_entry);
+                                }
+                                Ok(children)
                             }
                         })
                         .map({
@@ -569,22 +567,20 @@ impl MemoryManifestEntry {
         entry_changes: Arc<Mutex<BTreeMap<MPathElement, Option<MemoryManifestEntry>>>>,
         element: MPathElement,
         blobstore: RepoBlobstore,
-    ) -> impl Future<Item = (), Error = Error> + Send {
-        manifest.lookup(&element).map(move |entry| {
-            if let Some(entry) = entry {
-                let entry = match entry.get_type() {
-                    Type::Tree => Self::convert_treenode(&entry.get_hash().into_nodehash()),
-                    _ => MemoryManifestEntry::Blob(HgBlobEntry::new(
-                        blobstore,
-                        element.clone(),
-                        entry.get_hash().into_nodehash(),
-                        entry.get_type(),
-                    )),
-                };
-                let mut changes = entry_changes.lock().expect("lock poisoned");
-                changes.insert(element, Some(entry));
-            }
-        })
+    ) {
+        if let Some(entry) = manifest.lookup(&element) {
+            let entry = match entry.get_type() {
+                Type::Tree => Self::convert_treenode(&entry.get_hash().into_nodehash()),
+                _ => MemoryManifestEntry::Blob(HgBlobEntry::new(
+                    blobstore,
+                    element.clone(),
+                    entry.get_hash().into_nodehash(),
+                    entry.get_type(),
+                )),
+            };
+            let mut changes = entry_changes.lock().expect("lock poisoned");
+            changes.insert(element, Some(entry));
+        }
     }
 
     /// Creates directories as needed to find the element referred to by path
@@ -627,7 +623,7 @@ impl MemoryManifestEntry {
                                             m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
                                         }
                                     })
-                                    .and_then({
+                                    .map({
                                         let entry_changes = entry_changes.clone();
                                         let element = element.clone();
                                         let blobstore = blobstore.clone();
@@ -897,7 +893,7 @@ mod test {
                 .expect("Could not save manifest");
 
             let refound = repo.get_manifest_by_nodeid(&manifest_id.get_hash().into_nodehash())
-                .and_then(|m| m.lookup(&path))
+                .map(|m| m.lookup(&path))
                 .wait()
                 .expect("Lookup of entry just saved failed")
                 .expect("Just saved entry not present");
@@ -975,7 +971,7 @@ mod test {
                 .expect("Could not save manifest");
 
             let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
-                .and_then(|m| m.lookup(&dir2))
+                .map(|m| m.lookup(&dir2))
                 .wait()
                 .expect("Lookup of entry just saved failed");
 
@@ -1029,7 +1025,7 @@ mod test {
                 .expect("Could not save manifest");
 
             let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
-                .and_then(|m| m.lookup(&new_file))
+                .map(|m| m.lookup(&new_file))
                 .wait()
                 .expect("Lookup of entry just saved failed")
                 .expect("new_file did not persist");
@@ -1083,7 +1079,7 @@ mod test {
                 .expect("Could not save manifest");
 
             let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
-                .and_then(|m| m.lookup(&new_file))
+                .map(|m| m.lookup(&new_file))
                 .wait()
                 .expect("Lookup of entry just saved failed")
                 .expect("1 did not persist");

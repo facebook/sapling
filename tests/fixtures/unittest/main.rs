@@ -62,12 +62,9 @@ fn check_head_has_file() {
             .wait_future()
             .expect("Can't get manifest");
 
-        let files_future =
+        let lookup =
             manifest.lookup(&MPathElement::new(b"files".to_vec()).expect("Can't get file 'files'"));
-        let files = spawn(files_future)
-            .wait_future()
-            .expect("Can't fetch file")
-            .expect("Can't read file");
+        let files = lookup.expect("Can't read file");
         assert!(files.get_type() == Type::File(FileType::Regular));
         let content_future = files.get_content();
         let content = spawn(content_future)

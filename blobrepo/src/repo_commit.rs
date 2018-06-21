@@ -159,9 +159,8 @@ impl UploadEntries {
         entry
             .get_content()
             .and_then(move |content| match content {
-                Content::Tree(manifest) => manifest
-                    .list()
-                    .for_each(move |entry| {
+                Content::Tree(manifest) => {
+                    for entry in manifest.list() {
                         let mpath = MPath::join_element_opt(path.mpath(), entry.get_name());
                         let mpath = match mpath {
                             Some(mpath) => mpath,
@@ -177,13 +176,10 @@ impl UploadEntries {
                         };
                         let mut inner = inner_mutex.lock().expect("Lock poisoned");
                         inner.required_entries.insert(path, *entry.get_hash());
-                        future::ok(()).boxify()
-                    })
-                    .boxify(),
-                _ => {
-                    return future::err(ErrorKind::NotAManifest(entry_hash, entry_type).into())
-                        .boxify()
+                    }
+                    future::ok(()).boxify()
                 }
+                _ => future::err(ErrorKind::NotAManifest(entry_hash, entry_type).into()).boxify(),
             })
             .join(parents_found)
             .map(|_| ())

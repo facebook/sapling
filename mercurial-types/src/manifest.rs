@@ -5,16 +5,15 @@
 // GNU General Public License version 2 or any later version.
 
 use std::fmt::{self, Display};
+use std::iter;
 
 use failure::Error;
-use futures::future::{self, Future};
-use futures::stream::{self, Stream};
 
+use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{FileContents, FileType, MPathElement};
 
 use blob::HgBlob;
 use blobnode::HgParents;
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use nodehash::HgEntryId;
 
 /// Interface for a manifest
@@ -33,12 +32,12 @@ pub trait Manifest: Send + 'static {
     /// If the name exists, return it as Some(entry). If it doesn't exist, return None.
     /// If it returns an error, it indicates something went wrong with the underlying
     /// infrastructure.
-    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error>;
+    fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>>;
 
     /// List all the entries in the Manifest.
     ///
     /// Entries are returned in canonical order.
-    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error>;
+    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send>;
 
     /// Return self as a type-erased boxed trait (still needed as a trait method? T25577105)
     fn boxed(self) -> Box<Manifest + Sync>
@@ -52,65 +51,31 @@ pub trait Manifest: Send + 'static {
 pub struct EmptyManifest;
 
 impl Manifest for EmptyManifest {
-    fn lookup(&self, _path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
-        future::ok(None).boxify()
+    fn lookup(&self, _path: &MPathElement) -> Option<Box<Entry + Sync>> {
+        None
     }
 
-    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
-        stream::empty().boxify()
-    }
-}
-
-pub struct BoxManifest<M>
-where
-    M: Manifest,
-{
-    manifest: M,
-}
-
-impl<M> BoxManifest<M>
-where
-    M: Manifest + Sync + Send + 'static,
-{
-    pub fn new(manifest: M) -> Box<Manifest + Sync> {
-        let bm = BoxManifest { manifest };
-
-        Box::new(bm)
-    }
-}
-
-impl<M> Manifest for BoxManifest<M>
-where
-    M: Manifest + Sync + Send + 'static,
-{
-    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
-        self.manifest
-            .lookup(path)
-            .map(move |oe| oe.map(|e| BoxEntry::new(e)))
-            .boxify()
-    }
-
-    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
-        self.manifest.list().map(move |e| BoxEntry::new(e)).boxify()
+    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
+        Box::new(iter::empty())
     }
 }
 
 impl Manifest for Box<Manifest + Sync> {
-    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+    fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>> {
         (**self).lookup(path)
     }
 
-    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
+    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
         (**self).list()
     }
 }
 
 impl Manifest for Box<Manifest> {
-    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+    fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>> {
         (**self).lookup(path)
     }
 
-    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
+    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
         (**self).list()
     }
 }

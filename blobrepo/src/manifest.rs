@@ -10,8 +10,7 @@ use std::collections::BTreeMap;
 use std::str;
 
 use futures::future::{Future, IntoFuture};
-use futures::stream;
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial_types::{Entry, FileType, HgBlob, HgManifestEnvelope, MPathElement, Manifest, Type};
 use mercurial_types::nodehash::{HgEntryId, HgManifestId, HgNodeHash, NULL_HASH};
@@ -218,8 +217,8 @@ impl BlobManifest {
 }
 
 impl Manifest for BlobManifest {
-    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
-        Ok(self.content.files.get(path).map({
+    fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>> {
+        self.content.files.get(path).map({
             move |d| {
                 HgBlobEntry::new(
                     self.blobstore.clone(),
@@ -228,12 +227,11 @@ impl Manifest for BlobManifest {
                     d.flag(),
                 ).boxed()
             }
-        })).into_future()
-            .boxify()
+        })
     }
 
-    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
-        let entries = self.content.files.clone().into_iter().map({
+    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
+        let list_iter = self.content.files.clone().into_iter().map({
             let blobstore = self.blobstore.clone();
             move |(path, d)| {
                 HgBlobEntry::new(
@@ -244,7 +242,7 @@ impl Manifest for BlobManifest {
                 ).boxed()
             }
         });
-        stream::iter_ok(entries).boxify()
+        Box::new(list_iter)
     }
 }
 

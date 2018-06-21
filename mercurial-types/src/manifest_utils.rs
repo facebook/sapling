@@ -10,7 +10,7 @@ use std::iter::FromIterator;
 use std::sync::{Arc, Mutex};
 
 use futures::IntoFuture;
-use futures::future::Future;
+use futures::future::{self, Future};
 use futures::stream::{empty, once, Stream};
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
 
@@ -371,17 +371,11 @@ pub fn recursive_entry_stream(
             entry
                 .get_content()
                 .map(|content| {
-                    get_tree_content(content)
-                        .list()
-                        .collect()
-                        .map(move |entries| {
-                            select_all(
-                                entries
-                                    .into_iter()
-                                    .map(move |entry| recursive_entry_stream(path.clone(), entry)),
-                            )
-                        })
-                        .flatten_stream()
+                    select_all(
+                        get_tree_content(content)
+                            .list()
+                            .map(move |entry| recursive_entry_stream(path.clone(), entry)),
+                    )
                 })
                 .flatten_stream()
                 .boxify()
@@ -402,13 +396,11 @@ where
     TM: Manifest,
     FM: Manifest,
 {
-    let to_vec_future = to.list().collect();
-    let from_vec_future = from.list().collect();
+    let to_vec: Vec<_> = to.list().collect();
+    let from_vec: Vec<_> = from.list().collect();
 
-    to_vec_future
-        .join(from_vec_future)
-        .map(|(to, from)| diff_sorted_vecs(path, to, from))
-        .boxify()
+    // XXX this does not need to be a future at all
+    future::ok(diff_sorted_vecs(path, to_vec, from_vec)).boxify()
 }
 
 /// Compares vectors of entries and returns the difference

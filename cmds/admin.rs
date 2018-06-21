@@ -28,6 +28,7 @@ use std::sync::Arc;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 use failure::Error;
+use futures::future;
 use futures::prelude::*;
 use futures::stream::iter_ok;
 use tokio_core::reactor::Core;
@@ -156,27 +157,18 @@ fn fetch_content_from_manifest(
     mf: Box<Manifest + Sync>,
     element: MPathElement,
 ) -> BoxFuture<Content, Error> {
-    mf.lookup(&element)
-        .and_then({
-            let element = element.clone();
-            move |entry| match entry {
-                Some(entry) => Ok(entry),
-                None => Err(format_err!("failed to lookup element {:?}", element)),
-            }
-        })
-        .and_then({
-            let logger = logger.clone();
-            move |entry| {
-                debug!(
-                    logger,
-                    "Fetched {:?}, hash: {:?}",
-                    element,
-                    entry.get_hash()
-                );
-                entry.get_content()
-            }
-        })
-        .boxify()
+    match mf.lookup(&element) {
+        Some(entry) => {
+            debug!(
+                logger,
+                "Fetched {:?}, hash: {:?}",
+                element,
+                entry.get_hash()
+            );
+            entry.get_content()
+        }
+        None => try_boxfuture!(Err(format_err!("failed to lookup element {:?}", element))),
+    }
 }
 
 fn fetch_content(
@@ -307,22 +299,20 @@ fn main() {
 
             let repo = create_blobrepo(&logger, manifold_args);
             fetch_content(&mut core, logger.clone(), Arc::new(repo), rev, path)
-                .and_then(|content| match content {
-                    Content::Executable(_) => {
-                        println!("Binary file");
-                        Ok(()).into_future().boxify()
-                    }
-                    Content::File(contents) | Content::Symlink(contents) => match contents {
-                        FileContents::Bytes(bytes) => {
-                            let content =
-                                String::from_utf8(bytes.to_vec()).expect("non-utf8 file content");
-                            println!("{}", content);
-                            Ok(()).into_future().boxify()
+                .and_then(|content| {
+                    match content {
+                        Content::Executable(_) => {
+                            println!("Binary file");
                         }
-                    },
-                    Content::Tree(mf) => mf.list()
-                        .collect()
-                        .map(|entries| {
+                        Content::File(contents) | Content::Symlink(contents) => match contents {
+                            FileContents::Bytes(bytes) => {
+                                let content = String::from_utf8(bytes.to_vec())
+                                    .expect("non-utf8 file content");
+                                println!("{}", content);
+                            }
+                        },
+                        Content::Tree(mf) => {
+                            let entries: Vec<_> = mf.list().collect();
                             let mut longest_len = 0;
                             for entry in entries.iter() {
                                 let basename_len =
@@ -345,9 +335,9 @@ fn main() {
                                     entry.get_type()
                                 );
                             }
-                            ()
-                        })
-                        .boxify(),
+                        }
+                    }
+                    future::ok(()).boxify()
                 })
                 .boxify()
         }

@@ -12,8 +12,8 @@ use std::sync::Arc;
 use bytes::Bytes;
 use csv::{ByteRecord, ReaderBuilder};
 use failure::{Error, ResultExt};
-use futures::{future, stream, IntoFuture};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures::IntoFuture;
+use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial_types::{Entry, FileType, HgBlob, MPath, MPathElement, Manifest, RepoPath, Type};
 use mercurial_types::blobnode::HgParents;
@@ -207,11 +207,11 @@ fn finalize_dirs(
 }
 
 impl Manifest for MockManifest {
-    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
-        future::ok(self.entries.get(path).map(|e| e.clone().boxed())).boxify()
+    fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>> {
+        self.entries.get(path).map(|e| e.clone().boxed())
     }
-    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
-        stream::iter_ok(self.entries.clone().into_iter().map(|e| e.1.boxed())).boxify()
+    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
+        Box::new(self.entries.clone().into_iter().map(|e| e.1.boxed()))
     }
 }
 
@@ -310,15 +310,11 @@ mod test {
             assert!(
                 root_manifest
                     .lookup(&MPathElement::new(b"not-present".to_vec()).unwrap())
-                    .wait()
-                    .expect("MockManifest should always return Ok")
                     .is_none(),
                 "entry not present, should be None"
             );
             let foo_entry = root_manifest
                 .lookup(&MPathElement::new(b"foo".to_vec()).unwrap())
-                .wait()
-                .expect("MockManifest should always return Ok")
                 .expect("foo should be present");
             let foo_content = foo_entry
                 .get_content()
@@ -331,8 +327,6 @@ mod test {
 
             let bar1_entry = foo_manifest
                 .lookup(&MPathElement::new(b"bar1".to_vec()).unwrap())
-                .wait()
-                .expect("MockManifest should always return Ok")
                 .expect("bar1 should be present");
             let bar1_content = bar1_entry
                 .get_content()
@@ -347,8 +341,6 @@ mod test {
 
             let bar2_entry = foo_manifest
                 .lookup(&MPathElement::new(b"bar2".to_vec()).unwrap())
-                .wait()
-                .expect("MockManifest should always return Ok")
                 .expect("bar2 should be present");
             let bar2_content = bar2_entry
                 .get_content()

@@ -7,7 +7,7 @@
 use std::fmt;
 use std::sync::Arc;
 
-use futures::{Future, Stream};
+use futures::{stream, Future, Stream};
 
 use mercurial_types::{Entry, Manifest, Type};
 use mercurial_types::manifest::Content;
@@ -31,13 +31,10 @@ pub fn vfs_from_manifest<M>(
 where
     M: Manifest,
 {
-    manifest
+    let entry_streams = manifest
         .list()
-        .map_err(|err| {
-            let error: Error = err.context("failed while listing the manifest").into();
-            error
-        })
-        .map(|entry| recursive_entry_stream(None, entry))
+        .map(|entry| recursive_entry_stream(None, entry));
+    stream::iter_ok::<_, Error>(entry_streams)
         .flatten()
         .filter(|pathentry| pathentry.1.get_type() != Type::Tree)
         .collect()

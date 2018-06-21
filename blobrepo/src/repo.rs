@@ -571,14 +571,10 @@ impl BlobRepo {
             content
                 .and_then(move |content| match content {
                     None => Either::A(future::ok(None)),
-                    Some(Content::Tree(manifest)) => Either::B(
-                        manifest
-                            .lookup(&path_element)
-                            .and_then(|entry| match entry {
-                                None => Either::A(future::ok(None)),
-                                Some(entry) => Either::B(entry.get_content().map(Some)),
-                            }),
-                    ),
+                    Some(Content::Tree(manifest)) => match manifest.lookup(&path_element) {
+                        None => Either::A(future::ok(None)),
+                        Some(entry) => Either::B(entry.get_content().map(Some)),
+                    },
                     Some(_) => Either::A(future::ok(None)),
                 })
                 .boxify()
@@ -600,21 +596,19 @@ impl BlobRepo {
         manifest: HgNodeHash,
     ) -> impl Future<Item = Option<HgNodeHash>, Error = Error> + Send {
         let (dirname, basename) = path.split_dirname();
-        self.find_path_in_manifest(dirname, manifest).and_then({
+        self.find_path_in_manifest(dirname, manifest).map({
             let basename = basename.clone();
             move |content| match content {
-                None => Either::A(future::ok(None)),
-                Some(Content::Tree(manifest)) => {
-                    Either::B(manifest.lookup(&basename).map(|entry| match entry {
-                        None => None,
-                        Some(entry) => if let Type::File(_) = entry.get_type() {
-                            Some(entry.get_hash().into_nodehash())
-                        } else {
-                            None
-                        },
-                    }))
-                }
-                Some(_) => Either::A(future::ok(None)),
+                None => None,
+                Some(Content::Tree(manifest)) => match manifest.lookup(&basename) {
+                    None => None,
+                    Some(entry) => if let Type::File(_) = entry.get_type() {
+                        Some(entry.get_hash().into_nodehash())
+                    } else {
+                        None
+                    },
+                },
+                Some(_) => None,
             }
         })
     }

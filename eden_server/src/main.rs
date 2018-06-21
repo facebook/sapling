@@ -59,7 +59,7 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use bytes::Bytes;
 use clap::App;
-use futures::{Future, IntoFuture, Stream};
+use futures::{stream, Future, IntoFuture, Stream};
 use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
@@ -290,7 +290,7 @@ where
 
         let cpupool = self.cpupool.clone();
         repo.get_manifest_by_nodeid(&hash)
-            .map(|manifest| manifest.list())
+            .map(|manifest| stream::iter_ok(manifest.list()))
             .flatten_stream()
             .map(move |entry| cpupool.spawn(TreeMetadata::from_entry(entry, &options)))
             .buffer_unordered(100) // Schedules 100 futures on cpupool
