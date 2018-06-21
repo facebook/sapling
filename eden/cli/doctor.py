@@ -168,7 +168,7 @@ def cure_what_ails_you(
         out.write(f"{printer.red(msg)}\n")
 
     if num_failed_fixes == 0 and num_not_fixed_because_dry_run == 0:
-        out.write(f'{printer.green("All is well.")}\n')
+        out.write(f'{printer.green("No issues detected.")}\n')
 
     if num_failed_fixes:
         return 1

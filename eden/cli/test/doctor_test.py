@@ -254,7 +254,7 @@ and can re-clone the checkout afterwards if desired.
         self.assertEqual(
             "Performing 2 checks for /path/to/eden-mount.\n"
             "Performing 2 checks for /path/to/eden-mount-not-watched.\n"
-            "<green>All is well.<reset>\n",
+            "<green>No issues detected.<reset>\n",
             out.getvalue(),
         )
         mock_watchman.assert_has_calls(calls)
@@ -309,7 +309,7 @@ To start Eden, run:
     eden start
 
 Cannot check if running latest edenfs because the daemon is not running.
-<green>All is well.<reset>
+<green>No issues detected.<reset>
 """
             ),
             out.getvalue(),
@@ -647,7 +647,7 @@ command palette in Atom.
         self.assertEqual(
             f"""\
 Performing 3 checks for {edenfs_path1}.
-<green>All is well.<reset>
+<green>No issues detected.<reset>
 """,
             out.getvalue(),
         )
