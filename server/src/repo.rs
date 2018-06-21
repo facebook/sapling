@@ -59,10 +59,6 @@ const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
 const MAX_NODES_TO_LOG: usize = 5;
 
-lazy_static! {
-    static ref WHOAMI: Option<FbWhoAmI> = FbWhoAmI::new().ok();
-}
-
 mod ops {
     pub const HELLO: &str = "hello";
     pub const UNBUNDLE: &str = "unbundle";
@@ -235,7 +231,7 @@ fn add_common_stats_and_send_to_scuba(
                     sample.add("args", args);
                 }
 
-                if let &Some(ref whoami) = &*WHOAMI {
+                if let Ok(whoami) = FbWhoAmI::new() {
                     if let Some(hostname) = whoami.get_name() {
                         sample.add("server_hostname", hostname);
                     }
