@@ -83,7 +83,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use failure::SlogKVError;
 use futures::{Future, IntoFuture, Sink, Stream};
@@ -436,46 +436,65 @@ fn repo_listen(
         // Ok (if we allow the Error to propagate further it will shutdown the listener
         // rather than just the connection). Unfortunately there's no way to print what the
         // actual failing command was.
-        // TODO: seems to leave the client hanging?
-        let conn_log = conn_log.clone();
-        let endres = endres.or_else(move |err| {
-            error!(conn_log, "Command failed"; SlogKVError(err), "remote" => "true");
-            Ok(())
+        // TODO: (stash) T30523706 seems to leave the client hanging?
+        let endres = endres.or_else({
+            let conn_log = conn_log.clone();
+            move |err| {
+                error!(conn_log, "Command failed"; SlogKVError(err), "remote" => "true");
+                Ok(())
+            }
         });
 
-        // Run the whole future asynchronously to allow new connections
-        match scuba_table {
-            None => {
-                handle.spawn(asynchronize(move || endres).map_err(|_: Error| ()));
-            }
+        let request_future = match scuba_table {
+            None => asynchronize(move || endres).map_err(|_: Error| ()).boxify(),
             Some(ref scuba_table) => {
                 let scuba_table = scuba_table.clone();
                 let repo_path = repo.path().clone();
-                handle.spawn(
-                    asynchronize(move || {
-                        endres.map(move |_| {
-                            let scuba_client = ScubaClient::new(scuba_table);
+                let wireproto_calls = wireproto_calls.clone();
+                asynchronize(move || {
+                    endres.map(move |_| {
+                        let scuba_client = ScubaClient::new(scuba_table);
 
-                            let mut wireproto_calls =
-                                wireproto_calls.lock().expect("lock poisoned");
-                            let wireproto_calls =
-                                mem::replace(wireproto_calls.deref_mut(), Vec::new());
+                        let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
+                        let wireproto_calls = mem::replace(wireproto_calls.deref_mut(), Vec::new());
 
-                            let mut sample = ScubaSample::new();
-                            sample.add("session_uuid", format!("{}", session_uuid));
-                            let elapsed_time = connect_time.elapsed();
-                            let elapsed_ms = elapsed_time.as_secs() * 1000
-                                + elapsed_time.subsec_nanos() as u64 / 1000000;
-                            sample.add("time_elapsed_ms", elapsed_ms);
-                            sample.add("wireproto_commands", wireproto_calls);
-                            sample.add("repo", repo_path);
+                        let mut sample = ScubaSample::new();
+                        sample.add("session_uuid", format!("{}", session_uuid));
+                        let elapsed_time = connect_time.elapsed();
+                        let elapsed_ms = elapsed_time.as_secs() * 1000
+                            + elapsed_time.subsec_nanos() as u64 / 1000000;
+                        sample.add("time_elapsed_ms", elapsed_ms);
+                        sample.add("wireproto_commands", wireproto_calls);
+                        sample.add("repo", repo_path);
 
-                            scuba_client.log(&sample);
-                        })
-                    }).map_err(|_| ()),
-                )
+                        scuba_client.log(&sample);
+                    })
+                }).map_err(|_| ())
+                    .boxify()
             }
         };
+        // Run the whole future asynchronously to allow new connections
+        // Don't wait for more that 15 mins for a request
+        handle.spawn(
+            request_future
+                .select(
+                    tokio::timer::Delay::new(Instant::now() + Duration::from_secs(900))
+                        .map({
+                            let conn_log = conn_log.clone();
+                            move |_| {
+                                let mut wireproto_calls =
+                                    wireproto_calls.lock().expect("lock poisoned");
+                                let wireproto_calls =
+                                    mem::replace(wireproto_calls.deref_mut(), Vec::new());
+                                error!(conn_log, "timeout while handling {:?}", wireproto_calls);
+                                ()
+                            }
+                        })
+                        .map_err(|_| ()),
+                )
+                .map(|_| ())
+                .map_err(|_| ()),
+        );
 
         Ok(())
     });
