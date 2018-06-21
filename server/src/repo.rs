@@ -11,7 +11,7 @@ use std::fmt::{self, Debug};
 use std::io::{Cursor, Write};
 use std::iter::FromIterator;
 use std::mem;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -69,25 +69,6 @@ mod ops {
     pub const GETBUNDLE: &str = "getbundle";
     pub const GETTREEPACK: &str = "gettreepack";
     pub const GETFILES: &str = "getfiles";
-}
-
-pub fn init_repo(
-    parent_logger: &Logger,
-    repotype: &RepoType,
-    cache_size: usize,
-    repoid: RepositoryId,
-    scuba_table: Option<String>,
-) -> Result<(PathBuf, MononokeRepo)> {
-    let repopath = repotype.path();
-
-    let mut sock = repopath.join(".hg");
-
-    let repo = MononokeRepo::new(parent_logger, repotype, cache_size, repoid, scuba_table)
-        .with_context(|_| format!("Failed to initialize repo {:?}", repopath))?;
-
-    sock.push("mononoke.sock");
-
-    Ok((sock, repo))
 }
 
 struct LogNormalGenerator {
@@ -244,13 +225,6 @@ fn add_common_stats_and_send_to_scuba(
         .boxify()
 }
 
-pub struct MononokeRepo {
-    path: String,
-    blobrepo: Arc<BlobRepo>,
-    repo_generation: RepoGenCache,
-    scuba: Option<Arc<ScubaClient>>,
-}
-
 fn wireprotocaps() -> Vec<String> {
     vec![
         "lookup".to_string(),
@@ -315,6 +289,13 @@ fn bundle2caps() -> String {
     }
 
     percent_encode(&encodedcaps.join("\n"))
+}
+
+pub struct MononokeRepo {
+    path: String,
+    blobrepo: Arc<BlobRepo>,
+    repo_generation: RepoGenCache,
+    scuba: Option<Arc<ScubaClient>>,
 }
 
 impl MononokeRepo {

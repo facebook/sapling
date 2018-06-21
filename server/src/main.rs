@@ -367,13 +367,13 @@ fn repo_listen(
 ) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
     let scuba_table = config.scuba_table.clone();
-    let (_, repo) = repo::init_repo(
+    let repo = repo::MononokeRepo::new(
         &root_log,
         &config.repotype,
         config.generation_cache_size,
         RepositoryId::new(config.repoid),
         config.scuba_table.clone(),
-    ).expect("failed to initialize repo");
+    ).expect(&format!("failed to initialize repo {}", reponame));
 
     let listen_log = root_log.new(o!("repo" => repo.path().clone()));
 
