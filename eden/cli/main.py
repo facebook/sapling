@@ -420,10 +420,7 @@ class DoctorCmd(Subcmd):
 
 @subcmd(
     "mount",
-    (
-        "Remount an existing checkout (for instance, after it was "
-        'unmounted with "unmount")'
-    ),
+    "Remount an existing checkout (for instance, after it was manually unmounted)",
 )
 class MountCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -578,14 +575,21 @@ class PrefetchCmd(Subcmd):
         return 0
 
 
-@subcmd("unmount", "Unmount a specific checkout")
+#
+# Most users should not need the "unmount" command in most circumstances.
+# Maybe we should deprecate or remove it in the future.
+#
+# - "eden unmount --destroy" used to be the way to remove a checkout, but this has been
+#   replaced by "eden rm".
+# - I can't think of many situations where users would need to temporarily unmount a
+#   checkout.  However, "/bin/umount" can be used to accomplish this.  The only
+#   potential advantage of "eden umount" over "/bin/umount" is that "eden unmount" does
+#   not require root privileges.
+#
+@subcmd("unmount", "Temporarily unmount a specific checkout")
 class UnmountCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "--destroy",
-            action="store_true",
-            help="Permanently delete all state associated with the checkout.",
-        )
+        parser.add_argument("--destroy", action="store_true", help=argparse.SUPPRESS)
         parser.add_argument(
             "paths",
             nargs="+",
@@ -594,13 +598,19 @@ class UnmountCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
+        if args.destroy:
+            print_stderr(
+                'note: "eden unmount --destroy" is deprecated; '
+                'prefer using "eden rm" instead'
+            )
+
         config = create_config(args)
         for path in args.paths:
             path = normalize_path_arg(path)
             try:
                 config.unmount(path, delete_config=args.destroy)
-            except EdenService.EdenError as ex:
-                print_stderr("error: {}", ex)
+            except (EdenService.EdenError, EdenNotRunningError) as ex:
+                print_stderr(f"error: {ex}")
                 return 1
         return 0
 
