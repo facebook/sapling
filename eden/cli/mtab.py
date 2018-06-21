@@ -21,7 +21,7 @@ MountInfo = NamedTuple(
 )
 
 
-MTStat = NamedTuple("MTStat", [("st_uid", int), ("st_dev", int)])
+MTStat = NamedTuple("MTStat", [("st_uid", int), ("st_dev", int), ("st_mode", int)])
 
 
 class MountTable(abc.ABC):
@@ -40,6 +40,10 @@ class MountTable(abc.ABC):
     @abc.abstractmethod
     def lstat(self, path: Union[bytes, str]) -> MTStat:
         "Returns a subset of the results of os.lstat."
+
+    @abc.abstractmethod
+    def create_bind_mount(self, source_path, dest_path) -> bool:
+        "Creates a bind mount from source_path to dest_path."
 
 
 def parse_mtab(contents: bytes) -> List[MountInfo]:
@@ -76,4 +80,9 @@ class LinuxMountTable(MountTable):
 
     def lstat(self, path: Union[bytes, str]) -> MTStat:
         st = os.lstat(path)
-        return MTStat(st_uid=st.st_uid, st_dev=st.st_dev)
+        return MTStat(st_uid=st.st_uid, st_dev=st.st_dev, st_mode=st.st_mode)
+
+    def create_bind_mount(self, source_path, dest_path) -> bool:
+        return 0 == subprocess.check_call(
+            ["sudo", "mount", "-o", "bind", source_path, dest_path]
+        )

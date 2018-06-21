@@ -30,6 +30,7 @@ from . import (
     daemon,
     debug as debug_mod,
     doctor as doctor_mod,
+    filesystem,
     mtab,
     rage as rage_mod,
     stats as stats_mod,
@@ -409,7 +410,11 @@ class DoctorCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
         return doctor_mod.cure_what_ails_you(
-            config, args.dry_run, out=sys.stdout, mount_table=mtab.LinuxMountTable()
+            config,
+            args.dry_run,
+            out=sys.stdout,
+            mount_table=mtab.LinuxMountTable(),
+            fs_util=filesystem.LinuxFsUtil(),
         )
 
 

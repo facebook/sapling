@@ -13,6 +13,7 @@ import errno
 import json
 import logging
 import os
+import stat
 import subprocess
 import sys
 from enum import Enum, auto
@@ -21,7 +22,7 @@ from typing import Dict, List, Optional, Set, TextIO, Union
 
 import eden.dirstate
 
-from . import config as config_mod, mtab, version
+from . import config as config_mod, filesystem, mtab, version
 from .stdout_printer import StdoutPrinter
 
 
@@ -55,6 +56,7 @@ def cure_what_ails_you(
     dry_run: bool,
     out: TextIO,
     mount_table: mtab.MountTable,
+    fs_util: filesystem.FsUtil,
     printer: Optional[StdoutPrinter] = None,
 ) -> int:
     if printer is None:
@@ -111,6 +113,11 @@ def cure_what_ails_you(
         checks.append(
             WatchmanUsingEdenSubscriptionCheck(mount_path, watchman_roots, is_healthy)
         )
+        if is_healthy:
+            checks_and_messages.append(
+                BindMountsCheck(mount_path, config, mount_table, fs_util)
+            )
+
         if nuclide_roots is not None:
             checks.append(
                 NuclideHasExpectedWatchmanSubscriptions(
@@ -277,6 +284,220 @@ class StaleMountsCheck(Check):
             for mount in all_system_mounts
             if mount.device == b"edenfs" and mount.vfstype == b"fuse"
         }
+
+
+class BindMountsCheck(Check):
+    def __init__(
+        self,
+        mount_path: str,
+        config,
+        mount_table: mtab.MountTable,
+        fs_util: filesystem.FsUtil,
+    ) -> None:
+        self._mount_path = mount_path
+        self._config = config
+        self._mount_table = mount_table
+        self._fs_util = fs_util
+
+    def do_check(self, dry_run: bool) -> CheckResult:
+        # Check bind mounts exist and have different devices than mount path
+        try:
+            mount_path_stat = self._mount_table.lstat(self._mount_path)
+        except OSError as e:
+            return CheckResult(
+                CheckResultType.FAILED_TO_FIX,
+                f"Failed to stat eden mount: {self._mount_path}\n",
+            )
+
+        client_info = self._config.get_client_info(self._mount_path)
+        client_dir = client_info["client-dir"]
+        client_bind_mount_dir = os.path.join(client_dir, "bind-mounts")
+        bind_mounts = client_info["bind-mounts"]
+
+        # Create a dictionary of client paths : mount paths
+        # Client directory eg. /data/users/bob/.eden/clients/fbsource-eden/bind-mounts
+        # Mount directory eg. /data/users/bob/fbsource/
+        client_mount_path_dict = {}
+        for client_suffix, mount_suffix in bind_mounts.items():
+            path_in_client_dir = os.path.join(client_bind_mount_dir, client_suffix)
+            path_in_mount_dir = os.path.join(self._mount_path, mount_suffix)
+            client_mount_path_dict[path_in_client_dir] = path_in_mount_dir
+
+        # Identify: missing client paths, non-directory paths.
+        not_dir_paths = []
+        missing_client_paths = []
+        missing_path_dict = {}
+        for path_in_client_dir in client_mount_path_dict:
+            try:
+                client_stat = self._mount_table.lstat(path_in_client_dir)
+                if not stat.S_ISDIR(client_stat.st_mode):
+                    not_dir_paths.append(path_in_client_dir)
+            except OSError as ex:
+                if ex.errno == errno.ENOENT:
+                    missing_client_paths.append(path_in_client_dir)
+                else:
+                    return CheckResult(
+                        CheckResultType.FAILED_TO_FIX,
+                        f"Failed to lstat client mount path: {path_in_client_dir}\n",
+                    )
+
+        # Identify: missing mount paths, non-directory paths.
+        missing_mount_paths = []
+        wrong_dev_path_dict = {}
+        for path_in_client_dir, path_in_mount_dir in client_mount_path_dict.items():
+            try:
+                mount_stat = self._mount_table.lstat(path_in_mount_dir)
+                if not stat.S_ISDIR(mount_stat.st_mode):
+                    not_dir_paths.append(path_in_mount_dir)
+                    continue
+                if mount_stat.st_dev == mount_path_stat.st_dev:
+                    wrong_dev_path_dict[path_in_client_dir] = path_in_mount_dir
+            except OSError as ex:
+                if ex.errno == errno.ENOENT:
+                    missing_mount_paths.append(path_in_mount_dir)
+                    missing_path_dict[path_in_client_dir] = path_in_mount_dir
+                else:
+                    return CheckResult(
+                        CheckResultType.FAILED_TO_FIX,
+                        f"Failed to lstat mount path: {path_in_mount_dir}\n",
+                    )
+
+        # Exit early if everything is okay
+        if (
+            not wrong_dev_path_dict
+            and not not_dir_paths
+            and not missing_client_paths
+            and not missing_mount_paths
+        ):
+            return CheckResult(CheckResultType.NO_ISSUE, "")
+
+        # Add messages for mounts that are incorrect device type
+        message = ""
+        if wrong_dev_path_dict:
+            message += f"Found {len(wrong_dev_path_dict)} missing bind mounts:\n"
+            for mp in wrong_dev_path_dict:
+                message += f"  {mp}\n"
+            if dry_run:
+                message += "Not remounting because dry run.\n"
+            else:
+                message += "Will try to remount directories.\n"
+
+        # Add messages for mounts that are not directories
+        if not_dir_paths:
+            message += (
+                f"Found {len(not_dir_paths)} non-directory mount path "
+                f'point{"s" if len(missing_client_paths) != 1 else ""}:\n'
+            )
+            for mp in not_dir_paths:
+                message += f"  {mp}\n"
+            message += "Remove them and re-run eden doctor.\n"
+
+        # On dry-run, we want to add messages for missing bind mounts.
+        # Else, they will be reported with results of corrective actions.
+        if missing_mount_paths:
+            message += (
+                f"Found {len(missing_mount_paths)} missing mount path "
+                f'point{"s" if len(missing_mount_paths) != 1 else ""}:\n'
+            )
+            for mp in missing_mount_paths:
+                message += f"  {mp}\n"
+            if dry_run:
+                message += "Not creating missing mount paths because dry run.\n"
+            else:
+                message += "We will create mount paths and remount.\n"
+
+        # On dry-run, we want to add messages for missing client bind mounts.
+        # Else, they will be reported with results of corrective actions.
+        if missing_client_paths:
+            message += (
+                f"Found {len(missing_client_paths)} missing client mount path "
+                f'point{"s" if len(missing_client_paths) != 1 else ""}:\n'
+            )
+            for mp in missing_client_paths:
+                message += f"  {mp}\n"
+            if dry_run:
+                message += "Not creating missing client mount paths because dry run.\n"
+            else:
+                message += "We will create client mount paths and remount.\n"
+
+        if dry_run:
+            # Dry run - return our messages
+            return CheckResult(CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, message)
+
+        # Not a dry run, so, return result if there are issues we don't fix.
+        if not_dir_paths:
+            return CheckResult(CheckResultType.FAILED_TO_FIX, message)
+
+        success_mounts = {}
+        failed_mounts = {}
+
+        # There are missing bind mounts, create the bind-mounts directory
+        self._fs_util.mkdir_p(client_bind_mount_dir)
+
+        # Now, create the missing mount paths
+        for mount_path in missing_mount_paths:
+            try:
+                self._fs_util.mkdir_p(mount_path)
+            except (OSError, subprocess.CalledProcessError) as e:
+                return CheckResult(
+                    CheckResultType.FAILED_TO_FIX,
+                    f"Failed to create mount path directory : {mount_path}\n",
+                )
+
+        # Now, create the missing client paths
+        for client_mount_path in missing_client_paths:
+            try:
+                self._fs_util.mkdir_p(client_mount_path)
+            except (OSError, subprocess.CalledProcessError) as e:
+                return CheckResult(
+                    CheckResultType.FAILED_TO_FIX,
+                    f"Failed to create client mount path directory : {client_mount_path}\n",
+                )
+
+        # Create the bind mounts
+        for client_mount_path, mount_path in wrong_dev_path_dict.items():
+            try:
+                self._mount_table.create_bind_mount(client_mount_path, mount_path)
+                success_mounts[client_mount_path] = mount_path
+            except subprocess.CalledProcessError as e:
+                failed_mounts[client_mount_path] = mount_path
+                message += (
+                    f"Failed to create bind mount: {mount_path} to {client_mount_path}"
+                    f" failed with: {str(e) if getattr(e, 'strerror', None) is None else e.strerror}\n"
+                )
+
+        # Create the bind mounts the missing paths we fixed
+        for client_mount_path, mount_path in missing_path_dict.items():
+            try:
+                if client_mount_path in wrong_dev_path_dict:
+                    continue
+                self._mount_table.create_bind_mount(client_mount_path, mount_path)
+                success_mounts[client_mount_path] = mount_path
+            except subprocess.CalledProcessError as e:
+                failed_mounts[client_mount_path] = mount_path
+                message += (
+                    f"Failed to create bind mount: {mount_path} to {client_mount_path}"
+                    f" failed with: {str(e) if getattr(e, 'strerror', None) is None else e.strerror}\n"
+                )
+
+        if success_mounts:
+            message += (
+                f"Successfully created {len(success_mounts)} missing bind mount "
+                f'point{"s" if len(success_mounts) != 1 else ""}:\n'
+            )
+            for client_path, mount_path in success_mounts.items():
+                message += f"  {client_path} to {mount_path}\n"
+
+        if failed_mounts:
+            message += (
+                f"Failed to create {len(failed_mounts)} missing bind mount "
+                f'point{"s" if len(failed_mounts) != 1 else ""}:\n'
+            )
+            for client_path, mount_path in failed_mounts.items():
+                message += f"  {client_path} to {mount_path}\n"
+            return CheckResult(CheckResultType.FAILED_TO_FIX, message)
+
+        return CheckResult(CheckResultType.FIXED, message)
 
 
 class WatchmanUsingEdenSubscriptionCheck(Check):
@@ -561,6 +782,6 @@ def _check_json_output(args: List[str]) -> Dict:
         # ValueError if `output` is not valid JSON.
         sys.stderr.write(
             f'Calling `{" ".join(args)}`'
-            f" failed with: {str(e) if e.strerror is None else e.strerror}\n"
+            f" failed with: {str(e) if getattr(e, 'strerror', None) is None else e.strerror}\n"
         )
         return {"error": str(e)}

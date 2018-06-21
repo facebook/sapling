@@ -11,6 +11,7 @@ import errno
 import io
 import os
 import shutil
+import subprocess
 import tempfile
 import unittest
 from collections import OrderedDict
@@ -22,7 +23,7 @@ import eden.cli.config as config_mod
 import eden.cli.doctor as doctor
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
-from eden.cli import mtab
+from eden.cli import filesystem, mtab
 from eden.cli.doctor import CheckResult, CheckResultType
 from eden.cli.stdout_printer import AnsiEscapeCodes, StdoutPrinter
 from fb303.ttypes import fb_status
@@ -143,11 +144,22 @@ class DoctorTest(unittest.TestCase):
             os.mkdir(edenfs_path3)
 
             mount_table = FakeMountTable()
-            mount_table.stats[edenfs_path1] = mtab.MTStat(st_uid=os.getuid(), st_dev=11)
-            mount_table.stats[edenfs_path2] = mtab.MTStat(st_uid=os.getuid(), st_dev=12)
-            mount_table.stats[edenfs_path3] = mtab.MTStat(st_uid=os.getuid(), st_dev=13)
+            mount_table.stats[edenfs_path1] = mtab.MTStat(
+                st_uid=os.getuid(), st_dev=11, st_mode=None
+            )
+            mount_table.stats[edenfs_path2] = mtab.MTStat(
+                st_uid=os.getuid(), st_dev=12, st_mode=None
+            )
+            mount_table.stats[edenfs_path3] = mtab.MTStat(
+                st_uid=os.getuid(), st_dev=13, st_mode=None
+            )
             exit_code = doctor.cure_what_ails_you(
-                config, dry_run, out, mount_table, printer=printer
+                config,
+                dry_run,
+                out,
+                mount_table,
+                fs_util=filesystem.LinuxFsUtil(),
+                printer=printer,
             )
         finally:
             shutil.rmtree(tmp_dir)
@@ -225,13 +237,18 @@ and can re-clone the checkout afterwards if desired.
         ]
         mount_table = FakeMountTable()
         mount_table.stats["/path/to/eden-mount"] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=10
+            st_uid=os.getuid(), st_dev=10, st_mode=None
         )
         mount_table.stats["/path/to/eden-mount-not-watched"] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11
+            st_uid=os.getuid(), st_dev=11, st_mode=None
         )
         exit_code = doctor.cure_what_ails_you(
-            config, dry_run, out, mount_table=mount_table, printer=printer
+            config,
+            dry_run,
+            out,
+            mount_table=mount_table,
+            fs_util=filesystem.LinuxFsUtil(),
+            printer=printer,
         )
 
         self.assertEqual(
@@ -275,7 +292,12 @@ and can re-clone the checkout afterwards if desired.
         }
         config = FakeConfig(mount_paths, is_healthy=False)
         exit_code = doctor.cure_what_ails_you(
-            config, dry_run, out, FakeMountTable(), printer=printer
+            config,
+            dry_run,
+            out,
+            FakeMountTable(),
+            fs_util=filesystem.LinuxFsUtil(),
+            printer=printer,
         )
 
         self.assertEqual(
@@ -593,8 +615,12 @@ command palette in Atom.
 
             # ... and is in the system mount table.
             mount_table = FakeMountTable()
-            mount_table.stats[edenfs_path1] = mtab.MTStat(st_uid=os.getuid(), st_dev=11)
-            mount_table.stats[edenfs_path2] = mtab.MTStat(st_uid=os.getuid(), st_dev=12)
+            mount_table.stats[edenfs_path1] = mtab.MTStat(
+                st_uid=os.getuid(), st_dev=11, st_mode=None
+            )
+            mount_table.stats[edenfs_path2] = mtab.MTStat(
+                st_uid=os.getuid(), st_dev=12, st_mode=None
+            )
 
             os.mkdir(edenfs_path1)
             hg_dir = os.path.join(edenfs_path1, ".hg")
@@ -608,7 +634,12 @@ command palette in Atom.
             dry_run = False
             out = io.StringIO()
             exit_code = doctor.cure_what_ails_you(
-                config, dry_run, out, mount_table, printer=printer
+                config,
+                dry_run,
+                out,
+                mount_table,
+                fs_util=filesystem.LinuxFsUtil(),
+                printer=printer,
             )
         finally:
             shutil.rmtree(tmp_dir)
@@ -621,6 +652,855 @@ Performing 3 checks for {edenfs_path1}.
             out.getvalue(),
         )
         self.assertEqual(0, exit_code)
+
+
+class BindMountsCheckTest(unittest.TestCase):
+    maxDiff = None
+
+    def setUp(self):
+        tmp_dir = "/home/bob/eden_test"
+        self.edenfs_path1 = os.path.join(tmp_dir, "path1")
+        self.dot_eden_path = os.path.join(tmp_dir, ".eden")
+        self.clients_path = os.path.join(self.dot_eden_path, "clients")
+
+        self.fbsource_client = os.path.join(self.clients_path, "fbsource")
+        self.fbsource_bind_mounts = os.path.join(self.fbsource_client, "bind-mounts")
+        self.mount_paths = OrderedDict()
+        self.mount_paths[self.edenfs_path1] = {
+            "bind-mounts": {
+                "fbcode-buck-out": "fbcode/buck-out",
+                "fbandroid-buck-out": "fbandroid/buck-out",
+                "buck-out": "buck-out",
+            },
+            "mount": self.edenfs_path1,
+            "scm_type": "hg",
+            "client-dir": self.fbsource_client,
+        }
+        self.config = FakeConfig(self.mount_paths, is_healthy=True)
+
+        # Entries for later inclusion in client bind mount table
+        self.client_bm1 = os.path.join(self.fbsource_bind_mounts, "fbcode-buck-out")
+        self.client_bm2 = os.path.join(self.fbsource_bind_mounts, "fbandroid-buck-out")
+        self.client_bm3 = os.path.join(self.fbsource_bind_mounts, "buck-out")
+
+        # Entries for later inclusion in bind mount table
+        self.bm1 = os.path.join(self.edenfs_path1, "fbcode/buck-out")
+        self.bm2 = os.path.join(self.edenfs_path1, "fbandroid/buck-out")
+        self.bm3 = os.path.join(self.edenfs_path1, "buck-out")
+
+    def test_bind_mounts_okay(self):
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.client_bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+        result = check.do_check(dry_run=True)
+        self.assertEqual("", result.message)
+        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+
+    def test_bind_mounts_missing_dry_run(self):
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.client_bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+
+        result = check.do_check(dry_run=True)
+        self.assertEqual(
+            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+        )
+        self.assertEqual(
+            dedent(
+                """\
+                Found 3 missing bind mounts:
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                Not remounting because dry run.
+        """
+            ),
+            result.message,
+        )
+
+    def test_bind_mounts_missing(self):
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.client_bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+
+        result = check.do_check(dry_run=True)
+        self.assertEqual(
+            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+        )
+        self.assertEqual(
+            dedent(
+                """\
+                Found 3 missing bind mounts:
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                Not remounting because dry run.
+        """
+            ),
+            result.message,
+        )
+
+    def test_bind_mounts_missing_fail(self):
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.client_bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # These bound mind operations will succeed.
+        mount_table.bind_mount_success_paths[self.client_bm1] = self.bm1
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+
+        result = check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        self.assertEqual(
+            dedent(
+                """\
+                Found 3 missing bind mounts:
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                Will try to remount directories.
+                Failed to create bind mount: /home/bob/eden_test/path1/fbandroid/buck-out to /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out failed with: Command 'sudo mount -o bind /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out /home/bob/eden_test/path1/fbandroid/buck-out' returned non-zero exit status 1.
+                Failed to create bind mount: /home/bob/eden_test/path1/buck-out to /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out failed with: Command 'sudo mount -o bind /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out /home/bob/eden_test/path1/buck-out' returned non-zero exit status 1.
+                Successfully created 1 missing bind mount point:
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out to /home/bob/eden_test/path1/fbcode/buck-out
+                Failed to create 2 missing bind mount points:
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out to /home/bob/eden_test/path1/fbandroid/buck-out
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out to /home/bob/eden_test/path1/buck-out
+                """
+            ),
+            result.message,
+        )
+
+    def test_bind_mounts_and_dir_missing_dry_run(self):
+        mount_table = FakeMountTable()
+
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+        result = check.do_check(dry_run=True)
+        self.assertEqual(
+            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+        )
+        self.assertEqual(
+            dedent(
+                """\
+            Found 3 missing mount path points:
+              /home/bob/eden_test/path1/fbcode/buck-out
+              /home/bob/eden_test/path1/fbandroid/buck-out
+              /home/bob/eden_test/path1/buck-out
+            Not creating missing mount paths because dry run.
+            Found 3 missing client mount path points:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+            Not creating missing client mount paths because dry run.
+        """
+            ),
+            result.message,
+        )
+
+    def test_bind_mount_wrong_device_dry_run(self):
+        # bm1, bm2 should not have same device as edenfs
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.client_bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+        result = check.do_check(dry_run=True)
+        self.assertEqual(
+            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+        )
+        self.assertEqual(
+            dedent(
+                """\
+            Found 2 missing bind mounts:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
+            Not remounting because dry run.
+        """
+            ),
+            result.message,
+        )
+
+    def test_bind_mount_wrong_device(self):
+        # bm1, bm2 should not have same device as edenfs
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.client_bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # These bound mind operations will succeed.
+        mount_table.bind_mount_success_paths[self.client_bm1] = self.bm1
+        mount_table.bind_mount_success_paths[self.client_bm2] = self.bm2
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+        result = check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+        self.assertEqual(
+            dedent(
+                """\
+            Found 2 missing bind mounts:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
+            Will try to remount directories.
+            Successfully created 2 missing bind mount points:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out to /home/bob/eden_test/path1/fbcode/buck-out
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out to /home/bob/eden_test/path1/fbandroid/buck-out
+        """
+            ),
+            result.message,
+        )
+
+    def test_client_mount_path_not_dir(self):
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        # Note: client_bm3 is not a directory
+        mount_table.stats[self.client_bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.client_bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=33188
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+
+        # We don't fix this - so dry_run false is ok
+        result = check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        self.assertEqual(
+            dedent(
+                """\
+            Found 1 non-directory mount path points:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+            Remove them and re-run eden doctor.
+        """
+            ),
+            result.message,
+        )
+
+    def test_mount_path_not_dir(self):
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.client_bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        # Note: bm3 is not a directory
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=33188
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+
+        # We don't fix this - so dry_run false is ok
+        result = check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        self.assertEqual(
+            dedent(
+                """\
+            Found 1 non-directory mount path points:
+              /home/bob/eden_test/path1/buck-out
+            Remove them and re-run eden doctor.
+        """
+            ),
+            result.message,
+        )
+
+    def test_client_bind_mounts_missing_dry_run(self):
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+
+        result = check.do_check(dry_run=True)
+        self.assertEqual(
+            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+        )
+        self.assertEqual(
+            dedent(
+                """\
+            Found 2 missing client mount path points:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+            Not creating missing client mount paths because dry run.
+        """
+            ),
+            result.message,
+        )
+
+    def test_client_bind_mounts_missing(self):
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+
+        result = check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+        self.assertEqual(
+            dedent(
+                """\
+            Found 2 missing client mount path points:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+            We will create client mount paths and remount.
+        """
+            ),
+            result.message,
+        )
+
+    def test_client_bind_mounts_missing_fail(self):
+        mount_table = FakeMountTable()
+        fs_util = FakeFsUtil()
+
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        fs_util.path_error[self.client_bm3] = "Failed to create directory"
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1, self.config, mount_table=mount_table, fs_util=fs_util
+        )
+
+        result = check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        self.assertEqual(
+            dedent(
+                """\
+                Failed to create client mount path directory : /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+        """
+            ),
+            result.message,
+        )
+
+    def test_bind_mounts_and_client_dir_missing_dry_run(self):
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+
+        result = check.do_check(dry_run=True)
+        self.assertEqual(
+            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+        )
+
+        self.assertEqual(
+            dedent(
+                """\
+                Found 2 missing mount path points:
+                  /home/bob/eden_test/path1/fbandroid/buck-out
+                  /home/bob/eden_test/path1/buck-out
+                Not creating missing mount paths because dry run.
+                Found 2 missing client mount path points:
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                Not creating missing client mount paths because dry run.
+        """
+            ),
+            result.message,
+        )
+
+    def test_bind_mounts_and_client_dir_missing(self):
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.client_bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+        # These bound mind operations will succeed.
+        mount_table.bind_mount_success_paths[self.client_bm2] = self.bm2
+        mount_table.bind_mount_success_paths[self.client_bm3] = self.bm3
+
+        result = check.do_check(dry_run=False)
+
+        self.assertEqual(
+            dedent(
+                """\
+                Found 2 missing mount path points:
+                  /home/bob/eden_test/path1/fbandroid/buck-out
+                  /home/bob/eden_test/path1/buck-out
+                We will create mount paths and remount.
+                Found 2 missing client mount path points:
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                We will create client mount paths and remount.
+                Successfully created 2 missing bind mount points:
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out to /home/bob/eden_test/path1/fbandroid/buck-out
+                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out to /home/bob/eden_test/path1/buck-out
+        """
+            ),
+            result.message,
+        )
+        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+
+    def test_client_bind_mount_multiple_issues_dry_run(self):
+        # Bind mount 1 does not exist
+        # Bind mount 2 has wrong device type
+        # Bind mount 3 is a file instead of a directory
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.client_bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=33188
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+        result = check.do_check(dry_run=True)
+        self.assertEqual(
+            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+        )
+        self.assertEqual(
+            dedent(
+                """\
+            Found 1 non-directory mount path point:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+            Remove them and re-run eden doctor.
+            Found 1 missing client mount path point:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+            Not creating missing client mount paths because dry run.
+        """
+            ),
+            result.message,
+        )
+
+    def test_client_bind_mount_multiple_issues(self):
+        # Bind mount 1 does not exist
+        # Bind mount 2 has wrong device type
+        # Bind mount 3 is a file instead of a directory
+        mount_table = FakeMountTable()
+        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        # Client bind mount paths (under .eden)
+        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.client_bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=16877
+        )
+        mount_table.stats[self.client_bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=33188
+        )
+
+        # Bind mount paths (under eden path)
+        mount_table.stats[self.bm1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+        mount_table.stats[self.bm3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=16877
+        )
+
+        check = doctor.BindMountsCheck(
+            self.edenfs_path1,
+            self.config,
+            mount_table=mount_table,
+            fs_util=FakeFsUtil(),
+        )
+        result = check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        self.assertEqual(
+            dedent(
+                """\
+            Found 1 non-directory mount path point:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+            Remove them and re-run eden doctor.
+            Found 1 missing client mount path point:
+              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+            We will create client mount paths and remount.
+        """
+            ),
+            result.message,
+        )
 
 
 class StaleMountsCheckTest(unittest.TestCase):
@@ -876,12 +1756,14 @@ class FakeMountTable(mtab.MountTable):
         self.unmount_force_fails: Set[bytes] = set()
         self.stats: Dict[str, Union[mtab.MTStat, Exception]] = {}
         self._next_dev: int = 10
+        self.bind_mount_success_paths: Dict[str, str] = {}
 
     def add_mount(
         self,
         path: str,
         uid: Optional[int] = None,
         dev: Optional[int] = None,
+        mode: Optional[int] = None,
         device: str = "edenfs",
         vfstype: str = "fuse",
     ) -> None:
@@ -890,12 +1772,14 @@ class FakeMountTable(mtab.MountTable):
         if dev is None:
             dev = self._next_dev
         self._next_dev += 1
+        if mode is None:
+            mode = 16877
 
         self._add_mount_info(path, device=device, vfstype=vfstype)
-        self.stats[path] = mtab.MTStat(st_uid=uid, st_dev=dev)
+        self.stats[path] = mtab.MTStat(st_uid=uid, st_dev=dev, st_mode=mode)
         if device == "edenfs":
             self.stats[os.path.join(path, ".eden")] = mtab.MTStat(
-                st_uid=uid, st_dev=dev
+                st_uid=uid, st_dev=dev, st_mode=mode
             )
 
     def add_stale_mount(
@@ -966,3 +1850,25 @@ class FakeMountTable(mtab.MountTable):
             for mount_info in self.mounts
             if mount_info.mount_point != mount_point
         ]
+
+    def create_bind_mount(self, source_path, dest_path) -> bool:
+        if (
+            source_path in self.bind_mount_success_paths
+            and dest_path == self.bind_mount_success_paths[source_path]
+        ):
+            return True
+
+        cmd = " ".join(["sudo", "mount", "-o", "bind", source_path, dest_path])
+        output = "Command returned non-zero error code"
+        raise subprocess.CalledProcessError(returncode=1, cmd=cmd, output=output)
+
+
+class FakeFsUtil(filesystem.FsUtil):
+    def __init__(self):
+        self.path_error = {}
+
+    def mkdir_p(self, path: str):
+        if path not in self.path_error:
+            return path
+        error = self.path_error[path] or "[Errno 2] no such file or directory (faked)"
+        raise OSError(error)
