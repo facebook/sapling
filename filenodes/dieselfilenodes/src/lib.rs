@@ -24,7 +24,7 @@ extern crate mononoke_types;
 extern crate stats;
 extern crate tokio;
 
-use db::ConnectionParams;
+use db::{get_connection_params, ConnectionParams, InstanceRequirement, ProxyRequirement};
 use diesel::{insert_or_ignore_into, Connection, SqliteConnection};
 use diesel::backend::Backend;
 use diesel::connection::SimpleConnection;
@@ -53,6 +53,7 @@ pub const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
 define_stats! {
     prefix = "mononoke.filenodes";
     gets: timeseries(RATE, SUM),
+    gets_master: timeseries(RATE, SUM),
     range_gets: timeseries(RATE, SUM),
     adds: timeseries(RATE, SUM),
 }
@@ -113,7 +114,7 @@ impl SqliteFilenodes {
         Ok(self.connection.lock().expect("lock poisoned"))
     }
 
-    pub fn get_write_conn(&self) -> ::std::result::Result<MutexGuard<SqliteConnection>, !> {
+    pub fn get_master_conn(&self) -> ::std::result::Result<MutexGuard<SqliteConnection>, !> {
         Ok(self.connection.lock().expect("lock poisoned"))
     }
 }
@@ -121,24 +122,52 @@ impl SqliteFilenodes {
 #[derive(Clone)]
 pub struct MysqlFilenodes {
     pool: Pool<ConnectionManager<MysqlConnection>>,
-    write_pool: Pool<ConnectionManager<MysqlConnection>>,
+    master_pool: Pool<ConnectionManager<MysqlConnection>>,
     insert_chunk_size: usize,
 }
 
 impl MysqlFilenodes {
-    pub fn open(params: &ConnectionParams, insert_chunk_size: usize) -> Result<Self> {
-        let url = params.to_diesel_url()?;
+    pub fn open(db_address: &str, insert_chunk_size: usize) -> Result<Self> {
+        let local_connection_params = get_connection_params(
+            db_address.to_string(),
+            InstanceRequirement::Closest,
+            None,
+            Some(ProxyRequirement::Forbidden),
+        )?;
+
+        let master_connection_params = get_connection_params(
+            db_address.to_string(),
+            InstanceRequirement::Master,
+            None,
+            Some(ProxyRequirement::Forbidden),
+        )?;
+
+        Self::open_with_params(
+            &local_connection_params,
+            &master_connection_params,
+            insert_chunk_size,
+        )
+    }
+
+    fn open_with_params(
+        local_connection_params: &ConnectionParams,
+        master_connection_params: &ConnectionParams,
+        insert_chunk_size: usize,
+    ) -> Result<Self> {
+        let local_url = local_connection_params.to_diesel_url()?;
+        let master_url = master_connection_params.to_diesel_url()?;
+
         let pool = Pool::builder()
             .max_size(10)
             .min_idle(Some(1))
-            .build(ConnectionManager::new(url.clone()))?;
-        let write_pool = Pool::builder()
+            .build(ConnectionManager::new(local_url.clone()))?;
+        let master_pool = Pool::builder()
             .max_size(1)
             .min_idle(Some(1))
-            .build(ConnectionManager::new(url.clone()))?;
+            .build(ConnectionManager::new(master_url.clone()))?;
         Ok(Self {
             pool,
-            write_pool,
+            master_pool,
             insert_chunk_size,
         })
     }
@@ -149,10 +178,10 @@ impl MysqlFilenodes {
     }
 
     fn create(params: &ConnectionParams) -> Result<Self> {
-        let filenodes = Self::open(params, DEFAULT_INSERT_CHUNK_SIZE)?;
+        let filenodes = Self::open_with_params(params, params, DEFAULT_INSERT_CHUNK_SIZE)?;
 
         let up_query = include_str!("../schemas/mysql-filenodes.sql");
-        filenodes.pool.get()?.batch_execute(&up_query)?;
+        filenodes.master_pool.get()?.batch_execute(&up_query)?;
 
         Ok(filenodes)
     }
@@ -161,8 +190,8 @@ impl MysqlFilenodes {
         self.pool.get().map_err(Error::from)
     }
 
-    fn get_write_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
-        self.write_pool.get().map_err(Error::from)
+    fn get_master_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
+        self.master_pool.get().map_err(Error::from)
     }
 }
 
@@ -181,7 +210,7 @@ macro_rules! impl_filenodes {
                 asynchronize(move || {
                     filenodes.chunks(insert_chunk_size).and_then(move |filenodes| {
                         STATS::adds.add_value(filenodes.len() as i64);
-                        let connection = db.get_write_conn()?;
+                        let connection = db.get_master_conn()?;
                         Self::do_insert(&connection, &filenodes, &repo_id)
                     })
                     .for_each(|()| Ok(()))
@@ -202,24 +231,16 @@ macro_rules! impl_filenodes {
                 let repo_id = *repo_id;
 
                 asynchronize(move || {
-                    let connection = db.get_conn()?;
-                    let query = single_filenode_query(&repo_id, &filenode, &path);
-                    let filenode_row = query.first::<models::FilenodeRow>(&*connection)
-                        .optional()
-                        .context(ErrorKind::FailFetchFilenode(filenode.clone(), path.clone()))?;
-                    match filenode_row {
-                        Some(filenode_row) => {
-                            let filenodeinfo = Self::convert_to_filenode_info(
-                                &connection,
-                                &path,
-                                &repo_id,
-                                &filenode_row,
-                            )?;
-                            Ok(Some(filenodeinfo))
-                        }
-                        None => {
-                            Ok(None)
-                        },
+                    let filenode_info = {
+                        let conn = db.get_conn()?;
+                        Self::actual_get(&*conn, &path, &filenode, &repo_id)?
+                    };
+                    if filenode_info.is_none() {
+                        STATS::gets_master.add_value(1);
+                        let conn = db.get_master_conn()?;
+                        Self::actual_get(&*conn, &path, &filenode, &repo_id)
+                    } else {
+                        Ok(filenode_info)
                     }
                 })
             }
@@ -252,6 +273,33 @@ macro_rules! impl_filenodes {
         }
 
         impl $struct {
+            fn actual_get(
+                conn: &$connection,
+                path: &RepoPath,
+                filenode: &HgFileNodeId,
+                repo_id: &RepositoryId,
+            ) -> Result<Option<FilenodeInfo>> {
+                let query = single_filenode_query(&repo_id, &filenode, &path);
+                let filenode_row = query.first::<models::FilenodeRow>(conn)
+                    .optional()
+                    .context(ErrorKind::FailFetchFilenode(filenode.clone(), path.clone()))?;
+
+                match filenode_row {
+                    Some(filenode_row) => {
+                        let filenodeinfo = Self::convert_to_filenode_info(
+                            conn,
+                            &path,
+                            &repo_id,
+                            &filenode_row,
+                        )?;
+                        Ok(Some(filenodeinfo))
+                    }
+                    None => {
+                        Ok(None)
+                    },
+                }
+            }
+
             fn do_insert(
                 connection: &$connection,
                 filenodes: &Vec<FilenodeInfo>,

@@ -79,14 +79,8 @@ fn main() {
     let mut filenode_hash = HgFileNodeId::new(filenode_hash);
 
     info!(root_log, "Connecting to mysql...");
-    let connection_params = db::get_connection_params(
-        xdb_tier,
-        db::InstanceRequirement::ReplicaOnly,
-        None,
-        Some(db::ProxyRequirement::Forbidden),
-    ).expect("cannot create connection params");
-    let filenodes = MysqlFilenodes::open(&connection_params, DEFAULT_INSERT_CHUNK_SIZE)
-        .expect("cannot connect to mysql");
+    let filenodes =
+        MysqlFilenodes::open(xdb_tier, DEFAULT_INSERT_CHUNK_SIZE).expect("cannot connect to mysql");
     info!(root_log, "Connected");
 
     info!(root_log, "Fetching parents...");

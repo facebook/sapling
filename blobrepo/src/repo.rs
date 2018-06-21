@@ -256,7 +256,7 @@ impl BlobRepo {
         let blobstore = MemcacheBlobstore::new(blobstore, "manifold", bucket.as_ref())?;
         let blobstore = MemoizedBlobstore::new(blobstore, usize::MAX, blobstore_cache_size);
 
-        let filenodes = MysqlFilenodes::open(&connection_params, DEFAULT_INSERT_CHUNK_SIZE)
+        let filenodes = MysqlFilenodes::open(db_address, DEFAULT_INSERT_CHUNK_SIZE)
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let filenodes = CachingFilenodes::new(Arc::new(filenodes), filenodes_cache_size);
 
