@@ -86,12 +86,16 @@ impl UploadableHgBlob for TreemanifestEntry {
     //   implements Error.
     type Value = (
         ManifestContent,
+        Option<HgNodeHash>,
+        Option<HgNodeHash>,
         Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>,
     );
 
     fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let manifest_content = self.manifest_content;
+        let p1 = self.p1;
+        let p2 = self.p2;
         // The root tree manifest is expected to have the wrong hash in hybrid mode.
         // XXX possibly remove this once hybrid mode is gone
         let upload_node_id = if node_key.path.is_root() {
@@ -111,6 +115,8 @@ impl UploadableHgBlob for TreemanifestEntry {
                 node_key,
                 (
                     manifest_content,
+                    p1,
+                    p2,
                     value.map_err(Error::compat).boxify().shared(),
                 ),
             )

@@ -19,7 +19,7 @@ use futures::future::{self, err, ok, Shared};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial::changeset::RevlogChangeset;
-use mercurial::manifest::ManifestContent;
+use mercurial::manifest::{Details, ManifestContent};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
                       NULL_HASH};
@@ -621,13 +621,15 @@ impl NewBlobs {
             hash: manifest_root_id.clone().into_nodehash(),
         };
 
-        let &(ref manifest_content, ref manifest_root) = manifests
+        let &(ref manifest_content, ref p1, ref p2, ref manifest_root) = manifests
             .get(&root_key)
             .ok_or_else(|| format_err!("Missing root tree manifest"))?;
 
         let (entries, content_blobs, counters) = Self::walk_helper(
             &RepoPath::root(),
             &manifest_content,
+            get_manifest_parent_content(manifests, RepoPath::root(), p1.clone()),
+            get_manifest_parent_content(manifests, RepoPath::root(), p2.clone()),
             manifests,
             filelogs,
             content_blobs,
@@ -659,6 +661,8 @@ impl NewBlobs {
     fn walk_helper(
         path_taken: &RepoPath,
         manifest_content: &ManifestContent,
+        p1: Option<&ManifestContent>,
+        p2: Option<&ManifestContent>,
         manifests: &Manifests,
         filelogs: &Filelogs,
         content_blobs: &ContentBlobs,
@@ -679,6 +683,14 @@ impl NewBlobs {
         };
 
         for (name, details) in manifest_content.files.iter() {
+            if is_entry_present_in_parent(p1, name, details)
+                || is_entry_present_in_parent(p2, name, details)
+            {
+                // If one of the parents contains exactly the same version of entry then either that
+                // file or manifest subtree is not new
+                continue;
+            }
+
             let nodehash = details.entryid().clone().into_nodehash();
             let next_path = MPath::join_opt(path_taken.mpath(), name);
             let next_path = match next_path {
@@ -692,7 +704,9 @@ impl NewBlobs {
                     hash: nodehash,
                 };
 
-                if let Some(&(ref manifest_content, ref blobfuture)) = manifests.get(&key) {
+                if let Some(&(ref manifest_content, ref p1, ref p2, ref blobfuture)) =
+                    manifests.get(&key)
+                {
                     counters.manifests_count += 1;
                     entries.push(
                         blobfuture
@@ -705,6 +719,8 @@ impl NewBlobs {
                         Self::walk_helper(
                             &key.path,
                             manifest_content,
+                            get_manifest_parent_content(manifests, key.path.clone(), p1.clone()),
+                            get_manifest_parent_content(manifests, key.path.clone(), p2.clone()),
                             manifests,
                             filelogs,
                             content_blobs,
@@ -739,6 +755,26 @@ impl NewBlobs {
         }
 
         Ok((entries, cbinfos, counters))
+    }
+}
+
+fn get_manifest_parent_content(
+    manifests: &Manifests,
+    path: RepoPath,
+    p: Option<HgNodeHash>,
+) -> Option<&ManifestContent> {
+    p.and_then(|p| manifests.get(&HgNodeKey { path, hash: p }))
+        .map(|&(ref content, ..)| content)
+}
+
+fn is_entry_present_in_parent(
+    p: Option<&ManifestContent>,
+    name: &MPath,
+    details: &Details,
+) -> bool {
+    match p.and_then(|p| p.files.get(name)) {
+        None => false,
+        Some(parent_details) => parent_details == details,
     }
 }
 
