@@ -1036,6 +1036,22 @@ class Test(unittest.TestCase):
                     argv, env=envb, stdin=None, stdout=f, stderr=f
                 )
 
+            # Wait for watchman socket to become available
+            argv = [
+                self._watchman,
+                "--no-spawn",
+                "--no-local",
+                "--sockname",
+                sockfile,
+                "version",
+            ]
+            try:
+                # The watchman CLI can wait for a short time if sockfile
+                # is not ready.
+                subprocess.check_output(argv, env=envb)
+            except Exception:
+                raise RuntimeError("timed out waiting for watchman")
+
     def run(self, result):
         """Run this test and report results against a TestResult instance."""
         # This function is extremely similar to unittest.TestCase.run(). Once
