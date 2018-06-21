@@ -779,7 +779,7 @@ class RestartCmd(Subcmd):
         daemon.start_daemon(self.config, takeover=True)
 
 
-@subcmd("rage", "Prints diagnostic information about eden")
+@subcmd("rage", "Gather diagnostic information about eden")
 class RageCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
