@@ -39,6 +39,7 @@ extern crate slog_scuba;
 extern crate slog_stats;
 extern crate slog_term;
 
+extern crate dns_lookup;
 extern crate lz4;
 #[macro_use]
 extern crate maplit;
@@ -73,8 +74,10 @@ mod monitoring;
 mod repo;
 
 use std::collections::HashMap;
+use std::env::var;
 use std::io;
 use std::mem;
+use std::net::SocketAddr;
 use std::ops::DerefMut;
 use std::panic;
 use std::path::PathBuf;
@@ -91,6 +94,8 @@ use futures_ext::FutureExt;
 use futures_ext::asynchronize;
 
 use clap::{App, ArgMatches};
+
+use dns_lookup::getnameinfo;
 
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
@@ -288,7 +293,7 @@ where
 fn connection_acceptor(
     sockname: &str,
     root_log: Logger,
-    repo_senders: HashMap<String, mpsc::Sender<Stdio>>,
+    repo_senders: HashMap<String, mpsc::Sender<(Stdio, SocketAddr)>>,
 ) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
     let remote = core.remote();
@@ -298,30 +303,34 @@ fn connection_acceptor(
         .and_then({
             let root_log = root_log.clone();
             move |sock| {
-                match sock.peer_addr() {
-                    Ok(addr) => info!(root_log, "New connection from {:?}", addr),
+                let addr = match sock.peer_addr() {
+                    Ok(addr) => addr,
                     Err(err) => {
-                        error!(root_log, "Failed to get peer addr"; SlogKVError(Error::from(err)))
+                        crit!(root_log, "Failed to get peer addr"; SlogKVError(Error::from(err)));
+                        return Ok(None).into_future().boxify();
                     }
                 };
-                ssh_server_mux(sock, remote.clone()).map(Some).or_else({
-                    let root_log = root_log.clone();
-                    move |err| {
-                        error!(root_log, "Error while reading preamble: {}", err);
-                        Ok(None)
-                    }
-                })
+                ssh_server_mux(sock, remote.clone())
+                    .map(move |stdio| Some((stdio, addr)))
+                    .or_else({
+                        let root_log = root_log.clone();
+                        move |err| {
+                            error!(root_log, "Error while reading preamble: {}", err);
+                            Ok(None)
+                        }
+                    })
+                    .boxify()
             }
         })
         .for_each(move |maybe_stdio| {
             if maybe_stdio.is_none() {
                 return Ok(()).into_future().boxify();
             }
-            let stdio = maybe_stdio.unwrap();
+            let (stdio, addr) = maybe_stdio.unwrap();
             match repo_senders.get(&stdio.preamble.reponame) {
                 Some(sender) => sender
                     .clone()
-                    .send(stdio)
+                    .send((stdio, addr))
                     .map(|_| ())
                     .or_else({
                         let root_log = root_log.clone();
@@ -354,7 +363,7 @@ fn repo_listen(
     config: RepoConfig,
     root_log: Logger,
     ready_handle: ReadyHandle,
-    input_stream: mpsc::Receiver<Stdio>,
+    input_stream: mpsc::Receiver<(Stdio, SocketAddr)>,
 ) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
     let scuba_table = config.scuba_table.clone();
@@ -382,7 +391,7 @@ fn repo_listen(
             });
     let initial_warmup = ready_handle.wait_for(initial_warmup);
 
-    let server = input_stream.for_each(move |stdio| {
+    let server = input_stream.for_each(move |(stdio, addr)| {
         // Have a connection. Extract std{in,out,err} streams for socket
         let Stdio {
             stdin,
@@ -446,6 +455,7 @@ fn repo_listen(
         let request_future = match scuba_table {
             None => asynchronize(move || endres).map_err(|_: Error| ()).boxify(),
             Some(ref scuba_table) => {
+                let conn_log = conn_log.clone();
                 let scuba_table = scuba_table.clone();
                 let repo_path = repo.path().clone();
                 let wireproto_calls = wireproto_calls.clone();
@@ -464,6 +474,43 @@ fn repo_listen(
                         sample.add("time_elapsed_ms", elapsed_ms);
                         sample.add("wireproto_commands", wireproto_calls);
                         sample.add("repo", repo_path);
+
+                        match getnameinfo(&addr, 0) {
+                            Ok((hostname, _)) => sample.add("hostname", hostname),
+                            Err(err) => {
+                                warn!(
+                                    conn_log,
+                                    "failed to lookup hostname for address {}, reason: {:?}",
+                                    addr,
+                                    err
+                                );
+                            }
+                        };
+
+                        if let Ok(smc_tier) = var("SMC_TIERS") {
+                            sample.add("server_tier", smc_tier);
+                        }
+
+                        if let (Ok(tw_cluster), Ok(tw_user), Ok(tw_name)) = (
+                            var("TW_JOB_CLUSTER"),
+                            var("TW_JOB_USER"),
+                            var("TW_JOB_NAME"),
+                        ) {
+                            sample.add(
+                                "tw_handle",
+                                format!("{}/{}/{}", tw_cluster, tw_user, tw_name),
+                            );
+                        }
+
+                        if let Ok(tw_task_id) = var("TW_TASK_ID") {
+                            sample.add("tw_task_id", tw_task_id);
+                        }
+
+                        if let Ok(whoami) = fbwhoami::FbWhoAmI::new() {
+                            if let Some(hostname) = whoami.get_name() {
+                                sample.add("server_hostname", hostname);
+                            }
+                        }
 
                         scuba_client.log(&sample);
                     })
