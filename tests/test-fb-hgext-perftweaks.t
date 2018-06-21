@@ -18,11 +18,13 @@ Test disabling the tag cache
   $ hg tags
   tip                                1:2cc13e58bcd8
   foo                                0:be5a2292aa62
+#if no-fsmonitor
   $ hg blackbox | grep tag
   *> tags (glob)
   *> writing * bytes to cache/hgtagsfnodes1 (glob)
   *> writing .hg/cache/tags2-visible with 1 tags (glob)
   *> tags exited 0 after * seconds (glob)
+#endif
 
   $ rm -rf .hg/cache .hg/blackbox.log
   $ hg tags --config perftweaks.disabletags=True
@@ -84,21 +86,25 @@ Test disabling the branchcache
   > EOF
   $ echo a > a
   $ hg commit -Aqm a
+#if no-fsmonitor
   $ hg blackbox
   *> commit -Aqm a (glob)
   *> updated served branch cache in * seconds (glob)
   *> wrote served branch cache with 1 labels and 1 nodes (glob)
   *> commit -Aqm a exited 0 after * seconds (glob)
   *> blackbox (glob)
+#endif
   $ hg strip -q -r . -k
   $ rm .hg/blackbox.log
   $ rm -rf .hg/cache
   $ hg commit -Aqm a --config perftweaks.disablebranchcache=True --config perftweaks.disablebranchcache2=True
+#if no-fsmonitor
   $ hg blackbox
   *> commit -Aqm a* (glob)
   *> perftweaks updated served branch cache (glob)
   *> commit -Aqm a * exited 0 after * seconds (glob)
   *> blackbox (glob)
+#endif
 
   $ cd ..
 

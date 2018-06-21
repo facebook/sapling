@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 setup
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

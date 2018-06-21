@@ -49,6 +49,7 @@ test updating a symlink
   $ hg qpush --debug
   applying updatelink
   patching file a
+  fsmonitor: fallback to core status, full rewalk requested (fsmonitor !)
   committing files:
   a
   committing manifest

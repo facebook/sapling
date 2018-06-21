@@ -1,3 +1,7 @@
+Fsmonitor makes the size numbers less predicatable.
+
+#require no-fsmonitor
+
   $ setconfig format.dirstate=2
 
 Prepare: fake uuid.uuid4 so it becomes predictable

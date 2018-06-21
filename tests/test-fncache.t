@@ -92,8 +92,8 @@ Non store repo:
   .hg/data/tst.d.hg
   .hg/data/tst.d.hg/foo.i
   .hg/dirstate
-  .hg/fsmonitor.state (fsmonitor !)
   .hg/dirstate.tree.* (glob)
+  .hg/fsmonitor.state (fsmonitor !)
   .hg/last-message.txt
   .hg/phaseroots
   .hg/requires
@@ -123,8 +123,8 @@ Non fncache repo:
   .hg/cache/rbc-names-v1
   .hg/cache/rbc-revs-v1
   .hg/dirstate
-  .hg/fsmonitor.state (fsmonitor !)
   .hg/dirstate.tree.* (glob)
+  .hg/fsmonitor.state (fsmonitor !)
   .hg/last-message.txt
   .hg/requires
   .hg/store

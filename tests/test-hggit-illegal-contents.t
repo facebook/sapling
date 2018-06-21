@@ -12,6 +12,9 @@ Load commonly used test logic
   > echo pwned
   > EOF
 
+#if fsmonitor
+  $ hg addremove
+#else
   $ hg addremove
   adding .git/hooks/post-update
   $ hg ci -m "we should refuse to export this"
@@ -20,6 +23,7 @@ Load commonly used test logic
   abort: Refusing to export likely-dangerous path '.git/hooks/post-update'
   (If you need to continue, read about CVE-2014-9390 and then set '[git] blockdotgit = false' in your hgrc.)
   [255]
+#endif
   $ cd ..
 
   $ rm -rf hg

@@ -12,7 +12,7 @@
   > A   # A/A=1\n
   > EOS
 
-  $ enable blackbox fsmonitor rebase
+  $ enable blackbox fsmonitor rebase hgevents
   $ setconfig blackbox.track=merge-resolve,watchman-command
 
   $ hg rebase -s B -d C --tool=false
