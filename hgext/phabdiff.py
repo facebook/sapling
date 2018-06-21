@@ -7,7 +7,7 @@
 
 import re
 
-from mercurial import registrar, templatekw
+from mercurial import cmdutil, registrar, templatekw
 from mercurial.node import hex
 
 from .extlib.phabricator import diffprops
@@ -45,11 +45,18 @@ def singlepublicbase(repo, ctx, templ, **args):
 
 
 @templatekeyword("reviewers")
-def showreviewers(repo, **args):
+def showreviewers(repo, ctx, templ, **args):
     """String. Return the phabricator diff id for a given hg rev."""
-    reviewers = []
-    descr = args["ctx"].description()
-    match = re.search("Reviewers:(.*)", descr)
-    if match:
-        reviewers = filter(None, re.split("[\s,]", match.group(1)))
-    return templatekw.showlist("reviewer", reviewers, args)
+    if ctx.node() is None:
+        # working copy - use committemplate.reviewers, which can be found at
+        # templ.t.cache.
+        props = templ.cache
+        reviewersconfig = props.get("reviewers", "")
+        return cmdutil.rendertemplate(repo.ui, reviewersconfig, props)
+    else:
+        reviewers = []
+        descr = ctx.description()
+        match = re.search("Reviewers:(.*)", descr)
+        if match:
+            reviewers = filter(None, re.split("[\s,]", match.group(1)))
+        return templatekw.showlist("reviewer", reviewers, args)

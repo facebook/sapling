@@ -59,6 +59,12 @@ Test reviewers label
   $ hg log -r . --template "{join(reviewers, ', ')}\n"
   xlwang, quark
 
+Test reviewers for working copy
+
+  $ enable debugcommitmessage
+  $ hg debugcommitmessage --config 'committemplate.changeset={reviewers}' --config 'committemplate.reviewers=foo, {x}' --config 'committemplate.x=bar'
+  foo, bar (no-eol)
+
 Make sure the template keywords are documented correctly
 
   $ hg help templates | egrep 'phabdiff|tasks'
