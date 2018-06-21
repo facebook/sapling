@@ -41,7 +41,7 @@ use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use diesel::sql_types::HasSqlType;
 use failure::ResultExt;
 
-use db::ConnectionParams;
+use db::{get_connection_params, ConnectionParams, InstanceRequirement, ProxyRequirement};
 use futures::Future;
 use futures_ext::{asynchronize, BoxFuture, FutureExt};
 use mercurial_types::{HgChangesetId, RepositoryId};
@@ -60,6 +60,7 @@ use schema::{changesets, csparents};
 define_stats! {
     prefix = "mononoke.changesets";
     gets: timeseries(RATE, SUM),
+    gets_master: timeseries(RATE, SUM),
     adds: timeseries(RATE, SUM),
 }
 
@@ -214,22 +215,53 @@ impl SqliteChangesets {
     pub fn get_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
         Ok(self.connection.lock().expect("lock poisoned"))
     }
+
+    pub fn get_master_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
+        Ok(self.connection.lock().expect("lock poisoned"))
+    }
 }
 
 #[derive(Clone)]
 pub struct MysqlChangesets {
     pool: Pool<ConnectionManager<MysqlConnection>>,
+    master_pool: Pool<ConnectionManager<MysqlConnection>>,
 }
 
 impl MysqlChangesets {
-    pub fn open(params: &ConnectionParams) -> Result<Self> {
-        let url = params.to_diesel_url()?;
-        let manager = ConnectionManager::new(url);
+    pub fn open(db_address: &str) -> Result<Self> {
+        let local_connection_params = get_connection_params(
+            db_address.to_string(),
+            InstanceRequirement::Closest,
+            None,
+            Some(ProxyRequirement::Forbidden),
+        )?;
+
+        let master_connection_params = get_connection_params(
+            db_address.to_string(),
+            InstanceRequirement::Master,
+            None,
+            Some(ProxyRequirement::Forbidden),
+        )?;
+
+        Self::open_with_params(&local_connection_params, &master_connection_params)
+    }
+
+    fn open_with_params(
+        local_connection_params: &ConnectionParams,
+        master_connection_params: &ConnectionParams,
+    ) -> Result<Self> {
+        let local_url = local_connection_params.to_diesel_url()?;
+        let master_url = master_connection_params.to_diesel_url()?;
+
         let pool = Pool::builder()
             .max_size(10)
             .min_idle(Some(1))
-            .build(manager)?;
-        Ok(Self { pool })
+            .build(ConnectionManager::new(local_url.clone()))?;
+        let master_pool = Pool::builder()
+            .max_size(1)
+            .min_idle(Some(1))
+            .build(ConnectionManager::new(master_url.clone()))?;
+        Ok(Self { pool, master_pool })
     }
 
     pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
@@ -238,10 +270,10 @@ impl MysqlChangesets {
     }
 
     fn create(params: &ConnectionParams) -> Result<Self> {
-        let changesets = Self::open(params)?;
+        let changesets = Self::open_with_params(params, params)?;
 
         let up_query = include_str!("../schemas/mysql-changesets.sql");
-        changesets.pool.get()?.batch_execute(&up_query)?;
+        changesets.master_pool.get()?.batch_execute(&up_query)?;
 
         Ok(changesets)
     }
@@ -249,13 +281,17 @@ impl MysqlChangesets {
     fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
         self.pool.get().map_err(Error::from)
     }
+
+    fn get_master_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
+        self.master_pool.get().map_err(Error::from)
+    }
 }
 
 /// Using a macro here is unfortunate, but it appears to be the only way to share this code
 /// between SQLite and MySQL.
 /// See https://github.com/diesel-rs/diesel/issues/882#issuecomment-300257476
 macro_rules! impl_changesets {
-    ($struct: ty) => {
+    ($struct: ty, $connection: ty) => {
         impl Changesets for $struct {
             /// Retrieve the changeset specified by this commit.
             fn get(
@@ -267,39 +303,18 @@ macro_rules! impl_changesets {
                 let db = self.clone();
 
                 asynchronize(move || {
-                    let query = changeset_query(repo_id, cs_id);
-                    let connection = db.get_conn()?;
+                    let changeset = {
+                        let connection = db.get_conn()?;
+                        Self::actual_get(&connection, repo_id, cs_id)?
+                    };
 
-                    let changeset_row = query.first::<ChangesetRow>(&*connection).optional();
-                    // This code is written in this style to allow easy porting to futures.
-                    changeset_row.map_err(failure::Error::from).and_then(|row| {
-                        match row {
-                            None => Ok(None),
-                            Some(row) => {
-                                // Diesel can't express unsigned ints, so convert manually.
-                                // TODO: (rain1) T26215455 hide i64/u64 Diesel conversions behind an
-                                // interface
-                                let gen = u64::try_from(row.gen)
-                                    .context(ErrorKind::InvalidStoredData)?;
-
-                                let parent_query = csparents::table
-                                    .filter(csparents::cs_id.eq(row.id))
-                                    .order(csparents::seq.asc())
-                                    .inner_join(changesets::table);
-                                let parent_rows = parent_query
-                                    .load::<(ChangesetParentRow, ChangesetRow)>(&*connection);
-
-                                parent_rows.map(|parents| {
-                                    Some(ChangesetEntry {
-                                        repo_id: row.repo_id,
-                                        cs_id: row.cs_id,
-                                        parents: parents.into_iter().map(|p| p.1.cs_id).collect(),
-                                        gen,
-                                    })
-                                }).map_err(failure::Error::from)
-                            }
-                        }
-                    })
+                    if changeset.is_none() {
+                        STATS::gets_master.add_value(1);
+                        let connection = db.get_master_conn()?;
+                        Self::actual_get(&connection, repo_id, cs_id)
+                    } else {
+                        Ok(changeset)
+                    }
                 })
             }
 
@@ -314,7 +329,7 @@ macro_rules! impl_changesets {
                         .filter(changesets::repo_id.eq(cs.repo_id))
                         .filter(changesets::cs_id.eq_any(&cs.parents));
 
-                    let connection = db.get_conn()?;
+                    let connection = db.get_master_conn()?;
 
                     // TODO: always hit master for this query?
                     let parent_rows = parent_query.load::<ChangesetRow>(&*connection);
@@ -421,11 +436,53 @@ macro_rules! impl_changesets {
                 })
             }
         }
+
+
+        impl $struct {
+            fn actual_get(
+                connection: &$connection,
+                repo_id: RepositoryId,
+                cs_id: HgChangesetId,
+            ) -> Result<Option<ChangesetEntry>> {
+                let query = changeset_query(repo_id, cs_id);
+
+                let changeset_row = query.first::<ChangesetRow>(connection).optional();
+                // This code is written in this style to allow easy porting to futures.
+                changeset_row.map_err(failure::Error::from).and_then(|row| {
+                    match row {
+                        None => Ok(None),
+                        Some(row) => {
+                            // Diesel can't express unsigned ints, so convert manually.
+                            // TODO: (rain1) T26215455 hide i64/u64 Diesel conversions behind an
+                            // interface
+                            let gen = u64::try_from(row.gen)
+                                .context(ErrorKind::InvalidStoredData)?;
+
+                            let parent_query = csparents::table
+                                .filter(csparents::cs_id.eq(row.id))
+                                .order(csparents::seq.asc())
+                                .inner_join(changesets::table);
+                            let parent_rows = parent_query
+                                .load::<(ChangesetParentRow, ChangesetRow)>(connection);
+
+                            parent_rows.map(|parents| {
+                                Some(ChangesetEntry {
+                                    repo_id: row.repo_id,
+                                    cs_id: row.cs_id,
+                                    parents: parents.into_iter().map(|p| p.1.cs_id).collect(),
+                                    gen,
+                                })
+                            }).map_err(failure::Error::from)
+                        }
+                    }
+                })
+            }
+        }
     }
 }
 
-impl_changesets!(MysqlChangesets);
-impl_changesets!(SqliteChangesets);
+impl_changesets!(MysqlChangesets, MysqlConnection);
+impl_changesets!(SqliteChangesets, SqliteConnection);
 
 fn changeset_query<DB>(
     repo_id: RepositoryId,

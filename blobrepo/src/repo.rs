@@ -260,7 +260,7 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let filenodes = CachingFilenodes::new(Arc::new(filenodes), filenodes_cache_size);
 
-        let changesets = MysqlChangesets::open(&connection_params)
+        let changesets = MysqlChangesets::open(db_address)
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
         let changesets = CachingChangests::new(Arc::new(changesets), changesets_cache_size);
