@@ -80,51 +80,6 @@ def do_stats_general(
             )
 
 
-MemoryMapping = Dict[bytes, bytes]
-
-
-# Returns a list of all mappings
-def parse_smaps(smaps: bytes) -> List[MemoryMapping]:
-    output: List[MemoryMapping] = []
-    current: Optional[MemoryMapping] = None
-    for line in smaps.splitlines():
-        if b"-" in line:  # blech
-            if current is not None:
-                output.append(current)
-            current = {}
-        else:
-            if current is None:
-                log.warning("first line should be range")
-                continue
-            split = line.split(b":")
-            if len(split) != 2:
-                log.warning("line not key: value")
-                continue
-            key, value = line.split(b":")
-            current[key.strip()] = value.strip()
-    if current is not None:
-        output.append(current)
-    return output
-
-
-def total_private_dirty(maps: List[MemoryMapping]) -> Optional[int]:
-    total = 0
-    for mapping in maps:
-        try:
-            private_dirty = mapping[b"Private_Dirty"]
-        except KeyError:
-            pass
-        else:
-            if not private_dirty.endswith(b" kB"):
-                log.warning(
-                    "value does not end with kB: %s",
-                    private_dirty.decode(errors="backslashreplace"),
-                )
-                return None
-            total += int(private_dirty[:-3]) * 1024
-    return total
-
-
 @stats_cmd("memory", "Show memory statistics for Eden")
 class MemoryCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
