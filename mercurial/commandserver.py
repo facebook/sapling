@@ -464,6 +464,16 @@ class unixforkingservice(object):
 
     def init(self):
         self._sock = socket.socket(socket.AF_UNIX)
+        try:
+            import fcntl
+
+            fcntl.FD_CLOEXEC
+        except (ImportError, AttributeError):
+            pass
+        else:
+            flags = fcntl.fcntl(self._sock.fileno(), fcntl.F_GETFD)
+            flags |= fcntl.FD_CLOEXEC
+            fcntl.fcntl(self._sock.fileno(), fcntl.F_SETFD, flags)
         self._servicehandler.bindsocket(self._sock, self.address)
         if util.safehasattr(util, "unblocksignal"):
             util.unblocksignal(signal.SIGCHLD)
