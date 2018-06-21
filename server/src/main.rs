@@ -35,7 +35,6 @@ extern crate slog;
 extern crate slog_glog_fmt;
 extern crate slog_kvfilter;
 extern crate slog_logview;
-extern crate slog_scuba;
 extern crate slog_stats;
 extern crate slog_term;
 

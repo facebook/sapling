@@ -20,6 +20,7 @@ use futures::stream::{self, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{Discard, Drain, Logger};
 use stats::Timeseries;
 use time_ext::DurationExt;
@@ -1059,18 +1060,22 @@ pub struct CreateChangeset {
 }
 
 impl CreateChangeset {
-    pub fn create(self, repo: &BlobRepo) -> ChangesetHandle {
+    pub fn create(self, repo: &BlobRepo, mut scuba_logger: ScubaSampleBuilder) -> ChangesetHandle {
         STATS::create_changeset.add_value(1);
-        let entry_processor = UploadEntries::new(repo.blobstore.clone(), repo.repoid.clone());
-        let (signal_parent_ready, can_be_parent) = oneshot::channel();
         // This is used for logging, so that we can tie up all our pieces without knowing about
         // the final commit hash
         let uuid = Uuid::new_v4();
+        scuba_logger.add("changeset_uuid", format!("{}", uuid));
+
+        let entry_processor = UploadEntries::new(
+            repo.blobstore.clone(),
+            repo.repoid.clone(),
+            scuba_logger.clone(),
+        );
+        let (signal_parent_ready, can_be_parent) = oneshot::channel();
         let expected_nodeid = self.expected_nodeid;
 
         let upload_entries = process_entries(
-            repo.logger.clone(),
-            uuid,
             repo.clone(),
             &entry_processor,
             self.root_manifest,
@@ -1078,18 +1083,17 @@ impl CreateChangeset {
         ).context("While processing entries");
 
         let parents_complete = extract_parents_complete(&self.p1, &self.p2);
-        let parents_data =
-            handle_parents(repo.logger.clone(), uuid, repo.clone(), self.p1, self.p2)
-                .context("While waiting for parents to upload data");
+        let parents_data = handle_parents(scuba_logger.clone(), repo.clone(), self.p1, self.p2)
+            .context("While waiting for parents to upload data");
         let changeset = {
-            let logger = repo.logger.clone();
+            let mut scuba_logger = scuba_logger.clone();
             upload_entries
                 .join(parents_data)
                 .from_err()
                 .and_then({
                     let filenodes = repo.filenodes.clone();
                     let blobstore = repo.blobstore.clone();
-                    let logger = repo.logger.clone();
+                    let mut scuba_logger = scuba_logger.clone();
                     let expected_files = self.expected_files;
                     let user = self.user;
                     let time = self.time;
@@ -1146,9 +1150,9 @@ impl CreateChangeset {
                                             }
                                         }
 
-                                        debug!(logger, "Changeset uuid to hash mapping";
-                                        "changeset_uuid" => format!("{}", uuid),
-                                        "changeset_id" => format!("{}", cs_id));
+                                        scuba_logger
+                                            .add("changeset_id", format!("{}", cs_id))
+                                            .log_with_msg("Changeset uuid to hash mapping");
 
                                         // NOTE(luk): an attempt was made in D8187210 to split the
                                         // upload_entries signal into upload_entries and
@@ -1185,7 +1189,9 @@ impl CreateChangeset {
                 })
                 .timed(move |stats, result| {
                     if result.is_ok() {
-                        log_cs_future_stats(&logger, "changeset_created", stats, uuid);
+                        scuba_logger
+                            .add_stats(&stats)
+                            .log_with_msg("Changeset created");
                     }
                     Ok(())
                 })
@@ -1194,10 +1200,12 @@ impl CreateChangeset {
         let parents_complete = parents_complete
             .context("While waiting for parents to complete")
             .timed({
-                let logger = repo.logger.clone();
+                let mut scuba_logger = scuba_logger.clone();
                 move |stats, result| {
                     if result.is_ok() {
-                        log_cs_future_stats(&logger, "parents_complete", stats, uuid);
+                        scuba_logger
+                            .add_stats(&stats)
+                            .log_with_msg("Parents completed");
                     }
                     Ok(())
                 }
@@ -1231,10 +1239,9 @@ impl CreateChangeset {
                 })
                 .map_err(|e| Error::from(e).compat())
                 .timed({
-                    let logger = repo.logger.clone();
                     move |stats, result| {
                         if result.is_ok() {
-                            log_cs_future_stats(&logger, "finished", stats, uuid);
+                            scuba_logger.add_stats(&stats).log_with_msg("Finished");
                         }
                         Ok(())
                     }

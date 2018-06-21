@@ -47,6 +47,7 @@ extern crate mercurial_types;
 extern crate mononoke_types;
 extern crate rocksblob;
 extern crate rocksdb;
+extern crate scuba_ext;
 extern crate time_ext;
 
 #[cfg(test)]

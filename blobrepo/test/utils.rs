@@ -13,6 +13,7 @@ use futures::executor::spawn;
 use futures::future::Future;
 use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
+use scuba_ext::ScubaSampleBuilder;
 
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgFileContents,
                UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
@@ -187,7 +188,7 @@ pub fn create_changeset_no_parents(
         extra: BTreeMap::new(),
         comments: "Test commit".into(),
     };
-    create_changeset.create(repo)
+    create_changeset.create(repo, ScubaSampleBuilder::with_discard())
 }
 
 pub fn create_changeset_one_parent(
@@ -208,7 +209,7 @@ pub fn create_changeset_one_parent(
         extra: BTreeMap::new(),
         comments: "Child commit".into(),
     };
-    create_changeset.create(repo)
+    create_changeset.create(repo, ScubaSampleBuilder::with_discard())
 }
 
 pub fn string_to_nodehash(hash: &str) -> HgNodeHash {

@@ -12,11 +12,8 @@ extern crate bytes;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
-#[macro_use]
-extern crate maplit;
 extern crate quickcheck;
-#[macro_use]
-extern crate slog;
+extern crate scuba_ext;
 
 extern crate blobrepo;
 extern crate blobstore;
@@ -37,7 +34,6 @@ use mercurial_types::{manifest, Changeset, Entry, FileType, HgChangesetId, HgEnt
                       HgManifestId, MPath, MPathElement, RepoPath};
 use mononoke_types::{ChangesetId, ContentId, FileContents, MononokeId};
 
-mod stats_units;
 #[macro_use]
 mod utils;
 

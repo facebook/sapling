@@ -393,6 +393,7 @@ impl Bundle2Resolver {
 
         fn upload_changeset(
             repo: Arc<BlobRepo>,
+            scuba_logger: ScubaSampleBuilder,
             node: HgNodeHash,
             revlog_cs: RevlogChangeset,
             mut uploaded_changesets: UploadedChangesets,
@@ -435,7 +436,7 @@ impl Bundle2Resolver {
                         extra: revlog_cs.extra().clone(),
                         comments: String::from_utf8(revlog_cs.comments().into())?,
                     };
-                    let scheduled_uploading = create_changeset.create(&repo);
+                    let scheduled_uploading = create_changeset.create(&repo, scuba_logger);
 
                     uploaded_changesets.insert(node, scheduled_uploading);
                     Ok(uploaded_changesets)
@@ -452,12 +453,14 @@ impl Bundle2Resolver {
         trace!(self.logger, "manifests: {:?}", manifests.keys());
         trace!(self.logger, "content blobs: {:?}", content_blobs.keys());
 
+        let scuba_logger = self.scuba_logger.clone();
         stream::iter_ok(changesets)
             .fold(
                 HashMap::new(),
                 move |uploaded_changesets, (node, revlog_cs)| {
                     upload_changeset(
                         repo.clone(),
+                        scuba_logger.clone(),
                         node.clone(),
                         revlog_cs,
                         uploaded_changesets,

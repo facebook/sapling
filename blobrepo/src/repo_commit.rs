@@ -14,11 +14,9 @@ use futures::future::{self, Future, Shared, SharedError, SharedItem};
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_stats::{Stats, Timed};
-use slog::Logger;
+use futures_stats::Timed;
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::Timeseries;
-use time_ext::DurationExt;
-use uuid::Uuid;
 
 use blobstore::Blobstore;
 use filenodes::{FilenodeInfo, Filenodes};
@@ -46,6 +44,8 @@ define_stats! {
     finalize_required_uploading: timeseries(RATE, AVG, SUM),
     finalize_parent: timeseries(RATE, AVG, SUM),
     finalize_uploaded: timeseries(RATE, AVG, SUM),
+    finalize_uploaded_filenodes: timeseries(RATE, AVG, SUM),
+    finalize_uploaded_manifests: timeseries(RATE, AVG, SUM),
     finalize_compute_copy_from_info: timeseries(RATE, SUM),
 }
 
@@ -132,12 +132,18 @@ struct UploadEntriesState {
 
 #[derive(Clone)]
 pub struct UploadEntries {
+    scuba_logger: ScubaSampleBuilder,
     inner: Arc<Mutex<UploadEntriesState>>,
 }
 
 impl UploadEntries {
-    pub fn new(blobstore: RepoBlobstore, repoid: RepositoryId) -> Self {
+    pub fn new(
+        blobstore: RepoBlobstore,
+        repoid: RepositoryId,
+        scuba_logger: ScubaSampleBuilder,
+    ) -> Self {
         Self {
+            scuba_logger,
             inner: Arc::new(Mutex::new(UploadEntriesState {
                 required_entries: HashMap::new(),
                 uploaded_entries: HashMap::new(),
@@ -146,6 +152,10 @@ impl UploadEntries {
                 repoid,
             })),
         }
+    }
+
+    fn scuba_logger(&self) -> ScubaSampleBuilder {
+        self.scuba_logger.clone()
     }
 
     /// Parse a manifest and record the referenced blobs so that we know whether or not we have
@@ -300,7 +310,17 @@ impl UploadEntries {
             STATS::finalize_required_found.add_value((required_len - checks.len()) as i64);
             STATS::finalize_required_uploading.add_value(checks.len() as i64);
 
-            future::join_all(checks).boxify()
+            future::join_all(checks).timed({
+                let mut scuba_logger = self.scuba_logger();
+                move |stats, result| {
+                    if result.is_ok() {
+                        scuba_logger
+                            .add_stats(&stats)
+                            .log_with_msg("Required checks");
+                    }
+                    Ok(())
+                }
+            })
         };
 
         let parent_checks = {
@@ -325,14 +345,38 @@ impl UploadEntries {
 
             STATS::finalize_parent.add_value(checks.len() as i64);
 
-            future::join_all(checks).boxify()
+            future::join_all(checks).timed({
+                let mut scuba_logger = self.scuba_logger();
+                move |stats, result| {
+                    if result.is_ok() {
+                        scuba_logger.add_stats(&stats).log_with_msg("Parent checks");
+                    }
+                    Ok(())
+                }
+            })
         };
 
         let filenodes = {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             let uploaded_entries = mem::replace(&mut inner.uploaded_entries, HashMap::new());
 
+            let uploaded_filenodes_cnt = uploaded_entries
+                .iter()
+                .filter(|&(ref path, _)| path.is_file())
+                .count();
+            let uploaded_manifests_cnt = uploaded_entries
+                .iter()
+                .filter(|&(ref path, _)| !path.is_file())
+                .count();
+
             STATS::finalize_uploaded.add_value(uploaded_entries.len() as i64);
+            STATS::finalize_uploaded_filenodes.add_value(uploaded_filenodes_cnt as i64);
+            STATS::finalize_uploaded_manifests.add_value(uploaded_manifests_cnt as i64);
+
+            self.scuba_logger()
+                .add("manifests_count", uploaded_manifests_cnt)
+                .add("filelogs_count", uploaded_filenodes_cnt)
+                .log_with_msg("Size of changeset");
 
             let filenodeinfos =
                 stream::futures_unordered(uploaded_entries.into_iter().map(|(path, blobentry)| {
@@ -351,7 +395,19 @@ impl UploadEntries {
                     })
                 })).boxify();
 
-            filenodes.add_filenodes(filenodeinfos, &inner.repoid)
+            filenodes
+                .add_filenodes(filenodeinfos, &inner.repoid)
+                .timed({
+                    let mut scuba_logger = self.scuba_logger();
+                    move |stats, result| {
+                        if result.is_ok() {
+                            scuba_logger
+                                .add_stats(&stats)
+                                .log_with_msg("Upload filenodes");
+                        }
+                        Ok(())
+                    }
+                })
         };
 
         parent_checks
@@ -466,8 +522,6 @@ fn mercurial_mpath_comparator(a: &MPath, b: &MPath) -> ::std::cmp::Ordering {
 }
 
 pub fn process_entries(
-    logger: Logger,
-    uuid: Uuid,
     repo: BlobRepo,
     entry_processor: &UploadEntries,
     root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
@@ -505,6 +559,7 @@ pub fn process_entries(
         .buffer_unordered(100)
         .for_each(|()| future::ok(()));
 
+    let mut scuba_logger = entry_processor.scuba_logger();
     root_manifest_fut
         .join(child_entries_fut)
         .and_then(move |(root_hash, ())| match root_hash {
@@ -520,22 +575,13 @@ pub fn process_entries(
         })
         .timed(move |stats, result| {
             if result.is_ok() {
-                log_cs_future_stats(&logger, "upload_entries", stats, uuid);
+                scuba_logger
+                    .add_stats(&stats)
+                    .log_with_msg("Upload entries");
             }
             Ok(())
         })
         .boxify()
-}
-
-pub fn log_cs_future_stats(logger: &Logger, phase: &str, stats: Stats, uuid: Uuid) {
-    let uuid = format!("{}", uuid);
-    debug!(logger, "Changeset creation";
-        "changeset_uuid" => uuid,
-        "phase" => String::from(phase),
-        "poll_count" => stats.poll_count,
-        "poll_time_us" => stats.poll_time.as_micros_unchecked(),
-        "completion_time_us" => stats.completion_time.as_micros_unchecked(),
-    );
 }
 
 pub fn extract_parents_complete(
@@ -557,8 +603,7 @@ pub fn extract_parents_complete(
 }
 
 pub fn handle_parents(
-    logger: Logger,
-    uuid: Uuid,
+    mut scuba_logger: ScubaSampleBuilder,
     repo: BlobRepo,
     p1: Option<ChangesetHandle>,
     p2: Option<ChangesetHandle>,
@@ -601,7 +646,9 @@ pub fn handle_parents(
         })
         .timed(move |stats, result| {
             if result.is_ok() {
-                log_cs_future_stats(&logger, "wait_for_parents_ready", stats, uuid);
+                scuba_logger
+                    .add_stats(&stats)
+                    .log_with_msg("Wait for parents ready");
             }
             Ok(())
         })

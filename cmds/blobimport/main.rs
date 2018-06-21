@@ -19,6 +19,7 @@ extern crate futures_cpupool;
 extern crate futures_ext;
 extern crate mercurial;
 extern crate mercurial_types;
+extern crate scuba_ext;
 #[macro_use]
 extern crate slog;
 extern crate slog_glog_fmt;

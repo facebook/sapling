@@ -17,6 +17,7 @@ use futures::future::{self, SharedItem};
 use futures::stream::{self, Stream};
 use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use scuba_ext::ScubaSampleBuilder;
 
 use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry,
                UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
@@ -327,7 +328,7 @@ pub fn upload_changesets<'a>(
                 comments: String::from_utf8(Vec::from(cs.comments()))
                     .expect(&format!("non-utf8 comments for {}", csid)),
             };
-            let cshandle = create_changeset.create(&blobrepo);
+            let cshandle = create_changeset.create(&blobrepo, ScubaSampleBuilder::with_discard());
             parent_changeset_handles.insert(csid, cshandle.clone());
             cshandle
                 .get_completed_changeset()
