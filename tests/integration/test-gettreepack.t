@@ -52,8 +52,8 @@ Make sure that cache is empty
   $ hgmn prefetch -r 0 -r1
   $ hgmn prefetch -r 2
   $ cat $TESTTMP/mononoke.out | grep 'Got request: Gettreepack'
-  * Got request: Gettreepack(GettreepackArgs { rootdir: b"", mfnodes: [HgNodeHash(Sha1(41b34f08c1356f6ad068e9ab9b43d984245111aa)), HgNodeHash(Sha1(eb79886383871977bccdb3000c275a279f0d4c99))], basemfnodes: [], directories: [] }), repo: $TESTTMP/repo (glob)
-  * Got request: Gettreepack(GettreepackArgs { rootdir: b"", mfnodes: [HgNodeHash(Sha1(7c9b4fd8b49377e2fead2e9610bb8db910a98c53))], basemfnodes: [HgNodeHash(Sha1(eb79886383871977bccdb3000c275a279f0d4c99))], directories: [] }), repo: $TESTTMP/repo (glob)
+  * Got request: Gettreepack(GettreepackArgs { rootdir: b"", mfnodes: [HgNodeHash(Sha1(41b34f08c1356f6ad068e9ab9b43d984245111aa)), HgNodeHash(Sha1(eb79886383871977bccdb3000c275a279f0d4c99))], basemfnodes: [], directories: [] }), session_uuid: *, repo: $TESTTMP/repo (glob)
+  * Got request: Gettreepack(GettreepackArgs { rootdir: b"", mfnodes: [HgNodeHash(Sha1(7c9b4fd8b49377e2fead2e9610bb8db910a98c53))], basemfnodes: [HgNodeHash(Sha1(eb79886383871977bccdb3000c275a279f0d4c99))], directories: [] }), session_uuid: *, repo: $TESTTMP/repo (glob)
 
 Make sure that new entries were downloaded
   $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
@@ -98,6 +98,6 @@ because everything has been already downloaded.
   remote:     HgNodeHash(
   remote:         Sha1(1111111111111111111111111111111111111111)
   remote:     )
-  remote: ), backtrace: 
+  remote: ), backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

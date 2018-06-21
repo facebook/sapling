@@ -90,6 +90,7 @@ use futures::sink::Wait;
 use futures::sync::mpsc;
 use futures_ext::{asynchronize, FutureExt};
 use futures_stats::Timed;
+use tokio::util::FutureExt as TokioFutureExt;
 
 use clap::{App, ArgMatches};
 
@@ -421,9 +422,7 @@ fn repo_listen(
             "remote".into() => hashset!["true".into()],
         });
         let drain = slog::Duplicate::new(drain, listen_log.clone()).ignore_res();
-        let conn_log = Logger::root(drain, o![]);
-
-        let client_log = conn_log.new(o!("session_uuid" => format!("{}", session_uuid)));
+        let conn_log = Logger::root(drain, o!("session_uuid" => format!("{}", session_uuid)));
 
         let mut scuba_logger = {
             let client_hostname = match getnameinfo(&addr, 0) {
@@ -448,7 +447,7 @@ fn repo_listen(
         // Construct a hg protocol handler
         let proto_handler = HgProtoHandler::new(
             stdin,
-            repo::RepoClient::new(repo.clone(), client_log, scuba_logger.clone()),
+            repo::RepoClient::new(repo.clone(), conn_log.clone(), scuba_logger.clone()),
             sshproto::HgSshCommandDecode,
             sshproto::HgSshCommandEncode,
             &conn_log,
@@ -474,55 +473,48 @@ fn repo_listen(
         // actual failing command was.
         // TODO: (stash) T30523706 seems to leave the client hanging?
 
-        let request_future = asynchronize({
-            let conn_log = conn_log.clone();
-            let wireproto_calls = wireproto_calls.clone();
-            move || {
-                endres
-                    .map_err(move |err| {
-                        error!(conn_log, "Command failed"; SlogKVError(err), "remote" => "true");
-                        futures::Canceled // returning this to make the compiler happy
-                    })
-                    .timed(move |stats, result| {
-                        if result.is_ok() {
-                            let mut wireproto_calls =
-                                wireproto_calls.lock().expect("lock poisoned");
-                            let wireproto_calls =
-                                mem::replace(wireproto_calls.deref_mut(), Vec::new());
-
-                            scuba_logger
-                                .add("wireproto_commands", wireproto_calls)
-                                .add_stats(&stats)
-                                .log_with_msg("End of requests");
-                        }
-                        Ok(())
-                    })
-            }
-        }).map_err(|_| ())
-            .boxify();
-
-        // Run the whole future asynchronously to allow new connections
         // Don't wait for more that 15 mins for a request
-        handle.spawn(
-            request_future
-                .select(
-                    tokio::timer::Delay::new(Instant::now() + Duration::from_secs(900))
-                        .map({
-                            let conn_log = conn_log.clone();
-                            move |_| {
-                                let mut wireproto_calls =
-                                    wireproto_calls.lock().expect("lock poisoned");
-                                let wireproto_calls =
-                                    mem::replace(wireproto_calls.deref_mut(), Vec::new());
-                                error!(conn_log, "timeout while handling {:?}", wireproto_calls);
-                                ()
-                            }
-                        })
-                        .map_err(|_| ()),
-                )
-                .map(|_| ())
-                .map_err(|_| ()),
-        );
+        let endres = endres
+            .deadline(Instant::now() + Duration::from_secs(900))
+            .timed(move |stats, result| {
+                let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
+                let wireproto_calls = mem::replace(wireproto_calls.deref_mut(), Vec::new());
+
+                scuba_logger
+                    .add_stats(&stats)
+                    .add("wireproto_commands", wireproto_calls);
+
+                match result {
+                    Ok(_) => scuba_logger.log_with_msg("Request finished - Success"),
+                    Err(err) => if err.is_inner() {
+                        scuba_logger.log_with_msg(format!("Request finished - Failure {:#?}", err));
+                    } else if err.is_elapsed() {
+                        scuba_logger.log_with_msg("Request timeout");
+                    } else {
+                        scuba_logger.log_with_msg(format!("Unexpected timer error: {:#?}", err));
+                    },
+                }
+                Ok(())
+            })
+            .map_err(move |err| {
+                if err.is_inner() {
+                    error!(conn_log, "Command failed";
+                        SlogKVError(err.into_inner().unwrap()),
+                        "remote" => "true");
+                } else if err.is_elapsed() {
+                    error!(conn_log, "Timeout while handling request";
+                        "remote" => "true");
+                } else {
+                    crit!(conn_log, "Unexpected error";
+                        SlogKVError(err.into_timer().unwrap().into()),
+                        "remote" => "true");
+                }
+                format_err!("This is a dummy error, not supposed to be catched")
+            });
+
+        // Make this double async.
+        // TODO(stash, luk) is this really necessary?
+        handle.spawn(asynchronize(move || endres).then(|_| Ok(())));
 
         Ok(())
     });
