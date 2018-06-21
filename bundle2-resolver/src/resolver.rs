@@ -410,7 +410,7 @@ impl Bundle2Resolver {
                 .and_then(move |(p1, p2)| {
                     let create_changeset = CreateChangeset {
                         expected_nodeid: Some(node),
-                        expected_files: None,
+                        expected_files: Some(Vec::from(revlog_cs.files())),
                         p1,
                         p2,
                         root_manifest,
