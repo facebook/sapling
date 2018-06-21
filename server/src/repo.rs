@@ -18,21 +18,18 @@ use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
-use fbwhoami::FbWhoAmI;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, future::Either,
               stream::empty};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_stats::{Stats, Timed, TimedStreamTrait};
+use futures_stats::{Timed, TimedStreamTrait};
 use futures_trace::{self, Traced};
 use itertools::Itertools;
 use pylz4;
 use rand::Isaac64Rng;
 use rand::distributions::{Distribution, LogNormal};
-use scuba::{ScubaClient, ScubaSample};
-use time_ext::DurationExt;
 
-use slog::{self, Drain, Logger};
-use slog_scuba::ScubaDrain;
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use slog::Logger;
 
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
@@ -180,51 +177,6 @@ fn format_utf8_bytes_list(mut entries: Vec<Bytes>) -> String {
         .join(" ")
 }
 
-fn add_common_stats_and_send_to_scuba(
-    scuba: Option<Arc<ScubaClient>>,
-    mut sample: ScubaSample,
-    stats: Stats,
-    args: Option<String>,
-) -> BoxFuture<(), ()> {
-    let trace_upload = if futures_trace::global::is_enabled() {
-        futures_trace::global::context()
-            .upload_trace_async()
-            .map(|id| Some(id))
-            .boxify()
-    } else {
-        Ok(None).into_future().boxify()
-    };
-
-    trace_upload
-        .then(move |res| {
-            let trace_id = res.unwrap_or_else(|_| Some("upload failed".into()));
-            if let Some(ref scuba) = scuba {
-                sample.add(
-                    "time_elapsed_ms",
-                    stats.completion_time.as_millis_unchecked(),
-                );
-                sample.add("poll_time_us", stats.poll_time.as_micros_unchecked());
-                sample.add("poll_count", stats.poll_count);
-                if let Some(trace_id) = trace_id {
-                    sample.add("trace", trace_id);
-                }
-                if let Some(args) = args {
-                    sample.add("args", args);
-                }
-
-                if let Ok(whoami) = FbWhoAmI::new() {
-                    if let Some(hostname) = whoami.get_name() {
-                        sample.add("server_hostname", hostname);
-                    }
-                }
-
-                scuba.log(&sample);
-            }
-            Ok(())
-        })
-        .boxify()
-}
-
 fn wireprotocaps() -> Vec<String> {
     vec![
         "lookup".to_string(),
@@ -295,38 +247,19 @@ pub struct MononokeRepo {
     path: String,
     blobrepo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,
-    scuba: Option<Arc<ScubaClient>>,
 }
 
 impl MononokeRepo {
     pub fn new(
-        parent_logger: &Logger,
+        logger: Logger,
         repo: &RepoType,
         cache_size: usize,
         repoid: RepositoryId,
-        scuba_table: Option<String>,
     ) -> Result<Self> {
-        let path = repo.path().to_owned();
-        let logger = {
-            let kv = o!("repo" => format!("{}", path.display()));
-            match scuba_table {
-                Some(ref table) => {
-                    let scuba_drain = ScubaDrain::new(table.clone());
-                    let duplicate_drain = slog::Duplicate::new(scuba_drain, parent_logger.clone());
-                    Logger::root(duplicate_drain.fuse(), kv)
-                }
-                None => parent_logger.new(kv),
-            }
-        };
-
         Ok(MononokeRepo {
-            path: format!("{}", path.display()),
+            path: format!("{}", repo.path().to_owned().display()),
             blobrepo: Arc::new(repo.open(logger, repoid)?),
             repo_generation: RepoGenCache::new(cache_size),
-            scuba: match scuba_table {
-                Some(name) => Some(Arc::new(ScubaClient::new(name))),
-                None => None,
-            },
         })
     }
 
@@ -337,12 +270,6 @@ impl MononokeRepo {
     pub fn blobrepo(&self) -> Arc<BlobRepo> {
         self.blobrepo.clone()
     }
-
-    fn scuba_sample(&self, op: &str) -> ScubaSample {
-        let mut sample = ScubaSample::new();
-        sample.add("operation", op);
-        sample
-    }
 }
 
 impl Debug for MononokeRepo {
@@ -351,22 +278,38 @@ impl Debug for MononokeRepo {
     }
 }
 
+#[derive(Clone)]
 pub struct RepoClient {
     repo: Arc<MononokeRepo>,
     logger: Logger,
+    scuba_logger: ScubaSampleBuilder,
 }
 
 impl RepoClient {
-    pub fn new(repo: Arc<MononokeRepo>, parent_logger: Logger) -> Self {
+    pub fn new(repo: Arc<MononokeRepo>, logger: Logger, scuba_logger: ScubaSampleBuilder) -> Self {
         RepoClient {
-            repo: repo,
-            logger: parent_logger,
+            repo,
+            logger,
+            scuba_logger,
         }
     }
 
     #[allow(dead_code)]
     pub fn get_logger(&self) -> &Logger {
         &self.logger
+    }
+
+    fn scuba_logger(&self, op: &str, args: Option<String>) -> ScubaSampleBuilder {
+        let mut scuba_logger = self.scuba_logger.clone();
+
+        scuba_logger.add("command", op);
+
+        if let Some(args) = args {
+            scuba_logger.add("command_args", args);
+        }
+
+        scuba_logger.log_with_msg("Start processing");
+        scuba_logger
     }
 
     fn create_bundle(&self, args: GetbundleArgs) -> hgproto::Result<HgCommandRes<Bytes>> {
@@ -585,8 +528,7 @@ impl HgCommands for RepoClient {
             }
         }
 
-        let scuba = self.repo.scuba.clone();
-        let sample = self.repo.scuba_sample(ops::BETWEEN);
+        let mut scuba_logger = self.scuba_logger(ops::BETWEEN, None);
 
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
@@ -608,7 +550,7 @@ impl HgCommands for RepoClient {
                     .collect()
             })
             .collect()
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
             .boxify()
     }
 
@@ -617,8 +559,9 @@ impl HgCommands for RepoClient {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
         let logger = self.logger.clone();
-        let scuba = self.repo.scuba.clone();
-        let sample = self.repo.scuba_sample(ops::HEADS);
+
+        let mut scuba_logger = self.scuba_logger(ops::HEADS, None);
+
         self.repo
             .blobrepo
             .get_heads()
@@ -626,7 +569,7 @@ impl HgCommands for RepoClient {
             .map(|v| v.into_iter().collect())
             .from_err()
             .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
             .boxify()
     }
 
@@ -635,8 +578,9 @@ impl HgCommands for RepoClient {
         info!(self.logger, "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support bookmarks and prefixes too
         let repo = self.repo.blobrepo.clone();
-        let scuba = self.repo.scuba.clone();
-        let sample = self.repo.scuba_sample(ops::LOOKUP);
+
+        let mut scuba_logger = self.scuba_logger(ops::LOOKUP, None);
+
         HgNodeHash::from_str(&key)
             .into_future()
             .and_then(move |node| {
@@ -662,7 +606,7 @@ impl HgCommands for RepoClient {
                     Ok(buf.freeze())
                 }
             })
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
             .boxify()
     }
 
@@ -674,14 +618,14 @@ impl HgCommands for RepoClient {
             info!(self.logger, "known: {:?}", nodes);
         }
         let blobrepo = self.repo.blobrepo.clone();
-        let scuba = self.repo.scuba.clone();
-        let sample = self.repo.scuba_sample(ops::KNOWN);
+
+        let mut scuba_logger = self.scuba_logger(ops::KNOWN, None);
 
         future::join_all(
             nodes
                 .into_iter()
                 .map(move |node| blobrepo.changeset_exists(&HgChangesetId::new(node))),
-        ).timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
+        ).timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
             .boxify()
     }
 
@@ -689,13 +633,12 @@ impl HgCommands for RepoClient {
     fn getbundle(&self, args: GetbundleArgs) -> HgCommandRes<Bytes> {
         info!(self.logger, "Getbundle: {:?}", args);
 
-        let scuba = self.repo.scuba.clone();
-        let sample = self.repo.scuba_sample(ops::GETBUNDLE);
+        let mut scuba_logger = self.scuba_logger(ops::GETBUNDLE, None);
 
         match self.create_bundle(args) {
             Ok(res) => res,
             Err(err) => Err(err).into_future().boxify(),
-        }.timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
+        }.timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
             .boxify()
     }
 
@@ -708,10 +651,10 @@ impl HgCommands for RepoClient {
         caps.push(format!("bundle2={}", bundle2caps()));
         res.insert("capabilities".to_string(), caps);
 
-        let scuba = self.repo.scuba.clone();
-        let sample = self.repo.scuba_sample(ops::HELLO);
+        let mut scuba_logger = self.scuba_logger(ops::HELLO, None);
+
         future::ok(res)
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
             .boxify()
     }
 
@@ -756,30 +699,27 @@ impl HgCommands for RepoClient {
             stream,
         );
 
-        let scuba = self.repo.scuba.clone();
-        let sample = self.repo.scuba_sample(ops::UNBUNDLE);
+        let mut scuba_logger = self.scuba_logger(ops::UNBUNDLE, None);
 
         res.traced_global("unbundle", trace_args!())
-            .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, None))
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
             .boxify()
     }
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
     fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
-        let scuba = self.repo.scuba.clone();
-        let sample = self.repo.scuba_sample(ops::GETTREEPACK);
+        let args = format!(
+            "rootdir: {}, mfnodes: {}, basemfnodes: {}, directories: {}",
+            String::from_utf8_lossy(&params.rootdir),
+            format_nodes_list(params.mfnodes.clone()),
+            format_nodes_list(params.basemfnodes.clone()),
+            format_utf8_bytes_list(params.directories.clone()),
+        );
 
-        self.gettreepack_untimed(params.clone())
-            .timed(move |stats, _| {
-                let args = format!(
-                    "rootdir: {}, mfnodes: {}, basemfnodes: {}, directories: {}",
-                    String::from_utf8_lossy(&params.rootdir),
-                    format_nodes_list(params.mfnodes),
-                    format_nodes_list(params.basemfnodes),
-                    format_utf8_bytes_list(params.directories),
-                );
-                add_common_stats_and_send_to_scuba(scuba, sample, stats, Some(args))
-            })
+        let mut scuba_logger = self.scuba_logger(ops::GETTREEPACK, Some(args));
+
+        self.gettreepack_untimed(params)
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
             .boxify()
     }
 
@@ -787,27 +727,22 @@ impl HgCommands for RepoClient {
     fn getfiles(&self, params: BoxStream<(HgNodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
         let logger = self.logger.clone();
         info!(logger, "getfiles");
-        let repo = self.repo.clone();
+
+        let this = self.clone();
         let getfiles_buffer_size = 100; // TODO(stash): make it configurable
         params
             .map(move |(node, path)| {
+                let args = format!("node: {}, path: {}", node, path);
+                let mut scuba_logger = this.scuba_logger(ops::GETFILES, Some(args));
+
                 trace!(logger, "get file request: {:?} {}", path, node);
-                let repo = repo.clone();
+                let repo = this.repo.clone();
                 create_remotefilelog_blob(repo.blobrepo.clone(), node, path.clone())
                     .traced_global(
                         "getfile",
                         trace_args!("node" => format!("{}", node), "path" => format!("{}", path)),
                     )
-                    .timed(move |stats, _| {
-                        let sample = repo.scuba_sample(ops::GETFILES);
-                        let args = format!("node: {}, path: {}", node, path);
-                        add_common_stats_and_send_to_scuba(
-                            repo.scuba.clone(),
-                            sample,
-                            stats,
-                            Some(args),
-                        )
-                    })
+                    .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
             })
             .buffered(getfiles_buffer_size)
             .boxify()

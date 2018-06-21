@@ -62,7 +62,7 @@ extern crate metaconfig;
 extern crate pylz4;
 extern crate repoinfo;
 extern crate revset;
-extern crate scuba;
+extern crate scuba_ext;
 extern crate services;
 extern crate sshrelay;
 extern crate stats;
@@ -74,7 +74,6 @@ mod monitoring;
 mod repo;
 
 use std::collections::HashMap;
-use std::env::var;
 use std::io;
 use std::mem;
 use std::net::SocketAddr;
@@ -90,8 +89,8 @@ use failure::SlogKVError;
 use futures::{Future, IntoFuture, Sink, Stream};
 use futures::sink::Wait;
 use futures::sync::mpsc;
-use futures_ext::FutureExt;
-use futures_ext::asynchronize;
+use futures_ext::{asynchronize, FutureExt};
+use futures_stats::Timed;
 
 use clap::{App, ArgMatches};
 
@@ -102,7 +101,7 @@ use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_kvfilter::KVFilter;
 use slog_logview::LogViewDrain;
 
-use scuba::{ScubaClient, ScubaSample};
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 
 use blobrepo::BlobRepo;
 use bytes::Bytes;
@@ -189,6 +188,16 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
         drain.fuse(),
         o!(kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
     )
+}
+
+fn setup_scuba_logger(scuba_table: Option<String>, reponame: String) -> ScubaSampleBuilder {
+    let mut scuba_logger = match scuba_table {
+        None => ScubaSampleBuilder::with_discard(),
+        Some(scuba_table) => ScubaSampleBuilder::new(scuba_table),
+    };
+
+    scuba_logger.add_common_server_data().add("repo", reponame);
+    scuba_logger
 }
 
 fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
@@ -366,13 +375,14 @@ fn repo_listen(
     input_stream: mpsc::Receiver<(Stdio, SocketAddr)>,
 ) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
-    let scuba_table = config.scuba_table.clone();
+
+    let scuba_logger = setup_scuba_logger(config.scuba_table.clone(), reponame.clone());
+
     let repo = repo::MononokeRepo::new(
-        &root_log,
+        root_log.new(o!("repo" => reponame.clone())),
         &config.repotype,
         config.generation_cache_size,
         RepositoryId::new(config.repoid),
-        config.scuba_table.clone(),
     ).expect(&format!("failed to initialize repo {}", reponame));
 
     let listen_log = root_log.new(o!("repo" => repo.path().clone()));
@@ -401,7 +411,6 @@ fn repo_listen(
         } = stdio;
 
         let session_uuid = uuid::Uuid::new_v4();
-        let connect_time = Instant::now();
         let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
 
         let stderr_write = SenderBytesWrite {
@@ -416,10 +425,31 @@ fn repo_listen(
         let conn_log = Logger::root(drain, o![]);
 
         let client_log = conn_log.new(o!("session_uuid" => format!("{}", session_uuid)));
+
+        let mut scuba_logger = {
+            let client_hostname = match getnameinfo(&addr, 0) {
+                Ok((hostname, _)) => hostname,
+                Err(err) => {
+                    warn!(
+                        conn_log,
+                        "failed to lookup hostname for address {}, reason: {:?}", addr, err
+                    );
+                    "".to_owned()
+                }
+            };
+            let mut scuba_logger = scuba_logger.clone();
+            scuba_logger
+                .add("session_uuid", format!("{}", session_uuid))
+                .add("client_hostname", client_hostname);
+            scuba_logger
+        };
+
+        scuba_logger.log_with_msg("Connection established");
+
         // Construct a hg protocol handler
         let proto_handler = HgProtoHandler::new(
             stdin,
-            repo::RepoClient::new(repo.clone(), client_log),
+            repo::RepoClient::new(repo.clone(), client_log, scuba_logger.clone()),
             sshproto::HgSshCommandDecode,
             sshproto::HgSshCommandEncode,
             &conn_log,
@@ -444,80 +474,34 @@ fn repo_listen(
         // rather than just the connection). Unfortunately there's no way to print what the
         // actual failing command was.
         // TODO: (stash) T30523706 seems to leave the client hanging?
-        let endres = endres.or_else({
+
+        let request_future = asynchronize({
             let conn_log = conn_log.clone();
-            move |err| {
-                error!(conn_log, "Command failed"; SlogKVError(err), "remote" => "true");
-                Ok(())
-            }
-        });
-
-        let request_future = match scuba_table {
-            None => asynchronize(move || endres).map_err(|_: Error| ()).boxify(),
-            Some(ref scuba_table) => {
-                let conn_log = conn_log.clone();
-                let scuba_table = scuba_table.clone();
-                let repo_path = repo.path().clone();
-                let wireproto_calls = wireproto_calls.clone();
-                asynchronize(move || {
-                    endres.map(move |_| {
-                        let scuba_client = ScubaClient::new(scuba_table);
-
-                        let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
-                        let wireproto_calls = mem::replace(wireproto_calls.deref_mut(), Vec::new());
-
-                        let mut sample = ScubaSample::new();
-                        sample.add("session_uuid", format!("{}", session_uuid));
-                        let elapsed_time = connect_time.elapsed();
-                        let elapsed_ms = elapsed_time.as_secs() * 1000
-                            + elapsed_time.subsec_nanos() as u64 / 1000000;
-                        sample.add("time_elapsed_ms", elapsed_ms);
-                        sample.add("wireproto_commands", wireproto_calls);
-                        sample.add("repo", repo_path);
-
-                        match getnameinfo(&addr, 0) {
-                            Ok((hostname, _)) => sample.add("hostname", hostname),
-                            Err(err) => {
-                                warn!(
-                                    conn_log,
-                                    "failed to lookup hostname for address {}, reason: {:?}",
-                                    addr,
-                                    err
-                                );
-                            }
-                        };
-
-                        if let Ok(smc_tier) = var("SMC_TIERS") {
-                            sample.add("server_tier", smc_tier);
-                        }
-
-                        if let (Ok(tw_cluster), Ok(tw_user), Ok(tw_name)) = (
-                            var("TW_JOB_CLUSTER"),
-                            var("TW_JOB_USER"),
-                            var("TW_JOB_NAME"),
-                        ) {
-                            sample.add(
-                                "tw_handle",
-                                format!("{}/{}/{}", tw_cluster, tw_user, tw_name),
-                            );
-                        }
-
-                        if let Ok(tw_task_id) = var("TW_TASK_ID") {
-                            sample.add("tw_task_id", tw_task_id);
-                        }
-
-                        if let Ok(whoami) = fbwhoami::FbWhoAmI::new() {
-                            if let Some(hostname) = whoami.get_name() {
-                                sample.add("server_hostname", hostname);
-                            }
-                        }
-
-                        scuba_client.log(&sample);
+            let wireproto_calls = wireproto_calls.clone();
+            move || {
+                endres
+                    .map_err(move |err| {
+                        error!(conn_log, "Command failed"; SlogKVError(err), "remote" => "true");
+                        futures::Canceled // returning this to make the compiler happy
                     })
-                }).map_err(|_| ())
-                    .boxify()
+                    .timed(move |stats, result| {
+                        if result.is_ok() {
+                            let mut wireproto_calls =
+                                wireproto_calls.lock().expect("lock poisoned");
+                            let wireproto_calls =
+                                mem::replace(wireproto_calls.deref_mut(), Vec::new());
+
+                            scuba_logger
+                                .add("wireproto_commands", wireproto_calls)
+                                .add_stats(&stats)
+                                .log_with_msg("End of requests");
+                        }
+                        Ok(())
+                    })
             }
-        };
+        }).map_err(|_| ())
+            .boxify();
+
         // Run the whole future asynchronously to allow new connections
         // Don't wait for more that 15 mins for a request
         handle.spawn(
