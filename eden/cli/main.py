@@ -175,11 +175,11 @@ class ListCmd(Subcmd):
         for path in sorted(active_mount_points | config_mount_points):
             assert path is not None
             if path not in config_mount_points:
-                print(path + " (unconfigured)")
+                print(f"{path} (unconfigured)")
             elif path in active_mount_points:
-                print(path + " (active)")
-            else:
                 print(path)
+            else:
+                print(f"{path} (not mounted)")
         return 0
 
 

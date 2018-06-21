@@ -340,18 +340,18 @@ class EdenFS(object):
         lines = self.run_cmd("list").splitlines()
 
         results = {}
-        active_suffix = " (active)"
+        inactive_suffix = " (not mounted)"
         unconfigured_suffix = " (unconfigured)"
         for line in lines:
-            if line.endswith(active_suffix):
-                path = line[: -len(active_suffix)]
-                status = self.CLIENT_ACTIVE
+            if line.endswith(inactive_suffix):
+                path = line[: -len(inactive_suffix)]
+                status = self.CLIENT_INACTIVE
             elif line.endswith(unconfigured_suffix):
-                path = line[: -len(active_suffix)]
+                path = line[: -len(unconfigured_suffix)]
                 status = self.CLIENT_UNCONFIGURED
             else:
                 path = line
-                status = self.CLIENT_INACTIVE
+                status = self.CLIENT_ACTIVE
             results[path] = status
 
         return results
