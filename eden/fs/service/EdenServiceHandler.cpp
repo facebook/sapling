@@ -936,6 +936,17 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
   result.periodicUnloadCount =
       result.counters[kPeriodicUnloadCounterKey.toString()];
 
+  auto privateDirtyBytes = facebook::eden::proc_util::calculatePrivateBytes();
+  if (privateDirtyBytes) {
+    result.privateBytes = privateDirtyBytes.value();
+  }
+
+  auto vmRSSKBytes = facebook::eden::proc_util::getUnsignedLongLongValue(
+      proc_util::loadProcStatus(), kVmRSSKey.data(), kKBytes.data());
+  if (vmRSSKBytes) {
+    result.vmRSSBytes = vmRSSKBytes.value() * 1024;
+  }
+
   // Note: this will be removed in a subsequent commit.
   // We now report periodically via ServiceData
   std::string smaps;

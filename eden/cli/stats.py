@@ -41,9 +41,7 @@ def do_stats_general(
     with config.get_thrift_client() as client:
         diag_info = client.getStatInfo()
 
-        parsed = parse_smaps(diag_info.smaps)
-        private_dirty_bytes = total_private_dirty(parsed)
-
+        private_dirty_bytes = diag_info.privateBytes
         format_str = "{:>40} {:^1} {:<20}\n"
         if private_dirty_bytes is not None:
             out.write(
@@ -51,6 +49,15 @@ def do_stats_general(
                     "edenfs process memory usage",
                     ":",
                     stats_print.format_size(private_dirty_bytes),
+                )
+            )
+        vm_rss_bytes = diag_info.vmRSSBytes
+        if vm_rss_bytes is not None:
+            out.write(
+                format_str.format(
+                    "edenfs process resident virtual memory",
+                    ":",
+                    stats_print.format_size(vm_rss_bytes),
                 )
             )
         out.write(

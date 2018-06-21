@@ -327,6 +327,16 @@ struct InternalStats {
    * Linux-only: the contents of /proc/self/smaps, to be parsed by the caller.
    */
   4: binary smaps
+  /**
+   * Linux-only: privateBytes populated from contents of /proc/self/smaps.
+   * Populated with current value (the fb303 counters value is an average).
+   */
+  5: i64 privateBytes
+  /**
+   * Linux-only: vmRSS bytes is populated from contents of /proc/self/stats.
+   * Populated with current value (the fb303 counters value is an average).
+   */
+  6: i64 vmRSSBytes
 }
 
 struct ManifestEntry {
