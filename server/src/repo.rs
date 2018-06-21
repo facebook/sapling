@@ -692,14 +692,15 @@ impl HgCommands for RepoClient {
         heads: Vec<String>,
         stream: BoxStream<Bundle2Item, Error>,
     ) -> HgCommandRes<Bytes> {
+        let mut scuba_logger = self.scuba_logger(ops::UNBUNDLE, None);
+
         let res = bundle2_resolver::resolve(
             self.repo.blobrepo.clone(),
             self.logger.new(o!("command" => "unbundle")),
+            scuba_logger.clone(),
             heads,
             stream,
         );
-
-        let mut scuba_logger = self.scuba_logger(ops::UNBUNDLE, None);
 
         res.traced_global("unbundle", trace_args!())
             .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())

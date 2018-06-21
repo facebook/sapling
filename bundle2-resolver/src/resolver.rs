@@ -23,6 +23,7 @@ use mercurial::manifest::{Details, ManifestContent};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
                       NULL_HASH};
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use stats::*;
 
@@ -44,12 +45,13 @@ type UploadedChangesets = HashMap<HgNodeHash, ChangesetHandle>;
 pub fn resolve(
     repo: Arc<BlobRepo>,
     logger: Logger,
+    scuba_logger: ScubaSampleBuilder,
     heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<Bytes, Error> {
     info!(logger, "unbundle heads {:?}", heads);
 
-    let resolver = Bundle2Resolver::new(repo, logger);
+    let resolver = Bundle2Resolver::new(repo, logger, scuba_logger);
 
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
@@ -176,11 +178,16 @@ struct BookmarkPush {
 struct Bundle2Resolver {
     repo: Arc<BlobRepo>,
     logger: Logger,
+    scuba_logger: ScubaSampleBuilder,
 }
 
 impl Bundle2Resolver {
-    fn new(repo: Arc<BlobRepo>, logger: Logger) -> Self {
-        Self { repo, logger }
+    fn new(repo: Arc<BlobRepo>, logger: Logger, scuba_logger: ScubaSampleBuilder) -> Self {
+        Self {
+            repo,
+            logger,
+            scuba_logger,
+        }
     }
 
     /// Parse Start and Replycaps and ignore their content
@@ -371,6 +378,13 @@ impl Bundle2Resolver {
         let changesets = cg_push.changesets;
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
+
+        self.scuba_logger
+            .clone()
+            .add("changeset_count", changesets.len())
+            .add("manifests_count", manifests.len())
+            .add("filelogs_count", filelogs.len())
+            .log_with_msg("Size of unbundle");
 
         STATS::changesets_count.add_value(changesets.len() as i64);
         STATS::manifests_count.add_value(manifests.len() as i64);
