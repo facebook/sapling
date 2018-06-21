@@ -278,7 +278,7 @@ class EdenFS(object):
         # command not to wait and instead perform our own polling here against
         # the real process handle.
         self.run_cmd("shutdown", "-t", "0")
-        util.poll_until(lambda: self._process.poll(), timeout=15)
+        util.poll_until(lambda: self._process.poll(), timeout=30)
         return_code = self._process.wait()
         self._process = None
         if return_code != 0:
