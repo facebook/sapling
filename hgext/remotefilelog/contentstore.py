@@ -264,7 +264,7 @@ class manifestrevlogstore(object):
     def __init__(self, repo):
         self._store = repo.store
         self._svfs = repo.svfs
-        self._revlogs = dict()
+        self._revlogs = util.lrucachedict(15)
         self._cl = revlog.revlog(self._svfs, "00changelog.i")
         self._repackstartlinkrev = 0
 
