@@ -1045,11 +1045,19 @@ class Test(unittest.TestCase):
                 sockfile,
                 "version",
             ]
-            try:
-                # The watchman CLI can wait for a short time if sockfile
-                # is not ready.
-                subprocess.check_output(argv, env=envb)
-            except Exception:
+            deadline = time.time() + 30
+            watchmanavailable = False
+            while not watchmanavailable and time.time() < deadline:
+                try:
+                    # The watchman CLI can wait for a short time if sockfile
+                    # is not ready.
+                    subprocess.check_output(argv, env=envb)
+                    watchmanavailable = True
+                except Exception:
+                    time.sleep(0.1)
+            if not watchmanavailable:
+                # tearDown needs to be manually called in this case.
+                self.tearDown()
                 raise RuntimeError("timed out waiting for watchman")
 
     def run(self, result):
