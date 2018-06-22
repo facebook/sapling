@@ -73,15 +73,36 @@ Check age ranges
   3 Changeset 3800 seconds ago
   4 Changeset 420 seconds ago
   5 Changeset 5 seconds ago
+  $ hg log -T '{rev} {desc}\n' -r 'age("1h-20d")'
+  1 Changeset 86401 seconds ago
+  2 Changeset 86369 seconds ago
+  3 Changeset 3800 seconds ago
   $ hg log -T '{rev} {desc}\n' -r 'age("invalid")'
-  hg: parse error: invalid age range for age predicate
+  hg: parse error: invalid age range
   [255]
   $ hg log -T '{rev} {desc}\n' -r 'age("1h")'
-  hg: parse error: invalid age range for age predicate
+  hg: parse error: invalid age range
   [255]
   $ hg log -T '{rev} {desc}\n' -r 'age("<3m2h")'
-  hg: parse error: invalid age range for age predicate
+  hg: parse error: invalid age in age range: 3m2h
   [255]
   $ hg log -T '{rev} {desc}\n' -r 'age(">3h2h")'
-  hg: parse error: invalid age range for age predicate
+  hg: parse error: invalid age in age range: 3h2h
   [255]
+  $ hg log -T '{rev} {desc}\n' -r 'age("1h-5h-10d")'
+  hg: parse error: invalid age in age range: 5h-10d
+  [255]
+  $ hg log -T '{rev} {desc}\n' -r 'ancestorsaged(., "<1d")'
+  2 Changeset 86369 seconds ago
+  3 Changeset 3800 seconds ago
+  4 Changeset 420 seconds ago
+  5 Changeset 5 seconds ago
+  $ hg log -T '{rev} {desc}\n' -r 'ancestorsaged(.^, "<1d")'
+  2 Changeset 86369 seconds ago
+  3 Changeset 3800 seconds ago
+  4 Changeset 420 seconds ago
+  $ hg log -T '{rev} {desc}\n' -r 'ancestorsaged(., "1d-20d")'
+  1 Changeset 86401 seconds ago
+  $ hg log -T '{rev} {desc}\n' -r 'ancestorsaged(., ">1d")'
+  0 Changeset 31536000 seconds ago
+  1 Changeset 86401 seconds ago
