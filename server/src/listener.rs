@@ -17,6 +17,8 @@ use errors::*;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_core::reactor::Remote;
 use tokio_io::{AsyncRead, AsyncWrite, IoStream};
+// TODO: (rain1) T30794235 move mononoke/server to tokio-codec
+#[allow(deprecated)]
 use tokio_io::codec::{FramedRead, FramedWrite};
 
 use sshrelay::{Preamble, SshDecoder, SshEncoder, SshMsg, SshStream};
@@ -61,7 +63,10 @@ where
     S: AsyncRead + AsyncWrite + Send + 'static,
 {
     let (rx, tx) = s.split();
+    // TODO: (rain1) T30794235 move mononoke/server to tokio-codec
+    #[allow(deprecated)]
     let wr = FramedWrite::new(tx, SshEncoder::new());
+    #[allow(deprecated)]
     let rd = FramedRead::new(rx, SshDecoder::new());
 
     rd.into_future()

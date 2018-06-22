@@ -7,6 +7,9 @@
 #![deny(warnings)]
 #![feature(ascii_ctype)]
 
+// TODO: (rain1) T30794196 move mercurial-bundles to tokio-codec
+#![allow(deprecated)]
+
 extern crate ascii;
 #[macro_use]
 #[cfg(test)]
