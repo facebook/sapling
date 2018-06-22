@@ -27,11 +27,13 @@ use blobrepo::BlobRepo;
 use futures::{Future, Stream};
 use futures::executor::spawn;
 use futures_ext::select_all;
-use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Type, NULL_HASH};
+use mercurial_types::{Changeset, Entry, FileType, MPath, MPathElement, Manifest, RepoPath, Type,
+                      NULL_HASH};
 use mercurial_types::manifest::{Content, EmptyManifest};
 use mercurial_types::manifest_utils::{and_pruner_combinator, changed_entry_stream,
                                       changed_entry_stream_with_pruner, diff_sorted_vecs,
-                                      file_pruner, visited_pruner, ChangedEntry, EntryStatus};
+                                      file_pruner, recursive_entry_stream, visited_pruner,
+                                      ChangedEntry, EntryStatus};
 use mercurial_types::nodehash::{HgChangesetId, HgEntryId, HgNodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash;
@@ -369,6 +371,80 @@ fn test_recursive_changed_entry_stream_simple() {
             "dir2/file_1_in_dir2",
         ];
         do_check(repo, main_hash, base_hash, expected_added, vec![], vec![]);
+        Ok(())
+    }).expect("test failed")
+}
+
+#[test]
+fn test_recursive_entry_stream() {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let changesetid = HgNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+
+        // hg up ecafdc4a4b6748b7a7215c6995f14c837dc1ebec
+        // $ hg files
+        // 1
+        // 2
+        // dir1/file_1_in_dir1
+        // dir1/file_2_in_dir1
+        // dir1/subdir1/file_1
+        // dir2/file_1_in_dir2
+
+        let cs = repo.get_changeset_by_changesetid(&HgChangesetId::new(changesetid))
+            .wait()
+            .unwrap();
+        let manifestid = cs.manifestid();
+
+        let root_entry = repo.get_root_entry(&manifestid);
+        let fut = recursive_entry_stream(None, root_entry).collect();
+        let res = fut.wait().unwrap();
+
+        let mut actual = hashset![];
+        for r in res {
+            let path = MPath::join_element_opt(r.0.as_ref(), r.1.get_name());
+            actual.insert(path);
+        }
+        let expected = hashset![
+            None,
+            Some(MPath::new("1").unwrap()),
+            Some(MPath::new("2").unwrap()),
+            Some(MPath::new("dir1").unwrap()),
+            Some(MPath::new("dir1/file_1_in_dir1").unwrap()),
+            Some(MPath::new("dir1/file_2_in_dir1").unwrap()),
+            Some(MPath::new("dir1/subdir1").unwrap()),
+            Some(MPath::new("dir1/subdir1/file_1").unwrap()),
+            Some(MPath::new("dir2").unwrap()),
+            Some(MPath::new("dir2/file_1_in_dir2").unwrap()),
+        ];
+
+        assert_eq!(actual, expected);
+
+        let root_mf = repo.get_manifest_by_nodeid(&manifestid.into_nodehash())
+            .wait()
+            .unwrap();
+
+        let path_element = MPathElement::new(Vec::from("dir1".as_bytes())).unwrap();
+        let subentry = root_mf.lookup(&path_element).unwrap();
+
+        let res = recursive_entry_stream(None, subentry)
+            .collect()
+            .wait()
+            .unwrap();
+        let mut actual = hashset![];
+        for r in res {
+            let path = MPath::join_element_opt(r.0.as_ref(), r.1.get_name());
+            actual.insert(path);
+        }
+        let expected = hashset![
+            Some(MPath::new("dir1").unwrap()),
+            Some(MPath::new("dir1/file_1_in_dir1").unwrap()),
+            Some(MPath::new("dir1/file_2_in_dir1").unwrap()),
+            Some(MPath::new("dir1/subdir1").unwrap()),
+            Some(MPath::new("dir1/subdir1/file_1").unwrap()),
+        ];
+
+        assert_eq!(actual, expected);
+
         Ok(())
     }).expect("test failed")
 }
