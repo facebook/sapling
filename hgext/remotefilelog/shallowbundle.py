@@ -146,7 +146,9 @@ class shallowcg1packer(changegroup.cg1packer):
                     # This can happen while serving an infinitepush bundle that
                     # contains flat manifests. It will need to generate trees
                     # for that manifest.
-                    if mfstore.getmissing([("", mfnode)]):
+                    if repo.svfs.treemanifestserver and mfstore.getmissing(
+                        [("", mfnode)]
+                    ):
                         return True
 
                     return False
