@@ -528,6 +528,10 @@ impl BlobRepo {
         self.blobstore.clone()
     }
 
+    pub fn get_logger(&self) -> Logger {
+        self.logger.clone()
+    }
+
     pub fn store_file_change(
         &self,
         p1: Option<HgNodeHash>,
@@ -623,51 +627,51 @@ impl BlobRepo {
         manifest_p1: Option<&HgNodeHash>,
         manifest_p2: Option<&HgNodeHash>,
     ) -> BoxFuture<HgNodeHash, Error> {
-        MemoryRootManifest::new(
-            self.blobstore.clone(),
-            self.logger.clone(),
-            manifest_p1,
-            manifest_p2,
-        ).and_then({
-            let blobrepo = self.clone();
-            let manifest_p1 = manifest_p1.cloned();
-            let manifest_p2 = manifest_p2.cloned();
-            move |memory_manifest| {
-                let memory_manifest = Arc::new(memory_manifest);
-                let mut futures = Vec::new();
+        MemoryRootManifest::new(self.clone(), manifest_p1, manifest_p2)
+            .and_then({
+                let blobrepo = self.clone();
+                let manifest_p1 = manifest_p1.cloned();
+                let manifest_p2 = manifest_p2.cloned();
+                move |memory_manifest| {
+                    let memory_manifest = Arc::new(memory_manifest);
+                    let mut futures = Vec::new();
 
-                for (path, entry) in bcs.file_changes() {
-                    let path = path.clone();
-                    let memory_manifest = memory_manifest.clone();
-                    let p1 = manifest_p1
-                        .map(|manifest| blobrepo.find_file_in_manifest(&path, manifest))
-                        .into_future();
-                    let p2 = manifest_p2
-                        .map(|manifest| blobrepo.find_file_in_manifest(&path, manifest))
-                        .into_future();
-                    let future = p1.join(p2)
+                    for (path, entry) in bcs.file_changes() {
+                        let path = path.clone();
+                        let memory_manifest = memory_manifest.clone();
+                        let p1 = manifest_p1
+                            .map(|manifest| blobrepo.find_file_in_manifest(&path, manifest))
+                            .into_future();
+                        let p2 = manifest_p2
+                            .map(|manifest| blobrepo.find_file_in_manifest(&path, manifest))
+                            .into_future();
+                        let future = p1.join(p2)
+                            .and_then({
+                                let blobrepo = blobrepo.clone();
+                                let path = path.clone();
+                                let entry = entry.cloned();
+                                move |(p1, p2)| {
+                                    blobrepo.store_file_change(
+                                        p1.and_then(|x| x),
+                                        p2.and_then(|x| x),
+                                        &path,
+                                        entry.as_ref(),
+                                    )
+                                }
+                            })
+                            .and_then(move |entry| memory_manifest.change_entry(&path, entry));
+                        futures.push(future);
+                    }
+
+                    future::join_all(futures)
                         .and_then({
-                            let blobrepo = blobrepo.clone();
-                            let path = path.clone();
-                            let entry = entry.cloned();
-                            move |(p1, p2)| {
-                                blobrepo.store_file_change(
-                                    p1.and_then(|x| x),
-                                    p2.and_then(|x| x),
-                                    &path,
-                                    entry.as_ref(),
-                                )
-                            }
+                            let memory_manifest = memory_manifest.clone();
+                            move |_| memory_manifest.resolve_trivial_conflicts()
                         })
-                        .and_then(move |entry| memory_manifest.change_entry(&path, entry));
-                    futures.push(future);
+                        .and_then(move |_| memory_manifest.save())
+                        .map(|m| m.get_hash().into_nodehash())
                 }
-
-                future::join_all(futures)
-                    .and_then(move |_| memory_manifest.save())
-                    .map(|m| m.get_hash().into_nodehash())
-            }
-        })
+            })
             .boxify()
     }
 }
@@ -1126,13 +1130,7 @@ impl CreateChangeset {
                                         Error,
                                     > = (move || {
                                         let blobcs = try_boxfuture!(make_new_changeset(
-                                            parents,
-                                            root_hash,
-                                            user,
-                                            time,
-                                            extra,
-                                            files,
-                                            comments,
+                                            parents, root_hash, user, time, extra, files, comments,
                                         ));
 
                                         let cs_id = blobcs.get_changeset_id().into_nodehash();

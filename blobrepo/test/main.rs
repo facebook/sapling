@@ -22,6 +22,7 @@ extern crate dbbookmarks;
 extern crate many_files_dirs;
 extern crate mercurial;
 extern crate mercurial_types;
+extern crate mercurial_types_mocks;
 extern crate mononoke_types;
 
 use futures::Future;
@@ -36,6 +37,7 @@ use mononoke_types::{ChangesetId, ContentId, FileContents, MononokeId};
 
 #[macro_use]
 mod utils;
+mod memory_manifest;
 
 use utils::{create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
             get_empty_lazy_repo, run_future, string_to_nodehash, upload_file_no_parents,

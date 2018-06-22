@@ -19,10 +19,14 @@ use slog::Logger;
 
 use mercurial_types::{Entry, HgManifestId, HgNodeHash, MPath, MPathElement, Manifest, RepoPath,
                       Type};
+use mercurial_types::manifest::Content;
+use mononoke_types::{FileContents, FileType};
 
 use file::HgBlobEntry;
-use repo::{RepoBlobstore, UploadHgNodeHash, UploadHgTreeEntry};
+use repo::{RepoBlobstore, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
+           UploadHgTreeEntry};
 
+use super::BlobRepo;
 use errors::*;
 use manifest::BlobManifest;
 
@@ -30,7 +34,7 @@ use manifest::BlobManifest;
 /// This is because futures require ownership, and I don't want to Arc all of this when there's
 /// only a small amount of changing data.
 #[derive(Clone)]
-enum MemoryManifestEntry {
+pub enum MemoryManifestEntry {
     /// A blob already found in the blob store. This cannot be a Tree blob
     Blob(HgBlobEntry),
     /// There are conflicting options here, to be resolved
@@ -87,7 +91,7 @@ fn extend_repopath_with_dir(path: &RepoPath, dir: &MPathElement) -> RepoPath {
 
 impl MemoryManifestEntry {
     /// True iff this entry is a tree with no children
-    fn is_empty(
+    pub fn is_empty(
         &self,
         blobstore: &RepoBlobstore,
     ) -> impl Future<Item = bool, Error = Error> + Send {
@@ -115,7 +119,6 @@ impl MemoryManifestEntry {
     }
 
     /// True if this entry is a Tree, false otherwise
-    #[cfg(test)]
     pub fn is_dir(&self) -> bool {
         match self {
             MemoryManifestEntry::MemTree { .. } => true,
@@ -663,59 +666,177 @@ impl MemoryManifestEntry {
             _ => Err(ErrorKind::NotADirectory.into()),
         }
     }
+
+    /// Resolve conflicts when blobs point to the same data but have different parents
+    pub fn resolve_trivial_conflicts(
+        &self,
+        repo: BlobRepo,
+    ) -> impl Future<Item = (), Error = Error> + Send {
+        fn merge_content(
+            entries: Vec<HgBlobEntry>,
+        ) -> impl Future<Item = Option<(FileType, FileContents)>, Error = Error> + Send {
+            if let Some(Type::File(file_type)) = entries.first().map(|e| e.get_type()) {
+                let fut = future::join_all(entries.into_iter().map(|e| e.get_content())).map(
+                    move |content| {
+                        let mut iter = content.iter();
+                        if let Some(first) = iter.next() {
+                            if iter.all(|other| match (first, other) {
+                                (Content::File(c0), Content::File(c1))
+                                | (Content::Executable(c0), Content::Executable(c1))
+                                | (Content::Symlink(c0), Content::Symlink(c1)) => c0 == c1,
+                                _ => false,
+                            }) {
+                                return match first {
+                                    Content::Executable(file_content)
+                                    | Content::File(file_content)
+                                    | Content::Symlink(file_content) => {
+                                        Some((file_type, file_content.clone()))
+                                    }
+                                    _ => unreachable!(),
+                                };
+                            };
+                        };
+                        None
+                    },
+                );
+                Either::A(fut)
+            } else {
+                Either::B(future::ok(None))
+            }
+        }
+
+        fn merge_entries(
+            path: Option<MPath>,
+            entries: Vec<HgBlobEntry>,
+            repo: BlobRepo,
+        ) -> impl Future<Item = Option<MemoryManifestEntry>, Error = Error> + Send {
+            let parents = entries
+                .iter()
+                .map(|e| e.get_hash().into_nodehash())
+                .collect::<Vec<_>>();
+            merge_content(entries).and_then(move |content| {
+                let mut parents = parents.into_iter();
+                if let Some((file_type, file_content)) = content {
+                    let path = try_boxfuture!(path.ok_or(ErrorKind::EmptyFilePath).into());
+                    let upload_entry = UploadHgFileEntry {
+                        upload_node_id: UploadHgNodeHash::Generate,
+                        contents: UploadHgFileContents::RawBytes(file_content.into_bytes()),
+                        file_type: file_type,
+                        p1: parents.next(),
+                        p2: parents.next(),
+                        path: path,
+                    };
+                    assert!(parents.next().is_none(), "Only support two parents");
+                    let (_, upload_future) = try_boxfuture!(upload_entry.upload(&repo));
+                    upload_future
+                        .map(|(entry, _)| Some(MemoryManifestEntry::Blob(entry)))
+                        .boxify()
+                } else {
+                    future::ok(None).boxify()
+                }
+            })
+        }
+
+        fn resolve_rec(
+            path: Option<MPath>,
+            node: MemoryManifestEntry,
+            repo: BlobRepo,
+        ) -> BoxFuture<Option<MemoryManifestEntry>, Error> {
+            match node {
+                MemoryManifestEntry::MemTree { ref changes, .. } => {
+                    let resolve_children = {
+                        let changes_guard = changes.lock().expect("lock poisoned");
+                        changes_guard
+                            .iter()
+                            .flat_map(|(k, v)| v.clone().map(|v| (k, v)))
+                            .map(|(name, child)| {
+                                let path = MPath::join_opt(path.as_ref(), name);
+                                resolve_rec(path, child, repo.clone()).map({
+                                    let name = name.clone();
+                                    move |v| v.map(|v| (name, v))
+                                })
+                            })
+                            .collect::<Vec<_>>()
+                    };
+                    future::join_all(resolve_children)
+                        .map({
+                            let changes = changes.clone();
+                            move |updated| {
+                                let mut changes_guard = changes.lock().expect("lock poisoned");
+                                for (name, child) in updated.into_iter().flat_map(|v| v) {
+                                    changes_guard.insert(name, Some(child));
+                                }
+                                None
+                            }
+                        })
+                        .boxify()
+                }
+                MemoryManifestEntry::Conflict(conflict) => {
+                    // all conflict entries are blob entries
+                    let entries = conflict
+                        .iter()
+                        .map(|node| match node {
+                            &MemoryManifestEntry::Blob(ref blob_entry) => Some(blob_entry.clone()),
+                            _ => None,
+                        })
+                        .collect::<Option<Vec<_>>>();
+                    if let Some(entries) = entries {
+                        merge_entries(path, entries, repo).boxify()
+                    } else {
+                        future::ok(None).boxify()
+                    }
+                }
+                _ => future::ok(None).boxify(),
+            }
+        }
+        resolve_rec(None, self.clone(), repo).map(|_| ())
+    }
 }
 
 /// An in memory manifest, created from parent manifests (if any)
 pub struct MemoryRootManifest {
-    blobstore: RepoBlobstore,
+    repo: BlobRepo,
     root_entry: MemoryManifestEntry,
-    logger: Logger,
 }
 
 impl MemoryRootManifest {
-    fn create(blobstore: RepoBlobstore, root_entry: MemoryManifestEntry, logger: Logger) -> Self {
-        Self {
-            blobstore,
-            root_entry,
-            logger,
-        }
+    fn create(repo: BlobRepo, root_entry: MemoryManifestEntry) -> Self {
+        Self { repo, root_entry }
     }
 
     fn create_conflict(
-        blobstore: RepoBlobstore,
+        repo: BlobRepo,
         p1_root: MemoryManifestEntry,
         p2_root: MemoryManifestEntry,
-        logger: Logger,
     ) -> BoxFuture<Self, Error> {
         p1_root
-            .merge_with_conflicts(p2_root, blobstore.clone(), logger.clone(), RepoPath::root())
-            .map(move |root| Self::create(blobstore, root, logger))
+            .merge_with_conflicts(
+                p2_root,
+                repo.get_blobstore(),
+                repo.get_logger(),
+                RepoPath::root(),
+            )
+            .map(move |root| Self::create(repo, root))
             .boxify()
     }
 
     /// Create an in-memory manifest, backed by the given blobstore, and based on mp1 and mp2
     pub fn new(
-        blobstore: RepoBlobstore,
-        logger: Logger,
+        repo: BlobRepo,
         mp1: Option<&HgNodeHash>,
         mp2: Option<&HgNodeHash>,
     ) -> BoxFuture<Self, Error> {
         match (mp1, mp2) {
-            (None, None) => future::ok(Self::create(
-                blobstore,
-                MemoryManifestEntry::empty_tree(),
-                logger,
-            )).boxify(),
-            (Some(p), None) | (None, Some(p)) => future::ok(Self::create(
-                blobstore,
-                MemoryManifestEntry::convert_treenode(p),
-                logger,
-            )).boxify(),
+            (None, None) => {
+                future::ok(Self::create(repo, MemoryManifestEntry::empty_tree())).boxify()
+            }
+            (Some(p), None) | (None, Some(p)) => {
+                future::ok(Self::create(repo, MemoryManifestEntry::convert_treenode(p))).boxify()
+            }
             (Some(p1), Some(p2)) => Self::create_conflict(
-                blobstore,
+                repo,
                 MemoryManifestEntry::convert_treenode(p1),
                 MemoryManifestEntry::convert_treenode(p2),
-                logger,
             ),
         }
     }
@@ -728,7 +849,11 @@ impl MemoryRootManifest {
     /// Returns the saved manifest ID
     pub fn save(&self) -> BoxFuture<HgBlobEntry, Error> {
         self.root_entry
-            .save(&self.blobstore, &self.logger, RepoPath::root())
+            .save(
+                &self.repo.get_blobstore(),
+                &self.repo.get_logger(),
+                RepoPath::root(),
+            )
             .boxify()
     }
 
@@ -744,7 +869,7 @@ impl MemoryRootManifest {
             None => Either::A(future::ok(self.root_entry.clone())),
             Some(filepath) => Either::B(
                 self.root_entry
-                    .find_mut(filepath.into_iter(), self.blobstore.clone())
+                    .find_mut(filepath.into_iter(), self.repo.get_blobstore())
                     .and_then({
                         let path = path.clone();
                         |entry| entry.ok_or(ErrorKind::PathNotFound(path).into())
@@ -763,471 +888,18 @@ impl MemoryRootManifest {
             .and_then(|target| target.change(filename, entry).into_future())
             .boxify()
     }
+
+    pub fn resolve_trivial_conflicts(&self) -> impl Future<Item = (), Error = Error> + Send {
+        self.root_entry.resolve_trivial_conflicts(self.repo.clone())
+    }
+
+    pub fn unittest_root(&self) -> &MemoryManifestEntry {
+        &self.root_entry
+    }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use async_unit;
-    use many_files_dirs;
-    use mercurial_types::{FileType, HgNodeHash, nodehash::HgEntryId};
-    use mercurial_types_mocks::nodehash;
-    use slog::Discard;
-
-    fn insert_entry(tree: &MemoryManifestEntry, path: MPathElement, entry: MemoryManifestEntry) {
-        match tree {
-            MemoryManifestEntry::MemTree { changes, .. } => {
-                let mut changes = changes.lock().expect("lock poisoned");
-                changes.insert(path, Some(entry));
-            }
-            _ => panic!("Inserting into a non-Tree"),
-        }
-    }
-
-    #[test]
-    fn empty_manifest() {
-        async_unit::tokio_unit_test(|| {
-            let blobstore = many_files_dirs::getrepo(None).get_blobstore();
-            let logger = Logger::root(Discard, o![]);
-
-            // Create an empty memory manifest
-            let memory_manifest = MemoryRootManifest::new(blobstore, logger, None, None)
-                .wait()
-                .expect("Could not create empty manifest");
-
-            if let MemoryManifestEntry::MemTree {
-                base_manifest_id,
-                p1,
-                p2,
-                changes,
-            } = memory_manifest.root_entry
-            {
-                let changes = changes.lock().expect("lock poisoned");
-                assert!(base_manifest_id.is_none(), "Empty manifest had a baseline");
-                assert!(p1.is_none(), "Empty manifest had p1");
-                assert!(p2.is_none(), "Empty manifest had p2");
-                assert!(changes.is_empty(), "Empty manifest had new entries changed");
-            } else {
-                panic!("Empty manifest is not a MemTree");
-            }
-        })
-    }
-
-    #[test]
-    fn load_manifest() {
-        async_unit::tokio_unit_test(|| {
-            let blobstore = many_files_dirs::getrepo(None).get_blobstore();
-            let logger = Logger::root(Discard, o![]);
-
-            let manifest_id = HgNodeHash::from_static_str(
-                "b267a6869fcc39b37741408b5823cc044233201d",
-            ).expect("Could not get nodehash");
-
-            // Load a memory manifest
-            let memory_manifest =
-                MemoryRootManifest::new(blobstore, logger, Some(&manifest_id), None)
-                    .wait()
-                    .expect("Could not load manifest");
-
-            if let MemoryManifestEntry::MemTree {
-                base_manifest_id,
-                p1,
-                p2,
-                changes,
-            } = memory_manifest.root_entry
-            {
-                let changes = changes.lock().expect("lock poisoned");
-                assert_eq!(
-                    base_manifest_id,
-                    Some(manifest_id),
-                    "Loaded manifest had wrong base {:?}",
-                    base_manifest_id
-                );
-                assert_eq!(
-                    p1,
-                    Some(manifest_id),
-                    "Loaded manifest had wrong p1 {:?}",
-                    p1
-                );
-                assert!(p2.is_none(), "Loaded manifest had p2");
-                assert!(
-                    changes.is_empty(),
-                    "Loaded (unaltered) manifest has had entries changed"
-                );
-            } else {
-                panic!("Loaded manifest is not a MemTree");
-            }
-        })
-    }
-
-    #[test]
-    fn save_manifest() {
-        async_unit::tokio_unit_test(|| {
-            let repo = many_files_dirs::getrepo(None);
-            let blobstore = repo.get_blobstore();
-            let logger = Logger::root(Discard, o![]);
-
-            // Create an empty memory manifest
-            let mut memory_manifest =
-                MemoryRootManifest::new(blobstore.clone(), logger, None, None)
-                    .wait()
-                    .expect("Could not create empty manifest");
-
-            // Add an unmodified entry
-            let dir_nodehash = HgNodeHash::from_static_str(
-                "b267a6869fcc39b37741408b5823cc044233201d",
-            ).expect("Could not get nodehash");
-            let dir = MemoryManifestEntry::MemTree {
-                base_manifest_id: Some(dir_nodehash),
-                p1: Some(dir_nodehash),
-                p2: None,
-                changes: Arc::new(Mutex::new(BTreeMap::new())),
-            };
-            let path =
-                MPathElement::new(b"dir".to_vec()).expect("dir is no longer a valid MPathElement");
-            insert_entry(&mut memory_manifest.root_entry, path.clone(), dir);
-
-            let manifest_id = memory_manifest
-                .save()
-                .wait()
-                .expect("Could not save manifest");
-
-            let refound = repo.get_manifest_by_nodeid(&manifest_id.get_hash().into_nodehash())
-                .map(|m| m.lookup(&path))
-                .wait()
-                .expect("Lookup of entry just saved failed")
-                .expect("Just saved entry not present");
-
-            // Confirm that the entry we put in the root manifest is present
-            assert_eq!(
-                refound.get_hash().into_nodehash(),
-                dir_nodehash,
-                "directory hash changed"
-            );
-        })
-    }
-
-    #[test]
-    fn remove_item() {
-        async_unit::tokio_unit_test(|| {
-            let repo = many_files_dirs::getrepo(None);
-            let blobstore = repo.get_blobstore();
-            let logger = Logger::root(Discard, o![]);
-
-            let manifest_id = HgNodeHash::from_static_str(
-                "b267a6869fcc39b37741408b5823cc044233201d",
-            ).expect("Could not get nodehash");
-
-            let dir2 = MPathElement::new(b"dir2".to_vec()).expect("Can't create MPathElement dir2");
-
-            // Load a memory manifest
-            let memory_manifest =
-                MemoryRootManifest::new(blobstore.clone(), logger, Some(&manifest_id), None)
-                    .wait()
-                    .expect("Could not load manifest");
-
-            if !memory_manifest.root_entry.is_dir() {
-                panic!("Loaded manifest is not a MemTree");
-            }
-
-            // Remove a file
-            memory_manifest
-                .change_entry(
-                    &MPath::new(b"dir2/file_1_in_dir2").expect("Can't create MPath"),
-                    None,
-                )
-                .wait()
-                .expect("Failed to remove");
-
-            // Assert that dir2 is now empty, since we've removed the item
-            if let MemoryManifestEntry::MemTree { ref changes, .. } = memory_manifest.root_entry {
-                let changes = changes.lock().expect("lock poisoned");
-                assert!(
-                    changes
-                        .get(&dir2)
-                        .expect("dir2 is missing")
-                        .clone()
-                        .map_or(false, |e| e.is_empty(&blobstore).wait().unwrap()),
-                    "Bad after remove"
-                );
-                if let Some(MemoryManifestEntry::MemTree { changes, .. }) =
-                    changes.get(&dir2).expect("dir2 is missing")
-                {
-                    let changes = changes.lock().expect("lock poisoned");
-                    assert!(!changes.is_empty(), "dir2 has no change entries");
-                    assert!(
-                        changes.values().all(Option::is_none),
-                        "dir2 has some add entries"
-                    );
-                }
-            } else {
-                panic!("Loaded manifest is not a MemTree");
-            }
-
-            // And check that dir2 disappears over a save/reload operation
-            let manifest_entry = memory_manifest
-                .save()
-                .wait()
-                .expect("Could not save manifest");
-
-            let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
-                .map(|m| m.lookup(&dir2))
-                .wait()
-                .expect("Lookup of entry just saved failed");
-
-            assert!(
-                refound.is_none(),
-                "Found dir2 when we should have deleted it on save"
-            );
-        })
-    }
-
-    #[test]
-    fn add_item() {
-        async_unit::tokio_unit_test(|| {
-            let repo = many_files_dirs::getrepo(None);
-            let blobstore = repo.get_blobstore();
-            let logger = Logger::root(Discard, o![]);
-
-            let manifest_id = HgNodeHash::from_static_str(
-                "b267a6869fcc39b37741408b5823cc044233201d",
-            ).expect("Could not get nodehash");
-
-            let new_file = MPathElement::new(b"new_file".to_vec())
-                .expect("Can't create MPathElement new_file");
-
-            // Load a memory manifest
-            let memory_manifest =
-                MemoryRootManifest::new(blobstore.clone(), logger, Some(&manifest_id), None)
-                    .wait()
-                    .expect("Could not load manifest");
-
-            // Add a file
-            let nodehash = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
-                .expect("Could not get nodehash");
-            memory_manifest
-                .change_entry(
-                    &MPath::new(b"new_file").expect("Could not create MPath"),
-                    Some(HgBlobEntry::new(
-                        blobstore.clone(),
-                        new_file.clone(),
-                        nodehash,
-                        Type::File(FileType::Regular),
-                    )),
-                )
-                .wait()
-                .expect("Failed to set");
-
-            // And check that new_file persists
-            let manifest_entry = memory_manifest
-                .save()
-                .wait()
-                .expect("Could not save manifest");
-
-            let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
-                .map(|m| m.lookup(&new_file))
-                .wait()
-                .expect("Lookup of entry just saved failed")
-                .expect("new_file did not persist");
-            assert_eq!(
-                refound.get_hash().into_nodehash(),
-                nodehash,
-                "nodehash hash changed"
-            );
-        })
-    }
-
-    #[test]
-    fn replace_item() {
-        async_unit::tokio_unit_test(|| {
-            let repo = many_files_dirs::getrepo(None);
-            let blobstore = repo.get_blobstore();
-            let logger = Logger::root(Discard, o![]);
-
-            let manifest_id = HgNodeHash::from_static_str(
-                "b267a6869fcc39b37741408b5823cc044233201d",
-            ).expect("Could not get nodehash");
-
-            let new_file = MPathElement::new(b"1".to_vec()).expect("Can't create MPathElement 1");
-
-            // Load a memory manifest
-            let memory_manifest =
-                MemoryRootManifest::new(blobstore.clone(), logger, Some(&manifest_id), None)
-                    .wait()
-                    .expect("Could not load manifest");
-
-            // Add a file
-            let nodehash = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
-                .expect("Could not get nodehash");
-            memory_manifest
-                .change_entry(
-                    &MPath::new(b"1").expect("Could not create MPath"),
-                    Some(HgBlobEntry::new(
-                        blobstore.clone(),
-                        new_file.clone(),
-                        nodehash,
-                        Type::File(FileType::Regular),
-                    )),
-                )
-                .wait()
-                .expect("Failed to set");
-
-            // And check that new_file persists
-            let manifest_entry = memory_manifest
-                .save()
-                .wait()
-                .expect("Could not save manifest");
-
-            let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
-                .map(|m| m.lookup(&new_file))
-                .wait()
-                .expect("Lookup of entry just saved failed")
-                .expect("1 did not persist");
-            assert_eq!(
-                refound.get_hash().into_nodehash(),
-                nodehash,
-                "nodehash hash changed"
-            );
-        })
-    }
-
-    #[test]
-    fn merge_manifests() {
-        async_unit::tokio_unit_test(|| {
-            let repo = many_files_dirs::getrepo(None);
-            let blobstore = repo.get_blobstore();
-            let logger = Logger::root(Discard, o![]);
-
-            let base = {
-                let mut changes = BTreeMap::new();
-                let shared = MPathElement::new(b"shared".to_vec()).unwrap();
-                let base = MPathElement::new(b"base".to_vec()).unwrap();
-                let conflict = MPathElement::new(b"conflict".to_vec()).unwrap();
-                changes.insert(
-                    shared.clone(),
-                    Some(MemoryManifestEntry::Blob(HgBlobEntry::new(
-                        blobstore.clone(),
-                        shared.clone(),
-                        nodehash::ONES_HASH,
-                        Type::File(FileType::Regular),
-                    ))),
-                );
-                changes.insert(
-                    base.clone(),
-                    Some(MemoryManifestEntry::Blob(HgBlobEntry::new(
-                        blobstore.clone(),
-                        base.clone(),
-                        nodehash::ONES_HASH,
-                        Type::File(FileType::Regular),
-                    ))),
-                );
-                changes.insert(
-                    conflict.clone(),
-                    Some(MemoryManifestEntry::Blob(HgBlobEntry::new(
-                        blobstore.clone(),
-                        conflict.clone(),
-                        nodehash::ONES_HASH,
-                        Type::File(FileType::Regular),
-                    ))),
-                );
-                MemoryManifestEntry::MemTree {
-                    base_manifest_id: None,
-                    p1: Some(nodehash::ONES_HASH),
-                    p2: None,
-                    changes: Arc::new(Mutex::new(changes)),
-                }
-            };
-
-            let other = {
-                let mut changes = BTreeMap::new();
-                let shared = MPathElement::new(b"shared".to_vec()).unwrap();
-                let other = MPathElement::new(b"other".to_vec()).unwrap();
-                let conflict = MPathElement::new(b"conflict".to_vec()).unwrap();
-                changes.insert(
-                    shared.clone(),
-                    Some(MemoryManifestEntry::Blob(HgBlobEntry::new(
-                        blobstore.clone(),
-                        shared.clone(),
-                        nodehash::ONES_HASH,
-                        Type::File(FileType::Regular),
-                    ))),
-                );
-                changes.insert(
-                    other.clone(),
-                    Some(MemoryManifestEntry::Blob(HgBlobEntry::new(
-                        blobstore.clone(),
-                        other.clone(),
-                        nodehash::TWOS_HASH,
-                        Type::File(FileType::Regular),
-                    ))),
-                );
-                changes.insert(
-                    conflict.clone(),
-                    Some(MemoryManifestEntry::Blob(HgBlobEntry::new(
-                        blobstore.clone(),
-                        conflict.clone(),
-                        nodehash::TWOS_HASH,
-                        Type::File(FileType::Regular),
-                    ))),
-                );
-                MemoryManifestEntry::MemTree {
-                    base_manifest_id: None,
-                    p1: Some(nodehash::TWOS_HASH),
-                    p2: None,
-                    changes: Arc::new(Mutex::new(changes)),
-                }
-            };
-
-            let merged = base.merge_with_conflicts(other, blobstore, logger, RepoPath::root())
-                .wait()
-                .unwrap();
-
-            if let MemoryManifestEntry::MemTree { changes, .. } = merged {
-                let changes = changes.lock().expect("lock poisoned");
-                assert_eq!(changes.len(), 4, "Should merge to 4 entries");
-                if let Some(Some(MemoryManifestEntry::Blob(blob))) =
-                    changes.get(&MPathElement::new(b"shared".to_vec()).unwrap())
-                {
-                    assert_eq!(
-                        blob.get_hash(),
-                        &HgEntryId::new(nodehash::ONES_HASH),
-                        "Wrong hash for shared"
-                    );
-                } else {
-                    panic!("shared is not a blob");
-                }
-                if let Some(Some(MemoryManifestEntry::Blob(blob))) =
-                    changes.get(&MPathElement::new(b"base".to_vec()).unwrap())
-                {
-                    assert_eq!(
-                        blob.get_hash(),
-                        &HgEntryId::new(nodehash::ONES_HASH),
-                        "Wrong hash for base"
-                    );
-                } else {
-                    panic!("base is not a blob");
-                }
-                if let Some(Some(MemoryManifestEntry::Blob(blob))) =
-                    changes.get(&MPathElement::new(b"other".to_vec()).unwrap())
-                {
-                    assert_eq!(
-                        blob.get_hash(),
-                        &HgEntryId::new(nodehash::TWOS_HASH),
-                        "Wrong hash for other"
-                    );
-                } else {
-                    panic!("other is not a blob");
-                }
-                if let Some(Some(MemoryManifestEntry::Conflict(conflicts))) =
-                    changes.get(&MPathElement::new(b"conflict".to_vec()).unwrap())
-                {
-                    assert_eq!(conflicts.len(), 2, "Should have two conflicts");
-                } else {
-                    panic!("conflict did not create a conflict")
-                }
-            } else {
-                panic!("Merge failed to produce a merged tree");
-            }
-        })
+impl Debug for MemoryRootManifest {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.root_entry.fmt(fmt)
     }
 }

@@ -57,14 +57,14 @@ extern crate many_files_dirs;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
 
-mod repo;
 mod changeset;
+mod errors;
+mod file;
 mod manifest;
 mod memory_manifest;
-mod file;
-mod errors;
-mod utils;
+mod repo;
 mod repo_commit;
+mod utils;
 
 pub use errors::*;
 
@@ -77,3 +77,7 @@ pub use repo_commit::ChangesetHandle;
 // TODO: This is exported for testing - is this the right place for it?
 pub use repo_commit::compute_changed_files;
 pub use utils::RawNodeBlob;
+
+pub mod internal {
+    pub use memory_manifest::{MemoryManifestEntry, MemoryRootManifest};
+}

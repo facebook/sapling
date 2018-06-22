@@ -94,4 +94,5 @@ pub enum ErrorKind {
     ManifestAlreadyAMerge(HgNodeHash, HgNodeHash),
     #[fail(display = "Path not found: {}", _0)] PathNotFound(MPath),
     #[fail(display = "Remove called on non-directory")] NotADirectory,
+    #[fail(display = "Empty file path")] EmptyFilePath,
 }
