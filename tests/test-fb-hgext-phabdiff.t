@@ -65,6 +65,9 @@ Test reviewers for working copy
   $ hg debugcommitmessage --config 'committemplate.changeset={reviewers}' --config 'committemplate.reviewers=foo, {x}' --config 'committemplate.x=bar'
   foo, bar (no-eol)
 
+  $ hg debugcommitmessage --config 'committemplate.changeset=A{reviewers}B'
+  AB (no-eol)
+
 Make sure the template keywords are documented correctly
 
   $ hg help templates | egrep 'phabdiff|tasks'

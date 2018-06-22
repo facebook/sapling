@@ -51,8 +51,11 @@ def showreviewers(repo, ctx, templ, **args):
         # working copy - use committemplate.reviewers, which can be found at
         # templ.t.cache.
         props = templ.cache
-        reviewersconfig = props.get("reviewers", "")
-        return cmdutil.rendertemplate(repo.ui, reviewersconfig, props)
+        reviewersconfig = props.get("reviewers")
+        if reviewersconfig:
+            return cmdutil.rendertemplate(repo.ui, reviewersconfig, props)
+        else:
+            return None
     else:
         reviewers = []
         descr = ctx.description()
