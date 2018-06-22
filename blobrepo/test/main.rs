@@ -23,17 +23,22 @@ extern crate many_files_dirs;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
+extern crate merge_uneven;
 extern crate mononoke_types;
 
+use failure::Error;
 use futures::Future;
-use futures_ext::FutureExt;
+use futures_ext::{BoxFuture, FutureExt};
 use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::marker::PhantomData;
 
-use blobrepo::{compute_changed_files, BlobRepo};
+use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
 use mercurial_types::{manifest, Changeset, Entry, FileType, HgChangesetId, HgEntryId,
-                      HgManifestId, MPath, MPathElement, RepoPath};
-use mononoke_types::{ChangesetId, ContentId, FileContents, MononokeId};
+                      HgManifestId, HgNodeHash, HgParents, MPath, MPathElement, RepoPath};
+use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents,
+                     MononokeId};
+use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 
 #[macro_use]
 mod utils;
@@ -476,5 +481,158 @@ fn test_compute_changed_files_one_parent() {
             diff,
             expected,
         );
+    });
+}
+
+fn make_bonsai_changeset(
+    p0: Option<ChangesetId>,
+    p1: Option<ChangesetId>,
+    changes: Vec<(&'static str, Option<FileChange>)>,
+) -> BonsaiChangeset {
+    BonsaiChangesetMut {
+        parents: p0.into_iter().chain(p1).collect(),
+        author: "aslpavel".to_owned(),
+        author_date: DateTime::from_timestamp(1528298184, 0).unwrap(),
+        committer: None,
+        committer_date: None,
+        message: "[mononoke] awesome message".to_owned(),
+        extra: BTreeMap::new(),
+        file_changes: changes
+            .into_iter()
+            .map(|(path, change)| (MPath::new(path).unwrap(), change))
+            .collect(),
+    }.freeze()
+        .unwrap()
+}
+
+fn make_file_change(
+    content: impl AsRef<[u8]>,
+    repo: &BlobRepo,
+) -> impl Future<Item = FileChange, Error = Error> + Send {
+    let content = content.as_ref();
+    let content_size = content.len() as u64;
+    repo.unittest_store(FileContents::new_bytes(content.as_ref()))
+        .map(move |content_id| FileChange::new(content_id, FileType::Regular, content_size, None))
+}
+
+#[test]
+fn test_get_manifest_from_bonsai() {
+    async_unit::tokio_unit_test(|| {
+        let repo = merge_uneven::getrepo(None);
+        let get_manifest_for_changeset =
+            |cs_nodehash: &str| -> HgNodeHash {
+                run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(
+                    string_to_nodehash(cs_nodehash),
+                ))).unwrap()
+                    .manifestid()
+                    .into_nodehash()
+            };
+        let get_entries =
+            |ms_hash: &HgNodeHash| -> BoxFuture<HashMap<String, Box<Entry + Sync>>, Error> {
+                repo.get_manifest_by_nodeid(ms_hash)
+                    .map(|ms| {
+                        ms.list()
+                            .map(|e| {
+                                let name = e.get_name().unwrap().as_bytes().to_owned();
+                                (String::from_utf8(name).unwrap(), e)
+                            })
+                            .collect::<HashMap<_, _>>()
+                    })
+                    .boxify()
+            };
+
+        // #CONTENT
+        // 1: 1
+        // 2: 2
+        // 3: 3
+        // 4: 4
+        // 5: 5
+        // base: branch1
+        // branch: 4
+        let ms1 = get_manifest_for_changeset("264f01429683b3dd8042cb3979e8bf37007118bc");
+
+        // #CONTENT
+        // base: base
+        // branch: 4
+        let ms2 = get_manifest_for_changeset("16839021e338500b3cf7c9b871c8a07351697d68");
+
+        // fails with conflict
+        {
+            let ms_hash = run_future(repo.get_manifest_from_bonsai(
+                make_bonsai_changeset(None, None, vec![]),
+                Some(&ms1),
+                Some(&ms2),
+            ));
+            assert!(match ms_hash
+                .expect_err("should have failed")
+                .downcast::<ErrorKind>()
+                .unwrap()
+            {
+                ErrorKind::UnresolvedConflicts => true,
+                _ => false,
+            });
+        }
+
+        // resolves same content different parents for `branch` file
+        {
+            let ms_hash = run_future(repo.get_manifest_from_bonsai(
+                make_bonsai_changeset(None, None, vec![("base", None)]),
+                Some(&ms1),
+                Some(&ms2),
+            )).expect("merge should have succeeded");
+            let entries = run_future(get_entries(&ms_hash)).unwrap();
+
+            assert!(entries.get("1").is_some());
+            assert!(entries.get("2").is_some());
+            assert!(entries.get("3").is_some());
+            assert!(entries.get("4").is_some());
+            assert!(entries.get("5").is_some());
+            assert!(entries.get("base").is_none());
+
+            // check trivial merge parents
+            let (ms1_entries, ms2_entries) =
+                run_future(get_entries(&ms1).join(get_entries(&ms2))).unwrap();
+            let mut br_expected_parents = HashSet::new();
+            br_expected_parents.insert(
+                ms1_entries
+                    .get("branch")
+                    .unwrap()
+                    .get_hash()
+                    .into_nodehash(),
+            );
+            br_expected_parents.insert(
+                ms2_entries
+                    .get("branch")
+                    .unwrap()
+                    .get_hash()
+                    .into_nodehash(),
+            );
+
+            let br = entries.get("branch").expect("trivial merge should succeed");
+            let br_parents = run_future(br.get_parents())
+                .unwrap()
+                .into_iter()
+                .collect::<HashSet<_>>();
+            assert_eq!(br_parents, br_expected_parents);
+        }
+
+        // add file
+        {
+            let content_expected = &b"some awesome content"[..];
+            let fc = run_future(make_file_change(content_expected, &repo)).unwrap();
+            let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
+            let ms_hash = run_future(repo.get_manifest_from_bonsai(bcs, Some(&ms1), Some(&ms2)))
+                .expect("adding new file should not produce coflict");
+            let entries = run_future(get_entries(&ms_hash)).unwrap();
+            let new = entries.get("new").expect("new file should be in entries");
+            match run_future(new.get_content()).unwrap() {
+                manifest::Content::File(content) => {
+                    assert_eq!(content, FileContents::new_bytes(content_expected));
+                }
+                _ => panic!("content type mismatch"),
+            };
+            let new_parents = run_future(new.get_parents()).unwrap();
+            assert_eq!(new_parents, HgParents::None);
+        }
     });
 }
