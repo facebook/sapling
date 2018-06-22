@@ -392,7 +392,7 @@ def setuptreestores(repo, mfl):
         ondemandstore = ondemandtreedatastore(repo)
 
         # Data store
-        datastore = cstore.datapackstore(packpath)
+        datastore = datapackstore(ui, packpath, usecdatapack=True)
         revlogstore = manifestrevlogstore(repo)
         mfl.revlogstore = revlogstore
         if ui.configbool("treemanifest", "cacheserverstore"):
