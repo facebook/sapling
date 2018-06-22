@@ -2983,6 +2983,7 @@ class TestRunner(object):
 
         failed = False
         allskipped = False
+        errored = False
         try:
             if self.options.restart:
                 orig = list(testdescs)
@@ -3042,6 +3043,8 @@ class TestRunner(object):
                 result = runner.run(suite)
                 if tests and result.testsSkipped == len(tests):
                     allskipped = True
+                if tests and result.errors:
+                    errored = True
 
             if result.failures:
                 failed = True
@@ -3056,6 +3059,8 @@ class TestRunner(object):
             return 1
         elif allskipped:
             return Test.SKIPPED_STATUS
+        elif errored:
+            return 2
 
     def _getport(self, count):
         port = self._ports.get(count)  # do we have a cached entry?
