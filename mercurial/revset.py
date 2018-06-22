@@ -683,7 +683,7 @@ def contains(repo, subset, x):
     return subset.filter(matches, condrepr=("<contains %r>", pat))
 
 
-@predicate("converted([id])", safe=True)
+@predicate("converted([id])", safe=True, weight=10)
 def converted(repo, subset, x):
     """Changesets converted from the given identifier in the old repository if
     present, or all converted changesets if no identifier is specified.
@@ -869,7 +869,7 @@ def extinct(repo, subset, x):
     return subset & extincts
 
 
-@predicate("extra(label, [value])", safe=True)
+@predicate("extra(label, [value])", safe=True, weight=10)
 def extra(repo, subset, x):
     """Changesets with the given label in the extra metadata, with the given
     optional value.
@@ -1110,7 +1110,7 @@ def grep(repo, subset, x):
     return subset.filter(matches, condrepr=("<grep %r>", gr.pattern))
 
 
-@predicate("_matchfiles", safe=True)
+@predicate("_matchfiles", safe=True, weight=10)
 def _matchfiles(repo, subset, x):
     # _matchfiles takes a revset list of prefixed arguments:
     #
@@ -1316,7 +1316,7 @@ def maxrev(repo, subset, x):
     return baseset(datarepr=("<max %r, %r>", subset, os))
 
 
-@predicate("merge()", safe=True)
+@predicate("merge()", safe=True, weight=10)
 def merge(repo, subset, x):
     """Changeset is a merge changeset.
     """
@@ -1326,7 +1326,7 @@ def merge(repo, subset, x):
     return subset.filter(lambda r: cl.parentrevs(r)[1] != -1, condrepr="<merge>")
 
 
-@predicate("branchpoint()", safe=True)
+@predicate("branchpoint()", safe=True, weight=10)
 def branchpoint(repo, subset, x):
     """Changesets with more than one child.
     """
@@ -1818,7 +1818,7 @@ def rev(repo, subset, x):
     return subset & baseset([l])
 
 
-@predicate("matching(revision [, field])", safe=True)
+@predicate("matching(revision [, field])", safe=True, weight=10)
 def matching(repo, subset, x):
     """Changesets in which a given set of fields match the set of fields in the
     selected revision or set.
@@ -2067,7 +2067,7 @@ def sort(repo, subset, x, order):
     return baseset([c.rev() for c in ctxs])
 
 
-@predicate("subrepo([pattern])")
+@predicate("subrepo([pattern])", weight=10)
 def subrepo(repo, subset, x):
     """Changesets that add, modify or remove the given subrepo.  If no subrepo
     pattern is named, any subrepo changes are returned.

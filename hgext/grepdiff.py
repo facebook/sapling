@@ -46,7 +46,7 @@ def getpatternandprocessor(repo, args):
     return pattern, processor
 
 
-@revsetpredicate("grepdiff(pattern, [file], ...)")
+@revsetpredicate("grepdiff(pattern, [file], ...)", weight=10)
 def grepdiffpredicate(repo, subset, x):
     """grepdiff: a revset for code archeology
 

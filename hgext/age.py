@@ -60,7 +60,7 @@ def parseagerange(agerange):
     return start, end
 
 
-@revsetpredicate("age(string)")
+@revsetpredicate("age(string)", weight=10)
 def age(repo, subset, x):
     """Changesets that are in a specific age range.
 

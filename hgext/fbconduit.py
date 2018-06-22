@@ -46,6 +46,7 @@ def extsetup(ui):
         return
 
     revset.symbols["gitnode"] = gitnode
+    gitnode._weight = 10
     extensions.wrapfunction(revset, "stringset", overridestringset)
     revset.methods["string"] = revset.stringset
     revset.methods["symbol"] = revset.stringset
