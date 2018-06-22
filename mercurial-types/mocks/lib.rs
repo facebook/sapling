@@ -8,7 +8,6 @@
 #![feature(const_fn)]
 
 extern crate bytes;
-extern crate csv;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;

@@ -202,7 +202,7 @@ mod test {
 
     #[test]
     fn test_empty_vfs() {
-        let manifest = MockManifest::from_description_string("").expect("empty manifest is valid");
+        let manifest = MockManifest::empty();
         let vfs = vfs_from_manifest(&manifest)
             .wait()
             .expect("failed to get vfs");

@@ -6,11 +6,9 @@
 
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry as BTreeEntry;
-use std::io::{Cursor, Read};
 use std::sync::Arc;
 
 use bytes::Bytes;
-use csv::{ByteRecord, ReaderBuilder};
 use failure::{Error, ResultExt};
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
@@ -36,25 +34,11 @@ pub struct MockManifest {
 }
 
 impl MockManifest {
-    /// Build a root tree manifest from a description.
-    ///
-    /// A description is a CSV file with three fields (path, type and content).
-    pub fn from_description<R: Read>(desc: R) -> Result<Self> {
-        let mut reader = ReaderBuilder::new().has_headers(false).from_reader(desc);
-        let result: Result<BTreeMap<_, _>> = reader
-            .byte_records()
-            .map(|record| {
-                let (path, file_type, content) = parse_record(record?)?;
-                Ok((path, (file_type, content, None)))
-            })
-            .collect();
-        let path_map = result?;
-        Self::from_path_map(path_map)
-    }
-
-    /// Build a root tree manifest from a description string.
-    pub fn from_description_string<P: AsRef<[u8]>>(desc: P) -> Result<Self> {
-        Self::from_description(Cursor::new(desc))
+    /// Create an empty manifest.
+    pub fn empty() -> Self {
+        Self {
+            entries: BTreeMap::new(),
+        }
     }
 
     /// Build a root tree manifest from a map of paths to file types and contents.
@@ -147,29 +131,6 @@ impl MockManifest {
             result.with_context(|_| ErrorKind::InvalidPathMap("error converting to MPath".into()));
         Self::from_path_map(result?)
     }
-}
-
-fn parse_record(mut record: ByteRecord) -> Result<(MPath, FileType, Bytes)> {
-    if record.len() != 3 {
-        bail_err!(ErrorKind::InvalidManifestDescription(format!(
-            "expected CSV record to have 3 entries, found {}",
-            record.len()
-        )));
-    }
-    let path = MPath::new(&record[0])
-        .with_context(|_| ErrorKind::InvalidManifestDescription("invalid path".into()))?;
-    let file_type = match &record[1][..] {
-        b"r" => FileType::Regular,
-        b"x" => FileType::Executable,
-        b"l" => FileType::Symlink,
-        other => bail_err!(ErrorKind::InvalidManifestDescription(format!(
-            "expected file type to be 'r', 'x' or 'l', found {:?}",
-            String::from_utf8_lossy(other)
-        ))),
-    };
-    let content = record[2].into();
-    record.truncate(2);
-    Ok((path, file_type, content))
 }
 
 /// Pop directories from the end of the stack until and including 1 element after
