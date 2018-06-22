@@ -86,7 +86,6 @@ Verify
   3 files, 2 changesets, 6 total revisions
 
   $ test -d .hg/store/lfs/objects
-  [1]
   $ sqlite3 lfs.sql "SELECT * FROM p4_lfs_map"
   1|1|*|37a7b43abd9e105a0e6b22088b140735a02f288767fe7a6f4f436cb46b064ca9|//depot/Main/largefile (glob)
   2|2|*|b0d5c1968efbabbff9d94160f284cd7b52686ca3c46cfffdd351de07384fce9c|//depot/Main/largefile (glob)
