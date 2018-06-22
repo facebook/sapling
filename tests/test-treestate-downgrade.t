@@ -25,9 +25,7 @@ Downgrade to treedirstate
 Check nonnormalset
 
   $ hg debugshell --command 'print(repr(sorted(repo.dirstate._map.nonnormalset)))'
-  ['x']
-
-BUG: x should not be part of the nonnormalset.
+  []
 
 Check downgrade with "hg pull"
 
