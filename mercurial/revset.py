@@ -1743,7 +1743,7 @@ def _phaseandancestors(repo, subset, x):
     return subset & revs
 
 
-@predicate("public()", safe=True)
+@predicate("public()", safe=True, weight=3)
 def public(repo, subset, x):
     """Changeset in public phase."""
     # i18n: "public" is a keyword
