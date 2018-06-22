@@ -38,10 +38,12 @@ Check downgrade with "hg pull"
 
   $ hg init $TESTTMP/repo3 --config format.dirstate=2
   $ cd $TESTTMP/repo3
-  $ hg pull ../repo2 --config format.dirstate=1 --config treedirstate.migrateonpull=1 --config extensions.rebase= --rebase 2>err
-  downgrading dirstate format...
-  [1]
-  $ tail -1 err
-  mercurial.error.ProgrammingError: getclock is only supported by treestate
+  $ hg pull ../repo2 --config format.dirstate=1 --config treedirstate.migrateonpull=1 --config extensions.rebase= --rebase -q
 
-BUG: crashes with "pull --rebase" downgrade
+fsmonitor state is invalidated after upgrade
+
+  $ ls .hg/fsmonitor.state
+  .hg/fsmonitor.state
+  $ hg pull ../repo2 --config format.dirstate=2 --config treedirstate.migrateonpull=1 --config extensions.rebase= --rebase -q
+  $ [ -f .hg/fsmonitor.state ]
+  [1]

@@ -31,8 +31,11 @@ class state(object):
         self.walk_on_invalidate = self._ui.configbool("fsmonitor", "walk_on_invalidate")
         self.timeout = float(self._ui.config("fsmonitor", "timeout"))
         self._repo = repo
-        self._usetreestate = "treestate" in repo.requirements
         self._droplist = []
+
+    @property
+    def _usetreestate(self):
+        return "treestate" in self._repo.requirements
 
     def get(self):
         """return clock, ignorehash, notefiles"""
