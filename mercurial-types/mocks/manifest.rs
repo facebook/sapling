@@ -42,8 +42,11 @@ impl MockManifest {
     }
 
     /// Build a root tree manifest from a map of paths to file types and contents.
+    ///
+    /// dir_hashes is used to assign directories hashes.
     pub fn from_path_map(
         path_map: BTreeMap<MPath, (FileType, Bytes, Option<HgEntryId>)>,
+        dir_hashes: BTreeMap<MPath, HgEntryId>,
     ) -> Result<Self> {
         // Stack of directory names and entry lists currently being built
         let mut wip: Vec<(Option<MPath>, _)> = vec![(None, BTreeMap::new())];
@@ -65,7 +68,7 @@ impl MockManifest {
             );
 
             // Pop directories from the wip stack that are now done.
-            finalize_dirs(&mut wip, common_idx)?;
+            finalize_dirs(&mut wip, common_idx, &dir_hashes)?;
 
             // Push new elements to the stack for any new intermediate directories.
             for idx in (common_idx + 1)..path.num_components() {
@@ -89,7 +92,7 @@ impl MockManifest {
         }
 
         // Wrap up any remaining directories in the stack.
-        finalize_dirs(&mut wip, 0)?;
+        finalize_dirs(&mut wip, 0, &dir_hashes)?;
         assert_eq!(
             wip.len(),
             1,
@@ -101,9 +104,10 @@ impl MockManifest {
     }
 
     /// A generic version of `from_path_map`.
-    pub fn from_path_hashes<I, P, B>(paths: I) -> Result<Self>
+    pub fn from_path_hashes<IP, ID, P, B>(paths: IP, dir_hashes: ID) -> Result<Self>
     where
-        I: IntoIterator<Item = (P, (FileType, B, HgEntryId))>,
+        IP: IntoIterator<Item = (P, (FileType, B, HgEntryId))>,
+        ID: IntoIterator<Item = (P, HgEntryId)>,
         P: AsRef<[u8]>,
         B: Into<Bytes>,
     {
@@ -112,8 +116,16 @@ impl MockManifest {
             .map(|(p, (ft, b, id))| Ok((MPath::new(p)?, (ft, b.into(), Some(id)))))
             .collect();
         let result =
-            result.with_context(|_| ErrorKind::InvalidPathMap("error converting to MPath".into()));
-        Self::from_path_map(result?)
+            result.with_context(|_| ErrorKind::InvalidPathMap("error converting to MPath".into()))?;
+
+        let dir_hashes: Result<BTreeMap<_, _>> = dir_hashes
+            .into_iter()
+            .map(|(p, hash)| Ok((MPath::new(p)?, hash)))
+            .collect();
+        let dir_hashes = dir_hashes.with_context(|_| {
+            ErrorKind::InvalidDirectoryHashes("error converting to MPath".into())
+        })?;
+        Self::from_path_map(result, dir_hashes)
     }
 
     /// A generic version of `from_path_map` that doesn't accept hashes for entry IDs.
@@ -129,7 +141,7 @@ impl MockManifest {
             .collect();
         let result =
             result.with_context(|_| ErrorKind::InvalidPathMap("error converting to MPath".into()));
-        Self::from_path_map(result?)
+        Self::from_path_map(result?, BTreeMap::new())
     }
 }
 
@@ -138,6 +150,7 @@ impl MockManifest {
 fn finalize_dirs(
     wip: &mut Vec<(Option<MPath>, BTreeMap<MPathElement, MockEntry>)>,
     last_to_keep: usize,
+    dir_hashes: &BTreeMap<MPath, HgEntryId>,
 ) -> Result<()> {
     for _ in (last_to_keep + 1)..wip.len() {
         let (dir, entries) = wip.pop().expect("wip should have at least 1 element");
@@ -145,9 +158,11 @@ fn finalize_dirs(
         let basename = dir.basename().clone();
 
         let dir_manifest = MockManifest { entries };
-        let cf = Arc::new(move || Content::Tree(Box::new(dir_manifest.clone())));
-        let mut dir_entry = MockEntry::new(RepoPath::DirectoryPath(dir), cf);
-        dir_entry.set_type(Type::Tree);
+        let hash = dir_hashes.get(&dir).cloned();
+        let mut dir_entry = MockEntry::from_manifest(RepoPath::DirectoryPath(dir), dir_manifest);
+        if let Some(hash) = hash {
+            dir_entry.set_hash(hash);
+        }
 
         match wip.last_mut()
             .expect("wip should have at least 1 element")
@@ -213,6 +228,14 @@ impl MockEntry {
         }
     }
 
+    #[inline]
+    pub fn from_manifest(path: RepoPath, mf: MockManifest) -> Self {
+        let cf = Arc::new(move || Content::Tree(Box::new(mf.clone())));
+        let mut entry = MockEntry::new(path, cf);
+        entry.set_type(Type::Tree);
+        entry
+    }
+
     pub fn set_type(&mut self, ty: Type) {
         self.ty = Some(ty);
     }
@@ -241,7 +264,10 @@ impl Entry for MockEntry {
     fn get_hash(&self) -> &HgEntryId {
         match self.hash {
             Some(ref hash) => hash,
-            None => panic!("hash is not set!"),
+            None => panic!(
+                "hash for entry (name: '{:?}', type: '{:?}') is not set!",
+                self.name, self.ty
+            ),
         }
     }
     fn get_name(&self) -> Option<&MPathElement> {

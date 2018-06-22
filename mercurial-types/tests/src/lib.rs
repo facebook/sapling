@@ -18,7 +18,7 @@ extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate tokio;
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::iter::repeat;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -633,7 +633,8 @@ fn test_visited_pruner_different_files_same_hash() {
             "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
             "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
         };
-        let root_manifest = MockManifest::from_path_hashes(paths).expect("manifest is valid");
+        let root_manifest =
+            MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
 
         let pruner = visited_pruner();
         let stream =
@@ -653,7 +654,8 @@ fn test_file_pruner() {
             "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
             "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
         };
-        let root_manifest = MockManifest::from_path_hashes(paths).expect("manifest is valid");
+        let root_manifest =
+            MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
 
         let pruner = file_pruner;
         let stream =

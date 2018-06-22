@@ -10,4 +10,5 @@ pub use failure::{Error, Result};
 pub enum ErrorKind {
     #[fail(display = "invalid manifest description: {}", _0)] InvalidManifestDescription(String),
     #[fail(display = "invalid path map: {}", _0)] InvalidPathMap(String),
+    #[fail(display = "invalid directory hash map: {}", _0)] InvalidDirectoryHashes(String),
 }
