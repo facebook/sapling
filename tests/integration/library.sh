@@ -88,7 +88,7 @@ function blobimport {
 }
 
 function apiserver {
-  $MONONOKE_APISERVER "$@" >> "$TESTTMP/apiserver.out" 2>&1 &
+  $MONONOKE_APISERVER --config-path "$TESTTMP/mononoke-config-rocks" --config-bookmark "local_master"  "$@" >> "$TESTTMP/apiserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 
