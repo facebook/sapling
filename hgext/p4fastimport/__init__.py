@@ -32,12 +32,12 @@ import itertools
 import json
 import sqlite3
 
+from mercurial import error, extensions, progress, registrar, revlog, scmutil
+from mercurial.i18n import _
+from mercurial.node import hex, short
+
 from . import importer, p4, seqimporter, syncimporter
 from .util import decodefileflags, getcl, lastcl, runworker
-
-from mercurial.i18n import _
-from mercurial.node import short, hex
-from mercurial import error, extensions, progress, registrar, revlog, scmutil, verify
 
 
 def extsetup():
@@ -45,28 +45,6 @@ def extsetup():
     # caching issues when the inlined .i data is separated into a .d file. We
     # workaround by not allowing inlined revlogs at all.
     revlog.REVLOG_DEFAULT_VERSION = revlog.REVLOG_DEFAULT_FORMAT
-
-
-def reposetup(ui, repo):
-    def nothing(orig, *args, **kwargs):
-        pass
-
-    def yoloverify(orig, *args, **kwargs):
-        # We have to set it directly as repo is reading the config lfs.bypass
-        # during their repo setup.
-        repo.svfs.options["lfsbypass"] = True
-        return orig(*args, **kwargs)
-
-    extensions.wrapfunction(verify.verifier, "verify", yoloverify)
-
-    if ui.config("p4fastimport", "lfsmetadata", None) is not None:
-        try:
-            lfs = extensions.find("lfs")
-        except KeyError:
-            pass
-        else:
-            extensions.wrapfunction(lfs.blobstore.local, "write", nothing)
-            extensions.wrapfunction(lfs.blobstore.local, "read", nothing)
 
 
 def writebookmark(tr, repo, revisions, name):
