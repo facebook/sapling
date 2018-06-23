@@ -485,6 +485,13 @@ Do you want to run `eden mount %s` instead?"""
     def unmount(self, path: str) -> None:
         """Ask edenfs to unmount the specified checkout."""
         with self.get_thrift_client() as client:
+            # In some cases edenfs can take a long time unmounting while it waits for
+            # inodes to become unreferenced.  Ideally we should have edenfs timeout and
+            # forcibly clean up the mount point in this situation.
+            #
+            # For now at least time out here so the CLI commands do not hang in this
+            # case.
+            client._socket.setTimeout(15000)
             client.unmount(path)
 
     def destroy_mount(self, path: str) -> None:
