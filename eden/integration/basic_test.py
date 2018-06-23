@@ -219,7 +219,7 @@ class BasicTest(testcase.EdenRepoTest):
         self.eden.run_unchecked("remove", "/tmp")
         self.eden.run_unchecked("remove", "/root")
 
-    def test_unmount(self) -> None:
+    def test_remove_checkout(self) -> None:
         entries = set(os.listdir(self.mount))
         self.assertEqual(self.expected_mount_entries, entries)
 
@@ -236,6 +236,26 @@ class BasicTest(testcase.EdenRepoTest):
         self.assertEqual(self.expected_mount_entries, entries)
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
+
+    def test_remove_unmounted_checkout(self) -> None:
+        # Clone a second checkout mount point
+        mount2 = os.path.join(self.mounts_dir, "mount2")
+        self.eden.clone(self.repo_name, mount2)
+        self.assertEqual(
+            {self.mount: self.eden.CLIENT_ACTIVE, mount2: self.eden.CLIENT_ACTIVE},
+            self.eden.list_cmd(),
+        )
+
+        # Now unmount it
+        self.eden.run_cmd("unmount", mount2)
+        self.assertEqual(
+            {self.mount: self.eden.CLIENT_ACTIVE, mount2: self.eden.CLIENT_INACTIVE},
+            self.eden.list_cmd(),
+        )
+
+        # Now use "eden remove" to destroy mount2
+        self.eden.remove(mount2)
+        self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, self.eden.list_cmd())
 
     def test_unmount_remount(self) -> None:
         # write a file into the overlay to test that it is still visible

@@ -459,23 +459,34 @@ class RemoveCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         config = create_config(args)
+        configured_mounts = config.get_mount_paths()
 
-        # First translate the list of paths into mount point names
-        mounts = []
+        # First translate the list of paths into canonical checkout paths
+        # We also track a bool indicating if this checkout is currently mounted
+        mounts: List[Tuple[str, bool]] = []
         for path in args.paths:
             try:
                 mount_path = util.get_eden_mount_name(path)
+                active = True
             except util.NotAnEdenMountError as ex:
-                print(f"error: {ex}")
-                return 1
+                # This is not an active mount point.
+                # Check for it by name in the config file anyway, in case it is
+                # listed in the config file but not currently mounted.
+                mount_path = os.path.realpath(path)
+                if mount_path in configured_mounts:
+                    active = False
+                else:
+                    print(f"error: {ex}")
+                    return 1
+                active = False
             except Exception as ex:
-                print(f"error: cannot determine moint point for {path}: {ex}")
+                print(f"error: cannot determine mount point for {path}: {ex}")
                 return 1
-            mounts.append(mount_path)
+            mounts.append((mount_path, active))
 
         # Warn the user since this operation permanently destroys data
         if args.prompt and sys.stdin.isatty():
-            mounts_list = "\n  ".join(mounts)
+            mounts_list = "\n  ".join(path for path, active in mounts)
             print(
                 f"""\
 Warning: this operation will permanently delete the following checkouts:
@@ -488,17 +499,31 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                 return 2
 
         # Unmount + destroy everything
-        for mount in mounts:
+        exit_code = 0
+        for mount, active in mounts:
             print(f"Removing {mount}...")
-            try:
-                stop_aux_processes_for_path(mount)
-                config.unmount(mount, delete_config=True)
-            except EdenService.EdenError as ex:
-                print_stderr("error: {}", ex)
-                return 1
+            if active:
+                try:
+                    stop_aux_processes_for_path(mount)
+                    config.unmount(mount)
+                except Exception as ex:
+                    print_stderr(f"error unmounting {mount}: {ex}")
+                    exit_code = 1
+                    # We intentionally fall through here and remove the mount point
+                    # from the config file.  The most likely cause of failure is if
+                    # edenfs times out performing the unmount.  We still want to go
+                    # ahead delete the mount from the config in this case.
 
-        print(f"Success")
-        return 0
+            try:
+                config.destroy_mount(mount)
+            except EdenService.EdenError as ex:
+                print_stderr(f"error deleting configuration for {mount}: {ex}")
+                exit_code = 1
+                # Continue around the loop removing any other mount points
+
+        if exit_code == 0:
+            print(f"Success")
+        return exit_code
 
 
 @subcmd("prefetch", "Prefetch content for matching file patterns")
@@ -608,7 +633,9 @@ class UnmountCmd(Subcmd):
         for path in args.paths:
             path = normalize_path_arg(path)
             try:
-                config.unmount(path, delete_config=args.destroy)
+                config.unmount(path)
+                if args.destroy:
+                    config.destroy_mount(path)
             except (EdenService.EdenError, EdenNotRunningError) as ex:
                 print_stderr(f"error: {ex}")
                 return 1

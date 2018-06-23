@@ -482,17 +482,22 @@ Do you want to run `eden mount %s` instead?"""
 
         return 0
 
-    def unmount(self, path: str, delete_config: bool) -> None:
-        path = os.path.realpath(path)
+    def unmount(self, path: str) -> None:
+        """Ask edenfs to unmount the specified checkout."""
         with self.get_thrift_client() as client:
             client.unmount(path)
 
-        if delete_config:
-            shutil.rmtree(self._get_client_dir_for_mount_point(path))
-            self._remove_path_from_directory_map(path)
+    def destroy_mount(self, path: str) -> None:
+        """Delete the specified mount point from the configuration file and remove
+        the mount directory, if it exists.
 
-            # Delete the now empty mount point
-            os.rmdir(path)
+        This should normally be called after unmounting the mount point.
+        """
+        shutil.rmtree(self._get_client_dir_for_mount_point(path))
+        self._remove_path_from_directory_map(path)
+
+        # Delete the now empty mount point
+        os.rmdir(path)
 
     def check_health(self) -> HealthStatus:
         """
