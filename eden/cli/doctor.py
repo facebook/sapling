@@ -98,10 +98,17 @@ def cure_what_ails_you(
 
     watchman_roots = _get_watch_roots_for_watchman()
     nuclide_roots = _get_roots_for_nuclide()
+    configured_mounts = config.get_mount_paths()
+
+    if is_healthy:
+        for mount_path in configured_mounts:
+            if mount_path not in active_mount_points:
+                checks_and_messages.append(RemountCheck(config, mount_path))
+
     for mount_path in active_mount_points:
-        if mount_path not in config.get_mount_paths():
+        if mount_path not in configured_mounts:
             # TODO: if there are mounts in active_mount_points that aren't in
-            # config.get_mount_paths(), should we try to add them to the config?
+            # configured_mounts, should we try to add them to the config?
             # I've only seen this happen in the wild if a clone fails partway,
             # for example, if a post-clone hook fails.
             continue
@@ -178,6 +185,25 @@ def cure_what_ails_you(
 
 def printable_bytes(b: bytes) -> str:
     return b.decode("utf-8", "backslashreplace")
+
+
+class RemountCheck(Check):
+    def __init__(self, config: config_mod.Config, mount_path: str) -> None:
+        self._config = config
+        self._mount_path = mount_path
+
+    def do_check(self, dry_run: bool) -> CheckResult:
+        if dry_run:
+            message = f"Would remount {self._mount_path}\n"
+            return CheckResult(CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, message)
+
+        try:
+            self._config.mount(self._mount_path)
+            message = f"Remounted {self._mount_path}\n"
+            return CheckResult(CheckResultType.FIXED, message)
+        except Exception as ex:
+            message = f"Error remounting {self._mount_path}: {ex}\n"
+            return CheckResult(CheckResultType.FAILED_TO_FIX, message)
 
 
 class StaleMountsCheck(Check):

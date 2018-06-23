@@ -11,12 +11,14 @@ import errno
 import io
 import os
 import shutil
+import stat
 import subprocess
 import tempfile
+import typing
 import unittest
 from collections import OrderedDict
 from textwrap import dedent
-from typing import Any, Dict, Iterable, List, Optional, Set, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 from unittest.mock import call, patch
 
 import eden.cli.config as config_mod
@@ -652,6 +654,76 @@ Performing 3 checks for {edenfs_path1}.
             out.getvalue(),
         )
         self.assertEqual(0, exit_code)
+
+    def test_remount_checkouts(self) -> None:
+        exit_code, out = self._test_remount_checkouts(dry_run=False)
+        self.assertEqual(exit_code, 0)
+        self.assertIn(f"Remounted {self._tmp_dir}/path2\n", out)
+        self.assertIn(f"Number of fixes made: 1.", out)
+
+    def test_remount_checkouts_dry_run(self) -> None:
+        exit_code, out = self._test_remount_checkouts(dry_run=True)
+        self.assertEqual(exit_code, 0)
+        self.assertIn(f"Would remount {self._tmp_dir}/path2\n", out)
+
+    @patch("eden.cli.doctor._call_watchman")
+    @patch("eden.cli.doctor._get_roots_for_nuclide", return_value=set())
+    def _test_remount_checkouts(
+        self, mock_get_roots_for_nuclide, mock_watchman, dry_run: bool
+    ) -> Tuple[int, str]:
+        """Test that `eden doctor` remounts configured mount points that are not
+        currently mounted.
+        """
+        self._tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
+        self.addCleanup(shutil.rmtree, self._tmp_dir)
+
+        edenfs_path1 = os.path.join(self._tmp_dir, "path1")
+        edenfs_path2 = os.path.join(self._tmp_dir, "path2")
+
+        mount_paths: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        mount_paths[edenfs_path1] = {
+            "bind-mounts": {},
+            "mount": edenfs_path1,
+            "scm_type": "hg",
+            "snapshot": "12ab" * 10,
+            "client-dir": "/I_DO_NOT_EXIST1",
+        }
+        mount_paths[edenfs_path2] = {
+            "bind-mounts": {},
+            "mount": edenfs_path2,
+            "scm_type": "git",
+            "snapshot": "dcba" * 10,
+            "client-dir": "/I_DO_NOT_EXIST2",
+        }
+        config = FakeConfig(mount_paths, is_healthy=True)
+        config.get_thrift_client()._mounts = [
+            eden_ttypes.MountInfo(mountPoint=edenfs_path1)
+        ]
+
+        mount_table = FakeMountTable()
+        mount_table.stats[edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=stat.S_IFDIR | 0o755
+        )
+
+        os.mkdir(edenfs_path1)
+        hg_dir = os.path.join(edenfs_path1, ".hg")
+        os.mkdir(hg_dir)
+        dirstate = os.path.join(hg_dir, "dirstate")
+        dirstate_hash = b"\x12\xab" * 10
+        parents = (dirstate_hash, b"\x00" * 20)
+        with open(dirstate, "wb") as f:
+            eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
+
+        out = io.StringIO()
+        exit_code = doctor.cure_what_ails_you(
+            typing.cast(config_mod.Config, config),
+            dry_run,
+            out,
+            mount_table,
+            fs_util=filesystem.LinuxFsUtil(),
+            printer=printer,
+        )
+        return exit_code, out.getvalue()
 
 
 class BindMountsCheckTest(unittest.TestCase):
@@ -1732,6 +1804,10 @@ class FakeConfig:
 
     def get_mount_paths(self) -> Iterable[str]:
         return self._mount_paths.keys()
+
+    def mount(self, path) -> int:
+        assert path in self._mount_paths
+        return 0
 
     def check_health(self) -> config_mod.HealthStatus:
         status = fb_status.ALIVE if self._is_healthy else fb_status.STOPPED
