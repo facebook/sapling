@@ -166,14 +166,12 @@ cleanly.
   -rwxr-xr-x
   $ cd ..
 
-Rebase the working copy parent, which should default to an on-disk merge even if
-we requested in-memory.
+Rebase the working copy parent:
   $ cd repo2
   $ hg up -C 3
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg rebase -r 3 -d 0 --debug | egrep 'rebasing|disabling'
-  disabling IMM because: wcp in rebaseset
-  rebasing on disk
+  rebasing in-memory
   rebasing 3:753feb6fd12a "c" (tip)
   $ hg tglog
   @  3: 844a7de3e617 'c'
@@ -184,7 +182,7 @@ we requested in-memory.
   |/
   o  0: b173517d0057 'a'
   
-Rerun with merge conflicts:
+Rerun with merge conflicts, demonstrating switching to on-disk merge:
   $ hg up 2
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ echo 'e' > c
@@ -213,18 +211,6 @@ Rerun with merge conflicts:
   warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-
-Also ensure the last test works if rebasing the WCP (turning off IMM mid-call):
-  $ hg rebase --abort
-  rebase aborted
-  $ hg up -C 3
-  3 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg rebase -r 3 -d 4
-  rebasing 3:844a7de3e617 "c"
-  merging c
-  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [1]
   $ hg rebase --abort
   rebase aborted
 
@@ -233,8 +219,7 @@ Test inmemorydisallowedpaths carve-out:
   > [rebase]
   > experimental.inmemorydisallowedpaths=c|g
   > EOF
-  $ hg up 3
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up -Cq 3
   $ echo 'g' > g
   $ hg add -q g
   $ hg com -qm g
@@ -281,10 +266,9 @@ Test inmemorydisallowedpaths carve-out:
   $ hg rebase -r 5 -d 0 --debug | grep disabling
   [1]
 
-Allow the working copy parent to be rebased with IMM, if configured:
+Allow the working copy parent to be rebased with IMM:
   $ cat <<EOF >> .hg/hgrc
   > [rebase]
-  > experimental.inmemory.canrebaseworkingcopy=True
   > experimental.inmemorywarning=rebasing in-memory!
   > EOF
   $ hg up -C 6

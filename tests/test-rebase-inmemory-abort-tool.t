@@ -6,7 +6,6 @@ Tests the :abort merge tool
   $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True
   $ setconfig rebase.experimental.inmemory.nomergedriver=False
-  $ setconfig rebase.experimental.inmemory.canrebaseworkingcopy=True
   $ setconfig rebase.experimental.inmemory.newconflictswitching=True
   $ setconfig rebase.experimental.inmemorywarning="rebasing in-memory!"
 

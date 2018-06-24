@@ -926,11 +926,6 @@ def rebase(ui, repo, templ=None, **opts):
       [rebase]
       experimental.inmemory = True
 
-    This won't rebase the working copy by default, but you can change that::
-
-      [rebase]
-      experimental.inmemory.canrebaseworkingcopy = True
-
     It will also print a configurable warning::
 
       [rebase]
@@ -1112,24 +1107,14 @@ def _origrebase(ui, repo, rbsrt, **opts):
 
 def _shoulddisableimm(ui, repo, rebaseset, rebasingwcp):
     """returns if we should disable in-memory merge based on the rebaseset"""
-    # If rebasing the working copy parent, force in-memory merge to be off,
-    # unless ``experimental.inmemory.canrebaseworkingcopy`` is True.
-    #
-    # This is because the extra work of checking out the newly rebased commit
-    # might outweight the benefits of rebasing in-memory.
-    ui.log("rebase", "", rebase_rebasing_wcp=rebasingwcp)
-    allowwcprebase = ui.configbool(
-        "rebase", "experimental.inmemory.canrebaseworkingcopy", False
-    )
     if rebasingwcp:
-        if allowwcprebase:
-            cmdutil.bailifchanged(repo)
-        else:
-            whynotimm = "wcp in rebaseset\n"
-            msg = "disabling IMM because: %s" % whynotimm
-            ui.log("rebase", msg, why_not_imm=whynotimm)
-            ui.debug(msg + "\n")
-            return True
+        # Require a clean working copy if rebasing the current commit, as the
+        # last step of the rebase is an update.
+        #
+        # Technically this could be refined to hg update's checker, which can
+        # be more permissive (e.g., allow if only non-conflicting paths are
+        # changed).
+        cmdutil.bailifchanged(repo)
 
     # Check for paths in the rebaseset that are likely to later trigger
     # conflicts or a mergedriver run (and thus cause the whole rebase to later
