@@ -152,7 +152,7 @@ class TokenLocator(object):
                     ACCOUNT,
                     "-s",
                     SERVICE,
-                    "-p",
+                    "-w",
                     token,
                     "-U",
                 ],
