@@ -1043,7 +1043,6 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
             pats=cmdpats,
             opts=cmdoptions,
         )
-        hintutil.show(lui)
     except Exception:
         # run failure hook and re-raise
         hook.hook(
@@ -1316,9 +1315,11 @@ def _dispatch(req):
         strcmdopt = pycompat.strkwargs(cmdoptions)
         d = lambda: util.checksignature(func)(ui, *args, **strcmdopt)
         try:
-            return runcommand(
+            ret = runcommand(
                 lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions
             )
+            hintutil.show(lui)
+            return ret
         finally:
             for func in deferred:
                 func()
