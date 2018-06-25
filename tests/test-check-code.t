@@ -217,6 +217,7 @@ Prevent adding new files in the root directory accidentally.
   Makefile
   README.rst
   TARGETS
+  gen_version.py
   hg
   hgeditor
   hgweb.cgi
