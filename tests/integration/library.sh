@@ -38,6 +38,21 @@ function wait_for_mononoke {
   fi
 }
 
+# Wait until cache warmup finishes
+function wait_for_mononoke_cache_warmup {
+  local attempts=150
+  for _ in $(seq 1 $attempts); do
+    grep -q "finished initial warmup" "$TESTTMP/mononoke.out" && break
+    sleep 0.1
+  done
+
+  if ! grep -q "finished initial warmup" "$TESTTMP/mononoke.out"; then
+    echo "Mononoke warmup did not finished" >&2
+    cat "$TESTTMP/mononoke.out"
+    exit 1
+  fi
+}
+
 function setup_common_config {
     setup_config_repo
   cat >> "$HGRCPATH" <<EOF
@@ -70,6 +85,14 @@ path="$TESTTMP/repo"
 repotype="blob:rocks"
 repoid=0
 CONFIG
+
+  if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
+    cat >> repos/repo <<CONFIG
+[cache_warmup]
+bookmark="$CACHE_WARMUP_BOOKMARK"
+CONFIG
+  fi
+
   hg add -q repos
   hg ci -ma
   hg backfilltree
