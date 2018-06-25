@@ -460,3 +460,14 @@ class treestatemap(object):
             state |= treestate.NEED_CHECK
         self._tree.insert(path, state, mode, size, mtime, copied)
         return True
+
+    def copysource(self, path):
+        """Return the copysource for path. Return None if it's not copied, or
+        path does not exist.
+        """
+        existing = self._tree.get(path, None)
+        if existing:
+            _state, _mode, _size, _mtime, copied = existing
+            return copied
+        else:
+            return None

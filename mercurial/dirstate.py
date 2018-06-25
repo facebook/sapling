@@ -422,7 +422,10 @@ class dirstate(object):
             self._updatedfiles.add(dest)
 
     def copied(self, file):
-        return self._map.copymap.get(file, None)
+        if self._istreestate:
+            return self._map.copysource(file)
+        else:
+            return self._map.copymap.get(file, None)
 
     def copies(self):
         return self._map.copymap
