@@ -82,7 +82,7 @@ pub enum RepoType {
     /// RocksDb database
     BlobRocks(PathBuf),
     /// Blob repository with path pointing to the directory where a server socket is going to be.
-    TestBlobManifold {
+    BlobManifold {
         /// Bucket of the backing Manifold blobstore to connect to
         manifold_bucket: String,
         /// Prefix to be prepended to all the keys. In prod it should be ""
@@ -272,7 +272,7 @@ struct RawHookConfig {
 enum RawRepoType {
     #[serde(rename = "revlog")] Revlog,
     #[serde(rename = "blob:rocks")] BlobRocks,
-    #[serde(rename = "blob:testmanifold")] TestBlobManifold,
+    #[serde(rename = "blob:testmanifold")] BlobManifold,
     #[serde(rename = "blob:testdelay")] TestBlobDelayRocks,
 }
 
@@ -285,12 +285,12 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
         let repotype = match this.repotype {
             Revlog => RepoType::Revlog(this.path),
             BlobRocks => RepoType::BlobRocks(this.path),
-            TestBlobManifold => {
+            BlobManifold => {
                 let manifold_bucket = this.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
                     "manifold bucket must be specified".into(),
                 ))?;
                 let db_address = this.db_address.expect("xdb tier was not specified");
-                RepoType::TestBlobManifold {
+                RepoType::BlobManifold {
                     manifold_bucket,
                     prefix: this.manifold_prefix.unwrap_or("".into()),
                     path: this.path,

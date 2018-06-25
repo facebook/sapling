@@ -555,7 +555,7 @@ fn main() {
             start_server(
                 &config.addr,
                 config.reponame,
-                BlobRepo::new_test_manifold(
+                BlobRepo::new_manifold(
                     repo_logger,
                     bucket,
                     &config.manifold_prefix.unwrap_or("".into()),

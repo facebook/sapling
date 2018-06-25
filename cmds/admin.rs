@@ -138,7 +138,7 @@ fn create_blobrepo<'a>(logger: &'a Logger, manifold_args: ManifoldArgs<'a>) -> B
     } = manifold_args;
     let io_threads = 5;
     let default_cache_size = 1000000;
-    BlobRepo::new_test_manifold(
+    BlobRepo::new_manifold(
         logger.clone(),
         bucket,
         prefix,

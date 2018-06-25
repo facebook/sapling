@@ -205,7 +205,7 @@ impl BlobRepo {
         ))
     }
 
-    pub fn new_test_manifold<T: ToString + AsRef<str>>(
+    pub fn new_manifold<T: ToString + AsRef<str>>(
         logger: Logger,
         bucket: T,
         prefix: &str,

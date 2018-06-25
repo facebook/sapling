@@ -122,7 +122,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
         .unwrap_or("xdb.mononoke_test_2");
     let io_threads = 5;
     let default_cache_size = 1000000;
-    BlobRepo::new_test_manifold(
+    BlobRepo::new_manifold(
         logger.clone(),
         bucket,
         prefix,

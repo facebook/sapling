@@ -15,7 +15,7 @@ use slog::Logger;
 use blobrepo::BlobRepo;
 use mercurial_types::RepositoryId;
 use metaconfig::repoconfig::{RepoConfig, RepoConfigs};
-use metaconfig::repoconfig::RepoType::{BlobRocks, TestBlobManifold};
+use metaconfig::repoconfig::RepoType::{BlobManifold, BlobRocks};
 
 #[derive(Debug)]
 pub enum MononokeRepoQuery {
@@ -44,7 +44,7 @@ impl MononokeRepoActor {
         let repoid = RepositoryId::new(config.repoid);
         let repo = match config.repotype {
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid),
-            TestBlobManifold {
+            BlobManifold {
                 ref manifold_bucket,
                 ref prefix,
                 ref db_address,
@@ -54,7 +54,7 @@ impl MononokeRepoActor {
                 io_thread_num,
                 max_concurrent_requests_per_io_thread,
                 ..
-            } => BlobRepo::new_test_manifold(
+            } => BlobRepo::new_manifold(
                 logger,
                 manifold_bucket,
                 &prefix,

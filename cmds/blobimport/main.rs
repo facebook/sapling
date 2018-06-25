@@ -159,7 +159,7 @@ fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
                 .value_of("manifold-bucket")
                 .expect("manifold bucket is not specified");
 
-            BlobRepo::new_test_manifold(
+            BlobRepo::new_manifold(
                 logger.new(o!["BlobRepo:TestManifold" => manifold_bucket.to_owned()]),
                 manifold_bucket,
                 matches
