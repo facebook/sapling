@@ -22,7 +22,6 @@ use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, future::E
               stream::empty};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Timed, TimedStreamTrait};
-use futures_trace::{self, Traced};
 use itertools::Itertools;
 use pylz4;
 use rand::Isaac64Rng;
@@ -30,6 +29,7 @@ use rand::distributions::{Distribution, LogNormal};
 
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
+use tracing::{TraceContext, Traced};
 
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
@@ -283,14 +283,21 @@ pub struct RepoClient {
     repo: Arc<MononokeRepo>,
     logger: Logger,
     scuba_logger: ScubaSampleBuilder,
+    trace: TraceContext,
 }
 
 impl RepoClient {
-    pub fn new(repo: Arc<MononokeRepo>, logger: Logger, scuba_logger: ScubaSampleBuilder) -> Self {
+    pub fn new(
+        repo: Arc<MononokeRepo>,
+        logger: Logger,
+        scuba_logger: ScubaSampleBuilder,
+        trace: TraceContext,
+    ) -> Self {
         RepoClient {
             repo,
             logger,
             scuba_logger,
+            trace,
         }
     }
 
@@ -439,6 +446,7 @@ impl RepoClient {
                         &basemfnode,
                         rootpath.clone(),
                         Some(and_pruner_combinator(&file_pruner, visited_pruner.clone())),
+                        self.trace.clone(),
                     );
                     cur_stream.select(new_stream).boxify()
                 })
@@ -450,6 +458,7 @@ impl RepoClient {
                     &basemfnode,
                     rootpath.clone(),
                     Some(&file_pruner),
+                    self.trace.clone(),
                 ),
                 None => empty().boxify(),
             }
@@ -462,8 +471,9 @@ impl RepoClient {
             })
             .map({
                 let blobrepo = self.repo.blobrepo.clone();
+                let trace = self.trace.clone();
                 move |(entry, basepath)| {
-                    fetch_treepack_part_input(blobrepo.clone(), entry, basepath)
+                    fetch_treepack_part_input(blobrepo.clone(), entry, basepath, trace.clone())
                 }
             });
 
@@ -529,6 +539,7 @@ impl HgCommands for RepoClient {
         }
 
         let mut scuba_logger = self.scuba_logger(ops::BETWEEN, None);
+        let trace = self.trace.clone();
 
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
@@ -550,7 +561,7 @@ impl HgCommands for RepoClient {
                     .collect()
             })
             .collect()
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
             .boxify()
     }
 
@@ -559,8 +570,8 @@ impl HgCommands for RepoClient {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
         let logger = self.logger.clone();
-
         let mut scuba_logger = self.scuba_logger(ops::HEADS, None);
+        let trace = self.trace.clone();
 
         self.repo
             .blobrepo
@@ -569,7 +580,7 @@ impl HgCommands for RepoClient {
             .map(|v| v.into_iter().collect())
             .from_err()
             .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
             .boxify()
     }
 
@@ -578,8 +589,8 @@ impl HgCommands for RepoClient {
         info!(self.logger, "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support bookmarks and prefixes too
         let repo = self.repo.blobrepo.clone();
-
         let mut scuba_logger = self.scuba_logger(ops::LOOKUP, None);
+        let trace = self.trace.clone();
 
         HgNodeHash::from_str(&key)
             .into_future()
@@ -606,7 +617,7 @@ impl HgCommands for RepoClient {
                     Ok(buf.freeze())
                 }
             })
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
             .boxify()
     }
 
@@ -620,12 +631,13 @@ impl HgCommands for RepoClient {
         let blobrepo = self.repo.blobrepo.clone();
 
         let mut scuba_logger = self.scuba_logger(ops::KNOWN, None);
+        let trace = self.trace.clone();
 
         future::join_all(
             nodes
                 .into_iter()
                 .map(move |node| blobrepo.changeset_exists(&HgChangesetId::new(node))),
-        ).timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
+        ).timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
             .boxify()
     }
 
@@ -634,11 +646,12 @@ impl HgCommands for RepoClient {
         info!(self.logger, "Getbundle: {:?}", args);
 
         let mut scuba_logger = self.scuba_logger(ops::GETBUNDLE, None);
+        let trace = self.trace.clone();
 
         match self.create_bundle(args) {
             Ok(res) => res,
             Err(err) => Err(err).into_future().boxify(),
-        }.timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
+        }.timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
             .boxify()
     }
 
@@ -652,9 +665,10 @@ impl HgCommands for RepoClient {
         res.insert("capabilities".to_string(), caps);
 
         let mut scuba_logger = self.scuba_logger(ops::HELLO, None);
+        let trace = self.trace.clone();
 
         future::ok(res)
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
             .boxify()
     }
 
@@ -693,6 +707,7 @@ impl HgCommands for RepoClient {
         stream: BoxStream<Bundle2Item, Error>,
     ) -> HgCommandRes<Bytes> {
         let mut scuba_logger = self.scuba_logger(ops::UNBUNDLE, None);
+        let trace = self.trace.clone();
 
         let res = bundle2_resolver::resolve(
             self.repo.blobrepo.clone(),
@@ -702,8 +717,8 @@ impl HgCommands for RepoClient {
             stream,
         );
 
-        res.traced_global("unbundle", trace_args!())
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
+        res.traced(&trace, "unbundle", trace_args!())
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
             .boxify()
     }
 
@@ -718,15 +733,17 @@ impl HgCommands for RepoClient {
         );
 
         let mut scuba_logger = self.scuba_logger(ops::GETTREEPACK, Some(args));
+        let trace = self.trace.clone();
 
         self.gettreepack_untimed(params)
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
+            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
             .boxify()
     }
 
     // @wireprotocommand('getfiles', 'files*')
     fn getfiles(&self, params: BoxStream<(HgNodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
         let logger = self.logger.clone();
+        let trace = self.trace.clone();
         info!(logger, "getfiles");
 
         let this = self.clone();
@@ -738,12 +755,16 @@ impl HgCommands for RepoClient {
 
                 trace!(logger, "get file request: {:?} {}", path, node);
                 let repo = this.repo.clone();
-                create_remotefilelog_blob(repo.blobrepo.clone(), node, path.clone())
-                    .traced_global(
+                create_remotefilelog_blob(repo.blobrepo.clone(), node, path.clone(), trace.clone())
+                    .traced(
+                        &trace,
                         "getfile",
                         trace_args!("node" => format!("{}", node), "path" => format!("{}", path)),
                     )
-                    .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace())
+                    .timed({
+                        let trace = trace.clone();
+                        move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace)
+                    })
             })
             .buffered(getfiles_buffer_size)
             .boxify()
@@ -756,11 +777,13 @@ fn get_changed_entry_stream(
     basemfid: &HgNodeHash,
     rootpath: Option<MPath>,
     pruner: Option<impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static>,
+    trace: TraceContext,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
     let manifest = repo.get_manifest_by_nodeid(mfid)
-        .traced_global("fetch rootmf", trace_args!());
-    let basemanifest = repo.get_manifest_by_nodeid(basemfid)
-        .traced_global("fetch baserootmf", trace_args!());
+        .traced(&trace, "fetch rootmf", trace_args!());
+    let basemanifest =
+        repo.get_manifest_by_nodeid(basemfid)
+            .traced(&trace, "fetch baserootmf", trace_args!());
 
     let changed_entries = manifest
         .join(basemanifest)
@@ -807,6 +830,7 @@ fn fetch_treepack_part_input(
     repo: Arc<BlobRepo>,
     entry: Box<Entry + Sync>,
     basepath: Option<MPath>,
+    trace: TraceContext,
 ) -> BoxFuture<parts::TreepackPartInput, Error> {
     let path = MPath::join_element_opt(basepath.as_ref(), entry.get_name());
     let repo_path = match path {
@@ -823,7 +847,8 @@ fn fetch_treepack_part_input(
     let node = entry.get_hash().clone();
     let path = repo_path.clone();
 
-    let parents = entry.get_parents().traced_global(
+    let parents = entry.get_parents().traced(
+        &trace,
         "fetching parents",
         trace_args!(
                 "node" => format!("{}", node),
@@ -832,7 +857,8 @@ fn fetch_treepack_part_input(
     );
 
     let linknode_fut = repo.get_linknode(repo_path, &entry.get_hash().into_nodehash())
-        .traced_global(
+        .traced(
+            &trace,
             "fetching linknode",
             trace_args!(
                 "node" => format!("{}", node),
@@ -843,7 +869,8 @@ fn fetch_treepack_part_input(
     let content_fut = entry
         .get_raw_content()
         .and_then(|blob| blob.into_inner().ok_or(err_msg("bad blob content")))
-        .traced_global(
+        .traced(
+            &trace,
             "fetching raw content",
             trace_args!(
                 "node" => format!("{}", node),
@@ -874,6 +901,7 @@ fn get_file_history(
     startnode: HgNodeHash,
     path: MPath,
     prefetched_history: HashMap<HgNodeHash, FilenodeInfo>,
+    trace: TraceContext,
 ) -> BoxStream<
     (
         HgNodeHash,
@@ -916,16 +944,16 @@ fn get_file_history(
                 (Either::A(parents), Either::A(linknode), Either::A(copy))
             } else {
                 let parents = repo.get_parents(&path, &node);
-                let parents = parents.traced_global("fetching parents", trace_args!());
+                let parents = parents.traced(&trace, "fetching parents", trace_args!());
 
                 let copy = repo.get_file_copy(&path, &node);
-                let copy = copy.traced_global("fetching copy info", trace_args!());
+                let copy = copy.traced(&trace, "fetching copy info", trace_args!());
 
                 let linknode = Ok(path.clone()).into_future().and_then({
                     let repo = repo.clone();
                     move |path| repo.get_linknode(path, &node)
                 });
-                let linknode = linknode.traced_global("fetching linknode info", trace_args!());
+                let linknode = linknode.traced(&trace, "fetching linknode info", trace_args!());
 
                 (Either::B(parents), Either::B(linknode), Either::B(copy))
             };
@@ -960,6 +988,7 @@ fn create_remotefilelog_blob(
     repo: Arc<BlobRepo>,
     node: HgNodeHash,
     path: MPath,
+    trace: TraceContext,
 ) -> BoxFuture<Bytes, Error> {
     // raw_content includes copy information
     let raw_content_bytes = repo.get_file_content(&node)
@@ -986,7 +1015,7 @@ fn create_remotefilelog_blob(
                 .map_err(Error::from)
                 .map(|_| writer.into_inner())
         })
-        .traced_global("fetching remotefilelog content", trace_args!());
+        .traced(&trace, "fetching remotefilelog content", trace_args!());
 
     // Do bulk prefetch of the filenodes first. That saves lots of db roundtrips.
     // Prefetched filenodes are used as a cache. If filenode is not in the cache, then it will
@@ -1002,8 +1031,9 @@ fn create_remotefilelog_blob(
     let file_history_bytes = prefetched_filenodes
         .and_then({
             let node = node.clone();
+            let trace = trace.clone();
             move |prefetched_filenodes| {
-                get_file_history(repo, node, path, prefetched_filenodes).collect()
+                get_file_history(repo, node, path, prefetched_filenodes, trace).collect()
             }
         })
         .and_then(|history| {
@@ -1041,7 +1071,7 @@ fn create_remotefilelog_blob(
             }
             Ok(writer.into_inner())
         })
-        .traced_global("fetching file history", trace_args!());
+        .traced(&trace, "fetching file history", trace_args!());
 
     raw_content_bytes
         .join(file_history_bytes)

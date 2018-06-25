@@ -17,8 +17,6 @@ extern crate futures;
 #[macro_use]
 extern crate futures_ext;
 extern crate futures_stats;
-#[macro_use]
-extern crate futures_trace;
 extern crate itertools;
 extern crate tokio;
 extern crate tokio_core;
@@ -50,6 +48,7 @@ extern crate bytes;
 extern crate cache_warmup;
 extern crate filenodes;
 extern crate hgproto;
+extern crate manifold_thrift;
 #[cfg(test)]
 extern crate many_files_dirs;
 extern crate mercurial;
@@ -66,6 +65,9 @@ extern crate services;
 extern crate sshrelay;
 extern crate stats;
 extern crate time_ext;
+#[macro_use]
+extern crate tracing;
+extern crate upload_trace;
 
 mod errors;
 mod listener;
@@ -92,6 +94,7 @@ use futures_ext::{asynchronize, FutureExt};
 use futures_stats::Timed;
 use tokio::util::FutureExt as TokioFutureExt;
 
+use bytes::Bytes;
 use clap::{App, ArgMatches};
 
 use dns_lookup::getnameinfo;
@@ -102,9 +105,9 @@ use slog_kvfilter::KVFilter;
 use slog_logview::LogViewDrain;
 
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use tracing::TraceContext;
 
 use blobrepo::BlobRepo;
-use bytes::Bytes;
 use hgproto::{sshproto, HgProtoHandler};
 use mercurial_types::RepositoryId;
 use metaconfig::RepoConfigs;
@@ -412,6 +415,7 @@ fn repo_listen(
 
         let session_uuid = uuid::Uuid::new_v4();
         let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
+        let trace = TraceContext::new(session_uuid, Instant::now());
 
         let stderr_write = SenderBytesWrite {
             chan: stderr.clone().wait(),
@@ -447,7 +451,7 @@ fn repo_listen(
         // Construct a hg protocol handler
         let proto_handler = HgProtoHandler::new(
             stdin,
-            repo::RepoClient::new(repo.clone(), conn_log.clone(), scuba_logger.clone()),
+            repo::RepoClient::new(repo.clone(), conn_log.clone(), scuba_logger.clone(), trace),
             sshproto::HgSshCommandDecode,
             sshproto::HgSshCommandEncode,
             &conn_log,
