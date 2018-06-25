@@ -41,6 +41,11 @@ class DoctorTest(unittest.TestCase):
     # The diffs for what is written to stdout can be large.
     maxDiff = None
 
+    def _create_tmp_dir(self) -> str:
+        tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
+        self.addCleanup(shutil.rmtree, tmp_dir)
+        return tmp_dir
+
     @patch("eden.cli.doctor._call_watchman")
     @patch("eden.cli.doctor._get_roots_for_nuclide")
     def test_end_to_end_test_with_various_scenarios(
@@ -48,123 +53,121 @@ class DoctorTest(unittest.TestCase):
     ):
         side_effects: List[Dict[str, Any]] = []
         calls = []
-        tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
-        try:
-            # In edenfs_path1, we will break the snapshot check.
-            edenfs_path1 = os.path.join(tmp_dir, "path1")
-            # In edenfs_path2, we will break the inotify check and the Nuclide
-            # subscriptions check.
-            edenfs_path2 = os.path.join(tmp_dir, "path2")
-            # In edenfs_path3, we do not create the .hg directory
-            edenfs_path3 = os.path.join(tmp_dir, "path3")
+        tmp_dir = self._create_tmp_dir()
 
-            # Assume all paths are used as root folders in a connected Nuclide.
-            mock_get_roots_for_nuclide.return_value = {
-                edenfs_path1,
-                edenfs_path2,
-                edenfs_path3,
-            }
+        # In edenfs_path1, we will break the snapshot check.
+        edenfs_path1 = os.path.join(tmp_dir, "path1")
+        # In edenfs_path2, we will break the inotify check and the Nuclide
+        # subscriptions check.
+        edenfs_path2 = os.path.join(tmp_dir, "path2")
+        # In edenfs_path3, we do not create the .hg directory
+        edenfs_path3 = os.path.join(tmp_dir, "path3")
 
-            calls.append(call(["watch-list"]))
-            side_effects.append({"roots": [edenfs_path1, edenfs_path2, edenfs_path3]})
+        # Assume all paths are used as root folders in a connected Nuclide.
+        mock_get_roots_for_nuclide.return_value = {
+            edenfs_path1,
+            edenfs_path2,
+            edenfs_path3,
+        }
 
-            calls.append(call(["watch-project", edenfs_path1]))
-            side_effects.append({"watcher": "eden"})
+        calls.append(call(["watch-list"]))
+        side_effects.append({"roots": [edenfs_path1, edenfs_path2, edenfs_path3]})
 
-            calls.append(call(["debug-get-subscriptions", edenfs_path1]))
-            side_effects.append(
-                _create_watchman_subscription(
-                    filewatcher_subscription=f"filewatcher-{edenfs_path1}"
-                )
+        calls.append(call(["watch-project", edenfs_path1]))
+        side_effects.append({"watcher": "eden"})
+
+        calls.append(call(["debug-get-subscriptions", edenfs_path1]))
+        side_effects.append(
+            _create_watchman_subscription(
+                filewatcher_subscription=f"filewatcher-{edenfs_path1}"
             )
+        )
 
-            calls.append(call(["watch-project", edenfs_path2]))
-            side_effects.append({"watcher": "inotify"})
-            calls.append(call(["watch-del", edenfs_path2]))
-            side_effects.append({"watch-del": True, "root": edenfs_path2})
-            calls.append(call(["watch-project", edenfs_path2]))
-            side_effects.append({"watcher": "eden"})
+        calls.append(call(["watch-project", edenfs_path2]))
+        side_effects.append({"watcher": "inotify"})
+        calls.append(call(["watch-del", edenfs_path2]))
+        side_effects.append({"watch-del": True, "root": edenfs_path2})
+        calls.append(call(["watch-project", edenfs_path2]))
+        side_effects.append({"watcher": "eden"})
 
-            calls.append(call(["debug-get-subscriptions", edenfs_path2]))
-            side_effects.append(
-                _create_watchman_subscription(filewatcher_subscription=None)
+        calls.append(call(["debug-get-subscriptions", edenfs_path2]))
+        side_effects.append(
+            _create_watchman_subscription(filewatcher_subscription=None)
+        )
+
+        calls.append(call(["watch-project", edenfs_path3]))
+        side_effects.append({"watcher": "eden"})
+        calls.append(call(["debug-get-subscriptions", edenfs_path3]))
+        side_effects.append(
+            _create_watchman_subscription(
+                filewatcher_subscription=f"filewatcher-{edenfs_path3}"
             )
+        )
 
-            calls.append(call(["watch-project", edenfs_path3]))
-            side_effects.append({"watcher": "eden"})
-            calls.append(call(["debug-get-subscriptions", edenfs_path3]))
-            side_effects.append(
-                _create_watchman_subscription(
-                    filewatcher_subscription=f"filewatcher-{edenfs_path3}"
-                )
-            )
+        mock_watchman.side_effect = side_effects
 
-            mock_watchman.side_effect = side_effects
+        out = io.StringIO()
+        dry_run = False
+        mount_paths = OrderedDict()
+        edenfs_path1_snapshot_hex = "abcd" * 10
+        mount_paths[edenfs_path1] = {
+            "bind-mounts": {},
+            "mount": edenfs_path1,
+            "scm_type": "hg",
+            "snapshot": edenfs_path1_snapshot_hex,
+            "client-dir": "/I_DO_NOT_EXIST1",
+        }
+        mount_paths[edenfs_path2] = {
+            "bind-mounts": {},
+            "mount": edenfs_path2,
+            "scm_type": "git",
+            "snapshot": "dcba" * 10,
+            "client-dir": "/I_DO_NOT_EXIST2",
+        }
+        edenfs_path3_snapshot_hex = "1234" * 10
+        mount_paths[edenfs_path3] = {
+            "bind-mounts": {},
+            "mount": edenfs_path3,
+            "scm_type": "hg",
+            "snapshot": edenfs_path3_snapshot_hex,
+            "client-dir": "/I_DO_NOT_EXIST3",
+        }
+        config = FakeConfig(mount_paths, is_healthy=True)
+        config.get_thrift_client()._mounts = [
+            eden_ttypes.MountInfo(mountPoint=edenfs_path1),
+            eden_ttypes.MountInfo(mountPoint=edenfs_path2),
+            eden_ttypes.MountInfo(mountPoint=edenfs_path3),
+        ]
 
-            out = io.StringIO()
-            dry_run = False
-            mount_paths = OrderedDict()
-            edenfs_path1_snapshot_hex = "abcd" * 10
-            mount_paths[edenfs_path1] = {
-                "bind-mounts": {},
-                "mount": edenfs_path1,
-                "scm_type": "hg",
-                "snapshot": edenfs_path1_snapshot_hex,
-                "client-dir": "/I_DO_NOT_EXIST1",
-            }
-            mount_paths[edenfs_path2] = {
-                "bind-mounts": {},
-                "mount": edenfs_path2,
-                "scm_type": "git",
-                "snapshot": "dcba" * 10,
-                "client-dir": "/I_DO_NOT_EXIST2",
-            }
-            edenfs_path3_snapshot_hex = "1234" * 10
-            mount_paths[edenfs_path3] = {
-                "bind-mounts": {},
-                "mount": edenfs_path3,
-                "scm_type": "hg",
-                "snapshot": edenfs_path3_snapshot_hex,
-                "client-dir": "/I_DO_NOT_EXIST3",
-            }
-            config = FakeConfig(mount_paths, is_healthy=True)
-            config.get_thrift_client()._mounts = [
-                eden_ttypes.MountInfo(mountPoint=edenfs_path1),
-                eden_ttypes.MountInfo(mountPoint=edenfs_path2),
-                eden_ttypes.MountInfo(mountPoint=edenfs_path3),
-            ]
+        os.mkdir(edenfs_path1)
+        hg_dir = os.path.join(edenfs_path1, ".hg")
+        os.mkdir(hg_dir)
+        dirstate = os.path.join(hg_dir, "dirstate")
+        dirstate_hash = b"\x12\x34\x56\x78" * 5
+        parents = (dirstate_hash, b"\x00" * 20)
+        with open(dirstate, "wb") as f:
+            eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
 
-            os.mkdir(edenfs_path1)
-            hg_dir = os.path.join(edenfs_path1, ".hg")
-            os.mkdir(hg_dir)
-            dirstate = os.path.join(hg_dir, "dirstate")
-            dirstate_hash = b"\x12\x34\x56\x78" * 5
-            parents = (dirstate_hash, b"\x00" * 20)
-            with open(dirstate, "wb") as f:
-                eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
+        os.mkdir(edenfs_path3)
 
-            os.mkdir(edenfs_path3)
-
-            mount_table = FakeMountTable()
-            mount_table.stats[edenfs_path1] = mtab.MTStat(
-                st_uid=os.getuid(), st_dev=11, st_mode=None
-            )
-            mount_table.stats[edenfs_path2] = mtab.MTStat(
-                st_uid=os.getuid(), st_dev=12, st_mode=None
-            )
-            mount_table.stats[edenfs_path3] = mtab.MTStat(
-                st_uid=os.getuid(), st_dev=13, st_mode=None
-            )
-            exit_code = doctor.cure_what_ails_you(
-                config,
-                dry_run,
-                out,
-                mount_table,
-                fs_util=filesystem.LinuxFsUtil(),
-                printer=printer,
-            )
-        finally:
-            shutil.rmtree(tmp_dir)
+        mount_table = FakeMountTable()
+        mount_table.stats[edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=None
+        )
+        mount_table.stats[edenfs_path2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=None
+        )
+        mount_table.stats[edenfs_path3] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=13, st_mode=None
+        )
+        exit_code = doctor.cure_what_ails_you(
+            config,
+            dry_run,
+            out,
+            mount_table,
+            fs_util=filesystem.LinuxFsUtil(),
+            printer=printer,
+        )
 
         self.assertEqual(
             f"""\
@@ -518,24 +521,21 @@ command palette in Atom.
         snapshot_hex: str,
         expected_check_result: CheckResultType,
     ):
-        mount_path = tempfile.mkdtemp(prefix="eden_test.")
-        try:
-            hg_dir = os.path.join(mount_path, ".hg")
-            os.mkdir(hg_dir)
-            dirstate = os.path.join(hg_dir, "dirstate")
-            parents = (dirstate_hash, b"\x00" * 20)
-            with open(dirstate, "wb") as f:
-                eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
+        mount_path = self._create_tmp_dir()
+        hg_dir = os.path.join(mount_path, ".hg")
+        os.mkdir(hg_dir)
+        dirstate = os.path.join(hg_dir, "dirstate")
+        parents = (dirstate_hash, b"\x00" * 20)
+        with open(dirstate, "wb") as f:
+            eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
 
-            is_healthy = True
-            hash_check = doctor.SnapshotDirstateConsistencyCheck(
-                mount_path, snapshot_hex, is_healthy
-            )
-            dry_run = True
-            check_result = hash_check.do_check(dry_run)
-            self.assertEqual(expected_check_result, check_result.result_type)
-        finally:
-            shutil.rmtree(mount_path)
+        is_healthy = True
+        hash_check = doctor.SnapshotDirstateConsistencyCheck(
+            mount_path, snapshot_hex, is_healthy
+        )
+        dry_run = True
+        check_result = hash_check.do_check(dry_run)
+        self.assertEqual(expected_check_result, check_result.result_type)
 
     @patch("eden.cli.version.get_installed_eden_rpm_version")
     def test_edenfs_when_installed_and_running_match(self, mock_gierv):
@@ -594,57 +594,54 @@ command palette in Atom.
     def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide):
         # If Eden advertises that a mount is active, but it is not in the
         # configuration, then at least don't throw an exception.
-        tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
-        try:
-            edenfs_path1 = os.path.join(tmp_dir, "path1")
-            edenfs_path2 = os.path.join(tmp_dir, "path2")
+        tmp_dir = self._create_tmp_dir()
+        edenfs_path1 = os.path.join(tmp_dir, "path1")
+        edenfs_path2 = os.path.join(tmp_dir, "path2")
 
-            mount_paths = OrderedDict()
-            mount_paths[edenfs_path1] = {
-                "bind-mounts": {},
-                "mount": edenfs_path1,
-                "scm_type": "hg",
-                "snapshot": "abcd" * 10,
-                "client-dir": "/I_DO_NOT_EXIST1",
-            }
-            # path2 is not configured in the config...
-            config = FakeConfig(mount_paths, is_healthy=True)
-            # ... but is advertised by the daemon...
-            config.get_thrift_client()._mounts = [
-                eden_ttypes.MountInfo(mountPoint=edenfs_path1),
-                eden_ttypes.MountInfo(mountPoint=edenfs_path2),
-            ]
+        mount_paths = OrderedDict()
+        mount_paths[edenfs_path1] = {
+            "bind-mounts": {},
+            "mount": edenfs_path1,
+            "scm_type": "hg",
+            "snapshot": "abcd" * 10,
+            "client-dir": "/I_DO_NOT_EXIST1",
+        }
+        # path2 is not configured in the config...
+        config = FakeConfig(mount_paths, is_healthy=True)
+        # ... but is advertised by the daemon...
+        config.get_thrift_client()._mounts = [
+            eden_ttypes.MountInfo(mountPoint=edenfs_path1),
+            eden_ttypes.MountInfo(mountPoint=edenfs_path2),
+        ]
 
-            # ... and is in the system mount table.
-            mount_table = FakeMountTable()
-            mount_table.stats[edenfs_path1] = mtab.MTStat(
-                st_uid=os.getuid(), st_dev=11, st_mode=None
-            )
-            mount_table.stats[edenfs_path2] = mtab.MTStat(
-                st_uid=os.getuid(), st_dev=12, st_mode=None
-            )
+        # ... and is in the system mount table.
+        mount_table = FakeMountTable()
+        mount_table.stats[edenfs_path1] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=11, st_mode=None
+        )
+        mount_table.stats[edenfs_path2] = mtab.MTStat(
+            st_uid=os.getuid(), st_dev=12, st_mode=None
+        )
 
-            os.mkdir(edenfs_path1)
-            hg_dir = os.path.join(edenfs_path1, ".hg")
-            os.mkdir(hg_dir)
-            dirstate = os.path.join(hg_dir, "dirstate")
-            dirstate_hash = b"\xab\xcd" * 10
-            parents = (dirstate_hash, b"\x00" * 20)
-            with open(dirstate, "wb") as f:
-                eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
+        os.mkdir(edenfs_path1)
+        hg_dir = os.path.join(edenfs_path1, ".hg")
+        os.mkdir(hg_dir)
+        dirstate = os.path.join(hg_dir, "dirstate")
+        dirstate_hash = b"\xab\xcd" * 10
+        parents = (dirstate_hash, b"\x00" * 20)
+        with open(dirstate, "wb") as f:
+            eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
 
-            dry_run = False
-            out = io.StringIO()
-            exit_code = doctor.cure_what_ails_you(
-                config,
-                dry_run,
-                out,
-                mount_table,
-                fs_util=filesystem.LinuxFsUtil(),
-                printer=printer,
-            )
-        finally:
-            shutil.rmtree(tmp_dir)
+        dry_run = False
+        out = io.StringIO()
+        exit_code = doctor.cure_what_ails_you(
+            config,
+            dry_run,
+            out,
+            mount_table,
+            fs_util=filesystem.LinuxFsUtil(),
+            printer=printer,
+        )
 
         self.assertEqual(
             f"""\
@@ -674,8 +671,7 @@ Performing 3 checks for {edenfs_path1}.
         """Test that `eden doctor` remounts configured mount points that are not
         currently mounted.
         """
-        self._tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
-        self.addCleanup(shutil.rmtree, self._tmp_dir)
+        self._tmp_dir = self._create_tmp_dir()
 
         edenfs_path1 = os.path.join(self._tmp_dir, "path1")
         edenfs_path2 = os.path.join(self._tmp_dir, "path2")
