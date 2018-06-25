@@ -67,6 +67,7 @@ extern crate stats;
 extern crate time_ext;
 #[macro_use]
 extern crate tracing;
+extern crate tracing_fb303;
 extern crate upload_trace;
 
 mod errors;
@@ -549,6 +550,8 @@ fn main() {
                 .value_of("listening-host-port")
                 .expect("listening path must be specified"),
         )?;
+
+        tracing_fb303::register();
 
         let maybe_thrift = match monitoring::start_thrift_service(&root_log, &matches, ready) {
             None => None,
