@@ -247,16 +247,20 @@ def _matcheol(file, back):
                 util.writefile(file, newdata)
 
 
-@internaltool("abort", nomerge)
-def _iabort(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
-    if fcd.changectx().isinmemory():
+@internaltool("abort", fullmerge)
+def _iabort(repo, mynode, orig, fcd, *args, **kwargs):
+    if not fcd.changectx().isinmemory():
+        # Support coming soon; it's tricker to do without IMM and has to be
+        # implemented per-command.
+        raise error.Abort(_("--tool :abort only works with in-memory merge"))
+
+    res = _imerge(repo, mynode, orig, fcd, *args, **kwargs)
+    if res:
         raise error.AbortMergeToolError(
             _("hit merge conflicts, and --tool :abort passed")
         )
     else:
-        # Support coming soon; it's tricker to do without IMM and has to be
-        # implemented per-command.
-        raise error.Abort(_("--tool :abort only works with in-memory merge"))
+        return res
 
 
 @internaltool("prompt", nomerge)
