@@ -143,7 +143,7 @@ Add a hook to the server to make it spin until .hg/flag exists.
 Push from client1 -> server and detach. The background job will wait for
 .hg/flag.
   $ cd ../client1
-  $ hg push --to default | \sed "s/^/[client1 push] /" &
+  $ hg push --to default 2>&1 | \sed "s/^/[client1 push] /" &
 
 Wait for the first push to actually enter the hook before removing it.
   $ cd ../server
@@ -155,7 +155,7 @@ Remove the hook.
 Push from client2 -> server. This should go through immediately without
 blocking. There shouldn't be any "[client1 push]" output here.
   $ cd ../client2
-  $ hg push --to default | \sed "s/^/[client2 push] /"
+  $ hg push --to default 2>&1 | \sed "s/^/[client2 push] /"
   [client2 push] remote:  (?)
   [client2 push] remote:  (?)
   [client2 push] pushing to ssh://user@dummy/server
@@ -184,7 +184,7 @@ blocking. There shouldn't be any "[client1 push]" output here.
 
 Check that the first push is still running/blocked...
   $ jobs
-  [1]+  Running                 hg push --to default | \sed "s/^/[client1 push] /" &  (wd: ~/client1)
+  [1]+  Running                 hg push --to default 2>&1 | \sed "s/^/[client1 push] /" &  (wd: ~/client1)
 ...then allow it through.
   $ cd ../server
   $ touch .hg/flag

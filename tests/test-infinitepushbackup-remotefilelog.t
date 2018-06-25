@@ -115,7 +115,8 @@ Create a commit which deletes a file. Make sure it is backed up correctly
   $ hg ci -m 'deleted'
   $ hg log -r . -T '{node}\n'
   507709f4da22941c0471885d8377c48d6dadce21
-  $ hg pushbackup > /dev/null
+  $ hg pushbackup > /dev/null 2>err
+  $ grep 'not backing up' err
   not backing up commits marked as bad: 07e73d09a07862bc2b8beb13b72d2347f83e4981
   $ scratchbookmarks
   infinitepush/backups/test/*$TESTTMP/client/bookmarks/goodbooktobackup 22ea264ff89d6891c2889f15f338ac9fa2474f8b (glob)

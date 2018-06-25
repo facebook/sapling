@@ -25,7 +25,7 @@
   > 
   > pushclients() {
   >     for i in {0..9} ; do
-  >        hg -R client\$i push --to master -B master >/dev/null &
+  >        hg -R client\$i push --to master -B master >/dev/null 2>/dev/null &
   >     done
   >     wait
   > }

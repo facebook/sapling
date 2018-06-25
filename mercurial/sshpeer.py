@@ -27,9 +27,9 @@ def _forwardoutput(ui, pipe):
 
     This is non blocking."""
     s = util.readpipe(pipe)
-    if s:
+    if s and not ui.quiet:
         for l in s.splitlines():
-            ui.status(_("remote: "), l, "\n")
+            ui.write_err(_("remote: "), l, "\n")
 
 
 class doublepipe(object):

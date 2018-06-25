@@ -208,7 +208,7 @@ is created
   $ cd ../restored
 
 Pull the backup and check bundlerepo was created only once
-  $ hg pullbackup --reporoot $TESTTMP/backupsource | grep 'creating bundlerepo'
+  $ hg pullbackup --reporoot $TESTTMP/backupsource 2>&1 | grep 'creating bundlerepo'
   remote: creating bundlerepo
   $ cd ../repo
   $ printf "\n[extensions]\nbundlerepologger=!" >> .hg/hgrc

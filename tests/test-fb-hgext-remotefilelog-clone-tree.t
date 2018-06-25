@@ -88,10 +88,11 @@
 # full clone from shallow
 # - send stderr to /dev/null because the order of stdout/err causes
 #   flakiness here
-  $ hg clone --noupdate ssh://user@dummy/shallow full 2>/dev/null
+  $ hg clone --noupdate ssh://user@dummy/shallow full 2>err
   streaming all changes
-  remote: abort: Cannot clone from a shallow repo to a full repo.
   [255]
+  $ grep '^remote' err
+  remote: abort: Cannot clone from a shallow repo to a full repo.
 
 # getbundle full clone
 

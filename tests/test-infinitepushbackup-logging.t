@@ -63,9 +63,11 @@ Make upload to bundlestore fail
   > EOF
   $ cd client
   $ mkcommit failpushcommit
-  $ hg push -r . --to scratch/scratchpush 2> /dev/null
+  $ hg push -r . --to scratch/scratchpush 2>err
   pushing to ssh://user@dummy/repo
   searching for changes
+  [255]
+  $ grep '^remote: ' err
   remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, requestid=\d+, user=\w+\) (re)
   remote: pushing 2 commits:
   remote:     7e6a6fd9c7c8  commit
@@ -74,4 +76,3 @@ Make upload to bundlestore fail
   remote: infinitepush: bundlestore \(bundlesize=1067, elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] \$ENOTDIR\$: '/dev/null/\d+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepush \(elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] \$ENOTDIR\$: '/dev/null/\d+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: abort: \$ENOTDIR\$: '/dev/null/\d+' (re)
-  [255]

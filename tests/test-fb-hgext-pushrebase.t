@@ -98,7 +98,7 @@ Stack of non-conflicting commits should be accepted
   |
   o  initial [public:2bb9d20e471c]
   
-  $ hg push --to default --config devel.bundle2.debug=1 --debug | tee stuff | grep -v bundle2-
+  $ hg push --to default --config devel.bundle2.debug=1 --debug 2>&1 | tee stuff | grep -v bundle2-
   pushing to ssh://user@dummy/server
   running * (glob)
   sending hello command

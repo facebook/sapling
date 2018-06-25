@@ -611,7 +611,7 @@ Check the logs, make sure just one process was started
 
 Check if ssh batch mode enables only for background backup and not for foreground
   $ mkcommit ssh1
-  $ hg pushbackup --debug | debugsshcall
+  $ hg pushbackup --debug 2>&1 | debugsshcall
   running .* ".*/dummyssh" 'user@dummy' 'hg -R repo serve --stdio' (re)
   $ mkcommit ssh2
   $ hg pushbackup --background --config infinitepushbackup.logdir=$TESTTMP/logs --config infinitepushbackup.bgdebug=yes

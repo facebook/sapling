@@ -36,7 +36,7 @@
   > EOF
   $ echo a > a && hg add a && hg ci -m a
   $ cd ../repo-clone
-  $ hg pull | grep wireproto_requests
+  $ hg pull 2>&1 | grep wireproto_requests
   remote: wireproto_requests:  (args=[], command=hello, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=[], command=batch, duration=*, responselen=*) (glob)
@@ -44,13 +44,13 @@
   $ cd ../repo
   $ echo b > b && hg add b && hg ci -m b
   $ cd ../repo-clone
-  $ hg pull | grep wireproto_requests
+  $ hg pull 2>&1 | grep wireproto_requests
   remote: wireproto_requests:  (args=[], command=hello, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=[], command=batch, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$'), ('cg', '1'), ('common', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('heads', 'd2ae7f538514cd87c17547b0de4cea71fe1af9fb'), ('listkeys', 'bookmarks'), ('phases', '1')], command=getbundle, duration=*, responselen=*) (glob)
   $ echo c > c && hg add c && hg ci -m c
-  $ hg push --force | grep wireproto_requests
+  $ hg push --force 2>&1 | grep wireproto_requests
   remote: wireproto_requests:  (args=[], command=hello, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=[], command=batch, duration=*, responselen=*) (glob)
@@ -58,8 +58,7 @@
   remote: wireproto_requests:  (args=['bookmarks'], command=listkeys, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['666f726365'], command=unbundle, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['phases'], command=listkeys, duration=*, responselen=*) (glob)
-  $ hg pull -r ololo | grep wireproto_requests
-  abort: unknown revision 'ololo'!
+  $ hg pull -r ololo 2>&1 | grep wireproto_requests
   remote: wireproto_requests:  (args=[], command=hello, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['ololo'], command=lookup, duration=*, responselen=*) (glob)
