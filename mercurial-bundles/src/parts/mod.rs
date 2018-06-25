@@ -112,7 +112,7 @@ where
     builder.add_mparam("cache", "True")?;
     builder.add_mparam("category", "manifests")?;
 
-    let buffer_size = 100; // TODO(stash): make it configurable
+    let buffer_size = 10000; // TODO(stash): make it configurable
     let wirepack_parts = entries
         .buffered(buffer_size)
         .map(|input| {
