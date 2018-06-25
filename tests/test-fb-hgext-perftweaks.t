@@ -171,6 +171,9 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   > key.dirstate_size=dirstate_size
   > key.sparse_profiles=sparse_profiles
   > filepath = $LOGDIR/samplingpath.txt
+  > [perftweaks]
+  > largecheckouthint=True
+  > largecheckoutcount=1
   > [extensions]
   > sampling=
   > EOF
@@ -186,7 +189,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   dirstate_size: 1
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext/fbsparse.py
+  > fbsparse=$TESTDIR/../hgext/fbsparse.py
   > EOF
   $ cat >> profile_base << EOF
   > [include]
@@ -196,8 +199,14 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   > %include profile_base
   > EOF
   $ hg add profile_base profile_extended
+  hint[perftweaks-largecheckout]: Your repository checkout has 3 files which makes Many mercurial commands slower. Learn how to make it smaller at https://fburl.com/hgsparse
+  hint[hint-ack]: use 'hg hint --ack perftweaks-largecheckout' to silence these hints
   $ hg ci -m 'adding sparse profiles'
+  hint[perftweaks-largecheckout]: Your repository checkout has 3 files which makes Many mercurial commands slower. Learn how to make it smaller at https://fburl.com/hgsparse
+  hint[hint-ack]: use 'hg hint --ack perftweaks-largecheckout' to silence these hints
   $ hg sparse --enable-profile profile_extended
+  hint[perftweaks-largecheckout]: Your repository checkout has 1 files which makes Many mercurial commands slower. Learn how to make it smaller at https://fburl.com/hgsparse
+  hint[hint-ack]: use 'hg hint --ack perftweaks-largecheckout' to silence these hints
   >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read()

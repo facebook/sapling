@@ -12,6 +12,14 @@
     # Whether to use faster hidden cache. It has faster cache hash calculation
     # which only check stat of a few files inside store/ directory.
     fasthiddencache = False
+
+
+    [perftweaks]
+    # Whether to advertise usage of the sparse profiles when the checkout size
+    # is very large.
+    largecheckouthint = False
+    # The number of files in the checkout that constitute a "large checkout".
+    largecheckoutcount = 0
 """
 
 import errno
@@ -21,19 +29,28 @@ from mercurial import (
     branchmap,
     dispatch,
     extensions,
+    hintutil,
     localrepo,
     merge,
     namespaces,
     phases,
+    registrar,
     scmutil,
     tags,
     util,
 )
 from mercurial.extensions import wrapfunction
+from mercurial.i18n import _
 from mercurial.node import bin
 
 
 testedwith = "ships-with-fb-hgext"
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem("perftweaks", "largecheckouthint", default=False)
+configitem("perftweaks", "largecheckoutcount", default=0)
 
 
 def extsetup(ui):
@@ -328,17 +345,52 @@ def _savepreloadrevs(repo, name, revs):
             pass
 
 
+hint = registrar.hint()
+
+
+@hint("perftweaks-largecheckout")
+def hintexplainverbose(dirstatesize, repo):
+    return (
+        _(
+            "Your repository checkout has %s files which makes Many mercurial "
+            "commands slower. Learn how to make it smaller at "
+            "https://fburl.com/hgsparse"
+        )
+        % dirstatesize
+    )
+
+
+def sparseenabled():
+    sparse = None
+    try:
+        sparse = extensions.find("fbsparse")
+    except KeyError:
+        return False
+    if sparse:
+        return True
+
+
 def _trackdirstatesizes(runcommand, lui, repo, *args):
     res = runcommand(lui, repo, *args)
     if repo is not None and repo.local():
         dirstate = repo.dirstate
-        if "treedirstate" in getattr(repo, "requirements", set()):
-            # Treedirstate always has the dirstate size available.
-            lui.log("dirstate_size", "", dirstate_size=len(dirstate._map))
-        elif "_map" in vars(dirstate) and "_map" in vars(dirstate._map):
-            # For other dirstate types, access the inner map directly.  If the
-            # _map attribute is missing on the map, the dirstate was not loaded.
-            lui.log("dirstate_size", "", dirstate_size=len(dirstate._map._map))
+        dirstatesize = None
+        try:
+            # Eden and flat dirstate.
+            dirstatesize = len(dirstate._map._map)
+        except AttributeError:
+            # Treestate and treedirstate.
+            dirstatesize = len(dirstate._map)
+        if dirstatesize is not None:
+            lui.log("dirstate_size", "", dirstate_size=dirstatesize)
+            if (
+                repo.ui.configbool("perftweaks", "largecheckouthint")
+                and dirstatesize
+                >= repo.ui.configint("perftweaks", "largecheckoutcount")
+                # eden has the sparse extension disabled
+                and sparseenabled()
+            ):
+                hintutil.trigger("perftweaks-largecheckout", dirstatesize, repo)
     return res
 
 
