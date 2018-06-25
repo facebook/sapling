@@ -150,10 +150,17 @@ _collectedimports = []  # [(name, path)]
 def _collectimport(orig, name, *args, **kwargs):
     """collect imports to _collectedimports"""
     mod = orig(name, *args, **kwargs)
+    fromlist = args[2] if len(args) >= 3 else None
     try:
-        path = inspect.getabsfile(_resolvenestedmodules(mod, name))
-        if path:
-            _collectedimports.append((name, path))
+        # If the fromlist argument is non-empty then __import__ returns the exact
+        # module requested.  Otherwise it returns the top-level module in the hierarchy
+        # and we need to resolve it with _resolvenestedmodules()
+        if fromlist:
+            nestedmod = mod
+        else:
+            nestedmod = _resolvenestedmodules(mod, name)
+        path = os.path.abspath(inspect.getfile(nestedmod))
+        _collectedimports.append((name, path))
     except Exception:
         pass
     return mod
@@ -186,8 +193,8 @@ def _importh(name):
 def _resolvenestedmodules(mod, name):
     """resolve nested modules
 
-    __import__('x.y.z') returns module x. This function resolves it and return
-    the module "z".
+    __import__('x.y.z') returns module x when no fromlist is specified.
+    This function resolves it and return the module "z".
     """
     components = name.split(".")
     for comp in components[1:]:
