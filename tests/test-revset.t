@@ -1760,6 +1760,32 @@ Test working-directory revision
   $ hg debugrevspec 'wdir()^3'
   hg: parse error: ^ expects a number 0, 1, or 2
   [255]
+
+DAG ranges with wdir()
+  $ hg debugrevspec 'wdir()::1'
+  $ hg debugrevspec 'wdir()::wdir()'
+  2147483647
+  $ hg debugrevspec 'wdir()::(1+wdir())'
+  2147483647
+  $ hg debugrevspec '6::wdir()'
+  6
+  7
+  2147483647
+  $ hg debugrevspec '5::(wdir()+7)'
+  5
+  6
+  7
+  2147483647
+  $ hg debugrevspec '(1+wdir())::(2+wdir())'
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  2147483647
+
 For tests consistency
   $ hg up 9
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

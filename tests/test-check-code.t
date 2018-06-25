@@ -179,7 +179,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-hgsubversion-template-keywords.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-urls.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-utility-commands.py it has no-che?k-code (glob)
-  tests/test-revset.t:2759:
+  tests/test-revset.t:2785:
    >   > . +
    warning: ^ must be quoted
   Skipping tests/test_hgsubversion_util.py it has no-che?k-code (glob)

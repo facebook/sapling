@@ -283,10 +283,40 @@ def reachableroots(repo, roots, heads, includepath=False):
     minroot = roots.min()
     roots = list(roots)
     heads = list(heads)
+
+    # Check to see if any of the roots or heads are the working directory.
+    # reachableroots doesn't understand the working directory revision, so we
+    # must substitute it.
+    #
+    # If it appears as a head, we substitute the head with its parents, and then
+    # add it back afterwards if any of the parents matched.
+    wdirhead = node.wdirrev in heads
+    if wdirhead:
+        heads.remove(node.wdirrev)
+        wdirparents = {ctx.rev() for ctx in repo[None].parents()}
+        heads.extend(wdirparents)
+
+    # If it appears as a root, then remove it from the set of roots, as it
+    # can't match anything.  If it was the only root, then we know the answer
+    # already.
+    wdirroot = node.wdirrev in roots
+    if wdirroot:
+        roots.remove(node.wdirrev)
+        if not roots:
+            return baseset([node.wdirrev] if wdirhead else [])
+
     try:
         revs = repo.changelog.reachableroots(minroot, heads, roots, includepath)
     except AttributeError:
         revs = _reachablerootspure(repo, minroot, roots, heads, includepath)
+
+    # Check if we need to put the working dir back in the set
+    if wdirhead and (any(parent in revs for parent in wdirparents) or wdirroot):
+        # Filter out the parents we added if includepath is False.
+        if not includepath:
+            revs = [r for r in revs if r not in wdirparents]
+        revs.append(node.wdirrev)
+
     revs = baseset(revs)
     revs.sort()
     return revs
