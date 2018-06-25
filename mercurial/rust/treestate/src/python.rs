@@ -650,11 +650,10 @@ py_class!(class treestate |py| {
             let mode = data.get_item(py, 1)?.extract::<u32>(py)?;
             let size = data.get_item(py, 2)?.extract::<i32>(py)?;
             let mtime = data.get_item(py, 3)?.extract::<i32>(py)?;
-            // Mercurial uses special "size"s to represent "otherparent".
-            // See "size = -2" and "size = -1" in mercurial/dirstate.py
+            // Mercurial uses special "size"s to represent "otherparent" if state is "n".
+            // See "size = -2" in mercurial/dirstate.py
             let flags = match size {
                 -2 => StateFlags::EXIST_P2,
-                -1 => StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
                 _ => StateFlags::EXIST_P1,
             };
             let flags = match state {
