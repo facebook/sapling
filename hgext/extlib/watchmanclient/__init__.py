@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import getpass
+import os
 
 from mercurial import progress, util
 from mercurial.node import hex
@@ -69,6 +70,15 @@ class client(object):
         if err:
             raise Unavailable(err, warn)
 
+        self._sockpath = None
+
+        sockpath = repo.ui.config("fsmonitor", "sockpath")
+        if sockpath and self._user:
+            sockpath = sockpath.replace("%i", self._user)
+            if os.path.exists(sockpath):
+                self._sockpath = sockpath
+                repo.ui.debug("watchman sockpath is set as %s\n" % sockpath)
+
         self._timeout = timeout
         self._watchmanclient = None
         self._root = repo.root
@@ -112,7 +122,9 @@ class client(object):
             if self._watchmanclient is None:
                 self._firsttime = False
                 self._watchmanclient = pywatchman.client(
-                    timeout=self._timeout, useImmutableBser=True
+                    sockpath=self._sockpath,
+                    timeout=self._timeout,
+                    useImmutableBser=True,
                 )
             result = self._watchmanclient.query(*watchmanargs)
             self._ui.log(

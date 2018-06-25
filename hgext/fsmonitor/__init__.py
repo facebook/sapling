@@ -77,6 +77,14 @@ beneficial to performance but isn't enabled.
 If ``warn_when_unused`` is set and fsmonitor isn't enabled, a warning will
 be printed during working directory updates if this many files will be
 created.
+
+::
+
+    [fsmonitor]
+    sockpath = (string)
+
+Posix only: path of unix domain socket to communicate with watchman
+The path can contain %i that have to be replaced with user's unix username
 """
 
 # Platforms Supported

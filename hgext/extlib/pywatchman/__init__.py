@@ -800,6 +800,7 @@ class client(object):
     unilateral = ["log", "subscription"]
     tport = None
     useImmutableBser = None
+    sockpathretry = False  # Retry if sockpath was provided
 
     def __init__(
         self,
@@ -811,6 +812,9 @@ class client(object):
         useImmutableBser=False,
     ):
         self.sockpath = sockpath
+        # Remember that sockpath was provided
+        if sockpath:
+            self.sockpathretry = True
         self.timeout = timeout
         self.useImmutableBser = useImmutableBser
 
@@ -862,6 +866,10 @@ class client(object):
         if path:
             return path
 
+        # if sockpath was provided we should use it
+        if self.sockpath:
+            return self.sockpath
+
         cmd = ["watchman", "--output-encoding=bser", "get-sockname"]
         try:
             args = dict(
@@ -901,12 +909,19 @@ class client(object):
         if self.recvConn:
             return
 
-        if self.sockpath is None:
-            self.sockpath = self._resolvesockname()
-
+        self.sockpath = self._resolvesockname()
         self.tport = self.transport(self.sockpath, self.timeout)
-        self.sendConn = self.sendCodec(self.tport)
-        self.recvConn = self.recvCodec(self.tport)
+
+        try:
+            self.sendConn = self.sendCodec(self.tport)
+            self.recvConn = self.recvCodec(self.tport)
+        except Exception:
+            if self.sockpathretry:
+                self.sockpath = None
+                self.sockpathretry = False
+                self._connect()
+            else:
+                raise
 
     def __del__(self):
         self.close()
@@ -1038,7 +1053,6 @@ class client(object):
         self._connect()
         try:
             self.sendConn.send(args)
-
             res = self.receive()
             while self.isUnilateralResponse(res):
                 res = self.receive()
