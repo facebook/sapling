@@ -14,7 +14,7 @@ An extension itself cannot be outside the main hgext:
   > EOF
 
   $ PYTHONPATH=$TESTTMP:${PYTHONPATH:-/dev/null} hg --config extensions.alienext= help -e alienext 2>&1 | tail -1
-  mercurial.error.ForeignImportError: hgext.alienext: $TESTTMP/hgext/alienext.py lives outside * (glob)
+  mercurial.error.ForeignImportError: hgext.alienext: $TESTTMP/hgext/alienext.py* lives outside * (glob)
 
 An allowed extension cannot indirectly import a module inside a foreign hgext directory:
 
@@ -23,7 +23,7 @@ An allowed extension cannot indirectly import a module inside a foreign hgext di
   > EOF
 
   $ PYTHONPATH=$TESTTMP:$TESTTMP/hgext:${PYTHONPATH:-/dev/null} hg --config extensions.allowedext1= help -e allowedext1 2>&1 | tail -1
-  mercurial.error.ForeignImportError: alienext: $TESTTMP/hgext/alienext.py lives outside * (glob)
+  mercurial.error.ForeignImportError: alienext: $TESTTMP/hgext/alienext.py* lives outside * (glob)
 
 Modules outside hgext are not protected by this check. This is for compatibility.
 (Therefore, hgext.extlib is encouraged to be used for dependent modules that are not hg extensions)
