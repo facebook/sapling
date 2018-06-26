@@ -363,6 +363,15 @@ impl MPath {
         }
     }
 
+    pub fn join_opt_element(path: Option<&Self>, element: &MPathElement) -> Self {
+        match path {
+            Some(path) => path.join_element(Some(element)),
+            None => MPath {
+                elements: vec![element.clone()],
+            },
+        }
+    }
+
     pub fn join_element_opt(path: Option<&Self>, element: Option<&MPathElement>) -> Option<Self> {
         match element {
             Some(element) => Self::join_opt(path, element),

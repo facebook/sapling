@@ -318,7 +318,7 @@ impl HgEntryId {
         self.0
     }
 
-    pub fn new(hash: HgNodeHash) -> Self {
+    pub const fn new(hash: HgNodeHash) -> Self {
         HgEntryId(hash)
     }
 }

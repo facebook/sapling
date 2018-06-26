@@ -50,6 +50,13 @@ pub trait Manifest: Send + 'static {
 
 pub struct EmptyManifest;
 
+impl EmptyManifest {
+    #[inline]
+    pub fn new() -> Self {
+        EmptyManifest
+    }
+}
+
 impl Manifest for EmptyManifest {
     fn lookup(&self, _path: &MPathElement) -> Option<Box<Entry + Sync>> {
         None

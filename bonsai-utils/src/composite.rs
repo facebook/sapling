@@ -1,0 +1,107 @@
+// Copyright (c) 2018-present, Facebook, Inc.
+// All Rights Reserved.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
+use std::collections::{btree_map, BTreeMap, HashMap};
+
+use failure::Error;
+use futures::{future, stream, Future, Stream};
+
+use mercurial_types::{Entry, HgEntryId, Type, manifest::Content};
+use mononoke_types::{FileType, MPathElement};
+
+/// An entry representing composite state formed by multiple parents.
+pub struct CompositeEntry {
+    files: HashMap<(FileType, HgEntryId), Box<Entry + Sync>>,
+    trees: HashMap<HgEntryId, Box<Entry + Sync>>,
+}
+
+impl CompositeEntry {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            files: HashMap::new(),
+            trees: HashMap::new(),
+        }
+    }
+
+    #[inline]
+    pub fn add_parent(&mut self, entry: Box<Entry + Sync>) {
+        match entry.get_type() {
+            Type::Tree => self.trees.insert(*entry.get_hash(), entry),
+            Type::File(ft) => self.files.insert((ft, *entry.get_hash()), entry),
+        };
+    }
+
+    #[inline]
+    pub fn num_files(&self) -> usize {
+        self.files.len()
+    }
+
+    #[inline]
+    pub fn contains_file(&self, file_type: &FileType, hash: &HgEntryId) -> bool {
+        self.files.contains_key(&(*file_type, *hash))
+    }
+
+    #[inline]
+    pub fn num_trees(&self) -> usize {
+        self.trees.len()
+    }
+
+    #[inline]
+    pub fn contains_tree(&self, hash: &HgEntryId) -> bool {
+        self.trees.contains_key(hash)
+    }
+
+    pub fn manifest(&self) -> impl Future<Item = CompositeManifest, Error = Error> + Send {
+        // Manifests can only exist for tree entries. If self.trees is empty then an empty
+        // composite manifest will be returned. This is by design.
+        let mf_futs = self.trees.values().map(|entry| {
+            entry.get_content().map({
+                move |content| match content {
+                    Content::Tree(mf) => mf,
+                    _other => unreachable!("tree content must be a manifest"),
+                }
+            })
+        });
+        stream::futures_unordered(mf_futs).fold(CompositeManifest::new(), |mut composite_mf, mf| {
+            for entry in mf.list() {
+                composite_mf.add(entry);
+            }
+            future::ok::<_, Error>(composite_mf)
+        })
+    }
+}
+
+/// Represents a manifest formed from the state of multiple changesets. `CompositeManifest` and
+/// `CompositeEntry` work in tandem to provide a way to lazily iterate over multiple parents.
+pub struct CompositeManifest {
+    entries: BTreeMap<MPathElement, CompositeEntry>,
+}
+
+impl CompositeManifest {
+    pub fn new() -> Self {
+        Self {
+            entries: BTreeMap::new(),
+        }
+    }
+
+    pub fn add(&mut self, entry: Box<Entry + Sync>) {
+        self.entries
+            .entry(entry.get_name().expect("entry cannot be root").clone())
+            .or_insert_with(|| CompositeEntry::new())
+            .add_parent(entry)
+    }
+}
+
+impl IntoIterator for CompositeManifest {
+    type Item = (MPathElement, CompositeEntry);
+    type IntoIter = btree_map::IntoIter<MPathElement, CompositeEntry>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.entries.into_iter()
+    }
+}

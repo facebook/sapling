@@ -159,7 +159,7 @@ impl Arbitrary for FileChange {
 ///
 /// Symlink is also the same as Regular, but the content of the file is interpolated into a path
 /// being traversed during lookup.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize)]
 pub enum FileType {
     Regular,
     Executable,
