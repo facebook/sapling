@@ -41,8 +41,9 @@ extern crate parking_lot;
 #[cfg(test)]
 extern crate tokio_timer;
 
+use std::collections::hash_map::DefaultHasher;
 use std::fmt::{self, Debug};
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::thread;
 use std::usize;
@@ -59,6 +60,8 @@ mod weight;
 
 use boundedhash::BoundedHash;
 pub use weight::Weight;
+
+const SHARD_NUM: usize = 1000;
 
 /// Asynchronous memoizing cache for async processes
 ///
@@ -113,7 +116,7 @@ where
     F: Filler,
     F::Key: Eq + Hash,
 {
-    hash: Mutex<CacheHash<F>>,
+    hash_vec: Vec<Mutex<CacheHash<F>>>,
     filler: F,
 }
 
@@ -126,10 +129,12 @@ where
     <<F as Filler>::Value as IntoFuture>::Item: Debug,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let hash = self.hash.lock();
-        fmt.debug_struct("AsyncmemoInner")
-            .field("hash", &*hash)
-            .finish()
+        let mut fmt_struct = fmt.debug_struct("AsyncmemoInner");
+        for (idx, hash) in self.hash_vec.iter().enumerate() {
+            let hash = hash.lock();
+            fmt_struct.field(&format!("hash_vec[{}]", idx), &*hash);
+        }
+        fmt_struct.finish()
     }
 }
 
@@ -275,7 +280,7 @@ where
 {
     // Return the current state of a slot, if present
     fn slot_present(&self) -> Option<FillerSlot<F>> {
-        let mut hash = self.cache.inner.hash.lock();
+        let mut hash = self.cache.inner.hash_vec[self.cache.get_shard(&self.key)].lock();
 
         if let Some(entry) = hash.get_mut(&self.key) {
             match entry {
@@ -290,12 +295,12 @@ where
     }
 
     fn slot_remove(&self) {
-        let mut hash = self.cache.inner.hash.lock();
+        let mut hash = self.cache.inner.hash_vec[self.cache.get_shard(&self.key)].lock();
         let _ = hash.remove(&self.key);
     }
 
     fn slot_insert(&self, slot: FillerSlot<F>) {
-        let mut hash = self.cache.inner.hash.lock();
+        let mut hash = self.cache.inner.hash_vec[self.cache.get_shard(&self.key)].lock();
 
         match hash.insert(self.key.clone(), slot) {
             Err((_k, _v)) => {
@@ -417,11 +422,30 @@ where
     ///
     /// Weight is typically memory use.
     pub fn with_limits(fill: F, entrylimit: usize, weightlimit: usize) -> Self {
+        Self::with_limits_and_shards(fill, entrylimit, weightlimit, SHARD_NUM)
+    }
+
+    fn with_limits_and_shards(
+        fill: F,
+        entrylimit: usize,
+        weightlimit: usize,
+        shards: usize,
+    ) -> Self {
         assert!(entrylimit > 0);
         assert!(weightlimit > 0);
 
+        let hash_vec = {
+            let entrylimit = entrylimit / shards;
+            let weightlimit = weightlimit / shards;
+            let mut hash_vec = Vec::new();
+            for _ in 0..shards {
+                hash_vec.push(Mutex::new(BoundedHash::new(entrylimit, weightlimit)))
+            }
+            hash_vec
+        };
+
         let inner = AsyncmemoInner {
-            hash: Mutex::new(BoundedHash::new(entrylimit, weightlimit)),
+            hash_vec,
             filler: fill,
         };
 
@@ -433,8 +457,8 @@ where
     /// Construct an unbounded cache.
     ///
     /// This is pretty dangerous for any non-toy use.
-    pub fn new_unbounded(fill: F) -> Self {
-        Self::with_limits(fill, usize::MAX, usize::MAX)
+    pub fn new_unbounded(fill: F, shards: usize) -> Self {
+        Self::with_limits_and_shards(fill, usize::MAX, usize::MAX, shards)
     }
 
     /// Look up a result for a particular key/arg
@@ -461,8 +485,8 @@ where
     /// evicted before the `get`, and there could be a fetch in progress that will make
     /// `get` fast.
     pub fn key_present_in_cache<K: Into<F::Key>>(&self, key: K) -> bool {
-        let mut locked = self.inner.hash.lock();
         let key = key.into();
+        let mut locked = self.inner.hash_vec[self.get_shard(&key)].lock();
         match locked.get_mut(&key) {
             Some(Slot::Complete(_)) => true,
             _ => false,
@@ -471,8 +495,8 @@ where
 
     /// Invalidate a specific key
     pub fn invalidate<K: Into<F::Key>>(&self, key: K) {
-        let mut locked = self.inner.hash.lock();
         let key = key.into();
+        let mut locked = self.inner.hash_vec[self.get_shard(&key)].lock();
         let _ = locked.remove(&key);
     }
 
@@ -480,35 +504,57 @@ where
     /// This drops the futures of in-progress entries, which should propagate cancellation
     /// if necessary.
     pub fn clear(&self) {
-        let mut locked = self.inner.hash.lock();
+        for hash in &self.inner.hash_vec {
+            let mut locked = hash.lock();
 
-        locked.clear()
+            locked.clear()
+        }
     }
 
     /// Trim cache size to limits.
     pub fn trim(&self) {
-        let mut locked = self.inner.hash.lock();
+        for hash in &self.inner.hash_vec {
+            let mut locked = hash.lock();
 
-        locked.trim_entries(0);
-        locked.trim_weight(0);
+            locked.trim_entries(0);
+            locked.trim_weight(0);
+        }
     }
 
     /// Return number of entries in cache.
     pub fn len(&self) -> usize {
-        let hash = self.inner.hash.lock();
-        hash.len()
+        let mut len = 0;
+        for hash in &self.inner.hash_vec {
+            let hash = hash.lock();
+            len += hash.len();
+        }
+        len
     }
 
     /// Return current "weight" of the cache entries
     pub fn total_weight(&self) -> usize {
-        let hash = self.inner.hash.lock();
-        hash.total_weight()
+        let mut total = 0;
+        for hash in &self.inner.hash_vec {
+            let hash = hash.lock();
+            total += hash.total_weight()
+        }
+        total
     }
 
     /// Return true if cache is empty.
     pub fn is_empty(&self) -> bool {
-        let hash = self.inner.hash.lock();
-        hash.is_empty()
+        let mut is_empty = true;
+        for hash in &self.inner.hash_vec {
+            let hash = hash.lock();
+            is_empty = is_empty && hash.is_empty();
+        }
+        is_empty
+    }
+
+    fn get_shard<K: Hash>(&self, key: &K) -> usize {
+        let mut hasher = DefaultHasher::new();
+        key.hash(&mut hasher);
+        (hasher.finish() % (self.inner.hash_vec.len() as u64)) as usize
     }
 }
 
