@@ -242,7 +242,13 @@ class WorkspaceManager(object):
         )
 
     @property
+    def defaultworkspace(self):
+        """Default workspace name"""
+        return self._getdefaultworkspacename()
+
+    @property
     def workspace(self):
+        """Current connected workspace (reads commitcloudrc file)"""
         if self.repo.svfs.exists(self.filename):
             with self.repo.svfs.open(self.filename, r"rb") as f:
                 workspaceconfig = config.config()

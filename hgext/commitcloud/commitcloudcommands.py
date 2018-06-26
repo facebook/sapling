@@ -95,6 +95,50 @@ def cloudjoin(ui, repo, **opts):
     cloudsync(ui, repo, **opts)
 
 
+@subcmd("rejoin|reconnect", [])
+def cloudrejoin(ui, repo, **opts):
+    """reconnect the local repository to commit cloud
+
+    Reconnect only happens if the machine has been registered with Commit Cloud,
+    and the workspace has been already used for this repo
+
+    Use `hg cloud sync` to trigger a new synchronization.
+
+    Use `hg cloud connect` to connect to commit cloud for the first time.
+    """
+
+    token = commitcloudutil.TokenLocator(ui).token
+    if token:
+        try:
+            serv = service.get(ui, token)
+            serv.check()
+            reponame, workspace = getdefaultrepoworkspace(ui, repo)
+            highlightstatus(
+                ui,
+                _("trying to reconnect to the '%s' workspace for the '%s' repo\n")
+                % (workspace, reponame),
+            )
+            cloudrefs = serv.getreferences(reponame, workspace, 0)
+            if cloudrefs.version == 0:
+                highlightstatus(
+                    ui,
+                    _(
+                        "unable to reconnect: this workspace has been never connected to commit cloud for this repo\n"
+                    ),
+                )
+            else:
+                commitcloudutil.WorkspaceManager(repo).setworkspace(workspace)
+                highlightstatus(ui, _("the repository is now reconnected\n"))
+                cloudsync(ui, repo, cloudrefs, **opts)
+            return
+        except commitcloudcommon.RegistrationError:
+            pass
+
+    highlightstatus(
+        ui, _("unable to reconnect: not authenticated with commit cloud on this host\n")
+    )
+
+
 @subcmd("leave|disconnect")
 def cloudleave(ui, repo, **opts):
     """disconnect the local repository from commit cloud
@@ -195,6 +239,17 @@ def getrepoworkspace(ui, repo):
     return reponame, workspace
 
 
+def getdefaultrepoworkspace(ui, repo):
+    """get default workspace identity
+       repo may be not joined to this workspace yet
+    """
+    workspacemanager = commitcloudutil.WorkspaceManager(repo)
+    reponame = workspacemanager.reponame
+    if not reponame:
+        raise commitcloudcommon.ConfigurationError(ui, _("unknown repo"))
+    return reponame, workspacemanager.defaultworkspace
+
+
 @subcmd(
     "sync",
     [
@@ -229,7 +284,7 @@ def getrepoworkspace(ui, repo):
         ),
     ],
 )
-def cloudsync(ui, repo, **opts):
+def cloudsync(ui, repo, cloudrefs=None, **opts):
     """synchronize commits with the commit cloud service"""
     repo.ignoreautobackup = True
     if opts.get("use_bgssh"):
@@ -246,7 +301,7 @@ def cloudsync(ui, repo, **opts):
         srcrepo = shareutil.getsrcrepo(repo)
         with lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
             currentnode = repo["."].node()
-            _docloudsync(ui, repo, **opts)
+            _docloudsync(ui, repo, cloudrefs, **opts)
             return _maybeupdateworkingcopy(ui, repo, currentnode)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
@@ -263,14 +318,14 @@ def cloudsync(ui, repo, **opts):
             raise
 
 
-def _docloudsync(ui, repo, **opts):
+def _docloudsync(ui, repo, cloudrefs=None, **opts):
     start = time.time()
 
     # external services can run cloud sync and require to check if
     # auto sync is enabled
     if opts.get("check_autosync_enabled") and not autosyncenabled(ui, repo):
         highlightstatus(
-            ui, _("automatic backup and synchronization " "is currently disabled\n")
+            ui, _("automatic backup and synchronization is currently disabled\n")
         )
         return 0
 
@@ -279,7 +334,7 @@ def _docloudsync(ui, repo, **opts):
     serv = service.get(ui, tokenlocator.token)
     highlightstatus(ui, _("synchronizing '%s' with '%s'\n") % (reponame, workspace))
 
-    lastsyncstate = state.SyncState(repo)
+    lastsyncstate = state.SyncState(repo, workspace)
 
     # external services can run cloud sync and know the lasest version
     version = opts.get("workspace_version")
@@ -287,7 +342,9 @@ def _docloudsync(ui, repo, **opts):
         highlightstatus(ui, _("this version has been already synchronized\n"))
         return 0
 
-    cloudrefs = serv.getreferences(reponame, workspace, lastsyncstate.version)
+    # cloudrefs are passed in cloud rejoin
+    if cloudrefs is None:
+        cloudrefs = serv.getreferences(reponame, workspace, lastsyncstate.version)
 
     synced = False
     pushfailures = set()
@@ -424,7 +481,8 @@ def cloudrecover(ui, repo, **opts):
     the repository from scratch.
     """
     highlightstatus(ui, "clearing local commit cloud cache\n")
-    state.SyncState.erasestate(repo)
+    _, workspace = getrepoworkspace(ui, repo)
+    state.SyncState.erasestate(repo, workspace)
     cloudsync(ui, repo, **opts)
 
 

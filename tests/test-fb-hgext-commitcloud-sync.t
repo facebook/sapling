@@ -1121,3 +1121,57 @@ Check subscription when join/leave and also scm service health check
   repo_name=server
   repo_root=$TESTTMP/client1/.hg
 
+  $ cd ..
+
+Rejoin
+  $ rm -rf client2
+  $ mkdir client2
+
+  $ mkdir $TESTTMP/otherservicelocation
+  $ mkdir $TESTTMP/othertokenlocation
+
+  $ hg clone ssh://user@dummy/server client2 -q
+  $ cd client2
+  $ cat ../shared.rc >> .hg/hgrc
+
+  $ hg cloud reconnect --config "commitcloud.user_token_path=$TESTTMP/othertokenlocation" # invalid token
+  #commitcloud unable to reconnect: not authenticated with commit cloud on this host
+
+  $ hg cloud reconnect --config "commitcloud.servicelocation=$TESTTMP/otherservicelocation" # token is valid but server is different
+  #commitcloud trying to reconnect to the 'user/test/default' workspace for the 'server' repo
+  #commitcloud unable to reconnect: this workspace has been never connected to commit cloud for this repo
+
+  $ hg cloud reconnect 			# should be able to reconnect
+  #commitcloud trying to reconnect to the 'user/test/default' workspace for the 'server' repo
+  #commitcloud the repository is now reconnected
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 3 changes to 3 files
+  new changesets 3597ff85ead0:af621240884f
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  #commitcloud commits synchronized
+
+  $ hg trglog
+  o  af621240884f 'stack 1 second'
+  |
+  o  81cd67693e59 'stack 1 first'
+  |
+  | o  799d22972c4e 'stack 2 second'
+  | |
+  | o  3597ff85ead0 'stack 2 first'
+  | |
+  @ |  97250524560a 'public 2'  default/publicbookmark2 default/default
+  | |
+  o |  acd5b9e8c656 'public'  default/publicbookmark1
+  |/
+  o  d20a80d4def3 'base'
+  
+
