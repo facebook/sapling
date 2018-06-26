@@ -1130,7 +1130,13 @@ impl CreateChangeset {
                                         Error,
                                     > = (move || {
                                         let blobcs = try_boxfuture!(make_new_changeset(
-                                            parents, root_hash, user, time, extra, files, comments,
+                                            parents,
+                                            root_hash,
+                                            user,
+                                            time,
+                                            extra,
+                                            files,
+                                            comments,
                                         ));
 
                                         let cs_id = blobcs.get_changeset_id().into_nodehash();
@@ -1150,7 +1156,7 @@ impl CreateChangeset {
 
                                         scuba_logger
                                             .add("changeset_id", format!("{}", cs_id))
-                                            .log_with_msg("Changeset uuid to hash mapping");
+                                            .log_with_msg("Changeset uuid to hash mapping", None);
 
                                         // NOTE(luk): an attempt was made in D8187210 to split the
                                         // upload_entries signal into upload_entries and
@@ -1189,7 +1195,7 @@ impl CreateChangeset {
                     if result.is_ok() {
                         scuba_logger
                             .add_stats(&stats)
-                            .log_with_msg("Changeset created");
+                            .log_with_msg("Changeset created", None);
                     }
                     Ok(())
                 })
@@ -1203,7 +1209,7 @@ impl CreateChangeset {
                     if result.is_ok() {
                         scuba_logger
                             .add_stats(&stats)
-                            .log_with_msg("Parents completed");
+                            .log_with_msg("Parents completed", None);
                     }
                     Ok(())
                 }
@@ -1239,7 +1245,9 @@ impl CreateChangeset {
                 .timed({
                     move |stats, result| {
                         if result.is_ok() {
-                            scuba_logger.add_stats(&stats).log_with_msg("Finished");
+                            scuba_logger
+                                .add_stats(&stats)
+                                .log_with_msg("CreateChangeset Finished", None);
                         }
                         Ok(())
                     }

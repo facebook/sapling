@@ -316,7 +316,7 @@ impl UploadEntries {
                     if result.is_ok() {
                         scuba_logger
                             .add_stats(&stats)
-                            .log_with_msg("Required checks");
+                            .log_with_msg("Required checks", None);
                     }
                     Ok(())
                 }
@@ -349,7 +349,9 @@ impl UploadEntries {
                 let mut scuba_logger = self.scuba_logger();
                 move |stats, result| {
                     if result.is_ok() {
-                        scuba_logger.add_stats(&stats).log_with_msg("Parent checks");
+                        scuba_logger
+                            .add_stats(&stats)
+                            .log_with_msg("Parent checks", None);
                     }
                     Ok(())
                 }
@@ -376,7 +378,7 @@ impl UploadEntries {
             self.scuba_logger()
                 .add("manifests_count", uploaded_manifests_cnt)
                 .add("filelogs_count", uploaded_filenodes_cnt)
-                .log_with_msg("Size of changeset");
+                .log_with_msg("Size of changeset", None);
 
             let filenodeinfos =
                 stream::futures_unordered(uploaded_entries.into_iter().map(|(path, blobentry)| {
@@ -403,7 +405,7 @@ impl UploadEntries {
                         if result.is_ok() {
                             scuba_logger
                                 .add_stats(&stats)
-                                .log_with_msg("Upload filenodes");
+                                .log_with_msg("Upload filenodes", None);
                         }
                         Ok(())
                     }
@@ -577,7 +579,7 @@ pub fn process_entries(
             if result.is_ok() {
                 scuba_logger
                     .add_stats(&stats)
-                    .log_with_msg("Upload entries");
+                    .log_with_msg("Upload entries", None);
             }
             Ok(())
         })
@@ -648,7 +650,7 @@ pub fn handle_parents(
             if result.is_ok() {
                 scuba_logger
                     .add_stats(&stats)
-                    .log_with_msg("Wait for parents ready");
+                    .log_with_msg("Wait for parents ready", None);
             }
             Ok(())
         })

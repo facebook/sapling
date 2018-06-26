@@ -384,7 +384,7 @@ impl Bundle2Resolver {
             .add("changeset_count", changesets.len())
             .add("manifests_count", manifests.len())
             .add("filelogs_count", filelogs.len())
-            .log_with_msg("Size of unbundle");
+            .log_with_msg("Size of unbundle", None);
 
         STATS::changesets_count.add_value(changesets.len() as i64);
         STATS::manifests_count.add_value(manifests.len() as i64);

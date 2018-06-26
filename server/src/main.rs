@@ -447,7 +447,7 @@ fn repo_listen(
             scuba_logger
         };
 
-        scuba_logger.log_with_msg("Connection established");
+        scuba_logger.log_with_msg("Connection established", None);
 
         // Construct a hg protocol handler
         let proto_handler = HgProtoHandler::new(
@@ -490,13 +490,17 @@ fn repo_listen(
                     .add("wireproto_commands", wireproto_calls);
 
                 match result {
-                    Ok(_) => scuba_logger.log_with_msg("Request finished - Success"),
+                    Ok(_) => scuba_logger.log_with_msg("Request finished - Success", None),
                     Err(err) => if err.is_inner() {
-                        scuba_logger.log_with_msg(format!("Request finished - Failure {:#?}", err));
+                        scuba_logger
+                            .log_with_msg("Request finished - Failure", format!("{:#?}", err));
                     } else if err.is_elapsed() {
-                        scuba_logger.log_with_msg("Request timeout");
+                        scuba_logger.log_with_msg("Request finished - Timeout", None);
                     } else {
-                        scuba_logger.log_with_msg(format!("Unexpected timer error: {:#?}", err));
+                        scuba_logger.log_with_msg(
+                            "Request finished - Unexpected timer error",
+                            format!("{:#?}", err),
+                        );
                     },
                 }
                 Ok(())

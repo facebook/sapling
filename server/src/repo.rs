@@ -315,7 +315,7 @@ impl RepoClient {
             scuba_logger.add("command_args", args);
         }
 
-        scuba_logger.log_with_msg("Start processing");
+        scuba_logger.log_with_msg("Start processing", None);
         scuba_logger
     }
 
