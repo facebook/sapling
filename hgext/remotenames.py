@@ -38,6 +38,7 @@ from mercurial import (
     revset,
     scmutil,
     setdiscovery,
+    smartset,
     templatekw,
     ui as uimod,
     url,
@@ -51,27 +52,8 @@ from . import schemes
 from .convert import hg as converthg
 
 
-try:
-    from mercurial import smartset
-except ImportError:
-    smartset = revset
-
 configtable = {}
-try:
-    if not util.safehasattr(registrar, "configitem"):
-        raise ImportError()
-    # Supported in 4.3+
-    configitem = registrar.configitem(configtable)
-except ImportError:
-    # Support older releases that didn't register config defaults
-    def configitem(section, name, default=None):
-        configtable[(section, name)] = default
-
-    def configdefault(orig, self, section, name, default=None, untrusted=False):
-        if default is None:
-            default = configtable.get((section, name))
-        return orig(self, section, name, default=default, untrusted=untrusted)
-
+configitem = registrar.configitem(configtable)
 
 configitem("remotenames", "alias.default", default=False)
 configitem("remotenames", "allownonfastforward", default=False)
@@ -99,19 +81,14 @@ configitem("remotenames", "transitionbookmarks", default=[])
 configitem("remotenames", "transitionmessage", default=None)
 configitem("remotenames", "upstream", default=[])
 
+templatekeyword = registrar.templatekeyword()
+revsetpredicate = registrar.revsetpredicate()
+
 # namespace to use when recording an hg journal entry
 journalremotebookmarktype = "remotebookmark"
 # name of the file that is used to mark that transition to selectivepull has
 # happened
 _selectivepullenabledfile = "selectivepullenabled"
-
-
-def uisetup(ui):
-    if registrar is None:
-        if util.safehasattr(uimod.ui, "_config"):
-            extensions.wrapfunction(uimod.ui, "_config", configdefault)
-        else:
-            extensions.wrapfunction(uimod.ui, "config", configdefault)
 
 
 def exbookcalcupdate(orig, ui, repo, checkout):
@@ -873,8 +850,6 @@ def extsetup(ui):
     entry[1].append(("B", "bookmark", "", "create new bookmark"))
 
     exchange.pushdiscoverymapping["bookmarks"] = expushdiscoverybookmarks
-
-    templatekw.keywords["remotenames"] = remotenameskw
 
     try:
         strip = extensions.find("strip")
@@ -1922,10 +1897,9 @@ def upstream_revs(filt, repo, subset, x):
     return smartset.filteredset(subset, lambda n: n in tipancestors)
 
 
+@revsetpredicate("upstream()")
 def upstream(repo, subset, x):
-    """``upstream()``
-    Select changesets in an upstream repository according to remotenames.
-    """
+    """Select changesets in an upstream repository according to remotenames."""
     repo = repo.unfiltered()
     upstream_names = repo.ui.configlist("remotenames", "upstream")
     # override default args from hgrc with args passed in on the command line
@@ -1948,10 +1922,9 @@ def upstream(repo, subset, x):
     return upstream_revs(filt, repo, subset, x)
 
 
+@revsetpredicate("pushed()")
 def pushed(repo, subset, x):
-    """``pushed()``
-    Select changesets in any remote repository according to remotenames.
-    """
+    """Select changesets in any remote repository according to remotenames."""
     revset.getargs(x, 0, 0, "pushed takes no arguments")
     return upstream_revs(lambda x: True, repo, subset, x)
 
@@ -1978,10 +1951,9 @@ def getremoterevs(repo, namespacename, matchpattern=None):
     return {repo[node].rev() for node in nodes if node in repo}
 
 
+@revsetpredicate("remotenames()")
 def remotenamesrevset(repo, subset, x):
-    """``remotenames()``
-    All remote branches heads.
-    """
+    """All remote bookmarks and branches."""
     revset.getargs(x, 0, 0, "remotenames takes no arguments")
     remoterevs = set()
     for rname in repo._remotenames.keys():
@@ -1989,9 +1961,9 @@ def remotenamesrevset(repo, subset, x):
     return subset & smartset.baseset(sorted(remoterevs))
 
 
+@revsetpredicate("remotebookmark([name])")
 def remotebookmarkrevset(repo, subset, x):
-    """``remotebookmark([name])``
-    The named remote bookmark, or all remote bookmarks
+    """The named remote bookmark, or all remote bookmarks.
 
     Pattern matching is supported for `name`. See :hg:`help revisions.patterns`.
     """
@@ -2010,9 +1982,9 @@ def remotebookmarkrevset(repo, subset, x):
     return subset & smartset.baseset(sorted(remoterevs))
 
 
+@revsetpredicate("remotebranch([name])")
 def remotebranchrevset(repo, subset, x):
-    """``remotebranch([name])``
-    The named remote branch, or all remote branches
+    """The named remote branch, or all remote branches.
 
     Pattern matching is supported for `name`. See :hg:`help revisions.patterns`.
     """
@@ -2031,21 +2003,12 @@ def remotebranchrevset(repo, subset, x):
     return subset & smartset.baseset(sorted(remoterevs))
 
 
-revset.symbols.update(
-    {
-        "upstream": upstream,
-        "pushed": pushed,
-        "remotenames": remotenamesrevset,
-        "remotebookmark": remotebookmarkrevset,
-        "remotebranch": remotebranchrevset,
-    }
-)
-
 ###########
 # templates
 ###########
 
 
+@templatekeyword("remotenames")
 def remotenameskw(**args):
     """:remotenames: List of strings. List of remote names associated with the
     changeset. If remotenames.suppressbranches is True then branch names will
