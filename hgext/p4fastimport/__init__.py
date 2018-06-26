@@ -4,10 +4,6 @@
 Config example:
 
     [p4fastimport]
-    # whether use worker or not
-    useworker = false
-    # trace copies?
-    copytrace = false
     # Instead of uploading to LFS, store lfs metadata in this sqlite output
     # file. Some other process will upload from there to the LFS server later.
     lfsmetadata = PATH
@@ -19,17 +15,10 @@ Config example:
     # heuristic time difference between a ignored user commit
     # and a p4fastimporter import
     ignore-time-delta = None
-
-    # The P4 database can become corrupted when it tracks symlinks to
-    # directories. Keep this corruption out of the Mercurial repo.
-    checksymlinks = True
-
 """
 from __future__ import absolute_import
 
-import collections
 import itertools
-import json
 import sqlite3
 
 from mercurial import error, extensions, progress, registrar, revlog, scmutil
@@ -37,7 +26,7 @@ from mercurial.i18n import _
 from mercurial.node import hex, short
 
 from . import importer, p4, seqimporter, syncimporter
-from .util import decodefileflags, getcl, lastcl, runworker
+from .util import getcl, lastcl
 
 
 def extsetup():
@@ -104,27 +93,6 @@ def writelfsmetadata(largefiles, revisions, outfile):
         cur.execute("COMMIT")
 
 
-def create(tr, ui, repo, importset, p1ctx, filelogs):
-    for filelog in filelogs:
-        # If the Perforce is case insensitive a filelog can map to
-        # multiple filenames. For exmaple A.txt and a.txt would show up in the
-        # same filelog. It would be more appropriate to update the filelist
-        # after receiving the initial filelist but this would not be parallel.
-        fi = importer.FileImporter(ui, repo, importset, filelog, p1ctx)
-        fileflags, largefiles, baserevatcl, oldtiprev, newtiprev = fi.create(tr)
-        yield 1, json.dumps(
-            {
-                "newtiprev": newtiprev,
-                "oldtiprev": oldtiprev,
-                "fileflags": fileflags,
-                "baserevatcl": baserevatcl,
-                "largefiles": largefiles,
-                "depotname": filelog.depotfile,
-                "localname": fi.relpath,
-            }
-        )
-
-
 def enforce_p4_client_exists(client):
     # A client defines checkout behavior for a user. It contains a list of
     # views. A view defines a set of files and directories to check out from a
@@ -164,21 +132,6 @@ def getchangelists(ui, client, startcl, limit=None):
             ui.debug("importing %d only because of --limit.\n" % limit)
             changelists = changelists[:limit]
     return changelists
-
-
-def getfilelist(ui, p4filelist):
-    filelist = set()
-    for fileinfo in p4filelist:
-        if fileinfo["action"] in p4.ACTION_ARCHIVE:
-            pass
-        elif fileinfo["action"] in p4.SUPPORTED_ACTIONS:
-            filelist.add(fileinfo["depotFile"])
-        else:
-            ui.warn(
-                _("unknown action %s: %s\n")
-                % (fileinfo["action"], fileinfo["depotFile"])
-            )
-    return filelist
 
 
 def sanitizeopts(repo, opts):
@@ -248,122 +201,6 @@ def updatemetadata(ui, revisions, largefiles):
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-
-
-@command(
-    "p4fastimport",
-    [
-        ("P", "path", ".", _("path to the local depot store"), _("PATH")),
-        ("B", "bookmark", "", _("bookmark to set"), _("NAME")),
-        ("", "base", "", _("base changeset (must exist in the repository)")),
-        ("", "limit", "", _("number of changelists to import at a time"), _("N")),
-    ],
-    _("[-P PATH] [-B NAME] [--limit N] [CLIENT]"),
-    inferrepo=True,
-)
-def p4fastimport(ui, repo, client, **opts):
-    if "fncache" in repo.requirements:
-        raise error.Abort(_("fncache must be disabled"))
-
-    sanitizeopts(repo, opts)
-
-    if len(repo) > 0:
-        p1ctx, startcl, isbranchpoint = startfrom(ui, repo, opts)
-    else:
-        p1ctx, startcl, isbranchpoint = repo["tip"], None, False
-
-    # 0. Fail if the specified client does not exist
-    enforce_p4_client_exists(client)
-    # 1. Return all the changelists touching files in a given client view.
-    changelists = getchangelists(ui, client, startcl, limit=opts.get("limit"))
-    if len(changelists) == 0:
-        return
-
-    basepath = opts.get("path")
-    startcl, endcl = changelists[0].cl, changelists[-1].cl
-
-    # 2. Get a list of files that we will have to import from the depot with
-    # it's full path in the depot.
-    ui.note(_("loading list of files.\n"))
-    filelist = getfilelist(ui, p4.parse_filelist(client, startcl, endcl))
-    ui.note(_("%d files to import.\n") % len(filelist))
-
-    importset = importer.ImportSet(
-        repo, client, changelists, filelist, basepath, isbranchpoint=isbranchpoint
-    )
-    p4filelogs = []
-    with progress.bar(ui, _("reading filelog"), _("filelogs"), len(filelist)) as prog:
-        for i, f in enumerate(importset.filelogs()):
-            ui.debug("reading filelog %s\n" % f.depotfile)
-            prog.value = i
-            p4filelogs.append(f)
-
-    # runlist is used to topologically order files which were branched (Perforce
-    # uses per-file branching, not per-repo branching).  If we do copytracing a
-    # file A' which was branched off A will be considered a copy of A. Therefore
-    # we need to import A' before A. In this case A' will have a dependency
-    # counter +1 of A's, and therefore being imported after A. If copy tracing
-    # is disabled this is not needed and we can import files in arbitrary order.
-    runlist = collections.OrderedDict()
-    if ui.configbool("p4fastimport", "copytrace", False):
-        raise error.Abort(_("copytracing is broken"))
-    else:
-        runlist[0] = p4filelogs
-
-    ui.note(_("importing repository.\n"))
-    with repo.wlock(), repo.lock():
-        for a, b in importset.caseconflicts:
-            ui.warn(_("case conflict: %s and %s\n") % (a, b))
-        # 3. Import files.
-        count = 0
-        fileinfo = {}
-        largefiles = []
-        ftr = repo.transaction("importer")
-        try:
-            with progress.bar(
-                ui, _("importing filelogs"), "file", len(p4filelogs)
-            ) as prog:
-                for filelogs in map(sorted, runlist.values()):
-                    wargs = (ftr, ui, repo, importset, p1ctx)
-                    for i, serialized in runworker(ui, create, wargs, filelogs):
-                        data = json.loads(serialized)
-                        prog.value = (count, data["depotname"])
-                        # Json converts to UTF8 and int keys to strings, so we
-                        # have to convert back.
-                        # TODO: Find a better way to handle this.
-                        fileinfo[data["depotname"]] = {
-                            "localname": data["localname"].encode("utf-8"),
-                            "flags": decodefileflags(data["fileflags"]),
-                            "baserevatcl": data["baserevatcl"],
-                        }
-                        largefiles.extend(data["largefiles"])
-                        count += i
-                ftr.close()
-
-            tr = repo.transaction("import")
-            try:
-                # 4. Generate manifest and changelog based on the filelogs
-                # we imported
-                clog = importer.ChangeManifestImporter(ui, repo, importset, p1ctx=p1ctx)
-                revisions = []
-                for cl, hgnode in clog.creategen(tr, fileinfo):
-                    revisions.append((cl, hex(hgnode)))
-
-                if opts.get("bookmark"):
-                    ui.note(_("writing bookmark\n"))
-                    writebookmark(tr, repo, revisions, opts["bookmark"])
-
-                updatemetadata(ui, revisions, largefiles)
-
-                tr.close()
-                ui.note(
-                    _("%d revision(s), %d file(s) imported.\n")
-                    % (len(changelists), count)
-                )
-            finally:
-                tr.release()
-        finally:
-            ftr.release()
 
 
 @command(

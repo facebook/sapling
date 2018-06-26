@@ -41,28 +41,7 @@ Simple import
 
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
-  $ hg p4fastimport --debug -P $P4ROOT hg-p4-import
-  loading changelist numbers.
-  3 changelists to import.
-  loading list of files.
-  3 files to import.
-  reading filelog * (glob)
-  reading filelog * (glob)
-  reading filelog * (glob)
-  importing repository.
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 2, 2 bytes, src: *, path: Main/a (glob)
-  writing filelog: 149da44f2a4e, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/b/c (glob)
-  writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/d (glob)
-  changelist 1: writing manifest. node: * p1: 000000000000 p2: 000000000000 linkrev: 0 (glob)
-  changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: * p1: * p2: 000000000000 linkrev: 1 (glob)
-  updating the branch cache (?)
-  changelist 2: writing changelog: second
-  changelist 3: writing manifest. node: * p1: * p2: 000000000000 linkrev: 2 (glob)
-  changelist 3: writing changelog: third
-  updating the branch cache
-  3 revision(s), 3 file(s) imported.
+  $ hg p4seqimport -P $P4ROOT hg-p4-import
 
 Verify
 

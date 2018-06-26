@@ -1,13 +1,9 @@
 # (c) 2017-present Facebook Inc.
 from __future__ import absolute_import
 
-import collections
-import contextlib
-import json
 import marshal
 import time
 
-from .util import runworker
 from mercurial import error, util
 
 
@@ -92,18 +88,6 @@ def config(key):
     return _config[key]
 
 
-@contextlib.contextmanager
-def retries(num=3, sleeps=0.3):
-    for _try in range(1, num + 1):
-        try:
-            yield
-            return
-        except Exception:
-            if _try == num:
-                raise
-            time.sleep(sleeps)
-
-
 def parse_changes(client, startcl=None, endcl=None):
     "Read changes affecting the path"
     cmd = "p4 --client %s -ztag -G changes -s submitted //%s/...%s" % (
@@ -124,35 +108,6 @@ def parse_changes(client, startcl=None, endcl=None):
             yield P4Changelist(int(oc), int(c), user, time_diff)
         elif c:
             yield P4Changelist(int(c), int(c), user, time_diff)
-
-
-def parse_filelist(client, startcl=None, endcl=None):
-    if startcl is None:
-        startcl = 0
-
-    cmd = "p4 --client %s -G files -a //%s/...%s" % (
-        util.shellquote(client),
-        util.shellquote(client),
-        revrange(startcl, endcl),
-    )
-    stdout = util.popen(cmd, mode="rb")
-    for d in loaditer(stdout):
-        c = d.get("depotFile", None)
-        if c:
-            yield d
-
-
-def parse_filelist_at_cl(client, cl=None):
-    cmd = "p4 --client %s -G files //%s/...@%d" % (
-        util.shellquote(client),
-        util.shellquote(client),
-        cl,
-    )
-    stdout = util.popen(cmd, mode="rb")
-    for d in loaditer(stdout):
-        c = d.get("depotFile", None)
-        if c:
-            yield d
 
 
 def parse_where(client, depotname, ignore_nonexisting=False):
@@ -262,34 +217,6 @@ def parse_usermap():
         raise P4Exception(stdout)
 
 
-def parse_client(client):
-    cmd = "p4 -G client -o %s" % util.shellquote(client)
-    try:
-        stdout = ""
-        clientspec = []
-
-        @retry(num=3, sleeps=0.3)
-        def helper():
-            global stdout
-            global clientspec
-            stdout = util.popen(cmd, mode="rb")
-            clientspec = marshal.load(stdout)
-
-        helper()
-    except Exception:
-        raise P4Exception(stdout)
-
-    views = {}
-    for client in clientspec:
-        if client.startswith("View"):
-            sview, cview = clientspec[client].split()
-            # XXX: use a regex for this
-            cview = cview.lstrip("/")  # remove leading // from the local path
-            cview = cview[cview.find("/") + 1 :]  # remove the clientname part
-            views[sview] = cview
-    return views
-
-
 def exists_client(client):
     cmd = "p4 -G clients -e %s" % util.shellquote(client)
     try:
@@ -332,29 +259,6 @@ def parse_fstat(clnum, client, filter=None):
         return result
     except Exception:
         raise P4Exception(stdout)
-
-
-def parse_filelog(filelist, client, changelists):
-    for cl in changelists:
-        fstats = parse_fstat(cl.cl, client, lambda f: f["depotFile"] in filelist)
-        for fstat in fstats:
-            yield cl.cl, json.dumps(fstat)
-
-
-def parse_filelogs(ui, client, changelists, filelist):
-    # we can probably optimize this by using fstat only in the case-insensitive
-    # case and only for conflicts.
-    filelogs = collections.defaultdict(dict)
-    worker = runworker(ui, parse_filelog, (filelist, client), changelists)
-    for cl, jfstat in worker:
-        fstat = json.loads(jfstat)
-        depotfile = fstat["depotFile"].encode("ascii")
-        filelogs[depotfile][cl] = {
-            "action": fstat["action"].encode("ascii"),
-            "type": fstat["type"].encode("ascii"),
-        }
-    for p4filename, filelog in filelogs.iteritems():
-        yield P4Filelog(p4filename, filelog)
 
 
 def get_filelogs_at_cl(client, clnum):

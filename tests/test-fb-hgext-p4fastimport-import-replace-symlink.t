@@ -44,7 +44,7 @@ Now import it
 
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
-  $ hg p4fastimport --bookmark master -P $P4ROOT hg-p4-import
+  $ hg p4seqimport --bookmark master -P $P4ROOT hg-p4-import
   $ hg update -r 0
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls -l Main/d

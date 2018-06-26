@@ -38,27 +38,7 @@ import
 
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
-  $ hg p4fastimport --debug -P $P4ROOT hg-p4-import
-  loading changelist numbers.
-  3 changelists to import.
-  loading list of files.
-  3 files to import.
-  reading filelog * (glob)
-  reading filelog * (glob)
-  reading filelog * (glob)
-  importing repository.
-  case conflict: //depot/Main/A and //depot/Main/a
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 2, 2 bytes, src: *, path: Main/A (glob)
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 1, 2 bytes, src: *, path: Main/b (glob)
-  changelist 1: writing manifest. node: f495e209f723 p1: 000000000000 p2: 000000000000 linkrev: 0
-  changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: 510da33a44e3 p1: f495e209f723 p2: 000000000000 linkrev: 1
-  changelist 2: writing changelog: moveway
-  changelist 3: writing manifest. node: 6541d210de72 p1: 510da33a44e3 p2: 000000000000 linkrev: 2
-  changelist 3: writing changelog: moveback
-  updating the branch cache (?)
-  3 revision(s), 3 file(s) imported.
+  $ hg p4seqimport -P $P4ROOT hg-p4-import
 
 Verify
 
@@ -77,16 +57,10 @@ Update
   Main/b
   $ hg manifest -r 2
   Main/A
-  $ hg update -r 0
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cat Main/a
+  $ hg cat Main/a -r 0
   a
-  $ hg update -r 1
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ cat Main/b
+  $ hg cat Main/b -r 1
   a
-  $ hg update -r 2
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ cat Main/A
+  $ hg cat Main/A -r 2
   a
   stopping the p4 server
