@@ -27,7 +27,8 @@ import eden.cli.doctor as doctor
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.cli import filesystem, mtab
-from eden.cli.doctor import CheckResult, CheckResultType
+
+# from eden.cli.doctor import CheckResult, CheckResultType
 from eden.cli.stdout_printer import AnsiEscapeCodes, StdoutPrinter
 from fb303.ttypes import fb_status
 
@@ -38,14 +39,37 @@ escape_codes = AnsiEscapeCodes(
 printer = StdoutPrinter(escape_codes)
 
 
-class DoctorTest(unittest.TestCase):
-    # The diffs for what is written to stdout can be large.
-    maxDiff = None
-
+class DoctorTestBase(unittest.TestCase):
     def _create_tmp_dir(self) -> str:
         tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
         self.addCleanup(shutil.rmtree, tmp_dir)
         return tmp_dir
+
+    def create_fixer(self, dry_run: bool) -> Tuple[doctor.ProblemFixer, io.StringIO]:
+        out = io.StringIO()
+        if not dry_run:
+            fixer = doctor.ProblemFixer(out, printer)
+        else:
+            fixer = doctor.DryRunFixer(out, printer)
+        return fixer, out
+
+    def assert_results(
+        self,
+        fixer: doctor.ProblemFixer,
+        num_problems: int = 0,
+        num_fixed_problems: int = 0,
+        num_failed_fixes: int = 0,
+        num_manual_fixes: int = 0,
+    ) -> None:
+        self.assertEqual(num_problems, fixer.num_problems)
+        self.assertEqual(num_fixed_problems, fixer.num_fixed_problems)
+        self.assertEqual(num_failed_fixes, fixer.num_failed_fixes)
+        self.assertEqual(num_manual_fixes, fixer.num_manual_fixes)
+
+
+class DoctorTest(DoctorTestBase):
+    # The diffs for what is written to stdout can be large.
+    maxDiff = None
 
     @patch("eden.cli.doctor._call_watchman")
     @patch("eden.cli.doctor._get_roots_for_nuclide")
@@ -132,11 +156,21 @@ class DoctorTest(unittest.TestCase):
 
         self.assertEqual(
             f"""\
-Performing 3 checks for {edenfs_path1}.
-p1 for {edenfs_path1} is {edenfs_path1_dirstate_parent}, but Eden's internal
-hash in its SNAPSHOT file is {edenfs_path1_snapshot}.
-Performing 2 checks for {edenfs_path2}.
-Previous Watchman watcher for {edenfs_path2} was "inotify" but is now "eden".
+Checking {edenfs_path1}
+<yellow>- Found problem:<reset>
+mercurial's parent commit for {edenfs_path1} is {edenfs_path1_dirstate_parent},
+but Eden's internal hash in its SNAPSHOT file is {edenfs_path1_snapshot}.
+
+Run "hg -R {edenfs_path1} reset --keep {edenfs_path1_snapshot}"
+to bring the mercurial state back in sync.
+
+Checking {edenfs_path2}
+<yellow>- Found problem:<reset>
+Watchman is watching {edenfs_path2} with the wrong watcher type: \
+"inotify" instead of "eden"
+Fixing watchman watch for {edenfs_path2}...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
 Nuclide appears to be used to edit the following directories
 under {edenfs_path2}:
 
@@ -150,13 +184,18 @@ This can cause file changes to fail to show up in Nuclide.
 Currently, the only workaround for this is to run
 "Nuclide Remote Projects: Kill And Restart" from the
 command palette in Atom.
-Performing 3 checks for {edenfs_path3}.
+
+Checking {edenfs_path3}
+<yellow>- Found problem:<reset>
 {edenfs_path3}/.hg/dirstate is missing
 The most common cause of this is if you previously tried to manually remove this eden
 mount with "rm -rf".  You should instead remove it using "eden rm {edenfs_path3}",
 and can re-clone the checkout afterwards if desired.
-<yellow>Number of fixes made: 1.<reset>
-<red>Number of issues that could not be fixed: 3.<reset>
+
+<yellow>Successfully fixed 1 problem.<reset>
+<yellow>3 issues require manual attention.<reset>
+Ask in the Eden Users group if you need help fixing issues with Eden:
+https://fb.facebook.com/groups/eden.users/
 """,
             out.getvalue(),
         )
@@ -194,8 +233,8 @@ and can re-clone the checkout afterwards if desired.
         )
 
         self.assertEqual(
-            f"Performing 2 checks for {edenfs_path}.\n"
-            f"Performing 2 checks for {edenfs_path_not_watched}.\n"
+            f"Checking {edenfs_path}\n"
+            f"Checking {edenfs_path_not_watched}\n"
             "<green>No issues detected.<reset>\n",
             out.getvalue(),
         )
@@ -204,23 +243,28 @@ and can re-clone the checkout afterwards if desired.
 
     @patch("eden.cli.doctor._call_watchman")
     @patch("eden.cli.doctor._get_roots_for_nuclide")
-    def test_not_much_to_do_when_eden_is_not_running(
-        self, mock_get_roots_for_nuclide, mock_watchman
-    ):
+    def test_eden_not_in_use(self, mock_get_roots_for_nuclide, mock_watchman):
         config = FakeConfig(self._create_tmp_dir(), is_healthy=False)
-        edenfs_path = config.create_test_mount("eden-mount")
-        side_effects: List[Dict[str, Any]] = []
-        calls = []
 
-        # Note that even though Nuclide has a root that points to an unmounted
-        # Eden directory, `eden doctor` is not going to be able to report
-        # anything because it cannot make the Thrift call to `eden list` to
-        # discover that edenfs_path is normally an Eden mount.
-        mock_get_roots_for_nuclide.return_value = {edenfs_path}
+        out = io.StringIO()
+        dry_run = False
+        exit_code = doctor.cure_what_ails_you(
+            config,
+            dry_run,
+            out,
+            FakeMountTable(),
+            fs_util=filesystem.LinuxFsUtil(),
+            printer=printer,
+        )
 
-        calls.append(call(["watch-list"]))
-        side_effects.append({"roots": [edenfs_path]})
-        mock_watchman.side_effect = side_effects
+        self.assertEqual("Eden is not in use.\n", out.getvalue())
+        self.assertEqual(0, exit_code)
+
+    @patch("eden.cli.doctor._call_watchman")
+    @patch("eden.cli.doctor._get_roots_for_nuclide")
+    def test_edenfs_not_running(self, mock_get_roots_for_nuclide, mock_watchman):
+        config = FakeConfig(self._create_tmp_dir(), is_healthy=False)
+        config.create_test_mount("eden-mount")
 
         out = io.StringIO()
         dry_run = False
@@ -236,68 +280,94 @@ and can re-clone the checkout afterwards if desired.
         self.assertEqual(
             dedent(
                 """\
-Eden is not running: cannot perform all checks.
+<yellow>- Found problem:<reset>
+Eden is not running.
 To start Eden, run:
 
     eden start
 
-Cannot check if running latest edenfs because the daemon is not running.
-<green>No issues detected.<reset>
+<yellow>1 issue requires manual attention.<reset>
+Ask in the Eden Users group if you need help fixing issues with Eden:
+https://fb.facebook.com/groups/eden.users/
 """
             ),
             out.getvalue(),
         )
-        mock_watchman.assert_has_calls(calls)
-        self.assertEqual(0, exit_code)
+        self.assertEqual(1, exit_code)
 
     @patch("eden.cli.doctor._call_watchman")
     def test_no_issue_when_watchman_using_eden_watcher(self, mock_watchman):
-        self._test_watchman_watcher_check(
-            mock_watchman,
-            CheckResultType.NO_ISSUE,
-            initial_watcher="eden",
-            dry_run=False,
+        fixer, out = self._test_watchman_watcher_check(
+            mock_watchman, initial_watcher="eden"
         )
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
 
     @patch("eden.cli.doctor._call_watchman")
     def test_fix_when_watchman_using_inotify_watcher(self, mock_watchman):
-        self._test_watchman_watcher_check(
-            mock_watchman,
-            CheckResultType.FIXED,
-            initial_watcher="inotify",
-            new_watcher="eden",
-            dry_run=False,
+        fixer, out = self._test_watchman_watcher_check(
+            mock_watchman, initial_watcher="inotify", new_watcher="eden", dry_run=False
         )
+        self.assertEqual(
+            (
+                "<yellow>- Found problem:<reset>\n"
+                "Watchman is watching /path/to/eden-mount with the wrong watcher type: "
+                '"inotify" instead of "eden"\n'
+                "Fixing watchman watch for /path/to/eden-mount...<green>fixed<reset>\n"
+                "\n"
+            ),
+            out,
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
     @patch("eden.cli.doctor._call_watchman")
     def test_dry_run_identifies_inotify_watcher_issue(self, mock_watchman):
-        self._test_watchman_watcher_check(
-            mock_watchman,
-            CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN,
-            initial_watcher="inotify",
-            dry_run=True,
+        fixer, out = self._test_watchman_watcher_check(
+            mock_watchman, initial_watcher="inotify", dry_run=True
         )
+        self.assertEqual(
+            (
+                "<yellow>- Found problem:<reset>\n"
+                "Watchman is watching /path/to/eden-mount with the wrong watcher type: "
+                '"inotify" instead of "eden"\n'
+                "Would fix watchman watch for /path/to/eden-mount\n"
+                "\n"
+            ),
+            out,
+        )
+        self.assert_results(fixer, num_problems=1)
 
     @patch("eden.cli.doctor._call_watchman")
     def test_doctor_reports_failure_if_cannot_replace_inotify_watcher(
         self, mock_watchman
     ):
-        self._test_watchman_watcher_check(
+        fixer, out = self._test_watchman_watcher_check(
             mock_watchman,
-            CheckResultType.FAILED_TO_FIX,
             initial_watcher="inotify",
             new_watcher="inotify",
             dry_run=False,
         )
+        self.assertEqual(
+            (
+                "<yellow>- Found problem:<reset>\n"
+                "Watchman is watching /path/to/eden-mount with the wrong watcher type: "
+                '"inotify" instead of "eden"\n'
+                "Fixing watchman watch for /path/to/eden-mount...<red>error<reset>\n"
+                "Failed to fix problem: Failed to replace watchman watch for "
+                '/path/to/eden-mount with an "eden" watcher\n'
+                "\n"
+            ),
+            out,
+        )
+        self.assert_results(fixer, num_problems=1, num_failed_fixes=1)
 
     def _test_watchman_watcher_check(
         self,
         mock_watchman,
-        expected_check_result: Optional[CheckResultType],
         initial_watcher: str,
         new_watcher: Optional[str] = None,
         dry_run: bool = True,
-    ):
+    ) -> Tuple[doctor.ProblemFixer, str]:
         edenfs_path = "/path/to/eden-mount"
         side_effects: List[Dict[str, Any]] = []
         calls = []
@@ -317,41 +387,38 @@ Cannot check if running latest edenfs because the daemon is not running.
             side_effects.append({"watch": edenfs_path, "watcher": new_watcher})
         mock_watchman.side_effect = side_effects
 
-        watchman_roots = {edenfs_path}
-        watcher_check = doctor.WatchmanUsingEdenSubscriptionCheck(
-            edenfs_path, watchman_roots, True  # is_healthy
-        )
+        fixer, out = self.create_fixer(dry_run)
 
-        check_result = watcher_check.do_check(dry_run)
-        self.assertEqual(expected_check_result, check_result.result_type)
+        watchman_roots = {edenfs_path}
+        doctor.check_watchman_subscriptions(fixer, edenfs_path, watchman_roots)
+
         mock_watchman.assert_has_calls(calls)
+        return fixer, out.getvalue()
 
     @patch("eden.cli.doctor._call_watchman")
     def test_no_issue_when_expected_nuclide_subscriptions_present(self, mock_watchman):
-        self._test_nuclide_check(
-            mock_watchman=mock_watchman,
-            expected_check_result=CheckResultType.NO_ISSUE,
-            include_filewatcher_subscription=True,
+        fixer, out = self._test_nuclide_check(
+            mock_watchman=mock_watchman, include_filewatcher_subscription=True
         )
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
 
     @patch("eden.cli.doctor._call_watchman")
     def test_no_issue_when_path_not_in_nuclide_roots(self, mock_watchman):
-        self._test_nuclide_check(
-            mock_watchman=mock_watchman,
-            expected_check_result=CheckResultType.NO_ISSUE,
-            include_path_in_nuclide_roots=False,
+        fixer, out = self._test_nuclide_check(
+            mock_watchman=mock_watchman, include_path_in_nuclide_roots=False
         )
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
 
     @patch("eden.cli.doctor._call_watchman")
     def test_watchman_subscriptions_are_missing(self, mock_watchman):
-        check_result = self._test_nuclide_check(
-            mock_watchman=mock_watchman,
-            expected_check_result=CheckResultType.FAILED_TO_FIX,
-            include_hg_subscriptions=False,
-            dry_run=False,
+        fixer, out = self._test_nuclide_check(
+            mock_watchman=mock_watchman, include_hg_subscriptions=False, dry_run=False
         )
         self.assertEqual(
             f"""\
+<yellow>- Found problem:<reset>
 Nuclide appears to be used to edit the following directories
 under /path/to/eden-mount:
 
@@ -372,26 +439,45 @@ This can cause file changes to fail to show up in Nuclide.
 Currently, the only workaround for this is to run
 "Nuclide Remote Projects: Kill And Restart" from the
 command palette in Atom.
+
 """,
-            check_result.message,
+            out,
         )
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     @patch("eden.cli.doctor._call_watchman")
     def test_filewatcher_subscription_is_missing_dry_run(self, mock_watchman):
-        self._test_nuclide_check(
-            mock_watchman=mock_watchman,
-            expected_check_result=CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN,
+        fixer, out = self._test_nuclide_check(mock_watchman=mock_watchman)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+Nuclide appears to be used to edit the following directories
+under /path/to/eden-mount:
+
+  /path/to/eden-mount/subdirectory
+
+but the following Watchman subscriptions appear to be missing:
+
+  filewatcher-/path/to/eden-mount/subdirectory
+
+This can cause file changes to fail to show up in Nuclide.
+Currently, the only workaround for this is to run
+"Nuclide Remote Projects: Kill And Restart" from the
+command palette in Atom.
+
+""",
+            out,
         )
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     def _test_nuclide_check(
         self,
         mock_watchman,
-        expected_check_result: CheckResultType,
         dry_run: bool = True,
         include_filewatcher_subscription: bool = False,
         include_path_in_nuclide_roots: bool = True,
         include_hg_subscriptions: bool = True,
-    ) -> CheckResult:
+    ) -> Tuple[doctor.ProblemFixer, str]:
         edenfs_path = "/path/to/eden-mount"
         side_effects: List[Dict[str, Any]] = []
         watchman_calls = []
@@ -422,33 +508,44 @@ command palette in Atom.
         )
         mock_watchman.side_effect = side_effects
         watchman_roots = {edenfs_path}
-        nuclide_check = doctor.NuclideHasExpectedWatchmanSubscriptions(
-            edenfs_path, watchman_roots, nuclide_roots
+
+        fixer, out = self.create_fixer(dry_run)
+        doctor.check_nuclide_watchman_subscriptions(
+            fixer, edenfs_path, watchman_roots, nuclide_roots
         )
 
-        check_result = nuclide_check.do_check(dry_run)
-        self.assertEqual(expected_check_result, check_result.result_type)
         mock_watchman.assert_has_calls(watchman_calls)
-        return check_result
+        return fixer, out.getvalue()
 
     def test_snapshot_and_dirstate_file_match(self):
         dirstate_hash = b"\x12\x34\x56\x78" * 5
         snapshot_hex = "12345678" * 5
-        self._test_hash_check(dirstate_hash, snapshot_hex, CheckResultType.NO_ISSUE)
+        _mount_path, fixer, out = self._test_hash_check(dirstate_hash, snapshot_hex)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
 
     def test_snapshot_and_dirstate_file_differ(self):
         dirstate_hash = b"\x12\x00\x00\x00" * 5
         snapshot_hex = "12345678" * 5
-        self._test_hash_check(
-            dirstate_hash, snapshot_hex, CheckResultType.FAILED_TO_FIX
+        mount_path, fixer, out = self._test_hash_check(dirstate_hash, snapshot_hex)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+mercurial's parent commit for {mount_path} is 1200000012000000120000001200000012000000,
+but Eden's internal hash in its SNAPSHOT file is \
+1234567812345678123456781234567812345678.
+
+Run "hg -R {mount_path} reset --keep {snapshot_hex}"
+to bring the mercurial state back in sync.
+
+""",
+            out,
         )
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     def _test_hash_check(
-        self,
-        dirstate_hash: bytes,
-        snapshot_hex: str,
-        expected_check_result: CheckResultType,
-    ):
+        self, dirstate_hash: bytes, snapshot_hex: str
+    ) -> Tuple[str, doctor.ProblemFixer, str]:
         mount_path = self._create_tmp_dir()
         hg_dir = os.path.join(mount_path, ".hg")
         os.mkdir(hg_dir)
@@ -457,28 +554,23 @@ command palette in Atom.
         with open(dirstate, "wb") as f:
             eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
 
-        is_healthy = True
-        hash_check = doctor.SnapshotDirstateConsistencyCheck(
-            mount_path, snapshot_hex, is_healthy
-        )
-        dry_run = True
-        check_result = hash_check.do_check(dry_run)
-        self.assertEqual(expected_check_result, check_result.result_type)
+        fixer, out = self.create_fixer(dry_run=True)
+        doctor.check_snapshot_dirstate_consistency(fixer, mount_path, snapshot_hex)
+        return mount_path, fixer, out.getvalue()
 
     @patch("eden.cli.version.get_installed_eden_rpm_version")
     def test_edenfs_when_installed_and_running_match(self, mock_gierv):
-        self._test_edenfs_version(
-            mock_gierv, "20171213-165642", CheckResultType.NO_ISSUE, ""
-        )
+        fixer, out = self._test_edenfs_version(mock_gierv, "20171213-165642")
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
 
     @patch("eden.cli.version.get_installed_eden_rpm_version")
     def test_edenfs_when_installed_and_running_differ(self, mock_gierv):
-        self._test_edenfs_version(
-            mock_gierv,
-            "20171120-246561",
-            CheckResultType.FAILED_TO_FIX,
+        fixer, out = self._test_edenfs_version(mock_gierv, "20171120-246561")
+        self.assertEqual(
             dedent(
                 """\
+    <yellow>- Found problem:<reset>
     The version of Eden that is installed on your machine is:
         fb-eden-20171120-246561.x86_64
     but the version of Eden that is currently running is:
@@ -486,17 +578,16 @@ command palette in Atom.
 
     Consider running `eden restart` to migrate to the newer version, which
     may have important bug fixes or performance improvements.
+
                 """
             ),
+            out,
         )
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     def _test_edenfs_version(
-        self,
-        mock_rpm_q,
-        rpm_value: str,
-        expected_check_result: CheckResultType,
-        expected_message: str,
-    ):
+        self, mock_rpm_q, rpm_value: str
+    ) -> Tuple[doctor.ProblemFixer, str]:
         side_effects: List[str] = []
         calls = []
         calls.append(call())
@@ -510,12 +601,10 @@ command palette in Atom.
                 "build_package_release": "165642",
             },
         )
-        version_check = doctor.EdenfsIsLatest(config)
-        check_result = version_check.do_check(dry_run=False)
-        self.assertEqual(expected_check_result, check_result.result_type)
-        self.assertEqual(expected_message, check_result.message)
-
+        fixer, out = self.create_fixer(dry_run=False)
+        doctor.check_edenfs_version(fixer, typing.cast(config_mod.Config, config))
         mock_rpm_q.assert_has_calls(calls)
+        return fixer, out.getvalue()
 
     @patch("eden.cli.doctor._get_roots_for_nuclide", return_value=set())
     def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide):
@@ -540,7 +629,7 @@ command palette in Atom.
 
         self.assertEqual(
             f"""\
-Performing 3 checks for {edenfs_path1}.
+Checking {edenfs_path1}
 <green>No issues detected.<reset>
 """,
             out.getvalue(),
@@ -548,29 +637,49 @@ Performing 3 checks for {edenfs_path1}.
         self.assertEqual(0, exit_code)
 
     def test_remount_checkouts(self) -> None:
-        exit_code, out = self._test_remount_checkouts(dry_run=False)
+        exit_code, out, mounts = self._test_remount_checkouts(dry_run=False)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+{mounts[1]} is not currently mounted
+Remounting {mounts[1]}...<green>fixed<reset>
+
+Checking {mounts[0]}
+<yellow>Successfully fixed 1 problem.<reset>
+""",
+            out,
+        )
         self.assertEqual(exit_code, 0)
-        self.assertIn(f"Remounted {self._tmp_dir}/path2\n", out)
-        self.assertIn(f"Number of fixes made: 1.", out)
 
     def test_remount_checkouts_dry_run(self) -> None:
-        exit_code, out = self._test_remount_checkouts(dry_run=True)
-        self.assertEqual(exit_code, 0)
-        self.assertIn(f"Would remount {self._tmp_dir}/path2\n", out)
+        exit_code, out, mounts = self._test_remount_checkouts(dry_run=True)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+{mounts[1]} is not currently mounted
+Would remount {mounts[1]}
+
+Checking {mounts[0]}
+<yellow>Discovered 1 problem during --dry-run<reset>
+""",
+            out,
+        )
+        self.assertEqual(exit_code, 1)
 
     @patch("eden.cli.doctor._call_watchman")
     @patch("eden.cli.doctor._get_roots_for_nuclide", return_value=set())
     def _test_remount_checkouts(
         self, mock_get_roots_for_nuclide, mock_watchman, dry_run: bool
-    ) -> Tuple[int, str]:
+    ) -> Tuple[int, str, List[str]]:
         """Test that `eden doctor` remounts configured mount points that are not
         currently mounted.
         """
         self._tmp_dir = self._create_tmp_dir()
         config = FakeConfig(self._tmp_dir)
 
-        config.create_test_mount("path1")
-        config.create_test_mount("path2", active=False)
+        mounts = []
+        mounts.append(config.create_test_mount("path1"))
+        mounts.append(config.create_test_mount("path2", active=False))
 
         out = io.StringIO()
         exit_code = doctor.cure_what_ails_you(
@@ -581,10 +690,10 @@ Performing 3 checks for {edenfs_path1}.
             fs_util=filesystem.LinuxFsUtil(),
             printer=printer,
         )
-        return exit_code, out.getvalue()
+        return exit_code, out.getvalue(), mounts
 
 
-class BindMountsCheckTest(unittest.TestCase):
+class BindMountsCheckTest(DoctorTestBase):
     maxDiff = None
 
     def setUp(self):
@@ -618,6 +727,25 @@ class BindMountsCheckTest(unittest.TestCase):
         self.bm2 = os.path.join(self.edenfs_path1, "fbandroid/buck-out")
         self.bm3 = os.path.join(self.edenfs_path1, "buck-out")
 
+    def run_check(
+        self,
+        mount_table: mtab.MountTable,
+        dry_run: bool,
+        fs_util: Optional["FakeFsUtil"] = None,
+    ) -> Tuple[doctor.ProblemFixer, str]:
+        fixer, out = self.create_fixer(dry_run)
+        if fs_util is None:
+            fs_util = FakeFsUtil()
+        doctor.check_bind_mounts(
+            fixer,
+            self.edenfs_path1,
+            self.config,
+            self.config.get_client_info(self.edenfs_path1),
+            mount_table=mount_table,
+            fs_util=fs_util,
+        )
+        return fixer, out.getvalue()
+
     def test_bind_mounts_okay(self):
         mount_table = FakeMountTable()
         mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
@@ -649,15 +777,9 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=11, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-        result = check.do_check(dry_run=True)
-        self.assertEqual("", result.message)
-        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+        fixer, out = self.run_check(mount_table, dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
 
     def test_bind_mounts_missing_dry_run(self):
         mount_table = FakeMountTable()
@@ -690,29 +812,25 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=12, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
+        fixer, out = self.run_check(mount_table, dry_run=True)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbcode/buck-out is not mounted
+Would remount bind mount at {self.edenfs_path1}/fbcode/buck-out
 
-        result = check.do_check(dry_run=True)
-        self.assertEqual(
-            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbandroid/buck-out is not mounted
+Would remount bind mount at {self.edenfs_path1}/fbandroid/buck-out
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/buck-out is not mounted
+Would remount bind mount at {self.edenfs_path1}/buck-out
+
+""",
+            out,
         )
-        self.assertEqual(
-            dedent(
-                f"""\
-                Found 3 missing bind mounts:
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-                Not remounting because dry run.
-        """
-            ),
-            result.message,
-        )
+        self.assert_results(fixer, num_problems=3)
 
     def test_bind_mounts_missing(self):
         mount_table = FakeMountTable()
@@ -745,29 +863,29 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=12, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
+        mount_table.bind_mount_success_paths[self.client_bm1] = self.bm1
+        mount_table.bind_mount_success_paths[self.client_bm2] = self.bm2
+        mount_table.bind_mount_success_paths[self.client_bm3] = self.bm3
 
-        result = check.do_check(dry_run=True)
+        fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
-            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+            f"""\
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbcode/buck-out is not mounted
+Remounting bind mount at {self.edenfs_path1}/fbcode/buck-out...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbandroid/buck-out is not mounted
+Remounting bind mount at {self.edenfs_path1}/fbandroid/buck-out...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/buck-out is not mounted
+Remounting bind mount at {self.edenfs_path1}/buck-out...<green>fixed<reset>
+
+""",
+            out,
         )
-        self.assertEqual(
-            dedent(
-                f"""\
-                Found 3 missing bind mounts:
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-                Not remounting because dry run.
-        """
-            ),
-            result.message,
-        )
+        self.assert_results(fixer, num_problems=3, num_fixed_problems=3)
 
     def test_bind_mounts_missing_fail(self):
         mount_table = FakeMountTable()
@@ -803,33 +921,32 @@ class BindMountsCheckTest(unittest.TestCase):
         # These bound mind operations will succeed.
         mount_table.bind_mount_success_paths[self.client_bm1] = self.bm1
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-
-        result = check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
-            dedent(
-                f"""\
-                Found 3 missing bind mounts:
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-                Will try to remount directories.
-                Failed to create bind mount: {self.edenfs_path1}/fbandroid/buck-out to {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out failed with: Command 'sudo mount -o bind {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out {self.edenfs_path1}/fbandroid/buck-out' returned non-zero exit status 1.
-                Failed to create bind mount: {self.edenfs_path1}/buck-out to {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out failed with: Command 'sudo mount -o bind {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out {self.edenfs_path1}/buck-out' returned non-zero exit status 1.
-                Successfully created 1 missing bind mount point:
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out to {self.edenfs_path1}/fbcode/buck-out
-                Failed to create 2 missing bind mount points:
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out to {self.edenfs_path1}/fbandroid/buck-out
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out to {self.edenfs_path1}/buck-out
-                """
-            ),
-            result.message,
+            f"""\
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbcode/buck-out is not mounted
+Remounting bind mount at {self.edenfs_path1}/fbcode/buck-out...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbandroid/buck-out is not mounted
+Remounting bind mount at {self.edenfs_path1}/fbandroid/buck-out...<red>error<reset>
+Failed to fix problem: Command 'sudo mount -o bind \
+{self.fbsource_bind_mounts}/fbandroid-buck-out \
+{self.edenfs_path1}/fbandroid/buck-out' returned non-zero exit status 1.
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/buck-out is not mounted
+Remounting bind mount at {self.edenfs_path1}/buck-out...<red>error<reset>
+Failed to fix problem: Command \
+'sudo mount -o bind {self.fbsource_bind_mounts}/buck-out \
+{self.edenfs_path1}/buck-out' returned non-zero exit status 1.
+
+""",
+            out,
+        )
+        self.assert_results(
+            fixer, num_problems=3, num_fixed_problems=1, num_failed_fixes=2
         )
 
     def test_bind_mounts_and_dir_missing_dry_run(self):
@@ -841,33 +958,37 @@ class BindMountsCheckTest(unittest.TestCase):
         mount_table.stats[self.edenfs_path1] = mtab.MTStat(
             st_uid=os.getuid(), st_dev=12, st_mode=16877
         )
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-        result = check.do_check(dry_run=True)
+        fixer, out = self.run_check(mount_table, dry_run=True)
         self.assertEqual(
-            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+            f"""\
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/fbcode-buck-out
+Would create directory {self.fbsource_bind_mounts}/fbcode-buck-out
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbcode/buck-out is not mounted
+Would remount bind mount at {self.edenfs_path1}/fbcode/buck-out
+
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/fbandroid-buck-out
+Would create directory {self.fbsource_bind_mounts}/fbandroid-buck-out
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbandroid/buck-out is not mounted
+Would remount bind mount at {self.edenfs_path1}/fbandroid/buck-out
+
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/buck-out
+Would create directory {self.fbsource_bind_mounts}/buck-out
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/buck-out is not mounted
+Would remount bind mount at {self.edenfs_path1}/buck-out
+
+""",
+            out,
         )
-        self.assertEqual(
-            dedent(
-                f"""\
-            Found 3 missing mount path points:
-              {self.edenfs_path1}/fbcode/buck-out
-              {self.edenfs_path1}/fbandroid/buck-out
-              {self.edenfs_path1}/buck-out
-            Not creating missing mount paths because dry run.
-            Found 3 missing client mount path points:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-            Not creating missing client mount paths because dry run.
-        """
-            ),
-            result.message,
-        )
+        self.assert_results(fixer, num_problems=6)
 
     def test_bind_mount_wrong_device_dry_run(self):
         # bm1, bm2 should not have same device as edenfs
@@ -901,27 +1022,21 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=11, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-        result = check.do_check(dry_run=True)
+        fixer, out = self.run_check(mount_table, dry_run=True)
         self.assertEqual(
-            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+            f"""\
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbcode/buck-out is not mounted
+Would remount bind mount at {self.edenfs_path1}/fbcode/buck-out
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbandroid/buck-out is not mounted
+Would remount bind mount at {self.edenfs_path1}/fbandroid/buck-out
+
+""",
+            out,
         )
-        self.assertEqual(
-            dedent(
-                f"""\
-            Found 2 missing bind mounts:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
-            Not remounting because dry run.
-        """
-            ),
-            result.message,
-        )
+        self.assert_results(fixer, num_problems=2)
 
     def test_bind_mount_wrong_device(self):
         # bm1, bm2 should not have same device as edenfs
@@ -959,28 +1074,21 @@ class BindMountsCheckTest(unittest.TestCase):
         mount_table.bind_mount_success_paths[self.client_bm1] = self.bm1
         mount_table.bind_mount_success_paths[self.client_bm2] = self.bm2
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-        result = check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+        fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
-            dedent(
-                f"""\
-            Found 2 missing bind mounts:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
-            Will try to remount directories.
-            Successfully created 2 missing bind mount points:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out to {self.edenfs_path1}/fbcode/buck-out
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out to {self.edenfs_path1}/fbandroid/buck-out
-        """
-            ),
-            result.message,
+            f"""\
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbcode/buck-out is not mounted
+Remounting bind mount at {self.edenfs_path1}/fbcode/buck-out...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbandroid/buck-out is not mounted
+Remounting bind mount at {self.edenfs_path1}/fbandroid/buck-out...<green>fixed<reset>
+
+""",
+            out,
         )
+        self.assert_results(fixer, num_problems=2, num_fixed_problems=2)
 
     def test_client_mount_path_not_dir(self):
         mount_table = FakeMountTable()
@@ -1014,26 +1122,17 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=11, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-
-        # We don't fix this - so dry_run false is ok
-        result = check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
-            dedent(
-                f"""\
-            Found 1 non-directory mount path points:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-            Remove them and re-run eden doctor.
-        """
-            ),
-            result.message,
+            f"""\
+<yellow>- Found problem:<reset>
+Expected {self.fbsource_bind_mounts}/buck-out to be a directory
+Please remove the file at {self.fbsource_bind_mounts}/buck-out
+
+""",
+            out,
         )
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     def test_mount_path_not_dir(self):
         mount_table = FakeMountTable()
@@ -1067,26 +1166,17 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=11, st_mode=33188
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-
-        # We don't fix this - so dry_run false is ok
-        result = check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
-            dedent(
-                f"""\
-            Found 1 non-directory mount path points:
-              {self.edenfs_path1}/buck-out
-            Remove them and re-run eden doctor.
-        """
-            ),
-            result.message,
+            f"""\
+<yellow>- Found problem:<reset>
+Expected {self.edenfs_path1}/buck-out to be a directory
+Please remove the file at {self.edenfs_path1}/buck-out
+
+""",
+            out,
         )
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     def test_client_bind_mounts_missing_dry_run(self):
         mount_table = FakeMountTable()
@@ -1113,28 +1203,21 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=11, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
+        fixer, out = self.run_check(mount_table, dry_run=True)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/fbcode-buck-out
+Would create directory {self.fbsource_bind_mounts}/fbcode-buck-out
 
-        result = check.do_check(dry_run=True)
-        self.assertEqual(
-            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/buck-out
+Would create directory {self.fbsource_bind_mounts}/buck-out
+
+""",
+            out,
         )
-        self.assertEqual(
-            dedent(
-                f"""\
-            Found 2 missing client mount path points:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-            Not creating missing client mount paths because dry run.
-        """
-            ),
-            result.message,
-        )
+        self.assert_results(fixer, num_problems=2)
 
     def test_client_bind_mounts_missing(self):
         mount_table = FakeMountTable()
@@ -1161,26 +1244,21 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=11, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-
-        result = check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+        fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
-            dedent(
-                f"""\
-            Found 2 missing client mount path points:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-            We will create client mount paths and remount.
-        """
-            ),
-            result.message,
+            f"""\
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/fbcode-buck-out
+Creating directory {self.fbsource_bind_mounts}/fbcode-buck-out...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/buck-out
+Creating directory {self.fbsource_bind_mounts}/buck-out...<green>fixed<reset>
+
+""",
+            out,
         )
+        self.assert_results(fixer, num_problems=2, num_fixed_problems=2)
 
     def test_client_bind_mounts_missing_fail(self):
         mount_table = FakeMountTable()
@@ -1211,19 +1289,23 @@ class BindMountsCheckTest(unittest.TestCase):
 
         fs_util.path_error[self.client_bm3] = "Failed to create directory"
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1, self.config, mount_table=mount_table, fs_util=fs_util
-        )
-
-        result = check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        fixer, out = self.run_check(mount_table, dry_run=False, fs_util=fs_util)
         self.assertEqual(
-            dedent(
-                f"""\
-                Failed to create client mount path directory : {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-        """
-            ),
-            result.message,
+            f"""\
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/fbcode-buck-out
+Creating directory {self.fbsource_bind_mounts}/fbcode-buck-out...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/buck-out
+Creating directory {self.fbsource_bind_mounts}/buck-out...<red>error<reset>
+Failed to fix problem: Failed to create directory
+
+""",
+            out,
+        )
+        self.assert_results(
+            fixer, num_problems=2, num_fixed_problems=1, num_failed_fixes=1
         )
 
     def test_bind_mounts_and_client_dir_missing_dry_run(self):
@@ -1245,33 +1327,29 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=11, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-
-        result = check.do_check(dry_run=True)
+        fixer, out = self.run_check(mount_table, dry_run=True)
         self.assertEqual(
-            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
-        )
+            f"""\
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/fbandroid-buck-out
+Would create directory {self.fbsource_bind_mounts}/fbandroid-buck-out
 
-        self.assertEqual(
-            dedent(
-                f"""\
-                Found 2 missing mount path points:
-                  {self.edenfs_path1}/fbandroid/buck-out
-                  {self.edenfs_path1}/buck-out
-                Not creating missing mount paths because dry run.
-                Found 2 missing client mount path points:
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-                Not creating missing client mount paths because dry run.
-        """
-            ),
-            result.message,
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbandroid/buck-out is not mounted
+Would remount bind mount at {self.edenfs_path1}/fbandroid/buck-out
+
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/buck-out
+Would create directory {self.fbsource_bind_mounts}/buck-out
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/buck-out is not mounted
+Would remount bind mount at {self.edenfs_path1}/buck-out
+
+""",
+            out,
         )
+        self.assert_results(fixer, num_problems=4)
 
     def test_bind_mounts_and_client_dir_missing(self):
         mount_table = FakeMountTable()
@@ -1292,37 +1370,33 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=11, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
         # These bound mind operations will succeed.
         mount_table.bind_mount_success_paths[self.client_bm2] = self.bm2
         mount_table.bind_mount_success_paths[self.client_bm3] = self.bm3
 
-        result = check.do_check(dry_run=False)
-
+        fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
-            dedent(
-                f"""\
-                Found 2 missing mount path points:
-                  {self.edenfs_path1}/fbandroid/buck-out
-                  {self.edenfs_path1}/buck-out
-                We will create mount paths and remount.
-                Found 2 missing client mount path points:
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-                We will create client mount paths and remount.
-                Successfully created 2 missing bind mount points:
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out to {self.edenfs_path1}/fbandroid/buck-out
-                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out to {self.edenfs_path1}/buck-out
-        """
-            ),
-            result.message,
+            f"""\
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/fbandroid-buck-out
+Creating directory {self.fbsource_bind_mounts}/fbandroid-buck-out...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/fbandroid/buck-out is not mounted
+Remounting bind mount at {self.edenfs_path1}/fbandroid/buck-out...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/buck-out
+Creating directory {self.fbsource_bind_mounts}/buck-out...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
+Bind mount at {self.edenfs_path1}/buck-out is not mounted
+Remounting bind mount at {self.edenfs_path1}/buck-out...<green>fixed<reset>
+
+""",
+            out,
         )
-        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+        self.assert_results(fixer, num_problems=4, num_fixed_problems=4)
 
     def test_client_bind_mount_multiple_issues_dry_run(self):
         # Bind mount 1 does not exist
@@ -1355,29 +1429,21 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=11, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-        result = check.do_check(dry_run=True)
+        fixer, out = self.run_check(mount_table, dry_run=True)
         self.assertEqual(
-            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+            f"""\
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/fbcode-buck-out
+Would create directory {self.fbsource_bind_mounts}/fbcode-buck-out
+
+<yellow>- Found problem:<reset>
+Expected {self.fbsource_bind_mounts}/buck-out to be a directory
+Please remove the file at {self.fbsource_bind_mounts}/buck-out
+
+""",
+            out,
         )
-        self.assertEqual(
-            dedent(
-                f"""\
-            Found 1 non-directory mount path point:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-            Remove them and re-run eden doctor.
-            Found 1 missing client mount path point:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
-            Not creating missing client mount paths because dry run.
-        """
-            ),
-            result.message,
-        )
+        self.assert_results(fixer, num_problems=2, num_manual_fixes=1)
 
     def test_client_bind_mount_multiple_issues(self):
         # Bind mount 1 does not exist
@@ -1410,30 +1476,26 @@ class BindMountsCheckTest(unittest.TestCase):
             st_uid=os.getuid(), st_dev=11, st_mode=16877
         )
 
-        check = doctor.BindMountsCheck(
-            self.edenfs_path1,
-            self.config,
-            mount_table=mount_table,
-            fs_util=FakeFsUtil(),
-        )
-        result = check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
-            dedent(
-                f"""\
-            Found 1 non-directory mount path point:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
-            Remove them and re-run eden doctor.
-            Found 1 missing client mount path point:
-              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
-            We will create client mount paths and remount.
-        """
-            ),
-            result.message,
+            f"""\
+<yellow>- Found problem:<reset>
+Missing client directory for bind mount {self.fbsource_bind_mounts}/fbcode-buck-out
+Creating directory {self.fbsource_bind_mounts}/fbcode-buck-out...<green>fixed<reset>
+
+<yellow>- Found problem:<reset>
+Expected {self.fbsource_bind_mounts}/buck-out to be a directory
+Please remove the file at {self.fbsource_bind_mounts}/buck-out
+
+""",
+            out,
+        )
+        self.assert_results(
+            fixer, num_problems=2, num_fixed_problems=1, num_manual_fixes=1
         )
 
 
-class StaleMountsCheckTest(unittest.TestCase):
+class StaleMountsCheckTest(DoctorTestBase):
     maxDiff = None
 
     def setUp(self):
@@ -1441,14 +1503,16 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.mount_table = FakeMountTable()
         self.mount_table.add_mount("/mnt/active1")
         self.mount_table.add_mount("/mnt/active2")
-        self.check = doctor.StaleMountsCheck(
-            active_mount_points=self.active_mounts, mount_table=self.mount_table
-        )
+
+    def run_check(self, dry_run: bool) -> Tuple[doctor.ProblemFixer, str]:
+        fixer, out = self.create_fixer(dry_run)
+        doctor.check_for_stale_mounts(fixer, mount_table=self.mount_table)
+        return fixer, out.getvalue()
 
     def test_does_not_unmount_active_mounts(self):
-        result = self.check.do_check(dry_run=False)
-        self.assertEqual("", result.message)
-        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+        fixer, out = self.run_check(dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
@@ -1456,9 +1520,9 @@ class StaleMountsCheckTest(unittest.TestCase):
         # Add a working edenfs mount that is not part of our active list
         self.mount_table.add_mount("/mnt/other1")
 
-        result = self.check.do_check(dry_run=False)
-        self.assertEqual("", result.message)
-        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+        fixer, out = self.run_check(dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
@@ -1467,18 +1531,19 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.mount_table.add_stale_mount("/mnt/stale2")
         self.mount_table.fail_unmount_lazy(b"/mnt/stale1")
 
-        result = self.check.do_check(dry_run=False)
+        fixer, out = self.run_check(dry_run=False)
         self.assertEqual(
-            dedent(
-                """\
-            Unmounted 2 stale edenfs mount points:
-              /mnt/stale1
-              /mnt/stale2
-        """
-            ),
-            result.message,
+            f"""\
+<yellow>- Found problem:<reset>
+Found 2 stale edenfs mounts:
+  /mnt/stale1
+  /mnt/stale2
+Unmounting 2 stale edenfs mounts...<green>fixed<reset>
+
+""",
+            out,
         )
-        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         self.assertEqual(
             [b"/mnt/stale1", b"/mnt/stale2"], self.mount_table.unmount_lazy_calls
         )
@@ -1488,21 +1553,19 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.mount_table.add_stale_mount("/mnt/stale1")
         self.mount_table.add_stale_mount("/mnt/stale2")
 
-        result = self.check.do_check(dry_run=True)
+        fixer, out = self.run_check(dry_run=True)
         self.assertEqual(
-            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, result.result_type
+            f"""\
+<yellow>- Found problem:<reset>
+Found 2 stale edenfs mounts:
+  /mnt/stale1
+  /mnt/stale2
+Would unmount 2 stale edenfs mounts
+
+""",
+            out,
         )
-        self.assertEqual(
-            dedent(
-                """\
-            Found 2 stale edenfs mount points:
-              /mnt/stale1
-              /mnt/stale2
-            Not unmounting because dry run.
-        """
-            ),
-            result.message,
-        )
+        self.assert_results(fixer, num_problems=1)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
@@ -1512,19 +1575,21 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.mount_table.fail_unmount_lazy(b"/mnt/stale1", b"/mnt/stale2")
         self.mount_table.fail_unmount_force(b"/mnt/stale1")
 
-        result = self.check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        fixer, out = self.run_check(dry_run=False)
         self.assertEqual(
-            dedent(
-                """\
-            Successfully unmounted 1 mount point:
-              /mnt/stale2
-            Failed to unmount 1 mount point:
-              /mnt/stale1
-        """
-            ),
-            result.message,
+            f"""\
+<yellow>- Found problem:<reset>
+Found 2 stale edenfs mounts:
+  /mnt/stale1
+  /mnt/stale2
+Unmounting 2 stale edenfs mounts...<red>error<reset>
+Failed to fix problem: Failed to unmount 1 mount point:
+  /mnt/stale1
+
+""",
+            out,
         )
+        self.assert_results(fixer, num_problems=1, num_failed_fixes=1)
         self.assertEqual(
             [b"/mnt/stale1", b"/mnt/stale2"], self.mount_table.unmount_lazy_calls
         )
@@ -1534,21 +1599,19 @@ class StaleMountsCheckTest(unittest.TestCase):
 
     def test_ignores_noneden_mounts(self):
         self.mount_table.add_mount("/", device="/dev/sda1", vfstype="ext4")
-        result = self.check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
-        self.assertEqual("", result.message)
+        fixer, out = self.run_check(dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
-    def test_gives_up_if_cannot_stat_active_mount(self):
-        self.mount_table.fail_access("/mnt/active1", errno.ENOENT)
-        self.mount_table.fail_access("/mnt/active1/.eden", errno.ENOENT)
+    def test_ignores_errors_other_than_enotconn(self):
+        self.mount_table.fail_access("/mnt/active1", errno.EPERM)
+        self.mount_table.fail_access("/mnt/active1/.eden", errno.EPERM)
 
-        result = self.check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
-        self.assertEqual(
-            "Failed to lstat active eden mount b'/mnt/active1'\n", result.message
-        )
+        fixer, out = self.run_check(dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
 
     @patch("eden.cli.doctor.log.warning")
     def test_does_not_unmount_if_cannot_stat_stale_mount(self, warning):
@@ -1556,9 +1619,9 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.mount_table.fail_access("/mnt/stale1", errno.EACCES)
         self.mount_table.fail_access("/mnt/stale1/.eden", errno.EACCES)
 
-        result = self.check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
-        self.assertEqual("", result.message)
+        fixer, out = self.run_check(dry_run=False)
+        self.assertEqual("", out)
+        self.assertEqual(0, fixer.num_problems)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
         # Verify that the reason for skipping this mount is logged.
@@ -1570,20 +1633,27 @@ class StaleMountsCheckTest(unittest.TestCase):
     def test_does_unmount_if_stale_mount_is_unconnected(self):
         self.mount_table.add_stale_mount("/mnt/stale1")
 
-        result = self.check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+        fixer, out = self.run_check(dry_run=False)
         self.assertEqual(
-            "Unmounted 1 stale edenfs mount point:\n  /mnt/stale1\n", result.message
+            f"""\
+<yellow>- Found problem:<reset>
+Found 1 stale edenfs mount:
+  /mnt/stale1
+Unmounting 1 stale edenfs mount...<green>fixed<reset>
+
+""",
+            out,
         )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         self.assertEqual([b"/mnt/stale1"], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_does_not_unmount_other_users_mounts(self):
         self.mount_table.add_mount("/mnt/stale1", uid=os.getuid() + 1)
 
-        result = self.check.do_check(dry_run=False)
-        self.assertEqual("", result.message)
-        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+        fixer, out = self.run_check(dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
@@ -1591,9 +1661,9 @@ class StaleMountsCheckTest(unittest.TestCase):
         active1_dev = self.mount_table.lstat("/mnt/active1").st_dev
         self.mount_table.add_mount("/mnt/stale1", dev=active1_dev)
 
-        result = self.check.do_check(dry_run=False)
-        self.assertEqual("", result.message)
-        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+        fixer, out = self.run_check(dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
@@ -1666,7 +1736,7 @@ class FakeConfig:
 
     def create_test_mount(
         self,
-        path,
+        path: str,
         snapshot: Optional[str] = None,
         bind_mounts: Optional[Dict[str, str]] = None,
         client_dir: Optional[str] = None,
@@ -1759,7 +1829,7 @@ class FakeConfig:
     def get_mount_paths(self) -> Iterable[str]:
         return self._mount_paths.keys()
 
-    def mount(self, path) -> int:
+    def mount(self, path: str) -> int:
         assert self._is_healthy
         assert path in self._mount_paths
         return 0
@@ -1779,7 +1849,7 @@ class FakeConfig:
 
 
 class FakeMountTable(mtab.MountTable):
-    def __init__(self):
+    def __init__(self) -> None:
         self.mounts: List[mtab.MountInfo] = []
         self.unmount_lazy_calls: List[bytes] = []
         self.unmount_force_calls: List[bytes] = []
@@ -1895,10 +1965,10 @@ class FakeMountTable(mtab.MountTable):
 
 
 class FakeFsUtil(filesystem.FsUtil):
-    def __init__(self):
-        self.path_error = {}
+    def __init__(self) -> None:
+        self.path_error: Dict[str, str] = {}
 
-    def mkdir_p(self, path: str):
+    def mkdir_p(self, path: str) -> str:
         if path not in self.path_error:
             return path
         error = self.path_error[path] or "[Errno 2] no such file or directory (faked)"

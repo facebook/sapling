@@ -9,16 +9,17 @@
 
 import abc
 import binascii
+import collections
 import errno
 import json
 import logging
 import os
 import stat
 import subprocess
-import sys
-from enum import Enum, auto
+import typing
+from enum import IntEnum
 from textwrap import dedent
-from typing import Dict, List, Optional, Set, TextIO, Union
+from typing import Any, Dict, List, Optional, Set, TextIO
 
 import eden.dirstate
 
@@ -29,26 +30,113 @@ from .stdout_printer import StdoutPrinter
 log = logging.getLogger("eden.cli.doctor")
 
 
-class CheckResultType(Enum):
-    NO_ISSUE = auto()
-    FIXED = auto()
-    NOT_FIXED_BECAUSE_DRY_RUN = auto()
-    FAILED_TO_FIX = auto()
-    NO_CHECK_BECAUSE_EDEN_WAS_NOT_RUNNING = auto()
+class RemediationError(Exception):
+    pass
 
 
-class CheckResult:
-    __slots__ = ("result_type", "message")
+class ProblemSeverity(IntEnum):
+    # Note that we intentionally want to be able to compare severity values
+    # using < and > operators.
+    ADVICE = 3
+    ERROR = 10
 
-    def __init__(self, result_type: CheckResultType, message: str) -> None:
-        self.result_type = result_type
-        self.message = message
 
-
-class Check(abc.ABC):
+class ProblemBase(abc.ABC):
     @abc.abstractmethod
-    def do_check(self, dry_run: bool) -> CheckResult:
-        pass
+    def description(self) -> str:
+        "Return the description of this problem."
+
+    def severity(self) -> ProblemSeverity:
+        """Return the problem severity.
+
+        Defaults to ERROR if not overridden.
+        """
+        return ProblemSeverity.ERROR
+
+    def get_manual_remediation_message(self) -> Optional[str]:
+        "Return a message explaining how to manually fix this problem."
+        return None
+
+
+class FixableProblem(ProblemBase):
+    @abc.abstractmethod
+    def dry_run_msg(self) -> str:
+        """Return a string to print for dry-run operations."""
+
+    @abc.abstractmethod
+    def start_msg(self) -> str:
+        """Return a string to print when starting the remediation."""
+
+    @abc.abstractmethod
+    def perform_fix(self) -> None:
+        """Attempt to automatically fix the problem."""
+
+
+class Problem(ProblemBase):
+    def __init__(
+        self,
+        description: str,
+        remediation: Optional[str] = None,
+        severity: ProblemSeverity = ProblemSeverity.ERROR,
+    ) -> None:
+        self._description = description
+        self._remediation = remediation
+        self._severity = severity
+
+    def description(self) -> str:
+        return self._description
+
+    def severity(self) -> ProblemSeverity:
+        return self._severity
+
+    def get_manual_remediation_message(self) -> Optional[str]:
+        return self._remediation
+
+
+class ProblemTracker(abc.ABC):
+    def add_problem(self, problem: ProblemBase) -> None:
+        """Record a new problem"""
+
+
+class ProblemFixer(ProblemTracker):
+    def __init__(self, out: TextIO, printer: StdoutPrinter) -> None:
+        self._out = out
+        self._printer = printer
+        self.num_problems = 0
+        self.num_fixed_problems = 0
+        self.num_failed_fixes = 0
+        self.num_manual_fixes = 0
+
+    def add_problem(self, problem: ProblemBase) -> None:
+        self.num_problems += 1
+        self._out.write(
+            self._printer.yellow("- Found problem:") + f"\n{problem.description()}\n"
+        )
+        if isinstance(problem, FixableProblem):
+            self.fix_problem(problem)
+        else:
+            self.num_manual_fixes += 1
+            msg = problem.get_manual_remediation_message()
+            if msg:
+                self._out.write(msg + "\n\n")
+
+    def fix_problem(self, problem: FixableProblem) -> None:
+        self._out.write(problem.start_msg() + "...")
+        self._out.flush()
+        try:
+            problem.perform_fix()
+            self._out.write(self._printer.green("fixed") + "\n\n")
+            self.num_fixed_problems += 1
+        except Exception as ex:
+            self._out.write(self._printer.red("error") + "\n")
+            self._out.write(f"Failed to fix problem: {ex}\n\n")
+            self.num_failed_fixes += 1
+        self._out.flush()
+
+
+class DryRunFixer(ProblemFixer):
+    def fix_problem(self, problem: FixableProblem) -> None:
+        self._out.write(problem.dry_run_msg() + "\n\n")
 
 
 def cure_what_ails_you(
@@ -62,50 +150,110 @@ def cure_what_ails_you(
     if printer is None:
         printer = StdoutPrinter()
 
-    is_healthy = config.check_health().is_healthy()
-    if not is_healthy:
-        out.write(
-            dedent(
-                """\
-        Eden is not running: cannot perform all checks.
-        To start Eden, run:
-
-            eden start
-
-        """
-            )
-        )
-        active_mount_points: List[str] = []
+    if not dry_run:
+        fixer = ProblemFixer(out, printer)
     else:
-        with config.get_thrift_client() as client:
-            active_mount_points = [
-                mount.mountPoint
-                for mount in client.listMounts()
-                if mount.mountPoint is not None
-            ]
+        fixer = DryRunFixer(out, printer)
 
-    # This list is a mix of messages to print to stdout and checks to perform.
-    checks_and_messages: List[Union[str, Check]] = [
-        StaleMountsCheck(active_mount_points, mount_table)
-    ]
-    if is_healthy:
-        checks_and_messages.append(EdenfsIsLatest(config))
-    else:
-        out.write(
-            "Cannot check if running latest edenfs because "
-            "the daemon is not running.\n"
+    status = config.check_health()
+    if not status.is_healthy():
+        run_edenfs_not_healthy_checks(
+            fixer, config, status, out, mount_table, fs_util, printer
         )
+        if fixer.num_problems == 0:
+            out.write("Eden is not in use.\n")
+            return 0
+    else:
+        run_normal_checks(fixer, config, out, mount_table, fs_util, printer)
+
+    if fixer.num_problems == 0:
+        out.write(f'{printer.green("No issues detected.")}\n')
+        return 0
+
+    def problem_count(num: int) -> str:
+        if num == 1:
+            return "1 problem"
+        return f"{num} problems"
+
+    if dry_run:
+        msg = f"Discovered {problem_count(fixer.num_problems)} during --dry-run"
+        out.write(printer.yellow(msg) + "\n")
+        return 1
+
+    if fixer.num_fixed_problems:
+        msg = f"Successfully fixed {problem_count(fixer.num_fixed_problems)}."
+        out.write(printer.yellow(msg) + "\n")
+    if fixer.num_failed_fixes:
+        msg = f"Failed to fix {problem_count(fixer.num_failed_fixes)}."
+        out.write(printer.red(msg) + "\n")
+    if fixer.num_manual_fixes:
+        if fixer.num_manual_fixes == 1:
+            msg = f"1 issue requires manual attention."
+        else:
+            msg = f"{fixer.num_manual_fixes} issues require manual attention."
+        out.write(printer.yellow(msg) + "\n")
+
+    if fixer.num_fixed_problems == fixer.num_problems:
+        return 0
+
+    out.write(
+        "Ask in the Eden Users group if you need help fixing issues with Eden:\n"
+        "https://fb.facebook.com/groups/eden.users/\n"
+    )
+    return 1
+
+
+def run_edenfs_not_healthy_checks(
+    tracker: ProblemTracker,
+    config: config_mod.Config,
+    status: config_mod.HealthStatus,
+    out: TextIO,
+    mount_table: mtab.MountTable,
+    fs_util: filesystem.FsUtil,
+    printer: StdoutPrinter,
+) -> None:
+    check_for_stale_mounts(tracker, mount_table)
+
+    configured_mounts = config.get_mount_paths()
+    if configured_mounts:
+        tracker.add_problem(EdenfsNotHealthy())
+
+
+class EdenfsNotHealthy(Problem):
+    def __init__(self) -> None:
+        super().__init__(
+            "Eden is not running.", remediation="To start Eden, run:\n\n    eden start"
+        )
+
+
+def run_normal_checks(
+    tracker: ProblemTracker,
+    config: config_mod.Config,
+    out: TextIO,
+    mount_table: mtab.MountTable,
+    fs_util: filesystem.FsUtil,
+    printer: StdoutPrinter,
+) -> None:
+    with config.get_thrift_client() as client:
+        active_mount_points = [
+            mount.mountPoint
+            for mount in client.listMounts()
+            if mount.mountPoint is not None
+        ]
+
+    check_active_mounts(tracker, active_mount_points, mount_table)
+    check_for_stale_mounts(tracker, mount_table)
+    check_edenfs_version(tracker, config)
 
     watchman_roots = _get_watch_roots_for_watchman()
     nuclide_roots = _get_roots_for_nuclide()
+
     configured_mounts = config.get_mount_paths()
+    for mount_path in sorted(configured_mounts):
+        if mount_path not in active_mount_points:
+            tracker.add_problem(CheckoutNotMounted(config, mount_path))
 
-    if is_healthy:
-        for mount_path in configured_mounts:
-            if mount_path not in active_mount_points:
-                checks_and_messages.append(RemountCheck(config, mount_path))
-
-    for mount_path in active_mount_points:
+    for mount_path in sorted(active_mount_points):
         if mount_path not in configured_mounts:
             # TODO: if there are mounts in active_mount_points that aren't in
             # configured_mounts, should we try to add them to the config?
@@ -113,470 +261,344 @@ def cure_what_ails_you(
             # for example, if a post-clone hook fails.
             continue
 
-        # For now, we assume that each mount_path is actively mounted. We should
-        # update the listMounts() Thrift API to return information that notes
-        # whether a mount point is active and use it here.
-        checks: List[Union[str, Check]] = []
-        checks.append(
-            WatchmanUsingEdenSubscriptionCheck(mount_path, watchman_roots, is_healthy)
+        out.write(f"Checking {mount_path}\n")
+        client_info = config.get_client_info(mount_path)
+        check_watchman_subscriptions(tracker, mount_path, watchman_roots)
+        check_bind_mounts(
+            tracker, mount_path, config, client_info, mount_table, fs_util
         )
-        if is_healthy:
-            checks_and_messages.append(
-                BindMountsCheck(mount_path, config, mount_table, fs_util)
-            )
 
         if nuclide_roots is not None:
-            checks.append(
-                NuclideHasExpectedWatchmanSubscriptions(
-                    mount_path, watchman_roots, nuclide_roots
-                )
+            check_nuclide_watchman_subscriptions(
+                tracker, mount_path, watchman_roots, nuclide_roots
             )
 
-        client_info = config.get_client_info(mount_path)
         if client_info["scm_type"] == "hg":
             snapshot_hex = client_info["snapshot"]
-            checks.append(
-                SnapshotDirstateConsistencyCheck(mount_path, snapshot_hex, is_healthy)
-            )
-
-        checks_and_messages.append(
-            f"Performing {len(checks)} checks for {mount_path}.\n"
-        )
-        checks_and_messages.extend(checks)
-
-    num_fixes = 0
-    num_failed_fixes = 0
-    num_not_fixed_because_dry_run = 0
-    for item in checks_and_messages:
-        if isinstance(item, str):
-            out.write(item)
-            continue
-        result = item.do_check(dry_run)
-        result_type = result.result_type
-        if result_type == CheckResultType.FIXED:
-            num_fixes += 1
-        elif result_type == CheckResultType.FAILED_TO_FIX:
-            num_failed_fixes += 1
-        elif result_type == CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN:
-            num_not_fixed_because_dry_run += 1
-        out.write(result.message)
-
-    if num_not_fixed_because_dry_run:
-        msg = (
-            "Number of issues discovered during --dry-run: "
-            f"{num_not_fixed_because_dry_run}."
-        )
-        out.write(f"{printer.yellow(msg)}\n")
-    if num_fixes:
-        msg = f"Number of fixes made: {num_fixes}."
-        out.write(f"{printer.yellow(msg)}\n")
-    if num_failed_fixes:
-        msg = "Number of issues that " f"could not be fixed: {num_failed_fixes}."
-        out.write(f"{printer.red(msg)}\n")
-
-    if num_failed_fixes == 0 and num_not_fixed_because_dry_run == 0:
-        out.write(f'{printer.green("No issues detected.")}\n')
-
-    if num_failed_fixes:
-        return 1
-    else:
-        return 0
+            check_snapshot_dirstate_consistency(tracker, mount_path, snapshot_hex)
 
 
 def printable_bytes(b: bytes) -> str:
     return b.decode("utf-8", "backslashreplace")
 
 
-class RemountCheck(Check):
+class CheckoutNotMounted(FixableProblem):
     def __init__(self, config: config_mod.Config, mount_path: str) -> None:
         self._config = config
         self._mount_path = mount_path
 
-    def do_check(self, dry_run: bool) -> CheckResult:
-        if dry_run:
-            message = f"Would remount {self._mount_path}\n"
-            return CheckResult(CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, message)
+    def description(self) -> str:
+        return f"{self._mount_path} is not currently mounted"
 
+    def dry_run_msg(self) -> str:
+        return f"Would remount {self._mount_path}"
+
+    def start_msg(self) -> str:
+        return f"Remounting {self._mount_path}"
+
+    def perform_fix(self) -> None:
+        self._config.mount(self._mount_path)
+
+
+def check_active_mounts(
+    tracker: ProblemTracker,
+    active_mount_points: List[str],
+    mount_table: mtab.MountTable,
+) -> None:
+    for amp in active_mount_points:
         try:
-            self._config.mount(self._mount_path)
-            message = f"Remounted {self._mount_path}\n"
-            return CheckResult(CheckResultType.FIXED, message)
-        except Exception as ex:
-            message = f"Error remounting {self._mount_path}: {ex}\n"
-            return CheckResult(CheckResultType.FAILED_TO_FIX, message)
+            mount_table.lstat(amp).st_dev
+        except OSError as ex:
+            tracker.add_problem(
+                Problem(f"Failed to lstat active eden mount {amp}: {ex}")
+            )
 
 
-class StaleMountsCheck(Check):
-    def __init__(
-        self, active_mount_points: List[str], mount_table: mtab.MountTable
-    ) -> None:
-        self._active_mount_points = active_mount_points
+def check_for_stale_mounts(
+    tracker: ProblemTracker, mount_table: mtab.MountTable
+) -> None:
+    stale_mounts = get_all_stale_eden_mount_points(mount_table)
+    if stale_mounts:
+        tracker.add_problem(StaleMountsFound(stale_mounts, mount_table))
+
+
+class StaleMountsFound(FixableProblem):
+    def __init__(self, mounts: List[bytes], mount_table: mtab.MountTable) -> None:
+        self._mounts = mounts
         self._mount_table = mount_table
 
-    def do_check(self, dry_run: bool) -> CheckResult:
-        for amp in self._active_mount_points:
-            try:
-                self._mount_table.lstat(amp).st_dev
-            except OSError as e:
-                # If dry_run, should this return NOT_FIXED_BECAUSE_DRY_RUN?
-                return CheckResult(
-                    CheckResultType.FAILED_TO_FIX,
-                    f"Failed to lstat active eden mount {amp}\n",
-                )
+    def description(self) -> str:
+        mounts_str = "\n  ".join(printable_bytes(mount) for mount in self._mounts)
+        return f"Found {self._mounts_str()}:\n  {mounts_str}"
 
-        stale_mounts = self.get_all_stale_eden_mount_points()
-        if not stale_mounts:
-            return CheckResult(CheckResultType.NO_ISSUE, "")
+    def _mounts_str(self) -> str:
+        if len(self._mounts) == 1:
+            return "1 stale edenfs mount"
+        return f"{len(self._mounts)} stale edenfs mounts"
 
-        if dry_run:
-            message = (
-                f"Found {len(stale_mounts)} stale edenfs mount "
-                f'point{"s" if len(stale_mounts) != 1 else ""}:\n'
-            )
-            for mp in stale_mounts:
-                message += f"  {printable_bytes(mp)}\n"
-            message += "Not unmounting because dry run.\n"
+    def dry_run_msg(self) -> str:
+        return f"Would unmount {self._mounts_str()}"
 
-            return CheckResult(CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, message)
+    def start_msg(self) -> str:
+        return f"Unmounting {self._mounts_str()}"
 
+    def perform_fix(self) -> None:
         unmounted = []
         failed_to_unmount = []
 
         # Attempt to lazy unmount all of them first. For some reason,
         # lazy unmount can sometimes release any bind mounts inside.
-        for mp in stale_mounts:
+        for mp in self._mounts:
             if self._mount_table.unmount_lazy(mp):
                 unmounted.append(mp)
 
         # Use a refreshed list -- it's possible MNT_DETACH succeeded on some of
         # the points.
-        for mp in self.get_all_stale_eden_mount_points():
+        for mp in get_all_stale_eden_mount_points(self._mount_table):
             if self._mount_table.unmount_force(mp):
                 unmounted.append(mp)
             else:
                 failed_to_unmount.append(mp)
 
         if failed_to_unmount:
-            message = ""
-            if len(unmounted):
-                message += (
-                    f"Successfully unmounted {len(unmounted)} mount "
-                    f'point{"s" if len(unmounted) != 1 else ""}:\n'
-                )
-                for mp in sorted(unmounted):
-                    message += f"  {printable_bytes(mp)}\n"
-            message += (
-                f"Failed to unmount {len(failed_to_unmount)} mount "
-                f'point{"s" if len(failed_to_unmount) != 1 else ""}:\n'
-            )
-            for mp in sorted(failed_to_unmount):
-                message += f"  {printable_bytes(mp)}\n"
-            return CheckResult(CheckResultType.FAILED_TO_FIX, message)
-        else:
             message = (
-                f"Unmounted {len(stale_mounts)} stale edenfs mount "
-                f'point{"s" if len(stale_mounts) != 1 else ""}:\n'
+                f"Failed to unmount {len(failed_to_unmount)} mount "
+                f'point{"s" if len(failed_to_unmount) != 1 else ""}:\n  '
             )
-            for mp in sorted(unmounted):
-                message += f"  {printable_bytes(mp)}\n"
-            return CheckResult(CheckResultType.FIXED, message)
-
-    def get_all_stale_eden_mount_points(self) -> List[bytes]:
-        stale_eden_mount_points: Set[bytes] = set()
-        for mount_point in self.get_all_eden_mount_points():
-            try:
-                # All eden mounts should have a .eden directory.
-                # If the edenfs daemon serving this mount point has died we
-                # will get ENOTCONN when trying to access it.  (Simply calling
-                # lstat() on the root directory itself can succeed even in this
-                # case.)
-                eden_dir = os.path.join(mount_point, b".eden")
-                self._mount_table.lstat(eden_dir)
-            except OSError as e:
-                if e.errno == errno.ENOTCONN:
-                    stale_eden_mount_points.add(mount_point)
-                else:
-                    log.warning(
-                        f"Unclear whether {printable_bytes(mount_point)} "
-                        f"is stale or not. lstat() failed: {e}"
-                    )
-
-        return sorted(stale_eden_mount_points)
-
-    def get_all_eden_mount_points(self) -> Set[bytes]:
-        all_system_mounts = self._mount_table.read()
-        return {
-            mount.mount_point
-            for mount in all_system_mounts
-            if mount.device == b"edenfs" and mount.vfstype == b"fuse"
-        }
+            message += "\n  ".join(printable_bytes(mp) for mp in failed_to_unmount)
+            raise RemediationError(message)
 
 
-class BindMountsCheck(Check):
-    def __init__(
-        self,
-        mount_path: str,
-        config,
-        mount_table: mtab.MountTable,
-        fs_util: filesystem.FsUtil,
-    ) -> None:
-        self._mount_path = mount_path
-        self._config = config
-        self._mount_table = mount_table
+def get_all_stale_eden_mount_points(mount_table: mtab.MountTable) -> List[bytes]:
+    stale_eden_mount_points: Set[bytes] = set()
+    for mount_point in get_all_eden_mount_points(mount_table):
+        try:
+            # All eden mounts should have a .eden directory.
+            # If the edenfs daemon serving this mount point has died we
+            # will get ENOTCONN when trying to access it.  (Simply calling
+            # lstat() on the root directory itself can succeed even in this
+            # case.)
+            eden_dir = os.path.join(mount_point, b".eden")
+            mount_table.lstat(eden_dir)
+        except OSError as e:
+            if e.errno == errno.ENOTCONN:
+                stale_eden_mount_points.add(mount_point)
+            else:
+                log.warning(
+                    f"Unclear whether {printable_bytes(mount_point)} "
+                    f"is stale or not. lstat() failed: {e}"
+                )
+
+    return sorted(stale_eden_mount_points)
+
+
+def get_all_eden_mount_points(mount_table: mtab.MountTable) -> Set[bytes]:
+    all_system_mounts = mount_table.read()
+    return {
+        mount.mount_point
+        for mount in all_system_mounts
+        if mount.device == b"edenfs" and mount.vfstype == b"fuse"
+    }
+
+
+def check_bind_mounts(
+    tracker: ProblemTracker,
+    mount_path: str,
+    config: config_mod.Config,
+    client_info: collections.OrderedDict,
+    mount_table: mtab.MountTable,
+    fs_util: filesystem.FsUtil,
+) -> None:
+    """Check that bind mounts exist and have different device IDs than the top-level
+    checkout mount path, to confirm that they are mounted."""
+    try:
+        checkout_path_stat = mount_table.lstat(mount_path)
+    except OSError as ex:
+        tracker.add_problem(Problem(f"Failed to stat eden mount: {mount_path}: {ex}"))
+        return
+
+    client_dir = client_info["client-dir"]
+    client_bind_mount_dir = os.path.join(client_dir, "bind-mounts")
+    bind_mounts = client_info["bind-mounts"]
+
+    # Create a dictionary of client paths : mount paths
+    # Client directory eg. /data/users/bob/.eden/clients/fbsource-eden/bind-mounts
+    # Mount directory eg. /data/users/bob/fbsource/
+    client_mount_path_dict = {}
+    for client_suffix, mount_suffix in bind_mounts.items():
+        path_in_client_dir = os.path.join(client_bind_mount_dir, client_suffix)
+        path_in_mount_dir = os.path.join(mount_path, mount_suffix)
+        client_mount_path_dict[path_in_client_dir] = path_in_mount_dir
+
+    for path_in_client_dir, path_in_mount_dir in client_mount_path_dict.items():
+        _check_bind_mount_client_path(tracker, path_in_client_dir, mount_table, fs_util)
+        _check_bind_mount_path(
+            tracker,
+            path_in_client_dir,
+            path_in_mount_dir,
+            checkout_path_stat,
+            mount_table,
+            fs_util,
+        )
+
+
+def _check_bind_mount_client_path(
+    tracker: ProblemTracker,
+    path: str,
+    mount_table: mtab.MountTable,
+    fs_util: filesystem.FsUtil,
+) -> None:
+    # Identify missing or non-directory client paths
+    try:
+        client_stat = mount_table.lstat(path)
+        if not stat.S_ISDIR(client_stat.st_mode):
+            tracker.add_problem(NonDirectoryFile(path))
+    except OSError as ex:
+        if ex.errno == errno.ENOENT:
+            tracker.add_problem(MissingBindMountClientDir(path, fs_util))
+        else:
+            tracker.add_problem(
+                Problem(f"Failed to lstat bind mount source directory: {path}: {ex}")
+            )
+
+
+def _check_bind_mount_path(
+    tracker: ProblemTracker,
+    mount_source: str,
+    mount_point: str,
+    checkout_path_stat: os.stat_result,
+    mount_table: mtab.MountTable,
+    fs_util: filesystem.FsUtil,
+):
+    # Identify missing or not mounted bind mounts
+    try:
+        bind_mount_stat = mount_table.lstat(mount_point)
+        if not stat.S_ISDIR(bind_mount_stat.st_mode):
+            tracker.add_problem(NonDirectoryFile(mount_point))
+            return
+        if bind_mount_stat.st_dev == checkout_path_stat.st_dev:
+            tracker.add_problem(
+                BindMountNotMounted(
+                    mount_source,
+                    mount_point,
+                    mkdir=False,
+                    fs_util=fs_util,
+                    mount_table=mount_table,
+                )
+            )
+    except OSError as ex:
+        if ex.errno == errno.ENOENT:
+            tracker.add_problem(
+                BindMountNotMounted(
+                    mount_source,
+                    mount_point,
+                    mkdir=True,
+                    fs_util=fs_util,
+                    mount_table=mount_table,
+                )
+            )
+        else:
+            tracker.add_problem(Problem(f"Failed to lstat mount path: {mount_point}"))
+
+
+class NonDirectoryFile(Problem):
+    def __init__(self, path: str) -> None:
+        super().__init__(
+            f"Expected {path} to be a directory",
+            remediation=f"Please remove the file at {path}",
+        )
+        self._path = path
+
+
+class MissingBindMountClientDir(FixableProblem):
+    def __init__(self, path: str, fs_util: filesystem.FsUtil) -> None:
+        self._path = path
         self._fs_util = fs_util
 
-    def do_check(self, dry_run: bool) -> CheckResult:
-        # Check bind mounts exist and have different devices than mount path
-        try:
-            mount_path_stat = self._mount_table.lstat(self._mount_path)
-        except OSError as e:
-            return CheckResult(
-                CheckResultType.FAILED_TO_FIX,
-                f"Failed to stat eden mount: {self._mount_path}\n",
-            )
+    def description(self) -> str:
+        return f"Missing client directory for bind mount {self._path}"
 
-        client_info = self._config.get_client_info(self._mount_path)
-        client_dir = client_info["client-dir"]
-        client_bind_mount_dir = os.path.join(client_dir, "bind-mounts")
-        bind_mounts = client_info["bind-mounts"]
+    def dry_run_msg(self) -> str:
+        return f"Would create directory {self._path}"
 
-        # Create a dictionary of client paths : mount paths
-        # Client directory eg. /data/users/bob/.eden/clients/fbsource-eden/bind-mounts
-        # Mount directory eg. /data/users/bob/fbsource/
-        client_mount_path_dict = {}
-        for client_suffix, mount_suffix in bind_mounts.items():
-            path_in_client_dir = os.path.join(client_bind_mount_dir, client_suffix)
-            path_in_mount_dir = os.path.join(self._mount_path, mount_suffix)
-            client_mount_path_dict[path_in_client_dir] = path_in_mount_dir
+    def start_msg(self) -> str:
+        return f"Creating directory {self._path}"
 
-        # Identify: missing client paths, non-directory paths.
-        not_dir_paths = []
-        missing_client_paths = []
-        missing_path_dict = {}
-        for path_in_client_dir in client_mount_path_dict:
-            try:
-                client_stat = self._mount_table.lstat(path_in_client_dir)
-                if not stat.S_ISDIR(client_stat.st_mode):
-                    not_dir_paths.append(path_in_client_dir)
-            except OSError as ex:
-                if ex.errno == errno.ENOENT:
-                    missing_client_paths.append(path_in_client_dir)
-                else:
-                    return CheckResult(
-                        CheckResultType.FAILED_TO_FIX,
-                        f"Failed to lstat client mount path: {path_in_client_dir}\n",
-                    )
-
-        # Identify: missing mount paths, non-directory paths.
-        missing_mount_paths = []
-        wrong_dev_path_dict = {}
-        for path_in_client_dir, path_in_mount_dir in client_mount_path_dict.items():
-            try:
-                mount_stat = self._mount_table.lstat(path_in_mount_dir)
-                if not stat.S_ISDIR(mount_stat.st_mode):
-                    not_dir_paths.append(path_in_mount_dir)
-                    continue
-                if mount_stat.st_dev == mount_path_stat.st_dev:
-                    wrong_dev_path_dict[path_in_client_dir] = path_in_mount_dir
-            except OSError as ex:
-                if ex.errno == errno.ENOENT:
-                    missing_mount_paths.append(path_in_mount_dir)
-                    missing_path_dict[path_in_client_dir] = path_in_mount_dir
-                else:
-                    return CheckResult(
-                        CheckResultType.FAILED_TO_FIX,
-                        f"Failed to lstat mount path: {path_in_mount_dir}\n",
-                    )
-
-        # Exit early if everything is okay
-        if (
-            not wrong_dev_path_dict
-            and not not_dir_paths
-            and not missing_client_paths
-            and not missing_mount_paths
-        ):
-            return CheckResult(CheckResultType.NO_ISSUE, "")
-
-        # Add messages for mounts that are incorrect device type
-        message = ""
-        if wrong_dev_path_dict:
-            message += f"Found {len(wrong_dev_path_dict)} missing bind mounts:\n"
-            for mp in wrong_dev_path_dict:
-                message += f"  {mp}\n"
-            if dry_run:
-                message += "Not remounting because dry run.\n"
-            else:
-                message += "Will try to remount directories.\n"
-
-        # Add messages for mounts that are not directories
-        if not_dir_paths:
-            message += (
-                f"Found {len(not_dir_paths)} non-directory mount path "
-                f'point{"s" if len(missing_client_paths) != 1 else ""}:\n'
-            )
-            for mp in not_dir_paths:
-                message += f"  {mp}\n"
-            message += "Remove them and re-run eden doctor.\n"
-
-        # On dry-run, we want to add messages for missing bind mounts.
-        # Else, they will be reported with results of corrective actions.
-        if missing_mount_paths:
-            message += (
-                f"Found {len(missing_mount_paths)} missing mount path "
-                f'point{"s" if len(missing_mount_paths) != 1 else ""}:\n'
-            )
-            for mp in missing_mount_paths:
-                message += f"  {mp}\n"
-            if dry_run:
-                message += "Not creating missing mount paths because dry run.\n"
-            else:
-                message += "We will create mount paths and remount.\n"
-
-        # On dry-run, we want to add messages for missing client bind mounts.
-        # Else, they will be reported with results of corrective actions.
-        if missing_client_paths:
-            message += (
-                f"Found {len(missing_client_paths)} missing client mount path "
-                f'point{"s" if len(missing_client_paths) != 1 else ""}:\n'
-            )
-            for mp in missing_client_paths:
-                message += f"  {mp}\n"
-            if dry_run:
-                message += "Not creating missing client mount paths because dry run.\n"
-            else:
-                message += "We will create client mount paths and remount.\n"
-
-        if dry_run:
-            # Dry run - return our messages
-            return CheckResult(CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN, message)
-
-        # Not a dry run, so, return result if there are issues we don't fix.
-        if not_dir_paths:
-            return CheckResult(CheckResultType.FAILED_TO_FIX, message)
-
-        success_mounts = {}
-        failed_mounts = {}
-
-        # There are missing bind mounts, create the bind-mounts directory
-        self._fs_util.mkdir_p(client_bind_mount_dir)
-
-        # Now, create the missing mount paths
-        for mount_path in missing_mount_paths:
-            try:
-                self._fs_util.mkdir_p(mount_path)
-            except (OSError, subprocess.CalledProcessError) as e:
-                return CheckResult(
-                    CheckResultType.FAILED_TO_FIX,
-                    f"Failed to create mount path directory : {mount_path}\n",
-                )
-
-        # Now, create the missing client paths
-        for client_mount_path in missing_client_paths:
-            try:
-                self._fs_util.mkdir_p(client_mount_path)
-            except (OSError, subprocess.CalledProcessError) as e:
-                return CheckResult(
-                    CheckResultType.FAILED_TO_FIX,
-                    f"Failed to create client mount path directory : {client_mount_path}\n",
-                )
-
-        # Create the bind mounts
-        for client_mount_path, mount_path in wrong_dev_path_dict.items():
-            try:
-                self._mount_table.create_bind_mount(client_mount_path, mount_path)
-                success_mounts[client_mount_path] = mount_path
-            except subprocess.CalledProcessError as e:
-                failed_mounts[client_mount_path] = mount_path
-                message += (
-                    f"Failed to create bind mount: {mount_path} to {client_mount_path}"
-                    f" failed with: {str(e) if getattr(e, 'strerror', None) is None else e.strerror}\n"
-                )
-
-        # Create the bind mounts the missing paths we fixed
-        for client_mount_path, mount_path in missing_path_dict.items():
-            try:
-                if client_mount_path in wrong_dev_path_dict:
-                    continue
-                self._mount_table.create_bind_mount(client_mount_path, mount_path)
-                success_mounts[client_mount_path] = mount_path
-            except subprocess.CalledProcessError as e:
-                failed_mounts[client_mount_path] = mount_path
-                message += (
-                    f"Failed to create bind mount: {mount_path} to {client_mount_path}"
-                    f" failed with: {str(e) if getattr(e, 'strerror', None) is None else e.strerror}\n"
-                )
-
-        if success_mounts:
-            message += (
-                f"Successfully created {len(success_mounts)} missing bind mount "
-                f'point{"s" if len(success_mounts) != 1 else ""}:\n'
-            )
-            for client_path, mount_path in success_mounts.items():
-                message += f"  {client_path} to {mount_path}\n"
-
-        if failed_mounts:
-            message += (
-                f"Failed to create {len(failed_mounts)} missing bind mount "
-                f'point{"s" if len(failed_mounts) != 1 else ""}:\n'
-            )
-            for client_path, mount_path in failed_mounts.items():
-                message += f"  {client_path} to {mount_path}\n"
-            return CheckResult(CheckResultType.FAILED_TO_FIX, message)
-
-        return CheckResult(CheckResultType.FIXED, message)
+    def perform_fix(self) -> None:
+        self._fs_util.mkdir_p(self._path)
 
 
-class WatchmanUsingEdenSubscriptionCheck(Check):
-    def __init__(self, path: str, watchman_roots: Set[str], is_healthy: bool) -> None:
+class BindMountNotMounted(FixableProblem):
+    def __init__(
+        self,
+        client_dir_path: str,
+        mount_path: str,
+        mkdir: bool,
+        fs_util: filesystem.FsUtil,
+        mount_table: mtab.MountTable,
+    ) -> None:
+        self._client_dir_path = client_dir_path
+        self._mount_path = mount_path
+        self._mkdir = mkdir
+        self._fs_util = fs_util
+        self._mount_table = mount_table
+
+    def description(self) -> str:
+        return f"Bind mount at {self._mount_path} is not mounted"
+
+    def dry_run_msg(self) -> str:
+        return f"Would remount bind mount at {self._mount_path}"
+
+    def start_msg(self) -> str:
+        return f"Remounting bind mount at {self._mount_path}"
+
+    def perform_fix(self) -> None:
+        if self._mkdir:
+            self._fs_util.mkdir_p(self._mount_path)
+        self._mount_table.create_bind_mount(self._client_dir_path, self._mount_path)
+
+
+def check_watchman_subscriptions(
+    tracker: ProblemTracker, path: str, watchman_roots: Set[str]
+) -> None:
+    if path not in watchman_roots:
+        return
+
+    watch_details = _call_watchman(["watch-project", path])
+    watcher = watch_details.get("watcher")
+    if watcher == "eden":
+        return
+
+    tracker.add_problem(IncorrectWatchmanWatch(path, watcher))
+
+
+class IncorrectWatchmanWatch(FixableProblem):
+    def __init__(self, path: str, watcher: Any) -> None:
         self._path = path
-        self._watchman_roots = watchman_roots
-        self._is_healthy = is_healthy
-        self._watcher = None
+        self._watcher = watcher
 
-    def do_check(self, dry_run: bool) -> CheckResult:
-        if not self._is_healthy:
-            return self._report(CheckResultType.NO_CHECK_BECAUSE_EDEN_WAS_NOT_RUNNING)
-        if self._path not in self._watchman_roots:
-            return self._report(CheckResultType.NO_ISSUE)
+    def description(self) -> str:
+        return (
+            f"Watchman is watching {self._path} with the wrong watcher type: "
+            f'"{self._watcher}" instead of "eden"'
+        )
 
-        watch_details = _call_watchman(["watch-project", self._path])
-        self._watcher = watch_details.get("watcher")
-        if self._watcher == "eden":
-            return self._report(CheckResultType.NO_ISSUE)
+    def dry_run_msg(self) -> str:
+        return f"Would fix watchman watch for {self._path}"
 
-        # At this point, we know there is an issue that needs to be fixed.
-        if dry_run:
-            return self._report(CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN)
+    def start_msg(self) -> str:
+        return f"Fixing watchman watch for {self._path}"
 
+    def perform_fix(self) -> None:
         # Delete the old watch and try to re-establish it. Hopefully it will be
         # an Eden watch this time.
         _call_watchman(["watch-del", self._path])
         watch_details = _call_watchman(["watch-project", self._path])
-        if watch_details.get("watcher") == "eden":
-            return self._report(CheckResultType.FIXED)
-        else:
-            return self._report(CheckResultType.FAILED_TO_FIX)
-
-    def _report(self, result_type: CheckResultType) -> CheckResult:
-        old_watcher = self._watcher or "(unknown)"
-        if result_type == CheckResultType.FIXED:
-            msg = (
-                f"Previous Watchman watcher for {self._path} was "
-                f'"{old_watcher}" but is now "eden".\n'
+        if watch_details.get("watcher") != "eden":
+            raise RemediationError(
+                f"Failed to replace watchman watch for {self._path} "
+                'with an "eden" watcher'
             )
-        elif result_type == CheckResultType.FAILED_TO_FIX:
-            msg = (
-                f"Watchman Watcher for {self._path} was {old_watcher} "
-                'and we failed to replace it with an "eden" watcher.\n'
-            )
-        elif result_type == CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN:
-            msg = (
-                f"Watchman Watcher for {self._path} was {old_watcher} "
-                "but nothing was done because --dry-run was specified.\n"
-            )
-        else:
-            msg = ""
-        return CheckResult(result_type, msg)
 
 
 # Watchman subscriptions that Nuclide creates for an Hg repository.
@@ -591,177 +613,155 @@ NUCLIDE_HG_SUBSCRIPTIONS = [
 ]
 
 
-class NuclideHasExpectedWatchmanSubscriptions(Check):
-    def __init__(
-        self, path: str, watchman_roots: Set[str], nuclide_roots: Set[str]
-    ) -> None:
-        self._path = path
-        self._watchman_roots = watchman_roots
-        self._nuclide_roots = nuclide_roots
-        self._missing_subscriptions = []
-        self._connected_nuclide_roots = None
+def check_nuclide_watchman_subscriptions(
+    tracker: ProblemTracker,
+    path: str,
+    watchman_roots: Set[str],
+    nuclide_roots: Set[str],
+) -> None:
+    # Note that nuclide_roots is a set, but each entry in the set
+    # could appear as a root folder multiple times if the user uses multiple
+    # Atom windows.
+    path_prefix = path + "/"
+    connected_nuclide_roots = [
+        nuclide_root
+        for nuclide_root in nuclide_roots
+        if path == nuclide_root or nuclide_root.startswith(path_prefix)
+    ]
+    if not connected_nuclide_roots:
+        # There do not appear to be any Nuclide connections for path.
+        return
 
-    def do_check(self, dry_run: bool) -> CheckResult:
-        # Note that self._nuclide_roots is a set, but each entry in the set
-        # could appear as a root folder multiple times if the user uses multiple
-        # Atom windows.
-        path_prefix = self._path + "/"
-        connected_nuclide_roots = [
-            nuclide_root
-            for nuclide_root in self._nuclide_roots
-            if self._path == nuclide_root or nuclide_root.startswith(path_prefix)
-        ]
-        self._connected_nuclide_roots = connected_nuclide_roots
-        if not connected_nuclide_roots:
-            # There do not appear to be any Nuclide connections for self._path.
-            return self._report(CheckResultType.NO_ISSUE)
-
-        subscriptions = _call_watchman(["debug-get-subscriptions", self._path])
-        subscribers = subscriptions.get("subscribers", [])
-        subscription_counts = {}
-        for subscriber in subscribers:
-            info = subscriber.get("info", {})
-            name = info.get("name")
-            if name is None:
-                continue
-            elif name in subscription_counts:
-                subscription_counts[name] += 1
-            else:
-                subscription_counts[name] = 1
-
-        for nuclide_root in connected_nuclide_roots:
-            filewatcher_subscription = f"filewatcher-{nuclide_root}"
-            # Note that even if the user has `nuclide_root` opened in multiple
-            # Nuclide windows, the Nuclide server should not create the
-            # "filewatcher-" subscription multiple times.
-            if subscription_counts.get(filewatcher_subscription) != 1:
-                self._missing_subscriptions.append(filewatcher_subscription)
-
-        # Today, Nuclide creates a number of Watchman subscriptions per root
-        # folder that is under an Hg working copy. (It should probably
-        # consolidate these subscriptions, though it will take some work to
-        # refactor things to do that.) Because each of connected_nuclide_roots
-        # is a root folder in at least one Atom window, there must be at least
-        # as many instances of each subscription as there are
-        # connected_nuclide_roots.
-        #
-        # TODO(mbolin): Come up with a more stable contract than including a
-        # hardcoded list of Nuclide subscription names in here because Eden and
-        # Nuclide releases are not synced. This is admittedly a stopgap measure:
-        # the primary objective is to figure out how Eden/Nuclide gets into
-        # this state to begin with and prevent it.
-        #
-        # Further, Nuclide should probably rename these subscriptions so that:
-        # (1) It is clear that Nuclide is the one who created the subscription.
-        # (2) The subscription can be ascribed to an individual Nuclide client
-        #     if we are going to continue to create the same subscription
-        #     multiple times.
-        num_roots = len(connected_nuclide_roots)
-        for hg_subscription in NUCLIDE_HG_SUBSCRIPTIONS:
-            if subscription_counts.get(hg_subscription, 0) < num_roots:
-                self._missing_subscriptions.append(hg_subscription)
-
-        if not self._missing_subscriptions:
-            return self._report(CheckResultType.NO_ISSUE)
-        elif dry_run:
-            return self._report(CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN)
+    subscriptions = _call_watchman(["debug-get-subscriptions", path])
+    subscribers = subscriptions.get("subscribers", [])
+    subscription_counts: Dict[str, int] = {}
+    for subscriber in subscribers:
+        info = subscriber.get("info", {})
+        name = info.get("name")
+        if name is None:
+            continue
+        elif name in subscription_counts:
+            subscription_counts[name] += 1
         else:
-            return self._report(CheckResultType.FAILED_TO_FIX)
+            subscription_counts[name] = 1
 
-    def _report(self, result_type: CheckResultType) -> CheckResult:
-        if result_type in [
-            CheckResultType.FAILED_TO_FIX,
-            CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN,
-        ]:
+    missing_subscriptions = []
+    for nuclide_root in connected_nuclide_roots:
+        filewatcher_subscription = f"filewatcher-{nuclide_root}"
+        # Note that even if the user has `nuclide_root` opened in multiple
+        # Nuclide windows, the Nuclide server should not create the
+        # "filewatcher-" subscription multiple times.
+        if subscription_counts.get(filewatcher_subscription) != 1:
+            missing_subscriptions.append(filewatcher_subscription)
 
-            def format_paths(paths):
-                return "\n".join(map(lambda x: f"  {x}", paths))
+    # Today, Nuclide creates a number of Watchman subscriptions per root
+    # folder that is under an Hg working copy. (It should probably
+    # consolidate these subscriptions, though it will take some work to
+    # refactor things to do that.) Because each of connected_nuclide_roots
+    # is a root folder in at least one Atom window, there must be at least
+    # as many instances of each subscription as there are
+    # connected_nuclide_roots.
+    #
+    # TODO(mbolin): Come up with a more stable contract than including a
+    # hardcoded list of Nuclide subscription names in here because Eden and
+    # Nuclide releases are not synced. This is admittedly a stopgap measure:
+    # the primary objective is to figure out how Eden/Nuclide gets into
+    # this state to begin with and prevent it.
+    #
+    # Further, Nuclide should probably rename these subscriptions so that:
+    # (1) It is clear that Nuclide is the one who created the subscription.
+    # (2) The subscription can be ascribed to an individual Nuclide client
+    #     if we are going to continue to create the same subscription
+    #     multiple times.
+    num_roots = len(connected_nuclide_roots)
+    for hg_subscription in NUCLIDE_HG_SUBSCRIPTIONS:
+        if subscription_counts.get(hg_subscription, 0) < num_roots:
+            missing_subscriptions.append(hg_subscription)
 
-            msg = (
-                "Nuclide appears to be used to edit the following directories\n"
-                f"under {self._path}:\n\n"
-                f"{format_paths(self._connected_nuclide_roots)}\n\n"
-                "but the following Watchman subscriptions appear to be missing:\n\n"
-                f"{format_paths(self._missing_subscriptions)}\n\n"
-                "This can cause file changes to fail to show up in Nuclide.\n"
-                "Currently, the only workaround for this is to run\n"
-                '"Nuclide Remote Projects: Kill And Restart" from the\n'
-                "command palette in Atom.\n"
-            )
+    if missing_subscriptions:
+
+        def format_paths(paths: List[str]) -> str:
+            return "\n  ".join(paths)
+
+        msg = (
+            "Nuclide appears to be used to edit the following directories\n"
+            f"under {path}:\n\n"
+            f"  {format_paths(connected_nuclide_roots)}\n\n"
+            "but the following Watchman subscriptions appear to be missing:\n\n"
+            f"  {format_paths(missing_subscriptions)}\n\n"
+            "This can cause file changes to fail to show up in Nuclide.\n"
+            "Currently, the only workaround for this is to run\n"
+            '"Nuclide Remote Projects: Kill And Restart" from the\n'
+            "command palette in Atom.\n"
+        )
+        tracker.add_problem(Problem(msg))
+
+
+def check_snapshot_dirstate_consistency(
+    tracker: ProblemTracker, path: str, snapshot_hex: str
+) -> None:
+    dirstate = os.path.join(path, ".hg", "dirstate")
+    try:
+        with open(dirstate, "rb") as f:
+            parents, _tuples_dict, _copymap = eden.dirstate.read(f, dirstate)
+    except OSError as ex:
+        if ex.errno == errno.ENOENT:
+            tracker.add_problem(MissingHgDirectory(path))
         else:
-            msg = ""
-        return CheckResult(result_type, msg)
+            tracker.add_problem(Problem(f"Unable to access {path}/.hg/dirstate: {ex}"))
+        return
+
+    p1 = parents[0]
+    p1_hex = binascii.hexlify(p1).decode("utf-8")
+
+    if snapshot_hex != p1_hex:
+        tracker.add_problem(SnapshotMismatchError(path, snapshot_hex, p1_hex))
 
 
-class SnapshotDirstateConsistencyCheck(Check):
-    def __init__(self, path: str, snapshot_hex: str, is_healthy: bool) -> None:
+# TODO: we should perhaps turn this into a FixableProblem that automatically runs
+# `hg reset`
+class SnapshotMismatchError(Problem):
+    def __init__(self, path: str, snapshot_hex: str, p1_hex: str) -> None:
+        description = (
+            f"mercurial's parent commit for {path} is {p1_hex},\n"
+            f"but Eden's internal hash in its SNAPSHOT file is {snapshot_hex}.\n"
+        )
+        remediation = (
+            f'Run "hg -R {path} reset --keep {snapshot_hex}"\n'
+            "to bring the mercurial state back in sync."
+        )
+        super().__init__(description, remediation)
         self._path = path
         self._snapshot_hex = snapshot_hex
-        self._is_healthy = is_healthy
+        self._p1_hex = p1_hex
 
-    def do_check(self, dry_run: bool) -> CheckResult:
-        if not self._is_healthy:
-            return self._report(CheckResultType.NO_CHECK_BECAUSE_EDEN_WAS_NOT_RUNNING)
 
-        dirstate = os.path.join(self._path, ".hg", "dirstate")
-        try:
-            with open(dirstate, "rb") as f:
-                parents, _tuples_dict, _copymap = eden.dirstate.read(f, dirstate)
-        except OSError as ex:
-            if ex.errno == errno.ENOENT:
-                msg = f"""\
-{self._path}/.hg/dirstate is missing
+class MissingHgDirectory(Problem):
+    def __init__(self, path: str) -> None:
+        remediation = f"""\
 The most common cause of this is if you previously tried to manually remove this eden
-mount with "rm -rf".  You should instead remove it using "eden rm {self._path}",
-and can re-clone the checkout afterwards if desired.
-"""
-            else:
-                msg = f"""\
-Unable to access {self._path}/.hg/dirstate: {ex}
-Your mercurial data directory appears corrupted.
-Please report this issue in the Eden Users group.
-"""
-            return CheckResult(CheckResultType.FAILED_TO_FIX, msg)
-
-        p1 = parents[0]
-        self._p1_hex = binascii.hexlify(p1).decode("utf-8")
-
-        if self._snapshot_hex == self._p1_hex:
-            return self._report(CheckResultType.NO_ISSUE)
-        else:
-            return self._report(CheckResultType.FAILED_TO_FIX)
-
-    def _report(self, result_type: CheckResultType) -> CheckResult:
-        if result_type == CheckResultType.FAILED_TO_FIX:
-            msg = (
-                f"p1 for {self._path} is {self._p1_hex}, but Eden's internal\n"
-                f"hash in its SNAPSHOT file is {self._snapshot_hex}.\n"
-            )
-        else:
-            msg = ""
-        return CheckResult(result_type, msg)
+mount with "rm -rf".  You should instead remove it using "eden rm {path}",
+and can re-clone the checkout afterwards if desired."""
+        super().__init__(f"{path}/.hg/dirstate is missing", remediation)
+        self._path = path
 
 
-class EdenfsIsLatest(Check):
-    def __init__(self, config) -> None:
-        self._config = config
+def check_edenfs_version(tracker: ProblemTracker, config: config_mod.Config) -> None:
+    rver, release = version.get_running_eden_version_parts(config)
+    if not rver or not release:
+        # This could be a dev build that returns the empty
+        # string for both of these values.
+        return
 
-    def do_check(self, dry_run: bool) -> CheckResult:
-        rver, release = version.get_running_eden_version_parts(self._config)
-        if not rver or not release:
-            # This could be a dev build that returns the empty
-            # string for both of these values.
-            return CheckResult(CheckResultType.NO_ISSUE, "")
+    running_version = version.format_running_eden_version((rver, release))
+    installed_version = version.get_installed_eden_rpm_version()
+    if running_version == installed_version:
+        return
 
-        running_version = version.format_running_eden_version((rver, release))
-        installed_version = version.get_installed_eden_rpm_version()
-        if running_version == installed_version:
-            return CheckResult(CheckResultType.NO_ISSUE, "")
-        else:
-            return CheckResult(
-                CheckResultType.FAILED_TO_FIX,
-                dedent(
-                    f"""\
+    tracker.add_problem(
+        Problem(
+            dedent(
+                f"""\
 The version of Eden that is installed on your machine is:
     fb-eden-{installed_version}.x86_64
 but the version of Eden that is currently running is:
@@ -770,8 +770,10 @@ but the version of Eden that is currently running is:
 Consider running `eden restart` to migrate to the newer version, which
 may have important bug fixes or performance improvements.
 """
-                ),
-            )
+            ),
+            severity=ProblemSeverity.ADVICE,
+        )
+    )
 
 
 def _get_watch_roots_for_watchman() -> Set[str]:
@@ -795,19 +797,17 @@ def _get_roots_for_nuclide() -> Optional[Set[str]]:
         return None
 
 
-def _check_json_output(args: List[str]) -> Dict:
+def _check_json_output(args: List[str]) -> Dict[str, Any]:
     """Calls subprocess.check_output() and returns the output parsed as JSON.
     If the call fails, it will write the error to stderr and return a dict with
     a single property named "error".
     """
     try:
         output = subprocess.check_output(args)
-        return json.loads(output)
+        return typing.cast(Dict[str, Any], json.loads(output))
     except (subprocess.CalledProcessError, ValueError) as e:
         # CalledProcessError if check_output() fails.
         # ValueError if `output` is not valid JSON.
-        sys.stderr.write(
-            f'Calling `{" ".join(args)}`'
-            f" failed with: {str(e) if getattr(e, 'strerror', None) is None else e.strerror}\n"
-        )
+        errstr = getattr(e, "strerror", str(e))
+        log.warning(f'Calling `{" ".join(args)}` failed with: {errstr}')
         return {"error": str(e)}
