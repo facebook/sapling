@@ -43,6 +43,12 @@ DEFINE_string(
 
 using namespace facebook::eden;
 
+namespace facebook {
+namespace eden {
+std::string getEdenfsBuildName();
+} // namespace eden
+} // namespace facebook
+
 // Set the default log level for all eden logs to DBG2
 // Also change the "default" log handler (which logs to stderr) to log
 // messages asynchronously rather than blocking in the logging thread.
@@ -163,7 +169,7 @@ int main(int argc, char** argv) {
     gflags::SetCommandLineOptionWithMode(
         "minloglevel", "0", gflags::SET_FLAGS_DEFAULT);
 
-    startupLogger->log("Starting edenfs, pid ", getpid());
+    startupLogger->log("Starting ", getEdenfsBuildName(), ", pid ", getpid());
 
     server.emplace(
         std::move(identity),

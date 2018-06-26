@@ -13,6 +13,12 @@
 
 namespace facebook {
 namespace eden {
+
+std::string getEdenfsBuildName() {
+  // We don't have any version information for now, so just return "edenfs"
+  return "edenfs";
+}
+
 void runServer(const EdenServer& server) {
   // ThriftServer::serve() will drive the current thread's EventBase.
   // Verify that we are being called from the expected thread, and will end up
