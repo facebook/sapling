@@ -12,6 +12,18 @@ from __future__ import absolute_import, print_function
 import sys
 
 
+# Make print() below output \n line separators, and not \r\n, on Windows. This
+# is necessary for test consistency since tests assume \n separators
+# everywhere, and otherwise files/commit hashes can change.
+#
+# (Note: just using `print(sep="\n")` or `sys.stdout.write("%d\n")` is
+# insufficient if stdout is in O_TEXT mode.)
+if sys.platform == "win32":
+    import os, msvcrt
+
+    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+
+
 if sys.version_info[0] >= 3:
     xrange = range
 
