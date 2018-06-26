@@ -284,6 +284,35 @@ Test remotenames revset and keyword
   3:78f83396d79e beta/babar beta/default
   4:8948da77173b beta/stable
 
+Test remotebookmark and remotebranch revsets
+
+  $ hg log -r 'remotebookmark()' \
+  >   --template '{rev}:{node|short} {remotebookmarks}\n'
+  3:78f83396d79e beta/babar
+  $ hg log -r 'remotebranch()' \
+  >   --template '{rev}:{node|short} {remotebranches}\n'
+  1:7c3bad9141dc alpha/default
+  2:95cb4ab9fe1d alpha/stable
+  3:78f83396d79e beta/default
+  4:8948da77173b beta/stable
+  $ hg log -r 'remotebookmark("beta/babar")' \
+  >   --template '{rev}:{node|short} {remotebookmarks}\n'
+  3:78f83396d79e beta/babar
+  $ hg log -r 'remotebookmark("beta/stable")' \
+  >   --template '{rev}:{node|short} {remotebookmarks}\n'
+  abort: no remote bookmarks exist that match 'beta/stable'!
+  [255]
+  $ hg log -r 'remotebranch("beta/stable")' \
+  >   --template '{rev}:{node|short} {remotebranches}\n'
+  4:8948da77173b beta/stable
+  $ hg log -r 'remotebookmark("re:beta/.*")' \
+  >   --template '{rev}:{node|short} {remotebookmarks}\n'
+  3:78f83396d79e beta/babar
+  $ hg log -r 'remotebookmark("re:gamma/.*")' \
+  >   --template '{rev}:{node|short} {remotebookmarks}\n'
+  abort: no remote bookmarks exist that match 're:gamma/.*'!
+  [255]
+
 Test clone --mirror
 
   $ cd ..

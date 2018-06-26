@@ -1956,28 +1956,89 @@ def pushed(repo, subset, x):
     return upstream_revs(lambda x: True, repo, subset, x)
 
 
+def getremoterevs(repo, namespacename, matchpattern=None):
+    try:
+        ns = repo.names[namespacename]
+    except KeyError:
+        return set()
+
+    if matchpattern is None:
+        nodes = set()
+        for name in ns.listnames(repo):
+            nodes.update(ns.namemap(repo, name))
+    else:
+        kind, pattern, matcher = util.stringmatcher(matchpattern)
+        if kind == "literal":
+            nodes = ns.namemap(repo, pattern)
+        else:
+            nodes = set()
+            for name in ns.listnames(repo):
+                if matcher(name):
+                    nodes.update(ns.namemap(repo, name))
+    return {repo[node].rev() for node in nodes if node in repo}
+
+
 def remotenamesrevset(repo, subset, x):
     """``remotenames()``
     All remote branches heads.
     """
     revset.getargs(x, 0, 0, "remotenames takes no arguments")
     remoterevs = set()
-    cl = repo.changelog
-    for remotename in repo._remotenames.keys():
-        rname = "remote" + remotename
-        try:
-            ns = repo.names[rname]
-        except KeyError:
-            continue
-        for name in ns.listnames(repo):
-            remoterevs.update(ns.nodes(repo, name))
+    for rname in repo._remotenames.keys():
+        remoterevs.update(getremoterevs(repo, "remote" + rname))
+    return subset & smartset.baseset(sorted(remoterevs))
 
-    results = (cl.rev(n) for n in remoterevs if n in repo)
-    return subset & smartset.baseset(sorted(results))
+
+def remotebookmarkrevset(repo, subset, x):
+    """``remotebookmark([name])``
+    The named remote bookmark, or all remote bookmarks
+
+    Pattern matching is supported for `name`. See :hg:`help revisions.patterns`.
+    """
+    args = revset.getargs(x, 0, 1, _("remotebookmark takes one or no arguments"))
+    if args:
+        bookmarkname = revset.getstring(
+            args[0], _("the argument to remotebookmark must be a string")
+        )
+    else:
+        bookmarkname = None
+    remoterevs = getremoterevs(repo, "remotebookmarks", bookmarkname)
+    if not remoterevs and bookmarkname is not None:
+        raise error.RepoLookupError(
+            _("no remote bookmarks exist that match '%s'") % bookmarkname
+        )
+    return subset & smartset.baseset(sorted(remoterevs))
+
+
+def remotebranchrevset(repo, subset, x):
+    """``remotebranch([name])``
+    The named remote branch, or all remote branches
+
+    Pattern matching is supported for `name`. See :hg:`help revisions.patterns`.
+    """
+    args = revset.getargs(x, 0, 1, _("remotebranch takes one or no arguments"))
+    if args:
+        branchname = revset.getstring(
+            args[0], _("the argument to remotebranch must be a string")
+        )
+    else:
+        branchname = None
+    remoterevs = getremoterevs(repo, "remotebranches", branchname)
+    if not remoterevs and branchname is not None:
+        raise error.RepoLookupError(
+            _("no remote branches exist that match '%s'") % branchname
+        )
+    return subset & smartset.baseset(sorted(remoterevs))
 
 
 revset.symbols.update(
-    {"upstream": upstream, "pushed": pushed, "remotenames": remotenamesrevset}
+    {
+        "upstream": upstream,
+        "pushed": pushed,
+        "remotenames": remotenamesrevset,
+        "remotebookmark": remotebookmarkrevset,
+        "remotebranch": remotebranchrevset,
+    }
 )
 
 ###########
