@@ -433,6 +433,13 @@ def dispatch(req):
             if inst.errno != errno.EPIPE:
                 raise
         ret = -1
+    except IOError as inst:
+        # Windows does not have SIGPIPE, so pager exit does not
+        # get raised as a SignalInterrupt. Let's handle the error
+        # explicitly here
+        if not pycompat.iswindows or inst.errno != errno.EINVAL:
+            raise
+        ret = -1
     finally:
         duration = util.timer() - starttime
         req.ui.flush()
