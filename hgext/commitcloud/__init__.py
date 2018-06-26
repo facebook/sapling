@@ -49,6 +49,10 @@
 
     # SCM Daemon tcp port
     scm_daemon_tcp_port = 15432
+
+    # SCM Daemon log file (for hg rage)
+    # %i is substituted with the user identity
+    scm_daemon_log_path = /path/to/%i/logfile
 """
 
 from __future__ import absolute_import

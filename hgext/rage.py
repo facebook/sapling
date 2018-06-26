@@ -68,6 +68,36 @@ def which(name):
     return None
 
 
+def _tail(userlogdir, userlogfiles, nlines=100):
+    """
+    Returns the last `nlines` from logfiles
+    """
+    # create list of files (full paths)
+    logfiles = [os.path.join(userlogdir, f) for f in userlogfiles]
+    # sort by creation time
+    logfiles = sorted(filter(os.path.isfile, logfiles), key=os.path.getmtime)
+    # reverse to get from the latest
+    logfiles = reversed(logfiles)
+    logs = []
+    # traverse the files
+    linelimit = nlines
+    for logfile in logfiles:
+        loglines = open(logfile).readlines()
+        linecount = len(loglines)
+        if linecount > linelimit:
+            logcontent = "  ".join(loglines[-linelimit:])
+            logs.append(
+                "%s (first %s lines omitted):\n\n  %s\n"
+                % (logfile, linecount - linelimit, logcontent)
+            )
+            break
+        else:
+            logcontent = "  ".join(loglines)
+            logs.append("%s:\n\n  %s\n" % (logfile, logcontent))
+            linelimit -= linecount
+    return "".join(reversed(logs))
+
+
 rageopts = [
     ("p", "preview", None, _("print diagnostic information without doing arc paste"))
 ]
@@ -128,34 +158,42 @@ def infinitepushbackuplogs(ui, repo):
         username = util.shortuser(ui.username())
     except Exception:
         username = "unknown"
+
     userlogdir = os.path.join(logdir, username)
     if not os.path.exists(userlogdir):
         return "log directory does not exist: %s" % userlogdir
 
-    # Log filenames are the reponame with the date (YYYYMMDD) appended.
     reponame = os.path.basename(repo.origroot)
-    logfiles = sorted([f for f in os.listdir(userlogdir) if f[:-8] == reponame])
+    logfiles = [f for f in os.listdir(userlogdir) if f[:-8] == reponame]
+
     if not logfiles:
         return "no log files found for %s in %s" % (reponame, userlogdir)
 
-    # Display the last 100 lines from the most recent log files.
-    logs = []
-    linelimit = 100
-    for logfile in reversed(logfiles):
-        loglines = open(os.path.join(userlogdir, logfile)).readlines()
-        linecount = len(loglines)
-        if linecount > linelimit:
-            logcontent = "  ".join(loglines[-linelimit:])
-            logs.append(
-                "%s (first %s lines omitted):\n  %s\n"
-                % (logfile, linecount - linelimit, logcontent)
-            )
-            break
-        else:
-            logcontent = "  ".join(loglines)
-            logs.append("%s:\n  %s\n" % (logfile, logcontent))
-            linelimit -= linecount
-    return "".join(reversed(logs))
+    return _tail(userlogdir, logfiles, 100)
+
+
+def scmdaemonlog(ui, repo):
+    logfile = ui.config("commitcloud", "scm_daemon_log_path")
+
+    if not logfile:
+        return "commitcloud.scm_daemon_log_path not set"
+
+    try:
+        username = util.shortuser(ui.username())
+    except Exception:
+        username = "unknown"
+
+    logfile = logfile.replace("%i", username)
+
+    userlogdir = os.path.dirname(logfile)
+
+    if not os.path.exists(userlogdir):
+        return "log directory does not exist: %s" % userlogdir
+
+    userlogbasename = os.path.basename(logfile)
+    logfiles = [f for f in os.listdir(userlogdir) if userlogbasename in f]
+
+    return _tail(userlogdir, logfiles, 150)
 
 
 def readfsmonitorstate(repo):
@@ -288,9 +326,10 @@ def _makerage(ui, repo, **opts):
             _failsafe(lambda: hgsrcrepofile("infinitepushbackupstate")),
         ),
         (
-            "infinitepush backup logs",
+            "infinitepush / commitcloud backup logs",
             _failsafe(lambda: infinitepushbackuplogs(ui, repo)),
         ),
+        ("scm daemon logs", _failsafe(lambda: scmdaemonlog(ui, repo))),
         ("hg config (all)", _failsafe(lambda: hgcmd("config"))),
         ("fsmonitor state", _failsafe(lambda: readfsmonitorstate(repo))),
     ]
