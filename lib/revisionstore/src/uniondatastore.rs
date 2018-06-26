@@ -16,7 +16,7 @@ use self::mpatch::mpatch::get_full_text;
 pub type UnionDataStore = UnionStore<Rc<DataStore>>;
 
 #[derive(Debug, Fail)]
-#[fail(display = "Union Store Error: {:?}", _0)]
+#[fail(display = "Union Data Store Error: {:?}", _0)]
 struct UnionDataStoreError(String);
 
 impl From<UnionDataStoreError> for KeyError {
