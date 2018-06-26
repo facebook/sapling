@@ -10,6 +10,7 @@
 import configparser
 import itertools
 import json
+import logging
 import os
 import re
 import subprocess
@@ -451,7 +452,8 @@ class JournalEntry(object):
         )
 
     def match(self, json_data: Dict[str, Any]) -> bool:
-        if not re.search(self.command, json_data["command"]):
+        user_command = self._strip_profiling_args(json_data["command"])
+        if not re.search(self.command, user_command):
             return False
         if json_data["name"] != self.name:
             return False
@@ -460,6 +462,41 @@ class JournalEntry(object):
         if json_data["newhashes"] != [self.new]:
             return False
         return True
+
+    def _strip_profiling_args(self, command: str) -> str:
+        # The hg wrapper randomly decides to profile a percentage of hg commands,
+        # so it adds --profile and several other --config flags to the start of the
+        # command arguments.
+        #
+        # These are unfortunately reported in the output of "hg journal", despite the
+        # fact that this was not part of the command as originally invoked by the user.
+        # Strip off these extra arguments to make sure that these extra arguments do not
+        # interfere with our test checks.
+        if not command.startswith("--profile --config 'profiling.type="):
+            return command
+
+        # The arguments added include a temporary file path, so they unfortunately are
+        # not a fixed string.
+        #
+        # They are generally:
+        #   --profile --config 'profiling.type=stat'
+        #   --config 'profiling.output=[tmp_path]
+        #   --config 'profiling.statformat=json'
+        #   --config 'profiling.freq=50'
+        #
+        # Search for the last argument that gets added by the profiling code.
+        m = re.search("--config 'profiling.freq=[0-9]+' ", command)
+        if not m:
+            logging.warn(
+                "did not find match when trying to strip profiling "
+                f"arguments: {command}"
+            )
+            return command
+
+        # Remove all of the profiling arguments.
+        # This is everything from the start of the command (we confirmed that --profile
+        # was the first argument) up to and including the last profiling argument.
+        return command[m.end() :]
 
 
 def _apply_flatmanifest_config(test, config):
