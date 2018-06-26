@@ -94,6 +94,7 @@ Test
   |
   o  0	: ROOT - test
   
+
   $ hg update --clean .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg metaedit -r 0
@@ -142,6 +143,12 @@ Test
   2 changesets folded
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+
+
+
+
+
+
   $ glog -r .
   @  9:a08d35fd7d9d@default(draft) E
   |
@@ -165,6 +172,10 @@ no new commit is created here because the date is the same
   HG: added F
   nothing changed
   [1]
+
+
+
+
 
   $ glog -r '.^::.'
   @  9:a08d35fd7d9d@default(draft) E
@@ -218,6 +229,7 @@ metaedit a commit in the middle of the stack:
   |
   o  0:1ea73414a91b@default(draft) r0
   
+
   $ hg metaedit -m "metaedit" -r 2
   $ glog -r 'all()'
   @  7:8c1f124031e7@default(draft) r4
@@ -230,6 +242,7 @@ metaedit a commit in the middle of the stack:
   |
   o  0:1ea73414a91b@default(draft) r0
   
+
   $ hg metaedit -m "metaedit" -r 1aed0f31debd
   nothing changed
   [1]
@@ -285,6 +298,8 @@ test histedit compat
   +++ b/xx
   @@ -0,0 +1,1 @@
   +xx
+
+
   $ hg histedit ".^^" --commands - <<EOF
   > pick 1aed0f31debd
   > x hg metaedit -m "histedit test"
@@ -305,6 +320,41 @@ test histedit compat
   |
   o  0:1ea73414a91b@default(draft) r0
   
+
+metaedit noncontinuous set of commits in the stack:
+
+  $ cd $TESTTMP
+  $ hg init metaeditnoncontinues
+  $ cd metaeditnoncontinues
+  $ hg debugbuilddag '+5'
+  $ hg update tip
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ glog -r 'all()'
+  @  4:bebd167eb94d@default(draft) r4
+  |
+  o  3:2dc09a01254d@default(draft) r3
+  |
+  o  2:01241442b3c2@default(draft) r2
+  |
+  o  1:66f7d451a68b@default(draft) r1
+  |
+  o  0:1ea73414a91b@default(draft) r0
+  
+
+  $ hg metaedit -m "metaedit" 0 2 4
+  $ glog -r 'all()'
+  @  9:2b037168acb5@default(draft) metaedit
+  |
+  o  8:1a9c34db0e76@default(draft) r3
+  |
+  o  7:4d7251aa2bec@default(draft) metaedit
+  |
+  o  6:16ad2130f633@default(draft) r1
+  |
+  o  5:e37e0d87697f@default(draft) metaedit
+  
+
 Test copying obsmarkers
 
   $ hg init $TESTTMP/autorel
@@ -331,6 +381,7 @@ Test copying obsmarkers
   |
   o  0:426bada5c675@default(draft) A
   
+
   $ hg log -r 'successors(19437442f9e4)-19437442f9e4' -T '{node}\n'
   1be7301b35ae8ac3543a07a5d0ce5ca615be709f
 

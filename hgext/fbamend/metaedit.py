@@ -11,16 +11,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
-    cmdutil,
-    commands,
-    error,
-    hg,
-    lock as lockmod,
-    phases,
-    registrar,
-    scmutil,
-)
+from mercurial import cmdutil, commands, error, hg, phases, registrar, scmutil
 from mercurial.i18n import _
 
 from . import common, fold
@@ -116,13 +107,26 @@ def metaedit(ui, repo, templ, *revs, **opts):
             if root == head:
                 # fast path: use metarewrite
                 replacemap = {}
-                # we need topological order
-                allctx = sorted(allctx, key=lambda c: c.rev())
+                # adding commitopts to the revisions to metaedit
+                allctxopt = [{"ctx": ctx, "commitopts": commitopts} for ctx in allctx]
                 # all descendats that can be safely rewritten
                 newunstable = common.newunstable(repo, revs)
-                newunstablectx = sorted(
-                    [repo[r] for r in newunstable], key=lambda c: c.rev()
-                )
+                newunstableopt = [
+                    {"ctx": ctx} for ctx in [repo[r] for r in newunstable]
+                ]
+                # we need to edit descendants with the given revisions to not to
+                # corrupt the stacks
+                if _histediting(repo):
+                    ui.note(
+                        _(
+                            "during histedit, the descendants of "
+                            "the edited commit weren't auto-rebased\n"
+                        )
+                    )
+                else:
+                    allctxopt += newunstableopt
+                # we need topological order for all
+                allctxopt = sorted(allctxopt, key=lambda copt: copt["ctx"].rev())
 
                 def _rewritesingle(c, _commitopts):
                     if _commitopts.get("edit", False):
@@ -134,25 +138,20 @@ def metaedit(ui, repo, templ, *revs, **opts):
                         replacemap.get(c.p1().node(), c.p1().node()),
                         replacemap.get(c.p2().node(), c.p2().node()),
                     ]
+
                     newid, created = common.metarewrite(
                         repo, c, bases, commitopts=_commitopts
                     )
                     if created:
                         replacemap[c.node()] = newid
 
-                for c in allctx:
-                    _rewritesingle(c, commitopts)
-
-                if _histediting(repo):
-                    ui.note(
-                        _(
-                            "during histedit, the descendants of "
-                            "the edited commit weren't auto-rebased\n"
-                        )
+                for copt in allctxopt:
+                    _rewritesingle(
+                        copt["ctx"],
+                        copt.get(
+                            "commitopts", {"date": commitopts.get("date") or None}
+                        ),
                     )
-                else:
-                    for c in newunstablectx:
-                        _rewritesingle(c, {"date": commitopts.get("date") or None})
 
                 if p1.node() in replacemap:
                     repo.setparents(replacemap[p1.node()])
