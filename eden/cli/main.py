@@ -693,7 +693,7 @@ class StartCmd(Subcmd):
             print("No Eden mount points configured.")
             return 0
 
-        return daemon.start_daemon(
+        daemon.exec_daemon(
             config,
             args.daemon_binary,
             args.edenfs_args,
@@ -809,11 +809,11 @@ class RestartCmd(Subcmd):
 
     def _start(self) -> None:
         self.msg("Starting edenfs...")
-        daemon.start_daemon(self.config)
+        daemon.exec_daemon(self.config)
 
     def _graceful_start(self) -> None:
         self.msg("Performing a graceful restart...")
-        daemon.start_daemon(self.config, takeover=True)
+        daemon.exec_daemon(self.config, takeover=True)
 
 
 @subcmd("rage", "Gather diagnostic information about eden")

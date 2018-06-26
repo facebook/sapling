@@ -10,8 +10,9 @@
 import errno
 import os
 import signal
+import subprocess
 import sys
-from typing import List, Optional
+from typing import Dict, List, NoReturn, Optional, Tuple
 
 from . import config as config_mod
 from .util import ShutdownError, poll_until, print_stderr
@@ -102,7 +103,7 @@ def _find_default_daemon_binary() -> Optional[str]:
         return None
 
 
-def start_daemon(
+def exec_daemon(
     config: config_mod.Config,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
@@ -111,8 +112,48 @@ def start_daemon(
     gdb_args: Optional[List[str]] = None,
     strace_file: Optional[str] = None,
     foreground: bool = False,
-    timeout: Optional[float] = None,
+) -> NoReturn:
+    """Execute the edenfs daemon.
+
+    This method uses os.exec() to replace the current process with the edenfs daemon.
+    It does not return on success.  It may throw an exception on error.
+    """
+    cmd, env = _get_daemon_args(
+        config=config,
+        daemon_binary=daemon_binary,
+        edenfs_args=edenfs_args,
+        takeover=takeover,
+        gdb=gdb,
+        gdb_args=gdb_args,
+        strace_file=strace_file,
+        foreground=foreground,
+    )
+    os.execve(cmd[0], cmd, env)
+
+
+def start_daemon(
+    config: config_mod.Config,
+    daemon_binary: Optional[str] = None,
+    edenfs_args: Optional[List[str]] = None,
 ) -> int:
+    """Start the edenfs daemon."""
+    cmd, env = _get_daemon_args(
+        config=config, daemon_binary=daemon_binary, edenfs_args=edenfs_args
+    )
+    return subprocess.call(cmd, env=env)
+
+
+def _get_daemon_args(
+    config: config_mod.Config,
+    daemon_binary: Optional[str] = None,
+    edenfs_args: Optional[List[str]] = None,
+    takeover: bool = False,
+    gdb: bool = False,
+    gdb_args: Optional[List[str]] = None,
+    strace_file: Optional[str] = None,
+    foreground: bool = False,
+) -> Tuple[List[str], Dict[str, str]]:
+    """Get the command and environment to use to start edenfs."""
     if daemon_binary is None:
         valid_daemon_binary = _find_default_daemon_binary()
         if valid_daemon_binary is None:
@@ -126,23 +167,12 @@ def start_daemon(
     if edenfs_args and edenfs_args[0] == "--":
         edenfs_args = edenfs_args[1:]
 
-    try:
-        health_info = config.spawn(
-            valid_daemon_binary,
-            edenfs_args,
-            takeover=takeover,
-            gdb=gdb,
-            gdb_args=gdb_args,
-            strace_file=strace_file,
-            foreground=foreground,
-            timeout=timeout,
-        )
-    except config_mod.EdenStartError as ex:
-        print_stderr("error: {}", ex)
-        return 1
-    print(
-        "Started edenfs (pid {}). Logs available at {}".format(
-            health_info.pid, config.get_log_path()
-        )
+    return config.get_edenfs_start_cmd(
+        valid_daemon_binary,
+        edenfs_args,
+        takeover=takeover,
+        gdb=gdb,
+        gdb_args=gdb_args,
+        strace_file=strace_file,
+        foreground=foreground,
     )
-    return 0

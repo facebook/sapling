@@ -45,18 +45,11 @@ class StartTest(testcase.EdenTestCase):
         self.eden.shutdown()
         self.assertFalse(self.eden.is_healthy())
         # `eden start --if-necessary` should start edenfs now
-        # TODO: We unfortunately need to specify capture_output=False at the moment,
-        # since `eden start` daemonizes, but it's stdout doesn't actually get fully
-        # closed since it is being held open by sudo.  This capture_output setting
-        # can be removed once we move the daemonization logic from python into the
-        # edenfs C++ binary.
         if "SANDCASTLE" in os.environ:
-            self.eden.run_cmd(
-                "start", "--if-necessary", "--", "--allowRoot", capture_output=False
-            )
+            output = self.eden.run_cmd("start", "--if-necessary", "--", "--allowRoot")
         else:
-            self.eden.run_cmd("start", "--if-necessary", capture_output=False)
-        # self.assertIn("Started edenfs", output)
+            output = self.eden.run_cmd("start", "--if-necessary")
+        self.assertIn("Started edenfs", output)
         self.assertTrue(self.eden.is_healthy())
 
         # Stop edenfs.  We didn't start it through self.eden.start()

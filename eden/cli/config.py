@@ -23,7 +23,7 @@ import tempfile
 import time
 import types
 import typing
-from typing import Any, Dict, Iterable, List, Optional, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
 
 import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
@@ -512,7 +512,7 @@ Do you want to run `eden mount %s` instead?"""
         """
         return util.check_health(lambda: self.get_thrift_client(), self._config_dir)
 
-    def spawn(
+    def get_edenfs_start_cmd(
         self,
         daemon_binary: str,
         extra_args: Optional[List[str]] = None,
@@ -521,17 +521,8 @@ Do you want to run `eden mount %s` instead?"""
         gdb_args: Optional[List[str]] = None,
         strace_file: Optional[str] = None,
         foreground: bool = False,
-        timeout: Optional[float] = None,
-    ) -> HealthStatus:
-        """
-        Start edenfs.
-
-        If foreground is True this function never returns (edenfs is exec'ed
-        directly in the current process).
-
-        Otherwise, this function waits for edenfs to become healthy, and
-        returns a HealthStatus object.  On error an exception will be raised.
-        """
+    ) -> Tuple[List[str], Dict[str, str]]:
+        """Get the command and environment to use to start edenfs."""
         # Check to see if edenfs is already running
         health_info = self.check_health()
         if not takeover:
@@ -542,7 +533,7 @@ Do you want to run `eden mount %s` instead?"""
         if gdb and strace_file is not None:
             raise EdenStartError("cannot run eden under gdb and " "strace together")
 
-        # Run the eden server.
+        # Compute the command.
         cmd = [
             daemon_binary,
             "--edenDir",
@@ -551,9 +542,6 @@ Do you want to run `eden mount %s` instead?"""
             self._etc_eden_dir,
             "--configPath",
             self._user_config_path,
-            # Always run edenfs in foreground mode at the moment.
-            # I will update this in a future diff to let edenfs handle daemonization.
-            "--foreground",
         ]
         if gdb:
             gdb_args = gdb_args or []
@@ -565,14 +553,8 @@ Do you want to run `eden mount %s` instead?"""
             cmd.extend(extra_args)
         if takeover:
             cmd.append("--takeover")
-
-        # TODO: The larger timeout for takeovers is temporarily while takeover
-        # does a bunch of slow disk IO.  It should match takeoverReceiveTimeout
-        # in TakeoverClient.cpp.
-        # TODO: When edenfs does daemonization in C++, this
-        # timeout will no longer be necessary.
-        if timeout is None:
-            timeout = 300 if takeover else 60
+        if foreground:
+            cmd.append("--foreground")
 
         eden_env = self._build_eden_environment()
 
@@ -592,63 +574,7 @@ Do you want to run `eden mount %s` instead?"""
 
                 cmd = sudo_cmd + cmd
 
-        if foreground:
-            # This call does not return
-            os.execve(cmd[0], cmd, eden_env)
-
-        # Not running in the foreground.  Since sudo sometimes
-        # requires input (not from stdin, but from the current tty),
-        # don't redirect stdout and stderr to the Eden log.  Instead,
-        # tell the edenfs process to write its stderr and stdout to
-        # the given log path.
-        #
-        # TODO: Much of the following code is unnecessary and a bit
-        # unfortunate.  Ideally, edenfs would daemonize itself (after
-        # EdenServer::prepare()) so that it could exit with messages
-        # to stderr and a nonzero exit code if it failed to start
-        # itself.
-        #
-        # TODO: Another possible area of improvement here is to avoid
-        # having the cli create the .eden directory itself and
-        # eliminate the --logPath option - it should always be in the
-        # same location relative to edenDir.
-        log_path = self.get_log_path()
-        util.mkdir_p(os.path.dirname(log_path))
-        cmd.extend(["--logPath", log_path])
-
-        # Create the log file, if necessary, and write its initial line.
-        with open(log_path, "a") as log_file:
-            startup_msg = time.strftime("%Y-%m-%d %H:%M:%S: starting edenfs\n")
-            log_file.write(startup_msg)
-
-        # Start edenfs
-        proc = subprocess.Popen(cmd, env=eden_env, preexec_fn=os.setsid)
-
-        # Total hack to avoid printing the following warning:
-        # > ResourceWarning: subprocess <pid> is still running
-        # (Of course it's still running - our goal was to start a process.)
-        class NoDestructorWarningHack(subprocess.Popen):
-            def __del__(self) -> None:
-                pass
-
-        proc.__class__ = NoDestructorWarningHack
-
-        # Wait for edenfs to start or get taken over
-        exclude_pid = health_info.pid if takeover else None
-        try:
-            return util.wait_for_daemon_healthy(
-                proc,
-                self._config_dir,
-                lambda: self.get_thrift_client(),
-                timeout,
-                exclude_pid,
-            )
-        except KeyboardInterrupt:
-            # If user presses Ctrl-C while waiting for edenfs to start, forward
-            # that on to the subprocess, especially in case sudo is trying to
-            # read from the tty.
-            proc.send_signal(signal.SIGINT)
-            raise
+        return cmd, eden_env
 
     def get_log_path(self) -> str:
         return os.path.join(self._config_dir, "logs", "edenfs.log")
