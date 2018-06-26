@@ -264,7 +264,7 @@ class sshpeer(wireproto.wirepeer):
         try:
             # read the error descriptor until EOF
             for l in self._pipee:
-                self.ui.status(_("remote: "), l)
+                self.ui.write_err(_("remote: "), l)
         except (IOError, ValueError):
             pass
         self._pipee.close()

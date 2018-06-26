@@ -85,9 +85,10 @@ check its contents separately.
   $ hg clone --noupdate ssh://user@dummy/shallow full 2>$TEMP_STDERR
   streaming all changes
   [255]
-  $ cat $TEMP_STDERR
-  remote: abort: Cannot clone from a shallow repo to a full repo.
+- sort because the order is non-deterministic because of stderr pipe buffering
+  $ cat $TEMP_STDERR | sort
   abort: unexpected response from remote server: empty string
+  remote: abort: Cannot clone from a shallow repo to a full repo.
   $ rm $TEMP_STDERR
 
 # getbundle full clone
