@@ -6,6 +6,8 @@
     # Name of the rpm binary
     rpmbin = rpm
 """
+import glob
+import json
 import os
 import re
 import socket
@@ -196,6 +198,28 @@ def scmdaemonlog(ui, repo):
     return _tail(userlogdir, logfiles, 150)
 
 
+def readinfinitepushbackupstate(repo):
+    filename = "infinitepushbackupstate"
+    if repo.vfs.exists(filename):
+        with repo.vfs.open(filename, "r") as f:
+            return json.dumps(json.load(f), indent=4) + "\n"
+    else:
+        return "no any infinitepushbackupstate file in the repo\n"
+
+
+def readcommitcloudstate(repo):
+    prefixpath = repo.svfs.join("commitcloudstate")
+    files = glob.glob(prefixpath + "*")
+    if not files:
+        return "no any commitcloudstate file in the repo\n"
+    lines = []
+    for filename in files:
+        lines.append("reading commit cloud workspace state file: %s" % filename)
+        with open(filename, "r") as f:
+            lines.append(json.dumps(json.load(f), indent=4))
+    return "\n".join(lines) + "\n"
+
+
 def readfsmonitorstate(repo):
     """
     Read the fsmonitor.state file and pretty print some information from it.
@@ -323,7 +347,11 @@ def _makerage(ui, repo, **opts):
         ("hg debugobsolete <smartlog>", _failsafe(lambda: obsoleteinfo(repo, hgcmd))),
         (
             "infinitepush backup state",
-            _failsafe(lambda: hgsrcrepofile("infinitepushbackupstate")),
+            _failsafe(lambda: readinfinitepushbackupstate(srcrepo)),
+        ),
+        (
+            "commit cloud workspace sync state",
+            _failsafe(lambda: readcommitcloudstate(srcrepo)),
         ),
         (
             "infinitepush / commitcloud backup logs",
