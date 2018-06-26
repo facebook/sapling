@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![allow(deprecated)] // tokio_io::codec -> tokio_codec
 #![feature(ascii_ctype)]
 
 // TODO: (rain1) T30794196 move mercurial-bundles to tokio-codec
