@@ -150,7 +150,6 @@
   $ cd master
   $ INSPECTSQL=DELETE,INSERT hg book mybook2
   INSERT INTO revision_references(repo, namespace, name, value) VALUES (masterrepo, 'bookmarks', mybook2, 0000000000000000000000000000000000000000)
-  INSERT INTO revision_references(repo, namespace, name, value)
-                                 VALUES(masterrepo, 'tip', 'tip', 3) ON DUPLICATE KEY UPDATE value=3
+  INSERT INTO revision_references(repo, namespace, name, value) VALUES(masterrepo, 'tip', 'tip', 3) ON DUPLICATE KEY UPDATE value=3
   $ cd ..
   $ cp backup.hgrc $HGRCPATH

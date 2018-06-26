@@ -982,6 +982,97 @@ def wraprepo(repo):
 
             return executewithsql(self, _pushkey, namespace == "bookmarks")
 
+        def _updaterevisionreferences(self):
+            reponame = self.sqlreponame
+            cursor = self.sqlcursor
+
+            # Compute new heads, and delete old heads
+            newheads = set(hex(n) for n in self.heads())
+            oldheads = []
+            cursor.execute(
+                "SELECT value FROM revision_references "
+                "WHERE repo = %s AND namespace='heads'",
+                (reponame,),
+            )
+            for head in cursor:
+                head = head[0]
+                if head in newheads:
+                    newheads.discard(head)
+                else:
+                    oldheads.append(head)
+
+            if oldheads:
+                headargs = ",".join(["%s"] * len(oldheads))
+                cursor.execute(
+                    "DELETE revision_references FROM revision_references "
+                    + "FORCE INDEX (bookmarkindex) "
+                    + "WHERE namespace = 'heads' "
+                    + "AND repo = %s AND value IN ("
+                    + headargs
+                    + ")",
+                    (reponame,) + tuple(oldheads),
+                )
+
+            # Compute new bookmarks, and delete old bookmarks
+            newbookmarks = dict(
+                (k, hex(v)) for k, v in self._bookmarks.iteritems())
+            oldbookmarks = []
+            cursor.execute(
+                "SELECT name, value FROM revision_references "
+                "WHERE namespace = 'bookmarks' AND repo = %s",
+                (reponame,),
+            )
+            for k, v in cursor:
+                if newbookmarks.get(k) == v:
+                    del newbookmarks[k]
+                else:
+                    oldbookmarks.append(k)
+
+            if oldbookmarks:
+                bookargs = ",".join(["%s"] * len(oldbookmarks))
+                cursor.execute(
+                    "DELETE revision_references FROM revision_references "
+                    + "FORCE INDEX (bookmarkindex) "
+                    + "WHERE namespace = 'bookmarks' AND repo = %s "
+                    + "AND name IN ("
+                    + bookargs
+                    + ")",
+                    (repo.sqlreponame,) + tuple(oldbookmarks),
+                )
+
+            tmpl = []
+            values = []
+            for head in newheads:
+                tmpl.append("(%s, 'heads', NULL, %s)")
+                values.append(reponame)
+                values.append(head)
+
+            for k, v in newbookmarks.iteritems():
+                tmpl.append("(%s, 'bookmarks', %s, %s)")
+                values.append(repo.sqlreponame)
+                values.append(k)
+                values.append(v)
+
+            if tmpl:
+                cursor.execute(
+                    "INSERT INTO "
+                    + "revision_references(repo, namespace, name, value) "
+                    + "VALUES %s" % ",".join(tmpl),
+                    tuple(values),
+                )
+
+            # revision_references has multiple keys (primary key, and a unique
+            # index), so mysql gives a warning when using ON DUPLICATE KEY since
+            # it would only update one row despite multiple key duplicates. This
+            # doesn't matter for us, since we know there is only one row that
+            # will share the same key. So suppress the warning.
+            cursor.execute(
+                "INSERT INTO revision_references(repo, namespace, name, value) "
+                + "VALUES(%s, 'tip', 'tip', %s) "
+                + "ON DUPLICATE KEY UPDATE value=%s",
+                (reponame, len(self) - 1, len(self) - 1),
+            )
+
         def committodb(self, tr):
             """Commits all pending revisions to the database
             """
@@ -990,109 +1081,25 @@ def wraprepo(repo):
 
             if self.sqlconn == None:
                 raise util.Abort(
-                    "invalid repo change - only hg push and pull" + " are allowed"
+                    "invalid repo change - only hg push and pull are allowed"
                 )
 
             if not self.pendingrevs and not "bookmark_moved" in tr.hookargs:
                 return
-
-            reponame = self.sqlreponame
-            cursor = self.sqlcursor
 
             if self.pendingrevs:
                 self._validatependingrevs()
 
             try:
                 self._addrevstosql(self.pendingrevs)
+                self._updaterevisionreferences()
 
-                # Compute new heads, and delete old heads
-                newheads = set(hex(n) for n in self.heads())
-                oldheads = []
-                cursor.execute(
-                    "SELECT value FROM revision_references "
-                    "WHERE repo = %s AND namespace='heads'",
-                    (reponame,),
-                )
-                for head in cursor:
-                    head = head[0]
-                    if head in newheads:
-                        newheads.discard(head)
-                    else:
-                        oldheads.append(head)
-
-                if oldheads:
-                    headargs = ",".join(["%s"] * len(oldheads))
-                    cursor.execute(
-                        "DELETE revision_references FROM revision_references "
-                        + "FORCE INDEX (bookmarkindex) "
-                        + "WHERE namespace = 'heads' "
-                        + "AND repo = %s AND value IN ("
-                        + headargs
-                        + ")",
-                        (reponame,) + tuple(oldheads),
-                    )
-
-                # Compute new bookmarks, and delete old bookmarks
-                newbookmarks = dict((k, hex(v)) for k, v in self._bookmarks.iteritems())
-                oldbookmarks = []
-                cursor.execute(
-                    "SELECT name, value FROM revision_references "
-                    "WHERE namespace = 'bookmarks' AND repo = %s",
-                    (reponame,),
-                )
-                for k, v in cursor:
-                    if newbookmarks.get(k) == v:
-                        del newbookmarks[k]
-                    else:
-                        oldbookmarks.append(k)
-
-                if oldbookmarks:
-                    bookargs = ",".join(["%s"] * len(oldbookmarks))
-                    cursor.execute(
-                        "DELETE revision_references FROM revision_references "
-                        + "FORCE INDEX (bookmarkindex) "
-                        + "WHERE namespace = 'bookmarks' AND repo = %s "
-                        + "AND name IN ("
-                        + bookargs
-                        + ")",
-                        (repo.sqlreponame,) + tuple(oldbookmarks),
-                    )
-
-                tmpl = []
-                values = []
-                for head in newheads:
-                    tmpl.append("(%s, 'heads', NULL, %s)")
-                    values.append(reponame)
-                    values.append(head)
-
-                for k, v in newbookmarks.iteritems():
-                    tmpl.append("(%s, 'bookmarks', %s, %s)")
-                    values.append(repo.sqlreponame)
-                    values.append(k)
-                    values.append(v)
-
-                if tmpl:
-                    cursor.execute(
-                        "INSERT INTO revision_references(repo, namespace, name, value) "
-                        + "VALUES %s" % ",".join(tmpl),
-                        tuple(values),
-                    )
-
-                # revision_references has multiple keys (primary key, and a unique index), so
-                # mysql gives a warning when using ON DUPLICATE KEY since it would only update one
-                # row despite multiple key duplicates. This doesn't matter for us, since we know
-                # there is only one row that will share the same key. So suppress the warning.
-                cursor.execute(
-                    """INSERT INTO revision_references(repo, namespace, name, value)
-                               VALUES(%s, 'tip', 'tip', %s) ON DUPLICATE KEY UPDATE value=%s""",
-                    (reponame, len(self) - 1, len(self) - 1),
-                )
-
-                # Just to be super sure, check the write lock before doing the final commit
+                # Just to be super sure, check the write lock before doing the
+                # final commit
                 if not self.hassqllock(writelock):
                     raise Exception(
-                        "attempting to write to sql without holding %s (precommit)"
-                        % writelock
+                        "attempting to write to sql "
+                        + "without holding %s (precommit)" % writelock
                     )
 
                 self.sqlconn.commit()
