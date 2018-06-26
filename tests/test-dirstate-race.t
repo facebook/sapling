@@ -1,5 +1,9 @@
 #testcases v0 v1 v2
 
+Race detector will complain about this test.
+
+  $ setconfig fsmonitor.detectrace=0
+
 #if v0
   $ setconfig format.dirstate=0
 #endif

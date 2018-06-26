@@ -47,7 +47,7 @@ logged
   > [extensions]
   > sampling=
   > EOF
-  $ LOGDIR=`pwd`/logs
+  $ LOGDIR=$TESTTMP/logs
   $ mkdir $LOGDIR
   $ echo "logcommit=$TESTTMP/logcommit.py" >> $HGRCPATH
   $ echo "[sampling]" >> $HGRCPATH

@@ -85,6 +85,13 @@ created.
 
 Posix only: path of unix domain socket to communicate with watchman
 The path can contain %i that have to be replaced with user's unix username
+
+    [fsmonitor]
+    detectrace = (boolean)
+
+If ``detectrace`` is set to True, fsmonitor will spend extra effort detecting
+if there are file writes happening during a ``status`` call, and raises an
+exception if it finds anything. (default: false)
 """
 
 # Platforms Supported
@@ -155,6 +162,7 @@ configitem("fsmonitor", "mode", default="on")
 configitem("fsmonitor", "walk_on_invalidate", default=False)
 configitem("fsmonitor", "timeout", default="2")
 configitem("fsmonitor", "blacklistusers", default=list)
+configitem("fsmonitor", "detectrace", default=False)
 configitem("experimental", "fsmonitor.transaction_notify", default=False)
 
 # This extension is incompatible with the following blacklisted extensions
@@ -760,6 +768,56 @@ def wrapdirstate(orig, self):
     return ds
 
 
+def _racedetect(orig, self, other, s, match, listignored, listclean, listunknown):
+    repo = self._repo
+    detectrace = repo.ui.configbool("fsmonitor", "detectrace") or util.parsebool(
+        encoding.environ.get("HGDETECTRACE", "")
+    )
+    if detectrace and util.safehasattr(repo.dirstate, "_watchmanclient"):
+        state = repo.dirstate._fsmonitorstate
+        try:
+            startclock = repo.dirstate._watchmanclient.command(
+                "clock", {"sync_timeout": int(state.timeout * 1000)}
+            )["clock"]
+        except Exception as ex:
+            repo.ui.warn(_("cannot detect status race: %s\n") % ex)
+            detectrace = False
+    result = orig(self, other, s, match, listignored, listclean, listunknown)
+    if detectrace and util.safehasattr(repo.dirstate, "_fsmonitorstate"):
+        raceresult = repo._watchmanclient.command(
+            "query",
+            {
+                "fields": ["name"],
+                "since": startclock,
+                "expression": [
+                    "allof",
+                    ["type", "f"],
+                    ["not", ["anyof", ["dirname", ".hg"]]],
+                ],
+                "sync_timeout": int(state.timeout * 1000),
+                "empty_on_fresh_instance": True,
+            },
+        )
+        racenames = [
+            name
+            for name in raceresult["files"]
+            # hg-checklink*, hg-checkexec* are ignored.
+            if not name.startswith("hg-check")
+        ]
+        if racenames:
+            msg = _(
+                "[race-detector] files changed when scanning changes in working copy:\n%s"
+            ) % "".join("  %s\n" % name for name in sorted(racenames))
+            repo.ui.log("fsmonitor", msg)
+            raise error.WorkingCopyRaced(
+                msg,
+                hint=_(
+                    "this is an error because HGDETECTRACE or fsmonitor.detectrace is set to true"
+                ),
+            )
+    return result
+
+
 def extsetup(ui):
     extensions.wrapfilecache(localrepo.localrepository, "dirstate", wrapdirstate)
     if pycompat.isdarwin:
@@ -773,6 +831,7 @@ def extsetup(ui):
         extensions.wrapfunction(purge, "findthingstopurge", wrappurge)
 
     extensions.afterloaded("purge", purgeloaded)
+    extensions.wrapfunction(context.workingctx, "_buildstatus", _racedetect)
 
 
 def wrapsymlink(orig, source, link_name):

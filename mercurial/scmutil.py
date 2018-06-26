@@ -213,6 +213,7 @@ def callcatch(ui, func):
         ui.warn(_("abort: %s\n") % inst)
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
+        return inst.exitcode
     except ImportError as inst:
         ui.warn(_("abort: %s!\n") % inst)
         m = str(inst).split()[-1]

@@ -207,6 +207,7 @@ check that local configs for the cached repo aren't inherited when -R is used:
   devel.all-warnings=true
   devel.default-date=0 0
   extensions.fsmonitor= (fsmonitor !)
+  fsmonitor.detectrace=1 (fsmonitor !)
   lfs.usercache=$TESTTMP/.cache/lfs
   ui.slash=True
   ui.interactive=False

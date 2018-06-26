@@ -90,6 +90,7 @@ class Abort(Hint, Exception):
     """Raised if a command needs to print an error and exit."""
 
     __bytes__ = _tobytes
+    exitcode = 255
 
 
 class UncommitedChangesAbort(Abort):
@@ -188,6 +189,13 @@ class CapabilityError(RepoError):
 
 class RequirementError(RepoError):
     """Exception raised if .hg/requires has an unknown entry."""
+
+
+class WorkingCopyRaced(Abort):
+    """Raised when status detects writes in the working copy"""
+
+    # EX_TEMPFAIL, /usr/include/sysexits.h
+    exitcode = 75
 
 
 class StdioError(IOError):

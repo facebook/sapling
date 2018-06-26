@@ -1366,7 +1366,7 @@ class Test(unittest.TestCase):
         for k in (
             "HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy "
             + "HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER "
-            + "NO_PROXY CHGDEBUG"
+            + "NO_PROXY CHGDEBUG HGDETECTRACE"
         ).split():
             if k in env:
                 del env[k]
@@ -1403,6 +1403,7 @@ class Test(unittest.TestCase):
             )
             if self._watchman:
                 hgrc.write(b"[extensions]\nfsmonitor=\n")
+                hgrc.write(b"[fsmonitor]\ndetectrace=1\n")
             hgrc.write(b"[web]\n")
             hgrc.write(b"address = localhost\n")
             hgrc.write(b"ipv6 = %s\n" % str(self._useipv6).encode("ascii"))
