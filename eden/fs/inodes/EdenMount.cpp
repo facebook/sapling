@@ -9,8 +9,6 @@
  */
 #include "eden/fs/inodes/EdenMount.h"
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 #include <folly/ExceptionWrapper.h>
 #include <folly/FBString.h>
 #include <folly/File.h>
@@ -262,14 +260,15 @@ EdenMount::~EdenMount() {}
 Future<Unit> EdenMount::performBindMounts() {
   vector<Future<Unit>> futures;
   for (const auto& bindMount : bindMounts_) {
-    const auto pathInMountDir = bindMount.pathInMountDir.c_str();
+    const auto& pathInMountDir = bindMount.pathInMountDir;
     try {
       // If pathInMountDir does not exist, then it must be created before
       // the bind mount is performed.
-      boost::filesystem::create_directories(pathInMountDir);
+      ensureDirectoryExists(pathInMountDir);
 
       auto bindFuture = serverState_->getPrivHelper()->bindMount(
-          bindMount.pathInClientDir.c_str(), pathInMountDir);
+          bindMount.pathInClientDir.stringPiece(),
+          pathInMountDir.stringPiece());
       futures.push_back(std::move(bindFuture));
     } catch (const std::exception& ex) {
       // Consider recording all failed bind mounts in a way that can be

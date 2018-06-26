@@ -9,6 +9,8 @@
  */
 #include "eden/fs/utils/PathFuncs.h"
 
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <folly/Exception.h>
 #include <folly/Optional.h>
 #include <folly/portability/Stdlib.h>
@@ -244,6 +246,12 @@ void validatePathComponentLength(PathComponentPiece name) {
     folly::throwSystemErrorExplicit(
         ENAMETOOLONG, "path component too long: ", name);
   }
+}
+
+bool ensureDirectoryExists(AbsolutePathPiece path) {
+  auto piece = path.stringPiece();
+  return boost::filesystem::create_directories(
+      boost::filesystem::path(piece.begin(), piece.end()));
 }
 
 } // namespace eden

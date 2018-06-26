@@ -398,6 +398,8 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
     localStore_ = make_shared<MemoryLocalStore>();
   } else if (FLAGS_local_storage_engine_unsafe == "sqlite") {
     const auto path = edenDir_ + RelativePathPiece{kSqlitePath};
+    const auto parentDir = path.dirname();
+    ensureDirectoryExists(parentDir);
     logger->log("Opening local SQLite store ", path, "...");
     folly::stop_watch<std::chrono::milliseconds> watch;
     localStore_ = make_shared<SqliteLocalStore>(path);
@@ -409,6 +411,7 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
     logger->log("Opening local RocksDB store...");
     folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = edenDir_ + RelativePathPiece{kRocksDBPath};
+    ensureDirectoryExists(rocksPath);
     localStore_ = make_shared<RocksDbLocalStore>(rocksPath);
     logger->log(
         "Opened RocksDB store in ",

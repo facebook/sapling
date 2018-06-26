@@ -1650,6 +1650,19 @@ normalizeBestEffort(const T& path) {
 void validatePathComponentLength(PathComponentPiece name);
 
 /**
+ * Ensure that the specified path exists as a directory.
+ *
+ * This creates the specified directory if necessary, creating any parent
+ * directories as required as well.
+ *
+ * Returns true if the directory was created, and false if it already existed.
+ *
+ * Throws an exception on error, including if the path or one of its parent
+ * directories is a file rather than a directory.
+ */
+bool ensureDirectoryExists(AbsolutePathPiece path);
+
+/**
  * Convenient literals for constructing path types.
  */
 inline namespace path_literals {

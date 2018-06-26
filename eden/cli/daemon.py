@@ -85,13 +85,6 @@ def wait_for_shutdown(
         )
 
 
-def _ensure_dot_eden_folder_exists(config: config_mod.Config) -> None:
-    """Creates the ~/.eden folder as specified by --config-dir/$EDEN_CONFIG_DIR.
-    If the ~/.eden folder already exists, it will be left alone.
-    """
-    config.get_or_create_path_to_rocks_db()
-
-
 def _find_default_daemon_binary() -> Optional[str]:
     # By default, we look for the daemon executable alongside this file.
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -120,12 +113,6 @@ def start_daemon(
     foreground: bool = False,
     timeout: Optional[float] = None,
 ) -> int:
-    # If this is the first time running the daemon, the ~/.eden directory
-    # structure needs to be set up.
-    # TODO(mbolin): Check whether the user is running as sudo/root. In general,
-    # we want to avoid creating ~/.eden as root.
-    _ensure_dot_eden_folder_exists(config)
-
     if daemon_binary is None:
         valid_daemon_binary = _find_default_daemon_binary()
         if valid_daemon_binary is None:

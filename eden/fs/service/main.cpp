@@ -83,9 +83,19 @@ std::string getLogPath(AbsolutePathPiece edenDir) {
   // <edenDir>/logs/edenfs.log
   // Create the logs/ directory first in case it does not exist.
   auto logDir = edenDir + "logs"_pc;
-  boost::filesystem::create_directories(
-      boost::filesystem::path(logDir.value()));
+  ensureDirectoryExists(logDir);
   return (logDir + "edenfs.log"_pc).value();
+}
+
+AbsolutePath ensureEdenDirExists(folly::StringPiece path) {
+  // Call boost::filesystem::create_directories() directly on the user-supplied
+  // argument before we try canonicalizing it.  We'll do so with realpath()
+  // later, but this requires the directory exist first.
+  boost::filesystem::path boostPath(path.begin(), path.end());
+  boost::filesystem::create_directories(boostPath);
+
+  // Call realpath now that we know the directory exists.
+  return facebook::eden::realpath(path);
 }
 
 } // namespace
@@ -130,8 +140,18 @@ int main(int argc, char** argv) {
     fprintf(stderr, "error: the --edenDir argument is required\n");
     return EX_USAGE;
   }
-  // We require edenDir to already exist, so use realpath() to resolve it.
-  const auto edenDir = facebook::eden::realpath(FLAGS_edenDir);
+  // Resolve the eden directory path and make sure it exists.
+  AbsolutePath edenDir;
+  try {
+    edenDir = ensureEdenDirExists(FLAGS_edenDir);
+  } catch (const std::exception& ex) {
+    fprintf(
+        stderr,
+        "error creating %s: %s\n",
+        FLAGS_edenDir.c_str(),
+        folly::exceptionStr(ex).c_str());
+    return EX_SOFTWARE;
+  }
 
   // It's okay if the etcEdenDir and configPath don't exist, so use
   // normalizeBestEffort() to try resolving symlinks in these paths but don't

@@ -45,8 +45,6 @@ USER_CONFIG = ".edenrc"
 
 # These paths are relative to the user's client directory.
 CLIENTS_DIR = "clients"
-STORAGE_DIR = "storage"
-ROCKS_DB_DIR = os.path.join(STORAGE_DIR, "rocks-db")
 CONFIG_JSON = "config.json"
 
 # These are files in a client directory.
@@ -697,10 +695,6 @@ Do you want to run `eden mount %s` instead?"""
                 pass
 
         return eden_env
-
-    def get_or_create_path_to_rocks_db(self) -> str:
-        rocks_db_dir = os.path.join(self._config_dir, ROCKS_DB_DIR)
-        return util.mkdir_p(rocks_db_dir)
 
     def _get_client_config(self, client_dir: str) -> ClientConfig:
         """Returns ClientConfig or raises an Exception if the config.toml
