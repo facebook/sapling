@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import binascii
 import errno
 import io
 import os
@@ -53,15 +54,26 @@ class DoctorTest(unittest.TestCase):
     ):
         side_effects: List[Dict[str, Any]] = []
         calls = []
-        tmp_dir = self._create_tmp_dir()
+        config = FakeConfig(self._create_tmp_dir())
 
         # In edenfs_path1, we will break the snapshot check.
-        edenfs_path1 = os.path.join(tmp_dir, "path1")
+        edenfs_path1_snapshot = "abcd" * 10
+        edenfs_path1_dirstate_parent = "12345678" * 5
+        edenfs_path1 = config.create_test_mount(
+            "path1",
+            snapshot=edenfs_path1_snapshot,
+            dirstate_parent=edenfs_path1_dirstate_parent,
+        )
+
         # In edenfs_path2, we will break the inotify check and the Nuclide
         # subscriptions check.
-        edenfs_path2 = os.path.join(tmp_dir, "path2")
+        edenfs_path2 = config.create_test_mount(
+            "path2", scm_type="git", setup_path=False
+        )
+
         # In edenfs_path3, we do not create the .hg directory
-        edenfs_path3 = os.path.join(tmp_dir, "path3")
+        edenfs_path3 = config.create_test_mount("path3", setup_path=False)
+        os.makedirs(edenfs_path3)
 
         # Assume all paths are used as root folders in a connected Nuclide.
         mock_get_roots_for_nuclide.return_value = {
@@ -108,63 +120,12 @@ class DoctorTest(unittest.TestCase):
 
         out = io.StringIO()
         dry_run = False
-        mount_paths = OrderedDict()
-        edenfs_path1_snapshot_hex = "abcd" * 10
-        mount_paths[edenfs_path1] = {
-            "bind-mounts": {},
-            "mount": edenfs_path1,
-            "scm_type": "hg",
-            "snapshot": edenfs_path1_snapshot_hex,
-            "client-dir": "/I_DO_NOT_EXIST1",
-        }
-        mount_paths[edenfs_path2] = {
-            "bind-mounts": {},
-            "mount": edenfs_path2,
-            "scm_type": "git",
-            "snapshot": "dcba" * 10,
-            "client-dir": "/I_DO_NOT_EXIST2",
-        }
-        edenfs_path3_snapshot_hex = "1234" * 10
-        mount_paths[edenfs_path3] = {
-            "bind-mounts": {},
-            "mount": edenfs_path3,
-            "scm_type": "hg",
-            "snapshot": edenfs_path3_snapshot_hex,
-            "client-dir": "/I_DO_NOT_EXIST3",
-        }
-        config = FakeConfig(mount_paths, is_healthy=True)
-        config.get_thrift_client()._mounts = [
-            eden_ttypes.MountInfo(mountPoint=edenfs_path1),
-            eden_ttypes.MountInfo(mountPoint=edenfs_path2),
-            eden_ttypes.MountInfo(mountPoint=edenfs_path3),
-        ]
 
-        os.mkdir(edenfs_path1)
-        hg_dir = os.path.join(edenfs_path1, ".hg")
-        os.mkdir(hg_dir)
-        dirstate = os.path.join(hg_dir, "dirstate")
-        dirstate_hash = b"\x12\x34\x56\x78" * 5
-        parents = (dirstate_hash, b"\x00" * 20)
-        with open(dirstate, "wb") as f:
-            eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
-
-        os.mkdir(edenfs_path3)
-
-        mount_table = FakeMountTable()
-        mount_table.stats[edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=None
-        )
-        mount_table.stats[edenfs_path2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=None
-        )
-        mount_table.stats[edenfs_path3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=13, st_mode=None
-        )
         exit_code = doctor.cure_what_ails_you(
             config,
             dry_run,
             out,
-            mount_table,
+            config.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
             printer=printer,
         )
@@ -172,8 +133,8 @@ class DoctorTest(unittest.TestCase):
         self.assertEqual(
             f"""\
 Performing 3 checks for {edenfs_path1}.
-p1 for {edenfs_path1} is {'12345678' * 5}, but Eden's internal
-hash in its SNAPSHOT file is {edenfs_path1_snapshot_hex}.
+p1 for {edenfs_path1} is {edenfs_path1_dirstate_parent}, but Eden's internal
+hash in its SNAPSHOT file is {edenfs_path1_snapshot}.
 Performing 2 checks for {edenfs_path2}.
 Previous Watchman watcher for {edenfs_path2} was "inotify" but is now "eden".
 Nuclide appears to be used to edit the following directories
@@ -207,8 +168,11 @@ and can re-clone the checkout afterwards if desired.
     def test_not_all_mounts_have_watchman_watcher(
         self, mock_get_roots_for_nuclide, mock_watchman
     ):
-        edenfs_path = "/path/to/eden-mount"
-        edenfs_path_not_watched = "/path/to/eden-mount-not-watched"
+        config = FakeConfig(self._create_tmp_dir())
+        edenfs_path = config.create_test_mount("eden-mount", scm_type="git")
+        edenfs_path_not_watched = config.create_test_mount(
+            "eden-mount-not-watched", scm_type="git"
+        )
         side_effects: List[Dict[str, Any]] = []
         calls = []
 
@@ -220,45 +184,18 @@ and can re-clone the checkout afterwards if desired.
 
         out = io.StringIO()
         dry_run = False
-        mount_paths = OrderedDict()
-        mount_paths[edenfs_path] = {
-            "bind-mounts": {},
-            "mount": edenfs_path,
-            "scm_type": "git",
-            "snapshot": "abcd" * 10,
-            "client-dir": "/I_DO_NOT_EXIST",
-        }
-        mount_paths[edenfs_path_not_watched] = {
-            "bind-mounts": {},
-            "mount": edenfs_path_not_watched,
-            "scm_type": "git",
-            "snapshot": "abcd" * 10,
-            "client-dir": "/I_DO_NOT_EXIST",
-        }
-        config = FakeConfig(mount_paths, is_healthy=True)
-        config.get_thrift_client()._mounts = [
-            eden_ttypes.MountInfo(mountPoint=edenfs_path),
-            eden_ttypes.MountInfo(mountPoint=edenfs_path_not_watched),
-        ]
-        mount_table = FakeMountTable()
-        mount_table.stats["/path/to/eden-mount"] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=10, st_mode=None
-        )
-        mount_table.stats["/path/to/eden-mount-not-watched"] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=None
-        )
         exit_code = doctor.cure_what_ails_you(
             config,
             dry_run,
             out,
-            mount_table=mount_table,
+            mount_table=config.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
             printer=printer,
         )
 
         self.assertEqual(
-            "Performing 2 checks for /path/to/eden-mount.\n"
-            "Performing 2 checks for /path/to/eden-mount-not-watched.\n"
+            f"Performing 2 checks for {edenfs_path}.\n"
+            f"Performing 2 checks for {edenfs_path_not_watched}.\n"
             "<green>No issues detected.<reset>\n",
             out.getvalue(),
         )
@@ -270,7 +207,8 @@ and can re-clone the checkout afterwards if desired.
     def test_not_much_to_do_when_eden_is_not_running(
         self, mock_get_roots_for_nuclide, mock_watchman
     ):
-        edenfs_path = "/path/to/eden-mount"
+        config = FakeConfig(self._create_tmp_dir(), is_healthy=False)
+        edenfs_path = config.create_test_mount("eden-mount")
         side_effects: List[Dict[str, Any]] = []
         calls = []
 
@@ -286,16 +224,6 @@ and can re-clone the checkout afterwards if desired.
 
         out = io.StringIO()
         dry_run = False
-        mount_paths = {
-            edenfs_path: {
-                "bind-mounts": {},
-                "mount": edenfs_path,
-                "scm_type": "hg",
-                "snapshot": "abcd" * 10,
-                "client-dir": "/I_DO_NOT_EXIST",
-            }
-        }
-        config = FakeConfig(mount_paths, is_healthy=False)
         exit_code = doctor.cure_what_ails_you(
             config,
             dry_run,
@@ -576,8 +504,7 @@ command palette in Atom.
         mock_rpm_q.side_effect = side_effects
 
         config = FakeConfig(
-            mount_paths={},
-            is_healthy=True,
+            self._create_tmp_dir(),
             build_info={
                 "build_package_version": "20171213",
                 "build_package_release": "165642",
@@ -594,43 +521,11 @@ command palette in Atom.
     def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide):
         # If Eden advertises that a mount is active, but it is not in the
         # configuration, then at least don't throw an exception.
-        tmp_dir = self._create_tmp_dir()
-        edenfs_path1 = os.path.join(tmp_dir, "path1")
-        edenfs_path2 = os.path.join(tmp_dir, "path2")
-
-        mount_paths = OrderedDict()
-        mount_paths[edenfs_path1] = {
-            "bind-mounts": {},
-            "mount": edenfs_path1,
-            "scm_type": "hg",
-            "snapshot": "abcd" * 10,
-            "client-dir": "/I_DO_NOT_EXIST1",
-        }
-        # path2 is not configured in the config...
-        config = FakeConfig(mount_paths, is_healthy=True)
-        # ... but is advertised by the daemon...
-        config.get_thrift_client()._mounts = [
-            eden_ttypes.MountInfo(mountPoint=edenfs_path1),
-            eden_ttypes.MountInfo(mountPoint=edenfs_path2),
-        ]
-
-        # ... and is in the system mount table.
-        mount_table = FakeMountTable()
-        mount_table.stats[edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=None
-        )
-        mount_table.stats[edenfs_path2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=None
-        )
-
-        os.mkdir(edenfs_path1)
-        hg_dir = os.path.join(edenfs_path1, ".hg")
-        os.mkdir(hg_dir)
-        dirstate = os.path.join(hg_dir, "dirstate")
-        dirstate_hash = b"\xab\xcd" * 10
-        parents = (dirstate_hash, b"\x00" * 20)
-        with open(dirstate, "wb") as f:
-            eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
+        config = FakeConfig(self._create_tmp_dir())
+        edenfs_path1 = config.create_test_mount("path1")
+        edenfs_path2 = config.create_test_mount("path2")
+        # Remove path2 from the list of mounts in the config
+        del config._mount_paths[edenfs_path2]
 
         dry_run = False
         out = io.StringIO()
@@ -638,7 +533,7 @@ command palette in Atom.
             config,
             dry_run,
             out,
-            mount_table,
+            config.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
             printer=printer,
         )
@@ -672,50 +567,17 @@ Performing 3 checks for {edenfs_path1}.
         currently mounted.
         """
         self._tmp_dir = self._create_tmp_dir()
+        config = FakeConfig(self._tmp_dir)
 
-        edenfs_path1 = os.path.join(self._tmp_dir, "path1")
-        edenfs_path2 = os.path.join(self._tmp_dir, "path2")
-
-        mount_paths: OrderedDict[str, Dict[str, Any]] = OrderedDict()
-        mount_paths[edenfs_path1] = {
-            "bind-mounts": {},
-            "mount": edenfs_path1,
-            "scm_type": "hg",
-            "snapshot": "12ab" * 10,
-            "client-dir": "/I_DO_NOT_EXIST1",
-        }
-        mount_paths[edenfs_path2] = {
-            "bind-mounts": {},
-            "mount": edenfs_path2,
-            "scm_type": "git",
-            "snapshot": "dcba" * 10,
-            "client-dir": "/I_DO_NOT_EXIST2",
-        }
-        config = FakeConfig(mount_paths, is_healthy=True)
-        config.get_thrift_client()._mounts = [
-            eden_ttypes.MountInfo(mountPoint=edenfs_path1)
-        ]
-
-        mount_table = FakeMountTable()
-        mount_table.stats[edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=stat.S_IFDIR | 0o755
-        )
-
-        os.mkdir(edenfs_path1)
-        hg_dir = os.path.join(edenfs_path1, ".hg")
-        os.mkdir(hg_dir)
-        dirstate = os.path.join(hg_dir, "dirstate")
-        dirstate_hash = b"\x12\xab" * 10
-        parents = (dirstate_hash, b"\x00" * 20)
-        with open(dirstate, "wb") as f:
-            eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
+        config.create_test_mount("path1")
+        config.create_test_mount("path2", active=False)
 
         out = io.StringIO()
         exit_code = doctor.cure_what_ails_you(
             typing.cast(config_mod.Config, config),
             dry_run,
             out,
-            mount_table,
+            config.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
             printer=printer,
         )
@@ -726,25 +588,25 @@ class BindMountsCheckTest(unittest.TestCase):
     maxDiff = None
 
     def setUp(self):
-        tmp_dir = "/home/bob/eden_test"
-        self.edenfs_path1 = os.path.join(tmp_dir, "path1")
+        tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
+        self.addCleanup(shutil.rmtree, tmp_dir)
+        self.config = FakeConfig(tmp_dir, is_healthy=True)
+
         self.dot_eden_path = os.path.join(tmp_dir, ".eden")
         self.clients_path = os.path.join(self.dot_eden_path, "clients")
 
         self.fbsource_client = os.path.join(self.clients_path, "fbsource")
         self.fbsource_bind_mounts = os.path.join(self.fbsource_client, "bind-mounts")
-        self.mount_paths = OrderedDict()
-        self.mount_paths[self.edenfs_path1] = {
-            "bind-mounts": {
+        self.edenfs_path1 = self.config.create_test_mount(
+            "path1",
+            bind_mounts={
                 "fbcode-buck-out": "fbcode/buck-out",
                 "fbandroid-buck-out": "fbandroid/buck-out",
                 "buck-out": "buck-out",
             },
-            "mount": self.edenfs_path1,
-            "scm_type": "hg",
-            "client-dir": self.fbsource_client,
-        }
-        self.config = FakeConfig(self.mount_paths, is_healthy=True)
+            client_dir=self.fbsource_client,
+            setup_path=False,
+        )
 
         # Entries for later inclusion in client bind mount table
         self.client_bm1 = os.path.join(self.fbsource_bind_mounts, "fbcode-buck-out")
@@ -841,11 +703,11 @@ class BindMountsCheckTest(unittest.TestCase):
         )
         self.assertEqual(
             dedent(
-                """\
+                f"""\
                 Found 3 missing bind mounts:
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
                 Not remounting because dry run.
         """
             ),
@@ -896,11 +758,11 @@ class BindMountsCheckTest(unittest.TestCase):
         )
         self.assertEqual(
             dedent(
-                """\
+                f"""\
                 Found 3 missing bind mounts:
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
                 Not remounting because dry run.
         """
             ),
@@ -952,19 +814,19 @@ class BindMountsCheckTest(unittest.TestCase):
         self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
         self.assertEqual(
             dedent(
-                """\
+                f"""\
                 Found 3 missing bind mounts:
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
                 Will try to remount directories.
-                Failed to create bind mount: /home/bob/eden_test/path1/fbandroid/buck-out to /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out failed with: Command 'sudo mount -o bind /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out /home/bob/eden_test/path1/fbandroid/buck-out' returned non-zero exit status 1.
-                Failed to create bind mount: /home/bob/eden_test/path1/buck-out to /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out failed with: Command 'sudo mount -o bind /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out /home/bob/eden_test/path1/buck-out' returned non-zero exit status 1.
+                Failed to create bind mount: {self.edenfs_path1}/fbandroid/buck-out to {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out failed with: Command 'sudo mount -o bind {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out {self.edenfs_path1}/fbandroid/buck-out' returned non-zero exit status 1.
+                Failed to create bind mount: {self.edenfs_path1}/buck-out to {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out failed with: Command 'sudo mount -o bind {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out {self.edenfs_path1}/buck-out' returned non-zero exit status 1.
                 Successfully created 1 missing bind mount point:
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out to /home/bob/eden_test/path1/fbcode/buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out to {self.edenfs_path1}/fbcode/buck-out
                 Failed to create 2 missing bind mount points:
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out to /home/bob/eden_test/path1/fbandroid/buck-out
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out to /home/bob/eden_test/path1/buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out to {self.edenfs_path1}/fbandroid/buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out to {self.edenfs_path1}/buck-out
                 """
             ),
             result.message,
@@ -991,16 +853,16 @@ class BindMountsCheckTest(unittest.TestCase):
         )
         self.assertEqual(
             dedent(
-                """\
+                f"""\
             Found 3 missing mount path points:
-              /home/bob/eden_test/path1/fbcode/buck-out
-              /home/bob/eden_test/path1/fbandroid/buck-out
-              /home/bob/eden_test/path1/buck-out
+              {self.edenfs_path1}/fbcode/buck-out
+              {self.edenfs_path1}/fbandroid/buck-out
+              {self.edenfs_path1}/buck-out
             Not creating missing mount paths because dry run.
             Found 3 missing client mount path points:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
             Not creating missing client mount paths because dry run.
         """
             ),
@@ -1051,10 +913,10 @@ class BindMountsCheckTest(unittest.TestCase):
         )
         self.assertEqual(
             dedent(
-                """\
+                f"""\
             Found 2 missing bind mounts:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
             Not remounting because dry run.
         """
             ),
@@ -1107,14 +969,14 @@ class BindMountsCheckTest(unittest.TestCase):
         self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
         self.assertEqual(
             dedent(
-                """\
+                f"""\
             Found 2 missing bind mounts:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
             Will try to remount directories.
             Successfully created 2 missing bind mount points:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out to /home/bob/eden_test/path1/fbcode/buck-out
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out to /home/bob/eden_test/path1/fbandroid/buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out to {self.edenfs_path1}/fbcode/buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out to {self.edenfs_path1}/fbandroid/buck-out
         """
             ),
             result.message,
@@ -1164,9 +1026,9 @@ class BindMountsCheckTest(unittest.TestCase):
         self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
         self.assertEqual(
             dedent(
-                """\
+                f"""\
             Found 1 non-directory mount path points:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
             Remove them and re-run eden doctor.
         """
             ),
@@ -1217,9 +1079,9 @@ class BindMountsCheckTest(unittest.TestCase):
         self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
         self.assertEqual(
             dedent(
-                """\
+                f"""\
             Found 1 non-directory mount path points:
-              /home/bob/eden_test/path1/buck-out
+              {self.edenfs_path1}/buck-out
             Remove them and re-run eden doctor.
         """
             ),
@@ -1264,10 +1126,10 @@ class BindMountsCheckTest(unittest.TestCase):
         )
         self.assertEqual(
             dedent(
-                """\
+                f"""\
             Found 2 missing client mount path points:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
             Not creating missing client mount paths because dry run.
         """
             ),
@@ -1310,10 +1172,10 @@ class BindMountsCheckTest(unittest.TestCase):
         self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
         self.assertEqual(
             dedent(
-                """\
+                f"""\
             Found 2 missing client mount path points:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
             We will create client mount paths and remount.
         """
             ),
@@ -1357,8 +1219,8 @@ class BindMountsCheckTest(unittest.TestCase):
         self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
         self.assertEqual(
             dedent(
-                """\
-                Failed to create client mount path directory : /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                f"""\
+                Failed to create client mount path directory : {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
         """
             ),
             result.message,
@@ -1397,14 +1259,14 @@ class BindMountsCheckTest(unittest.TestCase):
 
         self.assertEqual(
             dedent(
-                """\
+                f"""\
                 Found 2 missing mount path points:
-                  /home/bob/eden_test/path1/fbandroid/buck-out
-                  /home/bob/eden_test/path1/buck-out
+                  {self.edenfs_path1}/fbandroid/buck-out
+                  {self.edenfs_path1}/buck-out
                 Not creating missing mount paths because dry run.
                 Found 2 missing client mount path points:
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
                 Not creating missing client mount paths because dry run.
         """
             ),
@@ -1444,18 +1306,18 @@ class BindMountsCheckTest(unittest.TestCase):
 
         self.assertEqual(
             dedent(
-                """\
+                f"""\
                 Found 2 missing mount path points:
-                  /home/bob/eden_test/path1/fbandroid/buck-out
-                  /home/bob/eden_test/path1/buck-out
+                  {self.edenfs_path1}/fbandroid/buck-out
+                  {self.edenfs_path1}/buck-out
                 We will create mount paths and remount.
                 Found 2 missing client mount path points:
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
                 We will create client mount paths and remount.
                 Successfully created 2 missing bind mount points:
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbandroid-buck-out to /home/bob/eden_test/path1/fbandroid/buck-out
-                  /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out to /home/bob/eden_test/path1/buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/fbandroid-buck-out to {self.edenfs_path1}/fbandroid/buck-out
+                  {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out to {self.edenfs_path1}/buck-out
         """
             ),
             result.message,
@@ -1505,12 +1367,12 @@ class BindMountsCheckTest(unittest.TestCase):
         )
         self.assertEqual(
             dedent(
-                """\
+                f"""\
             Found 1 non-directory mount path point:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
             Remove them and re-run eden doctor.
             Found 1 missing client mount path point:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
             Not creating missing client mount paths because dry run.
         """
             ),
@@ -1558,12 +1420,12 @@ class BindMountsCheckTest(unittest.TestCase):
         self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
         self.assertEqual(
             dedent(
-                """\
+                f"""\
             Found 1 non-directory mount path point:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/buck-out
             Remove them and re-run eden doctor.
             Found 1 missing client mount path point:
-              /home/bob/eden_test/.eden/clients/fbsource/bind-mounts/fbcode-buck-out
+              {self.dot_eden_path}/clients/fbsource/bind-mounts/fbcode-buck-out
             We will create client mount paths and remount.
         """
             ),
@@ -1789,19 +1651,116 @@ class FakeClient:
 class FakeConfig:
     def __init__(
         self,
-        mount_paths: Dict[str, Dict[str, str]],
+        tmp_dir: str,
         is_healthy: bool = True,
         build_info: Optional[Dict[str, str]] = None,
     ) -> None:
-        self._mount_paths = mount_paths
+        self._tmp_dir = tmp_dir
+        self._mount_paths: Dict[str, Dict[str, Any]] = {}
         self._is_healthy = is_healthy
         self._build_info = build_info if build_info else {}
         self._fake_client = FakeClient()
+
+        self.mount_table = FakeMountTable()
+        self._next_dev_id = 10
+
+    def create_test_mount(
+        self,
+        path,
+        snapshot: Optional[str] = None,
+        bind_mounts: Optional[Dict[str, str]] = None,
+        client_dir: Optional[str] = None,
+        scm_type: str = "hg",
+        active: bool = True,
+        setup_path: bool = True,
+        dirstate_parent: Union[str, Tuple[str, str], None] = None,
+    ) -> str:
+        """
+        Define a configured mount.
+
+        If active is True and is_healthy was set to True when creating the FakeClient
+        then the mount will appear as a normal active mount.  It will be reported in the
+        thrift results and the mount table, and the mount directory will be populated
+        with a .hg/ or .git/ subdirectory.
+
+        The setup_path argument can be set to False to prevent creating the fake mount
+        directory on disk.
+
+        Returns the absolute path to the mount directory.
+        """
+        full_path = os.path.join(self._tmp_dir, path)
+        if full_path in self._mount_paths:
+            raise Exception(f"duplicate mount definition: {full_path}")
+
+        if snapshot is None:
+            snapshot = "1" * 40
+        if bind_mounts is None:
+            bind_mounts = {}
+        if client_dir is None:
+            client_dir = "/" + path.replace("/", "_")
+
+        self._mount_paths[full_path] = {
+            "bind-mounts": bind_mounts,
+            "mount": full_path,
+            "scm_type": scm_type,
+            "snapshot": snapshot,
+            "client-dir": client_dir,
+        }
+
+        if self._is_healthy and active:
+            # Report the mount in /proc/mounts
+            dev_id = self._next_dev_id
+            self._next_dev_id += 1
+            self.mount_table.stats[full_path] = mtab.MTStat(
+                st_uid=os.getuid(), st_dev=dev_id, st_mode=(stat.S_IFDIR | 0o755)
+            )
+
+            # Tell the thrift client to report the mount as active
+            self._fake_client._mounts.append(
+                eden_ttypes.MountInfo(mountPoint=full_path)
+            )
+
+            # Set up directories on disk that look like the mounted checkout
+            if setup_path:
+                os.makedirs(full_path)
+                if scm_type == "hg":
+                    self._setup_hg_path(full_path, dirstate_parent, snapshot)
+                elif scm_type == "git":
+                    os.mkdir(os.path.join(full_path, ".git"))
+
+        return full_path
+
+    def _setup_hg_path(
+        self,
+        full_path: str,
+        dirstate_parent: Union[str, Tuple[str, str], None],
+        snapshot: str,
+    ):
+        hg_dir = os.path.join(full_path, ".hg")
+        os.mkdir(hg_dir)
+        dirstate_path = os.path.join(hg_dir, "dirstate")
+
+        if dirstate_parent is None:
+            # The dirstate parent should normally match the snapshot hash
+            parents = (binascii.unhexlify(snapshot), b"\x00" * 20)
+        elif isinstance(dirstate_parent, str):
+            # Assume we were given a single parent hash as a hex string
+            parents = (binascii.unhexlify(dirstate_parent), b"\x00" * 20)
+        else:
+            # Assume we were given a both parent hashes as hex strings
+            parents = (
+                binascii.unhexlify(dirstate_parent[0]),
+                binascii.unhexlify(dirstate_parent[1]),
+            )
+
+        with open(dirstate_path, "wb") as f:
+            eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
 
     def get_mount_paths(self) -> Iterable[str]:
         return self._mount_paths.keys()
 
     def mount(self, path) -> int:
+        assert self._is_healthy
         assert path in self._mount_paths
         return 0
 
