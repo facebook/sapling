@@ -8,7 +8,9 @@
  *
  */
 
+#include <boost/filesystem.hpp>
 #include <folly/Conv.h>
+#include <folly/Optional.h>
 #include <folly/experimental/FunctionScheduler.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
@@ -16,11 +18,18 @@
 #include <gflags/gflags.h>
 #include <pwd.h>
 #include <sysexits.h>
+#include <unistd.h>
 #include "EdenServer.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/service/StartupLogger.h"
 
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
+DEFINE_bool(
+    foreground,
+    false,
+    "Run edenfs in the foreground, rather than daemonizing "
+    "as a background process");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(
     etcEdenDir,
@@ -38,6 +47,42 @@ using namespace facebook::eden;
 // Also change the "default" log handler (which logs to stderr) to log
 // messages asynchronously rather than blocking in the logging thread.
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
+
+namespace {
+
+std::shared_ptr<StartupLogger> daemonizeIfRequested(
+    folly::StringPiece logPath) {
+  auto startupLogger = std::make_shared<StartupLogger>();
+  if (FLAGS_foreground) {
+    return startupLogger;
+  }
+
+  startupLogger->daemonize(logPath);
+  return startupLogger;
+}
+
+std::string getLogPath(AbsolutePathPiece edenDir) {
+  // If a log path was explicitly specified as a command line argument use that
+  if (!FLAGS_logPath.empty()) {
+    return FLAGS_logPath;
+  }
+
+  // If we are running in the foreground default to an empty log path
+  // (just log directly to stderr)
+  if (FLAGS_foreground) {
+    return "";
+  }
+
+  // When running in the background default to logging to
+  // <edenDir>/logs/edenfs.log
+  // Create the logs/ directory first in case it does not exist.
+  auto logDir = edenDir + "logs"_pc;
+  boost::filesystem::create_directories(
+      boost::filesystem::path(logDir.value()));
+  return (logDir + "edenfs.log"_pc).value();
+}
+
+} // namespace
 
 int main(int argc, char** argv) {
   // Fork the privhelper process, then drop privileges in the main process.
@@ -92,38 +137,63 @@ int main(int argc, char** argv) {
       ? identity.getHomeDirectory() + ".edenrc"_pc
       : normalizeBestEffort(configPathStr);
 
-  // If logPath is set, redirect stdout and stderr.
-  if (!FLAGS_logPath.empty()) {
-    folly::File logHandle(FLAGS_logPath, O_APPEND | O_CREAT | O_WRONLY, 0644);
-    folly::checkUnixError(dup2(logHandle.fd(), STDOUT_FILENO));
-    folly::checkUnixError(dup2(logHandle.fd(), STDERR_FILENO));
-    privHelper->setLogFileBlocking(std::move(logHandle));
+  auto logPath = getLogPath(edenDir);
+  auto startupLogger = daemonizeIfRequested(logPath);
+  folly::Optional<EdenServer> server;
+  auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
+  try {
+    // If stderr was redirected to a log file, inform the privhelper
+    // to make sure it logs to our current stderr.
+    if (!logPath.empty()) {
+      privHelper->setLogFileBlocking(
+          folly::File(STDERR_FILENO, /*ownsFd=*/false));
+    }
+
+    // Since we are a daemon, and we don't ever want to be in a situation
+    // where we hold any open descriptors through a fuse mount that points
+    // to ourselves (which can happen during takeover), we chdir to `/`
+    // to avoid having our cwd reference ourselves if the user runs
+    // `eden daemon --takeover` from within an eden mount
+    folly::checkPosixError(chdir("/"), "failed to chdir(/)");
+
+    // Set some default glog settings, to be applied unless overridden on the
+    // command line
+    gflags::SetCommandLineOptionWithMode(
+        "logtostderr", "1", gflags::SET_FLAGS_DEFAULT);
+    gflags::SetCommandLineOptionWithMode(
+        "minloglevel", "0", gflags::SET_FLAGS_DEFAULT);
+
+    startupLogger->log("Starting edenfs, pid ", getpid());
+
+    server.emplace(
+        std::move(identity),
+        std::move(privHelper),
+        edenDir,
+        etcEdenDir,
+        configPath);
+
+    prepareFuture = server->prepare(startupLogger);
+  } catch (const std::exception& ex) {
+    startupLogger->exitUnsuccessfully(
+        EX_SOFTWARE, "error starting edenfs: ", folly::exceptionStr(ex));
   }
 
-  // Since we are a daemon, and we don't ever want to be in a situation
-  // where we hold any open descriptors through a fuse mount that points
-  // to ourselves (which can happen during takeover), we chdir to `/`
-  // to avoid having our cwd reference ourselves if the user runs
-  // `eden daemon --takeover` from within an eden mount
-  folly::checkPosixError(chdir("/"), "failed to chdir(/)");
+  prepareFuture.then([startupLogger](folly::Try<folly::Unit>&& result) {
+    // If an error occurred this means that we failed to mount all of the mount
+    // points.  However, we have still started and will continue running, so we
+    // report successful startup here no matter what.
+    if (result.hasException()) {
+      // Log an overall error message here.
+      // We will have already logged more detailed messages for each mount
+      // failure when it occurred.
+      startupLogger->warn(
+          "did not successfully remount all repositories: ",
+          result.exception().what());
+    }
+    startupLogger->success();
+  });
 
-  // Set some default glog settings, to be applied unless overridden on the
-  // command line
-  gflags::SetCommandLineOptionWithMode(
-      "logtostderr", "1", gflags::SET_FLAGS_DEFAULT);
-  gflags::SetCommandLineOptionWithMode(
-      "minloglevel", "0", gflags::SET_FLAGS_DEFAULT);
-
-  XLOG(INFO) << "Starting edenfs.  UID=" << identity.getUid()
-             << ", GID=" << identity.getGid() << ", PID=" << getpid();
-
-  EdenServer server(
-      std::move(identity),
-      std::move(privHelper),
-      edenDir,
-      etcEdenDir,
-      configPath);
-  server.run();
+  server->run();
   XLOG(INFO) << "edenfs exiting successfully";
   return EX_OK;
 }

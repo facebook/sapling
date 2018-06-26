@@ -553,6 +553,9 @@ Do you want to run `eden mount %s` instead?"""
             self._etc_eden_dir,
             "--configPath",
             self._user_config_path,
+            # Always run edenfs in foreground mode at the moment.
+            # I will update this in a future diff to let edenfs handle daemonization.
+            "--foreground",
         ]
         if gdb:
             gdb_args = gdb_args or []

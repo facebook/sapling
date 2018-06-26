@@ -56,6 +56,7 @@ class Dirstate;
 class EdenServiceHandler;
 class LocalStore;
 class MountInfo;
+class StartupLogger;
 class TakeoverServer;
 
 /*
@@ -80,22 +81,32 @@ class EdenServer : private TakeoverHandler {
   virtual ~EdenServer();
 
   /**
-   * Run the EdenServer.
-   */
-  void run();
-
-  /**
    * Prepare to run the EdenServer.
    *
    * This acquires the lock on the eden directory, prepares the thrift server to
    * run, and begins remounting configured mount points.
    *
-   * After prepare returns the caller can call getServer()->serve() to
-   * run the thrift server main loop.
+   * Most of the preparation occurs synchronously before prepare() returns,
+   * however a few steps complete asynchronously.  The status of the
+   * asynchronous preparation steps is tracked in the returned Future object.
    *
-   * The returned Future will finish once all mount points have been remounted.
+   * The returned future does not complete until all configured mount points
+   * have been remounted and until the thrift server is accepting connections.
+   * If an error occurs remounting some mount points the Future will complete
+   * with an exception, but the server will still continue to run.  Everything
+   * will be running normally except for the mount points that failed to be
+   * remounted.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> prepare();
+  FOLLY_NODISCARD folly::Future<folly::Unit> prepare(
+      std::shared_ptr<StartupLogger> logger);
+
+  /**
+   * Run the EdenServer.
+   *
+   * prepare() must have been called before calling run(), but the future
+   * returned by prepare() does not need to be complete yet.
+   */
+  void run();
 
   /**
    * Stops this server, which includes the underlying Thrift server.
@@ -275,7 +286,7 @@ class EdenServer : private TakeoverHandler {
   std::shared_ptr<BackingStore> createBackingStore(
       folly::StringPiece type,
       folly::StringPiece name);
-  void createThriftServer();
+  FOLLY_NODISCARD folly::Future<folly::Unit> createThriftServer();
 
   /**
    * Acquire the main edenfs lock.
@@ -288,6 +299,12 @@ class EdenServer : private TakeoverHandler {
   FOLLY_NODISCARD bool acquireEdenLock();
 
   void prepareThriftAddress();
+
+  /**
+   * prepareImpl() contains the bulk of the implementation of prepare()
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> prepareImpl(
+      std::shared_ptr<StartupLogger> logger);
 
   // Called when a mount has been unmounted and has stopped.
   void mountFinished(

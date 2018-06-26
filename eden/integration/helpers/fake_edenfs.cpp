@@ -7,15 +7,16 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include <err.h>
 #include <folly/init/Init.h>
 #include <folly/io/async/AsyncSignalHandler.h>
+#include <folly/logging/Init.h>
 #include <gflags/gflags.h>
 #include <signal.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <array>
 
 #include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -26,6 +27,7 @@ using folly::EventBase;
 using std::make_shared;
 
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
+DEFINE_bool(foreground, false, "Run edenfs in the foreground");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(
     etcEdenDir,
@@ -36,6 +38,8 @@ DEFINE_string(
     logPath,
     "",
     "If set, redirects stdout and stderr to the log file given.");
+
+FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
 
 namespace {
 class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
@@ -113,14 +117,19 @@ int main(int argc, char** argv) {
 
   auto init = folly::Init(&argc, &argv);
 
-  if (FLAGS_edenDir.empty()) {
-    errx(1, "the --edenDir flag is required\n");
+  StartupLogger startupLogger;
+  if (!FLAGS_foreground) {
+    startupLogger.daemonize(FLAGS_logPath);
   }
-  auto edenDir = facebook::eden::realpath(FLAGS_edenDir);
+
+  if (FLAGS_edenDir.empty()) {
+    startupLogger.exitUnsuccessfully(1, "the --edenDir flag is required");
+  }
+  auto edenDir = facebook::eden::canonicalPath(FLAGS_edenDir);
 
   // Acquire the lock file
   if (!acquireLock(edenDir)) {
-    errx(1, "Failed to acquire lock file\n");
+    startupLogger.exitUnsuccessfully(1, "Failed to acquire lock file");
   }
 
   // Get the path to the thrift socket.
@@ -131,9 +140,13 @@ int main(int argc, char** argv) {
   // Make sure no socket already exists at this path
   int rc = unlink(thriftSocketPath.value().c_str());
   if (rc != 0 && errno != ENOENT) {
-    err(1,
-        "failed to remove eden socket at %s\n",
-        thriftSocketPath.value().c_str());
+    int errnum = errno;
+    startupLogger.exitUnsuccessfully(
+        1,
+        "failed to remove eden socket at ",
+        thriftSocketPath,
+        ": ",
+        folly::errnoStr(errnum));
   }
 
   // Create the ThriftServer object
@@ -148,8 +161,9 @@ int main(int argc, char** argv) {
   SignalHandler signalHandler(server.getEventBaseManager()->getEventBase());
 
   // Run the thrift server
-  printf("Fake edenfs running...\n");
-  server.serve();
+  server.setup();
+  startupLogger.success();
+  folly::EventBaseManager::get()->getEventBase()->loopForever();
 
   return 0;
 }

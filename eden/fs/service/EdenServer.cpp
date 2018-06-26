@@ -16,6 +16,7 @@
 #include <folly/chrono/Conv.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <folly/logging/xlog.h>
+#include <folly/stop_watch.h>
 #include <gflags/gflags.h>
 #include <signal.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
@@ -34,6 +35,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenServiceHandler.h"
+#include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
@@ -131,6 +133,7 @@ class EdenServer::ThriftServerEventHandler
     attachEventBase(eventBase);
     registerSignalHandler(SIGINT);
     registerSignalHandler(SIGTERM);
+    runningPromise_.setValue();
   }
 
   void signalReceived(int sig) noexcept override {
@@ -145,8 +148,17 @@ class EdenServer::ThriftServerEventHandler
     edenServer_->stop();
   }
 
+  /**
+   * Return a Future that will be fulfilled once the thrift server is bound to
+   * its socket and is ready to accept conenctions.
+   */
+  Future<Unit> getThriftRunningFuture() {
+    return runningPromise_.getFuture();
+  }
+
  private:
   EdenServer* edenServer_{nullptr};
+  folly::Promise<Unit> runningPromise_;
 };
 
 EdenServer::EdenServer(
@@ -307,7 +319,17 @@ void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
       [this] { unloadInodes(); }, timeout);
 }
 
-Future<Unit> EdenServer::prepare() {
+Future<Unit> EdenServer::prepare(std::shared_ptr<StartupLogger> logger) {
+  return prepareImpl(std::move(logger))
+      .ensure(
+          // Mark the server state as RUNNING once we finish setting up the
+          // mount points. Even if an error occurs we still transition to the
+          // running state. The prepare() code will log an error with more
+          // details if we do fail to set up some of the mount points.
+          [this] { runningState_.wlock()->state = RunState::RUNNING; });
+}
+
+Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   bool doingTakeover = false;
   if (!acquireEdenLock()) {
     // Another edenfs process is already running.
@@ -327,7 +349,7 @@ Future<Unit> EdenServer::prepare() {
   // Store a pointer to the EventBase that will be used to drive
   // the main thread.  The runServer() code will end up driving this EventBase.
   mainEventBase_ = folly::EventBaseManager::get()->getEventBase();
-  createThriftServer();
+  auto thriftRunningFuture = createThriftServer();
 
   // Start the PrivHelper client, using our main event base to drive its I/O
   serverState_->getPrivHelper()->attachEventBase(mainEventBase_);
@@ -351,10 +373,17 @@ Future<Unit> EdenServer::prepare() {
   // If we are gracefully taking over from an existing edenfs process,
   // receive its lock, thrift socket, and mount points now.
   // This will shut down the old process.
-  const auto takeoverPath = edenDir_ + "takeover"_pc;
+  const auto takeoverPath = edenDir_ + PathComponentPiece{kTakeoverSocketName};
   TakeoverData takeoverData;
   if (doingTakeover) {
+    logger->log(
+        "Requesting existing edenfs process to gracefully "
+        "transfer its mount points...");
     takeoverData = takeoverMounts(takeoverPath);
+    logger->log(
+        "Received takeover information for ",
+        takeoverData.mountPoints.size(),
+        " mount points");
 
     // Take over the eden lock file and the thrift server socket.
     lockFile_ = std::move(takeoverData.lockFile);
@@ -365,21 +394,30 @@ Future<Unit> EdenServer::prepare() {
   }
 
   if (FLAGS_local_storage_engine_unsafe == "memory") {
-    XLOG(DBG2) << "Creating new memory store";
+    logger->log("Creating new memory store.");
     localStore_ = make_shared<MemoryLocalStore>();
   } else if (FLAGS_local_storage_engine_unsafe == "sqlite") {
     const auto path = edenDir_ + RelativePathPiece{kSqlitePath};
-    XLOG(DBG2) << "opening local Sqlite store " << path;
+    logger->log("Opening local SQLite store ", path, "...");
+    folly::stop_watch<std::chrono::milliseconds> watch;
     localStore_ = make_shared<SqliteLocalStore>(path);
-    XLOG(DBG2) << "done opening local Sqlite store";
+    logger->log(
+        "Opened SQLite store in ",
+        watch.elapsed().count() / 1000.0,
+        " seconds.");
   } else if (FLAGS_local_storage_engine_unsafe == "rocksdb") {
-    XLOG(DBG2) << "opening local RocksDB store";
+    logger->log("Opening local RocksDB store...");
+    folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = edenDir_ + RelativePathPiece{kRocksDBPath};
     localStore_ = make_shared<RocksDbLocalStore>(rocksPath);
-    XLOG(DBG2) << "done opening local RocksDB store";
+    logger->log(
+        "Opened RocksDB store in ",
+        watch.elapsed().count() / 1000.0,
+        " seconds.");
   } else {
-    XLOG(FATAL) << "invalid load_storage_engine flag: "
-                << FLAGS_local_storage_engine_unsafe;
+    throw std::runtime_error(folly::to<string>(
+        "invalid --local_storage_engine_unsafe flag: ",
+        FLAGS_local_storage_engine_unsafe));
   }
 
   // Start listening for graceful takeover requests
@@ -400,11 +438,19 @@ Future<Unit> EdenServer::prepare() {
                 AbsolutePathPiece{info.stateDirectory});
             return mount(std::move(initialConfig), std::move(info));
           })
-              .unit()
-              .onError([stateDirectory](const folly::exception_wrapper& ew) {
-                XLOG(ERR) << "Failed to perform takeover for " << stateDirectory
-                          << ": " << ew.what();
-                return makeFuture<Unit>(ew);
+              .then([logger, mountPath = info.mountPath](
+                        folly::Try<std::shared_ptr<EdenMount>>&& result) {
+                if (result.hasValue()) {
+                  logger->log("Successfully took over mount ", mountPath);
+                  return makeFuture();
+                } else {
+                  logger->warn(
+                      "Failed to perform takeover for ",
+                      mountPath,
+                      ": ",
+                      result.exception().what());
+                  return makeFuture<Unit>(std::move(result).exception());
+                }
               });
       mountFutures.push_back(std::move(mountFuture));
     }
@@ -413,9 +459,22 @@ Future<Unit> EdenServer::prepare() {
     try {
       dirs = ClientConfig::loadClientDirectoryMap(edenDir_);
     } catch (const std::exception& ex) {
-      XLOG(ERR) << "Could not parse config.json file: " << ex.what()
-                << " Skipping remount step.";
+      logger->warn(
+          "Could not parse config.json file: ",
+          ex.what(),
+          "\nSkipping remount step.");
+      return thriftRunningFuture.then(
+          [ew = folly::exception_wrapper(std::current_exception(), ex)] {
+            return makeFuture<Unit>(ew);
+          });
     }
+
+    if (dirs.empty()) {
+      logger->log("No mount points currently configured.");
+      return thriftRunningFuture;
+    }
+    logger->log("Remounting ", dirs.size(), " mount points...");
+
     for (const auto& client : dirs.items()) {
       auto mountFuture =
           makeFutureWith([&] {
@@ -429,41 +488,40 @@ Future<Unit> EdenServer::prepare() {
                 AbsolutePathPiece{mountInfo.edenClientPath});
             return mount(std::move(initialConfig));
           })
-              .unit()
-              .onError([mountPath = client.first.asString()](
-                           const folly::exception_wrapper& ew) {
-                XLOG(ERR) << "Failed to perform remount for " << mountPath
-                          << ": " << ew.what();
-                return makeFuture<Unit>(ew);
+              .then([logger, mountPath = client.first.asString()](
+                        folly::Try<std::shared_ptr<EdenMount>>&& result) {
+                if (result.hasValue()) {
+                  logger->log("Successfully remounted ", mountPath);
+                  return makeFuture();
+                } else {
+                  logger->warn(
+                      "Failed to remount ",
+                      mountPath,
+                      ": ",
+                      result.exception().what());
+                  return makeFuture<Unit>(std::move(result).exception());
+                }
               });
       mountFutures.push_back(std::move(mountFuture));
     }
   }
-  return folly::collectAll(mountFutures).unit();
+
+  // Return a future that will complete only when all mount points have started
+  // and the thrift server is also running.
+  return folly::collectAll(mountFutures)
+      .then([thriftFuture = std::move(thriftRunningFuture)]() mutable {
+        return std::move(thriftFuture);
+      });
 }
 
 // Defined separately in RunServer.cpp
 void runServer(const EdenServer& server);
 
 void EdenServer::run() {
-  // Acquire the eden lock, prepare the thrift server, and start our mounts
-  auto prepareFuture = prepare();
-
-  // Start listening for graceful takeover requests
-  const auto takeoverPath = edenDir_ + PathComponentPiece{kTakeoverSocketName};
-  takeoverServer_.reset(
-      new TakeoverServer(getMainEventBase(), takeoverPath, this));
-  takeoverServer_->start();
-
-  // Mark our state as RUNNING once we finish setting up the mount points.
-  // Even if an error occurs we still transition to the running state.
-  // The prepare() code will log an error with more details if we do fail to set
-  // up some of the mount points.
-  prepareFuture.ensure([this] {
-    runningState_.wlock()->state = RunState::RUNNING;
-    XLOG(INFO)
-        << "finished setting up mount points, transitioning to RUNNING state";
-  });
+  if (!lockFile_) {
+    throw std::runtime_error(
+        "prepare() must be called before EdenServer::run()");
+  }
 
   // Run the thrift server
   runServer(*this);
@@ -849,7 +907,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
   }
 }
 
-void EdenServer::createThriftServer() {
+Future<Unit> EdenServer::createThriftServer() {
   server_ = make_shared<ThriftServer>();
   server_->setMaxRequests(FLAGS_thrift_max_requests);
   server_->setNumIOWorkerThreads(FLAGS_thrift_num_workers);
@@ -868,6 +926,7 @@ void EdenServer::createThriftServer() {
 
   serverEventHandler_ = make_shared<ThriftServerEventHandler>(this);
   server_->setServerEventHandler(serverEventHandler_);
+  return serverEventHandler_->getThriftRunningFuture();
 }
 
 bool EdenServer::acquireEdenLock() {
