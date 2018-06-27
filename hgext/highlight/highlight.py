@@ -10,21 +10,18 @@
 
 from __future__ import absolute_import
 
-from mercurial import demandimport
+from mercurial import demandimport, encoding, util
+
 
 demandimport.ignore.extend(["pkgutil", "pkg_resources", "__main__"])
 
-from mercurial import encoding, util
 
 with demandimport.deactivated():
     import pygments
     import pygments.formatters
     import pygments.lexers
-    import pygments.plugin
     import pygments.util
 
-    for unused in pygments.plugin.find_plugin_lexers():
-        pass
 
 highlight = pygments.highlight
 ClassNotFound = pygments.util.ClassNotFound
