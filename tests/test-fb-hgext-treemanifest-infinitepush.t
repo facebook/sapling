@@ -352,6 +352,7 @@ treemanifest data for the public commits.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 085784c01c08:02c12aef64ff
+  1 trees fetched over * (glob)
   (run 'hg update' to get a working copy)
 
   $ hg log -G -T '{node|short} {phase} {desc}'
@@ -370,8 +371,3 @@ treemanifest data for the public commits.
   Node          Delta Base    Delta Length  Blob Size
   604088751312  000000000000  92            (missing)
   
-# Verify the non-infinitepush commit tree data is downloaded on demand
-  $ hg manifest -r 0
-  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
-  1 trees fetched over * (glob)
-  x

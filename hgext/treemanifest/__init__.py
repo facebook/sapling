@@ -317,6 +317,26 @@ def clientreposetup(repo):
 
 def wraprepo(repo):
     class treerepository(repo.__class__):
+        def transaction(self, *args, **kwargs):
+            tr = super(treerepository, self).transaction(*args, **kwargs)
+            tr.addpostclose("draftparenttreefetch", self._parenttreefetch)
+            return tr
+
+        def _parenttreefetch(self, tr):
+            """Prefetches draft commit parents after draft commits are added to the
+            repository. This is useful for avoiding expensive ondemand downloads when
+            accessing a draft commit for which we have the draft trees but not the
+            public trees."""
+            revs = tr.changes.get("revs")
+            if not revs:
+                return
+
+            # If any draft commits were added, prefetch their public parents.
+            draftparents = list(self.set("parents(%ld & draft()) & public()", revs))
+
+            if draftparents:
+                self.prefetchtrees([c.manifestnode() for c in draftparents])
+
         def prefetchtrees(self, mfnodes, basemfnodes=None):
             if not treeenabled(self.ui):
                 return
