@@ -10,9 +10,10 @@ by SCM wrappers
 
 ::
 
-    [logging]
+    [loggedconfigs]
     # list of config options to log
-    configoptions = section1.option1,section2.option2
+    name1 = section1.option1
+    name2 = section2.option2
 
 """
 
@@ -24,28 +25,25 @@ from mercurial import extensions, localrepo, registrar
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("logging", "configoptions", default=[])
-
 
 def _localrepoinit(orig, self, baseui, path=None, create=False):
     orig(self, baseui, path, create)
     reponame = self.ui.config("paths", "default")
     if reponame:
         reponame = os.path.basename(reponame)
-    configoptstolog = self.ui.configlist("logging", "configoptions")
     kwargs = {"repo": reponame}
 
     # The configs being read here are user defined, so we need to suppress
     # warnings telling us to register them.
     with self.ui.configoverride({("devel", "all-warnings"): False}):
-        for option in configoptstolog:
+        for targetname, option in self.ui.configitems("loggedconfigs"):
             split = option.split(".")
             if len(split) != 2:
                 continue
             section, name = split
             value = self.ui.config(section, name)
             if value is not None:
-                kwargs[name] = value
+                kwargs[targetname] = value
 
     obsstore_size = 0
     try:
