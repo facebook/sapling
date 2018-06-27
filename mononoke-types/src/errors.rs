@@ -16,8 +16,8 @@ pub enum ErrorKind {
     #[fail(display = "error while deserializing blob for '{}'", _0)] BlobDeserializeError(String),
     #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)] InvalidThrift(String, String),
     #[fail(display = "invalid changeset date: {}", _0)] InvalidDateTime(String),
-    #[fail(display = "not path-prefix-free: path '{}' is a prefix of '{}'", _0, _1)]
-    NotPathPrefixFree(MPath, MPath),
+    #[fail(display = "not path-conflict-free: changed path '{}' is a prefix of '{}'", _0, _1)]
+    NotPathConflictFree(MPath, MPath),
     #[fail(display = "invalid bonsai changeset: {}", _0)] InvalidBonsaiChangeset(String),
 }
 

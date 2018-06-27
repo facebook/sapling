@@ -27,7 +27,7 @@ use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use mercurial_types::{Entry, HgEntryId};
 use mercurial_types_mocks::manifest::{MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash::*;
-use mononoke_types::{FileType, MPath, RepoPath};
+use mononoke_types::{FileType, MPath, RepoPath, path::check_pcf};
 
 use fixtures::ManifestFixture;
 
@@ -127,6 +127,11 @@ fn compute_diff(
     let diff_stream = bonsai_diff(working_entry, p1_entry, p2_entry);
     let mut paths = diff_stream.collect().wait().expect("computing diff failed");
     paths.sort_unstable();
+
+    check_pcf(paths.iter().map(|diff_result| match diff_result {
+        BonsaiDiffResult::Changed(path, ..) => (path, true),
+        BonsaiDiffResult::Deleted(path) => (path, false),
+    })).expect("paths must be path-conflict-free");
 
     // TODO: check that the result is path-conflict-free
     paths

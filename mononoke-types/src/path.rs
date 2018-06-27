@@ -492,26 +492,28 @@ impl MPath {
     }
 }
 
-/// Check that a sorted list of MPaths is path-conflict-free. This means that
-/// no path in the list is a directory of another path.
-pub(crate) fn check_pcf<'a, I>(sorted_paths: I) -> Result<()>
+/// Check that a sorted list of (MPath, is_changed) pairs is path-conflict-free. This means that
+/// no changed path in the list (is_changed is true) is a directory of another path.
+pub fn check_pcf<'a, I>(sorted_paths: I) -> Result<()>
 where
-    I: IntoIterator<Item = &'a MPath>,
+    I: IntoIterator<Item = (&'a MPath, bool)>,
 {
-    let mut last_path: Option<&MPath> = None;
+    let mut last_changed_path: Option<&MPath> = None;
     // The key observation to make here is that in a sorted list, "foo" will always appear before
     // "foo/bar", which in turn will always appear before "foo1".
-    // The loop invariant is that last_path at any point has no prefixes in the list.
-    for path in sorted_paths {
-        if let Some(last_path) = last_path {
-            if last_path.is_prefix_of(path) {
-                bail_err!(ErrorKind::NotPathPrefixFree(
-                    last_path.clone(),
+    // The loop invariant is that last_changed_path at any point has no prefixes in the list.
+    for (path, is_changed) in sorted_paths {
+        if let Some(last_changed_path) = last_changed_path {
+            if last_changed_path.is_prefix_of(path) {
+                bail_err!(ErrorKind::NotPathConflictFree(
+                    last_changed_path.clone(),
                     path.clone(),
                 ));
             }
         }
-        last_path = Some(path);
+        if is_changed {
+            last_changed_path = Some(path);
+        }
     }
 
     Ok(())
@@ -790,26 +792,40 @@ mod test {
     }
 
     #[test]
-    fn ppf() {
-        check_pcf(&paths(vec!["foo", "bar"])).expect("unexpected Err - no directories");
-        check_pcf(&paths(vec!["foo", "foo/bar"]))
+    fn pcf() {
+        check_pcf_paths(vec![("foo", true), ("bar", true)])
+            .expect("unexpected Err - no directories");
+        check_pcf_paths(vec![("foo", true), ("foo/bar", true)])
             .expect_err("unexpected OK - foo is a prefix of foo/bar");
-        check_pcf(&paths(vec!["foo", "foo1"]))
+        check_pcf_paths(vec![("foo", false), ("foo/bar", true)])
+            .expect("unexpected Err - foo is a prefix of foo/bar but is_changed is false");
+        check_pcf_paths(vec![("foo", true), ("foo/bar", false)])
+            .expect_err("unexpected OK - foo/bar's is_changed state does not matter");
+        check_pcf_paths(vec![("foo", true), ("foo1", true)])
             .expect("unexpected Err - foo is not a path prefix of foo1");
-        check_pcf(&vec![]).expect("unexpected Err - empty path list has no prefixes");
+        check_pcf_paths::<_, &str>(vec![])
+            .expect("unexpected Err - empty path list has no prefixes");
         // '/' is ASCII 0x2f
-        let mut multi_paths = paths(vec!["foo/bar", "foo/bar\x2e", "foo/bar/baz", "foo/bar\x30"]);
-        // The input calls for a *sorted* list -- this is important.
-        multi_paths.sort_unstable();
-        check_pcf(&multi_paths).expect_err("unexpected OK - other paths and prefixes");
+        check_pcf_paths(vec![
+            ("foo/bar", true),
+            ("foo/bar\x2e", true),
+            ("foo/bar/baz", true),
+            ("foo/bar\x30", true),
+        ]).expect_err("unexpected OK - other paths and prefixes");
     }
 
-    fn paths<I, T>(paths: I) -> Vec<MPath>
+    fn check_pcf_paths<I, T>(paths: I) -> Result<()>
     where
-        I: IntoIterator<Item = T>,
+        I: IntoIterator<Item = (T, bool)>,
         MPath: TryFrom<T, Error = Error>,
     {
-        let res: Result<Vec<_>> = paths.into_iter().map(|path| path.try_into()).collect();
-        res.expect("invalid input path")
+        let res: Result<Vec<_>> = paths
+            .into_iter()
+            .map(|(path, is_changed)| Ok((path.try_into()?, is_changed)))
+            .collect();
+        let mut paths = res.expect("invalid input path");
+        // The input calls for a *sorted* list -- this is important.
+        paths.sort_unstable();
+        check_pcf(paths.iter().map(|(path, is_changed)| (path, *is_changed)))
     }
 }

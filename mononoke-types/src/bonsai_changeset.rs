@@ -64,9 +64,11 @@ impl BonsaiChangesetMut {
         }
 
         // Check that the list of file changes doesn't have any path conflicts.
-        path::check_pcf(self.file_changes.keys()).with_context(|_| {
-            ErrorKind::InvalidBonsaiChangeset("invalid file change list".into())
-        })?;
+        path::check_pcf(
+            self.file_changes
+                .iter()
+                .map(|(path, change)| (path, change.is_some())),
+        ).with_context(|_| ErrorKind::InvalidBonsaiChangeset("invalid file change list".into()))?;
 
         Ok(())
     }
@@ -236,7 +238,12 @@ impl Arbitrary for BonsaiChangeset {
             })
             .collect();
 
-        if path::check_pcf(file_changes.keys()).is_err() {
+        if path::check_pcf(
+            file_changes
+                .iter()
+                .map(|(path, change)| (path, change.is_some())),
+        ).is_err()
+        {
             // This is rare but is definitely possible. Retry in this case.
             Self::arbitrary(g)
         } else {

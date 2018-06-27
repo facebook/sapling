@@ -74,14 +74,15 @@ typedef list<MPathElement> MPath (hs.newtype)
 //   model. Note that Thrift does allow changing "required" to unqualified.
 // * MPath, Id and DateTime fields do not have a reasonable default value, so
 //   they must always be either "required" or "optional".
-// * The set of keys in file_changes is path-conflict-free (pcf): no path is a
-//   directory prefix of another path. So file_changes can never have
+// * The set of keys in file_changes is path-conflict-free (pcf): no changed
+//   path is a directory prefix of another path. So file_changes can never have
 //   "foo" and "foo/bar" together, but "foo" and "foo1" are OK.
 //   * If a directory is replaced by a file, the bonsai changeset will only
 //     record the file being added. The directory being deleted is implicit.
-//   * The same for a file being replaced by a directory.
-//   * Corollary: The file list in Mercurial is not ppf, so that would have to
-//     be computed separately from manifest diffs.
+//   * This only applies if the potential prefix is changed. Deleted files can
+//     have conflicting subdirectory entries recorded for them.
+//   * Corollary: The file list in Mercurial is not pcf, so the Bonsai diff is
+//     computed separately.
 struct BonsaiChangeset {
   1: required list<ChangesetId> parents,
   2: string author,
