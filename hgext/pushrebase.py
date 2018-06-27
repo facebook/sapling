@@ -60,6 +60,7 @@ from .remotefilelog import (
     historypack,
     metadatastore,
     shallowbundle,
+    shallowutil,
     wirepack,
 )
 
@@ -909,7 +910,7 @@ def packparthandler(op, part):
 
     temppackpath = tempfile.mkdtemp()
     op.records.add("tempdirs", temppackpath)
-    wirepack.receivepack(repo.ui, part, temppackpath)
+    shallowutil.receivepack(repo.ui, part, temppackpath)
     op.records.add("temp%spackdir" % part.params.get("category", ""), temppackpath)
     # TODO: clean up
 

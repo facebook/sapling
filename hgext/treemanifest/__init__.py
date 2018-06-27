@@ -1710,7 +1710,8 @@ def _registerbundle2parts():
             packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
         else:
             packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base, PACK_CATEGORY)
-        receivedhistory, receiveddata = wirepack.receivepack(repo.ui, part, packpath)
+
+        receivedhistory, receiveddata = shallowutil.receivepack(repo.ui, part, packpath)
 
         op.records.add(RECEIVEDNODE_RECORD, receiveddata)
 

@@ -504,7 +504,8 @@ class fileserverclient(object):
                     self.repo, constants.FILEPACK_CATEGORY
                 )
                 pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
-                receiveddata, receivedhistory = wirepack.receivepack(
+
+                receiveddata, receivedhistory = shallowutil.receivepack(
                     self.repo.ui, pipei, packpath
                 )
                 rcvd = len(receiveddata)
