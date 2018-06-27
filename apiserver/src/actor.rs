@@ -5,17 +5,23 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use actix::{Actor, Addr, Context, Handler, Message, Syn};
 use actix::dev::Request;
-use failure::{err_msg, Error, Result};
+use bytes::Bytes;
+use failure::{err_msg, Error, FutureFailureErrorExt, Result, ResultExt};
 use futures::{Future, IntoFuture};
+use futures_ext::BoxFuture;
 use slog::Logger;
 
 use blobrepo::BlobRepo;
-use mercurial_types::RepositoryId;
+use futures_ext::FutureExt;
+use mercurial_types::{HgNodeHash, RepositoryId};
 use metaconfig::repoconfig::{RepoConfig, RepoConfigs};
 use metaconfig::repoconfig::RepoType::{BlobManifold, BlobRocks};
+
+use errors::ErrorKind;
 
 #[derive(Debug)]
 pub enum MononokeRepoQuery {
@@ -23,7 +29,11 @@ pub enum MononokeRepoQuery {
 }
 
 impl Message for MononokeRepoQuery {
-    type Result = Result<String>;
+    type Result = Result<BoxFuture<MononokeRepoResponse, Error>>;
+}
+
+pub enum MononokeRepoResponse {
+    GetBlobContent { content: Bytes },
 }
 
 pub struct MononokeQuery {
@@ -36,7 +46,7 @@ impl Message for MononokeQuery {
 }
 
 pub struct MononokeRepoActor {
-    pub repo: BlobRepo,
+    repo: BlobRepo,
 }
 
 impl MononokeRepoActor {
@@ -78,13 +88,25 @@ impl Actor for MononokeRepoActor {
 }
 
 impl Handler<MononokeRepoQuery> for MononokeRepoActor {
-    type Result = Result<String>;
+    type Result = Result<BoxFuture<MononokeRepoResponse, Error>>;
 
     fn handle(&mut self, msg: MononokeRepoQuery, _ctx: &mut Context<Self>) -> Self::Result {
         use MononokeRepoQuery::*;
 
         match msg {
-            GetBlobContent { hash: _hash } => Ok("success!".to_string()),
+            GetBlobContent { hash } => HgNodeHash::from_str(&hash)
+                .with_context(|_| ErrorKind::InvalidInput(hash.clone()))
+                .map_err(From::from)
+                .map(|node_hash| {
+                    self.repo
+                        .get_file_content(&node_hash)
+                        .map(|content| MononokeRepoResponse::GetBlobContent {
+                            content: content.into_bytes(),
+                        })
+                        .with_context(move |_| ErrorKind::NotFound(hash.clone()))
+                        .from_err()
+                        .boxify()
+                }),
         }
     }
 }
@@ -121,22 +143,26 @@ impl Actor for MononokeActor {
 impl Handler<MononokeQuery> for MononokeActor {
     type Result = Result<Request<Syn, MononokeRepoActor, MononokeRepoQuery>>;
 
-    fn handle(&mut self, msg: MononokeQuery, _ctx: &mut Context<Self>) -> Self::Result {
-        match self.repos.get(&msg.repo) {
-            Some(repo) => Ok(repo.send(msg.kind)),
-            None => Err(err_msg("repo not found!")),
+    fn handle(
+        &mut self,
+        MononokeQuery { repo, kind, .. }: MononokeQuery,
+        _ctx: &mut Context<Self>,
+    ) -> Self::Result {
+        match self.repos.get(&repo) {
+            Some(repo) => Ok(repo.send(kind)),
+            None => Err(ErrorKind::NotFound(repo).into()),
         }
     }
 }
 
 pub fn unwrap_request(
     request: Request<Syn, MononokeActor, MononokeQuery>,
-) -> impl Future<Item = String, Error = Error> {
-    request.map_err(From::from).and_then(|result| {
-        result.map_err(From::from).into_future().and_then(|result| {
-            result
-                .map_err(From::from)
-                .and_then(|result| result.map_err(From::from).into_future())
-        })
-    })
+) -> impl Future<Item = MononokeRepoResponse, Error = Error> {
+    request
+        .into_future()
+        .from_err()
+        .and_then(|result| result)
+        .and_then(|result| result.map_err(From::from))
+        .and_then(|result| result)
+        .and_then(|result| result)
 }

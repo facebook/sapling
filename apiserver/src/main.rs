@@ -10,9 +10,12 @@ extern crate actix;
 extern crate actix_web;
 extern crate blobrepo;
 extern crate bookmarks;
+extern crate bytes;
 extern crate clap;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate futures_ext;
 extern crate mercurial_types;
 extern crate metaconfig;
 #[macro_use]
@@ -24,13 +27,14 @@ extern crate slog_term;
 extern crate time_ext;
 
 mod actor;
+mod errors;
 mod middleware;
 
 use std::path::Path;
 use std::str::FromStr;
 
 use actix::{Actor, Addr, Syn};
-use actix_web::{http, server, App, HttpRequest, HttpResponse};
+use actix_web::{http, server, App, Body, HttpRequest, HttpResponse};
 use actix_web::error::ResponseError;
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
@@ -45,7 +49,8 @@ use mercurial_types::RepositoryId;
 use mercurial_types::nodehash::HgChangesetId;
 use metaconfig::RepoConfigs;
 
-use actor::{unwrap_request, MononokeActor, MononokeQuery, MononokeRepoQuery};
+use actor::{unwrap_request, MononokeActor, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse};
+use errors::ErrorKind;
 
 mod parameters {
     pub const REPO: &str = "repo";
@@ -75,8 +80,12 @@ fn get_blob_content(
     });
 
     unwrap_request(request)
-        .map(|response| HttpResponse::Ok().content_type("text/plain").body(response))
-        .map_err(|e| e.compat())
+        .map(|response| match response {
+            MononokeRepoResponse::GetBlobContent { content } => HttpResponse::Ok()
+                .content_type("application/octet-stream")
+                .body(Body::Binary(content.into())),
+        })
+        .map_err(|e| -> ErrorKind { e.into() })
 }
 
 fn setup_logger(debug: bool) -> Logger {
