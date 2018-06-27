@@ -447,7 +447,7 @@ TEST_F(PrivHelperTest, detachEventBase) {
   auto result = client_->fuseMount("/foo/bar");
   EXPECT_FALSE(result.isReady());
   filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
-  auto resultFile = result.get(1s);
+  auto resultFile = std::move(result).get(1s);
 
   // Detach the PrivHelper from the clientIoThread_'s EventBase, and perform a
   // call using a separate local EventBase
@@ -466,7 +466,7 @@ TEST_F(PrivHelperTest, detachEventBase) {
     if (result.isReady()) {
       ADD_FAILURE() << "unmount request was immediately ready";
       // Call get() so it will throw if the command failed.
-      result.get();
+      std::move(result).get();
       return;
     }
 
@@ -492,7 +492,7 @@ TEST_F(PrivHelperTest, detachEventBase) {
   auto unmountResult = client_->fuseUnmount("/foo/bar");
   EXPECT_FALSE(unmountResult.isReady());
   unmountPromise.setValue();
-  unmountResult.get(1s);
+  std::move(unmountResult).get(1s);
 }
 
 TEST_F(PrivHelperTest, setLogFile) {

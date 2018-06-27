@@ -428,13 +428,13 @@ void PrivHelper::setLogFileBlocking(folly::File logFile) {
 
   auto future = setLogFile(std::move(logFile));
   if (future.isReady()) {
-    future.get();
+    std::move(future).get();
     return;
   }
 
   future.ensure([&evb] { evb.terminateLoopSoon(); });
   evb.loopForever();
-  future.get();
+  std::move(future).get();
 }
 
 unique_ptr<PrivHelper> startPrivHelper(const UserInfo& userInfo) {
