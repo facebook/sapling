@@ -111,9 +111,9 @@ Add commit with a directory
   $ echo 'repotype="blob:rocks"' >> $TESTTMP/config
   $ echo 'repoid=0' >> $TESTTMP/config
   $ echo "[ssl]" >> $TESTTMP/config
-  $ echo "cert=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
-  $ echo "private_key=\"$TESTDIR/edenservertest.key\"" >> $TESTTMP/config
-  $ echo "ca_pem_file=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
+  $ echo "cert=\"$TESTDIR/testcert.crt\"" >> $TESTTMP/config
+  $ echo "private_key=\"$TESTDIR/testcert.key\"" >> $TESTTMP/config
+  $ echo "ca_pem_file=\"$TESTDIR/testcert.crt\"" >> $TESTTMP/config
  
   $ blobimport $TESTTMP/repo/.hg $TESTTMP/blobrepo --debug
   $ grep -Eo 'inserted: .*' < $TESTTMP/blobimport.out | sort
@@ -127,7 +127,7 @@ Add commit with a directory
   $ edenserver --config-file $TESTTMP/config
 
 Curl and debugdata output should match
-  $ alias curl="curl --cert $TESTDIR/edenservertest.crt --key $TESTDIR/edenservertest.key --cacert $TESTDIR/edenservertest.crt"
+  $ alias curl="curl --cert $TESTDIR/testcert.crt --key $TESTDIR/testcert.key --cacert $TESTDIR/testcert.crt"
 
 Wait at most 4 secs until server is ready
   $ for i in `seq 1 40`; do
