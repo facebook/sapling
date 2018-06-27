@@ -38,6 +38,9 @@ test cat renamed file
   $ curl http://127.0.0.1:$PORT/repo/blob/$HGHASH2 2> /dev/null > output
   $ diff output - <<< $TEST_CONTENT
 
+  $ curl http://127.0.0.1:$PORT/status 2> /dev/null
+  ok (no-eol)
+
   $ curl -w "\n%{http_code}" http://127.0.0.1:$PORT/repo/blob/0000000000000000000000000000000000000000 2> /dev/null
   0000000000000000000000000000000000000000 not found
   404 (no-eol)

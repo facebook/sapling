@@ -215,6 +215,11 @@ fn main() -> Result<()> {
     let server = server::new(move || {
         App::with_state(state.clone())
             .middleware(middleware::SLogger::new(actix_logger.clone()))
+            .route(
+                "/status",
+                http::Method::GET,
+                |_: HttpRequest<HttpServerState>| HttpResponse::Ok().body("ok"),
+            )
             .scope("/{repo}", |repo| {
                 repo.resource("/blob/{hash}", |r| {
                     r.method(http::Method::GET).a(get_blob_content)
