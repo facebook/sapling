@@ -110,6 +110,14 @@ pub trait FutureExt: Future + Sized {
         Box::new(self)
     }
 
+    fn left_future<B>(self) -> future::Either<Self, B> {
+        future::Either::A(self)
+    }
+
+    fn right_future<A>(self) -> future::Either<A, Self> {
+        future::Either::B(self)
+    }
+
     fn timeout(self, dur: Duration) -> Deadline<Self> {
         Deadline::new(self, Instant::now() + dur)
     }
