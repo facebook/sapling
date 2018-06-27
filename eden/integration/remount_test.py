@@ -13,6 +13,9 @@ import os
 from .lib import edenclient, testcase
 
 
+NOT_MOUNTED_DIR_LIST = ["README_EDEN.txt"]
+
+
 @testcase.eden_repo_test
 class RemountTest(testcase.EdenRepoTest):
     def populate_repo(self) -> None:
@@ -27,8 +30,7 @@ class RemountTest(testcase.EdenRepoTest):
 
     def test_remount_basic(self) -> None:
         # Mount multiple clients
-        for i in range(5):
-            self.eden.clone(self.repo_name, self.mount + "-" + str(i))
+        self._clone_checkouts(5)
 
         self.eden.shutdown()
         self.eden.start()
@@ -79,11 +81,9 @@ class RemountTest(testcase.EdenRepoTest):
                     self.assertEqual("hola\n", f.read())
 
     def test_partial_unmount(self) -> None:
-        # Mount multiple clients
-        for i in range(5):
-            self.eden.clone(self.repo_name, self.mount + "-" + str(i))
+        self._clone_checkouts(5)
 
-        # Unmount a client
+        # Remove the main checkout
         self.eden.remove(self.mount)
         self.assertFalse(os.path.exists(self.mount))
 
@@ -99,9 +99,7 @@ class RemountTest(testcase.EdenRepoTest):
         self.assertFalse(os.path.exists(self.mount))
 
     def test_restart_twice(self) -> None:
-        # Clone multiple checkouts
-        for i in range(5):
-            self.eden.clone(self.repo_name, self.mount + "-" + str(i))
+        self._clone_checkouts(5)
 
         self.eden.shutdown()
         self.eden.start()
@@ -151,8 +149,7 @@ class RemountTest(testcase.EdenRepoTest):
         self.assertEqual(1, context.exception.returncode)
 
     def test_empty_config_json(self) -> None:
-        for i in range(5):
-            self.eden.clone(self.repo_name, self.mount + "-" + str(i))
+        self._clone_checkouts(5)
 
         # Clear the contents of config.json file
         open(os.path.join(self.eden_dir, "config.json"), "w").close()
@@ -160,17 +157,10 @@ class RemountTest(testcase.EdenRepoTest):
         self.eden.shutdown()
         self.eden.start()
 
-        # Verify that no clients are remounted. No errors should be thrown here
-        for i in range(5):
-            entries = sorted(os.listdir(self.mount + "-" + str(i)))
-            self.assertEqual([], entries)
-
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual([], entries)
+        self._verify_not_mounted(5)
 
     def test_deleted_config_json(self) -> None:
-        for i in range(5):
-            self.eden.clone(self.repo_name, self.mount + "-" + str(i))
+        self._clone_checkouts(5)
 
         # Delete the config.json file
         os.remove(os.path.join(self.eden_dir, "config.json"))
@@ -178,17 +168,10 @@ class RemountTest(testcase.EdenRepoTest):
         self.eden.shutdown()
         self.eden.start()
 
-        # Verify that no clients are remounted. No errors should be thrown here
-        for i in range(5):
-            entries = sorted(os.listdir(self.mount + "-" + str(i)))
-            self.assertEqual([], entries)
-
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual([], entries)
+        self._verify_not_mounted(5)
 
     def test_incorrect_config_json(self) -> None:
-        for i in range(5):
-            self.eden.clone(self.repo_name, self.mount + "-" + str(i))
+        self._clone_checkouts(5)
 
         # Reload config.json file with incorrect data
         config_data = {
@@ -203,21 +186,14 @@ class RemountTest(testcase.EdenRepoTest):
         self.eden.shutdown()
         self.eden.start()
 
-        # Verify that no clients are remounted. No errors should be thrown here
-        for i in range(5):
-            entries = sorted(os.listdir(self.mount + "-" + str(i)))
-            self.assertEqual([], entries)
-
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual([], entries)
+        self._verify_not_mounted(5)
 
         # Incorrect mount paths from config.json should not have been created
         for incorrect_mount in config_data:
             self.assertFalse(os.path.isdir(incorrect_mount))
 
     def test_bad_config_json(self) -> None:
-        for i in range(5):
-            self.eden.clone(self.repo_name, self.mount + "-" + str(i))
+        self._clone_checkouts(5)
 
         # Reload config.json file with random data
         with open(os.path.join(self.eden_dir, "config.json"), "w") as f:
@@ -225,11 +201,18 @@ class RemountTest(testcase.EdenRepoTest):
 
         self.eden.shutdown()
         self.eden.start()
+        self._verify_not_mounted(5)
 
+    def _clone_checkouts(self, num_mounts):
+        for i in range(num_mounts):
+            self.eden.clone(self.repo_name, self.mount + "-" + str(i))
+
+    def _verify_not_mounted(self, num_mounts, main_mounted=False):
         # Verify that no clients are remounted. No errors should be thrown here
-        for i in range(5):
+        for i in range(num_mounts):
             entries = sorted(os.listdir(self.mount + "-" + str(i)))
-            self.assertEqual([], entries)
+            self.assertEqual(NOT_MOUNTED_DIR_LIST, entries)
 
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual([], entries)
+        if not main_mounted:
+            entries = sorted(os.listdir(self.mount))
+            self.assertEqual(NOT_MOUNTED_DIR_LIST, entries)

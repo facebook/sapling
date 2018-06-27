@@ -516,7 +516,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
 
             try:
                 config.destroy_mount(mount)
-            except EdenService.EdenError as ex:
+            except Exception as ex:
                 print_stderr(f"error deleting configuration for {mount}: {ex}")
                 exit_code = 1
                 # Continue around the loop removing any other mount points

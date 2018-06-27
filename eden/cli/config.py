@@ -62,6 +62,26 @@ SUPPORTED_REPOS = DEFAULT_REVISION.keys()
 
 REPO_FOR_EXTENSION = {".git": "git", ".hg": "hg"}
 
+# Create a readme file with this name in the mount point directory.
+# The intention is for this to contain instructions telling users what to do if their
+# Eden mount is not currently mounted.
+NOT_MOUNTED_README_PATH = "README_EDEN.txt"
+# The path under /etc/eden where site-specific contents for the not-mounted README can
+# be found.
+NOT_MOUNTED_SITE_SPECIFIC_README_PATH = "NOT_MOUNTED_README.txt"
+# The default contents for the not-mounted README if a site-specific template
+# is not found.
+NOT_MOUNTED_DEFAULT_TEXT = """\
+This directory is the mount point for a virtual checkout managed by Eden.
+
+If you are seeing this file that means that your repository checkout is not
+currently mounted.  This could either be because the edenfs daemon is not
+currently running, or it simply does not have this checkout mounted yet.
+
+You can run "eden doctor" to check for problems with Eden and try to have it
+automatically remount your checkouts.
+"""
+
 assert sorted(REPO_FOR_EXTENSION.values()) == sorted(SUPPORTED_REPOS)
 
 
@@ -296,28 +316,8 @@ Do you want to run `eden mount %s` instead?"""
                 % (path, path)
             )
 
-        # Make sure that path is a valid destination for the clone.
-        st = None
-        try:
-            st = os.stat(path)
-        except OSError as ex:
-            if ex.errno == errno.ENOENT:
-                # Note that this could also throw if path is /a/b/c and /a
-                # exists, but it is a file.
-                util.mkdir_p(path)
-            else:
-                raise
-
-        # Note that st will be None if `mkdir_p` was run in the catch block.
-        if st:
-            if stat.S_ISDIR(st.st_mode):
-                # If an existing directory was specified, then verify it is
-                # empty.
-                if len(os.listdir(path)) > 0:
-                    raise OSError(errno.ENOTEMPTY, os.strerror(errno.ENOTEMPTY), path)
-            else:
-                # Throw because it exists, but it is not a directory.
-                raise OSError(errno.ENOTDIR, os.strerror(errno.ENOTDIR), path)
+        # Create the mount point directory
+        self._create_mount_point_dir(path)
 
         # Create client directory
         clients_dir = self._get_clients_dir()
@@ -351,6 +351,61 @@ Do you want to run `eden mount %s` instead?"""
 
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(path, os.path.basename(client_dir))
+
+    def _create_mount_point_dir(self, path: str) -> None:
+        # Create the directory
+        try:
+            os.makedirs(path)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+            # If the path already exists, make sure it is an empty directory.
+            # listdir() will throw its own error if the path is not a directory.
+            if len(os.listdir(path)) > 0:
+                raise OSError(errno.ENOTEMPTY, os.strerror(errno.ENOTEMPTY), path)
+
+        # Populate the directory with a file containing instructions about how to get
+        # Eden to remount the checkout.  If Eden is not running or does not have this
+        # checkout mounted users will see this file.
+        help_path = os.path.join(path, NOT_MOUNTED_README_PATH)
+        site_readme_path = os.path.join(
+            self._etc_eden_dir, NOT_MOUNTED_SITE_SPECIFIC_README_PATH
+        )
+        help_contents = NOT_MOUNTED_DEFAULT_TEXT
+        try:
+            # Create a symlink to the site-specific readme file.  This helps ensure that
+            # users will see up-to-date contents if the site-specific file is updated
+            # later.
+            with open(site_readme_path, "r") as f:
+                try:
+                    os.symlink(site_readme_path, help_path)
+                    help_contents = None
+                except OSError as ex:
+                    # EPERM can indicate that the underlying filesystem does not support
+                    # symlinks.  Read the contents from the site-specific file in this
+                    # case.  We will copy them into the file instead of making a
+                    # symlink.
+                    if ex.errno == errno.EPERM:
+                        help_contents = f.read()
+                    else:
+                        raise
+        except OSError as ex:
+            if ex.errno == errno.ENOENT:
+                # If the site-specific readme file does not exist use default contents
+                help_contents = NOT_MOUNTED_DEFAULT_TEXT
+            else:
+                raise
+
+        if help_contents is not None:
+            with open(help_path, "w") as f:
+                f.write(help_contents)
+                os.fchmod(f.fileno(), 0o444)
+
+        # Now make the directory read-only so that users and tools can't accidentally
+        # write files here while the checkout is unmounted.  This primarily helps ensure
+        # that build tools won't write to this directory if the directory is unmounted
+        # in the middle of a build.
+        os.chmod(path, 0o555)
 
     def _create_client_dir_for_path(self, clients_dir: str, path: str) -> str:
         """Tries to create a new subdirectory of clients_dir based on the
@@ -501,7 +556,19 @@ Do you want to run `eden mount %s` instead?"""
         shutil.rmtree(self._get_client_dir_for_mount_point(path))
         self._remove_path_from_directory_map(path)
 
-        # Delete the now empty mount point
+        # Delete the mount point
+        # It should normally contain the readme file that we put there, but nothing
+        # else.  We only delete these specific files for now rather than using
+        # shutil.rmtree() to avoid deleting files we did not create.
+        #
+        # We make the mount point read-only in "eden clone".
+        # Make it writable now so we can clean it up.
+        os.chmod(path, 0o755)
+        try:
+            os.unlink(os.path.join(path, NOT_MOUNTED_README_PATH))
+        except OSError as ex:
+            if ex.errno != errno.ENOENT:
+                raise
         os.rmdir(path)
 
     def check_health(self) -> HealthStatus:

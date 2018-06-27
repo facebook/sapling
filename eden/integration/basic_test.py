@@ -252,10 +252,14 @@ class BasicTest(testcase.EdenRepoTest):
             {self.mount: self.eden.CLIENT_ACTIVE, mount2: self.eden.CLIENT_INACTIVE},
             self.eden.list_cmd(),
         )
+        # The Eden README telling users what to do if their mount point is not mounted
+        # should be present in the original mount point directory.
+        self.assertTrue(os.path.exists(os.path.join(mount2, "README_EDEN.txt")))
 
         # Now use "eden remove" to destroy mount2
         self.eden.remove(mount2)
         self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, self.eden.list_cmd())
+        self.assertFalse(os.path.exists(mount2))
 
     def test_unmount_remount(self) -> None:
         # write a file into the overlay to test that it is still visible
@@ -273,7 +277,7 @@ class BasicTest(testcase.EdenRepoTest):
 
         self.assertFalse(self.eden.in_proc_mounts(self.mount))
         entries = set(os.listdir(self.mount))
-        self.assertEqual(set(), entries)
+        self.assertEqual({"README_EDEN.txt"}, entries)
 
         # Now remount it with the mount command
         self.eden.run_cmd("mount", self.mount)

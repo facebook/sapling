@@ -376,5 +376,26 @@ echo -n "$1" >> "{scratch_file}"
         )
         self.assertEqual("hola\n", util.read_all(os.path.join(tmp, "hello")))
 
+    def test_custom_not_mounted_readme(self) -> None:
+        """Test that "eden clone" creates a README file in the mount point directory
+        telling users what to do if their checkout is not currently mounted.
+        """
+        # Write a custom readme file in our etc config directory
+        custom_readme_text = "If this is broken bug joe@example.com\n"
+        with open(os.path.join(self.etc_eden_dir, "NOT_MOUNTED_README.txt"), "w") as f:
+            f.write(custom_readme_text)
+
+        # Perform a clone
+        new_mount = self._new_tmp_dir()
+        readme_path = os.path.join(new_mount, "README_EDEN.txt")
+        self.eden.run_cmd("clone", self.repo.path, new_mount)
+        self.assertEqual("hola\n", util.read_all(os.path.join(new_mount, "hello")))
+        self.assertFalse(os.path.exists(readme_path))
+
+        # Now unmount the checkout and make sure we see the readme
+        self.eden.run_cmd("unmount", new_mount)
+        self.assertFalse(os.path.exists(os.path.join(new_mount, "hello")))
+        self.assertEqual(custom_readme_text, util.read_all(readme_path))
+
     def _new_tmp_dir(self) -> str:
         return tempfile.mkdtemp(dir=self.tmp_dir)
