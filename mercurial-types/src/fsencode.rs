@@ -15,7 +15,7 @@ use mononoke_types::MPathElement;
 
 fn fsencode_filter<P: AsRef<[u8]>>(p: P, dotencode: bool) -> String {
     let p = p.as_ref();
-    let p = fnencode(p);
+    let p = fnencode(p, true);
     let p = auxencode(p, dotencode);
     String::from_utf8(p).expect("bad utf8")
 }
@@ -68,13 +68,14 @@ pub fn simple_fsencode(elements: &[MPathElement]) -> PathBuf {
     if let Some(basename) = file {
         let encoded_directory: PathBuf = directory_elements
             .map(|elem| {
-                let encoded_element = fnencode(direncode(elem.as_bytes()));
+                let encoded_element = fnencode(direncode(elem.as_bytes()), false);
                 String::from_utf8(encoded_element).expect("bad utf8")
             })
             .collect();
 
-        let encoded_basename =
-            PathBuf::from(String::from_utf8(fnencode(basename.as_bytes())).expect("bad utf8"));
+        let encoded_basename = PathBuf::from(
+            String::from_utf8(fnencode(basename.as_bytes(), false)).expect("bad utf8"),
+        );
         encoded_directory.join(encoded_basename)
     } else {
         PathBuf::new()
@@ -101,25 +102,41 @@ fn direncode(elem: &[u8]) -> Vec<u8> {
     ret
 }
 
-fn fnencode<E: AsRef<[u8]>>(elem: E) -> Vec<u8> {
-    let elem = elem.as_ref();
-    let mut ret = Vec::new();
+// If this is not for fncache then path elements longer than 255 in this encoding will not use
+// UPPERCASE -> _lowercase encoding, as per D8527475
+fn fnencode<E: AsRef<[u8]>>(elem: E, forfncache: bool) -> Vec<u8> {
+    fn fnencode_internal(elem: &[u8], encode_upper: bool) -> Vec<u8> {
+        let mut ret = Vec::new();
 
-    for e in elem {
-        let e = *e;
-        match e {
-            0...31 | 126...255 => hexenc(e, &mut ret),
-            b'\\' | b':' | b'*' | b'?' | b'"' | b'<' | b'>' | b'|' => hexenc(e, &mut ret),
-            b'A'...b'Z' => {
-                ret.push(b'_');
-                ret.push(e - b'A' + b'a');
+        for e in elem {
+            let e = *e;
+            match e {
+                0...31 | 126...255 => hexenc(e, &mut ret),
+                b'\\' | b':' | b'*' | b'?' | b'"' | b'<' | b'>' | b'|' => hexenc(e, &mut ret),
+                b'A'...b'Z' => {
+                    if encode_upper {
+                        ret.push(b'_');
+                        ret.push(e - b'A' + b'a');
+                    } else {
+                        ret.push(e);
+                    }
+                }
+                b'_' => ret.extend_from_slice(b"__"),
+                _ => ret.push(e),
             }
-            b'_' => ret.extend_from_slice(b"__"),
-            _ => ret.push(e),
         }
+
+        ret
     }
 
-    ret
+    let elem = elem.as_ref();
+    let ret = fnencode_internal(elem, true);
+
+    if !forfncache && ret.len() > 255 {
+        fnencode_internal(elem, false)
+    } else {
+        ret
+    }
 }
 
 fn lowerencode(elem: &[u8]) -> Vec<u8> {
@@ -448,5 +465,27 @@ mod test {
         let toencode: &[u8] = b".arcconfig.i";
         let expected = ".arcconfig.i";
         check_simple_fsencode(toencode, expected);
+    }
+
+    /// Tested as in D8527475
+    #[test]
+    fn test_very_long_simple_fsencode() {
+        let toencode = vec![b'X'; 128];
+        let expected = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+
+        check_simple_fsencode(&toencode, expected);
+
+        let toencode = vec![b'X'; 127];
+        let expected = "_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x";
+
+        check_simple_fsencode(&toencode, expected);
+
+        let mut toencode = vec![b'Z', b'/'];
+        toencode.append(&mut vec![b'X'; 128]);
+        toencode.push(b'/');
+        toencode.append(&mut vec![b'Y'; 127]);
+        let expected = "_z/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y";
+
+        check_simple_fsencode(&toencode, expected);
     }
 }
