@@ -63,13 +63,14 @@ Problematic extension: treemanifest only
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
 
-Problematic extension: hgsubversion
+Fine extension: hgsubversion
 
   $ newrepo
   __del__ called
   $ setconfig extensions.hgsubversion=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
+  __del__ called
 
 Problematic extension: sparse
 
