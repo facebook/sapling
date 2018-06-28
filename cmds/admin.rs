@@ -34,7 +34,7 @@ use futures::prelude::*;
 use futures::stream::iter_ok;
 use tokio_core::reactor::Core;
 
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, ManifoldArgs};
 use blobstore::{Blobstore, MemcacheBlobstore, MemcacheBlobstoreExt, PrefixBlobstore};
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
@@ -93,7 +93,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .args_from_usage(
             "--manifold-bucket [BUCKET] 'manifold bucket (default: mononoke_prod)'
              --manifold-prefix [PREFIX] 'manifold prefix (default empty)'
-             --xdb-tier        [TIER]   'database tier (default: xdb.mononoke_test_2)'
+             --db-address      [ADDRESS] 'database tier (default: xdb.mononoke_test_2)'
              --repo-id         [REPO_ID]'repo id (default: 0)'
              -d, --debug                'print debug level output'",
         )
@@ -101,57 +101,37 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(content_fetch)
 }
 
-struct ManifoldArgs<'a> {
-    bucket: &'a str,
-    prefix: &'a str,
-    xdb_tier: &'a str,
-    repo_id: RepositoryId,
-}
-
-impl<'a> ManifoldArgs<'a> {
-    fn parse(matches: &'a ArgMatches) -> Self {
-        let bucket = matches
-            .value_of("manifold-bucket")
-            .unwrap_or("mononoke_prod");
-        let prefix = matches.value_of("manifold-prefix").unwrap_or("");
-        let xdb_tier = matches
-            .value_of("xdb-tier")
-            .unwrap_or("xdb.mononoke_test_2");
-        let repo_id = matches
-            .value_of("repo-id")
-            .map(|id: &str| id.parse::<u32>().expect("expected repo id to be a u32"))
-            .unwrap_or(0);
-        let repo_id = RepositoryId::new(repo_id as i32);
-        Self {
-            bucket,
-            prefix,
-            xdb_tier,
-            repo_id,
-        }
+fn parse_manifold_args<'a>(matches: &'a ArgMatches) -> ManifoldArgs {
+    let bucket = matches
+        .value_of("manifold-bucket")
+        .unwrap_or("mononoke_prod")
+        .to_string();
+    let prefix = matches
+        .value_of("manifold-prefix")
+        .unwrap_or("")
+        .to_string();
+    let db_address = matches
+        .value_of("db-address")
+        .unwrap_or("xdb.mononoke_test_2")
+        .to_string();
+    ManifoldArgs {
+        bucket,
+        prefix,
+        db_address,
+        blobstore_cache_size: 1_000_000,
+        changesets_cache_size: 1_000_000,
+        filenodes_cache_size: 1_000_000,
+        io_threads: 5,
+        max_concurrent_requests_per_io_thread: MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
     }
 }
 
-fn create_blobrepo<'a>(logger: &'a Logger, manifold_args: ManifoldArgs<'a>) -> BlobRepo {
-    let ManifoldArgs {
-        bucket,
-        prefix,
-        xdb_tier,
-        repo_id,
-    } = manifold_args;
-    let io_threads = 5;
-    let default_cache_size = 1000000;
-    BlobRepo::new_manifold(
-        logger.clone(),
-        bucket,
-        prefix,
-        repo_id,
-        xdb_tier,
-        default_cache_size,
-        default_cache_size,
-        default_cache_size,
-        io_threads,
-        MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
-    ).expect("cannot create blobrepo")
+fn create_blobrepo<'a>(
+    logger: &'a Logger,
+    manifold_args: &ManifoldArgs,
+    repo_id: RepositoryId,
+) -> BlobRepo {
+    BlobRepo::new_manifold(logger.clone(), manifold_args, repo_id).expect("cannot create blobrepo")
 }
 
 fn fetch_content_from_manifest(
@@ -238,7 +218,12 @@ fn main() {
         slog::Logger::root(drain, o![])
     };
 
-    let manifold_args = ManifoldArgs::parse(&matches);
+    let manifold_args = parse_manifold_args(&matches);
+    let repo_id = matches
+        .value_of("repo-id")
+        .map(|id: &str| id.parse::<u32>().expect("expected repo id to be a u32"))
+        .unwrap_or(0);
+    let repo_id = RepositoryId::new(repo_id as i32);
 
     let mut core = Core::new().unwrap();
     let remote = core.remote();
@@ -251,15 +236,15 @@ fn main() {
             let no_prefix = sub_m.is_present("no-prefix");
 
             let blobstore = ManifoldBlob::new_with_prefix(
-                manifold_args.bucket,
-                manifold_args.prefix,
+                &manifold_args.bucket,
+                &manifold_args.prefix,
                 vec![&remote],
                 MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
             );
 
             match (use_memcache, no_prefix) {
                 (None, false) => {
-                    let blobstore = PrefixBlobstore::new(blobstore, manifold_args.repo_id.prefix());
+                    let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
                     blobstore.get(key.clone()).boxify()
                 }
                 (None, true) => blobstore.get(key.clone()).boxify(),
@@ -269,7 +254,7 @@ fn main() {
                         "manifold",
                         manifold_args.bucket.as_ref(),
                     ).unwrap();
-                    let blobstore = PrefixBlobstore::new(blobstore, manifold_args.repo_id.prefix());
+                    let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
                     get_memcache(&blobstore, key.clone(), mode)
                 }
                 (Some(mode), true) => {
@@ -308,7 +293,7 @@ fn main() {
             let rev = sub_m.value_of("CHANGESET_ID").unwrap();
             let path = sub_m.value_of("PATH").unwrap();
 
-            let repo = create_blobrepo(&logger, manifold_args);
+            let repo = create_blobrepo(&logger, &manifold_args, repo_id);
             fetch_content(&mut core, logger.clone(), Arc::new(repo), rev, path)
                 .and_then(|content| {
                     match content {

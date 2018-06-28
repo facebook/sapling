@@ -40,7 +40,7 @@ use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
 
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, ManifoldArgs};
 use mercurial::RevlogRepo;
 use mercurial_types::RepositoryId;
 
@@ -161,19 +161,31 @@ fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
 
             BlobRepo::new_manifold(
                 logger.new(o!["BlobRepo:TestManifold" => manifold_bucket.to_owned()]),
-                manifold_bucket,
-                matches
-                    .value_of("manifold-prefix")
-                    .unwrap_or("new_blobimport_test"),
+                &ManifoldArgs {
+                    bucket: manifold_bucket.to_string(),
+                    prefix: matches
+                        .value_of("manifold-prefix")
+                        .unwrap_or("new_blobimport_test")
+                        .to_string(),
+                    db_address: matches
+                        .value_of("db-address")
+                        .expect("--db-address is not specified")
+                        .to_string(),
+                    blobstore_cache_size: get_usize(&matches, "blobstore-cache-size", 100_000_000),
+                    changesets_cache_size: get_usize(
+                        &matches,
+                        "changesets-cache-size",
+                        100_000_000,
+                    ),
+                    filenodes_cache_size: get_usize(&matches, "filenodes-cache-size", 100_000_000),
+                    io_threads: get_usize(&matches, "io-thread-num", 5),
+                    max_concurrent_requests_per_io_thread: get_usize(
+                        &matches,
+                        "max-concurrent-request-per-io-thread",
+                        5,
+                    ),
+                },
                 repo_id,
-                matches
-                    .value_of("db-address")
-                    .expect("--db-address is not specified"),
-                get_usize(&matches, "blobstore-cache-size", 100_000_000),
-                get_usize(&matches, "changesets-cache-size", 100_000_000),
-                get_usize(&matches, "filenodes-cache-size", 100_000_000),
-                get_usize(&matches, "io-thread-num", 5),
-                get_usize(&matches, "max-concurrent-request-per-io-thread", 5),
             ).expect("failed to create manifold blobrepo")
         }
         bad => panic!("unexpected blobstore type: {}", bad),

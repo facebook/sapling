@@ -87,6 +87,31 @@ define_stats! {
 /// 2. It ensures that all possible blobrepos use a prefix.
 pub type RepoBlobstore = PrefixBlobstore<Arc<Blobstore>>;
 
+/// Arguments for setting up a Manifold blobstore.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ManifoldArgs {
+    /// Bucket of the backing Manifold blobstore to connect to
+    pub bucket: String,
+    /// Prefix to be prepended to all the keys. In prod it should be ""
+    pub prefix: String,
+    /// Identifies the SQL database to connect to.
+    pub db_address: String,
+    /// Size of the blobstore cache.
+    /// Currently we need to set separate cache size for each cache (blobstore, filenodes etc)
+    /// TODO(stash): have single cache size for all caches
+    pub blobstore_cache_size: usize,
+    /// Size of the changesets cache.
+    pub changesets_cache_size: usize,
+    /// Size of the filenodes cache.
+    pub filenodes_cache_size: usize,
+    /// Number of IO threads the blobstore uses.
+    pub io_threads: usize,
+    /// This is a (hopefully) short term hack to overcome the problem of overloading Manifold.
+    /// It limits the number of simultaneous requests that can be sent from a single io thread
+    /// If not set then default value is used.
+    pub max_concurrent_requests_per_io_thread: usize,
+}
+
 pub struct BlobRepo {
     logger: Logger,
     blobstore: RepoBlobstore,
@@ -205,21 +230,10 @@ impl BlobRepo {
         ))
     }
 
-    pub fn new_manifold<T: ToString + AsRef<str>>(
-        logger: Logger,
-        bucket: T,
-        prefix: &str,
-        repoid: RepositoryId,
-        db_address: &str,
-        blobstore_cache_size: usize,
-        changesets_cache_size: usize,
-        filenodes_cache_size: usize,
-        thread_num: usize,
-        max_concurrent_requests_per_io_thread: usize,
-    ) -> Result<Self> {
+    pub fn new_manifold(logger: Logger, args: &ManifoldArgs, repoid: RepositoryId) -> Result<Self> {
         // TODO(stash): T28429403 use local region first, fallback to master if not found
         let connection_params = get_connection_params(
-            db_address.to_string(),
+            &args.db_address,
             InstanceRequirement::Master,
             None,
             Some(ProxyRequirement::Forbidden),
@@ -228,7 +242,7 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
         let mut io_remotes = vec![];
-        for i in 0..thread_num {
+        for i in 0..args.io_threads {
             let (sender, recv) = mpsc::channel();
             let builder = thread::Builder::new().name(format!("blobstore_io_{}", i));
             builder
@@ -249,22 +263,22 @@ impl BlobRepo {
             io_remotes.push(remote);
         }
         let blobstore = ManifoldBlob::new_with_prefix(
-            bucket.to_string(),
-            prefix,
+            args.bucket.clone(),
+            &args.prefix,
             io_remotes.iter().collect(),
-            max_concurrent_requests_per_io_thread,
+            args.max_concurrent_requests_per_io_thread,
         );
-        let blobstore = MemcacheBlobstore::new(blobstore, "manifold", bucket.as_ref())?;
-        let blobstore = MemoizedBlobstore::new(blobstore, usize::MAX, blobstore_cache_size);
+        let blobstore = MemcacheBlobstore::new(blobstore, "manifold", args.bucket.as_ref())?;
+        let blobstore = MemoizedBlobstore::new(blobstore, usize::MAX, args.blobstore_cache_size);
 
-        let filenodes = MysqlFilenodes::open(db_address, DEFAULT_INSERT_CHUNK_SIZE)
+        let filenodes = MysqlFilenodes::open(&args.db_address, DEFAULT_INSERT_CHUNK_SIZE)
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
-        let filenodes = CachingFilenodes::new(Arc::new(filenodes), filenodes_cache_size);
+        let filenodes = CachingFilenodes::new(Arc::new(filenodes), args.filenodes_cache_size);
 
-        let changesets = MysqlChangesets::open(db_address)
+        let changesets = MysqlChangesets::open(&args.db_address)
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
-        let changesets = CachingChangests::new(Arc::new(changesets), changesets_cache_size);
+        let changesets = CachingChangests::new(Arc::new(changesets), args.changesets_cache_size);
 
         Ok(Self::new(
             logger,

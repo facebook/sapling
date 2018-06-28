@@ -56,7 +56,7 @@ use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
 
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, ManifoldArgs};
 use bytes::Bytes;
 use clap::App;
 use futures::{stream, Future, IntoFuture, Stream};
@@ -550,22 +550,24 @@ fn main() {
             let blobstore_cache_size = 100_000_000;
             let changesets_cache_size = 100_000_000;
             let filenodes_cache_size = 100_000_000;
-            let io_thread_num = 5;
+            let io_threads = 5;
             let max_concurrent_requests_per_io_thread = 4;
             start_server(
                 &config.addr,
                 config.reponame,
                 BlobRepo::new_manifold(
                     repo_logger,
-                    bucket,
-                    &config.manifold_prefix.unwrap_or("".into()),
+                    &ManifoldArgs {
+                        bucket: bucket.to_string(),
+                        prefix: config.manifold_prefix.unwrap_or("".into()),
+                        db_address: config.db_address.expect("db tier needs to be specified"),
+                        blobstore_cache_size,
+                        changesets_cache_size,
+                        filenodes_cache_size,
+                        io_threads,
+                        max_concurrent_requests_per_io_thread,
+                    },
                     RepositoryId::new(config.repoid),
-                    &config.db_address.expect("db tier needs to be specified"),
-                    blobstore_cache_size,
-                    changesets_cache_size,
-                    filenodes_cache_size,
-                    io_thread_num,
-                    max_concurrent_requests_per_io_thread,
                 ).expect("couldn't open blob state"),
                 root_logger.clone(),
                 config.ssl,

@@ -35,7 +35,7 @@ extern crate linear;
 #[cfg(test)]
 extern crate tempdir;
 
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, ManifoldArgs};
 use clap::{App, ArgMatches};
 use failure::{Error, Result};
 use futures::{failed, Future};
@@ -124,15 +124,17 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
     let default_cache_size = 1000000;
     BlobRepo::new_manifold(
         logger.clone(),
-        bucket,
-        prefix,
+        &ManifoldArgs {
+            bucket: bucket.to_string(),
+            prefix: prefix.to_string(),
+            db_address: xdb_tier.to_string(),
+            blobstore_cache_size: default_cache_size,
+            changesets_cache_size: default_cache_size,
+            filenodes_cache_size: default_cache_size,
+            io_threads,
+            max_concurrent_requests_per_io_thread: MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
+        },
         RepositoryId::new(0),
-        xdb_tier,
-        default_cache_size,
-        default_cache_size,
-        default_cache_size,
-        io_threads,
-        MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
     ).expect("failed to create blobrepo instance")
 }
 

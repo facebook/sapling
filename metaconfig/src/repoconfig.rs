@@ -15,7 +15,7 @@ use std::str::from_utf8;
 use failure::FutureFailureErrorExt;
 use futures::{future, Future, IntoFuture};
 
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, ManifoldArgs};
 use bookmarks::Bookmark;
 use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
@@ -83,31 +83,10 @@ pub enum RepoType {
     BlobRocks(PathBuf),
     /// Blob repository with path pointing to the directory where a server socket is going to be.
     BlobManifold {
-        /// Bucket of the backing Manifold blobstore to connect to
-        manifold_bucket: String,
-        /// Prefix to be prepended to all the keys. In prod it should be ""
-        prefix: String,
+        /// The arguments used to connect to Manifold.
+        args: ManifoldArgs,
         /// Path is used to connect Mononoke server to hgcli
         path: PathBuf,
-        /// db_address is a string that identifies the sql db to connect to.
-        db_address: String,
-        /// Size of the blobstore cache. If not set in the config, then cache size is set to
-        /// a default value.
-        /// Currently we need to set separate cache size for each cache (blobstore, filenodes etc)
-        /// TODO(stash): have single cache size for all caches
-        blobstore_cache_size: usize,
-        /// Size of the changesets cache. If not set in the config, then cache size is set to
-        /// a default value.
-        changesets_cache_size: usize,
-        /// Size of the filenodes cache. If not set in the config, then cache size is set to
-        /// a default value.
-        filenodes_cache_size: usize,
-        /// Blobstore io threads to use. Set to a default value if not set in config
-        io_thread_num: usize,
-        /// This is a (hopefully) short term hack to overcome the problem of overloading Manifold.
-        /// It limits the number of simultaneous requests that can be sent from a single io thread
-        /// If not set then default value is used.
-        max_concurrent_requests_per_io_thread: usize,
     },
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database, and a log-normal delay is applied to access to simulate a remote store
@@ -291,16 +270,18 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
                 ))?;
                 let db_address = this.db_address.expect("xdb tier was not specified");
                 RepoType::BlobManifold {
-                    manifold_bucket,
-                    prefix: this.manifold_prefix.unwrap_or("".into()),
+                    args: ManifoldArgs {
+                        bucket: manifold_bucket,
+                        prefix: this.manifold_prefix.unwrap_or("".into()),
+                        db_address,
+                        blobstore_cache_size: this.blobstore_cache_size.unwrap_or(100_000_000),
+                        changesets_cache_size: this.changesets_cache_size.unwrap_or(100_000_000),
+                        filenodes_cache_size: this.filenodes_cache_size.unwrap_or(100_000_000),
+                        io_threads: this.io_thread_num.unwrap_or(5),
+                        max_concurrent_requests_per_io_thread:
+                            this.max_concurrent_requests_per_io_thread.unwrap_or(4),
+                    },
                     path: this.path,
-                    db_address,
-                    blobstore_cache_size: this.blobstore_cache_size.unwrap_or(100_000_000),
-                    changesets_cache_size: this.changesets_cache_size.unwrap_or(100_000_000),
-                    filenodes_cache_size: this.filenodes_cache_size.unwrap_or(100_000_000),
-                    io_thread_num: this.io_thread_num.unwrap_or(5),
-                    max_concurrent_requests_per_io_thread:
-                        this.max_concurrent_requests_per_io_thread.unwrap_or(4),
                 }
             }
             TestBlobDelayRocks => RepoType::TestBlobDelayRocks(

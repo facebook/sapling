@@ -80,28 +80,7 @@ impl MononokeRepoActor {
         let repoid = RepositoryId::new(config.repoid);
         let repo = match config.repotype {
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid),
-            BlobManifold {
-                ref manifold_bucket,
-                ref prefix,
-                ref db_address,
-                blobstore_cache_size,
-                changesets_cache_size,
-                filenodes_cache_size,
-                io_thread_num,
-                max_concurrent_requests_per_io_thread,
-                ..
-            } => BlobRepo::new_manifold(
-                logger.clone(),
-                manifold_bucket,
-                &prefix,
-                repoid,
-                &db_address,
-                blobstore_cache_size,
-                changesets_cache_size,
-                filenodes_cache_size,
-                io_thread_num,
-                max_concurrent_requests_per_io_thread,
-            ),
+            BlobManifold { ref args, .. } => BlobRepo::new_manifold(logger.clone(), args, repoid),
             _ => Err(err_msg("Unsupported repo type.")),
         };
 

@@ -86,28 +86,7 @@ impl OpenableRepoType for RepoType {
         let ret = match *self {
             Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
-            BlobManifold {
-                ref manifold_bucket,
-                ref prefix,
-                ref db_address,
-                ref blobstore_cache_size,
-                ref changesets_cache_size,
-                ref filenodes_cache_size,
-                ref io_thread_num,
-                ref max_concurrent_requests_per_io_thread,
-                ..
-            } => BlobRepo::new_manifold(
-                logger,
-                manifold_bucket,
-                &prefix,
-                repoid,
-                &db_address,
-                *blobstore_cache_size,
-                *changesets_cache_size,
-                *filenodes_cache_size,
-                *io_thread_num,
-                *max_concurrent_requests_per_io_thread,
-            )?,
+            BlobManifold { ref args, .. } => BlobRepo::new_manifold(logger, args, repoid)?,
             TestBlobDelayRocks(ref path, mean, stddev) => {
                 // We take in an arithmetic mean and stddev, and deduce a log normal
                 let mean = mean as f64 / 1_000_000.0;
