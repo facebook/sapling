@@ -86,13 +86,14 @@ Fine extension: sparse
   0000000000000000000000000000000000000000
   __del__ called
 
-Problematic extension: commitcloud
+Fine extension: commitcloud
 
   $ newrepo
   __del__ called
   $ setconfig extensions.infinitepush= extensions.infinitepushbackup= extensions.commitcloud=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
+  __del__ called
 
 Fine extension: sampling
 
@@ -103,7 +104,7 @@ Fine extension: sampling
   0000000000000000000000000000000000000000
   __del__ called
 
-Problematic: With many extensions
+Somehow problematic: With many extensions
 
   $ newrepo
   __del__ called
@@ -217,7 +218,15 @@ Problematic: With many extensions
   > EOF
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
+  __del__ called
+
   $ touch x
+
+ (this behaves differently with buck / setup.py build)
+
   $ hg ci -m x -A x
+  __del__ called (?)
+
   $ hg log -r . -T '{manifest % "{node}"}\n'
   c2ffc254676c538a75532e7b6ebbbccaf98e2545
+  __del__ called
