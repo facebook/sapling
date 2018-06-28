@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(try_from)]
 
 extern crate actix;
 extern crate actix_web;
@@ -18,6 +19,7 @@ extern crate futures;
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate metaconfig;
+extern crate mononoke_types;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -38,7 +40,6 @@ use std::str::FromStr;
 
 use actix::{Actor, Addr, Syn};
 use actix_web::{http, server, App, HttpRequest, HttpResponse, State};
-use actix_web::error::ResponseError;
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::Arg;
@@ -53,11 +54,13 @@ use mercurial_types::nodehash::HgChangesetId;
 use metaconfig::RepoConfigs;
 
 use actor::{unwrap_request, MononokeActor, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse};
+use errors::ErrorKind;
 
 #[derive(Deserialize)]
 struct QueryInfo {
     repo: String,
-    hash: String,
+    changeset: String,
+    path: String,
 }
 
 // The argument of this function is because the trait `actix_web::FromRequest` is implemented
@@ -67,11 +70,12 @@ struct QueryInfo {
 // [1] https://docs.rs/actix-web/0.6.11/actix_web/trait.FromRequest.html#impl-FromRequest%3CS%3E-3
 fn get_blob_content(
     (state, info): (State<HttpServerState>, actix_web::Path<QueryInfo>),
-) -> impl Future<Item = MononokeRepoResponse, Error = impl ResponseError> {
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     unwrap_request(state.mononoke.send(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetBlobContent {
-            hash: info.hash.clone(),
+            changeset: info.changeset.clone(),
+            path: info.path.clone(),
         },
     }))
 }
@@ -209,7 +213,7 @@ fn main() -> Result<()> {
                 |_: HttpRequest<HttpServerState>| HttpResponse::Ok().body("ok"),
             )
             .scope("/{repo}", |repo| {
-                repo.resource("/blob/{hash}", |r| {
+                repo.resource("/blob/{changeset}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(get_blob_content)
                 })
             })

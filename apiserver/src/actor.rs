@@ -5,33 +5,37 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::result::Result as StdResult;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use actix::{Actor, Addr, Context, Handler, Message, Syn};
 use actix::dev::Request;
 use actix_web::{Body, HttpRequest, HttpResponse, Responder};
 use bytes::Bytes;
-use failure::{err_msg, Error, FutureFailureErrorExt, Result, ResultExt};
+use failure::{err_msg, Error, FutureFailureErrorExt, ResultExt};
 use futures::{Future, IntoFuture};
 use futures_ext::BoxFuture;
 use slog::Logger;
 
 use blobrepo::BlobRepo;
 use futures_ext::FutureExt;
-use mercurial_types::{HgNodeHash, RepositoryId};
+use mercurial_types::{Changeset, HgChangesetId, RepositoryId};
+use mercurial_types::manifest::Content;
 use metaconfig::repoconfig::{RepoConfig, RepoConfigs};
 use metaconfig::repoconfig::RepoType::{BlobManifold, BlobRocks};
+use mononoke_types::MPath;
 
 use errors::ErrorKind;
 
 #[derive(Debug)]
 pub enum MononokeRepoQuery {
-    GetBlobContent { hash: String },
+    GetBlobContent { path: String, changeset: String },
 }
 
 impl Message for MononokeRepoQuery {
-    type Result = Result<BoxFuture<MononokeRepoResponse, Error>>;
+    type Result = Result<BoxFuture<MononokeRepoResponse, Error>, Error>;
 }
 
 pub enum MononokeRepoResponse {
@@ -63,18 +67,19 @@ pub struct MononokeQuery {
 }
 
 impl Message for MononokeQuery {
-    type Result = Result<Request<Syn, MononokeRepoActor, MononokeRepoQuery>>;
+    type Result = Result<Request<Syn, MononokeRepoActor, MononokeRepoQuery>, Error>;
 }
 
 pub struct MononokeRepoActor {
-    repo: BlobRepo,
+    repo: Arc<BlobRepo>,
+    logger: Logger,
 }
 
 impl MononokeRepoActor {
-    fn new(logger: Logger, config: RepoConfig) -> Result<Self> {
+    fn new(logger: Logger, config: RepoConfig) -> Result<Self, Error> {
         let repoid = RepositoryId::new(config.repoid);
         let repo = match config.repotype {
-            BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid),
+            BlobRocks(ref path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid),
             BlobManifold {
                 ref manifold_bucket,
                 ref prefix,
@@ -86,7 +91,7 @@ impl MononokeRepoActor {
                 max_concurrent_requests_per_io_thread,
                 ..
             } => BlobRepo::new_manifold(
-                logger,
+                logger.clone(),
                 manifold_bucket,
                 &prefix,
                 repoid,
@@ -100,7 +105,57 @@ impl MononokeRepoActor {
             _ => Err(err_msg("Unsupported repo type.")),
         };
 
-        repo.map(|repo| Self { repo })
+        repo.map(|repo| Self {
+            repo: Arc::new(repo),
+            logger: logger,
+        })
+    }
+
+    fn get_blob_content(
+        &self,
+        changeset: String,
+        path: String,
+    ) -> Result<BoxFuture<MononokeRepoResponse, Error>, Error> {
+        // steps to get blob content by path
+        // 1. Convert manifest to HgNodeHash
+        // 2. Convert path to RepoPath / MPath
+        // 3. Lookup NodeHashId in Manifest using path
+        // 4. Unwrap FileContents
+        // 5. Send!
+        debug!(
+            self.logger,
+            "Retrieving file content of {} at changeset {}.", path, changeset
+        );
+        let mpath = MPath::try_from(&*path)
+            .with_context(|_| ErrorKind::InvalidInput("path".into()))
+            .map_err(|e| -> Error { e.into() })?;
+
+        let changesetid = HgChangesetId::from_str(&changeset)
+            .with_context(|_| ErrorKind::InvalidInput(changeset))
+            .map_err(|e| -> Error { e.into() })?;
+
+        let repo = self.repo.clone();
+
+        Ok(repo.get_changeset_by_changesetid(&changesetid)
+            .with_context(move |_| ErrorKind::NotFound(changesetid.to_string()))
+            .from_err()
+            .map(|changeset| changeset.manifestid().clone().into_nodehash())
+            .and_then(move |manifestid| repo.find_path_in_manifest(Some(mpath), manifestid))
+            .from_err()
+            .and_then({
+                let path = path.clone();
+                |content| content.ok_or_else(move || ErrorKind::NotFound(path.to_string()))
+            })
+            .and_then(move |content| match content {
+                Content::File(content)
+                | Content::Executable(content)
+                | Content::Symlink(content) => Ok(MononokeRepoResponse::GetBlobContent {
+                    content: content.into_bytes(),
+                }),
+                _ => Err(ErrorKind::InvalidInput(path.to_string())),
+            })
+            .from_err()
+            .boxify())
     }
 }
 
@@ -109,25 +164,13 @@ impl Actor for MononokeRepoActor {
 }
 
 impl Handler<MononokeRepoQuery> for MononokeRepoActor {
-    type Result = Result<BoxFuture<MononokeRepoResponse, Error>>;
+    type Result = Result<BoxFuture<MononokeRepoResponse, Error>, Error>;
 
     fn handle(&mut self, msg: MononokeRepoQuery, _ctx: &mut Context<Self>) -> Self::Result {
         use MononokeRepoQuery::*;
 
         match msg {
-            GetBlobContent { hash } => HgNodeHash::from_str(&hash)
-                .with_context(|_| ErrorKind::InvalidInput(hash.clone()))
-                .map_err(From::from)
-                .map(|node_hash| {
-                    self.repo
-                        .get_file_content(&node_hash)
-                        .map(|content| MononokeRepoResponse::GetBlobContent {
-                            content: content.into_bytes(),
-                        })
-                        .with_context(move |_| ErrorKind::NotFound(hash.clone()))
-                        .from_err()
-                        .boxify()
-                }),
+            GetBlobContent { changeset, path } => self.get_blob_content(changeset, path),
         }
     }
 }
@@ -162,7 +205,7 @@ impl Actor for MononokeActor {
 }
 
 impl Handler<MononokeQuery> for MononokeActor {
-    type Result = Result<Request<Syn, MononokeRepoActor, MononokeRepoQuery>>;
+    type Result = Result<Request<Syn, MononokeRepoActor, MononokeRepoQuery>, Error>;
 
     fn handle(
         &mut self,
