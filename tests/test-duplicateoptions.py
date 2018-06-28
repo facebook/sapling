@@ -6,15 +6,16 @@ from mercurial import commands, extensions, ui as uimod
 
 
 ignore = {
-    b"highlight",
-    b"win32text",
-    b"factotum",
-    b"remotenames",
-    b"lz4revlog",
-    b"hgsql",
-    b"shelve",
-    b"fbconduit",
     b"",
+    b"factotum",
+    b"fbconduit",
+    b"globalrevs",
+    b"hgsql",
+    b"highlight",
+    b"lz4revlog",
+    b"remotenames",
+    b"shelve",
+    b"win32text",
 }
 
 if os.name != "nt":

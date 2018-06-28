@@ -349,6 +349,8 @@ Test extension help:
        gitlookup     extension that will look up hashes from an hg-git map file
                      over the wire.
        gitrevset     map a git hash to a Mercurial hash:
+       globalrevs    extension for providing strictly increasing revision
+                     numbers
        gpg           commands to sign and verify changesets
        grepdiff      (no help text available)
        grpcheck      check if the user is in specified groups
