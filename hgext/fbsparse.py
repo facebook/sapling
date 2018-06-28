@@ -996,7 +996,7 @@ def _wraprepo(ui, repo):
             self.invalidatesignaturecache()
 
         def prunetemporaryincludes(self):
-            if repo.vfs.exists("tempsparse"):
+            if self.vfs.exists("tempsparse"):
                 origstatus = self.status()
                 modified, added, removed, deleted, a, b, c = origstatus
                 if modified or added or removed or deleted:
@@ -1028,7 +1028,7 @@ def _wraprepo(ui, repo):
                     "cleaned up %d temporarily added file(s) from the "
                     "sparse checkout\n"
                 )
-                ui.status(msg % len(tempincludes))
+                self.ui.status(msg % len(tempincludes))
 
     if "dirstate" in repo._filecache:
         repo.dirstate.repo = repo

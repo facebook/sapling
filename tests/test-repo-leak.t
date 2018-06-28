@@ -77,13 +77,14 @@ Fine extension: hgsubversion
   0000000000000000000000000000000000000000
   __del__ called
 
-Problematic extension: sparse
+Fine extension: sparse
 
   $ newrepo
   __del__ called
   $ setconfig extensions.fbsparse=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
+  __del__ called
 
 Problematic extension: commitcloud
 
