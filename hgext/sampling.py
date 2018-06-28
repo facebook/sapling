@@ -16,6 +16,7 @@
 # The configuration details can be found in the documentation of ui.log below
 import json
 import os
+import weakref
 
 from mercurial import encoding, pycompat, registrar, util
 
@@ -140,28 +141,34 @@ def gettopdir(repo):
         return None
 
 
+def telemetry(reporef):
+    repo = reporef()
+    if repo is None:
+        return
+    try:
+        ui = repo.ui
+        if util.safehasattr(repo, "requirements"):
+            ui.log(
+                "requirements",
+                generaldelta=str("generaldelta" in repo.requirements).lower(),
+            )
+            ui.log(
+                "requirements",
+                remotefilelog=str("remotefilelog" in repo.requirements).lower(),
+            )
+
+        maxrss = util.getmaxrss()
+
+        # Log maxrss from within the hg process. The wrapper logs its own
+        # value (which is incorrect if chg is used) so the column is
+        # prefixed.
+        ui.log("command_info", hg_maxrss=maxrss)
+    except Exception as e:
+        ui.log("command_info", sampling_failure=e.message)
+
+
 def reposetup(ui, repo):
-    @repo.ui.atexit
-    def telemetry():
-        try:
-            if util.safehasattr(repo, "requirements"):
-                ui.log(
-                    "requirements",
-                    generaldelta=str("generaldelta" in repo.requirements).lower(),
-                )
-                ui.log(
-                    "requirements",
-                    remotefilelog=str("remotefilelog" in repo.requirements).lower(),
-                )
-
-            maxrss = util.getmaxrss()
-
-            # Log maxrss from within the hg process. The wrapper logs its own
-            # value (which is incorrect if chg is used) so the column is
-            # prefixed.
-            ui.log("command_info", hg_maxrss=maxrss)
-        except Exception as e:
-            ui.log("command_info", sampling_failure=e.message)
+    repo.ui.atexit(telemetry, weakref.ref(repo))
 
     # Log other information that we don't want to log in the wrapper, if it's
     # cheap to do so.
