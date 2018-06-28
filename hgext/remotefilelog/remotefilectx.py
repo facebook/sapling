@@ -8,10 +8,13 @@ from __future__ import absolute_import
 
 import collections
 import time
+
+from mercurial import ancestor, context, error, extensions, phases, util
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import context, util, error, ancestor, phases, extensions
+
 from . import shallowutil
+
 
 propertycache = util.propertycache
 conduit = None
@@ -272,33 +275,41 @@ class remotefilectx(context.filectx):
 
         repo.ui.log("linkrevfixup", "adjusting linknode", **commonlogkwargs)
 
-        pc = repo._phasecache
-        seenpublic = False
-        iteranc = cl.ancestors(revs, inclusive=inclusive)
-        for ancrev in iteranc:
-            # First, check locally-available history.
-            lnode = self._nodefromancrev(ancrev, cl, mfl, path, fnode)
-            if lnode is not None:
-                return lnode
+        # Adjustlinknodes accesses the file node in the manifest for a variety
+        # of manifests. Let's prevent us from downloading large numbers of trees
+        # by temporarily limiting the fetch depth to 1.
+        with repo.ui.timesection("adjustlinknode"), repo.ui.configoverride(
+            {("treemanifest", "fetchdepth"): 1}
+        ):
+            pc = repo._phasecache
+            seenpublic = False
+            iteranc = cl.ancestors(revs, inclusive=inclusive)
+            for ancrev in iteranc:
+                # First, check locally-available history.
+                lnode = self._nodefromancrev(ancrev, cl, mfl, path, fnode)
+                if lnode is not None:
+                    return lnode
 
-            # adjusting linknode can be super-slow. To mitigate the issue
-            # we use two heuristics: calling fastlog and forcing remotefilelog
-            # prefetch
-            if not seenpublic and pc.phase(repo, ancrev) == phases.public:
-                # If the commit is public and fastlog is enabled for this repo
-                # then we can try to fetch the right linknode via fastlog.
-                if repo.ui.configbool("fastlog", "enabled"):
-                    lnode = self._linknodeviafastlog(
-                        repo, path, ancrev, fnode, cl, mfl, commonlogkwargs
+                # adjusting linknode can be super-slow. To mitigate the issue
+                # we use two heuristics: calling fastlog and forcing remotefilelog
+                # prefetch
+                if not seenpublic and pc.phase(repo, ancrev) == phases.public:
+                    # If the commit is public and fastlog is enabled for this repo
+                    # then we can try to fetch the right linknode via fastlog.
+                    if repo.ui.configbool("fastlog", "enabled"):
+                        lnode = self._linknodeviafastlog(
+                            repo, path, ancrev, fnode, cl, mfl, commonlogkwargs
+                        )
+                        if lnode:
+                            return lnode
+                    # If fastlog is not enabled and/or failed, let's try
+                    # prefetching
+                    lnode = self._forceprefetch(
+                        repo, path, fnode, revs, commonlogkwargs
                     )
                     if lnode:
                         return lnode
-                # If fastlog is not enabled and/or failed, let's try
-                # prefetching
-                lnode = self._forceprefetch(repo, path, fnode, revs, commonlogkwargs)
-                if lnode:
-                    return lnode
-                seenpublic = True
+                    seenpublic = True
 
         return linknode
 
