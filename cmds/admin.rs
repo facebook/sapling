@@ -23,23 +23,25 @@ extern crate mononoke_types;
 extern crate slog;
 extern crate slog_glog_fmt;
 
+use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
-use failure::Error;
+use failure::{Error, Result};
 use futures::future;
 use futures::prelude::*;
 use futures::stream::iter_ok;
 use tokio_core::reactor::Core;
 
-use blobrepo::{BlobRepo, RawNodeBlob};
+use blobrepo::BlobRepo;
 use blobstore::{Blobstore, MemcacheBlobstore, MemcacheBlobstoreExt, PrefixBlobstore};
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
-use mercurial_types::{Changeset, HgChangesetId, MPath, MPathElement, Manifest, RepositoryId};
+use mercurial_types::{Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope,
+                      HgManifestEnvelope, MPath, MPathElement, Manifest, RepositoryId};
 use mercurial_types::manifest::Content;
-use mononoke_types::{BlobstoreBytes, FileContents};
+use mononoke_types::{BlobstoreBytes, BlobstoreValue, FileContents};
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 
@@ -56,7 +58,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long("decode-as")
                 .short("d")
                 .takes_value(true)
-                .possible_values(&["raw-node-blob"])
+                .possible_values(&["auto", "changeset", "manifest", "file", "contents"])
                 .required(false)
                 .help("if provided decode the value"),
         )
@@ -258,9 +260,9 @@ fn main() {
             match (use_memcache, no_prefix) {
                 (None, false) => {
                     let blobstore = PrefixBlobstore::new(blobstore, manifold_args.repo_id.prefix());
-                    blobstore.get(key).boxify()
+                    blobstore.get(key.clone()).boxify()
                 }
-                (None, true) => blobstore.get(key).boxify(),
+                (None, true) => blobstore.get(key.clone()).boxify(),
                 (Some(mode), false) => {
                     let blobstore = MemcacheBlobstore::new(
                         blobstore,
@@ -268,7 +270,7 @@ fn main() {
                         manifold_args.bucket.as_ref(),
                     ).unwrap();
                     let blobstore = PrefixBlobstore::new(blobstore, manifold_args.repo_id.prefix());
-                    get_memcache(&blobstore, key, mode)
+                    get_memcache(&blobstore, key.clone(), mode)
                 }
                 (Some(mode), true) => {
                     let blobstore = MemcacheBlobstore::new(
@@ -276,17 +278,26 @@ fn main() {
                         "manifold",
                         manifold_args.bucket.as_ref(),
                     ).unwrap();
-                    get_memcache(&blobstore, key, mode)
+                    get_memcache(&blobstore, key.clone(), mode)
                 }
             }.map(move |value| {
                 println!("{:?}", value);
                 if let Some(value) = value {
-                    match decode_as {
-                        Some(val) => {
-                            if val == "raw-node-blob" {
-                                println!("{:?}", RawNodeBlob::deserialize(&value.into()));
-                            }
+                    let decode_as = decode_as.as_ref().and_then(|val| {
+                        let val = val.as_str();
+                        if val == "auto" {
+                            detect_decode(&key, &logger)
+                        } else {
+                            Some(val)
                         }
+                    });
+
+                    match decode_as {
+                        Some("changeset") => display(&HgChangesetEnvelope::from_blob(value.into())),
+                        Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
+                        Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
+                        // TODO: (rain1) T30974137 add a better way to print out file contents
+                        Some("contents") => println!("{:?}", FileContents::from_blob(value.into())),
                         _ => (),
                     }
                 }
@@ -353,5 +364,39 @@ fn main() {
             println!("{:?}", err);
             ::std::process::exit(1);
         }
+    }
+}
+
+fn detect_decode(key: &str, logger: &Logger) -> Option<&'static str> {
+    // Use a simple heuristic to figure out how to decode this key.
+    if key.find("hgchangeset.").is_some() {
+        info!(logger, "Detected changeset key");
+        Some("changeset")
+    } else if key.find("hgmanifest.").is_some() {
+        info!(logger, "Detected manifest key");
+        Some("manifest")
+    } else if key.find("hgfilenode.").is_some() {
+        info!(logger, "Detected file key");
+        Some("file")
+    } else if key.find("content.").is_some() {
+        info!(logger, "Detected content key");
+        Some("contents")
+    } else {
+        warn!(
+            logger,
+            "Unable to detect how to decode this blob based on key";
+            "key" => key,
+        );
+        None
+    }
+}
+
+fn display<T>(res: &Result<T>)
+where
+    T: fmt::Display + fmt::Debug,
+{
+    match res {
+        Ok(val) => println!("---\n{}---", val),
+        err => println!("{:?}", err),
     }
 }

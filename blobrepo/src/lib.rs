@@ -18,8 +18,6 @@ extern crate db;
 extern crate lazy_static;
 extern crate serde;
 #[macro_use]
-extern crate serde_derive;
-#[macro_use]
 extern crate slog;
 #[macro_use]
 extern crate stats;
@@ -64,7 +62,6 @@ mod manifest;
 mod memory_manifest;
 mod repo;
 mod repo_commit;
-mod utils;
 
 pub use errors::*;
 
@@ -76,7 +73,6 @@ pub use repo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, CreateChangeset, Uplo
 pub use repo_commit::ChangesetHandle;
 // TODO: This is exported for testing - is this the right place for it?
 pub use repo_commit::compute_changed_files;
-pub use utils::RawNodeBlob;
 
 pub mod internal {
     pub use memory_manifest::{MemoryManifestEntry, MemoryRootManifest};
