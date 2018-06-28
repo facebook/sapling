@@ -8,8 +8,7 @@ use zstd_sys::{ZSTD_DCtx_setMaxWindowSize, ZSTD_compressBound, ZSTD_compress_adv
                ZSTD_decompress_usingDict, ZSTD_findDecompressedSize, ZSTD_frameParameters,
                ZSTD_freeCCtx, ZSTD_freeDCtx, ZSTD_getErrorName, ZSTD_isError, ZSTD_parameters,
                ZSTD_strategy_ZSTD_fast, ZSTD_CHAINLOG_MIN, ZSTD_CONTENTSIZE_ERROR,
-               ZSTD_CONTENTSIZE_UNKNOWN, ZSTD_HASHLOG_MIN, ZSTD_SEARCHLOG_MIN,
-               ZSTD_TARGETLENGTH_MIN, ZSTD_WINDOWLOG_MIN};
+               ZSTD_CONTENTSIZE_UNKNOWN, ZSTD_HASHLOG_MIN, ZSTD_SEARCHLOG_MIN, ZSTD_WINDOWLOG_MIN};
 
 // They are complex "#define"s that are not exposed by bindgen automatically
 const ZSTD_WINDOWLOG_MAX: u32 = 30;
@@ -49,7 +48,7 @@ pub fn diff(base: &[u8], data: &[u8]) -> io::Result<Vec<u8>> {
         hashLog: hlog,
         searchLog: ZSTD_SEARCHLOG_MIN, // useless using "fast" strategy
         searchLength: 7,               // level 1 default (see ZSTD_defaultCParameters)
-        targetLength: ZSTD_TARGETLENGTH_MIN, // useless for "fast" strategy
+        targetLength: 0, // enable huffman compression of literals (for "fast" strategy)
         strategy: ZSTD_strategy_ZSTD_fast,
     };
     let fparams = ZSTD_frameParameters {
