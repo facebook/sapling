@@ -14,7 +14,6 @@
 // as per the documentation.
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-#include <limits>
 #include <memory>
 #include <string>
 
@@ -27,6 +26,7 @@
 
 #define FILENAME_BUFFER_SIZE 16348
 #define FLAG_SIZE 1
+#define DEFAULT_FETCH_DEPTH 65536
 
 // clang-format off
 // clang thinks that PyObject_HEAD should be on the same line as the next line
@@ -1493,7 +1493,7 @@ static PyObject* treemanifest_walksubtrees(
     }
 
     auto rootPath = std::string("");
-    auto depth = std::numeric_limits<int>::max();
+    auto depth = DEFAULT_FETCH_DEPTH;
     return (PyObject*)subtreeiter_create(
         rootPath,
         self->tm.getRootManifest(),
@@ -1512,7 +1512,7 @@ static PyObject* treemanifest_walksubdirtrees(
   PyObject* keyObj = NULL;
   PyObject* storeObj = NULL;
   PyObject* compareTrees = NULL;
-  int depth = std::numeric_limits<int>::max();
+  int depth = DEFAULT_FETCH_DEPTH;
   static char const* kwlist[] = {"key", "store", "comparetrees", "depth", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(
