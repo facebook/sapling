@@ -188,22 +188,8 @@ def cachemanifest(ui, repo, *pats, **opts):
     cachemanager.cacher.cachemanifest(repo)
 
 
-class uiproxy(object):
-    """This is a proxy object that forwards all requests to a real ui object."""
-
-    def __init__(self, ui):
-        self.ui = ui
-
-    def _updateui(self, ui):
-        self.ui = ui
-
-    def __getattr__(self, name):
-        return getattr(self.ui, name)
-
-
 class FastManifestExtension(object):
     initialized = False
-    uiproxy = uiproxy(None)
 
     @staticmethod
     def _logonexit(orig, ui, repo, cmd, fullargs, *args):
@@ -212,16 +198,7 @@ class FastManifestExtension(object):
         return r
 
     @staticmethod
-    def get_ui():
-        return FastManifestExtension.uiproxy
-
-    @staticmethod
-    def set_ui(ui):
-        FastManifestExtension.uiproxy._updateui(ui)
-
-    @staticmethod
-    def setup():
-        ui = FastManifestExtension.get_ui()
+    def setup(ui):
         logger = debug.manifestaccesslogger(ui)
         extensions.wrapfunction(manifest.manifestrevlog, "rev", logger.revwrap)
 
@@ -269,11 +246,7 @@ class FastManifestExtension(object):
 
 
 def extsetup(ui):
-    # always update the ui object.  this is probably a bogus ui object, but we
-    # don't want to have a backing ui object of None.
-    FastManifestExtension.set_ui(ui)
-
-    FastManifestExtension.setup()
+    FastManifestExtension.setup(ui)
 
 
 def reposetup(ui, repo):
@@ -281,9 +254,6 @@ def reposetup(ui, repo):
     # configs.
     if repo.local() is None:
         return
-
-    # always update the ui object.
-    FastManifestExtension.set_ui(ui)
 
     if ui.configbool("fastmanifest", "usetree"):
         try:

@@ -46,15 +46,17 @@ Problematic extension: remotefilelog
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
 
-Problematic extension: treemanifest and fastmanifest
+Fine extension: treemanifest and fastmanifest
 
   $ newrepo
   __del__ called
   $ setconfig extensions.treemanifest= extensions.fastmanifest= remotefilelog.reponame=x
   $ hg log -r . -T '{node}\n'
   0000000000000000000000000000000000000000
+  __del__ called
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
+  __del__ called
 
 Fine extension: treemanifest only
 
