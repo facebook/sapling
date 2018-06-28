@@ -11,6 +11,7 @@ extern crate blobrepo;
 extern crate bookmarks;
 extern crate bytes;
 extern crate clap;
+extern crate cmdlib;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -22,7 +23,6 @@ extern crate mercurial_types;
 extern crate scuba_ext;
 #[macro_use]
 extern crate slog;
-extern crate slog_glog_fmt;
 extern crate tokio_core;
 
 mod bookmark;
@@ -36,31 +36,26 @@ use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Result, ResultExt};
 use futures::{future, Future, Stream};
 use futures_ext::FutureExt;
-use slog::{Drain, Level, Logger};
-use slog_glog_fmt::default_drain as glog_drain;
+use slog::Logger;
 use tokio_core::reactor::Core;
 
-use blobrepo::{BlobRepo, ManifoldArgs};
+use blobrepo::BlobRepo;
+use cmdlib::args;
 use mercurial::RevlogRepo;
 use mercurial_types::RepositoryId;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    App::new("revlog to blob importer")
+    let app = args::MononokeApp {
+        safe_writes: true,
+        hide_advanced_args: false,
+    };
+    app.build("revlog to blob importer")
         .version("0.0.0")
         .about("Import a revlog-backed Mercurial repo into Mononoke blobstore.")
         .args_from_usage(
             r#"
             <INPUT>                         'input revlog repo'
-            --debug                         'print debug logs'
             --repo_id <repo_id>             'ID of the newly imported repo'
-            --manifold-bucket [BUCKET]      'manifold bucket'
-            --manifold-prefix [PREFIX]      'manifold prefix Default: new_blobimport_test'
-            --db-address [address]          'address of a db. Used only for manifold blobstore'
-            --blobstore-cache-size [SIZE]   'size of the blobstore cache'
-            --changesets-cache-size [SIZE]  'size of the changesets cache'
-            --filenodes-cache-size [SIZE]   'size of the filenodes cache'
-            --io-thread-num [NUM]           'num of the io threads to use'
-            --max-concurrent-request-per-io-thread [NUM] 'max requests per io thread'
             --parsing-cpupool-size [NUM]    'size of cpupool for parsing revlogs'
             --changeset [HASH]              'if provided, the only changeset to be imported'
             --no-bookmark                   'if provided won't update bookmarks'
@@ -155,36 +150,11 @@ fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
             ).expect("failed to create rocksdb blobrepo")
         }
         "manifold" => {
-            let manifold_bucket = matches
-                .value_of("manifold-bucket")
-                .expect("manifold bucket is not specified");
+            let manifold_args = args::parse_manifold_args(&matches, 100_000_000);
 
             BlobRepo::new_manifold(
-                logger.new(o!["BlobRepo:TestManifold" => manifold_bucket.to_owned()]),
-                &ManifoldArgs {
-                    bucket: manifold_bucket.to_string(),
-                    prefix: matches
-                        .value_of("manifold-prefix")
-                        .unwrap_or("new_blobimport_test")
-                        .to_string(),
-                    db_address: matches
-                        .value_of("db-address")
-                        .expect("--db-address is not specified")
-                        .to_string(),
-                    blobstore_cache_size: get_usize(&matches, "blobstore-cache-size", 100_000_000),
-                    changesets_cache_size: get_usize(
-                        &matches,
-                        "changesets-cache-size",
-                        100_000_000,
-                    ),
-                    filenodes_cache_size: get_usize(&matches, "filenodes-cache-size", 100_000_000),
-                    io_threads: get_usize(&matches, "io-thread-num", 5),
-                    max_concurrent_requests_per_io_thread: get_usize(
-                        &matches,
-                        "max-concurrent-request-per-io-thread",
-                        5,
-                    ),
-                },
+                logger.new(o!["BlobRepo:TestManifold" => manifold_args.bucket.clone()]),
+                &manifold_args,
                 repo_id,
             ).expect("failed to create manifold blobrepo")
         }
@@ -202,16 +172,7 @@ fn main() {
 
     let mut core = Core::new().expect("cannot create tokio core");
 
-    let logger = {
-        let level = if matches.is_present("debug") {
-            Level::Debug
-        } else {
-            Level::Info
-        };
-
-        let drain = glog_drain().filter_level(level).fuse();
-        slog::Logger::root(drain, o![])
-    };
+    let logger = args::get_logger(&matches);
 
     let blobrepo = Arc::new(open_blobrepo(&logger, &matches));
 

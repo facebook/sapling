@@ -14,6 +14,7 @@ extern crate tokio_core;
 
 extern crate blobrepo;
 extern crate blobstore;
+extern crate cmdlib;
 #[macro_use]
 extern crate futures_ext;
 extern crate manifoldblob;
@@ -21,13 +22,12 @@ extern crate mercurial_types;
 extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
-extern crate slog_glog_fmt;
 
 use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{App, Arg, SubCommand};
 use failure::{Error, Result};
 use futures::future;
 use futures::prelude::*;
@@ -36,14 +36,14 @@ use tokio_core::reactor::Core;
 
 use blobrepo::{BlobRepo, ManifoldArgs};
 use blobstore::{Blobstore, MemcacheBlobstore, MemcacheBlobstoreExt, PrefixBlobstore};
+use cmdlib::args;
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
 use mercurial_types::{Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope,
                       HgManifestEnvelope, MPath, MPathElement, Manifest, RepositoryId};
 use mercurial_types::manifest::Content;
 use mononoke_types::{BlobstoreBytes, BlobstoreValue, FileContents};
-use slog::{Drain, Level, Logger};
-use slog_glog_fmt::default_drain as glog_drain;
+use slog::Logger;
 
 const BLOBSTORE_FETCH: &'static str = "blobstore-fetch";
 const CONTENT_FETCH: &'static str = "content-fetch";
@@ -87,43 +87,16 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
              <PATH>            'path to fetch'",
         );
 
-    App::new("Mononoke admin command line tool")
+    let app = args::MononokeApp {
+        safe_writes: false,
+        hide_advanced_args: true,
+    };
+    app.build("Mononoke admin command line tool")
         .version("0.0.0")
         .about("Poke at mononoke internals for debugging and investigating data structures.")
-        .args_from_usage(
-            "--manifold-bucket [BUCKET] 'manifold bucket (default: mononoke_prod)'
-             --manifold-prefix [PREFIX] 'manifold prefix (default empty)'
-             --db-address      [ADDRESS] 'database tier (default: xdb.mononoke_test_2)'
-             --repo-id         [REPO_ID]'repo id (default: 0)'
-             -d, --debug                'print debug level output'",
-        )
+        .args_from_usage("--repo-id [REPO_ID] 'repo id (default: 0)'")
         .subcommand(blobstore_fetch)
         .subcommand(content_fetch)
-}
-
-fn parse_manifold_args<'a>(matches: &'a ArgMatches) -> ManifoldArgs {
-    let bucket = matches
-        .value_of("manifold-bucket")
-        .unwrap_or("mononoke_prod")
-        .to_string();
-    let prefix = matches
-        .value_of("manifold-prefix")
-        .unwrap_or("")
-        .to_string();
-    let db_address = matches
-        .value_of("db-address")
-        .unwrap_or("xdb.mononoke_test_2")
-        .to_string();
-    ManifoldArgs {
-        bucket,
-        prefix,
-        db_address,
-        blobstore_cache_size: 1_000_000,
-        changesets_cache_size: 1_000_000,
-        filenodes_cache_size: 1_000_000,
-        io_threads: 5,
-        max_concurrent_requests_per_io_thread: MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
-    }
 }
 
 fn create_blobrepo<'a>(
@@ -207,18 +180,9 @@ fn get_memcache<B: MemcacheBlobstoreExt>(
 fn main() {
     let matches = setup_app().get_matches();
 
-    let logger = {
-        let level = if matches.is_present("debug") {
-            Level::Debug
-        } else {
-            Level::Info
-        };
+    let logger = args::get_logger(&matches);
+    let manifold_args = args::parse_manifold_args(&matches, 1_000_000);
 
-        let drain = glog_drain().filter_level(level).fuse();
-        slog::Logger::root(drain, o![])
-    };
-
-    let manifold_args = parse_manifold_args(&matches);
     let repo_id = matches
         .value_of("repo-id")
         .map(|id: &str| id.parse::<u32>().expect("expected repo id to be a u32"))
