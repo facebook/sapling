@@ -31,7 +31,7 @@ impl<'a> Filler for Upperer<'a> {
 #[test]
 fn simple() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::new_unbounded(Upperer(&count), 1);
+    let c = Asyncmemo::new_unbounded("test", Upperer(&count), 1);
 
     assert!(c.is_empty());
     assert_eq!(c.len(), 0);
@@ -58,7 +58,7 @@ fn simple() {
 #[test]
 fn clear() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::new_unbounded(Upperer(&count), 1);
+    let c = Asyncmemo::new_unbounded("test", Upperer(&count), 1);
 
     assert!(c.is_empty());
     assert_eq!(c.len(), 0);
@@ -86,7 +86,7 @@ fn clear() {
 #[test]
 fn size_limit() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::with_limits_and_shards(Upperer(&count), 3, usize::MAX, 1);
+    let c = Asyncmemo::with_limits_and_shards("test", Upperer(&count), 3, usize::MAX, 1);
 
     assert_eq!(c.len(), 0);
 
@@ -110,7 +110,7 @@ fn size_limit() {
 #[test]
 fn weight_limit_simple() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::with_limits_and_shards(Upperer(&count), 3, 100, 1);
+    let c = Asyncmemo::with_limits_and_shards("test", Upperer(&count), 3, 100, 1);
 
     assert_eq!(c.len(), 0);
 
@@ -126,7 +126,7 @@ fn weight_limit_simple() {
 #[test]
 fn weight_limit_eviction() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::with_limits_and_shards(Upperer(&count), 1, usize::MAX, 1);
+    let c = Asyncmemo::with_limits_and_shards("test", Upperer(&count), 1, usize::MAX, 1);
 
     assert_eq!(c.len(), 0);
 
@@ -192,7 +192,7 @@ impl Notify for DummyNotify {
 #[test]
 fn delayed() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::new_unbounded(Delayed(&count, 5), 1);
+    let c = Asyncmemo::new_unbounded("test", Delayed(&count, 5), 1);
 
     let notify_handle = NotifyHandle::from(Arc::new(DummyNotify {}));
     let dummy_id = 0;
@@ -293,7 +293,7 @@ impl Filler for Fib {
 #[test]
 fn fibonacci() {
     let count = Arc::new(AtomicUsize::new(0));
-    let c = Asyncmemo::new_unbounded(Fib(count.clone()), 1);
+    let c = Asyncmemo::new_unbounded("test", Fib(count.clone()), 1);
 
     let notify_handle = NotifyHandle::from(Arc::new(DummyNotify {}));
     let dummy_id = 0;
@@ -398,7 +398,7 @@ impl<'a> Filler for Fails<'a> {
 #[test]
 fn failing() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::new_unbounded(Fails(&count), 1);
+    let c = Asyncmemo::new_unbounded("test", Fails(&count), 1);
 
     let notify_handle = NotifyHandle::from(Arc::new(DummyNotify {}));
     let dummy_id = 0;
@@ -456,7 +456,7 @@ fn failing() {
 #[test]
 fn multiwait() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::new_unbounded(Delayed(&count, 5), 1);
+    let c = Asyncmemo::new_unbounded("test", Delayed(&count, 5), 1);
 
     let notify_handle = NotifyHandle::from(Arc::new(DummyNotify {}));
     let dummy_id = 0;
@@ -577,7 +577,7 @@ where
 #[test]
 fn timer_multiwait() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::new_unbounded(Delayed(&count, 2), 1);
+    let c = Asyncmemo::new_unbounded("test", Delayed(&count, 2), 1);
 
     let mut v1 = SpawnedFutureAndNotify::new(c.get("foo"));
     let mut v2 = SpawnedFutureAndNotify::new(c.get("foo"));
@@ -617,7 +617,7 @@ impl Filler for Timered {
 
 #[test]
 fn test_timer_future() {
-    let c = Asyncmemo::new_unbounded(Timered::new(vec![Ok("RES".into())]), 1);
+    let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())]), 1);
     let mut v1 = SpawnedFutureAndNotify::new(c.get("res"));
     let mut v2 = SpawnedFutureAndNotify::new(c.get("res"));
     assert_eq!(v1.poll(), Ok(Async::NotReady));
@@ -629,7 +629,7 @@ fn test_timer_future() {
 
 #[test]
 fn test_timer_future_many_futures() {
-    let c = Asyncmemo::new_unbounded(Timered::new(vec![Ok("RES".into())]), 1);
+    let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())]), 1);
     let futs: Vec<_> = (1..10)
         .map(|_| {
             let mut f = SpawnedFutureAndNotify::new(c.get("res"));
@@ -646,7 +646,7 @@ fn test_timer_future_many_futures() {
 #[test]
 fn test_drop() {
     {
-        let c = Asyncmemo::new_unbounded(Timered::new(vec![Ok("RES".into())]), 1);
+        let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())]), 1);
         let mut v1 = SpawnedFutureAndNotify::new(c.get("res"));
         let mut v2 = SpawnedFutureAndNotify::new(c.get("res"));
         assert_eq!(v1.poll(), Ok(Async::NotReady));
@@ -658,7 +658,7 @@ fn test_drop() {
 
     {
         // Vice-versa: drop the future that was polled second, check that first was notified
-        let c = Asyncmemo::new_unbounded(Timered::new(vec![Ok("RES".into())]), 1);
+        let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())]), 1);
         let mut v1 = SpawnedFutureAndNotify::new(c.get("res"));
         let mut v2 = SpawnedFutureAndNotify::new(c.get("res"));
         assert_eq!(v1.poll(), Ok(Async::NotReady));
@@ -671,7 +671,7 @@ fn test_drop() {
 
 #[test]
 fn test_poll_after_sporadic_failure() {
-    let c = Asyncmemo::new_unbounded(Timered::new(vec![Err(()), Ok("RES".into())]), 1);
+    let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Err(()), Ok("RES".into())]), 1);
     let mut v1 = SpawnedFutureAndNotify::new(c.get("res"));
     let mut v2 = SpawnedFutureAndNotify::new(c.get("res"));
     assert_eq!(v1.poll(), Ok(Async::NotReady));
@@ -711,7 +711,7 @@ fn slow_poll_success() {
     // Two futures poll at roughly the same time.
     // Poll is slow, so one future does the poll, another goes to the Polling state.
     // Make sure that second future is woken up after the first one succeed
-    let c = Asyncmemo::new_unbounded(SlowPollUpperrer::new(Ok("RES".into())), 1);
+    let c = Asyncmemo::new_unbounded("test", SlowPollUpperrer::new(Ok("RES".into())), 1);
 
     let t1 = thread::spawn({
         let c = c.clone();
@@ -738,7 +738,7 @@ fn slow_poll_err() {
     // Two futures poll at roughly the same time.
     // Poll is slow, so one future does the poll, another goes to the Polling state.
     // Make sure that second future is woken up after the first one errored
-    let c = Asyncmemo::new_unbounded(SlowPollUpperrer::new(Err("RES".into())), 1);
+    let c = Asyncmemo::new_unbounded("test", SlowPollUpperrer::new(Err("RES".into())), 1);
 
     let t1 = thread::spawn({
         let c = c.clone();
@@ -791,6 +791,7 @@ impl Filler for SignalBasedUpperrer {
 fn slow_poll_invalidate() {
     let signal = Arc::new(AtomicBool::new(false));
     let c = Asyncmemo::new_unbounded(
+        "test",
         SignalBasedUpperrer::new(Ok("RES".into()), signal.clone()),
         1,
     );
@@ -826,6 +827,7 @@ fn slow_poll_invalidate() {
 fn slow_clear_invalidate() {
     let signal = Arc::new(AtomicBool::new(false));
     let c = Asyncmemo::new_unbounded(
+        "test",
         SignalBasedUpperrer::new(Ok("RES".into()), signal.clone()),
         1,
     );
@@ -867,6 +869,7 @@ fn polling_hash_trimming() {
     let longskipkey = String::from("skipwaiting");
 
     let c = Asyncmemo::with_limits_and_shards(
+        "test",
         SignalBasedUpperrer::new(Ok("RES".into()), signal.clone()),
         1,
         // Make space exactly for one future and it's result

@@ -46,6 +46,7 @@ pub struct CachingFilenodes {
 impl CachingFilenodes {
     pub fn new(filenodes: Arc<Filenodes>, sizelimit: usize) -> Self {
         let cache = asyncmemo::Asyncmemo::with_limits(
+            "filenodes",
             FilenodesFiller::new(filenodes.clone()),
             std::usize::MAX,
             sizelimit,

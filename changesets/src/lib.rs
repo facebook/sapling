@@ -101,6 +101,7 @@ pub struct CachingChangests {
 impl CachingChangests {
     pub fn new(changesets: Arc<Changesets>, sizelimit: usize) -> Self {
         let cache = asyncmemo::Asyncmemo::with_limits(
+            "changesets",
             ChangesetsFiller::new(changesets.clone()),
             std::usize::MAX,
             sizelimit,

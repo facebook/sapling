@@ -216,7 +216,7 @@ impl HookManager {
             store,
             repo_name,
         };
-        let cache = Asyncmemo::with_limits(filler, entrylimit, weightlimit);
+        let cache = Asyncmemo::with_limits("hooks", filler, entrylimit, weightlimit);
         HookManager { cache, hooks }
     }
 

@@ -24,7 +24,7 @@ pub struct MemoizedBlobstore<T: Blobstore + Clone> {
 impl<T: Blobstore + Clone> MemoizedBlobstore<T> {
     pub fn new(blobstore: T, entries_limit: usize, bytes_limit: usize) -> CountedBlobstore<Self> {
         let filler = BlobstoreCacheFiller::new(blobstore.clone());
-        let cache = Asyncmemo::with_limits(filler, entries_limit, bytes_limit);
+        let cache = Asyncmemo::with_limits("blobstore", filler, entries_limit, bytes_limit);
         CountedBlobstore::new("in_memory", MemoizedBlobstore { cache, blobstore })
     }
 }

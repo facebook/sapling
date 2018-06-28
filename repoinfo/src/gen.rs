@@ -69,7 +69,7 @@ impl RepoGenCache {
     /// Construct a new `RepoGenCache`, bounded to `sizelimit` bytes.
     pub fn new(sizelimit: usize) -> Self {
         RepoGenCache {
-            cache: Asyncmemo::with_limits(GenFiller::new(), usize::MAX, sizelimit),
+            cache: Asyncmemo::with_limits("repogen", GenFiller::new(), usize::MAX, sizelimit),
         }
     }
 

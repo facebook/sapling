@@ -36,8 +36,12 @@ extern crate bytes;
 extern crate futures;
 extern crate futures_ext;
 extern crate heapsize;
+#[macro_use]
+extern crate lazy_static;
 extern crate linked_hash_map;
 extern crate parking_lot;
+#[macro_use]
+extern crate stats;
 #[cfg(test)]
 extern crate tokio_timer;
 
@@ -51,6 +55,7 @@ use std::usize;
 use futures::{Async, Future, Poll};
 use futures::future::{IntoFuture, Shared, SharedError, SharedItem};
 use parking_lot::Mutex;
+use stats::prelude::*;
 
 #[cfg(test)]
 mod test;
@@ -60,6 +65,16 @@ mod weight;
 
 use boundedhash::BoundedHash;
 pub use weight::Weight;
+
+define_stats! {
+    prefix = "asyncmemo";
+    memo_futures_estimate: dynamic_timeseries(
+        "memo_futures_estimate.{}", (tag: &'static str); AVG),
+    total_weight: dynamic_timeseries(
+        "per_shard.total_weight.{}", (tag: &'static str); AVG),
+    entry_num: dynamic_timeseries(
+        "per_shard.entry_num.{}", (tag: &'static str); AVG),
+}
 
 const SHARD_NUM: usize = 1000;
 
@@ -72,6 +87,7 @@ where
     F: Filler,
     F::Key: Eq + Hash,
 {
+    stats_tag: &'static str,
     inner: Arc<AsyncmemoInner<F>>,
 }
 
@@ -85,6 +101,7 @@ where
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("Asyncmemo")
+            .field("stats_tag", &self.stats_tag)
             .field("inner", &self.inner)
             .finish()
     }
@@ -281,6 +298,7 @@ where
     // Return the current state of a slot, if present
     fn slot_present(&self) -> Option<FillerSlot<F>> {
         let mut hash = self.cache.inner.hash_vec[self.cache.get_shard(&self.key)].lock();
+        self.report_stats(&*hash);
 
         if let Some(entry) = hash.get_mut(&self.key) {
             match entry {
@@ -297,6 +315,8 @@ where
     fn slot_remove(&self) {
         let mut hash = self.cache.inner.hash_vec[self.cache.get_shard(&self.key)].lock();
         let _ = hash.remove(&self.key);
+
+        self.report_stats(&*hash);
     }
 
     fn slot_insert(&self, slot: FillerSlot<F>) {
@@ -320,6 +340,17 @@ where
             }
             Ok(Some(_)) | Ok(None) => (), // nothing (interesting) there
         }
+
+        self.report_stats(&*hash);
+    }
+
+    fn report_stats(&self, hash: &CacheHash<F>) {
+        STATS::memo_futures_estimate.add_value(
+            Arc::strong_count(&self.cache.inner) as i64,
+            (self.cache.stats_tag,),
+        );
+        STATS::total_weight.add_value(hash.total_weight() as i64, (self.cache.stats_tag,));
+        STATS::entry_num.add_value(hash.len() as i64, (self.cache.stats_tag,));
     }
 
     fn poll_real_future(
@@ -421,11 +452,17 @@ where
     /// - weightlimit - the max abstract "weight" of the entries (both keys and values)
     ///
     /// Weight is typically memory use.
-    pub fn with_limits(fill: F, entrylimit: usize, weightlimit: usize) -> Self {
-        Self::with_limits_and_shards(fill, entrylimit, weightlimit, SHARD_NUM)
+    pub fn with_limits(
+        stats_tag: &'static str,
+        fill: F,
+        entrylimit: usize,
+        weightlimit: usize,
+    ) -> Self {
+        Self::with_limits_and_shards(stats_tag, fill, entrylimit, weightlimit, SHARD_NUM)
     }
 
     fn with_limits_and_shards(
+        stats_tag: &'static str,
         fill: F,
         entrylimit: usize,
         weightlimit: usize,
@@ -450,6 +487,7 @@ where
         };
 
         Asyncmemo {
+            stats_tag,
             inner: Arc::new(inner),
         }
     }
@@ -457,8 +495,8 @@ where
     /// Construct an unbounded cache.
     ///
     /// This is pretty dangerous for any non-toy use.
-    pub fn new_unbounded(fill: F, shards: usize) -> Self {
-        Self::with_limits_and_shards(fill, usize::MAX, usize::MAX, shards)
+    pub fn new_unbounded(stats_tag: &'static str, fill: F, shards: usize) -> Self {
+        Self::with_limits_and_shards(stats_tag, fill, usize::MAX, usize::MAX, shards)
     }
 
     /// Look up a result for a particular key/arg
@@ -565,6 +603,7 @@ where
 {
     fn clone(&self) -> Self {
         Asyncmemo {
+            stats_tag: self.stats_tag.clone(),
             inner: self.inner.clone(),
         }
     }
