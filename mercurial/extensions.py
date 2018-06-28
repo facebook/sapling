@@ -281,10 +281,8 @@ def load(ui, name, path):
     # false positives.
     from . import dispatch  # avoid cycles
 
-    strict = (
-        util.safehasattr(ui, "configbool")
-        and ui.configbool("devel", "all-warnings")
-        and dispatch.getentrypoint() == "hg"
+    strict = util.safehasattr(ui, "configbool") and ui.configbool(
+        "devel", "all-warnings"
     )
     mod = _importext(name, path, bind(_reportimporterror, ui), strict)
 

@@ -43,7 +43,6 @@ from .i18n import _
 
 
 unrecoverablewrite = registrar.command.unrecoverablewrite
-_entrypoint = None  # record who calls "run"
 
 
 class request(object):
@@ -91,10 +90,8 @@ class request(object):
                 raise exc
 
 
-def run(entrypoint="hg"):
+def run():
     "run the command in sys.argv"
-    global _entrypoint
-    _entrypoint = entrypoint
     _initstdio()
     req = request(pycompat.sysargv[1:])
     err = None
@@ -314,11 +311,6 @@ def runchgserver():
     _preimportmodules()
     service = chgserver.chgunixservice(ui, repo, cmdopts)
     server.runservice(cmdopts, initfn=service.init, runfn=service.run)
-
-
-def getentrypoint():
-    global _entrypoint
-    return _entrypoint
 
 
 def _initstdio():
