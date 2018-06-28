@@ -56,13 +56,14 @@ Problematic extension: treemanifest and fastmanifest
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
 
-Problematic extension: treemanifest only
+Fine extension: treemanifest only
 
   $ newrepo
   __del__ called
   $ setconfig extensions.treemanifest= treemanifest.treeonly=1 remotefilelog.reponame=x
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
+  __del__ called
 
 Fine extension: hgsubversion
 

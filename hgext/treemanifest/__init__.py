@@ -369,8 +369,8 @@ def wraprepo(repo):
             # If we have no base nodes, scan the changelog looking for a
             # semi-recent manifest node to treat as the base.
             if not basemfnodes:
-                changeloglen = len(repo.changelog) - 1
-                basemfnodes = _findrecenttree(repo, changeloglen)
+                changeloglen = len(self.changelog) - 1
+                basemfnodes = _findrecenttree(self, changeloglen)
 
             self._prefetchtrees("", mfnodes, basemfnodes, [])
 
@@ -400,7 +400,7 @@ def wraprepo(repo):
 
         def _restrictcapabilities(self, caps):
             caps = super(treerepository, self)._restrictcapabilities(caps)
-            if repo.svfs.treemanifestserver:
+            if self.svfs.treemanifestserver:
                 caps = _addservercaps(self, caps)
             return caps
 
