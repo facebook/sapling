@@ -251,6 +251,8 @@ class SubtreeIterator {
   std::string path;
   ManifestFetcher fetcher;
   bool firstRun;
+  int maxDepth;
+  int depth;
 
  public:
   SubtreeIterator(
@@ -258,7 +260,8 @@ class SubtreeIterator {
       ManifestPtr mainRoot,
       const std::vector<const char*>& cmpNodes,
       const std::vector<ManifestPtr>& cmpRoots,
-      const ManifestFetcher& fetcher);
+      const ManifestFetcher& fetcher,
+      const int depth);
 
   /**
    * Outputs the next new Manifest and its corresponding path and node.

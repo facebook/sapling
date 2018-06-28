@@ -10,6 +10,7 @@
 #include "hgext/extlib/ctreemanifest/treemanifest.h"
 
 #include <cassert>
+#include <limits>
 
 /**
  * Helper function that performs the actual recursion on the tree entries.
@@ -495,8 +496,14 @@ SubtreeIterator::SubtreeIterator(
     ManifestPtr mainRoot,
     const std::vector<const char*>& cmpNodes,
     const std::vector<ManifestPtr>& cmpRoots,
-    const ManifestFetcher& fetcher)
-    : cmpNodes(cmpNodes), path(path), fetcher(fetcher), firstRun(true) {
+    const ManifestFetcher& fetcher,
+    const int maxDepth)
+    : cmpNodes(cmpNodes),
+      path(path),
+      fetcher(fetcher),
+      firstRun(true),
+      maxDepth(maxDepth),
+      depth(1) {
   this->mainStack.push_back(stackframe(mainRoot, false));
 
   if (cmpRoots.size() > 2) {
@@ -603,6 +610,7 @@ bool SubtreeIterator::processDirectory(ManifestEntry* mainEntry) {
 
   // Otherwise, push to the main stack
   mainEntry->appendtopath(this->path);
+  this->depth++;
   ManifestPtr mainManifest = mainEntry->get_manifest(
       this->fetcher, this->path.c_str(), this->path.size());
   this->mainStack.push_back(stackframe(mainManifest, false));
@@ -632,6 +640,7 @@ bool SubtreeIterator::next(
     } else {
       this->path.erase(slashoffset + 1);
     }
+    this->depth--;
   } else {
     this->firstRun = false;
   }
@@ -666,7 +675,8 @@ bool SubtreeIterator::next(
       if (mainEntry->isdirectory()) {
         // If we're at a directory, process it, either by pushing it on the
         // stack, or by skipping it if it already matches a cmp parent.
-        if (!this->processDirectory(mainEntry)) {
+        if (this->depth >= this->maxDepth ||
+            !this->processDirectory(mainEntry)) {
           mainFrame.next();
         }
       } else {
@@ -681,7 +691,13 @@ FinalizeIterator::FinalizeIterator(
     const std::vector<const char*>& cmpNodes,
     const std::vector<ManifestPtr>& cmpRoots,
     const ManifestFetcher& fetcher)
-    : _iterator(std::string(""), mainRoot, cmpNodes, cmpRoots, fetcher) {}
+    : _iterator(
+          std::string(""),
+          mainRoot,
+          cmpNodes,
+          cmpRoots,
+          fetcher,
+          std::numeric_limits<int>::max()) {}
 
 bool FinalizeIterator::next(
     std::string** path,

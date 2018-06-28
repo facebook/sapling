@@ -14,6 +14,7 @@
 // as per the documentation.
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <limits>
 #include <memory>
 #include <string>
 
@@ -320,7 +321,8 @@ static py_subtreeiter* subtreeiter_create(
     std::string& path,
     ManifestPtr mainManifest,
     const std::vector<ManifestPtr>& cmpManifests,
-    const ManifestFetcher& fetcher) {
+    const ManifestFetcher& fetcher,
+    const int depth) {
   py_subtreeiter* pyiter = PyObject_New(py_subtreeiter, &subtreeiterType);
   if (pyiter) {
     try {
@@ -330,8 +332,8 @@ static py_subtreeiter* subtreeiter_create(
       for (size_t i = 0; i < cmpManifests.size(); ++i) {
         cmpNodes.push_back(cmpManifests[i]->node());
       }
-      new (&pyiter->iter)
-          SubtreeIterator(path, mainManifest, cmpNodes, cmpManifests, fetcher);
+      new (&pyiter->iter) SubtreeIterator(
+          path, mainManifest, cmpNodes, cmpManifests, fetcher, depth);
       return pyiter;
     } catch (const pyexception& ex) {
       Py_DECREF(pyiter);
@@ -1491,8 +1493,13 @@ static PyObject* treemanifest_walksubtrees(
     }
 
     auto rootPath = std::string("");
+    auto depth = std::numeric_limits<int>::max();
     return (PyObject*)subtreeiter_create(
-        rootPath, self->tm.getRootManifest(), cmpManifests, self->tm.fetcher);
+        rootPath,
+        self->tm.getRootManifest(),
+        cmpManifests,
+        self->tm.fetcher,
+        depth);
   } catch (const pyexception& ex) {
     return NULL;
   }
@@ -1505,16 +1512,18 @@ static PyObject* treemanifest_walksubdirtrees(
   PyObject* keyObj = NULL;
   PyObject* storeObj = NULL;
   PyObject* compareTrees = NULL;
-  static char const* kwlist[] = {"key", "store", "comparetrees", NULL};
+  int depth = std::numeric_limits<int>::max();
+  static char const* kwlist[] = {"key", "store", "comparetrees", "depth", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(
           args,
           kwargs,
-          "OO|O",
+          "OO|Oi",
           (char**)kwlist,
           &keyObj,
           &storeObj,
-          &compareTrees)) {
+          &compareTrees,
+          &depth)) {
     return NULL;
   }
 
@@ -1554,7 +1563,7 @@ static PyObject* treemanifest_walksubdirtrees(
 
     auto pathStr = std::string(path, pathlen);
     return (PyObject*)subtreeiter_create(
-        pathStr, manifest, cmpManifests, fetcher);
+        pathStr, manifest, cmpManifests, fetcher, depth);
   } catch (const pyexception& ex) {
     return NULL;
   } catch (const std::exception& ex) {
