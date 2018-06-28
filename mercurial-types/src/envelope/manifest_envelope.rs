@@ -6,6 +6,8 @@
 
 //! Envelopes used for manifest nodes.
 
+use std::fmt;
+
 use bytes::Bytes;
 use failure::{err_msg, SyncFailure};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
@@ -30,6 +32,17 @@ pub struct HgManifestEnvelopeMut {
 impl HgManifestEnvelopeMut {
     pub fn freeze(self) -> HgManifestEnvelope {
         HgManifestEnvelope { inner: self }
+    }
+}
+
+impl fmt::Display for HgManifestEnvelopeMut {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "node id: {}", self.node_id)?;
+        writeln!(f, "p1: {}", HgNodeHash::display_opt(self.p1.as_ref()))?;
+        writeln!(f, "p2: {}", HgNodeHash::display_opt(self.p2.as_ref()))?;
+        writeln!(f, "computed node id: {}", self.computed_node_id)?;
+        // TODO: (rain1) T30973227 parse contents and print out in a better fashion
+        writeln!(f, "contents: {:?}", self.contents)
     }
 }
 
@@ -117,6 +130,13 @@ impl HgManifestEnvelope {
     pub fn into_blob(self) -> HgEnvelopeBlob {
         let thrift = self.into_thrift();
         HgEnvelopeBlob(compact_protocol::serialize(&thrift))
+    }
+}
+
+impl fmt::Display for HgManifestEnvelope {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.inner.fmt(f)
     }
 }
 

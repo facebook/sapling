@@ -89,6 +89,24 @@ impl HgNodeHash {
     pub(crate) fn into_thrift(self) -> thrift::HgNodeHash {
         thrift::HgNodeHash(self.0.into_thrift())
     }
+
+    #[inline]
+    pub fn display_opt<'a>(opt_hash: Option<&'a HgNodeHash>) -> HgNodeHashOptDisplay<'a> {
+        HgNodeHashOptDisplay { inner: opt_hash }
+    }
+}
+
+pub struct HgNodeHashOptDisplay<'a> {
+    inner: Option<&'a HgNodeHash>,
+}
+
+impl<'a> Display for HgNodeHashOptDisplay<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self.inner {
+            Some(hash) => hash.fmt(fmt),
+            None => write!(fmt, "(none)"),
+        }
+    }
 }
 
 impl From<Option<HgNodeHash>> for HgNodeHash {

@@ -6,6 +6,8 @@
 
 //! Envelopes used for file nodes.
 
+use std::fmt;
+
 use bytes::Bytes;
 use failure::{err_msg, SyncFailure};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
@@ -33,6 +35,17 @@ pub struct HgFileEnvelopeMut {
 impl HgFileEnvelopeMut {
     pub fn freeze(self) -> HgFileEnvelope {
         HgFileEnvelope { inner: self }
+    }
+}
+
+impl fmt::Display for HgFileEnvelopeMut {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "node id: {}", self.node_id)?;
+        writeln!(f, "p1: {}", HgNodeHash::display_opt(self.p1.as_ref()))?;
+        writeln!(f, "p2: {}", HgNodeHash::display_opt(self.p2.as_ref()))?;
+        writeln!(f, "content id: {}", self.content_id)?;
+        writeln!(f, "content size: {}", self.content_size)?;
+        writeln!(f, "metadata: {:?}", self.metadata)
     }
 }
 
@@ -127,6 +140,13 @@ impl HgFileEnvelope {
     pub fn into_blob(self) -> HgEnvelopeBlob {
         let thrift = self.into_thrift();
         HgEnvelopeBlob(compact_protocol::serialize(&thrift))
+    }
+}
+
+impl fmt::Display for HgFileEnvelope {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.inner.fmt(f)
     }
 }
 
