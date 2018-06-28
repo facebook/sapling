@@ -11,8 +11,9 @@ extern crate quickcheck;
 
 mod unionstore;
 
-pub mod error;
 pub mod datastore;
+pub mod error;
+pub mod historystore;
 pub mod key;
 pub mod node;
 pub mod uniondatastore;
