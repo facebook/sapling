@@ -37,7 +37,7 @@ Fine extension: blackbox
   0000000000000000000000000000000000000000
   __del__ called
 
-Problematic extension: remotefilelog
+Fine extension: remotefilelog
 
   $ newrepo
   __del__ called
@@ -45,6 +45,7 @@ Problematic extension: remotefilelog
   $ setconfig extensions.remotefilelog= remotefilelog.cachepath=$TESTTMP/cache
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
+  __del__ called
 
 Fine extension: treemanifest and fastmanifest
 

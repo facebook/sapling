@@ -6,19 +6,27 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-from ..extutil import runshellcommand
+import os
+
+from mercurial import encoding, error, localrepo, match, progress, scmutil, util
 from mercurial.i18n import _
 from mercurial.node import hex, nullid, nullrev
-from mercurial import encoding, error, localrepo, util, match, scmutil, progress
+
 from . import constants, fileserverclient, remotefilectx, remotefilelog, shallowutil
-from .contentstore import remotefilelogcontentstore, unioncontentstore
-from .contentstore import remotecontentstore
-from .metadatastore import remotefilelogmetadatastore, unionmetadatastore
-from .metadatastore import remotemetadatastore
+from ..extutil import runshellcommand
+from .contentstore import (
+    remotecontentstore,
+    remotefilelogcontentstore,
+    unioncontentstore,
+)
 from .datapack import datapackstore
 from .historypack import historypackstore
+from .metadatastore import (
+    remotefilelogmetadatastore,
+    remotemetadatastore,
+    unionmetadatastore,
+)
 
-import os
 
 requirement = "remotefilelog"
 
@@ -129,12 +137,12 @@ def wraprepo(repo):
 
         @util.propertycache
         def fallbackpath(self):
-            path = repo.ui.config(
+            path = self.ui.config(
                 "remotefilelog",
                 "fallbackpath",
                 # fallbackrepo is the old, deprecated name
-                repo.ui.config(
-                    "remotefilelog", "fallbackrepo", repo.ui.config("paths", "default")
+                self.ui.config(
+                    "remotefilelog", "fallbackrepo", self.ui.config("paths", "default")
                 ),
             )
             if not path:
@@ -195,7 +203,7 @@ def wraprepo(repo):
         ):
             """Runs prefetch in background with optional repack
             """
-            cmd = [util.hgexecutable(), "-R", repo.origroot, "prefetch"]
+            cmd = [util.hgexecutable(), "-R", self.origroot, "prefetch"]
             if repack:
                 cmd.append("--repack")
             if revs:
@@ -210,13 +218,13 @@ def wraprepo(repo):
             """Prefetches all the necessary file revisions for the given revs
             Optionally runs repack in background
             """
-            with repo._lock(
-                repo.svfs,
+            with self._lock(
+                self.svfs,
                 "prefetchlock",
                 True,
                 None,
                 None,
-                _("prefetching in %s") % repo.origroot,
+                _("prefetching in %s") % self.origroot,
             ):
                 self._prefetch(revs, base, pats, opts, matcher)
 
@@ -227,19 +235,19 @@ def wraprepo(repo):
                 # version of those files, since our local file versions might
                 # become obsolete if the local commits are stripped.
                 with progress.spinner(self.ui, _("finding outgoing revisions")):
-                    localrevs = repo.revs("outgoing(%s)", fallbackpath)
+                    localrevs = self.revs("outgoing(%s)", fallbackpath)
                 if base is not None and base != nullrev:
                     serverbase = list(
-                        repo.revs("first(reverse(::%s) - %ld)", base, localrevs)
+                        self.revs("first(reverse(::%s) - %ld)", base, localrevs)
                     )
                     if serverbase:
                         base = serverbase[0]
             else:
-                localrevs = repo
+                localrevs = self
 
-            mfl = repo.manifestlog
+            mfl = self.manifestlog
             if base is not None:
-                mfdict = mfl[repo[base].manifestnode()].read()
+                mfdict = mfl[self[base].manifestnode()].read()
                 skip = set(mfdict.iteritems())
             else:
                 skip = set()
@@ -252,11 +260,11 @@ def wraprepo(repo):
             visited.add(nullid)
             with progress.bar(self.ui, _("prefetching"), total=len(revs)) as prog:
                 for rev in sorted(revs):
-                    ctx = repo[rev]
+                    ctx = self[rev]
                     if pats:
                         m = scmutil.match(ctx, pats, opts)
                     if matcher is None:
-                        matcher = repo.maybesparsematch(rev)
+                        matcher = self.maybesparsematch(rev)
 
                     mfnode = ctx.manifestnode()
                     mfctx = mfl[mfnode]
@@ -288,12 +296,12 @@ def wraprepo(repo):
             # Fetch files known to be on the server
             if serverfiles:
                 results = [(path, hex(fnode)) for (path, fnode) in serverfiles]
-                repo.fileservice.prefetch(results, force=True)
+                self.fileservice.prefetch(results, force=True)
 
             # Fetch files that may or may not be on the server
             if files:
                 results = [(path, hex(fnode)) for (path, fnode) in files]
-                repo.fileservice.prefetch(results)
+                self.fileservice.prefetch(results)
 
     repo.__class__ = shallowrepository
 
