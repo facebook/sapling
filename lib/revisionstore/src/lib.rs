@@ -17,3 +17,4 @@ pub mod historystore;
 pub mod key;
 pub mod node;
 pub mod uniondatastore;
+pub mod unionhistorystore;
