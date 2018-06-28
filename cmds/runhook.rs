@@ -184,7 +184,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let code = String::from(
                 "hook = function (info, files)\n\
-                 return info.author == \"Mahatma Ghandi\"\n\
+                 return info.author == \"Mahatma Gandhi\"\n\
                  end",
             );
             let changeset_id = String::from("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
