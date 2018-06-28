@@ -18,6 +18,9 @@ extern crate futures;
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate metaconfig;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 #[macro_use]
 extern crate slog;
 extern crate slog_glog_fmt;
@@ -34,7 +37,7 @@ use std::path::Path;
 use std::str::FromStr;
 
 use actix::{Actor, Addr, Syn};
-use actix_web::{http, server, App, Body, HttpRequest, HttpResponse};
+use actix_web::{http, server, App, HttpRequest, HttpResponse, State};
 use actix_web::error::ResponseError;
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
@@ -50,42 +53,27 @@ use mercurial_types::nodehash::HgChangesetId;
 use metaconfig::RepoConfigs;
 
 use actor::{unwrap_request, MononokeActor, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse};
-use errors::ErrorKind;
 
-mod parameters {
-    pub const REPO: &str = "repo";
-    pub const HASH: &str = "hash";
+#[derive(Deserialize)]
+struct QueryInfo {
+    repo: String,
+    hash: String,
 }
 
+// The argument of this function is because the trait `actix_web::FromRequest` is implemented
+// for tuple (A, B, ...) (up to 9 elements) [1]. These arguments must implement
+// `actix_web::FromRequest` as well so actix-web will try to extract them from `actix::HttpRequest`
+// for us. In this case, the `State<HttpServerState>` and `Path<QueryInfo>`.
+// [1] https://docs.rs/actix-web/0.6.11/actix_web/trait.FromRequest.html#impl-FromRequest%3CS%3E-3
 fn get_blob_content(
-    req: HttpRequest<HttpServerState>,
-) -> impl Future<Item = HttpResponse, Error = impl ResponseError> {
-    let matches = req.match_info();
-    let repo = matches
-        .get(parameters::REPO)
-        .expect("repo is required")
-        .to_string();
-    let hash = matches
-        .get(parameters::HASH)
-        .expect("hash is required")
-        .to_string();
-
-    let state = req.state();
-
-    let mononoke = &state.mononoke;
-
-    let request = mononoke.send(MononokeQuery {
-        repo: repo,
-        kind: MononokeRepoQuery::GetBlobContent { hash: hash },
-    });
-
-    unwrap_request(request)
-        .map(|response| match response {
-            MononokeRepoResponse::GetBlobContent { content } => HttpResponse::Ok()
-                .content_type("application/octet-stream")
-                .body(Body::Binary(content.into())),
-        })
-        .map_err(|e| -> ErrorKind { e.into() })
+    (state, info): (State<HttpServerState>, actix_web::Path<QueryInfo>),
+) -> impl Future<Item = MononokeRepoResponse, Error = impl ResponseError> {
+    unwrap_request(state.mononoke.send(MononokeQuery {
+        repo: info.repo.clone(),
+        kind: MononokeRepoQuery::GetBlobContent {
+            hash: info.hash.clone(),
+        },
+    }))
 }
 
 fn setup_logger(debug: bool) -> Logger {
@@ -222,7 +210,7 @@ fn main() -> Result<()> {
             )
             .scope("/{repo}", |repo| {
                 repo.resource("/blob/{hash}", |r| {
-                    r.method(http::Method::GET).a(get_blob_content)
+                    r.method(http::Method::GET).with_async(get_blob_content)
                 })
             })
     }).bind(format!("{}:{}", host, port))?;

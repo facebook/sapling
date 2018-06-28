@@ -5,10 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
+use std::result::Result as StdResult;
 use std::str::FromStr;
 
 use actix::{Actor, Addr, Context, Handler, Message, Syn};
 use actix::dev::Request;
+use actix_web::{Body, HttpRequest, HttpResponse, Responder};
 use bytes::Bytes;
 use failure::{err_msg, Error, FutureFailureErrorExt, Result, ResultExt};
 use futures::{Future, IntoFuture};
@@ -34,6 +36,25 @@ impl Message for MononokeRepoQuery {
 
 pub enum MononokeRepoResponse {
     GetBlobContent { content: Bytes },
+}
+
+fn binary_response(content: Bytes) -> HttpResponse {
+    HttpResponse::Ok()
+        .content_type("application/octet-stream")
+        .body(Body::Binary(content.into()))
+}
+
+impl Responder for MononokeRepoResponse {
+    type Item = HttpResponse;
+    type Error = ErrorKind;
+
+    fn respond_to<S: 'static>(self, _req: &HttpRequest<S>) -> StdResult<Self::Item, Self::Error> {
+        use MononokeRepoResponse::*;
+
+        match self {
+            GetBlobContent { content } => Ok(binary_response(content)),
+        }
+    }
 }
 
 pub struct MononokeQuery {
@@ -157,7 +178,7 @@ impl Handler<MononokeQuery> for MononokeActor {
 
 pub fn unwrap_request(
     request: Request<Syn, MononokeActor, MononokeQuery>,
-) -> impl Future<Item = MononokeRepoResponse, Error = Error> {
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     request
         .into_future()
         .from_err()
@@ -165,4 +186,5 @@ pub fn unwrap_request(
         .and_then(|result| result.map_err(From::from))
         .and_then(|result| result)
         .and_then(|result| result)
+        .from_err()
 }
