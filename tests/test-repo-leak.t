@@ -28,13 +28,14 @@ No leak without extensions
   0000000000000000000000000000000000000000
   __del__ called
 
-Problematic extension: blackbox
+Fine extension: blackbox
 
   $ newrepo
   __del__ called
   $ setconfig extensions.blackbox=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
+  __del__ called
 
 Problematic extension: remotefilelog
 

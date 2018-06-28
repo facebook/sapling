@@ -39,6 +39,7 @@ from __future__ import absolute_import
 
 import errno
 import re
+import weakref
 
 from mercurial import error, registrar, ui as uimod, util
 from mercurial.i18n import _
@@ -63,7 +64,10 @@ configitem("blackbox", "logsource", default=False)
 configitem("blackbox", "maxfiles", default=7)
 configitem("blackbox", "track", default=lambda: ["*"])
 
-lastui = None
+
+def lastui():
+    return None
+
 
 try:
     xrange(0)
@@ -110,7 +114,7 @@ def wrapui(ui):
         @property
         def _bbvfs(self):
             vfs = None
-            repo = getattr(self, "_bbrepo", None)
+            repo = getattr(self, "_bbrepo", lambda: None)()
             if repo:
                 vfs = repo.vfs
                 if not vfs.isdir("."):
@@ -137,7 +141,7 @@ def wrapui(ui):
                 # certain ui instances exist outside the context of
                 # a repo, so just default to the last blackbox that
                 # was seen.
-                ui = lastui
+                ui = lastui()
 
             if not ui:
                 return
@@ -145,9 +149,9 @@ def wrapui(ui):
             if not vfs:
                 return
 
-            repo = getattr(ui, "_bbrepo", None)
-            if not lastui or repo:
-                lastui = ui
+            repo = getattr(ui, "_bbrepo", lambda: None)()
+            if not lastui() or repo:
+                lastui = weakref.ref(ui)
             if getattr(ui, "_bbinlog", False):
                 # recursion and failure guard
                 return
@@ -206,7 +210,7 @@ def wrapui(ui):
                 ui._bbinlog = False
 
         def setrepo(self, repo):
-            self._bbrepo = repo
+            self._bbrepo = weakref.ref(repo)
 
     ui.__class__ = blackboxui
     uimod.ui = blackboxui
@@ -229,8 +233,8 @@ def reposetup(ui, repo):
         # Set lastui even if ui.log is not called. This gives blackbox a
         # fallback place to log.
         global lastui
-        if lastui is None:
-            lastui = ui
+        if lastui() is None:
+            lastui = weakref.ref(ui)
 
     repo._wlockfreeprefix.add("blackbox.log")
 
