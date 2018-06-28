@@ -82,6 +82,12 @@ when the maximum size is hit.
 
   [treemanifest]
   servercacheevictionpercent = 50
+
+`treemanifest.fetchdepth` sets the default depth to fetch trees when fetching
+trees from the server.
+
+  [treemanifest]
+  fetchdepth = 65536
 """
 from __future__ import absolute_import
 
@@ -160,6 +166,9 @@ osutil = policy.importmod(r"osutil")
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+# The default depth to fetch during tree fetches
+TREE_DEPTH_MAX = 2 ** 16
+
 configtable = {}
 configitem = registrar.configitem(configtable)
 
@@ -168,6 +177,7 @@ configitem("treemanifest", "server", default=False)
 configitem("treemanifest", "cacheserverstore", default=True)
 configitem("treemanifest", "servermaxcachesize", default=1000000)
 configitem("treemanifest", "servercacheevictionpercent", default=50)
+configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 
 PACK_CATEGORY = "manifests"
 
@@ -364,16 +374,28 @@ def wraprepo(repo):
 
             self._prefetchtrees("", mfnodes, basemfnodes, [])
 
-        def _prefetchtrees(self, rootdir, mfnodes, basemfnodes, directories):
+        def _prefetchtrees(
+            self, rootdir, mfnodes, basemfnodes, directories, depth=None
+        ):
             # If possible, use remotefilelog's more expressive fallbackpath
             fallbackpath = getfallbackpath(self)
+
+            if depth is None:
+                depth = self.ui.configint("treemanifest", "fetchdepth")
 
             start = time.time()
             with self.ui.timesection("fetchingtrees"):
                 with self.connectionpool.get(fallbackpath) as conn:
                     remote = conn.peer
                     _gettrees(
-                        self, remote, rootdir, mfnodes, basemfnodes, directories, start
+                        self,
+                        remote,
+                        rootdir,
+                        mfnodes,
+                        basemfnodes,
+                        directories,
+                        start,
+                        depth,
                     )
 
         def _restrictcapabilities(self, caps):
@@ -1643,10 +1665,10 @@ def _prefetchonlytrees(repo, opts):
     repo.prefetchtrees(mfnodes, basemfnodes=basemfnode)
 
 
-def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start):
+def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start, depth):
     if "gettreepack" not in shallowutil.peercapabilities(remote):
         raise error.Abort(_("missing gettreepack capability on remote"))
-    bundle = remote.gettreepack(rootdir, mfnodes, basemfnodes, directories)
+    bundle = remote.gettreepack(rootdir, mfnodes, basemfnodes, directories, depth)
 
     try:
         op = bundle2.processbundle(repo, bundle, None)
@@ -1827,7 +1849,11 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
     for basectx in basectxs:
         basemfnodes.append(basectx.manifestnode())
 
-    packstream = generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories)
+    # createtreepackpart is used to form bundles for normal pushes and pulls, so
+    # we always pass depth=max here.
+    packstream = generatepackstream(
+        repo, rootdir, mfnodes, basemfnodes, directories, TREE_DEPTH_MAX
+    )
     part = bundle2.bundlepart(partname, data=packstream)
     part.addparam("version", "1")
     part.addparam("cache", "False")
@@ -1933,19 +1959,22 @@ def _findrecenttree(repo, startrev):
     return []
 
 
-def clientgettreepack(remote, rootdir, mfnodes, basemfnodes, directories):
+def clientgettreepack(remote, rootdir, mfnodes, basemfnodes, directories, depth):
     opts = {}
     opts["rootdir"] = rootdir
     opts["mfnodes"] = wireproto.encodelist(mfnodes)
     opts["basemfnodes"] = wireproto.encodelist(basemfnodes)
     opts["directories"] = ",".join(wireproto.escapearg(d) for d in directories)
+    opts["depth"] = str(depth)
 
     f = remote._callcompressable("gettreepack", **opts)
     return bundle2.getunbundler(remote.ui, f)
 
 
-def localgettreepack(remote, rootdir, mfnodes, basemfnodes, directories):
-    bundler = _gettreepack(remote._repo, rootdir, mfnodes, basemfnodes, directories)
+def localgettreepack(remote, rootdir, mfnodes, basemfnodes, directories, depth):
+    bundler = _gettreepack(
+        remote._repo, rootdir, mfnodes, basemfnodes, directories, depth
+    )
     chunks = bundler.getchunks()
     cb = util.chunkbuffer(chunks)
     return bundle2.getunbundler(remote._repo.ui, cb)
@@ -1960,6 +1989,7 @@ def servergettreepack(repo, proto, args):
         raise error.Abort(_("cannot fetch remote files over non-ssh protocol"))
 
     rootdir = args["rootdir"]
+    depth = int(args.get("depth", str(2 ** 16)))
 
     # Sort to produce a consistent output
     mfnodes = sorted(wireproto.decodelist(args["mfnodes"]))
@@ -1970,15 +2000,15 @@ def servergettreepack(repo, proto, args):
         )
     )
 
-    bundler = _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories)
+    bundler = _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories, depth)
     return wireproto.streamres(gen=bundler.getchunks(), v1compressible=True)
 
 
-def _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories):
+def _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories, depth):
     try:
         bundler = bundle2.bundle20(repo.ui)
         packstream = generatepackstream(
-            repo, rootdir, mfnodes, basemfnodes, directories
+            repo, rootdir, mfnodes, basemfnodes, directories, depth
         )
         part = bundler.newpart(TREEGROUP_PARTTYPE2, data=packstream)
         part.addparam("version", "1")
@@ -1996,7 +2026,7 @@ def _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories):
     return bundler
 
 
-def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
+def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth):
     """
     All size/len/counts are network order unsigned ints.
 
@@ -2008,6 +2038,7 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
     already on the client.
     `directories` - The fullpath (not relative path) of directories underneath
     the rootdir that should be sent.
+    `depth` - The depth from the root that should be sent.
 
     Response format:
 
@@ -2040,10 +2071,10 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
     if missing:
         raise shallowutil.MissingNodesError(missing, "tree nodes missing on server")
 
-    return _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories)
+    return _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth)
 
 
-def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
+def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth):
     """A simple helper function for generatepackstream. This helper is a
     generator, while the main function is not, so we can execute the
     validation logic in the main function immediately without waiting for the
@@ -2088,7 +2119,7 @@ def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
             basetrees.append((rootdir, p2node))
 
         subtrees = cstore.treemanifest.walksubdirtrees(
-            (rootdir, node), datastore, comparetrees=basetrees
+            (rootdir, node), datastore, comparetrees=basetrees, depth=depth
         )
         for subname, subnode, subtext, x, x, x in subtrees:
             # Append data

@@ -709,6 +709,7 @@ Reset the server back to hybrid mode
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/7ec3c5c54734-3e715521-backup.hg
   $ mv .hg/hgrc.bak .hg/hgrc
+  $ cd ..
 
 Test creating a treeonly repo from scratch
   $ hg init treeonlyrepo
@@ -780,3 +781,30 @@ with pullprefetchrevs configured.
   (run 'hg update' to get a working copy)
   prefetching tree for 4f84204095e0
   2 trees fetched over * (glob)
+  $ cd ..
+
+Test ondemand downloading trees with a limited depth
+  $ hgcloneshallow ssh://user@dummy/master client4 -q --config treemanifest.treeonly=True --config extensions.treemanifest=
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ cd client4
+  $ cp ../client/.hg/hgrc .hg/hgrc
+
+  $ clearcache
+  $ hg status --change 'tip^'
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2937cde31c19
+  2 trees fetched over * (glob)
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2937cde31c19
+  2 trees fetched over * (glob)
+  M subdir/x
+
+  $ clearcache
+  $ hg status --change 'tip^' --config treemanifest.fetchdepth=1
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2937cde31c19
+  1 trees fetched over * (glob)
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2937cde31c19
+  1 trees fetched over * (glob)
+  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  1 trees fetched over * (glob)
+  fetching tree 'subdir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
+  1 trees fetched over * (glob)
+  M subdir/x
