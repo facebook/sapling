@@ -28,14 +28,14 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> Result<()> {
     if sub.is_present("stdio") {
         if let Some(repo) = main.value_of("repository") {
             let mononoke_path = sub.value_of("mononoke-path").unwrap();
-            return ssh_relay(mononoke_path, repo);
+            return stdio_relay(mononoke_path, repo);
         }
         bail_msg!("Missing repository");
     }
     bail_msg!("Only stdio server is supported");
 }
 
-fn ssh_relay<P: AsRef<str>>(path: P, repo: &str) -> Result<()> {
+fn stdio_relay<P: AsRef<str>>(path: P, repo: &str) -> Result<()> {
     let path = path.as_ref();
 
     let mut reactor = Core::new()?;
