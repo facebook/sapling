@@ -313,11 +313,17 @@ Test peer-to-peer push/pull of tree only commits
   $ cp ../client/.hg/hgrc .hg/hgrc
 
 # Test pulling from a treeonly peer
-  $ hg pull -r tip ssh://user@dummy/client --debug 2>&1 | egrep "(payload|treegroup)"
+# - We should see one tree recieve from the client, and then a second one when
+#   prefetching the draft commit parent.
+  $ hg pull -r tip ssh://user@dummy/client --debug 2>&1 | egrep "(payload|treegroup|running)"
+  running python "*" 'user@dummy' 'hg -R client serve --stdio' (glob)
   bundle2-input-part: total payload size 827
   bundle2-input-part: total payload size 48
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size 663
+  running python "*" 'user@dummy' 'hg -R master serve --stdio' (glob)
+  bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
+  bundle2-input-part: total payload size 388
   $ hg up tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -l 3 -T '{desc}\n' --stat

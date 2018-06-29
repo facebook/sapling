@@ -186,12 +186,26 @@ requires tree manifest for the base commit.
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/2ee5caf43a5904f1c2809973b5f95a8d33bf4f76.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/5f14647c5653622d4c2682648ec82c7193d2a9ab.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/ac8ce590a2ff835c7a1c4a1a4653d9a2265ddae4.dataidx
 
-  $ hg debugdatapack $TESTTMP/hgcache/master/packs/manifests/2ee5caf43a5904f1c2809973b5f95a8d33bf4f76.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/2ee5caf43a5904f1c2809973b5f95a8d33bf4f76:
+  $ hg debugdatapack $TESTTMP/hgcache/master/packs/manifests/*.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/ac8ce590a2ff835c7a1c4a1a4653d9a2265ddae4:
+  dir:
+  Node          Delta Base    Delta Length  Blob Size
+  a18d21674e76  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  60a7f7acb6bb  000000000000  95            (missing)
+  
+  dir:
+  Node          Delta Base    Delta Length  Blob Size
+  bc0c2c938b92  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  1be4ab2126dd  000000000000  95            (missing)
+  
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
@@ -201,10 +215,8 @@ requires tree manifest for the base commit.
   2 trees fetched over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*.dataidx
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
-#endif
 
-  $ hg debugdatapack --config extensions.remotefilelog= \
-  > $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
+  $ hg debugdatapack --config extensions.remotefilelog= $CACHEDIR/master/packs/manifests/*.dataidx
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c:
   dir:
   Node          Delta Base    Delta Length  Blob Size
@@ -214,6 +226,8 @@ requires tree manifest for the base commit.
   Node          Delta Base    Delta Length  Blob Size
   60a7f7acb6bb  000000000000  95            (missing)
   
+#endif
+
 Test prefetching when a draft commit is marked public
   $ mkdir $TESTTMP/cachedir.bak
   $ mv $CACHEDIR/* $TESTTMP/cachedir.bak
@@ -283,18 +297,13 @@ Test auto prefetch during normal access
   
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
   $ ls $CACHEDIR/master/packs/manifests
-  148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
-  148e9eb32f473ea522c591c95be0f9e772be9675.datapack
-  3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
-  3fb59713808147bda39cbd97b9cd862406f5865c.datapack
-  524ab81400c6bc8449e3e720d81f836ebacec539.histidx
-  524ab81400c6bc8449e3e720d81f836ebacec539.histpack
-  e5c44a5c1bbfd8841df1c6c4b7cca54536e016db.histidx
-  e5c44a5c1bbfd8841df1c6c4b7cca54536e016db.histpack
+  0ac61f8fd04a6623ecbde9812036089c557f07fa.histidx
+  0ac61f8fd04a6623ecbde9812036089c557f07fa.histpack
+  a20546acd9623acde8a6b471b0a3013963d1c85d.dataidx
+  a20546acd9623acde8a6b471b0a3013963d1c85d.datapack
 
-  $ hg debugdatapack --config extensions.remotefilelog= \
-  > $CACHEDIR/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675
-  $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675:
+  $ hg debugdatapack --config extensions.remotefilelog= $CACHEDIR/master/packs/manifests/*.datapack
+  $TESTTMP/hgcache/master/packs/manifests/a20546acd9623acde8a6b471b0a3013963d1c85d:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   bc0c2c938b92  000000000000  43            (missing)
@@ -307,11 +316,6 @@ Test auto prefetch during normal access
   Node          Delta Base    Delta Length  Blob Size
   1be4ab2126dd  000000000000  95            (missing)
   
-
-- Note that subdir/ is not downloaded again
-  $ hg debugdatapack --config extensions.remotefilelog= \
-  > $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c
-  $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
@@ -320,7 +324,6 @@ Test auto prefetch during normal access
   Node          Delta Base    Delta Length  Blob Size
   60a7f7acb6bb  000000000000  95            (missing)
   
-
 Test that auto prefetch scans up the changelog for base trees
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r 'tip^'

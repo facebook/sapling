@@ -1761,6 +1761,10 @@ def _registerbundle2parts():
         if category != PACK_CATEGORY:
             raise error.Abort(_("invalid treegroup pack category: %s") % category)
 
+        mfl = repo.manifestlog
+        if isinstance(mfl, hybridmanifestlog):
+            mfl = repo.manifestlog.treemanifestlog
+
         # Treemanifest servers don't accept trees directly. They must either go
         # through pushrebase, or be processed manually.
         if repo.svfs.treemanifestserver:
@@ -1772,9 +1776,6 @@ def _registerbundle2parts():
                     _("cannot push only trees to a hybrid server " "without pushrebase")
                 )
             data = part.read()
-            mfl = repo.manifestlog
-            if isinstance(mfl, hybridmanifestlog):
-                mfl = repo.manifestlog.treemanifestlog
             wirepackstore = wirepack.wirepackstore(data)
             datastore = unioncontentstore(wirepackstore, mfl.datastore)
             tr = op.gettransaction()
@@ -1794,11 +1795,13 @@ def _registerbundle2parts():
             return
 
         if part.params.get("cache", "False") == "True":
-            packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
+            dpack, hpack = mfl.getmutablesharedpacks()
         else:
-            packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base, PACK_CATEGORY)
+            dpack, hpack = mfl._getmutablelocalpacks()
 
-        receivedhistory, receiveddata = shallowutil.receivepack(repo.ui, part, packpath)
+        receivedhistory, receiveddata = wirepack.receivepack(
+            repo.ui, part, dpack, hpack
+        )
 
         op.records.add(RECEIVEDNODE_RECORD, receiveddata)
 
