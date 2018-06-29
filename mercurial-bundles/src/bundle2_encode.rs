@@ -14,8 +14,8 @@ use bytes::{BigEndian, Buf, BufMut, Bytes, IntoBuf};
 use futures::{Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};
 use futures::stream::Forward;
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
+use tokio_codec::FramedWrite;
 use tokio_io::AsyncWrite;
-use tokio_io::codec::FramedWrite;
 
 use async_compression::{Compressor, CompressorType};
 

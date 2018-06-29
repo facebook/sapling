@@ -16,8 +16,8 @@ use slog;
 
 use futures_ext::BoxFuture;
 use futures_ext::io::Either;
+use tokio_codec::{Framed, FramedParts};
 use tokio_io::AsyncRead;
-use tokio_io::codec::{Framed, FramedParts};
 
 use Bundle2Item;
 use errors::*;
@@ -131,14 +131,10 @@ where
                 logger: logger,
                 app_errors: Vec::new(),
             },
-            current_stream: CurrentStream::Start(Framed::from_parts(
-                FramedParts {
-                    inner: read,
-                    readbuf: BytesMut::new(),
-                    writebuf: BytesMut::new(),
-                },
+            current_stream: CurrentStream::Start(Framed::from_parts(FramedParts::new(
+                read,
                 StartDecoder,
-            )),
+            ))),
         }
     }
 
@@ -184,17 +180,17 @@ impl Bundle2StreamInner {
                     }
                     Ok(Async::Ready(Some(start))) => {
                         let FramedParts {
-                            inner,
-                            readbuf,
-                            writebuf,
+                            io,
+                            read_buf,
+                            write_buf,
+                            ..
                         } = stream.into_parts();
                         assert!(
-                            writebuf.is_empty(),
-                            "writebuf must be empty, since inner is not AsyncWrite"
+                            write_buf.is_empty(),
+                            "write_buf must be empty, since io is not AsyncWrite"
                         );
 
-                        match outer_stream(&start, Cursor::new(readbuf).chain(inner), &self.logger)
-                        {
+                        match outer_stream(&start, Cursor::new(read_buf).chain(io), &self.logger) {
                             Err(e) => {
                                 // Can't do much if reading stream level params
                                 // failed -- go to the invalid state.
@@ -241,26 +237,27 @@ impl Bundle2StreamInner {
                     Ok(Async::Ready(Some(OuterFrame::StreamEnd))) => {
                         // No more parts to go.
                         let FramedParts {
-                            inner,
-                            mut readbuf,
-                            writebuf,
+                            io,
+                            mut read_buf,
+                            write_buf,
+                            ..
                         } = stream.into_parts();
                         assert!(
-                            writebuf.is_empty(),
-                            "writebuf must be empty, since inner is not AsyncWrite"
+                            write_buf.is_empty(),
+                            "write_buf must be empty, since io is not AsyncWrite"
                         );
 
-                        let inner = match inner {
-                            Either::A(inner) => inner,
+                        let io = match io {
+                            Either::A(io) => io,
                             Either::B(decompressor) => decompressor.into_inner(),
                         };
 
-                        let (cursor, inner) = inner.into_inner();
-                        readbuf
+                        let (cursor, io) = io.into_inner();
+                        read_buf
                             .extend_from_slice(&cursor.get_ref()[(cursor.position() as usize)..]);
 
                         (
-                            Ok(Async::Ready(Some(StreamEvent::Done((readbuf, inner))))),
+                            Ok(Async::Ready(Some(StreamEvent::Done((read_buf, io))))),
                             CurrentStream::End,
                         )
                     }

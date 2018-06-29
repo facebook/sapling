@@ -19,6 +19,7 @@ extern crate futures_ext;
 extern crate futures_stats;
 extern crate itertools;
 extern crate tokio;
+extern crate tokio_codec;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_uds;

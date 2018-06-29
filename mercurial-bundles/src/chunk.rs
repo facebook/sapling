@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use bytes::{BufMut, Bytes, BytesMut};
-use tokio_io::codec::{Decoder, Encoder};
+use tokio_codec::{Decoder, Encoder};
 
 use errors::*;
 use utils::BytesExt;
@@ -156,8 +156,8 @@ mod test {
 
     use futures::{stream, Sink, Stream};
     use quickcheck::{quickcheck, TestResult};
+    use tokio_codec::{FramedRead, FramedWrite};
     use tokio_core::reactor::Core;
-    use tokio_io::codec::{FramedRead, FramedWrite};
 
     use super::*;
 

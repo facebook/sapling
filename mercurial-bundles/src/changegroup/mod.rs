@@ -51,8 +51,8 @@ mod test {
     use quickcheck::rand;
     use slog::{Drain, Logger};
     use slog_term;
+    use tokio_codec::{FramedRead, FramedWrite};
     use tokio_core::reactor::Core;
-    use tokio_io::codec::{FramedRead, FramedWrite};
 
     use futures_ext::StreamLayeredExt;
     use partial_io::{GenWouldBlock, PartialAsyncRead, PartialAsyncWrite, PartialWithErrors};

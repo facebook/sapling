@@ -5,11 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![allow(deprecated)] // tokio_io::codec -> tokio_codec
 #![feature(ascii_ctype)]
-
-// TODO: (rain1) T30794196 move mercurial-bundles to tokio-codec
-#![allow(deprecated)]
 
 extern crate ascii;
 #[macro_use]
@@ -39,6 +35,7 @@ extern crate slog;
 #[cfg(test)]
 extern crate slog_term;
 extern crate tokio;
+extern crate tokio_codec;
 #[cfg(test)]
 extern crate tokio_core;
 extern crate tokio_io;

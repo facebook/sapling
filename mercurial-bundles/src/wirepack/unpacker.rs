@@ -11,7 +11,7 @@ use std::mem;
 
 use bytes::BytesMut;
 use slog;
-use tokio_io::codec::Decoder;
+use tokio_codec::Decoder;
 
 use mercurial_types::RepoPath;
 
@@ -259,8 +259,8 @@ mod test {
     use futures::Stream;
     use slog::Drain;
     use slog_term;
+    use tokio_codec::FramedRead;
     use tokio_core::reactor::Core;
-    use tokio_io::codec::FramedRead;
 
     use super::*;
 
