@@ -334,7 +334,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
             # backup continues
             for f in tobackup:
                 fd, tmpname = tempfile.mkstemp(
-                    prefix=f.replace("/", "_") + ".", dir=backupdir
+                    dir=backupdir
                 )
                 os.close(fd)
                 ui.debug("backup %r as %r\n" % (f, tmpname))
