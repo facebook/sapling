@@ -6,5 +6,5 @@ title = "Scm Daemon configuration example"
 authors = ["Source Control Team"]
 
 [commitcloud]
-interngraph_url = "https://example.com/commit_cloud"
-streaminggraph_url = "https://streaming-example.com/commitcloud_live_updates"
+service_url = "https://example.com/commit_cloud"
+notification_url = "https://streaming-example.com/commitcloud_live_updates"

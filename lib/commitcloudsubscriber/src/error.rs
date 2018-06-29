@@ -13,7 +13,7 @@ pub enum ErrorKind {
 
 use regex::Regex;
 lazy_static! {
-    static ref RE: Regex = Regex::new(r"access_token=\b\w+\b").unwrap();
+    static ref RE: Regex = Regex::new(r"[\&\?]?access_token=\b\w+\b").unwrap();
 }
 
 // This error is outside the enum ErrorKind because of custom filter
@@ -26,7 +26,8 @@ impl fmt::Display for CommitCloudHttpError {
         write!(
             f,
             "Commit Cloud EventSource HTTP error: {}",
-            RE.replace_all(&self.0, "access_token=****************")
+            // remove any token
+            RE.replace_all(&self.0, "")
         )
     }
 }

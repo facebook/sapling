@@ -67,11 +67,11 @@ mod defaults {
 pub struct CommitCloudConfig {
     /// Http endpoint for Commit Cloud requests
     #[serde(default)]
-    pub interngraph_url: Option<String>,
+    pub service_url: Option<String>,
 
     /// Server-Sent Events endpoint for real-time Commit Cloud Notifications
     #[serde(default)]
-    pub streaminggraph_url: Option<String>,
+    pub notification_url: Option<String>,
 
     /// Path to the directory containing current connected subscribers
     /// This is an optional override, see logic for the default location

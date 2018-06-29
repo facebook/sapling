@@ -8,6 +8,7 @@ use reqwest::Url;
 use serde_json;
 use std::{str, thread};
 use std::collections::HashMap;
+use std::net::ToSocketAddrs;
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -98,7 +99,10 @@ impl ThrottlingExecutor {
 
 pub struct WorkspaceSubscriberService {
     /// Server-Sent Events endpoint for Commit Cloud Notifications
-    pub(crate) url: String,
+    pub(crate) notification_url: String,
+
+    /// Http endpoint for Commit Cloud requests
+    pub(crate) service_url: String,
 
     /// OAuth token path (optional) for access to Commit Cloud SSE endpoint
     pub(crate) user_token_path: Option<PathBuf>,
@@ -125,9 +129,14 @@ pub struct WorkspaceSubscriberService {
 impl WorkspaceSubscriberService {
     pub fn new(config: &CommitCloudConfig) -> Result<WorkspaceSubscriberService> {
         Ok(WorkspaceSubscriberService {
-            url: config.streaminggraph_url.clone().ok_or_else(|| {
-                ErrorKind::CommitCloudConfigError("undefined 'streaminggraph_url'")
-            })?,
+            notification_url: config
+                .notification_url
+                .clone()
+                .ok_or_else(|| ErrorKind::CommitCloudConfigError("undefined 'notification_url'"))?,
+            service_url: config
+                .service_url
+                .clone()
+                .ok_or_else(|| ErrorKind::CommitCloudConfigError("undefined 'service_url'"))?,
             user_token_path: config.user_token_path.clone(),
             connected_subscribers_path: config.connected_subscribers_path.clone().ok_or_else(
                 || ErrorKind::CommitCloudConfigError("undefined 'connected_subscribers_path'"),
@@ -261,17 +270,19 @@ impl WorkspaceSubscriberService {
         subscription: Subscription,
         repo_roots: Vec<PathBuf>,
     ) -> Result<thread::JoinHandle<()>> {
-        let mut url = Url::parse(&self.url)?;
+        let mut notification_url = Url::parse(&self.notification_url)?;
+        let service_url = Url::parse(&self.service_url)?;
 
         let sid = format!("({} @ {})", subscription.repo_name, subscription.workspace);
-        info!("{} Subscribing to {}", sid, url);
+        info!("{} Subscribing to {}", sid, notification_url);
 
-        url.query_pairs_mut()
+        notification_url
+            .query_pairs_mut()
             .append_pair("workspace", &subscription.workspace)
             .append_pair("repo_name", &subscription.repo_name)
             .append_pair("access_token", &access_token);
 
-        let client = Client::new(url);
+        let client = Client::new(notification_url);
 
         info!("{} Spawn a thread to handle the subscription", sid);
 
@@ -284,6 +295,13 @@ impl WorkspaceSubscriberService {
             info!("{} Thread started...", sid);
 
             let fire = |reason: &'static str, version: Option<u64>| {
+                if service_url.to_socket_addrs().is_err() {
+                    warn!(
+                        "{} Skip CloudSyncTrigger: failed to lookup address information {}",
+                        sid, service_url
+                    );
+                    return;
+                }
                 for repo_root in repo_roots.iter() {
                     info!(
                         "{} Fire CloudSyncTrigger in '{}' {}",
