@@ -368,23 +368,147 @@ revisions numbers.
   
 
 
-Test errors for bad configuration of the hgsql extension on the server
+Test simultaneous pushes to different heads.
 
-- Configure the server to bypass hgsql extension.
+- Configure the existing server to not work on incoming changegroup immediately.
 
+  $ cp .hg/hgrc .hg/hgrc.bak
+  $ printf "[hooks]\npre-changegroup.sleep = sleep 2\n" >> .hg/hgrc
+
+
+- Create a second server.
+
+  $ cd ..
+  $ initserver master2 master
+
+  $ cd master2
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > globalrevs=
+  > pushrebase=
+  > [pushrebase]
+  > blocknonpushrebase=True
+  > EOF
+
+
+- Create a second client corresponding to the second server.
+
+  $ cd ..
+  $ initclient client2
+
+  $ hg pull -q -R client2 ssh://user@dummy/master2
+
+  $ cd client2
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > globalrevs=
+  > pushrebase=
+  > [experimental]
+  > evolution = all
+  > EOF
+
+
+- Make some commits on top of the tip commit on the first client.
+
+  $ cd ../client
+  $ hg up -q 'tip'
+  $ touch h1 && hg ci -Aqm h1
+  $ touch i && hg ci -Aqm i
+
+
+- Make some commits on top of the tip commit on the second client.
+
+  $ cd ../client2
+  $ hg up -q 'tip'
+  $ touch h2 && hg ci -Aqm h2
+
+
+- Push the commits from both the clients.
+
+  $ cd ..
+  $ hg push -R client -q ssh://user@dummy/master --to master &
+  $ hg push -R client2 -q -f ssh://user@dummy/master2 --to master
+
+
+- Introduce some bash functions to help with testing
+
+  $ getglobalrev()
+  > {
+  >   echo `hg log -r "$1" -T "{globalrev}"`
+  > }
+
+  $ isgreaterglobalrev()
+  > {
+  >   [ `getglobalrev "$1"` -gt `getglobalrev "$2"` ]
+  > }
+
+  $ isnotequalglobalrev()
+  > {
+  >   [ `getglobalrev "$1"` -ne `getglobalrev "$2"` ]
+  > }
+
+  $ checkglobalrevs()
+  > {
+  >   isgreaterglobalrev 'desc("h2")' 'desc("g1")' && \
+  >   isgreaterglobalrev 'desc("i")' 'desc("h1")' && \
+  >   isgreaterglobalrev 'desc("h1")' 'desc("g1")' && \
+  >   isnotequalglobalrev 'desc("i")' 'desc("h2")' && \
+  >   isnotequalglobalrev 'desc("h1")' 'desc("h2")'
+  > }
+
+
+- Check that both the servers have the expected strictly increasing revision
+numbers.
+
+  $ cd master
+  $ checkglobalrevs
+
+  $ cd ../master2
+  $ checkglobalrevs
+
+
+- Check that both the clients have the expected strictly increasing revisions
+numbers.
+
+  $ cd ../client
+  $ isgreaterglobalrev 'desc("i")' 'desc("h1")'
+  $ isgreaterglobalrev 'desc("h1")' 'desc("g1")'
+
+  $ cd ../client2
+  $ isgreaterglobalrev 'desc("h2")' 'desc("g1")'
+
+
+- Check that the clients have the expected strictly increasing revision numbers
+after a pull.
+
+  $ cd ../client
+  $ hg pull -q ssh://user@dummy/master
+  $ checkglobalrevs
+
+  $ cd ../client2
+  $ hg pull -q ssh://user@dummy/master2
+  $ checkglobalrevs
+
+
+Test errors for bad configuration of the hgsql extension on the first server
+
+- Configure the first server to bypass hgsql extension.
+
+  $ cd ../master
+  $ mv .hg/hgrc.bak .hg/hgrc
   $ cat >> .hg/hgrc <<EOF
   > [hgsql]
   > bypass = True
   > EOF
 
 
-- Make a commit on the client.
+- Make a commit on the first client.
 
   $ cd ../client
-  $ touch h && hg ci -Aqm h
+  $ touch j && hg ci -Aqm j
 
 
-- Try to push the commit to the server. It should fail because the hgsql
+- Try to push the commit to the first server. It should fail because the hgsql
 extension is misconfigured.
 
   $ hg push ssh://user@dummy/master --to master
