@@ -269,3 +269,62 @@ Change file contents via comments
   34
   FILE dir2/c
   6
+
+Special comments: "(removed)", "(copied from X)", "(renamed from X)"
+
+  $ newrepo
+  $ drawdag <<'EOS'
+  > C   # C/X1 = (removed)
+  > |   # C/C = (removed)
+  > |
+  > B   # B/B = (removed)
+  > |   # B/X1 = X\n1\n (renamed from X)
+  > |   # B/Y1 = Y\n1\n (copied from Y)
+  > |
+  > |   # A/A = (removed)
+  > A   # A/X = X\n
+  >     # A/Y = Y\n
+  > EOS
+
+  $ hg log -p -G -r 'all()' --config diff.git=1 -T '{desc}\n'
+  o  C
+  |  diff --git a/X1 b/X1
+  |  deleted file mode 100644
+  |  --- a/X1
+  |  +++ /dev/null
+  |  @@ -1,2 +0,0 @@
+  |  -X
+  |  -1
+  |
+  o  B
+  |  diff --git a/X b/X1
+  |  rename from X
+  |  rename to X1
+  |  --- a/X
+  |  +++ b/X1
+  |  @@ -1,1 +1,2 @@
+  |   X
+  |  +1
+  |  diff --git a/Y b/Y1
+  |  copy from Y
+  |  copy to Y1
+  |  --- a/Y
+  |  +++ b/Y1
+  |  @@ -1,1 +1,2 @@
+  |   Y
+  |  +1
+  |
+  o  A
+     diff --git a/X b/X
+     new file mode 100644
+     --- /dev/null
+     +++ b/X
+     @@ -0,0 +1,1 @@
+     +X
+     diff --git a/Y b/Y
+     new file mode 100644
+     --- /dev/null
+     +++ b/Y
+     @@ -0,0 +1,1 @@
+     +Y
+  

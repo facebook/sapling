@@ -279,21 +279,35 @@ class simplefilectx(object):
 
 
 class simplecommitctx(context.committablectx):
-    def __init__(self, repo, name, parentctxs, added):
+    def __init__(self, repo, name, parentctxs, filemap):
+        added = []
+        removed = []
+        for path, data in filemap.items():
+            # check "(renamed from)". mark the source as removed
+            m = re.search("\(renamed from (.+)\)\s*\Z", data, re.S)
+            if m:
+                removed.append(m.group(1))
+            # check "(removed)"
+            if re.match("\A\s*\(removed\)\s*\Z", data, re.S):
+                removed.append(path)
+            else:
+                if path in removed:
+                    raise error.Abort(_("%s: both added and removed") % path)
+                added.append(path)
         opts = {
-            "changes": scmutil.status([], list(added), [], [], [], [], []),
+            "changes": scmutil.status([], added, removed, [], [], [], []),
             "date": b"0 0",
             "extra": {b"branch": b"default"},
         }
         super(simplecommitctx, self).__init__(self, name, **opts)
         self._repo = repo
-        self._added = added
+        self._filemap = filemap
         self._parents = parentctxs
         while len(self._parents) < 2:
             self._parents.append(repo[node.nullid])
 
     def filectx(self, key):
-        data = self._added[key]
+        data = self._filemap[key]
         m = re.match("\A(.*) \((?:renamed|copied) from (.+)\)\s*\Z", data, re.S)
         if m:
             data = m.group(1)
