@@ -732,7 +732,6 @@ impl HgCommands for RepoClient {
                 let args = format!("node: {}, path: {}", node, path);
                 let mut scuba_logger = this.scuba_logger(ops::GETFILES, Some(args));
 
-                trace!(logger, "get file request: {:?} {}", path, node);
                 let repo = this.repo.clone();
                 create_remotefilelog_blob(repo.blobrepo.clone(), node, path.clone(), trace.clone())
                     .traced(
