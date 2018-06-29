@@ -21,11 +21,10 @@ use scuba_ext::ScubaSampleBuilder;
 
 use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry,
                UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
+use cmdlib::args;
 use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
                       NULL_HASH};
-
-use super::get_usize;
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
@@ -223,14 +222,14 @@ pub fn upload_changesets<'a>(
     let changesets = if !matches.is_present("skip") {
         changesets
     } else {
-        let skip = get_usize(matches, "skip", 0);
+        let skip = args::get_usize(matches, "skip", 0);
         changesets.skip(skip as u64).boxify()
     };
 
     let changesets = if !matches.is_present("commits-limit") {
         changesets
     } else {
-        let limit = get_usize(matches, "commits-limit", 0);
+        let limit = args::get_usize(matches, "commits-limit", 0);
         changesets.take(limit as u64).boxify()
     };
 

@@ -81,16 +81,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn get_usize<'a>(matches: &ArgMatches<'a>, key: &str, default: usize) -> usize {
-    matches
-        .value_of(key)
-        .map(|val| {
-            val.parse::<usize>()
-                .expect(&format!("{} must be integer", key))
-        })
-        .unwrap_or(default)
-}
-
 fn setup_local_state(output: &Path) -> Result<()> {
     if !output.is_dir() {
         bail_msg!("{:?} does not exist or is not a directory", output);
@@ -180,7 +170,7 @@ fn main() {
         &matches,
         revlogrepo.clone(),
         blobrepo.clone(),
-        get_usize(&matches, "parsing-cpupool-size", 8),
+        args::get_usize(&matches, "parsing-cpupool-size", 8),
     ).buffer_unordered(100)
         .map({
             let mut cs_count = 0;
