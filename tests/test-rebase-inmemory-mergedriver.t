@@ -21,7 +21,7 @@ Test mergedriver invalidation with IMM.
   >     pass
   > EOF
 
-  $ cat >> driver/generators.py <<EOF
+  $ cat > driver/generators.py <<EOF
   > VERSION = "BASE"
   > def someFunction(repo):
   >     repo.ui.warn("base's someFunction() called\n")
@@ -40,7 +40,7 @@ conflicts, though a conflict would work too). Otherwise, mergedriver won't run.
 
 Next, off of BASE, make an API change to the driver.
 
-  $ cat >> driver/__init__.py <<EOF
+  $ cat > driver/__init__.py <<EOF
   > from .generators import someFunction, VERSION
   > 
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels=None):
@@ -56,7 +56,7 @@ Next, off of BASE, make an API change to the driver.
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels=None):
   >     pass
   > EOF
-  $ cat >> driver/generators.py <<EOF
+  $ cat > driver/generators.py <<EOF
   > VERSION = "NEW"
   > 
   > def someFunction(repo, new_required_arg):

@@ -114,6 +114,11 @@ def _rundriver(repo, ms, op, wctx, labels):
         raise error.ConfigError(_("merge driver must be a python hook"))
     ms.commit()
     raised = False
+    # Don't write .pyc files for the loaded hooks (restore this setting
+    # after running). Like the `loadedmodules` fix below, this is to prevent
+    # drivers changed during a rebase from being loaded inconsistently.
+    origbytecodesetting = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
     origmodules = set(sys.modules.keys())
     try:
         res = hook.runhooks(
@@ -149,6 +154,7 @@ def _rundriver(repo, ms, op, wctx, labels):
         loadedmodules = set(sys.modules.keys()) - origmodules
         for mod in loadedmodules:
             del sys.modules[mod]
+        sys.dont_write_bytecode = origbytecodesetting
     return r, raised
 
 
