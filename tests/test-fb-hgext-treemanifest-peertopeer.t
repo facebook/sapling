@@ -96,9 +96,16 @@ cache.
   $ hg -R ../client2 prefetch -r 'all()'
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ cp ../client2/.hg/hgrc ../client2/.hg/hgrc.bak
+  $ cat >> ../client2/.hg/hgrc <<EOF
+  > [remotefilelog]
+  > cachepath=$CACHEDIR/cache2
+  > EOF
+
 # Push and expect only one bulk download of trees
-  $ hg push -q ../client2
+  $ hg push -q ssh://user@dummy/client2
   4 trees fetched over * (glob)
+  remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   $ ls_l $CACHEDIR/master/packs/manifests
   -r--r--r--    1186 06f87527833ba45e5e277a5acf0a20d9e6ec2671.dataidx
@@ -111,6 +118,7 @@ cache.
   -r--r--r--     347 940bb8bf7ddf4196fff7fd1e837cbed98cb19c19.histpack
   $ hg -R ../client2 strip -q -r 'tip^^' --config extensions.treemanifest=! --config fastmanifest.usetree=False
   $ rm -rf ../client2/.hg/store/packs
+  $ mv ../client2/.hg/hgrc.bak ../client2/.hg/hgrc
   $ clearcache
 
 Pushing p2p with sendtrees=True puts the received packs in the local pack store
@@ -119,18 +127,26 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   $ hg -R ../client2 prefetch -r 'all()'
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ cp ../client2/.hg/hgrc ../client2/.hg/hgrc.bak
+  $ cat >> ../client2/.hg/hgrc <<EOF
+  > [remotefilelog]
+  > cachepath=$CACHEDIR/cache2
+  > EOF
+
 # Push and expect downloads of both public trees (in arbitrary order)
-  $ hg push -q ../client2 --config treemanifest.sendtrees=True --config treemanifest.treeonly=True
+  $ hg push -q ssh://user@dummy/client2 --config treemanifest.sendtrees=True --config treemanifest.treeonly=True
   fetching tree '' *, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 54609f68e211 (glob)
   2 trees fetched over * (glob)
   fetching tree '' *, based on *, found via 54609f68e211 (glob)
   2 trees fetched over * (glob)
+  remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   $ ls ../client2/.hg/store/packs/manifests
   700fb8a7918068e308a998d338d1689074118d07.histidx
   700fb8a7918068e308a998d338d1689074118d07.histpack
   c446da942a8eb5a687e11a12920e4d4526ef765a.dataidx
   c446da942a8eb5a687e11a12920e4d4526ef765a.datapack
+  $ mv ../client2/.hg/hgrc.bak ../client2/.hg/hgrc
   $ hg debughistorypack ../client2/.hg/store/packs/manifests/*histidx
   
   
