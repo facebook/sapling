@@ -190,6 +190,10 @@ RECEIVEDNODE_RECORD = "receivednodes"
 # prefetches, this constant defines how far back we should search.
 BASENODESEARCHMAX = 25000
 
+# Offsets in the mutable pack tuple
+DATA = 0
+HISTORY = 1
+
 try:
     xrange(0)
 except NameError:
@@ -531,46 +535,46 @@ class mutablemanifeststore(object):
         self.manifestlog = manifestlog
 
     def getmissing(self, keys):
-        datapack = self.manifestlog._mutabledatapack
-        if datapack is None:
+        packs = self.manifestlog._mutablelocalpacks
+        if packs is None:
             return keys
 
-        return datapack.getmissing(keys)
+        return packs[DATA].getmissing(keys)
 
     def get(self, name, node):
-        datapack = self.manifestlog._mutabledatapack
-        if datapack is None:
+        packs = self.manifestlog._mutablelocalpacks
+        if packs is None:
             raise KeyError(name, hex(node))
 
-        return datapack.get(name, node)
+        return packs[DATA].get(name, node)
 
     def getdelta(self, name, node):
-        datapack = self.manifestlog._mutabledatapack
-        if datapack is None:
+        packs = self.manifestlog._mutablelocalpacks
+        if packs is None:
             raise KeyError(name, hex(node))
 
-        return datapack.getdelta(name, node)
+        return packs[DATA].getdelta(name, node)
 
     def getdeltachain(self, name, node):
-        datapack = self.manifestlog._mutabledatapack
-        if datapack is None:
+        packs = self.manifestlog._mutablelocalpacks
+        if packs is None:
             raise KeyError(name, hex(node))
 
-        return datapack.getdeltachain(name, node)
+        return packs[DATA].getdeltachain(name, node)
 
     def getnodeinfo(self, name, node):
-        historypack = self.manifestlog._mutablehistorypack
-        if historypack is None:
+        packs = self.manifestlog._mutablelocalpacks
+        if packs is None:
             raise KeyError(name, hex(node))
 
-        return historypack.getnodeinfo(name, node)
+        return packs[HISTORY].getnodeinfo(name, node)
 
     def getancestors(self, name, node):
-        historypack = self.manifestlog._mutablehistorypack
-        if historypack is None:
+        packs = self.manifestlog._mutablelocalpacks
+        if packs is None:
             raise KeyError(name, hex(node))
 
-        return historypack.getancestors(name, node)
+        return packs[HISTORY].getancestors(name, node)
 
     def getmetrics(self):
         return {}
@@ -578,8 +582,7 @@ class mutablemanifeststore(object):
 
 class basetreemanifestlog(object):
     def __init__(self):
-        self._mutabledatapack = None
-        self._mutablehistorypack = None
+        self._mutablelocalpacks = None
         self.recentlinknode = None
 
     def add(
@@ -623,12 +626,15 @@ class basetreemanifestlog(object):
                 linkrev=linkrev,
             )
 
-    def _createmutablepack(self):
-        packpath = shallowutil.getlocalpackpath(self._opener.vfs.base, "manifests")
-        self._mutabledatapack = mutabledatapack(self.ui, packpath)
-        self._mutablehistorypack = mutablehistorypack(
-            self.ui, packpath, repo=self._repo
-        )
+    def _getmutablelocalpacks(self):
+        """Returns a tuple containing a data pack and a history pack."""
+        if self._mutablelocalpacks is None:
+            packpath = shallowutil.getlocalpackpath(self._opener.vfs.base, "manifests")
+            self._mutablelocalpacks = (
+                mutabledatapack(self.ui, packpath),
+                mutablehistorypack(self.ui, packpath, repo=self._repo),
+            )
+        return self._mutablelocalpacks
 
     def _addtopack(
         self,
@@ -641,8 +647,7 @@ class basetreemanifestlog(object):
         overridep1node=None,
         linkrev=None,
     ):
-        if self._mutabledatapack is None:
-            self._createmutablepack()
+        dpack, hpack = self._getmutablelocalpacks()
 
         p1tree = self[p1node].read()
         p2tree = self[p2node].read()
@@ -654,8 +659,6 @@ class basetreemanifestlog(object):
             p2tree = p2tree._treemanifest()
         newtreeiter = newtree.finalize(p1tree, p2tree)
 
-        dpack = self._mutabledatapack
-        hpack = self._mutablehistorypack
         if overridenode is not None:
             dpack = InterceptedMutableDataPack(dpack, overridenode, overridep1node)
             hpack = InterceptedMutableHistoryPack(hpack, overridenode, overridep1node)
@@ -722,29 +725,25 @@ class basetreemanifestlog(object):
         return node
 
     def commitpending(self):
-        if self._mutabledatapack is not None:
-            dpack = self._mutabledatapack
-            hpack = self._mutablehistorypack
+        if self._mutablelocalpacks is not None:
+            dpack, hpack = self._mutablelocalpacks
 
             dpack.close()
             hpack.close()
 
-            self._mutabledatapack = None
-            self._mutablehistorypack = None
+            self._mutablelocalpacks = None
 
             self.datastore.markforrefresh()
             self.historystore.markforrefresh()
 
     def abortpending(self):
-        if self._mutabledatapack is not None:
-            dpack = self._mutabledatapack
-            hpack = self._mutablehistorypack
+        if self._mutablelocalpacks is not None:
+            dpack, hpack = self._mutablelocalpacks
 
             dpack.abort()
             hpack.abort()
 
-            self._mutabledatapack = None
-            self._mutablehistorypack = None
+            self._mutablelocalpacks = None
 
     def __nonzero__(self):
         return True
@@ -1033,16 +1032,16 @@ def getbundlemanifestlog(orig, self):
                 linkrev=linkrev,
             )
 
-        def _createmutablepack(self):
-            self._mutabledatapack = memdatapack()
-            self._mutablehistorypack = memhistorypack()
+        def _getmutablelocalpacks(self):
+            if self._mutablelocalpacks is None:
+                self._mutablelocalpacks = (memdatapack(), memhistorypack())
+            return self._mutablelocalpacks
 
         def commitpending(self):
             pass
 
         def abortpending(self):
-            self._mutabledatapack = None
-            self._mutablehistorypack = None
+            self._mutabelocalpacks = None
 
     wrapmfl.__class__ = bundlemanifestlog
     return mfl
