@@ -896,7 +896,9 @@ def reposetup(ui, repo):
 
             def wlock(self, *args, **kwargs):
                 l = super(fsmonitorrepo, self).wlock(*args, **kwargs)
-                if not ui.configbool("experimental", "fsmonitor.transaction_notify"):
+                if not self.ui.configbool(
+                    "experimental", "fsmonitor.transaction_notify"
+                ):
                     return l
                 if l.held != 1:
                     return l

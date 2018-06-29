@@ -15,10 +15,6 @@ Attach an object with `__del__` to learn whether repo, ui are dropped on not.
 
   $ setconfig extensions.leakdetect=$TESTTMP/printondel.py
 
-fsmonitor would cause leaks
-
-#require no-fsmonitor
-
 No leak without extensions
 
   $ newrepo
