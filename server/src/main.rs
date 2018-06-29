@@ -22,6 +22,7 @@ extern crate tokio;
 extern crate tokio_codec;
 extern crate tokio_core;
 extern crate tokio_io;
+extern crate tokio_tls;
 extern crate tokio_uds;
 
 extern crate rand;
@@ -58,10 +59,13 @@ extern crate mercurial_types;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
 extern crate metaconfig;
+extern crate native_tls;
+extern crate openssl;
 extern crate pylz4;
 extern crate repoinfo;
 extern crate revset;
 extern crate scuba_ext;
+extern crate secure_utils;
 extern crate services;
 extern crate sshrelay;
 extern crate stats;
@@ -76,6 +80,7 @@ mod listener;
 mod monitoring;
 mod remotefilelog;
 mod repo;
+mod ssl;
 
 use std::collections::HashMap;
 use std::io;
@@ -96,6 +101,7 @@ use futures::sync::mpsc;
 use futures_ext::{asynchronize, FutureExt};
 use futures_stats::Timed;
 use tokio::util::FutureExt as TokioFutureExt;
+use tokio_tls::TlsAcceptorExt;
 
 use bytes::Bytes;
 use clap::{App, ArgMatches};
@@ -165,6 +171,10 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                           --listening-host-port <PATH>           'tcp address to listen to in format `host:port`'
 
             -p, --thrift_port [PORT] 'if provided the thrift server will start on this port'
+
+            <cert>        --cert [PATH]                         'path to a file with certificate'
+            <private_key> --private-key [PATH]                  'path to a file with private key'
+            <ca_pem>      --ca-pem [PATH]                       'path to a file with CA certificate'
 
             -d, --debug                                          'print debug level output'
         "#,
@@ -244,6 +254,7 @@ fn start_repo_listeners<I>(
     repos: I,
     root_log: &Logger,
     sockname: &str,
+    ssl: ssl::SslConfig,
 ) -> Result<(Vec<JoinHandle<!>>, ReadyState)>
 where
     I: IntoIterator<Item = (String, RepoConfig)>,
@@ -283,7 +294,7 @@ where
         .name(format!("connection_acceptor"))
         .spawn({
             let root_log = root_log.clone();
-            move || connection_acceptor(&sockname, root_log, repo_senders)
+            move || connection_acceptor(&sockname, root_log, repo_senders, ssl)
         })
         .map_err(Error::from);
 
@@ -309,7 +320,10 @@ fn connection_acceptor(
     sockname: &str,
     root_log: Logger,
     repo_senders: HashMap<String, mpsc::Sender<(Stdio, SocketAddr)>>,
+    ssl: ssl::SslConfig,
 ) -> ! {
+    let tls_acceptor = ssl::build_tls_acceptor(ssl).expect("failed to build tls acceptor");
+
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
     let remote = core.remote();
     let connection_acceptor = listener::listener(sockname)
@@ -322,19 +336,32 @@ fn connection_acceptor(
                     Ok(addr) => addr,
                     Err(err) => {
                         crit!(root_log, "Failed to get peer addr"; SlogKVError(Error::from(err)));
-                        return Ok(None).into_future().boxify();
+                        return Ok(None).into_future().left_future();
                     }
                 };
-                ssh_server_mux(sock, remote.clone())
-                    .map(move |stdio| Some((stdio, addr)))
-                    .or_else({
+                tls_acceptor
+                    .accept_async(sock)
+                    .then({
+                        let remote = remote.clone();
                         let root_log = root_log.clone();
-                        move |err| {
-                            error!(root_log, "Error while reading preamble: {}", err);
-                            Ok(None)
+                        move |sock| match sock {
+                            Ok(sock) => ssh_server_mux(sock, remote.clone())
+                                .map(move |stdio| Some((stdio, addr)))
+                                .or_else({
+                                    let root_log = root_log.clone();
+                                    move |err| {
+                                        error!(root_log, "Error while reading preamble: {}", err);
+                                        Ok(None)
+                                    }
+                                })
+                                .left_future(),
+                            Err(err) => {
+                                error!(root_log, "Error while reading preamble: {}", err);
+                                Ok(None).into_future().right_future()
+                            }
                         }
                     })
-                    .boxify()
+                    .right_future()
             }
         })
         .for_each(move |maybe_stdio| {
@@ -549,12 +576,23 @@ fn main() {
         let stats_aggregation = monitoring::start_stats()?;
 
         let config = get_config(root_log, &matches)?;
+        let cert = matches.value_of("cert").unwrap().to_string();
+        let private_key = matches.value_of("private_key").unwrap().to_string();
+        let ca_pem = matches.value_of("ca_pem").unwrap().to_string();
+
+        let ssl = ssl::SslConfig {
+            cert,
+            private_key,
+            ca_pem,
+        };
+
         let (repo_listeners, ready) = start_repo_listeners(
             config.repos.into_iter(),
             root_log,
             matches
                 .value_of("listening-host-port")
                 .expect("listening path must be specified"),
+            ssl,
         )?;
 
         tracing_fb303::register();

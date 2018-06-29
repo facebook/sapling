@@ -19,19 +19,31 @@ EOF
 function mononoke {
   export MONONOKE_SOCKET
   MONONOKE_SOCKET=$(get_free_socket)
-  "$MONONOKE_SERVER" "$@" --debug --listening-host-port 127.0.0.1:"$MONONOKE_SOCKET" -P "$TESTTMP/mononoke-config-rocks" --configrepo_book local_master >> "$TESTTMP/mononoke.out" 2>&1 &
+  "$MONONOKE_SERVER" "$@" --ca-pem "$TESTDIR/testcert.crt" \
+  --private-key "$TESTDIR/testcert.key" \
+  --cert "$TESTDIR/testcert.crt" \
+  --debug \
+  --listening-host-port 127.0.0.1:"$MONONOKE_SOCKET" \
+  -P "$TESTTMP/mononoke-config-rocks" \
+   --configrepo_book local_master >> "$TESTTMP/mononoke.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
   local attempts=150
+
+  SSLCURL="curl --cert $TESTDIR/testcert.crt \
+                --cacert $TESTDIR/testcert.crt \
+                --key $TESTDIR/testcert.key \
+                https://localhost:$MONONOKE_SOCKET"
+
   for _ in $(seq 1 $attempts); do
-    curl 127.0.0.1:"$MONONOKE_SOCKET" 2>&1 | grep -q 'Empty reply' && break
+    $SSLCURL 2>&1 | grep -q 'Empty reply' && break
     sleep 0.1
   done
 
-  if ! curl 127.0.0.1:"$MONONOKE_SOCKET" 2>&1 | grep -q 'Empty reply'; then
+  if ! $SSLCURL 2>&1 | grep -q 'Empty reply'; then
     echo "Mononoke did not start" >&2
     cat "$TESTTMP/mononoke.out"
     exit 1

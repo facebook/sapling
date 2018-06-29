@@ -15,11 +15,14 @@ extern crate tokio_uds;
 
 extern crate bytes;
 extern crate futures;
+extern crate native_tls;
+extern crate secure_utils;
 extern crate tokio;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_proto;
 extern crate tokio_service;
+extern crate tokio_tls;
 
 extern crate mio;
 extern crate nix;
@@ -55,6 +58,16 @@ fn main() {
                 .arg(Arg::from_usage("-p, --port <PORT> 'port to listen on'").default_value("8000"))
                 .arg(Arg::from_usage(
                     "-a, --address [ADDR] 'address to listen on'",
+                ))
+                .arg(Arg::from_usage(
+                    "--cert [CERT]  'path to the certificate file'",
+                ))
+                .arg(Arg::from_usage("--ca-pem [PEM] 'path to the pem file'"))
+                .arg(Arg::from_usage(
+                    "--private-key [KEY] 'path to the private key'",
+                ))
+                .arg(Arg::from_usage(
+                    "--common-name [CN] 'expected SSL common name of the server see https://www.ssl.com/faqs/common-name/'",
                 ))
                 .arg(Arg::from_usage("--stdio 'for remote clients'"))
                 .arg(

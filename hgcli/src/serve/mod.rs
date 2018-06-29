@@ -9,9 +9,12 @@ use std::net::SocketAddr;
 use bytes::Bytes;
 use futures::{future, stream, Future, Sink, Stream};
 
+use native_tls::TlsConnector;
+use native_tls::backend::openssl::TlsConnectorBuilderExt;
 use tokio_core::reactor::Core;
 use tokio_io::AsyncRead;
 use tokio_io::codec::{FramedRead, FramedWrite};
+use tokio_tls::TlsConnectorExt;
 
 use tokio::net::TcpStream;
 
@@ -20,6 +23,7 @@ use clap::ArgMatches;
 use errors::*;
 
 use futures_ext::StreamExt;
+use secure_utils::build_pkcs12;
 use sshrelay::{Preamble, SshDecoder, SshEncoder, SshMsg, SshStream};
 
 mod fdio;
@@ -28,14 +32,35 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> Result<()> {
     if sub.is_present("stdio") {
         if let Some(repo) = main.value_of("repository") {
             let mononoke_path = sub.value_of("mononoke-path").unwrap();
-            return stdio_relay(mononoke_path, repo);
+
+            let cert = sub.value_of("cert")
+                .expect("certificate file is not specified")
+                .to_string();
+            let private_key = sub.value_of("private-key")
+                .expect("private key file is not specified")
+                .to_string();
+            let ca_pem = sub.value_of("ca-pem")
+                .expect("Cental authority pem file is not specified")
+                .to_string();
+            let common_name = sub.value_of("common-name")
+                .expect("expected SSL common name of the Mononoke server")
+                .to_string();
+
+            return stdio_relay(mononoke_path, repo, cert, private_key, ca_pem, common_name);
         }
         bail_msg!("Missing repository");
     }
     bail_msg!("Only stdio server is supported");
 }
 
-fn stdio_relay<P: AsRef<str>>(path: P, repo: &str) -> Result<()> {
+fn stdio_relay<P: AsRef<str>>(
+    path: P,
+    repo: &str,
+    cert: String,
+    private_key: String,
+    ca_pem: String,
+    ssl_common_name: String,
+) -> Result<()> {
     let path = path.as_ref();
 
     let mut reactor = Core::new()?;
@@ -50,7 +75,20 @@ fn stdio_relay<P: AsRef<str>>(path: P, repo: &str) -> Result<()> {
     let socket = TcpStream::connect(&addr)
         .map_err(|err| format_err!("connecting to Mononoke {} socket '{}' failed", path, err));
 
-    let socket = reactor.run(socket)?;
+    let pkcs12 = build_pkcs12(cert, private_key)?;
+    let mut connector_builder = TlsConnector::builder()?;
+    connector_builder.identity(pkcs12)?;
+    {
+        let sslcontextbuilder = connector_builder.builder_mut();
+
+        sslcontextbuilder.set_ca_file(ca_pem)?;
+    }
+    let connector = connector_builder.build()?;
+
+    let socket = reactor.run(socket.and_then(move |socket| {
+        let async_connector = connector.connect_async(&ssl_common_name, socket);
+        async_connector.map_err(|err| format_err!("async connect error {}", err))
+    }))?;
 
     // Wrap the socket with the ssh codec
     let (socket_read, socket_write) = socket.split();
