@@ -324,7 +324,9 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   bundle2-input-bundle: 1 parts total
   updating the branch cache
   invalid branchheads cache (served): tip differs
+  history modification detected - truncating revision branch cache to revision 9
   rebase completed
+  truncating cache/rbc-revs-v1 to 72
 
 Test minimization of merge conflicts
   $ hg up -q null

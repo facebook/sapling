@@ -679,6 +679,8 @@ Missing tags2* files means the cache wasn't written through the normal mechanism
   checklink (symlink !)
   checklink-target (symlink !)
   hgtagsfnodes1
+  rbc-names-v1
+  rbc-revs-v1
 
 Cache should contain the head only, even though other nodes have tags data
 
@@ -704,6 +706,8 @@ Running hg tags should produce tags2* file and not change cache
   checklink (symlink !)
   checklink-target (symlink !)
   hgtagsfnodes1
+  rbc-names-v1
+  rbc-revs-v1
   tags2-visible
 
   $ f --size --hexdump tagsclient/.hg/cache/hgtagsfnodes1

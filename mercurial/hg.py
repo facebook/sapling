@@ -581,6 +581,7 @@ def clone(
     else:
         dest = ui.expandpath(dest)
 
+    destpeer = None
     dest = util.urllocalpath(dest)
     source = util.urllocalpath(source)
 
@@ -797,6 +798,8 @@ def clone(
             shutil.rmtree(cleandir, True)
         if srcpeer is not None:
             srcpeer.close()
+        if destpeer is not None:
+            destpeer.close()
     return srcpeer, destpeer
 
 
