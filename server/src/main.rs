@@ -73,6 +73,7 @@ extern crate upload_trace;
 mod errors;
 mod listener;
 mod monitoring;
+mod remotefilelog;
 mod repo;
 
 use std::collections::HashMap;
