@@ -98,6 +98,20 @@ repotype="blob:rocks"
 repoid=0
 CONFIG
 
+  cat > repos/enabled_repo <<CONFIG
+path="$TESTTMP/enabled_repo"
+repotype="blob:rocks"
+repoid=1
+enabled=true
+CONFIG
+
+  cat > repos/disabled_repo <<CONFIG
+path="$TESTTMP/disabled_repo"
+repotype="blob:rocks"
+repoid=2
+enabled=false
+CONFIG
+
   if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
     cat >> repos/repo <<CONFIG
 [cache_warmup]

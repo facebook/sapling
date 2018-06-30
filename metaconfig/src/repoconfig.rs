@@ -29,6 +29,8 @@ use errors::*;
 /// Configuration of a single repository
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RepoConfig {
+    /// If false, this repo config is completely ignored.
+    pub enabled: bool,
     /// Defines the type of repository
     pub repotype: RepoType,
     /// How large a cache to use (in bytes) for RepoGenCache derived information
@@ -205,6 +207,8 @@ impl RepoConfigs {
 struct RawRepoConfig {
     path: PathBuf,
     repotype: RawRepoType,
+
+    enabled: Option<bool>,
     generation_cache_size: Option<usize>,
     manifold_bucket: Option<String>,
     manifold_prefix: Option<String>,
@@ -291,6 +295,7 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
             ),
         };
 
+        let enabled = this.enabled.unwrap_or(true);
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
         let repoid = this.repoid;
         let scuba_table = this.scuba_table;
@@ -327,6 +332,7 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
         };
 
         Ok(RepoConfig {
+            enabled,
             repotype,
             generation_cache_size,
             repoid,
@@ -392,6 +398,7 @@ mod test {
         repos.insert(
             "fbsource".to_string(),
             RepoConfig {
+                enabled: true,
                 repotype: RepoType::BlobRocks("/tmp/fbsource".into()),
                 generation_cache_size: 1024 * 1024,
                 repoid: 0,
@@ -425,6 +432,7 @@ mod test {
         repos.insert(
             "www".to_string(),
             RepoConfig {
+                enabled: true,
                 repotype: RepoType::Revlog("/tmp/www".into()),
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: 1,

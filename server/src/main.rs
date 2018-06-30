@@ -270,6 +270,12 @@ where
 
     let mut handles: Vec<_> = repos
         .into_iter()
+        .filter(|(reponame, config)| {
+            if !config.enabled {
+                info!(root_log, "Repo {} not enabled", reponame)
+            };
+            config.enabled
+        })
         .map(|(reponame, config)| {
             info!(root_log, "Start listening for repo {:?}", config.repotype);
             let ready_handle = ready.create_handle(reponame.as_ref());

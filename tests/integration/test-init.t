@@ -113,11 +113,18 @@ blobimport
 
   $ cd ..
   $ blobimport repo-hg/.hg repo
+  $ blobimport repo-hg/.hg enabled_repo
 
 start mononoke
 
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
+  $ hgmn debugwireargs ssh://user@dummy/disabled_repo one two --three three
+  abort: no suitable response from remote hg!
+  [255]
+  $ hgmn debugwireargs ssh://user@dummy/enabled_repo one two --three three
+  one two three None None
+
   $ hgmn debugwireargs ssh://user@dummy/repo one two --three three
   one two three None None
 
