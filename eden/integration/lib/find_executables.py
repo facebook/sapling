@@ -90,7 +90,9 @@ class FindExeClass(object):
         return self._find_exe(
             "fsattr",
             env="EDENFS_FSATTR_BIN",
-            candidates=[os.path.join(self.BUCK_OUT, "gen/eden/integration/fsattr")],
+            candidates=[
+                os.path.join(self.BUCK_OUT, "gen/eden/integration/helpers/fsattr")
+            ],
         )
 
     @cached_property

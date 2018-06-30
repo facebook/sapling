@@ -26,7 +26,7 @@ def get_test_env_and_deps(suffix=''):
         'EDENFS_CLI_PATH': '//eden/cli:eden',
         'EDENFS_SERVER_PATH': daemon_target,
         'EDENFS_POST_CLONE_PATH': '//eden/hooks/hg:post-clone',
-        'EDENFS_FSATTR_BIN': '//eden/integration:fsattr',
+        'EDENFS_FSATTR_BIN': '//eden/integration/helpers:fsattr',
         'EDENFS_FAKE_EDENFS': '//eden/integration/helpers:fake_edenfs',
         'EDENFS_HG_IMPORT_HELPER': '//eden/fs/store/hg:hg_import_helper',
         'EDEN_HG_BINARY': '//scm/telemetry/hg:hg',
