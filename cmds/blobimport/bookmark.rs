@@ -68,7 +68,15 @@ pub fn upload_bookmarks(
                 try_boxfuture!(transaction.force_set(&key, &value))
             }
 
-            transaction.commit().map(move |()| count).boxify()
+            transaction.commit()
+                .and_then(move |ok| {
+                    if ok {
+                        Ok(count)
+                    } else {
+                        Err(format_err!("Bookmark transaction failed"))
+                    }
+                })
+                .boxify()
         }
     }).for_each(move |count| {
         info!(logger, "uploaded chunk of {:?} bookmarks", count);

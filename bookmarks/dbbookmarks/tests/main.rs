@@ -52,7 +52,7 @@ macro_rules! bookmarks_test_impl {
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.force_set(&name_correct, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 assert_eq!(
                     bookmarks.get(&name_correct, &REPO_ZERO).wait().unwrap(),
@@ -73,7 +73,7 @@ macro_rules! bookmarks_test_impl {
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.force_set(&name_1, &ONES_CSID).unwrap();
                 txn.force_set(&name_2, &TWOS_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 assert_eq!(
                     bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(),
@@ -92,11 +92,11 @@ macro_rules! bookmarks_test_impl {
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.force_set(&name_1, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.force_set(&name_1, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 assert_eq!(
                     bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(),
@@ -111,7 +111,7 @@ macro_rules! bookmarks_test_impl {
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 assert_eq!(
                     bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(),
@@ -126,7 +126,7 @@ macro_rules! bookmarks_test_impl {
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
@@ -178,11 +178,11 @@ macro_rules! bookmarks_test_impl {
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.update(&name_1, &TWOS_CSID, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 assert_eq!(
                     bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(),
@@ -197,7 +197,7 @@ macro_rules! bookmarks_test_impl {
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.update(&name_1, &TWOS_CSID, &ONES_CSID).unwrap();
-                assert!(txn.commit().wait().is_err());
+                assert_eq!(txn.commit().wait().unwrap(), false);
             }
 
             #[test]
@@ -207,11 +207,11 @@ macro_rules! bookmarks_test_impl {
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.update(&name_1, &ONES_CSID, &TWOS_CSID).unwrap();
-                assert!(txn.commit().wait().is_err());
+                assert_eq!(txn.commit().wait().unwrap(), false);
             }
 
             #[test]
@@ -221,18 +221,18 @@ macro_rules! bookmarks_test_impl {
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.force_delete(&name_1).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 assert_eq!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(), None);
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
                 assert!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap().is_some());
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.force_delete(&name_1).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 assert_eq!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap(), None);
             }
@@ -244,16 +244,16 @@ macro_rules! bookmarks_test_impl {
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.delete(&name_1, &ONES_CSID).unwrap();
-                assert!(txn.commit().wait().is_err());
+                assert_eq!(txn.commit().wait().unwrap(), false);
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
                 assert!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap().is_some());
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.delete(&name_1, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
             }
 
             #[test]
@@ -263,12 +263,12 @@ macro_rules! bookmarks_test_impl {
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
                 assert!(bookmarks.get(&name_1, &REPO_ZERO).wait().unwrap().is_some());
 
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.delete(&name_1, &TWOS_CSID).unwrap();
-                assert!(txn.commit().wait().is_err());
+                assert_eq!(txn.commit().wait().unwrap(), false);
             }
 
             #[test]
@@ -280,7 +280,7 @@ macro_rules! bookmarks_test_impl {
                 let mut txn = bookmarks.create_transaction(&REPO_ZERO);
                 txn.create(&name_1, &ONES_CSID).unwrap();
                 txn.create(&name_2, &ONES_CSID).unwrap();
-                txn.commit().wait().unwrap();
+                assert!(txn.commit().wait().unwrap());
 
                 let prefix = create_prefix("book");
                 let name_1_prefix = create_prefix("book1");
@@ -325,7 +325,7 @@ macro_rules! bookmarks_test_impl {
                 // Updating value from another repo, should fail
                 let mut txn = bookmarks.create_transaction(&REPO_ONE);
                 txn.update(&name_1, &TWOS_CSID, &ONES_CSID).unwrap();
-                assert!(txn.commit().wait().is_err());
+                assert_eq!(txn.commit().wait().unwrap(), false);
 
                 // Creating value should succeed
                 let mut txn = bookmarks.create_transaction(&REPO_ONE);
@@ -344,7 +344,7 @@ macro_rules! bookmarks_test_impl {
                 // delete should fail for another repo
                 let mut txn = bookmarks.create_transaction(&REPO_ONE);
                 txn.delete(&name_1, &ONES_CSID).unwrap();
-                assert!(txn.commit().wait().is_err());
+                assert_eq!(txn.commit().wait().unwrap(), false);
             }
         }
     }

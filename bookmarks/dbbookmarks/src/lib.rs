@@ -268,7 +268,7 @@ macro_rules! impl_bookmarks {
                 Ok(())
             }
 
-            fn commit(&self) -> BoxFuture<(), Error> {
+            fn commit(&self) -> BoxFuture<bool, Error> {
                 #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
                 let connection = try_boxfuture!(self.db.get_conn());
 
@@ -291,7 +291,7 @@ macro_rules! impl_bookmarks {
                         ).set(schema::bookmarks::changeset_id.eq(new_cs))
                             .execute(&*connection)?;
                         if num_affected_rows != 1 {
-                            bail_msg!("cannot update bookmark {}", key);
+                            return Ok(false) // conflict
                         }
                     }
 
@@ -313,10 +313,10 @@ macro_rules! impl_bookmarks {
                                 .filter(schema::bookmarks::changeset_id.eq(old_cs)),
                         ).execute(&*connection)?;
                         if num_deleted_rows != 1 {
-                            bail_msg!("cannot delete bookmark {}", key);
+                            return Ok(false) // conflict
                         }
                     }
-                    Ok(())
+                    Ok(true)
                 });
                 future::result(txnres).from_err().boxify()
             }

@@ -91,8 +91,11 @@ impl BookmarkPrefix {
 
 pub trait Bookmarks: Send + Sync + 'static {
     /// Returns Some(HgChangesetId) if bookmark exists, returns None if doesn't
-    fn get(&self, name: &Bookmark, repoid: &RepositoryId)
-        -> BoxFuture<Option<HgChangesetId>, Error>;
+    fn get(
+        &self,
+        name: &Bookmark,
+        repoid: &RepositoryId,
+    ) -> BoxFuture<Option<HgChangesetId>, Error>;
 
     /// Lists the bookmarks that match the prefix with bookmark's values.
     /// Empty prefix means list all of the available bookmarks
@@ -138,7 +141,7 @@ pub trait Transaction: Send + Sync + 'static {
     fn force_delete(&mut self, key: &Bookmark) -> Result<()>;
 
     /// Commits the transaction. Future succeeds if transaction has been
-    /// successful, or errors if transaction has failed. Transaction may fail because of the
-    /// infra error or logical error i.e. non-existent bookmark was deleted.
-    fn commit(&self) -> BoxFuture<(), Error>;
+    /// successful, or errors if transaction has failed. Logical failure is indicated by
+    /// returning a successful `false` value; infrastructure failure is reported via an Error.
+    fn commit(&self) -> BoxFuture<bool, Error>;
 }

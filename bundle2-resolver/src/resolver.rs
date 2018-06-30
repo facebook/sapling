@@ -133,6 +133,13 @@ pub fn resolve(
                         try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp));
                     }
                     txn.commit()
+                        .and_then(|ok| {
+                            if ok {
+                                Ok(())
+                            } else {
+                                Err(format_err!("Bookmark transaction failed"))
+                            }
+                        })
                         .map(move |()| (changegroup_id, bookmark_ids))
                         .boxify()
                 })()
