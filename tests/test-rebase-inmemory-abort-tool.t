@@ -4,7 +4,6 @@ Tests the :abort merge tool
   $ setconfig morestatus.show=True
   $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True
-  $ setconfig rebase.experimental.inmemory.nomergedriver=False
   $ setconfig rebase.experimental.inmemorywarning="rebasing in-memory!"
   $ newrepo
 

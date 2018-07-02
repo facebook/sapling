@@ -113,10 +113,7 @@ class perftestsuite(object):
     def testimmrebase(self):
         dist = self.ui.configint("perfsuite", "immrebase.masterdistance", 100)
         self._run(["update", "-C", "master"])
-        configs = {
-            ("rebase", "experimental.inmemory.nomergedriver"): False,
-            ("rebase", "experimental.inmemory"): True,
-        }
+        configs = {("rebase", "experimental.inmemory"): True}
         with self.ui.configoverride(configs):
             self._runtimeprofile(
                 "rebase",
