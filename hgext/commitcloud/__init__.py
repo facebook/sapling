@@ -34,6 +34,9 @@
     # owner team, used for help messages
     owner_team = "The Source Control Team"
 
+    # education page
+    education_page = https://someurl.com/wiki/CommitCloud
+
     # update to a new revision if the current revision has been moved
     updateonmove = true
 

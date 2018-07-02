@@ -107,6 +107,7 @@ def cloudrejoin(ui, repo, **opts):
     Use `hg cloud connect` to connect to commit cloud for the first time.
     """
 
+    educationpage = ui.config("commitcloud", "education_page")
     token = commitcloudutil.TokenLocator(ui).token
     if token:
         try:
@@ -123,9 +124,13 @@ def cloudrejoin(ui, repo, **opts):
                 highlightstatus(
                     ui,
                     _(
-                        "unable to reconnect: this workspace has been never connected to commit cloud for this repo\n"
+                        "unable to reconnect: this workspace has been never connected to Commit Cloud for this repo\n"
                     ),
                 )
+                if educationpage:
+                    ui.status(
+                        _("learn more about Commit Cloud at %s\n") % educationpage
+                    )
             else:
                 commitcloudutil.WorkspaceManager(repo).setworkspace(workspace)
                 highlightstatus(ui, _("the repository is now reconnected\n"))
@@ -135,8 +140,10 @@ def cloudrejoin(ui, repo, **opts):
             pass
 
     highlightstatus(
-        ui, _("unable to reconnect: not authenticated with commit cloud on this host\n")
+        ui, _("unable to reconnect: not authenticated with Commit Cloud on this host\n")
     )
+    if educationpage:
+        ui.status(_("learn more about Commit Cloud at %s\n") % educationpage)
 
 
 @subcmd("leave|disconnect")

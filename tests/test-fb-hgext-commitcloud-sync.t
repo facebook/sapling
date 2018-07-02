@@ -58,7 +58,8 @@ Make shared part of config
   > servicetype = local
   > servicelocation = $TESTTMP
   > user_token_path = $TESTTMP
-  > auth_help = visit htts://localhost/oauth to generate a registration token
+  > auth_help = visit https://localhost/oauth to generate a registration token
+  > education_page = https://someurl.com/wiki/CommitCloud
   > owner_team = The Test Team @ FB
   > EOF
 
@@ -70,7 +71,7 @@ Registration:
   $ hg cloud auth
   abort: #commitcloud registration error: authentication with commit cloud required
   authentication instructions:
-  visit htts://localhost/oauth to generate a registration token
+  visit https://localhost/oauth to generate a registration token
   please read `hg cloud authenticate --help` for more information
   please contact The Test Team @ FB if you are unable to authenticate
   (use 'hg cloud auth --token TOKEN' to set a token)
@@ -1135,11 +1136,13 @@ Rejoin
   $ cat ../shared.rc >> .hg/hgrc
 
   $ hg cloud reconnect --config "commitcloud.user_token_path=$TESTTMP/othertokenlocation" # invalid token
-  #commitcloud unable to reconnect: not authenticated with commit cloud on this host
+  #commitcloud unable to reconnect: not authenticated with Commit Cloud on this host
+  learn more about Commit Cloud at https://someurl.com/wiki/CommitCloud
 
   $ hg cloud reconnect --config "commitcloud.servicelocation=$TESTTMP/otherservicelocation" # token is valid but server is different
   #commitcloud trying to reconnect to the 'user/test/default' workspace for the 'server' repo
-  #commitcloud unable to reconnect: this workspace has been never connected to commit cloud for this repo
+  #commitcloud unable to reconnect: this workspace has been never connected to Commit Cloud for this repo
+  learn more about Commit Cloud at https://someurl.com/wiki/CommitCloud
 
   $ hg cloud reconnect 			# should be able to reconnect
   #commitcloud trying to reconnect to the 'user/test/default' workspace for the 'server' repo
