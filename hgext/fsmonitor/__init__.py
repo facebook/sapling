@@ -411,6 +411,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
         # We need to propagate the last observed clock up so that we
         # can use it for our next query
         state.setlastclock(result["clock"])
+        state.setlastisfresh(result["is_fresh_instance"])
         if result["is_fresh_instance"]:
             if state.walk_on_invalidate:
                 state.invalidate(reason="fresh_instance")
