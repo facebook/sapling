@@ -8,6 +8,7 @@ use async_unit;
 use futures::future::Future;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use utils::run_future;
 
 use blobrepo::HgBlobEntry;
 use blobrepo::internal::{MemoryManifestEntry, MemoryRootManifest};
@@ -314,6 +315,99 @@ fn replace_item() {
             "nodehash hash changed"
         );
     })
+}
+
+#[test]
+fn conflict_resolution() {
+    async_unit::tokio_unit_test(|| {
+        let repo = many_files_dirs::getrepo(None);
+        let blobstore = repo.get_blobstore();
+        let logger = repo.get_logger();
+
+        let dir_file_conflict = MPathElement::new(b"dir_file_conflict".to_vec()).unwrap();
+
+        let base = {
+            let mut changes = BTreeMap::new();
+
+            changes.insert(
+                dir_file_conflict.clone(),
+                Some(MemoryManifestEntry::Blob(HgBlobEntry::new(
+                    blobstore.clone(),
+                    dir_file_conflict.clone(),
+                    nodehash::ONES_HASH,
+                    Type::File(FileType::Regular),
+                ))),
+            );
+            MemoryManifestEntry::MemTree {
+                base_manifest_id: None,
+                p1: Some(nodehash::ONES_HASH),
+                p2: None,
+                changes: Arc::new(Mutex::new(changes)),
+            }
+        };
+
+        let other = {
+            let mut changes = BTreeMap::new();
+
+            let other_sub = {
+                let mut changes = BTreeMap::new();
+                let file = MPathElement::new(b"file".to_vec()).unwrap();
+                changes.insert(
+                    file.clone(),
+                    Some(MemoryManifestEntry::Blob(HgBlobEntry::new(
+                        blobstore.clone(),
+                        file.clone(),
+                        nodehash::ONES_HASH,
+                        Type::File(FileType::Regular),
+                    ))),
+                );
+                MemoryManifestEntry::MemTree {
+                    base_manifest_id: None,
+                    p1: None,
+                    p2: None,
+                    changes: Arc::new(Mutex::new(changes)),
+                }
+            };
+            changes.insert(dir_file_conflict.clone(), Some(other_sub));
+
+            MemoryManifestEntry::MemTree {
+                base_manifest_id: None,
+                p1: Some(nodehash::ONES_HASH),
+                p2: None,
+                changes: Arc::new(Mutex::new(changes)),
+            }
+        };
+
+        let merge =
+            run_future(base.merge_with_conflicts(other, blobstore, logger, RepoPath::root()))
+                .unwrap();
+        match &merge {
+            MemoryManifestEntry::MemTree { changes, .. } => {
+                let changes = changes.lock().expect("lock poisoned");
+                match changes.get(&dir_file_conflict) {
+                    Some(Some(MemoryManifestEntry::Conflict(conflict))) => {
+                        assert_eq!(conflict.len(), 2)
+                    }
+                    _ => panic!("Conflict expected"),
+                }
+            }
+            _ => panic!("Tree expected"),
+        };
+
+        merge
+            .change(dir_file_conflict.clone(), None)
+            .expect("Should succeed");
+        match &merge {
+            MemoryManifestEntry::MemTree { changes, .. } => {
+                let changes = changes.lock().expect("lock poisoned");
+                match changes.get(&dir_file_conflict) {
+                    Some(Some(MemoryManifestEntry::MemTree { .. })) => (),
+                    _ => panic!("Tree expected"),
+                }
+            }
+            _ => panic!("Tree expected"),
+        };
+    });
 }
 
 #[test]

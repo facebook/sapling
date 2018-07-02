@@ -657,10 +657,34 @@ impl MemoryManifestEntry {
 
     /// Change an entry - remove if None, set if Some(entry)
     pub fn change(&self, element: MPathElement, change: Option<HgBlobEntry>) -> Result<()> {
+        use self::MemoryManifestEntry::{Blob, Conflict, MemTree};
+
         match self {
-            &MemoryManifestEntry::MemTree { ref changes, .. } => {
+            &MemTree { ref changes, .. } => {
                 let mut changes = changes.lock().expect("lock poisoned");
-                changes.insert(element, change.map(|c| MemoryManifestEntry::Blob(c)));
+                let entry = match changes.get(&element) {
+                    Some(Some(Conflict(conflict))) => {
+                        let mut conflict = conflict.iter();
+                        if let (Some(e0), Some(e1)) = (conflict.next(), conflict.next()) {
+                            assert!(
+                                conflict.next().is_none(),
+                                "Only support two manifest conflict"
+                            );
+                            match (e0, e1) {
+                                (Blob(_), tree @ MemTree { .. })
+                                | (tree @ MemTree { .. }, Blob(_)) => match change {
+                                    None => Some(tree.clone()),
+                                    Some(entry) => Some(Blob(entry)),
+                                },
+                                _ => change.map(|c| Blob(c)),
+                            }
+                        } else {
+                            return Err(ErrorKind::SingleEntryConflict.into());
+                        }
+                    }
+                    _ => change.map(|c| Blob(c)),
+                };
+                changes.insert(element, entry);
                 Ok(())
             }
             _ => Err(ErrorKind::NotADirectory.into()),
