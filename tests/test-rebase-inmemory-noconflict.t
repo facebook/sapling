@@ -1,4 +1,4 @@
-Tests the :abort merge tool
+Tests the --noconflict rebase flag
 
   $ enable rebase fbamend morestatus
   $ setconfig morestatus.show=True
@@ -24,18 +24,18 @@ Tests the :abort merge tool
 
 
 Confirm it fails when rebasing a change that conflicts:
-  $ hg rebase -r tip -d . --tool :abort
+  $ hg rebase -r tip -d . --noconflict
   rebasing in-memory!
   rebasing 3:955ac081fc7c "g" (tip)
   merging c
-  hit merge conflicts, and --tool :abort passed; exiting.
+  hit merge conflicts (in c) and --noconflict passed; exiting.
   $ hg st
   M b
   $ cat b
   local change
 
 Confirm rebase without a merge behaves the same:
-  $ hg rebase -r tip -d .~1 --tool :abort
+  $ hg rebase -r tip -d .~1 --noconflict
   rebasing in-memory!
   rebasing 3:955ac081fc7c "g" (tip)
   saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/955ac081fc7c-77e57574-rebase.hg
@@ -46,12 +46,8 @@ Confirm the flag fails without IMM:
   $ hg up -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
-  $ hg rebase -r tip -d . --tool :abort
-  rebasing 3:20b9638feb86 "g" (tip)
-  merging c
-  transaction abort!
-  rollback completed
-  abort: --tool :abort only works with in-memory merge
+  $ hg rebase -r tip -d . --noconflict
+  abort: --noconflict requires in-memory merge
   [255]
 
 Confirm that it rebases a three-way merge, but no conflict:
@@ -71,7 +67,7 @@ Confirm that it rebases a three-way merge, but no conflict:
   o  0 base
   
   $ hg up -qC 0
-  $ hg rebase -r 1 -d 2 --tool :abort
+  $ hg rebase -r 1 -d 2 --noconflict
   rebasing in-memory!
   rebasing 1:12cba56c6d27 "extend to 10"
   merging a

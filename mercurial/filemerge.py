@@ -247,22 +247,6 @@ def _matcheol(file, back):
                 util.writefile(file, newdata)
 
 
-@internaltool("abort", fullmerge)
-def _iabort(repo, mynode, orig, fcd, *args, **kwargs):
-    if not fcd.changectx().isinmemory():
-        # Support coming soon; it's tricker to do without IMM and has to be
-        # implemented per-command.
-        raise error.Abort(_("--tool :abort only works with in-memory merge"))
-
-    res = _imerge(repo, mynode, orig, fcd, *args, **kwargs)
-    if res:
-        raise error.AbortMergeToolError(
-            _("hit merge conflicts, and --tool :abort passed")
-        )
-    else:
-        return res
-
-
 @internaltool("prompt", nomerge)
 def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     """Asks the user which of the local `p1()` or the other `p2()` version to

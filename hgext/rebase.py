@@ -543,7 +543,11 @@ class rebaseruntime(object):
                     else:
                         kindstr = _("artifact rebuild required")
 
-                    if cmdutil.uncommittedchanges(repo):
+                    if self.opts["noconflict"]:
+                        raise error.AbortMergeToolError(
+                            "%s (in %s) and --noconflict passed" % (kindstr, pathstr)
+                        )
+                    elif cmdutil.uncommittedchanges(repo):
                         raise error.UncommitedChangesAbort(
                             _(
                                 "must use on-disk merge for this rebase (%s in %s), but you have working copy changes"
@@ -814,6 +818,12 @@ class rebaseruntime(object):
         ("t", "tool", "", _("specify merge tool")),
         ("c", "continue", False, _("continue an interrupted rebase")),
         ("a", "abort", False, _("abort an interrupted rebase")),
+        (
+            "",
+            "noconflict",
+            False,
+            _("cancel the rebase if there are conflicts (EXPERIMENTAL)"),
+        ),
     ]
     + cmdutil.formatteropts,
     _("[-s REV | -b REV] [-d REV] [OPTION]"),
@@ -965,6 +975,9 @@ def rebase(ui, repo, templ=None, **opts):
                 "rebase", "disabling IMM because: %s" % whynotimm, why_not_imm=whynotimm
             )
             inmemory = False
+
+    if opts.get("noconflict") and not inmemory:
+        raise error.Abort("--noconflict requires in-memory merge")
 
     opts = pycompat.byteskwargs(opts)
     rbsrt = rebaseruntime(repo, ui, templ, inmemory, opts)
