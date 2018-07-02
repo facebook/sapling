@@ -214,82 +214,22 @@ Rerun with merge conflicts, demonstrating switching to on-disk merge:
   $ hg rebase --abort
   rebase aborted
 
-Test inmemorydisallowedpaths carve-out:
-  $ cat <<EOF >> $HGRCPATH
-  > [rebase]
-  > experimental.inmemorydisallowedpaths=c|g
-  > EOF
-  $ hg up -Cq 3
-  $ echo 'g' > g
-  $ hg add -q g
-  $ hg com -qm g
-  $ hg up -qC 4
-  $ echo 'h' > h
-  $ hg add -q h
-  $ hg com -qm h
-  $ hg up 0
-  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
-  $ hg tglog
-  o  6: 02554e3f8526 'h'
-  |
-  | o  5: e8cedfb0cf72 'g'
-  | |
-  o |  4: 6af061510c70 'e -> c'
-  | |
-  | o  3: 844a7de3e617 'c'
-  | |
-  o |  2: 09c044d2cb43 'd'
-  | |
-  o |  1: fc055c3b4d33 'b'
-  |/
-  @  0: b173517d0057 'a'
-  
-  $ hg rebase -r 5 -d 0 --debug | grep disabling
-  disabling IMM because: path matched inmemory_disallowed_paths: g
-  $ hg rebase -s 3 -d 0 --debug | grep disabling
-  disabling IMM because: path matched inmemory_disallowed_paths: c
-  $ hg tglog
-  o  6: f3a876323b82 'g'
-  |
-  | o  5: 02554e3f8526 'h'
-  | |
-  | o  4: 6af061510c70 'e -> c'
-  | |
-  +---o  3: 844a7de3e617 'c'
-  | |
-  | o  2: 09c044d2cb43 'd'
-  | |
-  | o  1: fc055c3b4d33 'b'
-  |/
-  @  0: b173517d0057 'a'
-  
-  $ hg rebase -r 5 -d 0 --debug | grep disabling
-  [1]
-
 Allow the working copy parent to be rebased with IMM:
-  $ cat <<EOF >> .hg/hgrc
-  > [rebase]
-  > experimental.inmemorywarning=rebasing in-memory!
-  > EOF
-  $ hg up -C 6
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg rebase -r . -d 5
+  $ setconfig rebase.experimental.inmemorywarning='rebasing in-memory!'
+  $ hg up -qC 3
+  $ hg rebase -r . -d 2
   rebasing in-memory!
-  rebasing 6:f19e4c5309bc "h" (tip)
-  saved backup bundle to $TESTTMP/repo1/repo2/.hg/strip-backup/f19e4c5309bc-e3db5525-rebase.hg
+  rebasing 3:844a7de3e617 "c"
+  saved backup bundle to $TESTTMP/repo1/repo2/.hg/strip-backup/844a7de3e617-108d0332-rebase.hg
   $ hg tglog
-  @  6: 0b514f19a9ab 'h'
+  @  4: 6f55b7035492 'c'
   |
-  o  5: f3a876323b82 'g'
-  |
-  | o  4: 6af061510c70 'e -> c'
-  | |
-  +---o  3: 844a7de3e617 'c'
-  | |
-  | o  2: 09c044d2cb43 'd'
-  | |
-  | o  1: fc055c3b4d33 'b'
+  | o  3: 6af061510c70 'e -> c'
   |/
+  o  2: 09c044d2cb43 'd'
+  |
+  o  1: fc055c3b4d33 'b'
+  |
   o  0: b173517d0057 'a'
   
 

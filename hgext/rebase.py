@@ -924,12 +924,6 @@ def rebase(ui, repo, templ=None, **opts):
       [rebase]
       experimental.inmemorywarning = Using experimental in-memory rebase
 
-    It will not run if any file paths in the source set match a particular
-    config::
-
-      [rebase]
-      experimental.inmemorydisallowedpaths = Types.php|build.jar
-
     Return Values:
 
     Returns 0 on success, 1 if nothing to rebase or there are
@@ -1059,40 +1053,6 @@ def _origrebase(ui, repo, rbsrt, **opts):
         rbsrt._finishrebase()
 
 
-def _shoulddisableimm(ui, repo, rebaseset, rebasingwcp):
-    """returns if we should disable in-memory merge based on the rebaseset"""
-    if rebasingwcp:
-        # Require a clean working copy if rebasing the current commit, as the
-        # last step of the rebase is an update.
-        #
-        # Technically this could be refined to hg update's checker, which can
-        # be more permissive (e.g., allow if only non-conflicting paths are
-        # changed).
-        cmdutil.bailifchanged(repo)
-
-    # Check for paths in the rebaseset that are likely to later trigger
-    # conflicts or a mergedriver run (and thus cause the whole rebase to later
-    # be restarted).
-    #
-    # Note that this is crude, as it will include commits even if their
-    # artifacts don't need to be rebuilt (don't needs to be merged).
-    badpaths = ui.config("rebase", "experimental.inmemorydisallowedpaths")
-    if badpaths:
-        badpathsre = util.re.compile(badpaths)
-        ctxs = [repo[rev] for rev in rebaseset]
-        sets = [set(ctx.files()) for ctx in ctxs]
-        paths = set.union(*sets)
-        for path in paths:
-            if badpathsre.match(path):
-                whynotimm = "path matched inmemory_disallowed_paths: %s" % path
-                msg = "disabling IMM because: %s" % whynotimm
-                ui.log("rebase", msg, why_not_imm=whynotimm)
-                ui.debug(msg + "\n")
-                return True
-
-    return False  # no change
-
-
 def _definedestmap(
     ui, repo, rbsrt, destf=None, srcf=None, basef=None, revf=None, destspace=None
 ):
@@ -1201,12 +1161,15 @@ def _definedestmap(
                 )
             return None
 
-    # Possibly disable in-memory merge based on the rebaseset.
     rbsrt.rebasingwcp = repo["."].rev() in rebaseset
-    if rbsrt.inmemory and _shoulddisableimm(ui, repo, rebaseset, rbsrt.rebasingwcp):
-        rbsrt.inmemory = False
 
-        # Check for local changes since we did not before.
+    if rbsrt.inmemory and rbsrt.rebasingwcp:
+        # Require a clean working copy if rebasing the current commit, as the
+        # last step of the rebase is an update.
+        #
+        # Technically this could be refined to hg update's checker, which can
+        # be more permissive (e.g., allow if only non-conflicting paths are
+        # changed).
         cmdutil.bailifchanged(repo)
 
     if not destf:

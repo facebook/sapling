@@ -1676,26 +1676,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
                 proceed = driverpreprocess(repo, ms, wctx, labels=labels)
             driverresolved = [f for f in ms.driverresolved()]
 
-            # Note which files were marked as driver-resolved but not matched by
-            # experimental.inmemorydisallowedpaths. This will allow us to keep
-            # inmemorydisallowedpaths up to date so in-memory rebases are not
-            # restarted late in the merge.
-            pathsconfig = repo.ui.config(
-                "rebase", "experimental.inmemorydisallowedpaths"
-            )
-            # Make sure the the default value (.^) doesn't match anything, since
-            # an empty string matches everything -- not what we want:
-            if not pathsconfig:
-                pathsconfig = ".^"
-            regex = util.re.compile(pathsconfig)
-            unmatched = [f for f in driverresolved if not regex.match(f)]
-            repo.ui.log(
-                "imm_mergedriver",
-                "",
-                driver_resolved_missed="|".join(sorted(unmatched)),
-                in_memory=wctx.isinmemory(),
-            )
-
             # If preprocess() marked any files as driver-resolved and we're
             # merging in-memory, abort on the assumption that driver scripts
             # require the working directory.
