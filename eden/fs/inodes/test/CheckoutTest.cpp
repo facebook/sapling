@@ -650,7 +650,7 @@ TEST(Checkout, modifyThenRevert) {
   ASSERT_TRUE(checkoutResult.isReady());
   // The checkout should report a/test.txt as a conflict
   EXPECT_THAT(
-      checkoutResult.get(),
+      std::move(checkoutResult).get(),
       UnorderedElementsAre(
           makeConflict(ConflictType::MODIFIED_MODIFIED, "a/test.txt")));
 
@@ -682,7 +682,7 @@ TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
   ASSERT_TRUE(checkoutTo1.isReady());
 
   EXPECT_THAT(
-      checkoutTo1.get(),
+      std::move(checkoutTo1).get(),
       UnorderedElementsAre(
           makeConflict(ConflictType::MODIFIED_REMOVED, "src/test.c")));
 }
@@ -706,7 +706,7 @@ TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
   ASSERT_TRUE(checkoutTo2.isReady());
 
   EXPECT_THAT(
-      checkoutTo2.get(),
+      std::move(checkoutTo2).get(),
       UnorderedElementsAre(
           makeConflict(ConflictType::UNTRACKED_ADDED, "src/test.c")));
 }
@@ -738,7 +738,7 @@ TEST(
   ASSERT_TRUE(checkoutTo2.isReady());
 
   EXPECT_THAT(
-      checkoutTo2.get(),
+      std::move(checkoutTo2).get(),
       UnorderedElementsAre(
           makeConflict(ConflictType::UNTRACKED_ADDED, "src/test/test.c")));
 }

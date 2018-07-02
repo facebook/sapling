@@ -36,7 +36,8 @@ TEST(InodeMap, invalidInodeNumber) {
   EdenBugDisabler noCrash;
   auto* inodeMap = testMount.getEdenMount()->getInodeMap();
   auto future = inodeMap->lookupFileInode(0x12345678_ino);
-  EXPECT_THROW_RE(future.get(), std::runtime_error, "unknown inode number");
+  EXPECT_THROW_RE(
+      std::move(future).get(), std::runtime_error, "unknown inode number");
 }
 
 TEST(InodeMap, simpleLookups) {
@@ -121,8 +122,8 @@ TEST(InodeMap, asyncError) {
       "src", std::domain_error("rejecting lookup for src tree"));
   ASSERT_TRUE(srcFuture.isReady());
   ASSERT_TRUE(srcFuture2.isReady());
-  EXPECT_THROW(srcFuture.get(), std::domain_error);
-  EXPECT_THROW(srcFuture2.get(), std::domain_error);
+  EXPECT_THROW(std::move(srcFuture).get(), std::domain_error);
+  EXPECT_THROW(std::move(srcFuture2).get(), std::domain_error);
 }
 
 TEST(InodeMap, recursiveLookup) {
@@ -183,7 +184,9 @@ TEST(InodeMap, recursiveLookupError) {
       "a/b/c/d", std::domain_error("error for testing purposes"));
   ASSERT_TRUE(fileFuture.isReady());
   EXPECT_THROW_RE(
-      fileFuture.get(), std::domain_error, "error for testing purposes");
+      std::move(fileFuture).get(),
+      std::domain_error,
+      "error for testing purposes");
 }
 
 TEST(InodeMap, renameDuringRecursiveLookup) {

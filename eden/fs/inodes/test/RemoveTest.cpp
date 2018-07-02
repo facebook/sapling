@@ -42,7 +42,7 @@ TEST_F(UnlinkTest, enoent) {
   auto dir = mount_.getTreeInode("dir");
   auto unlinkFuture = dir->unlink("notpresent.txt"_pc);
   ASSERT_TRUE(unlinkFuture.isReady());
-  EXPECT_THROW_ERRNO(unlinkFuture.get(), ENOENT);
+  EXPECT_THROW_ERRNO(std::move(unlinkFuture).get(), ENOENT);
 }
 
 TEST_F(UnlinkTest, notLoaded) {

@@ -88,8 +88,8 @@ TEST_F(FakeBackingStoreTest, getBlob) {
   storedBlob->trigger();
   ASSERT_TRUE(future1.isReady());
   ASSERT_TRUE(future2.isReady());
-  EXPECT_EQ("foobar", blobContents(*future1.get()));
-  EXPECT_EQ("foobar", blobContents(*future2.get()));
+  EXPECT_EQ("foobar", blobContents(*std::move(future1).get()));
+  EXPECT_EQ("foobar", blobContents(*std::move(future2).get()));
 
   // But subsequent calls to getBlob() should still yield unready futures.
   auto future3 = store_->getBlob(hash);
@@ -107,7 +107,8 @@ TEST_F(FakeBackingStoreTest, getBlob) {
   // Calling triggerError() should fail pending futures
   storedBlob->triggerError(std::logic_error("does not compute"));
   ASSERT_TRUE(future3.isReady());
-  EXPECT_THROW_RE(future3.get(), std::logic_error, "does not compute");
+  EXPECT_THROW_RE(
+      std::move(future3).get(), std::logic_error, "does not compute");
   ASSERT_TRUE(future4Failed);
   EXPECT_THROW_RE(
       future4Error.throw_exception(), std::logic_error, "does not compute");
@@ -119,13 +120,13 @@ TEST_F(FakeBackingStoreTest, getBlob) {
 
   storedBlob->setReady();
   ASSERT_TRUE(future5.isReady());
-  EXPECT_EQ("foobar", blobContents(*future5.get()));
+  EXPECT_EQ("foobar", blobContents(*std::move(future5).get()));
 
   // Subsequent calls to getBlob() should return Futures that are immediately
   // ready since we called setReady() above.
   auto future6 = store_->getBlob(hash);
   ASSERT_TRUE(future6.isReady());
-  EXPECT_EQ("foobar", blobContents(*future6.get()));
+  EXPECT_EQ("foobar", blobContents(*std::move(future6).get()));
 }
 
 TEST_F(FakeBackingStoreTest, getTree) {
@@ -158,7 +159,7 @@ TEST_F(FakeBackingStoreTest, getTree) {
   auto future1 = store_->getTree(rootHash);
   EXPECT_FALSE(future1.isReady());
   rootDir->triggerError(std::runtime_error("cosmic rays"));
-  EXPECT_THROW_RE(future1.get(), std::runtime_error, "cosmic rays");
+  EXPECT_THROW_RE(std::move(future1).get(), std::runtime_error, "cosmic rays");
 
   // Now try using trigger()
   auto future2 = store_->getTree(rootHash);
@@ -189,18 +190,18 @@ TEST_F(FakeBackingStoreTest, getTree) {
   EXPECT_EQ(foo->get().getHash(), tree2->getEntryAt(3).getHash());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, tree2->getEntryAt(3).getType());
 
-  EXPECT_EQ(rootHash, future3.get()->getHash());
+  EXPECT_EQ(rootHash, std::move(future3).get()->getHash());
 
   // Now try using setReady()
   auto future4 = store_->getTree(rootHash);
   EXPECT_FALSE(future4.isReady());
   rootDir->setReady();
   ASSERT_TRUE(future4.isReady());
-  EXPECT_EQ(rootHash, future4.get()->getHash());
+  EXPECT_EQ(rootHash, std::move(future4).get()->getHash());
 
   auto future5 = store_->getTree(rootHash);
   ASSERT_TRUE(future5.isReady());
-  EXPECT_EQ(rootHash, future5.get()->getHash());
+  EXPECT_EQ(rootHash, std::move(future5).get()->getHash());
 }
 
 TEST_F(FakeBackingStoreTest, getTreeForCommit) {
@@ -223,7 +224,7 @@ TEST_F(FakeBackingStoreTest, getTreeForCommit) {
   EXPECT_FALSE(future1.isReady());
   dir1->trigger();
   ASSERT_TRUE(future1.isReady());
-  EXPECT_EQ(dir1Hash, future1.get()->getHash());
+  EXPECT_EQ(dir1Hash, std::move(future1).get()->getHash());
 
   // future2 should still be pending
   EXPECT_FALSE(future2.isReady());
@@ -239,14 +240,14 @@ TEST_F(FakeBackingStoreTest, getTreeForCommit) {
   EXPECT_FALSE(future3.isReady());
   dir1->trigger();
   ASSERT_TRUE(future3.isReady());
-  EXPECT_EQ(dir1Hash, future3.get()->getHash());
+  EXPECT_EQ(dir1Hash, std::move(future3).get()->getHash());
 
   // Try triggering errors
   auto future4 = store_->getTreeForCommit(hash1);
   EXPECT_FALSE(future4.isReady());
   commit1->triggerError(std::runtime_error("bad luck"));
   ASSERT_TRUE(future4.isReady());
-  EXPECT_THROW_RE(future4.get(), std::runtime_error, "bad luck");
+  EXPECT_THROW_RE(std::move(future4).get(), std::runtime_error, "bad luck");
 
   auto future5 = store_->getTreeForCommit(hash1);
   EXPECT_FALSE(future5.isReady());
@@ -254,14 +255,17 @@ TEST_F(FakeBackingStoreTest, getTreeForCommit) {
   EXPECT_FALSE(future5.isReady());
   dir1->triggerError(std::runtime_error("PC Load Letter"));
   ASSERT_TRUE(future5.isReady());
-  EXPECT_THROW_RE(future5.get(), std::runtime_error, "PC Load Letter");
+  EXPECT_THROW_RE(
+      std::move(future5).get(), std::runtime_error, "PC Load Letter");
 
   // Now trigger commit2.
   // This should trigger future2 to fail since the tree does not actually exist.
   commit2->trigger();
   ASSERT_TRUE(future2.isReady());
   EXPECT_THROW_RE(
-      future2.get(), std::domain_error, "tree .* for commit .* not found");
+      std::move(future2).get(),
+      std::domain_error,
+      "tree .* for commit .* not found");
 }
 
 TEST_F(FakeBackingStoreTest, maybePutBlob) {

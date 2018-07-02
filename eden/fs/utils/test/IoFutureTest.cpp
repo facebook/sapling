@@ -60,7 +60,7 @@ TEST(IoFuture, readTimeout) {
                .ensure([&evb] { evb.terminateLoopSoon(); });
   evb.loopForever();
   ASSERT_TRUE(f.isReady());
-  EXPECT_THROW_ERRNO(f.get(), ETIMEDOUT);
+  EXPECT_THROW_ERRNO(std::move(f).get(), ETIMEDOUT);
 }
 
 TEST(IoFuture, multiRead) {
@@ -74,7 +74,7 @@ TEST(IoFuture, multiRead) {
   auto writeF = iof.wait(EventHandler::WRITE, 1s);
   evb.loopOnce();
   EXPECT_TRUE(writeF.isReady());
-  EXPECT_EQ(EventHandler::WRITE, writeF.get());
+  EXPECT_EQ(EventHandler::WRITE, std::move(writeF).get());
 
   // Wait for readability.
   auto readF1 = iof.wait(EventHandler::READ, 1s);
@@ -83,7 +83,7 @@ TEST(IoFuture, multiRead) {
   checkUnixError(bytesSent, "send failed");
   evb.loopOnce();
   EXPECT_TRUE(readF1.isReady());
-  EXPECT_EQ(EventHandler::READ, readF1.get());
+  EXPECT_EQ(EventHandler::READ, readF1.wait().value());
   EXPECT_FALSE(readF1.hasException());
 
   // Read the data so the socket no longer has read data pending.
@@ -97,7 +97,7 @@ TEST(IoFuture, multiRead) {
   EXPECT_FALSE(readF2.isReady());
   evb.loopOnce();
   ASSERT_TRUE(readF2.isReady());
-  EXPECT_THROW_ERRNO(readF2.get(), ETIMEDOUT);
+  EXPECT_THROW_ERRNO(std::move(readF2).get(), ETIMEDOUT);
 
   // Try calling iof.wait() twice in a row, even though the
   // first one did not finish.  This should fail the earlier future with an
@@ -106,14 +106,14 @@ TEST(IoFuture, multiRead) {
   EXPECT_FALSE(readF3.isReady());
   auto readF4 = iof.wait(EventHandler::READ, 1s);
   ASSERT_TRUE(readF3.isReady());
-  EXPECT_THROW_ERRNO(readF3.get(), ECANCELED);
+  EXPECT_THROW_ERRNO(std::move(readF3).get(), ECANCELED);
   EXPECT_FALSE(readF4.isReady());
 
   bytesSent = send(sockets.second.fd(), "bar", 3, 0);
   checkUnixError(bytesSent, "send failed");
   evb.loopOnce();
   ASSERT_TRUE(readF4.isReady());
-  EXPECT_EQ(EventHandler::READ, readF4.get());
+  EXPECT_EQ(EventHandler::READ, std::move(readF4).get());
   bytesRead = recv(sockets.first.fd(), buf.data(), buf.size(), MSG_DONTWAIT);
   EXPECT_EQ(bytesRead, 3);
 }

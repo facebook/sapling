@@ -90,7 +90,7 @@ TEST(FuseTest, destroyBeforeInitComplete) {
 
   // The initFuture() should have completed unsuccessfully.
   EXPECT_THROW_RE(
-      initFuture.get(100ms),
+      std::move(initFuture).get(100ms),
       std::runtime_error,
       "FuseChannel for .* stopped while waiting for INIT packet");
 }

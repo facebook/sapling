@@ -330,7 +330,7 @@ void RenameTest::renameError(
 
   // The rename should fail with the expected error
   ASSERT_TRUE(renameFuture.isReady());
-  EXPECT_THROW_ERRNO(renameFuture.get(), expectedError);
+  EXPECT_THROW_ERRNO(std::move(renameFuture).get(), expectedError);
 }
 
 TEST_F(RenameTest, renameNonexistentFile) {
@@ -400,7 +400,7 @@ TEST_F(RenameTest, renameIntoUnlinkedDir) {
   // The rename should fail with ENOENT since the destination directory no
   // longer exists
   ASSERT_TRUE(renameFuture.isReady());
-  EXPECT_THROW_ERRNO(renameFuture.get(), ENOENT);
+  EXPECT_THROW_ERRNO(std::move(renameFuture).get(), ENOENT);
 }
 
 TEST_F(RenameTest, renameOverEmptyDir) {
@@ -531,7 +531,7 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
   //
   // In practice our code currently always succeeds the load attempt.
   if (inodeFuture.hasException()) {
-    EXPECT_THROW_ERRNO(inodeFuture.get(), ENOENT);
+    EXPECT_THROW_ERRNO(std::move(inodeFuture).get(), ENOENT);
   } else {
     auto cInode = std::move(inodeFuture).get();
     EXPECT_EQ("a/b/x", cInode->getPath().value().stringPiece());
@@ -570,7 +570,7 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
   //
   // In practice our code currently always succeeds the load attempt.
   if (inodeFuture.hasException()) {
-    EXPECT_THROW_ERRNO(inodeFuture.get(), ENOENT);
+    EXPECT_THROW_ERRNO(std::move(inodeFuture).get(), ENOENT);
   } else {
     auto cInode = std::move(inodeFuture).get();
     EXPECT_EQ("a/b/x", cInode->getPath().value().stringPiece());
@@ -591,7 +591,9 @@ TEST_F(RenameLoadingTest, renameLoadFailure) {
   builder_.triggerError("a/b/c", std::domain_error("fake error for testing"));
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_THROW_RE(
-      renameFuture.get(), std::domain_error, "fake error for testing");
+      std::move(renameFuture).get(),
+      std::domain_error,
+      "fake error for testing");
 }
 
 // Test a rename that replaces a destination directory, where neither
@@ -660,7 +662,7 @@ TEST_F(RenameLoadingTest, renameLoadDestNonempty) {
 
   // The load should fail with ENOTEMPTY
   ASSERT_TRUE(renameFuture.isReady());
-  EXPECT_THROW_ERRNO(renameFuture.get(), ENOTEMPTY);
+  EXPECT_THROW_ERRNO(std::move(renameFuture).get(), ENOTEMPTY);
 }
 
 // Test a rename that replaces a destination directory, where neither
@@ -685,7 +687,7 @@ TEST_F(RenameLoadingTest, renameLoadDestNonemptyOtherOrder) {
 
   // The load should fail with ENOTEMPTY
   ASSERT_TRUE(renameFuture.isReady());
-  EXPECT_THROW_ERRNO(renameFuture.get(), ENOTEMPTY);
+  EXPECT_THROW_ERRNO(std::move(renameFuture).get(), ENOTEMPTY);
 }
 
 TEST_F(RenameLoadingTest, renameLoadDestFailure) {
@@ -708,7 +710,9 @@ TEST_F(RenameLoadingTest, renameLoadDestFailure) {
   // Verify the rename failure
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_THROW_RE(
-      renameFuture.get(), std::domain_error, "fake error for testing");
+      std::move(renameFuture).get(),
+      std::domain_error,
+      "fake error for testing");
 }
 
 TEST_F(RenameLoadingTest, renameLoadDestFailureOtherOrder) {
@@ -732,7 +736,9 @@ TEST_F(RenameLoadingTest, renameLoadDestFailureOtherOrder) {
   // Verify the rename failure
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_THROW_RE(
-      renameFuture.get(), std::domain_error, "fake error for testing");
+      std::move(renameFuture).get(),
+      std::domain_error,
+      "fake error for testing");
 }
 
 TEST_F(RenameLoadingTest, renameLoadBothFailure) {
@@ -757,5 +763,7 @@ TEST_F(RenameLoadingTest, renameLoadBothFailure) {
   // first error it receives.)
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_THROW_RE(
-      renameFuture.get(), std::domain_error, "fake error for testing: .*");
+      std::move(renameFuture).get(),
+      std::domain_error,
+      "fake error for testing: .*");
 }
