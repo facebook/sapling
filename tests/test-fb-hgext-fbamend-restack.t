@@ -1,25 +1,14 @@
   $ . helpers-usechg.sh
 
 Set up test environment.
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > fbamend=
-  > inhibit=
-  > rebase=
-  > [experimental]
-  > evolution.allowdivergence = True
-  > evolution = createmarkers, allowunstable
-  > EOF
+
+  $ enable fbamend inhibit rebase
+  $ setconfig experimental.evolution.allowdivergence=True
+  $ setconfig experimental.evolution="createmarkers, allowunstable"
   $ mkcommit() {
   >   echo "$1" > "$1"
   >   hg add "$1"
   >   hg ci -m "add $1"
-  > }
-  $ reset() {
-  >   cd ..
-  >   rm -rf restack
-  >   hg init restack
-  >   cd restack
   > }
   $ showgraph() {
   >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
@@ -85,7 +74,7 @@ Test basic case of a single amend in a small stack.
   o  0 add a
 
 Test multiple amends of same commit.
-  $ reset
+  $ newrepo
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
@@ -122,7 +111,7 @@ Test multiple amends of same commit.
   o  0 add a
 
 Test conflict during rebasing.
-  $ reset
+  $ newrepo
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
@@ -178,7 +167,7 @@ Test conflict during rebasing.
   o  0 add a
 
 Test finding a stable base commit from within the old stack.
-  $ reset
+  $ newrepo
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
@@ -214,7 +203,7 @@ Test finding a stable base commit from within the old stack.
   o  0 add a
 
 Test finding a stable base commit from a new child of the amended commit.
-  $ reset
+  $ newrepo
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
@@ -254,7 +243,7 @@ Test finding a stable base commit from a new child of the amended commit.
 
 Test finding a stable base commit when there are multiple amends and
 a commit on top of one of the obsolete intermediate commits.
-  $ reset
+  $ newrepo
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
@@ -307,7 +296,7 @@ a commit on top of one of the obsolete intermediate commits.
 Test that we start from the bottom of the stack. (Previously, restack would
 only repair the unstable children closest to the current changeset. This
 behavior is now incorrect -- restack should always fix the whole stack.)
-  $ reset
+  $ newrepo
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
@@ -353,7 +342,7 @@ behavior is now incorrect -- restack should always fix the whole stack.)
 Test what happens if there is no base commit found. The command should
 fix up everything above the current commit, leaving other commits
 below the current commit alone.
-  $ reset
+  $ newrepo
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
@@ -400,7 +389,7 @@ below the current commit alone.
   o  0 add a
 
 Test having an unamended commit.
-  $ reset
+  $ newrepo
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
@@ -436,105 +425,13 @@ Test having an unamended commit.
   |/
   o  0 add a
 
-Test situation with divergence. Restack should rebase unstable children
-onto the newest successor of their parent.
-  $ reset
-  $ mkcommit a
-  $ mkcommit b
-  $ mkcommit c
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [*] add b (glob)
-  $ hg amend -m "successor 1" --no-rebase
-  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
-  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ hg up 1
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg amend -m "successor 2" --no-rebase
-  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
-  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ hg up 1
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ showgraph
-  o  4 successor 2
-  |
-  | o  3 successor 1
-  |/
-  | o  2 add c
-  | |
-  | @  1 add b
-  |/
-  o  0 add a
-  $ hg rebase --restack
-  rebasing 2:4538525df7e2 "add c"
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ showgraph
-  o  5 add c
-  |
-  @  4 successor 2
-  |
-  | o  3 successor 1
-  |/
-  | x  1 add b
-  |/
-  o  0 add a
-
-Test situation with divergence due to an unamend. This should actually succeed
-since the successor is obsolete.
-  $ reset
-  $ mkcommit a
-  $ mkcommit b
-  $ mkcommit c
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [*] add b (glob)
-  $ echo b >> b
-  $ hg amend
-  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
-  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ showgraph
-  @  3 add b
-  |
-  | o  2 add c
-  | |
-  | x  1 add b
-  |/
-  o  0 add a
-  $ hg up 1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo c >> b
-  $ hg amend
-  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
-  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ showgraph
-  @  4 add b
-  |
-  | o  3 add b
-  |/
-  | o  2 add c
-  | |
-  | x  1 add b
-  |/
-  o  0 add a
-  $ hg unamend
-  $ hg up -C 3
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ showgraph
-  @  3 add b
-  |
-  | o  2 add c
-  | |
-  | o  1 add b
-  |/
-  o  0 add a
-
 Revision 2 "add c" is already stable (not orphaned) so restack does nothing:
 
   $ hg rebase --restack
   nothing to rebase - empty destination
 
 Test recursive restacking -- basic case.
-  $ reset
+  $ newrepo
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
@@ -584,7 +481,7 @@ Test recursive restacking -- more complex case. This test is designed to
 to check for a bug encountered if rebasing is performed naively from the
 bottom-up wherein obsolescence information for commits further up the
 stack is lost upon rebasing lower levels.
-  $ reset
+  $ newrepo
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
@@ -670,282 +567,3 @@ stack is lost upon rebasing lower levels.
   | x  1 add b
   |/
   o  0 add a
-
-Restack does topological sort and only rebases "D" once:
-
-  $ reset
-  $ hg debugdrawdag<<'EOS'
-  > D
-  > |
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOS
-  $ hg update B -q
-  $ hg commit --amend -m B2 -q --no-rebase 2>/dev/null
-  $ hg tag --local B2
-  $ hg rebase -r C -d B2 -q
-  $ hg commit --amend -m B3 -q --no-rebase 2>/dev/null
-  $ hg tag --local B3
-  $ showgraph
-  @  6 B3
-  |
-  | o  5 C
-  | |
-  | x  4 B2
-  |/
-  | o  3 D
-  | |
-  | x  2 C
-  | |
-  | x  1 B
-  |/
-  o  0 A
-  $ hg rebase --restack
-  rebasing 5:ca53c8ceb284 "C"
-  rebasing 3:f585351a92f8 "D" (D)
-  $ showgraph
-  o  8 D
-  |
-  o  7 C
-  |
-  @  6 B3
-  |
-  | x  4 B2
-  |/
-  | x  3 D
-  | |
-  | x  2 C
-  | |
-  | x  1 B
-  |/
-  o  0 A
-
-Restack will only restack the "current" stack and leave other stacks untouched.
-
-  $ reset
-  $ hg debugdrawdag<<'EOS'
-  >  D   H   K
-  >  |   |   |
-  >  B C F G J L    # amend: B -> C
-  >  |/  |/  |/     # amend: F -> G
-  >  A   E   I   Z  # amend: J -> L
-  > EOS
-
-  $ hg phase --public -r Z+I+A+E
-
-  $ hg update -q Z
-  $ hg rebase --restack
-  nothing to restack
-  [1]
-
-  $ hg update -q D
-  $ hg rebase --restack
-  rebasing 10:be0ef73c17ad "D" (D)
-
-  $ hg update -q G
-  $ hg rebase --restack
-  rebasing 11:cc209258a732 "H" (H)
-
-  $ hg update -q I
-  $ hg rebase --restack
-  rebasing 12:59760668f0e1 "K" (K)
-
-  $ rm .hg/localtags
-  $ showgraph
-  o  15 K
-  |
-  | o  14 H
-  | |
-  | | o  13 D
-  | | |
-  o | |  9 L
-  | | |
-  | o |  7 G
-  | | |
-  | | o  5 C
-  | | |
-  | | | o  3 Z
-  | | |
-  @ | |  2 I
-   / /
-  o /  1 E
-   /
-  o  0 A
-
-The "prune" cases.
-
-  $ reset
-  $ hg debugdrawdag<<'EOS'
-  > D E
-  > |/
-  > C
-  > |       # amend: F -> F2
-  > B  G H  # prune: A, C, F2
-  > |  |/
-  > A  F F2
-  > EOS
-
-  $ hg update -q B
-  $ hg rebase --restack
-  rebasing 3:112478962961 "B" (B)
-  rebasing 7:f585351a92f8 "D" (D)
-  rebasing 8:78d2dca436b2 "E" (E tip)
-
-  $ hg update -q H
-  $ hg rebase --restack
-  rebasing 4:8fdb2c1feb20 "G" (G)
-  rebasing 5:02ac06fe83b9 "H" (H)
-
-  $ rm .hg/localtags
-  $ showgraph
-  @  13 H
-  
-  o  12 G
-  
-  o  11 E
-  |
-  | o  10 D
-  |/
-  o  9 B
-
-
-
-Restack could resume after resolving merge conflicts.
-
-  $ reset
-  $ hg debugdrawdag<<'EOS'
-  >  F   G    # F/C = F # cause conflict
-  >  |   |    # G/E = G # cause conflict
-  >  B C D E  # amend: B -> C
-  >  |/  |/   # amend: D -> E
-  >  |   /
-  >  |  /
-  >  | /
-  >  |/
-  >  A
-  > EOS
-
-  $ hg update -q F
-  $ hg rebase --restack
-  rebasing 5:ed8545a5c22a "F" (F)
-  merging C
-  warning: conflicts while merging C! (edit, then use 'hg resolve --mark')
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [1]
-
-  $ rm .hg/localtags
-
-  $ echo R > C
-  $ hg resolve --mark -q
-  continue: hg rebase --continue
-  $ hg rebase --continue
-  rebasing 5:ed8545a5c22a "F"
-  rebasing 6:4d1ef7d890c5 "G" (tip)
-  merging E
-  warning: conflicts while merging E! (edit, then use 'hg resolve --mark')
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [1]
-
-  $ echo R > E
-  $ hg resolve --mark -q
-  continue: hg rebase --continue
-  $ hg rebase --continue
-  already rebased 5:ed8545a5c22a "F" as 2282fe522d5c
-  rebasing 6:4d1ef7d890c5 "G"
-
-  $ showgraph
-  o  8 G
-  |
-  | @  7 F
-  | |
-  o |  4 E
-  | |
-  | o  2 C
-  |/
-  o  0 A
-
-Test auto-restack heuristics - no changes to manifest and clean working directory
-  $ reset
-  $ hg debugdrawdag<<'EOS'
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOS
-  $ hg update B -q
-  $ hg amend -m 'Unchanged manifest for B'
-  rebasing 2:26805aba1e60 "C" (C)
-  hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
-  hint[hint-ack]: use 'hg hint --ack amend-autorebase' to silence these hints
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [426bad] A
-  $ hg amend -m 'Unchanged manifest for A'
-  rebasing 3:5357953e3ea3 "Unchanged manifest for B"
-  rebasing 4:b635bd2cf20b "C"
-  hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
-  hint[hint-ack]: use 'hg hint --ack amend-autorebase' to silence these hints
-
-Test commands.amend.autorebase=False flag - no changes to manifest and clean working directory
-  $ reset
-  $ hg debugdrawdag<<'EOS'
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOS
-  $ hg update B -q
-  $ hg amend --config commands.amend.autorebase=False -m 'Unchanged manifest for B'
-  hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
-  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [426bad] A
-  $ hg amend --config commands.amend.autorebase=False -m 'Unchanged manifest for A'
-  hint[amend-restack]: descendants of 426bada5c675 are left behind - use 'hg restack' to rebase them
-  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-
-Test auto-restack heuristics - manifest changes
-  $ reset
-  $ hg debugdrawdag<<'EOS'
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOS
-  $ hg update B -q
-  $ echo 'new b' > B
-  $ hg amend -m 'Change manifest for B'
-  hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
-  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-
-Test auto-restack heuristics - no committed changes to manifest but dirty working directory
-  $ reset
-  $ hg debugdrawdag<<'EOS'
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOS
-  $ hg update B -q
-  $ echo 'new b' > B
-  $ hg amend a -m 'Unchanged manifest, but dirty workdir'
-  hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
-  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-
-Test auto-restack heuristics - no changes to manifest but no children
-  $ reset
-  $ hg debugdrawdag<<'EOS'
-  > B
-  > |
-  > A
-  > EOS
-  $ hg update B -q
-  $ hg amend -m 'Unchanged manifest for B'
