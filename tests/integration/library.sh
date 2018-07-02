@@ -96,12 +96,6 @@ EOF
 path="$TESTTMP/repo"
 repotype="blob:rocks"
 repoid=0
-CONFIG
-
-  cat > repos/enabled_repo <<CONFIG
-path="$TESTTMP/enabled_repo"
-repotype="blob:rocks"
-repoid=1
 enabled=true
 CONFIG
 
