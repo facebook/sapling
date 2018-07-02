@@ -89,7 +89,8 @@ because everything has been already downloaded.
   >     fallbackpath = treemanifestext.getfallbackpath(repo)
   >     with repo.connectionpool.get(fallbackpath) as conn:
   >         remote = conn.peer
-  >         bundle = remote.gettreepack('', [bin(mfnode) for mfnode in opts.get('mfnode')], [], [])
+  >         depth = 100
+  >         bundle = remote.gettreepack('', [bin(mfnode) for mfnode in opts.get('mfnode')], [], [], depth)
   >         bundle2.processbundle(repo, bundle, None)
   > EOF
 
