@@ -8,7 +8,7 @@ Test mergedriver invalidation with IMM.
   $ setconfig rebase.experimental.inmemorywarning="rebasing in-memory!"
 
   $ mkdir driver
-  $ cat >> driver/__init__.py <<EOF
+  $ cat > driver/__init__.py <<EOF
   > from .generators import someFunction, VERSION
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels=None):
   >     unresolved_files = list(mergestate.unresolved())
@@ -91,7 +91,7 @@ we expect to see "generators version = NEW".
   rebasing 2:* "prefix FILE with 0" (base_1 tip) (glob)
   generators version = BASE
   base's someFunction() called
-  hit merge conflicts; using on-disk merge instead (some of your files require mergedriver to run, which in-memory merge does not support)
+  hit merge conflicts; switching to on-disk merge (some of your files require mergedriver to run, which in-memory merge does not support)
   rebasing 2:* "prefix FILE with 0" (base_1 tip) (glob)
   generators version = NEW
   new_required_arg = new_required

@@ -205,7 +205,7 @@ Rerun with merge conflicts, demonstrating switching to on-disk merge:
   $ hg rebase -r 3 -d 4
   rebasing 3:844a7de3e617 "c"
   merging c
-  hit merge conflicts; using on-disk merge instead (in-memory merge does not support merge conflicts)
+  hit merge conflicts; switching to on-disk merge (in-memory merge does not support merge conflicts)
   rebasing 3:844a7de3e617 "c"
   merging c
   warning: conflicts while merging c! (edit, then use 'hg resolve --mark')

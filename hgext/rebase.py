@@ -524,39 +524,32 @@ class rebaseruntime(object):
                 try:
                     self._performrebaseone(rev, ctx, desc, tr, dest)
                 except error.InMemoryMergeConflictsError as e:
-                    if ui.configbool(
-                        "rebase", "experimental.inmemory.newconflictswitching", False
-                    ):
-                        # in-memory merge doesn't support conflicts, so if we hit any, abort
-                        # and re-run as an on-disk merge.
-                        clearstatus(repo)
-                        mergemod.mergestate.clean(repo)
-                        if cmdutil.uncommittedchanges(repo):
-                            raise error.UncommitedChangesAbort(
-                                _(
-                                    "must use on-disk merge for this rebase (%s), but you have working copy changes"
-                                )
-                                % e,
-                                hint=_("commit, revert, or shelve them"),
+                    # in-memory merge doesn't support conflicts, so if we hit any, abort
+                    # and re-run as an on-disk merge.
+                    clearstatus(repo)
+                    mergemod.mergestate.clean(repo)
+                    if cmdutil.uncommittedchanges(repo):
+                        raise error.UncommitedChangesAbort(
+                            _(
+                                "must use on-disk merge for this rebase (%s), but you have working copy changes"
                             )
-                        else:
-                            ui.warn(
-                                _(
-                                    "hit merge conflicts; switching to on-disk merge (%s)\n"
-                                )
-                                % e
-                            )
-                        ui.log(
-                            "rebase",
-                            "",
-                            rebase_imm_new_restart=str(True).lower(),
-                            rebase_imm_restart=str(True).lower(),
+                            % e,
+                            hint=_("commit, revert, or shelve them"),
                         )
-                        self.inmemory = False
-                        self._assignworkingcopy()
-                        self._performrebaseone(rev, ctx, desc, tr, dest)
                     else:
-                        raise  # Use the old restart logic in `rebase()`
+                        ui.warn(
+                            _("hit merge conflicts; switching to on-disk merge (%s)\n")
+                            % e
+                        )
+                    ui.log(
+                        "rebase",
+                        "",
+                        rebase_imm_new_restart=str(True).lower(),
+                        rebase_imm_restart=str(True).lower(),
+                    )
+                    self.inmemory = False
+                    self._assignworkingcopy()
+                    self._performrebaseone(rev, ctx, desc, tr, dest)
             else:
                 ui.status(
                     _("already rebased %s as %s\n") % (desc, repo[self.state[rev]])
@@ -943,11 +936,6 @@ def rebase(ui, repo, templ=None, **opts):
       [rebase]
       experimental.inmemory.nomergedriver = True
 
-    A newer, faster switching on merge conflicts is controlled by the following::
-
-      [rebase]
-      experimental.inmemory.newconflictswitching = False
-
     Return Values:
 
     Returns 0 on success, 1 if nothing to rebase or there are
@@ -1003,20 +991,6 @@ def rebase(ui, repo, templ=None, **opts):
             }
             with ui.configoverride(overrides):
                 return _origrebase(ui, repo, rbsrt, **opts)
-        except error.InMemoryMergeConflictsError as e:
-            # in-memory merge doesn't support conflicts, so if we hit any, abort
-            # and re-run as an on-disk merge.
-            ui.warn(("hit merge conflicts; using on-disk merge instead " "(%s)\n" % e))
-            ui.log("rebase", "", rebase_imm_restart=str(True).lower())
-            clearstatus(repo)
-            mergemod.mergestate.clean(repo)
-            if repo.currenttransaction():
-                repo.currenttransaction().abort()
-            cmdutil.bailifchanged(
-                repo, hint=_("commit, shelve or remove them, then rerun the rebase")
-            )
-            rbsrt.inmemory = False
-            return _origrebase(ui, repo, rbsrt, **opts)
         except error.AbortMergeToolError as e:
             ui.status(_("%s; exiting.\n") % e)
             clearstatus(repo)
