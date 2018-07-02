@@ -2276,7 +2276,16 @@ class overlayworkingctx(committablectx):
         if self.isdirty(path):
             self._cache[path]["copied"] = origin
         else:
-            raise error.ProgrammingError("markcopied() called on clean context")
+            if self.exists(path):
+                self._markdirty(
+                    path,
+                    True,
+                    data=self.data(path),
+                    flags=self.flags(path),
+                    copied=origin,
+                )
+            else:
+                raise error.ProgrammingError("markcopied() called on non-existent file")
 
     def copydata(self, path):
         if self.isdirty(path):
@@ -2334,6 +2343,9 @@ class overlayworkingctx(committablectx):
                 return self._cache[path]["exists"]
 
         return self._existsinparent(path)
+
+    def __contains__(self, path):
+        return self.exists(path)
 
     def lexists(self, path):
         """lexists returns True if the path exists"""
@@ -2448,13 +2460,13 @@ class overlayworkingctx(committablectx):
             del self._cache[path]
         return keys
 
-    def _markdirty(self, path, exists, data=None, date=None, flags=""):
+    def _markdirty(self, path, exists, data=None, date=None, flags="", copied=None):
         self._cache[path] = {
             "exists": exists,
             "data": data,
             "date": date,
             "flags": flags,
-            "copied": None,
+            "copied": copied,
         }
 
     def filectx(self, path, filelog=None):
