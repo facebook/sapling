@@ -49,7 +49,7 @@ Make conflicts halfway up the stack:
   rebasing 4:881eb15e0fdf "e" (e)
   rebasing 5:e692c3b32196 "f"
   merging c
-  hit merge conflicts; switching to on-disk merge (in-memory merge does not support merge conflicts)
+  hit merge conflicts (in c); switching to on-disk merge
   rebasing 5:e692c3b32196 "f"
   merging c
   warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
@@ -91,7 +91,7 @@ Try it with uncommitted changes, ensure it aborts nicely:
   rebasing 5:c33e7f678afd "f"
   transaction abort!
   rollback completed
-  abort: must use on-disk merge for this rebase (in-memory merge does not support file conflicts), but you have working copy changes
+  abort: must use on-disk merge for this rebase (hit merge conflicts in c), but you have working copy changes
   (commit, revert, or shelve them)
   [255]
   $ hg st

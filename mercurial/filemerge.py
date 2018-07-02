@@ -274,7 +274,9 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     # conflicts.
     if fcd.changectx().isinmemory():
         raise error.InMemoryMergeConflictsError(
-            "in-memory merge does not support file conflicts"
+            "in-memory merge does not support file conflicts",
+            type=error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
+            paths=[fcd.path()],
         )
 
     prompts = partextras(labels)
@@ -535,7 +537,9 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 
     if isinstance(fcd, context.overlayworkingfilectx):
         raise error.InMemoryMergeConflictsError(
-            "in-memory merge does not " "support the :dump tool."
+            "in-memory merge does not support the :dump tool.",
+            type=error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
+            paths=[fcd.path()],
         )
 
     util.writefile(a + ".local", fcd.decodeddata())
@@ -562,7 +566,9 @@ def _xmergeimm(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     # directory and tell the user how to get it is my best idea, but it's
     # clunky.)
     raise error.InMemoryMergeConflictsError(
-        "in-memory merge does not support " "external merge tools"
+        "in-memory merge does not support external merge tools",
+        type=error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
+        paths=[fcd.path()],
     )
 
 
@@ -821,7 +827,9 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
         if onfailure:
             if wctx.isinmemory():
                 raise error.InMemoryMergeConflictsError(
-                    "in-memory merge does " "not support merge " "conflicts"
+                    "in-memory merge does not support merge conflicts",
+                    type=error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
+                    paths=[fcd.path()],
                 )
             ui.warn(onfailure % relfd)
         return True, 1, False
@@ -852,7 +860,9 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
             if onfailure:
                 if wctx.isinmemory():
                     raise error.InMemoryMergeConflictsError(
-                        "in-memory merge " "does not support " "merge conflicts"
+                        "in-memory merge does not support merge conflicts",
+                        type=error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
+                        paths=[fcd.path()],
                     )
                 ui.warn(onfailure % relfd)
             _onfilemergefailure(ui)

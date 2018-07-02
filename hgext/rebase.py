@@ -528,18 +528,33 @@ class rebaseruntime(object):
                     # and re-run as an on-disk merge.
                     clearstatus(repo)
                     mergemod.mergestate.clean(repo)
+
+                    # internal config: merge.numconflictpaths
+                    numconfictpaths = ui.config("merge", "numconflictpaths", 3)
+                    if len(e.paths) > numconfictpaths > 0:
+                        pathstr = ", ".join(
+                            e.paths[0:numconfictpaths]
+                        ) + ", and %d more" % (len(e.paths) - numconfictpaths)
+                    else:
+                        pathstr = ", ".join(e.paths)
+
+                    if e.type == error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS:
+                        kindstr = _("hit merge conflicts")
+                    else:
+                        kindstr = _("artifact rebuild required")
+
                     if cmdutil.uncommittedchanges(repo):
                         raise error.UncommitedChangesAbort(
                             _(
-                                "must use on-disk merge for this rebase (%s), but you have working copy changes"
+                                "must use on-disk merge for this rebase (%s in %s), but you have working copy changes"
                             )
-                            % e,
+                            % (kindstr, pathstr),
                             hint=_("commit, revert, or shelve them"),
                         )
                     else:
                         ui.warn(
-                            _("hit merge conflicts; switching to on-disk merge (%s)\n")
-                            % e
+                            _("%s (in %s); switching to on-disk merge\n")
+                            % (kindstr, pathstr)
                         )
                     ui.log(
                         "rebase",

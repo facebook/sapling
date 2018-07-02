@@ -1684,7 +1684,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
                     "some of your files require mergedriver to run, "
                     "which in-memory merge does not support"
                 )
-                raise error.InMemoryMergeConflictsError(errorstr)
+                raise error.InMemoryMergeConflictsError(
+                    errorstr,
+                    type=error.InMemoryMergeConflictsError.TYPE_MERGEDRIVER,
+                    paths=driverresolved,
+                )
 
             # the driver might leave some files unresolved
             unresolvedf = set(ms.unresolved())

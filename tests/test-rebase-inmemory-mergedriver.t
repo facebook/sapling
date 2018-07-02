@@ -90,7 +90,7 @@ we expect to see "generators version = NEW".
   rebasing 2:* "prefix FILE with 0" (base_1 tip) (glob)
   generators version = BASE
   base's someFunction() called
-  hit merge conflicts; switching to on-disk merge (some of your files require mergedriver to run, which in-memory merge does not support)
+  artifact rebuild required (in FILE); switching to on-disk merge
   rebasing 2:* "prefix FILE with 0" (base_1 tip) (glob)
   generators version = NEW
   new_required_arg = new_required

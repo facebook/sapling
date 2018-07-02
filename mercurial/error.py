@@ -416,6 +416,19 @@ class PeerTransportError(Abort):
 class InMemoryMergeConflictsError(Exception):
     """Exception raised when merge conflicts arose during an in-memory merge."""
 
+    TYPE_FILE_CONFLICTS = 1
+    TYPE_MERGEDRIVER = 2
+
+    def __init__(self, msg, type, paths):
+        """
+        :param type: TYPE_FILE_CONFLICTS or TYPE_MERGEDRIVER_RUN
+        :param paths: The affected paths (for file conflicts, just the first)
+        """
+        self.type = type
+        self.paths = paths
+
+        Exception.__init__(self, msg)
+
     __bytes__ = _tobytes
 
 
