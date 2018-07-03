@@ -13,6 +13,7 @@ from mercurial import (
     cmdutil,
     commands,
     dispatch,
+    encoding,
     error,
     extensions,
     fancyopts,
@@ -36,6 +37,7 @@ from mercurial import (
 )
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
+
 
 if not pycompat.iswindows:
     from . import interactiveui
@@ -76,7 +78,7 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     # For chg, do not wrap the "serve" runcommand call. Otherwise everything
     # will be logged as side effects of a long "hg serve" command, no
     # individual commands will be logged.
-    if "CHGINTERNALMARK" in os.environ:
+    if "CHGINTERNALMARK" in encoding.environ:
         return orig(lui, repo, cmd, fullargs, *args)
 
     # For non-repo command, it's unnecessary to go through the undo logic
@@ -94,7 +96,7 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
 
     # '_undologactive' is set by a parent hg process with before state written
     # to undolog. In this case, the current process should not write undolog.
-    if "_undologactive" in os.environ:
+    if "_undologactive" in encoding.environ:
         triggered.append(False)
 
     def log(orig, *args, **kwargs):
@@ -102,7 +104,7 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
         # to modify that state.
         if not triggered:
             triggered.append(True)
-            os.environ["_undologactive"] = "active"
+            encoding.environ["_undologactive"] = "active"
 
             # Check wether undolog is consistent
             # ie check wether the undo ext was
@@ -132,7 +134,7 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
                 # upstream change.
                 repo.invalidatevolatilesets()
                 safelog(repo, command)
-                del os.environ["_undologactive"]
+                del encoding.environ["_undologactive"]
 
     return result
 

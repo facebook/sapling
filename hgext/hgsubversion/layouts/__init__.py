@@ -1,4 +1,4 @@
-"""Code for dealing with subversion layouts
+"""code for dealing with subversion layouts
 
 This package is intended to encapsulate everything about subversion
 layouts.  This includes detecting the layout based on looking at
@@ -9,11 +9,11 @@ NB: this has a long way to go before it does everything it claims to
 
 """
 
-from mercurial import util as hgutil
-
 import custom
 import single
 import standard
+from mercurial import util as hgutil
+
 
 __all__ = ["layout_from_name"]
 

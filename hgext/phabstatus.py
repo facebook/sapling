@@ -7,7 +7,7 @@
 
 import os
 
-from mercurial import cmdutil, extensions, obsutil, registrar, util as hgutil
+from mercurial import cmdutil, extensions, obsutil, pycompat, registrar, util as hgutil
 from mercurial.i18n import _
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
@@ -77,7 +77,9 @@ def getdiffstatus(repo, *diffid):
     ca_certs = repo.ui.configpath("web", "cacerts")
 
     try:
-        client = graphql.Client(repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
+        client = graphql.Client(
+            repodir=pycompat.getcwd(), ca_bundle=ca_certs, repo=repo
+        )
         statuses = client.getrevisioninfo(timeout, diffid)
     except arcconfig.ArcConfigError as ex:
         msg = _(

@@ -12,7 +12,7 @@ the state of the repo
 
 import os
 
-from mercurial import commands, merge as mergemod, registrar, scmutil
+from mercurial import commands, merge as mergemod, pycompat, registrar, scmutil
 from mercurial.extensions import wrapcommand
 from mercurial.i18n import _
 
@@ -42,7 +42,8 @@ def conflictsmsg(repo, ui):
     if unresolvedlist:
         mergeliststr = "\n".join(
             [
-                "    %s" % os.path.relpath(os.path.join(repo.root, path), os.getcwd())
+                "    %s"
+                % os.path.relpath(os.path.join(repo.root, path), pycompat.getcwd())
                 for path in unresolvedlist
             ]
         )

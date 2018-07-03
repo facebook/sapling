@@ -87,9 +87,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping hgext/hgsubversion/compathacks.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/editor.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/hooks/updatemeta.py it has no-che?k-code (glob)
-  hgext/hgsubversion/layouts/__init__.py:1:
-   > """Code for dealing with subversion layouts
-   don't capitalize docstring title
   Skipping hgext/hgsubversion/layouts/base.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/layouts/custom.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/layouts/standard.py it has no-che?k-code (glob)
@@ -107,24 +104,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping hgext/hgsubversion/util.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/verify.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/wrappers.py it has no-che?k-code (glob)
-  hgext/morestatus.py:45:
-   >                 "    %s" % os.path.relpath(os.path.join(repo.root, path), os.getcwd())
-   use pycompat.getcwd instead (py3)
-  hgext/phabstatus.py:80:
-   >         client = graphql.Client(repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
-   use pycompat.getcwd instead (py3)
-  hgext/undo.py:*: (glob)
-   >     if "CHGINTERNALMARK" in os.environ:
-   use encoding.environ instead (py3)
-  hgext/undo.py:*: (glob)
-   >     if "_undologactive" in os.environ:
-   use encoding.environ instead (py3)
-  hgext/undo.py:*: (glob)
-   >             os.environ["_undologactive"] = "active"
-   use encoding.environ instead (py3)
-  hgext/undo.py:*: (glob)
-   >                 del os.environ["_undologactive"]
-   use encoding.environ instead (py3)
   Skipping i18n/polib.py it has no-che?k-code (glob)
   Skipping lib/clib/buffer.c it has no-che?k-code (glob)
   Skipping lib/clib/buffer.h it has no-che?k-code (glob)
