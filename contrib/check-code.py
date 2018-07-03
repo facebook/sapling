@@ -176,7 +176,6 @@ testpats = [
         (r"\bsed\b.*[^\\]\\n", "don't use 'sed ... \\n', use a \\ and a newline"),
         (r"env.*-u", "don't use 'env -u VAR', use 'unset VAR'"),
         (r"cp.* -r ", "don't use 'cp -r', use 'cp -R'"),
-        (r"grep.* -[ABC]", "don't use grep's context flags"),
         (r"find.*-printf", "don't use 'find -printf', it doesn't exist on BSD find(1)"),
     ],
     # warnings

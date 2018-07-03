@@ -150,15 +150,9 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/conduithttp.py it has no-che?k-code (glob)
   Skipping tests/fixtures/rsvn.py it has no-che?k-code (glob)
   Skipping tests/test-fb-hgext-remotefilelog-bad-configs.t it has no-che?k-code (glob)
-  tests/test-hggit-git-submodules.t:61:
-   >   $ grep 'submodule "subrepo2"' -A2 .gitmodules > .gitmodules-new
-   don't use grep's context flags
   tests/test-hggit-gitignore.t:124:
    >   $ echo 'foo.*$(?<!bar)' >> .hgignore
    don't use $(expr), use `expr`
-  tests/test-hggit-renames.t:79:
-   >   $ grep 'submodule "gitsubmodule"' -A2 .gitmodules > .gitmodules-new
-   don't use grep's context flags
   Skipping tests/test-hgsql-encoding.t it has no-che?k-code (glob)
   Skipping tests/test-hgsql-race-conditions.t it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-externals.py it has no-che?k-code (glob)
