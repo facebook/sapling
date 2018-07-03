@@ -38,12 +38,6 @@ Replace the directory with a symlink
   removing a/x
   adding b/x
 
-
-#if fsmonitor
-BUG: fsmonitor "hg status" shows a/x
+"a/x" should not show up in "hg status", even if it exists
 
   $ hg status
-  ? a/x
-#else
-  $ hg status
-#endif

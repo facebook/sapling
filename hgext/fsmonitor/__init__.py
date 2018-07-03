@@ -509,16 +509,28 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
             visit.update(f for f in dmap if f not in results and matchfn(f))
             visit.update(f for f in copymap if f not in results and matchfn(f))
 
+    # audit returns False for paths with one of its parent directories being a
+    # symlink.
     audit = pathutil.pathauditor(self._root, cached=True).check
     auditpass = [f for f in visit if audit(f)]
     auditpass.sort()
     auditfail = visit.difference(auditpass)
-    for f in auditfail:
-        results[f] = None
-
-    nf = iter(auditpass).next
     droplist = []
     droplistappend = droplist.append
+    for f in auditfail:
+        # For auditfail paths, they should be treated as not existed in working
+        # copy.
+        filestate = dmap.get(f, ("?",))[0]
+        if filestate in ("?",):
+            # do not exist in working parents, remove them from treestate and
+            # avoid walking through them.
+            droplistappend(f)
+            results.pop(f, None)
+        else:
+            # tracked, mark as deleted
+            results[f] = None
+
+    nf = iter(auditpass).next
     for st in util.statfiles([join(f) for f in auditpass]):
         f = nf()
         if st or f in dmap:

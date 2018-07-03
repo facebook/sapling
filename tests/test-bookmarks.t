@@ -863,8 +863,7 @@ working directory of current repository)
    y
   branch: test
   bookmarks: *four
-  commit: 2 unknown (clean) (no-fsmonitor !)
-  commit: * unknown (clean) (glob) (fsmonitor !)
+  commit: 2 unknown (clean)
   update: (current)
   phases: 4 draft
 
