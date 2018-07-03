@@ -57,6 +57,10 @@ Configs:
     ``remotefilelog.updatesharedcache`` is used to prevent writing data to the
     shared remotefilelog cache. This can be useful to prevent poisoning cache
     while using experimental remotefilelog store.
+    ``remotefilelog.descendantrevfastpath`` controls whether to use the
+    linkrev-fixup fastpath when creating a filectx from a descendant rev.
+    The default is true, but this may make some operations cause many tree
+    fetches when used in conjunction with treemanifest in treeonly mode.
 """
 from __future__ import absolute_import
 
@@ -64,22 +68,6 @@ import os
 import time
 import traceback
 
-from mercurial.node import hex, nullrev
-from mercurial.i18n import _
-from mercurial.extensions import wrapfunction
-
-from . import (
-    debugcommands,
-    fileserverclient,
-    remotefilectx,
-    remotefilelog,
-    remotefilelogserver,
-    repack as repackmod,
-    shallowbundle,
-    shallowrepo,
-    shallowstore,
-    shallowutil,
-)
 from mercurial import (
     changegroup,
     changelog,
@@ -108,6 +96,23 @@ from mercurial import (
     templatekw,
     util,
 )
+from mercurial.extensions import wrapfunction
+from mercurial.i18n import _
+from mercurial.node import hex, nullrev
+
+from . import (
+    debugcommands,
+    fileserverclient,
+    remotefilectx,
+    remotefilelog,
+    remotefilelogserver,
+    repack as repackmod,
+    shallowbundle,
+    shallowrepo,
+    shallowstore,
+    shallowutil,
+)
+
 
 # ensures debug commands are registered
 hgdebugcommands.command

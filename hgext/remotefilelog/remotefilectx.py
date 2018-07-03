@@ -192,6 +192,10 @@ class remotefilectx(context.filectx):
         repo = self._repo
         ancestormap = self.ancestormap()
 
+        descendantrevfastpath = repo.ui.configbool(
+            "remotefilelog", "descendantrevfastpath", True
+        )
+
         p1, p2, linknode, copyfrom = ancestormap[self._filenode]
         results = []
         if p1 != nullid:
@@ -200,7 +204,8 @@ class remotefilectx(context.filectx):
             p1ctx = remotefilectx(
                 repo, path, fileid=p1, filelog=flog, ancestormap=ancestormap
             )
-            p1ctx._descendantrev = self.rev()
+            if descendantrevfastpath:
+                p1ctx._descendantrev = self.rev()
             results.append(p1ctx)
 
         if p2 != nullid:
@@ -209,7 +214,8 @@ class remotefilectx(context.filectx):
             p2ctx = remotefilectx(
                 repo, path, fileid=p2, filelog=flog, ancestormap=ancestormap
             )
-            p2ctx._descendantrev = self.rev()
+            if descendantrevfastpath:
+                p2ctx._descendantrev = self.rev()
             results.append(p2ctx)
 
         return results
