@@ -201,25 +201,3 @@ New errors are not allowed. Warnings are strongly discouraged.
   ...               'command is %s; expected %s' % (commands[i], command))
   ...         break
 
-Prevent adding new files in the root directory accidentally.
-
-  $ testrepohg files 'glob:*'
-  .editorconfig
-  .flake8
-  .gitignore
-  .hg-vendored-crates
-  .hgsigs
-  .jshintrc
-  .watchmanconfig
-  CONTRIBUTING
-  CONTRIBUTORS
-  COPYING
-  Makefile
-  README.rst
-  TARGETS
-  gen_version.py
-  hg
-  hgeditor
-  hgweb.cgi
-  setup.py
-  vendorcrates.py
