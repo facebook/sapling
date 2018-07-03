@@ -15,7 +15,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X lib/third-party \
   > -X mercurial/thirdparty \
   > -X fb \
-  > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
+  > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - | sort || false
   Skipping hgext/extlib/cfastmanifest.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.h it has no-che?k-code (glob)
@@ -129,9 +129,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/conduithttp.py it has no-che?k-code (glob)
   Skipping tests/fixtures/rsvn.py it has no-che?k-code (glob)
   Skipping tests/test-fb-hgext-remotefilelog-bad-configs.t it has no-che?k-code (glob)
-  tests/test-hggit-gitignore.t:124:
-   >   $ echo 'foo.*$(?<!bar)' >> .hgignore
-   don't use $(expr), use `expr`
   Skipping tests/test-hgsql-encoding.t it has no-che?k-code (glob)
   Skipping tests/test-hgsql-race-conditions.t it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-externals.py it has no-che?k-code (glob)
@@ -152,11 +149,9 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-hgsubversion-template-keywords.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-urls.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-utility-commands.py it has no-che?k-code (glob)
-  tests/test-revset.t:2785:
-   >   > . +
-   warning: ^ must be quoted
   Skipping tests/test_hgsubversion_util.py it has no-che?k-code (glob)
-  [1]
+  tests/test-hggit-gitignore.t:124: don't use $(expr), use `expr` --> $ echo 'foo.*$(?<!bar)' >> .hgignore
+  tests/test-revset.t:2785: warning: ^ must be quoted --> > . +
 
 @commands in debugcommands.py should be in alphabetical order.
 

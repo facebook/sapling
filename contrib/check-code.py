@@ -720,12 +720,12 @@ class norepeatlogger(object):
         msgid = fname, lineno, line
         if msgid != self._lastseen:
             if blame:
-                print("%s:%d (%s):" % (fname, lineno, blame))
+                print(
+                    "%s:%d (%s): %s --> %s" % (fname, lineno, blame, msg, line.strip())
+                )
             else:
-                print("%s:%d:" % (fname, lineno))
-            print(" > %s" % line)
+                print("%s:%d: %s --> %s" % (fname, lineno, msg, line.strip()))
             self._lastseen = msgid
-        print(" " + msg)
 
 
 _defaultlogger = norepeatlogger()
