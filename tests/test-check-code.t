@@ -15,7 +15,10 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X lib/third-party \
   > -X mercurial/thirdparty \
   > -X fb \
-  > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - | sort || false
+  > | sed 's-\\-/-g' > $TESTTMP/files.txt
+
+  $ NPROC=`python -c 'import multiprocessing; print(multiprocessing.cpu_count())'`
+  $ cat $TESTTMP/files.txt | xargs -n64 -P $NPROC contrib/check-code.py --warnings --per-file=0 | sort
   Skipping hgext/extlib/cfastmanifest.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.h it has no-che?k-code (glob)
