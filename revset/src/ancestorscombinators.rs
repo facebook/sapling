@@ -22,9 +22,8 @@
 ///
 /// The stream below aims to solve the aforementioned problems. It's primary usage is in
 /// Mercurial pull to find commits that need to be sent to a client.
-use std::collections::{BTreeMap, BinaryHeap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::collections::hash_set::IntoIter;
-use std::hash::Hash;
 use std::iter;
 use std::sync::Arc;
 
@@ -39,6 +38,7 @@ use mercurial_types::nodehash::HgChangesetId;
 use repoinfo::{Generation, RepoGenCache};
 
 use NodeStream;
+use UniqueHeap;
 use errors::*;
 use setcommon::*;
 
@@ -77,41 +77,6 @@ use setcommon::*;
 /// ```
 ///
 
-struct UniqueHeap<T>
-where
-    T: Ord + Hash + Eq,
-{
-    sorted_vals: BinaryHeap<T>,
-    unique_vals: HashSet<T>,
-}
-
-impl<T> UniqueHeap<T>
-where
-    T: Ord + Hash + Eq + Clone,
-{
-    fn new() -> Self {
-        UniqueHeap {
-            sorted_vals: BinaryHeap::new(),
-            unique_vals: HashSet::new(),
-        }
-    }
-
-    fn push(&mut self, val: T) {
-        if !self.unique_vals.contains(&val) {
-            self.unique_vals.insert(val.clone());
-            self.sorted_vals.push(val.clone());
-        }
-    }
-
-    fn pop(&mut self) -> Option<T> {
-        if let Some(v) = self.sorted_vals.pop() {
-            self.unique_vals.remove(&v);
-            Some(v)
-        } else {
-            None
-        }
-    }
-}
 pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     repo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,

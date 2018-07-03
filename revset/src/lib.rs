@@ -50,6 +50,9 @@ pub use ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
 mod range;
 pub use range::RangeNodeStream;
 
+mod uniqueheap;
+use uniqueheap::UniqueHeap;
+
 pub use test::*;
 #[cfg(test)]
 mod test {
