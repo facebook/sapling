@@ -155,16 +155,21 @@ fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
 fn main() {
     let matches = setup_app().get_matches();
 
-    let revlogrepo = {
-        let input = matches.value_of("INPUT").expect("input is not specified");
-        RevlogRepo::open(input).expect("cannot open revlogrepo")
-    };
+    let revlogrepo_path = matches.value_of("INPUT").expect("input is not specified");
 
     let mut core = Core::new().expect("cannot create tokio core");
 
     let logger = args::get_logger(&matches);
 
     let blobrepo = Arc::new(open_blobrepo(&logger, &matches));
+
+    let stale_bookmarks = {
+        let revlogrepo = RevlogRepo::open(revlogrepo_path).expect("cannot open revlogrepo");
+        core.run(bookmark::read_bookmarks(revlogrepo))
+            .expect("failed to read bookmarks")
+    };
+
+    let revlogrepo = RevlogRepo::open(revlogrepo_path).expect("cannot open revlogrepo");
 
     let upload_changesets = changeset::upload_changesets(
         &matches,
@@ -207,7 +212,7 @@ fn main() {
             Ok(())
         }).boxify()
     } else {
-        bookmark::upload_bookmarks(&logger, revlogrepo, blobrepo)
+        bookmark::upload_bookmarks(&logger, revlogrepo, blobrepo, stale_bookmarks)
     };
 
     core.run(upload_changesets.and_then(|()| {
