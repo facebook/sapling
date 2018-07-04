@@ -42,6 +42,7 @@ extern crate tokio_core;
 
 pub mod lua_hook;
 pub mod rust_hook;
+pub mod hook_loader;
 
 use asyncmemo::{Asyncmemo, Filler, Weight};
 use blobrepo::{BlobChangeset, BlobRepo};
