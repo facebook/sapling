@@ -16,6 +16,7 @@ use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::{iter_ok, Stream};
 
+use UniqueHeap;
 use blobrepo::BlobRepo;
 use mercurial_types::{Changeset, HgNodeHash};
 use mercurial_types::nodehash::HgChangesetId;
@@ -32,6 +33,9 @@ pub struct AncestorsNodeStream {
     next_generation: BTreeMap<Generation, HashSet<HgNodeHash>>,
     pending_changesets: Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send>,
     drain: IntoIter<HgNodeHash>,
+
+    // max heap of all relevant unique generation numbers
+    sorted_unique_generations: UniqueHeap<Generation>,
 }
 
 fn make_pending(
@@ -75,6 +79,7 @@ impl AncestorsNodeStream {
                 node_set.clone().into_iter(),
             ),
             drain: node_set.into_iter(),
+            sorted_unique_generations: UniqueHeap::new(),
         }
     }
 
@@ -102,6 +107,8 @@ impl Stream for AncestorsNodeStream {
                         .entry(generation)
                         .or_insert_with(HashSet::new)
                         .insert(hash);
+                    // insert into our sorted list of generations
+                    self.sorted_unique_generations.push(generation);
                 }
                 Async::NotReady => return Ok(Async::NotReady),
                 Async::Ready(None) => break,
@@ -113,10 +120,9 @@ impl Stream for AncestorsNodeStream {
             return Ok(Async::Ready(None));
         }
 
-        let highest_generation = *self.next_generation
-            .keys()
-            .max()
-            .expect("Non-empty map has no keys");
+        let highest_generation = self.sorted_unique_generations
+            .pop()
+            .expect("Expected a non empty heap of generations");
         let current_generation = self.next_generation
             .remove(&highest_generation)
             .expect("Highest generation doesn't exist");
