@@ -164,6 +164,7 @@ impl MononokeActor {
         let repos = config
             .repos
             .into_iter()
+            .filter(move |&(_, ref config)| config.enabled)
             .map(move |(reponame, config)| {
                 let logger = logger.clone();
                 (
