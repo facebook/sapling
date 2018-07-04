@@ -9,9 +9,8 @@
 //! A generation number for a changeset is 1 + max(parents, 0). This number is computed for each
 //! changeset and memoized for efficiency.
 
-use std::{usize, u64};
-use std::mem;
 use std::sync::Arc;
+use std::usize;
 
 use failure::{err_msg, Error};
 use futures::IntoFuture;
@@ -19,36 +18,12 @@ use futures::future::{Either, Future};
 
 use futures_ext::FutureExt;
 
-use asyncmemo::{Asyncmemo, Filler, Weight};
+use asyncmemo::{Asyncmemo, Filler};
 use blobrepo::BlobRepo;
 use mercurial_types::{HgChangesetId, HgNodeHash, NULL_HASH};
+use mononoke_types::Generation;
 
 use nodehashkey::Key;
-
-/// Generation number
-///
-/// The generation number for a changeset is defined as the max of the changeset's parents'
-/// generation number plus 1; if there are no parents then it's 1.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, HeapSizeOf)]
-pub struct Generation(u64);
-
-impl Weight for Generation {
-    fn get_weight(&self) -> usize {
-        mem::size_of::<Self>()
-    }
-}
-
-impl Generation {
-    /// Creates new generation number
-    pub fn new(gen: u64) -> Self {
-        Generation(gen)
-    }
-
-    /// Create a maximum possible generation number
-    pub fn max_gen() -> Self {
-        Generation(u64::MAX)
-    }
-}
 
 /// Cache of generation numbers
 ///
@@ -80,7 +55,7 @@ impl RepoGenCache {
         nodeid: HgNodeHash,
     ) -> impl Future<Item = Generation, Error = Error> + Send {
         if nodeid == NULL_HASH {
-            Either::A(Ok(Generation(0)).into_future())
+            Either::A(Ok(Generation::new(0)).into_future())
         } else {
             Either::B(self.cache.get((repo, nodeid.clone())))
         }
@@ -107,7 +82,7 @@ impl Filler for GenFiller {
         let cs = HgChangesetId::new(*nodeid);
         repo.get_generation_number(&cs)
             .and_then(move |genopt| genopt.ok_or_else(|| err_msg(format!("{} not found", cs))))
-            .map(|gen| Generation(gen))
+            .map(|gen| Generation::new(gen))
             .boxify()
     }
 }

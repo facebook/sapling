@@ -12,7 +12,8 @@ use failure::Error;
 use futures::{Async, Poll};
 use futures::stream::Stream;
 use mercurial_types::HgNodeHash;
-use repoinfo::{Generation, RepoGenCache};
+use mononoke_types::Generation;
+use repoinfo::RepoGenCache;
 
 use NodeStream;
 use setcommon::{add_generations, InputStream};

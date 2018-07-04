@@ -19,7 +19,8 @@ use futures::stream::{iter_ok, Stream};
 use blobrepo::BlobRepo;
 use mercurial_types::{Changeset, HgNodeHash};
 use mercurial_types::nodehash::HgChangesetId;
-use repoinfo::{Generation, RepoGenCache};
+use mononoke_types::Generation;
+use repoinfo::RepoGenCache;
 
 use IntersectNodeStream;
 use NodeStream;

@@ -47,12 +47,14 @@ pub mod file_contents;
 pub mod hash;
 pub mod path;
 pub mod typed_hash;
+pub mod generation;
 
 pub use blob::{Blob, BlobstoreBytes, BlobstoreValue, ChangesetBlob, ContentBlob};
 pub use bonsai_changeset::BonsaiChangeset;
 pub use datetime::DateTime;
 pub use file_change::{FileChange, FileType};
 pub use file_contents::FileContents;
+pub use generation::Generation;
 pub use path::{MPath, MPathElement, RepoPath};
 pub use typed_hash::{ChangesetId, ContentId, MononokeId};
 

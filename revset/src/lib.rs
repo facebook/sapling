@@ -14,6 +14,7 @@ extern crate futures_ext;
 #[macro_use]
 extern crate maplit;
 extern crate mercurial_types;
+extern crate mononoke_types;
 extern crate repoinfo;
 
 use futures::stream::Stream;

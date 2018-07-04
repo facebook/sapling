@@ -8,7 +8,8 @@ use blobrepo::BlobRepo;
 use futures::future::Future;
 use futures::stream::Stream;
 use mercurial_types::HgNodeHash;
-use repoinfo::{Generation, RepoGenCache};
+use mononoke_types::Generation;
+use repoinfo::RepoGenCache;
 use std::boxed::Box;
 use std::sync::Arc;
 

@@ -16,12 +16,11 @@ extern crate changesets;
 extern crate failure;
 extern crate futures;
 extern crate heapsize;
-#[macro_use]
-extern crate heapsize_derive;
 
 extern crate blobrepo;
 extern crate futures_ext;
 extern crate mercurial_types;
+extern crate mononoke_types;
 
 mod gen;
 mod nodehashkey;
@@ -29,4 +28,4 @@ mod ptrwrap;
 
 pub use ptrwrap::PtrWrap;
 
-pub use gen::{Generation, RepoGenCache};
+pub use gen::RepoGenCache;

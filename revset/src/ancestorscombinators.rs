@@ -35,7 +35,8 @@ use futures_ext::{SelectAll, StreamExt};
 use blobrepo::BlobRepo;
 use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
-use repoinfo::{Generation, RepoGenCache};
+use mononoke_types::Generation;
+use repoinfo::RepoGenCache;
 
 use NodeStream;
 use UniqueHeap;
