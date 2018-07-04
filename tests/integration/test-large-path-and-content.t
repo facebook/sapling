@@ -60,6 +60,7 @@ pull on repo2
   $ cd $TESTTMP/repo2
   $ hgmn pull
   pulling from ssh://user@dummy/repo
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   requesting all changes
   adding changesets
   adding manifests
@@ -77,6 +78,7 @@ pull on repo2
   summary:     long
   
   $ hgmn update -r master_bookmark
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master_bookmark)
   $ du ${LONG_PATH}/${LONG_FILENAME}
@@ -108,6 +110,7 @@ push one more long path from repo2
   
   $ hgmn push
   pushing to ssh://user@dummy/repo
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   searching for changes
   updating bookmark master_bookmark
 
@@ -116,6 +119,7 @@ pull on repo3
   $ cd $TESTTMP/repo3
   $ hgmn pull
   pulling from ssh://user@dummy/repo
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   requesting all changes
   adding changesets
   adding manifests
@@ -138,6 +142,7 @@ pull on repo3
   summary:     long
   
   $ hgmn update -r master_bookmark
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master_bookmark)
   $ du ${LONG_PATH}/${LONG_FILENAME}

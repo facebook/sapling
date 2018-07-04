@@ -40,6 +40,7 @@ Push with bookmark
   $ echo withbook > withbook && hg addremove && hg ci -m withbook
   adding withbook
   $ hgmn push --to withbook --create
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   pushing rev 11f53bbd855a to destination ssh://user@dummy/repo bookmark withbook
   searching for changes
   exporting bookmark withbook
@@ -58,6 +59,7 @@ Update the bookmark
   $ echo update > update && hg addremove && hg ci -m update
   adding update
   $ hgmn push --to withbook
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   pushing rev 66b9c137712a to destination ssh://user@dummy/repo bookmark withbook
   searching for changes
   updating bookmark withbook
@@ -71,6 +73,7 @@ Delete the bookmark
   $ cd ../repo-push
   $ hgmn push --delete withbook
   pushing to ssh://user@dummy/repo
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   searching for changes
   no changes found
   deleting remote bookmark withbook

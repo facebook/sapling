@@ -68,9 +68,11 @@ configure an extension so that a push happens right after pulldiscovery
 
   $ hgmn pull --config extensions.pulldiscovery_push=$TESTTMP/pulldiscovery_push.py
   pulling from ssh://user@dummy/repo
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   *** starting discovery
   *** running push
   pushing to ssh://user@dummy/repo
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   searching for changes
   updating bookmark master_bookmark
   *** push complete
@@ -90,6 +92,7 @@ pull again to ensure the new version makes it into repo-pull
 
   $ hgmn pull
   backfilling missing flat manifests
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   adding changesets
   adding manifests
   adding file changes

@@ -187,6 +187,7 @@ move master bookmarks
 
   $ hgmn outgoing ssh://user@dummy/repo
   comparing with ssh://user@dummy/repo
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   searching for changes
   changeset:   1:bb0985934a0f
   user:        test
@@ -230,6 +231,7 @@ push to Mononoke
   running *scm/mononoke/tests/integration/dummyssh.par 'user@dummy' ''\''*scm/mononoke/hgcli/hgcli#binary/hgcli'\'' -R repo serve --stdio' (glob)
   sending hello command
   sending between command
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   remote: * (glob)
   remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
   remote: 1
@@ -274,6 +276,7 @@ Now pull what was just pushed
 
   $ cd ../repo3
   $ hgmn sl --all -r "all()" --stat
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   @  changeset:   0:0e7ec5675652
      bookmark:    master_bookmark
      bookmark:    master_bookmark2
@@ -314,7 +317,7 @@ This last step is verifying every commit one by one, it is done in a single
 command, but the output of this command is long
 
   $ for commit in `hg log --template '{node} ' -r '0e7ec567::634de738'` f40c09205504d8410f8c8679bf7a85fef25f9337; do \
-  $ if [ "`hg export -R $TESTTMP/repo2 ${commit}`" == "`hgmn export ${commit}`" ]; then echo "${commit} comparison SUCCESS"; fi; hgmn export ${commit}; echo; echo; done
+  $ if [ "`hg export -R $TESTTMP/repo2 ${commit}`" == "`hgmn export ${commit} 2> /dev/null`" ]; then echo "${commit} comparison SUCCESS"; fi; hgmn export ${commit}; echo; echo; done
   0e7ec5675652a04069cbf976a42e45b740f3243c comparison SUCCESS
   # HG changeset patch
   # User test

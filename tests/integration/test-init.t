@@ -123,6 +123,7 @@ start mononoke
   abort: no suitable response from remote hg!
   [255]
   $ hgmn debugwireargs ssh://user@dummy/repo one two --three three
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   one two three None None
 
   $ cd repo2

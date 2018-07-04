@@ -50,7 +50,11 @@ Make sure that cache is empty
   [1]
 
   $ hgmn prefetch -r 0 -r1
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   $ hgmn prefetch -r 2
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   $ cat $TESTTMP/mononoke.out | grep 'Got request: Gettreepack'
   * Got request: Gettreepack(GettreepackArgs { rootdir: b"", mfnodes: [HgNodeHash(Sha1(41b34f08c1356f6ad068e9ab9b43d984245111aa)), HgNodeHash(Sha1(eb79886383871977bccdb3000c275a279f0d4c99))], basemfnodes: [], directories: [] }), session_uuid: *, repo: $TESTTMP/repo (glob)
   * Got request: Gettreepack(GettreepackArgs { rootdir: b"", mfnodes: [HgNodeHash(Sha1(7c9b4fd8b49377e2fead2e9610bb8db910a98c53))], basemfnodes: [HgNodeHash(Sha1(eb79886383871977bccdb3000c275a279f0d4c99))], directories: [] }), session_uuid: *, repo: $TESTTMP/repo (glob)
@@ -95,6 +99,7 @@ because everything has been already downloaded.
   > EOF
 
   $ hgmn --config extensions.gettreepack=$TESTTMP/gettreepack.py gettreepack --mfnode 1111111111111111111111111111111111111111
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   remote: * ERRO Command failed, remote: true, error: Manifest id 1111111111111111111111111111111111111111 is missing, root_cause: ManifestMissing( (glob)
   remote:     HgNodeHash(
   remote:         Sha1(1111111111111111111111111111111111111111)

@@ -50,6 +50,7 @@ Do infinitepush (aka commit cloud) push
   running * (glob)
   sending hello command
   sending between command
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   remote: * (glob)
   remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
   remote: 1
@@ -82,6 +83,7 @@ Do infinitepush (aka commit cloud) push
   $ cd ../repo-pull
   $ hgmn pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
   pulling from ssh://user@dummy/repo
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   searching for changes
   no changes found
   adding changesets
@@ -103,6 +105,7 @@ Pushbackup also works
   running * (glob)
   sending hello command
   sending between command
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   remote: * (glob)
   remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
   remote: 1
@@ -127,6 +130,7 @@ Pushbackup also works
   $ cd ../repo-pull
   $ hgmn pull -r 95cad53aab1b0b33eceee14473b3983312721529
   pulling from ssh://user@dummy/repo
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   searching for changes
   no changes found
   adding changesets
@@ -146,6 +150,7 @@ Pushbackup that pushes only bookmarks
   running * (glob)
   sending hello command
   sending between command
+  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
   remote: * (glob)
   remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
   remote: 1
