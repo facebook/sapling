@@ -105,7 +105,7 @@ fn run_hook(
 
     match HgChangesetId::from_str(revstr) {
         Ok(id) => hook_manager
-            .run_hooks(id)
+            .run_all_hooks(id)
             .map(|executions| executions.get("testhook").unwrap().clone())
             .boxify(),
         Err(e) => Box::new(failed(e)),

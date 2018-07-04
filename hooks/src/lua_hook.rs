@@ -45,12 +45,17 @@ impl Hook for LuaHook {
                     })
                     .boxify()
             }
+
             Err(e) => Box::new(failed(e)),
         }
     }
 }
 
 impl LuaHook {
+    pub fn new(name: String, code: String) -> LuaHook {
+        LuaHook { name, code }
+    }
+
     fn create_coroutine<'lua>(
         &self,
         hook: LuaHook,
@@ -324,10 +329,7 @@ mod test {
     }
 
     fn run_hook(code: String, changeset: HookChangeset) -> Result<HookExecution, Error> {
-        let hook = LuaHook {
-            name: String::from("testhook"),
-            code: code.to_string(),
-        };
+        let hook = LuaHook::new(String::from("testhook"), code.to_string());
         let context = HookContext::new(hook.name.clone(), "some-repo".into(), Arc::new(changeset));
         hook.run(context).wait()
     }

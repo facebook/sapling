@@ -14,7 +14,7 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
-pub extern crate lua52_sys as ffi;
+extern crate lua52_sys as ffi;
 
 #[cfg(test)]
 #[macro_use]
@@ -34,6 +34,9 @@ extern crate linear;
 #[macro_use]
 extern crate maplit;
 extern crate mercurial_types;
+extern crate metaconfig;
+#[cfg(test)]
+extern crate tempdir;
 #[cfg(test)]
 extern crate tokio_core;
 
@@ -59,6 +62,7 @@ type Hooks = Arc<Mutex<HashMap<String, Arc<Hook>>>>;
 pub struct HookManager {
     cache: Asyncmemo<HookCacheFiller>,
     hooks: Hooks,
+    bookmark_hooks: HashMap<String, Vec<String>>,
 }
 
 /// Represents the status of a (non error) hook run
@@ -217,7 +221,11 @@ impl HookManager {
             repo_name,
         };
         let cache = Asyncmemo::with_limits("hooks", filler, entrylimit, weightlimit);
-        HookManager { cache, hooks }
+        HookManager {
+            cache,
+            hooks,
+            bookmark_hooks: HashMap::new(),
+        }
     }
 
     pub fn install_hook(&mut self, hook_name: &str, hook: Arc<Hook>) {
@@ -225,9 +233,8 @@ impl HookManager {
         hooks.insert(hook_name.to_string(), hook);
     }
 
-    pub fn uninstall_hook(&mut self, hook_name: &str) {
-        let mut hooks = self.hooks.lock().unwrap();
-        hooks.remove(hook_name);
+    pub fn set_hooks_for_bookmark(&mut self, bookmark_name: String, hooks: Vec<String>) {
+        self.bookmark_hooks.insert(bookmark_name, hooks);
     }
 
     pub fn iter(&self) -> IntoIter<String, Arc<Hook>> {
@@ -236,14 +243,37 @@ impl HookManager {
         cloned.into_iter()
     }
 
-    pub fn run_hooks(
+    pub fn run_hooks_for_bookmark(
+        &self,
+        changeset_id: HgChangesetId,
+        bookmark_name: String,
+    ) -> BoxFuture<HashMap<String, HookExecution>, Error> {
+        match self.bookmark_hooks.get(&bookmark_name) {
+            Some(hooks) => self.run_hooks(changeset_id, hooks.to_vec()),
+            None => return Box::new(finished(HashMap::new())),
+        }
+    }
+
+    pub fn run_all_hooks(
         &self,
         changeset_id: HgChangesetId,
     ) -> BoxFuture<HashMap<String, HookExecution>, Error> {
         let hooks = self.hooks.lock().unwrap();
+        let names = hooks
+            .iter()
+            .map(|(hook_name, _)| hook_name.to_string())
+            .collect();
+        self.run_hooks(changeset_id, names)
+    }
+
+    fn run_hooks(
+        &self,
+        changeset_id: HgChangesetId,
+        hooks: Vec<String>,
+    ) -> BoxFuture<HashMap<String, HookExecution>, Error> {
         let v: Vec<BoxFuture<HookExecutionHolder, _>> = hooks
             .iter()
-            .map(|(hook_name, _)| self.run_hook(hook_name.to_string(), changeset_id.clone()))
+            .map(|hook_name| self.run_hook(hook_name.to_string(), changeset_id.clone()))
             .collect();
         futures::future::join_all(v)
             .map(|v| {
@@ -364,6 +394,7 @@ mod test {
     use std::collections::HashSet;
     use std::str::FromStr;
 
+    #[derive(Clone, Debug)]
     struct TestHook {
         expected_execution: HookExecution,
     }
@@ -394,35 +425,110 @@ mod test {
             let hook1 = TestHook {
                 expected_execution: HookExecution::Accepted,
             };
-            let hook1_expected = hook1.expected_execution.clone();
-            hook_manager.install_hook("testhook1", Arc::new(hook1));
+            hook_manager.install_hook("testhook1", Arc::new(hook1.clone()));
             let hook2 = TestHook {
                 expected_execution: HookExecution::Rejected(HookRejectionInfo::new(
                     "d1".into(),
                     "d2".into(),
                 )),
             };
-            let hook2_expected = hook2.expected_execution.clone();
-            hook_manager.install_hook("testhook2", Arc::new(hook2));
+            hook_manager.install_hook("testhook2", Arc::new(hook2.clone()));
             let change_set_id =
                 HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
             let fut: BoxFuture<HashMap<String, HookExecution>, Error> =
-                hook_manager.run_hooks(change_set_id);
-            let res = fut.wait();
-            match res {
-                Ok(map) => {
-                    assert_eq!(map.len(), 2);
-                    let hook_execution = map.get("testhook1").unwrap();
-                    assert_eq!(hook1_expected, *hook_execution);
-                    let hook_execution = map.get("testhook2").unwrap();
-                    assert_eq!(hook2_expected, *hook_execution);
-                }
-                Err(e) => {
-                    println!("Failed to run hook {}", e);
-                    assert!(false); // Just fail
+                hook_manager.run_all_hooks(change_set_id);
+            let expected = hashmap! {
+                "testhook1".to_string() => hook1,
+                "testhook2".to_string() => hook2,
+            };
+            check_executions(expected, fut);
+        });
+    }
+
+    #[test]
+    fn test_run_hooks_for_bookmark() {
+        async_unit::tokio_unit_test(move || {
+            let mut hook_manager = hook_manager_inmem();
+            let hook1 = TestHook {
+                expected_execution: HookExecution::Accepted,
+            };
+            let hook2 = TestHook {
+                expected_execution: HookExecution::Accepted,
+            };
+            let hook3 = TestHook {
+                expected_execution: HookExecution::Accepted,
+            };
+
+            hook_manager.install_hook("testhook1", Arc::new(hook1.clone()));
+            hook_manager.install_hook("testhook2", Arc::new(hook2.clone()));
+            hook_manager.install_hook("testhook3", Arc::new(hook3.clone()));
+
+            hook_manager.set_hooks_for_bookmark(
+                "bm1".to_string(),
+                vec!["testhook1".to_string(), "testhook2".to_string()],
+            );
+            hook_manager.set_hooks_for_bookmark(
+                "bm2".to_string(),
+                vec!["testhook2".to_string(), "testhook3".to_string()],
+            );
+
+            let expected = hashmap! {
+                "testhook1".to_string() => hook1,
+                "testhook2".to_string() => hook2.clone(),
+            };
+            run_for_bookmark("bm1".to_string(), expected, &hook_manager);
+
+            let expected = hashmap! {
+                "testhook1".to_string() => hook2.clone(),
+                "testhook2".to_string() => hook3,
+            };
+            run_for_bookmark("bm1".to_string(), expected, &hook_manager);
+        });
+    }
+
+    #[test]
+    fn test_run_hooks_for_bookmark_no_hooks() {
+        async_unit::tokio_unit_test(move || {
+            let hook_manager = hook_manager_inmem();
+            let expected = HashMap::new();
+            run_for_bookmark("whatev".to_string(), expected, &hook_manager);
+        });
+    }
+
+    fn run_for_bookmark(
+        bookmark_name: String,
+        expected: HashMap<String, TestHook>,
+        hook_manager: &HookManager,
+    ) {
+        let change_set_id =
+            HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
+        let fut: BoxFuture<HashMap<String, HookExecution>, Error> =
+            hook_manager.run_hooks_for_bookmark(change_set_id, bookmark_name);
+        check_executions(expected, fut);
+    }
+
+    fn check_executions(
+        expected: HashMap<String, TestHook>,
+        fut: BoxFuture<HashMap<String, HookExecution>, Error>,
+    ) {
+        let res = fut.wait();
+        match res {
+            Ok(map) => {
+                assert_eq!(map.len(), expected.len());
+                for (hook_name, expected_hook) in expected {
+                    match map.get(&hook_name) {
+                        Some(hook_execution) => {
+                            assert_eq!(expected_hook.expected_execution, *hook_execution)
+                        }
+                        None => assert!(false, "Missing hook execution"),
+                    };
                 }
             }
-        });
+            Err(e) => {
+                println!("Failed to run hooks {}", e);
+                assert!(false); // Just fail
+            }
+        }
     }
 
     #[test]
@@ -439,7 +545,7 @@ mod test {
                 let change_set_id =
                     HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
                 let fut: BoxFuture<HashMap<String, HookExecution>, Error> =
-                    hook_manager.run_hooks(change_set_id);
+                    hook_manager.run_all_hooks(change_set_id);
                 let res = fut.wait();
                 match res {
                     Ok(map) => {
@@ -476,31 +582,6 @@ mod test {
 
             assert_eq!(2, set.len());
             assert!(set.contains("testhook1"));
-            assert!(set.contains("testhook2"));
-        });
-    }
-
-    #[test]
-    fn test_uninstall() {
-        async_unit::tokio_unit_test(|| {
-            let mut hook_manager = hook_manager();
-            let hook1 = TestHook {
-                expected_execution: HookExecution::Accepted,
-            };
-            hook_manager.install_hook("testhook1", Arc::new(hook1));
-            let hook2 = TestHook {
-                expected_execution: HookExecution::Accepted,
-            };
-            hook_manager.install_hook("testhook2", Arc::new(hook2));
-
-            hook_manager.uninstall_hook("testhook1");
-
-            let mut set = HashSet::new();
-            hook_manager.iter().for_each(|(k, _)| {
-                set.insert(k.clone());
-            });
-
-            assert_eq!(1, set.len());
             assert!(set.contains("testhook2"));
         });
     }
