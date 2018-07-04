@@ -65,7 +65,7 @@ mod repo_commit;
 
 pub use errors::*;
 
-pub use changeset::BlobChangeset;
+pub use changeset::{BlobChangeset, ChangesetContent};
 pub use file::HgBlobEntry;
 pub use manifest::BlobManifest;
 pub use repo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, CreateChangeset, ManifoldArgs,

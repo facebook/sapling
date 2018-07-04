@@ -22,7 +22,7 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
             for hook in hooks {
                 let name = hook.name;
                 let hook = LuaHook::new(name.clone(), hook.code.clone());
-                hook_manager.install_hook(&name, Arc::new(hook));
+                hook_manager.register_changeset_hook(&name, Arc::new(hook));
                 hook_set.insert(name);
             }
             match config.bookmarks {
@@ -35,7 +35,7 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
                         if diff.len() != 0 {
                             return Err(ErrorKind::NoSuchBookmarkHook(bm_name).into());
                         } else {
-                            hook_manager.set_hooks_for_bookmark(bm_name, hooks);
+                            hook_manager.set_hooks_for_bookmark(&bm_name, hooks);
                         }
                     };
                 },
@@ -59,7 +59,7 @@ mod test {
     use super::ErrorKind;
     use super::super::*;
     use async_unit;
-    use linear;
+    use many_files_dirs;
     use metaconfig::repoconfig::{BookmarkParams, HookParams, RepoType};
 
     #[test]
@@ -145,7 +145,7 @@ mod test {
     }
 
     fn hook_manager_blobrepo() -> HookManager {
-        let repo = linear::getrepo(None);
+        let repo = many_files_dirs::getrepo(None);
         let store = BlobRepoChangesetStore { repo };
         HookManager::new("some_repo".into(), Box::new(store), 1024, 1024 * 1024)
     }

@@ -18,6 +18,7 @@ extern crate blobstore;
 extern crate clap;
 extern crate failure_ext as failure;
 extern crate futures;
+#[macro_use]
 extern crate futures_ext;
 extern crate hooks;
 extern crate manifoldblob;
@@ -38,7 +39,7 @@ extern crate tempdir;
 use blobrepo::{BlobRepo, ManifoldArgs};
 use clap::{App, ArgMatches};
 use failure::{Error, Result};
-use futures::{failed, Future};
+use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::{BlobRepoChangesetStore, HookExecution, HookManager};
 use hooks::lua_hook::LuaHook;
@@ -65,6 +66,7 @@ fn run_hook(
         .args_from_usage(concat!(
             "<REPO_NAME>           'name of repository\n",
             "<HOOK_FILE>           'file containing hook code\n",
+            "<HOOK_TYPE>           'the type of the hook (perfile, percs)\n",
             "<REV>                 'revision hash'"
         ))
         .get_matches_from(args);
@@ -82,6 +84,13 @@ fn run_hook(
 
     let repo_name = String::from(matches.value_of("REPO_NAME").unwrap());
     let hook_file = matches.value_of("HOOK_FILE").unwrap();
+    let hook_type = matches.value_of("HOOK_TYPE").unwrap();
+    println!("hook type is {}", hook_type);
+    let file_hook = match hook_type.as_ref() {
+        "perfile" => true,
+        "percs" => false,
+        _ => panic!("Invalid hook type"),
+    };
     let revstr = matches.value_of("REV").unwrap();
     let repo = repo_creator(&logger, &matches);
 
@@ -101,14 +110,23 @@ fn run_hook(
         name: String::from("testhook"),
         code,
     };
-    hook_manager.install_hook("testhook", Arc::new(hook));
-
-    match HgChangesetId::from_str(revstr) {
-        Ok(id) => hook_manager
-            .run_all_hooks(id)
-            .map(|executions| executions.get("testhook").unwrap().clone())
-            .boxify(),
-        Err(e) => Box::new(failed(e)),
+    if file_hook {
+        hook_manager.register_file_hook("testhook", Arc::new(hook));
+    } else {
+        hook_manager.register_changeset_hook("testhook", Arc::new(hook));
+    }
+    hook_manager.set_hooks_for_bookmark("bm1", vec!["testhook".to_string()]);
+    let id = try_boxfuture!(HgChangesetId::from_str(revstr));
+    if file_hook {
+        hook_manager
+            .run_file_hooks_for_bookmark(id, "bm1")
+            .map(|executions| executions.get(0).unwrap().1.clone())
+            .boxify()
+    } else {
+        hook_manager
+            .run_changeset_hooks_for_bookmark(id, "bm1")
+            .map(|executions| executions.get(0).unwrap().1.clone())
+            .boxify()
     }
 }
 
@@ -163,9 +181,9 @@ mod test {
 
     #[test]
     fn test_hook_accepted() {
-        async_unit::tokio_unit_test(|| {
+        async_unit::tokio_unit_test(move || {
             let code = String::from(
-                "hook = function (info, files)\n\
+                "hook = function (info, arg)\n\
                  return info.author == \"Jeremy Fitzhardinge <jsgf@fb.com>\"\n\
                  end",
             );
@@ -181,7 +199,7 @@ mod test {
 
     #[test]
     fn test_hook_rejected() {
-        async_unit::tokio_unit_test(|| {
+        async_unit::tokio_unit_test(move || {
             let code = String::from(
                 "hook = function (info, files)\n\
                  return info.author == \"Mahatma Gandhi\"\n\
@@ -205,9 +223,10 @@ mod test {
         let mut file = File::create(file_path.clone()).unwrap();
         file.write(code.as_bytes()).unwrap();
         let args = vec![
-            String::from("test_repo"),
             String::from("runhook"),
+            String::from("test_repo"),
             file_path.to_str().unwrap().into(),
+            String::from("percs"),
             changeset_id,
         ];
         let fut = run_hook(args, test_blobrepo);
