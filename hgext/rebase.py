@@ -543,7 +543,7 @@ class rebaseruntime(object):
                     else:
                         kindstr = _("artifact rebuild required")
 
-                    if self.opts["noconflict"]:
+                    if self.opts.get("noconflict"):
                         raise error.AbortMergeToolError(
                             "%s (in %s) and --noconflict passed" % (kindstr, pathstr)
                         )
