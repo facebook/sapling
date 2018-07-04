@@ -14,8 +14,6 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
-extern crate lua52_sys as ffi;
-
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;

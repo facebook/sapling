@@ -10,12 +10,10 @@
 
 use super::{Hook, HookChangesetParents, HookContext, HookExecution, HookRejectionInfo};
 use failure::Error;
-use ffi;
 use futures::{failed, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use hlua::{AsLua, Lua, LuaError, LuaRead, PushGuard};
+use hlua::{Lua, LuaError, PushGuard};
 use hlua_futures::{LuaCoroutine, LuaCoroutineBuilder};
-use std::ffi::CString;
 
 #[derive(Clone)]
 pub struct LuaHook {
@@ -68,15 +66,13 @@ impl LuaHook {
             ErrorKind::HookParseError(hook.name.clone().into(), e.to_string()).into()
         });
         res?;
-        let builder: LuaCoroutineBuilder<PushGuard<Lua<'lua>>> =
-            match self.get_function(lua, "hook") {
-                Some(val) => val,
-                None => {
-                    let err: Error =
-                        ErrorKind::NoHookFunctionError(hook.name.clone().into()).into();
-                    bail_err!(err)
-                }
-            };
+        let builder: LuaCoroutineBuilder<PushGuard<Lua<'lua>>> = match lua.into_get("hook") {
+            Ok(val) => val,
+            Err(_) => {
+                let err: Error = ErrorKind::NoHookFunctionError(hook.name.clone().into()).into();
+                bail_err!(err)
+            }
+        };
 
         let mut hook_info = hashmap! {
             "repo_name" => context.repo_name.to_string(),
@@ -98,30 +94,6 @@ impl LuaHook {
             .map_err(|err| {
                 ErrorKind::HookRuntimeError(hook.name.clone().into(), format!("{:?}", err)).into()
             })
-    }
-
-    // We can't use the Lua::get method to get the function as this method borrows Lua.
-    // We need a method that moves the Lua instance into the builder and later the coroutine
-    // future, as the future can't refer to structs with non static lifetimes
-    // So this method use the Lua ffi directly to get the function which we pass to the
-    // coroutine builder
-    fn get_function<'lua, V>(&self, lua: Lua<'lua>, index: &str) -> Option<V>
-    where
-        V: LuaRead<PushGuard<Lua<'lua>>>,
-    {
-        let index = CString::new(index).unwrap();
-        let guard = unsafe {
-            ffi::lua_getglobal(lua.as_lua().state_ptr(), index.as_ptr());
-            if ffi::lua_isnil(lua.as_lua().state_ptr(), -1) {
-                let _guard = PushGuard::new(lua, 1);
-                return None;
-            }
-            PushGuard::new(lua, 1)
-        };
-        // Calls lua_read on the coroutine builder
-        // The builder later moves the Lua instance into the actual coroutine future when
-        // create is called
-        LuaRead::lua_read(guard).ok()
     }
 }
 
