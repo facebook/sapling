@@ -8,23 +8,22 @@
 //! deserialized from TOML files from metaconfig repo
 
 use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
 use std::path::PathBuf;
-use std::str::from_utf8;
-
-use failure::FutureFailureErrorExt;
-use futures::{future, Future, IntoFuture};
-
+use futures::{future, Future, finished};
 use blobrepo::{BlobRepo, ManifoldArgs};
 use bookmarks::Bookmark;
+use bytes::Bytes;
+use errors::*;
+use failure::FutureFailureErrorExt;
+use futures::Stream;
+use futures_ext::FutureExt;
 use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::FileContents;
+use std::str;
 use toml;
 use vfs::{vfs_from_manifest, ManifestVfsDir, ManifestVfsFile, VfsDir, VfsFile, VfsNode, VfsWalker};
-
-use errors::*;
 
 /// Configuration of a single repository
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -71,8 +70,8 @@ pub struct BookmarkParams {
 pub struct HookParams {
     /// The name of the hook
     pub name: String,
-    /// The path to the hook
-    pub path: String,
+    /// The code of the hook
+    pub code: String,
 }
 
 /// Types of repositories supported
@@ -133,24 +132,32 @@ impl RepoConfigs {
     {
         Box::new(
             vfs_from_manifest(manifest)
-                .and_then(|vfs| {
-                    VfsWalker::new(vfs.into_node(), MPath::new(b"repos").unwrap()).walk()
-                })
                 .from_err()
+                .and_then(|vfs| RepoConfigs::read_repos(vfs.into_node())),
+        )
+    }
+
+    fn read_repos(
+        root_node: VfsNode<ManifestVfsDir, ManifestVfsFile>,
+    ) -> Box<Future<Item = Self, Error = Error> + Send> {
+        Box::new(
+            finished(root_node.clone())
+                .and_then(|root_node| {
+                    let path = try_boxfuture!(MPath::new(b"repos"));
+                    VfsWalker::new(root_node, path).walk()
+                })
                 .and_then(|repos_node| match repos_node {
                     VfsNode::File(_) => {
                         bail_err!(ErrorKind::InvalidFileStructure("expected directory".into()))
                     }
                     VfsNode::Dir(dir) => Ok(dir),
                 })
-                .and_then(|repos_dir| {
-                    let repopaths: Vec<_> = repos_dir.read().into_iter().cloned().collect();
+                .and_then(move |repos_dir| {
+                    let repodirs: Vec<_> = repos_dir.read().into_iter().cloned().collect();
                     let repos_node = repos_dir.into_node();
-                    future::join_all(
-                        repopaths
-                            .into_iter()
-                            .map(move |repopath| Self::read_repo(repos_node.clone(), repopath)),
-                    )
+                    future::join_all(repodirs.into_iter().map(move |repodir| {
+                        Self::read_repo(root_node.clone(), repos_node.clone(), repodir)
+                    }))
                 })
                 .map(|repos| RepoConfigs {
                     metaconfig: MetaConfig {},
@@ -160,115 +167,105 @@ impl RepoConfigs {
     }
 
     fn read_repo(
-        dir: VfsNode<ManifestVfsDir, ManifestVfsFile>,
-        path: MPathElement,
+        root_node: VfsNode<ManifestVfsDir, ManifestVfsFile>,
+        repos_dir: VfsNode<ManifestVfsDir, ManifestVfsFile>,
+        repo_dir: MPathElement,
     ) -> Box<Future<Item = (String, RepoConfig), Error = Error> + Send> {
+        let repo_name = try_boxfuture!(str::from_utf8(repo_dir.as_bytes())).to_string();
         Box::new(
-            from_utf8(path.as_bytes())
-                .map(ToOwned::to_owned)
-                .into_future()
+            VfsWalker::new(repos_dir, repo_dir.into_iter().cloned())
+                .walk()
                 .from_err()
-                .and_then({
-                    let path = path.clone();
-                    move |reponame| {
-                        VfsWalker::new(dir, path.into_iter().cloned())
-                            .walk()
-                            .from_err()
-                            .and_then(|node| match node {
-                                VfsNode::File(file) => Ok(file),
-                                _ => Err(ErrorKind::InvalidFileStructure("expected file".into()).into()),
-                            })
-                            .and_then(|file| {
-                                file.read().map_err(|err| {
-                                    err.context("failed to read content of the file").into()
-                                })
-                            })
-                            .and_then(|content| match content {
-                                Content::File(FileContents::Bytes(bytes)) => Ok(bytes),
-                                _ => Err(ErrorKind::InvalidFileStructure("expected file".into()).into()),
-                            })
-                            .and_then(|bytes| {
-                                Ok((
-                                    reponame,
-                                    toml::from_slice::<RawRepoConfig>(bytes.as_ref())?.try_into()?,
-                                ))
-                            })
-                    }
+                .and_then(|node| match node {
+                    VfsNode::Dir(dir) => Ok(dir),
+                    _ => Err(ErrorKind::InvalidFileStructure("expected directory".into()).into()),
                 })
-                .map_err(move |err: Error| {
-                    err.context(format_err!("failed while parsing file: {:?}", path))
-                        .into()
+                .and_then(|repo_dir| {
+                    Box::new(
+                        RepoConfigs::read_file(
+                            repo_dir.clone().into_node(),
+                            try_boxfuture!(MPath::new(b"server.toml".to_vec())),
+                        ).map(move |bytes| (bytes, repo_dir)),
+                    )
+                })
+                .and_then(|(bytes, repo_dir)| {
+                    let raw_config =
+                        try_boxfuture!(toml::from_slice::<RawRepoConfig>(bytes.as_ref()));
+                    let hooks = raw_config.hooks.clone();
+                    // Easier to deal with empty vector than Option
+                    let hooks = hooks.unwrap_or(Vec::new());
+
+                    future::join_all(hooks.into_iter().map(move |raw_hook_config| {
+                        let path = raw_hook_config.path.clone();
+                        let is_relative = path.starts_with("./");
+                        let path_node;
+                        let path_adjusted;
+                        if is_relative {
+                            path_node = repo_dir.clone().into_node();
+                            path_adjusted = path.chars().skip(2).collect();
+                        } else {
+                            path_node = root_node.clone();
+                            path_adjusted = path;
+                        }
+                        RepoConfigs::read_file(
+                            path_node,
+                            try_boxfuture!(MPath::new(path_adjusted.as_bytes().to_vec())),
+                        ).then(|res| match res {
+                            Ok(bytes) => {
+                                let code = str::from_utf8(&bytes)?;
+                                let code = code.to_string();
+                                Ok(HookParams {
+                                    name: raw_hook_config.name,
+                                    code,
+                                })
+                            }
+                            Err(e) => Err(e),
+                        })
+                            .boxify()
+                    })).map(|hook_params| (raw_config, hook_params))
+                        .boxify()
+                })
+                .then(|res| match res {
+                    Ok((raw_config, all_hook_params)) => Ok((
+                        repo_name,
+                        RepoConfigs::convert_conf(raw_config, all_hook_params)?,
+                    )),
+                    Err(e) => Err(e),
                 }),
         )
     }
-}
 
-#[derive(Debug, Deserialize)]
-struct RawRepoConfig {
-    path: PathBuf,
-    repotype: RawRepoType,
+    fn read_file(
+        file_dir: VfsNode<ManifestVfsDir, ManifestVfsFile>,
+        file_path: MPath,
+    ) -> impl Future<Item = Bytes, Error = Error> {
+        VfsWalker::new(file_dir, file_path.clone())
+            .collect()
+            .and_then(move |nodes| {
+                nodes
+                    .last()
+                    .cloned()
+                    .ok_or(ErrorKind::InvalidPath(file_path).into())
+            })
+            .and_then(|node| match node {
+                VfsNode::File(file) => Ok(file),
+                _ => Err(ErrorKind::InvalidFileStructure("expected file".into()).into()),
+            })
+            .and_then(|file| {
+                file.read()
+                    .map_err(|err| err.context("failed to read content of the file").into())
+            })
+            .and_then(|content| match content {
+                Content::File(FileContents::Bytes(bytes)) => Ok(bytes),
+                _ => Err(ErrorKind::InvalidFileStructure("expected file".into()).into()),
+            })
+    }
 
-    enabled: Option<bool>,
-    generation_cache_size: Option<usize>,
-    manifold_bucket: Option<String>,
-    manifold_prefix: Option<String>,
-    repoid: i32,
-    db_address: Option<String>,
-    scuba_table: Option<String>,
-    delay_mean: Option<u64>,
-    delay_stddev: Option<u64>,
-    blobstore_cache_size: Option<usize>,
-    changesets_cache_size: Option<usize>,
-    filenodes_cache_size: Option<usize>,
-    io_thread_num: Option<usize>,
-    cache_warmup: Option<RawCacheWarmupConfig>,
-    max_concurrent_requests_per_io_thread: Option<usize>,
-    bookmarks: Option<Vec<RawBookmarkConfig>>,
-    hooks: Option<Vec<RawHookConfig>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct RawCacheWarmupConfig {
-    bookmark: String,
-    commit_limit: Option<usize>,
-}
-
-#[derive(Debug, Deserialize)]
-struct RawBookmarkConfig {
-    name: String,
-    hooks: Option<Vec<RawBookmarkHook>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct RawBookmarkHook {
-    hook_name: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct RawHookConfig {
-    name: String,
-    path: String,
-}
-
-/// Types of repositories supported
-#[derive(Clone, Debug, Deserialize)]
-enum RawRepoType {
-    #[serde(rename = "revlog")] Revlog,
-    #[serde(rename = "blob:rocks")] BlobRocks,
-    #[serde(rename = "blob:testmanifold")] BlobManifold,
-    #[serde(rename = "blob:testdelay")] TestBlobDelayRocks,
-}
-
-impl TryFrom<RawRepoConfig> for RepoConfig {
-    type Error = Error;
-
-    fn try_from(this: RawRepoConfig) -> Result<Self> {
-        use self::RawRepoType::*;
-
+    fn convert_conf(this: RawRepoConfig, hooks: Vec<HookParams>) -> Result<RepoConfig> {
         let repotype = match this.repotype {
-            Revlog => RepoType::Revlog(this.path),
-            BlobRocks => RepoType::BlobRocks(this.path),
-            BlobManifold => {
+            RawRepoType::Revlog => RepoType::Revlog(this.path),
+            RawRepoType::BlobRocks => RepoType::BlobRocks(this.path),
+            RawRepoType::TestBlobManifold => {
                 let manifold_bucket = this.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
                     "manifold bucket must be specified".into(),
                 ))?;
@@ -288,7 +285,7 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
                     path: this.path,
                 }
             }
-            TestBlobDelayRocks => RepoType::TestBlobDelayRocks(
+            RawRepoType::TestBlobDelayRocks => RepoType::TestBlobDelayRocks(
                 this.path,
                 this.delay_mean.expect("mean delay must be specified"),
                 this.delay_stddev.expect("stddev delay must be specified"),
@@ -304,8 +301,9 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
             commit_limit: cache_warmup.commit_limit.unwrap_or(200000),
         });
         let bookmarks = match this.bookmarks {
-            Some(bm) => Some(
-                bm.into_iter()
+            Some(bookmarks) => Some(
+                bookmarks
+                    .into_iter()
                     .map(|bm| BookmarkParams {
                         name: bm.name,
                         hooks: match bm.hooks {
@@ -319,17 +317,13 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
             ),
             None => None,
         };
-        let hooks = match this.hooks {
-            Some(hook) => Some(
-                hook.into_iter()
-                    .map(|hook| HookParams {
-                        name: hook.name,
-                        path: hook.path,
-                    })
-                    .collect(),
-            ),
-            None => None,
-        };
+
+        let hooks_opt;
+        if hooks.len() != 0 {
+            hooks_opt = Some(hooks);
+        } else {
+            hooks_opt = None;
+        }
 
         Ok(RepoConfig {
             enabled,
@@ -339,9 +333,64 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
             scuba_table,
             cache_warmup,
             bookmarks,
-            hooks,
+            hooks: hooks_opt,
         })
     }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct RawRepoConfig {
+    path: PathBuf,
+    repotype: RawRepoType,
+    enabled: Option<bool>,
+    generation_cache_size: Option<usize>,
+    manifold_bucket: Option<String>,
+    manifold_prefix: Option<String>,
+    repoid: i32,
+    db_address: Option<String>,
+    scuba_table: Option<String>,
+    delay_mean: Option<u64>,
+    delay_stddev: Option<u64>,
+    blobstore_cache_size: Option<usize>,
+    changesets_cache_size: Option<usize>,
+    filenodes_cache_size: Option<usize>,
+    io_thread_num: Option<usize>,
+    cache_warmup: Option<RawCacheWarmupConfig>,
+    max_concurrent_requests_per_io_thread: Option<usize>,
+    bookmarks: Option<Vec<RawBookmarkConfig>>,
+    hooks: Option<Vec<RawHookConfig>>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct RawCacheWarmupConfig {
+    bookmark: String,
+    commit_limit: Option<usize>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct RawBookmarkConfig {
+    name: String,
+    hooks: Option<Vec<RawBookmarkHook>>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct RawBookmarkHook {
+    hook_name: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct RawHookConfig {
+    name: String,
+    path: String,
+}
+
+/// Types of repositories supported
+#[derive(Clone, Debug, Deserialize)]
+enum RawRepoType {
+    #[serde(rename = "revlog")] Revlog,
+    #[serde(rename = "blob:rocks")] BlobRocks,
+    #[serde(rename = "blob:testmanifold")] TestBlobManifold,
+    #[serde(rename = "blob:testdelay")] TestBlobDelayRocks,
 }
 
 #[cfg(test)]
@@ -353,6 +402,8 @@ mod test {
 
     #[test]
     fn test_read_manifest() {
+        let hook1_content = "this is hook1";
+        let hook2_content = "this is hook2";
         let fbsource_content = r#"
             path="/tmp/fbsource"
             repotype="blob:rocks"
@@ -363,19 +414,17 @@ mod test {
             bookmark="master"
             commit_limit=100
             [[bookmarks]]
-            name="bookmark_fbs1"
+            name="master"
             [[bookmarks.hooks]]
-            hook_name="hook_fbs1"
+            hook_name="hook1"
             [[bookmarks.hooks]]
-            hook_name="hook_fbs2"
-            [[bookmarks]]
-            name="bookmark_fbs2"
+            hook_name="hook2"
             [[hooks]]
-            name="hook_fbs1"
-            path="blah/hooks/hook_fbs1.lua"
+            name="hook1"
+            path="common/hooks/hook1.lua"
             [[hooks]]
-            name="hook_fbs2"
-            path="blah/hooks/hook_fbs2.lua"
+            name="hook2"
+            path="./hooks/hook2.lua"
         "#;
         let www_content = r#"
             path="/tmp/www"
@@ -385,8 +434,10 @@ mod test {
         "#;
 
         let paths = btreemap! {
-            "repos/fbsource" => (FileType::Regular, fbsource_content),
-            "repos/www" => (FileType::Regular, www_content),
+            "common/hooks/hook1.lua" => (FileType::Regular, hook1_content),
+            "repos/fbsource/server.toml" => (FileType::Regular, fbsource_content),
+            "repos/fbsource/hooks/hook2.lua" => (FileType::Regular, hook2_content),
+            "repos/www/server.toml" => (FileType::Regular, www_content),
             "my_path/my_files" => (FileType::Regular, ""),
         };
         let root_manifest = MockManifest::from_paths(paths).expect("manifest is valid");
@@ -409,22 +460,18 @@ mod test {
                 }),
                 bookmarks: Some(vec![
                     BookmarkParams {
-                        name: "bookmark_fbs1".to_string(),
-                        hooks: Some(vec!["hook_fbs1".to_string(), "hook_fbs2".to_string()]),
-                    },
-                    BookmarkParams {
-                        name: "bookmark_fbs2".to_string(),
-                        hooks: None,
+                        name: "master".to_string(),
+                        hooks: Some(vec!["hook1".to_string(), "hook2".to_string()]),
                     },
                 ]),
                 hooks: Some(vec![
                     HookParams {
-                        name: "hook_fbs1".to_string(),
-                        path: "blah/hooks/hook_fbs1.lua".to_string(),
+                        name: "hook1".to_string(),
+                        code: "this is hook1".to_string(),
                     },
                     HookParams {
-                        name: "hook_fbs2".to_string(),
-                        path: "blah/hooks/hook_fbs2.lua".to_string(),
+                        name: "hook2".to_string(),
+                        code: "this is hook2".to_string(),
                     },
                 ]),
             },

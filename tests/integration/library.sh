@@ -91,27 +91,30 @@ server=True
 shallowtrees=True
 EOF
 
-  mkdir repos
-  cat > repos/repo <<CONFIG
+  mkdir -p repos/repo
+  cat > repos/repo/server.toml <<CONFIG
 path="$TESTTMP/repo"
 repotype="blob:rocks"
 repoid=0
 enabled=true
 CONFIG
 
-  cat > repos/disabled_repo <<CONFIG
+if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+[cache_warmup]
+bookmark="$CACHE_WARMUP_BOOKMARK"
+CONFIG
+fi
+
+  mkdir -p repos/disabled_repo
+  cat > repos/disabled_repo/server.toml <<CONFIG
 path="$TESTTMP/disabled_repo"
 repotype="blob:rocks"
 repoid=2
 enabled=false
 CONFIG
 
-  if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
-    cat >> repos/repo <<CONFIG
-[cache_warmup]
-bookmark="$CACHE_WARMUP_BOOKMARK"
-CONFIG
-  fi
+
 
   hg add -q repos
   hg ci -ma

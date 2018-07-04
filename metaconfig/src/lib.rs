@@ -11,11 +11,12 @@
 #![feature(try_from)]
 
 extern crate bookmarks;
-#[cfg(test)]
 extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+#[macro_use]
+extern crate futures_ext;
 #[macro_use]
 #[cfg(test)]
 extern crate maplit;

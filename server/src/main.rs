@@ -228,6 +228,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
     let changesetid = match matches.value_of("crbook") {
         Some(book) => {
             let book = bookmarks::Bookmark::new(book).expect("book must be ascii");
+            println!("Looking for bookmark {:?}", book);
             config_repo
                 .get_bookmark(&book)
                 .wait()?

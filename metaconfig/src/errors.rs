@@ -7,6 +7,7 @@
 //! Definition of errors used in this crate by the error_chain crate
 
 pub use failure::{Error, Result};
+pub use mononoke_types::MPath;
 
 /// Types of errors we can raise
 #[derive(Debug, Fail)]
@@ -20,4 +21,7 @@ pub enum ErrorKind {
     /// Config is invalid
     #[fail(display = "invalid config options: {}", _0)]
     InvalidConfig(String),
+    /// Config is invalid
+    #[fail(display = "invalid path: {}", _0)]
+    InvalidPath(MPath),
 }
