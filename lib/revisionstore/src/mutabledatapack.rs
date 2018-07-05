@@ -25,7 +25,7 @@ pub struct MutableDataPack {
 
 #[derive(Debug, Fail)]
 #[fail(display = "Mutable Data Pack Error: {:?}", _0)]
-struct MutableDataPackError(&'static str);
+struct MutableDataPackError(String);
 
 impl MutableDataPack {
     /// Creates a new MutableDataPack for producing datapack files.
@@ -76,10 +76,10 @@ impl MutableDataPack {
     /// Adds the given entry to the mutable datapack.
     pub fn add(&mut self, delta: &Delta, metadata: Option<Metadata>) -> Result<()> {
         if delta.key.name().len() >= u16::MAX as usize {
-            return Err(MutableDataPackError("delta name is longer than 2^16").into());
+            return Err(MutableDataPackError("delta name is longer than 2^16".into()).into());
         }
         if self.version == 0 && metadata.is_some() {
-            return Err(MutableDataPackError("v0 data pack cannot store metadata").into());
+            return Err(MutableDataPackError("v0 data pack cannot store metadata".into()).into());
         }
 
         let offset = self.data_file.as_ref().metadata()?.len();
@@ -116,7 +116,10 @@ impl MutableDataPack {
 
 impl DataStore for MutableDataPack {
     fn get(&self, key: &Key) -> Result<Vec<u8>> {
-        Err(MutableDataPackError("DataPack doesn't support raw get(), only getdeltachain").into())
+        Err(
+            MutableDataPackError("DataPack doesn't support raw get(), only getdeltachain".into())
+                .into(),
+        )
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
