@@ -180,44 +180,60 @@ mod test {
     use tempdir::TempDir;
 
     #[test]
-    fn test_hook_accepted() {
+    fn test_file_hook_accepted() {
+        test_hook_accepted(true);
+    }
+
+    #[test]
+    fn test_cs_hook_accepted() {
+        test_hook_accepted(false);
+    }
+
+    fn test_hook_accepted(file: bool) {
         async_unit::tokio_unit_test(move || {
             let code = String::from(
-                "hook = function (info, arg)\n\
-                 return info.author == \"Jeremy Fitzhardinge <jsgf@fb.com>\"\n\
+                "hook = function (ctx)\n\
+                 return true\n\
                  end",
             );
             let changeset_id = String::from("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
-            let f = |execution| match execution {
+            match test_hook(code, changeset_id, file) {
                 Ok(HookExecution::Accepted) => (),
                 Ok(HookExecution::Rejected(_)) => assert!(false, "Hook should be accepted"),
                 Err(e) => assert!(false, format!("Unexpected error {:?}", e)),
-            };
-            test_hook(code, changeset_id, &f);
+            }
         });
     }
 
     #[test]
-    fn test_hook_rejected() {
+    fn test_file_hook_rejected() {
+        test_hook_rejected(true)
+    }
+
+    #[test]
+    fn test_cs_hook_rejected() {
+        test_hook_rejected(false)
+    }
+
+    fn test_hook_rejected(file: bool) {
         async_unit::tokio_unit_test(move || {
             let code = String::from(
-                "hook = function (info, files)\n\
-                 return info.author == \"Mahatma Gandhi\"\n\
+                "hook = function (ctx)\n\
+                 return false, \"sausages\"\n\
                  end",
             );
             let changeset_id = String::from("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
-            let f = |execution| match execution {
+            match test_hook(code, changeset_id, file) {
                 Ok(HookExecution::Accepted) => assert!(false, "Hook should be rejected"),
                 Ok(HookExecution::Rejected(rejection_info)) => {
-                    assert!(rejection_info.description.starts_with("short desc"))
+                    assert!(rejection_info.description.starts_with("sausages"))
                 }
                 Err(e) => assert!(false, format!("Unexpected error {:?}", e)),
-            };
-            test_hook(code, changeset_id, &f);
+            }
         });
     }
 
-    fn test_hook(code: String, changeset_id: String, f: &Fn(Result<HookExecution>) -> ()) {
+    fn test_hook(code: String, changeset_id: String, run_file: bool) -> Result<HookExecution> {
         let dir = TempDir::new("runhook").unwrap();
         let file_path = dir.path().join("testhook.lua");
         let mut file = File::create(file_path.clone()).unwrap();
@@ -226,12 +242,14 @@ mod test {
             String::from("runhook"),
             String::from("test_repo"),
             file_path.to_str().unwrap().into(),
-            String::from("percs"),
+            if run_file {
+                String::from("perfile")
+            } else {
+                String::from("percs")
+            },
             changeset_id,
         ];
-        let fut = run_hook(args, test_blobrepo);
-        let result = fut.wait();
-        f(result);
+        run_hook(args, test_blobrepo).wait()
     }
 
     fn test_blobrepo(_logger: &Logger, _matches: &ArgMatches) -> BlobRepo {

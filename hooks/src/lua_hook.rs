@@ -10,11 +10,53 @@
 
 use super::{Hook, HookChangeset, HookChangesetParents, HookContext, HookExecution, HookFile,
             HookRejectionInfo};
+use super::errors::*;
 use failure::Error;
 use futures::{failed, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use hlua::{Lua, LuaFunctionCallError, PushGuard, TuplePushError, Void};
+use hlua::{Lua, LuaFunctionCallError, LuaTable, PushGuard, TuplePushError, Void};
 use hlua_futures::{LuaCoroutine, LuaCoroutineBuilder};
+
+const HOOK_START_CODE_BASE: &'static str = "
+__hook_start = function(info, arg)
+     if hook == nil then
+        error(\"no hook function\")
+     end
+     local ctx = {}
+     ctx.info=info
+     @@@
+     acc, desc, long_desc = hook(ctx)
+     if type(acc) ~= \"boolean\" then
+        error(\"invalid hook return type\")
+     end
+     if acc and desc ~= nil then
+        error(\"failure description must only be set if hook fails\")
+     end
+     if acc and long_desc ~= nil then
+        error(\"failure long description must only be set if hook fails\")
+     end
+     if desc ~= nil and type(desc) ~= \"string\" then
+        error(\"invalid hook failure short description type\")
+     end
+     if long_desc ~= nil and type(long_desc) ~= \"string\" then
+        error(\"invalid hook failure long description type\")
+     end
+     res = {acc, desc, long_desc}
+     return res
+end
+";
+
+lazy_static! {
+    static ref HOOK_START_CODE_CS: String = {
+        HOOK_START_CODE_BASE.to_string().replace("@@@", "ctx.files=arg")
+    };
+}
+
+lazy_static! {
+    static ref HOOK_START_CODE_FILE: String = {
+        HOOK_START_CODE_BASE.to_string().replace("@@@", "ctx.file=arg")
+    };
+}
 
 #[derive(Clone)]
 pub struct LuaHook {
@@ -25,8 +67,6 @@ pub struct LuaHook {
 
 impl Hook<HookChangeset> for LuaHook {
     fn run(&self, context: HookContext<HookChangeset>) -> BoxFuture<HookExecution, Error> {
-        let hook = (*self).clone();
-        let hook_name = hook.name.clone();
         let mut hook_info = hashmap! {
             "repo_name" => context.repo_name.to_string(),
             "author" => context.data.author.to_string(),
@@ -42,32 +82,26 @@ impl Hook<HookChangeset> for LuaHook {
                 hook_info.insert("parent2_hash", parent2_hash.to_string());
             }
         }
-        let builder = match self.create_builder(hook.clone()) {
+        let builder = match self.create_builder(&format!("{}{}", &*HOOK_START_CODE_CS, self.code)) {
             Ok(builder) => builder,
             Err(e) => return failed(e).boxify(),
         };
-        self.convert_cr_res(
-            builder.create((hook_info, context.data.files.clone())),
-            hook_name,
-        )
+        self.convert_coroutine_res(builder.create((hook_info, context.data.files.clone())))
     }
 }
 
 impl Hook<HookFile> for LuaHook {
     fn run(&self, context: HookContext<HookFile>) -> BoxFuture<HookExecution, Error> {
-        let hook = (*self).clone();
-        let hook_name = hook.name.clone();
         let hook_info = hashmap! {
             "repo_name" => context.repo_name.to_string(),
         };
-        let builder = match self.create_builder(hook) {
+        let mut code = HOOK_START_CODE_FILE.clone();
+        code.push_str(&self.code);
+        let builder = match self.create_builder(&code) {
             Ok(builder) => builder,
             Err(e) => return failed(e).boxify(),
         };
-        self.convert_cr_res(
-            builder.create((hook_info, context.data.path.clone())),
-            hook_name,
-        )
+        self.convert_coroutine_res(builder.create((hook_info, context.data.path.clone())))
     }
 }
 
@@ -76,60 +110,53 @@ impl LuaHook {
         LuaHook { name, code }
     }
 
-    fn convert_cr_res(
-        &self,
-        res: Result<
-            LuaCoroutine<PushGuard<Lua<'static>>, bool>,
-            LuaFunctionCallError<TuplePushError<Void, Void>>,
-        >,
-        hook_name: String,
-    ) -> BoxFuture<HookExecution, Error> {
-        let res = res.map_err(|err| {
-            ErrorKind::HookRuntimeError(hook_name.clone().into(), format!("{:?}", err)).into()
-        });
-        match res {
-            Ok(cr) => {
-                cr.map(|b| {
-                    if b {
-                        HookExecution::Accepted
-                    } else {
-                        // TODO allow proper hook rejection to be set from Lua hook
-                        HookExecution::Rejected(HookRejectionInfo::new(
-                            "short desc".into(),
-                            "long desc".into(),
-                        ))
-                    }
-                }).map_err(move |err| {
-                        ErrorKind::HookRuntimeError(hook_name.into(), format!("{:?}", err)).into()
-                    })
-                    .boxify()
-            }
-
-            Err(e) => Box::new(failed(e)),
-        }
-    }
-
     fn create_builder(
         &self,
-        hook: LuaHook,
+        code: &str,
     ) -> Result<LuaCoroutineBuilder<PushGuard<Lua<'static>>>, Error> {
         let mut lua = Lua::new();
         lua.openlibs();
-        let res: Result<(), Error> = lua.execute::<()>(&hook.code)
-            .map_err(|e| ErrorKind::HookParseError(hook.name.clone().into(), e.to_string()).into());
+        let res: Result<(), Error> = lua.execute::<()>(code)
+            .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         res?;
         // Note the lifetime becomes static as the into_get method moves the lua
         // and the later create moves it again into the coroutine
-        lua.into_get("hook")
-            .map_err(|_| ErrorKind::NoHookFunctionError(hook.name.clone().into()).into())
+        lua.into_get("__hook_start")
+            .map_err(|_| panic!("No __hook_start"))
     }
-}
 
-#[derive(Debug, Fail)]
-pub enum ErrorKind {
-    #[fail(display = "No hook function found for hook '{}'", _0)] NoHookFunctionError(String),
-    #[fail(display = "Error while parsing hook '{}': {}", _0, _1)] HookParseError(String, String),
-    #[fail(display = "Error while running hook '{}': {}", _0, _1)] HookRuntimeError(String, String),
+    fn convert_coroutine_res(
+        &self,
+        res: Result<
+            LuaCoroutine<PushGuard<Lua<'static>>, LuaTable<PushGuard<Lua<'static>>>>,
+            LuaFunctionCallError<TuplePushError<Void, Void>>,
+        >,
+    ) -> BoxFuture<HookExecution, Error> {
+        let res = res.map_err(|err| ErrorKind::HookRuntimeError(format!("{:#?}", err)));
+        try_boxfuture!(res)
+            .map_err(move |err| Error::from(ErrorKind::HookRuntimeError(format!("{:#?}", err))))
+            .map(|mut t| {
+                t.get::<bool, _, _>(1)
+                    .ok_or(ErrorKind::HookRuntimeError("No hook return".to_string()).into())
+                    .map(|acc| {
+                        if acc {
+                            HookExecution::Accepted
+                        } else {
+                            let desc = match t.get::<String, _, _>(2) {
+                                Some(desc) => desc,
+                                None => "".into(),
+                            };
+                            let long_desc = match t.get::<String, _, _>(3) {
+                                Some(long_desc) => long_desc,
+                                None => "".into(),
+                            };
+                            HookExecution::Rejected(HookRejectionInfo::new(desc, long_desc))
+                        }
+                    })
+            })
+            .flatten()
+            .boxify()
+    }
 }
 
 #[cfg(test)]
@@ -140,12 +167,12 @@ mod test {
     use futures::Future;
 
     #[test]
-    fn test_cs_hook_rejected() {
+    fn test_cs_hook_simple_rejected() {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
-                "hook = function (info, files)\n\
-                 return info.author == \"mr blobby\"\n\
+                "hook = function (ctx)\n\
+                 return false\n\
                  end",
             );
             assert_matches!(
@@ -156,12 +183,30 @@ mod test {
     }
 
     #[test]
+    fn test_cs_hook_rejected_short_and_long_desc() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return false, \"emus\", \"ostriches\"\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Rejected(HookRejectionInfo{ref description,
+                    ref long_description}))
+                    if description==&"emus" && long_description==&"ostriches"
+            );
+        });
+    }
+
+    #[test]
     fn test_cs_hook_author() {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
-                "hook = function (info, files)\n\
-                 return info.author == \"some-author\"\n\
+                "hook = function (ctx)\n\
+                 return ctx.info.author == \"some-author\"\n\
                  end",
             );
             assert_matches!(
@@ -177,10 +222,10 @@ mod test {
             let changeset = default_changeset();
             // Arrays passed from rust -> lua appear to be 1 indexed in Lua land
             let code = String::from(
-                "hook = function (info, files)\n\
-                 return files[0] == nil and files[1] == \"file1\" and\n\
-                 files[2] == \"file2\" and files[3] == \"file3\" and\n\
-                 files[4] == nil\n\
+                "hook = function (ctx)\n\
+                 return ctx.files[0] == nil and ctx.files[1] == \"file1\" and\n\
+                 ctx.files[2] == \"file2\" and ctx.files[3] == \"file3\" and\n\
+                 ctx.files[4] == nil\n\
                  end",
             );
             assert_matches!(
@@ -195,8 +240,8 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
-                "hook = function (info, files)\n\
-                 return info.comments == \"some-comments\"\n\
+                "hook = function (ctx)\n\
+                 return ctx.info.comments == \"some-comments\"\n\
                  end",
             );
             assert_matches!(
@@ -211,8 +256,8 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
-                "hook = function (info, files)\n\
-                 return info.repo_name == \"some-repo\"\n\
+                "hook = function (ctx)\n\
+                 return ctx.info.repo_name == \"some-repo\"\n\
                  end",
             );
             assert_matches!(
@@ -227,9 +272,9 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
-                "hook = function (info, files)\n\
-                 return info.parent1_hash == \"p1-hash\" and \n\
-                 info.parent2_hash == nil\n\
+                "hook = function (ctx)\n\
+                 return ctx.info.parent1_hash == \"p1-hash\" and \n\
+                 ctx.info.parent2_hash == nil\n\
                  end",
             );
             assert_matches!(
@@ -245,9 +290,9 @@ mod test {
             let mut changeset = default_changeset();
             changeset.parents = HookChangesetParents::Two("p1-hash".into(), "p2-hash".into());
             let code = String::from(
-                "hook = function (info, files)\n\
-                 return info.parent1_hash == \"p1-hash\" and \n\
-                 info.parent2_hash == \"p2-hash\"\n\
+                "hook = function (ctx)\n\
+                 return ctx.info.parent1_hash == \"p1-hash\" and \n\
+                 ctx.info.parent2_hash == \"p2-hash\"\n\
                  end",
             );
             assert_matches!(
@@ -263,9 +308,9 @@ mod test {
             let mut changeset = default_changeset();
             changeset.parents = HookChangesetParents::None;
             let code = String::from(
-                "hook = function (info, files)\n\
-                 return info.parent1_hash == nil and \n\
-                 info.parent2_hash == nil\n\
+                "hook = function (ctx)\n\
+                 return ctx.info.parent1_hash == nil and \n\
+                 ctx.info.parent2_hash == nil\n\
                  end",
             );
             assert_matches!(
@@ -280,13 +325,13 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
-                "elephants = function (info, files)\n\
+                "elephants = function (ctx)\n\
                  return true\n\
                  end",
             );
             assert_matches!(
                 run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
-                Ok(ErrorKind::NoHookFunctionError(ref hook_name)) if hook_name == "testhook"
+                Ok(ErrorKind::HookRuntimeError(ref msg)) if msg.contains("no hook function")
              );
         });
     }
@@ -298,8 +343,8 @@ mod test {
             let code = String::from("invalid code");
             assert_matches!(
                 run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
-                Ok(ErrorKind::HookParseError(ref hook_name, ref err_msg))
-                    if hook_name == "testhook" && err_msg.starts_with("Syntax error:")
+                Ok(ErrorKind::HookParseError(ref err_msg))
+                    if err_msg.starts_with("Syntax error:")
              );
         });
     }
@@ -309,8 +354,8 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
-                "hook = function (info, files)\n\
-                 if info.author == \"some-author\" then\n\
+                "hook = function (ctx)\n\
+                 if ctx.info.author == \"some-author\" then\n\
                  error(\"fubar\")\n\
                  end\n\
                  return true\n\
@@ -318,8 +363,8 @@ mod test {
             );
             assert_matches!(
                 run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
-                Ok(ErrorKind::HookRuntimeError(ref hook_name, ref err_msg))
-                    if hook_name == "testhook" && err_msg.starts_with("LuaError")
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.starts_with("LuaError")
              );
         });
     }
@@ -329,14 +374,82 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
-                "hook = function (info, files)\n\
+                "hook = function (ctx)\n\
                  return \"aardvarks\"\n\
                  end",
             );
             assert_matches!(
                 run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
-                Ok(ErrorKind::HookRuntimeError(ref hook_name, ref err_msg))
-                    if hook_name == "testhook" && err_msg.starts_with("LuaError")
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("invalid hook return type")
+             );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_invalid_short_desc() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return false, 23, \"long desc\"\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("invalid hook failure short description type")
+            );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_invalid_long_desc() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return false, \"short desc\", 23\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("invalid hook failure long description type")
+            );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_desc_when_hooks_is_accepted() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return true, \"short\", \"long\"\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("failure description must only be set if hook fails")
+             );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_long_desc_when_hooks_is_accepted() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return true, nil, \"long\"\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("failure long description must only be set if hook fails")
              );
         });
     }
@@ -346,8 +459,9 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let hook_file = default_hook_file();
             let code = String::from(
-                "hook = function (info, file)\n\
-                 return file == \"/a/b/c.txt\"\n\
+                "hook = function (ctx)\n\
+                 print(\"file is\", ctx.file)\n\
+                 return ctx.file == \"/a/b/c.txt\"\n\
                  end",
             );
             assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
@@ -359,8 +473,8 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let hook_file = default_hook_file();
             let code = String::from(
-                "hook = function (info, file)\n\
-                 return info.repo_name == \"some-repo\"\n\
+                "hook = function (ctx)\n\
+                 return ctx.info.repo_name == \"some-repo\"\n\
                  end",
             );
             assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
@@ -372,7 +486,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let hook_file = default_hook_file();
             let code = String::from(
-                "hook = function (info, file)\n\
+                "hook = function (ctx)\n\
                  return false\n\
                  end",
             );
@@ -388,13 +502,13 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let hook_file = default_hook_file();
             let code = String::from(
-                "elephants = function (info, file)\n\
+                "elephants = function (ctx)\n\
                  return true\n\
                  end",
             );
             assert_matches!(
                 run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
-                Ok(ErrorKind::NoHookFunctionError(ref hook_name)) if hook_name == "testhook"
+                Ok(ErrorKind::HookRuntimeError(ref err_msg)) if err_msg.contains("no hook function")
              );
         });
     }
@@ -406,8 +520,8 @@ mod test {
             let code = String::from("invalid code");
             assert_matches!(
                 run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
-                Ok(ErrorKind::HookParseError(ref hook_name, ref err_msg))
-                    if hook_name == "testhook" && err_msg.starts_with("Syntax error:")
+                Ok(ErrorKind::HookParseError(ref err_msg))
+                    if err_msg.starts_with("Syntax error:")
              );
         });
     }
@@ -417,8 +531,8 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let hook_file = default_hook_file();
             let code = String::from(
-                "hook = function (info, file)\n\
-                 if file == \"/a/b/c.txt\" then\n\
+                "hook = function (ctx)\n\
+                 if ctx.file == \"/a/b/c.txt\" then\n\
                  error(\"fubar\")\n\
                  end\n\
                  return true\n\
@@ -426,8 +540,8 @@ mod test {
             );
             assert_matches!(
                 run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
-                Ok(ErrorKind::HookRuntimeError(ref hook_name, ref err_msg))
-                    if hook_name == "testhook" && err_msg.starts_with("LuaError")
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.starts_with("LuaError")
              );
         });
     }
@@ -437,15 +551,49 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let hook_file = default_hook_file();
             let code = String::from(
-                "hook = function (info, file)\n\
+                "hook = function (ctx)\n\
                  return \"aardvarks\"\n\
                  end",
             );
             assert_matches!(
                 run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
-                Ok(ErrorKind::HookRuntimeError(ref hook_name, ref err_msg))
-                    if hook_name == "testhook" && err_msg.starts_with("LuaError")
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("invalid hook return type")
              );
+        });
+    }
+
+    #[test]
+    fn test_file_hook_invalid_short_desc() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return false, 23, \"long desc\"\n\
+                 end",
+            );
+            assert_matches!(
+                run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("invalid hook failure short description type")
+            );
+        });
+    }
+
+    #[test]
+    fn test_file_hook_invalid_long_desc() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return false, \"short desc\", 23\n\
+                 end",
+            );
+            assert_matches!(
+                run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("invalid hook failure long description type")
+            );
         });
     }
 

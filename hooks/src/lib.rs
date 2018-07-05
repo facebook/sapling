@@ -29,6 +29,8 @@ extern crate futures;
 extern crate futures_ext;
 extern crate hlua;
 extern crate hlua_futures;
+#[macro_use]
+extern crate lazy_static;
 #[cfg(test)]
 extern crate many_files_dirs;
 #[macro_use]
@@ -45,9 +47,11 @@ extern crate tokio_core;
 pub mod lua_hook;
 pub mod rust_hook;
 pub mod hook_loader;
+pub mod errors;
 
 use asyncmemo::{Asyncmemo, Filler, Weight};
 use blobrepo::{BlobChangeset, BlobRepo};
+pub use errors::*;
 use failure::Error;
 use futures::{failed, finished, Future};
 use futures_ext::{BoxFuture, FutureExt};
@@ -423,12 +427,6 @@ impl InMemoryChangesetStore {
     pub fn insert(&mut self, changeset_id: &HgChangesetId, changeset: &BlobChangeset) {
         self.map.insert(changeset_id.clone(), changeset.clone());
     }
-}
-
-#[derive(Debug, Fail)]
-pub enum ErrorKind {
-    #[fail(display = "No changeset with id '{}'", _0)] NoSuchChangeset(String),
-    #[fail(display = "No such hook '{}'", _0)] NoSuchHook(String),
 }
 
 struct HookCacheFiller {
