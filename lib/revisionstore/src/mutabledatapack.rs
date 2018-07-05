@@ -7,7 +7,8 @@ use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use dataindex::{DataIndex, DeltaLocation};
-use datastore::{Delta, Metadata};
+use datastore::{DataStore, Delta, Metadata};
+use key::Key;
 use lz4_pyframe::compress;
 use node::Node;
 use tempfile::NamedTempFile;
@@ -113,6 +114,27 @@ impl MutableDataPack {
     }
 }
 
+impl DataStore for MutableDataPack {
+    fn get(&self, key: &Key) -> Result<Vec<u8>> {
+        Err(MutableDataPackError("DataPack doesn't support raw get(), only getdeltachain").into())
+    }
+
+    fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
+        unimplemented!();
+    }
+
+    fn get_meta(&self, key: &Key) -> Result<Metadata> {
+        unimplemented!();
+    }
+
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+        Ok(keys.iter()
+            .filter(|k| self.mem_index.get(k.node()).is_none())
+            .map(|k| k.clone())
+            .collect())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -170,5 +192,23 @@ mod tests {
         }
 
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn test_get_missing() {
+        let tempdir = tempdir().unwrap();
+        let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
+        let delta = Delta {
+            data: Rc::new([0, 1, 2]),
+            base: Key::new(Box::new([]), Default::default()),
+            key: Key::new(Box::new([]), Default::default()),
+        };
+        mutdatapack.add(&delta, None).unwrap();
+
+        let not = Key::new(Box::new([1]), Node::random());
+        let missing = mutdatapack
+            .get_missing(&vec![delta.key.clone(), not.clone()])
+            .unwrap();
+        assert_eq!(missing, vec![not.clone()]);
     }
 }
