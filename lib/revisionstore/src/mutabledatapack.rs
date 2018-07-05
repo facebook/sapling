@@ -119,6 +119,7 @@ mod tests {
     use std::fs;
     use std::fs::File;
     use std::io::Read;
+    use std::rc::Rc;
 
     use key::Key;
     use tempfile::tempdir;
@@ -128,7 +129,7 @@ mod tests {
         let tempdir = tempdir().unwrap();
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
         let delta = Delta {
-            data: Box::new([0, 1, 2]),
+            data: Rc::new([0, 1, 2]),
             base: Key::new(Box::new([]), Default::default()),
             key: Key::new(Box::new([]), Default::default()),
         };
@@ -161,7 +162,7 @@ mod tests {
         {
             let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
             let delta = Delta {
-                data: Box::new([0, 1, 2]),
+                data: Rc::new([0, 1, 2]),
                 base: Key::new(Box::new([]), Default::default()),
                 key: Key::new(Box::new([]), Default::default()),
             };

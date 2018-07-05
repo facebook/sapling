@@ -2,9 +2,10 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use error::Result;
 use key::Key;
 use std::io::{Cursor, Write};
+use std::rc::Rc;
 
 pub struct Delta {
-    pub data: Box<[u8]>,
+    pub data: Rc<[u8]>,
     pub base: Key,
     pub key: Key,
 }

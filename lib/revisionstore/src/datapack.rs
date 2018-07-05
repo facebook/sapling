@@ -303,7 +303,7 @@ mod tests {
         let revisions = vec![
             (
                 Delta {
-                    data: Box::new([1, 2, 3, 4]),
+                    data: Rc::new([1, 2, 3, 4]),
                     base: Key::new(Box::new([0]), Node::random()),
                     key: Key::new(Box::new([0]), Node::random()),
                 },
@@ -327,7 +327,7 @@ mod tests {
         let revisions = vec![
             (
                 Delta {
-                    data: Box::new([1, 2, 3, 4]),
+                    data: Rc::new([1, 2, 3, 4]),
                     base: Key::new(Box::new([0]), Node::random()),
                     key: Key::new(Box::new([0]), Node::random()),
                 },
@@ -335,7 +335,7 @@ mod tests {
             ),
             (
                 Delta {
-                    data: Box::new([1, 2, 3, 4]),
+                    data: Rc::new([1, 2, 3, 4]),
                     base: Key::new(Box::new([0]), Node::random()),
                     key: Key::new(Box::new([0]), Node::random()),
                 },

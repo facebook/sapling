@@ -31,7 +31,7 @@ pub fn from_tuple_to_delta<'a>(py: Python, py_delta: &PyObject) -> PyResult<Delt
     let py_bytes = PyBytes::extract(py, &py_delta.get_item(py, 4))?;
 
     Ok(Delta {
-        data: py_bytes.data(py).to_vec().into_boxed_slice(),
+        data: py_bytes.data(py).to_vec().into(),
         base: to_key(py, &py_delta_name, &py_delta_node),
         key: to_key(py, &py_name, &py_node),
     })
