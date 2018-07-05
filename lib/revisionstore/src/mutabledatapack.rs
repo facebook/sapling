@@ -6,19 +6,13 @@ use std::u16;
 use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
+use dataindex::DeltaLocation;
 use datastore::{Delta, Metadata};
 use lz4_pyframe::compress;
 use node::Node;
 use tempfile::NamedTempFile;
 
 use error::Result;
-
-#[derive(Debug)]
-struct DeltaLocation {
-    delta_base: Node,
-    offset: u64,
-    size: u64,
-}
 
 pub struct MutableDataPack {
     version: u8,

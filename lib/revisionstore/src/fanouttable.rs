@@ -36,7 +36,7 @@ fn get_fanout_index(table_size: usize, node: &Node) -> Result<u64> {
     }
 }
 
-struct FanoutTable {}
+pub struct FanoutTable {}
 
 impl FanoutTable {
     /// Returns the (start, end) search bounds indicated by the fanout table. If end is None, then
@@ -130,6 +130,13 @@ impl FanoutTable {
         }
 
         Ok(())
+    }
+
+    pub fn get_size(large: bool) -> usize {
+        match large {
+            true => LARGE_RAW_SIZE,
+            false => SMALL_RAW_SIZE,
+        }
     }
 }
 
