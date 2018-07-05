@@ -149,10 +149,10 @@ class treestatemap(object):
             raise KeyError(key)
         return result
 
-    def keys(self):
+    def keys(self, prefix=None):
         # Exclude untracked files, since the matcher interface expects __iter__
         # to not include untracked files.
-        return self._tree.tracked()
+        return self._tree.tracked(prefix or "")
 
     def preload(self):
         pass

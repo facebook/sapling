@@ -569,23 +569,43 @@ py_class!(class treestate |py| {
         Ok(result)
     }
 
-    def tracked(&self) -> PyResult<Vec<PyBytes>> {
+    def tracked(&self, prefix: PyBytes) -> PyResult<Vec<PyBytes>> {
+        // prefix limits the result to given prefix (ex. ["dir1/", "dir2/"]). To get all tracked
+        // files, set prefix to an empty list.
         // Not ideal as a special case. But the returned list is large and it needs to be fast.
         // It's basically walk(EXIST_P1, 0) + walk(EXIST_P2, 0) + walk(EXIST_NEXT).
         let mut state = self.state(py).borrow_mut();
         let mut result = Vec::new();
         let mask = StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT;
+        let prefix = split_path(prefix.data(py));
         convert_result(py, state.visit(
             &mut |components, _state| {
                 let path = PyBytes::new(py, &components.concat());
                 result.push(path);
                 Ok(VisitorResult::NotChanged)
             },
-            &|_, dir| match dir.get_aggregated_state() {
-                None => true,
-                Some(state) => state.union.intersects(mask),
+            &|path, dir| {
+                if path.iter().zip(prefix.iter()).any(|(a, b)| a != b) {
+                    // common prefix does not match
+                    false
+                } else {
+                    match dir.get_aggregated_state() {
+                        None => true,
+                        Some(state) => state.union.intersects(mask),
+                    }
+                }
             },
-            &|_, file| file.state.intersects(mask),
+            &|path, file| {
+                if path.len() == prefix.len() {
+                    // must be an exact match
+                    *path == prefix
+                } else if path.len() < prefix.len() {
+                    // file outside given prefix
+                    false
+                } else {
+                    file.state.intersects(mask)
+                }
+            }
         ))?;
         Ok(result)
     }
@@ -757,4 +777,21 @@ fn convert_result<T>(py: Python, result: errors::Result<T>) -> PyResult<T> {
 
 fn encoding_error(py: Python) -> PyErr {
     PyErr::new::<exc::RuntimeError, _>(py, "invalid encoding")
+}
+
+/// Convert "dir1/dir2/file1" to ["dir1/", "dir2/", "file1"]
+fn split_path(path: &[u8]) -> Vec<&[u8]> {
+    // convert prefix to a vec like ["dir/", "dir2/", "file"]
+    let mut components = Vec::new();
+    let mut next_index = 0;
+    for (index, byte) in path.iter().enumerate() {
+        if *byte == b'/' {
+            components.push(&path[next_index..index + 1]);
+            next_index = index + 1;
+        }
+    }
+    if next_index < path.len() {
+        components.push(&path[next_index..]);
+    }
+    components
 }

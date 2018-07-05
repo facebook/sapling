@@ -229,6 +229,21 @@ class testtreestate(unittest.TestCase):
         tree.remove("a/e/f")
         self.assertEqual(tree.get("a/", None), (3 | 5, 3 & 5))
 
+    def testsubdirquery(self):
+        treepath = os.path.join(testtmp, "subdir")
+        tree = treestate.treestate(treepath, 0)
+        paths = ["a/b/c", "a/b/d", "a/c", "de"]
+        for path in paths:
+            tree.insert(path, 1, 2, 3, 4, None)
+        self.assertEqual(tree.tracked(""), paths)
+        self.assertEqual(tree.tracked("de"), ["de"])
+        self.assertEqual(tree.tracked("a"), [])
+        self.assertEqual(tree.tracked("a/"), ["a/b/c", "a/b/d", "a/c"])
+        self.assertEqual(tree.tracked("a/b/"), ["a/b/c", "a/b/d"])
+        self.assertEqual(tree.tracked("a/b"), [])
+        self.assertEqual(tree.tracked("a/c/"), [])
+        self.assertEqual(tree.tracked("a/c"), ["a/c"])
+
 
 if __name__ == "__main__":
     silenttestrunner.main(__name__)
