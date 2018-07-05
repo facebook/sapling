@@ -113,7 +113,7 @@ Rename the file in a commit
   $ hg commit -m "rename"
   fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0, found via 9f95b8f1011f
   11 trees fetched over *s (glob)
-  13 files fetched over *s (glob)
+  * files fetched over *s (glob)
 
 Amend the commit to add a new file with an empty cache
   $ clearcache
