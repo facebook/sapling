@@ -13,6 +13,10 @@ impl Node {
     pub fn is_null(&self) -> bool {
         self == &NULL_ID
     }
+
+    pub fn len() -> usize {
+        20
+    }
 }
 
 impl Default for Node {
