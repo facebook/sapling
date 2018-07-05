@@ -10,7 +10,9 @@ lto = true
 byteorder = "*"
 failure = "*"
 lz4-pyframe = { path = "../lz4-pyframe" }
+memmap = "*"
 mpatch = { path = "../mpatch" }
 quickcheck = "*"
+rand = "*"
 rust-crypto = "*"
 tempfile = "*"

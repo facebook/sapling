@@ -1,6 +1,11 @@
 // Copyright Facebook, Inc. 2018
 use error::Result;
 
+#[cfg(test)]
+use rand::RngCore;
+#[cfg(test)]
+use rand::os::OsRng;
+
 #[derive(Debug, Fail)]
 #[fail(display = "Node Error: {:?}", _0)]
 struct NodeError(String);
@@ -33,6 +38,13 @@ impl Node {
         let mut fixed_bytes = [0u8; 20];
         fixed_bytes.copy_from_slice(bytes);
         Ok(Node(fixed_bytes))
+    }
+
+    #[cfg(test)]
+    pub fn random() -> Self {
+        let mut bytes = [0; 20];
+        OsRng::new().unwrap().fill_bytes(&mut bytes);
+        Node::from(&bytes)
     }
 }
 

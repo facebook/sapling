@@ -7,6 +7,8 @@ extern crate crypto;
 #[macro_use]
 extern crate failure;
 extern crate lz4_pyframe;
+extern crate memmap;
+extern crate rand;
 extern crate tempfile;
 
 #[cfg(test)]

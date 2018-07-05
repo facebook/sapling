@@ -41,7 +41,7 @@ pub struct FanoutTable {}
 impl FanoutTable {
     /// Returns the (start, end) search bounds indicated by the fanout table. If end is None, then
     /// search to the end of the index.
-    fn get_bounds(table: &[u8], node: &Node) -> Result<(usize, Option<usize>)> {
+    pub fn get_bounds(table: &[u8], node: &Node) -> Result<(usize, Option<usize>)> {
         // Get the integer equivalent of the first few bytes of the node.
         let index = get_fanout_index(table.len(), node)?;
 
