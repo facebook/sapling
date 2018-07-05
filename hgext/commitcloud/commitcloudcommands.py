@@ -299,27 +299,38 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
         if bgssh:
             ui.setconfig("ui", "ssh", bgssh)
 
-    # wait at most 30 seconds, because that's the average backup time
-    timeout = 30
-    # interactive run don't require waiting
+    lock = None
+    # check if the background sync is running and provide all the details
     if ui.interactive():
-        timeout = 0
+        try:
+            srcrepo = shareutil.getsrcrepo(repo)
+            lock = lockmod.lock(srcrepo.vfs, _backuplockname, 0)
+        except error.LockHeld as e:
+            if e.errno == errno.ETIMEDOUT and e.locker.isrunning():
+                etimemsg = ""
+                etime = commitcloudutil.getprocessetime(e.locker)
+                if etime:
+                    etimemsg = _(", running for %d min %d sec") % divmod(etime, 60)
+                highlightstatus(
+                    ui,
+                    _("background cloud sync is already in progress (pid %s on %s%s)\n")
+                    % (e.locker.uniqueid, e.locker.namespace, etimemsg),
+                )
+                ui.status(_("waiting for background sync to complete\n"))
+                ui.flush()
+
+    # run cloud sync with waiting for background process to complete
     try:
+        # wait at most 120 seconds, because cloud sync can take a while
+        timeout = 120
         srcrepo = shareutil.getsrcrepo(repo)
-        with lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
+        with lock or lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
             currentnode = repo["."].node()
             _docloudsync(ui, repo, cloudrefs, **opts)
             return _maybeupdateworkingcopy(ui, repo, currentnode)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
-            if e.locker.isrunning():
-                highlightstatus(
-                    ui,
-                    _("background cloud sync is already in progress (pid %s on %s)\n")
-                    % (e.locker.uniqueid, e.locker.namespace),
-                )
-            else:
-                ui.warn(_("timeout waiting on backup lock expired\n"))
+            ui.warn(_("timeout waiting %d sec on backup lock expired\n") % timeout)
             return 2
         else:
             raise
@@ -623,7 +634,7 @@ def _forkname(ui, name, othernames):
     m = re.match("-%s(-[0-9]*)?$" % re.escape(hostname), name)
     if m:
         suffix = "-%s%s" % (hostname, m.group(1) or "")
-        name = name[0 : -len(suffix)]
+        name = name[0: -len(suffix)]
 
     # Find a new name.
     for n in itertools.count():
