@@ -77,7 +77,9 @@ use std::fs::File;
 use std::path::Path;
 
 use dataindex::DataIndex;
+use datastore::{DataStore, Delta, Metadata};
 use error::Result;
+use key::Key;
 
 pub struct DataPack {
     mmap: Mmap,
@@ -112,11 +114,32 @@ impl DataPack {
     }
 }
 
+impl DataStore for DataPack {
+    fn get(&self, key: &Key) -> Result<Vec<u8>> {
+        unimplemented!();
+    }
+    fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
+        unimplemented!();
+    }
+
+    fn get_meta(&self, key: &Key) -> Result<Metadata> {
+        unimplemented!();
+    }
+
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+        Ok(keys.iter()
+            .filter(|k| self.index.get_entry(k.node()).is_err())
+            .map(|k| k.clone())
+            .collect())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use datastore::{Delta, Metadata};
     use mutabledatapack::MutableDataPack;
+    use node::Node;
     use tempfile::TempDir;
 
     fn make_pack(tempdir: &TempDir, deltas: &Vec<(Delta, Option<Metadata>)>) -> DataPack {
@@ -135,5 +158,29 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
         let pack = make_pack(&tempdir, &vec![]);
         assert!(pack.len() > 0);
+    }
+
+    #[test]
+    fn test_get_missing() {
+        let tempdir = TempDir::new().unwrap();
+        let revisions = vec![
+            (
+                Delta {
+                    data: Box::new([1, 2, 3, 4]),
+                    base: Key::new(Box::new([0]), Node::random()),
+                    key: Key::new(Box::new([0]), Node::random()),
+                },
+                None,
+            ),
+        ];
+        let pack = make_pack(&tempdir, &revisions);
+        for &(ref delta, ref metadata) in revisions.iter() {
+            let missing = pack.get_missing(&[delta.key.clone()]).unwrap();
+            assert_eq!(missing.len(), 0);
+        }
+
+        let not = Key::new(Box::new([1]), Node::random());
+        let missing = pack.get_missing(&vec![not.clone()]).unwrap();
+        assert_eq!(missing, vec![not.clone()]);
     }
 }
