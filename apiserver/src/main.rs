@@ -28,7 +28,9 @@ extern crate serde_derive;
 extern crate slog;
 extern crate slog_glog_fmt;
 extern crate slog_logview;
+extern crate slog_scope;
 extern crate slog_stats;
+extern crate slog_stdlog;
 extern crate slog_term;
 extern crate time_ext;
 
@@ -163,6 +165,11 @@ fn main() -> Result<()> {
         .arg(Arg::with_name("with-scuba").long("with-scuba"))
         .arg(Arg::with_name("debug").short("p").long("debug"))
         .arg(
+            Arg::with_name("stdlog")
+                .long("stdlog")
+                .help("print logs from third-party crates"),
+        )
+        .arg(
             Arg::with_name("config-path")
                 .long("config-path")
                 .value_name("PATH")
@@ -191,6 +198,18 @@ fn main() -> Result<()> {
     let root_logger = setup_logger(matches.is_present("debug"));
     let actix_logger = root_logger.clone();
     let mononoke_logger = root_logger.clone();
+
+    // These guards have to be placed in main or they would be destoried once the function ends
+    let global_logger = root_logger.clone();
+
+    let (_scope_guard, _log_guard) = if matches.is_present("stdlog") {
+        (
+            Some(slog_scope::set_global_logger(global_logger)),
+            slog_stdlog::init().ok(),
+        )
+    } else {
+        (None, None)
+    };
 
     let sys = actix::System::new("mononoke-apiserver");
 
