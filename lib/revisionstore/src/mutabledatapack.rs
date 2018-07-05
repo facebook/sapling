@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::Write;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::u16;
 
@@ -7,7 +7,9 @@ use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use dataindex::{DataIndex, DeltaLocation};
+use datapack::DataEntry;
 use datastore::{DataStore, Delta, Metadata};
+use failure::Error;
 use key::Key;
 use lz4_pyframe::compress;
 use node::Node;
@@ -106,11 +108,37 @@ impl MutableDataPack {
         let delta_location = DeltaLocation {
             delta_base: delta.base.node().clone(),
             offset: offset,
-            size: compressed.len() as u64,
+            size: buf.len() as u64,
         };
         self.mem_index
             .insert(delta.key.node().clone(), delta_location);
         Ok(())
+    }
+
+    fn read_entry(&self, key: &Key) -> Result<(Delta, Metadata)> {
+        let location: &DeltaLocation = self.mem_index.get(key.node()).ok_or::<Error>(
+            MutableDataPackError(format!("Unable to find key {:?} in mutable datapack", key))
+                .into(),
+        )?;
+        let mut file = &self.data_file;
+
+        let mut data = Vec::with_capacity(location.size as usize);
+        unsafe { data.set_len(location.size as usize) };
+
+        file.seek(SeekFrom::Start(location.offset))?;
+        file.read_exact(&mut data)?;
+        // The add function assumes the file position is always at the end, so reset it.
+        file.seek(SeekFrom::End(0))?;
+
+        let entry = DataEntry::new(&data, 0, self.version as u8)?;
+        Ok((
+            Delta {
+                data: entry.delta()?,
+                base: Key::new(key.name().into(), entry.delta_base().clone()),
+                key: Key::new(key.name().into(), entry.node().clone()),
+            },
+            entry.metadata().clone(),
+        ))
     }
 }
 
@@ -127,7 +155,8 @@ impl DataStore for MutableDataPack {
     }
 
     fn get_meta(&self, key: &Key) -> Result<Metadata> {
-        unimplemented!();
+        let (delta_base, metadata) = self.read_entry(&key)?;
+        Ok(metadata)
     }
 
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
@@ -195,6 +224,42 @@ mod tests {
         }
 
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn test_get_meta() {
+        let tempdir = tempdir().unwrap();
+        let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
+        let delta = Delta {
+            data: Rc::new([0, 1, 2]),
+            base: Key::new(Box::new([]), Default::default()),
+            key: Key::new(Box::new([]), Node::random()),
+        };
+        mutdatapack.add(&delta, None).unwrap();
+        let delta2 = Delta {
+            data: Rc::new([0, 1, 2]),
+            base: Key::new(Box::new([]), Default::default()),
+            key: Key::new(Box::new([]), Node::random()),
+        };
+        let meta2 = Metadata {
+            flags: Some(2),
+            size: Some(1000),
+        };
+        mutdatapack.add(&delta2, Some(meta2.clone())).unwrap();
+
+        // Requesting a default metadata
+        let found_meta = mutdatapack.get_meta(&delta.key).unwrap();
+        assert_eq!(found_meta, Metadata::default());
+
+        // Requesting a specified metadata
+        let found_meta = mutdatapack.get_meta(&delta2.key).unwrap();
+        assert_eq!(found_meta, meta2);
+
+        // Requesting a non-existent metadata
+        let not = Key::new(Box::new([1]), Node::random());
+        mutdatapack
+            .get_meta(&not)
+            .expect_err("expected error for non existent node");
     }
 
     #[test]
