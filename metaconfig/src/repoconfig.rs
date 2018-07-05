@@ -65,11 +65,22 @@ pub struct BookmarkParams {
     pub hooks: Option<Vec<String>>,
 }
 
+/// The type of the hook
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
+pub enum HookType {
+    /// A hook that runs on the whole changeset
+    PerChangeset,
+    /// A hook that runs on a file in a changeset
+    PerFile,
+}
+
 /// Configuration for a hook
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct HookParams {
     /// The name of the hook
     pub name: String,
+    /// The type of the hook
+    pub hook_type: HookType,
     /// The code of the hook
     pub code: String,
 }
@@ -194,15 +205,15 @@ impl RepoConfigs {
                     let hooks = raw_config.hooks.clone();
                     // Easier to deal with empty vector than Option
                     let hooks = hooks.unwrap_or(Vec::new());
-
                     future::join_all(hooks.into_iter().map(move |raw_hook_config| {
                         let path = raw_hook_config.path.clone();
-                        let is_relative = path.starts_with("./");
+                        let relative_prefix = "./";
+                        let is_relative = path.starts_with(relative_prefix);
                         let path_node;
                         let path_adjusted;
                         if is_relative {
                             path_node = repo_dir.clone().into_node();
-                            path_adjusted = path.chars().skip(2).collect();
+                            path_adjusted = path.chars().skip(relative_prefix.len()).collect();
                         } else {
                             path_node = root_node.clone();
                             path_adjusted = path;
@@ -210,16 +221,14 @@ impl RepoConfigs {
                         RepoConfigs::read_file(
                             path_node,
                             try_boxfuture!(MPath::new(path_adjusted.as_bytes().to_vec())),
-                        ).then(|res| match res {
-                            Ok(bytes) => {
-                                let code = str::from_utf8(&bytes)?;
-                                let code = code.to_string();
-                                Ok(HookParams {
-                                    name: raw_hook_config.name,
-                                    code,
-                                })
-                            }
-                            Err(e) => Err(e),
+                        ).and_then(|bytes| {
+                            let code = str::from_utf8(&bytes)?;
+                            let code = code.to_string();
+                            Ok(HookParams {
+                                name: raw_hook_config.name,
+                                code,
+                                hook_type: raw_hook_config.hook_type,
+                            })
                         })
                             .boxify()
                     })).map(|hook_params| (raw_config, hook_params))
@@ -382,6 +391,7 @@ struct RawBookmarkHook {
 struct RawHookConfig {
     name: String,
     path: String,
+    hook_type: HookType,
 }
 
 /// Types of repositories supported
@@ -422,9 +432,11 @@ mod test {
             [[hooks]]
             name="hook1"
             path="common/hooks/hook1.lua"
+            hook_type="PerFile"
             [[hooks]]
             name="hook2"
             path="./hooks/hook2.lua"
+            hook_type="PerChangeset"
         "#;
         let www_content = r#"
             path="/tmp/www"
@@ -468,10 +480,12 @@ mod test {
                     HookParams {
                         name: "hook1".to_string(),
                         code: "this is hook1".to_string(),
+                        hook_type: HookType::PerFile,
                     },
                     HookParams {
                         name: "hook2".to_string(),
                         code: "this is hook2".to_string(),
+                        hook_type: HookType::PerChangeset,
                     },
                 ]),
             },

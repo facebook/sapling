@@ -11,7 +11,7 @@
 use super::HookManager;
 use super::lua_hook::LuaHook;
 use failure::Error;
-use metaconfig::repoconfig::RepoConfig;
+use metaconfig::repoconfig::{HookType, RepoConfig};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -21,8 +21,13 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
             let mut hook_set = HashSet::new();
             for hook in hooks {
                 let name = hook.name;
-                let hook = LuaHook::new(name.clone(), hook.code.clone());
-                hook_manager.register_changeset_hook(&name, Arc::new(hook));
+                let lua_hook = LuaHook::new(name.clone(), hook.code.clone());
+                match hook.hook_type {
+                    HookType::PerFile => hook_manager.register_file_hook(&name, Arc::new(lua_hook)),
+                    HookType::PerChangeset => {
+                        hook_manager.register_changeset_hook(&name, Arc::new(lua_hook))
+                    }
+                }
                 hook_set.insert(name);
             }
             match config.bookmarks {
@@ -86,14 +91,17 @@ mod test {
                     HookParams {
                         name: "hook1".into(),
                         code: "hook1 code".into(),
+                        hook_type: HookType::PerFile,
                     },
                     HookParams {
                         name: "hook2".into(),
                         code: "hook2 code".into(),
+                        hook_type: HookType::PerFile,
                     },
                     HookParams {
                         name: "hook3".into(),
                         code: "hook3 code".into(),
+                        hook_type: HookType::PerChangeset,
                     },
                 ]),
             };
@@ -126,6 +134,7 @@ mod test {
                     HookParams {
                         name: "hook1".into(),
                         code: "hook1 code".into(),
+                        hook_type: HookType::PerFile,
                     },
                 ]),
             };
