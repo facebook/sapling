@@ -3,6 +3,7 @@
 //! and file data)
 
 extern crate byteorder;
+extern crate crypto;
 #[macro_use]
 extern crate failure;
 extern crate lz4_pyframe;

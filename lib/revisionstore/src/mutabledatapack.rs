@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 use std::u16;
 
 use byteorder::{BigEndian, WriteBytesExt};
+use crypto::digest::Digest;
+use crypto::sha1::Sha1;
 use datastore::{Delta, Metadata};
 use lz4_pyframe::compress;
 use tempfile::NamedTempFile;
@@ -13,6 +15,7 @@ pub struct MutableDataPack {
     version: u32,
     dir: PathBuf,
     data_file: NamedTempFile,
+    hasher: Sha1,
 }
 
 #[derive(Debug, Fail)]
@@ -40,16 +43,16 @@ impl MutableDataPack {
             version: version,
             dir: dir.to_path_buf(),
             data_file: data_file,
+            hasher: Sha1::new(),
         })
     }
 
     /// Closes the mutable datapack, returning the path of the final immutable datapack on disk.
     /// The mutable datapack is no longer usable after being closed.
     pub fn close(mut self) -> Result<PathBuf> {
-        // This will be replaced later with an actual hash of the datapack contents
-        let base_filename = "temp_datapack_name";
+        let base_filename = self.hasher.result_str();
+        let data_filepath = self.dir.join(&base_filename).with_extension("datapack");
 
-        let data_filepath = self.dir.join(base_filename);
         self.data_file.persist(&data_filepath)?;
         Ok(data_filepath)
     }
@@ -65,17 +68,22 @@ impl MutableDataPack {
 
         let compressed = compress(&delta.data)?;
 
-        let file = self.data_file.as_file_mut();
-        file.write_u16::<BigEndian>(delta.key.name().len() as u16)?;
-        file.write_all(delta.key.name())?;
-        file.write_all(delta.key.node().as_ref())?;
-        file.write_all(delta.base.node().as_ref())?;
-        file.write_u64::<BigEndian>(compressed.len() as u64)?;
-        file.write_all(&compressed)?;
+        // Preallocate with approximately the size we need:
+        // (namelen(2) + name + node(20) + node(20) + datalen(8) + data + metadata(~22))
+        let mut buf = Vec::with_capacity(delta.key.name().len() + compressed.len() + 72);
+        buf.write_u16::<BigEndian>(delta.key.name().len() as u16)?;
+        buf.write_all(delta.key.name())?;
+        buf.write_all(delta.key.node().as_ref())?;
+        buf.write_all(delta.base.node().as_ref())?;
+        buf.write_u64::<BigEndian>(compressed.len() as u64)?;
+        buf.write_all(&compressed)?;
 
         if self.version == 1 {
-            metadata.unwrap_or_default().write(file)?;
+            metadata.unwrap_or_default().write(&mut buf)?;
         }
+
+        self.data_file.write_all(&buf)?;
+        self.hasher.input(&buf);
 
         Ok(())
     }
@@ -85,6 +93,8 @@ impl MutableDataPack {
 mod tests {
     use super::*;
     use std::fs;
+    use std::fs::File;
+    use std::io::Read;
 
     use key::Key;
     use tempfile::tempdir;
@@ -102,6 +112,20 @@ mod tests {
         let datapackpath = mutdatapack.close().expect("close");
 
         assert!(datapackpath.exists());
+
+        // Verify the hash
+        let mut temppath = datapackpath.clone();
+        // The file's name is the hash of it's content, so drop the extension to get just the name
+        temppath.set_extension("");
+
+        let filename_hash = temppath.file_name().unwrap().to_str().unwrap();
+        let mut hasher = Sha1::new();
+        let mut file = File::open(datapackpath).expect("file");
+        let mut buf = vec![];
+        file.read_to_end(&mut buf).expect("read to end");
+        hasher.input(&buf);
+        let hash = hasher.result_str();
+        assert!(hash == filename_hash);
     }
 
     #[test]

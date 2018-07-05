@@ -12,4 +12,5 @@ failure = "*"
 lz4-pyframe = { path = "../lz4-pyframe" }
 mpatch = { path = "../mpatch" }
 quickcheck = "*"
+rust-crypto = "*"
 tempfile = "*"
