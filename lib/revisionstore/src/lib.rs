@@ -20,6 +20,7 @@ mod fanouttable;
 mod mutabledatapack;
 mod unionstore;
 
+pub mod datapack;
 pub mod datastore;
 pub mod error;
 pub mod historystore;

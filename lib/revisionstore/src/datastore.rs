@@ -9,7 +9,7 @@ pub struct Delta {
     pub key: Key,
 }
 
-#[derive(PartialEq, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Metadata {
     pub size: Option<u64>,
     pub flags: Option<u64>,
