@@ -3889,6 +3889,11 @@ Test pad function
   1------------------- {node|short}
   0------------------- test
 
+Test unicode fillchar
+
+  $ HGENCODING=utf-8 hg log -r 0 -T '{pad("hello", 10, "☃")}world\n'
+  hello☃☃☃☃☃world
+
 Test template string in pad function
 
   $ hg log -r 0 -T '{pad("\{{rev}}", 10)} {author|user}\n'

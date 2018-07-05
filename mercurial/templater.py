@@ -808,7 +808,8 @@ def pad(context, mapping, args):
     fillchar = " "
     if "fillchar" in args:
         fillchar = evalstring(context, mapping, args["fillchar"])
-        if len(color.stripeffects(fillchar)) != 1:
+        fillchar_width = encoding.colwidth(color.stripeffects(fillchar))
+        if fillchar_width != 1:
             # i18n: "pad" is a keyword
             raise error.ParseError(_("pad() expects a single fill character"))
     if "left" in args:
