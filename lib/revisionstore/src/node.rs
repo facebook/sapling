@@ -1,4 +1,11 @@
 // Copyright Facebook, Inc. 2018
+use error::Result;
+
+#[derive(Debug, Fail)]
+#[fail(display = "Node Error: {:?}", _0)]
+struct NodeError(String);
+
+const NODE_LEN: usize = 20;
 
 /// A 20-byte identifier, often a hash. Nodes are used to uniquely identify
 /// commits, file versions, and many other things.
@@ -16,6 +23,16 @@ impl Node {
 
     pub fn len() -> usize {
         20
+    }
+
+    pub fn from_slice(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() != NODE_LEN {
+            return Err(NodeError(format!("invalid node length {:?}", bytes.len())).into());
+        }
+
+        let mut fixed_bytes = [0u8; 20];
+        fixed_bytes.copy_from_slice(bytes);
+        Ok(Node(fixed_bytes))
     }
 }
 
@@ -46,5 +63,21 @@ impl quickcheck::Arbitrary for Node {
         let mut bytes = [0u8; 20];
         g.fill_bytes(&mut bytes);
         Node::from(&bytes)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_incorrect_length() {
+        Node::from_slice(&[0u8; 25]).expect_err("bad slice length");
+    }
+
+    quickcheck! {
+        fn test_from_slice(node: Node) -> bool {
+            node == Node::from_slice(node.as_ref()).expect("from_slice")
+        }
     }
 }
