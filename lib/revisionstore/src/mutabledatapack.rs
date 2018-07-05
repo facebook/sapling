@@ -6,7 +6,7 @@ use std::u16;
 use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use dataindex::DeltaLocation;
+use dataindex::{DataIndex, DeltaLocation};
 use datastore::{Delta, Metadata};
 use lz4_pyframe::compress;
 use node::Node;
@@ -58,11 +58,18 @@ impl MutableDataPack {
     /// Closes the mutable datapack, returning the path of the final immutable datapack on disk.
     /// The mutable datapack is no longer usable after being closed.
     pub fn close(mut self) -> Result<PathBuf> {
-        let base_filename = self.hasher.result_str();
-        let data_filepath = self.dir.join(&base_filename).with_extension("datapack");
+        // Compute the index
+        let mut index_file = NamedTempFile::new_in(&self.dir)?;
+        DataIndex::write(&mut index_file, &self.mem_index)?;
+
+        // Persist the temp files
+        let base_filepath = self.dir.join(&self.hasher.result_str());
+        let data_filepath = base_filepath.with_extension("datapack");
+        let index_filepath = base_filepath.with_extension("dataidx");
 
         self.data_file.persist(&data_filepath)?;
-        Ok(data_filepath)
+        index_file.persist(&index_filepath)?;
+        Ok(base_filepath)
     }
 
     /// Adds the given entry to the mutable datapack.
@@ -126,9 +133,12 @@ mod tests {
             key: Key::new(Box::new([]), Default::default()),
         };
         mutdatapack.add(&delta, None).expect("add");
-        let datapackpath = mutdatapack.close().expect("close");
+        let datapackbase = mutdatapack.close().expect("close");
+        let datapackpath = datapackbase.with_extension("datapack");
+        let dataindexpath = datapackbase.with_extension("dataidx");
 
         assert!(datapackpath.exists());
+        assert!(dataindexpath.exists());
 
         // Verify the hash
         let mut temppath = datapackpath.clone();
