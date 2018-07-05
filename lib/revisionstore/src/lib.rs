@@ -5,11 +5,14 @@
 extern crate byteorder;
 #[macro_use]
 extern crate failure;
+extern crate lz4_pyframe;
+extern crate tempfile;
 
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
 
+mod mutabledatapack;
 mod unionstore;
 
 pub mod datastore;

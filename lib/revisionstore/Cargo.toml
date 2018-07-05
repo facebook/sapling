@@ -9,5 +9,7 @@ lto = true
 [dependencies]
 byteorder = "*"
 failure = "*"
+lz4-pyframe = { path = "../lz4-pyframe" }
 mpatch = { path = "../mpatch" }
-quickcheck = "0.6"
+quickcheck = "*"
+tempfile = "*"
