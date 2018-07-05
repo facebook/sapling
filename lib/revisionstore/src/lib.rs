@@ -13,6 +13,7 @@ extern crate tempfile;
 #[macro_use]
 extern crate quickcheck;
 
+mod dataindex;
 mod fanouttable;
 mod mutabledatapack;
 mod unionstore;
