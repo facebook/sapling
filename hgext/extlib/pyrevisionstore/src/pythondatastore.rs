@@ -65,7 +65,7 @@ impl DataStore for PythonDataStore {
 
         Ok(Metadata {
             flags: match py_dict.get_item(py, "f") {
-                Some(x) => Some(u16::extract(py, &x).map_err(|e| pyerr_to_error(py, e))?),
+                Some(x) => Some(u64::extract(py, &x).map_err(|e| pyerr_to_error(py, e))?),
                 None => None,
             },
             size: match py_dict.get_item(py, "s") {

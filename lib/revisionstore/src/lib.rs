@@ -2,6 +2,7 @@
 //! revisionstore - Data and history store for generic revision data (usually commit, manifest,
 //! and file data)
 
+extern crate byteorder;
 #[macro_use]
 extern crate failure;
 
