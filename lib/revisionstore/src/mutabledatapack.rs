@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::u16;
@@ -7,14 +8,23 @@ use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use datastore::{Delta, Metadata};
 use lz4_pyframe::compress;
+use node::Node;
 use tempfile::NamedTempFile;
 
 use error::Result;
+
+#[derive(Debug)]
+struct DeltaLocation {
+    delta_base: Node,
+    offset: u64,
+    size: u64,
+}
 
 pub struct MutableDataPack {
     version: u8,
     dir: PathBuf,
     data_file: NamedTempFile,
+    mem_index: HashMap<Node, DeltaLocation>,
     hasher: Sha1,
 }
 
@@ -46,6 +56,7 @@ impl MutableDataPack {
             version: version,
             dir: dir.to_path_buf(),
             data_file: data_file,
+            mem_index: HashMap::new(),
             hasher: hasher,
         })
     }
@@ -69,6 +80,8 @@ impl MutableDataPack {
             return Err(MutableDataPackError("v0 data pack cannot store metadata").into());
         }
 
+        let offset = self.data_file.as_ref().metadata()?.len();
+
         let compressed = compress(&delta.data)?;
 
         // Preallocate with approximately the size we need:
@@ -88,6 +101,13 @@ impl MutableDataPack {
         self.data_file.write_all(&buf)?;
         self.hasher.input(&buf);
 
+        let delta_location = DeltaLocation {
+            delta_base: delta.base.node().clone(),
+            offset: offset,
+            size: compressed.len() as u64,
+        };
+        self.mem_index
+            .insert(delta.key.node().clone(), delta_location);
         Ok(())
     }
 }
