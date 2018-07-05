@@ -1199,10 +1199,24 @@ class dirstate(object):
             # fast path -- filter the other way around, since typically files is
             # much smaller than dmap
             return [f for f in files if f in dmap]
-        if match.prefix() and all(fn in dmap for fn in files):
-            # fast path -- all the values are known to be files, so just return
-            # that
-            return list(files)
+        if match.prefix():
+            if self._istreestate:
+                # treestate has a fast path to get files inside a subdirectory.
+                # files are prefixes
+                result = set()
+                for prefix in files:
+                    if prefix in dmap:
+                        # prefix is a file
+                        result.add(prefix)
+                    else:
+                        # prefix is a directory
+                        result.update(dmap.keys(prefix=prefix + "/"))
+                return sorted(result)
+            else:
+                # fast path -- all the values are known to be files, so just
+                # return that
+                if all(fn in dmap for fn in files):
+                    return list(files)
         return [f for f in dmap if match(f)]
 
     def _actualfilename(self, tr):
