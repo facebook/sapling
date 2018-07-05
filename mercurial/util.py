@@ -1307,6 +1307,7 @@ def checksignature(func):
 
 # a whilelist of known filesystems where hardlink works reliably
 _hardlinkfswhitelist = {
+    "apfs",
     "btrfs",
     "ext2",
     "ext3",
