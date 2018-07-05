@@ -12,7 +12,7 @@ use tempfile::NamedTempFile;
 use error::Result;
 
 pub struct MutableDataPack {
-    version: u32,
+    version: u8,
     dir: PathBuf,
     data_file: NamedTempFile,
     hasher: Sha1,
@@ -29,7 +29,7 @@ impl MutableDataPack {
     /// when close() is called, at which point the MutableDataPack is consumed. If
     /// close() is not called, the temporary file is cleaned up when the object is
     /// release.
-    pub fn new(dir: &Path, version: u32) -> Result<Self> {
+    pub fn new(dir: &Path, version: u8) -> Result<Self> {
         if !dir.is_dir() {
             return Err(format_err!(
                 "cannot create mutable datapack in non-directory '{:?}'",
@@ -37,13 +37,16 @@ impl MutableDataPack {
             ));
         }
 
-        let data_file = NamedTempFile::new_in(&dir)?;
+        let mut data_file = NamedTempFile::new_in(&dir)?;
+        let mut hasher = Sha1::new();
+        data_file.write_u8(version)?;
+        hasher.input(&[version]);
 
         Ok(MutableDataPack {
             version: version,
             dir: dir.to_path_buf(),
             data_file: data_file,
-            hasher: Sha1::new(),
+            hasher: hasher,
         })
     }
 
