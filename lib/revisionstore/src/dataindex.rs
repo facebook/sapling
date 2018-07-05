@@ -190,7 +190,7 @@ impl DataIndex {
         self.read_entry(start + entry_offset)
     }
 
-    fn read_entry(&self, offset: usize) -> Result<IndexEntry> {
+    pub fn read_entry(&self, offset: usize) -> Result<IndexEntry> {
         let raw_entry = &self.mmap
             .get(offset..offset + ENTRY_LEN)
             .ok_or(DataIndexError(format!(

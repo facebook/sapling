@@ -252,10 +252,30 @@ impl DataPack {
 
 impl DataStore for DataPack {
     fn get(&self, key: &Key) -> Result<Vec<u8>> {
-        unimplemented!();
+        Err(format_err!(
+            "DataPack doesn't support raw get(), only getdeltachain"
+        ))
     }
     fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
-        unimplemented!();
+        let mut chain: Vec<Delta> = Default::default();
+        let mut next_entry = self.index.get_entry(key.node())?;
+        loop {
+            let data_entry = self.read_entry(next_entry.pack_entry_offset)?;
+            chain.push(Delta {
+                data: data_entry.delta()?,
+                base: Key::new(key.name().into(), data_entry.delta_base().clone()),
+                key: Key::new(key.name().into(), data_entry.node().clone()),
+            });
+
+            if next_entry.delta_base_offset != -1 {
+                next_entry = self.index
+                    .read_entry(next_entry.delta_base_offset as usize)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(chain)
     }
 
     fn get_meta(&self, key: &Key) -> Result<Metadata> {
@@ -354,6 +374,85 @@ mod tests {
                 &None => Default::default(),
             };
             assert_eq!(meta, metadata);
+        }
+    }
+
+    #[test]
+    fn test_get_delta_chain_single() {
+        let tempdir = TempDir::new().unwrap();
+        let revisions = vec![
+            (
+                Delta {
+                    data: Rc::new([1, 2, 3, 4]),
+                    base: Key::new(Box::new([0]), Node::random()),
+                    key: Key::new(Box::new([0]), Node::random()),
+                },
+                None,
+            ),
+            (
+                Delta {
+                    data: Rc::new([1, 2, 3, 4]),
+                    base: Key::new(Box::new([0]), Node::random()),
+                    key: Key::new(Box::new([0]), Node::random()),
+                },
+                None,
+            ),
+        ];
+
+        let pack = make_pack(&tempdir, &revisions);
+        for &(ref delta, ref metadata) in revisions.iter() {
+            let chain = pack.get_delta_chain(&delta.key).unwrap();
+            assert_eq!(chain[0], *delta);
+        }
+    }
+
+    #[test]
+    fn test_get_delta_chain_multiple() {
+        let tempdir = TempDir::new().unwrap();
+        let mut revisions = vec![
+            (
+                Delta {
+                    data: Rc::new([1, 2, 3, 4]),
+                    base: Key::new(Box::new([0]), Node::random()),
+                    key: Key::new(Box::new([0]), Node::random()),
+                },
+                None,
+            ),
+        ];
+        let base0 = revisions[0].0.key.clone();
+        revisions.push((
+            Delta {
+                data: Rc::new([1, 2, 3, 4]),
+                base: base0,
+                key: Key::new(Box::new([0]), Node::random()),
+            },
+            None,
+        ));
+        let base1 = revisions[1].0.key.clone();
+        revisions.push((
+            Delta {
+                data: Rc::new([1, 2, 3, 4]),
+                base: base1,
+                key: Key::new(Box::new([0]), Node::random()),
+            },
+            None,
+        ));
+
+        let pack = make_pack(&tempdir, &revisions);
+
+        let chains = [
+            vec![revisions[0].0.clone()],
+            vec![revisions[1].0.clone(), revisions[0].0.clone()],
+            vec![
+                revisions[2].0.clone(),
+                revisions[1].0.clone(),
+                revisions[0].0.clone(),
+            ],
+        ];
+
+        for i in 0..2 {
+            let chain = pack.get_delta_chain(&revisions[i].0.key).unwrap();
+            assert_eq!(&chains[i], &chain);
         }
     }
 }
