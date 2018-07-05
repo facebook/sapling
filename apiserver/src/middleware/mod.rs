@@ -6,5 +6,7 @@
 
 mod response_time;
 mod slogger;
+mod scuba;
 
+pub use self::scuba::ScubaMiddleware;
 pub use self::slogger::SLogger;

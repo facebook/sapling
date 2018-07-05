@@ -20,6 +20,7 @@ extern crate futures_ext;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
+extern crate scuba_ext;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -55,6 +56,10 @@ use metaconfig::RepoConfigs;
 
 use actor::{unwrap_request, MononokeActor, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse};
 use errors::ErrorKind;
+
+mod config {
+    pub const SCUBA_TABLE: &str = "mononoke_apiserver";
+}
 
 #[derive(Deserialize)]
 struct QueryInfo {
@@ -155,6 +160,7 @@ fn main() -> Result<()> {
                 .default_value("8000")
                 .help("HTTP port to listen to"),
         )
+        .arg(Arg::with_name("with-scuba").long("with-scuba"))
         .arg(Arg::with_name("debug").short("p").long("debug"))
         .arg(
             Arg::with_name("config-path")
@@ -204,9 +210,20 @@ fn main() -> Result<()> {
         logger: actix_logger.clone(),
     };
 
+    let with_scuba = matches.is_present("with-scuba");
     let server = server::new(move || {
         App::with_state(state.clone())
             .middleware(middleware::SLogger::new(actix_logger.clone()))
+            .middleware({
+                if with_scuba {
+                    middleware::ScubaMiddleware::new(
+                        Some(config::SCUBA_TABLE.into()),
+                        actix_logger.clone(),
+                    )
+                } else {
+                    middleware::ScubaMiddleware::new(None, actix_logger.clone())
+                }
+            })
             .route(
                 "/status",
                 http::Method::GET,
