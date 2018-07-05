@@ -59,8 +59,8 @@ pub struct CacheWarmupParams {
 /// Configuration for a bookmark
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BookmarkParams {
-    /// The name of the bookmark
-    pub name: String,
+    /// The bookmark
+    pub bookmark: Bookmark,
     /// The hooks active for the bookmark
     pub hooks: Option<Vec<String>>,
 }
@@ -183,65 +183,63 @@ impl RepoConfigs {
         repo_dir: MPathElement,
     ) -> Box<Future<Item = (String, RepoConfig), Error = Error> + Send> {
         let repo_name = try_boxfuture!(str::from_utf8(repo_dir.as_bytes())).to_string();
-        Box::new(
-            VfsWalker::new(repos_dir, repo_dir.into_iter().cloned())
-                .walk()
-                .from_err()
-                .and_then(|node| match node {
-                    VfsNode::Dir(dir) => Ok(dir),
-                    _ => Err(ErrorKind::InvalidFileStructure("expected directory".into()).into()),
-                })
-                .and_then(|repo_dir| {
-                    Box::new(
-                        RepoConfigs::read_file(
-                            repo_dir.clone().into_node(),
-                            try_boxfuture!(MPath::new(b"server.toml".to_vec())),
-                        ).map(move |bytes| (bytes, repo_dir)),
-                    )
-                })
-                .and_then(|(bytes, repo_dir)| {
-                    let raw_config =
-                        try_boxfuture!(toml::from_slice::<RawRepoConfig>(bytes.as_ref()));
-                    let hooks = raw_config.hooks.clone();
-                    // Easier to deal with empty vector than Option
-                    let hooks = hooks.unwrap_or(Vec::new());
-                    future::join_all(hooks.into_iter().map(move |raw_hook_config| {
-                        let path = raw_hook_config.path.clone();
-                        let relative_prefix = "./";
-                        let is_relative = path.starts_with(relative_prefix);
-                        let path_node;
-                        let path_adjusted;
-                        if is_relative {
-                            path_node = repo_dir.clone().into_node();
-                            path_adjusted = path.chars().skip(relative_prefix.len()).collect();
-                        } else {
-                            path_node = root_node.clone();
-                            path_adjusted = path;
-                        }
-                        RepoConfigs::read_file(
-                            path_node,
-                            try_boxfuture!(MPath::new(path_adjusted.as_bytes().to_vec())),
-                        ).and_then(|bytes| {
-                            let code = str::from_utf8(&bytes)?;
-                            let code = code.to_string();
-                            Ok(HookParams {
-                                name: raw_hook_config.name,
-                                code,
-                                hook_type: raw_hook_config.hook_type,
-                            })
+
+        VfsWalker::new(repos_dir, repo_dir.into_iter().cloned())
+            .walk()
+            .from_err()
+            .and_then(|node| match node {
+                VfsNode::Dir(dir) => Ok(dir),
+                _ => Err(ErrorKind::InvalidFileStructure("expected directory".into()).into()),
+            })
+            .and_then(|repo_dir| {
+                RepoConfigs::read_file(
+                    repo_dir.clone().into_node(),
+                    try_boxfuture!(MPath::new(b"server.toml".to_vec())),
+                ).map(move |bytes| (bytes, repo_dir))
+                    .boxify()
+            })
+            .and_then(|(bytes, repo_dir)| {
+                let raw_config = try_boxfuture!(toml::from_slice::<RawRepoConfig>(bytes.as_ref()));
+                let hooks = raw_config.hooks.clone();
+                // Easier to deal with empty vector than Option
+                let hooks = hooks.unwrap_or(Vec::new());
+                future::join_all(hooks.into_iter().map(move |raw_hook_config| {
+                    let path = raw_hook_config.path.clone();
+                    let relative_prefix = "./";
+                    let is_relative = path.starts_with(relative_prefix);
+                    let path_node;
+                    let path_adjusted;
+                    if is_relative {
+                        path_node = repo_dir.clone().into_node();
+                        path_adjusted = path.chars().skip(relative_prefix.len()).collect();
+                    } else {
+                        path_node = root_node.clone();
+                        path_adjusted = path;
+                    }
+                    RepoConfigs::read_file(
+                        path_node,
+                        try_boxfuture!(MPath::new(path_adjusted.as_bytes().to_vec())),
+                    ).and_then(|bytes| {
+                        let code = str::from_utf8(&bytes)?;
+                        let code = code.to_string();
+                        Ok(HookParams {
+                            name: raw_hook_config.name,
+                            code,
+                            hook_type: raw_hook_config.hook_type,
                         })
-                            .boxify()
-                    })).map(|hook_params| (raw_config, hook_params))
+                    })
                         .boxify()
-                })
-                .then(|res| match res {
-                    Ok((raw_config, all_hook_params)) => Ok((
-                        repo_name,
-                        RepoConfigs::convert_conf(raw_config, all_hook_params)?,
-                    )),
-                    Err(e) => Err(e),
-                }),
-        )
+                })).map(|hook_params| (raw_config, hook_params))
+                    .boxify()
+            })
+            .then(|res| match res {
+                Ok((raw_config, all_hook_params)) => Ok((
+                    repo_name,
+                    RepoConfigs::convert_conf(raw_config, all_hook_params)?,
+                )),
+                Err(e) => Err(e),
+            })
+            .boxify()
     }
 
     fn read_file(
@@ -314,7 +312,7 @@ impl RepoConfigs {
                 bookmarks
                     .into_iter()
                     .map(|bm| BookmarkParams {
-                        name: bm.name,
+                        bookmark: Bookmark::new(bm.name).unwrap(),
                         hooks: match bm.hooks {
                             Some(hooks) => {
                                 Some(hooks.into_iter().map(|rbmh| rbmh.hook_name).collect())
@@ -472,7 +470,7 @@ mod test {
                 }),
                 bookmarks: Some(vec![
                     BookmarkParams {
-                        name: "master".to_string(),
+                        bookmark: Bookmark::new("master").unwrap(),
                         hooks: Some(vec!["hook1".to_string(), "hook2".to_string()]),
                     },
                 ]),

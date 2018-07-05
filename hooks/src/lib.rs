@@ -22,6 +22,7 @@ extern crate assert_matches;
 extern crate async_unit;
 extern crate asyncmemo;
 extern crate blobrepo;
+extern crate bookmarks;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -51,6 +52,7 @@ pub mod errors;
 
 use asyncmemo::{Asyncmemo, Filler, Weight};
 use blobrepo::{BlobChangeset, BlobRepo};
+use bookmarks::Bookmark;
 pub use errors::*;
 use failure::Error;
 use futures::{failed, finished, Future};
@@ -72,7 +74,7 @@ pub struct HookManager {
     cache: Cache,
     changeset_hooks: ChangesetHooks,
     file_hooks: FileHooks,
-    bookmark_hooks: HashMap<String, Vec<String>>,
+    bookmark_hooks: HashMap<Bookmark, Vec<String>>,
     repo_name: String,
     store: Box<ChangesetStore>,
 }
@@ -110,8 +112,8 @@ impl HookManager {
         hooks.insert(hook_name.to_string(), hook);
     }
 
-    pub fn set_hooks_for_bookmark(&mut self, bookmark_name: &str, hooks: Vec<String>) {
-        self.bookmark_hooks.insert(bookmark_name.to_string(), hooks);
+    pub fn set_hooks_for_bookmark(&mut self, bookmark: Bookmark, hooks: Vec<String>) {
+        self.bookmark_hooks.insert(bookmark, hooks);
     }
 
     pub fn changeset_hook_names(&self) -> HashSet<String> {
@@ -135,9 +137,9 @@ impl HookManager {
     pub fn run_changeset_hooks_for_bookmark(
         &self,
         changeset_id: HgChangesetId,
-        bookmark_name: &str,
+        bookmark: &Bookmark,
     ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
-        match self.bookmark_hooks.get(bookmark_name) {
+        match self.bookmark_hooks.get(bookmark) {
             Some(hooks) => self.run_changeset_hooks_for_changeset_id(changeset_id, hooks.to_vec()),
             None => return finished(Vec::new()).boxify(),
         }
@@ -201,9 +203,9 @@ impl HookManager {
     pub fn run_file_hooks_for_bookmark(
         &self,
         changeset_id: HgChangesetId,
-        bookmark_name: &str,
+        bookmark: &Bookmark,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
-        match self.bookmark_hooks.get(bookmark_name) {
+        match self.bookmark_hooks.get(bookmark) {
             Some(hooks) => self.run_file_hooks_for_changeset_id(changeset_id, hooks.to_vec()),
             None => return Box::new(finished(Vec::new())),
         }
@@ -895,8 +897,10 @@ mod test {
         for (hook_name, hook) in hooks {
             hook_manager.register_changeset_hook(&hook_name, hook.into());
         }
-        let fut =
-            hook_manager.run_changeset_hooks_for_bookmark(default_changeset_id(), &bookmark_name);
+        let fut = hook_manager.run_changeset_hooks_for_bookmark(
+            default_changeset_id(),
+            &Bookmark::new(bookmark_name).unwrap(),
+        );
         let res = fut.wait().unwrap();
         let map: HashMap<String, HookExecution> = res.into_iter().collect();
         assert_eq!(expected, map);
@@ -922,8 +926,11 @@ mod test {
         for (hook_name, hook) in hooks {
             hook_manager.register_file_hook(&hook_name, hook.into());
         }
-        let fut: BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> =
-            hook_manager.run_file_hooks_for_bookmark(default_changeset_id(), &bookmark_name);
+        let fut: BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> = hook_manager
+            .run_file_hooks_for_bookmark(
+                default_changeset_id(),
+                &Bookmark::new(bookmark_name).unwrap(),
+            );
         let res = fut.wait().unwrap();
         let map: HashMap<String, HashMap<String, HookExecution>> =
             res.into_iter()
@@ -944,7 +951,7 @@ mod test {
             hook_manager_blobrepo()
         };
         for (bookmark_name, hook_names) in bookmarks {
-            hook_manager.set_hooks_for_bookmark(&bookmark_name, hook_names);
+            hook_manager.set_hooks_for_bookmark(Bookmark::new(bookmark_name).unwrap(), hook_names);
         }
         hook_manager
     }

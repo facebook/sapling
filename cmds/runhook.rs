@@ -31,12 +31,14 @@ extern crate tokio_core;
 
 #[cfg(test)]
 extern crate async_unit;
+extern crate bookmarks;
 #[cfg(test)]
 extern crate linear;
 #[cfg(test)]
 extern crate tempdir;
 
 use blobrepo::{BlobRepo, ManifoldArgs};
+use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
 use failure::{Error, Result};
 use futures::Future;
@@ -115,16 +117,17 @@ fn run_hook(
     } else {
         hook_manager.register_changeset_hook("testhook", Arc::new(hook));
     }
-    hook_manager.set_hooks_for_bookmark("bm1", vec!["testhook".to_string()]);
+    let bookmark = Bookmark::new("testbm").unwrap();
+    hook_manager.set_hooks_for_bookmark(bookmark.clone(), vec!["testhook".to_string()]);
     let id = try_boxfuture!(HgChangesetId::from_str(revstr));
     if file_hook {
         hook_manager
-            .run_file_hooks_for_bookmark(id, "bm1")
+            .run_file_hooks_for_bookmark(id, &bookmark)
             .map(|executions| executions.get(0).unwrap().1.clone())
             .boxify()
     } else {
         hook_manager
-            .run_changeset_hooks_for_bookmark(id, "bm1")
+            .run_changeset_hooks_for_bookmark(id, &bookmark)
             .map(|executions| executions.get(0).unwrap().1.clone())
             .boxify()
     }

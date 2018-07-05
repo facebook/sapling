@@ -10,6 +10,7 @@
 
 use super::HookManager;
 use super::lua_hook::LuaHook;
+use bookmarks::Bookmark;
 use failure::Error;
 use metaconfig::repoconfig::{HookType, RepoConfig};
 use std::collections::HashSet;
@@ -32,15 +33,15 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
             }
             match config.bookmarks {
                 Some(bookmarks) => for bookmark_hook in bookmarks {
-                    let bm_name = bookmark_hook.name;
+                    let bookmark = bookmark_hook.bookmark;
                     let hooks = bookmark_hook.hooks;
                     if let Some(hooks) = hooks {
                         let bm_hook_set: HashSet<String> = hooks.clone().into_iter().collect();
                         let diff: HashSet<_> = bm_hook_set.difference(&hook_set).collect();
                         if diff.len() != 0 {
-                            return Err(ErrorKind::NoSuchBookmarkHook(bm_name).into());
+                            return Err(ErrorKind::NoSuchBookmarkHook(bookmark).into());
                         } else {
-                            hook_manager.set_hooks_for_bookmark(&bm_name, hooks);
+                            hook_manager.set_hooks_for_bookmark(bookmark, hooks);
                         }
                     };
                 },
@@ -55,7 +56,7 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Hook(s) referenced in bookmark {} do not exist", _0)]
-    NoSuchBookmarkHook(String),
+    NoSuchBookmarkHook(Bookmark),
 }
 
 #[cfg(test)]
@@ -79,11 +80,11 @@ mod test {
                 cache_warmup: None,
                 bookmarks: Some(vec![
                     BookmarkParams {
-                        name: "bm1".into(),
+                        bookmark: Bookmark::new("bm1").unwrap(),
                         hooks: Some(vec!["hook1".into(), "hook2".into()]),
                     },
                     BookmarkParams {
-                        name: "bm2".into(),
+                        bookmark: Bookmark::new("bm2").unwrap(),
                         hooks: Some(vec!["hook2".into(), "hook3".into()]),
                     },
                 ]),
@@ -126,7 +127,7 @@ mod test {
                 cache_warmup: None,
                 bookmarks: Some(vec![
                     BookmarkParams {
-                        name: "bm1".into(),
+                        bookmark: Bookmark::new("bm1").unwrap(),
                         hooks: Some(vec!["hook1".into(), "hook2".into()]),
                     },
                 ]),
@@ -145,8 +146,8 @@ mod test {
                 .unwrap_err()
                 .downcast::<ErrorKind>()
             {
-                Ok(ErrorKind::NoSuchBookmarkHook(bm_name)) => {
-                    assert_eq!("bm1", bm_name);
+                Ok(ErrorKind::NoSuchBookmarkHook(bookmark)) => {
+                    assert_eq!(Bookmark::new("bm1").unwrap(), bookmark);
                 }
                 _ => assert!(false, "Unexpected err type"),
             };
