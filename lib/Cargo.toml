@@ -1,0 +1,23 @@
+[workspace]
+members = [
+    "argparse",
+    "cbincode",
+    "commitcloudsubscriber",
+    "hg_watchman_client",
+    "indexedlog",
+    "lz4-pyframe",
+    "minibench",
+    "mpatch-sys",
+    "mpatch",
+    "pathencoding",
+    "pathmatcher",
+    "radixbuf",
+    "revisionstore",
+    "treestate",
+    "vlqencoding",
+    "watchman_client",
+    "zstdelta",
+]
+
+[profile.release]
+lto = true

@@ -3,9 +3,6 @@ name = "revisionstore"
 version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 
-[profile.release]
-lto = true
-
 [dependencies]
 byteorder = "*"
 failure = "*"
