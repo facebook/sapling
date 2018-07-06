@@ -125,6 +125,7 @@ from mercurial import (
     exchange,
     extensions,
     hg,
+    hintutil,
     i18n,
     localrepo,
     node as nodemod,
@@ -142,7 +143,6 @@ copiedpart = bundleparts.copiedpart
 getscratchbranchparts = bundleparts.getscratchbranchparts
 scratchbookmarksparttype = bundleparts.scratchbookmarksparttype
 scratchbranchparttype = bundleparts.scratchbranchparttype
-
 
 batchable = peer.batchable
 bin = nodemod.bin
@@ -869,12 +869,21 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
                         remoteerror = remoteerror.replace(kw, ui.label(kw, label))
 
                 ui.warn(_("pull failed: %s\n") % remoteerror)
+
+                # User updates to own commit from Commit Cloud
+                if ui.username() in remoteerror:
+                    hintutil.trigger("commitcloud-sync-education", ui)
             else:
                 ui.warn(_("'%s' found remotely\n") % mayberemote)
                 pulltime = time.time() - pullstarttime
                 ui.warn(_("pull finished in %.3f sec\n") % pulltime)
 
-    return orig(ui, repo, node, rev, **opts)
+    try:
+        return orig(ui, repo, node, rev, **opts)
+    except Exception:
+        # Show the triggered hints anyway
+        hintutil.show(ui)
+        raise
 
 
 def _pull(orig, ui, repo, source="default", **opts):

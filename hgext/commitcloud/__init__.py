@@ -166,10 +166,23 @@ def reposetup(ui, repo):
 
 
 @hint("commitcloud-update-on-move")
-def hintunpdateonmove():
+def hintupdateonmove():
     return _(
         "if you would like to update to the moved version automatically add\n"
         "[commitcloud]\n"
         "updateonmove = true\n"
         "to your .hgrc config file\n"
     )
+
+
+@hint("commitcloud-sync-education")
+def hintcommitcloudeducation(ui):
+    education = ui.config("commitcloud", "education_page")
+    if education:
+        return (
+            _(
+                "for syncing your own commits between machines try Commit Cloud Sync\n"
+                "read more information at %s"
+            )
+            % education
+        )
