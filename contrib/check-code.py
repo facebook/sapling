@@ -511,16 +511,64 @@ stream_out_shallow stream_wrap swap_out_encoding test_timeout transform_notgit
 tree_entry update_changeset update_hg_bookmarks update_references
 update_remote_branches upload_pack upstream_revs wrap_socket write_err
 write_rej zc_create_server
+
+active_diff add_padding_line address_family alias_default all_exportable
+all_files allhunks_re all_objects allowed_opts allow_read allow_reuse_address
+amend_copies amended_ctx app_id app_token arch_version audit_path authors_path
+background_cmd bad_chars bad_headers base_marker base_ofs best_len best_node
+best_rev bg_height blob_id branch_batches bullet_points ca_certs changed_files
+changed_refs change_totals check_binary chunk_left cl_count cl_path
+cmdline_message collapse_recursion commit_cache commit_count commit_hash
+commit_info commit_re common_file common_nodes conduit_host conduit_path
+conduit_protocol content_type copied_path copies_map copyfrom_path cur_len
+cur_line current_ctx current_file custom_sections default_books default_path
+default_port default_scm_daemon_port delim_re deny_read desc_lines
+detect_renames diffgit_re diff_re diffs_seen dirty_trees dry_run
+enableprofile_pat end_cut end_marker equal_a equal_b error_msg e_size exc_info
+excluded_files exclude_pat existing_local_bms extra_defaults extra_in_message
+extra_interline extra_message file_added_re files_map files_to_commit
+fillchar_width find_copies_harder first_empty fix_nodeline_tail fmtmax_date
+fmtmin_date formatted_args fqdn_re fresh_instance get_args get_binary
+git_commit_tree git_extra git_extraitems git_fn git_match gitmodules_content
+git_sha guard_re has_hunks headers_sent headers_set heads_hash hexnode_first
+hexnode_last hg_commit_message hg_field hidden_count histedit_nodes include_pat
+incoming_str indentation_level indent_string infinitepush_bgssh iterable_map
+last_cut last_key lc_all len_a len_b len_base linear_search_result lines_re
+link_prefix listdir_batch_size load_matcher local_hostname local_opts lookup_ch
+map_file map_git_real map_hg map_hg_real matcher_opts match_opts max_cost
+max_date max_files max_noise max_offset max_width metadata_key_value min_date
+mode_state module_name msng_list name_idx nametype_idx newfile_re new_hash
+new_header new_map new_ref new_refs new_socket new_tunnel next_revs
+node_expander no_list numeric_loglevel num_lines num_pages obsstore_size
+offset_end ok_sources ok_types old_guarded old_header old_ref old_refs old_rev
+old_sha old_unapplied orig_amend_copies orig_data orig_encoded orig_encoding
+original_series orig_paths orig_start orig_type other_bms out_file page_height
+para_re parent_tree parsed_rev parsed_url permitted_opts pg_style pipei_bufsize
+prefix_char prefix_end pretty_re printed_file profile_directory put_args
+put_binary range_tup raw_url real_part real_parts ref_name remote_bm_names
+remote_idx remote_info rename_detector renamed_out repo_callsign repo_index
+repo_parts repos_to_update request_type response_class resp_url return_code
+rev_first rev_last rev_numbers root_paths saved_status scratch_bms seen_dirs
+sender_addr server_capabilities shift_interline shift_size silent_worker
+sm_path sm_url space_left space_re special_re start_marker start_time
+stdout_lines st_mode string_list stripped_refs str_lgt svn_config
+switch_slashes tag_refname tags_file their_heads todo_total to_export to_pass
+to_store total_bytes tree_sha tunnel_host tv_sec_ofs upstream_names
+upstream_tips uptodate_annotated_tags url_scheme uuid_re version_info
+without_newline
 """.split()
 
 # ported from check-commit
 pycorepats = [
     [
-        # (r"\n\n\n", "use single blank line"),
         (
             r"\bdef (?!cffi|%s)[a-z]+_[a-z][a-z_]*\(" % "|".join(underscorenames),
             "use foobar, not foo_bar naming",
-        )
+        ),
+        (
+            r"    (?!cffi|%s)[a-z]+_[a-z][a-z_]* = " % "|".join(underscorenames),
+            "use foobar, not foo_bar naming",
+        ),
     ],
     # warnings
     [],
