@@ -206,16 +206,6 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
     )
 }
 
-fn setup_scuba_logger(scuba_table: Option<String>, reponame: String) -> ScubaSampleBuilder {
-    let mut scuba_logger = match scuba_table {
-        None => ScubaSampleBuilder::with_discard(),
-        Some(scuba_table) => ScubaSampleBuilder::new(scuba_table),
-    };
-
-    scuba_logger.add_common_server_data().add("repo", reponame);
-    scuba_logger
-}
-
 fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     // TODO: This needs to cope with blob repos, too
     let crpath = PathBuf::from(matches.value_of("crpath").unwrap());
@@ -416,7 +406,7 @@ fn repo_listen(
 ) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
 
-    let scuba_logger = setup_scuba_logger(config.scuba_table.clone(), reponame.clone());
+    let scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
 
     let repo = repo::MononokeRepo::new(
         root_log.new(o!("repo" => reponame.clone())),
@@ -488,6 +478,7 @@ fn repo_listen(
             let mut scuba_logger = scuba_logger.clone();
             scuba_logger
                 .add("session_uuid", format!("{}", session_uuid))
+                .add_preamble(&preamble)
                 .add("client_hostname", client_hostname);
             scuba_logger
         };
