@@ -1,3 +1,4 @@
+#require no-fsmonitor
   $ python -c 'from mercurial.dirstate import rootcache' || exit 80
 
 Load commonly used test logic
@@ -65,11 +66,11 @@ directory) otherwise, a rogue .gitignore could slow down a hg-only repo
   $ echo 'foo*' > .gitignore
   $ echo '!*bar' >> .gitignore
   $ hg status
-  .gitignore: unsupported ignore pattern '!*bar'
   ? .gitignore
   ? bar
   ? dir/.gitignore
   ? dir/bar
+  ? foobar
 
   $ echo '.hg/' > .gitignore
   $ hg status
@@ -116,7 +117,6 @@ directory) otherwise, a rogue .gitignore could slow down a hg-only repo
   ? bar
   ? dir/.gitignore
   ? dir/bar
-  ? dir/foo
   ? foo
   ? foobar
 

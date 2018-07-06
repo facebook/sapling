@@ -34,7 +34,6 @@ from mercurial import (
     bundlerepo,
     cmdutil,
     demandimport,
-    dirstate,
     discovery,
     extensions,
     help,
@@ -254,24 +253,6 @@ def _gitvfs(repo):
 
 def reposetup(ui, repo):
     if not isinstance(repo, gitrepo.gitrepo):
-
-        if (
-            getattr(dirstate, "rootcache", False)
-            and (not ignoremod or getattr(ignore, "readpats", False))
-            and hgutil.safehasattr(repo, "vfs")
-            and os.path.exists(_gitvfs(repo).join("git"))
-        ):
-            # only install our dirstate wrapper if it has a hope of working
-            import gitdirstate
-
-            if ignoremod:
-
-                def ignorewrap(orig, *args, **kwargs):
-                    return gitdirstate.gignore(*args, **kwargs)
-
-                extensions.wrapfunction(ignore, "ignore", ignorewrap)
-            dirstate.dirstate = gitdirstate.gitdirstate
-
         klass = hgrepo.generate_repo_subclass(repo.__class__)
         repo.__class__ = klass
 
