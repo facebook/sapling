@@ -203,10 +203,10 @@ Test relative ignore path (issue4473):
   $ hg debugignore --config ui.gitignore=1
   <unionmatcher matchers=[<gitignorematcher>, <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>]>
 
-  $ hg debugignore
+  $ hg debugignore --config ui.gitignore=0
   <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>
 
-  $ hg debugignore --config ui.hgignore=0
+  $ hg debugignore --config ui.hgignore=0 --config ui.gitignore=0
   <includematcher includes=''>
 
   $ hg debugignore b.o
