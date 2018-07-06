@@ -852,10 +852,20 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
             pullstarttime = time.time()
 
             try:
+                # Prefer to pull from 'infinitepush' path if it exists.
+                # 'infinitepush' path has both infinitepush and non-infinitepush
+                # revisions, so pulling from it is safer.
+                # This is useful for dogfooding other hg backend that stores
+                # only public commits (e.g. Mononoke)
+                if "infinitepush" in ui.paths:
+                    path = "infinitepush"
+                else:
+                    path = "default"
                 (pullcmd, pullopts) = cmdutil.getcmdanddefaultopts(
                     "pull", commands.table
                 )
                 pullopts.update(kwargs)
+                pullopts["source"] = path
                 pullcmd(ui, repo, **pullopts)
             except Exception:
                 remoteerror = str(sys.exc_info()[1])
@@ -887,6 +897,15 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
 
 
 def _pull(orig, ui, repo, source="default", **opts):
+    # If '-r' or '-B' option is set, then prefer to pull from 'infinitepush' path
+    # if it exists. 'infinitepush' path has both infinitepush and non-infinitepush
+    # revisions, so pulling from it is safer.
+    # This is useful for dogfooding other hg backend that stores only public commits
+    # (e.g. Mononoke)
+    if opts.get("rev") or opts.get("bookmark"):
+        if "infinitepush" in ui.paths:
+            source = "infinitepush"
+
     # Copy paste from `pull` command
     source, branches = hg.parseurl(ui.expandpath(source), opts.get("branch"))
 
