@@ -10,8 +10,8 @@ import os
 import shlex
 import shutil
 
-from mercurial.i18n import _
 from mercurial import encoding, error, hg, progress, scmutil, util
+from mercurial.i18n import _
 
 from . import (
     bzr,
@@ -26,6 +26,7 @@ from . import (
     p4,
     subversion,
 )
+
 
 mapfile = common.mapfile
 MissingTool = common.MissingTool

@@ -1014,8 +1014,7 @@ def wraprepo(repo):
                 )
 
             # Compute new bookmarks, and delete old bookmarks
-            newbookmarks = dict(
-                (k, hex(v)) for k, v in self._bookmarks.iteritems())
+            newbookmarks = dict((k, hex(v)) for k, v in self._bookmarks.iteritems())
             oldbookmarks = []
             cursor.execute(
                 "SELECT name, value FROM revision_references "

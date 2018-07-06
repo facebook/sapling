@@ -1,4 +1,9 @@
+# dulwich doesn't return the symref where remote HEAD points, so we monkey
+# patch it here
+from dulwich.errors import GitProtocolError
+from dulwich.protocol import extract_capabilities
 from mercurial import url, util as hgutil
+
 
 try:
     from mercurial import encoding
@@ -8,7 +13,7 @@ except AttributeError:
     # compat with hg 3.2.1 and earlier, which doesn't have
     # hfsignoreclean (This was borrowed wholesale from hg 3.2.2.)
     _ignore = [
-        unichr(int(x, 16)).encode("utf-8")
+        unichr(int(x, 16)).encode("utf-8")  # noqa: F821
         for x in "200c 200d 200e 200f 202a 202b 202c 202d 202e "
         "206a 206b 206c 206d 206e 206f feff".split()
     ]
@@ -36,12 +41,6 @@ def passwordmgr(ui):
     except (TypeError, AttributeError):
         # compat with hg < 3.9
         return url.passwordmgr(ui)
-
-
-# dulwich doesn't return the symref where remote HEAD points, so we monkey
-# patch it here
-from dulwich.errors import GitProtocolError
-from dulwich.protocol import extract_capabilities
 
 
 def read_pkt_refs(proto):

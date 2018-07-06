@@ -4,6 +4,8 @@ import os
 import sys
 
 import test_hgsubversion_util
+from hgext.hgsubversion import maps, svnmeta
+
 
 # interesting and fast tests
 test_fetch_mappings = test_hgsubversion_util.import_test("test_fetch_mappings")
@@ -14,9 +16,6 @@ test_utility_commands = test_hgsubversion_util.import_test("test_utility_command
 test_custom_layout = test_hgsubversion_util.import_test("test_custom_layout")
 test_rebuildmeta = test_hgsubversion_util.import_test("test_rebuildmeta")
 test_updatemeta = test_hgsubversion_util.import_test("test_updatemeta")
-
-
-from hgext.hgsubversion import svnmeta, maps
 
 
 class SqliteRevMapMixIn(object):

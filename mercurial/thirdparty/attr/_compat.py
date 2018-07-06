@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import sys
 import types
 
+
 PY2 = sys.version_info[0] == 2
 
 if PY2:

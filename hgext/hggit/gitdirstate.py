@@ -1,15 +1,15 @@
-import os
-import stat
-import re
 import errno
+import os
+import re
+import stat
 
-from mercurial import dirstate, error, match as matchmod, util
+# pathauditor moved to pathutil in 2.9
+from mercurial import dirstate, error, match as matchmod, pathutil, util
+from mercurial.i18n import _
+
 
 # ignore module was removed in Mercurial 3.5
 ignoremod = False
-# pathauditor moved to pathutil in 2.9
-from mercurial import pathutil
-from mercurial.i18n import _
 
 
 def gignorepats(orig, lines, root=None):

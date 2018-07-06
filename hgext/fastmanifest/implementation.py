@@ -7,14 +7,16 @@
 from __future__ import absolute_import
 
 import collections
+import heapq
 import os
 import time
-import heapq
 
 from mercurial import error, manifest, mdiff, revlog, util
+
 from ..extlib import cfastmanifest
-from .metrics import metricscollector
 from .constants import CACHE_SUBDIR, DEFAULT_MAX_MEMORY_ENTRIES
+from .metrics import metricscollector
+
 
 try:
     from ..extlib import cstore

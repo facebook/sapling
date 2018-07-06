@@ -1,14 +1,10 @@
 import errno
 import traceback
 
-from mercurial import revlog
-from mercurial import node
-from mercurial import context
-from mercurial import util as hgutil
-
 import compathacks
 import svnexternals
 import util
+from mercurial import context, node, revlog, util as hgutil
 
 
 class MissingPlainTextError(Exception):

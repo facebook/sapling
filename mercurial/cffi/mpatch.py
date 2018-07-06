@@ -7,9 +7,10 @@
 
 from __future__ import absolute_import
 
+from . import _mpatch
 from ..pure.mpatch import *
 from ..pure.mpatch import mpatchError  # silence pyflakes
-from . import _mpatch
+
 
 ffi = _mpatch.ffi
 lib = _mpatch.lib

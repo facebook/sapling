@@ -32,8 +32,6 @@ from __future__ import absolute_import
 
 import collections
 
-from mercurial.i18n import _
-from ..extlib import linelog
 from mercurial import (
     cmdutil,
     commands,
@@ -51,6 +49,10 @@ from mercurial import (
     scmutil,
     util,
 )
+from mercurial.i18n import _
+
+from ..extlib import linelog
+
 
 testedwith = "ships-with-fb-hgext"
 

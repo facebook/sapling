@@ -11,8 +11,6 @@ import json
 import os
 import re
 
-from mercurial.i18n import _
-
 from mercurial import (
     error,
     pathutil,
@@ -22,6 +20,8 @@ from mercurial import (
     vfs as vfsmod,
     worker,
 )
+from mercurial.i18n import _
+
 
 # 64 bytes for SHA256
 _lfsre = re.compile(r"\A[a-f0-9]{64}\Z")

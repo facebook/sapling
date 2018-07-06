@@ -4,16 +4,16 @@ import os
 import re
 import StringIO
 
-from dulwich.errors import HangupException, GitProtocolError
+import _ssh
+import compat
+import git2hg
+import hg2git
+import util
+from dulwich import client, config as dul_config, diff_tree
+from dulwich.errors import GitProtocolError, HangupException
 from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone
-from dulwich.pack import create_delta, apply_delta
+from dulwich.pack import apply_delta, create_delta
 from dulwich.repo import Repo, check_ref_format
-from dulwich import client
-from dulwich import config as dul_config
-from dulwich import diff_tree
-
-from mercurial.i18n import _
-from mercurial.node import hex, bin, nullid
 from mercurial import (
     bookmarks,
     commands,
@@ -26,13 +26,10 @@ from mercurial import (
     util as hgutil,
     vfs as vfsmod,
 )
-
-import _ssh
-import compat
-import git2hg
-import hg2git
-import util
+from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid
 from overlay import overlayrepo
+
 
 RE_GIT_AUTHOR = re.compile("^(.*?) ?\<(.*?)(?:\>(.*))?$")
 

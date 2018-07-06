@@ -28,9 +28,11 @@ import os
 import socket
 import time
 
-from . import Zeroconf
 from mercurial import dispatch, encoding, extensions, hg, ui as uimod
 from mercurial.hgweb import server as servermod
+
+from . import Zeroconf
+
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

@@ -10,10 +10,16 @@ from __future__ import absolute_import
 import os
 import re
 
-from mercurial.i18n import _
 from mercurial import error, util
+from mercurial.i18n import _
 
 from . import common
+
+
+try:
+    unicode
+except NameError:
+    unicode = str
 
 
 class monotone_source(common.converter_source, common.commandline):
@@ -34,7 +40,7 @@ class monotone_source(common.converter_source, common.commandline):
         if not os.path.exists(os.path.join(path, "_MTN")):
             # Could be a monotone repository (SQLite db file)
             try:
-                f = file(path, "rb")
+                f = file(path, "rb")  # noqa: F821
                 header = f.read(16)
                 f.close()
             except IOError:
@@ -130,7 +136,7 @@ class monotone_source(common.converter_source, common.commandline):
                 raise error.Abort(_("bad mtn packet - no end of packet size"))
             lengthstr += read
         try:
-            length = long(lengthstr[:-1])
+            length = int(lengthstr[:-1])
         except TypeError:
             raise error.Abort(_("bad mtn packet - bad packet size %s") % lengthstr)
 

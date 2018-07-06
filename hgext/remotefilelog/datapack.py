@@ -3,10 +3,13 @@ from __future__ import absolute_import
 import os
 import struct
 
-from .lz4wrapper import lz4compress, lz4decompress
-from mercurial.node import hex, nullid
+from mercurial import error, util
 from mercurial.i18n import _
+from mercurial.node import hex, nullid
+
 from . import basepack, constants, shallowutil
+from .lz4wrapper import lz4compress, lz4decompress
+
 
 try:
     xrange(0)
@@ -20,7 +23,6 @@ try:
 except ImportError:
     cstore = None
 
-from mercurial import error, util
 
 NODELENGTH = 20
 

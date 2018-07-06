@@ -1,12 +1,18 @@
 from __future__ import absolute_import
 
-import errno, hashlib, os, shutil, stat, time
-
-from . import constants, shallowutil
+import errno
+import hashlib
+import os
+import shutil
+import stat
+import time
 
 from mercurial import error, progress, pycompat, util
 from mercurial.i18n import _
 from mercurial.node import bin, hex
+
+from . import constants, shallowutil
+
 
 try:
     xrange(0)

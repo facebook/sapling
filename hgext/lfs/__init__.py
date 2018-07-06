@@ -34,8 +34,6 @@ from __future__ import absolute_import
 
 import hashlib
 
-from mercurial.i18n import _
-
 from mercurial import (
     bundle2,
     changegroup,
@@ -53,8 +51,10 @@ from mercurial import (
     util,
     vfs as vfsmod,
 )
+from mercurial.i18n import _
 
 from . import blobstore, pointer, wrapper
+
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from mercurial import error, extensions, obsolete, obsutil, registrar
 from mercurial.i18n import _
 
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 

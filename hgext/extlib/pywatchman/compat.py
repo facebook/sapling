@@ -26,15 +26,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import sys
+
 
 # no unicode literals
 
 """Compatibility module across Python 2 and 3."""
 
-import sys
 
 PYTHON3 = sys.version_info >= (3, 0)
 
@@ -68,4 +68,4 @@ def reraise(tp, value, tb=None):
 if PYTHON3:
     UNICODE = str
 else:
-    UNICODE = unicode
+    UNICODE = unicode  # noqa: F821

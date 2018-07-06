@@ -9,7 +9,6 @@ from __future__ import absolute_import
 
 import os
 
-from mercurial.i18n import _
 from mercurial import (
     commands,
     error,
@@ -21,8 +20,10 @@ from mercurial import (
     scmutil,
     util,
 )
+from mercurial.i18n import _
 
 from . import context as facontext, error as faerror, formatter as faformatter
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)

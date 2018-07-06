@@ -1,24 +1,26 @@
 # no-check-code -- see T24862348
 
+import svnexternals
+import svnwrap
+import util
 from mercurial import util as hgutil
 
-import svnwrap
-import svnexternals
-import util
 
 class NoFilesException(Exception):
     """Exception raised when you try and commit without files.
     """
 
+
 def _isdir(svn, branchpath, svndir):
     try:
-        path = ''
+        path = ""
         if branchpath:
-            path = branchpath + '/'
-        svn.list_dir('%s%s' % (path, svndir))
+            path = branchpath + "/"
+        svn.list_dir("%s%s" % (path, svndir))
         return True
     except svnwrap.SubversionException:
         return False
+
 
 def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
     """Compute directories to add or delete when moving from parentctx
@@ -32,17 +34,18 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
     deleted directories are also listed, but item order of undefined
     in either list.
     """
+
     def finddirs(path, includeself=False):
         if includeself and path:
             yield path
-        pos = path.rfind('/')
+        pos = path.rfind("/")
         while pos != -1:
             yield path[:pos]
-            pos = path.rfind('/', 0, pos)
+            pos = path.rfind("/", 0, pos)
         # Include the root path, properties can be set explicitely on it
         # (like externals), and you want to preserve it if there are any
         # other child item still existing.
-        yield ''
+        yield ""
 
     def getctxdirs(ctx, keptdirs, extdirs):
         dirs = {}
@@ -72,10 +75,8 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
                 changeddirs[d] = 1
     if not changeddirs:
         return added, deleted
-    olddirs = getctxdirs(parentctx, changeddirs,
-                         [e[0] for e in extchanges if e[1]])
-    newdirs = getctxdirs(ctx, changeddirs,
-                         [e[0] for e in extchanges if e[2]])
+    olddirs = getctxdirs(parentctx, changeddirs, [e[0] for e in extchanges if e[1]])
+    newdirs = getctxdirs(ctx, changeddirs, [e[0] for e in extchanges if e[2]])
 
     for d in newdirs:
         if d not in olddirs and not _isdir(svn, branchpath, d):
@@ -92,6 +93,7 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
 
     return added, deleted
 
+
 def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     """Build and send a commit from Mercurial to Subversion.
     """
@@ -100,10 +102,12 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     parent_branch = rev_ctx.parents()[0].branch()
     branch_path = meta.layoutobj.remotename(parent_branch)
 
-    extchanges = svnexternals.diff(svnexternals.parse(ui, parent),
-                                   svnexternals.parse(ui, rev_ctx))
-    addeddirs, deleteddirs = _getdirchanges(svn, branch_path, parent, rev_ctx,
-                                            rev_ctx.files(), extchanges)
+    extchanges = svnexternals.diff(
+        svnexternals.parse(ui, parent), svnexternals.parse(ui, rev_ctx)
+    )
+    addeddirs, deleteddirs = _getdirchanges(
+        svn, branch_path, parent, rev_ctx, rev_ctx.files(), extchanges
+    )
     deleteddirs = set(deleteddirs)
 
     props = {}
@@ -111,19 +115,19 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     for file in rev_ctx.files():
         if file in util.ignoredfiles:
             continue
-        new_data = base_data = ''
-        action = ''
+        new_data = base_data = ""
+        action = ""
         if file in rev_ctx:
             fctx = rev_ctx.filectx(file)
             new_data = fctx.data()
 
-            if 'x' in fctx.flags():
-                props.setdefault(file, {})['svn:executable'] = '*'
-            if 'l' in fctx.flags():
-                props.setdefault(file, {})['svn:special'] = '*'
+            if "x" in fctx.flags():
+                props.setdefault(file, {})["svn:executable"] = "*"
+            if "l" in fctx.flags():
+                props.setdefault(file, {})["svn:special"] = "*"
             isbinary = hgutil.binary(new_data)
             if isbinary:
-                props.setdefault(file, {})['svn:mime-type'] = 'application/octet-stream'
+                props.setdefault(file, {})["svn:mime-type"] = "application/octet-stream"
 
             if file not in parent:
                 renamed = fctx.renamed()
@@ -132,41 +136,43 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
                     # this kind of renames: a -> b, b -> c
                     copies[file] = renamed[0]
                     base_data = parent[renamed[0]].data()
-                    if 'l' in parent[renamed[0]].flags():
-                        base_data = 'link ' + base_data
+                    if "l" in parent[renamed[0]].flags():
+                        base_data = "link " + base_data
                 else:
                     autoprops = svn.autoprops_config.properties(file)
                     if autoprops:
                         props.setdefault(file, {}).update(autoprops)
 
-                action = 'add'
+                action = "add"
             else:
                 base_data = parent.filectx(file).data()
-                if ('x' in parent.filectx(file).flags()
-                    and 'x' not in rev_ctx.filectx(file).flags()):
-                    props.setdefault(file, {})['svn:executable'] = None
-                if 'l' in parent.filectx(file).flags():
-                    base_data = 'link ' + base_data
-                    if 'l' not in rev_ctx.filectx(file).flags():
-                        props.setdefault(file, {})['svn:special'] = None
+                if (
+                    "x" in parent.filectx(file).flags()
+                    and "x" not in rev_ctx.filectx(file).flags()
+                ):
+                    props.setdefault(file, {})["svn:executable"] = None
+                if "l" in parent.filectx(file).flags():
+                    base_data = "link " + base_data
+                    if "l" not in rev_ctx.filectx(file).flags():
+                        props.setdefault(file, {})["svn:special"] = None
                 if hgutil.binary(base_data) and not isbinary:
-                    props.setdefault(file, {})['svn:mime-type'] = None
-                action = 'modify'
+                    props.setdefault(file, {})["svn:mime-type"] = None
+                action = "modify"
         else:
-            pos = file.rfind('/')
+            pos = file.rfind("/")
             if pos >= 0:
                 if file[:pos] in deleteddirs:
                     # This file will be removed when its directory is removed
                     continue
-            action = 'delete'
+            action = "delete"
         file_data[file] = base_data, new_data, action
 
     def svnpath(p):
-        return ('%s/%s' % (branch_path, p)).strip('/')
+        return ("%s/%s" % (branch_path, p)).strip("/")
 
     changeddirs = []
     for d, v1, v2 in extchanges:
-        props.setdefault(svnpath(d), {})['svn:externals'] = v2
+        props.setdefault(svnpath(d), {})["svn:externals"] = v2
         if d not in deleteddirs and d not in addeddirs:
             changeddirs.append(svnpath(d))
 
@@ -175,7 +181,7 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     deleteddirs2 = list(deleteddirs)
     deleteddirs2.sort(reverse=True)
     for d in deleteddirs2:
-        pos = d.rfind('/')
+        pos = d.rfind("/")
         if pos >= 0 and d[:pos] in deleteddirs:
             deleteddirs.remove(d)
 
@@ -197,18 +203,29 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     if not new_target_files:
         raise NoFilesException()
     try:
-        return svn.commit(new_target_files, rev_ctx.description(), file_data,
-                          base_revision, set(addeddirs), set(deleteddirs),
-                          props, newcopies)
-    except svnwrap.SubversionException, e:
+        return svn.commit(
+            new_target_files,
+            rev_ctx.description(),
+            file_data,
+            base_revision,
+            set(addeddirs),
+            set(deleteddirs),
+            props,
+            newcopies,
+        )
+    except svnwrap.SubversionException as e:
         ui.traceback()
 
-        if len(e.args) > 0 and e.args[1] in (svnwrap.ERR_FS_TXN_OUT_OF_DATE,
-                                             svnwrap.ERR_FS_CONFLICT,
-                                             svnwrap.ERR_FS_ALREADY_EXISTS):
-            raise hgutil.Abort('Outgoing changesets parent is not at '
-                               'subversion HEAD\n'
-                               '(pull again and rebase on a newer revision)')
+        if len(e.args) > 0 and e.args[1] in (
+            svnwrap.ERR_FS_TXN_OUT_OF_DATE,
+            svnwrap.ERR_FS_CONFLICT,
+            svnwrap.ERR_FS_ALREADY_EXISTS,
+        ):
+            raise hgutil.Abort(
+                "Outgoing changesets parent is not at "
+                "subversion HEAD\n"
+                "(pull again and rebase on a newer revision)"
+            )
         elif len(e.args) > 0 and e.args[1] == svnwrap.ERR_REPOS_HOOK_FAILURE:
             # Special handling for svn hooks blocking error
             raise hgutil.Abort(e.args[0])

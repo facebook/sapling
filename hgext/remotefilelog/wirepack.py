@@ -6,16 +6,17 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
+import struct
+from collections import defaultdict
+from StringIO import StringIO
+
+from mercurial import progress
 from mercurial.i18n import _
 from mercurial.node import nullid
-from mercurial import progress
-from . import constants
-import struct
-from StringIO import StringIO
-from collections import defaultdict
 
-from .shallowutil import readexactly, readunpack, mkstickygroupdir, readpath
-from . import datapack, historypack, shallowutil
+from . import constants, shallowutil
+from .shallowutil import readexactly, readpath, readunpack
+
 
 try:
     xrange(0)

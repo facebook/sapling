@@ -1,5 +1,16 @@
 from __future__ import absolute_import, print_function
 
+import errno
+import itertools
+import select
+import socket
+import string
+import struct
+import threading
+import time
+import traceback
+
+
 """ Multicast DNS Service Discovery for Python, v0.12
     Copyright (C) 2003, Paul Scott-Murphy
 
@@ -80,15 +91,6 @@ __author__ = "Paul Scott-Murphy"
 __email__ = "paul at scott dash murphy dot com"
 __version__ = "0.12"
 
-import errno
-import itertools
-import select
-import socket
-import string
-import struct
-import threading
-import time
-import traceback
 
 __all__ = ["Zeroconf", "ServiceInfo", "ServiceBrowser"]
 
@@ -1348,7 +1350,8 @@ class Zeroconf(object):
         multicast communications, listening and reaping threads."""
         globals()["_GLOBAL_DONE"] = 0
         if bindaddress is None:
-            self.intf = socket.gethostbyname(socket.gethostname())
+            socketmod = socket  # workaround linters
+            self.intf = socketmod.gethostbyname(socketmod.gethostname())
         else:
             self.intf = bindaddress
         self.group = ("", _MDNS_PORT)

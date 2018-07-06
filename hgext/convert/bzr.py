@@ -11,9 +11,11 @@ from __future__ import absolute_import
 
 import os
 
-from mercurial.i18n import _
 from mercurial import demandimport, error
+from mercurial.i18n import _
+
 from . import common
+
 
 # these do not work with demandimport, blacklist
 demandimport.ignore.extend(["bzrlib.transactions", "bzrlib.urlutils", "ElementPath"])

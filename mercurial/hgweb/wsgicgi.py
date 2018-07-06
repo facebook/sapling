@@ -10,9 +10,8 @@
 
 from __future__ import absolute_import
 
-from .. import encoding, util
-
 from . import common
+from .. import encoding, util
 
 
 def launch(application):

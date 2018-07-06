@@ -14,16 +14,15 @@ import socket
 import sys
 import traceback
 
+from . import common
+from .. import encoding, error, pycompat, util
 from ..i18n import _
 
-from .. import encoding, error, pycompat, util
 
 httpservermod = util.httpserver
 socketserver = util.socketserver
 urlerr = util.urlerr
 urlreq = util.urlreq
-
-from . import common
 
 
 def _splitURI(uri):
@@ -355,7 +354,7 @@ def create_server(ui, app):
         # codec is hardcoded as ascii.
 
         sys.argv  # unwrap demand-loader so that reload() works
-        reload(sys)  # resurrect sys.setdefaultencoding()
+        reload(sys)  # resurrect sys.setdefaultencoding() # noqa: F821
         oldenc = sys.getdefaultencoding()
         sys.setdefaultencoding("latin1")  # or any full 8-bit encoding
         mimetypes.init()

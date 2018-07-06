@@ -9,10 +9,11 @@
 
 from __future__ import absolute_import
 
-from mercurial.i18n import _
 from mercurial import registrar
+from mercurial.i18n import _
 
 from . import convcmd, cvsps, subversion
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)

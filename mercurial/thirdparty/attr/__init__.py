@@ -1,21 +1,19 @@
 from __future__ import absolute_import, division, print_function
 
+from . import converters, exceptions, filters, validators
+from ._config import get_run_validators, set_run_validators
 from ._funcs import asdict, assoc, astuple, evolve, has
 from ._make import (
+    NOTHING,
     Attribute,
     Factory,
-    NOTHING,
     attr,
     attributes,
     fields,
     make_class,
     validate,
 )
-from ._config import get_run_validators, set_run_validators
-from . import exceptions
-from . import filters
-from . import converters
-from . import validators
+
 
 __version__ = "17.2.0"
 

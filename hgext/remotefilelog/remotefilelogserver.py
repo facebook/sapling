@@ -12,13 +12,26 @@ import os
 import stat
 import time
 
-from mercurial import changegroup, changelog, context, match, util, wireproto
-from mercurial import error, exchange, progress, sshserver, store
+from mercurial import (
+    changegroup,
+    changelog,
+    context,
+    error,
+    exchange,
+    match,
+    progress,
+    sshserver,
+    store,
+    util,
+    wireproto,
+)
 from mercurial.extensions import wrapfunction
 from mercurial.hgweb import protocol as httpprotocol
-from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid, nullrev
+
 from . import constants, lz4wrapper, shallowrepo, shallowutil, wirepack
+
 
 try:
     xrange(0)

@@ -3,10 +3,11 @@ from __future__ import absolute_import
 
 import re
 
-from mercurial.i18n import _
 from mercurial import context
+from mercurial.i18n import _
 
 from . import importer, lfs, p4
+
 
 IMPORTER_IGNORE_REORG = "@IMPORTER_IGNORE_REORG@"
 

@@ -5,13 +5,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import error, extensions, hg, localrepo, scmutil, wireproto
-from mercurial.i18n import _
-
 import contextlib
 import os
 
+from mercurial import error, extensions, hg, localrepo, scmutil, wireproto
+from mercurial.i18n import _
+
 from . import context
+
+
+try:
+    buffer
+except NameError:
+    buffer = memoryview
+
 
 # common
 

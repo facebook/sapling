@@ -22,7 +22,25 @@ testedwith = "3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4"
 import os
 import zlib
 
-from mercurial import commands
+import compathacks
+import svncommands
+import svnexternals
+import svnrepo
+import util
+import wrappers
+from mercurial import (
+    commands,
+    demandimport,
+    extensions,
+    help,
+    hg,
+    localrepo,
+    policy,
+    revset,
+    subrepo,
+    util as hgutil,
+)
+
 
 try:
     from mercurial import exchange
@@ -32,27 +50,11 @@ except ImportError:
     # We only *use* the exchange module in hg 3.2+, so this is safe
     pass
 
-from mercurial import policy
 
 base85 = policy.importmod(r"base85")
-from mercurial import extensions
-from mercurial import help
-from mercurial import hg
-from mercurial import localrepo
-from mercurial import util as hgutil
-from mercurial import demandimport
 
 demandimport.ignore.extend(["svn", "svn.client", "svn.core", "svn.delta", "svn.ra"])
 
-from mercurial import revset
-from mercurial import subrepo
-
-import svncommands
-import util
-import svnrepo
-import wrappers
-import svnexternals
-import compathacks
 
 svnopts = [
     ("", "stupid", None, "use slower, but more compatible, protocol for Subversion")
@@ -405,7 +407,7 @@ configitem("hgsubversion", "failonmissing", default=configitem.dynamicdefault)
 @templatekeyword("svnrev")
 def svnrevkw(**args):
     """:svnrev: String. Converted subversion revision number."""
-    convertinfo = util.getsvnrev(args['ctx'], "")
+    convertinfo = util.getsvnrev(args["ctx"], "")
 
     if not convertinfo or not convertinfo.startswith("svn:"):
         return ""

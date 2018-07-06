@@ -8,10 +8,11 @@ import re
 import tempfile
 import xml.dom.minidom
 
-from mercurial.i18n import _
 from mercurial import encoding, error, progress, pycompat, util, vfs as vfsmod
+from mercurial.i18n import _
 
 from . import common
+
 
 pickle = util.pickle
 stringio = util.stringio

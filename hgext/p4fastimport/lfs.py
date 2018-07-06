@@ -3,6 +3,7 @@ from __future__ import absolute_import
 
 from mercurial import extensions
 
+
 lfsext = None
 try:
     lfsext = extensions.find("lfs")

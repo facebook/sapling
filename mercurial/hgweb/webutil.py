@@ -13,11 +13,6 @@ import difflib
 import os
 import re
 
-from ..i18n import _
-from ..node import hex, nullid, short
-
-from .common import ErrorResponse, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, paritygen
-
 from .. import (
     context,
     error,
@@ -30,6 +25,10 @@ from .. import (
     ui as uimod,
     util,
 )
+from ..i18n import _
+from ..node import hex, nullid, short
+from .common import HTTP_BAD_REQUEST, HTTP_NOT_FOUND, ErrorResponse, paritygen
+
 
 try:
     xrange(0)

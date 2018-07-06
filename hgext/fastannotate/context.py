@@ -12,11 +12,12 @@ import contextlib
 import hashlib
 import os
 
-from mercurial.i18n import _
-from ..extlib import linelog as linelogmod
 from mercurial import error, lock as lockmod, mdiff, node, progress, scmutil, util
+from mercurial.i18n import _
 
 from . import error as faerror, revmap as revmapmod
+from ..extlib import linelog as linelogmod
+
 
 # given path, get filelog, cached
 try:

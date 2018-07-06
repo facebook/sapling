@@ -11,9 +11,18 @@ import os
 import re
 import shutil
 import tempfile
-from mercurial.i18n import _
+
 from mercurial import error, util
+from mercurial.i18n import _
+
 from . import common
+
+
+try:
+    unicode
+except NameError:
+    unicode = str
+
 
 NoRepo = common.NoRepo
 

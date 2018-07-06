@@ -26,18 +26,18 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import sys
+
+from . import compat
+
 
 # no unicode literals
 
 """Module to deal with filename encoding on the local system, as returned by
 Watchman."""
 
-import sys
-
-from . import compat
 
 if compat.PYTHON3:
     default_local_errors = "surrogateescape"

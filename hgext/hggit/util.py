@@ -2,14 +2,16 @@
 functions."""
 import re
 
+from dulwich import errors
+from mercurial import error, lock as lockmod, util as hgutil
+from mercurial.i18n import _
+
+
 try:
     from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict
 
-from dulwich import errors
-from mercurial.i18n import _
-from mercurial import error, lock as lockmod, util as hgutil
 
 gitschemes = ("git", "git+ssh", "git+http", "git+https")
 

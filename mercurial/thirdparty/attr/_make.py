@@ -2,16 +2,16 @@ from __future__ import absolute_import, division, print_function
 
 import hashlib
 import linecache
-
 from operator import itemgetter
 
 from . import _config
-from ._compat import PY2, iteritems, isclass, iterkeys, metadata_proxy
+from ._compat import PY2, isclass, iteritems, iterkeys, metadata_proxy
 from .exceptions import (
     DefaultAlreadySetError,
     FrozenInstanceError,
     NotAnAttrsClassError,
 )
+
 
 # This is used at least twice, so cache it here.
 _obj_setattr = object.__setattr__

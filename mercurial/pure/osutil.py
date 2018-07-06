@@ -15,6 +15,7 @@ import stat as statmod
 
 from .. import pycompat
 
+
 try:
     xrange(0)
 except NameError:

@@ -20,20 +20,16 @@ For more information and instructions, see :hg:`help git`
 # global modules
 import os
 import warnings
+from bisect import insort
 
 # local modules
 import compat
 import gitrepo
 import hgrepo
 import overlay
-import verify
 import util
-
-from bisect import insort
+import verify
 from git_handler import GitHandler
-from mercurial.node import hex
-from mercurial.error import LookupError
-from mercurial.i18n import _
 from mercurial import (
     bundlerepo,
     cmdutil,
@@ -43,16 +39,20 @@ from mercurial import (
     extensions,
     help,
     hg,
-    ui as hgui,
-    util as hgutil,
     localrepo,
     manifest,
     pycompat,
     revset,
     scmutil,
     templatekw,
+    ui as hgui,
+    util as hgutil,
     vfs as vfsmod,
 )
+from mercurial.error import LookupError
+from mercurial.i18n import _
+from mercurial.node import hex
+
 
 # Disable DeprecationWarning from newer dulwich since hggit also supports older
 # dulwich.

@@ -10,9 +10,9 @@ from __future__ import absolute_import
 import cgi
 import struct
 
+from .. import error, pycompat, util, wireproto
 from .common import HTTP_OK
 
-from .. import error, pycompat, util, wireproto
 
 stringio = util.stringio
 

@@ -10,6 +10,7 @@ import os
 
 from mercurial import encoding, error, pycompat, registrar
 
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 

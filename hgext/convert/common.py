@@ -13,11 +13,17 @@ import os
 import re
 import subprocess
 
-from mercurial.i18n import _
 from mercurial import encoding, error, phases, util
+from mercurial.i18n import _
+
 
 pickle = util.pickle
 propertycache = util.propertycache
+
+try:
+    unicode
+except NameError:
+    unicode = str
 
 
 def encodeargs(args):

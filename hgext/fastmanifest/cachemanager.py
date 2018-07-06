@@ -6,15 +6,15 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-import os
 import errno
+import os
 
 from mercurial import encoding, error, extensions, revlog, scmutil, util
 
+from . import concurrency, constants
 from ..extlib import cfastmanifest
-from . import constants, concurrency
+from .implementation import CacheFullException, fastmanifestcache
 from .metrics import metricscollector
-from .implementation import fastmanifestcache, CacheFullException
 
 
 def _relevantremonamesrevs(repo):

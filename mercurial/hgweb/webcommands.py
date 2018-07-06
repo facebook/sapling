@@ -12,19 +12,7 @@ import mimetypes
 import os
 import re
 
-from ..i18n import _
-from ..node import hex, short
-
-from .common import (
-    ErrorResponse,
-    HTTP_FORBIDDEN,
-    HTTP_NOT_FOUND,
-    HTTP_OK,
-    get_contact,
-    paritygen,
-    staticfile,
-)
-
+from . import webutil
 from .. import (
     archival,
     dagop,
@@ -39,8 +27,18 @@ from .. import (
     templater,
     util,
 )
+from ..i18n import _
+from ..node import hex, short
+from .common import (
+    HTTP_FORBIDDEN,
+    HTTP_NOT_FOUND,
+    HTTP_OK,
+    ErrorResponse,
+    get_contact,
+    paritygen,
+    staticfile,
+)
 
-from . import webutil
 
 __all__ = []
 commands = {}

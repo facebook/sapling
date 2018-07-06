@@ -1,6 +1,6 @@
-from dulwich.client import SubprocessWrapper
 import subprocess
 
+from dulwich.client import SubprocessWrapper
 from mercurial import util
 
 
@@ -16,7 +16,7 @@ def generate_ssh_vendor(ui):
 
     class _Vendor(SSHVendor):
         def run_command(self, host, command, username=None, port=None):
-            if isinstance(command, basestring):
+            if isinstance(command, (str, bytes)):
                 # 0.12.x dulwich sends the raw string
                 command = [command]
             elif len(command) > 1:

@@ -1,7 +1,9 @@
 from __future__ import absolute_import
 
-import cffi
 import os
+
+import cffi
+
 
 ffi = cffi.FFI()
 mpatch_c = os.path.join(os.path.join(os.path.dirname(__file__), "..", "mpatch.c"))

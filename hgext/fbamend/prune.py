@@ -11,7 +11,6 @@
 
 from __future__ import absolute_import
 
-from mercurial.i18n import _
 from mercurial import (
     bookmarks as bookmarksmod,
     commands,
@@ -25,8 +24,10 @@ from mercurial import (
     scmutil,
     util,
 )
+from mercurial.i18n import _
 
 from . import common
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)

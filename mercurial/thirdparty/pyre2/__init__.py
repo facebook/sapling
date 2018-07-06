@@ -26,8 +26,10 @@
 
 from __future__ import absolute_import
 
-from . import _re2
 import sre_constants
+
+from . import _re2
+
 
 __all__ = [
     "error",

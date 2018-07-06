@@ -34,6 +34,7 @@ import time
 
 from .. import pycompat
 
+
 namedtuple = collections.namedtuple
 Mapping = collections.Mapping
 

@@ -3,8 +3,8 @@
 
 import difflib
 import errno
-import imp
 import gettext
+import imp
 import os
 import shutil
 import stat
@@ -14,26 +14,26 @@ import tarfile
 import tempfile
 import unittest
 
-from mercurial import cmdutil
-from mercurial import commands
-from mercurial import context
-from mercurial import dispatch as dispatchmod
-from mercurial import encoding
-from mercurial import hg
-from mercurial import i18n
-from mercurial import node
-from mercurial import scmutil
-from mercurial import ui
-from mercurial import util as hgutil
-from mercurial import extensions
+from hgext.hgsubversion import compathacks, svnrepo, svnwrap, util
+from mercurial import (
+    cmdutil,
+    commands,
+    context,
+    dispatch as dispatchmod,
+    encoding,
+    extensions,
+    hg,
+    i18n,
+    node,
+    scmutil,
+    ui,
+    util as hgutil,
+)
 
-from hgext.hgsubversion import compathacks
-from hgext.hgsubversion import svnrepo
-from hgext.hgsubversion import svnwrap
-from hgext.hgsubversion import util
 
 try:
     from mercurial import obsolete
+
     obsolete._enabled
 except ImportError:
     obsolete = None
@@ -41,8 +41,8 @@ except ImportError:
 try:
     SkipTest = unittest.SkipTest
 except AttributeError:
-    if 'nose' in sys.modules:
-        SkipTest = sys.modules['nose'].SkipTest
+    if "nose" in sys.modules:
+        SkipTest = sys.modules["nose"].SkipTest
     else:
         SkipTest = None
 
@@ -50,11 +50,14 @@ except AttributeError:
 #   "Note that on Windows, you cannot set close_fds to true and
 #   also redirect the standard handles by setting stdin, stdout or
 #   stderr."
-canCloseFds = 'win32' not in sys.platform
+canCloseFds = "win32" not in sys.platform
 
-if not 'win32' in sys.platform:
+if not "win32" in sys.platform:
+
     def kill_process(popen_obj):
         os.kill(popen_obj.pid, 9)
+
+
 else:
     import ctypes
     from ctypes.wintypes import BOOL, DWORD, HANDLE, UINT
@@ -76,19 +79,26 @@ else:
     # dwDesiredAccess
     PROCESS_TERMINATE = 0x0001
 
-    OpenProcess = WINAPI(HANDLE, ctypes.windll.kernel32.OpenProcess,
-        DWORD, 'dwDesiredAccess',
-        BOOL, 'bInheritHandle',
-        DWORD, 'dwProcessId',
+    OpenProcess = WINAPI(
+        HANDLE,
+        ctypes.windll.kernel32.OpenProcess,
+        DWORD,
+        "dwDesiredAccess",
+        BOOL,
+        "bInheritHandle",
+        DWORD,
+        "dwProcessId",
     )
 
-    CloseHandle = WINAPI(BOOL, ctypes.windll.kernel32.CloseHandle,
-        HANDLE, 'hObject'
-    )
+    CloseHandle = WINAPI(BOOL, ctypes.windll.kernel32.CloseHandle, HANDLE, "hObject")
 
-    TerminateProcess = WINAPI(BOOL, ctypes.windll.kernel32.TerminateProcess,
-        HANDLE, 'hProcess',
-        UINT, 'uExitCode'
+    TerminateProcess = WINAPI(
+        BOOL,
+        ctypes.windll.kernel32.TerminateProcess,
+        HANDLE,
+        "hProcess",
+        UINT,
+        "uExitCode",
     )
 
     def kill_process(popen_obj):
@@ -96,115 +106,86 @@ else:
         TerminateProcess(phnd, 1)
         CloseHandle(phnd)
 
+
 # Fixtures that need to be pulled at a subdirectory of the repo path
-subdir = {'truncatedhistory.svndump': '/project2',
-          'fetch_missing_files_subdir.svndump': '/foo',
-          'empty_dir_in_trunk_not_repo_root.svndump': '/project',
-          'project_root_not_repo_root.svndump': '/dummyproj',
-          'project_name_with_space.svndump': '/project name',
-          'non_ascii_path_1.svndump': '/b\xC3\xB8b',
-          'non_ascii_path_2.svndump': '/b%C3%B8b',
-          'subdir_is_file_prefix.svndump': '/flaf',
-          'renames_with_prefix.svndump': '/prefix',
-          }
+subdir = {
+    "truncatedhistory.svndump": "/project2",
+    "fetch_missing_files_subdir.svndump": "/foo",
+    "empty_dir_in_trunk_not_repo_root.svndump": "/project",
+    "project_root_not_repo_root.svndump": "/dummyproj",
+    "project_name_with_space.svndump": "/project name",
+    "non_ascii_path_1.svndump": "/b\xC3\xB8b",
+    "non_ascii_path_2.svndump": "/b%C3%B8b",
+    "subdir_is_file_prefix.svndump": "/flaf",
+    "renames_with_prefix.svndump": "/prefix",
+}
 # map defining the layouts of the fixtures we can use with custom layout
 # these are really popular layouts, so I gave them names
-trunk_only = {
-    'default': 'trunk',
-    }
-trunk_dev_branch = {
-    'default': 'trunk',
-    'dev_branch': 'branches/dev_branch',
-    }
+trunk_only = {"default": "trunk"}
+trunk_dev_branch = {"default": "trunk", "dev_branch": "branches/dev_branch"}
 custom = {
-    'addspecial.svndump': {
-        'default': 'trunk',
-        'foo': 'branches/foo',
-        },
-    'binaryfiles.svndump': trunk_only,
-    'branch_create_with_dir_delete.svndump': trunk_dev_branch,
-    'branch_delete_parent_dir.svndump': trunk_dev_branch,
-    'branchmap.svndump': {
-        'default': 'trunk',
-        'badname': 'branches/badname',
-        'feature': 'branches/feature',
-        },
-    'branch_prop_edit.svndump': trunk_dev_branch,
-    'branch_rename_to_trunk.svndump': {
-        'default': 'trunk',
-        'dev_branch': 'branches/dev_branch',
-        'old_trunk': 'branches/old_trunk',
-        },
-    'copies.svndump': trunk_only,
-    'copyafterclose.svndump': {
-        'default': 'trunk',
-        'test': 'branches/test'
-        },
-    'copybeforeclose.svndump': {
-        'default': 'trunk',
-        'test': 'branches/test'
-        },
-    'delentries.svndump': trunk_only,
-    'delete_restore_trunk.svndump': trunk_only,
-    'empty_dir_in_trunk_not_repo_root.svndump': trunk_only,
-    'executebit.svndump': trunk_only,
-    'filecase.svndump': trunk_only,
-    'file_not_in_trunk_root.svndump': trunk_only,
-    'project_name_with_space.svndump': trunk_dev_branch,
-    'pushrenames.svndump': trunk_only,
-    'rename_branch_parent_dir.svndump': trunk_dev_branch,
-    'renamedproject.svndump': {
-        'default': 'trunk',
-        'branch': 'branches/branch',
-        },
-    'renames.svndump': {
-        'default': 'trunk',
-        'branch1': 'branches/branch1',
-        },
-    'renames_with_prefix.svndump': {
-        'default': 'trunk',
-        'branch1': 'branches/branch1',
-        },
-    'replace_branch_with_branch.svndump': {
-        'default': 'trunk',
-        'branch1': 'branches/branch1',
-        'branch2': 'branches/branch2',
-        },
-    'replace_trunk_with_branch.svndump': {
-        'default': 'trunk',
-        'test': 'branches/test',
-        },
-    'revert.svndump': trunk_only,
-    'siblingbranchfix.svndump': {
-        'default': 'trunk',
-        'wrongbranch': 'branches/wrongbranch',
-        },
-    'simple_branch.svndump': {
-        'default': 'trunk',
-        'the_branch': 'branches/the_branch',
-        },
-    'spaces-in-path.svndump': trunk_dev_branch,
-    'symlinks.svndump': trunk_only,
-    'truncatedhistory.svndump': trunk_only,
-    'unorderedbranch.svndump': {
-        'default': 'trunk',
-        'branch': 'branches/branch',
-        },
-    'unrelatedbranch.svndump': {
-        'default': 'trunk',
-        'branch1': 'branches/branch1',
-        'branch2': 'branches/branch2',
-        },
+    "addspecial.svndump": {"default": "trunk", "foo": "branches/foo"},
+    "binaryfiles.svndump": trunk_only,
+    "branch_create_with_dir_delete.svndump": trunk_dev_branch,
+    "branch_delete_parent_dir.svndump": trunk_dev_branch,
+    "branchmap.svndump": {
+        "default": "trunk",
+        "badname": "branches/badname",
+        "feature": "branches/feature",
+    },
+    "branch_prop_edit.svndump": trunk_dev_branch,
+    "branch_rename_to_trunk.svndump": {
+        "default": "trunk",
+        "dev_branch": "branches/dev_branch",
+        "old_trunk": "branches/old_trunk",
+    },
+    "copies.svndump": trunk_only,
+    "copyafterclose.svndump": {"default": "trunk", "test": "branches/test"},
+    "copybeforeclose.svndump": {"default": "trunk", "test": "branches/test"},
+    "delentries.svndump": trunk_only,
+    "delete_restore_trunk.svndump": trunk_only,
+    "empty_dir_in_trunk_not_repo_root.svndump": trunk_only,
+    "executebit.svndump": trunk_only,
+    "filecase.svndump": trunk_only,
+    "file_not_in_trunk_root.svndump": trunk_only,
+    "project_name_with_space.svndump": trunk_dev_branch,
+    "pushrenames.svndump": trunk_only,
+    "rename_branch_parent_dir.svndump": trunk_dev_branch,
+    "renamedproject.svndump": {"default": "trunk", "branch": "branches/branch"},
+    "renames.svndump": {"default": "trunk", "branch1": "branches/branch1"},
+    "renames_with_prefix.svndump": {"default": "trunk", "branch1": "branches/branch1"},
+    "replace_branch_with_branch.svndump": {
+        "default": "trunk",
+        "branch1": "branches/branch1",
+        "branch2": "branches/branch2",
+    },
+    "replace_trunk_with_branch.svndump": {"default": "trunk", "test": "branches/test"},
+    "revert.svndump": trunk_only,
+    "siblingbranchfix.svndump": {
+        "default": "trunk",
+        "wrongbranch": "branches/wrongbranch",
+    },
+    "simple_branch.svndump": {"default": "trunk", "the_branch": "branches/the_branch"},
+    "spaces-in-path.svndump": trunk_dev_branch,
+    "symlinks.svndump": trunk_only,
+    "truncatedhistory.svndump": trunk_only,
+    "unorderedbranch.svndump": {"default": "trunk", "branch": "branches/branch"},
+    "unrelatedbranch.svndump": {
+        "default": "trunk",
+        "branch1": "branches/branch1",
+        "branch2": "branches/branch2",
+    },
 }
 
-FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                        'fixtures')
+FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)), "fixtures")
+
 
 def getlocalpeer(repo):
-    localrepo = getattr(repo, 'local', lambda: repo)()
+    localrepo = getattr(repo, "local", lambda: repo)()
     if isinstance(localrepo, bool):
         localrepo = repo
     return localrepo
+
 
 def repolen(repo, svnonly=False):
     """Naively calculate the amount of available revisions in a repository.
@@ -219,49 +200,58 @@ def repolen(repo, svnonly=False):
     revs = set(repo)
 
     if obsolete:
-        revs -= obsolete.getrevs(repo, 'obsolete')
+        revs -= obsolete.getrevs(repo, "obsolete")
 
     if svnonly:
         revs = set(r for r in revs if util.getsvnrev(repo[r]))
 
     return len(revs)
 
+
 def _makeskip(name, message):
     if SkipTest:
+
         def skip(*args, **kwargs):
             raise SkipTest(message)
+
         skip.__name__ = name
         return skip
 
+
 def requiresmodule(mod):
     """Skip a test if the specified module is not None."""
+
     def decorator(fn):
         if fn is None:
             return
         if mod is not None:
             return fn
-        return _makeskip(fn.__name__, 'missing required feature')
+        return _makeskip(fn.__name__, "missing required feature")
+
     return decorator
 
 
 def requiresoption(option):
-    '''Skip a test if commands.clone does not take the specified option.'''
+    """Skip a test if commands.clone does not take the specified option."""
+
     def decorator(fn):
-        for entry in cmdutil.findcmd('clone', commands.table)[1][1]:
+        for entry in cmdutil.findcmd("clone", commands.table)[1][1]:
             if entry[1] == option:
                 return fn
         # no match found, so skip
         if SkipTest:
-            return _makeskip(fn.__name__,
-                             'test requires clone to accept %s' % option)
+            return _makeskip(fn.__name__, "test requires clone to accept %s" % option)
         # no skipping support, so erase decorated method
         return
+
     if not isinstance(option, str):
-        raise TypeError('requiresoption takes a string argument')
+        raise TypeError("requiresoption takes a string argument")
     return decorator
 
+
 def requiresreplay(method):
-    '''Skip a test in stupid mode.'''
+    """Skip a test in stupid mode."""
+
     def test(self, *args, **kwargs):
         if self.stupid:
             if SkipTest:
@@ -272,47 +262,53 @@ def requiresreplay(method):
     test.__name__ = method.__name__
     return test
 
+
 def filtermanifest(manifest):
     return [f for f in manifest if f not in util.ignoredfiles]
 
+
 def fileurl(path):
-    path = os.path.abspath(path).replace(os.sep, '/')
+    path = os.path.abspath(path).replace(os.sep, "/")
     drive, path = os.path.splitdrive(path)
     if drive:
         # In svn 1.7, the swig svn wrapper returns local svn URLs
         # with an uppercase drive letter, try to match that to
         # simplify svn info tests.
-        drive = '/' + drive.upper()
-    url = 'file://%s%s' % (drive, path)
+        drive = "/" + drive.upper()
+    url = "file://%s%s" % (drive, path)
     return url
+
 
 class _testui(ui.ui):
     def develwarn(self, msg, stacklevel=1, *args, **kwargs):
         from hgext.hgsubversion import util
-        if util.smartset is not None:
-            config = args[0] if args else kwargs['config']
-            raise Exception('flunked develwarn: %r (%r)' % (msg, config))
-        return ui.ui.develwarn(self, msg, stacklevel=stacklevel,
-                               *args, **kwargs)
 
-def testui(stupid=False, layout='auto', startrev=0):
-    encoding.environ['HGPLAIN'] = 'True'
+        if util.smartset is not None:
+            config = args[0] if args else kwargs["config"]
+            raise Exception("flunked develwarn: %r (%r)" % (msg, config))
+        return ui.ui.develwarn(self, msg, stacklevel=stacklevel, *args, **kwargs)
+
+
+def testui(stupid=False, layout="auto", startrev=0):
+    encoding.environ["HGPLAIN"] = "True"
     u = _testui()
-    bools = {True: 'true', False: 'false'}
-    u.setconfig('ui', 'quiet', bools[True])
-    u.setconfig('ui', 'username', 'automated tests')
-    u.setconfig('extensions', 'hgsubversion', '')
-    u.setconfig('hgsubversion', 'stupid', bools[stupid])
-    u.setconfig('hgsubversion', 'layout', layout)
-    u.setconfig('hgsubversion', 'startrev', startrev)
-    u.setconfig('devel', 'all-warnings', True)
-    u.setconfig('subrepos', 'hgsubversion:allowed', True)
+    bools = {True: "true", False: "false"}
+    u.setconfig("ui", "quiet", bools[True])
+    u.setconfig("ui", "username", "automated tests")
+    u.setconfig("extensions", "hgsubversion", "")
+    u.setconfig("hgsubversion", "stupid", bools[stupid])
+    u.setconfig("hgsubversion", "layout", layout)
+    u.setconfig("hgsubversion", "startrev", startrev)
+    u.setconfig("devel", "all-warnings", True)
+    u.setconfig("subrepos", "hgsubversion:allowed", True)
     return u
 
+
 def dispatch(cmd):
-    assert '--quiet' in cmd
-    cmd = getattr(dispatchmod, 'request', lambda x: x)(cmd)
+    assert "--quiet" in cmd
+    cmd = getattr(dispatchmod, "request", lambda x: x)(cmd)
     return dispatchmod.dispatch(cmd)
+
 
 def rmtree(path):
     # Read-only files cannot be removed under Windows
@@ -321,7 +317,7 @@ def rmtree(path):
             f = os.path.join(root, f)
             try:
                 s = os.stat(f)
-            except OSError, e:
+            except OSError as e:
                 if e.errno == errno.ENOENT:
                     continue
                 raise
@@ -329,74 +325,74 @@ def rmtree(path):
                 os.chmod(f, s.st_mode | stat.S_IWRITE)
     shutil.rmtree(path)
 
+
 def hgclone(ui, source, dest, update=True, rev=None):
-    if getattr(hg, 'peer', None):
+    if getattr(hg, "peer", None):
         # Since 1.9 (d976542986d2)
         src, dest = hg.clone(ui, {}, source, dest, update=update, rev=rev)
     else:
         src, dest = hg.clone(ui, source, dest, update=update, rev=rev)
     return src, dest
 
-def svnls(repo_path, path, rev='HEAD'):
-    path = repo_path + '/' + path
+
+def svnls(repo_path, path, rev="HEAD"):
+    path = repo_path + "/" + path
     path = util.normalize_url(fileurl(path))
-    args = ['svn', 'ls', '-r', rev, '-R', path]
-    p = subprocess.Popen(args,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT)
+    args = ["svn", "ls", "-r", rev, "-R", path]
+    p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout, stderr = p.communicate()
     if p.returncode:
-        raise Exception('svn ls failed on %s: %r' % (path, stderr))
-    entries = [e.strip('/') for e in stdout.splitlines()]
+        raise Exception("svn ls failed on %s: %r" % (path, stderr))
+    entries = [e.strip("/") for e in stdout.splitlines()]
     entries.sort()
     return entries
 
-def svnpropget(repo_path, path, prop, rev='HEAD'):
-    path = repo_path + '/' + path
+
+def svnpropget(repo_path, path, prop, rev="HEAD"):
+    path = repo_path + "/" + path
     path = util.normalize_url(fileurl(path))
-    args = ['svn', 'propget', '-r', str(rev), prop, path]
-    p = subprocess.Popen(args,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT)
+    args = ["svn", "propget", "-r", str(rev), prop, path]
+    p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout, stderr = p.communicate()
     if p.returncode and stderr:
-        raise Exception('svn ls failed on %s: %r' % (path, stderr))
-    if 'W200017' in stdout:
+        raise Exception("svn ls failed on %s: %r" % (path, stderr))
+    if "W200017" in stdout:
         # subversion >= 1.9 changed 'no properties' to be an error, so let's
         # avoid that
-        return ''
+        return ""
     return stdout.strip()
 
 
 def _obsolete_wrap(cls, name):
     origfunc = getattr(cls, name)
 
-    if not name.startswith('test_') or not origfunc:
+    if not name.startswith("test_") or not origfunc:
         return
 
     if not obsolete:
-        wrapper = _makeskip(name, 'obsolete not available')
+        wrapper = _makeskip(name, "obsolete not available")
     else:
+
         def wrapper(self, *args, **opts):
-            self.assertFalse(obsolete._enabled, 'obsolete was already active')
+            self.assertFalse(obsolete._enabled, "obsolete was already active")
 
             obsolete._enabled = True
 
             try:
-                    origfunc(self, *args, **opts)
-                    self.assertTrue(obsolete._enabled, 'obsolete remains active')
+                origfunc(self, *args, **opts)
+                self.assertTrue(obsolete._enabled, "obsolete remains active")
             finally:
                 obsolete._enabled = False
 
     if not wrapper:
         return
 
-    wrapper.__name__ = name + ' obsolete'
+    wrapper.__name__ = name + " obsolete"
     wrapper.__module__ = origfunc.__module__
 
     if origfunc.__doc__:
         firstline = origfunc.__doc__.strip().splitlines()[0]
-        wrapper.__doc__ = firstline + ' (obsolete)'
+        wrapper.__doc__ = firstline + " (obsolete)"
 
     assert getattr(cls, wrapper.__name__, None) is None
 
@@ -406,11 +402,11 @@ def _obsolete_wrap(cls, name):
 def _stupid_wrap(cls, name):
     origfunc = getattr(cls, name)
 
-    if not name.startswith('test_') or not origfunc:
+    if not name.startswith("test_") or not origfunc:
         return
 
     def wrapper(self, *args, **opts):
-        self.assertFalse(self.stupid, 'stupid mode was already active')
+        self.assertFalse(self.stupid, "stupid mode was already active")
 
         self.stupid = True
 
@@ -419,16 +415,17 @@ def _stupid_wrap(cls, name):
         finally:
             self.stupid = False
 
-    wrapper.__name__ = name + ' stupid'
+    wrapper.__name__ = name + " stupid"
     wrapper.__module__ = origfunc.__module__
 
     if origfunc.__doc__:
         firstline = origfunc.__doc__.strip().splitlines()[0]
-        wrapper.__doc__ = firstline + ' (stupid)'
+        wrapper.__doc__ = firstline + " (stupid)"
 
     assert getattr(cls, wrapper.__name__, None) is None
 
     setattr(cls, wrapper.__name__, wrapper)
+
 
 class TestMeta(type):
     def __init__(cls, *args, **opts):
@@ -442,6 +439,7 @@ class TestMeta(type):
 
         return super(TestMeta, cls).__init__(*args, **opts)
 
+
 class TestBase(unittest.TestCase):
     __metaclass__ = TestMeta
 
@@ -451,43 +449,45 @@ class TestBase(unittest.TestCase):
     stupid = False
 
     def setUp(self):
-        if 'hgsubversion' in sys.modules:
-            sys.modules['hgext_hgsubversion'] = sys.modules['hgsubversion']
+        if "hgsubversion" in sys.modules:
+            sys.modules["hgext_hgsubversion"] = sys.modules["hgsubversion"]
 
         # the Python 2.7 default of 640 is obnoxiously low
         self.maxDiff = 4096
 
-        self.oldenv = dict([(k, os.environ.get(k, None),) for k in
-                           ('LANG', 'LC_ALL', 'HGRCPATH',)])
+        self.oldenv = dict(
+            [(k, os.environ.get(k, None)) for k in ("LANG", "LC_ALL", "HGRCPATH")]
+        )
         try:
             self.oldugettext = i18n._ugettext  # Mercurial >= 3.2
         except AttributeError:
             self.oldt = i18n.t
-            os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
-            i18n.t = gettext.translation('hg', i18n.localedir, fallback=True)
+            os.environ["LANG"] = os.environ["LC_ALL"] = "C"
+            i18n.t = gettext.translation("hg", i18n.localedir, fallback=True)
         else:
-            os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
+            os.environ["LANG"] = os.environ["LC_ALL"] = "C"
             i18n.setdatapath(hgutil.datapath)
 
         self.oldwd = os.getcwd()
         self.tmpdir = tempfile.mkdtemp(
-            'svnwrap_test', dir=os.environ.get('HGSUBVERSION_TEST_TEMP', None))
+            "svnwrap_test", dir=os.environ.get("HGSUBVERSION_TEST_TEMP", None)
+        )
         os.chdir(self.tmpdir)
-        self.hgrc = os.path.join(self.tmpdir, '.hgrc')
-        os.environ['HGRCPATH'] = self.hgrc
+        self.hgrc = os.path.join(self.tmpdir, ".hgrc")
+        os.environ["HGRCPATH"] = self.hgrc
         scmutil._rcpath = None
-        rc = open(self.hgrc, 'w')
-        rc.write('[ui]\nusername=test-user\n')
-        for l in '[extensions]', 'hgsubversion=':
+        rc = open(self.hgrc, "w")
+        rc.write("[ui]\nusername=test-user\n")
+        for l in "[extensions]", "hgsubversion=":
             print >> rc, l
 
         self.repocount = 0
-        self.wc_path = '%s/testrepo_wc' % self.tmpdir
+        self.wc_path = "%s/testrepo_wc" % self.tmpdir
         self.svn_wc = None
 
         self.config_dir = self.tmpdir
         svnwrap.common._svn_config_dir = self.config_dir
-        self.setup_svn_config('')
+        self.setup_svn_config("")
 
         # Previously, we had a MockUI class that wrapped ui, and giving access
         # to the stream. The ui.pushbuffer() and ui.popbuffer() can be used
@@ -498,7 +498,7 @@ class TestBase(unittest.TestCase):
         setattr(ui.ui, self.patch[0].func_name, self.patch[1])
 
     def setup_svn_config(self, config):
-        c = open(self.config_dir + '/config', 'w')
+        c = open(self.config_dir + "/config", "w")
         try:
             c.write(config)
         finally:
@@ -506,7 +506,7 @@ class TestBase(unittest.TestCase):
 
     def _makerepopath(self):
         self.repocount += 1
-        return '%s/testrepo-%d' % (self.tmpdir, self.repocount)
+        return "%s/testrepo-%d" % (self.tmpdir, self.repocount)
 
     def tearDown(self):
         for var, val in self.oldenv.iteritems():
@@ -522,13 +522,13 @@ class TestBase(unittest.TestCase):
         rmtree(self.tmpdir)
         setattr(ui.ui, self.patch[0].func_name, self.patch[0])
 
-    def ui(self, layout='auto'):
+    def ui(self, layout="auto"):
         return testui(self.stupid, layout)
 
     def load_svndump(self, fixture_name):
-        '''Loads an svnadmin dump into a fresh repo. Return the svn repo
+        """Loads an svnadmin dump into a fresh repo. Return the svn repo
         path.
-        '''
+        """
         path = self._makerepopath()
         assert not os.path.exists(path)
         with open(os.path.join(FIXTURES, fixture_name)) as inp:
@@ -536,7 +536,7 @@ class TestBase(unittest.TestCase):
         return path
 
     def load_repo_tarball(self, fixture_name):
-        '''Extracts a tarball of an svn repo and returns the svn repo path.'''
+        """Extracts a tarball of an svn repo and returns the svn repo path."""
         path = self._makerepopath()
         assert not os.path.exists(path)
         os.mkdir(path)
@@ -552,50 +552,59 @@ class TestBase(unittest.TestCase):
             tarball.extract(entry, path)
         return path
 
-    def fetch(self, repo_path, subdir=None, layout='auto',
-            startrev=0, externals=None, noupdate=True, dest=None, rev=None,
-            config=None):
-        if layout == 'single':
+    def fetch(
+        self,
+        repo_path,
+        subdir=None,
+        layout="auto",
+        startrev=0,
+        externals=None,
+        noupdate=True,
+        dest=None,
+        rev=None,
+        config=None,
+    ):
+        if layout == "single":
             if subdir is None:
-                subdir = 'trunk'
+                subdir = "trunk"
         elif subdir is None:
-            subdir = ''
+            subdir = ""
         projectpath = repo_path
         if subdir:
-            projectpath += '/' + subdir
+            projectpath += "/" + subdir
 
         cmd = [
-            'clone',
-            '--quiet',
-            '--layout=%s' % layout,
-            '--startrev=%s' % startrev,
+            "clone",
+            "--quiet",
+            "--layout=%s" % layout,
+            "--startrev=%s" % startrev,
             fileurl(projectpath),
             self.wc_path,
-            ]
+        ]
         if self.stupid:
-            cmd.append('--stupid')
+            cmd.append("--stupid")
         if noupdate:
-            cmd.append('--noupdate')
+            cmd.append("--noupdate")
         if rev is not None:
-            cmd.append('--rev=%s' % rev)
+            cmd.append("--rev=%s" % rev)
         config = dict(config or {})
         if externals:
-            config['hgsubversion.externals'] = str(externals)
-        for k,v in reversed(sorted(config.iteritems())):
-            cmd[:0] = ['--config', '%s=%s' % (k, v)]
+            config["hgsubversion.externals"] = str(externals)
+        for k, v in reversed(sorted(config.iteritems())):
+            cmd[:0] = ["--config", "%s=%s" % (k, v)]
 
         r = dispatch(cmd)
-        assert not r, 'fetch of %s failed' % projectpath
+        assert not r, "fetch of %s failed" % projectpath
 
         return hg.repository(testui(), self.wc_path)
 
     def load(self, fixture_name):
-        if fixture_name.endswith('.svndump'):
+        if fixture_name.endswith(".svndump"):
             repo_path = self.load_svndump(fixture_name)
-        elif fixture_name.endswith('tar.gz'):
+        elif fixture_name.endswith("tar.gz"):
             repo_path = self.load_repo_tarball(fixture_name)
         else:
-            assert False, 'Unknown fixture type'
+            assert False, "Unknown fixture type"
 
         return repo_path
 
@@ -608,26 +617,31 @@ class TestBase(unittest.TestCase):
         return repo
 
     def add_svn_rev(self, repo_path, changes):
-        '''changes is a dict of filename -> contents'''
+        """changes is a dict of filename -> contents"""
         if self.svn_wc is None:
-            self.svn_wc = os.path.join(self.tmpdir, 'testsvn_wc')
-            subprocess.call([
-                'svn', 'co', '-q', fileurl(repo_path),
-                self.svn_wc
-            ],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self.svn_wc = os.path.join(self.tmpdir, "testsvn_wc")
+            subprocess.call(
+                ["svn", "co", "-q", fileurl(repo_path), self.svn_wc],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
 
         for filename, contents in changes.iteritems():
             # filenames are / separated
-            filename = filename.replace('/', os.path.sep)
+            filename = filename.replace("/", os.path.sep)
             filename = os.path.join(self.svn_wc, filename)
-            open(filename, 'w').write(contents)
+            open(filename, "w").write(contents)
             # may be redundant
-            subprocess.call(['svn', 'add', '-q', filename],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        subprocess.call([
-            'svn', 'commit', '-q', self.svn_wc, '-m', 'test changes'],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            subprocess.call(
+                ["svn", "add", "-q", filename],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+        subprocess.call(
+            ["svn", "commit", "-q", self.svn_wc, "-m", "test changes"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
 
     # define this as a property so that it reloads anytime we need it
     @property
@@ -636,7 +650,7 @@ class TestBase(unittest.TestCase):
 
     def pushrevisions(self, expected_extra_back=0):
         before = repolen(self.repo)
-        self.repo.ui.setconfig('hgsubversion', 'stupid', str(self.stupid))
+        self.repo.ui.setconfig("hgsubversion", "stupid", str(self.stupid))
         res = commands.push(self.repo.ui, self.repo)
         after = repolen(self.repo)
         self.assertEqual(expected_extra_back, after - before)
@@ -647,16 +661,14 @@ class TestBase(unittest.TestCase):
         subpath = os.path.dirname(path)
         if not os.path.isdir(subpath):
             os.makedirs(subpath)
-        svnpath = fileurl(repo_path + '/' + svnpath)
-        args = ['svn', 'co', '-r', rev, svnpath, path]
-        p = subprocess.Popen(args,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
+        svnpath = fileurl(repo_path + "/" + svnpath)
+        args = ["svn", "co", "-r", rev, svnpath, path]
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         stdout, stderr = p.communicate()
         if p.returncode:
-            raise Exception('svn co failed on %s: %r' % (svnpath, stderr))
+            raise Exception("svn co failed on %s: %r" % (svnpath, stderr))
 
-    def commitchanges(self, changes, parent='tip', message='automated test'):
+    def commitchanges(self, changes, parent="tip", message="automated test"):
         """Commit changes to mercurial directory
 
         'changes' is a sequence of tuples (source, dest, data). It can look
@@ -688,22 +700,26 @@ class TestBase(unittest.TestCase):
             copied = None
             if source != dest:
                 copied = source
-            return compathacks.makememfilectx(repo,
-                                              memctx=memctx,
-                                              path=dest,
-                                              data=newdata,
-                                              islink=False,
-                                              isexec=False,
-                                              copied=copied)
+            return compathacks.makememfilectx(
+                repo,
+                memctx=memctx,
+                path=dest,
+                data=newdata,
+                islink=False,
+                isexec=False,
+                copied=copied,
+            )
 
-        ctx = context.memctx(repo,
-                             (parentctx.node(), node.nullid),
-                             message,
-                             changed + removed,
-                             filectxfn,
-                             'an_author',
-                             '2008-10-07 20:59:48 -0500',
-                             {'branch': parentctx.branch()})
+        ctx = context.memctx(
+            repo,
+            (parentctx.node(), node.nullid),
+            message,
+            changed + removed,
+            filectxfn,
+            "an_author",
+            "2008-10-07 20:59:48 -0500",
+            {"branch": parentctx.branch()},
+        )
         nodeid = repo.commitctx(ctx)
         repo = self.repo
         hg.clean(repo, nodeid)
@@ -729,23 +745,24 @@ class TestBase(unittest.TestCase):
         """Assert that two multi-line strings are equal. (Based on Py3k code.)
         """
         try:
-            return super(TestBase, self).assertMultiLineEqual(first, second,
-                                                              msg)
+            return super(TestBase, self).assertMultiLineEqual(first, second, msg)
         except AttributeError:
             pass
 
-        self.assert_(isinstance(first, str),
-                     ('First argument is not a string'))
-        self.assert_(isinstance(second, str),
-                     ('Second argument is not a string'))
+        self.assert_(isinstance(first, str), ("First argument is not a string"))
+        self.assert_(isinstance(second, str), ("Second argument is not a string"))
 
         if first != second:
-            diff = ''.join(difflib.unified_diff(first.splitlines(True),
-                                                second.splitlines(True),
-                                                fromfile='a',
-                                                tofile='b'))
-            msg = '%s\n%s' % (msg or '', diff)
-            raise self.failureException, msg
+            diff = "".join(
+                difflib.unified_diff(
+                    first.splitlines(True),
+                    second.splitlines(True),
+                    fromfile="a",
+                    tofile="b",
+                )
+            )
+            msg = "%s\n%s" % (msg or "", diff)
+            raise self.failureException(msg)
 
     def getgraph(self, repo):
         """Helper function displaying a repository graph, especially
@@ -753,9 +770,9 @@ class TestBase(unittest.TestCase):
         """
         # Could be more elegant, but it works with stock hg
         _ui = testui()
-        _ui.setconfig('extensions', 'graphlog', '')
+        _ui.setconfig("extensions", "graphlog", "")
         extensions.loadall(_ui)
-        graphlog = extensions.find('graphlog')
+        graphlog = extensions.find("graphlog")
         templ = """\
 changeset: {rev}:{node|short} (r{svnrev})
 branch:    {branches}
@@ -769,39 +786,50 @@ files:     {files}
             graphlog.graphlog(_ui, repo, rev=None, template=templ)
         except AttributeError:
             from mercurial import commands
+
             commands.log(_ui, repo, rev=None, template=templ, graph=True)
         return _ui.popbuffer()
 
     def svnlog(self, repo=None):
-        '''log of the remote Subversion repository corresponding to repo
+        """log of the remote Subversion repository corresponding to repo
 
         In order to make the format suitable for direct comparison in
         tests, we exclude dates and convert the path operations into
         a tuple.
-        '''
+        """
 
         if repo is None:
             repo = self.repo
 
-        return [(r.revnum, r.message,
-                 dict((p, (op.action, op.copyfrom_path, int(op.copyfrom_rev)))
-                      for (p, op) in r.paths.items()))
-                for r in svnrepo.svnremoterepo(repo.ui).svn.revisions()]
+        return [
+            (
+                r.revnum,
+                r.message,
+                dict(
+                    (p, (op.action, op.copyfrom_path, int(op.copyfrom_rev)))
+                    for (p, op) in r.paths.items()
+                ),
+            )
+            for r in svnrepo.svnremoterepo(repo.ui).svn.revisions()
+        ]
 
     def draw(self, repo):
         sys.stdout.write(self.getgraph(repo))
 
+
 def import_test(name):
-    components = name.split('_')
-    components.insert(1, 'hgsubversion')
-    testname = '-'.join(components) + '.py'
+    components = name.split("_")
+    components.insert(1, "hgsubversion")
+    testname = "-".join(components) + ".py"
     dot = os.path.dirname(os.path.abspath(__file__))
-    candidates = [os.path.join(dot, testname),
-                  os.path.join(dot, 'comprehensive', testname)]
+    candidates = [
+        os.path.join(dot, testname),
+        os.path.join(dot, "comprehensive", testname),
+    ]
     for candidate in candidates:
         if os.path.exists(candidate):
             return imp.load_source(name, candidate)
 
-    raise ImportError('Could not import module %s from files like %s' %
-                      (name, testname))
-
+    raise ImportError(
+        "Could not import module %s from files like %s" % (name, testname)
+    )

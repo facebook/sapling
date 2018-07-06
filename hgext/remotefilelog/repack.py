@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 
 import os
-from ..extutil import runshellcommand, flock
+import time
+
 from mercurial import (
     encoding,
     error,
@@ -13,10 +14,12 @@ from mercurial import (
     util,
     vfs,
 )
-from mercurial.node import nullid, short
 from mercurial.i18n import _
+from mercurial.node import nullid, short
+
 from . import constants, contentstore, datapack, historypack, metadatastore, shallowutil
-import time
+from ..extutil import flock, runshellcommand
+
 
 osutil = policy.importmod(r"osutil")
 

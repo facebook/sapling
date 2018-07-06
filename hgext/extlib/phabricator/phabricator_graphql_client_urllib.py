@@ -4,6 +4,7 @@ import json
 
 from mercurial import util
 
+
 urlreq = util.urlreq
 
 # helper class so phabricator_graphql_client can talk using the requests

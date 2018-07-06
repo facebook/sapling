@@ -10,6 +10,7 @@ can be done outside of python code
 
 from mercurial import commands, registrar
 
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 

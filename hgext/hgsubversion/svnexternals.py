@@ -1,11 +1,16 @@
 # no-check-code -- see T24862348
 
 import cStringIO
+import os
+import re
+import shutil
+import stat
+import subprocess
 
-import os, re, shutil, stat, subprocess
-from mercurial import util as hgutil
+import util
+from mercurial import subrepo, util as hgutil
 from mercurial.i18n import _
-from mercurial import subrepo
+
 
 try:
     from mercurial import scmutil
@@ -15,8 +20,6 @@ except (ImportError, AttributeError):
     from mercurial import pathutil
 
     canonpath = pathutil.canonpath
-
-import util
 
 
 class externalsfile(dict):
@@ -30,7 +33,7 @@ class externalsfile(dict):
     def __setitem__(self, key, value):
         if value is None:
             value = []
-        elif isinstance(value, basestring):
+        elif isinstance(value, basestring):  # noqa: F821
             value = value.splitlines()
         if key == ".":
             key = ""
@@ -387,7 +390,7 @@ def updateexternals(ui, args, repo, **opts):
 
     # Retrieve current externals status
     try:
-        oldext = file(repo.vfs.join("svn/externals"), "rb").read()
+        oldext = file(repo.vfs.join("svn/externals"), "rb").read()  # noqa: F821
     except IOError:
         oldext = ""
     newext = ""
@@ -405,7 +408,7 @@ def updateexternals(ui, args, repo, **opts):
         else:
             raise hgutil.Abort(_("unknown update actions: %r") % action)
 
-    file(repo.vfs.join("svn/externals"), "wb").write(newext)
+    file(repo.vfs.join("svn/externals"), "wb").write(newext)  # noqa: F821
 
 
 def getchanges(ui, repo, parentctx, exts):

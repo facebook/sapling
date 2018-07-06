@@ -12,9 +12,9 @@ import cgi
 import errno
 import socket
 
-from .common import ErrorResponse, HTTP_NOT_MODIFIED, statusmessage
-
 from .. import pycompat, util
+from .common import HTTP_NOT_MODIFIED, ErrorResponse, statusmessage
+
 
 shortcuts = {
     "cl": [("cmd", ["changelog"]), ("rev", None)],

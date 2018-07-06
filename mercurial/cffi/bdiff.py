@@ -9,8 +9,9 @@ from __future__ import absolute_import
 
 import struct
 
-from ..pure.bdiff import *
 from . import _bdiff
+from ..pure.bdiff import *  # noqa: F403, F401
+
 
 ffi = _bdiff.ffi
 lib = _bdiff.lib

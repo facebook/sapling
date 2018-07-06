@@ -7,11 +7,15 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-from . import constants, fileserverclient, shallowutil
-import collections, os
-from mercurial.node import bin, nullid
-from mercurial import filelog, revlog, mdiff, ancestor, error, util
+import collections
+import os
+
+from mercurial import ancestor, error, filelog, mdiff, revlog, util
 from mercurial.i18n import _
+from mercurial.node import bin, nullid
+
+from . import constants, fileserverclient, shallowutil
+
 
 # corresponds to uncompressed length of revlog's indexformatng (2 gigs, 4-byte
 # signed integer)

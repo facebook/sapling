@@ -2,10 +2,11 @@ from __future__ import absolute_import
 
 import threading
 
-from . import basestore, constants, shallowutil
-
 from mercurial import manifest, mdiff, revlog, util
 from mercurial.node import hex, nullid
+
+from . import basestore, constants, shallowutil
+
 
 try:
     xrange(0)

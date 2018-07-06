@@ -1,8 +1,8 @@
 from __future__ import absolute_import
-from mercurial import error
-from mercurial.i18n import _
 
 import lz4
+from mercurial import error
+from mercurial.i18n import _
 
 
 def missing(*args, **kwargs):

@@ -3,14 +3,10 @@
 import difflib
 import posixpath
 
-from mercurial import util as hgutil
-from mercurial import error
-from mercurial import progress
-from mercurial import worker
-
-import svnwrap
 import svnrepo
+import svnwrap
 import util
+from mercurial import error, progress, util as hgutil, worker
 
 
 def verify(ui, repo, args=None, **opts):

@@ -7,6 +7,7 @@ from mercurial import context
 
 from . import importer, lfs, p4
 
+
 SYNC_COMMIT_MSG = "p4fastimport synchronizing client view"
 P4_ADMIN_USER = "p4admin"
 

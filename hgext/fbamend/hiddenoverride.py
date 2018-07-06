@@ -8,9 +8,8 @@
 from __future__ import absolute_import
 
 from hgext import extutil
-
-from mercurial.node import short
 from mercurial import dispatch, error, extensions, obsolete, repoview, scmutil, util
+from mercurial.node import short
 
 
 def uisetup(ui):

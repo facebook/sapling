@@ -2,6 +2,7 @@
 
 from mercurial import cmdutil, commands, scmutil
 
+
 cmdtable = {}
 try:
     from mercurial import registrar

@@ -1,7 +1,9 @@
 from __future__ import absolute_import
 
-import cffi
 import os
+
+import cffi
+
 
 ffi = cffi.FFI()
 ffi.set_source(

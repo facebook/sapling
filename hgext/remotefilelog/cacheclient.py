@@ -12,8 +12,11 @@
 # A better implementation would make all of the requests non-blocking.
 from __future__ import absolute_import
 
-import os, sys
+import os
+import sys
+
 import memcache
+
 
 stdin = sys.stdin
 stdout = sys.stdout

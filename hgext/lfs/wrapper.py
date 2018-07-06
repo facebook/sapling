@@ -9,10 +9,9 @@ from __future__ import absolute_import
 
 import hashlib
 
+from mercurial import error, filelog, revlog, util
 from mercurial.i18n import _
 from mercurial.node import bin, nullid, short
-
-from mercurial import error, filelog, revlog, util
 
 from . import blobstore, pointer
 

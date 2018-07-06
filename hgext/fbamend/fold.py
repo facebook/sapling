@@ -16,6 +16,7 @@ from mercurial.i18n import _
 
 from . import common
 
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 hex = node.hex

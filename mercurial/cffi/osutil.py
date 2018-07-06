@@ -10,9 +10,9 @@ from __future__ import absolute_import
 import os
 import stat as statmod
 
+from .. import pycompat
 from ..pure.osutil import *
 
-from .. import pycompat
 
 if pycompat.isdarwin:
     from . import _osutil

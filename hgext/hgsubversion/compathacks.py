@@ -7,6 +7,7 @@ import sys
 
 from mercurial import util
 
+
 def branchset(repo):
     """Return the set of branches present in a repo.
 
@@ -17,10 +18,13 @@ def branchset(repo):
     except AttributeError:
         return set(repo.branchtags())
 
+
 def pickle_load(f):
     import cPickle as pickle
+
     f.seek(0)
     return pickle.load(f)
+
 
 def makememfilectx(repo, memctx, path, data, islink, isexec, copied):
     """Return a memfilectx
@@ -28,13 +32,22 @@ def makememfilectx(repo, memctx, path, data, islink, isexec, copied):
     Works around API change by 8a0cac20a1ad (first in 4.5).
     """
     from mercurial import context
+
     try:
-        return context.memfilectx(repo=repo, path=path, data=data,
-                                  islink=islink, isexec=isexec, copied=copied,
-                                  changectx=memctx)
+        return context.memfilectx(
+            repo=repo,
+            path=path,
+            data=data,
+            islink=islink,
+            isexec=isexec,
+            copied=copied,
+            changectx=memctx,
+        )
     except TypeError:
-        return context.memfilectx(repo=repo, path=path, data=data,
-                                  islink=islink, isexec=isexec, copied=copied)
+        return context.memfilectx(
+            repo=repo, path=path, data=data, islink=islink, isexec=isexec, copied=copied
+        )
+
 
 def filectxfn_deleted(memctx, path):
     """
@@ -49,9 +62,10 @@ def filectxfn_deleted(memctx, path):
     for deleted files, filectxfn should return None rather than returning
     IOError.
     """
-    if getattr(memctx, '_returnnoneformissingfiles', False):
+    if getattr(memctx, "_returnnoneformissingfiles", False):
         return None
-    raise IOError(errno.ENOENT, '%s is deleted' % path)
+    raise IOError(errno.ENOENT, "%s is deleted" % path)
+
 
 def filectxfn_deleted_reraise(memctx):
     """
@@ -69,15 +83,16 @@ def filectxfn_deleted_reraise(memctx):
     IOError.
     """
     exc_info = sys.exc_info()
-    if (exc_info[1].errno == errno.ENOENT and
-        getattr(memctx, '_returnnoneformissingfiles', False)):
+    if exc_info[1].errno == errno.ENOENT and getattr(
+        memctx, "_returnnoneformissingfiles", False
+    ):
         return None
-    # preserve traceback info
-    raise exc_info[0], exc_info[1], exc_info[2]
+    raise exc_info[0](exc_info[1])
+
 
 # copied from hg 3.8
 class _funcregistrarbase(object):
-    """Base of decorator to register a fuction for specific purpose
+    """Base of decorator to register a function for specific purpose
 
     This decorator stores decorated functions into own dict 'table'.
 
@@ -102,6 +117,7 @@ class _funcregistrarbase(object):
     - 'barfunc' is stored as 'bar' in '_table' of an instance 'keyword' above
     - 'barfunc.__doc__' becomes ":bar: Explanation of bar keyword"
     """
+
     def __init__(self, table=None):
         if table is None:
             self._table = {}
@@ -114,7 +130,7 @@ class _funcregistrarbase(object):
     def _doregister(self, func, decl, *args, **kwargs):
         name = self._getname(decl)
 
-        if func.__doc__ and not util.safehasattr(func, '_origdoc'):
+        if func.__doc__ and not util.safehasattr(func, "_origdoc"):
             doc = func.__doc__.strip()
             func._origdoc = doc
             func.__doc__ = self._formatdoc(decl, doc)
@@ -127,7 +143,7 @@ class _funcregistrarbase(object):
     def _parsefuncdecl(self, decl):
         """Parse function declaration and return the name of function in it
         """
-        i = decl.find('(')
+        i = decl.find("(")
         if i >= 0:
             return decl[:i]
         else:

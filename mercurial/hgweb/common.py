@@ -15,6 +15,7 @@ import os
 
 from .. import encoding, pycompat, util
 
+
 httpserver = util.httpserver
 
 HTTP_OK = 200

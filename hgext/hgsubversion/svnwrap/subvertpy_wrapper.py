@@ -1,17 +1,16 @@
 # no-check-code -- see T24862348
 
+import collections
 import cStringIO
 import errno
 import os
 import urllib
-import collections
+import warnings
 
 import common
 
-import warnings
-warnings.filterwarnings('ignore',
-                        module='svn.core',
-                        category=DeprecationWarning)
+
+warnings.filterwarnings("ignore", module="svn.core", category=DeprecationWarning)
 
 subvertpy_required = (0, 7, 4)
 subversion_required = (1, 5, 0)
@@ -29,43 +28,51 @@ try:
     from subvertpy import repos
     import subvertpy
 except ImportError:
-    raise ImportError('Subvertpy %d.%d.%d or later required, but not found'
-                      % subvertpy_required)
+    raise ImportError(
+        "Subvertpy %d.%d.%d or later required, but not found" % subvertpy_required
+    )
+
 
 def _versionstr(v):
-    return '.'.join(str(d) for d in v)
+    return ".".join(str(d) for d in v)
 
-if subvertpy.__version__ < subvertpy_required: # pragma: no cover
-    raise ImportError('Subvertpy %s or later required, '
-                      'but %s found'
-                      % (_versionstr(subvertpy_required),
-                         _versionstr(subvertpy.__version__)))
+
+if subvertpy.__version__ < subvertpy_required:  # pragma: no cover
+    raise ImportError(
+        "Subvertpy %s or later required, "
+        "but %s found"
+        % (_versionstr(subvertpy_required), _versionstr(subvertpy.__version__))
+    )
 
 subversion_version = subvertpy.wc.api_version()
 
 if subversion_version[:3] < subversion_required:
-    raise ImportError('Subversion %s or later required, '
-                      'but Subvertpy is using %s'
-                      % (_versionstr(subversion_required),
-                         _versionstr(subversion_version[:3])))
+    raise ImportError(
+        "Subversion %s or later required, "
+        "but Subvertpy is using %s"
+        % (_versionstr(subversion_required), _versionstr(subversion_version[:3]))
+    )
+
 
 def version():
     svnvers = _versionstr(subversion_version[:3])
     if subversion_version[3]:
-        svnvers += '-' + subversion_version[3]
-    return (svnvers, 'Subvertpy ' + _versionstr(subvertpy.__version__))
+        svnvers += "-" + subversion_version[3]
+    return (svnvers, "Subvertpy " + _versionstr(subvertpy.__version__))
+
 
 def create_and_load(repopath, dumpfd):
-    ''' create a new repository at repopath and load the given dump into it '''
+    """ create a new repository at repopath and load the given dump into it """
     repo = repos.create(repopath)
 
-    nullfd = open(os.devnull, 'w')
+    nullfd = open(os.devnull, "w")
 
     try:
         repo.load_fs(dumpfd, nullfd, repos.LOAD_UUID_FORCE)
     finally:
         dumpfd.close()
         nullfd.close()
+
 
 # exported values
 ERR_FS_ALREADY_EXISTS = subvertpy.ERR_FS_ALREADY_EXISTS
@@ -86,6 +93,7 @@ apply_txdelta = delta.apply_txdelta_handler
 # superclass for editor.HgEditor
 Editor = object
 
+
 def ieditor(fn):
     """No-op decorator to identify methods used by the SVN editor interface.
 
@@ -95,24 +103,28 @@ def ieditor(fn):
 
     return fn
 
+
 _prompt = None
+
+
 def prompt_callback(callback):
     global _prompt
     _prompt = callback
 
-_svntypes = {
-    subvertpy.NODE_DIR: 'd',
-    subvertpy.NODE_FILE: 'f',
-}
 
-_unitype = type(u'')
+_svntypes = {subvertpy.NODE_DIR: "d", subvertpy.NODE_FILE: "f"}
+
+_unitype = type(u"")
+
+
 def _forceutf8(s):
     if isinstance(s, _unitype):
-        return s.encode('utf-8')
+        return s.encode("utf-8")
     return s
 
+
 class PathAdapter(object):
-    __slots__ = ('action', 'copyfrom_path', 'copyfrom_rev')
+    __slots__ = ("action", "copyfrom_path", "copyfrom_rev")
 
     def __init__(self, action, copyfrom_path, copyfrom_rev):
         self.action = action
@@ -120,14 +132,19 @@ class PathAdapter(object):
         self.copyfrom_rev = copyfrom_rev
 
         if self.copyfrom_path:
-            self.copyfrom_path = intern(self.copyfrom_path)
+            self.copyfrom_path = intern(self.copyfrom_path)  # noqa: F821
 
     def __repr__(self):
-        return '%s(%r, %r, %r)' % (type(self).__name__, self.action,
-                                     self.copyfrom_path, self.copyfrom_rev)
+        return "%s(%r, %r, %r)" % (
+            type(self).__name__,
+            self.action,
+            self.copyfrom_path,
+            self.copyfrom_rev,
+        )
+
 
 class BaseEditor(object):
-    __slots__ = ('editor', 'baton')
+    __slots__ = ("editor", "baton")
 
     def __init__(self, editor, baton=None):
         self.editor = editor
@@ -147,6 +164,7 @@ class BaseEditor(object):
     def close(self):
         del self.editor
 
+
 class FileEditor(BaseEditor):
     __slots__ = ()
 
@@ -163,6 +181,7 @@ class FileEditor(BaseEditor):
         self.editor.close_file(self.baton, checksum)
         super(FileEditor, self).close()
 
+
 class DirectoryEditor(BaseEditor):
     __slots__ = ()
 
@@ -177,8 +196,7 @@ class DirectoryEditor(BaseEditor):
         return DirectoryEditor(self.editor, baton)
 
     def add_directory(self, path, copyfrom_path=None, copyfrom_rev=-1):
-        baton = self.editor.add_directory(
-            path, self.baton, copyfrom_path, copyfrom_rev)
+        baton = self.editor.add_directory(path, self.baton, copyfrom_path, copyfrom_rev)
         return DirectoryEditor(self.editor, baton)
 
     def open_file(self, path, base_revnum):
@@ -186,8 +204,7 @@ class DirectoryEditor(BaseEditor):
         return FileEditor(self.editor, baton)
 
     def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
-        baton = self.editor.add_file(
-            path, self.baton, copyfrom_path, copyfrom_rev)
+        baton = self.editor.add_file(path, self.baton, copyfrom_path, copyfrom_rev)
         return FileEditor(self.editor, baton)
 
     def change_prop(self, name, value):
@@ -196,6 +213,7 @@ class DirectoryEditor(BaseEditor):
     def close(self):
         self.editor.close_directory(self.baton)
         super(DirectoryEditor, self).close()
+
 
 class SubversionRepo(object):
     """Wrapper for a Subversion repository.
@@ -207,8 +225,10 @@ class SubversionRepo(object):
     Note that password stores do not work, the parameter is only here
     to ensure that the API is the same as for the SWIG wrapper.
     """
-    def __init__(self, url='', username='', password='', head=None,
-                 password_stores=None):
+
+    def __init__(
+        self, url="", username="", password="", head=None, password_stores=None
+    ):
         parsed = common.parse_url(url, username, password)
         # --username and --password override URL credentials
         self.username = parsed[0]
@@ -223,9 +243,9 @@ class SubversionRepo(object):
         assert self.svn_url.startswith(self.root)
 
         # *will* have a leading '/', would not if we used get_repos_root2
-        self.subdir = self.svn_url[len(self.root):]
-        if not self.subdir or self.subdir[-1] != '/':
-            self.subdir += '/'
+        self.subdir = self.svn_url[len(self.root) :]
+        if not self.subdir or self.subdir[-1] != "/":
+            self.subdir += "/"
         # the RA interface always yields quoted paths, but the editor interface
         # expects unquoted paths
         self.subdir = urllib.unquote(self.subdir)
@@ -240,8 +260,9 @@ class SubversionRepo(object):
         sometimes runs out of open files. It is not known whether the Subvertpy
         is affected by this.
         """
+
         def getclientstring():
-            return 'hgsubversion'
+            return "hgsubversion"
 
         def simple(realm, username, may_save):
             return _prompt.simple(realm, username, may_save)
@@ -289,10 +310,10 @@ class SubversionRepo(object):
             auth.set_parameter(subvertpy.AUTH_PARAM_DEFAULT_PASSWORD, self.password)
 
         try:
-            self.remote = ra.RemoteAccess(url=self.svn_url,
-                                          client_string_func=getclientstring,
-                                          auth=auth)
-        except SubversionException, e:
+            self.remote = ra.RemoteAccess(
+                url=self.svn_url, client_string_func=getclientstring, auth=auth
+            )
+        except SubversionException as e:
             # e.child contains a detailed error messages
             msglist = []
             svn_exc = e
@@ -300,7 +321,7 @@ class SubversionRepo(object):
                 if svn_exc.args[0]:
                     msglist.append(svn_exc.args[0])
                 svn_exc = svn_exc.child
-            msg = '\n'.join(msglist)
+            msg = "\n".join(msglist)
             raise common.SubversionConnectionException(msg)
 
         self.client = client.Client()
@@ -314,16 +335,21 @@ class SubversionRepo(object):
     def last_changed_rev(self):
         try:
             holder = []
+
             def callback(paths, revnum, props, haschildren):
                 holder.append(revnum)
 
-            self.remote.get_log(paths=[''],
-                                start=self.HEAD, end=1, limit=1,
-                                discover_changed_paths=False,
-                                callback=callback)
+            self.remote.get_log(
+                paths=[""],
+                start=self.HEAD,
+                end=1,
+                limit=1,
+                discover_changed_paths=False,
+                callback=callback,
+            )
 
             return holder[-1]
-        except SubversionException, e:
+        except SubversionException as e:
             if e.args[0] == ERR_FS_NOT_FOUND:
                 raise
             else:
@@ -340,14 +366,13 @@ class SubversionRepo(object):
         """
         # TODO: reject leading slashes like the docstring says
         if path:
-            path = path.rstrip('/') + '/'
+            path = path.rstrip("/") + "/"
 
         r = self.remote.get_dir(path, revision or self.HEAD, ra.DIRENT_ALL)
         dirents, fetched_rev, properties = r
         return dirents
 
-    def revisions(self, paths=None, start=0, stop=0,
-                  chunk_size=common.chunk_size):
+    def revisions(self, paths=None, start=0, stop=0, chunk_size=common.chunk_size):
         """Load the history of this repo.
 
         This is LAZY. It returns a generator, and fetches a small number
@@ -357,39 +382,53 @@ class SubversionRepo(object):
         to perform RA calls to get deltas.
         """
         if paths is None:
-            paths = ['']
+            paths = [""]
         if not stop:
             stop = self.HEAD
         while stop > start:
+
             def callback(paths, revnum, props, haschildren):
                 if paths is None:
                     return
-                r = common.Revision(revnum,
-                             props.get(properties.PROP_REVISION_AUTHOR),
-                             props.get(properties.PROP_REVISION_LOG),
-                             props.get(properties.PROP_REVISION_DATE),
-                             dict([(_forceutf8(k), PathAdapter(*v))
-                                   for k, v in paths.iteritems()]),
-                             strip_path=_forceutf8(self.subdir))
+                r = common.Revision(
+                    revnum,
+                    props.get(properties.PROP_REVISION_AUTHOR),
+                    props.get(properties.PROP_REVISION_LOG),
+                    props.get(properties.PROP_REVISION_DATE),
+                    dict(
+                        [(_forceutf8(k), PathAdapter(*v)) for k, v in paths.iteritems()]
+                    ),
+                    strip_path=_forceutf8(self.subdir),
+                )
                 revisions.append(r)
+
             # we only access revisions in a FIFO manner
             revisions = collections.deque()
 
-            revprops = [properties.PROP_REVISION_AUTHOR,
-                        properties.PROP_REVISION_DATE,
-                        properties.PROP_REVISION_LOG]
+            revprops = [
+                properties.PROP_REVISION_AUTHOR,
+                properties.PROP_REVISION_DATE,
+                properties.PROP_REVISION_LOG,
+            ]
             try:
                 # TODO: using min(start + chunk_size, stop) may be preferable;
                 #       ra.get_log(), even with chunk_size set, takes a while
                 #       when converting the 65k+ rev. in LLVM.
-                self.remote.get_log(paths=paths, revprops=revprops,
-                                    start=start + 1, end=stop, limit=chunk_size,
-                                    discover_changed_paths=True,
-                                    callback=callback)
-            except SubversionException, e:
+                self.remote.get_log(
+                    paths=paths,
+                    revprops=revprops,
+                    start=start + 1,
+                    end=stop,
+                    limit=chunk_size,
+                    discover_changed_paths=True,
+                    callback=callback,
+                )
+            except SubversionException as e:
                 if e.args[1] == ERR_FS_NOT_FOUND:
-                    msg = ('%s not found at revision %d!'
-                           % (self.subdir.rstrip('/'), stop))
+                    msg = "%s not found at revision %d!" % (
+                        self.subdir.rstrip("/"),
+                        stop,
+                    )
                     raise common.SubversionConnectionException(msg)
                 elif e.args[1] == subvertpy.ERR_FS_NO_SUCH_REVISION:
                     raise common.SubversionConnectionException(e.args[0])
@@ -407,18 +446,28 @@ class SubversionRepo(object):
                 start = r.revnum
                 yield r
 
-    def commit(self, paths, message, file_data, base_revision, addeddirs,
-               deleteddirs, props, copies):
+    def commit(
+        self,
+        paths,
+        message,
+        file_data,
+        base_revision,
+        addeddirs,
+        deleteddirs,
+        props,
+        copies,
+    ):
         """Commits the appropriate targets from revision in editor's store.
 
         Return the committed revision as a common.Revision instance.
         """
+
         def commitcb(rev, date, author):
             r = common.Revision(rev, author, message, date)
             committedrev.append(r)
 
         committedrev = []
-        revprops = { properties.PROP_REVISION_LOG: message }
+        revprops = {properties.PROP_REVISION_LOG: message}
         # revprops.update(props)
         commiteditor = self.remote.get_commit_editor(revprops, commitcb)
 
@@ -428,8 +477,8 @@ class SubversionRepo(object):
 
         # ensure that all parents are visited too; this may be slow
         for path in paths.copy():
-            for i in xrange(path.count('/'), -1, -1):
-                p = path.rsplit('/', i)[0]
+            for i in xrange(path.count("/"), -1, -1):
+                p = path.rsplit("/", i)[0]
                 if p in paths:
                     continue
                 paths.add(p)
@@ -438,7 +487,7 @@ class SubversionRepo(object):
         def visitdir(editor, directory, paths, pathidx):
             while pathidx < len(paths):
                 path = paths[pathidx]
-                if directory and not path.startswith(directory + '/'):
+                if directory and not path.startswith(directory + "/"):
                     return pathidx
 
                 pathidx += 1
@@ -446,22 +495,22 @@ class SubversionRepo(object):
                 if path in file_data:
                     # visiting a file
                     base_text, new_text, action = file_data[path]
-                    if action == 'modify':
+                    if action == "modify":
                         fileeditor = editor.open_file(path, base_revision)
-                    elif action == 'add':
+                    elif action == "add":
                         frompath, fromrev = copies.get(path, (None, -1))
                         if frompath:
                             frompath = self.path2url(frompath)
                         fileeditor = editor.add_file(path, frompath, fromrev)
-                    elif action == 'delete':
+                    elif action == "delete":
                         editor.delete_entry(path, base_revision)
                         continue
                     else:
                         assert False, "invalid action '%s'" % action
 
                     if path in props:
-                        if props[path].get('svn:special', None):
-                            new_text = 'link %s' % new_text
+                        if props[path].get("svn:special", None):
+                            new_text = "link %s" % new_text
                         for p, v in props[path].iteritems():
                             fileeditor.change_prop(p, v)
 
@@ -496,7 +545,7 @@ class SubversionRepo(object):
 
         try:
             rooteditor = commiteditor.open_root()
-            visitdir(rooteditor, '', paths, 0)
+            visitdir(rooteditor, "", paths, 0)
             rooteditor.close()
         except:
             commiteditor.abort()
@@ -509,38 +558,53 @@ class SubversionRepo(object):
 
         try:
             self.remote.replay(revision, oldestrev, BaseEditor(editor))
-        except (SubversionException, NotImplementedError), e: # pragma: no cover
+        except (SubversionException, NotImplementedError) as e:  # pragma: no cover
             # can I depend on this number being constant?
-            if (isinstance(e, NotImplementedError) or
-                e.args[1] == subvertpy.ERR_RA_NOT_IMPLEMENTED or
-                e.args[1] == subvertpy.ERR_UNSUPPORTED_FEATURE):
-                msg = ('This Subversion server is older than 1.4.0, and '
-                       'cannot satisfy replay requests.')
+            if (
+                isinstance(e, NotImplementedError)
+                or e.args[1] == subvertpy.ERR_RA_NOT_IMPLEMENTED
+                or e.args[1] == subvertpy.ERR_UNSUPPORTED_FEATURE
+            ):
+                msg = (
+                    "This Subversion server is older than 1.4.0, and "
+                    "cannot satisfy replay requests."
+                )
                 raise common.SubversionRepoCanNotReplay(msg)
             else:
                 raise
 
     def get_revision(self, revision, editor):
-        ''' feed the contents of the given revision to the given editor '''
-        reporter = self.remote.do_update(revision, '', True,
-                                         BaseEditor(editor))
-        reporter.set_path('', revision, True)
+        """ feed the contents of the given revision to the given editor """
+        reporter = self.remote.do_update(revision, "", True, BaseEditor(editor))
+        reporter.set_path("", revision, True)
         reporter.finish()
 
-    def get_unified_diff(self, path, revision, other_path=None, other_rev=None,
-                         deleted=True, ignore_type=False):
+    def get_unified_diff(
+        self,
+        path,
+        revision,
+        other_path=None,
+        other_rev=None,
+        deleted=True,
+        ignore_type=False,
+    ):
         """Gets a unidiff of path at revision against revision-1.
         """
 
         url = self.path2url(path)
-        url2 = (other_path and self.path2url(other_path) or url)
+        url2 = other_path and self.path2url(other_path) or url
 
         if other_rev is None:
             other_rev = revision - 1
 
-        outfile, errfile = self.client.diff(other_rev, revision, url2, url,
-                                            no_diff_deleted=deleted,
-                                            ignore_content_type=ignore_type)
+        outfile, errfile = self.client.diff(
+            other_rev,
+            revision,
+            url2,
+            url,
+            no_diff_deleted=deleted,
+            ignore_content_type=ignore_type,
+        )
         error = errfile.read()
         assert not error, error
 
@@ -554,7 +618,7 @@ class SubversionRepo(object):
         otherwise. If the file does not exist at this revision, raise
         IOError.
         """
-        mode = ''
+        mode = ""
         try:
             out = common.SimpleStringIO()
             rev, info = self.remote.get_file(path, out, revision)
@@ -562,17 +626,17 @@ class SubversionRepo(object):
             out.close()
             if isinstance(info, list):
                 info = info[-1]
-            mode = (properties.PROP_EXECUTABLE in info) and 'x' or ''
-            mode = (properties.PROP_SPECIAL in info) and 'l' or mode
-        except SubversionException, e:
+            mode = (properties.PROP_EXECUTABLE in info) and "x" or ""
+            mode = (properties.PROP_SPECIAL in info) and "l" or mode
+        except SubversionException as e:
             if e.args[1] in (ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND):
                 # File not found
                 raise IOError(errno.ENOENT, e.args[0])
             raise
-        if mode == 'l':
+        if mode == "l":
             linkprefix = "link "
             if data.startswith(linkprefix):
-                data = data[len(linkprefix):]
+                data = data[len(linkprefix) :]
         return data, mode
 
     def list_props(self, path, revision):
@@ -580,9 +644,8 @@ class SubversionRepo(object):
         specified path does not exist.
         """
         try:
-            pl = self.client.proplist(self.path2url(path), revision,
-                                      client.depth_empty)
-        except SubversionException, e:
+            pl = self.client.proplist(self.path2url(path), revision, client.depth_empty)
+        except SubversionException as e:
             # Specified path does not exist at this revision
             if e.args[1] == subvertpy.ERR_NODE_UNKNOWN_KIND:
                 raise IOError(errno.ENOENT, e.args[0])
@@ -598,16 +661,19 @@ class SubversionRepo(object):
         revision.
         """
         try:
-            entries = self.client.list(self.path2url(dirpath), revision,
-                                       client.depth_infinity, ra.DIRENT_KIND)
-        except SubversionException, e:
+            entries = self.client.list(
+                self.path2url(dirpath), revision, client.depth_infinity, ra.DIRENT_KIND
+            )
+        except SubversionException as e:
             if e.args[1] == subvertpy.ERR_FS_NOT_FOUND:
-                raise IOError(errno.ENOENT,
-                              '%s cannot be found at r%d' % (dirpath, revision))
+                raise IOError(
+                    errno.ENOENT, "%s cannot be found at r%d" % (dirpath, revision)
+                )
             raise
         for path, e in entries.iteritems():
-            if not path: continue
-            kind = _svntypes.get(e['kind'])
+            if not path:
+                continue
+            kind = _svntypes.get(e["kind"])
             yield path, kind
 
     def checkpath(self, path, revision):
@@ -620,7 +686,7 @@ class SubversionRepo(object):
     def path2url(self, path):
         """Build svn URL for path, URL-escaping path.
         """
-        if not path or path == '.':
+        if not path or path == ".":
             return self.svn_url
-        assert path[0] != '/', path
-        return '/'.join((self.svn_url, urllib.quote(path).rstrip('/'),))
+        assert path[0] != "/", path
+        return "/".join((self.svn_url, urllib.quote(path).rstrip("/")))

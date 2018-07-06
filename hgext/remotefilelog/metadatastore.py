@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from mercurial.node import hex, nullid
 from mercurial import util
+from mercurial.node import hex, nullid
 
 from . import basestore, shallowutil
 

@@ -13,8 +13,9 @@ import shutil
 import stat
 import tempfile
 
-from mercurial.i18n import _
 from mercurial import encoding, error, util
+from mercurial.i18n import _
+
 from . import common
 
 

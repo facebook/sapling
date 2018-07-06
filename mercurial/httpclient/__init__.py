@@ -50,6 +50,9 @@ import socket
 import ssl
 import sys
 
+from . import _readers
+
+
 try:
     import cStringIO as io
 
@@ -64,7 +67,6 @@ try:
 except ImportError:
     import http.client as httplib
 
-from . import _readers
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +98,7 @@ TIMEOUT_DEFAULT = None
 if sys.version_info > (3, 0):
     _unicode = str
 else:
-    _unicode = unicode
+    _unicode = unicode  # noqa: F821
 
 
 def _ensurebytes(data):
@@ -495,7 +497,7 @@ class HTTPConnection(object):
 
         if handlesubar is False and handlesnobar is False:
             # does not support either
-            def call_wrap_socket(sock, server_hostname=None, **ssl_opts):
+            def call_wrap_socket(sock, server_hostname=None, **ssl_opts):  # noqa: F811
                 return _wrap_socket(sock, **ssl_opts)
 
         if call_wrap_socket is None:

@@ -11,9 +11,11 @@ import bisect
 import os
 import struct
 
-from . import error
 from mercurial import error as hgerror
 from mercurial.node import hex
+
+from . import error
+
 
 # the revmap file format is straightforward:
 #

@@ -12,22 +12,7 @@ import os
 import re
 import time
 
-from ..i18n import _
-
-from .common import (
-    ErrorResponse,
-    HTTP_NOT_FOUND,
-    HTTP_OK,
-    HTTP_SERVER_ERROR,
-    cspvalues,
-    get_contact,
-    get_mtime,
-    ismember,
-    paritygen,
-    staticfile,
-)
-from .request import wsgirequest
-
+from . import hgweb_mod, webutil, wsgicgi
 from .. import (
     configitems,
     encoding,
@@ -40,8 +25,20 @@ from .. import (
     ui as uimod,
     util,
 )
-
-from . import hgweb_mod, webutil, wsgicgi
+from ..i18n import _
+from .common import (
+    HTTP_NOT_FOUND,
+    HTTP_OK,
+    HTTP_SERVER_ERROR,
+    ErrorResponse,
+    cspvalues,
+    get_contact,
+    get_mtime,
+    ismember,
+    paritygen,
+    staticfile,
+)
+from .request import wsgirequest
 
 
 def cleannames(items):

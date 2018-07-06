@@ -6,15 +6,21 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-import errno, hashlib, os, stat, struct, tempfile
-
+import errno
+import hashlib
+import os
+import stat
+import struct
+import tempfile
 from collections import defaultdict
-from mercurial import filelog, revlog, util, error, pycompat
-from mercurial.node import hex
+
+from mercurial import error, filelog, pycompat, revlog, util
 from mercurial.i18n import _
+from mercurial.node import hex
 
 from . import constants
 from ..lfs import pointer
+
 
 try:
     xrange(0)

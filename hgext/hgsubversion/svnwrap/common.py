@@ -1,11 +1,11 @@
 # no-check-code -- see T24862348
 
-import os
-import urlparse
-import urllib
-import fnmatch
 import ConfigParser
+import fnmatch
+import os
 import sys
+import urllib
+import urlparse
 
 
 class SubversionRepoCanNotReplay(Exception):

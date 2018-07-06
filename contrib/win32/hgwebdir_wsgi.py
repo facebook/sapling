@@ -81,6 +81,12 @@
 
 from __future__ import absolute_import
 
+import sys
+
+import isapi_wsgi
+from mercurial.hgweb.hgwebdir_mod import hgwebdir
+
+
 # Configuration file location
 hgweb_config = r"c:\your\directory\wsgi.config"
 
@@ -89,7 +95,6 @@ path_strip = 0  # Strip this many path elements off (when using url rewrite)
 path_prefix = 1  # This many path elements are prefixes (depends on the
 # virtual path of the IIS application).
 
-import sys
 
 # Adjust python path if this is not a system-wide install
 # sys.path.insert(0, r'C:\your\custom\hg\build\lib.win32-2.7')
@@ -100,8 +105,6 @@ if getattr(sys, "isapidllhandle", None) is not None:
 
     win32traceutil.SetupForPrint  # silence unused import warning
 
-import isapi_wsgi
-from mercurial.hgweb.hgwebdir_mod import hgwebdir
 
 # Example tweak: Replace isapi_wsgi's handler to provide better error message
 # Other stuff could also be done here, like logging errors etc.

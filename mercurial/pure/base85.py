@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import struct
 
+
 _b85chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" "abcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"
 _b85chars2 = [(a + b) for a in _b85chars for b in _b85chars]
 _b85dec = {}

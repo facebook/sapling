@@ -26,11 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-# no unicode literals
+from __future__ import absolute_import, division, print_function
 
 import binascii
 import collections
@@ -39,6 +35,10 @@ import struct
 import sys
 
 from . import compat
+
+
+# no unicode literals
+
 
 BSER_ARRAY = b"\x00"
 BSER_OBJECT = b"\x01"
@@ -309,7 +309,7 @@ class _BunserDict(object):
             key = key[3:]
         try:
             return self._values[self._keys.index(key)]
-        except ValueError as ex:
+        except ValueError:
             raise KeyError("_BunserDict has no key %s" % key)
 
     def __len__(self):

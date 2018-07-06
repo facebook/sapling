@@ -7,18 +7,23 @@
 
 from __future__ import absolute_import
 
-import hashlib, os, time, io, struct
+import hashlib
+import io
 import itertools
+import os
+import struct
 import threading
+import time
 
-from mercurial.i18n import _
-from mercurial.node import hex, bin, nullid
 from mercurial import error, httppeer, progress, revlog, sshpeer, util, wireproto
+from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid
 
 from . import constants, shallowutil, wirepack
 from .contentstore import unioncontentstore
-from .metadatastore import unionmetadatastore
 from .lz4wrapper import lz4decompress
+from .metadatastore import unionmetadatastore
+
 
 # Statistics for debugging
 fetchcost = 0

@@ -4,13 +4,11 @@ import os
 import sys
 
 import test_hgsubversion_util
+from hgext.hgsubversion import svncommands
+from mercurial import context, extensions
+
 
 test_rebuildmeta = test_hgsubversion_util.import_test("test_rebuildmeta")
-
-from mercurial import context
-from mercurial import extensions
-
-from hgext.hgsubversion import svncommands
 
 
 def _do_case(self, name, layout):

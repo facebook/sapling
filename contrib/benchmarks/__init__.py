@@ -39,6 +39,7 @@ import re
 
 from mercurial import extensions, hg, ui as uimod, util
 
+
 basedir = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir)
 )

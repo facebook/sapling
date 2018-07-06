@@ -15,6 +15,7 @@ from mercurial.node import nullrev, short
 
 from . import common
 
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 

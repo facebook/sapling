@@ -4,7 +4,7 @@
 #
 # incomplete, implemented on demand
 
-from mercurial import ancestor, changelog, manifest, match as matchmod, context, util
+from mercurial import ancestor, changelog, context, manifest, match as matchmod, util
 from mercurial.node import bin, hex, nullid
 
 
@@ -203,7 +203,7 @@ class overlaychangectx(context.changectx):
     def __init__(self, repo, sha):
         # Can't store this in self._repo because the base class uses that field
         self._hgrepo = repo
-        if not isinstance(sha, basestring):
+        if not isinstance(sha, basestring):  # noqa: F821
             sha = sha.hex()
         self.commit = repo.handler.git.get_object(_maybehex(sha))
         self._overlay = getattr(repo, "gitoverlay", repo)

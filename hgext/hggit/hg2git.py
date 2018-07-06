@@ -5,12 +5,11 @@
 import os
 import stat
 
-import dulwich.objects as dulobjs
-from mercurial.i18n import _
-from mercurial import util as hgutil
-
 import compat
+import dulwich.objects as dulobjs
 import util
+from mercurial import util as hgutil
+from mercurial.i18n import _
 
 
 def parse_subrepos(ctx):

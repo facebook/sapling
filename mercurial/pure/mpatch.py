@@ -11,6 +11,7 @@ import struct
 
 from .. import pycompat
 
+
 stringio = pycompat.stringio
 
 

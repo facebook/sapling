@@ -1,6 +1,7 @@
-from util import isgitsshuri
 from mercurial import error, util
 from mercurial.error import RepoError
+from util import isgitsshuri
+
 
 peerapi = False
 try:

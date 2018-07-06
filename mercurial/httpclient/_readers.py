@@ -33,6 +33,9 @@ have any clients outside of httpplus.
 """
 from __future__ import absolute_import
 
+import logging
+
+
 try:
     import httplib
 
@@ -40,7 +43,6 @@ try:
 except ImportError:
     import http.client as httplib
 
-import logging
 
 logger = logging.getLogger(__name__)
 

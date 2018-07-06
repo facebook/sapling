@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import cffi
 
+
 ffi = cffi.FFI()
 ffi.set_source(
     "mercurial.cffi._osutil",

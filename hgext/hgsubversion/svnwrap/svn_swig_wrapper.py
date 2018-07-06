@@ -1,5 +1,6 @@
 # no-check-code -- see T24862348
 
+import collections
 import cStringIO
 import errno
 import os
@@ -7,14 +8,12 @@ import shutil
 import sys
 import tempfile
 import urllib
-import collections
+import warnings
 
 import common
 
-import warnings
-warnings.filterwarnings('ignore',
-                        module='svn.core',
-                        category=DeprecationWarning)
+
+warnings.filterwarnings("ignore", module="svn.core", category=DeprecationWarning)
 
 required_bindings = (1, 5, 0)
 
@@ -25,33 +24,46 @@ try:
     from svn import ra
     from svn import repos
 
-    subversion_version = (core.SVN_VER_MAJOR, core.SVN_VER_MINOR,
-                          core.SVN_VER_MICRO)
+    subversion_version = (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO)
 except ImportError:
-    raise ImportError('Subversion %d.%d.%d or later required, '
-                      'but no bindings were found' % required_bindings)
+    raise ImportError(
+        "Subversion %d.%d.%d or later required, "
+        "but no bindings were found" % required_bindings
+    )
 
-if subversion_version < required_bindings: # pragma: no cover
-    raise ImportError('Subversion %d.%d.%d or later required, '
-                      'but bindings for %d.%d.%d found' %
-                      (required_bindings + subversion_version))
+if subversion_version < required_bindings:  # pragma: no cover
+    raise ImportError(
+        "Subversion %d.%d.%d or later required, "
+        "but bindings for %d.%d.%d found" % (required_bindings + subversion_version)
+    )
+
 
 def version():
-    return '%d.%d.%d' % subversion_version, 'SWIG'
+    return "%d.%d.%d" % subversion_version, "SWIG"
+
 
 def create_and_load(repopath, dumpfd):
-    ''' create a new repository at repopath and load the given dump into it '''
+    """ create a new repository at repopath and load the given dump into it """
     pool = core.Pool()
-    r = repos.svn_repos_create(repopath, '', '', None, None, pool)
+    r = repos.svn_repos_create(repopath, "", "", None, None, pool)
 
     try:
-        repos.svn_repos_load_fs2(r, dumpfd, None,
-                                 repos.svn_repos_load_uuid_force,
-                                 '', False, False, None, pool)
+        repos.svn_repos_load_fs2(
+            r,
+            dumpfd,
+            None,
+            repos.svn_repos_load_uuid_force,
+            "",
+            False,
+            False,
+            None,
+            pool,
+        )
     finally:
         dumpfd.close()
 
         pool.destroy()
+
 
 # exported values
 ERR_FS_ALREADY_EXISTS = core.SVN_ERR_FS_ALREADY_EXISTS
@@ -69,10 +81,11 @@ SSL_UNKNOWNCA = core.SVN_AUTH_SSL_UNKNOWNCA
 SubversionException = core.SubversionException
 Editor = delta.Editor
 
+
 def apply_txdelta(base, target):
-    handler, baton = delta.svn_txdelta_apply(cStringIO.StringIO(base),
-                                             target, None)
-    return (lambda window: handler(window, baton))
+    handler, baton = delta.svn_txdelta_apply(cStringIO.StringIO(base), target, None)
+    return lambda window: handler(window, baton)
+
 
 def optrev(revnum):
     optrev = core.svn_opt_revision_t()
@@ -80,18 +93,22 @@ def optrev(revnum):
     optrev.value.number = revnum
     return optrev
 
+
 core.svn_config_ensure(None)
 svn_config = core.svn_config_get_config(None)
+
+
 class RaCallbacks(ra.Callbacks):
     @staticmethod
-    def open_tmp_file(pool): # pragma: no cover
+    def open_tmp_file(pool):  # pragma: no cover
         (fd, fn) = tempfile.mkstemp()
         os.close(fd)
         return fn
 
     @staticmethod
     def get_client_string(pool):
-        return 'hgsubversion'
+        return "hgsubversion"
+
 
 def ieditor(fn):
     """Helps identify methods used by the SVN editor interface.
@@ -103,19 +120,25 @@ def ieditor(fn):
     This allows the editor object to notice when you try and commit and really
     got an exception in the replay process.
     """
+
     def fun(self, *args, **kwargs):
         try:
             return fn(self, *args, **kwargs)
-        except: # pragma: no cover
+        except:  # pragma: no cover
             if self.current.exception is not None:
                 self.current.exception = sys.exc_info()
             raise
+
     return fun
 
+
 _prompt = None
+
+
 def prompt_callback(callback):
     global _prompt
     _prompt = callback
+
 
 def _simple(realm, default_username, ms, pool):
     ret = _prompt.simple(realm, default_username, ms, pool)
@@ -123,11 +146,13 @@ def _simple(realm, default_username, ms, pool):
     (creds.username, creds.password, creds.may_save) = ret
     return creds
 
+
 def _username(realm, ms, pool):
     ret = _prompt.username(realm, ms, pool)
     creds = core.svn_auth_cred_username_t()
     (creds.username, creds.may_save) = ret
     return creds
+
 
 def _ssl_client_cert(realm, may_save, pool):
     ret = _prompt.ssl_client_cert(realm, may_save, pool)
@@ -135,20 +160,22 @@ def _ssl_client_cert(realm, may_save, pool):
     (creds.cert_file, creds.may_save) = ret
     return creds
 
+
 def _ssl_client_cert_pw(realm, may_save, pool):
     ret = _prompt.ssl_client_cert_pw(realm, may_save, pool)
     creds = core.svn_auth_cred_ssl_client_cert_pw_t()
     (creds.password, creds.may_save) = ret
     return creds
 
+
 def _ssl_server_trust(realm, failures, cert_info, may_save, pool):
     cert = [
-            cert_info.hostname,
-            cert_info.fingerprint,
-            cert_info.valid_from,
-            cert_info.valid_until,
-            cert_info.issuer_dname,
-            ]
+        cert_info.hostname,
+        cert_info.fingerprint,
+        cert_info.valid_from,
+        cert_info.valid_until,
+        cert_info.issuer_dname,
+    ]
     ret = _prompt.ssl_server_trust(realm, failures, cert, may_save, pool)
     if ret:
         creds = core.svn_auth_cred_ssl_server_trust_t()
@@ -157,31 +184,32 @@ def _ssl_server_trust(realm, failures, cert_info, may_save, pool):
         creds = None
     return creds
 
+
 def _create_auth_baton(pool, password_stores):
     """Create a Subversion authentication baton. """
     # Give the client context baton a suite of authentication
     # providers.h
-    platform_specific = ['svn_auth_get_gnome_keyring_simple_provider',
-                         'svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider',
-                         'svn_auth_get_keychain_simple_provider',
-                         'svn_auth_get_keychain_ssl_client_cert_pw_provider',
-                         'svn_auth_get_kwallet_simple_provider',
-                         'svn_auth_get_kwallet_ssl_client_cert_pw_provider',
-                         'svn_auth_get_ssl_client_cert_file_provider',
-                         'svn_auth_get_windows_simple_provider',
-                         'svn_auth_get_windows_ssl_server_trust_provider',
-                         ]
+    platform_specific = [
+        "svn_auth_get_gnome_keyring_simple_provider",
+        "svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider",
+        "svn_auth_get_keychain_simple_provider",
+        "svn_auth_get_keychain_ssl_client_cert_pw_provider",
+        "svn_auth_get_kwallet_simple_provider",
+        "svn_auth_get_kwallet_ssl_client_cert_pw_provider",
+        "svn_auth_get_ssl_client_cert_file_provider",
+        "svn_auth_get_windows_simple_provider",
+        "svn_auth_get_windows_ssl_server_trust_provider",
+    ]
 
     providers = []
     # Platform-dependant authentication methods
-    getprovider = getattr(core, 'svn_auth_get_platform_specific_provider',
-                          None)
+    getprovider = getattr(core, "svn_auth_get_platform_specific_provider", None)
     if getprovider:
         # Available in svn >= 1.6
         if password_stores is None:
-            password_stores = ('gnome_keyring', 'keychain', 'kwallet', 'windows')
+            password_stores = ("gnome_keyring", "keychain", "kwallet", "windows")
         for name in password_stores:
-            for type in ('simple', 'ssl_client_cert_pw', 'ssl_server_trust'):
+            for type in ("simple", "ssl_client_cert_pw", "ssl_server_trust"):
                 p = getprovider(name, type, pool)
                 if p:
                     providers.append(p)
@@ -199,7 +227,7 @@ def _create_auth_baton(pool, password_stores):
         client.get_ssl_client_cert_file_provider(),
         client.get_ssl_client_cert_pw_file_provider(),
         client.get_ssl_server_trust_file_provider(),
-        ]
+    ]
 
     if _prompt:
         providers += [
@@ -208,22 +236,23 @@ def _create_auth_baton(pool, password_stores):
             client.get_ssl_client_cert_prompt_provider(_ssl_client_cert, 2),
             client.get_ssl_client_cert_pw_prompt_provider(_ssl_client_cert_pw, 2),
             client.get_ssl_server_trust_prompt_provider(_ssl_server_trust),
-            ]
+        ]
 
     return core.svn_auth_open(providers, pool)
 
-_svntypes = {
-    core.svn_node_dir: 'd',
-    core.svn_node_file: 'f',
-    }
+
+_svntypes = {core.svn_node_dir: "d", core.svn_node_file: "f"}
+
 
 class SubversionRepo(object):
     """Wrapper for a Subversion repository.
 
     It uses the SWIG Python bindings, see above for requirements.
     """
-    def __init__(self, url='', username='', password='', head=None,
-                 password_stores=None):
+
+    def __init__(
+        self, url="", username="", password="", head=None, password_stores=None
+    ):
         parsed = common.parse_url(url, username, password)
         # --username and --password override URL credentials
         self.username = parsed[0]
@@ -240,9 +269,9 @@ class SubversionRepo(object):
         self.root = ra.get_repos_root(self.ra, self.pool)
         assert self.svn_url.startswith(self.root)
         # *will* have a leading '/', would not if we used get_repos_root2
-        self.subdir = self.svn_url[len(self.root):]
-        if not self.subdir or self.subdir[-1] != '/':
-            self.subdir += '/'
+        self.subdir = self.svn_url[len(self.root) :]
+        if not self.subdir or self.subdir[-1] != "/":
+            self.subdir += "/"
         # the RA interface always yields quoted paths, but the editor interface
         # expects unquoted paths
         self.subdir = urllib.unquote(self.subdir)
@@ -256,13 +285,13 @@ class SubversionRepo(object):
         # while we're in here we'll recreate our pool
         self.pool = core.Pool()
         if self.username:
-            core.svn_auth_set_parameter(self.auth_baton,
-                                        core.SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                                        self.username)
+            core.svn_auth_set_parameter(
+                self.auth_baton, core.SVN_AUTH_PARAM_DEFAULT_USERNAME, self.username
+            )
         if self.password:
-            core.svn_auth_set_parameter(self.auth_baton,
-                                        core.SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-                                        self.password)
+            core.svn_auth_set_parameter(
+                self.auth_baton, core.SVN_AUTH_PARAM_DEFAULT_PASSWORD, self.password
+            )
         self.client_context = client.create_context()
 
         self.client_context.auth_baton = self.auth_baton
@@ -271,9 +300,8 @@ class SubversionRepo(object):
         callbacks.auth_baton = self.auth_baton
         self.callbacks = callbacks
         try:
-            self.ra = ra.open2(self.svn_url, callbacks,
-                               svn_config, self.pool)
-        except SubversionException, e:
+            self.ra = ra.open2(self.svn_url, callbacks, svn_config, self.pool)
+        except SubversionException as e:
             # e.child contains a detailed error messages
             msglist = []
             svn_exc = e
@@ -281,7 +309,7 @@ class SubversionRepo(object):
                 if svn_exc.args[0]:
                     msglist.append(svn_exc.args[0])
                 svn_exc = svn_exc.child
-            msg = '\n'.join(msglist)
+            msg = "\n".join(msglist)
             raise common.SubversionConnectionException(msg)
 
     @property
@@ -292,17 +320,22 @@ class SubversionRepo(object):
     def last_changed_rev(self):
         try:
             holder = []
-            ra.get_log(self.ra, [''],
-                       self.HEAD, 1,
-                       1, # limit of how many log messages to load
-                       True, # don't need to know changed paths
-                       True, # stop on copies
-                       lambda paths, revnum, author, date, message, pool:
-                           holder.append(revnum),
-                       self.pool)
+            ra.get_log(
+                self.ra,
+                [""],
+                self.HEAD,
+                1,
+                1,  # limit of how many log messages to load
+                True,  # don't need to know changed paths
+                True,  # stop on copies
+                lambda paths, revnum, author, date, message, pool: holder.append(
+                    revnum
+                ),
+                self.pool,
+            )
 
             return holder[-1]
-        except SubversionException, e:
+        except SubversionException as e:
             if e.apr_err not in [core.SVN_ERR_FS_NOT_FOUND]:
                 raise
             else:
@@ -318,7 +351,7 @@ class SubversionRepo(object):
           rev: the revision at which to list the directory, defaults to HEAD
         """
         # TODO this should just not accept leading slashes like the docstring says
-        if dir and dir[-1] == '/':
+        if dir and dir[-1] == "/":
             dir = dir[:-1]
         if revision is None:
             revision = self.HEAD
@@ -326,8 +359,7 @@ class SubversionRepo(object):
         folders, props, junk = r
         return folders
 
-    def revisions(self, paths=None, start=0, stop=0,
-                  chunk_size=common.chunk_size):
+    def revisions(self, paths=None, start=0, stop=0, chunk_size=common.chunk_size):
         """Load the history of this repo.
 
         This is LAZY. It returns a generator, and fetches a small number
@@ -337,14 +369,17 @@ class SubversionRepo(object):
         to perform RA calls to get deltas.
         """
         if paths is None:
-            paths = ['']
+            paths = [""]
         if not stop:
             stop = self.HEAD
         while stop > start:
+
             def callback(paths, revnum, author, date, message, pool):
-                r = common.Revision(revnum, author, message, date, paths,
-                                    strip_path=self.subdir)
+                r = common.Revision(
+                    revnum, author, message, date, paths, strip_path=self.subdir
+                )
                 revisions.append(r)
+
             # we only access revisions in a FIFO manner
             revisions = collections.deque()
 
@@ -352,19 +387,23 @@ class SubversionRepo(object):
                 # TODO: using min(start + chunk_size, stop) may be preferable;
                 #       ra.get_log(), even with chunk_size set, takes a while
                 #       when converting the 65k+ rev. in LLVM.
-                ra.get_log(self.ra,
-                           paths,
-                           start + 1,
-                           stop,
-                           chunk_size, # limit of how many log messages to load
-                           True, # don't need to know changed paths
-                           True, # stop on copies
-                           callback,
-                           self.pool)
-            except core.SubversionException, e:
+                ra.get_log(
+                    self.ra,
+                    paths,
+                    start + 1,
+                    stop,
+                    chunk_size,  # limit of how many log messages to load
+                    True,  # don't need to know changed paths
+                    True,  # stop on copies
+                    callback,
+                    self.pool,
+                )
+            except core.SubversionException as e:
                 if e.apr_err == core.SVN_ERR_FS_NOT_FOUND:
-                    msg = ('%s not found at revision %d!'
-                           % (self.subdir.rstrip('/'), stop))
+                    msg = "%s not found at revision %d!" % (
+                        self.subdir.rstrip("/"),
+                        stop,
+                    )
                     raise common.SubversionConnectionException(msg)
                 elif e.apr_err == core.SVN_ERR_FS_NO_SUCH_REVISION:
                     raise common.SubversionConnectionException(e.message)
@@ -383,8 +422,17 @@ class SubversionRepo(object):
                 yield r
             self.init_ra_and_client()
 
-    def commit(self, paths, message, file_data, base_revision, addeddirs,
-               deleteddirs, properties, copies):
+    def commit(
+        self,
+        paths,
+        message,
+        file_data,
+        base_revision,
+        addeddirs,
+        deleteddirs,
+        properties,
+        copies,
+    ):
         """Commits the appropriate targets from revision in editor's store.
 
         Return the committed revision as a common.Revision instance.
@@ -393,22 +441,21 @@ class SubversionRepo(object):
 
         def commit_cb(commit_info, pool):
             # disregard commit_info.post_commit_err for now
-            r = common.Revision(commit_info.revision, commit_info.author,
-                                message, commit_info.date)
+            r = common.Revision(
+                commit_info.revision, commit_info.author, message, commit_info.date
+            )
 
             committedrev.append(r)
 
         committedrev = []
 
-        editor, edit_baton = ra.get_commit_editor2(self.ra,
-                                                   message,
-                                                   commit_cb,
-                                                   None,
-                                                   False,
-                                                   self.pool)
+        editor, edit_baton = ra.get_commit_editor2(
+            self.ra, message, commit_cb, None, False, self.pool
+        )
         # internal dir batons can fall out of scope and get GCed before svn is
         # done with them. This prevents that (credit to gvn for the idea).
-        batons = [edit_baton, ]
+        batons = [edit_baton]
+
         def driver_cb(parent, path, pool):
             if not parent:
                 bat = editor.open_root(edit_baton, base_revision, self.pool)
@@ -431,45 +478,46 @@ class SubversionRepo(object):
                     bat = editor.open_directory(path, parent, base_revision, pool)
                 batons.append(bat)
                 props = properties.get(path, {})
-                if 'svn:externals' in props:
-                    value = props['svn:externals']
-                    editor.change_dir_prop(bat, 'svn:externals', value, pool)
+                if "svn:externals" in props:
+                    value = props["svn:externals"]
+                    editor.change_dir_prop(bat, "svn:externals", value, pool)
                 return bat
             base_text, new_text, action = file_data[path]
             compute_delta = True
-            if action == 'modify':
+            if action == "modify":
                 baton = editor.open_file(path, parent, base_revision, pool)
-            elif action == 'add':
+            elif action == "add":
                 frompath, fromrev = copies.get(path, (None, -1))
                 if frompath:
                     frompath = self.path2url(frompath)
                 baton = editor.add_file(path, parent, frompath, fromrev, pool)
-            elif action == 'delete':
+            elif action == "delete":
                 baton = editor.delete_entry(path, base_revision, parent, pool)
                 compute_delta = False
 
             if path in properties:
-                if properties[path].get('svn:special', None):
-                    new_text = 'link %s' % new_text
+                if properties[path].get("svn:special", None):
+                    new_text = "link %s" % new_text
                 for p, v in properties[path].iteritems():
                     editor.change_file_prop(baton, p, v)
 
             if compute_delta:
-                handler, wh_baton = editor.apply_textdelta(baton, None,
-                                                           self.pool)
+                handler, wh_baton = editor.apply_textdelta(baton, None, self.pool)
 
                 txdelta_stream = delta.svn_txdelta(
-                    cStringIO.StringIO(base_text), cStringIO.StringIO(new_text),
-                    self.pool)
-                delta.svn_txdelta_send_txstream(txdelta_stream, handler,
-                                                wh_baton, pool)
+                    cStringIO.StringIO(base_text),
+                    cStringIO.StringIO(new_text),
+                    self.pool,
+                )
+                delta.svn_txdelta_send_txstream(txdelta_stream, handler, wh_baton, pool)
 
                 # TODO pass md5(new_text) instead of None
                 editor.close_file(baton, None, pool)
 
         try:
-            delta.path_driver(editor, edit_baton, base_revision, paths, driver_cb,
-                              self.pool)
+            delta.path_driver(
+                editor, edit_baton, base_revision, paths, driver_cb, self.pool
+            )
         except:
             # If anything went wrong on the preceding lines, we should
             # abort the in-progress transaction.
@@ -485,14 +533,19 @@ class SubversionRepo(object):
         self.init_ra_and_client()
         e_ptr, e_baton = delta.make_editor(editor)
         try:
-            ra.replay(self.ra, revision, oldest_rev_i_have, True, e_ptr,
-                      e_baton, self.pool)
-        except SubversionException, e: # pragma: no cover
+            ra.replay(
+                self.ra, revision, oldest_rev_i_have, True, e_ptr, e_baton, self.pool
+            )
+        except SubversionException as e:  # pragma: no cover
             # can I depend on this number being constant?
-            if (e.apr_err == core.SVN_ERR_RA_NOT_IMPLEMENTED or
-                e.apr_err == core.SVN_ERR_UNSUPPORTED_FEATURE):
-                msg = ('This Subversion server is older than 1.4.0, and '
-                       'cannot satisfy replay requests.')
+            if (
+                e.apr_err == core.SVN_ERR_RA_NOT_IMPLEMENTED
+                or e.apr_err == core.SVN_ERR_UNSUPPORTED_FEATURE
+            ):
+                msg = (
+                    "This Subversion server is older than 1.4.0, and "
+                    "cannot satisfy replay requests."
+                )
                 raise common.SubversionRepoCanNotReplay(msg)
             else:
                 raise
@@ -512,22 +565,30 @@ class SubversionRepo(object):
                 # every time it's called.  As a result, it's actually
                 # *cheaper* to call get_file than list_props here
                 data, mode = self.get_file(sf, revision)
-                links[f] = mode == 'l'
-                execs[f] = mode == 'x'
+                links[f] = mode == "l"
+                execs[f] = mode == "x"
 
     def get_revision(self, revision, editor):
-        ''' feed the contents of the given revision to the given editor '''
+        """ feed the contents of the given revision to the given editor """
 
         e_ptr, e_baton = delta.make_editor(editor)
 
-        reporter, reporter_baton = ra.do_update(self.ra, revision, "", True,
-                                                e_ptr, e_baton)
+        reporter, reporter_baton = ra.do_update(
+            self.ra, revision, "", True, e_ptr, e_baton
+        )
 
         reporter.set_path(reporter_baton, "", revision, True, None)
         reporter.finish_report(reporter_baton)
 
-    def get_unified_diff(self, path, revision, other_path=None, other_rev=None,
-                         deleted=True, ignore_type=False):
+    def get_unified_diff(
+        self,
+        path,
+        revision,
+        other_path=None,
+        other_rev=None,
+        deleted=True,
+        ignore_type=False,
+    ):
         """Gets a unidiff of path at revision against revision-1.
         """
         if not self.hasdiff3:
@@ -538,23 +599,36 @@ class SubversionRepo(object):
 
         url = self.path2url(path)
         url2 = url
-        url2 = (other_path and self.path2url(other_path) or url)
+        url2 = other_path and self.path2url(other_path) or url
         if other_rev is None:
             other_rev = revision - 1
         old_cwd = os.getcwd()
-        tmpdir = tempfile.mkdtemp('svnwrap_temp')
+        tmpdir = tempfile.mkdtemp("svnwrap_temp")
         out, err = None, None
         try:
             # hot tip: the swig bridge doesn't like StringIO for these bad boys
-            out_path = os.path.join(tmpdir, 'diffout')
-            error_path = os.path.join(tmpdir, 'differr')
-            out = open(out_path, 'w')
-            err = open(error_path, 'w')
+            out_path = os.path.join(tmpdir, "diffout")
+            error_path = os.path.join(tmpdir, "differr")
+            out = open(out_path, "w")
+            err = open(error_path, "w")
             try:
-                client.diff3([], url2, optrev(other_rev), url, optrev(revision),
-                             True, True, deleted, ignore_type, 'UTF-8', out, err,
-                             self.client_context, self.pool)
-            except SubversionException, e:
+                client.diff3(
+                    [],
+                    url2,
+                    optrev(other_rev),
+                    url,
+                    optrev(revision),
+                    True,
+                    True,
+                    deleted,
+                    ignore_type,
+                    "UTF-8",
+                    out,
+                    err,
+                    self.client_context,
+                    self.pool,
+                )
+            except SubversionException as e:
                 # "Can't write to stream: The handle is invalid."
                 # This error happens systematically under Windows, possibly
                 # related to file handles being non-write shareable by default.
@@ -569,8 +643,10 @@ class SubversionRepo(object):
             diff = open(out_path).read()
             return diff
         finally:
-            if out: out.close()
-            if err: err.close()
+            if out:
+                out.close()
+            if err:
+                err.close()
             shutil.rmtree(tmpdir)
             os.chdir(old_cwd)
 
@@ -582,8 +658,8 @@ class SubversionRepo(object):
         otherwise. If the file does not exist at this revision, raise
         IOError.
         """
-        assert not path.startswith('/')
-        mode = ''
+        assert not path.startswith("/")
+        mode = ""
         try:
             out = common.SimpleStringIO()
             info = ra.get_file(self.ra, path, revision, out)
@@ -591,18 +667,17 @@ class SubversionRepo(object):
             out.close()
             if isinstance(info, list):
                 info = info[-1]
-            mode = ("svn:executable" in info) and 'x' or ''
-            mode = ("svn:special" in info) and 'l' or mode
-        except SubversionException, e:
-            notfound = (core.SVN_ERR_FS_NOT_FOUND,
-                        core.SVN_ERR_RA_DAV_PATH_NOT_FOUND)
-            if e.args[1] in notfound: # File not found
+            mode = ("svn:executable" in info) and "x" or ""
+            mode = ("svn:special" in info) and "l" or mode
+        except SubversionException as e:
+            notfound = (core.SVN_ERR_FS_NOT_FOUND, core.SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+            if e.args[1] in notfound:  # File not found
                 raise IOError(errno.ENOENT, e.args[0])
             raise
-        if mode == 'l':
+        if mode == "l":
             linkprefix = "link "
             if data.startswith(linkprefix):
-                data = data[len(linkprefix):]
+                data = data[len(linkprefix) :]
         return data, mode
 
     def list_props(self, path, revision):
@@ -613,9 +688,10 @@ class SubversionRepo(object):
         rev = optrev(revision)
         rpath = self.path2url(path)
         try:
-            pl = client.proplist2(rpath, rev, rev, False,
-                                  self.client_context, self.pool)
-        except SubversionException, e:
+            pl = client.proplist2(
+                rpath, rev, rev, False, self.client_context, self.pool
+            )
+        except SubversionException as e:
             # Specified path does not exist at this revision
             if e.apr_err == core.SVN_ERR_NODE_UNKNOWN_KIND:
                 raise IOError(errno.ENOENT, e.args[0])
@@ -637,10 +713,11 @@ class SubversionRepo(object):
         rev = optrev(revision)
         try:
             entries = client.ls(rpath, rev, True, self.client_context, pool)
-        except SubversionException, e:
+        except SubversionException as e:
             if e.apr_err == core.SVN_ERR_FS_NOT_FOUND:
-                raise IOError(errno.ENOENT,
-                              '%s cannot be found at r%d' % (dirpath, revision))
+                raise IOError(
+                    errno.ENOENT, "%s cannot be found at r%d" % (dirpath, revision)
+                )
             raise
         for path, e in entries.iteritems():
             kind = _svntypes.get(e.kind)
@@ -650,18 +727,18 @@ class SubversionRepo(object):
         """Return the entry type at the given revision, 'f', 'd' or None
         if the entry does not exist.
         """
-        kind = ra.check_path(self.ra, path.strip('/'), revision)
+        kind = ra.check_path(self.ra, path.strip("/"), revision)
         return _svntypes.get(kind)
 
     def path2url(self, path):
         """Build svn URL for path, URL-escaping path.
         """
-        if not path or path == '.':
+        if not path or path == ".":
             return self.svn_url
-        assert path[0] != '/', path
-        path = path.rstrip('/')
+        assert path[0] != "/", path
+        path = path.rstrip("/")
         try:
             # new in svn 1.7
-            return core.svn_uri_canonicalize(self.svn_url + '/' + path)
+            return core.svn_uri_canonicalize(self.svn_url + "/" + path)
         except AttributeError:
-            return self.svn_url + '/' + urllib.quote(path)
+            return self.svn_url + "/" + urllib.quote(path)

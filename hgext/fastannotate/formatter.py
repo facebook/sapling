@@ -7,6 +7,7 @@
 
 from mercurial import encoding, node, templatefilters, util
 
+
 # imitating mercurial.commands.annotate, not using the vanilla formatter since
 # the data structures are a bit different, and we have some fast paths.
 try:

@@ -11,19 +11,7 @@ from __future__ import absolute_import
 import contextlib
 import os
 
-from .common import (
-    ErrorResponse,
-    HTTP_BAD_REQUEST,
-    HTTP_NOT_FOUND,
-    HTTP_NOT_MODIFIED,
-    HTTP_OK,
-    HTTP_SERVER_ERROR,
-    caching,
-    cspvalues,
-    permhooks,
-)
-from .request import wsgirequest
-
+from . import protocol, webcommands, webutil, wsgicgi
 from .. import (
     encoding,
     error,
@@ -37,8 +25,19 @@ from .. import (
     ui as uimod,
     util,
 )
+from .common import (
+    HTTP_BAD_REQUEST,
+    HTTP_NOT_FOUND,
+    HTTP_NOT_MODIFIED,
+    HTTP_OK,
+    HTTP_SERVER_ERROR,
+    ErrorResponse,
+    caching,
+    cspvalues,
+    permhooks,
+)
+from .request import wsgirequest
 
-from . import protocol, webcommands, webutil, wsgicgi
 
 perms = {
     "changegroup": "pull",

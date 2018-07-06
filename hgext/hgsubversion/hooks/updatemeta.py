@@ -7,16 +7,17 @@
 
 # no-check-code -- see T24862348
 
+import hgext.hgsubversion
+import hgext.hgsubversion.svncommands
+import hgext.hgsubversion.util
 from mercurial import node
 
-import hgext.hgsubversion
-import hgext.hgsubversion.util
-import hgext.hgsubversion.svncommands
 
 try:
     xrange(0)
 except NameError:
     xrange = range
+
 
 def hook(ui, repo, **kwargs):
     updatemeta = False
@@ -32,7 +33,7 @@ def hook(ui, repo, **kwargs):
         try:
             hgext.hgsubversion.svncommands.updatemeta(ui, repo, args=[])
             ui.status("Updated svn metadata\n")
-        except Exception, e:
+        except Exception as e:
             ui.warn("Failed to update svn metadata: %s" % str(e))
 
     return False

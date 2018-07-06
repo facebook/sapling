@@ -27,11 +27,11 @@ https://facebook.github.io/watchman/docs/scm-query.html.
 
 from __future__ import absolute_import
 
+from mercurial import extensions, filemerge, merge
 from mercurial.i18n import _
 
-from mercurial import extensions, filemerge, merge
-
 from ..extlib import watchmanclient
+
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:

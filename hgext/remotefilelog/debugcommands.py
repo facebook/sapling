@@ -6,10 +6,14 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-from mercurial import error, filelog, revlog
-from mercurial.node import bin, hex, nullid, short
-from mercurial.i18n import _
+import hashlib
+import os
+
 from hgext import extutil
+from mercurial import error, filelog, revlog
+from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid, short
+
 from . import (
     constants,
     datapack,
@@ -18,9 +22,8 @@ from . import (
     shallowrepo,
     shallowutil,
 )
-from .repack import repacklockvfs
 from .lz4wrapper import lz4decompress
-import hashlib, os
+from .repack import repacklockvfs
 
 
 def debugremotefilelog(ui, path, **opts):

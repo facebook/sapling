@@ -10,10 +10,11 @@ import random
 import subprocess
 import time
 
-from mercurial.i18n import _
 from mercurial import commands, encoding, error, metrics, registrar, scmutil, util
+from mercurial.i18n import _
 
 from . import editsgenerator
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
