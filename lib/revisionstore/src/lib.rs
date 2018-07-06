@@ -25,6 +25,7 @@ pub mod datastore;
 pub mod error;
 pub mod historystore;
 pub mod key;
+pub mod loosefile;
 pub mod node;
 pub mod uniondatastore;
 pub mod unionhistorystore;
