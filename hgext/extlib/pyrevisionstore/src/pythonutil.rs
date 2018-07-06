@@ -3,6 +3,7 @@ use cpython::{exc, FromPyObject, PyBytes, PyErr, PyObject, PyResult, PyTuple, Py
 use failure::Error;
 use revisionstore::datastore::Delta;
 use revisionstore::key::Key;
+use revisionstore::node::Node;
 
 pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
     PyErr::new::<exc::KeyError, _>(py, format!("{}", error.cause()))
@@ -30,16 +31,24 @@ pub fn from_tuple_to_delta<'a>(py: Python, py_delta: &PyObject) -> PyResult<Delt
     let py_delta_node = PyBytes::extract(py, &py_delta.get_item(py, 3))?;
     let py_bytes = PyBytes::extract(py, &py_delta.get_item(py, 4))?;
 
+    let base_key = to_key(py, &py_delta_name, &py_delta_node);
     Ok(Delta {
         data: py_bytes.data(py).to_vec().into(),
-        base: to_key(py, &py_delta_name, &py_delta_node),
+        base: if base_key.node().is_null() {
+            None
+        } else {
+            Some(base_key)
+        },
         key: to_key(py, &py_name, &py_node),
     })
 }
 
 pub fn from_delta_to_tuple(py: Python, delta: &Delta) -> PyObject {
     let (name, node) = from_key(py, &delta.key);
-    let (base_name, base_node) = from_key(py, &delta.base);
+    let (base_name, base_node) = match delta.base.as_ref() {
+        Some(base) => from_key(py, &base),
+        None => from_key(py, &Key::new(Box::new([0u8; 0]), Node::null_id().clone())),
+    };
     let bytes = PyBytes::new(py, &delta.data);
     // A python delta is a tuple: (name, node, base name, base node, delta bytes)
     (
