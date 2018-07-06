@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "argparse",
-    "cbincode",
     "commitcloudsubscriber",
     "hg_watchman_client",
     "indexedlog",
