@@ -94,7 +94,14 @@ impl MutableDataPack {
         buf.write_u16::<BigEndian>(delta.key.name().len() as u16)?;
         buf.write_all(delta.key.name())?;
         buf.write_all(delta.key.node().as_ref())?;
-        buf.write_all(delta.base.node().as_ref())?;
+
+        let base_node = buf.write_all(
+            delta
+                .base
+                .as_ref()
+                .map_or_else(|| Node::null_id(), |k| k.node())
+                .as_ref(),
+        )?;
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
         buf.write_all(&compressed)?;
 
@@ -106,7 +113,7 @@ impl MutableDataPack {
         self.hasher.input(&buf);
 
         let delta_location = DeltaLocation {
-            delta_base: delta.base.node().clone(),
+            delta_base: delta.base.as_ref().map_or(None, |k| Some(k.node().clone())),
             offset: offset,
             size: buf.len() as u64,
         };
@@ -134,7 +141,9 @@ impl MutableDataPack {
         Ok((
             Delta {
                 data: entry.delta()?,
-                base: Key::new(key.name().into(), entry.delta_base().clone()),
+                base: entry
+                    .delta_base()
+                    .map(|delta_base| Key::new(key.name().into(), delta_base.clone())),
                 key: Key::new(key.name().into(), entry.node().clone()),
             },
             entry.metadata().clone(),
@@ -184,7 +193,7 @@ mod tests {
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
         let delta = Delta {
             data: Rc::new([0, 1, 2]),
-            base: Key::new(Box::new([]), Default::default()),
+            base: None,
             key: Key::new(Box::new([]), Default::default()),
         };
         mutdatapack.add(&delta, None).expect("add");
@@ -217,7 +226,7 @@ mod tests {
             let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
             let delta = Delta {
                 data: Rc::new([0, 1, 2]),
-                base: Key::new(Box::new([]), Default::default()),
+                base: None,
                 key: Key::new(Box::new([]), Default::default()),
             };
             mutdatapack.add(&delta, None).expect("add");
@@ -232,13 +241,13 @@ mod tests {
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
         let delta = Delta {
             data: Rc::new([0, 1, 2]),
-            base: Key::new(Box::new([]), Default::default()),
+            base: None,
             key: Key::new(Box::new([]), Node::random()),
         };
         mutdatapack.add(&delta, None).unwrap();
         let delta2 = Delta {
             data: Rc::new([0, 1, 2]),
-            base: Key::new(Box::new([]), Default::default()),
+            base: None,
             key: Key::new(Box::new([]), Node::random()),
         };
         let meta2 = Metadata {
@@ -268,7 +277,7 @@ mod tests {
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
         let delta = Delta {
             data: Rc::new([0, 1, 2]),
-            base: Key::new(Box::new([]), Default::default()),
+            base: None,
             key: Key::new(Box::new([]), Default::default()),
         };
         mutdatapack.add(&delta, None).unwrap();

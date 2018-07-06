@@ -25,7 +25,7 @@ struct DataIndexOptions {
 
 #[derive(Debug)]
 pub struct DeltaLocation {
-    pub delta_base: Node,
+    pub delta_base: Option<Node>,
     pub offset: u64,
     pub size: u64,
 }
@@ -160,11 +160,14 @@ impl DataIndex {
         writer.write_u64::<BigEndian>(values.len() as u64)?;
         let index_start = 2 + FanoutTable::get_size(options.large) + 8;
         for &(node, value) in values.iter() {
-            let delta_base_offset = nodelocations
-                .get(&value.delta_base)
-                .map(|x| *x as i32 + index_start as i32)
-                .unwrap_or(-1)
-                .clone();
+            let delta_base_offset = value.delta_base.map_or(-1, |delta_base| {
+                nodelocations
+                    .get(&delta_base)
+                    .map(|x| *x as i32 + index_start as i32)
+                    .unwrap_or(-1)
+                    .clone()
+            });
+
             let entry = IndexEntry {
                 node: node.clone(),
                 delta_base_offset: delta_base_offset,

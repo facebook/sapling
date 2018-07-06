@@ -102,7 +102,7 @@ pub struct DataEntry<'a> {
     offset: u64,
     filename: &'a [u8],
     node: Node,
-    delta_base: Node,
+    delta_base: Option<Node>,
     compressed_data: &'a [u8],
     data: RefCell<Option<Rc<[u8]>>>,
     metadata: Metadata,
@@ -133,6 +133,11 @@ impl<'a> DataEntry<'a> {
         // Delta
         cur.read_exact(&mut node_buf)?;
         let delta_base = Node::from(&node_buf);
+        let delta_base = if delta_base.is_null() {
+            None
+        } else {
+            Some(delta_base)
+        };
 
         let delta_len = cur.read_u64::<BigEndian>()?;
         let compressed_data = &buf.get(
@@ -181,7 +186,7 @@ impl<'a> DataEntry<'a> {
         &self.node
     }
 
-    pub fn delta_base(&self) -> &Node {
+    pub fn delta_base(&self) -> &Option<Node> {
         &self.delta_base
     }
 
@@ -263,7 +268,9 @@ impl DataStore for DataPack {
             let data_entry = self.read_entry(next_entry.pack_entry_offset)?;
             chain.push(Delta {
                 data: data_entry.delta()?,
-                base: Key::new(key.name().into(), data_entry.delta_base().clone()),
+                base: data_entry
+                    .delta_base()
+                    .map(|delta_base| Key::new(key.name().into(), delta_base.clone())),
                 key: Key::new(key.name().into(), data_entry.node().clone()),
             });
 
@@ -324,7 +331,7 @@ mod tests {
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random())),
                     key: Key::new(Box::new([0]), Node::random()),
                 },
                 None,
@@ -348,7 +355,7 @@ mod tests {
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random())),
                     key: Key::new(Box::new([0]), Node::random()),
                 },
                 None,
@@ -356,7 +363,7 @@ mod tests {
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random())),
                     key: Key::new(Box::new([0]), Node::random()),
                 },
                 Some(Metadata {
@@ -384,7 +391,7 @@ mod tests {
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random())),
                     key: Key::new(Box::new([0]), Node::random()),
                 },
                 None,
@@ -392,7 +399,7 @@ mod tests {
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random())),
                     key: Key::new(Box::new([0]), Node::random()),
                 },
                 None,
@@ -413,7 +420,7 @@ mod tests {
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random())),
                     key: Key::new(Box::new([0]), Node::random()),
                 },
                 None,
@@ -423,7 +430,7 @@ mod tests {
         revisions.push((
             Delta {
                 data: Rc::new([1, 2, 3, 4]),
-                base: base0,
+                base: Some(base0),
                 key: Key::new(Box::new([0]), Node::random()),
             },
             None,
@@ -432,7 +439,7 @@ mod tests {
         revisions.push((
             Delta {
                 data: Rc::new([1, 2, 3, 4]),
-                base: base1,
+                base: Some(base1),
                 key: Key::new(Box::new([0]), Node::random()),
             },
             None,

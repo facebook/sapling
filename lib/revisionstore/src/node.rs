@@ -22,6 +22,10 @@ pub struct Node([u8; 20]);
 pub const NULL_ID: Node = Node([0; 20]);
 
 impl Node {
+    pub fn null_id() -> &'static Self {
+        &NULL_ID
+    }
+
     pub fn is_null(&self) -> bool {
         self == &NULL_ID
     }

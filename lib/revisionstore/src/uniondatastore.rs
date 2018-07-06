@@ -61,15 +61,15 @@ impl DataStore for UnionDataStore {
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
-        let mut current_key = key.clone();
+        let mut current_key = Some(key.clone());
         let mut delta_chain = Vec::new();
-        while !current_key.node().is_null() {
-            let partial_chain = self.get_partial_chain(&current_key)?;
+        while let Some(key) = current_key {
+            let partial_chain = self.get_partial_chain(&key)?;
             current_key = partial_chain
                 .last()
                 .ok_or(KeyError::from(UnionDataStoreError(format!(
                     "No delta chain for key {:?}",
-                    current_key
+                    key
                 ))))?
                 .base
                 .clone();

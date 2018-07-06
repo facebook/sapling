@@ -7,7 +7,7 @@ use std::rc::Rc;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Delta {
     pub data: Rc<[u8]>,
-    pub base: Key,
+    pub base: Option<Key>,
     pub key: Key,
 }
 
