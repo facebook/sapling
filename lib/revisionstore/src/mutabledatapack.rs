@@ -160,7 +160,15 @@ impl DataStore for MutableDataPack {
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
-        unimplemented!();
+        let mut chain: Vec<Delta> = Default::default();
+        let mut next_key = Some(key.clone());
+        while let Some(key) = next_key {
+            let (delta, _metadata) = self.read_entry(&key)?;
+            next_key = delta.base.clone();
+            chain.push(delta);
+        }
+
+        Ok(chain)
     }
 
     fn get_meta(&self, key: &Key) -> Result<Metadata> {
@@ -233,6 +241,30 @@ mod tests {
         }
 
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn test_get_delta_chain() {
+        let tempdir = tempdir().unwrap();
+        let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
+        let delta = Delta {
+            data: Rc::new([0, 1, 2]),
+            base: None,
+            key: Key::new(Box::new([]), Node::random()),
+        };
+        mutdatapack.add(&delta, None).unwrap();
+        let delta2 = Delta {
+            data: Rc::new([0, 1, 2]),
+            base: Some(Key::new(Box::new([]), delta.key.node().clone())),
+            key: Key::new(Box::new([]), Node::random()),
+        };
+        mutdatapack.add(&delta2, None).unwrap();
+
+        let chain = mutdatapack.get_delta_chain(&delta.key).unwrap();
+        assert_eq!(&vec![delta.clone()], &chain);
+
+        let chain = mutdatapack.get_delta_chain(&delta2.key).unwrap();
+        assert_eq!(&vec![delta2.clone(), delta.clone()], &chain);
     }
 
     #[test]
