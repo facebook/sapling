@@ -223,6 +223,8 @@ impl DataIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
+    use rand::chacha::ChaChaRng;
     use tempfile::NamedTempFile;
 
     fn make_index(values: &HashMap<Node, DeltaLocation>) -> DataIndex {
@@ -286,7 +288,8 @@ mod tests {
                 offset += size;
             }
 
-            let last_node = last_node.unwrap_or((Node::random(), 0)).0;
+            let mut rng = ChaChaRng::from_seed([0u8; 32]);
+            let last_node = last_node.unwrap_or((Node::random(&mut rng), 0)).0;
             index.get_entry(&last_node).expect_err("get_entry with missing node");
 
             true

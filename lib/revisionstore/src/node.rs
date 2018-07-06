@@ -3,8 +3,6 @@ use error::Result;
 
 #[cfg(test)]
 use rand::RngCore;
-#[cfg(test)]
-use rand::os::OsRng;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Node Error: {:?}", _0)]
@@ -45,10 +43,16 @@ impl Node {
     }
 
     #[cfg(test)]
-    pub fn random() -> Self {
+    pub fn random(rng: &mut RngCore) -> Self {
         let mut bytes = [0; 20];
-        OsRng::new().unwrap().fill_bytes(&mut bytes);
-        Node::from(&bytes)
+        rng.fill_bytes(&mut bytes);
+        while true {
+            let node = Node::from(&bytes);
+            if !node.is_null() {
+                return node;
+            }
+        }
+        panic!("should never get here")
     }
 }
 

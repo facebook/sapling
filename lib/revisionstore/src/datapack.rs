@@ -304,6 +304,8 @@ mod tests {
     use datastore::{Delta, Metadata};
     use mutabledatapack::MutableDataPack;
     use node::Node;
+    use rand::SeedableRng;
+    use rand::chacha::ChaChaRng;
     use tempfile::TempDir;
 
     fn make_pack(tempdir: &TempDir, deltas: &Vec<(Delta, Option<Metadata>)>) -> DataPack {
@@ -326,13 +328,15 @@ mod tests {
 
     #[test]
     fn test_get_missing() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
+
         let revisions = vec![
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Some(Key::new(Box::new([0]), Node::random())),
-                    key: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
                 },
                 None,
             ),
@@ -343,28 +347,30 @@ mod tests {
             assert_eq!(missing.len(), 0);
         }
 
-        let not = Key::new(Box::new([1]), Node::random());
+        let not = Key::new(Box::new([1]), Node::random(&mut rng));
         let missing = pack.get_missing(&vec![not.clone()]).unwrap();
         assert_eq!(missing, vec![not.clone()]);
     }
 
     #[test]
     fn test_get_meta() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
+
         let revisions = vec![
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Some(Key::new(Box::new([0]), Node::random())),
-                    key: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
                 },
                 None,
             ),
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Some(Key::new(Box::new([0]), Node::random())),
-                    key: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
                 },
                 Some(Metadata {
                     size: Some(1000),
@@ -386,21 +392,23 @@ mod tests {
 
     #[test]
     fn test_get_delta_chain_single() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
+
         let revisions = vec![
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Some(Key::new(Box::new([0]), Node::random())),
-                    key: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
                 },
                 None,
             ),
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Some(Key::new(Box::new([0]), Node::random())),
-                    key: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
                 },
                 None,
             ),
@@ -415,13 +423,15 @@ mod tests {
 
     #[test]
     fn test_get_delta_chain_multiple() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
+
         let mut revisions = vec![
             (
                 Delta {
                     data: Rc::new([1, 2, 3, 4]),
-                    base: Some(Key::new(Box::new([0]), Node::random())),
-                    key: Key::new(Box::new([0]), Node::random()),
+                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
                 },
                 None,
             ),
@@ -431,7 +441,7 @@ mod tests {
             Delta {
                 data: Rc::new([1, 2, 3, 4]),
                 base: Some(base0),
-                key: Key::new(Box::new([0]), Node::random()),
+                key: Key::new(Box::new([0]), Node::random(&mut rng)),
             },
             None,
         ));
@@ -440,7 +450,7 @@ mod tests {
             Delta {
                 data: Rc::new([1, 2, 3, 4]),
                 base: Some(base1),
-                key: Key::new(Box::new([0]), Node::random()),
+                key: Key::new(Box::new([0]), Node::random(&mut rng)),
             },
             None,
         ));
