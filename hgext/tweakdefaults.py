@@ -59,6 +59,10 @@ Config::
 
     # output new hashes when nodes get updated
     showupdated = False
+
+    [grep]
+    # Use external grep index
+    usebiggrep = False
 """
 from __future__ import absolute_import
 
@@ -91,7 +95,7 @@ from mercurial import (
     util,
 )
 from mercurial.i18n import _
-from mercurial.node import short
+from mercurial.node import bin, short
 
 from . import rebase
 
@@ -669,6 +673,34 @@ def histgrep(ui, repo, pattern, *pats, **opts):
     return commands.grep(ui, repo, pattern, *pats, **opts)
 
 
+ansiregex = re.compile(
+    (
+        r"\x1b("
+        r"(\[\??\d+[hl])|"
+        r"([=<>a-kzNM78])|"
+        r"([\(\)][a-b0-2])|"
+        r"(\[\d{0,2}[ma-dgkjqi])|"
+        r"(\[\d+;\d+[hfy]?)|"
+        r"(\[;?[hf])|"
+        r"(#[3-68])|"
+        r"([01356]n)|"
+        r"(O[mlnp-z]?)|"
+        r"(/Z)|"
+        r"(\d+)|"
+        r"(\[\?\d;\d0c)|"
+        r"(\d;\dR))"
+    ),
+    flags=re.IGNORECASE,
+)
+
+
+def stripansiescapes(s):
+    """Removes ANSI escape sequences from a string.
+    Borrowed from https://stackoverflow.com/a/45448194/149111
+    """
+    return ansiregex.sub("", s)
+
+
 del commands.table["grep"]
 
 
@@ -729,36 +761,60 @@ def grep(ui, repo, pattern, *pats, **opts):
         ]
     )
 
+    # If true, we'll use the `bgr` tool to perform the grep against some
+    # externally maintained index.  We don't provide an implementation
+    # of that tool with this repo, just the optional client interface.
+    biggrep = ui.configbool("grep", "usebiggrep")
+
+    # Ask big grep to strip out the corpus dir (stripdir) and to include
+    # the corpus revision on the first line.
+    biggrepcmd = ["bgr", "--stripdir", "-r", "--expression", pattern]
+
+    args = []
+
     if opts.get("after_context"):
-        cmd.append("-A")
-        cmd.append(opts.get("after_context"))
+        args.append("-A")
+        args.append(opts.get("after_context"))
     if opts.get("before_context"):
-        cmd.append("-B")
-        cmd.append(opts.get("before_context"))
+        args.append("-B")
+        args.append(opts.get("before_context"))
     if opts.get("context"):
-        cmd.append("-C")
-        cmd.append(opts.get("context"))
+        args.append("-C")
+        args.append(opts.get("context"))
     if opts.get("ignore_case"):
-        cmd.append("-i")
+        args.append("-i")
     if opts.get("files_with_matches"):
-        cmd.append("-l")
+        args.append("-l")
     if opts.get("line_number"):
         cmd.append("-n")
     if opts.get("invert_match"):
+        if biggrep:
+            raise error.Abort("Cannot use invert_match option with big grep")
         cmd.append("-v")
     if opts.get("word_regexp"):
         cmd.append("-w")
+        biggrepcmd[4] = "\\b%s\\b" % pattern
     if opts.get("extended_regexp"):
         cmd.append("-E")
+        # re2 is already mostly compatible by default, so there are no options
+        # to apply for this.
     if opts.get("fixed_strings"):
         cmd.append("-F")
+        # using bgs rather than bgr switches the engine to fixed string matches
+        biggrepcmd[0] = "bgs"
     if opts.get("perl_regexp"):
         cmd.append("-P")
+        # re2 is already mostly pcre compatible, so there are no options
+        # to apply for this.
+
+    biggrepcmd += args
+    cmd += args
 
     # color support, using the color extension
     colormode = getattr(ui, "_colormode", "")
     if colormode == "ansi":
         cmd.append("--color=always")
+        biggrepcmd.append("--color=on")
 
     # Copy match specific options
     match_opts = {}
@@ -778,21 +834,129 @@ def grep(ui, repo, pattern, *pats, **opts):
     # (passed in by xargs) as filenames.
     cmd.append("--")
     ui.pager("grep")
-    p = subprocess.Popen(
-        cmd, bufsize=-1, close_fds=util.closefds, stdin=subprocess.PIPE
-    )
 
-    write = p.stdin.write
+    if biggrep:
+        reporoot = os.path.dirname(repo.path)
+        p = subprocess.Popen(
+            biggrepcmd,
+            bufsize=-1,
+            close_fds=util.closefds,
+            stdout=subprocess.PIPE,
+            cwd=reporoot,
+        )
+        out, err = p.communicate()
+        lines = out.rstrip().split("\n")
+        # the first line has the revision for the corpus; parse it out
+        # the format is "#HASH:timestamp"
+        corpusrev = lines[0][1:41]
+        lines = lines[1:]
+
+        resultsbyfile = {}
+        includelineno = opts.get("line_number")
+
+        for line in lines:
+            filename, lineno, colno, context = line.split(":", 3)
+            unescapedfilename = stripansiescapes(filename)
+
+            # filter to just the files that match the list supplied
+            # by the caller
+            if m(unescapedfilename):
+                # relativize the path to the CWD.  Note that `filename` will
+                # often have escape sequences, so we do a substring replacement
+                filename = filename.replace(unescapedfilename, m.rel(unescapedfilename))
+
+                if unescapedfilename not in resultsbyfile:
+                    resultsbyfile[unescapedfilename] = []
+
+                # re-assemble the output, but omit the column number
+                if includelineno:
+                    resultsbyfile[unescapedfilename].append(
+                        "%s:%s:%s\n" % (filename, lineno, context)
+                    )
+                else:
+                    resultsbyfile[unescapedfilename].append(
+                        "%s:%s\n" % (filename, context)
+                    )
+
+        # Now check to see what has changed since the corpusrev
+        # we're going to need to grep those and stitch the results together
+        try:
+            changes = repo.status(bin(corpusrev), None, m)
+        except error.RepoLookupError:
+            # TODO: can we trigger a commit cloud fetch for this case?
+
+            # print the results we've gathered so far.  We're not sure
+            # how things differ, so we'll follow up with a warning.
+            for lines in resultsbyfile.values():
+                for line in lines:
+                    ui.write(line)
+
+            ui.warn(
+                _(
+                    "The results above are based on revision %s\n"
+                    "which is not available locally and thus may be inaccurate.\n"
+                    "To get accurate results, run `hg pull` and re-run "
+                    "your grep.\n"
+                )
+                % corpusrev
+            )
+            return
+
+        # which files we're going to search locally
+        filestogrep = set()
+
+        # files that have been changed or added need to be searched again
+        for f in changes.modified:
+            resultsbyfile.pop(f, None)
+            filestogrep.add(f)
+        for f in changes.added:
+            resultsbyfile.pop(f, None)
+            filestogrep.add(f)
+
+        # files that have been removed since the corpus rev cannot match
+        for f in changes.removed:
+            resultsbyfile.pop(f, None)
+        for f in changes.deleted:
+            resultsbyfile.pop(f, None)
+
+        # Having filtered out the changed files from the big grep results,
+        # we can now print those that remain.
+        for lines in resultsbyfile.values():
+            for line in lines:
+                ui.write(line)
+
+        # pass on any changed files to the local grep
+        if len(filestogrep) > 0:
+            # Ensure that the biggrep results are flushed before we
+            # start to intermingle with the local grep process output
+            ui.flush()
+            return _rungrep(cmd, filestogrep, m)
+
+        return 0
+
     ds = repo.dirstate
     getkind = stat.S_IFMT
     lnkkind = stat.S_IFLNK
     results = ds.walk(m, subrepos=[], unknown=False, ignored=False)
+
+    files = []
     for f in sorted(results.keys()):
         st = results[f]
         # skip symlinks and removed files
         if st is None or getkind(st.st_mode) == lnkkind:
             continue
-        write(m.rel(f) + "\0")
+        files.append(f)
+
+    return _rungrep(cmd, files, m)
+
+
+def _rungrep(cmd, files, match):
+    p = subprocess.Popen(
+        cmd, bufsize=-1, close_fds=util.closefds, stdin=subprocess.PIPE
+    )
+    write = p.stdin.write
+    for f in files:
+        write(match.rel(f) + "\0")
 
     p.stdin.close()
     return p.wait()
