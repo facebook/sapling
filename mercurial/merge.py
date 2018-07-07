@@ -1676,6 +1676,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
                 proceed = driverpreprocess(repo, ms, wctx, labels=labels)
             driverresolved = [f for f in ms.driverresolved()]
 
+            repo.ui.log("command_metrics", mergedriver_num_files=len(driverresolved))
+
             # If preprocess() marked any files as driver-resolved and we're
             # merging in-memory, abort on the assumption that driver scripts
             # require the working directory.

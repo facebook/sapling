@@ -1190,6 +1190,7 @@ def _definedestmap(
             return None
 
     rbsrt.rebasingwcp = repo["."].rev() in rebaseset
+    ui.log("rebase", "", rebase_rebasing_wcp=rbsrt.rebasingwcp)
 
     if rbsrt.inmemory and rbsrt.rebasingwcp:
         # Require a clean working copy if rebasing the current commit, as the
