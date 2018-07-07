@@ -186,8 +186,10 @@ class treedirstatemap(object):
     def clear(self):
         self._rmap.clear()
         self.copymap.clear()
-        self._nonnormalset.clear()
-        self._otherparentset.clear()
+        if self._nonnormalset is not None:
+            self._nonnormalset.clear()
+        if self._otherparentset is not None:
+            self._otherparentset.clear()
         self.setparents(node.nullid, node.nullid)
         util.clearcachedproperty(self, "filefoldmap")
         util.clearcachedproperty(self, "dirfoldmap")
