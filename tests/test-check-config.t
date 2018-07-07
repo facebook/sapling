@@ -42,8 +42,7 @@ Sanity check check-config.py
   undocumented: ui.missingint (int)
 
 New errors are not allowed. Warnings are strongly discouraged.
-
-  $ testrepohg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
+  $ testrepohg files . | egrep -v '^tests/' | egrep '\.(py|txt)$' | sed 's|\\|/|g' |
   >   $PYTHON contrib/check-config.py
   undocumented: clone.requestfullclone (bool)
   undocumented: extensions.fbsparse (str) ["!"]
