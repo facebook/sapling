@@ -8,6 +8,7 @@
 #![feature(try_from, never_type)]
 
 extern crate asyncmemo;
+extern crate db_conn;
 #[macro_use]
 extern crate diesel;
 #[macro_use]
@@ -29,19 +30,18 @@ extern crate stats;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::result;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, MutexGuard};
 
 use asyncmemo::{Asyncmemo, Filler, Weight};
+use db_conn::{MysqlConnInner, SqliteConnInner};
 use diesel::{insert_into, Connection, MysqlConnection, SqliteConnection};
 use diesel::backend::Backend;
-use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use diesel::sql_types::HasSqlType;
 use failure::ResultExt;
 
-use db::{get_connection_params, ConnectionParams, InstanceRequirement, ProxyRequirement};
 use futures::Future;
 use futures_ext::{asynchronize, BoxFuture, FutureExt};
 use mercurial_types::{HgChangesetId, RepositoryId};
@@ -165,126 +165,71 @@ impl Weight for ChangesetEntry {
 
 #[derive(Clone)]
 pub struct SqliteChangesets {
-    connection: Arc<Mutex<SqliteConnection>>,
+    inner: SqliteConnInner,
 }
 
 impl SqliteChangesets {
-    /// Open a SQLite database. This is synchronous because the SQLite backend hits local
-    /// disk or memory.
-    pub fn open<P: AsRef<str>>(path: P) -> Result<Self> {
-        let path = path.as_ref();
-        let conn = SqliteConnection::establish(path)?;
-        Ok(Self {
-            connection: Arc::new(Mutex::new(conn)),
-        })
+    fn from(inner: SqliteConnInner) -> SqliteChangesets {
+        SqliteChangesets { inner } // one true constructor
     }
 
-    fn create_tables(&mut self) -> Result<()> {
-        let up_query = include_str!("../schemas/sqlite-changesets.sql");
-
-        self.connection
-            .lock()
-            .expect("lock poisoned")
-            .batch_execute(&up_query)?;
-
-        Ok(())
-    }
-
-    /// Create a new SQLite database.
-    pub fn create<P: AsRef<str>>(path: P) -> Result<Self> {
-        let mut changesets = Self::open(path)?;
-
-        changesets.create_tables()?;
-
-        Ok(changesets)
-    }
-
-    /// Open a SQLite database, and create the tables if they are missing
-    pub fn open_or_create<P: AsRef<str>>(path: P) -> Result<Self> {
-        let mut changesets = Self::open(path)?;
-
-        let _ = changesets.create_tables();
-
-        Ok(changesets)
+    fn get_up_query() -> &'static str {
+        include_str!("../schemas/sqlite-changesets.sql")
     }
 
     /// Create a new in-memory empty database. Great for tests.
     pub fn in_memory() -> Result<Self> {
-        Self::create(":memory:")
+        Ok(Self::from(SqliteConnInner::in_memory(
+            Self::get_up_query(),
+        )?))
     }
 
-    pub fn get_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
-        Ok(self.connection.lock().expect("lock poisoned"))
+    pub fn open_or_create<P: AsRef<str>>(path: P) -> Result<Self> {
+        Ok(Self::from(SqliteConnInner::open_or_create(
+            path,
+            Self::get_up_query(),
+        )?))
     }
 
-    pub fn get_master_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
-        Ok(self.connection.lock().expect("lock poisoned"))
+    fn get_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
+        self.inner.get_conn()
+    }
+    fn get_master_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
+        self.inner.get_master_conn()
     }
 }
 
 #[derive(Clone)]
 pub struct MysqlChangesets {
-    pool: Pool<ConnectionManager<MysqlConnection>>,
-    master_pool: Pool<ConnectionManager<MysqlConnection>>,
+    inner: MysqlConnInner,
 }
 
 impl MysqlChangesets {
-    pub fn open(db_address: &str) -> Result<Self> {
-        let local_connection_params = get_connection_params(
-            db_address.to_string(),
-            InstanceRequirement::Closest,
-            None,
-            Some(ProxyRequirement::Forbidden),
-        )?;
-
-        let master_connection_params = get_connection_params(
-            db_address.to_string(),
-            InstanceRequirement::Master,
-            None,
-            Some(ProxyRequirement::Forbidden),
-        )?;
-
-        Self::open_with_params(&local_connection_params, &master_connection_params)
+    fn from(inner: MysqlConnInner) -> MysqlChangesets {
+        MysqlChangesets { inner } // one true constructor
     }
 
-    fn open_with_params(
-        local_connection_params: &ConnectionParams,
-        master_connection_params: &ConnectionParams,
-    ) -> Result<Self> {
-        let local_url = local_connection_params.to_diesel_url()?;
-        let master_url = master_connection_params.to_diesel_url()?;
+    pub fn open(db_address: &str) -> Result<Self> {
+        Ok(Self::from(MysqlConnInner::open(db_address)?))
+    }
 
-        let pool = Pool::builder()
-            .max_size(10)
-            .min_idle(Some(1))
-            .build(ConnectionManager::new(local_url.clone()))?;
-        let master_pool = Pool::builder()
-            .max_size(1)
-            .min_idle(Some(1))
-            .build(ConnectionManager::new(master_url.clone()))?;
-        Ok(Self { pool, master_pool })
+    fn get_up_query() -> &'static str {
+        include_str!("../schemas/mysql-changesets.sql")
     }
 
     pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
-        let params = db::create_test_db(prefix)?;
-        Self::create(&params)
-    }
-
-    fn create(params: &ConnectionParams) -> Result<Self> {
-        let changesets = Self::open_with_params(params, params)?;
-
-        let up_query = include_str!("../schemas/mysql-changesets.sql");
-        changesets.master_pool.get()?.batch_execute(&up_query)?;
-
-        Ok(changesets)
+        Ok(Self::from(MysqlConnInner::create_test_db(
+            prefix,
+            Self::get_up_query(),
+        )?))
     }
 
     fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
-        self.pool.get().map_err(Error::from)
+        self.inner.get_conn()
     }
 
     fn get_master_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
-        self.master_pool.get().map_err(Error::from)
+        self.inner.get_master_conn()
     }
 }
 
@@ -365,7 +310,8 @@ macro_rules! impl_changesets {
                                 let old_parent_rows = parent_query
                                     .load::<(ChangesetParentRow, ChangesetRow)>(&*connection)
                                     .map_err(failure::Error::from)
-                                    .context("while fetching parents to check duplicate insertion")?;
+                                    .context(
+                                        "while fetching parents to check duplicate insertion")?;
 
                                 let mut old_parent_rows: Vec<_> =  old_parent_rows
                                     .into_iter()
@@ -399,8 +345,9 @@ macro_rules! impl_changesets {
 
                             let cs_query = changeset_query(cs.repo_id, cs.cs_id);
                             // MySQL and SQLite both have functions to expose "last insert ID", but
-                            // Diesel doesn't expose them. Using it isn't strictly necessary, because
-                            // inserts can be later queried from selects within the same transaction.
+                            // Diesel doesn't expose them. Using it isn't strictly necessary,
+                            // because inserts can be later queried from selects within the same
+                            // transaction.
                             // But doing so would probably save a roundtrip.
                             // TODO: (rain1) T26215642 expose last_insert_id in Diesel and use it.
                             let new_cs_row = cs_query.first::<ChangesetRow>(&*connection)?;

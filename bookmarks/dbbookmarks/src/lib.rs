@@ -10,6 +10,7 @@
 extern crate ascii;
 extern crate bookmarks;
 extern crate db;
+extern crate db_conn;
 #[macro_use]
 extern crate diesel;
 #[macro_use]
@@ -26,10 +27,10 @@ mod schema;
 mod models;
 
 use bookmarks::{Bookmark, BookmarkPrefix, Bookmarks, Transaction};
+use db_conn::{MysqlConnInner, SqliteConnInner};
 use diesel::{delete, insert_into, replace_into, update, MysqlConnection, SqliteConnection};
-use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use diesel::r2d2::{ConnectionManager, PooledConnection};
 use failure::{Error, Result};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -38,95 +39,71 @@ use db::ConnectionParams;
 use mercurial_types::{HgChangesetId, RepositoryId};
 use std::collections::{HashMap, HashSet};
 use std::result;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::MutexGuard;
 
 #[derive(Clone)]
 pub struct SqliteDbBookmarks {
-    connection: Arc<Mutex<SqliteConnection>>,
+    inner: SqliteConnInner,
 }
 
 impl SqliteDbBookmarks {
-    /// Open a SQLite database. This is synchronous because the SQLite backend hits local
-    /// disk or memory.
-    pub fn open<P: AsRef<str>>(path: P) -> Result<Self> {
-        let path = path.as_ref();
-        let conn = SqliteConnection::establish(path)?;
-        Ok(Self {
-            connection: Arc::new(Mutex::new(conn)),
-        })
+    fn from(inner: SqliteConnInner) -> SqliteDbBookmarks {
+        SqliteDbBookmarks { inner } // one true constructor
     }
 
-    fn create_tables(&mut self) -> Result<()> {
-        let up_query = include_str!("../schemas/sqlite-bookmarks.sql");
-
-        self.connection
-            .lock()
-            .expect("lock poisoned")
-            .batch_execute(&up_query)?;
-
-        Ok(())
+    fn get_up_query() -> &'static str {
+        include_str!("../schemas/sqlite-bookmarks.sql")
     }
 
-    /// Create a new SQLite database.
-    pub fn create<P: AsRef<str>>(path: P) -> Result<Self> {
-        let mut bookmarks = Self::open(path)?;
-
-        bookmarks.create_tables()?;
-
-        Ok(bookmarks)
+    pub fn in_memory() -> Result<Self> {
+        Ok(Self::from(SqliteConnInner::in_memory(
+            Self::get_up_query(),
+        )?))
     }
 
     /// Open a SQLite database, and create the tables if they are missing
     pub fn open_or_create<P: AsRef<str>>(path: P) -> Result<Self> {
-        let mut bookmarks = Self::open(path)?;
-
-        let _ = bookmarks.create_tables();
-
-        Ok(bookmarks)
+        Ok(Self::from(SqliteConnInner::open_or_create(
+            path,
+            Self::get_up_query(),
+        )?))
     }
 
-    /// Create a new in-memory empty database. Great for tests.
-    pub fn in_memory() -> Result<Self> {
-        Self::create(":memory:")
-    }
-
-    fn get_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
-        Ok(self.connection.lock().expect("lock poisoned"))
+    pub fn get_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
+        self.inner.get_master_conn()
     }
 }
 
 #[derive(Clone)]
 pub struct MysqlDbBookmarks {
-    pool: Pool<ConnectionManager<MysqlConnection>>,
+    inner: MysqlConnInner,
 }
 
 impl MysqlDbBookmarks {
+    fn from(inner: MysqlConnInner) -> MysqlDbBookmarks {
+        MysqlDbBookmarks { inner } // one true constructor
+    }
+
     pub fn open(params: &ConnectionParams) -> Result<Self> {
-        let url = params.to_diesel_url()?;
-        let manager = ConnectionManager::new(url);
-        let pool = Pool::builder()
-            .max_size(10)
-            .min_idle(Some(1))
-            .build(manager)?;
-        Ok(Self { pool })
+        Ok(Self::from(MysqlConnInner::open_with_params(
+            params,
+            params,
+        )?))
+    }
+
+    fn get_up_query() -> &'static str {
+        include_str!("../schemas/mysql-bookmarks.sql")
     }
 
     pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
-        let params = db::create_test_db(prefix)?;
-        Self::create(&params)
-    }
-
-    fn create(params: &ConnectionParams) -> Result<Self> {
-        let changesets = Self::open(params)?;
-
-        let up_query = include_str!("../schemas/mysql-bookmarks.sql");
-        changesets.pool.get()?.batch_execute(&up_query)?;
-
-        Ok(changesets)
+        Ok(Self::from(MysqlConnInner::create_test_db(
+            prefix,
+            Self::get_up_query(),
+        )?))
     }
 
     fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
-        self.pool.get().map_err(Error::from)
+        self.inner.get_master_conn()
     }
 }
 

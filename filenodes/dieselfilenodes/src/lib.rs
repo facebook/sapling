@@ -8,6 +8,7 @@
 #![feature(try_from, never_type)]
 
 extern crate db;
+extern crate db_conn;
 #[macro_use]
 extern crate diesel;
 #[macro_use]
@@ -24,12 +25,12 @@ extern crate mononoke_types;
 extern crate stats;
 extern crate tokio;
 
-use db::{get_connection_params, ConnectionParams, InstanceRequirement, ProxyRequirement};
-use diesel::{insert_or_ignore_into, Connection, SqliteConnection};
+use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
+use db_conn::{MysqlConnInner, SqliteConnInner};
+use diesel::{insert_or_ignore_into, SqliteConnection};
 use diesel::backend::Backend;
-use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::sql_types::HasSqlType;
 use failure::{Error, Result, ResultExt};
 use filenodes::{FilenodeInfo, Filenodes};
@@ -39,7 +40,8 @@ use mercurial_types::{HgFileNodeId, RepoPath, RepositoryId};
 use mercurial_types::sql_types::HgFileNodeIdSql;
 use stats::Timeseries;
 
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::result;
+use std::sync::MutexGuard;
 
 mod common;
 mod errors;
@@ -60,73 +62,71 @@ define_stats! {
 
 #[derive(Clone)]
 pub struct SqliteFilenodes {
-    connection: Arc<Mutex<SqliteConnection>>,
+    inner: SqliteConnInner,
     insert_chunk_size: usize,
 }
 
 impl SqliteFilenodes {
-    /// Open a SQLite database. This is synchronous because the SQLite backend hits local
-    /// disk or memory.
-    pub fn open<P: AsRef<str>>(path: P, insert_chunk_size: usize) -> Result<Self> {
-        let path = path.as_ref();
-        let conn = SqliteConnection::establish(path)?;
-        Ok(Self {
-            connection: Arc::new(Mutex::new(conn)),
+    fn from(inner: SqliteConnInner, insert_chunk_size: usize) -> SqliteFilenodes {
+        SqliteFilenodes {
+            inner,
             insert_chunk_size,
-        })
+        } // one true constructor
     }
 
-    fn create_tables(&mut self) -> Result<()> {
-        let up_query = include_str!("../schemas/sqlite-filenodes.sql");
-
-        self.connection
-            .lock()
-            .expect("lock poisoned")
-            .batch_execute(&up_query)?;
-
-        Ok(())
+    fn get_up_query() -> &'static str {
+        include_str!("../schemas/sqlite-filenodes.sql")
     }
 
-    /// Create a new SQLite database.
-    pub fn create<P: AsRef<str>>(path: P, insert_chunk_size: usize) -> Result<Self> {
-        let mut changesets = Self::open(path, insert_chunk_size)?;
-
-        changesets.create_tables()?;
-
-        Ok(changesets)
+    pub fn in_memory() -> Result<Self> {
+        let up_query = Self::get_up_query();
+        Ok(Self::from(
+            SqliteConnInner::in_memory(up_query)?,
+            DEFAULT_INSERT_CHUNK_SIZE,
+        ))
     }
 
     /// Open a SQLite database, and create the tables if they are missing
     pub fn open_or_create<P: AsRef<str>>(path: P, insert_chunk_size: usize) -> Result<Self> {
-        let mut filenodes = Self::open(path, insert_chunk_size)?;
-
-        let _ = filenodes.create_tables();
-
-        Ok(filenodes)
+        Ok(Self::from(
+            SqliteConnInner::open_or_create(&path, Self::get_up_query())?,
+            insert_chunk_size,
+        ))
     }
 
-    /// Create a new in-memory empty database. Great for tests.
-    pub fn in_memory() -> Result<Self> {
-        Self::create(":memory:", DEFAULT_INSERT_CHUNK_SIZE)
+    pub fn get_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
+        self.inner.get_conn()
     }
-
-    pub fn get_conn(&self) -> ::std::result::Result<MutexGuard<SqliteConnection>, !> {
-        Ok(self.connection.lock().expect("lock poisoned"))
-    }
-
-    pub fn get_master_conn(&self) -> ::std::result::Result<MutexGuard<SqliteConnection>, !> {
-        Ok(self.connection.lock().expect("lock poisoned"))
+    pub fn get_master_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
+        self.inner.get_master_conn()
     }
 }
 
 #[derive(Clone)]
 pub struct MysqlFilenodes {
-    pool: Pool<ConnectionManager<MysqlConnection>>,
-    master_pool: Pool<ConnectionManager<MysqlConnection>>,
+    inner: MysqlConnInner,
     insert_chunk_size: usize,
 }
 
 impl MysqlFilenodes {
+    fn from(inner: MysqlConnInner, insert_chunk_size: usize) -> MysqlFilenodes {
+        MysqlFilenodes {
+            inner,
+            insert_chunk_size,
+        } // one true constructor
+    }
+
+    fn get_up_query() -> &'static str {
+        include_str!("../schemas/mysql-filenodes.sql")
+    }
+
+    pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
+        Ok(Self::from(
+            MysqlConnInner::create_test_db(prefix, Self::get_up_query())?,
+            DEFAULT_INSERT_CHUNK_SIZE,
+        ))
+    }
+
     pub fn open(db_address: &str, insert_chunk_size: usize) -> Result<Self> {
         let local_connection_params = get_connection_params(
             db_address.to_string(),
@@ -142,56 +142,17 @@ impl MysqlFilenodes {
             Some(ProxyRequirement::Forbidden),
         )?;
 
-        Self::open_with_params(
-            &local_connection_params,
-            &master_connection_params,
+        Ok(Self::from(
+            MysqlConnInner::open_with_params(&local_connection_params, &master_connection_params)?,
             insert_chunk_size,
-        )
+        ))
     }
 
-    fn open_with_params(
-        local_connection_params: &ConnectionParams,
-        master_connection_params: &ConnectionParams,
-        insert_chunk_size: usize,
-    ) -> Result<Self> {
-        let local_url = local_connection_params.to_diesel_url()?;
-        let master_url = master_connection_params.to_diesel_url()?;
-
-        let pool = Pool::builder()
-            .max_size(10)
-            .min_idle(Some(1))
-            .build(ConnectionManager::new(local_url.clone()))?;
-        let master_pool = Pool::builder()
-            .max_size(1)
-            .min_idle(Some(1))
-            .build(ConnectionManager::new(master_url.clone()))?;
-        Ok(Self {
-            pool,
-            master_pool,
-            insert_chunk_size,
-        })
+    pub fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
+        self.inner.get_conn()
     }
-
-    pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
-        let params = db::create_test_db(prefix)?;
-        Self::create(&params)
-    }
-
-    fn create(params: &ConnectionParams) -> Result<Self> {
-        let filenodes = Self::open_with_params(params, params, DEFAULT_INSERT_CHUNK_SIZE)?;
-
-        let up_query = include_str!("../schemas/mysql-filenodes.sql");
-        filenodes.master_pool.get()?.batch_execute(&up_query)?;
-
-        Ok(filenodes)
-    }
-
-    fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
-        self.pool.get().map_err(Error::from)
-    }
-
-    fn get_master_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
-        self.master_pool.get().map_err(Error::from)
+    pub fn get_master_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
+        self.inner.get_master_conn()
     }
 }
 
