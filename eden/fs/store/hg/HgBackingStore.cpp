@@ -164,12 +164,9 @@ folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(
 
 Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
     const Hash& commitID) {
-  return folly::via(
-             importThreadPool_.get(),
-             [this, commitID] { return getTreeForCommitImpl(commitID); })
-      // Ensure that the control moves back to the main thread pool
-      // to process the caller-attached .then routine.
-      .via(serverThreadPool_);
+  // Ensure that the control moves back to the main thread pool
+  // to process the caller-attached .then routine.
+  return getTreeForCommitImpl(commitID).via(serverThreadPool_);
 }
 
 folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
@@ -180,7 +177,7 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
           [this,
            commitID](StoreResult result) -> folly::Future<unique_ptr<Tree>> {
             if (!result.isValid()) {
-              return nullptr;
+              return importTreeForCommit(commitID);
             }
 
             auto rootTreeHash = Hash{result.bytes()};
@@ -189,11 +186,12 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
 
             return localStore_->getTree(rootTreeHash)
                 .then(
-                    [rootTreeHash, commitID](std::unique_ptr<Tree> tree)
+                    [this, rootTreeHash, commitID](std::unique_ptr<Tree> tree)
                         -> folly::Future<unique_ptr<Tree>> {
                       if (tree) {
                         return std::move(tree);
                       }
+
                       // No corresponding tree for this commit ID! Must
                       // re-import. This could happen if RocksDB is corrupted
                       // in some way or deleting entries races with
@@ -201,28 +199,24 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
                       XLOG(WARN) << "No corresponding tree " << rootTreeHash
                                  << " for commit " << commitID
                                  << "; will import again";
-                      return nullptr;
+                      return importTreeForCommit(commitID);
                     });
-          })
-      .via(importThreadPool_.get())
-      .then(
-          [this,
-           commitID](unique_ptr<Tree> tree) -> folly::Future<unique_ptr<Tree>> {
-            if (tree) {
-              return std::move(tree);
-            } else {
-              auto rootTreeHash =
-                  getThreadLocalImporter().importManifest(commitID.toString());
-              XLOG(DBG1) << "imported mercurial commit " << commitID.toString()
-                         << " as tree " << rootTreeHash.toString();
-
-              localStore_->put(
-                  KeySpace::HgCommitToTreeFamily,
-                  commitID,
-                  rootTreeHash.getBytes());
-              return localStore_->getTree(rootTreeHash);
-            }
           });
 }
+
+folly::Future<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
+    const Hash& commitID) {
+  return folly::via(importThreadPool_.get(), [this, commitID] {
+    auto rootTreeHash =
+        getThreadLocalImporter().importManifest(commitID.toString());
+    XLOG(DBG1) << "imported mercurial commit " << commitID.toString()
+               << " as tree " << rootTreeHash.toString();
+
+    localStore_->put(
+        KeySpace::HgCommitToTreeFamily, commitID, rootTreeHash.getBytes());
+    return localStore_->getTree(rootTreeHash);
+  });
+}
+
 } // namespace eden
 } // namespace facebook

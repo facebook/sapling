@@ -65,6 +65,10 @@ class HgBackingStore : public BackingStore {
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(
       const Hash& commitID);
 
+  // Import the Tree from Hg and cache it in the LocalStore before returning it.
+  folly::Future<std::unique_ptr<Tree>> importTreeForCommit(
+      const Hash& commitID);
+
   LocalStore* localStore_{nullptr};
   // A set of threads owning HgImporter instances
   std::unique_ptr<folly::Executor> importThreadPool_;
