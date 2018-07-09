@@ -458,6 +458,13 @@ impl<'a> Iterator for LogLookupIter<'a> {
     }
 }
 
+impl<'a> LogLookupIter<'a> {
+    /// A convenient way to get data.
+    pub fn into_vec(self) -> io::Result<Vec<&'a [u8]>> {
+        self.collect()
+    }
+}
+
 impl<'a> Iterator for LogIter<'a> {
     type Item = io::Result<&'a [u8]>;
 
