@@ -644,6 +644,26 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_index_reorder() {
+        let dir = TempDir::new("log").expect("tempdir");
+        let indexes = get_index_defs(0);
+        let mut log = Log::open(dir.path(), indexes).unwrap();
+        let entries: [&[u8]; 2] = [b"123", b"234"];
+        for bytes in entries.iter() {
+            log.append(bytes).expect("append");
+        }
+        log.flush().expect("flush");
+        // Reverse the index to make it interesting.
+        let mut indexes = get_index_defs(0);
+        indexes.reverse();
+        log = Log::open(dir.path(), indexes).unwrap();
+        assert_eq!(
+            log.lookup(1, b"23").unwrap().into_vec().unwrap(),
+            [b"234", b"123"]
+        );
+    }
+
     quickcheck! {
         fn test_roundtrip_meta(primary_len: u64, indexes: BTreeMap<String, u64>) -> bool {
             let mut buf = Vec::new();
