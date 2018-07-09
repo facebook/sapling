@@ -10,16 +10,15 @@ use std::net::SocketAddr;
 use failure::Error;
 use futures::{Future, Stream};
 use futures::sync::mpsc;
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
-use bytes::Bytes;
 use errors::*;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_codec::{FramedRead, FramedWrite};
 use tokio_core::reactor::Remote;
 use tokio_io::{AsyncRead, AsyncWrite, IoStream};
 
-use sshrelay::{Preamble, SshDecoder, SshEncoder, SshMsg, SshStream};
+use sshrelay::{SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
 pub fn listener<P>(sockname: P) -> io::Result<IoStream<TcpStream>>
 where
@@ -45,13 +44,6 @@ where
     }
 
     Ok(listener.incoming().boxify())
-}
-
-pub struct Stdio {
-    pub preamble: Preamble,
-    pub stdin: BoxStream<Bytes, io::Error>,
-    pub stdout: mpsc::Sender<Bytes>,
-    pub stderr: mpsc::Sender<Bytes>,
 }
 
 // As a server, given a stream to a client, return an Io pair with stdin/stdout, and an

@@ -96,14 +96,12 @@ use std::time::{Duration, Instant};
 
 use failure::SlogKVError;
 use futures::{Future, IntoFuture, Sink, Stream};
-use futures::sink::Wait;
 use futures::sync::mpsc;
 use futures_ext::{asynchronize, FutureExt};
 use futures_stats::Timed;
 use tokio::util::FutureExt as TokioFutureExt;
 use tokio_tls::TlsAcceptorExt;
 
-use bytes::Bytes;
 use clap::{App, ArgMatches};
 
 use dns_lookup::getnameinfo;
@@ -121,30 +119,12 @@ use hgproto::{sshproto, HgProtoHandler};
 use mercurial_types::RepositoryId;
 use metaconfig::RepoConfigs;
 use metaconfig::repoconfig::RepoConfig;
+use sshrelay::{SenderBytesWrite, Stdio};
 
 use errors::*;
 
-use listener::{ssh_server_mux, Stdio};
+use listener::ssh_server_mux;
 use monitoring::{ReadyHandle, ReadyState, ReadyStateBuilder};
-
-struct SenderBytesWrite {
-    chan: Wait<mpsc::Sender<Bytes>>,
-}
-
-impl io::Write for SenderBytesWrite {
-    fn flush(&mut self) -> io::Result<()> {
-        self.chan
-            .flush()
-            .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
-    }
-
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.chan
-            .send(Bytes::from(buf))
-            .map(|_| buf.len())
-            .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
-    }
-}
 
 // Exit the whole process if any of the threads fails to catch a panic
 fn setup_panic_hook() {

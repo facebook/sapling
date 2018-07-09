@@ -5,6 +5,10 @@
 // GNU General Public License version 2 or any later version.
 
 extern crate bytes;
+extern crate futures;
+extern crate futures_ext;
+#[macro_use]
+extern crate maplit;
 extern crate netstring;
 extern crate serde;
 #[macro_use]
@@ -16,6 +20,8 @@ use std::collections::HashMap;
 use std::io;
 
 use bytes::{BufMut, Bytes, BytesMut};
+use futures::{sink::Wait, sync::mpsc};
+use futures_ext::BoxStream;
 use tokio_io::codec::{Decoder, Encoder};
 
 use netstring::{NetstringDecoder, NetstringEncoder};
@@ -26,6 +32,32 @@ pub struct SshDecoder(NetstringDecoder);
 
 #[derive(Debug)]
 pub struct SshEncoder(NetstringEncoder<Bytes>);
+
+pub struct Stdio {
+    pub preamble: Preamble,
+    pub stdin: BoxStream<Bytes, io::Error>,
+    pub stdout: mpsc::Sender<Bytes>,
+    pub stderr: mpsc::Sender<Bytes>,
+}
+
+pub struct SenderBytesWrite {
+    pub chan: Wait<mpsc::Sender<Bytes>>,
+}
+
+impl io::Write for SenderBytesWrite {
+    fn flush(&mut self) -> io::Result<()> {
+        self.chan
+            .flush()
+            .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
+    }
+
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.chan
+            .send(Bytes::from(buf))
+            .map(|_| buf.len())
+            .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
+    }
+}
 
 // Common information for a connection
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
