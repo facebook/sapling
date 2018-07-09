@@ -63,6 +63,11 @@ pub struct Log {
     meta: LogMetadata,
     indexes: Vec<Index>,
     index_defs: Vec<IndexDef>,
+    // Whether the index and the log is out-of-sync. In which case, index-based reads (lookups)
+    // should return errors because it can no longer be trusted.
+    // This could be improved to be per index. For now, it's a single state for simplicity. It's
+    // probably fine considering index corruptions are rare.
+    index_corrupted: bool,
 }
 
 /// Index definition.
@@ -135,6 +140,7 @@ impl Log {
             meta,
             indexes,
             index_defs,
+            index_corrupted: false,
         };
         log.update_indexes_for_on_disk_entries()?;
         Ok(log)
@@ -203,7 +209,8 @@ impl Log {
             .collect();
         self.update_indexes_for_on_disk_entries()?;
         for i in indexes_to_flush {
-            let new_length = self.indexes[i].flush()?;
+            let new_length = self.indexes[i].flush();
+            let new_length = self.maybe_set_index_error(new_length)?;
             let name = self.index_defs[i].name.to_string();
             self.meta.indexes.insert(name, new_length);
         }
@@ -217,6 +224,7 @@ impl Log {
     /// Lookup an entry using the given index. Return an iterator of `Result<&[u8]>`.
     /// `open` decides available `index_id`s.
     pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> io::Result<LogLookupIter> {
+        self.maybe_return_index_error()?;
         if let Some(index) = self.indexes.get(index_id) {
             assert!(key.as_ref().len() > 0);
             let link_offset = index.get(&key)?;
@@ -243,6 +251,15 @@ impl Log {
 
     /// Build in-memory index for the newly added entry.
     fn update_indexes_for_in_memory_entry(&mut self, data: &[u8], offset: u64) -> io::Result<()> {
+        let result = self.update_indexes_for_in_memory_entry_unchecked(data, offset);
+        self.maybe_set_index_error(result)
+    }
+
+    fn update_indexes_for_in_memory_entry_unchecked(
+        &mut self,
+        data: &[u8],
+        offset: u64,
+    ) -> io::Result<()> {
         for (mut index, def) in self.indexes.iter_mut().zip(&self.index_defs) {
             for index_output in (def.func)(data) {
                 match index_output {
@@ -265,6 +282,11 @@ impl Log {
 
     /// Build in-memory index so they cover all entries stored in self.disk_buf.
     fn update_indexes_for_on_disk_entries(&mut self) -> io::Result<()> {
+        let result = self.update_indexes_for_on_disk_entries_unchecked();
+        self.maybe_set_index_error(result)
+    }
+
+    fn update_indexes_for_on_disk_entries_unchecked(&mut self) -> io::Result<()> {
         // It's a programming error to call this when mem_buf is not empty.
         assert!(self.mem_buf.is_empty());
         for (mut index, def) in self.indexes.iter_mut().zip(&self.index_defs) {
@@ -409,6 +431,28 @@ impl Log {
                 data_offset: offset,
                 next_offset: end,
             }))
+        }
+    }
+
+    /// Wrapper around a `Result` returned by an index write operation.
+    /// Make sure all index write operations are wrapped by this method.
+    #[inline]
+    fn maybe_set_index_error<T>(&mut self, result: io::Result<T>) -> io::Result<T> {
+        if result.is_err() && !self.index_corrupted {
+            self.index_corrupted = true;
+        }
+        result
+    }
+
+    /// Wrapper to return an error if `index_corrupted` is set.
+    /// Use this before doing index read operations.
+    #[inline]
+    fn maybe_return_index_error(&self) -> io::Result<()> {
+        if self.index_corrupted {
+            let msg = format!("index is corrupted");
+            Err(io::Error::new(io::ErrorKind::InvalidData, msg))
+        } else {
+            Ok(())
         }
     }
 }
@@ -662,6 +706,39 @@ mod tests {
             log.lookup(1, b"23").unwrap().into_vec().unwrap(),
             [b"234", b"123"]
         );
+    }
+
+    #[test]
+    fn test_index_mark_corrupt() {
+        let dir = TempDir::new("log").expect("tempdir");
+        let indexes = get_index_defs(0);
+
+        let mut log = Log::open(dir.path(), indexes).unwrap();
+        let entries: [&[u8]; 2] = [b"123", b"234"];
+        for bytes in entries.iter() {
+            log.append(bytes).expect("append");
+        }
+        log.flush().expect("flush");
+
+        // Corrupt an index. Backup its content.
+        let backup = {
+            let mut buf = Vec::new();
+            let size = File::open(dir.path().join("index-x"))
+                .unwrap()
+                .read_to_end(&mut buf)
+                .unwrap();
+            let mut index_file = File::create(dir.path().join("index-x")).unwrap();
+            index_file.write_all(&vec![0; size]).expect("write");
+            buf
+        };
+
+        // Inserting a new entry will mark the index as "corrupted".
+        assert!(log.append(b"new").is_err());
+
+        // Then index lookups will return errors. Even if its content is restored.
+        let mut index_file = File::create(dir.path().join("index-x")).unwrap();
+        index_file.write_all(&backup).expect("write");
+        assert!(log.lookup(1, b"23").is_err());
     }
 
     quickcheck! {
