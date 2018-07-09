@@ -580,6 +580,70 @@ mod tests {
         assert_eq!(log2.iter().count(), 0);
     }
 
+    fn get_index_defs(lag_threshold: u64) -> Vec<IndexDef> {
+        // Two index functions. First takes every 2 bytes as references. The second takes every 3
+        // bytes as owned slices.
+        let index_func0 = |data: &[u8]| {
+            (0..(data.len().max(1) - 1))
+                .map(|i| IndexOutput::Reference(i as u64..i as u64 + 2))
+                .collect()
+        };
+        let index_func1 = |data: &[u8]| {
+            (0..(data.len().max(2) - 2))
+                .map(|i| IndexOutput::Owned(data[i..i + 3].to_vec().into_boxed_slice()))
+                .collect()
+        };
+        vec![
+            IndexDef {
+                func: Box::new(index_func0),
+                name: "x",
+                lag_threshold,
+            },
+            IndexDef {
+                func: Box::new(index_func1),
+                name: "y",
+                lag_threshold,
+            },
+        ]
+    }
+
+    #[test]
+    fn test_index_manual() {
+        // Test index lookups with these combinations:
+        // - Index key: Reference and Owned.
+        // - Index lag_threshold: 0, 20, 1000.
+        // - Entries: Mixed on-disk and in-memory ones.
+        for lag in [0u64, 20, 1000].iter().cloned() {
+            let dir = TempDir::new("log").expect("tempdir");
+            let mut log = Log::open(dir.path(), get_index_defs(lag)).unwrap();
+            let entries: [&[u8]; 6] = [b"1", b"", b"2345", b"", b"78", b"3456"];
+            for bytes in entries.iter() {
+                log.append(bytes).expect("append");
+                // Flush and reload in the middle of entries. This exercises the code paths
+                // handling both on-disk and in-memory parts.
+                if bytes.is_empty() {
+                    log.flush().expect("flush");
+                    log = Log::open(dir.path(), get_index_defs(lag)).unwrap();
+                }
+            }
+
+            // Lookups via index 0
+            assert_eq!(
+                log.lookup(0, b"34").unwrap().into_vec().unwrap(),
+                [b"3456", b"2345"]
+            );
+            assert_eq!(log.lookup(0, b"56").unwrap().into_vec().unwrap(), [b"3456"]);
+            assert_eq!(log.lookup(0, b"78").unwrap().into_vec().unwrap(), [b"78"]);
+            assert!(log.lookup(0, b"89").unwrap().into_vec().unwrap().is_empty());
+
+            // Lookups via index 1
+            assert_eq!(
+                log.lookup(1, b"345").unwrap().into_vec().unwrap(),
+                [b"3456", b"2345"]
+            );
+        }
+    }
+
     quickcheck! {
         fn test_roundtrip_meta(primary_len: u64, indexes: BTreeMap<String, u64>) -> bool {
             let mut buf = Vec::new();
