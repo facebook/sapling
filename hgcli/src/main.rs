@@ -35,6 +35,7 @@ extern crate nix;
 extern crate fbwhoami;
 #[macro_use]
 extern crate futures_ext;
+extern crate futures_stats;
 extern crate scuba_ext;
 extern crate sshrelay;
 

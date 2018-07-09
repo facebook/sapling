@@ -29,6 +29,7 @@ use errors::*;
 use failure::SlogKVError;
 use fbwhoami;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::build_pkcs12;
 use sshrelay::{Preamble, SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
@@ -133,14 +134,26 @@ impl<'a> StdioRelay<'a> {
             client_logger,
             "Session with Mononoke started with uuid: {}", session_uuid
         );
-        scuba_logger.log_with_msg("Hgcli proxy - connected", None);
+        scuba_logger.log_with_msg("Hgcli proxy - Connected", None);
 
         self.internal_run(stdio)
-            .map_err(move |err| {
-                let err_msg = format!("{:#?}", err);
-                scuba_logger.log_with_msg("Hgcli proxy - error", err_msg.clone());
-                error!(client_logger, "Error in hgcli proxy"; SlogKVError(err));
-                format_err!("{}", err_msg)
+            .timed(move |stats, result| {
+                scuba_logger.add_stats(&stats);
+
+                match result {
+                    Ok(_) => scuba_logger.log_with_msg("Hgcli proxy - Success", None),
+                    Err(err) => {
+                        scuba_logger.log_with_msg("Hgcli proxy - Failure", format!("{:#?}", err))
+                    }
+                }
+                Ok(())
+            })
+            .then(move |result| match result {
+                Ok(()) => Ok(()),
+                Err(err) => {
+                    error!(client_logger, "Error in hgcli proxy"; SlogKVError(err));
+                    Ok(())
+                }
             })
             .boxify()
     }
