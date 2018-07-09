@@ -201,7 +201,7 @@ TEST_F(FuseChannelTest, testInitErrorClose) {
   fuse_.close();
 
   EXPECT_THROW_RE(
-      initFuture.get(100ms),
+      std::move(initFuture).get(100ms),
       std::runtime_error,
       "FUSE mount \"/fake/mount/path\" was unmounted before we "
       "received the INIT packet");
@@ -218,7 +218,7 @@ TEST_F(FuseChannelTest, testInitErrorWrongPacket) {
   fuse_.sendRequest(FUSE_LOOKUP, FUSE_ROOT_ID, initArg);
 
   EXPECT_THROW_RE(
-      initFuture.get(100ms),
+      std::move(initFuture).get(100ms),
       std::runtime_error,
       "expected to receive FUSE_INIT for \"/fake/mount/path\" "
       "but got FUSE_LOOKUP");
@@ -237,7 +237,7 @@ TEST_F(FuseChannelTest, testInitErrorOldVersion) {
   fuse_.sendRequest(FUSE_INIT, FUSE_ROOT_ID, initArg);
 
   EXPECT_THROW_RE(
-      initFuture.get(100ms),
+      std::move(initFuture).get(100ms),
       std::runtime_error,
       "Unsupported FUSE kernel version 2.7 while initializing "
       "\"/fake/mount/path\"");
@@ -255,7 +255,7 @@ TEST_F(FuseChannelTest, testInitErrorShortPacket) {
   fuse_.sendRequest(FUSE_INIT, FUSE_ROOT_ID, body);
 
   EXPECT_THROW_RE(
-      initFuture.get(100ms),
+      std::move(initFuture).get(100ms),
       std::runtime_error,
       "received partial FUSE_INIT packet on mount \"/fake/mount/path\": "
       "size=44");

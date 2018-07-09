@@ -452,7 +452,7 @@ TEST(FileInode, readDuringLoad) {
 
   // The read() operation should have completed now.
   ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ(contents, dataFuture.get().copyData());
+  EXPECT_EQ(contents, std::move(dataFuture).get().copyData());
 }
 
 TEST(FileInode, writeDuringLoad) {
@@ -477,7 +477,7 @@ TEST(FileInode, writeDuringLoad) {
 
   // The write() operation should have completed now.
   ASSERT_TRUE(writeFuture.isReady());
-  EXPECT_EQ(newContents.size(), writeFuture.get());
+  EXPECT_EQ(newContents.size(), std::move(writeFuture).get());
 
   // We should be able to read back our modified data now.
   EXPECT_FILE_INODE(inode, "ConTENTS not ready.\n", 0644);
@@ -508,14 +508,14 @@ TEST(FileInode, truncateDuringLoad) {
 
   // The read should complete now too.
   ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ("", dataFuture.get().copyData());
+  EXPECT_EQ("", std::move(dataFuture).get().copyData());
 
   // For good measure, test reading and writing some more.
   truncHandle->write("foobar\n"_sp, 5).get(0ms);
 
   dataFuture = handle->read(4096, 0);
   ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ("\0\0\0\0\0foobar\n"_sp, dataFuture.get().copyData());
+  EXPECT_EQ("\0\0\0\0\0foobar\n"_sp, std::move(dataFuture).get().copyData());
 
   EXPECT_FILE_INODE(inode, "\0\0\0\0\0foobar\n"_sp, 0644);
 }

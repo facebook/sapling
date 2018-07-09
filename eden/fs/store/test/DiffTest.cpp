@@ -70,7 +70,8 @@ class DiffTest : public ::testing::Test {
 
 TEST_F(DiffTest, unknownCommit) {
   auto future = diffCommits("1", "1");
-  EXPECT_THROW_RE(future.get(100ms), std::domain_error, "commit .* not found");
+  EXPECT_THROW_RE(
+      std::move(future).get(100ms), std::domain_error, "commit .* not found");
 }
 
 TEST_F(DiffTest, sameCommit) {
