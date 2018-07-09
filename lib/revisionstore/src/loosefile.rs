@@ -76,10 +76,7 @@ impl LooseFile {
             let k1: Key = Key::new(Box::new([1u8; 3]), p1);
             let parents: [Key; 2] = [k0, k1];
             let linknode: Node = Node::from_slice(&content[start + 60..start + 80])?;
-            let nodeinfo = NodeInfo {
-                parents,
-                linknode,
-            };
+            let nodeinfo = NodeInfo { parents, linknode };
             ancestors.insert(key, nodeinfo);
             start += 80;
             while start < content.len() && content[start] != 0 {
@@ -87,7 +84,11 @@ impl LooseFile {
             }
             start += 1;
         }
-        Ok(LooseFile::new(textsize, Rc::new(text.into_boxed_slice()), ancestors))
+        Ok(LooseFile::new(
+            textsize,
+            Rc::new(text.into_boxed_slice()),
+            ancestors,
+        ))
     }
 
     pub fn from_file(spath: &str) -> Result<Self> {
@@ -99,6 +100,8 @@ impl LooseFile {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
+    use rand::chacha::ChaChaRng;
 
     quickcheck! {
         fn test_roundtrip_atoi(value: u32) -> bool {
@@ -134,14 +137,16 @@ mod tests {
             // text='abcdefghijkl'
             content.push(i);
         }
-        let anode = Node::random();
-        let bnode = Node::random();
-        let ap0 = Node::random();
-        let bp0 = Node::random();
-        let ap1 = Node::random();
-        let bp1 = Node::random();
-        let alinknode = Node::random();
-        let blinknode = Node::random();
+
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let anode = Node::random(&mut rng);
+        let bnode = Node::random(&mut rng);
+        let ap0 = Node::random(&mut rng);
+        let bp0 = Node::random(&mut rng);
+        let ap1 = Node::random(&mut rng);
+        let bp1 = Node::random(&mut rng);
+        let alinknode = Node::random(&mut rng);
+        let blinknode = Node::random(&mut rng);
         content.extend_from_slice(anode.as_ref());
         content.extend_from_slice(ap0.as_ref());
         content.extend_from_slice(ap1.as_ref());
