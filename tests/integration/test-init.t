@@ -120,10 +120,11 @@ start mononoke
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
   $ hgmn debugwireargs ssh://user@dummy/disabled_repo one two --three three
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   abort: no suitable response from remote hg!
   [255]
   $ hgmn debugwireargs ssh://user@dummy/repo one two --three three
-  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   one two three None None
 
   $ cd repo2

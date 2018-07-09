@@ -15,6 +15,7 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
 extern crate tokio_io;
+extern crate uuid;
 
 use std::collections::HashMap;
 use std::io;
@@ -23,6 +24,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use futures::{sink::Wait, sync::mpsc};
 use futures_ext::BoxStream;
 use tokio_io::codec::{Decoder, Encoder};
+use uuid::Uuid;
 
 use netstring::{NetstringDecoder, NetstringEncoder};
 
@@ -69,11 +71,21 @@ pub struct Preamble {
 }
 
 impl Preamble {
-    pub fn new(reponame: String) -> Self {
-        Self {
-            reponame,
-            misc: HashMap::new(),
+    pub fn new(
+        reponame: String,
+        session_uuid: Uuid,
+        unix_username: Option<String>,
+        source_hostname: Option<String>,
+    ) -> Self {
+        let mut misc = hashmap!{"session_uuid".to_owned() => format!("{}", session_uuid)};
+        if let Some(unix_username) = unix_username {
+            misc.insert("unix_username".to_owned(), unix_username);
         }
+        if let Some(source_hostname) = source_hostname {
+            misc.insert("source_hostname".to_owned(), source_hostname);
+        }
+
+        Self { reponame, misc }
     }
 }
 

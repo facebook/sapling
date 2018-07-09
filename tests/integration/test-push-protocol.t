@@ -187,7 +187,7 @@ move master bookmarks
 
   $ hgmn outgoing ssh://user@dummy/repo
   comparing with ssh://user@dummy/repo
-  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   changeset:   1:bb0985934a0f
   user:        test
@@ -231,7 +231,7 @@ push to Mononoke
   running *scm/mononoke/tests/integration/dummyssh.par 'user@dummy' ''\''*scm/mononoke/hgcli/hgcli#binary/hgcli'\'' -R repo serve --stdio' (glob)
   sending hello command
   sending between command
-  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: * (glob)
   remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
   remote: 1
@@ -276,7 +276,7 @@ Now pull what was just pushed
 
   $ cd ../repo3
   $ hgmn sl --all -r "all()" --stat
-  remote: * DEBG Connection with Mononoke established, remote: remote_only, session_uuid: * (glob)
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   @  changeset:   0:0e7ec5675652
      bookmark:    master_bookmark
      bookmark:    master_bookmark2

@@ -11,9 +11,13 @@
 extern crate clap;
 #[macro_use]
 extern crate failure_ext as failure;
+#[macro_use]
+extern crate slog;
+extern crate slog_term;
 extern crate tokio_uds;
 
 extern crate bytes;
+extern crate dns_lookup;
 extern crate futures;
 extern crate native_tls;
 extern crate secure_utils;
@@ -23,11 +27,14 @@ extern crate tokio_io;
 extern crate tokio_proto;
 extern crate tokio_service;
 extern crate tokio_tls;
+extern crate uuid;
 
 extern crate mio;
 extern crate nix;
 
+extern crate fbwhoami;
 extern crate futures_ext;
+extern crate scuba_ext;
 extern crate sshrelay;
 
 use clap::{App, Arg, SubCommand};
@@ -42,6 +49,10 @@ fn main() {
     let matches = App::new("Mononoke CLI")
         .about("Provide minimally compatible CLI to Mononoke server")
         .arg(Arg::from_usage("-R, --repository=<REPO> 'repository name'"))
+        .arg(Arg::from_usage("--remote-proxy 'hgcli is run as remote proxy, not locally'"))
+        .arg(Arg::from_usage(
+            "--scuba-table [SCUBA_TABLE] 'name of scuba table to log to'",
+        ))
         .subcommand(
             SubCommand::with_name("serve")
                 .about("start server")

@@ -417,10 +417,24 @@ fn repo_listen(
             stdin,
             stdout,
             stderr,
-            preamble,
+            mut preamble,
         } = stdio;
 
-        let session_uuid = uuid::Uuid::new_v4();
+        let session_uuid = match preamble
+            .misc
+            .get("session_uuid")
+            .and_then(|v| uuid::Uuid::parse_str(v).ok())
+        {
+            Some(session_uuid) => session_uuid,
+            None => {
+                let session_uuid = uuid::Uuid::new_v4();
+                preamble
+                    .misc
+                    .insert("session_uuid".to_owned(), format!("{}", session_uuid));
+                session_uuid
+            }
+        };
+
         let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
         let trace = TraceContext::new(session_uuid, Instant::now());
 
@@ -457,13 +471,11 @@ fn repo_listen(
             };
             let mut scuba_logger = scuba_logger.clone();
             scuba_logger
-                .add("session_uuid", format!("{}", session_uuid))
                 .add_preamble(&preamble)
                 .add("client_hostname", client_hostname);
             scuba_logger
         };
 
-        debug!(conn_log, "Connection with Mononoke established"; "remote" => "remote_only");
         scuba_logger.log_with_msg("Connection established", None);
 
         // Construct a hg protocol handler
