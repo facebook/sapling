@@ -33,17 +33,20 @@ extern crate mio;
 extern crate nix;
 
 extern crate fbwhoami;
+#[macro_use]
 extern crate futures_ext;
 extern crate scuba_ext;
 extern crate sshrelay;
 
 use clap::{App, Arg, SubCommand};
+use tokio_core::reactor::Core;
 
 mod serve;
 
 pub mod errors {
     pub use failure::{Error, Result};
 }
+use errors::Error;
 
 fn main() {
     let matches = App::new("Mononoke CLI")
@@ -89,7 +92,9 @@ fn main() {
         .get_matches();
 
     let res = if let Some(subcmd) = matches.subcommand_matches("serve") {
-        serve::cmd(&matches, subcmd)
+        Core::new()
+            .map_err(Error::from)
+            .map(|mut reactor| reactor.run(serve::cmd(&matches, subcmd)))
     } else {
         Err(failure::err_msg("unexpected or missing subcommand"))
     };
