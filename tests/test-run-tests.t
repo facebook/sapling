@@ -387,7 +387,7 @@ test --xunit support
   test-failure.t
   test-success.t
   $ cat report.json
-  testreport ={
+  {
       "test-failure-unicode.t": {
           "result": "success"
       },
@@ -415,7 +415,7 @@ test --xunit support
   test-failure-unicode.t
   test-failure.t
   $ cat output/report.json
-  testreport ={
+  {
       "test-failure-unicode.t": {
           "result": "success"
       },
@@ -942,7 +942,7 @@ Missing skips or blacklisted skips don't count as executed:
   # Ran 0 tests, 2 skipped, 0 failed.
   [80]
   $ cat report.json
-  testreport ={
+  {
       "test-bogus.t": {
           "result": "skip"
       },
@@ -1011,7 +1011,7 @@ test for --json
   [1]
 
   $ cat report.json
-  testreport ={
+  {
       "test-failure.t": [\{] (re)
           "csys": "\s*[\d\.]{4,5}", ? (re)
           "cuser": "\s*[\d\.]{4,5}", ? (re)
@@ -1067,7 +1067,7 @@ test for --json
   $ f report.json
   report.json: file not found
   $ cat output/report.json
-  testreport ={
+  {
       "test-failure.t": [\{] (re)
           "csys": "\s*[\d\.]{4,5}", ? (re)
           "cuser": "\s*[\d\.]{4,5}", ? (re)
@@ -1122,7 +1122,7 @@ Test that failed test accepted through interactive are properly reported:
   # Ran 2 tests, 1 skipped, 0 failed.
 
   $ cat report.json
-  testreport ={
+  {
       "test-failure.t": [\{] (re)
           "csys": "\s*[\d\.]{4,5}", ? (re)
           "cuser": "\s*[\d\.]{4,5}", ? (re)

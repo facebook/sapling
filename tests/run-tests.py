@@ -2661,8 +2661,9 @@ class TextTestRunner(unittest.TextTestRunner):
                     tres = {"result": res}
 
                 outcome[tc.name] = tres
-        jsonout = json.dumps(outcome, sort_keys=True, indent=4, separators=(",", ": "))
-        outf.writelines(("testreport =", jsonout))
+        outf.write(
+            json.dumps(outcome, sort_keys=True, indent=4, separators=(",", ": "))
+        )
 
 
 class TestRunner(object):
