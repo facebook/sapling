@@ -225,6 +225,7 @@ class server(object):
         from . import dispatch  # avoid cycle
 
         args = self._readlist()
+        pycompat.sysargv[1:] = args
 
         # copy the uis so changes (e.g. --config or --verbose) don't
         # persist between requests
