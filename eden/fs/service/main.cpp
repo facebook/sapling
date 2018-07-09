@@ -20,6 +20,7 @@
 #include <sysexits.h>
 #include <unistd.h>
 #include "EdenServer.h"
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/StartupLogger.h"
@@ -40,6 +41,9 @@ DEFINE_string(
     logPath,
     "",
     "If set, redirects stdout and stderr to the log file given.");
+
+constexpr folly::StringPiece kDefaultUserConfigFile{".edenrc"};
+constexpr folly::StringPiece kEdenfsConfigFile{"edenfs.rc"};
 
 using namespace facebook::eden;
 
@@ -135,15 +139,62 @@ int main(int argc, char** argv) {
     return EX_USAGE;
   }
 
-  // Resolve path arguments before we cd to /
-  if (FLAGS_edenDir.empty()) {
-    fprintf(stderr, "error: the --edenDir argument is required\n");
-    return EX_USAGE;
+  // normalizeBestEffort() to try resolving symlinks in these paths but don't
+  // fail if they don't exist.
+  AbsolutePath systemConfigDir;
+  try {
+    systemConfigDir = normalizeBestEffort(FLAGS_etcEdenDir);
+  } catch (const std::exception& ex) {
+    fprintf(
+        stderr,
+        "invalid flag value: %s: %s\n",
+        FLAGS_edenDir.c_str(),
+        folly::exceptionStr(ex).c_str());
+    return EX_SOFTWARE;
   }
-  // Resolve the eden directory path and make sure it exists.
+  const auto systemConfigPath =
+      systemConfigDir + PathComponentPiece{kEdenfsConfigFile};
+
+  const std::string configPathStr = FLAGS_configPath;
+  AbsolutePath userConfigPath;
+  if (configPathStr.empty()) {
+    userConfigPath = identity.getHomeDirectory() +
+        PathComponentPiece{kDefaultUserConfigFile};
+  } else {
+    try {
+      userConfigPath = normalizeBestEffort(configPathStr);
+    } catch (const std::exception& ex) {
+      fprintf(
+          stderr,
+          "invalid flag value: %s: %s\n",
+          FLAGS_configPath.c_str(),
+          folly::exceptionStr(ex).c_str());
+      return EX_SOFTWARE;
+    }
+  }
+  // Create the default EdenConfig. Next, update with command line arguments.
+  // Command line areguments will take precedence over config file settings.
+  auto edenConfig = std::make_unique<EdenConfig>(
+      identity.getHomeDirectory(),
+      userConfigPath,
+      systemConfigDir,
+      systemConfigPath);
+
+  // Load system and user configurations
+  edenConfig->loadSystemConfig();
+  edenConfig->loadUserConfig();
+
+  // We will set the edenDir using ConfigSource COMMAND_LINE so that it cannot
+  // be over-ridden by subsequent config file updates.
   AbsolutePath edenDir;
   try {
-    edenDir = ensureEdenDirExists(FLAGS_edenDir);
+    if (!FLAGS_edenDir.empty()) {
+      edenDir = ensureEdenDirExists(folly::to<std::string>(FLAGS_edenDir));
+    } else {
+      edenDir =
+          ensureEdenDirExists(folly::to<std::string>(edenConfig->getEdenDir()));
+    }
+    edenConfig->setEdenDir(edenDir, facebook::eden::COMMAND_LINE);
   } catch (const std::exception& ex) {
     fprintf(
         stderr,
@@ -153,18 +204,9 @@ int main(int argc, char** argv) {
     return EX_SOFTWARE;
   }
 
-  // It's okay if the etcEdenDir and configPath don't exist, so use
-  // normalizeBestEffort() to try resolving symlinks in these paths but don't
-  // fail if they don't exist.
-  const auto etcEdenDir = normalizeBestEffort(FLAGS_etcEdenDir);
-
-  const std::string configPathStr = FLAGS_configPath;
-  const AbsolutePath configPath = configPathStr.empty()
-      ? identity.getHomeDirectory() + ".edenrc"_pc
-      : normalizeBestEffort(configPathStr);
-
   auto logPath = getLogPath(edenDir);
   auto startupLogger = daemonizeIfRequested(logPath);
+  XLOG(DBG3) << edenConfig->toString();
   folly::Optional<EdenServer> server;
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
   try {
@@ -192,11 +234,7 @@ int main(int argc, char** argv) {
     startupLogger->log("Starting ", getEdenfsBuildName(), ", pid ", getpid());
 
     server.emplace(
-        std::move(identity),
-        std::move(privHelper),
-        edenDir,
-        etcEdenDir,
-        configPath);
+        std::move(identity), std::move(privHelper), std::move(edenConfig));
 
     prepareFuture = server->prepare(startupLogger);
   } catch (const std::exception& ex) {
@@ -220,6 +258,7 @@ int main(int argc, char** argv) {
   });
 
   server->run();
+
   XLOG(INFO) << "edenfs exiting successfully";
   return EX_OK;
 }

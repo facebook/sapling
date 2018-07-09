@@ -24,6 +24,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -74,9 +75,7 @@ class EdenServer : private TakeoverHandler {
   EdenServer(
       UserInfo userInfo,
       std::unique_ptr<PrivHelper> privHelper,
-      AbsolutePathPiece edenDir,
-      AbsolutePathPiece etcEdenDir,
-      AbsolutePathPiece configPath);
+      std::unique_ptr<const EdenConfig> edenConfig);
 
   virtual ~EdenServer();
 
@@ -206,6 +205,10 @@ class EdenServer : private TakeoverHandler {
 
   AbsolutePathPiece getEdenDir() {
     return edenDir_;
+  }
+
+  std::shared_ptr<const EdenConfig> getEdenConfig() {
+    return *edenConfig_.rlock();
   }
 
   const std::shared_ptr<ServerState>& getServerState() {
@@ -355,7 +358,6 @@ class EdenServer : private TakeoverHandler {
    */
 
   AbsolutePath edenDir_;
-  AbsolutePath etcEdenDir_;
   AbsolutePath configPath_;
   folly::File lockFile_;
   std::shared_ptr<EdenServiceHandler> handler_;
@@ -389,6 +391,11 @@ class EdenServer : private TakeoverHandler {
     folly::File takeoverThriftSocket;
   };
   folly::Synchronized<RunStateData> runningState_;
+
+  /**
+   * EdenConfig
+   */
+  folly::Synchronized<std::shared_ptr<const EdenConfig>> edenConfig_;
 
   /**
    * Common state shared by all of the EdenMount objects.

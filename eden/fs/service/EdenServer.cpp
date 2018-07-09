@@ -164,17 +164,17 @@ class EdenServer::ThriftServerEventHandler
 EdenServer::EdenServer(
     UserInfo userInfo,
     std::unique_ptr<PrivHelper> privHelper,
-    AbsolutePathPiece edenDir,
-    AbsolutePathPiece etcEdenDir,
-    AbsolutePathPiece configPath)
-    : edenDir_(edenDir),
-      etcEdenDir_(etcEdenDir),
-      configPath_(configPath),
+    std::unique_ptr<const EdenConfig> edenConfig)
+    : edenConfig_(std::move(edenConfig)),
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(),
-          std::make_shared<UnixClock>())} {}
+          std::make_shared<UnixClock>())} {
+  auto cfgPtr = *edenConfig_.rlock();
+  edenDir_ = cfgPtr->getEdenDir();
+  configPath_ = cfgPtr->getUserConfigPath();
+}
 
 EdenServer::~EdenServer() {}
 
@@ -722,54 +722,53 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto initFuture = edenMount->initialize(
       optionalTakeover ? folly::make_optional(optionalTakeover->inodeMap)
                        : folly::none);
-  return initFuture.then(
-      [this,
-       doTakeover,
-       edenMount,
-       optionalTakeover = std::move(optionalTakeover)]() mutable {
-        addToMountPoints(edenMount);
+  return initFuture.then([this,
+                          doTakeover,
+                          edenMount,
+                          optionalTakeover =
+                              std::move(optionalTakeover)]() mutable {
+    addToMountPoints(edenMount);
 
-        return (optionalTakeover ? performTakeoverFuseStart(
-                                       edenMount, std::move(*optionalTakeover))
-                                 : performFreshFuseStart(edenMount))
-            // If an error occurs we want to call mountFinished and throw the
-            // error here.  Once the pool is up and running, the finishFuture
-            // will ensure that this happens.
-            .onError([this, edenMount](folly::exception_wrapper ew) {
-              mountFinished(edenMount.get(), folly::none);
-              return makeFuture<folly::Unit>(ew);
-            })
-            .then([edenMount, doTakeover, this]() mutable {
-              // Now that we've started the workers, arrange to call
-              // mountFinished once the pool is torn down.
-              auto finishFuture = edenMount->getFuseCompletionFuture().then(
-                  [this,
-                   edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
-                    folly::Optional<TakeoverData::MountInfo> optTakeover;
-                    if (takeover.hasValue()) {
-                      optTakeover = std::move(takeover.value());
-                    }
-                    mountFinished(edenMount.get(), std::move(optTakeover));
-                  });
-              // We're deliberately discarding the future here; we don't
-              // need to wait for it to finish.
-              (void)finishFuture;
+    return (optionalTakeover ? performTakeoverFuseStart(
+                                   edenMount, std::move(*optionalTakeover))
+                             : performFreshFuseStart(edenMount))
+        // If an error occurs we want to call mountFinished and throw the
+        // error here.  Once the pool is up and running, the finishFuture
+        // will ensure that this happens.
+        .onError([this, edenMount](folly::exception_wrapper ew) {
+          mountFinished(edenMount.get(), folly::none);
+          return makeFuture<folly::Unit>(ew);
+        })
+        .then([edenMount, doTakeover, this]() mutable {
+          // Now that we've started the workers, arrange to call
+          // mountFinished once the pool is torn down.
+          auto finishFuture = edenMount->getFuseCompletionFuture().then(
+              [this,
+               edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
+                folly::Optional<TakeoverData::MountInfo> optTakeover;
+                if (takeover.hasValue()) {
+                  optTakeover = std::move(takeover.value());
+                }
+                mountFinished(edenMount.get(), std::move(optTakeover));
+              });
+          // We're deliberately discarding the future here; we don't
+          // need to wait for it to finish.
+          (void)finishFuture;
 
-              registerStats(edenMount);
+          registerStats(edenMount);
 
-              if (doTakeover) {
-                // The bind mounts are already mounted in the takeover case
-                return makeFuture<std::shared_ptr<EdenMount>>(
-                    std::move(edenMount));
-              } else {
-                // Perform all of the bind mounts associated with the
-                // client.  We don't need to do this for the takeover
-                // case as they are already mounted.
-                return edenMount->performBindMounts().then(
-                    [edenMount] { return edenMount; });
-              }
-            });
-      });
+          if (doTakeover) {
+            // The bind mounts are already mounted in the takeover case
+            return makeFuture<std::shared_ptr<EdenMount>>(std::move(edenMount));
+          } else {
+            // Perform all of the bind mounts associated with the
+            // client.  We don't need to do this for the takeover
+            // case as they are already mounted.
+            return edenMount->performBindMounts().then(
+                [edenMount] { return edenMount; });
+          }
+        });
+  });
 }
 
 Future<Unit> EdenServer::unmount(StringPiece mountPath) {
@@ -1055,5 +1054,6 @@ void EdenServer::reportProcStats() {
     lastProcStatsRun_.store(now);
   }
 }
+
 } // namespace eden
 } // namespace facebook
