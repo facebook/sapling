@@ -11,7 +11,17 @@ import os
 import re
 import time
 
-from . import encoding, error, hbisect, node, pycompat, registrar, templatekw, url, util
+from . import (
+    encoding,
+    hbisect,
+    json as jsonmod,
+    node,
+    pycompat,
+    registrar,
+    templatekw,
+    url,
+    util,
+)
 
 
 urlerr = util.urlerr
@@ -262,35 +272,7 @@ def indent(text, prefix):
 
 @templatefilter("json")
 def json(obj, paranoid=True):
-    if obj is None:
-        return "null"
-    elif obj is False:
-        return "false"
-    elif obj is True:
-        return "true"
-    elif isinstance(obj, (int, long, float)):
-        return pycompat.bytestr(obj)
-    elif isinstance(obj, bytes):
-        return '"%s"' % encoding.jsonescape(obj, paranoid=paranoid)
-    elif isinstance(obj, str):
-        # This branch is unreachable on Python 2, because bytes == str
-        # and we'll return in the next-earlier block in the elif
-        # ladder. On Python 3, this helps us catch bugs before they
-        # hurt someone.
-        raise error.ProgrammingError(
-            "Mercurial only does output with bytes on Python 3: %r" % obj
-        )
-    elif util.safehasattr(obj, "keys"):
-        out = [
-            '"%s": %s' % (encoding.jsonescape(k, paranoid=paranoid), json(v, paranoid))
-            for k, v in sorted(obj.iteritems())
-        ]
-        return "{" + ", ".join(out) + "}"
-    elif util.safehasattr(obj, "__iter__"):
-        out = [json(i, paranoid) for i in obj]
-        return "[" + ", ".join(out) + "]"
-    else:
-        raise TypeError("cannot encode type %s" % obj.__class__.__name__)
+    return jsonmod.dumps(obj, paranoid)
 
 
 @templatefilter("lower")
