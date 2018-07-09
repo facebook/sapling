@@ -9,6 +9,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from distutils.version import LooseVersion
+import errno
 import glob
 import os
 import struct
@@ -189,6 +190,8 @@ else:
             + "(found %s, need %s or higher)\n"
             % (cargo_version, required_cargo_version)
         )
+
+havefb = os.path.exists("fb")
 
 if not haverust:
     raise RuntimeError("Rust (and cargo >= 0.21) is required")
@@ -978,7 +981,6 @@ packages = [
     "mercurial",
     "mercurial.cext",
     "mercurial.cffi",
-    "mercurial.fb",
     "mercurial.hgweb",
     "mercurial.httpclient",
     "mercurial.pure",
@@ -1014,6 +1016,9 @@ packages = [
     "hgext3rd",
     "hgdemandimport",
 ]
+
+if havefb:
+    packages.append("mercurial.fb")
 
 common_depends = [
     "mercurial/bitmanipulation.h",
@@ -1521,7 +1526,41 @@ def build_libraries(self, libraries):
 
 distutils.command.build_clib.build_clib.build_libraries = build_libraries
 
-rustvendoredcrates = [RustVendoredCrates("hg-vendored-crates", dest="build")]
+rustvendoredcrates = []
+cargoconfig = """
+# On OS X targets, configure the linker to perform dynamic lookup of undefined
+# symbols.  This allows the library to be used as a Python extension.
+
+[target.i686-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+"""
+
+if havefb:
+    rustvendoredcrates.append(RustVendoredCrates("hg-vendored-crates", dest="build"))
+    cargoconfig += """
+# Vendor in Rust crates.  "build/hg-vendored-crates" is populated by the
+# contents of a vendor package downloaded from Dewey with the hash in
+# ".hg-vendored-crates".
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "build/hg-vendored-crates"
+    """
+
+try:
+    os.mkdir(".cargo")
+except OSError as e:
+    if e.errno != errno.EEXIST:
+        raise
+
+with open(".cargo/config", "w") as f:
+    f.write(cargoconfig)
+
 
 rustextmodules = [
     RustExtension(
