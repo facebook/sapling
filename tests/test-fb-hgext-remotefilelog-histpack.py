@@ -235,7 +235,7 @@ class histpacktests(unittest.TestCase):
 
     def testBadVersionThrows(self):
         pack = self.createPack()
-        path = pack.path + ".histpack"
+        path = pack.path() + ".histpack"
         with open(path) as f:
             raw = f.read()
         raw = struct.pack("!B", 255) + raw[1:]
@@ -244,7 +244,7 @@ class histpacktests(unittest.TestCase):
             f.write(raw)
 
         try:
-            pack = historypack(pack.path)
+            pack = historypack(pack.path())
             self.assertTrue(False, "bad version number should have thrown")
         except RuntimeError:
             pass

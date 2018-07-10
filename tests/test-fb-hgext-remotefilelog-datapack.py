@@ -239,7 +239,7 @@ class datapacktestsbase(object):
 
     def testBadVersionThrows(self):
         pack = self.createPack()
-        path = pack.path + ".datapack"
+        path = pack.path() + ".datapack"
         with open(path) as f:
             raw = f.read()
         raw = struct.pack("!B", 255) + raw[1:]
@@ -248,7 +248,7 @@ class datapacktestsbase(object):
             f.write(raw)
 
         try:
-            pack = self.datapackreader(pack.path)
+            pack = self.datapackreader(pack.path())
             self.assertTrue(False, "bad version number should have thrown")
         except RuntimeError:
             pass
@@ -459,7 +459,7 @@ class datapacktestsbase(object):
                 node = self.getHash(content)
                 revisions.append((filename, node, nullid, content))
 
-            path = self.createPack(revisions).path
+            path = self.createPack(revisions).path()
 
             # Perf of large multi-get
             import gc

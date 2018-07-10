@@ -242,11 +242,11 @@ class basepackstore(object):
                 pack.markledger(ledger, options)
             except Exception as ex:
                 if self.deletecorruptpacks:
-                    self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path)
-                    util.tryunlink(filepath + self.PACKSUFFIX)
-                    util.tryunlink(filepath + self.INDEXSUFFIX)
+                    self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path())
+                    util.tryunlink(pack.path() + self.PACKSUFFIX)
+                    util.tryunlink(pack.path() + self.INDEXSUFFIX)
                 else:
-                    self.ui.warn(_("unable to load pack %s: %s\n") % (pack.path, ex))
+                    self.ui.warn(_("unable to load pack %s: %s\n") % (pack.path(), ex))
                 # Re-raise the exception anyway, since the ledger may have been
                 # tainted by the corrupt packs.
                 raise
@@ -269,7 +269,7 @@ class basepackstore(object):
         newpacks = []
         if now > self.lastrefresh + REFRESHRATE:
             self.lastrefresh = now
-            previous = set(p.path for p in self.packs)
+            previous = set(p.path() for p in self.packs)
             for filepath, __, __ in self._getavailablepackfilessorted():
                 if filepath not in previous:
                     try:
@@ -315,14 +315,14 @@ class basepackstore(object):
         if badpacks:
             if self.deletecorruptpacks:
                 for pack in badpacks:
-                    self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path)
+                    self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path())
                     self.packs.remove(pack)
                     util.tryunlink(pack.packpath)
                     util.tryunlink(pack.indexpath)
             else:
                 for pack in badpacks:
                     self.ui.warn(
-                        _("detected corrupt pack '%s' - ignoring it\n") % pack.path
+                        _("detected corrupt pack '%s' - ignoring it\n") % pack.path()
                     )
 
 
@@ -350,7 +350,7 @@ class basepack(versionmixin):
     SUPPORTED_VERSIONS = [0]
 
     def __init__(self, path):
-        self.path = path
+        self._path = path
         self.packpath = path + self.PACKSUFFIX
         self.indexpath = path + self.INDEXSUFFIX
 
@@ -371,6 +371,9 @@ class basepack(versionmixin):
             self.params = indexparams(LARGEFANOUTPREFIX, version)
         else:
             self.params = indexparams(SMALLFANOUTPREFIX, version)
+
+    def path(self):
+        return self._path
 
     @util.propertycache
     def _fanouttable(self):

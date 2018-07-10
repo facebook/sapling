@@ -246,7 +246,7 @@ class datapack(basepack.basepack):
         )
 
         if len(allkeys - repackedkeys) == 0:
-            if self.path not in ledger.created:
+            if self._path not in ledger.created:
                 util.unlinkpath(self.indexpath, ignoremissing=True)
                 util.unlinkpath(self.packpath, ignoremissing=True)
 
@@ -355,10 +355,13 @@ class fastdatapack(basepack.basepack):
     PACKSUFFIX = PACKSUFFIX
 
     def __init__(self, path):
-        self.path = path
+        self._path = path
         self.packpath = path + self.PACKSUFFIX
         self.indexpath = path + self.INDEXSUFFIX
         self.datapack = cstore.datapack(path)
+
+    def path(self):
+        return self._path
 
     def getmissing(self, keys):
         missing = []
@@ -410,7 +413,7 @@ class fastdatapack(basepack.basepack):
         )
 
         if len(allkeys - repackedkeys) == 0:
-            if self.path not in ledger.created:
+            if self._path not in ledger.created:
                 util.unlinkpath(self.indexpath, ignoremissing=True)
                 util.unlinkpath(self.packpath, ignoremissing=True)
 

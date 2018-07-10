@@ -290,7 +290,7 @@ class historypack(basepack.basepack):
         repackedkeys = set((e.filename, e.node) for e in entries if e.historyrepacked)
 
         if len(allkeys - repackedkeys) == 0:
-            if self.path not in ledger.created:
+            if self._path not in ledger.created:
                 util.unlinkpath(self.indexpath, ignoremissing=True)
                 util.unlinkpath(self.packpath, ignoremissing=True)
 
