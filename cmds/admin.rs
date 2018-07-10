@@ -35,7 +35,7 @@ use futures::stream::iter_ok;
 use tokio_core::reactor::Core;
 
 use blobrepo::{BlobRepo, ManifoldArgs};
-use blobstore::{Blobstore, MemcacheBlobstore, MemcacheBlobstoreExt, PrefixBlobstore};
+use blobstore::{new_memcache_blobstore, Blobstore, CacheBlobstoreExt, PrefixBlobstore};
 use cmdlib::args;
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
@@ -163,13 +163,13 @@ fn fetch_content(
         .boxify()
 }
 
-fn get_memcache<B: MemcacheBlobstoreExt>(
+fn get_cache<B: CacheBlobstoreExt>(
     blobstore: &B,
     key: String,
     mode: String,
 ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
     if mode == "cache-only" {
-        blobstore.get_memcache_only(key)
+        blobstore.get_cache_only(key)
     } else if mode == "no-fill" {
         blobstore.get_no_cache_fill(key)
     } else {
@@ -213,21 +213,21 @@ fn main() {
                 }
                 (None, true) => blobstore.get(key.clone()).boxify(),
                 (Some(mode), false) => {
-                    let blobstore = MemcacheBlobstore::new(
+                    let blobstore = new_memcache_blobstore(
                         blobstore,
                         "manifold",
                         manifold_args.bucket.as_ref(),
                     ).unwrap();
                     let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
-                    get_memcache(&blobstore, key.clone(), mode)
+                    get_cache(&blobstore, key.clone(), mode)
                 }
                 (Some(mode), true) => {
-                    let blobstore = MemcacheBlobstore::new(
+                    let blobstore = new_memcache_blobstore(
                         blobstore,
                         "manifold",
                         manifold_args.bucket.as_ref(),
                     ).unwrap();
-                    get_memcache(&blobstore, key.clone(), mode)
+                    get_cache(&blobstore, key.clone(), mode)
                 }
             }.map(move |value| {
                 println!("{:?}", value);

@@ -40,11 +40,14 @@ pub use counted_blobstore::CountedBlobstore;
 mod in_memory_cache;
 pub use in_memory_cache::MemoizedBlobstore;
 
+mod locking_cache;
+pub use locking_cache::{CacheBlobstore, CacheBlobstoreExt, CacheOps, LeaseOps};
+
 mod memblob;
 pub use memblob::{EagerMemblob, LazyMemblob};
 
 mod memcache_cache;
-pub use memcache_cache::{MemcacheBlobstore, MemcacheBlobstoreExt};
+pub use memcache_cache::new_memcache_blobstore;
 
 mod prefix;
 pub use prefix::PrefixBlobstore;

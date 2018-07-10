@@ -11,7 +11,7 @@ use stats::DynamicTimeseries;
 
 use mononoke_types::BlobstoreBytes;
 
-use {Blobstore, MemcacheBlobstoreExt};
+use {Blobstore, CacheBlobstoreExt};
 
 define_stats! {
     prefix = "mononoke.blobstore";
@@ -117,14 +117,14 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
     }
 }
 
-impl<T: MemcacheBlobstoreExt> MemcacheBlobstoreExt for CountedBlobstore<T> {
+impl<T: CacheBlobstoreExt> CacheBlobstoreExt for CountedBlobstore<T> {
     #[inline]
     fn get_no_cache_fill(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.as_inner().get_no_cache_fill(key)
     }
 
     #[inline]
-    fn get_memcache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.as_inner().get_memcache_only(key)
+    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_inner().get_cache_only(key)
     }
 }

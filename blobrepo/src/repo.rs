@@ -26,7 +26,8 @@ use stats::Timeseries;
 use time_ext::DurationExt;
 use uuid::Uuid;
 
-use blobstore::{Blobstore, EagerMemblob, MemcacheBlobstore, MemoizedBlobstore, PrefixBlobstore};
+use blobstore::{new_memcache_blobstore, Blobstore, EagerMemblob, MemoizedBlobstore,
+                PrefixBlobstore};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
@@ -268,7 +269,7 @@ impl BlobRepo {
             io_remotes.iter().collect(),
             args.max_concurrent_requests_per_io_thread,
         );
-        let blobstore = MemcacheBlobstore::new(blobstore, "manifold", args.bucket.as_ref())?;
+        let blobstore = new_memcache_blobstore(blobstore, "manifold", args.bucket.as_ref())?;
         let blobstore = MemoizedBlobstore::new(blobstore, usize::MAX, args.blobstore_cache_size);
 
         let filenodes = MysqlFilenodes::open(&args.db_address, DEFAULT_INSERT_CHUNK_SIZE)
