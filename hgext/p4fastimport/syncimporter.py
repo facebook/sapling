@@ -31,8 +31,9 @@ def get_filelogs_to_sync(ui, oldclient, oldcl, newclient, newcl):
     # {hgpath: (p4filelog, p4cl)}
     files_add = {}
     addfilesmapping = p4.parse_where_multiple(newclient, addp4filepaths)
+    newp4flmapping = {path.lower(): filelog for path, filelog in newp4flmapping.items()}
     for p4path, hgpath in addfilesmapping.items():
-        p4fl = newp4flmapping[p4path]
+        p4fl = newp4flmapping[p4path.lower()]
         headcl = p4fl.getheadchangelist(newcl)
         origcl = headcl_to_origcl.get(headcl)
         if origcl is None:
