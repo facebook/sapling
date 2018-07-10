@@ -1,0 +1,10 @@
+[package]
+name = "changesets"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+diesel = "1.3.2"
+
+asyncmemo = { path = "../asyncmemo" }

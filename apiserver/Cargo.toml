@@ -1,0 +1,14 @@
+[package]
+name = "apiserver"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+actix = "0.6.1"
+actix-web = "0.6.14"
+bytes = "0.4.5"
+clap = "2.27.1"
+
+blobrepo = { path = "../blobrepo" }
+bookmarks = { path = "../bookmarks" }

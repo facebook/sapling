@@ -1,0 +1,10 @@
+[package]
+name = "eden-server"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+ascii = "0.8.6"
+
+blobrepo = { path = "../blobrepo" }

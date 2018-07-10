@@ -1,0 +1,6 @@
+[package]
+name = "pylz4"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+

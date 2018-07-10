@@ -1,0 +1,14 @@
+[package]
+name = "revset"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+error-chain = "0.11.0"
+futures = "0.1.17"
+maplit = "1.0.0"
+
+asyncmemo = { path = "../asyncmemo" }
+mercurial-types = { path = "../mercurial-types" }
+repoinfo = { path = "../repoinfo" }

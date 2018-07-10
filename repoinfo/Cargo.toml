@@ -1,0 +1,14 @@
+[package]
+name = "repoinfo"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+futures = "0.1.17"
+heapsize = "0.4.1"
+heapsize_derive = "0.1.4"
+
+asyncmemo = { path = "../asyncmemo" }
+futures-ext = { path = "../futures-ext" }
+mercurial-types = { path = "../mercurial-types" }

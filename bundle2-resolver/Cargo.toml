@@ -1,0 +1,12 @@
+[package]
+name = "bundle2-resolver"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+ascii = "0.8.6"
+bytes = "0.4.5"
+futures = "0.1.17"
+
+futures-ext = { path = "../futures-ext" }

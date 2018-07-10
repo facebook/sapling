@@ -1,0 +1,13 @@
+[package]
+name = "bonsai-utils"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+futures = "0.1.17"
+itertools = "0.7.2"
+
+futures-ext = { path = "../futures-ext" }
+mercurial-types = { path = "../mercurial-types" }
+mononoke-types = { path = "../mononoke-types" }

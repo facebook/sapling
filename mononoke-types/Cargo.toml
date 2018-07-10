@@ -1,0 +1,14 @@
+[package]
+name = "mononoke-types"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+ascii = "0.8.6"
+bincode = "0.9.2"
+blake2 = "0.7.1"
+bytes = "0.4.5"
+chrono = "0.4.4"
+
+asyncmemo = { path = "../asyncmemo" }

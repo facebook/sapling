@@ -1,0 +1,13 @@
+[package]
+name = "futures-ext"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+bytes = "0.4.8"
+failure = "0.1.1"
+futures = "0.1.17"
+tokio-core = "0.1.17"
+tokio-io = "0.1.7"
+tokio = "0.1.7"

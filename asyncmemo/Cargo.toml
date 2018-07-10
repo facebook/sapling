@@ -1,0 +1,14 @@
+[package]
+name = "asyncmemo"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+bytes = "0.4.5"
+futures = "0.1.17"
+heapsize = "0.4.2"
+linked-hash-map = "0.5.1"
+parking_lot = "0.6.1"
+
+futures-ext = { path = "../futures-ext" }

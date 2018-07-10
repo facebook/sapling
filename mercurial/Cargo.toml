@@ -1,0 +1,20 @@
+[package]
+name = "mercurial"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+
+[dependencies]
+error-chain = "0.11.0"
+futures = "0.1.17"
+itertools = "0.7.2"
+lz4 = "1.22.0"
+memmap = "0.6.1"
+nom = "3.2.1"
+time = "0.1.38"
+
+asyncmemo = { path = "../asyncmemo" }
+bookmarks = { path = "../bookmarks" }
+futures-ext = { path = "../futures-ext" }
+mercurial-types = { path = "../mercurial-types" }
+storage-types = { path = "../storage/types" }
