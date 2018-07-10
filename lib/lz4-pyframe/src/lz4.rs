@@ -50,6 +50,10 @@ pub fn decompress(data: &[u8]) -> Result<Box<[u8]>, Error> {
     // Consume the header
     let mut cur = Cursor::new(data);
     let max_decompressed_size = cur.read_u32::<LittleEndian>()? as usize;
+    if max_decompressed_size == 0 {
+        return Ok(Box::new([]));
+    }
+
     let data = &data[HEADER_LEN..];
 
     let stream = StreamDecoder(unsafe { LZ4_createStreamDecode() });
@@ -94,17 +98,19 @@ pub fn compress(data: &[u8]) -> Result<Box<[u8]>, Error> {
     let mut dest = Vec::<u8>::with_capacity(max_compressed_size);
     dest.write_u32::<LittleEndian>(data.len() as u32)?;
 
-    unsafe { dest.set_len(max_compressed_size) };
-    let written: i32 = check_error(unsafe {
-        LZ4_compress_continue(
-            stream.0,
-            source,
-            dest.as_mut_ptr().offset(HEADER_LEN as isize),
-            data.len() as i32,
-        )
-    })?;
-    if written < dest.len() as i32 {
-        dest.truncate(written as usize + HEADER_LEN);
+    if data.len() > 0 {
+        unsafe { dest.set_len(max_compressed_size) };
+        let written: i32 = check_error(unsafe {
+            LZ4_compress_continue(
+                stream.0,
+                source,
+                dest.as_mut_ptr().offset(HEADER_LEN as isize),
+                data.len() as i32,
+            )
+        })?;
+        if written < dest.len() as i32 {
+            dest.truncate(written as usize + HEADER_LEN);
+        }
     }
     Ok(dest.into_boxed_slice())
 }
@@ -135,6 +141,14 @@ mod tests {
         let data = &b"\x00\x01\x02hello world long string easy easy easy easy compress\xF0\xFA"[..];
         let (compressed, roundtrips) = check_roundtrip(&data);
         assert!(compressed.len() < data.len());
+        assert!(roundtrips);
+    }
+
+    #[test]
+    fn test_empty() {
+        let data = &b"";
+        let (compressed, roundtrips) = check_roundtrip(&data);
+        assert_eq!(compressed, vec![0u8, 0, 0, 0].into_boxed_slice());
         assert!(roundtrips);
     }
 
