@@ -15,6 +15,7 @@ use tokio_timer::Timer;
 
 use fbwhoami::FbWhoAmI;
 use mononoke_types::BlobstoreBytes;
+use stats::Timeseries;
 
 use Blobstore;
 use CacheBlobstore;
@@ -22,6 +23,30 @@ use CacheOps;
 use CountedBlobstore;
 use LeaseOps;
 use memcache_lock_thrift::LockState;
+
+define_stats! {
+    prefix = "mononoke.blobstore.memcache";
+    blob_put: timeseries("blob_put"; RATE, SUM),
+    blob_put_err: timeseries("blob_put_err"; RATE, SUM),
+    presence_put: timeseries("presence_put"; RATE, SUM),
+    presence_put_err: timeseries("presence_put_err"; RATE, SUM),
+    lease_claim: timeseries("lease_claim"; RATE, SUM),
+    lease_claim_err: timeseries("lease_claim_err"; RATE, SUM),
+    lease_conflict: timeseries("lease_conflict"; RATE, SUM),
+    lease_wait_ms: timeseries("lease_wait_ms"; RATE, SUM),
+    lease_release: timeseries("lease_release"; RATE, SUM),
+    lease_release_good: timeseries("lease_release_good"; RATE, SUM),
+    lease_release_bad: timeseries("lease_release_bad"; RATE, SUM),
+    blob_presence: timeseries("blob_presence"; RATE, SUM),
+    blob_presence_hit: timeseries("blob_presence_hit"; RATE, SUM),
+    blob_presence_miss: timeseries("blob_presence_miss"; RATE, SUM),
+    blob_presence_err: timeseries("blob_presence_err"; RATE, SUM),
+    presence_get: timeseries("presence_get"; RATE, SUM),
+    presence_check_hit: timeseries("presence_check_hit"; RATE, SUM),
+    presence_check_miss: timeseries("presence_check_miss"; RATE, SUM),
+    // This can come from leases as well as presence checking.
+    presence_err: timeseries("presence_err"; RATE, SUM),
+}
 
 /// A caching layer over an existing blobstore, backed by memcache
 #[derive(Clone)]
@@ -46,13 +71,17 @@ fn mc_raw_put(
 ) -> impl Future<Item = (), Error = ()> {
     let uploaded = compact_protocol::serialize(&LockState::uploaded_key(orig_key));
 
-    memcache.set(presence_key, uploaded).then(move |_| {
+    STATS::presence_put.add_value(1);
+    memcache.set(presence_key, uploaded).then(move |res| {
+        if let Err(_) = res {
+            STATS::presence_put_err.add_value(1);
+        }
         if value.len() < MEMCACHE_MAX_SIZE {
-            Either::A(
-                memcache
-                    .set(key, value.into_bytes())
-                    .or_else(|_| Ok(()).into_future()),
-            )
+            STATS::blob_put.add_value(1);
+            Either::A(memcache.set(key, value.into_bytes()).or_else(|_| {
+                STATS::blob_put_err.add_value(1);
+                Ok(()).into_future()
+            }))
         } else {
             Either::B(Ok(()).into_future())
         }
@@ -90,6 +119,7 @@ impl MemcacheOps {
         key: String,
     ) -> impl Future<Item = Option<LockState>, Error = ()> + Send {
         let mc_key = self.presence_keygen.key(key.clone());
+        STATS::presence_get.add_value(1);
         self.memcache
             .get(mc_key.clone())
             .and_then({
@@ -108,7 +138,10 @@ impl MemcacheOps {
                     Either::B(Ok(opt_res).into_future())
                 }
             })
-            .or_else(|_| Ok(None).into_future())
+            .or_else(move |_| {
+                STATS::presence_err.add_value(1);
+                Ok(None).into_future()
+            })
     }
 }
 
@@ -147,16 +180,34 @@ impl CacheOps for MemcacheOps {
     }
 
     fn check_present(&self, key: &str) -> BoxFuture<bool, ()> {
-        let lock_presence = self.get_lock_state(key.to_string())
-            .map(|lockstate| match lockstate {
+        let lock_presence = self.get_lock_state(key.to_string()).map({
+            move |lockstate| match lockstate {
                 // get_lock_state will delete the lock and return None if there's a bad
                 // uploaded_key
-                Some(LockState::uploaded_key(_)) => true,
-                _ => false,
-            });
+                Some(LockState::uploaded_key(_)) => {
+                    STATS::presence_check_hit.add_value(1);
+                    true
+                }
+                _ => {
+                    STATS::presence_check_miss.add_value(1);
+                    false
+                }
+            }
+        });
 
         let mc_key = self.keygen.key(key);
-        let blob_presence = self.memcache.get(mc_key).map(|blob| blob.is_some());
+        STATS::blob_presence.add_value(1);
+        let blob_presence = self.memcache
+            .get(mc_key)
+            .map(|blob| blob.is_some())
+            .then(move |res| {
+                match res {
+                    Ok(true) => STATS::blob_presence_hit.add_value(1),
+                    Ok(false) => STATS::blob_presence_miss.add_value(1),
+                    Err(_) => STATS::blob_presence_err.add_value(1),
+                };
+                res
+            });
 
         lock_presence
             .and_then(move |present| {
@@ -174,25 +225,38 @@ impl LeaseOps for MemcacheOps {
     fn try_add_put_lease(&self, key: &str) -> BoxFuture<bool, ()> {
         let lockstate = compact_protocol::serialize(&LockState::locked_by(self.hostname.clone()));
         let lock_ttl = Duration::from_secs(10);
-        let mc_key = self.presence_keygen.key(key.clone());
+        let mc_key = self.presence_keygen.key(key);
 
         self.memcache
             .add_with_ttl(mc_key, lockstate, lock_ttl)
+            .then(move |res| {
+                match res {
+                    Ok(true) => STATS::lease_claim.add_value(1),
+                    Ok(false) => STATS::lease_conflict.add_value(1),
+                    Err(_) => STATS::lease_claim_err.add_value(1),
+                }
+                res
+            })
             .boxify()
     }
 
     fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<(), ()> {
-        let retry_delay = Duration::from_millis(200);
+        let retry_millis = 200;
+        let retry_delay = Duration::from_millis(retry_millis);
+        STATS::lease_wait_ms.add_value(retry_millis as i64);
         self.timer.sleep(retry_delay).map_err(|_| ()).boxify()
     }
 
     fn release_lease(&self, key: &str, put_success: bool) -> BoxFuture<(), ()> {
-        let mc_key = self.presence_keygen.key(key.clone());
+        let mc_key = self.presence_keygen.key(key);
+        STATS::lease_release.add_value(1);
         if put_success {
             let uploaded = compact_protocol::serialize(&LockState::uploaded_key(key.to_string()));
+            STATS::lease_release_good.add_value(1);
 
             self.memcache.set(mc_key, uploaded).boxify()
         } else {
+            STATS::lease_release_bad.add_value(1);
             self.memcache.del(mc_key).boxify()
         }
     }
