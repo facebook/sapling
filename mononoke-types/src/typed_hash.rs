@@ -8,6 +8,7 @@ use std::fmt::{self, Display};
 use std::str::FromStr;
 
 use ascii::{AsciiStr, AsciiString};
+use asyncmemo;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use blob::BlobstoreValue;
@@ -15,6 +16,7 @@ use bonsai_changeset::BonsaiChangeset;
 use errors::*;
 use file_contents::FileContents;
 use hash::{Blake2, Context};
+use sql_types::ChangesetIdSql;
 use thrift;
 
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
@@ -34,7 +36,8 @@ pub trait MononokeId: Copy + Send + 'static {
 
 /// An identifier for a changeset in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf)]
+#[derive(HeapSizeOf, FromSqlRow, AsExpression)]
+#[sql_type = "ChangesetIdSql"]
 pub struct ChangesetId(Blake2);
 
 /// An identifier for file contents in Mononoke.
@@ -137,6 +140,12 @@ macro_rules! impl_typed_hash {
             #[inline]
             pub fn finish(self) -> $typed {
                 $typed(self.0.finish())
+            }
+        }
+
+        impl asyncmemo::Weight for $typed {
+            fn get_weight(&self) -> usize {
+                ::std::mem::size_of::<Blake2>()
             }
         }
 

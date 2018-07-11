@@ -19,6 +19,8 @@ extern crate blake2;
 extern crate bytes;
 extern crate chrono;
 #[macro_use]
+extern crate diesel;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate heapsize;
 #[macro_use]
@@ -44,10 +46,11 @@ pub mod datetime;
 pub mod errors;
 pub mod file_change;
 pub mod file_contents;
+pub mod generation;
 pub mod hash;
 pub mod path;
+pub mod sql_types;
 pub mod typed_hash;
-pub mod generation;
 
 pub use blob::{Blob, BlobstoreBytes, BlobstoreValue, ChangesetBlob, ContentBlob};
 pub use bonsai_changeset::BonsaiChangeset;
