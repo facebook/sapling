@@ -36,6 +36,7 @@ function wait_for_mononoke {
   SSLCURL="curl --cert $TESTDIR/testcert.crt \
                 --cacert $TESTDIR/testcert.crt \
                 --key $TESTDIR/testcert.key \
+                --noproxy localhost \
                 https://localhost:$MONONOKE_SOCKET"
 
   for _ in $(seq 1 $attempts); do
