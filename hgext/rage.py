@@ -120,10 +120,10 @@ def obsoleteinfo(repo, hgcmd):
     ndays = 180
     unfi = repo.unfiltered()
     # take the last ndays
-    from_date = datetime.datetime.now() + datetime.timedelta(-1 * ndays)
-    # return smartlog subset from 'from_date'
+    fromdate = datetime.datetime.now() + datetime.timedelta(-1 * ndays)
+    # return smartlog subset from 'fromdate'
     revs = scmutil.revrange(
-        unfi, ['smartlog() and date(">%s")' % from_date.strftime("%Y-%m-%d")]
+        unfi, ['smartlog() and date(">%s")' % fromdate.strftime("%Y-%m-%d")]
     )
     # search obsolescence markers that are relevant to that subset
     hashes = "|".join(unfi[rev].hex() for rev in revs)
