@@ -230,7 +230,9 @@ bool hasConfigFileChanged(
   }
   if (currentStat.st_dev != oldStat->st_dev ||
       currentStat.st_ino != oldStat->st_ino ||
-      currentStat.st_mtime != oldStat->st_mtime) {
+      currentStat.st_size != oldStat->st_size ||
+      currentStat.st_mtim.tv_sec != oldStat->st_mtim.tv_sec ||
+      currentStat.st_mtim.tv_nsec != oldStat->st_mtim.tv_nsec) {
     fileChangeDetected = true;
   }
   return fileChangeDetected;
