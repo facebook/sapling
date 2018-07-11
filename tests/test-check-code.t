@@ -7,14 +7,7 @@
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
-  $ testrepohg files -I . \
-  > -X contrib/python-zstandard \
-  > -X hgext/extlib/pywatchman \
-  > -X hgext/p4fastimport \
-  > -X lib/cdatapack \
-  > -X lib/third-party \
-  > -X mercurial/thirdparty \
-  > -X fb \
+  $ testrepohg files . | egrep -v "^(contrib/python-zstandard|hgext/extlib/pywatchman|hgext/p4fastimport|lib/cdatapack|lib/third-party|mercurial/thirdparty|fb)" \
   > | sed 's-\\-/-g' > $TESTTMP/files.txt
 
   $ NPROC=`python -c 'import multiprocessing; print(multiprocessing.cpu_count())'`
