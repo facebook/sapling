@@ -150,48 +150,6 @@ def loadcolortable(ui, extname, colortable):
     _defaultstyles.update(colortable)
 
 
-def _terminfosetup(ui, mode, formatted):
-    """Initialize terminfo data and the terminal if we're in terminfo mode."""
-
-    # If we failed to load curses, we go ahead and return.
-    if curses is None:
-        return
-    # Otherwise, see what the config file says.
-    if mode not in ("auto", "terminfo"):
-        return
-    ui._terminfoparams.update(_baseterminfoparams)
-
-    for key, val in ui.configitems("color"):
-        if key.startswith("color."):
-            newval = (False, int(val), "")
-            ui._terminfoparams[key[6:]] = newval
-        elif key.startswith("terminfo."):
-            newval = (True, "", val.replace("\\E", "\x1b"))
-            ui._terminfoparams[key[9:]] = newval
-    try:
-        curses.setupterm()
-    except curses.error as e:
-        ui._terminfoparams.clear()
-        return
-
-    for key, (b, e, c) in ui._terminfoparams.items():
-        if not b:
-            continue
-        if not c and not curses.tigetstr(e):
-            # Most terminals don't support dim, invis, etc, so don't be
-            # noisy and use ui.debug().
-            ui.debug("no terminfo entry for %s\n" % e)
-            del ui._terminfoparams[key]
-    if not curses.tigetstr("setaf") or not curses.tigetstr("setab"):
-        # Only warn about missing terminfo entries if we explicitly asked for
-        # terminfo mode and we're in a formatted terminal.
-        if mode == "terminfo" and formatted:
-            ui.warn(
-                _("no terminfo entry for setab/setaf: reverting to " "ECMA-48 color\n")
-            )
-        ui._terminfoparams.clear()
-
-
 def setup(ui):
     """configure color on a ui
 
@@ -267,6 +225,10 @@ def _modesetup(ui):
         if mode == realmode and formatted:
             ui.warn(_("warning: failed to set color mode to %s\n") % mode)
 
+    if realmode == "terminfo":
+        ui.warn(_("warning: color.mode = terminfo is no longer supported\n"))
+        realmode = "ansi"
+
     if realmode == "win32":
         ui._terminfoparams.clear()
         if not w32effects:
@@ -274,12 +236,6 @@ def _modesetup(ui):
             return None
     elif realmode == "ansi":
         ui._terminfoparams.clear()
-    elif realmode == "terminfo":
-        _terminfosetup(ui, mode, formatted)
-        if not ui._terminfoparams:
-            ## FIXME Shouldn't we return None in this case too?
-            modewarn()
-            realmode = "ansi"
     else:
         return None
 
