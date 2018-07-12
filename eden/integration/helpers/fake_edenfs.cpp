@@ -10,6 +10,7 @@
 #include <folly/init/Init.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <signal.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
@@ -24,10 +25,13 @@ using namespace facebook::eden;
 using apache::thrift::ThriftServer;
 using facebook::fb303::cpp2::fb_status;
 using folly::EventBase;
+using folly::StringPiece;
 using std::make_shared;
+using std::string;
 
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 DEFINE_bool(foreground, false, "Run edenfs in the foreground");
+DEFINE_bool(ignoreStop, false, "Ignore attempts to stop edenfs");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(
     etcEdenDir,
@@ -39,15 +43,72 @@ DEFINE_string(
     "",
     "If set, redirects stdout and stderr to the log file given.");
 
-FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
+FOLLY_INIT_LOGGING_CONFIG(".=INFO,eden=DBG2");
 
 namespace {
+
+class FakeEdenServiceHandler;
+
+class FakeEdenServer {
+ public:
+  FakeEdenServer() {}
+
+  void run(folly::SocketAddress thriftAddress, StartupLogger& startupLogger);
+  void stop(StringPiece reason) {
+    if (!honorStop_) {
+      XLOG(INFO) << "ignoring stop attempt: " << reason;
+      return;
+    }
+
+    XLOG(INFO) << "stopping: " << reason;
+    eventBase_->terminateLoopSoon();
+  }
+
+  void setHonorStop(bool honorStop) {
+    honorStop_ = honorStop;
+  }
+
+ private:
+  EventBase* eventBase_{nullptr};
+  ThriftServer server_;
+  std::shared_ptr<FakeEdenServiceHandler> handler_;
+  bool honorStop_{true};
+};
+
 class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
  public:
-  FakeEdenServiceHandler() {}
+  explicit FakeEdenServiceHandler(FakeEdenServer* server) : server_{server} {}
 
   fb_status getStatus() override {
-    return fb_status::ALIVE;
+    return status_;
+  }
+
+  void setOption(std::unique_ptr<string> name, std::unique_ptr<string> value)
+      override {
+    auto badOption = [&]() {
+      auto errMsg = folly::to<string>(
+          "invalid value for ", *name, " setting: \"", *value, "\"");
+      XLOG(ERR) << errMsg;
+      throw std::invalid_argument(errMsg);
+    };
+
+    if (*name == "honor_stop") {
+      auto boolValue = folly::tryTo<bool>(*value);
+      if (boolValue.hasError()) {
+        badOption();
+      }
+      server_->setHonorStop(boolValue.value());
+    } else if (*name == "status") {
+      if (*value == "starting") {
+        status_ = fb_status::STARTING;
+      } else if (*value == "alive") {
+        status_ = fb_status::ALIVE;
+      } else if (*value == "stopping") {
+        status_ = fb_status::STOPPING;
+      } else {
+        badOption();
+      }
+    }
   }
 
   int64_t getPid() override {
@@ -59,38 +120,65 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
   }
 
   void shutdown() override {
-    printf("received shutdown() thrift request\n");
+    server_->stop("received shutdown() thrift request");
   }
 
-  void initiateShutdown(std::unique_ptr<std::string> reason) override {
-    printf(
-        "received initiateShutdown() thrift requested: %s\n", reason->c_str());
+  void initiateShutdown(std::unique_ptr<string> reason) override {
+    server_->stop(folly::to<string>(
+        "received initiateShutdown() thrift requested: ", reason->c_str()));
   }
+
+ private:
+  FakeEdenServer* server_{nullptr};
+  fb_status status_{fb_status::ALIVE};
 };
 
 class SignalHandler : public folly::AsyncSignalHandler {
  public:
-  explicit SignalHandler(EventBase* eventBase) : AsyncSignalHandler(eventBase) {
+  SignalHandler(EventBase* eventBase, FakeEdenServer* server)
+      : AsyncSignalHandler(eventBase), server_{server} {
     registerSignalHandler(SIGINT);
     registerSignalHandler(SIGTERM);
   }
 
   void signalReceived(int sig) noexcept override {
-    // We just print a message when we receive a signal,
-    // but ignore it otherwise
     switch (sig) {
       case SIGINT:
-        printf("received SIGINT\n");
+        server_->stop("received SIGINT");
         break;
       case SIGTERM:
-        printf("received SIGTERM\n");
+        server_->stop("received SIGTERM");
         break;
       default:
-        printf("received signal %d\n", sig);
+        XLOG(INFO) << "received signal " << sig;
         break;
     }
   }
+
+ private:
+  FakeEdenServer* server_{nullptr};
 };
+
+void FakeEdenServer::run(
+    folly::SocketAddress thriftAddress,
+    StartupLogger& startupLogger) {
+  eventBase_ = folly::EventBaseManager::get()->getEventBase();
+
+  // Create the ThriftServer object
+  auto handler = make_shared<FakeEdenServiceHandler>(this);
+  server_.setInterface(handler);
+  server_.setAddress(thriftAddress);
+
+  // Set up a signal handler to ignore SIGINT and SIGTERM
+  // This lets our integration tests exercise the case where edenfs does not
+  // shut down on its own.
+  SignalHandler signalHandler(eventBase_, this);
+
+  // Run the thrift server
+  server_.setup();
+  startupLogger.success();
+  eventBase_->loopForever();
+}
 
 bool acquireLock(AbsolutePathPiece edenDir) {
   const auto lockPath = edenDir + "lock"_pc;
@@ -108,6 +196,7 @@ bool acquireLock(AbsolutePathPiece edenDir) {
   lockFile.release();
   return true;
 }
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -132,6 +221,8 @@ int main(int argc, char** argv) {
     startupLogger.exitUnsuccessfully(1, "Failed to acquire lock file");
   }
 
+  startupLogger.log("Starting fake edenfs daemon");
+
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir + "socket"_pc;
   folly::SocketAddress thriftAddress;
@@ -149,21 +240,10 @@ int main(int argc, char** argv) {
         folly::errnoStr(errnum));
   }
 
-  // Create the ThriftServer object
-  auto handler = make_shared<FakeEdenServiceHandler>();
-  ThriftServer server;
-  server.setInterface(handler);
-  server.setAddress(thriftAddress);
-
-  // Set up a signal handler to ignore SIGINT and SIGTERM
-  // This lets our integration tests exercise the case where edenfs does not
-  // shut down on its own.
-  SignalHandler signalHandler(server.getEventBaseManager()->getEventBase());
-
-  // Run the thrift server
-  server.setup();
-  startupLogger.success();
-  folly::EventBaseManager::get()->getEventBase()->loopForever();
-
+  FakeEdenServer server;
+  if (FLAGS_ignoreStop) {
+    server.setHonorStop(false);
+  }
+  server.run(thriftAddress, startupLogger);
   return 0;
 }

@@ -38,6 +38,8 @@ class StopTest(unittest.TestCase):
             "start",
             "--daemon-binary",
             FindExe.FAKE_EDENFS,
+            "--",
+            "--ignoreStop",
         ]
         print("Starting eden: %r" % (start_cmd,))
         subprocess.check_call(start_cmd)

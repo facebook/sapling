@@ -122,7 +122,7 @@ def _check_health_using_lockfile(config_dir: str) -> HealthStatus:
     comm = stdout.rstrip().decode("utf8")
     # Note that the command may be just "edenfs" rather than a path, but it
     # works out fine either way.
-    if os.path.basename(comm) == "edenfs":
+    if os.path.basename(comm) in ("edenfs", "fake_edenfs"):
         return HealthStatus(
             fb_status.STOPPED,
             int(pid),

@@ -23,6 +23,7 @@ import eden.thrift
 from eden.thrift import EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import GlobParams
+from fb303.ttypes import fb_status
 
 from . import (
     buck,
@@ -730,6 +731,7 @@ def stop_aux_processes(client: eden.thrift.EdenClient) -> None:
 
 RESTART_MODE_FULL = "full"
 RESTART_MODE_GRACEFUL = "graceful"
+RESTART_MODE_FORCE = "force"
 
 
 @subcmd("restart", "Restart the edenfs daemon")
@@ -755,65 +757,158 @@ class RestartCmd(Subcmd):
             "disruption to clients.  Open file handles will continue to work "
             "across the restart.",
         )
+        mode_group.add_argument(
+            "--force",
+            action="store_const",
+            const=RESTART_MODE_FORCE,
+            dest="restart_type",
+            help="Force a full restart, even if the existing edenfs daemon is "
+            "still in the middle of starting or stopping.",
+        )
 
+        parser.add_argument(
+            "--daemon-binary", help="Path to the binary for the Eden daemon."
+        )
         parser.add_argument(
             "--shutdown-timeout",
             type=float,
-            default=30,
+            default=None,
             help="How long to wait for the old edenfs process to exit when "
             "performing a full restart.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
         self.args = args
-
-        if self.args.restart_type is None:
+        if args.restart_type is None:
             # Default to a full restart for now
-            self.args.restart_type = RESTART_MODE_FULL
+            args.restart_type = RESTART_MODE_FULL
 
-        self.config = create_config(args)
-        stopping = False
-        pid = None
-        try:
-            with self.config.get_thrift_client() as client:
-                pid = client.getPid()
-                if self.args.restart_type == RESTART_MODE_FULL:
-                    stop_aux_processes(client)
-                    # Ask the old edenfs daemon to shutdown
-                    self.msg("Stopping the existing edenfs daemon (pid {})...", pid)
-                    client.initiateShutdown(
-                        f"`eden restart` requested by pid={os.getpid()} "
-                        f"uid={os.getuid()}"
-                    )
-                    stopping = True
-        except EdenNotRunningError:
-            pass
+        config = create_config(self.args)
 
-        if stopping:
-            assert isinstance(pid, int)
-            daemon.wait_for_shutdown(
-                self.config, pid, timeout=self.args.shutdown_timeout
-            )
-            self._start()
-        elif pid is None:
-            self.msg("edenfs is not currently running.")
-            self._start()
+        health = config.check_health()
+        if health.is_healthy():
+            assert health.pid is not None
+            if self.args.restart_type == RESTART_MODE_GRACEFUL:
+                return self._graceful_restart(config)
+            else:
+                return self._full_restart(config, health.pid)
+        elif health.pid is None:
+            # The daemon is not running
+            return self._start(config)
         else:
-            self._graceful_start()
+            if health.status == fb_status.STARTING:
+                print(
+                    f"The current edenfs daemon (pid {health.pid}) is still starting."
+                )
+                # Give the daemon a little extra time to hopefully finish starting
+                # before we time out and kill it.
+                stop_timeout = 30
+            elif health.status == fb_status.STOPPING:
+                print(
+                    f"The current edenfs daemon (pid {health.pid}) is in the middle "
+                    "of stopping."
+                )
+                # Use a reduced stopping timeout.  If the user is using --force
+                # then the daemon is probably stuck or something, and we'll likely need
+                # to kill it anyway.
+                stop_timeout = 5
+            else:
+                # The only other status value we generally expect to receive here is
+                # fb_status.STOPPED.  This is returned if we found an existing edenfs
+                # process but it is not responding to thrift calls.
+                print(
+                    f"Found an existing edenfs daemon (pid {health.pid} that does not "
+                    "seem to be responding to thrift calls."
+                )
+                # Don't attempt to ask the daemon to stop at all in this case;
+                # just kill it.
+                stop_timeout = 0
+
+            if self.args.restart_type != RESTART_MODE_FORCE:
+                print(f"Use --force if you want to forcibly restart the current daemon")
+                return 1
+            return self._force_restart(config, health.pid, stop_timeout)
+
+    def _graceful_restart(self, config: config_mod.Config) -> int:
+        print("Performing a graceful restart...")
+        daemon.exec_daemon(config, daemon_binary=self.args.daemon_binary, takeover=True)
+        return 1  # never reached
+
+    def _start(self, config: config_mod.Config) -> int:
+        print("Eden is not currently running.  Starting it...")
+        daemon.exec_daemon(config, daemon_binary=self.args.daemon_binary)
+        return 1  # never reached
+
+    def _full_restart(self, config: config_mod.Config, old_pid: int) -> int:
+        print(
+            """\
+About to perform a full restart of Eden.
+Note: this will temporarily disrupt access to your Eden-managed repositories.
+Any programs using files or directories inside the Eden mounts will need to
+re-open these files after Eden is restarted.
+"""
+        )
+        if self.args.restart_type != RESTART_MODE_FORCE and sys.stdin.isatty():
+            if not prompt_confirmation("Proceed?"):
+                print("Not confirmed.")
+                return 1
+
+        self._do_stop(config, old_pid, timeout=15)
+        return self._finish_restart(config)
+
+    def _force_restart(
+        self, config: config_mod.Config, old_pid: int, stop_timeout: int
+    ) -> int:
+        print("Forcing a full restart...")
+        if stop_timeout <= 0:
+            print("Sending SIGTERM...")
+            os.kill(old_pid, signal.SIGTERM)
+            self._wait_for_stop(config, old_pid, timeout=5)
+        else:
+            self._do_stop(config, old_pid, stop_timeout)
+
+        return self._finish_restart(config)
+
+    def _wait_for_stop(self, config: config_mod.Config, pid: int, timeout: int) -> None:
+        # If --shutdown-timeout was specified on the command line that always takes
+        # precedence over the default timeout passed in by our caller.
+        if self.args.shutdown_timeout is not None:
+            timeout = self.args.shutdown_timeout
+        daemon.wait_for_shutdown(config, pid, timeout=timeout)
+
+    def _do_stop(self, config: config_mod.Config, pid: int, timeout: int) -> None:
+        with config.get_thrift_client() as client:
+            try:
+                stop_aux_processes(client)
+            except Exception as ex:
+                pass
+            try:
+                client.initiateShutdown(
+                    f"`eden restart --force` requested by pid={os.getpid()} "
+                    f"uid={os.getuid()}"
+                )
+            except Exception as ex:
+                print("Sending SIGTERM...")
+                os.kill(pid, signal.SIGTERM)
+        self._wait_for_stop(config, pid, timeout)
+
+    def _finish_restart(self, config: config_mod.Config) -> int:
+        exit_code = daemon.start_daemon(config, daemon_binary=self.args.daemon_binary)
+        if exit_code != 0:
+            print("Failed to start edenfs!", file=sys.stderr)
+            return exit_code
+
+        print(
+            """\
+
+Successfully restarted edenfs.
+Note: any programs running inside of an Eden-managed directory will need to cd
+out of and back into the repository to pick up the new working directory state.
+If you see "Transport endpoint not connected" errors from any program this
+means it is still attempting to use the old mount point from the previous Eden
+process."""
+        )
         return 0
-
-    def msg(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        if args or kwargs:
-            msg = msg.format(*args, **kwargs)
-        print(msg)
-
-    def _start(self) -> None:
-        self.msg("Starting edenfs...")
-        daemon.exec_daemon(self.config)
-
-    def _graceful_start(self) -> None:
-        self.msg("Performing a graceful restart...")
-        daemon.exec_daemon(self.config, takeover=True)
 
 
 @subcmd("rage", "Gather diagnostic information about eden")
