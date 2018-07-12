@@ -197,6 +197,40 @@ impl ValueSource {
     }
 }
 
+/// C memchr-like API
+#[inline]
+fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
+    haystack.iter().position(|&x| x == needle)
+}
+
+/// Test if a binary char is a space.
+#[inline]
+fn is_space(byte: u8) -> bool {
+    b" \t\r\n".contains(&byte)
+}
+
+/// Remove space characters from both ends. `start` position is inclusive, `end` is exclusive.
+/// Return the stripped `start` and `end` offsets.
+#[inline]
+fn strip_offsets(buf: &Bytes, start: usize, end: usize) -> (usize, usize) {
+    let mut start = start;
+    let mut end = end;
+    while start < end && is_space(buf[start]) {
+        start += 1
+    }
+    while start < end && is_space(buf[end - 1]) {
+        end -= 1
+    }
+    (start, end)
+}
+
+/// Strip spaces and return a `Bytes` sub-slice.
+#[inline]
+fn strip(buf: &Bytes, start: usize, end: usize) -> Bytes {
+    let (start, end) = strip_offsets(buf, start, end);
+    buf.slice(start, end)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
