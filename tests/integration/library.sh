@@ -125,13 +125,15 @@ CONFIG
 
   # We need to have a RocksDb version of config repo
   mkdir mononoke-config-rocks
-  $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb mononoke-config/.hg mononoke-config-rocks >> "$TESTTMP/mononoke-config-blobimport.out" 2>&1
+  $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb mononoke-config/.hg --data-dir mononoke-config-rocks >> "$TESTTMP/mononoke-config-blobimport.out" 2>&1
 }
 
 function blobimport {
-  reponame=$2
-  mkdir -p "$reponame"
-  $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb "$@" >> "$TESTTMP/blobimport.out" 2>&1
+  input="$1"
+  output="$2"
+  shift 2
+  mkdir -p "$output"
+  $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb "$input" --data-dir "$output" "$@" >> "$TESTTMP/blobimport.out" 2>&1
 }
 
 function apiserver {

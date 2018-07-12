@@ -28,18 +28,14 @@ extern crate tokio_core;
 mod bookmark;
 mod changeset;
 
-use std::fs;
-use std::path::Path;
 use std::sync::Arc;
 
-use clap::{App, Arg, ArgMatches};
-use failure::{err_msg, Result, ResultExt};
+use clap::{App, Arg};
+use failure::err_msg;
 use futures::{future, Future, Stream};
 use futures_ext::FutureExt;
-use slog::Logger;
 use tokio_core::reactor::Core;
 
-use blobrepo::BlobRepo;
 use cmdlib::args;
 use mercurial::RevlogRepo;
 
@@ -47,6 +43,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
         safe_writes: true,
         hide_advanced_args: false,
+        local_instances: true,
     };
     app.build("revlog to blob importer")
         .version("0.0.0")
@@ -57,16 +54,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --parsing-cpupool-size [NUM]    'size of cpupool for parsing revlogs'
             --changeset [HASH]              'if provided, the only changeset to be imported'
             --no-bookmark                   'if provided won't update bookmarks'
-            [OUTPUT]                        'Blobstore output'
         "#,
-        )
-        .arg(
-            Arg::with_name("blobstore")
-                .long("blobstore")
-                .takes_value(true)
-                .possible_values(&["files", "rocksdb", "manifold"])
-                .required(true)
-                .help("blobstore type"),
         )
         .arg(
             Arg::from_usage("--skip [SKIP]  'skips commits from the beginning'")
@@ -79,77 +67,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn setup_local_state(output: &Path) -> Result<()> {
-    if !output.is_dir() {
-        bail_msg!("{:?} does not exist or is not a directory", output);
-    }
-
-    for subdir in &["blobs"] {
-        let subdir = output.join(subdir);
-        if subdir.exists() {
-            if !subdir.is_dir() {
-                bail_msg!("{:?} already exists and is not a directory", subdir);
-            }
-
-            let content: Vec<_> = subdir.read_dir()?.collect();
-            if !content.is_empty() {
-                bail_msg!(
-                    "{:?} already exists and is not empty: {:?}",
-                    subdir,
-                    content
-                );
-            }
-        } else {
-            fs::create_dir(&subdir)
-                .with_context(|_| format!("failed to create subdirectory {:?}", subdir))?;
-        }
-    }
-    Ok(())
-}
-
-fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
-    let repo_id = args::get_repo_id(matches);
-
-    match matches.value_of("blobstore").unwrap() {
-        "files" => {
-            let output = matches.value_of("OUTPUT").expect("output is not specified");
-            let output = Path::new(output)
-                .canonicalize()
-                .expect("Failed to read output path");
-            setup_local_state(&output).expect("Setting up file blobrepo failed");
-
-            BlobRepo::new_files(
-                logger.new(o!["BlobRepo:Files" => output.to_string_lossy().into_owned()]),
-                &output,
-                repo_id,
-            ).expect("failed to create file blobrepo")
-        }
-        "rocksdb" => {
-            let output = matches.value_of("OUTPUT").expect("output is not specified");
-            let output = Path::new(output)
-                .canonicalize()
-                .expect("Failed to read output path");
-            setup_local_state(&output).expect("Setting up rocksdb blobrepo failed");
-
-            BlobRepo::new_rocksdb(
-                logger.new(o!["BlobRepo:Rocksdb" => output.to_string_lossy().into_owned()]),
-                &output,
-                repo_id,
-            ).expect("failed to create rocksdb blobrepo")
-        }
-        "manifold" => {
-            let manifold_args = args::parse_manifold_args(&matches, 100_000_000);
-
-            BlobRepo::new_manifold(
-                logger.new(o!["BlobRepo:TestManifold" => manifold_args.bucket.clone()]),
-                &manifold_args,
-                repo_id,
-            ).expect("failed to create manifold blobrepo")
-        }
-        bad => panic!("unexpected blobstore type: {}", bad),
-    }
-}
-
 fn main() {
     let matches = setup_app().get_matches();
 
@@ -159,7 +76,7 @@ fn main() {
 
     let logger = args::get_logger(&matches);
 
-    let blobrepo = Arc::new(open_blobrepo(&logger, &matches));
+    let blobrepo = Arc::new(args::create_blobrepo(&logger, &matches));
 
     let stale_bookmarks = {
         let revlogrepo = RevlogRepo::open(revlogrepo_path).expect("cannot open revlogrepo");

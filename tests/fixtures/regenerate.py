@@ -110,6 +110,7 @@ server=True"""
                     '--repo_id',
                     '1',
                     os.path.join(revlog_repo, '.hg'),
+                    '--data-dir',
                     new_dir,
                 ]
             )

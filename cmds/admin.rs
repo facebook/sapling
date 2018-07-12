@@ -34,13 +34,13 @@ use futures::prelude::*;
 use futures::stream::iter_ok;
 use tokio_core::reactor::Core;
 
-use blobrepo::{BlobRepo, ManifoldArgs};
+use blobrepo::BlobRepo;
 use blobstore::{new_memcache_blobstore, Blobstore, CacheBlobstoreExt, PrefixBlobstore};
 use cmdlib::args;
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
 use mercurial_types::{Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope,
-                      HgManifestEnvelope, MPath, MPathElement, Manifest, RepositoryId};
+                      HgManifestEnvelope, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
 use mononoke_types::{BlobstoreBytes, BlobstoreValue, FileContents};
 use slog::Logger;
@@ -90,20 +90,13 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
         safe_writes: false,
         hide_advanced_args: true,
+        local_instances: false,
     };
     app.build("Mononoke admin command line tool")
         .version("0.0.0")
         .about("Poke at mononoke internals for debugging and investigating data structures.")
         .subcommand(blobstore_fetch)
         .subcommand(content_fetch)
-}
-
-fn create_blobrepo<'a>(
-    logger: &'a Logger,
-    manifold_args: &ManifoldArgs,
-    repo_id: RepositoryId,
-) -> BlobRepo {
-    BlobRepo::new_manifold(logger.clone(), manifold_args, repo_id).expect("cannot create blobrepo")
 }
 
 fn fetch_content_from_manifest(
@@ -252,7 +245,7 @@ fn main() {
             let rev = sub_m.value_of("CHANGESET_ID").unwrap();
             let path = sub_m.value_of("PATH").unwrap();
 
-            let repo = create_blobrepo(&logger, &manifold_args, repo_id);
+            let repo = args::open_blobrepo(&logger, &matches);
             fetch_content(&mut core, logger.clone(), Arc::new(repo), rev, path)
                 .and_then(|content| {
                     match content {

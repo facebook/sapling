@@ -10,6 +10,8 @@
 
 extern crate clap;
 #[macro_use]
+extern crate failure_ext as failure;
+#[macro_use]
 extern crate slog;
 
 extern crate slog_glog_fmt;
