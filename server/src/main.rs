@@ -22,7 +22,7 @@ extern crate tokio;
 extern crate tokio_codec;
 extern crate tokio_core;
 extern crate tokio_io;
-extern crate tokio_tls;
+extern crate tokio_openssl;
 extern crate tokio_uds;
 
 extern crate rand;
@@ -59,7 +59,6 @@ extern crate mercurial_types;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
 extern crate metaconfig;
-extern crate native_tls;
 extern crate openssl;
 extern crate pylz4;
 extern crate repoinfo;
@@ -100,7 +99,7 @@ use futures::sync::mpsc;
 use futures_ext::{asynchronize, FutureExt};
 use futures_stats::Timed;
 use tokio::util::FutureExt as TokioFutureExt;
-use tokio_tls::TlsAcceptorExt;
+use tokio_openssl::SslAcceptorExt;
 
 use clap::{App, ArgMatches};
 

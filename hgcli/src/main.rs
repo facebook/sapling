@@ -19,14 +19,14 @@ extern crate tokio_uds;
 extern crate bytes;
 extern crate dns_lookup;
 extern crate futures;
-extern crate native_tls;
+extern crate openssl;
 extern crate secure_utils;
 extern crate tokio;
 extern crate tokio_core;
 extern crate tokio_io;
+extern crate tokio_openssl;
 extern crate tokio_proto;
 extern crate tokio_service;
-extern crate tokio_tls;
 extern crate uuid;
 
 extern crate mio;

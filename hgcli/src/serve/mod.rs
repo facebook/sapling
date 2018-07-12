@@ -13,11 +13,10 @@ use slog::{Drain, Logger};
 use slog_term;
 
 use dns_lookup::lookup_addr;
-use native_tls::TlsConnector;
-use native_tls::backend::openssl::TlsConnectorBuilderExt;
+use openssl::ssl::{SslConnector, SslMethod};
 use tokio_io::AsyncRead;
 use tokio_io::codec::{FramedRead, FramedWrite};
-use tokio_tls::{TlsConnectorExt, TlsStream};
+use tokio_openssl::{SslConnectorExt, SslStream};
 use uuid;
 
 use tokio::net::TcpStream;
@@ -31,7 +30,7 @@ use fbwhoami;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use secure_utils::build_pkcs12;
+use secure_utils::{build_identity, read_x509};
 use sshrelay::{Preamble, SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
 mod fdio;
@@ -158,7 +157,7 @@ impl<'a> StdioRelay<'a> {
             .boxify()
     }
 
-    fn establish_connection(&self) -> impl Future<Item = TlsStream<TcpStream>, Error = Error> {
+    fn establish_connection(&self) -> impl Future<Item = SslStream<TcpStream>, Error = Error> {
         let path = self.path.to_owned();
         let ssl_common_name = self.ssl_common_name.to_owned();
 
@@ -168,18 +167,25 @@ impl<'a> StdioRelay<'a> {
             format_err!("connecting to Mononoke {} socket '{}' failed", path, err)
         });
 
-        let pkcs12 = try_boxfuture!(build_pkcs12(
-            self.cert.to_owned(),
-            self.private_key.to_owned(),
-        ));
-        let mut connector_builder = try_boxfuture!(TlsConnector::builder());
-        try_boxfuture!(connector_builder.identity(pkcs12));
-        {
-            let sslcontextbuilder = connector_builder.builder_mut();
+        let connector = {
+            let mut connector = try_boxfuture!(SslConnector::builder(SslMethod::tls()));
 
-            try_boxfuture!(sslcontextbuilder.set_ca_file(self.ca_pem.to_owned()));
-        }
-        let connector = try_boxfuture!(connector_builder.build());
+            let pkcs12 = try_boxfuture!(build_identity(
+                self.cert.to_owned(),
+                self.private_key.to_owned(),
+            ));
+            try_boxfuture!(connector.set_certificate(&pkcs12.cert));
+            try_boxfuture!(connector.set_private_key(&pkcs12.pkey));
+
+            // add root certificate
+            try_boxfuture!(
+                connector
+                    .cert_store_mut()
+                    .add_cert(try_boxfuture!(read_x509(self.ca_pem)))
+            );
+
+            connector.build()
+        };
 
         socket
             .and_then(move |socket| {
