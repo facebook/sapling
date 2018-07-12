@@ -9,13 +9,12 @@ from __future__ import absolute_import
 import hashlib
 import os
 import socket
-import subprocess
+from subprocess import PIPE, Popen
 
 from mercurial import (
     config,
     encoding,
     error,
-    hg,
     lock as lockmod,
     obsolete,
     pycompat,
@@ -77,6 +76,8 @@ class TokenLocator(object):
         self.ui = ui
         self.vfs = _gethomevfs(self.ui, "user_token_path")
         self.vfs.createmode = 0o600
+        self.user = util.shortuser(self.ui.username())
+        self.secretname = (SERVICE + "_" + self.user).upper()
 
     def _gettokenfromfile(self):
         """On platforms except macOS tokens are stored in a file"""
@@ -92,12 +93,73 @@ class TokenLocator(object):
         with self.vfs.open(self.filename, "w") as configfile:
             configfile.write(("[commitcloud]\nuser_token=%s\n") % token)
 
+    def _gettokenfromsecretstool(self):
+        """Token stored in keychain as individual secret"""
+        try:
+            p = Popen(
+                ["secrets_tool", "get", self.secretname],
+                close_fds=util.closefds,
+                stdout=PIPE,
+                stderr=PIPE,
+            )
+            (stdoutdata, stderrdata) = p.communicate()
+            rc = p.returncode
+            if rc != 0:
+                # May not have migrated token yet
+                token = self._gettokenfromfile()
+
+                if token is not None:
+                    self._settokeninsecretstool(token)
+                    return token
+
+            text = stdoutdata.strip()
+            return text or None
+
+        except OSError as e:
+            raise commitcloudcommon.UnexpectedError(self.ui, e)
+        except ValueError as e:
+            raise commitcloudcommon.UnexpectedError(self.ui, e)
+
+    def _settokeninsecretstool(self, token, update=False):
+        """Token stored in keychain as individual secrets"""
+        action = "update" if update else "create"
+        try:
+            p = Popen(
+                [
+                    "secrets_tool",
+                    action,
+                    "--read_contents_from_stdin",
+                    self.secretname,
+                    "Mercurial commitcloud token",
+                ],
+                close_fds=util.closefds,
+                stdout=PIPE,
+                stderr=PIPE,
+                stdin=PIPE,
+            )
+            (stdoutdata, stderrdata) = p.communicate(token)
+            rc = p.returncode
+
+            if rc != 0:
+                if action == "create":
+                    # Try updating token instead
+                    self._settokeninsecretstool(token, update=True)
+                else:
+                    raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
+            text = stdoutdata.strip()
+            return text or None
+
+        except OSError as e:
+            raise commitcloudcommon.UnexpectedError(self.ui, e)
+        except ValueError as e:
+            raise commitcloudcommon.UnexpectedError(self.ui, e)
+
     def _gettokenosx(self):
         """On macOS tokens are stored in keychain
            this function fetches token from keychain
         """
         try:
-            p = subprocess.Popen(
+            p = Popen(
                 [
                     "security",
                     "find-generic-password",
@@ -110,8 +172,8 @@ class TokenLocator(object):
                 ],
                 stdin=None,
                 close_fds=util.closefds,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=PIPE,
+                stderr=PIPE,
             )
             (stdoutdata, stderrdata) = p.communicate()
             rc = p.returncode
@@ -144,7 +206,7 @@ class TokenLocator(object):
            this function puts the token to keychain
         """
         try:
-            p = subprocess.Popen(
+            p = Popen(
                 [
                     "security",
                     "add-generic-password",
@@ -158,8 +220,8 @@ class TokenLocator(object):
                 ],
                 stdin=None,
                 close_fds=util.closefds,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=PIPE,
+                stderr=PIPE,
             )
             (stdoutdata, stderrdata) = p.communicate()
             rc = p.returncode
@@ -187,10 +249,17 @@ class TokenLocator(object):
                 returns None if token is not found
                 it can throw only in case of unexpected error
         """
-        if pycompat.isdarwin and not self.ui.config("commitcloud", "user_token_path"):
+        if self.ui.config("commitcloud", "user_token_path"):
+            token = self._gettokenfromfile()
+        elif pycompat.isdarwin:
             token = self._gettokenosx()
+        elif self.ui.config("commitcloud", "use_secrets_tool"):
+            token = self._gettokenfromsecretstool()
+            if self.vfs.exists(self.filename):
+                self.vfs.tryunlink(self.filename)
         else:
             token = self._gettokenfromfile()
+
         # Ensure token doesn't have any extraneous whitespace around it.
         if token is not None:
             token = token.strip()
@@ -204,8 +273,13 @@ class TokenLocator(object):
         # Ensure token doesn't have any extraneous whitespace around it.
         if token is not None:
             token = token.strip()
-        if pycompat.isdarwin and not self.ui.config("commitcloud", "user_token_path"):
+
+        if self.ui.config("commitcloud", "user_token_path"):
+            self._settokentofile(token)
+        elif pycompat.isdarwin:
             self._settokenosx(token)
+        elif self.ui.config("commitcloud", "use_secrets_tool"):
+            self._settokeninsecretstool(token)
         else:
             self._settokentofile(token)
 
@@ -439,12 +513,12 @@ def getprocessetime(locker):
         return None
     try:
         pid = locker.pid
-        p = subprocess.Popen(
+        p = Popen(
             ["ps", "-o", "etime=", pid],
             stdin=None,
             close_fds=util.closefds,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
         (stdoutdata, stderrdata) = p.communicate()
         if p.returncode == 0 and stdoutdata:

@@ -56,6 +56,9 @@
     # SCM Daemon log file (for hg rage)
     # %i is substituted with the user identity
     scm_daemon_log_path = /path/to/%i/logfile
+
+    # Use secrets_tool for token
+    use_secrets_tool = true
 """
 
 from __future__ import absolute_import
