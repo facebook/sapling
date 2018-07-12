@@ -129,7 +129,6 @@ def rephere(m):
 testpats = [
     [
         (r"\b(push|pop)d\b", "don't use 'pushd' or 'popd', use 'cd'"),
-        (r"\W\$?\(\([^\)\n]*\)\)", "don't use (()) or $(()), use 'expr'"),
         (r"grep.*-q", "don't use 'grep -q', redirect to /dev/null"),
         (r"(?<!hg )grep.* -a", "don't use 'grep -a', use in-line python"),
         (r"sed.*-i", "don't use 'sed -i', use a temporary file (it breaks on OSX)"),
@@ -142,7 +141,6 @@ testpats = [
         (r"ls.*-\w*R", "don't use 'ls -R', use 'find'"),
         (r"printf.*[^\\]\\([1-9]|0\d)", r"don't use 'printf \NNN', use Python"),
         (r"printf.*[^\\]\\x", "don't use printf \\x, use Python"),
-        (r"\$\(.*\)", "don't use $(expr), use `expr`"),
         (r"rm -rf \*", "don't use naked rm -rf, target a directory"),
         (r"\[[^\]]+==", "[ foo == bar ] is a bashism, use [ foo = bar ] instead"),
         (r"(^|\|\s*)grep (-\w\s+)*[^|]*[(|]\w", "use egrep for extended grep syntax"),
@@ -150,7 +148,6 @@ testpats = [
         (r"(?<!!)/bin/", "don't use explicit paths for tools"),
         (r"#!.*/bash", "don't use bash in shebang, use sh"),
         (r"[^\n]\Z", "no trailing newline"),
-        (r"export .*=", "don't export and assign at once"),
         (r"^source\b", "don't use 'source', use '.'"),
         (r"touch -d", "don't use 'touch -d', use 'touch -t' instead"),
         (r"\bls +[^|\n-]+ +-", "options to 'ls' must come before filenames"),

@@ -146,7 +146,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-hgsubversion-urls.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-utility-commands.py it has no-che?k-code (glob)
   Skipping tests/test_hgsubversion_util.py it has no-che?k-code (glob)
-  tests/test-hggit-gitignore.t:124: don't use $(expr), use `expr` --> $ echo 'foo.*$(?<!bar)' >> .hgignore
   tests/test-revset.t:2785: warning: ^ must be quoted --> > . +
 
 @commands in debugcommands.py should be in alphabetical order.
