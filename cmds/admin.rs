@@ -94,7 +94,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     app.build("Mononoke admin command line tool")
         .version("0.0.0")
         .about("Poke at mononoke internals for debugging and investigating data structures.")
-        .args_from_usage("--repo-id [REPO_ID] 'repo id (default: 0)'")
         .subcommand(blobstore_fetch)
         .subcommand(content_fetch)
 }
@@ -183,11 +182,7 @@ fn main() {
     let logger = args::get_logger(&matches);
     let manifold_args = args::parse_manifold_args(&matches, 1_000_000);
 
-    let repo_id = matches
-        .value_of("repo-id")
-        .map(|id: &str| id.parse::<u32>().expect("expected repo id to be a u32"))
-        .unwrap_or(0);
-    let repo_id = RepositoryId::new(repo_id as i32);
+    let repo_id = args::get_repo_id(&matches);
 
     let mut core = Core::new().unwrap();
     let remote = core.remote();

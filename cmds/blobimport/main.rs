@@ -42,7 +42,6 @@ use tokio_core::reactor::Core;
 use blobrepo::BlobRepo;
 use cmdlib::args;
 use mercurial::RevlogRepo;
-use mercurial_types::RepositoryId;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
@@ -55,7 +54,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .args_from_usage(
             r#"
             <INPUT>                         'input revlog repo'
-            --repo_id <repo_id>             'ID of the newly imported repo'
             --parsing-cpupool-size [NUM]    'size of cpupool for parsing revlogs'
             --changeset [HASH]              'if provided, the only changeset to be imported'
             --no-bookmark                   'if provided won't update bookmarks'
@@ -110,7 +108,7 @@ fn setup_local_state(output: &Path) -> Result<()> {
 }
 
 fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
-    let repo_id = RepositoryId::new(matches.value_of("repo_id").unwrap().parse().unwrap());
+    let repo_id = args::get_repo_id(matches);
 
     match matches.value_of("blobstore").unwrap() {
         "files" => {

@@ -15,5 +15,6 @@ extern crate slog;
 extern crate slog_glog_fmt;
 
 extern crate blobrepo;
+extern crate mercurial_types;
 
 pub mod args;

@@ -7,6 +7,7 @@
 use diesel::sql_types::Integer;
 
 // XXX RepositoryId might want to be a short string like a Phabricator callsign.
+// TODO: (rain1) T31391673 move this to the mononoke-types crate
 
 /// Represents a repository. This ID is used throughout storage.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]

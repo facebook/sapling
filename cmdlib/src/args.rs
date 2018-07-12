@@ -10,6 +10,7 @@ use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 
 use blobrepo::ManifoldArgs;
+use mercurial_types::RepositoryId;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blobstore-cache-size", "size of the blobstore cache"),
@@ -57,6 +58,15 @@ impl MononokeApp {
                 r#"
                 -d, --debug 'print debug output'
                 "#,
+            )
+            .arg(
+                Arg::with_name("repo-id")
+                    .long("repo-id")
+                    // This is an old form that some consumers use
+                    .alias("repo_id")
+                    .value_name("ID")
+                    .default_value("0")
+                    .help("numeric ID of repository")
             )
 
             // Manifold-specific arguments
@@ -110,6 +120,15 @@ pub fn get_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
 
     let drain = glog_drain().filter_level(level).fuse();
     Logger::root(drain, o![])
+}
+
+pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {
+    let repo_id = matches
+        .value_of("repo-id")
+        .unwrap()
+        .parse::<u32>()
+        .expect("expected repository ID to be a u32");
+    RepositoryId::new(repo_id as i32)
 }
 
 pub fn parse_manifold_args<'a>(
