@@ -28,7 +28,13 @@ from facebook.eden.ttypes import (
     TreeInodeDebugInfo,
 )
 
-from . import cmd_util, config as config_mod, subcmd as subcmd_mod, util
+from . import (
+    cmd_util,
+    config as config_mod,
+    overlay as overlay_mod,
+    subcmd as subcmd_mod,
+    util,
+)
 from .stdout_printer import StdoutPrinter
 from .subcmd import Subcmd
 
@@ -465,122 +471,6 @@ def _print_inode_info(inode_info: TreeInodeDebugInfo, out: IO[bytes]) -> None:
         out.write(line.encode())
 
 
-def _load_overlay_tree(overlay_dir: str, inode_number: int) -> OverlayDir:
-    from thrift.util import Serializer
-    from thrift.protocol import TCompactProtocol
-
-    dir_name = "{:02x}".format(inode_number % 256)
-    overlay_file_path = os.path.join(overlay_dir, dir_name, str(inode_number))
-    with open(overlay_file_path, "rb") as f:
-        data = f.read()
-
-    assert data[0:4] == b"OVDR"
-
-    tree_data = OverlayDir()
-    protocol_factory = TCompactProtocol.TCompactProtocolFactory()
-    Serializer.deserialize(protocol_factory, data[64:], tree_data)
-    return tree_data
-
-
-def _print_overlay_tree(inode_number: int, path: str, tree_data: OverlayDir):
-    def hex(binhash) -> str:
-        if binhash is None:
-            return "None"
-        else:
-            return binascii.hexlify(binhash).decode("utf-8")
-
-    print("Inode {}: {}".format(inode_number, path))
-    if not tree_data.entries:
-        return
-    name_width = max(len(name) for name in tree_data.entries)
-    for name, entry in tree_data.entries.items():
-        assert entry.mode is not None
-        perms = entry.mode & 0o7777
-        file_type = stat.S_IFMT(entry.mode)
-        if file_type == stat.S_IFREG:
-            file_type_flag = "f"
-        elif file_type == stat.S_IFDIR:
-            file_type_flag = "d"
-        elif file_type == stat.S_IFLNK:
-            file_type_flag = "l"
-        else:
-            file_type_flag = "?"
-
-        print(
-            "    {:{name_width}s} : {:12d} {} {:04o} {}".format(
-                name,
-                entry.inodeNumber,
-                file_type_flag,
-                perms,
-                hex(entry.hash),
-                name_width=name_width,
-            )
-        )
-
-
-def _find_overlay_tree_rel(
-    overlay_dir: str, root: OverlayDir, path_parts: List[str]
-) -> int:
-    desired = path_parts[0]
-    rest = path_parts[1:]
-    entries = [] if root.entries is None else root.entries.items()
-    for name, entry in entries:  # noqa: ignore=B007
-        if name == desired:
-            break
-    else:
-        raise Exception("path does not exist")
-
-    if entry.mode is None or stat.S_IFMT(entry.mode) != stat.S_IFDIR:
-        raise Exception("path does not not refer to a directory")
-    if entry.hash:
-        raise Exception("path is not materialized")
-    if entry.inodeNumber is None or entry.inodeNumber == 0:
-        raise Exception("path is not loaded")
-
-    if rest:
-        entry_data = _load_overlay_tree(overlay_dir, entry.inodeNumber)
-        return _find_overlay_tree_rel(overlay_dir, entry_data, rest)
-    return entry.inodeNumber
-
-
-def _find_overlay_tree(overlay_dir: str, path: str) -> int:
-    assert path
-    assert not os.path.isabs(path)
-
-    root = _load_overlay_tree(overlay_dir, 1)
-    path_parts = path.split(os.sep)
-    return _find_overlay_tree_rel(overlay_dir, root, path_parts)
-
-
-def _display_overlay(
-    args: argparse.Namespace,
-    overlay_dir: str,
-    inode_number: int,
-    path: str,
-    level: int = 0,
-):
-    data = _load_overlay_tree(overlay_dir, inode_number)
-    _print_overlay_tree(inode_number, path, data)
-
-    # If args.depth is negative, recurse forever.
-    # Stop if args.depth is non-negative, and level reaches the maximum
-    # requested recursion depth.
-    if args.depth >= 0 and level >= args.depth:
-        return
-
-    entries = {} if data.entries is None else data.entries
-    for name, entry in entries.items():
-        if entry.hash or entry.inodeNumber is None or entry.inodeNumber == 0:
-            # This entry is not materialized
-            continue
-        if entry.mode is None or stat.S_IFMT(entry.mode) != stat.S_IFDIR:
-            # Only display data for directories
-            continue
-        print()
-        entry_path = os.path.join(path, name)
-        _display_overlay(args, overlay_dir, entry.inodeNumber, entry_path, level + 1)
-
-
 @debug_cmd("overlay", "Show data about the overlay")
 class OverlayCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -605,23 +495,86 @@ class OverlayCmd(Subcmd):
         parser.add_argument("path", nargs="?", help="The path to the eden mount point.")
 
     def run(self, args: argparse.Namespace) -> int:
+        self.args = args
         config = cmd_util.create_config(args)
         mount, rel_path = get_mount_path(args.path or os.getcwd())
 
         # Get the path to the overlay directory for this mount point
         client_dir = config._get_client_dir_for_mount_point(mount)
-        overlay_dir = os.path.join(client_dir, "local")
+        self.overlay = overlay_mod.Overlay(os.path.join(client_dir, "local"))
 
         if args.number is not None:
-            _display_overlay(args, overlay_dir, args.number, "")
+            self._display_overlay(args.number, "")
         elif rel_path:
             rel_path = os.path.normpath(rel_path)
-            inode_number = _find_overlay_tree(overlay_dir, rel_path)
-            _display_overlay(args, overlay_dir, inode_number, rel_path)
+            inode_number = self.overlay.lookup_path(rel_path)
+            if inode_number is None:
+                print(f"{rel_path} is not materialized", file=sys.stderr)
+                return 1
+            self._display_overlay(inode_number, rel_path)
         else:
-            _display_overlay(args, overlay_dir, 1, "/")
+            self._display_overlay(1, "/")
 
         return 0
+
+    def _display_overlay(self, inode_number: int, path: str, level: int = 0) -> None:
+        data = self.overlay.read_dir_inode(inode_number)
+        self._print_overlay_tree(inode_number, path, data)
+
+        # If self.args.depth is negative, recurse forever.
+        # Stop if self.args.depth is non-negative, and level reaches the maximum
+        # requested recursion depth.
+        if self.args.depth >= 0 and level >= self.args.depth:
+            return
+
+        entries = {} if data.entries is None else data.entries
+        for name, entry in entries.items():
+            if entry.hash or entry.inodeNumber is None or entry.inodeNumber == 0:
+                # This entry is not materialized
+                continue
+            if entry.mode is None or stat.S_IFMT(entry.mode) != stat.S_IFDIR:
+                # Only display data for directories
+                continue
+            print()
+            entry_path = os.path.join(path, name)
+            self._display_overlay(entry.inodeNumber, entry_path, level + 1)
+
+    def _print_overlay_tree(
+        self, inode_number: int, path: str, tree_data: OverlayDir
+    ) -> None:
+        def hex(binhash) -> str:
+            if binhash is None:
+                return "None"
+            else:
+                return binascii.hexlify(binhash).decode("utf-8")
+
+        print("Inode {}: {}".format(inode_number, path))
+        if not tree_data.entries:
+            return
+        name_width = max(len(name) for name in tree_data.entries)
+        for name, entry in tree_data.entries.items():
+            assert entry.mode is not None
+            perms = entry.mode & 0o7777
+            file_type = stat.S_IFMT(entry.mode)
+            if file_type == stat.S_IFREG:
+                file_type_flag = "f"
+            elif file_type == stat.S_IFDIR:
+                file_type_flag = "d"
+            elif file_type == stat.S_IFLNK:
+                file_type_flag = "l"
+            else:
+                file_type_flag = "?"
+
+            print(
+                "    {:{name_width}s} : {:12d} {} {:04o} {}".format(
+                    name,
+                    entry.inodeNumber,
+                    file_type_flag,
+                    perms,
+                    hex(entry.hash),
+                    name_width=name_width,
+                )
+            )
 
 
 @debug_cmd("getpath", "Get the eden path that corresponds to an inode number")
