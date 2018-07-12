@@ -2,6 +2,7 @@
 members = [
     "argparse",
     "commitcloudsubscriber",
+    "configparser",
     "hg_watchman_client",
     "indexedlog",
     "lz4-pyframe",
