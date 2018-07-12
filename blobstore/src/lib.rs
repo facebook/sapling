@@ -37,6 +37,8 @@ use mononoke_types::BlobstoreBytes;
 mod counted_blobstore;
 pub use counted_blobstore::CountedBlobstore;
 
+mod dummy_lease;
+
 mod in_memory_cache;
 pub use in_memory_cache::MemoizedBlobstore;
 
@@ -46,8 +48,8 @@ pub use locking_cache::{CacheBlobstore, CacheBlobstoreExt, CacheOps, LeaseOps};
 mod memblob;
 pub use memblob::{EagerMemblob, LazyMemblob};
 
-mod memcache_cache;
-pub use memcache_cache::new_memcache_blobstore;
+mod memcache_cache_lease;
+pub use memcache_cache_lease::{new_memcache_blobstore, new_memcache_blobstore_no_lease};
 
 mod prefix;
 pub use prefix::PrefixBlobstore;

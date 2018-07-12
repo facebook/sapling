@@ -22,6 +22,7 @@ use CacheBlobstore;
 use CacheOps;
 use CountedBlobstore;
 use LeaseOps;
+use dummy_lease::DummyLease;
 use memcache_lock_thrift::LockState;
 
 define_stats! {
@@ -158,6 +159,22 @@ where
     Ok(CountedBlobstore::new(
         "memcache",
         CacheBlobstore::new(cache_ops.clone(), cache_ops, blobstore),
+    ))
+}
+
+pub fn new_memcache_blobstore_no_lease<T, S>(
+    blobstore: T,
+    backing_store_name: S,
+    backing_store_params: S,
+) -> Result<CountedBlobstore<CacheBlobstore<MemcacheOps, DummyLease, T>>, Error>
+where
+    T: Blobstore + Clone,
+    S: AsRef<str>,
+{
+    let cache_ops = MemcacheOps::new(backing_store_name, backing_store_params)?;
+    Ok(CountedBlobstore::new(
+        "memcache",
+        CacheBlobstore::new(cache_ops, DummyLease {}, blobstore),
     ))
 }
 
