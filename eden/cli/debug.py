@@ -754,7 +754,7 @@ class SetLogLevelCmd(Subcmd):
 
 
 @debug_cmd("journal", "Prints the most recent N entries from the journal")
-class DebugLevelCmd(Subcmd):
+class DebugJournalCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-n",
