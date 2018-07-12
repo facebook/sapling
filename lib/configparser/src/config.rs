@@ -139,12 +139,37 @@ impl ConfigSet {
         value: Option<&[u8]>,
         source: S,
     ) {
-        unimplemented!()
+        let section = section.into();
+        let name = name.into();
+        let source = source.into();
+        let value = value.map(|v| Bytes::from(v));
+        self.set_internal(section, name, value, None, &source)
     }
 
     /// Get errors caused by parsing config files previously.
     pub fn errors(&self) -> &Vec<Error> {
         &self.errors
+    }
+
+    fn set_internal(
+        &mut self,
+        section: Bytes,
+        name: Bytes,
+        value: Option<Bytes>,
+        location: Option<ValueLocation>,
+        source: &Bytes,
+    ) {
+        self.sections
+            .entry(section)
+            .or_insert_with(|| Default::default())
+            .items
+            .entry(name)
+            .or_insert_with(|| Vec::with_capacity(1))
+            .push(ValueSource {
+                value,
+                location,
+                source: source.clone(),
+            })
     }
 }
 
@@ -169,5 +194,44 @@ impl ValueSource {
             Some(ref src) => Some((src.path.as_ref().to_path_buf(), src.location.clone())),
             None => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_empty() {
+        let cfg = ConfigSet::new();
+        assert!(cfg.sections().is_empty());
+        assert!(cfg.keys("foo").is_empty());
+        assert!(cfg.get("foo", "bar").is_none());
+        assert!(cfg.get_sources("foo", "bar").is_empty());
+        assert!(cfg.errors().is_empty());
+    }
+
+    #[test]
+    fn test_set() {
+        let mut cfg = ConfigSet::new();
+        cfg.set("y", "b", Some(b"1"), "set1");
+        cfg.set("y", "b", Some(b"2"), "set2");
+        cfg.set("y", "a", Some(b"3"), "set3");
+        cfg.set("z", "p", Some(b"4"), "set4");
+        cfg.set("z", "p", None, "set5");
+        assert_eq!(cfg.sections(), vec![Bytes::from("y"), Bytes::from("z")]);
+        assert_eq!(cfg.keys("y"), vec![Bytes::from("b"), Bytes::from("a")]);
+        assert_eq!(cfg.get("y", "b"), Some(Bytes::from("2")));
+        assert_eq!(cfg.get("y", "a"), Some(Bytes::from("3")));
+        assert_eq!(cfg.get("z", "p"), None);
+
+        let sources = cfg.get_sources("z", "p");
+        assert_eq!(sources.len(), 2);
+        assert_eq!(sources[0].value(), &Some(Bytes::from("4")));
+        assert_eq!(sources[1].value(), &None);
+        assert_eq!(sources[0].source(), "set4");
+        assert_eq!(sources[1].source(), "set5");
+        assert_eq!(sources[0].location(), None);
+        assert_eq!(sources[1].location(), None);
     }
 }
