@@ -9,6 +9,7 @@ use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
 use mercurial_types::HgNodeHash;
+use mercurial_types::nodehash::HgChangesetId;
 use repoinfo::RepoGenCache;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -20,7 +21,7 @@ pub fn string_to_nodehash(hash: &'static str) -> HgNodeHash {
 /// Accounting for reordering within generations, ensure that a NodeStream gives the expected
 /// NodeHashes for testing.
 pub fn assert_node_sequence<I>(
-    repo_generation: RepoGenCache,
+    _repo_generation: RepoGenCache,
     repo: &Arc<BlobRepo>,
     hashes: I,
     stream: Box<NodeStream>,
@@ -36,8 +37,8 @@ pub fn assert_node_sequence<I>(
             continue;
         }
 
-        let expected_generation = repo_generation
-            .get(&repo.clone(), expected)
+        let expected_generation = repo.clone()
+            .get_generation_number(&HgChangesetId::new(expected))
             .wait()
             .expect("Unexpected error");
 
@@ -52,8 +53,8 @@ pub fn assert_node_sequence<I>(
                 break;
             }
 
-            let node_generation = repo_generation
-                .get(&repo.clone(), hash)
+            let node_generation = repo.clone()
+                .get_generation_number(&HgChangesetId::new(expected))
                 .wait()
                 .expect("Unexpected error");
 
