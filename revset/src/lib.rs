@@ -15,7 +15,6 @@ extern crate futures_ext;
 extern crate maplit;
 extern crate mercurial_types;
 extern crate mononoke_types;
-extern crate repoinfo;
 
 use futures::stream::Stream;
 use mercurial_types::HgNodeHash;

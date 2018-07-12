@@ -15,7 +15,6 @@ extern crate slog;
 extern crate blobrepo;
 extern crate mercurial_types;
 extern crate metaconfig;
-extern crate repoinfo;
 extern crate revset;
 
 use std::sync::Arc;

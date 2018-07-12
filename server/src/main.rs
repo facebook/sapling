@@ -61,7 +61,6 @@ extern crate mercurial_types_mocks;
 extern crate metaconfig;
 extern crate openssl;
 extern crate pylz4;
-extern crate repoinfo;
 extern crate revset;
 extern crate scuba_ext;
 extern crate secure_utils;
