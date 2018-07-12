@@ -10,6 +10,8 @@ use std::iter;
 use std::mem::replace;
 use std::sync::Arc;
 
+use failure::{err_msg, Error};
+
 use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
@@ -18,7 +20,6 @@ use blobrepo::BlobRepo;
 use mercurial_types::{Changeset, HgNodeHash};
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::Generation;
-use repoinfo::RepoGenCache;
 
 use NodeStream;
 use errors::*;
@@ -37,7 +38,6 @@ struct ParentChild {
 
 pub struct RangeNodeStream {
     repo: Arc<BlobRepo>,
-    repo_generation: RepoGenCache,
     start_node: HgNodeHash,
     start_generation: Box<Stream<Item = Generation, Error = Error> + Send>,
     children: HashMap<HashGen, HashSet<HashGen>>,
@@ -49,7 +49,6 @@ pub struct RangeNodeStream {
 
 fn make_pending(
     repo: Arc<BlobRepo>,
-    repo_generation: RepoGenCache,
     child: HashGen,
 ) -> Box<Stream<Item = ParentChild, Error = Error> + Send> {
     Box::new(
@@ -61,8 +60,10 @@ fn make_pending(
         }.map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
             .flatten_stream()
             .and_then(move |(child, parent_hash)| {
-                repo_generation
-                    .get(&repo, parent_hash)
+                repo.get_generation_number(&HgChangesetId::new(parent_hash))
+                    .and_then(move |genopt| {
+                        genopt.ok_or_else(|| err_msg(format!("{} not found", parent_hash)))
+                    })
                     .map(move |gen_id| ParentChild {
                         child,
                         parent: HashGen {
@@ -76,15 +77,13 @@ fn make_pending(
 }
 
 impl RangeNodeStream {
-    pub fn new(
-        repo: &Arc<BlobRepo>,
-        repo_generation: RepoGenCache,
-        start_node: HgNodeHash,
-        end_node: HgNodeHash,
-    ) -> Self {
+    pub fn new(repo: &Arc<BlobRepo>, start_node: HgNodeHash, end_node: HgNodeHash) -> Self {
         let start_generation = Box::new(
-            repo_generation
-                .get(repo, start_node)
+            repo.clone()
+                .get_generation_number(&HgChangesetId::new(start_node))
+                .and_then(move |genopt| {
+                    genopt.ok_or_else(|| err_msg(format!("{} not found", start_node)))
+                })
                 .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
                 .map(stream::repeat)
                 .flatten_stream(),
@@ -92,15 +91,16 @@ impl RangeNodeStream {
 
         let pending_nodes = {
             let repo = repo.clone();
-            let repo_generation = repo_generation.clone();
             Box::new(
-                repo_generation
-                    .get(&repo, end_node)
+                repo.clone()
+                    .get_generation_number(&HgChangesetId::new(end_node))
+                    .and_then(move |genopt| {
+                        genopt.ok_or_else(|| err_msg(format!("{} not found", end_node)))
+                    })
                     .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
                     .map(move |generation| {
                         make_pending(
                             repo,
-                            repo_generation,
                             HashGen {
                                 hash: end_node,
                                 generation,
@@ -113,7 +113,6 @@ impl RangeNodeStream {
 
         RangeNodeStream {
             repo: repo.clone(),
-            repo_generation,
             start_node,
             start_generation,
             children: HashMap::new(),
@@ -196,11 +195,8 @@ impl Stream for RangeNodeStream {
 
                 if next_pending.parent.generation > start_generation {
                     let old_pending = replace(&mut self.pending_nodes, Box::new(stream::empty()));
-                    let pending = old_pending.chain(make_pending(
-                        self.repo.clone(),
-                        self.repo_generation.clone(),
-                        next_pending.parent,
-                    ));
+                    let pending =
+                        old_pending.chain(make_pending(self.repo.clone(), next_pending.parent));
                     self.pending_nodes = Box::new(pending);
                 }
             }
@@ -242,11 +238,9 @@ mod test {
     fn linear_range() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = RangeNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
             ).boxed();
@@ -269,11 +263,9 @@ mod test {
     fn linear_direct_parent_range() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = RangeNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
             ).boxed();
@@ -293,11 +285,9 @@ mod test {
     fn linear_single_node_range() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = RangeNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
             ).boxed();
@@ -316,12 +306,10 @@ mod test {
     fn linear_empty_range() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // These are swapped, so won't find anything
             let nodestream = RangeNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
             ).boxed();
@@ -334,11 +322,9 @@ mod test {
     fn merge_range_from_merge() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = RangeNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
                 string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
             ).boxed();
@@ -359,11 +345,9 @@ mod test {
     fn merge_range_everything() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = RangeNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
                 string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
             ).boxed();
