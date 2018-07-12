@@ -27,6 +27,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
+#include "eden/fs/inodes/InodeLoader.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -48,7 +49,9 @@
 using folly::Future;
 using folly::makeFuture;
 using folly::Optional;
+using folly::SemiFuture;
 using folly::StringPiece;
+using folly::Try;
 using folly::Unit;
 using std::make_unique;
 using std::string;
@@ -493,38 +496,52 @@ void EdenServiceHandler::debugGetRawJournal(
   }
 }
 
-void EdenServiceHandler::getFileInformation(
-    std::vector<FileInformationOrError>& out,
+folly::Future<std::unique_ptr<std::vector<FileInformationOrError>>>
+EdenServiceHandler::future_getFileInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths) {
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, "[" + folly::join(", ", *paths.get()) + "]");
+      DBG3, *mountPoint, "[" + folly::join(", ", *paths) + "]");
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
-  for (auto& path : *paths) {
-    FileInformationOrError result;
+  // Remember the current thrift worker thread so that we can
+  // perform the final result transformation in an appropriate thread.
+  auto threadMgr = getThreadManager();
 
-    try {
-      auto relativePath = RelativePathPiece{path};
-      auto inodeBase = edenMount->getInodeBlocking(relativePath);
+  return collectAllSemiFuture(
+             applyToInodes(
+                 rootInode,
+                 *paths,
+                 [](InodePtr inode) {
+                   return inode->getattr().then([](Dispatcher::Attr attr) {
+                     FileInformation info;
+                     info.size = attr.st.st_size;
+                     info.mtime.seconds = attr.st.st_mtim.tv_sec;
+                     info.mtime.nanoSeconds = attr.st.st_mtim.tv_nsec;
+                     info.mode = attr.st.st_mode;
 
-      // we've reached the item of interest.
-      auto attr = inodeBase->getattr().get();
-      FileInformation info;
-      info.size = attr.st.st_size;
-      info.mtime.seconds = attr.st.st_mtim.tv_sec;
-      info.mtime.nanoSeconds = attr.st.st_mtim.tv_nsec;
-      info.mode = attr.st.st_mode;
+                     FileInformationOrError result;
+                     result.set_info(info);
 
-      result.set_info(info);
-      out.emplace_back(std::move(result));
-
-    } catch (const std::system_error& e) {
-      result.set_error(newEdenError(e));
-      out.emplace_back(std::move(result));
-    }
-  }
+                     return result;
+                   });
+                 }))
+      .via(threadMgr)
+      .then([](vector<Try<FileInformationOrError>>&& done) {
+        auto out = std::make_unique<vector<FileInformationOrError>>();
+        out->reserve(done.size());
+        for (auto& item : done) {
+          if (item.hasException()) {
+            FileInformationOrError result;
+            result.set_error(newEdenError(item.exception()));
+            out->emplace_back(std::move(result));
+          } else {
+            out->emplace_back(item.value());
+          }
+        }
+        return out;
+      });
 }
 
 void EdenServiceHandler::glob(

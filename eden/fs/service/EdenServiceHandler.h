@@ -77,8 +77,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       DebugGetRawJournalResponse& out,
       std::unique_ptr<DebugGetRawJournalParams> params) override;
 
-  void getFileInformation(
-      std::vector<FileInformationOrError>& out,
+  folly::Future<std::unique_ptr<std::vector<FileInformationOrError>>>
+  future_getFileInformation(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths) override;
 
