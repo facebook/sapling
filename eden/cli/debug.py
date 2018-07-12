@@ -267,12 +267,12 @@ class HgCopyMapGetAllCmd(Subcmd):
         parser.add_argument(
             "path",
             nargs="?",
-            default=os.getcwd(),
             help="The path to an Eden mount point. Uses `pwd` by default.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        mount, _ = get_mount_path(args.path)
+        path = args.path or os.getcwd()
+        mount, _ = get_mount_path(path)
         _parents, _dirstate_tuples, copymap = _get_dirstate_data(mount)
         _print_copymap(copymap)
         return 0
@@ -291,12 +291,12 @@ class HgDirstateCmd(Subcmd):
         parser.add_argument(
             "path",
             nargs="?",
-            default=os.getcwd(),
             help="The path to an Eden mount point. Uses `pwd` by default.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        mount, _ = get_mount_path(args.path)
+        path = args.path or os.getcwd()
+        mount, _ = get_mount_path(path)
         _parents, dirstate_tuples, copymap = _get_dirstate_data(mount)
         printer = StdoutPrinter()
         entries = list(dirstate_tuples.items())
