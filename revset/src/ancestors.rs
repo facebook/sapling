@@ -20,7 +20,7 @@ use futures::stream::{iter_ok, Stream};
 
 use UniqueHeap;
 use blobrepo::BlobRepo;
-use mercurial_types::{Changeset, HgNodeHash};
+use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::Generation;
 
@@ -50,20 +50,19 @@ fn make_pending(
         iter_ok::<_, Error>(hashes)
             .map(move |hash| {
                 new_repo_changesets
-                    .get_changeset_by_changesetid(&HgChangesetId::new(hash))
-                    .map(|cs| cs.parents().clone())
+                    .get_changeset_parents(&HgChangesetId::new(hash))
                     .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
             })
             .buffered(size)
             .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
             .flatten()
-            .and_then(move |node_hash| {
+            .and_then(move |node_cs| {
                 new_repo_gennums
-                    .get_generation_number(&HgChangesetId::new(node_hash))
+                    .get_generation_number(&node_cs)
                     .and_then(move |genopt| {
-                        genopt.ok_or_else(|| err_msg(format!("{} not found", node_hash)))
+                        genopt.ok_or_else(|| err_msg(format!("{} not found", node_cs)))
                     })
-                    .map(move |gen_id| (node_hash, gen_id))
+                    .map(move |gen_id| (*node_cs.as_nodehash(), gen_id))
                     .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
             }),
     )

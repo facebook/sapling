@@ -23,12 +23,12 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use futures::{Future, IntoFuture, Stream};
-use futures::future::{loop_fn, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, MPath, RepoPath};
 use mercurial_types::manifest::{Entry, Type};
 use mercurial_types::manifest_utils::recursive_entry_stream;
 use metaconfig::CacheWarmupParams;
+use revset::AncestorsNodeStream;
 use slog::Logger;
 
 mod errors {
@@ -93,22 +93,12 @@ fn changesets_warmup(
     logger: Logger,
 ) -> BoxFuture<(), Error> {
     info!(logger, "about to start warming up changesets cache");
-    let mut count = 0;
-    // TODO(stash): ancestor revset is surprisingly slow, we need to investigate it - T28905795
-    // For now use a simpler option.
-    loop_fn(start_rev, move |rev| {
-        count += 1;
-        if count >= cs_limit {
-            Ok(Loop::Break(())).into_future().boxify()
-        } else {
-            repo.get_changeset_parents(&rev)
-                .map(|parents| match parents.get(0) {
-                    Some(p1) => Loop::Continue(*p1),
-                    None => Loop::Break(()),
-                })
-                .boxify()
-        }
-    }).boxify()
+
+    AncestorsNodeStream::new(&repo, start_rev.into_nodehash())
+        .take(cs_limit as u64)
+        .collect()
+        .map(|_| ())
+        .boxify()
 }
 
 fn do_cache_warmup(
