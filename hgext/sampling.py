@@ -49,7 +49,7 @@ def uisetup(ui):
             for k in ui.configitems("sampling"):
                 if not k[0].startswith("key."):
                     continue  # not a key
-                filtermap[k[0].lstrip("key.")] = k[1]
+                filtermap[k[0][len("key.") :]] = k[1]
             return filtermap
 
         def log(self, event, *msg, **opts):
