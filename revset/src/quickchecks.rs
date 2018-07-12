@@ -16,7 +16,6 @@ use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use mercurial_types::HgNodeHash;
-use repoinfo::RepoGenCache;
 
 use branch_even;
 use branch_uneven;
@@ -113,7 +112,7 @@ impl RevsetSpec {
         output.pop().expect("No revisions").into_iter().collect()
     }
 
-    pub fn as_revset(&self, repo: Arc<BlobRepo>, repo_generation: RepoGenCache) -> Box<NodeStream> {
+    pub fn as_revset(&self, repo: Arc<BlobRepo>) -> Box<NodeStream> {
         let mut output: Vec<Box<NodeStream>> = Vec::with_capacity(self.rp_entries.len());
         for entry in self.rp_entries.iter() {
             let next_node = ValidateNodeStream::new(
@@ -125,27 +124,20 @@ impl RevsetSpec {
                     &RevsetEntry::SetDifference => {
                         let keep = output.pop().expect("No keep for setdifference");
                         let remove = output.pop().expect("No remove for setdifference");
-                        SetDifferenceNodeStream::new(
-                            &repo.clone(),
-                            repo_generation.clone(),
-                            keep,
-                            remove,
-                        ).boxed()
+                        SetDifferenceNodeStream::new(&repo.clone(), keep, remove).boxed()
                     }
                     &RevsetEntry::Union(size) => {
                         let idx = output.len() - size;
                         let inputs = output.split_off(idx);
-                        UnionNodeStream::new(&repo.clone(), repo_generation.clone(), inputs).boxed()
+                        UnionNodeStream::new(&repo.clone(), inputs).boxed()
                     }
                     &RevsetEntry::Intersect(size) => {
                         let idx = output.len() - size;
                         let inputs = output.split_off(idx);
-                        IntersectNodeStream::new(&repo.clone(), repo_generation.clone(), inputs)
-                            .boxed()
+                        IntersectNodeStream::new(&repo.clone(), inputs).boxed()
                     }
                 },
                 &repo.clone(),
-                repo_generation.clone(),
             ).boxed();
             output.push(next_node);
         }
@@ -258,11 +250,9 @@ fn match_streams(
 }
 
 fn match_hashset_to_revset(repo: Arc<BlobRepo>, mut set: RevsetSpec) -> bool {
-    let repo_generation = RepoGenCache::new(10);
-
     set.add_hashes(&*repo, &mut thread_rng());
     let mut hashes = set.as_hashes();
-    let mut nodestream = spawn(set.as_revset(repo, repo_generation));
+    let mut nodestream = spawn(set.as_revset(repo));
 
     while !hashes.is_empty() {
         let hash = nodestream
@@ -362,7 +352,6 @@ macro_rules! ancestors_check {
         fn $test_name() {
             async_unit::tokio_unit_test(|| {
                 let repo = Arc::new($repo::getrepo(None));
-                let repo_generation = RepoGenCache::new(10);
                 let all_changesets = get_changesets_from_repo(&*repo);
 
                 // Limit the number of changesets, otherwise tests take too much time
@@ -376,38 +365,29 @@ macro_rules! ancestors_check {
                     let actual = ValidateNodeStream::new(
                         DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                             &repo,
-                            repo_generation.clone(),
                             include.clone(),
                             exclude.clone(),
                         ).boxify(),
                         &repo.clone(),
-                        repo_generation.clone(),
                     );
 
                     let mut includes = vec![];
                     for i in include.clone() {
                         includes.push(
-                            AncestorsNodeStream::new(&repo, repo_generation.clone(), i).boxify()
+                            AncestorsNodeStream::new(&repo, i).boxify()
                         );
                     }
 
                     let mut excludes = vec![];
                     for i in exclude.clone() {
                         excludes.push(
-                            AncestorsNodeStream::new(&repo, repo_generation.clone(), i).boxify()
+                            AncestorsNodeStream::new(&repo, i).boxify()
                         );
                     }
 
-                    let includes = UnionNodeStream::new(
-                        &repo, repo_generation.clone(), includes
-                    ).boxify();
-                    let excludes = UnionNodeStream::new(
-                        &repo, repo_generation.clone(), excludes
-                    ).boxify();
-                    let expected =
-                        SetDifferenceNodeStream::new(
-                            &repo, repo_generation.clone(), includes, excludes
-                        );
+                    let includes = UnionNodeStream::new(&repo, includes).boxify();
+                    let excludes = UnionNodeStream::new(&repo, excludes).boxify();
+                    let expected = SetDifferenceNodeStream::new(&repo, includes, excludes);
 
                     assert!(
                         match_streams(expected.boxify(), actual.boxify()),

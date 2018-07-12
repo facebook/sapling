@@ -47,7 +47,6 @@ use blobrepo::BlobRepo;
 
 use errors::*;
 
-use repoinfo::RepoGenCache;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 
 const MAX_NODES_TO_LOG: usize = 5;
@@ -221,20 +220,17 @@ fn bundle2caps() -> String {
 pub struct MononokeRepo {
     path: String,
     blobrepo: Arc<BlobRepo>,
-    repo_generation: RepoGenCache,
 }
 
 impl MononokeRepo {
     pub fn new(
         logger: Logger,
         repo: &RepoType,
-        cache_size: usize,
         repoid: RepositoryId,
     ) -> Result<Self> {
         Ok(MononokeRepo {
             path: format!("{}", repo.path().to_owned().display()),
             blobrepo: Arc::new(repo.open(logger, repoid)?),
-            repo_generation: RepoGenCache::new(cache_size),
         })
     }
 
@@ -302,7 +298,6 @@ impl RepoClient {
         // TODO: possibly enable compression support once this is fixed.
         bundle.set_compressor_type(None);
 
-        let repo_generation = &self.repo.repo_generation;
         let blobrepo = &self.repo.blobrepo;
 
         let common_heads: HashSet<_> = HashSet::from_iter(args.common.iter());
@@ -323,12 +318,9 @@ impl RepoClient {
             .map(|node| node.clone().into_option())
             .filter_map(|maybe_node| maybe_node)
             .collect();
-        let nodestosend = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-            &blobrepo,
-            repo_generation.clone(),
-            heads,
-            excludes,
-        ).boxify();
+        let nodestosend =
+            DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(&blobrepo, heads, excludes)
+                .boxify();
 
         // TODO(stash): avoid collecting all the changelogs in the vector - T25767311
         let nodestosend = nodestosend

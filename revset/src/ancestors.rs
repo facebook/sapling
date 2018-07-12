@@ -12,6 +12,8 @@ use std::collections::{BTreeMap, HashSet};
 use std::collections::hash_set::IntoIter;
 use std::sync::Arc;
 
+use failure::{err_msg, Error};
+
 use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::{iter_ok, Stream};
@@ -21,7 +23,6 @@ use blobrepo::BlobRepo;
 use mercurial_types::{Changeset, HgNodeHash};
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::Generation;
-use repoinfo::RepoGenCache;
 
 use IntersectNodeStream;
 use NodeStream;
@@ -29,7 +30,6 @@ use errors::*;
 
 pub struct AncestorsNodeStream {
     repo: Arc<BlobRepo>,
-    repo_generation: RepoGenCache,
     next_generation: BTreeMap<Generation, HashSet<HgNodeHash>>,
     pending_changesets: Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send>,
     drain: IntoIter<HgNodeHash>,
@@ -40,16 +40,16 @@ pub struct AncestorsNodeStream {
 
 fn make_pending(
     repo: Arc<BlobRepo>,
-    repo_generation: RepoGenCache,
     hashes: IntoIter<HgNodeHash>,
 ) -> Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send> {
     let size = hashes.size_hint().0;
-    let new_repo = repo.clone();
+    let new_repo_changesets = repo.clone();
+    let new_repo_gennums = repo.clone();
 
     Box::new(
         iter_ok::<_, Error>(hashes)
             .map(move |hash| {
-                new_repo
+                new_repo_changesets
                     .get_changeset_by_changesetid(&HgChangesetId::new(hash))
                     .map(|cs| cs.parents().clone())
                     .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
@@ -58,8 +58,11 @@ fn make_pending(
             .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
             .flatten()
             .and_then(move |node_hash| {
-                repo_generation
-                    .get(&repo, node_hash)
+                new_repo_gennums
+                    .get_generation_number(&HgChangesetId::new(node_hash))
+                    .and_then(move |genopt| {
+                        genopt.ok_or_else(|| err_msg(format!("{} not found", node_hash)))
+                    })
                     .map(move |gen_id| (node_hash, gen_id))
                     .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
             }),
@@ -67,17 +70,12 @@ fn make_pending(
 }
 
 impl AncestorsNodeStream {
-    pub fn new(repo: &Arc<BlobRepo>, repo_generation: RepoGenCache, hash: HgNodeHash) -> Self {
+    pub fn new(repo: &Arc<BlobRepo>, hash: HgNodeHash) -> Self {
         let node_set: HashSet<HgNodeHash> = hashset!{hash};
         AncestorsNodeStream {
             repo: repo.clone(),
-            repo_generation: repo_generation.clone(),
             next_generation: BTreeMap::new(),
-            pending_changesets: make_pending(
-                repo.clone(),
-                repo_generation,
-                node_set.clone().into_iter(),
-            ),
+            pending_changesets: make_pending(repo.clone(), node_set.clone().into_iter()),
             drain: node_set.into_iter(),
             sorted_unique_generations: UniqueHeap::new(),
         }
@@ -126,11 +124,8 @@ impl Stream for AncestorsNodeStream {
         let current_generation = self.next_generation
             .remove(&highest_generation)
             .expect("Highest generation doesn't exist");
-        self.pending_changesets = make_pending(
-            self.repo.clone(),
-            self.repo_generation.clone(),
-            current_generation.clone().into_iter(),
-        );
+        self.pending_changesets =
+            make_pending(self.repo.clone(), current_generation.clone().into_iter());
         self.drain = current_generation.into_iter();
         Ok(Async::Ready(Some(self.drain.next().expect(
             "Cannot create a generation without at least one node hash",
@@ -138,30 +133,21 @@ impl Stream for AncestorsNodeStream {
     }
 }
 
-pub fn common_ancestors<I>(
-    repo: &Arc<BlobRepo>,
-    repo_generation: RepoGenCache,
-    nodes: I,
-) -> Box<NodeStream>
+pub fn common_ancestors<I>(repo: &Arc<BlobRepo>, nodes: I) -> Box<NodeStream>
 where
     I: IntoIterator<Item = HgNodeHash>,
 {
-    let nodes_iter = nodes.into_iter().map({
-        let repo_generation = repo_generation.clone();
-        move |node| AncestorsNodeStream::new(repo, repo_generation.clone(), node).boxed()
-    });
-    IntersectNodeStream::new(repo, repo_generation, nodes_iter).boxed()
+    let nodes_iter = nodes
+        .into_iter()
+        .map({ move |node| AncestorsNodeStream::new(repo, node).boxed() });
+    IntersectNodeStream::new(repo, nodes_iter).boxed()
 }
 
-pub fn greatest_common_ancestor<I>(
-    repo: &Arc<BlobRepo>,
-    repo_generation: RepoGenCache,
-    nodes: I,
-) -> Box<NodeStream>
+pub fn greatest_common_ancestor<I>(repo: &Arc<BlobRepo>, nodes: I) -> Box<NodeStream>
 where
     I: IntoIterator<Item = HgNodeHash>,
 {
-    Box::new(common_ancestors(repo, repo_generation, nodes).take(1))
+    Box::new(common_ancestors(repo, nodes).take(1))
 }
 
 #[cfg(test)]
@@ -170,6 +156,7 @@ mod test {
     use async_unit;
     use linear;
     use merge_uneven;
+    use repoinfo::RepoGenCache;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
     use unshared_merge_uneven;
@@ -182,7 +169,6 @@ mod test {
 
             let nodestream = AncestorsNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
             ).boxed();
 
@@ -212,7 +198,6 @@ mod test {
 
             let nodestream = AncestorsNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
             ).boxed();
 
@@ -247,7 +232,6 @@ mod test {
 
             let nodestream = AncestorsNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
             ).boxed();
 
@@ -275,7 +259,6 @@ mod test {
 
             let nodestream = AncestorsNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("ec27ab4e7aeb7088e8a0234f712af44fb7b43a46"),
             ).boxed();
 
@@ -316,7 +299,6 @@ mod test {
 
             let nodestream = greatest_common_ancestor(
                 &repo,
-                repo_generation.clone(),
                 vec![
                     string_to_nodehash("64011f64aaf9c2ad2e674f57c033987da4016f51"),
                     string_to_nodehash("1700524113b1a3b1806560341009684b4378660b"),
@@ -334,7 +316,6 @@ mod test {
 
             let nodestream = greatest_common_ancestor(
                 &repo,
-                repo_generation.clone(),
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
@@ -359,7 +340,6 @@ mod test {
 
             let nodestream = greatest_common_ancestor(
                 &repo,
-                repo_generation.clone(),
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
@@ -384,7 +364,6 @@ mod test {
 
             let nodestream = common_ancestors(
                 &repo,
-                repo_generation.clone(),
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
@@ -409,7 +388,6 @@ mod test {
 
             let nodestream = common_ancestors(
                 &repo,
-                repo_generation.clone(),
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),

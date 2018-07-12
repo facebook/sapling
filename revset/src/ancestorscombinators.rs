@@ -27,6 +27,7 @@ use std::collections::hash_set::IntoIter;
 use std::iter;
 use std::sync::Arc;
 
+use failure::{err_msg, Error};
 use futures::{Async, IntoFuture, Poll};
 use futures::future::Future;
 use futures::stream::{self, empty, iter_ok, Peekable, Stream};
@@ -36,7 +37,6 @@ use blobrepo::BlobRepo;
 use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::Generation;
-use repoinfo::RepoGenCache;
 
 use NodeStream;
 use UniqueHeap;
@@ -80,7 +80,6 @@ use setcommon::*;
 
 pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     repo: Arc<BlobRepo>,
-    repo_generation: RepoGenCache,
 
     // Nodes that we know about, grouped by generation.
     next_generation: BTreeMap<Generation, HashSet<HgNodeHash>>,
@@ -106,16 +105,16 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
 
 fn make_pending(
     repo: Arc<BlobRepo>,
-    repo_generation: RepoGenCache,
     hash: HgNodeHash,
 ) -> Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send> {
-    let new_repo = repo.clone();
+    let new_repo_changesets = repo.clone();
+    let new_repo_gennums = repo.clone();
 
     Box::new(
         Ok::<_, Error>(hash)
             .into_future()
             .and_then(move |hash| {
-                new_repo
+                new_repo_changesets
                     .get_changeset_parents(&HgChangesetId::new(hash))
                     .map(|parents| parents.into_iter().map(|cs| cs.into_nodehash()))
                     .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
@@ -123,8 +122,11 @@ fn make_pending(
             .map(|parents| iter_ok::<_, Error>(parents))
             .flatten_stream()
             .and_then(move |node_hash| {
-                repo_generation
-                    .get(&repo, node_hash)
+                new_repo_gennums
+                    .get_generation_number(&HgChangesetId::new(node_hash))
+                    .and_then(move |genopt| {
+                        genopt.ok_or_else(|| err_msg(format!("{} not found", node_hash)))
+                    })
                     .map(move |gen_id| (node_hash, gen_id))
                     .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
             }),
@@ -132,39 +134,27 @@ fn make_pending(
 }
 
 impl DifferenceOfUnionsOfAncestorsNodeStream {
-    pub fn new(
-        repo: &Arc<BlobRepo>,
-        repo_generation: RepoGenCache,
-        hash: HgNodeHash,
-    ) -> Box<NodeStream> {
-        Self::new_with_excludes(repo, repo_generation, vec![hash], vec![])
+    pub fn new(repo: &Arc<BlobRepo>, hash: HgNodeHash) -> Box<NodeStream> {
+        Self::new_with_excludes(repo, vec![hash], vec![])
     }
 
-    pub fn new_union(
-        repo: &Arc<BlobRepo>,
-        repo_generation: RepoGenCache,
-        hashes: Vec<HgNodeHash>,
-    ) -> Box<NodeStream> {
-        Self::new_with_excludes(repo, repo_generation, hashes, vec![])
+    pub fn new_union(repo: &Arc<BlobRepo>, hashes: Vec<HgNodeHash>) -> Box<NodeStream> {
+        Self::new_with_excludes(repo, hashes, vec![])
     }
 
     pub fn new_with_excludes(
         repo: &Arc<BlobRepo>,
-        repo_generation: RepoGenCache,
         hashes: Vec<HgNodeHash>,
         excludes: Vec<HgNodeHash>,
     ) -> Box<NodeStream> {
         let excludes = if !excludes.is_empty() {
-            Self::new_union(repo, repo_generation.clone(), excludes)
+            Self::new_union(repo, excludes)
         } else {
             empty().boxify()
         };
 
-        add_generations(
-            stream::iter_ok(hashes.into_iter()).boxify(),
-            repo_generation.clone(),
-            repo.clone(),
-        ).collect()
+        add_generations(stream::iter_ok(hashes.into_iter()).boxify(), repo.clone())
+            .collect()
             .map({
                 let repo = repo.clone();
                 move |hashes_generations| {
@@ -179,10 +169,9 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                         sorted_unique_generations.push(generation);
                     }
 
-                    let excludes = add_generations(excludes, repo_generation.clone(), repo.clone());
+                    let excludes = add_generations(excludes, repo.clone());
                     Self {
                         repo: repo.clone(),
-                        repo_generation,
                         next_generation,
                         // Start with a fake state - maximum generation number and no entries
                         // for it (see drain below)
@@ -254,11 +243,8 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
                     continue;
                 } else {
                     let next_in_drain = self.drain.next();
-                    self.pending_changesets.push(make_pending(
-                        self.repo.clone(),
-                        self.repo_generation.clone(),
-                        next_in_drain.unwrap(),
-                    ));
+                    self.pending_changesets
+                        .push(make_pending(self.repo.clone(), next_in_drain.unwrap()));
                     return Ok(Async::Ready(next_in_drain));
                 }
             }
@@ -362,6 +348,7 @@ mod test {
     use futures::executor::spawn;
     use linear;
     use merge_uneven;
+    use repoinfo::RepoGenCache;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
 
@@ -369,14 +356,12 @@ mod test {
     fn grouped_by_generation_simple() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
             ).boxify();
-            let inputstream = add_generations(nodestream, repo_generation.clone(), repo.clone());
+            let inputstream = add_generations(nodestream, repo.clone());
 
             let res = spawn(GroupedByGenenerationStream::new(inputstream).collect())
                 .wait_future()
@@ -426,14 +411,12 @@ mod test {
     fn grouped_by_generation_merge_uneven() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new(
                 &repo,
-                repo_generation.clone(),
                 string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
             ).boxify();
-            let inputstream = add_generations(nodestream, repo_generation.clone(), repo.clone());
+            let inputstream = add_generations(nodestream, repo.clone());
 
             let res = spawn(GroupedByGenenerationStream::new(inputstream).collect())
                 .wait_future()
@@ -502,11 +485,7 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let repo_generation = RepoGenCache::new(10);
 
-            let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
-                &repo,
-                repo_generation.clone(),
-                vec![],
-            ).boxify();
+            let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(&repo, vec![]).boxify();
 
             assert_node_sequence(repo_generation.clone(), &repo, vec![], stream);
 
@@ -514,12 +493,9 @@ mod test {
                 string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
             ];
 
-            let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                &repo,
-                repo_generation.clone(),
-                vec![],
-                excludes,
-            ).boxify();
+            let stream =
+                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(&repo, vec![], excludes)
+                    .boxify();
 
             assert_node_sequence(repo_generation, &repo, vec![], stream);
         });
@@ -533,7 +509,6 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
-                repo_generation.clone(),
                 vec![
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 ],
@@ -561,7 +536,6 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
-                repo_generation.clone(),
                 vec![
                     string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
                 ],
@@ -582,7 +556,6 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
                 &repo,
-                repo_generation.clone(),
                 vec![
                     string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
                     string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
@@ -616,7 +589,6 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
-                repo_generation.clone(),
                 vec![
                     string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
                 ],
@@ -647,7 +619,6 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
-                repo_generation.clone(),
                 vec![
                     string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
                 ],

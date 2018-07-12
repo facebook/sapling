@@ -42,7 +42,7 @@ use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFil
                       Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest::Content;
 use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, ContentId, DateTime, FileChange,
-                     FileContents, FileType, MPath, MPathElement, MononokeId};
+                     FileContents, FileType, Generation, MPath, MPathElement, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 use tokio_core::reactor::Core;
@@ -498,11 +498,14 @@ impl BlobRepo {
         self.filenodes.get_all_filenodes(&path, &self.repoid)
     }
 
-    pub fn get_generation_number(&self, cs: &HgChangesetId) -> BoxFuture<Option<u64>, Error> {
+    pub fn get_generation_number(
+        &self,
+        cs: &HgChangesetId,
+    ) -> BoxFuture<Option<Generation>, Error> {
         STATS::get_generation_number.add_value(1);
         self.changesets
             .get(self.repoid, *cs)
-            .map(|res| res.map(|res| res.gen))
+            .map(|res| res.map(|res| Generation::new(res.gen)))
             .boxify()
     }
 

@@ -390,7 +390,6 @@ fn repo_listen(
     let repo = repo::MononokeRepo::new(
         root_log.new(o!("repo" => reponame.clone())),
         &config.repotype,
-        config.generation_cache_size,
         RepositoryId::new(config.repoid),
     ).expect(&format!("failed to initialize repo {}", reponame));
 

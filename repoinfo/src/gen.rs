@@ -82,7 +82,6 @@ impl Filler for GenFiller {
         let cs = HgChangesetId::new(*nodeid);
         repo.get_generation_number(&cs)
             .and_then(move |genopt| genopt.ok_or_else(|| err_msg(format!("{} not found", cs))))
-            .map(|gen| Generation::new(gen))
             .boxify()
     }
 }

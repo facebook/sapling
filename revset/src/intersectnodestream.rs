@@ -10,7 +10,6 @@ use futures::Poll;
 use futures::stream::Stream;
 use mercurial_types::HgNodeHash;
 use mononoke_types::Generation;
-use repoinfo::RepoGenCache;
 use std::boxed::Box;
 use std::collections::HashMap;
 use std::collections::hash_map::IntoIter;
@@ -30,18 +29,13 @@ pub struct IntersectNodeStream {
 }
 
 impl IntersectNodeStream {
-    pub fn new<I>(repo: &Arc<BlobRepo>, repo_generation: RepoGenCache, inputs: I) -> Self
+    pub fn new<I>(repo: &Arc<BlobRepo>, inputs: I) -> Self
     where
         I: IntoIterator<Item = Box<NodeStream>>,
     {
-        let hash_and_gen = inputs.into_iter().map({
-            move |i| {
-                (
-                    add_generations(i, repo_generation.clone(), repo.clone()),
-                    Ok(Async::NotReady),
-                )
-            }
-        });
+        let hash_and_gen = inputs
+            .into_iter()
+            .map({ move |i| (add_generations(i, repo.clone()), Ok(Async::NotReady)) });
         IntersectNodeStream {
             inputs: hash_and_gen.collect(),
             current_generation: None,
@@ -184,9 +178,7 @@ mod test {
                 SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
                 SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
             ];
-            let nodestream =
-                IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter())
-                    .boxed();
+            let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(repo_generation, &repo, vec![head_hash.clone()], nodestream);
         });
@@ -213,9 +205,7 @@ mod test {
                     &repo,
                 ).boxed(),
             ];
-            let nodestream =
-                IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter())
-                    .boxed();
+            let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(repo_generation, &repo, vec![], nodestream);
         });
@@ -241,9 +231,7 @@ mod test {
                     &repo,
                 ).boxed(),
             ];
-            let nodestream =
-                IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter())
-                    .boxed();
+            let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
                 repo_generation,
@@ -273,9 +261,7 @@ mod test {
                 ).boxed(),
             ];
 
-            let nodestream =
-                IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter())
-                    .boxed();
+            let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             let inputs: Vec<Box<NodeStream>> = vec![
                 nodestream,
@@ -284,9 +270,7 @@ mod test {
                     &repo,
                 ).boxed(),
             ];
-            let nodestream =
-                IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter())
-                    .boxed();
+            let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
                 repo_generation,
@@ -316,8 +300,7 @@ mod test {
                 ).boxed(),
             ];
 
-            let nodestream =
-                UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
+            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             // This set has a different node sequence, so that we can demonstrate that we skip nodes
             // when they're not going to contribute.
@@ -336,13 +319,10 @@ mod test {
                 ).boxed(),
             ];
 
-            let nodestream2 =
-                UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
+            let nodestream2 = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             let inputs: Vec<Box<NodeStream>> = vec![nodestream, nodestream2];
-            let nodestream =
-                IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter())
-                    .boxed();
+            let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
                 repo_generation,
@@ -360,15 +340,13 @@ mod test {
     fn intersect_error_node() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
             let inputs: Vec<Box<NodeStream>> = vec![
                 Box::new(RepoErrorStream { hash: nodehash }),
                 SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
             ];
-            let mut nodestream =
-                spawn(IntersectNodeStream::new(&repo, repo_generation, inputs.into_iter()).boxed());
+            let mut nodestream = spawn(IntersectNodeStream::new(&repo, inputs.into_iter()).boxed());
 
             match nodestream.wait_stream() {
                 Some(Err(err)) => match err.downcast::<ErrorKind>() {
@@ -389,9 +367,7 @@ mod test {
             let repo_generation = RepoGenCache::new(10);
 
             let inputs: Vec<Box<NodeStream>> = vec![];
-            let nodestream =
-                IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter())
-                    .boxed();
+            let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
             assert_node_sequence(repo_generation, &repo, vec![], nodestream);
         });
     }
@@ -402,14 +378,12 @@ mod test {
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
             let inputs: Vec<Box<NodeStream>> = vec![
                 Box::new(NotReadyEmptyStream {
                     poll_count: repeats,
                 }),
             ];
-            let mut nodestream =
-                IntersectNodeStream::new(&repo, repo_generation, inputs.into_iter()).boxed();
+            let mut nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             // Keep polling until we should be done.
             for _ in 0..repeats + 1 {
@@ -451,8 +425,7 @@ mod test {
                     &repo,
                 ).boxed(),
             ];
-            let left_nodestream =
-                UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
+            let left_nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             // Four commits from one branch
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -473,13 +446,10 @@ mod test {
                     &repo,
                 ).boxed(),
             ];
-            let right_nodestream =
-                UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
+            let right_nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             let inputs: Vec<Box<NodeStream>> = vec![left_nodestream, right_nodestream];
-            let nodestream =
-                IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter())
-                    .boxed();
+            let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
                 repo_generation,
@@ -517,8 +487,7 @@ mod test {
                     &repo,
                 ).boxed(),
             ];
-            let left_nodestream =
-                UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
+            let left_nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             // Four commits from one branch
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -539,13 +508,10 @@ mod test {
                     &repo,
                 ).boxed(),
             ];
-            let right_nodestream =
-                UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
+            let right_nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             let inputs: Vec<Box<NodeStream>> = vec![left_nodestream, right_nodestream];
-            let nodestream =
-                IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter())
-                    .boxed();
+            let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
                 repo_generation,

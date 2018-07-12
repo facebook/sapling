@@ -13,7 +13,6 @@ use futures::{Async, Poll};
 use futures::stream::Stream;
 use mercurial_types::HgNodeHash;
 use mononoke_types::Generation;
-use repoinfo::RepoGenCache;
 
 use NodeStream;
 use setcommon::{add_generations, InputStream};
@@ -29,13 +28,9 @@ pub struct ValidateNodeStream {
 }
 
 impl ValidateNodeStream {
-    pub fn new(
-        wrapped: Box<NodeStream>,
-        repo: &Arc<BlobRepo>,
-        repo_generation: RepoGenCache,
-    ) -> ValidateNodeStream {
+    pub fn new(wrapped: Box<NodeStream>, repo: &Arc<BlobRepo>) -> ValidateNodeStream {
         ValidateNodeStream {
-            wrapped: add_generations(wrapped, repo_generation, repo.clone()),
+            wrapped: add_generations(wrapped, repo.clone()),
             last_generation: None,
             seen_hashes: HashSet::new(),
         }
@@ -98,9 +93,7 @@ mod test {
 
             let nodestream = SingleNodeHash::new(head_hash, &repo);
 
-            let nodestream =
-                ValidateNodeStream::new(Box::new(nodestream), &repo, repo_generation.clone())
-                    .boxed();
+            let nodestream = ValidateNodeStream::new(Box::new(nodestream), &repo).boxed();
             assert_node_sequence(repo_generation, &repo, vec![head_hash], nodestream);
         });
     }
@@ -111,13 +104,11 @@ mod test {
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
             let mut nodestream = ValidateNodeStream::new(
                 Box::new(NotReadyEmptyStream {
                     poll_count: repeats,
                 }),
                 &repo,
-                repo_generation,
             ).boxed();
 
             // Keep polling until we should be done.
@@ -140,14 +131,12 @@ mod test {
     fn repeat_hash_panics() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let nodestream =
                 SingleNodeHash::new(head_hash, &repo).chain(SingleNodeHash::new(head_hash, &repo));
 
-            let mut nodestream =
-                ValidateNodeStream::new(Box::new(nodestream), &repo, repo_generation).boxed();
+            let mut nodestream = ValidateNodeStream::new(Box::new(nodestream), &repo).boxed();
 
             loop {
                 match nodestream.poll() {
@@ -163,7 +152,6 @@ mod test {
     fn wrong_order_panics() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = SingleNodeHash::new(
                 string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
@@ -173,8 +161,7 @@ mod test {
                 &repo,
             ));
 
-            let mut nodestream =
-                ValidateNodeStream::new(Box::new(nodestream), &repo, repo_generation).boxed();
+            let mut nodestream = ValidateNodeStream::new(Box::new(nodestream), &repo).boxed();
 
             loop {
                 match nodestream.poll() {
