@@ -152,7 +152,6 @@ mod test {
     use async_unit;
     use errors::ErrorKind;
     use futures::executor::spawn;
-    use repoinfo::RepoGenCache;
     use setcommon::{NotReadyEmptyStream, RepoErrorStream};
     use std::sync::Arc;
     use tests::assert_node_sequence;
@@ -162,7 +161,6 @@ mod test {
     fn union_identical_node() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -171,7 +169,7 @@ mod test {
             ];
             let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
-            assert_node_sequence(repo_generation, &repo, vec![head_hash.clone()], nodestream);
+            assert_node_sequence(&repo, vec![head_hash.clone()], nodestream);
         });
     }
 
@@ -203,7 +201,6 @@ mod test {
     fn union_three_nodes() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // Note that these are *not* in generation order deliberately.
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -224,7 +221,6 @@ mod test {
 
             // But, once I hit the asserts, I expect them in generation order.
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
@@ -240,11 +236,10 @@ mod test {
     fn union_nothing() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let inputs: Vec<Box<NodeStream>> = vec![];
             let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
-            assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+            assert_node_sequence(&repo, vec![], nodestream);
         });
     }
 
@@ -252,7 +247,6 @@ mod test {
     fn union_nesting() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // Note that these are *not* in generation order deliberately.
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -278,7 +272,6 @@ mod test {
             let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
@@ -322,7 +315,6 @@ mod test {
     fn union_branch_even_repo() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(branch_even::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // Two nodes should share the same generation number
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -342,7 +334,6 @@ mod test {
             let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
@@ -358,7 +349,6 @@ mod test {
     fn union_branch_uneven_repo() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(branch_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // Two nodes should share the same generation number
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -386,7 +376,6 @@ mod test {
             let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
@@ -404,7 +393,6 @@ mod test {
     fn union_branch_wide_repo() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(branch_wide::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // Two nodes should share the same generation number
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -428,7 +416,6 @@ mod test {
             let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449"),

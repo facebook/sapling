@@ -77,7 +77,6 @@ mod test {
     use async_unit;
     use linear;
 
-    use repoinfo::RepoGenCache;
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
     use tests::assert_node_sequence;
@@ -87,14 +86,13 @@ mod test {
     fn validate_accepts_single_node() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
 
             let nodestream = SingleNodeHash::new(head_hash, &repo);
 
             let nodestream = ValidateNodeStream::new(Box::new(nodestream), &repo).boxed();
-            assert_node_sequence(repo_generation, &repo, vec![head_hash], nodestream);
+            assert_node_sequence(&repo, vec![head_hash], nodestream);
         });
     }
 

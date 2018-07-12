@@ -159,7 +159,6 @@ mod test {
     use async_unit;
     use futures::executor::spawn;
     use linear;
-    use repoinfo::RepoGenCache;
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
     use tests::assert_node_sequence;
@@ -171,7 +170,6 @@ mod test {
     fn intersect_identical_node() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -180,7 +178,7 @@ mod test {
             ];
             let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
-            assert_node_sequence(repo_generation, &repo, vec![head_hash.clone()], nodestream);
+            assert_node_sequence(&repo, vec![head_hash.clone()], nodestream);
         });
     }
 
@@ -188,7 +186,6 @@ mod test {
     fn intersect_three_different_nodes() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // Note that these are *not* in generation order deliberately.
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -207,7 +204,7 @@ mod test {
             ];
             let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
-            assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+            assert_node_sequence(&repo, vec![], nodestream);
         });
     }
 
@@ -215,7 +212,6 @@ mod test {
     fn intersect_three_identical_nodes() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
@@ -234,7 +230,6 @@ mod test {
             let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
@@ -248,7 +243,6 @@ mod test {
     fn intersect_nesting() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
@@ -273,7 +267,6 @@ mod test {
             let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
@@ -287,7 +280,6 @@ mod test {
     fn intersection_of_unions() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
@@ -325,7 +317,6 @@ mod test {
             let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
@@ -364,11 +355,10 @@ mod test {
     fn intersect_nothing() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let inputs: Vec<Box<NodeStream>> = vec![];
             let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
-            assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+            assert_node_sequence(&repo, vec![], nodestream);
         });
     }
 
@@ -404,7 +394,6 @@ mod test {
     fn intersect_unshared_merge_even() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(unshared_merge_even::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // Post-merge, merge, and both unshared branches
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -452,7 +441,6 @@ mod test {
             let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
@@ -466,7 +454,6 @@ mod test {
     fn intersect_unshared_merge_uneven() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(unshared_merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // Post-merge, merge, and both unshared branches
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -514,7 +501,6 @@ mod test {
             let nodestream = IntersectNodeStream::new(&repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),

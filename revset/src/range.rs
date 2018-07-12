@@ -252,7 +252,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
@@ -280,7 +279,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
@@ -305,7 +303,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
@@ -329,7 +326,7 @@ mod test {
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
             ).boxed();
 
-            assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+            assert_node_sequence(&repo, vec![], nodestream);
         })
     }
 
@@ -347,7 +344,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
@@ -373,7 +369,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),

@@ -348,7 +348,6 @@ mod test {
     use futures::executor::spawn;
     use linear;
     use merge_uneven;
-    use repoinfo::RepoGenCache;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
 
@@ -483,11 +482,10 @@ mod test {
     fn empty_ancestors_combinators() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(&repo, vec![]).boxify();
 
-            assert_node_sequence(repo_generation.clone(), &repo, vec![], stream);
+            assert_node_sequence(&repo, vec![], stream);
 
             let excludes = vec![
                 string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
@@ -497,7 +495,7 @@ mod test {
                 DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(&repo, vec![], excludes)
                     .boxify();
 
-            assert_node_sequence(repo_generation, &repo, vec![], stream);
+            assert_node_sequence(&repo, vec![], stream);
         });
     }
 
@@ -505,7 +503,6 @@ mod test {
     fn linear_ancestors_with_excludes() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
@@ -518,7 +515,6 @@ mod test {
             ).boxify();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
@@ -532,7 +528,6 @@ mod test {
     fn linear_ancestors_with_excludes_empty() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
@@ -544,7 +539,7 @@ mod test {
                 ],
             ).boxify();
 
-            assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+            assert_node_sequence(&repo, vec![], nodestream);
         });
     }
 
@@ -552,7 +547,6 @@ mod test {
     fn ancestors_union() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
                 &repo,
@@ -562,7 +556,6 @@ mod test {
                 ],
             ).boxify();
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
@@ -585,7 +578,6 @@ mod test {
     fn merge_ancestors_from_merge_excludes() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
@@ -599,7 +591,6 @@ mod test {
             ).boxify();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
@@ -615,7 +606,6 @@ mod test {
     fn merge_ancestors_from_merge_excludes_union() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
@@ -628,7 +618,6 @@ mod test {
             ).boxify();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),

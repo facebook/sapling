@@ -119,7 +119,6 @@ mod test {
     use linear;
     use merge_even;
     use merge_uneven;
-    use repoinfo::RepoGenCache;
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
     use tests::assert_node_sequence;
@@ -129,7 +128,6 @@ mod test {
     fn difference_identical_node() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let nodestream = SetDifferenceNodeStream::new(
@@ -138,7 +136,7 @@ mod test {
                 SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
             ).boxed();
 
-            assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+            assert_node_sequence(&repo, vec![], nodestream);
         });
     }
 
@@ -146,7 +144,6 @@ mod test {
     fn difference_node_and_empty() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let nodestream = SetDifferenceNodeStream::new(
@@ -155,7 +152,7 @@ mod test {
                 Box::new(NotReadyEmptyStream { poll_count: 0 }),
             ).boxed();
 
-            assert_node_sequence(repo_generation, &repo, vec![head_hash], nodestream);
+            assert_node_sequence(&repo, vec![head_hash], nodestream);
         });
     }
 
@@ -163,7 +160,6 @@ mod test {
     fn difference_empty_and_node() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let nodestream = SetDifferenceNodeStream::new(
@@ -172,7 +168,7 @@ mod test {
                 SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
             ).boxed();
 
-            assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+            assert_node_sequence(&repo, vec![], nodestream);
         });
     }
 
@@ -180,7 +176,6 @@ mod test {
     fn difference_two_nodes() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = SetDifferenceNodeStream::new(
                 &repo,
@@ -195,7 +190,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
@@ -266,7 +260,6 @@ mod test {
     fn difference_union_with_single_node() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
@@ -294,7 +287,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
@@ -309,7 +301,6 @@ mod test {
     fn difference_single_node_with_union() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
@@ -336,7 +327,7 @@ mod test {
                 nodestream,
             ).boxed();
 
-            assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+            assert_node_sequence(&repo, vec![], nodestream);
         });
     }
 
@@ -344,7 +335,6 @@ mod test {
     fn difference_merge_even() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_even::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // Top three commits in my hg log -G -r 'all()' output
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -388,7 +378,6 @@ mod test {
                 SetDifferenceNodeStream::new(&repo, left_nodestream, right_nodestream).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("babf5e4dea7ffcf32c3740ff2f1351de4e15c889"),
@@ -403,7 +392,6 @@ mod test {
     fn difference_merge_uneven() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             // Merge commit, and one from each branch
             let inputs: Vec<Box<NodeStream>> = vec![
@@ -447,7 +435,6 @@ mod test {
                 SetDifferenceNodeStream::new(&repo, left_nodestream, right_nodestream).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),

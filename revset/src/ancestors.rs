@@ -155,7 +155,6 @@ mod test {
     use async_unit;
     use linear;
     use merge_uneven;
-    use repoinfo::RepoGenCache;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
     use unshared_merge_uneven;
@@ -164,7 +163,6 @@ mod test {
     fn linear_ancestors() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = AncestorsNodeStream::new(
                 &repo,
@@ -172,7 +170,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
@@ -193,7 +190,6 @@ mod test {
     fn merge_ancestors_from_merge() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = AncestorsNodeStream::new(
                 &repo,
@@ -201,7 +197,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
@@ -227,7 +222,6 @@ mod test {
     fn merge_ancestors_one_branch() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = AncestorsNodeStream::new(
                 &repo,
@@ -235,7 +229,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
@@ -254,7 +247,6 @@ mod test {
             // The unshared_merge_uneven fixture has a commit after the merge. Pull in everything
             // by starting at the head and working back to the original unshared history commits
             let repo = Arc::new(unshared_merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = AncestorsNodeStream::new(
                 &repo,
@@ -262,7 +254,6 @@ mod test {
             ).boxed();
 
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("ec27ab4e7aeb7088e8a0234f712af44fb7b43a46"),
@@ -294,7 +285,6 @@ mod test {
     fn no_common_ancestor() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(unshared_merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = greatest_common_ancestor(
                 &repo,
@@ -303,7 +293,7 @@ mod test {
                     string_to_nodehash("1700524113b1a3b1806560341009684b4378660b"),
                 ],
             );
-            assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+            assert_node_sequence(&repo, vec![], nodestream);
         });
     }
 
@@ -311,7 +301,6 @@ mod test {
     fn greatest_common_ancestor_different_branches() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = greatest_common_ancestor(
                 &repo,
@@ -321,7 +310,6 @@ mod test {
                 ],
             );
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
@@ -335,7 +323,6 @@ mod test {
     fn greatest_common_ancestor_same_branch() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = greatest_common_ancestor(
                 &repo,
@@ -345,7 +332,6 @@ mod test {
                 ],
             );
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
@@ -359,7 +345,6 @@ mod test {
     fn all_common_ancestors_different_branches() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = common_ancestors(
                 &repo,
@@ -369,7 +354,6 @@ mod test {
                 ],
             );
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
@@ -383,7 +367,6 @@ mod test {
     fn all_common_ancestors_same_branch() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let repo_generation = RepoGenCache::new(10);
 
             let nodestream = common_ancestors(
                 &repo,
@@ -393,7 +376,6 @@ mod test {
                 ],
             );
             assert_node_sequence(
-                repo_generation,
                 &repo,
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
