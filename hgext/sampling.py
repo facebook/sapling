@@ -83,6 +83,12 @@ def uisetup(ui):
              "ref":"perf_status",
              "msg":"",
              "opts":{"t":42}}\0
+
+            We will also log any given environmental vars to the env_vars log,
+            if configured::
+
+              [sampling]
+              env_vars = PATH,SHELL
             """
             if not util.safehasattr(self, "samplingfilters"):
                 self.samplingfilters = logtofile.computesamplingfilters(self)
@@ -180,3 +186,14 @@ def reposetup(ui, repo):
         topdir = gettopdir(repo)
         if topdir:
             ui.log("command_info", topdir=topdir)
+
+    # Allow environment variables to be directly mapped to metrics columns.
+    env = encoding.environ
+    tolog = {}
+    for conf in ui.configlist("sampling", "env_vars"):
+        if conf in env:
+            # The default name is a lowercased version of the environment
+            # variable name; in the future, an override config could be used to
+            # customize it.
+            tolog["env_" + conf.lower()] = env[conf]
+    ui.log("env_vars", **tolog)

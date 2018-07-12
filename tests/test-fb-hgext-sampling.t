@@ -94,3 +94,23 @@ Test topdir logging:
   ...     data = f.read().strip("\0").split("\0")
   >>> print([json.loads(d)["data"]["topdir"] for d in data if "topdir" in d])
   [u'a_topdir']
+
+Test env-var logging:
+  $ setconfig sampling.env_vars=TEST_VAR1,TEST_VAR2
+  $ setconfig sampling.key.env_vars=env_vars
+  $ export TEST_VAR1=abc
+  $ export TEST_VAR2=def
+  $ hg st > /dev/null
+  atexit handler executed
+  >>> import json, pprint
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read().strip("\0").split("\0")
+  >>> alldata = {}
+  >>> for jsonstr in data:
+  ...     entry = json.loads(jsonstr)
+  ...     if entry["category"] == "env_vars":
+  ...         for k in sorted(entry["data"].keys()):
+  ...             print("%s: %s" % (k, entry["data"][k]))
+  env_test_var1: abc
+  env_test_var2: def
+  metrics_type: env_vars
