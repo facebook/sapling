@@ -8,7 +8,6 @@
  *
  */
 #include "GlobNode.h"
-#include "EdenError.h"
 #include "eden/fs/inodes/TreeInode.h"
 
 using folly::Future;
@@ -200,11 +199,13 @@ GlobNode::GlobNode(StringPiece pattern, bool includeDotfiles, bool hasSpecials)
         includeDotfiles ? GlobOptions::DEFAULT : GlobOptions::IGNORE_DOTFILES;
     auto compiled = GlobMatcher::create(pattern, options);
     if (compiled.hasError()) {
-      throw newEdenError(
+      throw std::system_error(
           EINVAL,
-          "failed to compile pattern `{}` to GlobMatcher: {}",
-          pattern,
-          compiled.error());
+          std::generic_category(),
+          folly::sformat(
+              "failed to compile pattern `{}` to GlobMatcher: {}",
+              pattern,
+              compiled.error()));
     }
     matcher_ = std::move(compiled.value());
   }

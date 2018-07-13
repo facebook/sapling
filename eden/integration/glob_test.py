@@ -121,6 +121,10 @@ class GlobTest(testcase.EdenRepoTest):
             self.client.glob(self.mount, ["adir["])
         self.assertIn("unterminated bracket sequence", str(ctx.exception))
 
+        with self.assertRaises(EdenError) as ctx:
+            self.client.globFiles(GlobParams(self.mount, ["adir["], True))
+        self.assertIn("unterminated bracket sequence", str(ctx.exception))
+
     def assert_glob(
         self,
         globs: List[str],

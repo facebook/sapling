@@ -26,6 +26,7 @@
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/GlobNode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeLoader.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -37,7 +38,6 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/EdenServer.h"
-#include "eden/fs/service/GlobNode.h"
 #include "eden/fs/service/StreamingSubscriber.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/BlobMetadata.h"
@@ -553,22 +553,26 @@ void EdenServiceHandler::glob(
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
-  // Compile the list of globs into a tree
-  GlobNode globRoot(/*includeDotfiles=*/true);
-  for (auto& globString : *globs) {
-    globRoot.parse(globString);
-  }
+  try {
+    // Compile the list of globs into a tree
+    GlobNode globRoot(/*includeDotfiles=*/true);
+    for (auto& globString : *globs) {
+      globRoot.parse(globString);
+    }
 
-  // and evaluate it against the root
-  auto matches = globRoot
-                     .evaluate(
-                         edenMount->getObjectStore(),
-                         RelativePathPiece(),
-                         rootInode,
-                         /*fileBlobsToPrefetch=*/nullptr)
-                     .get();
-  for (auto& fileName : matches) {
-    out.emplace_back(fileName.stringPiece().toString());
+    // and evaluate it against the root
+    auto matches = globRoot
+                       .evaluate(
+                           edenMount->getObjectStore(),
+                           RelativePathPiece(),
+                           rootInode,
+                           /*fileBlobsToPrefetch=*/nullptr)
+                       .get();
+    for (auto& fileName : matches) {
+      out.emplace_back(fileName.stringPiece().toString());
+    }
+  } catch (const std::system_error& exc) {
+    throw newEdenError(exc);
   }
 }
 
@@ -584,8 +588,12 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
 
   // Compile the list of globs into a tree
   auto globRoot = std::make_shared<GlobNode>(params->includeDotfiles);
-  for (auto& globString : params->globs) {
-    globRoot->parse(globString);
+  try {
+    for (auto& globString : params->globs) {
+      globRoot->parse(globString);
+    }
+  } catch (const std::system_error& exc) {
+    throw newEdenError(exc);
   }
 
   auto fileBlobsToPrefetch = params->prefetchFiles
