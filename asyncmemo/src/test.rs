@@ -267,7 +267,7 @@ struct Fib(Arc<AtomicUsize>);
 
 impl Filler for Fib {
     type Key = u32;
-    type Value = Box<Future<Item = u32, Error = ()>>;
+    type Value = BoxFuture<u32, ()>;
 
     fn fill(&self, cache: &Asyncmemo<Self>, key: &u32) -> Self::Value {
         self.0.fetch_add(1, Ordering::Relaxed);
@@ -279,13 +279,13 @@ impl Filler for Fib {
                 remains: 1,
                 v: Some(Ok(1)),
             };
-            Box::new(f) as Box<Future<Item = u32, Error = ()>>
+            Box::new(f) as BoxFuture<u32, ()>
         } else {
             let f = cache.get(key - 1).and_then(move |f| Delay {
                 remains: 1,
                 v: Some(Ok(key + f)),
             });
-            Box::new(f) as Box<Future<Item = u32, Error = ()>>
+            Box::new(f) as BoxFuture<u32, ()>
         }
     }
 }
@@ -739,6 +739,8 @@ fn slow_poll_err() {
     // Poll is slow, so one future does the poll, another goes to the Polling state.
     // Make sure that second future is woken up after the first one errored
     let c = Asyncmemo::new_unbounded("test", SlowPollUpperrer::new(Err("RES".into())), 1);
+    fn assert_send<T: Send>(_t: &T) {}
+    assert_send(&c);
 
     let t1 = thread::spawn({
         let c = c.clone();

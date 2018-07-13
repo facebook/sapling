@@ -57,6 +57,8 @@ use futures::future::{IntoFuture, Shared, SharedError, SharedItem};
 use parking_lot::Mutex;
 use stats::prelude::*;
 
+use futures_ext::BoxFuture;
+
 #[cfg(test)]
 mod test;
 
@@ -165,11 +167,11 @@ where
 
 struct SharedAsyncmemoFuture<Item, Error> {
     // Future can only be None when it's dropped (see Drop implementation)
-    future: Option<Shared<Box<Future<Item = Item, Error = SharedAsyncmemoError<Error>>>>>,
+    future: Option<Shared<BoxFuture<Item, SharedAsyncmemoError<Error>>>>,
 }
 
 impl<Item, Error> SharedAsyncmemoFuture<Item, Error> {
-    fn new(future: Shared<Box<Future<Item = Item, Error = SharedAsyncmemoError<Error>>>>) -> Self {
+    fn new(future: Shared<BoxFuture<Item, SharedAsyncmemoError<Error>>>) -> Self {
         SharedAsyncmemoFuture {
             future: Some(future),
         }
@@ -222,12 +224,11 @@ enum SharedAsyncmemoFuturePoll<Item, Error> {
     MovedError,
 }
 
-fn wrap_filler_future<Fut: Future + 'static>(
+fn wrap_filler_future<Fut: Future + Send + 'static>(
     fut: Fut,
 ) -> SharedAsyncmemoFuture<<Fut as Future>::Item, <Fut as Future>::Error> {
-    let fut: Box<
-        Future<Item = <Fut as Future>::Item, Error = SharedAsyncmemoError<<Fut as Future>::Error>>,
-    > = Box::new(fut.map_err(|err| Mutex::new(Some(err))));
+    let fut: BoxFuture<<Fut as Future>::Item, SharedAsyncmemoError<<Fut as Future>::Error>> =
+        Box::new(fut.map_err(|err| Mutex::new(Some(err))));
     SharedAsyncmemoFuture::new(fut.shared())
 }
 
@@ -293,6 +294,7 @@ impl<F> MemoFuture<F>
 where
     F: Filler,
     F::Key: Eq + Hash + Weight + Clone,
+    <F::Value as IntoFuture>::Future: Send,
     <F::Value as IntoFuture>::Item: Weight + Clone,
 {
     // Return the current state of a slot, if present
@@ -431,6 +433,7 @@ impl<F> Future for MemoFuture<F>
 where
     F: Filler,
     F::Key: Eq + Hash + Weight + Clone,
+    <F::Value as IntoFuture>::Future: Send,
     <F::Value as IntoFuture>::Item: Weight + Clone,
 {
     type Item = <F::Value as IntoFuture>::Item;
