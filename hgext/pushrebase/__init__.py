@@ -54,14 +54,13 @@ from mercurial.extensions import unwrapfunction, wrapcommand, wrapfunction
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 
-from .remotefilelog import (
+from ..remotefilelog import (
     contentstore,
     datapack,
     historypack,
     metadatastore,
     shallowbundle,
     shallowutil,
-    wirepack,
 )
 
 
@@ -678,7 +677,7 @@ def _getmanifest(op, rev):
         m = rev.manifest()
     else:
         store = repo.manifestlog.datastore
-        from .extlib import cstore
+        from ..extlib import cstore
 
         m = cstore.treemanifest(store, rev.manifestnode())
         if store.getmissing([("", rev.manifestnode())]):

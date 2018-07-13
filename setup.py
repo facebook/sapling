@@ -1008,6 +1008,7 @@ packages = [
     "hgext.hgsubversion.svnwrap",
     "hgext.infinitepush",
     "hgext.p4fastimport",
+    "hgext.pushrebase",
     "hgext.remotefilelog",
     "hgext.treemanifest",
     "hgext.highlight",
