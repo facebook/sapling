@@ -126,7 +126,7 @@ EdenConfig::EdenConfig(
   // Force set defaults that require passed arguments
   edenDir_.setValue(
       userHomePath_ + kDefaultEdenDirectory, facebook::eden::DEFAULT, true);
-  ignoreFile_.setValue(
+  userIgnoreFile_.setValue(
       userHomePath + kDefaultIgnoreFile, facebook::eden::DEFAULT, true);
   systemIgnoreFile_.setValue(
       systemConfigDir_ + kDefaultIgnoreFile, facebook::eden::DEFAULT, true);
@@ -178,8 +178,8 @@ const AbsolutePath& EdenConfig::getSystemIgnoreFile() const {
   return systemIgnoreFile_.getValue();
 }
 
-const AbsolutePath& EdenConfig::getIgnoreFile() const {
-  return ignoreFile_.getValue();
+const AbsolutePath& EdenConfig::getUserIgnoreFile() const {
+  return userIgnoreFile_.getValue();
 }
 
 void EdenConfig::setUserConfigPath(AbsolutePath userConfigPath) {
@@ -202,10 +202,10 @@ void EdenConfig::setEdenDir(AbsolutePath edenDir, ConfigSource configSource) {
   return edenDir_.setValue(edenDir, configSource);
 }
 
-void EdenConfig::setIgnoreFile(
-    AbsolutePath ignoreFile,
+void EdenConfig::setUserIgnoreFile(
+    AbsolutePath userIgnoreFile,
     ConfigSource configSource) {
-  return ignoreFile_.setValue(ignoreFile, configSource);
+  return userIgnoreFile_.setValue(userIgnoreFile, configSource);
 }
 
 bool hasConfigFileChanged(

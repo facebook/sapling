@@ -339,8 +339,8 @@ class EdenConfig : public ConfigSettingManager {
   /** Get the eden directory. Default "/etc/eden/edenfs.rc" */
   const AbsolutePath& getEdenDir() const;
 
-  /** Get the system ignore file. Default "userHomePath/ignore" */
-  const AbsolutePath& getIgnoreFile() const;
+  /** Get the user ignore file. Default "userHomePath/ignore" */
+  const AbsolutePath& getUserIgnoreFile() const;
 
   void setUserConfigPath(AbsolutePath userConfigPath);
 
@@ -365,7 +365,9 @@ class EdenConfig : public ConfigSettingManager {
 
   /** Set the ignore file for the provided source.
    */
-  void setIgnoreFile(AbsolutePath ignoreFile, ConfigSource configSource);
+  void setUserIgnoreFile(
+      AbsolutePath userIgnoreFile,
+      ConfigSource configSource);
 
   /**
    *  Register the configuration setting. The fullKey is used to parse values
@@ -413,9 +415,9 @@ class EdenConfig : public ConfigSettingManager {
                                                 kUnspecifiedDefault,
                                                 this};
 
-  ConfigSetting<AbsolutePath> ignoreFile_{"core:ignoreFile",
-                                          kUnspecifiedDefault,
-                                          this};
+  ConfigSetting<AbsolutePath> userIgnoreFile_{"core:ignoreFile",
+                                              kUnspecifiedDefault,
+                                              this};
 
   struct stat systemConfigFileStat_ = {};
   struct stat userConfigFileStat_ = {};

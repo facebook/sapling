@@ -38,7 +38,7 @@ class EdenConfigTest : public ::testing::Test {
   AbsolutePath defaultSystemConfigPath_{"/etc/eden/edenfs.rc"};
 
   // Used by various tests to verify default values is set
-  AbsolutePath defaultIgnoreFilePath_{"/home/bob/ignore"};
+  AbsolutePath defaultUserIgnoreFilePath_{"/home/bob/ignore"};
   AbsolutePath defaultSystemIgnoreFilePath_{"/etc/eden/ignore"};
   AbsolutePath defaultEdenDirPath_{"/home/bob/.eden"};
 
@@ -100,7 +100,7 @@ TEST_F(EdenConfigTest, defaultTest) {
   EXPECT_EQ(edenConfig->getSystemConfigDir(), systemConfigDir);
 
   // Configuration
-  EXPECT_EQ(edenConfig->getIgnoreFile(), defaultIgnoreFilePath_);
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
 }
@@ -128,7 +128,7 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   edenConfig->setSystemConfigPath(updatedSystemConfigPath);
 
   // Configuration
-  edenConfig->setIgnoreFile(ignoreFile, facebook::eden::COMMAND_LINE);
+  edenConfig->setUserIgnoreFile(ignoreFile, facebook::eden::COMMAND_LINE);
   edenConfig->setSystemIgnoreFile(
       systemIgnoreFile, facebook::eden::COMMAND_LINE);
   edenConfig->setEdenDir(edenDir, facebook::eden::COMMAND_LINE);
@@ -139,7 +139,7 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   EXPECT_EQ(edenConfig->getSystemConfigPath(), updatedSystemConfigPath);
 
   // Configuration
-  EXPECT_EQ(edenConfig->getIgnoreFile(), ignoreFile);
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), ignoreFile);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), systemIgnoreFile);
   EXPECT_EQ(edenConfig->getEdenDir(), edenDir);
 }
@@ -159,7 +159,7 @@ TEST_F(EdenConfigTest, cloneTest) {
         testHomeDir_, userConfigPath, systemConfigDir, systemConfigPath);
 
     // Configuration
-    edenConfig->setIgnoreFile(ignoreFile, facebook::eden::COMMAND_LINE);
+    edenConfig->setUserIgnoreFile(ignoreFile, facebook::eden::COMMAND_LINE);
     edenConfig->setSystemIgnoreFile(
         systemIgnoreFile, facebook::eden::SYSTEM_CONFIG_FILE);
     edenConfig->setEdenDir(edenDir, facebook::eden::USER_CONFIG_FILE);
@@ -168,7 +168,7 @@ TEST_F(EdenConfigTest, cloneTest) {
     EXPECT_EQ(edenConfig->getSystemConfigPath(), systemConfigPath);
     EXPECT_EQ(edenConfig->getSystemConfigDir(), systemConfigDir);
 
-    EXPECT_EQ(edenConfig->getIgnoreFile(), ignoreFile);
+    EXPECT_EQ(edenConfig->getUserIgnoreFile(), ignoreFile);
     EXPECT_EQ(edenConfig->getSystemIgnoreFile(), systemIgnoreFile);
     EXPECT_EQ(edenConfig->getEdenDir(), edenDir);
 
@@ -179,7 +179,7 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(configCopy->getSystemConfigPath(), systemConfigPath);
   EXPECT_EQ(configCopy->getSystemConfigDir(), systemConfigDir);
 
-  EXPECT_EQ(configCopy->getIgnoreFile(), ignoreFile);
+  EXPECT_EQ(configCopy->getUserIgnoreFile(), ignoreFile);
   EXPECT_EQ(configCopy->getSystemIgnoreFile(), systemIgnoreFile);
   EXPECT_EQ(configCopy->getEdenDir(), edenDir);
 
@@ -187,7 +187,7 @@ TEST_F(EdenConfigTest, cloneTest) {
   configCopy->clearAll(facebook::eden::SYSTEM_CONFIG_FILE);
   configCopy->clearAll(facebook::eden::COMMAND_LINE);
 
-  EXPECT_EQ(configCopy->getIgnoreFile(), defaultIgnoreFilePath_);
+  EXPECT_EQ(configCopy->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(configCopy->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(configCopy->getEdenDir(), defaultEdenDirPath_);
 }
@@ -206,7 +206,7 @@ TEST_F(EdenConfigTest, clearAllTest) {
 
   // We will set the config on 3 properties, each with different sources
   // We will then run for each source to check results
-  edenConfig->setIgnoreFile(
+  edenConfig->setUserIgnoreFile(
       fromUserConfigPath, facebook::eden::USER_CONFIG_FILE);
   edenConfig->setSystemIgnoreFile(
       fromSystemConfigPath, facebook::eden::SYSTEM_CONFIG_FILE);
@@ -216,25 +216,25 @@ TEST_F(EdenConfigTest, clearAllTest) {
       fromSystemConfigPath, facebook::eden::SYSTEM_CONFIG_FILE);
 
   // Check over-rides
-  EXPECT_EQ(edenConfig->getIgnoreFile(), fromUserConfigPath);
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), fromUserConfigPath);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), fromSystemConfigPath);
   EXPECT_EQ(edenConfig->getEdenDir(), fromCommandLine);
 
   // Clear USER_CONFIG_FILE and check
   edenConfig->clearAll(facebook::eden::USER_CONFIG_FILE);
-  EXPECT_EQ(edenConfig->getIgnoreFile(), defaultIgnoreFilePath_);
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), fromSystemConfigPath);
   EXPECT_EQ(edenConfig->getEdenDir(), fromCommandLine);
 
   // Clear SYSTEM_CONFIG_FILE and check
   edenConfig->clearAll(facebook::eden::SYSTEM_CONFIG_FILE);
-  EXPECT_EQ(edenConfig->getIgnoreFile(), defaultIgnoreFilePath_);
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getEdenDir(), fromCommandLine);
 
   // Clear COMMAND_LINE and check
   edenConfig->clearAll(facebook::eden::COMMAND_LINE);
-  EXPECT_EQ(edenConfig->getIgnoreFile(), defaultIgnoreFilePath_);
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
 }
@@ -248,21 +248,22 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
       testHomeDir_, userConfigPath, systemConfigDir, systemConfigPath);
 
   // Check default (starting point)
-  EXPECT_EQ(edenConfig->getIgnoreFile(), "/home/bob/ignore");
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/home/bob/ignore");
 
   // Set from cli and verify that cannot over-ride
   AbsolutePath cliIgnoreFile{"/CLI_IGNORE_FILE"};
   AbsolutePath ignoreFile{"/USER_IGNORE_FILE"};
   AbsolutePath systemIgnoreFile{"/SYSTEM_IGNORE_FILE"};
 
-  edenConfig->setIgnoreFile(cliIgnoreFile, facebook::eden::COMMAND_LINE);
-  EXPECT_EQ(edenConfig->getIgnoreFile(), cliIgnoreFile);
+  edenConfig->setUserIgnoreFile(cliIgnoreFile, facebook::eden::COMMAND_LINE);
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), cliIgnoreFile);
 
-  edenConfig->setIgnoreFile(cliIgnoreFile, facebook::eden::SYSTEM_CONFIG_FILE);
-  EXPECT_EQ(edenConfig->getIgnoreFile(), cliIgnoreFile);
+  edenConfig->setUserIgnoreFile(
+      cliIgnoreFile, facebook::eden::SYSTEM_CONFIG_FILE);
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), cliIgnoreFile);
 
-  edenConfig->setIgnoreFile(ignoreFile, facebook::eden::USER_CONFIG_FILE);
-  EXPECT_EQ(edenConfig->getIgnoreFile(), cliIgnoreFile);
+  edenConfig->setUserIgnoreFile(ignoreFile, facebook::eden::USER_CONFIG_FILE);
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), cliIgnoreFile);
 }
 
 TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
@@ -275,13 +276,13 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
 
   edenConfig->loadSystemConfig();
 
-  EXPECT_EQ(edenConfig->getIgnoreFile(), "/should_be_over_ridden");
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/should_be_over_ridden");
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), "/etc/eden/systemCustomIgnore");
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
 
   edenConfig->loadUserConfig();
 
-  EXPECT_EQ(edenConfig->getIgnoreFile(), "/home/bob/userCustomIgnore");
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/home/bob/userCustomIgnore");
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), "/etc/eden/systemCustomIgnore");
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
 }
@@ -298,7 +299,7 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
   edenConfig->loadUserConfig();
 
   // Check default configuration is set
-  EXPECT_EQ(edenConfig->getIgnoreFile(), defaultIgnoreFilePath_);
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
 }
