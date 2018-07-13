@@ -82,3 +82,45 @@ mkcommit() {
 ls_l() {
   $PYTHON $TESTDIR/ls-l.py "$@"
 }
+
+getmysqldb() {
+if ! ${PYTHON:-python} -c "import mysql.connector" 2>/dev/null; then
+  echo "skipped: mysql-connector-python missing"
+  exit 80
+fi
+
+GETDB_PATH="$TESTDIR/${HGTEST_GETDB_PATH:-getdb.sh}"
+
+if [[ ! -f "$GETDB_PATH" ]]; then
+  echo "skipped: getdb.sh missing"
+  exit 80
+fi
+
+# shellcheck source=/dev/null
+source "$GETDB_PATH" >/dev/null
+
+if [[ -z $DBHOST && -z $DBPORT && -n $DBHOSTPORT ]]; then
+    # Assuming they are set using the legacy way: $DBHOSTPORT
+    DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
+    DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
+fi
+
+[[ -z $DBHOST ]] && DBHOST=localhost
+[[ -z $DBPORT ]] && DBPORT=3306
+[[ -z $DBPASS && -n $PASSWORD ]] && DBPASS="$PASSWORD"
+[[ -z $DBUSER && -n $USER ]] && DBUSER="$USER"
+[[ -z $DBNAME ]] && DBNAME="testdb_hg_$$_$TIME"
+if [[ -z $DBPASS ]]; then
+    DBPASSOPT=''
+else
+    DBPASSOPT='-p'"$DBPASS"
+fi
+}
+
+createpushrebaserecordingdb() {
+mysql -h $DBHOST -P $DBPORT -u $DBUSER $DBPASSOPT -e "CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
+mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT <<EOF
+DROP TABLE IF EXISTS pushrebaserecording;
+$(cat $TESTDIR/pushrebase_replay_schema.sql)
+EOF
+}

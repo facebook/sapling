@@ -21,6 +21,18 @@ Configs:
     treemanifests instead of incoming flat manifests. This is useful for the
     transition to treemanifest.
 
+    ``pushrebase.enablerecording`` whether to enable the recording of pushrebase
+    requests.
+
+    ``pushrebase.bundlepartuploadbinary`` binary and command line arguments that
+    will be called to upload bundle2 part. One of the arguments should contain
+    '{filename}' to specify a filename with a bundle2 part. It should return
+    a handle, that can later be used to access the part. Note: handles MUST NOT
+    contain whitespaces.
+
+    ``pushrebase.recordingrepoid`` id of the repo for the pushrebase recording
+
+    ``pushrebase.recordingsqlargs`` sql arguments for the pushrebase recording
 """
 from __future__ import absolute_import
 
@@ -54,6 +66,7 @@ from mercurial.extensions import unwrapfunction, wrapcommand, wrapfunction
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 
+from . import recording
 from ..remotefilelog import (
     contentstore,
     datapack,
@@ -230,7 +243,20 @@ def unbundle(orig, repo, cg, heads, source, url):
             for mfnode in preloadmfs.split(","):
                 repo.manifestlog[bin(mfnode)].read()
 
-    return orig(repo, cg, heads, source, url)
+    try:
+        result = orig(repo, cg, heads, source, url)
+        recording.recordpushrebaserequest(repo, conflicts=None, pushrebase_errmsg=None)
+        return result
+    except ConflictsError as ex:
+        recording.recordpushrebaserequest(
+            repo, conflicts="\n".join(sorted(ex.conflicts)), pushrebase_errmsg=None
+        )
+        raise
+    except Exception as ex:
+        recording.recordpushrebaserequest(
+            repo, conflicts=None, pushrebase_errmsg="%s" % ex
+        )
+        raise
 
 
 def validaterevset(repo, revset):
@@ -996,6 +1022,10 @@ def bundle2rebase(op, part):
 
         onto = getontotarget(op, params, bundle)
 
+        op.repo.pushrebaserecordingparams = {
+            "onto": params.get("onto", donotrebasemarker),
+            "ontorev": op.repo[onto].hex(),
+        }
         revs, oldonto = _getrevs(op, bundle, onto, renamesrccache)
 
         op.repo.hook("prechangegroup", **hookargs)
@@ -1011,6 +1041,9 @@ def bundle2rebase(op, part):
 
         # Perform the rebase + commit to the main repo
         added, replacements = runrebase(op, revs, oldonto, onto)
+
+        op.repo.pushrebaseaddedchangesets = added
+        op.repo.pushrebasereplacements = replacements
 
         # revs is modified by runrebase to ensure garbage collection of
         # manifests, so don't use it from here on.

@@ -1133,6 +1133,9 @@ def unbundle(repo, proto, heads):
 
         # write bundle data to temporary file because it can be big
         fd, tempname = tempfile.mkstemp(prefix="hg-unbundle-")
+        # Make the file available to other extensions.
+        # See pushrebase recording for example
+        repo.unbundlefile = tempname
         fp = os.fdopen(fd, pycompat.sysstr("wb+"))
         r = 0
         try:
