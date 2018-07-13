@@ -258,6 +258,11 @@ pub fn parse_manifold_args<'a>(
         blobstore_cache_size: get_usize(matches, "blobstore-cache-size", default_cache_size),
         changesets_cache_size: get_usize(matches, "changesets-cache-size", default_cache_size),
         filenodes_cache_size: get_usize(matches, "filenodes-cache-size", default_cache_size),
+        bonsai_hg_mapping_cache_size: get_usize(
+            matches,
+            "bonsai-hg-mapping-cache-size",
+            default_cache_size,
+        ),
         io_threads: get_usize(matches, "io-threads", 5),
         max_concurrent_requests_per_io_thread: get_usize(
             matches,

@@ -152,6 +152,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
             blobstore_cache_size: default_cache_size,
             changesets_cache_size: default_cache_size,
             filenodes_cache_size: default_cache_size,
+            bonsai_hg_mapping_cache_size: default_cache_size,
             io_threads,
             max_concurrent_requests_per_io_thread: MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
         },

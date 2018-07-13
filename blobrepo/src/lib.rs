@@ -30,6 +30,7 @@ extern crate futures_stats;
 
 extern crate ascii;
 extern crate blobstore;
+extern crate bonsai_hg_mapping;
 extern crate bookmarks;
 extern crate changesets;
 extern crate dbbookmarks;

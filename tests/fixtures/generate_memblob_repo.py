@@ -42,6 +42,7 @@ if __name__ == '__main__':
 #![deny(warnings)]
 
 extern crate bookmarks;
+extern crate bonsai_hg_mapping;
 extern crate changesets;
 extern crate dbbookmarks;
 extern crate dieselfilenodes;
@@ -59,6 +60,7 @@ use std::str::FromStr;
 
 use ascii::AsciiString;
 use bookmarks::{Bookmark, Bookmarks};
+use bonsai_hg_mapping::SqliteBonsaiHgMapping;
 use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use dbbookmarks::SqliteDbBookmarks;
 use dieselfilenodes::SqliteFilenodes;
@@ -78,6 +80,8 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
         .expect("cannot create in-memory filenodes"));
     let changesets = Arc::new(SqliteChangesets::in_memory()
         .expect("cannot create in-memory changeset table"));
+    let bonsai_hg_mapping = Arc::new(SqliteBonsaiHgMapping::in_memory()
+        .expect("cannot create in-memory bonsai_hg_mapping table"));
     let repo_id = RepositoryId::new(1);
     let mut book_txn = bookmarks.create_transaction(&repo_id);
 
@@ -161,7 +165,15 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
             """
     book_txn.commit().wait().expect("Bookmark heads creation failed");
     let logger = logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!()));
-    BlobRepo::new(logger, bookmarks, blobs, filenodes, changesets, repo_id)
+    BlobRepo::new(
+        logger,
+        bookmarks,
+        blobs,
+        filenodes,
+        changesets,
+        bonsai_hg_mapping,
+        repo_id,
+    )
 }
 """
         )

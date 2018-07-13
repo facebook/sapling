@@ -24,6 +24,7 @@ pub enum StateOpenError {
     Blobstore,
     Changesets,
     Filenodes,
+    BonsaiHgMapping,
 }
 
 impl fmt::Display for StateOpenError {
@@ -36,6 +37,7 @@ impl fmt::Display for StateOpenError {
             Blobstore => write!(f, "blob store"),
             Changesets => write!(f, "changesets"),
             Filenodes => write!(f, "filenodes"),
+            BonsaiHgMapping => write!(f, "bonsai_hg_mapping"),
         }
     }
 }

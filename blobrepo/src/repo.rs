@@ -28,6 +28,8 @@ use uuid::Uuid;
 
 use blobstore::{new_memcache_blobstore, Blobstore, EagerMemblob, MemoizedBlobstore,
                 PrefixBlobstore};
+use bonsai_hg_mapping::{BonsaiHgMapping, CachingBonsaiHgMapping, MysqlBonsaiHgMapping,
+                        SqliteBonsaiHgMapping};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
@@ -105,6 +107,8 @@ pub struct ManifoldArgs {
     pub changesets_cache_size: usize,
     /// Size of the filenodes cache.
     pub filenodes_cache_size: usize,
+    /// Size of the bonsai_hg_mapping cache.
+    pub bonsai_hg_mapping_cache_size: usize,
     /// Number of IO threads the blobstore uses.
     pub io_threads: usize,
     /// This is a (hopefully) short term hack to overcome the problem of overloading Manifold.
@@ -119,6 +123,7 @@ pub struct BlobRepo {
     bookmarks: Arc<Bookmarks>,
     filenodes: Arc<Filenodes>,
     changesets: Arc<Changesets>,
+    bonsai_hg_mapping: Arc<BonsaiHgMapping>,
     repoid: RepositoryId,
 }
 
@@ -129,6 +134,7 @@ impl BlobRepo {
         blobstore: Arc<Blobstore>,
         filenodes: Arc<Filenodes>,
         changesets: Arc<Changesets>,
+        bonsai_hg_mapping: Arc<BonsaiHgMapping>,
         repoid: RepositoryId,
     ) -> Self {
         BlobRepo {
@@ -137,6 +143,7 @@ impl BlobRepo {
             blobstore: PrefixBlobstore::new(blobstore, repoid.prefix()),
             filenodes,
             changesets,
+            bonsai_hg_mapping,
             repoid,
         }
     }
@@ -202,6 +209,9 @@ impl BlobRepo {
         let changesets = SqliteChangesets::open_or_create(
             path.join("changesets").to_string_lossy(),
         ).context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+        let bonsai_hg_mapping =
+            SqliteBonsaiHgMapping::open_or_create(path.join("bonsai_hg_mapping").to_string_lossy())
+                .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
 
         Ok(Self::new(
             logger,
@@ -209,6 +219,7 @@ impl BlobRepo {
             blobstore,
             Arc::new(filenodes),
             Arc::new(changesets),
+            Arc::new(bonsai_hg_mapping),
             repoid,
         ))
     }
@@ -227,6 +238,8 @@ impl BlobRepo {
                 .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?),
             Arc::new(SqliteChangesets::in_memory()
                 .context(ErrorKind::StateOpen(StateOpenError::Changesets))?),
+            Arc::new(SqliteBonsaiHgMapping::in_memory()
+                .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?),
             RepositoryId::new(0),
         ))
     }
@@ -278,8 +291,14 @@ impl BlobRepo {
 
         let changesets = MysqlChangesets::open(&args.db_address)
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
-
         let changesets = CachingChangests::new(Arc::new(changesets), args.changesets_cache_size);
+
+        let bonsai_hg_mapping = MysqlBonsaiHgMapping::open(&args.db_address)
+            .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
+        let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
+            Arc::new(bonsai_hg_mapping),
+            args.bonsai_hg_mapping_cache_size,
+        );
 
         Ok(Self::new(
             logger,
@@ -287,6 +306,7 @@ impl BlobRepo {
             Arc::new(blobstore),
             Arc::new(filenodes),
             Arc::new(changesets),
+            Arc::new(bonsai_hg_mapping),
             repoid,
         ))
     }
@@ -1284,6 +1304,7 @@ impl Clone for BlobRepo {
             blobstore: self.blobstore.clone(),
             filenodes: self.filenodes.clone(),
             changesets: self.changesets.clone(),
+            bonsai_hg_mapping: self.bonsai_hg_mapping.clone(),
             repoid: self.repoid.clone(),
         }
     }

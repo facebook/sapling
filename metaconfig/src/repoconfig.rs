@@ -7,20 +7,20 @@
 //! Contains structures describing configuration of the entire repo. Those structures are
 //! deserialized from TOML files from metaconfig repo
 
-use std::collections::HashMap;
-use std::path::PathBuf;
-use futures::{future, Future, finished};
 use blobrepo::{BlobRepo, ManifoldArgs};
 use bookmarks::Bookmark;
 use bytes::Bytes;
 use errors::*;
 use failure::FutureFailureErrorExt;
+use futures::{finished, future, Future};
 use futures::Stream;
 use futures_ext::FutureExt;
 use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::FileContents;
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::str;
 use toml;
 use vfs::{vfs_from_manifest, ManifestVfsDir, ManifestVfsFile, VfsDir, VfsFile, VfsNode, VfsWalker};
@@ -285,6 +285,8 @@ impl RepoConfigs {
                         blobstore_cache_size: this.blobstore_cache_size.unwrap_or(100_000_000),
                         changesets_cache_size: this.changesets_cache_size.unwrap_or(100_000_000),
                         filenodes_cache_size: this.filenodes_cache_size.unwrap_or(100_000_000),
+                        bonsai_hg_mapping_cache_size: this.bonsai_hg_mapping_cache_size
+                            .unwrap_or(100_000_000),
                         io_threads: this.io_thread_num.unwrap_or(5),
                         max_concurrent_requests_per_io_thread:
                             this.max_concurrent_requests_per_io_thread.unwrap_or(4),
@@ -361,6 +363,7 @@ struct RawRepoConfig {
     blobstore_cache_size: Option<usize>,
     changesets_cache_size: Option<usize>,
     filenodes_cache_size: Option<usize>,
+    bonsai_hg_mapping_cache_size: Option<usize>,
     io_thread_num: Option<usize>,
     cache_warmup: Option<RawCacheWarmupConfig>,
     max_concurrent_requests_per_io_thread: Option<usize>,
