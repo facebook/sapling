@@ -1,8 +1,3 @@
-#require no-fsmonitor
-
-Disabled fsmonitor test since watchman sock path exceeds limit:
-AssertionError: /tmp/hgtests.8M8JR4/child3/test-fb-hgext-treemanifest-prefetch.t-remotefilelog.true.shallowrepo.true.watchman/sock: path is too long
-
 There are three cases which are of interest in this test:
 
  - client remotefilelog enabled and the client repo is a shallowrepo

@@ -50,6 +50,7 @@ import collections
 import difflib
 import distutils.version as version
 import errno
+import hashlib
 import json
 import multiprocessing
 import os
@@ -994,7 +995,10 @@ class Test(unittest.TestCase):
             os.mkdir(self._chgsockdir)
 
         if self._watchman:
-            self._watchmandir = os.path.join(self._threadtmp, b"%s.watchman" % name)
+            shortname = hashlib.sha1(b"%s" % name).hexdigest()[:6]
+            self._watchmandir = os.path.join(
+                self._threadtmp, b"%s.watchman" % shortname
+            )
             os.mkdir(self._watchmandir)
             cfgfile = os.path.join(self._watchmandir, b"config.json")
 
