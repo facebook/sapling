@@ -1004,8 +1004,10 @@ class Test(unittest.TestCase):
 
             if os.name == "nt":
                 sockfile = "\\\\.\\pipe\\watchman-test-%s" % uuid.uuid4().hex
+                closefd = False
             else:
                 sockfile = os.path.join(self._watchmandir, b"sock")
+                closefd = True
 
             self._watchmansock = sockfile
 
@@ -1037,7 +1039,7 @@ class Test(unittest.TestCase):
 
             with open(clilogfile, "wb") as f:
                 self._watchmanproc = subprocess.Popen(
-                    argv, env=envb, stdin=None, stdout=f, stderr=f
+                    argv, env=envb, stdin=None, stdout=f, stderr=f, close_fds=closefd
                 )
 
             # Wait for watchman socket to become available
@@ -1055,7 +1057,7 @@ class Test(unittest.TestCase):
                 try:
                     # The watchman CLI can wait for a short time if sockfile
                     # is not ready.
-                    subprocess.check_output(argv, env=envb)
+                    subprocess.check_output(argv, env=envb, close_fds=closefd)
                     watchmanavailable = True
                 except Exception:
                     time.sleep(0.1)
