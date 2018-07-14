@@ -533,9 +533,9 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     nf = iter(auditpass).next
     for st in util.statfiles([join(f) for f in auditpass]):
         f = nf()
-        if st or f in dmap:
+        if (st and not ignore(f)) or f in dmap:
             results[f] = st
-        else:
+        elif not st:
             # '?' (untracked) file was deleted from the filesystem - remove it
             # from treestate.
             #

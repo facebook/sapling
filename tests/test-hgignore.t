@@ -1,3 +1,4 @@
+  $ setconfig format.dirstate=2
   $ hg init ignorerepo
   $ cd ignorerepo
 
