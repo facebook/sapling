@@ -981,7 +981,7 @@ class manifestfactory(object):
         if node in mfl._dirmancache.get(dir, ()):
             return mfl._dirmancache[dir][node]
 
-        m = hybridmanifestctx(self.ui, mfl, mfl._revlog, node)
+        m = hybridmanifestctx(mfl.ui, mfl, mfl._revlog, node)
 
         if node != revlog.nullid:
             mancache = mfl._dirmancache.get(dir)
@@ -1052,7 +1052,7 @@ class manifestfactory(object):
 
     def ctxwrite(self, orig, mfctx, transaction, link, p1, p2, added, removed):
         mfl = mfctx._manifestlog
-        treeenabled = self.ui.configbool("fastmanifest", "usetree")
+        treeenabled = mfl.ui.configbool("fastmanifest", "usetree")
         if (
             supportsctree
             and treeenabled
@@ -1078,7 +1078,7 @@ class manifestfactory(object):
                 raise RuntimeError("no-op loadflat should never be hit")
 
             tree = hybridmanifest(
-                self.ui, opener, mfl, loadflat=loadflat, node=p1
+                mfl.ui, opener, mfl, loadflat=loadflat, node=p1
             )._treemanifest()
 
             if tree is not None:
@@ -1103,7 +1103,7 @@ class manifestfactory(object):
 
                 # linknode=None because linkrev is provided
                 node = tmfl.add(
-                    self.ui,
+                    mfl.ui,
                     newtree,
                     p1,
                     p2,

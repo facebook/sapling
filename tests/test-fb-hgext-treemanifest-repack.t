@@ -280,3 +280,37 @@ Test incremental repack that doesn't take all packs
   $ hg repack --incremental --config packs.maxpackfilecount=1
   purging shared treemanifest pack cache (4 entries) -- too many files
   $ ls_l .hg/cache/packs/manifests/
+  $ cd ..
+
+Test hg gc with multiple repositories
+  $ hginit master_remotefilelog_only
+  $ cd master_remotefilelog_only
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > [remotefilelog]
+  > server=True
+  > serverexpiration=-1
+  > [treemanifest]
+  > server=True
+  > EOF
+  $ echo x > x
+  $ hg commit -qAm x
+  $ echo x >> x
+  $ hg commit -qAm x2
+  $ cd ..
+
+  $ hgcloneshallow ssh://user@dummy/master_remotefilelog_only shallow -q
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ hgcloneshallow ssh://user@dummy/master_remotefilelog_only shallow_tree -q
+  $ cd shallow_tree
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > fastmanifest=
+  > treemanifest=
+  > [fastmanifest]
+  > usetree=True
+  > usecache=False
+  > EOF
+  $ hg gc
+  finished: removed 0 of 2 files (0.00 GB to 0.00 GB)
