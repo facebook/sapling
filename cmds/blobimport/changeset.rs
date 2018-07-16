@@ -15,7 +15,6 @@ use failure::prelude::*;
 use futures::{Future, IntoFuture};
 use futures::future::{self, SharedItem};
 use futures::stream::{self, Stream};
-use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
 
@@ -209,7 +208,6 @@ pub fn upload_changesets<'a>(
     matches: &ArgMatches<'a>,
     revlogrepo: RevlogRepo,
     blobrepo: Arc<BlobRepo>,
-    cpupool_size: usize,
 ) -> BoxStream<BoxFuture<SharedItem<BlobChangeset>, Error>, Error> {
     let changesets = if let Some(hash) = matches.value_of("changeset") {
         future::result(HgNodeHash::from_str(hash))
@@ -286,10 +284,6 @@ pub fn upload_changesets<'a>(
                     .join3(rootmf, entries.collect())
                     .map(move |(cs, rootmf, entries)| (csid, cs, rootmf, entries))
             }
-        })
-        .map({
-            let cpupool = CpuPool::new(cpupool_size);
-            move |fut| cpupool.spawn(fut)
         })
         .buffered(100)
         .map(move |(csid, cs, rootmf, entries)| {
