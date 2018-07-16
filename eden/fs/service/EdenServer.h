@@ -113,7 +113,7 @@ class EdenServer : private TakeoverHandler {
    * This may be called from any thread while a call to run() is outstanding,
    * and will cause run() to return.
    */
-  void stop() const;
+  void stop();
 
   /**
    * Request to shutdown the server for a graceful restart operation,
@@ -346,7 +346,7 @@ class EdenServer : private TakeoverHandler {
 
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
-  void shutdownSubscribers() const;
+  void shutdownSubscribers();
 
   /*
    * Member variables.

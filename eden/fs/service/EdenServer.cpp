@@ -965,7 +965,7 @@ void EdenServer::prepareThriftAddress() {
   }
 }
 
-void EdenServer::stop() const {
+void EdenServer::stop() {
   shutdownSubscribers();
   server_->stop();
 }
@@ -1013,7 +1013,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
   return takeoverPromise_.getFuture();
 }
 
-void EdenServer::shutdownSubscribers() const {
+void EdenServer::shutdownSubscribers() {
   // TODO: Set a flag in handler_ to reject future subscription requests.
   // Alternatively, have them seamless transfer through takeovers.
 
@@ -1021,7 +1021,7 @@ void EdenServer::shutdownSubscribers() const {
   // those down now, otherwise they will block the server_->stop() call
   // below
   XLOG(DBG1) << "cancel all subscribers prior to stopping thrift";
-  const auto mountPoints = mountPoints_.wlock();
+  auto mountPoints = mountPoints_.wlock();
   for (auto& entry : *mountPoints) {
     auto& info = entry.second;
     info.edenMount->getJournal().cancelAllSubscribers();
