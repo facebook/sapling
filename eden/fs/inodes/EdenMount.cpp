@@ -176,7 +176,6 @@ EdenMount::EdenMount(
       mountGeneration_(globalProcessGeneration | ++mountGeneration),
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
       lastCheckoutTime_{serverState_->getClock()->getRealtime()},
-      path_(config_->getMountPath()),
       uid_(getuid()),
       gid_(getgid()),
       clock_(serverState_->getClock()) {}
@@ -382,7 +381,7 @@ FuseChannel* EdenMount::getFuseChannel() const {
 }
 
 const AbsolutePath& EdenMount::getPath() const {
-  return path_;
+  return config_->getMountPath();
 }
 
 ThreadLocalEdenStats* EdenMount::getStats() const {
@@ -672,7 +671,7 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
     }
 
     return serverState_->getPrivHelper()
-        ->fuseMount(path_.stringPiece())
+        ->fuseMount(getPath().stringPiece())
         .then([this](folly::File&& fuseDevice) {
           createFuseChannel(std::move(fuseDevice));
           return channel_->initialize()
@@ -706,7 +705,10 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
 
 void EdenMount::createFuseChannel(folly::File fuseDevice) {
   channel_.reset(new FuseChannel(
-      std::move(fuseDevice), path_, FLAGS_fuseNumThreads, dispatcher_.get()));
+      std::move(fuseDevice),
+      getPath(),
+      FLAGS_fuseNumThreads,
+      dispatcher_.get()));
 }
 
 void EdenMount::fuseInitSuccessful(
@@ -728,7 +730,7 @@ void EdenMount::fuseInitSuccessful(
         }
 
         fuseCompletionPromise_.setValue(TakeoverData::MountInfo(
-            path_,
+            getPath(),
             config_->getClientDirectory(),
             bindMounts,
             std::move(stopData.fuseDevice),

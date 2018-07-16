@@ -119,8 +119,8 @@ class ClientConfig {
       AbsolutePathPiece mountPath,
       std::vector<BindMount>&& bindMounts);
 
-  AbsolutePath clientDirectory_;
-  AbsolutePath mountPath_;
+  const AbsolutePath clientDirectory_;
+  const AbsolutePath mountPath_;
   std::vector<BindMount> bindMounts_;
   std::string repoType_;
   std::string repoSource_;

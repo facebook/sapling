@@ -573,7 +573,7 @@ class EdenMount {
    */
   std::shared_ptr<ServerState> serverState_;
 
-  std::unique_ptr<ClientConfig> config_;
+  const std::unique_ptr<const ClientConfig> config_;
   std::unique_ptr<InodeMap> inodeMap_;
   std::unique_ptr<EdenDispatcher> dispatcher_;
   std::unique_ptr<ObjectStore> objectStore_;
@@ -658,8 +658,6 @@ class EdenMount {
    * waiting on us for a response.
    */
   folly::Promise<TakeoverData::MountInfo> fuseCompletionPromise_;
-
-  AbsolutePath const path_; // the path where this MountPoint is mounted
 
   /**
    * uid and gid that we'll set as the owners in the stat information
