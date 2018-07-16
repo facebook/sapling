@@ -55,6 +55,7 @@ use slog_logview::LogViewDrain;
 use mercurial_types::RepositoryId;
 use mercurial_types::nodehash::HgChangesetId;
 use metaconfig::RepoConfigs;
+use scuba_ext::ScubaSampleBuilder;
 
 use actor::{unwrap_request, MononokeActor, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse};
 use errors::ErrorKind;
@@ -246,7 +247,11 @@ fn main() -> Result<()> {
             .route(
                 "/status",
                 http::Method::GET,
-                |_: HttpRequest<HttpServerState>| HttpResponse::Ok().body("ok"),
+                |mut req: HttpRequest<HttpServerState>| {
+                    // removing ScubaSampleBuilder will disable scuba logging for this request.
+                    req.extensions_mut().remove::<ScubaSampleBuilder>();
+                    HttpResponse::Ok().body("ok")
+                },
             )
             .scope("/{repo}", |repo| {
                 repo.resource("/blob/{changeset}/{path:.*}", |r| {
