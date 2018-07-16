@@ -33,44 +33,59 @@ starts api server
   > sleep 0.1
   > done
 
+  $ if [[ -z "$PORT" ]]; then
+  >   echo "error: Mononoke API Server is not started"
+  >   cat $TESTTMP/apiserver.out
+  >   exit 1
+  > fi
+
+  $ APISERVER="https://localhost:$PORT"
+
+ping test
+  $ sslcurl -i $APISERVER/status 2> /dev/null | grep -iv "date"
+  HTTP/2 200 \r (esc)
+  content-length: 2\r (esc)
+  \r (esc)
+  ok
+
 test cat file
-  $ curl http://127.0.0.1:$PORT/repo/blob/$COMMIT1/test 2> /dev/null > output
+  $ sslcurl $APISERVER/repo/blob/$COMMIT1/test 2> /dev/null > output
   $ diff output - <<< $TEST_CONTENT
 
 test link file (no follow)
-  $ curl http://127.0.0.1:$PORT/repo/blob/$COMMIT1/link 2> /dev/null
+  $ sslcurl $APISERVER/repo/blob/$COMMIT1/link 2> /dev/null
   test (no-eol)
 
 test folder
-  $ curl -w "\n%{http_code}" http://127.0.0.1:$PORT/repo/blob/$COMMIT1/folder 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/$COMMIT1/folder 2> /dev/null
   folder is invalid
   400 (no-eol)
 
 test cat renamed file
-  $ curl http://127.0.0.1:$PORT/repo/blob/$COMMIT2/test-rename 2> /dev/null > output
+  $ sslcurl $APISERVER/repo/blob/$COMMIT2/test-rename 2> /dev/null > output
   $ diff output - <<< $TEST_CONTENT
 
-  $ curl -w "\n%{http_code}" http://127.0.0.1:$PORT/repo/blob/$COMMIT2/test 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/$COMMIT2/test 2> /dev/null
   test not found
   404 (no-eol)
 
-  $ curl http://127.0.0.1:$PORT/status 2> /dev/null
+  $ sslcurl $APISERVER/status 2> /dev/null
   ok (no-eol)
 
-  $ curl -w "\n%{http_code}" http://127.0.0.1:$PORT/repo/blob/0000000000000000000000000000000000000001/test 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000000000000000000000000000000000000001/test 2> /dev/null
   0000000000000000000000000000000000000001 not found
   404 (no-eol)
 
-  $ curl -w "\n%{http_code}" http://127.0.0.1:$PORT/other/blob/0000000000000000000000000000000000000001/test 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/other/blob/0000000000000000000000000000000000000001/test 2> /dev/null
   other not found
   404 (no-eol)
 
-  $ curl -w "\n%{http_code}" http://127.0.0.1:$PORT/repo/blob/0000/test 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000/test 2> /dev/null
   0000 is invalid
   400 (no-eol)
 
-  $ curl -i http://127.0.0.1:$PORT//blob/000/test 2> /dev/null | grep 404
-  HTTP/1.1 404 Not Found\r (esc)
+  $ sslcurl -i $APISERVER//blob/000/test 2> /dev/null | grep 404
+  HTTP/2 404 \r (esc)
 
-  $ curl -i http://127.0.0.1:$PORT/sup/blob/ 2> /dev/null | grep 404
-  HTTP/1.1 404 Not Found\r (esc)
+  $ sslcurl -i $APISERVER/sup/blob/ 2> /dev/null | grep 404
+  HTTP/2 404 \r (esc)

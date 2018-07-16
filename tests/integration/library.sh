@@ -16,6 +16,10 @@ EOF
   python "$TESTTMP/get_free_socket.py"
 }
 
+function sslcurl {
+  curl --cert "$TESTDIR/testcert.crt" --cacert "$TESTDIR/testcert.crt" --key "$TESTDIR/testcert.key" "$@"
+}
+
 function mononoke {
   export MONONOKE_SOCKET
   MONONOKE_SOCKET=$(get_free_socket)
@@ -33,10 +37,7 @@ function mononoke {
 function wait_for_mononoke {
   local attempts=150
 
-  SSLCURL="curl --cert $TESTDIR/testcert.crt \
-                --cacert $TESTDIR/testcert.crt \
-                --key $TESTDIR/testcert.key \
-                --noproxy localhost \
+  SSLCURL="sslcurl --noproxy localhost \
                 https://localhost:$MONONOKE_SOCKET"
 
   for _ in $(seq 1 $attempts); do
@@ -137,7 +138,11 @@ function blobimport {
 }
 
 function apiserver {
-  $MONONOKE_APISERVER --config-path "$TESTTMP/mononoke-config-rocks" --config-bookmark "local_master"  "$@" >> "$TESTTMP/apiserver.out" 2>&1 &
+  $MONONOKE_APISERVER "$@" --config-path "$TESTTMP/mononoke-config-rocks" \
+    --config-bookmark "local_master" \
+    --ssl-ca "$TESTDIR/testcert.crt" \
+    --ssl-private-key "$TESTDIR/testcert.key" \
+    --ssl-certificate "$TESTDIR/testcert.crt" >> "$TESTTMP/apiserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 

@@ -21,6 +21,7 @@ extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
 extern crate scuba_ext;
+extern crate secure_utils;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -191,6 +192,25 @@ fn main() -> Result<()> {
                 .required_unless("config-bookmark")
                 .help("commit hash of the config repository"),
         )
+        .arg(
+            Arg::with_name("ssl-certificate")
+                .long("ssl-certificate")
+                .value_name("PATH")
+                .help("path to the ssl certificate file"),
+        )
+        .arg(
+            Arg::with_name("ssl-private-key")
+                .long("ssl-private-key")
+                .value_name("PATH")
+                .help("path to the ssl private key file")
+                .requires("ssl-ca"),
+        )
+        .arg(
+            Arg::with_name("ssl-ca")
+                .long("ssl-ca")
+                .value_name("PATH")
+                .help("path to the ssl ca file"),
+        )
         .get_matches();
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
@@ -258,11 +278,43 @@ fn main() -> Result<()> {
                     r.method(http::Method::GET).with_async(get_blob_content)
                 })
             })
-    }).bind(format!("{}:{}", host, port))?;
+    });
+
+    let address = format!("{}:{}", host, port);
+
+    let server = if let Some(cert) = matches.value_of("ssl-certificate") {
+        let cert = cert.to_string();
+        let private_key = matches
+            .value_of("ssl-private-key")
+            .expect("must specify ssl private key")
+            .to_string();
+        let ca_pem = matches
+            .value_of("ssl-ca")
+            .expect("must specify CA")
+            .to_string();
+
+        let ssl = secure_utils::SslConfig {
+            cert,
+            private_key,
+            ca_pem,
+        };
+        let ssl = secure_utils::build_tls_acceptor_builder(ssl)?;
+
+        server.bind_ssl(address, ssl)?
+    } else {
+        server.bind(address)?
+    };
+
     let address = server.addrs()[0];
 
     server.start();
-    info!(root_logger, "Listening to http://{}", address);
+
+    if matches.is_present("ssl-private-key") {
+        info!(root_logger, "Listening to https://{}", address);
+    } else {
+        info!(root_logger, "Listening to http://{}", address);
+    }
+
     let _ = sys.run();
 
     Ok(())
