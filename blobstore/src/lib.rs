@@ -12,6 +12,7 @@ extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate inlinable_string;
 extern crate tokio;
 extern crate tokio_timer;
 

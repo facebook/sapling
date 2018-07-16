@@ -5,6 +5,8 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Error;
+use inlinable_string::InlinableString;
+
 use futures_ext::BoxFuture;
 
 use mononoke_types::BlobstoreBytes;
@@ -14,19 +16,20 @@ use {Blobstore, CacheBlobstoreExt};
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
 #[derive(Clone)]
 pub struct PrefixBlobstore<T: Blobstore + Clone> {
-    prefix: String,
+    // Try to inline the prefix to ensure copies remain cheap. Most prefixes are short anyway.
+    prefix: InlinableString,
     blobstore: T,
 }
 
 impl<T: Blobstore + Clone> PrefixBlobstore<T> {
-    pub fn new<S: Into<String>>(blobstore: T, prefix: S) -> Self {
+    pub fn new<S: Into<InlinableString>>(blobstore: T, prefix: S) -> Self {
         let prefix = prefix.into();
         Self { prefix, blobstore }
     }
 
     #[inline]
     fn prepend(&self, key: String) -> String {
-        [self.prefix.as_str(), key.as_str()].concat()
+        [&self.prefix, key.as_str()].concat()
     }
 }
 
