@@ -78,7 +78,6 @@ mod listener;
 mod monitoring;
 mod remotefilelog;
 mod repo;
-mod ssl;
 
 use std::collections::HashMap;
 use std::io;
@@ -223,7 +222,7 @@ fn start_repo_listeners<I>(
     repos: I,
     root_log: &Logger,
     sockname: &str,
-    ssl: ssl::SslConfig,
+    ssl: secure_utils::SslConfig,
 ) -> Result<(Vec<JoinHandle<!>>, ReadyState)>
 where
     I: IntoIterator<Item = (String, RepoConfig)>,
@@ -295,9 +294,9 @@ fn connection_acceptor(
     sockname: &str,
     root_log: Logger,
     repo_senders: HashMap<String, mpsc::Sender<(Stdio, SocketAddr)>>,
-    ssl: ssl::SslConfig,
+    ssl: secure_utils::SslConfig,
 ) -> ! {
-    let tls_acceptor = ssl::build_tls_acceptor(ssl).expect("failed to build tls acceptor");
+    let tls_acceptor = secure_utils::build_tls_acceptor(ssl).expect("failed to build tls acceptor");
 
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
     let remote = core.remote();
@@ -577,7 +576,7 @@ fn main() {
         let private_key = matches.value_of("private_key").unwrap().to_string();
         let ca_pem = matches.value_of("ca_pem").unwrap().to_string();
 
-        let ssl = ssl::SslConfig {
+        let ssl = secure_utils::SslConfig {
             cert,
             private_key,
             ca_pem,
