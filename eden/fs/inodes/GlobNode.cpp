@@ -103,10 +103,10 @@ struct TreeInodePtrRoot {
    * We only do this if the child is not already materialized */
   template <typename ENTRY>
   bool entryShouldPrefetch(const ENTRY& entry) {
-    return !entry.second.isMaterialized();
+    return !entry.second.isMaterialized() && !entryIsTree(entry);
   }
   bool entryShouldPrefetch(const DirEntry* entry) {
-    return !entry->isMaterialized();
+    return !entry->isMaterialized() && !entryIsTree(entry);
   }
 
   /** Returns the hash for the given ENTRY */
@@ -172,10 +172,10 @@ struct TreeRoot {
     return entry->isTree();
   }
 
-  // We always need to prefetch children of a raw Tree
+  // We always need to prefetch file children of a raw Tree
   template <typename ENTRY>
-  bool entryShouldPrefetch(const ENTRY&) {
-    return true;
+  bool entryShouldPrefetch(const ENTRY& entry) {
+    return !entryIsTree(entry);
   }
 
   template <typename ENTRY>
@@ -287,6 +287,9 @@ Future<vector<RelativePath>> GlobNode::evaluateImpl(
           // Matched!
           if (node->isLeaf_) {
             results.emplace_back((rootPath + name));
+            if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
+              fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
+            }
             continue;
           }
 
@@ -310,8 +313,6 @@ Future<vector<RelativePath>> GlobNode::evaluateImpl(
                             fileBlobsToPrefetch);
                       }));
             }
-          } else if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
-            fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
           }
         }
       } else {
@@ -321,6 +322,10 @@ Future<vector<RelativePath>> GlobNode::evaluateImpl(
           if (node->alwaysMatch_ || node->matcher_.match(name.stringPiece())) {
             if (node->isLeaf_) {
               results.emplace_back((rootPath + name));
+              if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
+                fileBlobsToPrefetch->wlock()->emplace_back(
+                    root.entryHash(entry));
+              }
               continue;
             }
             // Not the leaf of a pattern; if this is a dir, we need to
@@ -344,8 +349,6 @@ Future<vector<RelativePath>> GlobNode::evaluateImpl(
                               fileBlobsToPrefetch);
                         }));
               }
-            } else if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
-              fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
             }
           }
         }
@@ -459,6 +462,9 @@ Future<vector<RelativePath>> GlobNode::evaluateRecursiveComponentImpl(
         if (node->alwaysMatch_ ||
             node->matcher_.match(candidateName.stringPiece())) {
           results.emplace_back(candidateName);
+          if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
+            fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
+          }
           // No sense running multiple matches for this same file.
           break;
         }
@@ -481,8 +487,6 @@ Future<vector<RelativePath>> GlobNode::evaluateRecursiveComponentImpl(
                         fileBlobsToPrefetch);
                   }));
         }
-      } else if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
-        fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
       }
     }
   }
