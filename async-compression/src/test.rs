@@ -10,7 +10,7 @@ use bzip2;
 use flate2;
 use futures::{Async, Poll};
 use quickcheck::{Arbitrary, Gen, TestResult};
-use tokio_core::reactor::Core;
+use tokio;
 use tokio_io::AsyncWrite;
 use tokio_io::io::read_to_end;
 
@@ -113,8 +113,8 @@ fn roundtrip(ct: CompressorType, input: &[u8]) -> TestResult {
     let result = Vec::with_capacity(32 * 1024);
     let read_future = read_to_end(decoder, result);
 
-    let mut core = Core::new().unwrap();
-    let (decoder, result) = core.run(read_future).unwrap();
+    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let (decoder, result) = runtime.block_on(read_future).unwrap();
     assert_eq!(decoder.total_thru(), input.len() as u64);
     assert_eq!(
         decoder.get_ref().get_ref().get_ref().total_thru(),

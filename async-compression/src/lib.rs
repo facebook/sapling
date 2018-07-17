@@ -17,7 +17,7 @@ extern crate futures;
 #[cfg(test)]
 extern crate quickcheck;
 #[cfg(test)]
-extern crate tokio_core;
+extern crate tokio;
 extern crate tokio_io;
 extern crate zstd;
 
