@@ -125,7 +125,7 @@ Add a hook to the server to make it spin until .hg/flag exists.
   >   repo._wlockfreeprefix.add('hookrunning')
   >   repo.vfs.write('hookrunning', '')
   >   while not repo.vfs.exists('flag'):
-  >     if time.time() - start > 5:
+  >     if time.time() - start > 20:
   >       print >> sys.stderr, "ERROR: Timeout waiting for .hg/flag"
   >       repo.vfs.unlink('hookrunning')
   >       return True
