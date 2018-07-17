@@ -226,8 +226,9 @@ class treestatemap(object):
             return self._tree.remove(f)
         else:
             # If watchman is used, treestate tracks "untracked" files before
-            # watchman clock. So only remove EXIST_* bits from the file.
-            # fsmonitor will do a stat check and drop(real=True) later.
+            # watchman clock. So only remove EXIST_* bits and copy infomation
+            # from the file. fsmonitor will do a stat check and drop(real=True)
+            # later.
             #
             # Typically, dropfile is used in 2 cases:
             # - "hg forget": mark the file as "untracked".
@@ -237,8 +238,12 @@ class treestatemap(object):
                 return False
             else:
                 state, mode, size, mtime, copied = entry
+                copied = None
                 state ^= state & (
-                    treestate.EXIST_NEXT | treestate.EXIST_P1 | treestate.EXIST_P2
+                    treestate.EXIST_NEXT
+                    | treestate.EXIST_P1
+                    | treestate.EXIST_P2
+                    | treestate.COPIED
                 )
                 state |= treestate.NEED_CHECK
                 self._tree.insert(f, state, mode, size, mtime, copied)
@@ -483,7 +488,7 @@ class treestatemap(object):
         existing = self._tree.get(dest, None)
         if existing:
             state, mode, size, mtime, copied = existing
-            if bool(copied) != bool(source):
+            if copied != source:
                 self._tree.insert(dest, state, mode, size, mtime, source)
         else:
             raise error.ProgrammingError("copy dest %r does not exist" % dest)

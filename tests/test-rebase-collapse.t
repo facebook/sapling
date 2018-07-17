@@ -1,3 +1,5 @@
+  $ setconfig format.dirstate=2
+
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=
