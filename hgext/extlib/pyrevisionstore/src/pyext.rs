@@ -1,8 +1,13 @@
 // Copyright Facebook, Inc. 2018
 //! Python bindings for a Rust hg store
-use cpython::{PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult, Python, PythonObject};
+use cpython::{PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult, PyString, Python,
+              PythonObject};
+use std::borrow::Cow;
+use std::path::{Path, PathBuf};
+
 use pythondatastore::PythonDataStore;
 use pythonutil::{from_delta_to_tuple, from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr};
+use revisionstore::datapack::DataPack;
 use revisionstore::datastore::DataStore;
 use revisionstore::key::Key;
 
@@ -13,6 +18,7 @@ py_module_initializer!(
     |py, m| {
         // init function
         m.add_class::<datastore>(py)?;
+        m.add_class::<datapack>(py)?;
         Ok(())
     }
 );
@@ -44,6 +50,48 @@ py_class!(class datastore |py| {
 
     def getmissing(&self, keys: &PyList) -> PyResult<PyList> {
         self.store(py).get_missing(py, keys)
+    }
+});
+
+py_class!(class datapack |py| {
+    data store: Box<DataPack>;
+    data pack_path: PathBuf;
+
+    def __new__(
+        _cls,
+        path: &PyString
+    ) -> PyResult<datapack> {
+        let raw_str: Cow<str> = path.to_string(py)?;
+        let path_str = Path::new(raw_str.as_ref());
+        let path = PathBuf::from(&path_str);
+        datapack::create_instance(
+            py,
+            Box::new(match DataPack::new(&path) {
+                Ok(pack) => pack,
+                Err(e) => return Err(to_pyerr(py, &e)),
+            }),
+            path,
+        )
+    }
+
+    def path(&self) -> PyResult<PyString> {
+        Ok(PyString::new(py, &self.pack_path(py).to_string_lossy()))
+    }
+
+    def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
+        <DataStorePyExt>::get(self.store(py).as_ref(), py, name, node)
+    }
+
+    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+        <DataStorePyExt>::get_delta_chain(self.store(py).as_ref(), py, name, node)
+    }
+
+    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+        <DataStorePyExt>::get_meta(self.store(py).as_ref(), py, name, node)
+    }
+
+    def getmissing(&self, keys: &PyList) -> PyResult<PyList> {
+        <DataStorePyExt>::get_missing(self.store(py).as_ref(), py, keys)
     }
 });
 
