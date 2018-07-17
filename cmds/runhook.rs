@@ -27,7 +27,7 @@ extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
 extern crate slog_glog_fmt;
-extern crate tokio_core;
+extern crate tokio;
 
 #[cfg(test)]
 extern crate async_unit;
@@ -53,7 +53,6 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::str::FromStr;
 use std::sync::Arc;
-use tokio_core::reactor::Core;
 
 const MAX_CONCURRENT_REQUESTS_PER_IO_THREAD: usize = 4;
 
@@ -163,15 +162,16 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
 // It all starts here
 fn main() -> Result<()> {
     let args_vec = args().collect();
-    let fut = run_hook(args_vec, create_blobrepo);
-    let mut core = Core::new().unwrap();
-    match core.run(fut) {
-        Ok(HookExecution::Accepted) => println!("Hook accepted the changeset"),
-        Ok(HookExecution::Rejected(rejection_info)) => {
-            println!("Hook rejected the changeset {}", rejection_info.description)
+    tokio::run(run_hook(args_vec, create_blobrepo).then(|res| {
+        match res {
+            Ok(HookExecution::Accepted) => println!("Hook accepted the changeset"),
+            Ok(HookExecution::Rejected(rejection_info)) => {
+                println!("Hook rejected the changeset {}", rejection_info.description)
+            }
+            Err(e) => println!("Failed to run hook {:?}", e),
         }
-        Err(e) => println!("Failed to run hook {:?}", e),
-    }
+        Ok(())
+    }));
     Ok(())
 }
 

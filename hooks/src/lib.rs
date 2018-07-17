@@ -42,8 +42,6 @@ extern crate metaconfig;
 extern crate mononoke_types;
 #[cfg(test)]
 extern crate tempdir;
-#[cfg(test)]
-extern crate tokio_core;
 
 pub mod lua_hook;
 pub mod rust_hook;
