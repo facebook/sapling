@@ -1,3 +1,7 @@
+Turn on treestate
+
+  $ setconfig format.dirstate=2
+
 Path conflict checking is currently disabled by default because of issue5716.
 Turn it on for this test.
 

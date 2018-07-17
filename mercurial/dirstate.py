@@ -464,7 +464,7 @@ class dirstate(object):
                 if self._map.hastrackeddir(d):
                     break
                 entry = self._map.get(d)
-                if entry is not None and entry[0] != "r":
+                if entry is not None and entry[0] not in "r?":
                     raise error.Abort(_("file %r in dirstate clashes with %r") % (d, f))
         self._dirty = True
         self._updatedfiles.add(f)
