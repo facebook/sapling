@@ -7,11 +7,13 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import contextlib
 import errno
+import fcntl
 import os
 import stat
 import struct
-from typing import BinaryIO, Optional, Tuple
+from typing import BinaryIO, Iterator, Optional, Tuple
 
 from facebook.eden.overlay.ttypes import OverlayDir
 
@@ -150,6 +152,24 @@ class Overlay:
 
     def __init__(self, path: str) -> None:
         self.path = path
+
+    @contextlib.contextmanager
+    def try_lock(self) -> Iterator[bool]:
+        info_path = os.path.join(self.path, "info")
+        try:
+            lock_file = open(info_path, "rb")
+        except OSError:
+            yield False
+            return
+
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            yield True
+        except OSError:
+            yield False
+        finally:
+            # Release the lock once the yield returns
+            lock_file.close()
 
     def get_path(self, inode_number: int) -> str:
         dir_name = "{:02x}".format(inode_number % 256)

@@ -32,7 +32,9 @@ from . import (
     debug as debug_mod,
     doctor as doctor_mod,
     filesystem,
+    fsck as fsck_mod,
     mtab,
+    overlay as overlay_mod,
     rage as rage_mod,
     stats as stats_mod,
     subcmd as subcmd_mod,
@@ -417,6 +419,54 @@ class DoctorCmd(Subcmd):
             mount_table=mtab.LinuxMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
         )
+
+
+@subcmd("fsck", "Perform a filesystem check for Eden")
+class FsckCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            action="store_true",
+            default=False,
+            help="Print more verbose information about issues found.",
+        )
+        parser.add_argument(
+            "path",
+            nargs="?",
+            help="The path to an Eden mount point. Uses `pwd` by default.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        config = create_config(args)
+        mount, rel_path = debug_mod.get_mount_path(args.path or os.getcwd())
+
+        # Get the path to the overlay directory for this mount point
+        client_dir = config._get_client_dir_for_mount_point(mount)
+        self._overlay_dir = os.path.join(client_dir, "local")
+        self._overlay = overlay_mod.Overlay(self._overlay_dir)
+
+        with fsck_mod.FilesystemChecker(self._overlay, verbose=args.verbose) as checker:
+            checker.scan_for_errors()
+            print("\nReport summary:")
+            if not checker.errors:
+                print("  No issues found")
+                return 0
+
+            num_warnings = 0
+            num_errors = 0
+            for error in checker.errors:
+                if error.level == fsck_mod.ErrorLevel.WARNING:
+                    num_warnings += 1
+                else:
+                    num_errors += 1
+
+            if num_warnings > 0:
+                print(f"  {num_warnings} warnings")
+            print(f"  {num_errors} errors")
+            if num_errors == 0:
+                return 2
+            return 1
 
 
 @subcmd(
