@@ -8,7 +8,7 @@
 from __future__ import absolute_import
 
 from hgext import treedirstate
-from mercurial import context, dirstate, extensions, policy, registrar, util
+from mercurial import context, dirstate, extensions, policy, registrar, treestate, util
 
 
 configtable = {}
@@ -77,7 +77,16 @@ def treedirstatewrite(orig, self, st, now):
     return orig(self, st, now)
 
 
+def treestatewrite(orig, self, st, now):
+    ui = self._ui
+    fakenow = ui.config("fakedirstatewritetime", "fakenow")
+    if fakenow:
+        now = util.parsedate(fakenow, ["%Y%m%d%H%M"])[0]
+    return orig(self, st, now)
+
+
 def extsetup(ui):
     extensions.wrapfunction(context.workingctx, "_poststatusfixup", _poststatusfixup)
     extensions.wrapfunction(context.committablectx, "markcommitted", markcommitted)
     extensions.wrapfunction(treedirstate.treedirstatemap, "write", treedirstatewrite)
+    extensions.wrapfunction(treestate.treestatemap, "write", treestatewrite)
