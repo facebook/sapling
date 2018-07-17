@@ -1,6 +1,6 @@
 #require killdaemons
 
-  $ setconfig treedirstate.useinnewrepos=0
+  $ setconfig format.dirstate=2
   $ hg clone http://localhost:$HGPORT/ copy
   abort: * (glob)
   [255]

@@ -794,12 +794,12 @@ def clone(
                     bookmarks.activate(destrepo, update)
     finally:
         release(srclock, destlock)
-        if cleandir is not None:
-            shutil.rmtree(cleandir, True)
         if srcpeer is not None:
             srcpeer.close()
         if destpeer is not None:
             destpeer.close()
+        if cleandir is not None:
+            shutil.rmtree(cleandir, True)
     return srcpeer, destpeer
 
 
