@@ -126,15 +126,14 @@ mod test {
     use std::io;
 
     use bytes::Bytes;
-    use futures::Stream;
-    use futures::stream;
-    use tokio_core::reactor;
+    use futures::{stream, Stream};
+    use tokio;
 
     use super::*;
 
     #[test]
     fn simple() {
-        let mut core = reactor::Core::new().unwrap();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
         let decoder = NetstringDecoder::new();
 
@@ -147,7 +146,7 @@ mod test {
             panic!("bad = {}", err);
         }).forward(out);
 
-        let (_, out) = core.run(xfer).unwrap();
+        let (_, out) = runtime.block_on(xfer).unwrap();
         let out = out.into_iter()
             .flat_map(|x| x.as_ref().to_vec())
             .collect::<Vec<_>>();
@@ -156,7 +155,7 @@ mod test {
 
     #[test]
     fn large() {
-        let mut core = reactor::Core::new().unwrap();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
         let decoder = NetstringDecoder::new();
 
@@ -171,7 +170,7 @@ mod test {
             panic!("bad = {}", err);
         }).forward(out);
 
-        let (_, out) = core.run(xfer).unwrap();
+        let (_, out) = runtime.block_on(xfer).unwrap();
         let out = out.into_iter()
             .flat_map(|x| x.as_ref().to_vec())
             .collect::<Vec<_>>();
@@ -181,7 +180,7 @@ mod test {
 
     #[test]
     fn partial() {
-        let mut core = reactor::Core::new().unwrap();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
         let decoder = NetstringDecoder::new();
 
@@ -197,7 +196,7 @@ mod test {
             panic!("bad = {}", err);
         }).forward(out);
 
-        let (_, out) = core.run(xfer).unwrap();
+        let (_, out) = runtime.block_on(xfer).unwrap();
         let out = out.into_iter()
             .flat_map(|x| x.as_ref().to_vec())
             .collect::<Vec<_>>();

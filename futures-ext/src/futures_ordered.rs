@@ -65,7 +65,6 @@ where
     type Item = <I::Item as IntoFuture>::Item;
     type Error = <I::Item as IntoFuture>::Error;
 
-
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.current.take() {
             Some(mut fut) => {
@@ -103,7 +102,6 @@ where
     elems.next().map(IntoFuture::into_future)
 }
 
-
 #[cfg(test)]
 mod test {
     use std::result;
@@ -111,7 +109,7 @@ mod test {
     use futures::{Future, Sink, Stream};
     use futures::sync::mpsc;
     use futures::task;
-    use tokio_core::reactor::Core;
+    use tokio;
 
     use super::*;
 
@@ -132,9 +130,9 @@ mod test {
         // stream ends.
         let futs = vec![delayed_future(10, tx.clone(), 4), delayed_future(20, tx, 2)];
 
-        let mut core = Core::new().unwrap();
-        core.run(futures_ordered(futs).collect()).unwrap();
-        let results = core.run(rx.collect());
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(futures_ordered(futs).collect()).unwrap();
+        let results = runtime.block_on(rx.collect());
         assert_eq!(results, Ok(vec![10, 20]));
     }
 

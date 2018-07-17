@@ -20,7 +20,6 @@ extern crate futures;
 #[macro_use]
 extern crate quickcheck;
 extern crate tokio;
-extern crate tokio_core;
 extern crate tokio_io;
 
 use bytes::Bytes;
@@ -587,7 +586,6 @@ mod test {
     use futures::stream;
     use futures::sync::mpsc;
     use tokio::timer::Delay;
-    use tokio_core::reactor::Core;
 
     #[derive(Debug)]
     struct MyErr;
@@ -602,16 +600,15 @@ mod test {
     fn discard() {
         use futures::sync::mpsc;
 
-        let mut core = Core::new().unwrap();
-        let handle = core.handle();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
         let (tx, rx) = mpsc::channel(1);
 
         let xfer = stream::iter_ok::<_, MyErr>(vec![123]).forward(tx);
 
-        handle.spawn(xfer.discard());
+        runtime.spawn(xfer.discard());
 
-        match core.run(rx.collect()) {
+        match runtime.block_on(rx.collect()) {
             Ok(v) => assert_eq!(v, vec![123]),
             bad => panic!("bad {:?}", bad),
         }
@@ -633,8 +630,8 @@ mod test {
         let s = stream::iter_ok::<_, ()>(vec!["hello", "there", "world"]).fuse();
         let (mut s, mut remainder) = s.return_remainder();
 
-        let mut core = Core::new().unwrap();
-        let res: Result<(), ()> = core.run(poll_fn(move || {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let res: Result<(), ()> = runtime.block_on(poll_fn(move || {
             assert_matches!(
                 remainder.poll(),
                 Err(ConservativeReceiverError::ReceiveBeforeSend)
