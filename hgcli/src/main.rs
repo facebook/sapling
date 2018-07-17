@@ -22,7 +22,6 @@ extern crate futures;
 extern crate openssl;
 extern crate secure_utils;
 extern crate tokio;
-extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_openssl;
 extern crate tokio_proto;
@@ -40,7 +39,6 @@ extern crate scuba_ext;
 extern crate sshrelay;
 
 use clap::{App, Arg, SubCommand};
-use tokio_core::reactor::Core;
 
 mod serve;
 
@@ -93,9 +91,13 @@ fn main() {
         .get_matches();
 
     let res = if let Some(subcmd) = matches.subcommand_matches("serve") {
-        Core::new()
+        tokio::runtime::Runtime::new()
             .map_err(Error::from)
-            .map(|mut reactor| reactor.run(serve::cmd(&matches, subcmd)))
+            .and_then(|mut runtime| {
+                let result = runtime.block_on(serve::cmd(&matches, subcmd));
+                runtime.shutdown_on_idle();
+                result
+            })
     } else {
         Err(failure::err_msg("unexpected or missing subcommand"))
     };
