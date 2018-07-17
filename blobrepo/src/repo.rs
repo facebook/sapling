@@ -7,8 +7,7 @@
 use std::collections::{BTreeMap, HashSet};
 use std::mem;
 use std::path::Path;
-use std::sync::{mpsc, Arc};
-use std::thread;
+use std::sync::Arc;
 use std::time::Duration;
 use std::usize;
 
@@ -47,7 +46,6 @@ use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, ContentId, DateTime,
                      FileContents, FileType, Generation, MPath, MPathElement, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
-use tokio_core::reactor::Core;
 
 use BlobChangeset;
 use BlobManifest;
@@ -255,31 +253,9 @@ impl BlobRepo {
         let bookmarks = MysqlDbBookmarks::open(&connection_params)
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
-        let mut io_remotes = vec![];
-        for i in 0..args.io_threads {
-            let (sender, recv) = mpsc::channel();
-            let builder = thread::Builder::new().name(format!("blobstore_io_{}", i));
-            builder
-                .spawn(move || {
-                    let mut core = Core::new()
-                        .expect("failed to create manifold blobrepo: failed to create core");
-                    sender
-                        .send(core.remote())
-                        .expect("failed to create manifold blobrepo: sending remote failed");
-                    loop {
-                        core.turn(None);
-                    }
-                })
-                .expect("failed to start blobstore io thread");
-
-            let remote = recv.recv()
-                .expect("failed to create manifold blobrepo: recv remote failed");
-            io_remotes.push(remote);
-        }
         let blobstore = ManifoldBlob::new_with_prefix(
             args.bucket.clone(),
             &args.prefix,
-            io_remotes.iter().collect(),
             args.max_concurrent_requests_per_io_thread,
         );
         let blobstore = new_memcache_blobstore(blobstore, "manifold", args.bucket.as_ref())?;

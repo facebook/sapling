@@ -21,7 +21,6 @@ extern crate serde;
 extern crate slog;
 #[macro_use]
 extern crate stats;
-extern crate tokio_core;
 extern crate uuid;
 
 extern crate heapsize;

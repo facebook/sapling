@@ -8,9 +8,10 @@
 
 extern crate clap;
 #[macro_use]
+extern crate cloned;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
-extern crate tokio_core;
 
 extern crate blobrepo;
 extern crate blobstore;
@@ -22,6 +23,7 @@ extern crate mercurial_types;
 extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
+extern crate tokio;
 
 use std::fmt;
 use std::str::FromStr;
@@ -32,7 +34,6 @@ use failure::{Error, Result};
 use futures::future;
 use futures::prelude::*;
 use futures::stream::iter_ok;
-use tokio_core::reactor::Core;
 
 use blobrepo::BlobRepo;
 use blobstore::{new_memcache_blobstore, Blobstore, CacheBlobstoreExt, PrefixBlobstore};
@@ -119,7 +120,6 @@ fn fetch_content_from_manifest(
 }
 
 fn fetch_content(
-    core: &mut Core,
     logger: Logger,
     repo: Arc<BlobRepo>,
     rev: &str,
@@ -130,24 +130,26 @@ fn fetch_content(
 
     let mf = repo.get_changeset_by_changesetid(&cs_id)
         .map(|cs| cs.manifestid().clone())
-        .and_then(|root_mf_id| repo.get_manifest_by_nodeid(&root_mf_id.into_nodehash()));
+        .and_then({
+            cloned!(repo);
+            move |root_mf_id| repo.get_manifest_by_nodeid(&root_mf_id.into_nodehash())
+        });
 
     let all_but_last = iter_ok::<_, Error>(path.clone().into_iter().rev().skip(1).rev());
 
-    let mf = core.run(mf).unwrap();
-    let folded: BoxFuture<_, Error> = all_but_last
-        .fold(mf, {
-            let logger = logger.clone();
-            move |mf, element| {
+    let folded: BoxFuture<_, Error> = mf.and_then({
+        cloned!(logger);
+        move |mf| {
+            all_but_last.fold(mf, move |mf, element| {
                 fetch_content_from_manifest(logger.clone(), mf, element).and_then(|content| {
                     match content {
                         Content::Tree(mf) => Ok(mf),
                         content => Err(format_err!("expected tree entry, found {:?}", content)),
                     }
                 })
-            }
-        })
-        .boxify();
+            })
+        }
+    }).boxify();
 
     let basename = path.basename().clone();
     folded
@@ -177,9 +179,6 @@ fn main() {
 
     let repo_id = args::get_repo_id(&matches);
 
-    let mut core = Core::new().unwrap();
-    let remote = core.remote();
-
     let future = match matches.subcommand() {
         (BLOBSTORE_FETCH, Some(sub_m)) => {
             let key = sub_m.value_of("KEY").unwrap().to_string();
@@ -190,7 +189,6 @@ fn main() {
             let blobstore = ManifoldBlob::new_with_prefix(
                 &manifold_args.bucket,
                 &manifold_args.prefix,
-                vec![&remote],
                 MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
             );
 
@@ -246,7 +244,7 @@ fn main() {
             let path = sub_m.value_of("PATH").unwrap();
 
             let repo = args::open_blobrepo(&logger, &matches);
-            fetch_content(&mut core, logger.clone(), Arc::new(repo), rev, path)
+            fetch_content(logger.clone(), Arc::new(repo), rev, path)
                 .and_then(|content| {
                     match content {
                         Content::Executable(_) => {
@@ -295,13 +293,10 @@ fn main() {
         }
     };
 
-    match core.run(future) {
-        Ok(()) => (),
-        Err(err) => {
-            println!("{:?}", err);
-            ::std::process::exit(1);
-        }
-    }
+    tokio::run(future.map_err(|err| {
+        println!("{:?}", err);
+        ::std::process::exit(1);
+    }));
 }
 
 fn detect_decode(key: &str, logger: &Logger) -> Option<&'static str> {
