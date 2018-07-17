@@ -176,7 +176,7 @@ def extsetup(ui):
 
 
 def reposetup(ui, repo):
-    if not util.safehasattr(repo, "dirstate"):
+    if not repo.local():
         return
 
     # The sparse extension should never be enabled in Eden repositories;
