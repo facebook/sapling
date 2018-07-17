@@ -132,6 +132,7 @@ from mercurial import (
     peer,
     phases,
     pushkey,
+    ui as uimod,
     util,
     wireproto,
 )
@@ -852,21 +853,17 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
             pullstarttime = time.time()
 
             try:
+                (pullcmd, pullopts) = cmdutil.getcmdanddefaultopts(
+                    "pull", commands.table
+                )
+                pullopts.update(kwargs)
                 # Prefer to pull from 'infinitepush' path if it exists.
                 # 'infinitepush' path has both infinitepush and non-infinitepush
                 # revisions, so pulling from it is safer.
                 # This is useful for dogfooding other hg backend that stores
                 # only public commits (e.g. Mononoke)
-                if "infinitepush" in ui.paths:
-                    path = "infinitepush"
-                else:
-                    path = "default"
-                (pullcmd, pullopts) = cmdutil.getcmdanddefaultopts(
-                    "pull", commands.table
-                )
-                pullopts.update(kwargs)
-                pullopts["source"] = path
-                pullcmd(ui, repo, **pullopts)
+                with _resetinfinitepushpath(ui):
+                    pullcmd(ui, repo, **pullopts)
             except Exception:
                 remoteerror = str(sys.exc_info()[1])
                 replacements = {
@@ -896,6 +893,31 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
         raise
 
 
+@contextlib.contextmanager
+def _resetinfinitepushpath(ui):
+    """
+    Sets "default" path to "infinitepush" path and deletes "infinitepush" path.
+    In some cases (e.g. when testing new hg backend which doesn't have commit cloud
+    commits) we want to do normal `hg pull` from "default" path but `hg pull -r HASH`
+    from "infinitepush" path if it's present. This is better than just setting
+    another path because of "remotenames" extension. Pulling or pushing to
+    another path will add lots of new remote bookmarks and that can be slow
+    and slow down smartlog.
+    """
+
+    overrides = {}
+    if "infinitepush" in ui.paths:
+        overrides[("paths", "default")] = ui.paths["infinitepush"].loc
+        overrides[("paths", "infinitepush")] = "!"
+        with ui.configoverride(overrides, "infinitepush"):
+            loc, sub = ui.configsuboptions("paths", "default")
+            ui.paths["default"] = uimod.path(ui, "default", rawloc=loc, suboptions=sub)
+            del ui.paths["infinitepush"]
+            yield
+    else:
+        yield
+
+
 def _pull(orig, ui, repo, source="default", **opts):
     # If '-r' or '-B' option is set, then prefer to pull from 'infinitepush' path
     # if it exists. 'infinitepush' path has both infinitepush and non-infinitepush
@@ -903,9 +925,13 @@ def _pull(orig, ui, repo, source="default", **opts):
     # This is useful for dogfooding other hg backend that stores only public commits
     # (e.g. Mononoke)
     if opts.get("rev") or opts.get("bookmark"):
-        if "infinitepush" in ui.paths:
-            source = "infinitepush"
+        with _resetinfinitepushpath(ui):
+            return _dopull(orig, ui, repo, source, **opts)
 
+    return _dopull(orig, ui, repo, source, **opts)
+
+
+def _dopull(orig, ui, repo, source="default", **opts):
     # Copy paste from `pull` command
     source, branches = hg.parseurl(ui.expandpath(source), opts.get("branch"))
 
