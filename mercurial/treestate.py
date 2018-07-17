@@ -177,11 +177,12 @@ class treestatemap(object):
         if existing:
             # preserve "copied" information
             state, mode, size, mtime, copied = existing
+            mode = 0
             state ^= state & treestate.EXIST_NEXT
         else:
             state = 0
             copied = None
-            mode = 0o666
+            mode = 0
             mtime = -1
             size = 0
         self._tree.insert(f, state, mode, size, mtime, copied)
