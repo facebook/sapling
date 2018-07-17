@@ -70,3 +70,6 @@ extern crate failure_derive;
 
 mod config;
 mod error;
+
+#[cfg(test)]
+extern crate tempdir;

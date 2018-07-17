@@ -79,9 +79,10 @@ impl ConfigSet {
     ///
     /// Errors will be pushed to an internal array, and can be retrieved by `errors`. Non-existed
     /// path is not considered as an error.
-    pub fn load_path(&mut self, path: &Path, source: &'static str) {
+    pub fn load_path<P: AsRef<Path>, S: Into<Bytes>>(&mut self, path: P, source: S) {
         let mut visited = HashSet::new();
-        self.load_dir_or_file(path, source, &mut visited);
+        let source = source.into();
+        self.load_dir_or_file(path.as_ref(), &source, &mut visited);
     }
 
     /// Load content of an unnamed config file. The `ValueLocation`s of loaded config items will
@@ -276,7 +277,49 @@ impl ConfigSet {
                         None => return,          // reach file end
                     }
                 }
-                b'%' => unimplemented!(),
+                b'%' => {
+                    static INCLUDE: &[u8] = b"%include ";
+                    static UNSET: &[u8] = b"%unset ";
+                    if buf.get(pos..pos + INCLUDE.len()) == Some(INCLUDE) {
+                        let path_start = pos + INCLUDE.len();
+                        let path_end = memchr(b'\n', &buf.as_ref()[pos..])
+                            .map(|len| len + pos)
+                            .unwrap_or(buf.len());
+                        if !skip_include {
+                            match ::std::str::from_utf8(&buf[path_start..path_end]) {
+                                Ok(literal_include_path) => {
+                                    let full_include_path = path.parent()
+                                        .unwrap()
+                                        .join(expand_path(literal_include_path));
+                                    self.load_dir_or_file(&full_include_path, source, visited);
+                                }
+                                Err(_error) => {
+                                    self.error(Error::Parse(
+                                        path.to_path_buf(),
+                                        path_start,
+                                        "invalid utf-8",
+                                    ));
+                                }
+                            }
+                        }
+                        pos = path_end;
+                    } else if buf.get(pos..pos + UNSET.len()) == Some(UNSET) {
+                        let name_start = pos + UNSET.len();
+                        let name_end = memchr(b'\n', &buf.as_ref()[pos..])
+                            .map(|len| len + pos)
+                            .unwrap_or(buf.len());
+                        let name = strip(&buf, name_start, name_end);
+                        let location = ValueLocation {
+                            path: shared_path.clone(),
+                            location: pos..name_end,
+                        };
+                        self.set_internal(section.clone(), name, None, location.into(), source);
+                        pos = name_end;
+                    } else {
+                        self.error(Error::Parse(path.to_path_buf(), pos, "unknown instruction"));
+                        return;
+                    }
+                }
                 _ => {
                     let name_start = pos;
                     match memchr(b'=', &buf.as_ref()[name_start..]) {
@@ -396,9 +439,21 @@ fn strip(buf: &Bytes, start: usize, end: usize) -> Bytes {
     buf.slice(start, end)
 }
 
+/// Expand `~` to home directory.
+fn expand_path(path: &str) -> PathBuf {
+    if path.starts_with("~/") {
+        if let Some(home) = ::std::env::home_dir() {
+            return home.join(Path::new(&path[2..]));
+        }
+    }
+    Path::new(path).to_path_buf()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+    use tempdir::TempDir;
 
     #[test]
     fn test_empty() {
@@ -497,5 +552,97 @@ mod tests {
             format!("{}", cfg.errors()[0]),
             "\"\": parse error around byte 10: missing \'=\' for config value"
         );
+    }
+
+    #[test]
+    fn test_parse_unset() {
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[x]\n\
+             a = 1\n\
+             %unset b\n\
+             b = 2\n\
+             %unset  a \n\
+             c = 3\n\
+             d = 4\n\
+             [y]\n\
+             %unset  c\n\
+             [x]\n\
+             %unset  d ",
+            "test_parse_unset",
+        );
+
+        assert_eq!(cfg.get("x", "a"), None);
+        assert_eq!(cfg.get("x", "b"), Some(Bytes::from("2")));
+        assert_eq!(cfg.get("x", "c"), Some(Bytes::from("3")));
+        assert_eq!(cfg.get("x", "d"), None);
+
+        let sources = cfg.get_sources("x", "a");
+        assert_eq!(sources.len(), 2);
+        assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
+        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 25..35));
+    }
+
+    fn write_file(path: PathBuf, content: &str) {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let mut f = fs::File::create(path).unwrap();
+        f.write_all(content.as_bytes()).unwrap();
+    }
+
+    #[test]
+    fn test_parse_include() {
+        let dir = TempDir::new("test_parse_include").unwrap();
+        write_file(
+            dir.path().join("rootrc"),
+            "[x]\n\
+             b=1\n\
+             a=1\n\
+             %include dir\n\
+             %include b.rc\n\
+             [y]\n\
+             b=1\n\
+             [x]\n\
+             %unset f",
+        );
+
+        write_file(dir.path().join("dir/abc.rc"), "[x]\na=2\nb=2");
+        write_file(dir.path().join("dir/y.rc"), "[y]\ny=1\n%include ../e.rc");
+        write_file(dir.path().join("dir/loop.rc"), "%include ../rootrc");
+
+        // Won't be loaded before it's not inside dir/ directly.
+        write_file(dir.path().join("dir/unused/unused.rc"), "[unused]\na=1");
+
+        // Won't be loaded before it does not have ".rc" extension.
+        write_file(dir.path().join("dir/unusedrc"), "[unused]\na=1");
+
+        // Will loaded. `%include` shouldn't cause cycles.
+        write_file(dir.path().join("b.rc"), "[x]\nb=4\n%include dir");
+
+        // Will be loaded. Shouldn't cause cycles.
+        write_file(dir.path().join("e.rc"), "[x]\ne=e\n%include f.rc");
+        write_file(
+            dir.path().join("f.rc"),
+            "[x]\nf=f\n%include e.rc\n%include rootrc",
+        );
+
+        let mut cfg = ConfigSet::new();
+        cfg.load_path(dir.path().join("rootrc"), "test_parse_include");
+        assert!(cfg.errors().is_empty());
+
+        assert_eq!(cfg.sections(), vec![Bytes::from("x"), Bytes::from("y")]);
+        assert_eq!(
+            cfg.keys("x"),
+            vec![
+                Bytes::from("b"),
+                Bytes::from("a"),
+                Bytes::from("e"),
+                Bytes::from("f"),
+            ]
+        );
+        assert_eq!(cfg.get("x", "a"), Some(Bytes::from("2")));
+        assert_eq!(cfg.get("x", "b"), Some(Bytes::from("4")));
+        assert_eq!(cfg.get("x", "e"), Some(Bytes::from("e")));
+        assert_eq!(cfg.get("x", "f"), None);
+        assert_eq!(cfg.get("y", "b"), Some(Bytes::from("1")));
     }
 }
