@@ -31,7 +31,7 @@ use errors::ErrorKind;
 
 #[derive(Debug)]
 pub enum MononokeRepoQuery {
-    GetBlobContent { path: String, changeset: String },
+    GetRawFile { path: String, changeset: String },
 }
 
 impl Message for MononokeRepoQuery {
@@ -39,7 +39,7 @@ impl Message for MononokeRepoQuery {
 }
 
 pub enum MononokeRepoResponse {
-    GetBlobContent { content: Bytes },
+    GetRawFile { content: Bytes },
 }
 
 fn binary_response(content: Bytes) -> HttpResponse {
@@ -56,7 +56,7 @@ impl Responder for MononokeRepoResponse {
         use MononokeRepoResponse::*;
 
         match self {
-            GetBlobContent { content } => Ok(binary_response(content)),
+            GetRawFile { content } => Ok(binary_response(content)),
         }
     }
 }
@@ -90,7 +90,7 @@ impl MononokeRepoActor {
         })
     }
 
-    fn get_blob_content(
+    fn get_raw_file(
         &self,
         changeset: String,
         path: String,
@@ -128,7 +128,7 @@ impl MononokeRepoActor {
             .and_then(move |content| match content {
                 Content::File(content)
                 | Content::Executable(content)
-                | Content::Symlink(content) => Ok(MononokeRepoResponse::GetBlobContent {
+                | Content::Symlink(content) => Ok(MononokeRepoResponse::GetRawFile {
                     content: content.into_bytes(),
                 }),
                 _ => Err(ErrorKind::InvalidInput(path.to_string())),
@@ -149,7 +149,7 @@ impl Handler<MononokeRepoQuery> for MononokeRepoActor {
         use MononokeRepoQuery::*;
 
         match msg {
-            GetBlobContent { changeset, path } => self.get_blob_content(changeset, path),
+            GetRawFile { changeset, path } => self.get_raw_file(changeset, path),
         }
     }
 }

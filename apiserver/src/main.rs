@@ -77,12 +77,12 @@ struct QueryInfo {
 // `actix_web::FromRequest` as well so actix-web will try to extract them from `actix::HttpRequest`
 // for us. In this case, the `State<HttpServerState>` and `Path<QueryInfo>`.
 // [1] https://docs.rs/actix-web/0.6.11/actix_web/trait.FromRequest.html#impl-FromRequest%3CS%3E-3
-fn get_blob_content(
+fn get_raw_file(
     (state, info): (State<HttpServerState>, actix_web::Path<QueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     unwrap_request(state.mononoke.send(MononokeQuery {
         repo: info.repo.clone(),
-        kind: MononokeRepoQuery::GetBlobContent {
+        kind: MononokeRepoQuery::GetRawFile {
             changeset: info.changeset.clone(),
             path: info.path.clone(),
         },
@@ -274,8 +274,8 @@ fn main() -> Result<()> {
                 },
             )
             .scope("/{repo}", |repo| {
-                repo.resource("/blob/{changeset}/{path:.*}", |r| {
-                    r.method(http::Method::GET).with_async(get_blob_content)
+                repo.resource("/raw/{changeset}/{path:.*}", |r| {
+                    r.method(http::Method::GET).with_async(get_raw_file)
                 })
             })
     });

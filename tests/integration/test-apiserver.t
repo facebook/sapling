@@ -49,43 +49,43 @@ ping test
   ok
 
 test cat file
-  $ sslcurl $APISERVER/repo/blob/$COMMIT1/test 2> /dev/null > output
+  $ sslcurl $APISERVER/repo/raw/$COMMIT1/test 2> /dev/null > output
   $ diff output - <<< $TEST_CONTENT
 
 test link file (no follow)
-  $ sslcurl $APISERVER/repo/blob/$COMMIT1/link 2> /dev/null
+  $ sslcurl $APISERVER/repo/raw/$COMMIT1/link 2> /dev/null
   test (no-eol)
 
 test folder
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/$COMMIT1/folder 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/$COMMIT1/folder 2> /dev/null
   folder is invalid
   400 (no-eol)
 
 test cat renamed file
-  $ sslcurl $APISERVER/repo/blob/$COMMIT2/test-rename 2> /dev/null > output
+  $ sslcurl $APISERVER/repo/raw/$COMMIT2/test-rename 2> /dev/null > output
   $ diff output - <<< $TEST_CONTENT
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/$COMMIT2/test 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/$COMMIT2/test 2> /dev/null
   test not found
   404 (no-eol)
 
   $ sslcurl $APISERVER/status 2> /dev/null
   ok (no-eol)
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000000000000000000000000000000000000001/test 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/0000000000000000000000000000000000000001/test 2> /dev/null
   0000000000000000000000000000000000000001 not found
   404 (no-eol)
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/other/blob/0000000000000000000000000000000000000001/test 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/other/raw/0000000000000000000000000000000000000001/test 2> /dev/null
   other not found
   404 (no-eol)
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000/test 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/0000/test 2> /dev/null
   0000 is invalid
   400 (no-eol)
 
-  $ sslcurl -i $APISERVER//blob/000/test 2> /dev/null | grep 404
+  $ sslcurl -i $APISERVER//raw/000/test 2> /dev/null | grep 404
   HTTP/2 404 \r (esc)
 
-  $ sslcurl -i $APISERVER/sup/blob/ 2> /dev/null | grep 404
+  $ sslcurl -i $APISERVER/sup/raw/ 2> /dev/null | grep 404
   HTTP/2 404 \r (esc)
