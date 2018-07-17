@@ -1,4 +1,5 @@
   $ . helpers-usechg.sh
+  $ setconfig format.dirstate=2
 
   $ hg init basic
   $ cd basic
@@ -161,7 +162,7 @@ transaction: in-memory dirstate changes should be written into
   R c
   $ hg debugstate --nodates
   a   0         -1 unset               b
-  r   0          0 set                 c
+  r   0          0 unset               c
 
 across branch
 
