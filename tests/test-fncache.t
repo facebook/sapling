@@ -1,3 +1,5 @@
+  $ setconfig format.dirstate=2
+
 Init repo1:
 
   $ hg init repo1
@@ -92,11 +94,11 @@ Non store repo:
   .hg/data/tst.d.hg
   .hg/data/tst.d.hg/foo.i
   .hg/dirstate
-  .hg/dirstate.tree.* (glob)
-  .hg/fsmonitor.state (fsmonitor !)
   .hg/last-message.txt
   .hg/phaseroots
   .hg/requires
+  .hg/treestate
+  .hg/treestate/* (glob)
   .hg/undo
   .hg/undo.backup.dirstate
   .hg/undo.backupfiles
@@ -123,8 +125,6 @@ Non fncache repo:
   .hg/cache/rbc-names-v1
   .hg/cache/rbc-revs-v1
   .hg/dirstate
-  .hg/dirstate.tree.* (glob)
-  .hg/fsmonitor.state (fsmonitor !)
   .hg/last-message.txt
   .hg/requires
   .hg/store
@@ -137,6 +137,8 @@ Non fncache repo:
   .hg/store/undo
   .hg/store/undo.backupfiles
   .hg/store/undo.phaseroots
+  .hg/treestate
+  .hg/treestate/* (glob)
   .hg/undo.backup.dirstate
   .hg/undo.bookmarks
   .hg/undo.branch
