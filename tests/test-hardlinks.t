@@ -1,3 +1,5 @@
+  $ setconfig format.dirstate=2
+
 #require hardlink
 
   $ cat > nlinks.py <<EOF
@@ -245,8 +247,6 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/.hg/cache/rbc-names-v1
   2 r4/.hg/cache/rbc-revs-v1
   2 r4/.hg/dirstate
-  2 r4/.hg/dirstate.tree.* (glob)
-  2 r4/.hg/fsmonitor.state (fsmonitor !)
   2 r4/.hg/hgrc
   2 r4/.hg/last-message.txt
   2 r4/.hg/requires
@@ -263,6 +263,7 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/.hg/store/undo.backup.phaseroots
   2 r4/.hg/store/undo.backupfiles
   2 r4/.hg/store/undo.phaseroots
+  2 r4/.hg/treestate/* (glob)
   [24] r4/\.hg/undo\.backup\.dirstate (re)
   2 r4/.hg/undo.bookmarks
   2 r4/.hg/undo.branch
@@ -296,8 +297,6 @@ Update back to revision 12 in r4 should break hardlink of file f1 and f3:
   2 r4/.hg/cache/rbc-names-v1
   2 r4/.hg/cache/rbc-revs-v1
   1 r4/.hg/dirstate
-  2 r4/.hg/dirstate.tree.* (glob)
-  1 r4/.hg/fsmonitor.state (fsmonitor !)
   2 r4/.hg/hgrc
   2 r4/.hg/last-message.txt
   2 r4/.hg/requires
@@ -314,6 +313,7 @@ Update back to revision 12 in r4 should break hardlink of file f1 and f3:
   2 r4/.hg/store/undo.backup.phaseroots
   2 r4/.hg/store/undo.backupfiles
   2 r4/.hg/store/undo.phaseroots
+  2 r4/.hg/treestate/* (glob)
   [24] r4/\.hg/undo\.backup\.dirstate (re)
   2 r4/.hg/undo.bookmarks
   2 r4/.hg/undo.branch
