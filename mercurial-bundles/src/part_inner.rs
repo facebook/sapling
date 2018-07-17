@@ -27,6 +27,7 @@ use futures_ext::{StreamExt, StreamLayeredExt};
 use infinitepush;
 use part_header::{PartHeader, PartHeaderType};
 use part_outer::{OuterFrame, OuterStream};
+use pushrebase;
 use wirepack;
 
 // --- Part parameters
@@ -93,6 +94,10 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
                 logger.new(o!("stream" => "cg2")),
             ));
             Bundle2Item::Changegroup(header, Box::new(cg2_stream))
+        }
+        &PartHeaderType::B2xCommonHeads => {
+            let heads_stream = wrapped_stream.decode(pushrebase::CommonHeadsUnpacker::new());
+            Bundle2Item::B2xCommonHeads(header, Box::new(heads_stream))
         }
         &PartHeaderType::B2xInfinitepush => {
             let cg2_stream = wrapped_stream.decode(changegroup::unpacker::Cg2Unpacker::new(

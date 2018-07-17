@@ -62,6 +62,7 @@ pub mod part_encode;
 mod part_header;
 mod part_inner;
 mod part_outer;
+mod pushrebase;
 mod quickcheck_types;
 mod stream_start;
 mod types;
@@ -90,6 +91,7 @@ pub use types::StreamHeader;
 pub enum Bundle2Item {
     Start(StreamHeader),
     Changegroup(PartHeader, BoxStream<changegroup::Part, Error>),
+    B2xCommonHeads(PartHeader, BoxStream<mercurial_types::HgChangesetId, Error>),
     B2xInfinitepush(PartHeader, BoxStream<changegroup::Part, Error>),
     B2xTreegroup2(PartHeader, BoxStream<wirepack::Part, Error>),
     // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
@@ -121,6 +123,9 @@ impl fmt::Debug for Bundle2Item {
         match self {
             &Start(ref header) => write!(f, "Bundle2Item::Start({:?})", header),
             &Changegroup(ref header, _) => write!(f, "Bundle2Item::Changegroup({:?}, ...)", header),
+            &B2xCommonHeads(ref header, _) => {
+                write!(f, "Bundle2Item::B2xCommonHeads({:?}, ...)", header)
+            }
             &B2xInfinitepush(ref header, _) => {
                 write!(f, "Bundle2Item::B2xInfinitepush({:?}, ...)", header)
             }

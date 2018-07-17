@@ -34,6 +34,9 @@ pub enum PartHeaderType {
     /// Mononoke this parameter will be ignored, because it does not provide transaction during
     /// push
     CheckHeads,
+    /// Contains list of heads that are present client-side and server-side.
+    /// Used in pushrebase to find out what to send to the client.
+    B2xCommonHeads,
     /// Contains changegroup for infinitepush commits
     B2xInfinitepush,
     /// Contains bookmarks for infinitepush backups (won't be used in Mononoke,
@@ -75,6 +78,7 @@ impl PartHeaderType {
             "b2x:treegroup2" => Ok(B2xTreegroup2),
             "b2x:infinitepush" => Ok(B2xInfinitepush),
             "b2x:infinitepushscratchbookmarks" => Ok(B2xInfinitepushBookmarks),
+            "b2x:commonheads" => Ok(B2xCommonHeads),
             "check:heads" => Ok(CheckHeads),
             "pushkey" => Ok(Pushkey),
             "reply:pushkey" => Ok(ReplyPushkey),
@@ -90,6 +94,7 @@ impl PartHeaderType {
             Replycaps => "replycaps",
             Listkeys => "listkeys",
             B2xTreegroup2 => "b2x:treegroup2",
+            B2xCommonHeads => "b2x:commonheads",
             B2xInfinitepush => "b2x:infinitepush",
             B2xInfinitepushBookmarks => "b2x:infinitepushscratchbookmarks",
             CheckHeads => "check:heads",
