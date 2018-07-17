@@ -11,7 +11,7 @@ use futures::{Future, IntoFuture, future::Either};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use rust_thrift::compact_protocol;
-use tokio_timer::Timer;
+use tokio_timer;
 
 use fbwhoami::FbWhoAmI;
 use mononoke_types::BlobstoreBytes;
@@ -53,7 +53,6 @@ define_stats! {
 #[derive(Clone)]
 pub struct MemcacheOps {
     memcache: MemcacheClient,
-    timer: Timer,
     keygen: KeyGen,
     presence_keygen: KeyGen,
     hostname: String,
@@ -108,7 +107,6 @@ impl MemcacheOps {
 
         Ok(Self {
             memcache: MemcacheClient::new(),
-            timer: Timer::default(),
             keygen: KeyGen::new(blob_key, MC_CODEVER, MC_SITEVER),
             presence_keygen: KeyGen::new(presence_key, MC_CODEVER, MC_SITEVER),
             hostname,
@@ -261,7 +259,7 @@ impl LeaseOps for MemcacheOps {
         let retry_millis = 200;
         let retry_delay = Duration::from_millis(retry_millis);
         STATS::lease_wait_ms.add_value(retry_millis as i64);
-        self.timer.sleep(retry_delay).map_err(|_| ()).boxify()
+        tokio_timer::sleep(retry_delay).map_err(|_| ()).boxify()
     }
 
     fn release_lease(&self, key: &str, put_success: bool) -> BoxFuture<(), ()> {

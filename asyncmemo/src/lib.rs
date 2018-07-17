@@ -32,6 +32,8 @@
 //! TODO: entry invalidation interface
 #![deny(warnings)]
 
+#[cfg(test)]
+extern crate async_unit;
 extern crate bytes;
 extern crate futures;
 extern crate futures_ext;
@@ -42,6 +44,8 @@ extern crate linked_hash_map;
 extern crate parking_lot;
 #[macro_use]
 extern crate stats;
+#[cfg(test)]
+extern crate tokio;
 #[cfg(test)]
 extern crate tokio_timer;
 

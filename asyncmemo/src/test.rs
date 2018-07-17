@@ -10,10 +10,9 @@ use futures_ext::FutureExt;
 use std::cell::RefCell;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::thread::{self, sleep};
+use std::thread;
 use std::time::Duration;
 use std::usize;
-use tokio_timer::Timer;
 
 // A simple operation, also keep track of the number of times invoked
 struct Upperer<'a>(&'a AtomicUsize);
@@ -590,54 +589,58 @@ fn timer_multiwait() {
 struct Timered {
     res: Vec<Result<String, ()>>,
     cur_result: RefCell<usize>,
+    remains: usize,
 }
 
 impl Timered {
-    fn new(res: Vec<Result<String, ()>>) -> Self {
+    fn new(res: Vec<Result<String, ()>>, remains: usize) -> Self {
         Timered {
             res,
             cur_result: RefCell::new(0),
+            remains,
         }
     }
 }
 
 impl Filler for Timered {
     type Key = String;
-    type Value = futures_ext::BoxFuture<String, ()>;
+    type Value = Delay<String>;
 
     fn fill(&self, _cache: &Asyncmemo<Self>, _key: &Self::Key) -> Self::Value {
-        let timer = Timer::default();
-        let sleep_fut = timer.sleep(Duration::from_millis(300));
         let index = *self.cur_result.borrow();
         let res = self.res.get(index).unwrap().clone();
         *self.cur_result.borrow_mut() = index + 1;
-        sleep_fut.then(move |_| res).boxify()
+        Delay {
+            remains: self.remains,
+            v: Some(res),
+        }
     }
 }
 
 #[test]
 fn test_timer_future() {
-    let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())]), 1);
+    let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())], 2), 1);
     let mut v1 = SpawnedFutureAndNotify::new(c.get("res"));
     let mut v2 = SpawnedFutureAndNotify::new(c.get("res"));
     assert_eq!(v1.poll(), Ok(Async::NotReady));
     assert_eq!(v2.poll(), Ok(Async::NotReady));
-    sleep(Duration::from_millis(350));
+    assert_eq!(v1.poll(), Ok(Async::Ready(String::from("RES"))));
+    assert_eq!(v2.poll(), Ok(Async::Ready(String::from("RES"))));
     assert!(v1.was_notified());
     assert!(v2.was_notified());
 }
 
 #[test]
 fn test_timer_future_many_futures() {
-    let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())]), 1);
-    let futs: Vec<_> = (1..10)
+    let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())], 9), 1);
+    let mut futs: Vec<_> = (1..10)
         .map(|_| {
             let mut f = SpawnedFutureAndNotify::new(c.get("res"));
             assert_eq!(f.poll(), Ok(Async::NotReady));
             f
         })
         .collect();
-    sleep(Duration::from_millis(350));
+    assert_eq!(futs[0].poll(), Ok(Async::Ready(String::from("RES"))));
     for f in futs {
         assert!(f.was_notified());
     }
@@ -646,43 +649,42 @@ fn test_timer_future_many_futures() {
 #[test]
 fn test_drop() {
     {
-        let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())]), 1);
+        let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())], 2), 2);
         let mut v1 = SpawnedFutureAndNotify::new(c.get("res"));
         let mut v2 = SpawnedFutureAndNotify::new(c.get("res"));
         assert_eq!(v1.poll(), Ok(Async::NotReady));
         assert_eq!(v2.poll(), Ok(Async::NotReady));
-        sleep(Duration::from_millis(350));
         std::mem::drop(v1);
+        assert_eq!(v2.poll(), Ok(Async::Ready(String::from("RES"))));
         assert!(v2.was_notified());
     }
 
     {
         // Vice-versa: drop the future that was polled second, check that first was notified
-        let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())]), 1);
+        let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Ok("RES".into())], 2), 1);
         let mut v1 = SpawnedFutureAndNotify::new(c.get("res"));
         let mut v2 = SpawnedFutureAndNotify::new(c.get("res"));
         assert_eq!(v1.poll(), Ok(Async::NotReady));
         assert_eq!(v2.poll(), Ok(Async::NotReady));
-        sleep(Duration::from_millis(350));
         std::mem::drop(v2);
+        assert_eq!(v1.poll(), Ok(Async::Ready(String::from("RES"))));
         assert!(v1.was_notified());
     }
 }
 
 #[test]
 fn test_poll_after_sporadic_failure() {
-    let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Err(()), Ok("RES".into())]), 1);
+    let c = Asyncmemo::new_unbounded("test", Timered::new(vec![Err(()), Ok("RES".into())], 2), 1);
     let mut v1 = SpawnedFutureAndNotify::new(c.get("res"));
     let mut v2 = SpawnedFutureAndNotify::new(c.get("res"));
     assert_eq!(v1.poll(), Ok(Async::NotReady));
     assert_eq!(v2.poll(), Ok(Async::NotReady));
-    sleep(Duration::from_millis(350));
-    assert!(v1.was_notified());
-    assert!(v2.was_notified());
     // Sporadic error has failed, polling second future should succeed
     assert_eq!(v1.poll(), Err(()));
+    assert!(v1.was_notified());
+    assert!(v2.was_notified());
     assert_eq!(v2.poll(), Ok(Async::NotReady));
-    sleep(Duration::from_millis(350));
+    assert_eq!(v2.poll(), Ok(Async::NotReady));
     assert_eq!(v2.poll(), Ok(Async::Ready("RES".into())));
 }
 
