@@ -118,6 +118,13 @@ assert that we order the commits consistently based on the time field.
   @@ -0,0 +1,1 @@
   +bleet
 
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-submit-2o
+  Phabricator rev: 88dd5a13bf28b99853a24bddfc93d4c44e07c6bd
+  Local rev: 2e6531b7dada2a3e5638e136de05f51e94a427f4 (.)
+  Changed: foo
+  | ...
+  | +bleet
+
 Make a new commit on top, and then use -r to look at the previous commit
   $ echo other > foo
   $ hg commit -m "Other commmit"

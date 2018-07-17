@@ -8,8 +8,18 @@
 
 import os
 
-from mercurial import commands, error, extensions, hintutil, registrar
+from mercurial import (
+    commands,
+    error,
+    extensions,
+    hintutil,
+    match,
+    mdiff,
+    patch,
+    registrar,
+)
 from mercurial.i18n import _
+from mercurial.node import hex
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
 
@@ -31,6 +41,14 @@ def extsetup(ui):
     options.append(
         ("", "since-last-submit", None, _("show changes since last Phabricator submit"))
     )
+    options.append(
+        (
+            "",
+            "since-last-submit-2o",
+            None,
+            _("show diff of current diff and last Phabricator submit"),
+        )
+    )
 
 
 def _differentialhash(ui, repo, phabrev):
@@ -50,8 +68,76 @@ def _differentialhash(ui, repo, phabrev):
         raise error.Abort(str(e))
 
 
+def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
+    # Phabricator revs are often filtered (hidden)
+    repo = repo.unfiltered()
+    # First reconstruct textual diffs for rev1 and rev2 independently.
+    def changediff(node, nodebase):
+        m = match.always(repo.root, repo.root)
+        diff = patch.diffhunks(repo, nodebase, node, m, opts=mdiff.diffopts(context=0))
+        filepatches = {}
+        for _fctx1, _fctx2, headerlines, hunks in diff:
+            difflines = []
+            for hunkrange, hunklines in hunks:
+                difflines += list(hunklines)
+            header = patch.header(headerlines)
+            filepatches[header.files()[0]] = "".join(difflines)
+        return (set(filepatches.keys()), filepatches, node)
+
+    rev1node = repo[rev1].node()
+    rev2node = repo[rev2].node()
+    basenode = repo[rev1].p1().node()
+    files1, filepatches1, node1 = changediff(rev1node, basenode)
+    files2, filepatches2, node2 = changediff(rev2node, basenode)
+
+    ui.write(_("Phabricator rev: %s\n") % hex(node1)),
+    ui.write(_("Local rev: %s (%s)\n") % (hex(node2), rev2))
+
+    # For files have changed, produce a diff of the diffs first using a normal
+    # text diff of the input diffs, then fixing-up the output for readability.
+    changedfiles = files1 & files2
+    for f in changedfiles:
+        opts["context"] = 0
+        diffopts = mdiff.diffopts(**opts)
+        header, hunks = mdiff.unidiff(
+            filepatches1[f], "", filepatches2[f], "", f, f, opts=diffopts
+        )
+        hunklines = []
+        for hunk in hunks:
+            hunklines += hunk[1]
+        changelines = []
+        i = 0
+        while i < len(hunklines):
+            line = hunklines[i]
+            i += 1
+            if line[:2] == "++":
+                changelines.append("+" + line[2:])
+            elif line[:2] == "+-":
+                changelines.append("-" + line[2:])
+            elif line[:2] == "-+":
+                changelines.append("-" + line[2:])
+            elif line[:2] == "--":
+                changelines.append("+" + line[2:])
+            elif line[:2] == "@@" or line[1:3] == "@@":
+                if len(changelines) < 1 or changelines[-1] != "...\n":
+                    changelines.append("...\n")
+            else:
+                changelines.append(line)
+        if len(changelines):
+            ui.write(_("Changed: %s\n") % f)
+            for line in changelines:
+                ui.write("| " + line)
+    wholefilechanges = files1 ^ files2
+    for f in wholefilechanges:
+        ui.write(_("Added/removed: %s\n") % f)
+
+
 def _diff(orig, ui, repo, *pats, **opts):
-    if not opts.get("since_last_submit") and not opts.get("since_last_arc_diff"):
+    if (
+        not opts.get("since_last_submit")
+        and not opts.get("since_last_arc_diff")
+        and not opts.get("since_last_submit_2o")
+    ):
         return orig(ui, repo, *pats, **opts)
 
     if opts.get("since_last_arc_diff"):
@@ -87,4 +173,7 @@ def _diff(orig, ui, repo, *pats, **opts):
         curr = set(repo[targetrev].files())
         pats = tuple(os.path.join(repo.root, p) for p in prev | curr)
 
-    return orig(ui, repo, *pats, **opts)
+    if opts.get("since_last_submit_2o"):
+        return _diff2o(ui, repo, rev, ".", **opts)
+    else:
+        return orig(ui, repo, *pats, **opts)
