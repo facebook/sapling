@@ -244,7 +244,92 @@ impl ConfigSet {
         source: &Bytes,
         visited: &mut HashSet<PathBuf>,
     ) {
-        unimplemented!();
+        let mut pos = 0;
+        let mut section = Bytes::new();
+        let shared_path = Arc::new(path.to_path_buf()); // use Arc to do shallow copy
+        let skip_include = path.parent().is_none(); // skip handling %include if path is empty
+
+        while pos < buf.len() {
+            match buf[pos] {
+                b'\n' | b'\r' => pos += 1,
+                b'[' => {
+                    let section_start = pos + 1;
+                    match memchr(b']', &buf.as_ref()[section_start..]) {
+                        Some(len) => {
+                            let section_end = section_start + len;
+                            section = strip(&buf, section_start, section_end);
+                            pos = section_end + 1;
+                        }
+                        None => {
+                            self.error(Error::Parse(
+                                path.to_path_buf(),
+                                pos,
+                                "missing ']' for section name",
+                            ));
+                            return;
+                        }
+                    }
+                }
+                b';' | b'#' => {
+                    match memchr(b'\n', &buf.as_ref()[pos..]) {
+                        Some(len) => pos += len, // skip this line
+                        None => return,          // reach file end
+                    }
+                }
+                b'%' => unimplemented!(),
+                _ => {
+                    let name_start = pos;
+                    match memchr(b'=', &buf.as_ref()[name_start..]) {
+                        Some(len) => {
+                            let equal_pos = name_start + len;
+                            let name = strip(&buf, name_start, equal_pos);
+                            // Find the end of value. It could be multi-line.
+                            let value_start = equal_pos + 1;
+                            let mut value_end = value_start;
+                            loop {
+                                match memchr(b'\n', &buf.as_ref()[value_end..]) {
+                                    Some(len) => {
+                                        value_end += len + 1;
+                                        let next_line_first_char =
+                                            *buf.get(value_end).unwrap_or(&b'.');
+                                        if !is_space(next_line_first_char) {
+                                            break;
+                                        }
+                                    }
+                                    None => {
+                                        value_end = buf.len();
+                                        break;
+                                    }
+                                }
+                            }
+                            let (start, end) = strip_offsets(&buf, value_start, value_end);
+                            let value = buf.slice(start, end);
+                            let location = ValueLocation {
+                                path: shared_path.clone(),
+                                location: start..end,
+                            };
+
+                            self.set_internal(
+                                section.clone(),
+                                name,
+                                value.into(),
+                                location.into(),
+                                source,
+                            );
+                            pos = value_end;
+                        }
+                        None => {
+                            self.error(Error::Parse(
+                                path.to_path_buf(),
+                                pos,
+                                "missing '=' for config value",
+                            ));
+                            return;
+                        }
+                    }
+                }
+            } // match buf[pos]
+        }
     }
 
     #[inline]
@@ -347,5 +432,70 @@ mod tests {
         assert_eq!(sources[1].source(), "set5");
         assert_eq!(sources[0].location(), None);
         assert_eq!(sources[1].location(), None);
+    }
+
+    #[test]
+    fn test_parse_basic() {
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[y]\n\
+             a = 0\n\
+             b=1\n\
+             # override a to 2
+              a  =  2 \n\
+             \n\
+             [x]\n\
+             m = this\n \
+             value has\n \
+             multi lines\n\
+             ; comment again\n\
+             n =",
+            "test_parse_basic",
+        );
+
+        assert_eq!(cfg.sections(), vec![Bytes::from("y"), Bytes::from("x")]);
+        assert_eq!(cfg.keys("y"), vec![Bytes::from("a"), Bytes::from("b")]);
+        assert_eq!(cfg.keys("x"), vec![Bytes::from("m"), Bytes::from("n")]);
+
+        assert_eq!(cfg.get("y", "a"), Some(Bytes::from("2")));
+        assert_eq!(cfg.get("y", "b"), Some(Bytes::from("1")));
+        assert_eq!(cfg.get("x", "n"), Some(Bytes::new()));
+        assert_eq!(
+            cfg.get("x", "m"),
+            Some(Bytes::from(&b"this\n value has\n multi lines"[..]))
+        );
+
+        let sources = cfg.get_sources("y", "a");
+        assert_eq!(sources.len(), 2);
+        assert_eq!(sources[0].value(), &Some(Bytes::from("0")));
+        assert_eq!(sources[1].value(), &Some(Bytes::from("2")));
+        assert_eq!(sources[0].source(), "test_parse_basic");
+        assert_eq!(sources[1].source(), "test_parse_basic");
+        assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
+        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 52..53));
+    }
+
+    #[test]
+    fn test_parse_errors() {
+        let mut cfg = ConfigSet::new();
+        cfg.parse("# foo\n[y", "test_parse_errors");
+        assert_eq!(
+            format!("{}", cfg.errors()[0]),
+            "\"\": parse error around byte 6: missing \']\' for section name"
+        );
+
+        let mut cfg = ConfigSet::new();
+        cfg.parse("\n\n%unknown", "test_parse_errors");
+        assert_eq!(
+            format!("{}", cfg.errors()[0]),
+            "\"\": parse error around byte 2: unknown instruction"
+        );
+
+        let mut cfg = ConfigSet::new();
+        cfg.parse("[section]\nabc", "test_parse_errors");
+        assert_eq!(
+            format!("{}", cfg.errors()[0]),
+            "\"\": parse error around byte 10: missing \'=\' for config value"
+        );
     }
 }
