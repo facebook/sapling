@@ -178,6 +178,12 @@ class treestatemap(object):
             # preserve "copied" information
             state, mode, size, mtime, copied = existing
             mode = 0
+            mtime = -1
+            # note: do not reset "size" if it is a special value (ex. -2).
+            # some old code still depends on that. but do reset it since
+            # some tests expect size to be 0.
+            if size > 0:
+                size = 0
             state ^= state & treestate.EXIST_NEXT
         else:
             state = 0
