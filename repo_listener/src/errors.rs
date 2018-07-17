@@ -8,7 +8,6 @@ pub use failure::{Error, Result, ResultExt};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "failed to initialize server: {}", _0)] Initialization(&'static str),
     #[fail(display = "connection does not start with preamble")] NoConnectionPreamble,
     #[fail(display = "connection error while reading preamble")] ConnectionError,
     #[fail(display = "incorrect reponame: {}", _0)] IncorrectRepoName(String),

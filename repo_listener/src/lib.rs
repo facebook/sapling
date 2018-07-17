@@ -23,7 +23,6 @@ extern crate slog_kvfilter;
 extern crate slog_term;
 extern crate tokio;
 extern crate tokio_codec;
-extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_openssl;
 extern crate tracing;
@@ -43,10 +42,9 @@ mod errors;
 mod repo_listen;
 
 use std::collections::HashMap;
-use std::thread::{self, JoinHandle};
 
-use failure::SlogKVError;
-use futures::sync::mpsc;
+use futures::{future, Future, sync::mpsc};
+use futures_ext::{BoxFuture, FutureExt};
 use openssl::ssl::SslAcceptor;
 use slog::Logger;
 
@@ -61,7 +59,7 @@ pub fn start_repo_listeners<I>(
     root_log: &Logger,
     sockname: &str,
     tls_acceptor: SslAcceptor,
-) -> Result<(Vec<JoinHandle<!>>, ready_state::ReadyState)>
+) -> (BoxFuture<(), Error>, ready_state::ReadyState)
 where
     I: IntoIterator<Item = (String, RepoConfig)>,
 {
@@ -74,7 +72,7 @@ where
     let mut repo_senders = HashMap::new();
     let mut ready = ready_state::ReadyStateBuilder::new();
 
-    let mut handles: Vec<_> = repos
+    let handles: Vec<_> = repos
         .into_iter()
         .filter(|(reponame, config)| {
             if !config.enabled {
@@ -90,38 +88,19 @@ where
             // the sender. However each clone creates one more entry in the channel.
             let (sender, receiver) = mpsc::channel(1);
             repo_senders.insert(reponame.clone(), sender);
-            // start a thread for each repo to own the reactor and start listening for
-            // connections and detach it
-            thread::Builder::new()
-                .name(format!("listener_{:?}", config.repotype))
-                .spawn({
-                    let root_log = root_log.clone();
-                    move || repo_listen(reponame, config, root_log, ready_handle, receiver)
-                })
-                .map_err(Error::from)
+            // create a future for each repo and start listening for connections
+            repo_listen(reponame, config, root_log.clone(), ready_handle, receiver)
         })
         .collect();
 
-    let conn_acceptor_handle = thread::Builder::new()
-        .name(format!("connection_acceptor"))
-        .spawn({
-            let root_log = root_log.clone();
-            move || connection_acceptor(&sockname, root_log, repo_senders, tls_acceptor)
-        })
-        .map_err(Error::from);
+    let conn_acceptor_handle =
+        connection_acceptor(&sockname, root_log.clone(), repo_senders, tls_acceptor);
 
-    handles.push(conn_acceptor_handle);
-    if handles.iter().any(Result::is_err) {
-        for err in handles.into_iter().filter_map(Result::err) {
-            crit!(root_log, "Failed to spawn listener thread"; SlogKVError(err));
-        }
-        bail_err!(ErrorKind::Initialization(
-            "at least one of the listener threads failed to be spawned",
-        ));
-    }
-
-    Ok((
-        handles.into_iter().filter_map(Result::ok).collect(),
+    (
+        future::join_all(handles)
+            .join(conn_acceptor_handle)
+            .map(|_: (Vec<()>, ())| ())
+            .boxify(),
         ready.freeze(),
-    ))
+    )
 }

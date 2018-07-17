@@ -14,9 +14,9 @@ use futures::sync::mpsc;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use openssl::ssl::SslAcceptor;
 use slog::Logger;
+use tokio;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_codec::{FramedRead, FramedWrite};
-use tokio_core::reactor::{Core, Remote};
 use tokio_io::{AsyncRead, AsyncWrite, IoStream};
 use tokio_openssl::SslAcceptorExt;
 
@@ -31,10 +31,8 @@ pub fn connection_acceptor(
     root_log: Logger,
     repo_senders: HashMap<String, mpsc::Sender<(Stdio, SocketAddr)>>,
     tls_acceptor: SslAcceptor,
-) -> ! {
-    let mut core = Core::new().expect("failed to create tokio core");
-    let remote = core.remote();
-    let connection_acceptor = listener(sockname)
+) -> impl Future<Item = (), Error = Error> {
+    listener(sockname)
         .expect("failed to create listener")
         .map_err(Error::from)
         .and_then({
@@ -50,10 +48,9 @@ pub fn connection_acceptor(
                 tls_acceptor
                     .accept_async(sock)
                     .then({
-                        let remote = remote.clone();
                         let root_log = root_log.clone();
                         move |sock| match sock {
-                            Ok(sock) => ssh_server_mux(sock, remote.clone())
+                            Ok(sock) => ssh_server_mux(sock)
                                 .map(move |stdio| Some((stdio, addr)))
                                 .or_else({
                                     let root_log = root_log.clone();
@@ -98,13 +95,7 @@ pub fn connection_acceptor(
                     Ok(()).into_future().boxify()
                 }
             }
-        });
-
-    core.run(connection_acceptor)
-        .expect("failure while running listener on tokio core");
-
-    // The server is an infinite stream of connections
-    unreachable!();
+        })
 }
 
 fn listener<P>(sockname: P) -> io::Result<IoStream<TcpStream>>
@@ -135,7 +126,7 @@ where
 
 // As a server, given a stream to a client, return an Io pair with stdin/stdout, and an
 // auxillary sink for stderr.
-fn ssh_server_mux<S>(s: S, remote: Remote) -> BoxFuture<Stdio, Error>
+fn ssh_server_mux<S>(s: S) -> BoxFuture<Stdio, Error>
 where
     S: AsyncRead + AsyncWrite + Send + 'static,
 {
@@ -180,7 +171,7 @@ where
                     .forward(wr);
 
                 // spawn a task for forwarding stdout/err into stream
-                remote.spawn(|_handle| fwd.discard());
+                tokio::spawn(fwd.discard());
 
                 (otx, etx)
             };

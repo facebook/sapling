@@ -175,7 +175,7 @@ fn main() {
                 .value_of("listening-host-port")
                 .expect("listening path must be specified"),
             secure_utils::build_tls_acceptor(ssl).expect("failed to build tls acceptor"),
-        )?;
+        );
 
         tracing_fb303::register();
 
@@ -184,13 +184,14 @@ fn main() {
             Some(handle) => Some(handle?),
         };
 
-        tokio::run(stats_aggregation.map_err(|err| panic!("Unexpected error: {:#?}", err)));
+        tokio::run(
+            repo_listeners
+                .join(stats_aggregation.from_err())
+                .map(|((), ())| ())
+                .map_err(|err| panic!("Unexpected error: {:#?}", err)),
+        );
 
-        for handle in vec![]
-            .into_iter()
-            .chain(maybe_thrift.into_iter())
-            .chain(repo_listeners.into_iter())
-        {
+        if let Some(handle) = maybe_thrift {
             let thread_name = handle.thread().name().unwrap_or("unknown").to_owned();
             match handle.join() {
                 Ok(_) => panic!("unexpected success"),
