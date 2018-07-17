@@ -54,7 +54,14 @@ pub fn resolve(
     let resolver = Bundle2Resolver::new(repo, logger, scuba_logger);
 
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
-    resolve_push(resolver, bundle2)
+
+    resolver
+        .maybe_resolve_commonheads(bundle2)
+        .and_then(move |(commonheads, bundle2)| match commonheads {
+            Some(commonheads) => resolve_pushrebase(commonheads, resolver, bundle2),
+            None => resolve_push(resolver, bundle2),
+        })
+        .boxify()
 }
 
 fn resolve_push(
@@ -161,6 +168,14 @@ fn resolve_push(
         .boxify()
 }
 
+fn resolve_pushrebase(
+    _commonheads: CommonHeads,
+    _resolver: Bundle2Resolver,
+    _bundle2: BoxStream<Bundle2Item, Error>,
+) -> BoxFuture<Bytes, Error> {
+    unimplemented!()
+}
+
 fn next_item(
     bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<(Option<Bundle2Item>, BoxStream<Bundle2Item, Error>), Error> {
@@ -172,6 +187,10 @@ struct ChangegroupPush {
     changesets: Changesets,
     filelogs: Filelogs,
     content_blobs: ContentBlobs,
+}
+
+struct CommonHeads {
+    _heads: Vec<HgChangesetId>,
 }
 
 enum Pushkey {
@@ -218,6 +237,28 @@ impl Bundle2Resolver {
                 _ => err(format_err!("Expected Bundle2 Replycaps")).boxify(),
             })
             .flatten_stream()
+            .boxify()
+    }
+
+    // Parse b2x:commonheads
+    // This part sent by pushrebase so that server can find out what commits to send back to the
+    // client. This part is used as a marker that this push is pushrebase.
+    fn maybe_resolve_commonheads(
+        &self,
+        bundle2: BoxStream<Bundle2Item, Error>,
+    ) -> BoxFuture<(Option<CommonHeads>, BoxStream<Bundle2Item, Error>), Error> {
+        next_item(bundle2)
+            .and_then(|(commonheads, bundle2)| match commonheads {
+                Some(Bundle2Item::B2xCommonHeads(_header, heads)) => heads
+                    .collect()
+                    .map(|heads| {
+                        let heads = CommonHeads { _heads: heads };
+                        (Some(heads), bundle2)
+                    })
+                    .boxify(),
+                Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
+                _ => err(format_err!("Unexpected Bundle2 stream end")).boxify(),
+            })
             .boxify()
     }
 
