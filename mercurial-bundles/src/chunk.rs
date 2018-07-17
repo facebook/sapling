@@ -154,10 +154,10 @@ impl Decoder for ChunkDecoder {
 mod test {
     use std::io::Cursor;
 
-    use futures::{stream, Sink, Stream};
+    use futures::{stream, Future, Sink, Stream};
     use quickcheck::{quickcheck, TestResult};
+    use tokio;
     use tokio_codec::{FramedRead, FramedWrite};
-    use tokio_core::reactor::Core;
 
     use super::*;
 
@@ -226,28 +226,26 @@ mod test {
         let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
         let sink = FramedWrite::new(cursor, ChunkEncoder);
 
-        let encode_fut = sink.send_all(stream::iter_ok(chunks_res).and_then(|x| x));
+        let encode_fut = sink.send_all(stream::iter_ok(chunks_res).and_then(|x| x))
+            .map_err(|err| panic!("{:#?}", err))
+            .and_then(move |(sink, _)| {
+                let mut cursor = sink.into_inner();
+                cursor.set_position(0);
 
-        let mut core = Core::new().unwrap();
+                // cursor will now have the encoded byte stream. Run it through the decoder.
+                let stream = FramedRead::new(cursor, ChunkDecoder);
 
-        // Perform encoding.
-        let (sink, _) = core.run(encode_fut).unwrap();
+                let collector: Vec<Chunk> = Vec::with_capacity(count);
+                collector.send_all(stream.map_err(|err| {
+                    panic!("Unexpected error: {}", err);
+                }))
+            })
+            .map(move |(collector, _)| {
+                assert_eq!(collector, chunks);
+            })
+            .map_err(|err| panic!("{:#?}", err));
 
-        let mut cursor = sink.into_inner();
-        cursor.set_position(0);
-
-        // cursor will now have the encoded byte stream. Run it through the decoder.
-        let stream = FramedRead::new(cursor, ChunkDecoder);
-
-        let collector: Vec<Chunk> = Vec::with_capacity(count);
-        let decode_fut = collector.send_all(stream.map_err(|err| {
-            panic!("Unexpected error: {}", err);
-        }));
-
-        // Perform decoding.
-        let (collector, _) = core.run(decode_fut).unwrap();
-
-        assert_eq!(collector, chunks);
+        tokio::run(encode_fut);
 
         TestResult::passed()
     }

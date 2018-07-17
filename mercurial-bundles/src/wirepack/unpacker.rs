@@ -256,18 +256,17 @@ enum DecodeRes<T> {
 mod test {
     use std::io::{self, Cursor};
 
-    use futures::Stream;
+    use futures::{Future, Stream};
     use slog::Drain;
     use slog_term;
+    use tokio;
     use tokio_codec::FramedRead;
-    use tokio_core::reactor::Core;
 
     use super::*;
 
     #[test]
     fn test_empty() {
         let logger = make_root_logger();
-        let mut core = Core::new().unwrap();
 
         // Absolutely nothing in here.
         let empty_1 = Cursor::new(WIREPACK_END);
@@ -275,35 +274,40 @@ mod test {
         let stream = FramedRead::new(empty_1, unpacker);
         let collect_fut = stream.collect();
 
-        let parts = core.run(collect_fut).unwrap();
-        assert_eq!(parts, vec![Part::End]);
+        let fut = collect_fut
+            .and_then(move |parts| {
+                assert_eq!(parts, vec![Part::End]);
 
-        // A file with no entries:
-        // - filename b"\0\x03foo"
-        // - history count: b"\0\0\0\0"
-        // - data count: b"\0\0\0\0"
-        // - next filename, end of stream: b"\0\0\0\0\0\0\0\0\0\0"
-        let foo_dir = RepoPath::file("foo").unwrap();
-        let empty_2 = Cursor::new(b"\0\x03foo\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
-        let unpacker = new(logger.clone(), Kind::File);
-        let stream = FramedRead::new(empty_2, unpacker);
-        let collect_fut = stream.collect();
+                // A file with no entries:
+                // - filename b"\0\x03foo"
+                // - history count: b"\0\0\0\0"
+                // - data count: b"\0\0\0\0"
+                // - next filename, end of stream: b"\0\0\0\0\0\0\0\0\0\0"
+                let empty_2 = Cursor::new(b"\0\x03foo\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+                let unpacker = new(logger.clone(), Kind::File);
+                let stream = FramedRead::new(empty_2, unpacker);
+                stream.collect()
+            })
+            .map(|parts| {
+                let foo_dir = RepoPath::file("foo").unwrap();
+                assert_eq!(
+                    parts,
+                    vec![
+                        Part::HistoryMeta {
+                            path: foo_dir.clone(),
+                            entry_count: 0,
+                        },
+                        Part::DataMeta {
+                            path: foo_dir,
+                            entry_count: 0,
+                        },
+                        Part::End,
+                    ]
+                );
+            })
+            .map_err(|err| panic!("{:#?}", err));
 
-        let parts = core.run(collect_fut).unwrap();
-        assert_eq!(
-            parts,
-            vec![
-                Part::HistoryMeta {
-                    path: foo_dir.clone(),
-                    entry_count: 0,
-                },
-                Part::DataMeta {
-                    path: foo_dir,
-                    entry_count: 0,
-                },
-                Part::End,
-            ]
-        );
+        tokio::run(fut);
     }
 
     fn make_root_logger() -> slog::Logger {

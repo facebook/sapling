@@ -46,13 +46,13 @@ pub struct CgDeltaChunk {
 mod test {
     use std::io::{self, Cursor};
 
-    use futures::Stream;
+    use futures::{Future, Stream};
     use quickcheck::{QuickCheck, StdGen, TestResult};
     use quickcheck::rand;
     use slog::{Drain, Logger};
     use slog_term;
+    use tokio;
     use tokio_codec::{FramedRead, FramedWrite};
-    use tokio_core::reactor::Core;
 
     use futures_ext::StreamLayeredExt;
     use partial_io::{GenWouldBlock, PartialAsyncRead, PartialAsyncWrite, PartialWithErrors};
@@ -108,35 +108,41 @@ mod test {
         let partial_write = PartialAsyncWrite::new(cursor, write_ops);
         let packer = packer::Cg2Packer::new(seq.to_stream().and_then(|x| x));
         let sink = FramedWrite::new(partial_write, ChunkEncoder);
-        let encode_fut = packer.forward(sink);
 
-        let mut core = Core::new().unwrap();
-        let (_, sink) = core.run(encode_fut).unwrap();
-        let mut cursor = sink.into_inner().into_inner();
-
-        // Decode it.
-        cursor.set_position(0);
-
-        let partial_read = PartialAsyncRead::new(cursor, read_ops);
-        let chunks = FramedRead::new(partial_read, ChunkDecoder)
-            .map(|chunk| chunk.into_bytes().expect("expected normal chunk"));
-
-        let logger = make_root_logger();
-        let unpacker = unpacker::Cg2Unpacker::new(logger);
-        let part_stream = chunks.decode(unpacker);
-
-        let parts = Vec::new();
-        let decode_fut = part_stream
+        let fut = packer
+            .forward(sink)
             .map_err(|e| -> () { panic!("unexpected error: {}", e) })
-            .forward(parts);
+            .and_then(|(_, sink)| {
+                let mut cursor = sink.into_inner().into_inner();
 
-        let (_, parts) = core.run(decode_fut).unwrap();
+                // Decode it.
+                cursor.set_position(0);
 
-        if seq != parts[..] {
-            return TestResult::failed();
-        }
+                let partial_read = PartialAsyncRead::new(cursor, read_ops);
+                let chunks = FramedRead::new(partial_read, ChunkDecoder)
+                    .map(|chunk| chunk.into_bytes().expect("expected normal chunk"));
 
-        TestResult::passed()
+                let logger = make_root_logger();
+                let unpacker = unpacker::Cg2Unpacker::new(logger);
+                let part_stream = chunks.decode(unpacker);
+
+                let parts = Vec::new();
+                part_stream
+                    .map_err(|e| -> () { panic!("unexpected error: {}", e) })
+                    .forward(parts)
+            })
+            .map(move |(_, parts)| {
+                if seq != parts[..] {
+                    return TestResult::failed();
+                } else {
+                    TestResult::passed()
+                }
+            });
+
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let result = runtime.block_on(fut);
+        runtime.shutdown_on_idle();
+        result.unwrap()
     }
 
     fn make_root_logger() -> Logger {

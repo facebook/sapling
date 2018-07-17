@@ -36,8 +36,6 @@ extern crate slog;
 extern crate slog_term;
 extern crate tokio;
 extern crate tokio_codec;
-#[cfg(test)]
-extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_proto;
 extern crate url;
