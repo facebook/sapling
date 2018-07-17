@@ -87,6 +87,7 @@
 
   $ hg init lock-checker
   $ cd lock-checker
+#if no-fsmonitor
   $ hg buggylocking
   devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
   $ cat << EOF >> $HGRCPATH
@@ -99,6 +100,7 @@
   $ hg buggylocking --traceback 2>&1 | egrep '(devel-warn|buggylocking)'
   devel-warn: "wlock" acquired after "lock" at:
    $TESTTMP/buggylocking.py:* in buggylocking (glob)
+#endif
   $ hg properlocking
   $ hg nowaitlocking
 
