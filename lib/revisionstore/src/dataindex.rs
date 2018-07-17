@@ -163,7 +163,7 @@ impl DataIndex {
             let delta_base_offset = value.delta_base.map_or(-1, |delta_base| {
                 nodelocations
                     .get(&delta_base)
-                    .map(|x| *x as i32 + index_start as i32)
+                    .map(|x| *x as i32)
                     .unwrap_or(-1)
                     .clone()
             });
@@ -190,10 +190,11 @@ impl DataIndex {
         };
 
         let entry_offset = self.binary_search(node, &self.mmap[start..end])?;
-        self.read_entry(start + entry_offset)
+        self.read_entry((start + entry_offset) - self.index_start)
     }
 
     pub fn read_entry(&self, offset: usize) -> Result<IndexEntry> {
+        let offset = offset + self.index_start;
         let raw_entry = &self.mmap
             .get(offset..offset + ENTRY_LEN)
             .ok_or(DataIndexError(format!(
