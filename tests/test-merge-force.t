@@ -1,3 +1,4 @@
+  $ setconfig format.dirstate=2
   $ . helpers-usechg.sh
 
 Set up a base, local, and remote changeset, as well as the working copy state.
@@ -279,11 +280,6 @@ overwritten.
 A lot of untracked files become tracked, for example
 content1_content2_content2_content2-untracked.
 
-*_missing_missing_missing-tracked is reported as removed ('R'), which
-doesn't make sense since the file did not exist in the parent, but on the
-other hand, merged-in additions are reported as modifications, which is
-almost as strange.
-
 missing_missing_content3_missing-tracked becomes removed ('R'), even though
 the remote side did not touch the file
 
@@ -536,7 +532,7 @@ the remote side did not touch the file
   R content1_missing_content3_missing-untracked
   <missing>
   
-  R content1_missing_missing_content1-tracked
+  content1_missing_missing_content1-tracked: $ENOENT$
   <missing>
   
   ? content1_missing_missing_content1-untracked
@@ -548,7 +544,7 @@ the remote side did not touch the file
   ? content1_missing_missing_content4-untracked
   content4
   
-  R content1_missing_missing_missing-tracked
+  content1_missing_missing_missing-tracked: $ENOENT$
   <missing>
   
   content1_missing_missing_missing-untracked: * (glob)
@@ -663,7 +659,7 @@ the remote side did not touch the file
   ? missing_missing_missing_content4-untracked
   content4
   
-  R missing_missing_missing_missing-tracked
+  missing_missing_missing_missing-tracked: $ENOENT$
   <missing>
   
   missing_missing_missing_missing-untracked: * (glob)
