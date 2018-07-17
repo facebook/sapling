@@ -1,7 +1,11 @@
 use bytes::Bytes;
 use error::Error;
 use linked_hash_map::LinkedHashMap;
+use std::collections::HashSet;
 use std::convert::AsRef;
+use std::ffi::OsStr;
+use std::fs;
+use std::io::Read;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -76,7 +80,8 @@ impl ConfigSet {
     /// Errors will be pushed to an internal array, and can be retrieved by `errors`. Non-existed
     /// path is not considered as an error.
     pub fn load_path(&mut self, path: &Path, source: &'static str) {
-        unimplemented!()
+        let mut visited = HashSet::new();
+        self.load_dir_or_file(path, source, &mut visited);
     }
 
     /// Load content of an unnamed config file. The `ValueLocation`s of loaded config items will
@@ -88,7 +93,10 @@ impl ConfigSet {
     ///
     /// Errors will be pushed to an internal array, and can be retrieved by `errors`.
     pub fn parse<B: Into<Bytes>, S: Into<Bytes>>(&mut self, content: B, source: S) {
-        unimplemented!()
+        let mut visited = HashSet::new();
+        let buf = content.into();
+        let source = source.into();
+        self.load_file_content(Path::new(""), buf, &source, &mut visited);
     }
 
     /// Get config sections.
@@ -170,6 +178,78 @@ impl ConfigSet {
                 location,
                 source: source.clone(),
             })
+    }
+
+    fn load_dir_or_file(&mut self, path: &Path, source: &Bytes, visited: &mut HashSet<PathBuf>) {
+        if let Ok(path) = path.canonicalize() {
+            if path.is_dir() {
+                self.load_dir(&path, source, visited);
+            } else {
+                self.load_file(&path, source, visited);
+            }
+        }
+        // If `path.canonicalize` reports an error. It's usually the path cannot
+        // be resolved (ex. does not exist). It is considered normal and is not
+        // reported in `self.errors`.
+    }
+
+    fn load_dir(&mut self, dir: &Path, source: &Bytes, visited: &mut HashSet<PathBuf>) {
+        let rc_ext = OsStr::new("rc");
+        match dir.read_dir() {
+            Ok(entries) => {
+                for entry in entries {
+                    match entry {
+                        Ok(entry) => {
+                            let path = entry.path();
+                            if path.is_file() && path.extension() == Some(rc_ext) {
+                                self.load_file(&path, source, visited);
+                            }
+                        }
+                        Err(error) => self.error(Error::Io(dir.to_path_buf(), error)),
+                    }
+                }
+            }
+            Err(error) => self.error(Error::Io(dir.to_path_buf(), error)),
+        }
+    }
+
+    fn load_file(&mut self, path: &Path, source: &Bytes, visited: &mut HashSet<PathBuf>) {
+        debug_assert!(path.is_absolute());
+
+        if !visited.insert(path.to_path_buf()) {
+            // skip - visited before
+            return;
+        }
+
+        match fs::File::open(path) {
+            Ok(mut file) => {
+                let mut buf = Vec::with_capacity(256);
+                if let Err(error) = file.read_to_end(&mut buf) {
+                    self.error(Error::Io(path.to_path_buf(), error));
+                    return;
+                }
+                buf.push(b'\n');
+                let buf = Bytes::from(buf);
+
+                self.load_file_content(path, buf, source, visited);
+            }
+            Err(error) => self.error(Error::Io(path.to_path_buf(), error)),
+        }
+    }
+
+    fn load_file_content(
+        &mut self,
+        path: &Path,
+        buf: Bytes,
+        source: &Bytes,
+        visited: &mut HashSet<PathBuf>,
+    ) {
+        unimplemented!();
+    }
+
+    #[inline]
+    fn error(&mut self, error: Error) {
+        self.errors.push(error);
     }
 }
 
