@@ -71,5 +71,8 @@ extern crate failure_derive;
 mod config;
 mod error;
 
+pub use config::{ConfigSet, ValueSource};
+pub use error::Error;
+
 #[cfg(test)]
 extern crate tempdir;
