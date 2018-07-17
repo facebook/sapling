@@ -1,3 +1,4 @@
+  $ setconfig format.dirstate=2
   $ . helpers-usechg.sh
 
   $ cat >> $HGRCPATH <<EOF

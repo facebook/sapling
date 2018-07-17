@@ -759,7 +759,7 @@ fn flags_to_hg_state(_py: Python, flags: u16) -> PyResult<&'static str> {
     let flags = StateFlags::from_bits_truncate(flags);
     Ok(match (
         flags.intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2),
-        flags.contains(StateFlags::EXIST_P2 | StateFlags::EXIST_P2),
+        flags.contains(StateFlags::EXIST_P1 | StateFlags::EXIST_P2),
         flags.contains(StateFlags::EXIST_NEXT),
     ) {
         (true, true, true) => "m",  // merge
