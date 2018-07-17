@@ -11,25 +11,10 @@ use std::thread::{self, JoinHandle};
 use clap::ArgMatches;
 use services::{self, Fb303Service, FbStatus};
 use slog::Logger;
-use stats;
-use tokio_core::reactor::Core;
 
 use ready_state::ReadyState;
 
 use errors::*;
-
-pub(crate) fn start_stats() -> Result<JoinHandle<!>> {
-    Ok(thread::Builder::new()
-        .name("stats_aggregation".to_owned())
-        .spawn(move || {
-            let mut core = Core::new().expect("failed to create tokio core");
-            let scheduler = stats::schedule_stats_aggregation(&core.handle())
-                .expect("failed to create stats aggregation scheduler");
-            core.run(scheduler).expect("stats scheduler failed");
-            // stats scheduler shouldn't finish successfully
-            unreachable!()
-        })?)
-}
 
 struct MononokeService {
     ready: ReadyState,

@@ -20,7 +20,7 @@ extern crate slog_logview;
 extern crate slog_stats;
 extern crate slog_term;
 extern crate stats;
-extern crate tokio_core;
+extern crate tokio;
 extern crate tracing_fb303;
 
 extern crate blobrepo;
@@ -154,7 +154,8 @@ fn main() {
     fn run_server<'a>(root_log: &Logger, matches: ArgMatches<'a>) -> Result<!> {
         info!(root_log, "Starting up");
 
-        let stats_aggregation = monitoring::start_stats()?;
+        let stats_aggregation = stats::schedule_stats_aggregation()
+            .expect("failed to create stats aggregation scheduler");
 
         let config = get_config(root_log, &matches)?;
         let cert = matches.value_of("cert").unwrap().to_string();
@@ -183,7 +184,9 @@ fn main() {
             Some(handle) => Some(handle?),
         };
 
-        for handle in vec![stats_aggregation]
+        tokio::run(stats_aggregation.map_err(|err| panic!("Unexpected error: {:#?}", err)));
+
+        for handle in vec![]
             .into_iter()
             .chain(maybe_thrift.into_iter())
             .chain(repo_listeners.into_iter())
