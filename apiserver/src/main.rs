@@ -19,6 +19,7 @@ extern crate futures;
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate metaconfig;
+extern crate mononoke_api as api;
 extern crate mononoke_types;
 extern crate scuba_ext;
 extern crate secure_utils;
@@ -37,6 +38,7 @@ extern crate time_ext;
 
 mod actor;
 mod errors;
+mod from_string;
 mod middleware;
 
 use std::path::Path;

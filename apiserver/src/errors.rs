@@ -10,6 +10,9 @@ use actix_web::error::ResponseError;
 use actix_web::http::StatusCode;
 use failure::{Context, Error};
 
+use api::errors::ErrorKind as ApiError;
+use blobrepo::ErrorKind as BlobRepoError;
+
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "{} not found", _0)] NotFound(String),
@@ -50,6 +53,8 @@ impl ResponseError for ErrorKind {
 impl From<Error> for ErrorKind {
     fn from(e: Error) -> ErrorKind {
         e.downcast::<ErrorKind>()
+            .or_else(|err| err.downcast::<BlobRepoError>().map(|e| e.into()))
+            .or_else(|err| err.downcast::<ApiError>().map(|e| e.into()))
             .unwrap_or_else(|e| ErrorKind::InternalError(e))
     }
 }
@@ -57,5 +62,27 @@ impl From<Error> for ErrorKind {
 impl From<MailboxError> for ErrorKind {
     fn from(e: MailboxError) -> ErrorKind {
         ErrorKind::InternalError(e.into())
+    }
+}
+
+impl From<ApiError> for ErrorKind {
+    fn from(e: ApiError) -> ErrorKind {
+        use self::ApiError::*;
+
+        match e {
+            NotFound(t) => ErrorKind::NotFound(t),
+            InvalidInput(t) => ErrorKind::InvalidInput(t),
+        }
+    }
+}
+
+impl From<BlobRepoError> for ErrorKind {
+    fn from(e: BlobRepoError) -> ErrorKind {
+        use self::BlobRepoError::*;
+
+        match e {
+            ChangesetMissing(cs) => ErrorKind::NotFound(cs.to_string()),
+            e => ErrorKind::InternalError(e.into()),
+        }
     }
 }

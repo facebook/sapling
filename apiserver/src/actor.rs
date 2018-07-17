@@ -5,29 +5,28 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::result::Result as StdResult;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use actix::{Actor, Addr, Context, Handler, Message, Syn};
 use actix::dev::Request;
 use actix_web::{Body, HttpRequest, HttpResponse, Responder};
 use bytes::Bytes;
-use failure::{err_msg, Error, FutureFailureErrorExt, ResultExt};
+use failure::{err_msg, Error};
 use futures::{Future, IntoFuture};
 use futures_ext::BoxFuture;
 use slog::Logger;
 
+use api;
 use blobrepo::BlobRepo;
 use futures_ext::FutureExt;
-use mercurial_types::{Changeset, HgChangesetId, RepositoryId};
+use mercurial_types::RepositoryId;
 use mercurial_types::manifest::Content;
 use metaconfig::repoconfig::{RepoConfig, RepoConfigs};
 use metaconfig::repoconfig::RepoType::{BlobManifold, BlobRocks};
-use mononoke_types::MPath;
 
 use errors::ErrorKind;
+use from_string as FS;
 
 #[derive(Debug)]
 pub enum MononokeRepoQuery {
@@ -95,43 +94,23 @@ impl MononokeRepoActor {
         changeset: String,
         path: String,
     ) -> Result<BoxFuture<MononokeRepoResponse, Error>, Error> {
-        // steps to get blob content by path
-        // 1. Convert manifest to HgNodeHash
-        // 2. Convert path to RepoPath / MPath
-        // 3. Lookup NodeHashId in Manifest using path
-        // 4. Unwrap FileContents
-        // 5. Send!
         debug!(
             self.logger,
             "Retrieving file content of {} at changeset {}.", path, changeset
         );
-        let mpath = MPath::try_from(&*path)
-            .with_context(|_| ErrorKind::InvalidInput("path".into()))
-            .map_err(|e| -> Error { e.into() })?;
 
-        let changesetid = HgChangesetId::from_str(&changeset)
-            .with_context(|_| ErrorKind::InvalidInput(changeset))
-            .map_err(|e| -> Error { e.into() })?;
-
+        let mpath = FS::get_mpath(path.clone())?;
+        let changesetid = FS::get_changeset_id(changeset)?;
         let repo = self.repo.clone();
 
-        Ok(repo.get_changeset_by_changesetid(&changesetid)
-            .with_context(move |_| ErrorKind::NotFound(changesetid.to_string()))
-            .from_err()
-            .map(|changeset| changeset.manifestid().clone().into_nodehash())
-            .and_then(move |manifestid| repo.find_path_in_manifest(Some(mpath), manifestid))
-            .from_err()
-            .and_then({
-                let path = path.clone();
-                |content| content.ok_or_else(move || ErrorKind::NotFound(path.to_string()))
-            })
+        Ok(api::get_content_by_path(repo, changesetid, mpath)
             .and_then(move |content| match content {
                 Content::File(content)
                 | Content::Executable(content)
                 | Content::Symlink(content) => Ok(MononokeRepoResponse::GetRawFile {
                     content: content.into_bytes(),
                 }),
-                _ => Err(ErrorKind::InvalidInput(path.to_string())),
+                _ => Err(ErrorKind::InvalidInput(path.to_string()).into()),
             })
             .from_err()
             .boxify())
@@ -205,9 +184,9 @@ pub fn unwrap_request(
     request
         .into_future()
         .from_err()
-        .and_then(|result| result)
+        .and_then(|result| result)  // use flatten here will blind the compiler.
         .and_then(|result| result.map_err(From::from))
-        .and_then(|result| result)
-        .and_then(|result| result)
+        .flatten()
+        .flatten()
         .from_err()
 }
