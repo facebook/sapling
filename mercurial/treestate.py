@@ -7,10 +7,11 @@
 
 from __future__ import absolute_import
 
+import errno
 import os
 import uuid
 
-from . import error, node, util
+from . import error, node, txnutil, util
 from .i18n import _
 from .rust import treestate
 
@@ -261,10 +262,9 @@ class treestatemap(object):
     def setparents(self, p1, p2):
         self._parents = (p1, p2)
 
-    def _parsedirstate(self, filename):
+    def _parsedirstate(self, content):
         """Parse given dirstate metadata file"""
-        dirstate = self._vfs.tryread("dirstate")
-        f = util.stringio(dirstate)
+        f = util.stringio(content)
         p1 = f.read(20) or node.nullid
         p2 = f.read(20) or node.nullid
         header = f.read(len(HEADER))
@@ -290,7 +290,14 @@ class treestatemap(object):
 
     def _read(self):
         """Read every metadata automatically"""
-        p1, p2, filename, rootid, threshold = self._parsedirstate("dirstate")
+        content = ""
+        try:
+            fp, _mode = txnutil.trypending(self._root, self._vfs, "dirstate")
+            content = fp.read()
+        except IOError as ex:
+            if ex.errno != errno.ENOENT:
+                raise
+        p1, p2, filename, rootid, threshold = self._parsedirstate(content)
 
         self._parents = (p1, p2)
         self._threshold = threshold
@@ -333,7 +340,8 @@ class treestatemap(object):
         """Remove unreferenced treestate files"""
         for name in ["dirstate", "undo.dirstate", "undo.backup.dirstate"]:
             try:
-                _p1, _p2, filename = self._parsedirstate(name)[:3]
+                content = self._vfs.tryread(name)
+                _p1, _p2, filename = self._parsedirstate(content)[:3]
                 self.fileinuse.add(filename)
             except Exception:
                 # dirstate file does not exist, or is in an incompatible
