@@ -58,6 +58,29 @@ def _unpackmetadata(data):
     return dict(entry.split("=", 1) for entry in data.split("\0") if "=" in entry)
 
 
+def _fixed(value):
+    """Return a function that returns a fixed return value"""
+
+    def func(*args, **kwargs):
+        return value
+
+    return func
+
+
+def _error(self, *args, **kwargs):
+    raise IOError("dirstate is readonly")
+
+
+class emptytree(object):
+    """an empty, read-only treestate"""
+
+    setmetadata = remove = insert = saveas = flush = _error
+    getmetadata = _fixed("")
+    pathcomplete = invalidatemtime = get = _fixed(None)
+    hasdir = __contains__ = _fixed(False)
+    getfiltered = tracked = walk = _fixed([])
+
+
 class treestatemap(object):
     """a drop-in replacement for dirstate._map, with more abilities like also
     track fsmonitor state.
@@ -304,7 +327,19 @@ class treestatemap(object):
         self._rootid = rootid
 
         path = self._setfilename(filename)
-        tree = treestate.treestate(path, rootid)
+        try:
+            tree = treestate.treestate(path, rootid)
+        except IOError:
+            if not rootid:
+                # treestate.treestate is read-only if rootid is not None.
+                # If rootid is None, treestate transparently creates an empty
+                # tree (ex. right after "hg init").  IOError can happen if
+                # treestate cannot write such an empty tree. It's hard to make
+                # the Rust land support read-only operation in this case. So
+                # just use a read-only, empty tree.
+                tree = emptytree()
+            else:
+                raise
 
         # Double check p1 p2 against metadata stored in the tree. This is
         # redundant but many things depend on "dirstate" file format.
