@@ -7,9 +7,10 @@
 use std::collections::HashMap;
 use std::io;
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use failure::SlogKVError;
-use futures::{Future, IntoFuture, Sink, Stream};
+use futures::{future, Future, IntoFuture, Stream};
 use futures::sync::mpsc;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use openssl::ssl::SslAcceptor;
@@ -23,78 +24,82 @@ use tokio_openssl::SslAcceptorExt;
 use sshrelay::{SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
 use errors::*;
+use repo_handlers::RepoHandler;
+use request_handler::request_handler;
 
 /// This function accepts connections, reads Preamble and routes request to a thread responsible for
 /// a particular repo
 pub fn connection_acceptor(
-    sockname: &str,
+    sockname: String,
     root_log: Logger,
-    repo_senders: HashMap<String, mpsc::Sender<(Stdio, SocketAddr)>>,
+    repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
-) -> impl Future<Item = (), Error = Error> {
+) -> BoxFuture<(), Error> {
+    let repo_handlers = Arc::new(repo_handlers);
+    let tls_acceptor = Arc::new(tls_acceptor);
+
     listener(sockname)
         .expect("failed to create listener")
         .map_err(Error::from)
-        .and_then({
-            let root_log = root_log.clone();
-            move |sock| {
-                let addr = match sock.peer_addr() {
-                    Ok(addr) => addr,
-                    Err(err) => {
-                        crit!(root_log, "Failed to get peer addr"; SlogKVError(Error::from(err)));
-                        return Ok(None).into_future().left_future();
-                    }
-                };
-                tls_acceptor
-                    .accept_async(sock)
-                    .then({
-                        let root_log = root_log.clone();
-                        move |sock| match sock {
-                            Ok(sock) => ssh_server_mux(sock)
-                                .map(move |stdio| Some((stdio, addr)))
-                                .or_else({
-                                    let root_log = root_log.clone();
-                                    move |err| {
-                                        error!(root_log, "Error while reading preamble: {}", err);
-                                        Ok(None)
-                                    }
-                                })
-                                .left_future(),
-                            Err(err) => {
-                                error!(root_log, "Error while reading preamble: {}", err);
-                                Ok(None).into_future().right_future()
-                            }
-                        }
-                    })
-                    .right_future()
+        .for_each(move |sock| {
+            // Accept the request without blocking the listener
+            cloned!(root_log, repo_handlers, tls_acceptor);
+            tokio::spawn(future::lazy(move || {
+                accept(sock, root_log, repo_handlers, tls_acceptor)
+            }));
+            Ok(())
+        })
+        .boxify()
+}
+
+fn accept(
+    sock: TcpStream,
+    root_log: Logger,
+    repo_handlers: Arc<HashMap<String, RepoHandler>>,
+    tls_acceptor: Arc<SslAcceptor>,
+) -> impl Future<Item = (), Error = ()> {
+    let addr = sock.peer_addr();
+
+    tls_acceptor
+        .accept_async(sock)
+        .map_err({
+            cloned!(root_log);
+            move |err| {
+                error!(
+                    root_log,
+                    "Error while establishing tls connection";
+                    SlogKVError(Error::from(err)),
+                )
             }
         })
-        .for_each(move |maybe_stdio| {
-            if maybe_stdio.is_none() {
-                return Ok(()).into_future().boxify();
+        .and_then({
+            cloned!(root_log);
+            move |sock| {
+                ssh_server_mux(sock).map_err(move |err| {
+                    error!(
+                        root_log,
+                        "Error while reading preamble";
+                        SlogKVError(Error::from(err)),
+                    )
+                })
             }
-            let (stdio, addr) = maybe_stdio.unwrap();
-            match repo_senders.get(&stdio.preamble.reponame) {
-                Some(sender) => sender
-                    .clone()
-                    .send((stdio, addr))
-                    .map(|_| ())
-                    .or_else({
-                        let root_log = root_log.clone();
-                        move |err| {
-                            error!(
-                                root_log,
-                                "Failed to send request to a repo processing thread: {}", err
-                            );
-                            Ok(())
-                        }
-                    })
-                    .boxify(),
-                None => {
-                    error!(root_log, "Unknown repo: {}", stdio.preamble.reponame);
-                    Ok(()).into_future().boxify()
-                }
+        })
+        .join(addr.into_future().map_err({
+            cloned!(root_log);
+            move |err| {
+                crit!(
+                    root_log,
+                    "Failed to get peer addr"; SlogKVError(Error::from(err)),
+                )
             }
+        }))
+        .and_then(move |(stdio, addr)| {
+            repo_handlers
+                .get(&stdio.preamble.reponame)
+                .cloned()
+                .ok_or_else(|| error!(root_log, "Unknown repo: {}", stdio.preamble.reponame))
+                .into_future()
+                .and_then(move |handler| request_handler(handler.clone(), stdio, addr))
         })
 }
 

@@ -8,6 +8,8 @@
 #![feature(never_type)]
 #![feature(try_from)]
 
+#[macro_use]
+extern crate cloned;
 extern crate dns_lookup;
 #[macro_use]
 extern crate failure_ext as failure;
@@ -39,11 +41,10 @@ extern crate sshrelay;
 
 mod connection_acceptor;
 mod errors;
-mod repo_listen;
+mod request_handler;
+mod repo_handlers;
 
-use std::collections::HashMap;
-
-use futures::{future, Future, sync::mpsc};
+use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use openssl::ssl::SslAcceptor;
 use slog::Logger;
@@ -52,9 +53,9 @@ use metaconfig::repoconfig::RepoConfig;
 
 use connection_acceptor::connection_acceptor;
 use errors::*;
-use repo_listen::repo_listen;
+use repo_handlers::repo_handlers;
 
-pub fn start_repo_listeners<I>(
+pub fn create_repo_listeners<I>(
     repos: I,
     root_log: &Logger,
     sockname: &str,
@@ -63,43 +64,13 @@ pub fn start_repo_listeners<I>(
 where
     I: IntoIterator<Item = (String, RepoConfig)>,
 {
-    // Given the list of paths to repos:
-    // - create a thread for it
-    // - initialize the repo
-    // - wait for connections in that thread
-
     let sockname = String::from(sockname);
-    let mut repo_senders = HashMap::new();
+    let root_log = root_log.clone();
     let mut ready = ready_state::ReadyStateBuilder::new();
 
-    let handles: Vec<_> = repos
-        .into_iter()
-        .filter(|(reponame, config)| {
-            if !config.enabled {
-                info!(root_log, "Repo {} not enabled", reponame)
-            };
-            config.enabled
-        })
-        .map(|(reponame, config)| {
-            info!(root_log, "Start listening for repo {:?}", config.repotype);
-            let ready_handle = ready.create_handle(reponame.as_ref());
-
-            // Buffer size doesn't make much sense. `.send()` consumes the sender, so we clone
-            // the sender. However each clone creates one more entry in the channel.
-            let (sender, receiver) = mpsc::channel(1);
-            repo_senders.insert(reponame.clone(), sender);
-            // create a future for each repo and start listening for connections
-            repo_listen(reponame, config, root_log.clone(), ready_handle, receiver)
-        })
-        .collect();
-
-    let conn_acceptor_handle =
-        connection_acceptor(&sockname, root_log.clone(), repo_senders, tls_acceptor);
-
     (
-        future::join_all(handles)
-            .join(conn_acceptor_handle)
-            .map(|_: (Vec<()>, ())| ())
+        repo_handlers(repos, &root_log, &mut ready)
+            .and_then(move |handles| connection_acceptor(sockname, root_log, handles, tls_acceptor))
             .boxify(),
         ready.freeze(),
     )

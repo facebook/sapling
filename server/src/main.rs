@@ -168,7 +168,7 @@ fn main() {
             ca_pem,
         };
 
-        let (repo_listeners, ready) = repo_listener::start_repo_listeners(
+        let (repo_listeners, ready) = repo_listener::create_repo_listeners(
             config.repos.into_iter(),
             root_log,
             matches
