@@ -5,3 +5,11 @@
 // GNU General Public License version 2 or any later version.
 
 pub use failure::{Error, Result, ResultExt};
+
+use mercurial_types::RepoPath;
+
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "internal error: file {} copied from directory {}", _0, _1)]
+    InconsistenCopyInfo(RepoPath, RepoPath),
+}

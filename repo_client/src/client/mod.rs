@@ -4,17 +4,14 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-//! State for a single source control Repo
+mod remotefilelog;
 
 use std::collections::{HashMap, HashSet};
-use std::fmt::{self, Debug};
 use std::io::Cursor;
 use std::iter::FromIterator;
 use std::mem;
-use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
@@ -22,32 +19,27 @@ use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, stream::e
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Timed, TimedStreamTrait};
 use itertools::Itertools;
-use rand::Isaac64Rng;
-use rand::distributions::{Distribution, LogNormal};
-use remotefilelog::create_remotefilelog_blob;
-
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
-use tracing::{TraceContext, Traced};
 
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
 use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, Changeset, Entry, HgBlobNode, HgChangesetId, HgManifestId,
-                      HgNodeHash, MPath, RepoPath, RepositoryId, Type, NULL_HASH};
+                      HgNodeHash, MPath, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{and_pruner_combinator, changed_entry_stream,
                                       changed_entry_stream_with_pruner, file_pruner,
                                       visited_pruner, ChangedEntry, EntryStatus};
-use metaconfig::repoconfig::RepoType;
-
-use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use tracing::{TraceContext, Traced};
 
 use blobrepo::BlobRepo;
-
-use errors::*;
-
+use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+
+use self::remotefilelog::create_remotefilelog_blob;
+use errors::*;
+use mononoke_repo::MononokeRepo;
 
 const MAX_NODES_TO_LOG: usize = 5;
 
@@ -61,81 +53,6 @@ mod ops {
     pub const GETBUNDLE: &str = "getbundle";
     pub const GETTREEPACK: &str = "gettreepack";
     pub const GETFILES: &str = "getfiles";
-}
-
-struct LogNormalGenerator {
-    rng: Isaac64Rng,
-    distribution: LogNormal,
-}
-
-pub trait OpenableRepoType {
-    fn open(&self, logger: Logger, repoid: RepositoryId) -> Result<BlobRepo>;
-    fn path(&self) -> &Path;
-}
-
-impl OpenableRepoType for RepoType {
-    fn open(&self, logger: Logger, repoid: RepositoryId) -> Result<BlobRepo> {
-        use hgproto::ErrorKind;
-        use metaconfig::repoconfig::RepoType::*;
-
-        let ret = match *self {
-            Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
-            BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
-            BlobManifold { ref args, .. } => BlobRepo::new_manifold(logger, args, repoid)?,
-            TestBlobDelayRocks(ref path, mean, stddev) => {
-                // We take in an arithmetic mean and stddev, and deduce a log normal
-                let mean = mean as f64 / 1_000_000.0;
-                let stddev = stddev as f64 / 1_000_000.0;
-                let variance = stddev * stddev;
-                let mean_squared = mean * mean;
-
-                let mu = (mean_squared / (variance + mean_squared).sqrt()).ln();
-                let sigma = (1.0 + variance / mean_squared).ln();
-
-                let max_delay = 16.0;
-
-                let mut delay_gen = LogNormalGenerator {
-                    // This is a deterministic RNG if not seeded
-                    rng: Isaac64Rng::new_from_u64(0),
-                    distribution: LogNormal::new(mu, sigma),
-                };
-                let delay_gen = move |()| {
-                    let delay = delay_gen.distribution.sample(&mut delay_gen.rng);
-                    let delay = if delay < 0.0 || delay > max_delay {
-                        max_delay
-                    } else {
-                        delay
-                    };
-                    let seconds = delay as u64;
-                    let nanos = ((delay - seconds as f64) * 1_000_000_000.0) as u32;
-                    Duration::new(seconds, nanos)
-                };
-                BlobRepo::new_rocksdb_delayed(
-                    logger,
-                    &path,
-                    repoid,
-                    delay_gen,
-                    // Roundtrips to the server - i.e. how many delays to apply
-                    2, // get
-                    3, // put
-                    2, // is_present
-                    2, // assert_present
-                )?
-            }
-        };
-
-        Ok(ret)
-    }
-
-    fn path(&self) -> &Path {
-        use metaconfig::repoconfig::RepoType::*;
-
-        match *self {
-            Revlog(ref path) | BlobRocks(ref path) => path.as_ref(),
-            BlobManifold { ref path, .. } => path.as_ref(),
-            TestBlobDelayRocks(ref path, ..) => path.as_ref(),
-        }
-    }
 }
 
 fn format_nodes_list(mut nodes: Vec<HgNodeHash>) -> String {
@@ -217,38 +134,6 @@ fn bundle2caps() -> String {
     percent_encode(&encodedcaps.join("\n"))
 }
 
-pub struct MononokeRepo {
-    path: String,
-    blobrepo: Arc<BlobRepo>,
-}
-
-impl MononokeRepo {
-    pub fn new(
-        logger: Logger,
-        repo: &RepoType,
-        repoid: RepositoryId,
-    ) -> Result<Self> {
-        Ok(MononokeRepo {
-            path: format!("{}", repo.path().to_owned().display()),
-            blobrepo: Arc::new(repo.open(logger, repoid)?),
-        })
-    }
-
-    pub fn path(&self) -> &String {
-        &self.path
-    }
-
-    pub fn blobrepo(&self) -> Arc<BlobRepo> {
-        self.blobrepo.clone()
-    }
-}
-
-impl Debug for MononokeRepo {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Repo({})", self.path)
-    }
-}
-
 #[derive(Clone)]
 pub struct RepoClient {
     repo: Arc<MononokeRepo>,
@@ -298,7 +183,7 @@ impl RepoClient {
         // TODO: possibly enable compression support once this is fixed.
         bundle.set_compressor_type(None);
 
-        let blobrepo = &self.repo.blobrepo;
+        let blobrepo = self.repo.blobrepo();
 
         let common_heads: HashSet<_> = HashSet::from_iter(args.common.iter());
 
@@ -366,7 +251,6 @@ impl RepoClient {
         // TODO: generalize this to other listkey types
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
-            let blobrepo = self.repo.blobrepo.clone();
             let items = blobrepo.get_bookmarks().map(|(name, cs)| {
                 let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
                 (name.to_string(), hash)
@@ -408,7 +292,7 @@ impl RepoClient {
                 .iter()
                 .fold(stream::empty().boxify(), move |cur_stream, manifest_id| {
                     let new_stream = get_changed_entry_stream(
-                        self.repo.blobrepo.clone(),
+                        self.repo.blobrepo(),
                         &manifest_id,
                         &basemfnode,
                         rootpath.clone(),
@@ -420,7 +304,7 @@ impl RepoClient {
         } else {
             match params.mfnodes.get(0) {
                 Some(mfnode) => get_changed_entry_stream(
-                    self.repo.blobrepo.clone(),
+                    self.repo.blobrepo(),
                     &mfnode,
                     &basemfnode,
                     rootpath.clone(),
@@ -437,7 +321,7 @@ impl RepoClient {
                 move |entry| used_hashes.insert(*entry.0.get_hash())
             })
             .map({
-                let blobrepo = self.repo.blobrepo.clone();
+                let blobrepo = self.repo.blobrepo();
                 let trace = self.trace.clone();
                 move |(entry, basepath)| {
                     fetch_treepack_part_input(blobrepo.clone(), entry, basepath, trace.clone())
@@ -491,7 +375,7 @@ impl HgCommands for RepoClient {
                 self.wait_cs = self.wait_cs.take().or_else(|| {
                     Some(
                         self.repo
-                            .blobrepo
+                            .blobrepo()
                             .get_changeset_by_changesetid(&HgChangesetId::new(self.n)),
                     )
                 });
@@ -541,7 +425,7 @@ impl HgCommands for RepoClient {
         let trace = self.trace.clone();
 
         self.repo
-            .blobrepo
+            .blobrepo()
             .get_heads()
             .collect()
             .map(|v| v.into_iter().collect())
@@ -555,7 +439,7 @@ impl HgCommands for RepoClient {
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
         info!(self.logger, "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support bookmarks and prefixes too
-        let repo = self.repo.blobrepo.clone();
+        let repo = self.repo.blobrepo();
         let mut scuba_logger = self.scuba_logger(ops::LOOKUP, None);
         let trace = self.trace.clone();
 
@@ -595,7 +479,7 @@ impl HgCommands for RepoClient {
         } else {
             info!(self.logger, "known: {:?}", nodes);
         }
-        let blobrepo = self.repo.blobrepo.clone();
+        let blobrepo = self.repo.blobrepo();
 
         let mut scuba_logger = self.scuba_logger(ops::KNOWN, None);
         let trace = self.trace.clone();
@@ -643,7 +527,7 @@ impl HgCommands for RepoClient {
     fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
         if namespace == "bookmarks" {
             self.repo
-                .blobrepo
+                .blobrepo()
                 .get_bookmarks()
                 .map(|(name, cs)| {
                     let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
@@ -677,7 +561,7 @@ impl HgCommands for RepoClient {
         let trace = self.trace.clone();
 
         let res = bundle2_resolver::resolve(
-            self.repo.blobrepo.clone(),
+            self.repo.blobrepo(),
             self.logger.new(o!("command" => "unbundle")),
             scuba_logger.clone(),
             heads,
@@ -721,7 +605,7 @@ impl HgCommands for RepoClient {
                 let mut scuba_logger = this.scuba_logger(ops::GETFILES, Some(args));
 
                 let repo = this.repo.clone();
-                create_remotefilelog_blob(repo.blobrepo.clone(), node, path.clone(), trace.clone())
+                create_remotefilelog_blob(repo.blobrepo(), node, path.clone(), trace.clone())
                     .traced(
                         &trace,
                         "getfile",

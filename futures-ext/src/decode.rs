@@ -126,8 +126,8 @@ mod test {
     use std::io;
 
     use bytes::Bytes;
-    use futures::stream;
     use futures::Stream;
+    use futures::stream;
     use tokio_core::reactor;
 
     use super::*;

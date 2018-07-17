@@ -4,18 +4,21 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobrepo::BlobRepo;
-use bytes::Bytes;
-use errors::*;
-use filenodes::FilenodeInfo;
-use futures::{stream, Future, IntoFuture, Stream, future::Either};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use mercurial_types::{HgNodeHash, HgParents, MPath, RepoPath, NULL_HASH};
-use pylz4;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Cursor, Write};
 use std::sync::Arc;
+
+use bytes::Bytes;
+use futures::{stream, Future, IntoFuture, Stream, future::Either};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use pylz4;
+
+use blobrepo::BlobRepo;
+use filenodes::FilenodeInfo;
+use mercurial_types::{HgNodeHash, HgParents, MPath, RepoPath, NULL_HASH};
 use tracing::{TraceContext, Traced};
+
+use errors::*;
 
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
