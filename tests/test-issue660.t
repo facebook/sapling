@@ -1,10 +1,5 @@
-#testcases treestate-on treestate-off
 
-#if treestate-on
-  $ setconfig format.usetreestate=1
-#else
-  $ setconfig format.usetreestate=0
-#endif
+  $ setconfig format.dirstate=2
 
 https://bz.mercurial-scm.org/660 and:
 https://bz.mercurial-scm.org/322
