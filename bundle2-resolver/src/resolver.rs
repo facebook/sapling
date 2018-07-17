@@ -54,7 +54,13 @@ pub fn resolve(
     let resolver = Bundle2Resolver::new(repo, logger, scuba_logger);
 
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
+    resolve_push(resolver, bundle2)
+}
 
+fn resolve_push(
+    resolver: Bundle2Resolver,
+    bundle2: BoxStream<Bundle2Item, Error>,
+) -> BoxFuture<Bytes, Error> {
     resolver
         .maybe_resolve_changegroup(bundle2)
         .and_then({
