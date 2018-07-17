@@ -572,17 +572,19 @@ impl MemoryManifestEntry {
         blobstore: RepoBlobstore,
     ) {
         if let Some(entry) = manifest.lookup(&element) {
-            let entry = match entry.get_type() {
-                Type::Tree => Self::convert_treenode(&entry.get_hash().into_nodehash()),
-                _ => MemoryManifestEntry::Blob(HgBlobEntry::new(
-                    blobstore,
-                    element.clone(),
-                    entry.get_hash().into_nodehash(),
-                    entry.get_type(),
-                )),
-            };
             let mut changes = entry_changes.lock().expect("lock poisoned");
-            changes.insert(element, Some(entry));
+            changes.entry(element.clone()).or_insert_with(move || {
+                let entry = match entry.get_type() {
+                    Type::Tree => Self::convert_treenode(&entry.get_hash().into_nodehash()),
+                    _ => MemoryManifestEntry::Blob(HgBlobEntry::new(
+                        blobstore,
+                        element,
+                        entry.get_hash().into_nodehash(),
+                        entry.get_type(),
+                    )),
+                };
+                Some(entry)
+            });
         }
     }
 
