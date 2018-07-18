@@ -85,7 +85,8 @@ and error because it will try to add/remove the same file
   [255]
 
 Update change to ignore moves and attempt import again
-  $ p4 change -o 3 | sed 's: foo: foo @IMPORTER_IGNORE_REORG@:' | p4 change -fi
+  $ p4 change -o 3 | sed 's: foo: foo @IMPORTER_IGNORE_REORG@:' > changeo3
+  $ p4 change -fi < changeo3
   Change 3 updated.
 
   $ hg p4seqimport --debug -P $P4ROOT -B master overlay-client
