@@ -7,7 +7,6 @@
 #![deny(warnings)]
 
 extern crate asyncmemo;
-#[cfg(test)]
 extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;
@@ -16,6 +15,7 @@ extern crate inlinable_string;
 extern crate tokio;
 extern crate tokio_timer;
 
+extern crate cachelib;
 extern crate fbwhoami;
 extern crate futures_ext;
 #[macro_use]
@@ -34,6 +34,9 @@ use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
 use mononoke_types::BlobstoreBytes;
+
+mod cachelib_cache;
+pub use cachelib_cache::new_cachelib_blobstore_no_lease;
 
 mod counted_blobstore;
 pub use counted_blobstore::CountedBlobstore;
