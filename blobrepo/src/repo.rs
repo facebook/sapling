@@ -1110,9 +1110,7 @@ impl CreateChangeset {
                 .join(parents_data)
                 .from_err()
                 .and_then({
-                    let filenodes = repo.filenodes.clone();
-                    let blobstore = repo.blobstore.clone();
-                    let mut scuba_logger = scuba_logger.clone();
+                    cloned!(repo.filenodes, repo.blobstore, mut scuba_logger);
                     let expected_files = self.expected_files;
                     let cs_metadata = self.cs_metadata;
 

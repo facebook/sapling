@@ -7,6 +7,8 @@
 #![deny(warnings)]
 
 #[macro_use]
+extern crate cloned;
+#[macro_use]
 extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
