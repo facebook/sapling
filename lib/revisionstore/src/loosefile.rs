@@ -3,10 +3,8 @@
 // hg/hgext/remotefilelog/remotefilelog.py:_createfileblob()
 // into the size of text, text and ancestors information.
 
-use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::Path;
 use std::rc::Rc;
 
 use error::{KeyError, Result};

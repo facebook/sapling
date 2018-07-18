@@ -256,7 +256,7 @@ impl DataPack {
 }
 
 impl DataStore for DataPack {
-    fn get(&self, key: &Key) -> Result<Vec<u8>> {
+    fn get(&self, _key: &Key) -> Result<Vec<u8>> {
         Err(format_err!(
             "DataPack doesn't support raw get(), only getdeltachain"
         ))

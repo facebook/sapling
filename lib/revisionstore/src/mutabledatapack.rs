@@ -95,7 +95,7 @@ impl MutableDataPack {
         buf.write_all(delta.key.name())?;
         buf.write_all(delta.key.node().as_ref())?;
 
-        let base_node = buf.write_all(
+        buf.write_all(
             delta
                 .base
                 .as_ref()
@@ -152,7 +152,7 @@ impl MutableDataPack {
 }
 
 impl DataStore for MutableDataPack {
-    fn get(&self, key: &Key) -> Result<Vec<u8>> {
+    fn get(&self, _key: &Key) -> Result<Vec<u8>> {
         Err(
             MutableDataPackError("DataPack doesn't support raw get(), only getdeltachain".into())
                 .into(),
@@ -172,7 +172,7 @@ impl DataStore for MutableDataPack {
     }
 
     fn get_meta(&self, key: &Key) -> Result<Metadata> {
-        let (delta_base, metadata) = self.read_entry(&key)?;
+        let (_, metadata) = self.read_entry(&key)?;
         Ok(metadata)
     }
 

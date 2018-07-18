@@ -17,7 +17,6 @@ extern crate quickcheck;
 
 mod dataindex;
 mod fanouttable;
-mod mutabledatapack;
 mod unionstore;
 
 pub mod datapack;
@@ -26,6 +25,7 @@ pub mod error;
 pub mod historystore;
 pub mod key;
 pub mod loosefile;
+pub mod mutabledatapack;
 pub mod node;
 pub mod uniondatastore;
 pub mod unionhistorystore;

@@ -158,7 +158,6 @@ impl DataIndex {
 
         // Write index
         writer.write_u64::<BigEndian>(values.len() as u64)?;
-        let index_start = 2 + FanoutTable::get_size(options.large) + 8;
         for &(node, value) in values.iter() {
             let delta_base_offset = value.delta_base.map_or(-1, |delta_base| {
                 nodelocations
