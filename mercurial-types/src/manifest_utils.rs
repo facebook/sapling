@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::{HashSet, VecDeque};
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 use std::sync::{Arc, Mutex};
@@ -23,6 +24,7 @@ use errors::*;
 // * this isn't "left" and "right" because an explicit direction makes the API clearer
 // * this isn't "new" and "old" because one could ask for either a diff from a child manifest to
 //   its parent, or the other way round
+#[derive(Debug)]
 pub enum EntryStatus {
     Added(Box<Entry + Sync>),
     Deleted(Box<Entry + Sync>),
@@ -53,6 +55,7 @@ impl EntryStatus {
     }
 }
 
+#[derive(Debug)]
 pub struct ChangedEntry {
     pub dirname: Option<MPath>,
     pub status: EntryStatus,
@@ -110,6 +113,42 @@ impl ChangedEntry {
                 let entry_path = to_entry.get_name().cloned();
                 MPath::join_element_opt(dirname.as_ref(), entry_path.as_ref())
             }
+        }
+    }
+}
+
+impl fmt::Display for ChangedEntry {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let full_path = self.get_full_path();
+        let path_display = MPath::display_opt(full_path.as_ref());
+
+        match &self.status {
+            EntryStatus::Added(entry) => write!(
+                f,
+                "[added] path: {}, hash: {}, type: {}",
+                path_display,
+                entry.get_hash(),
+                entry.get_type(),
+            ),
+            EntryStatus::Deleted(entry) => write!(
+                f,
+                "[deleted] path: {}, hash: {}, type: {}",
+                path_display,
+                entry.get_hash(),
+                entry.get_type(),
+            ),
+            EntryStatus::Modified {
+                to_entry,
+                from_entry,
+            } => write!(
+                f,
+                "[modified] path: {}, to {{hash: {}, type: {}}}, from {{hash: {}, type: {}}}",
+                path_display,
+                to_entry.get_hash(),
+                to_entry.get_type(),
+                from_entry.get_hash(),
+                from_entry.get_type(),
+            ),
         }
     }
 }
