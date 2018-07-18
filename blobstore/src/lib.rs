@@ -36,7 +36,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 
 mod cachelib_cache;
-pub use cachelib_cache::new_cachelib_blobstore_no_lease;
+pub use cachelib_cache::{new_cachelib_blobstore, new_cachelib_blobstore_no_lease};
 
 mod counted_blobstore;
 pub use counted_blobstore::CountedBlobstore;
@@ -45,6 +45,8 @@ mod dummy_lease;
 
 mod in_memory_cache;
 pub use in_memory_cache::MemoizedBlobstore;
+
+mod in_process_lease;
 
 mod locking_cache;
 pub use locking_cache::{CacheBlobstore, CacheBlobstoreExt, CacheOps, LeaseOps};

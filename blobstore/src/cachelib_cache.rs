@@ -17,6 +17,7 @@ use mononoke_types::BlobstoreBytes;
 use Blobstore;
 use counted_blobstore::CountedBlobstore;
 use dummy_lease::DummyLease;
+use in_process_lease::InProcessLease;
 use locking_cache::CacheBlobstore;
 
 const CACHELIB_MAX_SIZE: usize = 1024000;
@@ -49,6 +50,21 @@ where
     CountedBlobstore::new(
         "cachelib",
         CacheBlobstore::new(cache_ops, DummyLease {}, blobstore),
+    )
+}
+
+pub fn new_cachelib_blobstore<T>(
+    blobstore: T,
+    blob_pool: Arc<LruCachePool>,
+    presence_pool: Arc<LruCachePool>,
+) -> CountedBlobstore<CacheBlobstore<CachelibOps, InProcessLease, T>>
+where
+    T: Blobstore + Clone,
+{
+    let cache_ops = CachelibOps::new(blob_pool, presence_pool);
+    CountedBlobstore::new(
+        "cachelib",
+        CacheBlobstore::new(cache_ops, InProcessLease::new(), blobstore),
     )
 }
 
