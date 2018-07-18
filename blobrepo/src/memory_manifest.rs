@@ -96,8 +96,19 @@ impl MemoryManifestEntry {
         blobstore: &RepoBlobstore,
     ) -> impl Future<Item = bool, Error = Error> + Send {
         match self {
-            MemoryManifestEntry::MemTree { .. } => Either::A(
-                self.get_new_children(blobstore)
+            MemoryManifestEntry::MemTree {
+                changes,
+                base_manifest_id,
+                ..
+            } => {
+                let changes_are_empty = {
+                    let changes = changes.lock().expect("lock poisoned");
+                    changes.is_empty()
+                };
+                if changes_are_empty {
+                    Either::B(future::ok(base_manifest_id.is_none()))
+                } else {
+                    let is_empty_rec = self.get_new_children(blobstore)
                     .and_then({
                         let blobstore = blobstore.clone();
                         move |children| {
@@ -112,8 +123,10 @@ impl MemoryManifestEntry {
                     // Needed because otherwise I get
                     // error[E0275]: overflow evaluating the requirement
                     // `impl std::marker::Send+futures::Future`
-                    .boxify(),
-            ),
+                    .boxify();
+                    Either::A(is_empty_rec)
+                }
+            }
             _ => Either::B(future::ok(false)),
         }
     }
