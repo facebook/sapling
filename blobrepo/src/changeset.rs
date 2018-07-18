@@ -22,7 +22,7 @@ use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NULL_HASH};
 use mononoke_types::DateTime;
 
 use errors::*;
-use repo::RepoBlobstore;
+use repo::{ChangesetMetadata, RepoBlobstore};
 
 #[derive(Debug, Clone)]
 pub struct ChangesetContent {
@@ -41,22 +41,19 @@ impl ChangesetContent {
         // XXX replace parents with p1 and p2
         parents: HgParents,
         manifestid: HgManifestId,
-        user: Vec<u8>,
-        time: DateTime,
-        extra: BTreeMap<Vec<u8>, Vec<u8>>,
+        cs_metadata: ChangesetMetadata,
         files: Vec<MPath>,
-        comments: Vec<u8>,
     ) -> Self {
         let (p1, p2) = parents.get_nodes();
         Self {
             p1: p1.cloned(),
             p2: p2.cloned(),
             manifestid,
-            user,
-            time,
-            extra: Extra::new(extra),
+            user: cs_metadata.user.into_bytes(),
+            time: cs_metadata.time,
+            extra: Extra::new(cs_metadata.extra),
             files,
-            comments,
+            comments: cs_metadata.comments.into_bytes(),
         }
     }
 

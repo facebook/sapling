@@ -68,8 +68,9 @@ pub use errors::*;
 pub use changeset::{BlobChangeset, ChangesetContent};
 pub use file::HgBlobEntry;
 pub use manifest::BlobManifest;
-pub use repo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, CreateChangeset, ManifoldArgs,
-               UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
+pub use repo::{BlobRepo, ChangesetMetadata, ContentBlobInfo, ContentBlobMeta, CreateChangeset,
+               ManifoldArgs, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
+               UploadHgTreeEntry};
 pub use repo_commit::ChangesetHandle;
 // TODO: This is exported for testing - is this the right place for it?
 pub use repo_commit::compute_changed_files;

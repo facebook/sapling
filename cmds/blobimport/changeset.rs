@@ -18,8 +18,9 @@ use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
 
-use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry,
-               UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
+use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset,
+               HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
+               UploadHgTreeEntry};
 use cmdlib::args;
 use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
@@ -307,6 +308,14 @@ pub fn upload_changesets<'a>(
                 (parents.next(), parents.next())
             };
 
+            let cs_metadata = ChangesetMetadata {
+                user: String::from_utf8(Vec::from(cs.user()))
+                    .expect(&format!("non-utf8 username for {}", csid)),
+                time: cs.time().clone(),
+                extra: cs.extra().clone(),
+                comments: String::from_utf8(Vec::from(cs.comments()))
+                    .expect(&format!("non-utf8 comments for {}", csid)),
+            };
             let create_changeset = CreateChangeset {
                 expected_nodeid: Some(csid),
                 expected_files: Some(Vec::from(cs.files())),
@@ -314,12 +323,7 @@ pub fn upload_changesets<'a>(
                 p2: p2handle,
                 root_manifest: rootmf,
                 sub_entries: entries,
-                user: String::from_utf8(Vec::from(cs.user()))
-                    .expect(&format!("non-utf8 username for {}", csid)),
-                time: cs.time().clone(),
-                extra: cs.extra().clone(),
-                comments: String::from_utf8(Vec::from(cs.comments()))
-                    .expect(&format!("non-utf8 comments for {}", csid)),
+                cs_metadata,
             };
             let cshandle = create_changeset.create(&blobrepo, ScubaSampleBuilder::with_discard());
             parent_changeset_handles.insert(csid, cshandle.clone());

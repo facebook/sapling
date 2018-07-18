@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
@@ -26,14 +26,13 @@ use mercurial_types::{Changeset, Entry, HgChangesetId, HgEntryId, HgNodeHash, Hg
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
-use mononoke_types::DateTime;
 
 use BlobChangeset;
 use BlobRepo;
 use changeset::ChangesetContent;
 use errors::*;
 use file::HgBlobEntry;
-use repo::RepoBlobstore;
+use repo::{ChangesetMetadata, RepoBlobstore};
 
 define_stats! {
     prefix = "mononoke.blobrepo_commit";
@@ -660,21 +659,10 @@ pub fn handle_parents(
 pub fn make_new_changeset(
     parents: HgParents,
     root_hash: HgManifestId,
-    user: String,
-    time: DateTime,
-    extra: BTreeMap<Vec<u8>, Vec<u8>>,
+    cs_metadata: ChangesetMetadata,
     files: Vec<MPath>,
-    comments: String,
 ) -> Result<BlobChangeset> {
-    let changeset = ChangesetContent::new_from_parts(
-        parents,
-        root_hash,
-        user.into_bytes(),
-        time,
-        extra,
-        files,
-        comments.into_bytes(),
-    );
+    let changeset = ChangesetContent::new_from_parts(parents, root_hash, cs_metadata, files);
     BlobChangeset::new(changeset)
 }
 

@@ -15,8 +15,8 @@ use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
 
-use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset, HgBlobEntry, UploadHgFileContents,
-               UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
+use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, HgBlobEntry,
+               UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
 use blobstore::{EagerMemblob, LazyMemblob};
 use mercurial_types::{FileType, HgBlobNode, HgNodeHash, RepoPath};
 use mononoke_types::DateTime;
@@ -176,6 +176,12 @@ pub fn create_changeset_no_parents(
     root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     other_nodes: Vec<BoxFuture<(HgBlobEntry, RepoPath), Error>>,
 ) -> ChangesetHandle {
+    let cs_metadata = ChangesetMetadata {
+        user: "author <author@fb.com>".into(),
+        time: DateTime::from_timestamp(0, 0).expect("valid timestamp"),
+        extra: BTreeMap::new(),
+        comments: "Test commit".into(),
+    };
     let create_changeset = CreateChangeset {
         expected_nodeid: None,
         expected_files: None,
@@ -183,10 +189,7 @@ pub fn create_changeset_no_parents(
         p2: None,
         root_manifest,
         sub_entries: futures_unordered(other_nodes).boxify(),
-        user: "author <author@fb.com>".into(),
-        time: DateTime::from_timestamp(0, 0).expect("valid timestamp"),
-        extra: BTreeMap::new(),
-        comments: "Test commit".into(),
+        cs_metadata,
     };
     create_changeset.create(repo, ScubaSampleBuilder::with_discard())
 }
@@ -197,6 +200,12 @@ pub fn create_changeset_one_parent(
     other_nodes: Vec<BoxFuture<(HgBlobEntry, RepoPath), Error>>,
     p1: ChangesetHandle,
 ) -> ChangesetHandle {
+    let cs_metadata = ChangesetMetadata {
+        user: "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into(),
+        time: DateTime::from_timestamp(1234, 0).expect("valid timestamp"),
+        extra: BTreeMap::new(),
+        comments: "Child commit".into(),
+    };
     let create_changeset = CreateChangeset {
         expected_nodeid: None,
         expected_files: None,
@@ -204,10 +213,7 @@ pub fn create_changeset_one_parent(
         p2: None,
         root_manifest,
         sub_entries: futures_unordered(other_nodes).boxify(),
-        user: "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into(),
-        time: DateTime::from_timestamp(1234, 0).expect("valid timestamp"),
-        extra: BTreeMap::new(),
-        comments: "Child commit".into(),
+        cs_metadata,
     };
     create_changeset.create(repo, ScubaSampleBuilder::with_discard())
 }

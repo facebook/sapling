@@ -1059,6 +1059,13 @@ pub struct ContentBlobMeta {
     pub copy_from: Option<(MPath, HgNodeHash)>,
 }
 
+pub struct ChangesetMetadata {
+    pub user: String,
+    pub time: DateTime,
+    pub extra: BTreeMap<Vec<u8>, Vec<u8>>,
+    pub comments: String,
+}
+
 pub struct CreateChangeset {
     /// This should always be provided, keeping it an Option for tests
     pub expected_nodeid: Option<HgNodeHash>,
@@ -1068,10 +1075,7 @@ pub struct CreateChangeset {
     // root_manifest can be None f.e. when commit removes all the content of the repo
     pub root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     pub sub_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
-    pub user: String,
-    pub time: DateTime,
-    pub extra: BTreeMap<Vec<u8>, Vec<u8>>,
-    pub comments: String,
+    pub cs_metadata: ChangesetMetadata,
 }
 
 impl CreateChangeset {
@@ -1110,10 +1114,7 @@ impl CreateChangeset {
                     let blobstore = repo.blobstore.clone();
                     let mut scuba_logger = scuba_logger.clone();
                     let expected_files = self.expected_files;
-                    let user = self.user;
-                    let time = self.time;
-                    let extra = self.extra;
-                    let comments = self.comments;
+                    let cs_metadata = self.cs_metadata;
 
                     move |((root_manifest, root_hash), (parents, p1_manifest, p2_manifest))| {
                         let files = if let Some(expected_files) = expected_files {
@@ -1143,11 +1144,8 @@ impl CreateChangeset {
                                         let blobcs = try_boxfuture!(make_new_changeset(
                                             parents,
                                             root_hash,
-                                            user,
-                                            time,
-                                            extra,
+                                            cs_metadata,
                                             files,
-                                            comments,
                                         ));
 
                                         let cs_id = blobcs.get_changeset_id().into_nodehash();

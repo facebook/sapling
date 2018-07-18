@@ -10,7 +10,8 @@ use std::ops::AddAssign;
 use std::sync::Arc;
 
 use ascii::AsciiString;
-use blobrepo::{BlobRepo, ChangesetHandle, ContentBlobInfo, CreateChangeset, HgBlobEntry};
+use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset,
+               HgBlobEntry};
 use bookmarks;
 use bytes::Bytes;
 use failure::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
@@ -477,6 +478,12 @@ impl Bundle2Resolver {
                 .with_context(move |_| format!("While fetching parents for Changeset {}", node))
                 .from_err()
                 .and_then(move |(p1, p2)| {
+                    let cs_metadata = ChangesetMetadata {
+                        user: String::from_utf8(revlog_cs.user().into())?,
+                        time: revlog_cs.time().clone(),
+                        extra: revlog_cs.extra().clone(),
+                        comments: String::from_utf8(revlog_cs.comments().into())?,
+                    };
                     let create_changeset = CreateChangeset {
                         expected_nodeid: Some(node),
                         expected_files: Some(Vec::from(revlog_cs.files())),
@@ -485,10 +492,7 @@ impl Bundle2Resolver {
                         root_manifest,
                         sub_entries,
                         // XXX pass content blobs to CreateChangeset here
-                        user: String::from_utf8(revlog_cs.user().into())?,
-                        time: revlog_cs.time().clone(),
-                        extra: revlog_cs.extra().clone(),
-                        comments: String::from_utf8(revlog_cs.comments().into())?,
+                        cs_metadata,
                     };
                     let scheduled_uploading = create_changeset.create(&repo, scuba_logger);
 
