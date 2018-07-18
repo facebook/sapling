@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::fmt::{self, Display};
+use std::fmt;
 use std::iter;
 
 use failure::Error;
@@ -108,17 +108,25 @@ impl Type {
     pub fn is_tree(&self) -> bool {
         self == &Type::Tree
     }
-}
 
-impl Display for Type {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let s = match *self {
+    pub fn manifest_suffix(&self) -> &'static str {
+        // It's a little weird that this returns a Unicode string and not a bytestring, but that's
+        // what callers demand.
+        match self {
             Type::Tree => "t",
             Type::File(FileType::Symlink) => "l",
             Type::File(FileType::Executable) => "x",
             Type::File(FileType::Regular) => "",
-        };
-        write!(fmt, "{}", s)
+        }
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Type::Tree => write!(f, "tree"),
+            Type::File(ft) => write!(f, "{}", ft),
+        }
     }
 }
 
@@ -271,5 +279,15 @@ impl Entry for Box<Entry + Sync> {
 
     fn get_name(&self) -> Option<&MPathElement> {
         (**self).get_name()
+    }
+}
+
+impl fmt::Debug for Box<Entry + Sync> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Entry")
+            .field("name", &self.get_name())
+            .field("hash", &format!("{}", self.get_hash()))
+            .field("type", &self.get_type())
+            .finish()
     }
 }

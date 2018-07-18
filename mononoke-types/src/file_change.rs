@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::fmt;
+
 use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 
 use errors::*;
@@ -186,6 +188,17 @@ impl FileType {
             FileType::Executable => thrift::FileType::Executable,
             FileType::Symlink => thrift::FileType::Symlink,
         }
+    }
+}
+
+impl fmt::Display for FileType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            FileType::Symlink => "symlink",
+            FileType::Executable => "executable",
+            FileType::Regular => "regular",
+        };
+        write!(f, "{}", s)
     }
 }
 

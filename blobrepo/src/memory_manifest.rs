@@ -234,7 +234,7 @@ impl MemoryManifestEntry {
                                                 &mut manifest,
                                                 "\0{}{}\n",
                                                 entry.get_hash().into_nodehash(),
-                                                entry.get_type(),
+                                                entry.get_type().manifest_suffix(),
                                             ).expect("Writing to memory failed!");
                                         });
 

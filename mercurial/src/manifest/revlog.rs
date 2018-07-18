@@ -235,7 +235,12 @@ impl Details {
     }
 
     fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
-        write!(out, "{}{}", self.entryid.into_nodehash(), self.flag)
+        write!(
+            out,
+            "{}{}",
+            self.entryid.into_nodehash(),
+            self.flag.manifest_suffix()
+        )
     }
 
     pub fn entryid(&self) -> &HgEntryId {
