@@ -490,6 +490,21 @@ impl MPath {
                 .collect(),
         )
     }
+
+    pub fn display_opt<'a>(path_opt: Option<&'a MPath>) -> DisplayOpt<'a> {
+        DisplayOpt(path_opt)
+    }
+}
+
+pub struct DisplayOpt<'a>(Option<&'a MPath>);
+
+impl<'a> Display for DisplayOpt<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.0 {
+            Some(path) => write!(f, "{}", path),
+            None => write!(f, "(none)"),
+        }
+    }
 }
 
 /// Check that a sorted list of (MPath, is_changed) pairs is path-conflict-free. This means that
