@@ -1673,7 +1673,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         if usemergedriver:
             ms.commit()
             with repo.ui.timesection("mergedriver"):
-                proceed = driverpreprocess(repo, ms, wctx, labels=labels)
+                # This will return False if the function raises an exception.
+                failed = not driverpreprocess(repo, ms, wctx, labels=labels)
             driverresolved = [f for f in ms.driverresolved()]
 
             repo.ui.log("command_metrics", mergedriver_num_files=len(driverresolved))
@@ -1692,12 +1693,22 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
                     paths=driverresolved,
                 )
 
-            # the driver might leave some files unresolved
+            # NOTE(phillco): This used to say "the driver might leave some files unresolved",
+            # but this actually only handles the case where preprocess() fails. A preprocess()
+            # script can also leave files unmarked without failing.
             unresolvedf = set(ms.unresolved())
-            if not proceed:
-                # XXX setting unresolved to at least 1 is a hack to make sure we
-                # error out
-                return updated, merged, removed, max(len(unresolvedf), 1)
+            if failed:
+                # Preprocess failed, so don't proceed in either case.
+                if wctx.isinmemory():
+                    raise error.InMemoryMergeConflictsError(
+                        "preprocess() raised an exception",
+                        type=error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
+                        paths=list(unresolvedf),
+                    )
+                else:
+                    # XXX setting unresolved to at least 1 is a hack to make sure we
+                    # error out
+                    return updated, merged, removed, max(len(unresolvedf), 1)
             newactions = []
             for f, args, msg in mergeactions:
                 if f in unresolvedf:
