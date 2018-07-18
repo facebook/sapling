@@ -58,11 +58,12 @@ void DirEntry::setInode(InodeBase* inode) {
   inode_ = inode;
 }
 
-void DirEntry::clearInode() {
+InodeBase* DirEntry::clearInode() {
   DCHECK(hasInodePointer_);
-  hasInodePointer_ = false;
   auto inode = inode_;
+  hasInodePointer_ = false;
   inodeNumber_ = inode->getNodeId();
+  return inode;
 }
 
 } // namespace eden

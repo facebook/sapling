@@ -165,9 +165,19 @@ class DirEntry {
    */
   TreeInodePtr asTreePtrOrNull() const;
 
+  /**
+   * Associates a loaded inode pointer with this entry. Does not take ownership.
+   */
   void setInode(InodeBase* inode);
 
-  void clearInode();
+  /**
+   * Clears and returns this entry's inode pointer. Must only be called if
+   * assignInode() has.
+   *
+   * This method is only called when the inode is being unloaded and its pointer
+   * is no longer valid.
+   */
+  FOLLY_NODISCARD InodeBase* clearInode();
 
  private:
   /**

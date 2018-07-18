@@ -712,8 +712,8 @@ void InodeMap::onInodeUnreferenced(
       const auto& parentContents = parentInfo.getParentContents();
       auto it = parentContents->entries.find(parentInfo.getName());
       CHECK(it != parentContents->entries.end());
-      CHECK_EQ(it->second.getInode(), inode);
-      it->second.clearInode();
+      auto released = it->second.clearInode();
+      CHECK_EQ(inode, released);
     }
   }
 

@@ -2986,8 +2986,7 @@ void TreeInode::unloadChildrenNow() {
               entry.second.getInode(), this, entry.first, false, inodeMapLock);
           // Record that we should now delete this inode after releasing
           // the locks.
-          toDelete.push_back(entry.second.getInode());
-          entry.second.clearInode();
+          toDelete.push_back(entry.second.clearInode());
         }
       }
     }
@@ -3080,13 +3079,13 @@ uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
         // age)
         auto entryInode = entry.second.getInode();
         if (toUnload.count(entryInode) && entryInode->isPtrAcquireCountZero()) {
+          (void)entry.second.clearInode();
           // Unload the inode
           inodeMap->unloadInode(
               entryInode, this, entry.first, false, inodeMapLock);
           // Record that we should now delete this inode after releasing
           // the locks.
           toDelete.push_back(entryInode);
-          entry.second.clearInode();
         }
       }
     }
