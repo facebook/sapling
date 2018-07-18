@@ -24,7 +24,7 @@ extern crate tokio_io;
 
 use bytes::Bytes;
 use futures::{future, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream};
-use futures::sync::oneshot;
+use futures::sync::{mpsc, oneshot};
 use tokio::timer::{Deadline, DeadlineError};
 use tokio_io::AsyncWrite;
 use tokio_io::codec::{Decoder, Encoder};
@@ -73,6 +73,24 @@ where
             Ok(Async::Ready(_)) => Ok(Async::Ready(())),
         }
     }
+}
+
+/// Send an item over an mpsc channel, discarding both the sender and receiver-closed errors. This
+/// should be used when the receiver being closed makes sending values moot, since no one is
+/// interested in the results any more.
+///
+/// `E` is an arbitrary error type useful for getting types to match up, but it will never be
+/// produced by the returned future.
+#[inline]
+pub fn send_discard<T, E>(
+    sender: mpsc::Sender<T>,
+    value: T,
+) -> impl Future<Item = (), Error = E> + Send
+where
+    T: Send,
+    E: Send,
+{
+    sender.send(value).then(|_| Ok(()))
 }
 
 // Replacements for BoxFuture and BoxStream, deprecated in upstream futures-rs.
