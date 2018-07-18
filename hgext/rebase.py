@@ -600,7 +600,14 @@ class rebaseruntime(object):
                 )
                 if stats and stats[3] > 0:
                     if self.wctx.isinmemory():
-                        raise error.InMemoryMergeConflictsError()
+                        # This is a fallback in case the merge itself did not raise
+                        # this exception (which, in general, it should).
+                        raise error.InMemoryMergeConflictsError(
+                            _("merge returned conflicts"),
+                            type=error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
+                            # We don't have access to the paths here, so fake it:
+                            paths=["%d files" % stats[3]],
+                        )
                     else:
                         raise error.InterventionRequired(
                             _(
