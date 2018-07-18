@@ -94,9 +94,10 @@ class GitIgnore {
 
   GitIgnore();
   virtual ~GitIgnore();
-  GitIgnore(GitIgnore&&) = default;
-  GitIgnore(GitIgnore const&) = delete;
-  GitIgnore& operator=(GitIgnore const&) = delete;
+  GitIgnore(GitIgnore&&) noexcept(
+      std::is_nothrow_move_constructible<std::vector<GitIgnorePattern>>::value);
+  GitIgnore(GitIgnore const&);
+  GitIgnore& operator=(GitIgnore const&);
 
   /**
    * Move assignment operator.
@@ -105,7 +106,8 @@ class GitIgnore {
    * providing synchronization between this operation and anyone else using the
    * GitIgnore object from other threads.
    */
-  GitIgnore& operator=(GitIgnore&&) = default;
+  GitIgnore& operator=(GitIgnore&&) noexcept(
+      std::is_nothrow_move_assignable<std::vector<GitIgnorePattern>>::value);
 
   /**
    * Parse the contents of a gitignore file.
@@ -158,6 +160,13 @@ class GitIgnore {
       RelativePathPiece path,
       PathComponentPiece basename,
       FileType fileType) const;
+
+  /**
+   * @return true if there are no rules.
+   */
+  bool empty() const {
+    return rules_.empty();
+  }
 
   /**
    * Get a human-readable description of a MatchResult enum value.

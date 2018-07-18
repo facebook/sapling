@@ -62,12 +62,19 @@ class GitIgnoreStack {
     ignore_.loadFile(ignoreFileContents);
   }
 
+  GitIgnoreStack(const GitIgnoreStack* parent, GitIgnore ignore)
+      : ignore_{std::move(ignore)}, parent_{parent} {}
+
   /**
    * Get the MatchResult for a path.
    */
   GitIgnore::MatchResult match(
       RelativePathPiece path,
       GitIgnore::FileType fileType) const;
+
+  bool empty() const {
+    return ignore_.empty();
+  }
 
  private:
   /**

@@ -38,6 +38,9 @@ class GitIgnorePattern {
   GitIgnorePattern(GitIgnorePattern&&) = default;
   GitIgnorePattern& operator=(GitIgnorePattern&&) = default;
 
+  GitIgnorePattern(GitIgnorePattern const&) = default;
+  GitIgnorePattern& operator=(GitIgnorePattern const&) = default;
+
   /**
    * Check to see if a pathname matches this pattern.
    *
@@ -85,9 +88,6 @@ class GitIgnorePattern {
   };
 
   GitIgnorePattern(uint32_t flags, GlobMatcher&& matcher);
-
-  GitIgnorePattern(GitIgnorePattern const&) = delete;
-  GitIgnorePattern& operator=(GitIgnorePattern const&) = delete;
 
   /**
    * A bit set of the Flags defined above.

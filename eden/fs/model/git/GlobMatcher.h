@@ -55,6 +55,8 @@ class GlobMatcher {
   ~GlobMatcher();
   GlobMatcher(GlobMatcher&&) = default;
   GlobMatcher& operator=(GlobMatcher&&) = default;
+  GlobMatcher(const GlobMatcher&) = default;
+  GlobMatcher& operator=(const GlobMatcher&) = default;
 
   /**
    * Create a GlobMatcher object from a glob pattern.
