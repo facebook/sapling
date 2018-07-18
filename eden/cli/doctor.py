@@ -29,6 +29,10 @@ from .stdout_printer import StdoutPrinter
 
 log = logging.getLogger("eden.cli.doctor")
 
+# working_directory_was_stale may be set to True by the CLI main module
+# if the original working directory referred to a stale eden mount point.
+working_directory_was_stale = False
+
 
 class RemediationError(Exception):
     pass
@@ -154,6 +158,9 @@ def cure_what_ails_you(
         fixer = ProblemFixer(out, printer)
     else:
         fixer = DryRunFixer(out, printer)
+
+    if working_directory_was_stale:
+        fixer.add_problem(StaleWorkingDirectory())
 
     status = config.check_health()
     if not status.is_healthy():
@@ -744,6 +751,16 @@ mount with "rm -rf".  You should instead remove it using "eden rm {path}",
 and can re-clone the checkout afterwards if desired."""
         super().__init__(f"{path}/.hg/dirstate is missing", remediation)
         self._path = path
+
+
+class StaleWorkingDirectory(Problem):
+    def __init__(self) -> None:
+        remediation = f"""\
+Run "cd / && cd -" to update your shell's working directory."""
+        super().__init__(
+            f"Your current working directory appears to be a stale Eden mount point",
+            remediation,
+        )
 
 
 def check_edenfs_version(tracker: ProblemTracker, config: config_mod.Config) -> None:

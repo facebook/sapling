@@ -1098,14 +1098,70 @@ def normalize_path_arg(path_arg: str, may_need_tilde_expansion: bool = False) ->
     return path_arg
 
 
+def is_working_directory_stale() -> bool:
+    try:
+        os.getcwd()
+        return False
+    except OSError as ex:
+        if ex.errno == errno.ENOTCONN:
+            return True
+        raise
+
+
+def check_for_stale_working_directory() -> Optional[int]:
+    try:
+        if not is_working_directory_stale():
+            return None
+    except OSError as ex:
+        print(
+            f"error: unable to determine current working directory: {ex}",
+            file=sys.stderr,
+        )
+        return os.EX_OSFILE
+
+    # See if we can figure out what the current working directory should be
+    # based on the $PWD environment variable that is normally set by most shells.
+    #
+    # If we have a valid $PWD, cd to it and try to continue using it.
+    # This lets commands like "eden doctor" work and report useful data even if
+    # the user is running it from a stale directory.
+    can_continue = False
+    cwd = os.environ.get("PWD")
+    if cwd is not None:
+        try:
+            os.chdir(cwd)
+            can_continue = True
+        except OSError:
+            pass
+
+    msg = """\
+Your current working directory appears to be a stale Eden
+mount point from a previous Eden daemon instance.
+Please run "cd / && cd -" to update your shell's working directory."""
+    if not can_continue:
+        print(f"Error: {msg}", file=sys.stderr)
+        return os.EX_OSFILE
+
+    print(f"Warning: {msg}", file=sys.stderr)
+    doctor_mod.working_directory_was_stale = True
+    return None
+
+
 def main() -> int:
+    # Before doing anything else check that the current working directory is valid.
+    # This helps catch the case where a user is trying to run the Eden CLI inside
+    # a stale eden mount point.
+    stale_return_code = check_for_stale_working_directory()
+    if stale_return_code is not None:
+        return stale_return_code
+
     parser = create_parser()
     args = parser.parse_args()
     if args.version:
         return do_version(args)
     if getattr(args, "func", None) is None:
         parser.print_help()
-        return 0
+        return os.EX_OK
     return_code: int = args.func(args)
     return return_code
 
