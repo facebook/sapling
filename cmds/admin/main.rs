@@ -12,6 +12,8 @@ extern crate cloned;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate promptly;
+extern crate tokio_process;
 
 extern crate blobrepo;
 extern crate blobstore;
@@ -24,6 +26,8 @@ extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
 extern crate tokio;
+
+mod config_repo;
 
 use std::fmt;
 use std::str::FromStr;
@@ -48,6 +52,7 @@ use slog::Logger;
 
 const BLOBSTORE_FETCH: &'static str = "blobstore-fetch";
 const CONTENT_FETCH: &'static str = "content-fetch";
+const CONFIG_REPO: &'static str = "config";
 const MAX_CONCURRENT_REQUESTS_PER_IO_THREAD: usize = 4;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
@@ -98,6 +103,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .about("Poke at mononoke internals for debugging and investigating data structures.")
         .subcommand(blobstore_fetch)
         .subcommand(content_fetch)
+        .subcommand(config_repo::prepare_command(SubCommand::with_name(
+            CONFIG_REPO,
+        )))
 }
 
 fn fetch_content_from_manifest(
@@ -287,14 +295,21 @@ fn main() {
                 })
                 .boxify()
         }
+        (CONFIG_REPO, Some(sub_m)) => config_repo::handle_command(sub_m, logger),
         _ => {
             println!("{}", matches.usage());
             ::std::process::exit(1);
         }
     };
 
-    tokio::run(future.map_err(|err| {
-        println!("{:?}", err);
+    let debug = matches.is_present("debug");
+
+    tokio::run(future.map_err(move |err| {
+        println!("{}", err);
+        if debug {
+            println!("\n============ DEBUG ERROR ============");
+            println!("{:#?}", err);
+        }
         ::std::process::exit(1);
     }));
 }
