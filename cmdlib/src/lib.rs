@@ -8,15 +8,23 @@
 
 #![deny(warnings)]
 
+extern crate ascii;
+extern crate bytes;
 extern crate clap;
 #[macro_use]
 extern crate failure_ext as failure;
+extern crate futures;
+#[macro_use]
+extern crate futures_ext;
 #[macro_use]
 extern crate slog;
-
 extern crate slog_glog_fmt;
 
 extern crate blobrepo;
+extern crate bookmarks;
+extern crate mercurial;
 extern crate mercurial_types;
+extern crate scuba_ext;
 
 pub mod args;
+pub mod blobimport_lib;

@@ -5,11 +5,9 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use clap::ArgMatches;
 use failure::err_msg;
 use failure::prelude::*;
 use futures::{Future, IntoFuture};
@@ -21,7 +19,6 @@ use scuba_ext::ScubaSampleBuilder;
 use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset,
                HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
                UploadHgTreeEntry};
-use cmdlib::args;
 use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
                       NULL_HASH};
@@ -205,133 +202,141 @@ fn upload_entry(
         .boxify()
 }
 
-pub fn upload_changesets<'a>(
-    matches: &ArgMatches<'a>,
-    revlogrepo: RevlogRepo,
-    blobrepo: Arc<BlobRepo>,
-) -> BoxStream<BoxFuture<SharedItem<BlobChangeset>, Error>, Error> {
-    let changesets = if let Some(hash) = matches.value_of("changeset") {
-        future::result(HgNodeHash::from_str(hash))
-            .into_stream()
-            .boxify()
-    } else {
-        revlogrepo.changesets().boxify()
-    };
+pub struct UploadChangesets {
+    pub blobrepo: Arc<BlobRepo>,
+    pub revlogrepo: RevlogRepo,
+    pub changeset: Option<HgNodeHash>,
+    pub skip: Option<usize>,
+    pub commits_limit: Option<usize>,
+}
 
-    let changesets = if !matches.is_present("skip") {
+impl UploadChangesets {
+    pub fn upload(self) -> BoxStream<BoxFuture<SharedItem<BlobChangeset>, Error>, Error> {
+        let Self {
+            blobrepo,
+            revlogrepo,
+            changeset,
+            skip,
+            commits_limit,
+        } = self;
+
+        let changesets = match changeset {
+            Some(hash) => future::ok(hash).into_stream().boxify(),
+            None => revlogrepo.changesets().boxify(),
+        };
+
+        let changesets = match skip {
+            None => changesets,
+            Some(skip) => changesets.skip(skip as u64).boxify(),
+        };
+
+        let changesets = match commits_limit {
+            None => changesets,
+            Some(limit) => changesets.take(limit as u64).boxify(),
+        };
+
+        let is_import_from_beggining = changeset.is_none() && skip.is_none();
+        let mut parent_changeset_handles: HashMap<HgNodeHash, ChangesetHandle> = HashMap::new();
+
         changesets
-    } else {
-        let skip = args::get_usize(matches, "skip", 0);
-        changesets.skip(skip as u64).boxify()
-    };
+            .map({
+                let revlogrepo = revlogrepo.clone();
+                let blobrepo = blobrepo.clone();
+                move |csid| {
+                    let ParseChangeset {
+                        revlogcs,
+                        rootmf,
+                        entries,
+                    } = parse_changeset(revlogrepo.clone(), HgChangesetId::new(csid));
 
-    let changesets = if !matches.is_present("commits-limit") {
-        changesets
-    } else {
-        let limit = args::get_usize(matches, "commits-limit", 0);
-        changesets.take(limit as u64).boxify()
-    };
-
-    let is_import_from_beggining = !matches.is_present("changeset") && !matches.is_present("skip");
-    let mut parent_changeset_handles: HashMap<HgNodeHash, ChangesetHandle> = HashMap::new();
-
-    changesets
-        .map({
-            let revlogrepo = revlogrepo.clone();
-            let blobrepo = blobrepo.clone();
-            move |csid| {
-                let ParseChangeset {
-                    revlogcs,
-                    rootmf,
-                    entries,
-                } = parse_changeset(revlogrepo.clone(), HgChangesetId::new(csid));
-
-                let rootmf = rootmf.map({
-                    let blobrepo = blobrepo.clone();
-                    move |rootmf| {
-                        match rootmf {
-                            None => future::ok(None).boxify(),
-                            Some((manifest_id, blob, p1, p2)) => {
-                                let upload = UploadHgTreeEntry {
-                                    // The root tree manifest is expected to have the wrong hash in
-                                    // hybrid mode. This will probably never go away for
-                                    // compatibility with old repositories.
-                                    upload_node_id: UploadHgNodeHash::Supplied(
-                                        manifest_id.into_nodehash(),
-                                    ),
-                                    contents: blob.into_inner()
-                                        .expect("contents should always be available"),
-                                    p1,
-                                    p2,
-                                    path: RepoPath::root(),
-                                };
-                                upload
-                                    .upload(&blobrepo)
-                                    .into_future()
-                                    .and_then(|(_, entry)| entry)
-                                    .map(Some)
-                                    .boxify()
+                    let rootmf = rootmf.map({
+                        let blobrepo = blobrepo.clone();
+                        move |rootmf| {
+                            match rootmf {
+                                None => future::ok(None).boxify(),
+                                Some((manifest_id, blob, p1, p2)) => {
+                                    let upload = UploadHgTreeEntry {
+                                        // The root tree manifest is expected to have the wrong hash in
+                                        // hybrid mode. This will probably never go away for
+                                        // compatibility with old repositories.
+                                        upload_node_id: UploadHgNodeHash::Supplied(
+                                            manifest_id.into_nodehash(),
+                                        ),
+                                        contents: blob.into_inner()
+                                            .expect("contents should always be available"),
+                                        p1,
+                                        p2,
+                                        path: RepoPath::root(),
+                                    };
+                                    upload
+                                        .upload(&blobrepo)
+                                        .into_future()
+                                        .and_then(|(_, entry)| entry)
+                                        .map(Some)
+                                        .boxify()
+                                }
                             }
                         }
-                    }
-                });
+                    });
 
-                let entries = entries.map({
-                    let blobrepo = blobrepo.clone();
-                    move |(path, entry)| upload_entry(&blobrepo, entry, path)
-                });
+                    let entries = entries.map({
+                        let blobrepo = blobrepo.clone();
+                        move |(path, entry)| upload_entry(&blobrepo, entry, path)
+                    });
 
-                revlogcs
-                    .join3(rootmf, entries.collect())
-                    .map(move |(cs, rootmf, entries)| (csid, cs, rootmf, entries))
-            }
-        })
-        .buffered(100)
-        .map(move |(csid, cs, rootmf, entries)| {
-            let entries = stream::futures_unordered(entries).boxify();
+                    revlogcs
+                        .join3(rootmf, entries.collect())
+                        .map(move |(cs, rootmf, entries)| (csid, cs, rootmf, entries))
+                }
+            })
+            .buffered(100)
+            .map(move |(csid, cs, rootmf, entries)| {
+                let entries = stream::futures_unordered(entries).boxify();
 
-            let (p1handle, p2handle) = {
-                let mut parents = cs.parents().into_iter().map(|p| {
-                    let maybe_handle = parent_changeset_handles.get(&p).cloned();
+                let (p1handle, p2handle) = {
+                    let mut parents = cs.parents().into_iter().map(|p| {
+                        let maybe_handle = parent_changeset_handles.get(&p).cloned();
 
-                    if is_import_from_beggining {
-                        maybe_handle.expect(&format!("parent {} not found for {}", p, csid))
-                    } else {
-                        maybe_handle.unwrap_or_else(|| {
-                            ChangesetHandle::from(
-                                blobrepo.get_changeset_by_changesetid(&HgChangesetId::new(p)),
-                            )
-                        })
-                    }
-                });
+                        if is_import_from_beggining {
+                            maybe_handle.expect(&format!("parent {} not found for {}", p, csid))
+                        } else {
+                            maybe_handle.unwrap_or_else(|| {
+                                ChangesetHandle::from(
+                                    blobrepo.get_changeset_by_changesetid(&HgChangesetId::new(p)),
+                                )
+                            })
+                        }
+                    });
 
-                (parents.next(), parents.next())
-            };
+                    (parents.next(), parents.next())
+                };
 
-            let cs_metadata = ChangesetMetadata {
-                user: String::from_utf8(Vec::from(cs.user()))
-                    .expect(&format!("non-utf8 username for {}", csid)),
-                time: cs.time().clone(),
-                extra: cs.extra().clone(),
-                comments: String::from_utf8(Vec::from(cs.comments()))
-                    .expect(&format!("non-utf8 comments for {}", csid)),
-            };
-            let create_changeset = CreateChangeset {
-                expected_nodeid: Some(csid),
-                expected_files: Some(Vec::from(cs.files())),
-                p1: p1handle,
-                p2: p2handle,
-                root_manifest: rootmf,
-                sub_entries: entries,
-                cs_metadata,
-            };
-            let cshandle = create_changeset.create(&blobrepo, ScubaSampleBuilder::with_discard());
-            parent_changeset_handles.insert(csid, cshandle.clone());
-            cshandle
-                .get_completed_changeset()
-                .with_context(move |_| format!("While uploading changeset: {}", csid))
-                .from_err()
-                .boxify()
-        })
-        .boxify()
+                let cs_metadata = ChangesetMetadata {
+                    user: String::from_utf8(Vec::from(cs.user()))
+                        .expect(&format!("non-utf8 username for {}", csid)),
+                    time: cs.time().clone(),
+                    extra: cs.extra().clone(),
+                    comments: String::from_utf8(Vec::from(cs.comments()))
+                        .expect(&format!("non-utf8 comments for {}", csid)),
+                };
+                let create_changeset = CreateChangeset {
+                    expected_nodeid: Some(csid),
+                    expected_files: Some(Vec::from(cs.files())),
+                    p1: p1handle,
+                    p2: p2handle,
+                    root_manifest: rootmf,
+                    sub_entries: entries,
+                    cs_metadata,
+                };
+                let cshandle =
+                    create_changeset.create(&blobrepo, ScubaSampleBuilder::with_discard());
+                parent_changeset_handles.insert(csid, cshandle.clone());
+                cshandle
+                    .get_completed_changeset()
+                    .with_context(move |_| format!("While uploading changeset: {}", csid))
+                    .from_err()
+                    .boxify()
+            })
+            .boxify()
+    }
 }
