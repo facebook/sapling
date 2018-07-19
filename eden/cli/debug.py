@@ -33,9 +33,9 @@ from . import (
     config as config_mod,
     overlay as overlay_mod,
     subcmd as subcmd_mod,
+    ui as ui_mod,
     util,
 )
-from .stdout_printer import StdoutPrinter
 from .subcmd import Subcmd
 
 
@@ -304,14 +304,14 @@ class HgDirstateCmd(Subcmd):
         path = args.path or os.getcwd()
         mount, _ = get_mount_path(path)
         _parents, dirstate_tuples, copymap = _get_dirstate_data(mount)
-        printer = StdoutPrinter()
+        out = ui_mod.get_output()
         entries = list(dirstate_tuples.items())
-        print(printer.bold("Non-normal Files (%d):" % len(entries)))
+        out.writeln(f"Non-normal Files ({len(entries)}):", attr=out.BOLD)
         entries.sort(key=lambda entry: entry[0])  # Sort by key.
         for path, dirstate_tuple in entries:
-            _print_hg_nonnormal_file(path, dirstate_tuple, printer)
+            _print_hg_nonnormal_file(path, dirstate_tuple, out)
 
-        print(printer.bold("Copymap (%d):" % len(copymap)))
+        out.writeln(f"Copymap ({len(copymap)}):", attr=out.BOLD)
         _print_copymap(copymap)
         return 0
 
@@ -327,16 +327,16 @@ class HgGetDirstateTupleCmd(Subcmd):
         mount, rel_path = get_mount_path(args.path)
         _parents, dirstate_tuples, _copymap = _get_dirstate_data(mount)
         dirstate_tuple = dirstate_tuples.get(rel_path)
-        printer = StdoutPrinter()
+        out = ui_mod.get_output()
         if dirstate_tuple:
-            _print_hg_nonnormal_file(rel_path, dirstate_tuple, printer)
+            _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
         else:
             config = cmd_util.create_config(args)
             with config.get_thrift_client() as client:
                 try:
                     entry = client.getManifestEntry(mount, rel_path)
                     dirstate_tuple = ("n", entry.mode, 0)
-                    _print_hg_nonnormal_file(rel_path, dirstate_tuple, printer)
+                    _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
                 except NoValueForKeyError:
                     print("No tuple for " + rel_path, file=sys.stderr)
                     return 1
@@ -345,19 +345,15 @@ class HgGetDirstateTupleCmd(Subcmd):
 
 
 def _print_hg_nonnormal_file(
-    rel_path: str, dirstate_tuple: Tuple[str, Any, int], printer: "StdoutPrinter"
+    rel_path: str, dirstate_tuple: Tuple[str, Any, int], out: ui_mod.Output
 ) -> None:
     status = _dirstate_char_to_name(dirstate_tuple[0])
     merge_state = _dirstate_merge_state_to_name(dirstate_tuple[2])
 
-    print(
-        f"""\
-{printer.green(rel_path)}
-    status = {status}
-    mode = {oct(dirstate_tuple[1])}
-    mergeState = {merge_state}\
-"""
-    )
+    out.writeln(f"{rel_path}", fg=out.GREEN)
+    out.writeln(f"    status = {status}")
+    out.writeln(f"    mode = {oct(dirstate_tuple[1])}")
+    out.writeln(f"    mergeState = {merge_state}")
 
 
 def _dirstate_char_to_name(state: str) -> str:

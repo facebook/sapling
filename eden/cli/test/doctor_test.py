@@ -24,19 +24,36 @@ from unittest.mock import call, patch
 
 import eden.cli.config as config_mod
 import eden.cli.doctor as doctor
+import eden.cli.ui
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.cli import filesystem, mtab
-
-# from eden.cli.doctor import CheckResult, CheckResultType
-from eden.cli.stdout_printer import AnsiEscapeCodes, StdoutPrinter
 from fb303.ttypes import fb_status
 
 
-escape_codes = AnsiEscapeCodes(
-    bold="<bold>", red="<red>", green="<green>", yellow="<yellow>", reset="<reset>"
-)
-printer = StdoutPrinter(escape_codes)
+class TestOutput(eden.cli.ui.TerminalOutput):
+    def __init__(self) -> None:
+        Color = eden.cli.ui.Color
+        Attribute = eden.cli.ui.Attribute
+        term_settings = eden.cli.ui.TerminalSettings(
+            foreground={
+                Color.RED: b"<red>",
+                Color.GREEN: b"<green>",
+                Color.YELLOW: b"<yellow>",
+            },
+            background={
+                Color.RED: b"<red_bg>",
+                Color.GREEN: b"<green_bg>",
+                Color.YELLOW: b"<yellow_bg>",
+            },
+            attributes={Attribute.BOLD: b"<bold>", Attribute.UNDERLINE: b"<underline>"},
+            reset=b"<reset>",
+        )
+        self._out = io.BytesIO()
+        super().__init__(self._out, term_settings)
+
+    def getvalue(self) -> str:
+        return self._out.getvalue().decode("utf-8", errors="surrogateescape")
 
 
 class DoctorTestBase(unittest.TestCase):
@@ -45,12 +62,12 @@ class DoctorTestBase(unittest.TestCase):
         self.addCleanup(shutil.rmtree, tmp_dir)
         return tmp_dir
 
-    def create_fixer(self, dry_run: bool) -> Tuple[doctor.ProblemFixer, io.StringIO]:
-        out = io.StringIO()
+    def create_fixer(self, dry_run: bool) -> Tuple[doctor.ProblemFixer, TestOutput]:
+        out = TestOutput()
         if not dry_run:
-            fixer = doctor.ProblemFixer(out, printer)
+            fixer = doctor.ProblemFixer(out)
         else:
-            fixer = doctor.DryRunFixer(out, printer)
+            fixer = doctor.DryRunFixer(out)
         return fixer, out
 
     def assert_results(
@@ -142,16 +159,15 @@ class DoctorTest(DoctorTestBase):
 
         mock_watchman.side_effect = side_effects
 
-        out = io.StringIO()
+        out = TestOutput()
         dry_run = False
 
         exit_code = doctor.cure_what_ails_you(
             config,
             dry_run,
-            out,
             config.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            printer=printer,
+            out=out,
         )
 
         self.assertEqual(
@@ -221,15 +237,14 @@ https://fb.facebook.com/groups/eden.users/
         side_effects.append({"watcher": "eden"})
         mock_watchman.side_effect = side_effects
 
-        out = io.StringIO()
+        out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
             config,
             dry_run,
-            out,
             mount_table=config.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            printer=printer,
+            out=out,
         )
 
         self.assertEqual(
@@ -246,15 +261,10 @@ https://fb.facebook.com/groups/eden.users/
     def test_eden_not_in_use(self, mock_get_roots_for_nuclide, mock_watchman):
         config = FakeConfig(self._create_tmp_dir(), is_healthy=False)
 
-        out = io.StringIO()
+        out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
-            config,
-            dry_run,
-            out,
-            FakeMountTable(),
-            fs_util=filesystem.LinuxFsUtil(),
-            printer=printer,
+            config, dry_run, FakeMountTable(), fs_util=filesystem.LinuxFsUtil(), out=out
         )
 
         self.assertEqual("Eden is not in use.\n", out.getvalue())
@@ -266,15 +276,10 @@ https://fb.facebook.com/groups/eden.users/
         config = FakeConfig(self._create_tmp_dir(), is_healthy=False)
         config.create_test_mount("eden-mount")
 
-        out = io.StringIO()
+        out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
-            config,
-            dry_run,
-            out,
-            FakeMountTable(),
-            fs_util=filesystem.LinuxFsUtil(),
-            printer=printer,
+            config, dry_run, FakeMountTable(), fs_util=filesystem.LinuxFsUtil(), out=out
         )
 
         self.assertEqual(
@@ -617,14 +622,13 @@ to bring the mercurial state back in sync.
         del config._mount_paths[edenfs_path2]
 
         dry_run = False
-        out = io.StringIO()
+        out = TestOutput()
         exit_code = doctor.cure_what_ails_you(
             config,
             dry_run,
-            out,
             config.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            printer=printer,
+            out=out,
         )
 
         self.assertEqual(
@@ -681,14 +685,13 @@ Checking {mounts[0]}
         mounts.append(config.create_test_mount("path1"))
         mounts.append(config.create_test_mount("path2", active=False))
 
-        out = io.StringIO()
+        out = TestOutput()
         exit_code = doctor.cure_what_ails_you(
             typing.cast(config_mod.Config, config),
             dry_run,
-            out,
             config.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            printer=printer,
+            out=out,
         )
         return exit_code, out.getvalue(), mounts
 

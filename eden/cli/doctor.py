@@ -23,8 +23,7 @@ from typing import Any, Dict, List, Optional, Set, TextIO
 
 import eden.dirstate
 
-from . import config as config_mod, filesystem, mtab, version
-from .stdout_printer import StdoutPrinter
+from . import config as config_mod, filesystem, mtab, ui, version
 
 
 log = logging.getLogger("eden.cli.doctor")
@@ -103,9 +102,8 @@ class ProblemTracker(abc.ABC):
 
 
 class ProblemFixer(ProblemTracker):
-    def __init__(self, out: TextIO, printer: StdoutPrinter) -> None:
+    def __init__(self, out: ui.Output) -> None:
         self._out = out
-        self._printer = printer
         self.num_problems = 0
         self.num_fixed_problems = 0
         self.num_failed_fixes = 0
@@ -113,68 +111,62 @@ class ProblemFixer(ProblemTracker):
 
     def add_problem(self, problem: ProblemBase) -> None:
         self.num_problems += 1
-        self._out.write(
-            self._printer.yellow("- Found problem:") + f"\n{problem.description()}\n"
-        )
+        self._out.writeln("- Found problem:", fg=self._out.YELLOW)
+        self._out.writeln(problem.description())
         if isinstance(problem, FixableProblem):
             self.fix_problem(problem)
         else:
             self.num_manual_fixes += 1
             msg = problem.get_manual_remediation_message()
             if msg:
-                self._out.write(msg + "\n\n")
+                self._out.write(msg, end="\n\n")
 
     def fix_problem(self, problem: FixableProblem) -> None:
-        self._out.write(problem.start_msg() + "...")
-        self._out.flush()
+        self._out.write(f"{problem.start_msg()}...", flush=True)
         try:
             problem.perform_fix()
-            self._out.write(self._printer.green("fixed") + "\n\n")
+            self._out.write("fixed", fg=self._out.GREEN, end="\n\n", flush=True)
             self.num_fixed_problems += 1
         except Exception as ex:
-            self._out.write(self._printer.red("error") + "\n")
-            self._out.write(f"Failed to fix problem: {ex}\n\n")
+            self._out.writeln("error", fg=self._out.RED)
+            self._out.write(f"Failed to fix problem: {ex}", end="\n\n", flush=True)
             self.num_failed_fixes += 1
-        self._out.flush()
 
 
 class DryRunFixer(ProblemFixer):
     def fix_problem(self, problem: FixableProblem) -> None:
-        self._out.write(problem.dry_run_msg() + "\n\n")
+        self._out.write(problem.dry_run_msg(), end="\n\n")
 
 
 def cure_what_ails_you(
     config: config_mod.Config,
     dry_run: bool,
-    out: TextIO,
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
-    printer: Optional[StdoutPrinter] = None,
+    out: Optional[ui.Output] = None,
 ) -> int:
-    if printer is None:
-        printer = StdoutPrinter()
+    if out is None:
+        out = ui.get_output()
 
     if not dry_run:
-        fixer = ProblemFixer(out, printer)
+        fixer = ProblemFixer(out)
     else:
-        fixer = DryRunFixer(out, printer)
+        fixer = DryRunFixer(out)
 
     if working_directory_was_stale:
         fixer.add_problem(StaleWorkingDirectory())
 
     status = config.check_health()
     if not status.is_healthy():
-        run_edenfs_not_healthy_checks(
-            fixer, config, status, out, mount_table, fs_util, printer
-        )
+        run_edenfs_not_healthy_checks(fixer, config, out, status, mount_table, fs_util)
         if fixer.num_problems == 0:
-            out.write("Eden is not in use.\n")
+            out.writeln("Eden is not in use.")
             return 0
     else:
-        run_normal_checks(fixer, config, out, mount_table, fs_util, printer)
+        run_normal_checks(fixer, config, out, mount_table, fs_util)
 
     if fixer.num_problems == 0:
-        out.write(f'{printer.green("No issues detected.")}\n')
+        out.writeln("No issues detected.", fg=out.GREEN)
         return 0
 
     def problem_count(num: int) -> str:
@@ -183,22 +175,27 @@ def cure_what_ails_you(
         return f"{num} problems"
 
     if dry_run:
-        msg = f"Discovered {problem_count(fixer.num_problems)} during --dry-run"
-        out.write(printer.yellow(msg) + "\n")
+        out.writeln(
+            f"Discovered {problem_count(fixer.num_problems)} during --dry-run",
+            fg=out.YELLOW,
+        )
         return 1
 
     if fixer.num_fixed_problems:
-        msg = f"Successfully fixed {problem_count(fixer.num_fixed_problems)}."
-        out.write(printer.yellow(msg) + "\n")
+        out.writeln(
+            f"Successfully fixed {problem_count(fixer.num_fixed_problems)}.",
+            fg=out.YELLOW,
+        )
     if fixer.num_failed_fixes:
-        msg = f"Failed to fix {problem_count(fixer.num_failed_fixes)}."
-        out.write(printer.red(msg) + "\n")
+        out.writeln(
+            f"Failed to fix {problem_count(fixer.num_failed_fixes)}.", fg=out.RED
+        )
     if fixer.num_manual_fixes:
         if fixer.num_manual_fixes == 1:
             msg = f"1 issue requires manual attention."
         else:
             msg = f"{fixer.num_manual_fixes} issues require manual attention."
-        out.write(printer.yellow(msg) + "\n")
+        out.writeln(msg, fg=out.YELLOW)
 
     if fixer.num_fixed_problems == fixer.num_problems:
         return 0
@@ -213,11 +210,10 @@ def cure_what_ails_you(
 def run_edenfs_not_healthy_checks(
     tracker: ProblemTracker,
     config: config_mod.Config,
+    out: ui.Output,
     status: config_mod.HealthStatus,
-    out: TextIO,
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
-    printer: StdoutPrinter,
 ) -> None:
     check_for_stale_mounts(tracker, mount_table)
 
@@ -236,10 +232,9 @@ class EdenfsNotHealthy(Problem):
 def run_normal_checks(
     tracker: ProblemTracker,
     config: config_mod.Config,
-    out: TextIO,
+    out: ui.Output,
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
-    printer: StdoutPrinter,
 ) -> None:
     with config.get_thrift_client() as client:
         active_mount_points = [
@@ -268,7 +263,7 @@ def run_normal_checks(
             # for example, if a post-clone hook fails.
             continue
 
-        out.write(f"Checking {mount_path}\n")
+        out.writeln(f"Checking {mount_path}")
         client_info = config.get_client_info(mount_path)
         check_watchman_subscriptions(tracker, mount_path, watchman_roots)
         check_bind_mounts(
@@ -473,10 +468,10 @@ def _check_bind_mount_path(
     tracker: ProblemTracker,
     mount_source: str,
     mount_point: str,
-    checkout_path_stat: os.stat_result,
+    checkout_path_stat: mtab.MTStat,
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
-):
+) -> None:
     # Identify missing or not mounted bind mounts
     try:
         bind_mount_stat = mount_table.lstat(mount_point)

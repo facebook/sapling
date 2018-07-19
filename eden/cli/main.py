@@ -415,7 +415,6 @@ class DoctorCmd(Subcmd):
         return doctor_mod.cure_what_ails_you(
             config,
             args.dry_run,
-            out=sys.stdout,
             mount_table=mtab.LinuxMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
         )
