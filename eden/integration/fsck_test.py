@@ -66,4 +66,4 @@ class FsckTest(testcase.EdenRepoTest):
         self.eden.run_cmd("mount", self.mount)
 
         cmd_result = self.eden.run_unchecked("fsck", self.mount)
-        self.assertEqual(cmd_result, 1)
+        self.assertEqual(1, cmd_result.returncode)

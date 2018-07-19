@@ -21,5 +21,5 @@ class HelpTest(unittest.TestCase):
 
     def test_eden_cli_help_returns_without_error(self) -> None:
         with edenclient.EdenFS() as client:
-            return_code = client.run_unchecked("help")
-            self.assertEqual(0, return_code)
+            cmd_result = client.run_unchecked("help")
+            self.assertEqual(0, cmd_result.returncode)

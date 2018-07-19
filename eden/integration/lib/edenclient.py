@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import tempfile
 from types import TracebackType
-from typing import Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional, cast
 
 import eden.thrift
 from eden.cli import util
@@ -95,16 +95,17 @@ class EdenFS(object):
             raise EdenCommandError(ex)
         return cast(str, completed_process.stdout.decode("utf-8"))
 
-    def run_unchecked(self, command: str, *args: str) -> int:
-        """
-        Run the specified eden command.
+    def run_unchecked(
+        self, command: str, *args: str, **kwargs: Any
+    ) -> subprocess.CompletedProcess:
+        """Run the specified eden command.
 
         Args: The eden command name and any arguments to pass to it.
         Usage example: run_cmd('mount', 'my_eden_client')
-        Returns the process return code.
+        Returns a subprocess.CompletedProcess object.
         """
         cmd = self._get_eden_args(command, *args)
-        return subprocess.call(cmd)
+        return subprocess.run(cmd, **kwargs)
 
     def _get_eden_args(self, command: str, *args: str) -> List[str]:
         """Combines the specified eden command args with the appropriate
@@ -355,8 +356,8 @@ class EdenFS(object):
 
     def is_healthy(self) -> bool:
         """Executes `eden health` and returns True if it exited with code 0."""
-        return_code = self.run_unchecked("health")
-        return return_code == 0
+        cmd_result = self.run_unchecked("health")
+        return cmd_result.returncode == 0
 
     def set_log_level(self, category: str, level: str) -> None:
         with self.get_thrift_client() as client:
