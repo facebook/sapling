@@ -17,6 +17,7 @@ from mercurial import (
     mdiff,
     patch,
     registrar,
+    scmutil,
 )
 from mercurial.i18n import _
 from mercurial.node import hex
@@ -72,8 +73,9 @@ def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
     # Phabricator revs are often filtered (hidden)
     repo = repo.unfiltered()
     # First reconstruct textual diffs for rev1 and rev2 independently.
-    def changediff(node, nodebase):
-        m = match.always(repo.root, repo.root)
+    def changediff(node):
+        nodebase = repo[node].p1().node()
+        m = scmutil.matchall(repo)
         diff = patch.diffhunks(repo, nodebase, node, m, opts=mdiff.diffopts(context=0))
         filepatches = {}
         for _fctx1, _fctx2, headerlines, hunks in diff:
@@ -86,9 +88,8 @@ def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
 
     rev1node = repo[rev1].node()
     rev2node = repo[rev2].node()
-    basenode = repo[rev1].p1().node()
-    files1, filepatches1, node1 = changediff(rev1node, basenode)
-    files2, filepatches2, node2 = changediff(rev2node, basenode)
+    files1, filepatches1, node1 = changediff(rev1node)
+    files2, filepatches2, node2 = changediff(rev2node)
 
     ui.write(_("Phabricator rev: %s\n") % hex(node1)),
     ui.write(_("Local rev: %s (%s)\n") % (hex(node2), rev2))
