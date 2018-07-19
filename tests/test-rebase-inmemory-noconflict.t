@@ -28,7 +28,7 @@ Confirm it fails when rebasing a change that conflicts:
   rebasing in-memory!
   rebasing 3:955ac081fc7c "g" (tip)
   merging c
-  hit merge conflicts (in c) and --noconflict passed; exiting.
+  hit merge conflicts (in c) and --noconflict passed; exiting
   $ hg st
   M b
   $ cat b

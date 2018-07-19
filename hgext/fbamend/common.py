@@ -29,7 +29,15 @@ def getchildrelationships(repo, revs):
     return children
 
 
-def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
+def restackonce(
+    ui,
+    repo,
+    rev,
+    rebaseopts=None,
+    childrenonly=False,
+    noconflict=None,
+    noconflictmsg=None,
+):
     """Rebase all descendants of precursors of rev onto rev, thereby
        stabilzing any non-obsolete descendants of those precursors.
        Takes in an optional dict of options for the rebase command.
@@ -53,6 +61,7 @@ def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
         rebaseopts = {}
     rebaseopts["rev"] = descendants
     rebaseopts["dest"] = rev
+    rebaseopts["noconflict"] = noconflict
 
     # We need to ensure that the 'operation' field in the obsmarker metadata
     # is always set to 'rebase', regardless of the current command so that
@@ -68,6 +77,9 @@ def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
         overrides[
             (tweakdefaults.globaldata, tweakdefaults.createmarkersoperation)
         ] = "rebase"
+
+    if noconflictmsg:
+        overrides[("rebase", "noconflictmsg")] = noconflictmsg
 
     # Perform rebase.
     with repo.ui.configoverride(overrides, "restack"):

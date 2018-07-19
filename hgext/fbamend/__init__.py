@@ -36,10 +36,11 @@ To automatically update the commit date, enable the following config option::
     [fbamend]
     date = implicitupdate
 
-To stop fbamend from automatically rebasing stacked changes::
+Commits are restacked automatically on amend, if doing so doesn't create
+conflicts. To never automatically restack::
 
-    [commands]
-    amend.autorebase = false
+    [amend]
+    autorestack = none
 
 Note that if --date is specified on the command line, it takes precedence.
 
@@ -110,6 +111,30 @@ amendopts = [
     ("", "fixup", None, _("rebase children from a previous amend")),
     ("", "to", "", _("amend to a specific commit in the current stack")),
 ]
+
+# Never restack commits on amend.
+RESTACK_NEVER = "never"
+
+# Restack commits on amend only if they chage manifest, and don't change the
+# commit manifest.
+RESTACK_ONLY_TRIVIAL = "only-trivial"
+
+# Restack commits on amend only if doing so won't create merge conflicts.
+RESTACK_NO_CONFLICT = "no-conflict"
+
+# Always attempt to restack commits on amend, even if doing so will leave the
+# user in a conflicted state.
+RESTACK_ALWAYS = "always"
+
+# Possible restack values for `amend.autorestack`.
+RESTACK_VALUES = [
+    RESTACK_NEVER,
+    RESTACK_ONLY_TRIVIAL,
+    RESTACK_NO_CONFLICT,
+    RESTACK_ALWAYS,
+]
+
+RESTACK_DEFAULT = RESTACK_ONLY_TRIVIAL
 
 
 @hint("strip-hide")
@@ -328,24 +353,61 @@ def amend(ui, repo, *pats, **opts):
             ui.status(_("nothing changed\n"))
             return 1
 
-        if haschildren and rebase is None and not _histediting(repo):
-            # If the user has chosen the default behaviour for the
-            # rebase, then see if we can apply any heuristics. This
-            # will not performed if a histedit is in flight.
+        conf = ui.config("amend", "autorestack", RESTACK_DEFAULT)
+        noconflict = None
 
-            newcommit = repo[node]
-            # If the rebase did not change the manifest and the
-            # working copy is clean, force the children to be
-            # restacked.
-            if (
-                old.manifestnode() == newcommit.manifestnode()
-                and not repo[None].dirty()
-            ):
-                if ui.configbool("commands", "amend.autorebase"):
-                    hintutil.trigger("amend-autorebase")
-                    rebase = True
-                else:
+        # RESTACK_NO_CONFLICT requires IMM.
+        if conf == RESTACK_NO_CONFLICT and not ui.config(
+            "rebase", "experimental.inmemory", False
+        ):
+            conf = RESTACK_DEFAULT
+
+        # If they explicitly disabled the old behavior, disable the new behavior
+        # too, for now.
+        # internal config: commands.amend.autorebase
+        if ui.configbool("commands", "amend.autorebase") is False:
+            # In the future we'll add a nag message here.
+            conf = RESTACK_NEVER
+
+        if conf not in RESTACK_VALUES:
+            ui.warn(
+                _('invalid amend.autorestack config of "%s"; falling back to %s\n')
+                % (conf, RESTACK_DEFAULT)
+            )
+            conf = RESTACK_DEFAULT
+
+        if haschildren and rebase is None and not _histediting(repo):
+            if conf == RESTACK_ALWAYS:
+                rebase = True
+            elif conf == RESTACK_NO_CONFLICT:
+                if repo[None].dirty():
+                    # For now, only restack if the WC is clean (t31742174).
+                    ui.status(_("not restacking because working copy is dirty\n"))
                     rebase = False
+                else:
+                    # internal config: amend.autorestackmsg
+                    msg = ui.config(
+                        "amend",
+                        "autorestackmsg",
+                        _("restacking children automatically (unless they conflict)"),
+                    )
+                    if msg:
+                        ui.status("%s\n" % msg)
+                    rebase = True
+                    noconflict = True
+            elif conf == RESTACK_ONLY_TRIVIAL:
+                newcommit = repo[node]
+                # If the rebase did not change the manifest and the
+                # working copy is clean, force the children to be
+                # restacked.
+                rebase = (
+                    old.manifestnode() == newcommit.manifestnode()
+                    and not repo[None].dirty()
+                )
+                if rebase:
+                    hintutil.trigger("amend-autorebase")
+            else:
+                rebase = False
 
         if haschildren and not rebase and not _histediting(repo):
             hintutil.trigger("amend-restack", old.node())
@@ -360,12 +422,15 @@ def amend(ui, repo, *pats, **opts):
         tr.close()
 
         if rebase and haschildren:
-            fixupamend(ui, repo)
+            noconflictmsg = _(
+                "restacking would create conflicts (%s in %s), so you must run it manually\n(run `hg restack` manually to restack this commit's children)"
+            )
+            fixupamend(ui, repo, noconflict=noconflict, noconflictmsg=noconflictmsg)
     finally:
         lockmod.release(wlock, lock, tr)
 
 
-def fixupamend(ui, repo):
+def fixupamend(ui, repo, noconflict=None, noconflictmsg=None):
     """rebases any children found on the preamend changset and strips the
     preamend changset
     """
@@ -378,7 +443,9 @@ def fixupamend(ui, repo):
         current = repo["."]
 
         # Use obsolescence information to fix up the amend.
-        common.restackonce(ui, repo, current.rev())
+        common.restackonce(
+            ui, repo, current.rev(), noconflict=noconflict, noconflictmsg=noconflictmsg
+        )
     finally:
         lockmod.release(wlock, lock, tr)
 

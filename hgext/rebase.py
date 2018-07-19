@@ -544,9 +544,13 @@ class rebaseruntime(object):
                         kindstr = _("artifact rebuild required")
 
                     if self.opts.get("noconflict"):
-                        raise error.AbortMergeToolError(
-                            "%s (in %s) and --noconflict passed" % (kindstr, pathstr)
+                        # internal config: rebase.noconflictmsg
+                        msg = ui.config(
+                            "rebase",
+                            "noconflictmsg",
+                            _("%s (in %s) and --noconflict passed; exiting"),
                         )
+                        raise error.AbortMergeToolError(msg % (kindstr, pathstr))
                     elif cmdutil.uncommittedchanges(repo):
                         raise error.UncommitedChangesAbort(
                             _(
@@ -1001,7 +1005,7 @@ def rebase(ui, repo, templ=None, **opts):
             with ui.configoverride(overrides):
                 return _origrebase(ui, repo, rbsrt, **opts)
         except error.AbortMergeToolError as e:
-            ui.status(_("%s; exiting.\n") % e)
+            ui.status(_("%s\n") % e)
             clearstatus(repo)
             mergemod.mergestate.clean(repo)
             if repo.currenttransaction():
