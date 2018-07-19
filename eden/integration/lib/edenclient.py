@@ -76,13 +76,7 @@ class EdenFS(object):
     def get_thrift_client(self) -> eden.thrift.EdenClient:
         return eden.thrift.create_thrift_client(self._eden_dir)
 
-    def run_cmd(
-        self,
-        command: str,
-        *args: str,
-        cwd: Optional[str] = None,
-        capture_output: bool = True
-    ) -> str:
+    def run_cmd(self, command: str, *args: str, cwd: Optional[str] = None) -> str:
         """
         Run the specified eden command.
 
