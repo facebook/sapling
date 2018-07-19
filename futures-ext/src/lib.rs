@@ -485,6 +485,30 @@ macro_rules! try_boxstream {
     })
 }
 
+/// Macro that can be used like ensure! macro from failure crate, but in the context where the
+/// expected return type is BoxFuture. Exits a function early with an Error if the condition is not
+/// satisfied.
+#[macro_export]
+macro_rules! ensure_boxfuture {
+    ($cond:expr, $e:expr) => {
+        if !($cond) {
+            return ::futures::future::err($e.into()).boxify();
+        }
+    };
+}
+
+/// Macro that can be used like ensure! macro from failure crate, but in the context where the
+/// expected return type is BoxStream. Exits a function early with an Error if the condition is not
+/// satisfied.
+#[macro_export]
+macro_rules! ensure_boxstream {
+    ($cond:expr, $e:expr) => {
+        if !($cond) {
+            return ::futures::stream::once(Err($e.into())).boxify();
+        }
+    };
+}
+
 ///  This method allows us to take synchronous code, schedule it on the default tokio thread pool
 /// and convert it to the future. Func can return anything that is convertable to a future, for
 /// example, Result
