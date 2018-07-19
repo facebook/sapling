@@ -16,6 +16,7 @@ import os
 import shutil
 import tempfile
 import time
+import types
 import typing
 import unittest
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type
@@ -72,6 +73,41 @@ if not edenclient.can_run_eden():
     TestParent = typing.cast(Type[unittest.TestCase], object)
 else:
     TestParent = unittest.TestCase
+
+
+def _cleanup_tmp_dir(tmp_dir: str) -> None:
+    # "eden clone" makes the original mount point directory read-only.
+    # Attempting to delete the files inside it will fail unless we make the directory
+    # writable first.
+    #
+    # If we encounter an EPERM or EACCESS error removing a file try making its parent
+    # directory writable and then retry the removal.
+    def _remove_readonly(
+        func: Callable[[str], Any],
+        path: str,
+        exc_info: Tuple[Type, BaseException, types.TracebackType],
+    ) -> None:
+        _ex_type, ex, _traceback = exc_info
+        if path == tmp_dir:
+            logging.warning(
+                f"failed to remove temporary test directory {tmp_dir}: {ex}"
+            )
+            return
+        if not isinstance(ex, PermissionError):
+            logging.warning(f"error removing file in temporary directory {path}: {ex}")
+            return
+
+        try:
+            parent_dir = os.path.dirname(path)
+            os.chmod(parent_dir, 0o755)
+            # func() is the function that failed.
+            # This is usually os.unlink() or os.rmdir().
+            func(path)
+        except OSError as ex:
+            logging.warning(f"error removing file in temporary directory {path}: {ex}")
+            return
+
+    shutil.rmtree(tmp_dir, onerror=_remove_readonly)
 
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
@@ -141,7 +177,7 @@ class EdenTestCase(TestParent):
             if os.environ.get("EDEN_TEST_NO_CLEANUP"):
                 print("Leaving behind eden test directory %r" % self.tmp_dir)
             else:
-                shutil.rmtree(self.tmp_dir, ignore_errors=True)
+                _cleanup_tmp_dir(self.tmp_dir)
 
         self.tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
         self.addCleanup(cleanup_tmp_dir)
