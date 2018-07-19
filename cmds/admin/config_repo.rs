@@ -17,6 +17,7 @@ use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use promptly::Promptable;
 use slog::Logger;
+use tempdir::TempDir;
 use tokio_process::CommandExt;
 
 use blobrepo::BlobRepo;
@@ -27,6 +28,7 @@ const CLONE_CMD: &'static str = "clone";
 const CLONE_DFLT_DIR: &'static str = "mononoke-config";
 const IMPORT_CMD: &'static str = "import";
 const IMPORT_DFLT_DIR: &'static str = "mononoke-config-imported";
+const FBPKG_CMD: &'static str = "fbpkg";
 
 const HGRC_CONTENT: &'static str = "
 [extensions]
@@ -60,9 +62,29 @@ pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         .add_dest()
         .add_src();
 
+    let fbpkg = SubCommand::with_name(FBPKG_CMD)
+        .about("build fbpkg mononoke.config for tupperware deployments")
+        .add_interactive()
+        .add_src()
+        .arg(
+            Arg::with_name("ephemeral")
+                .long("ephemeral")
+                .short("E")
+                .takes_value(false)
+                .help("Build an ephemeral package with fbpkg"),
+        )
+        .arg(
+            Arg::with_name("non-forward")
+                .long("non-forward")
+                .short("f")
+                .takes_value(false)
+                .help("Do not use --revision-check on fbpkg build"),
+        );
+
     app.about("set of commands to interact with mononoke-config repository")
         .subcommand(clone)
         .subcommand(import)
+        .subcommand(fbpkg)
 }
 
 trait AppExt {
@@ -112,6 +134,7 @@ pub fn handle_command<'a>(matches: &ArgMatches<'a>, logger: Logger) -> BoxFuture
     match matches.subcommand() {
         (CLONE_CMD, Some(sub_m)) => handle_clone(sub_m, logger),
         (IMPORT_CMD, Some(sub_m)) => handle_import(sub_m, logger),
+        (FBPKG_CMD, Some(sub_m)) => handle_fbpkg(sub_m, logger),
         _ => {
             println!("{}", matches.usage());
             ::std::process::exit(1);
@@ -182,6 +205,60 @@ fn handle_import<'a>(args: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Err
 
     try_boxfuture!(fs::create_dir_all(&dest));
     import(logger, src, dest)
+}
+
+fn handle_fbpkg<'a>(args: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Error> {
+    let interactive = args.is_present("interactive");
+    let ephemeral = args.is_present("ephemeral");
+    let non_forward = args.is_present("non-forward");
+
+    let src = {
+        let default = try_boxfuture!(data_dir()).join(CLONE_DFLT_DIR);
+
+        match args.value_of("src") {
+            Some(dir) => PathBuf::from(dir),
+            None if interactive => {
+                PathBuf::prompt_default("Specify src folder for importing", default)
+            }
+            None => default,
+        }
+    };
+
+    let tmpdir = try_boxfuture!(TempDir::new(IMPORT_DFLT_DIR));
+    // The imported content needs to be in a folder with deterministic name
+    let import_dir = tmpdir.path().to_owned().join(IMPORT_DFLT_DIR);
+    try_boxfuture!(fs::create_dir(&import_dir));
+
+    force_prod_bookmark(src.clone())
+        .and_then({
+            cloned!(src, import_dir);
+            move |()| import(logger, src.clone(), import_dir)
+        })
+        .and_then(move |()| {
+            let mut fbpkg = Command::new("fbpkg");
+            fbpkg
+                .arg("build")
+                .arg("mononoke.config")
+                .arg("--set")
+                .arg("import_dir")
+                .arg(import_dir);
+            if !non_forward {
+                fbpkg.arg("--revision-check");
+            }
+            if ephemeral {
+                fbpkg.arg("--ephemeral");
+            }
+            fbpkg
+                .current_dir(src)
+                .status_async()
+                .into_future()
+                .flatten()
+                .from_err()
+                .and_then(|status| check_status(status, "fbpkg build"))
+        })
+        // Make sure that the TempDir is dropped not earlier than at the end
+        .map(move |()| { let _ = tmpdir; })
+        .boxify()
 }
 
 fn data_dir() -> Result<PathBuf> {
@@ -258,4 +335,18 @@ fn import(logger: Logger, src: PathBuf, dest: PathBuf) -> BoxFuture<(), Error> {
         commits_limit: None,
         no_bookmark: false,
     }.import()
+}
+
+fn force_prod_bookmark(src: PathBuf) -> BoxFuture<(), Error> {
+    Command::new("hg")
+        .arg("bookmark")
+        .arg("--force")
+        .arg("PROD")
+        .current_dir(&src)
+        .status_async()
+        .into_future()
+        .flatten()
+        .from_err()
+        .and_then(|status| check_status(status, "hg bookmark --force PROD"))
+        .boxify()
 }

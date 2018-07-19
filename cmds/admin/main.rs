@@ -25,6 +25,7 @@ extern crate mercurial_types;
 extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
+extern crate tempdir;
 extern crate tokio;
 
 mod config_repo;
