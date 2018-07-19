@@ -238,7 +238,7 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
   so your commits are not being backed up.
   Run `hg backupenable` to turn backups back on.
   
-  note: 3 changesets are not backed up.
+  note: [34] changesets are not backed up. (re)
   Run `hg pushbackup` to perform a backup. If this fails,
   please report to the Source Control @ FB group.
 
@@ -260,7 +260,7 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
   |/
   o  0 Public changeset
   
-  note: 3 changesets are not backed up.
+  note: [34] changesets are not backed up. (re)
   Run `hg pushbackup` to perform a backup. If this fails,
   please report to the Source Control @ FB group.
 
