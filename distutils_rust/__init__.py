@@ -17,7 +17,7 @@ import tarfile
 
 
 FBSOURCE = os.path.realpath(os.path.join(__file__, "../../../../../"))
-LFS_SCRIPT_PATH = os.path.join(FBSOURCE, "tools/scm/lfs/lfs.py")
+LFS_SCRIPT_PATH = os.path.join(FBSOURCE, "fbcode/tools/lfs/lfs.py")
 LFS_POINTERS = os.path.join(__file__, '../../fb/tools/.lfs-pointers')
 
 
