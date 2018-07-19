@@ -9,6 +9,7 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, ExitStatus};
+use std::sync::Arc;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 use failure::{Error, Result};
@@ -18,8 +19,14 @@ use promptly::Promptable;
 use slog::Logger;
 use tokio_process::CommandExt;
 
+use blobrepo::BlobRepo;
+use cmdlib::{args::setup_blobrepo_dir, blobimport_lib::Blobimport};
+use mercurial_types::RepositoryId;
+
 const CLONE_CMD: &'static str = "clone";
 const CLONE_DFLT_DIR: &'static str = "mononoke-config";
+const IMPORT_CMD: &'static str = "import";
+const IMPORT_DFLT_DIR: &'static str = "mononoke-config-imported";
 
 const HGRC_CONTENT: &'static str = "
 [extensions]
@@ -47,13 +54,21 @@ pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         .add_interactive()
         .add_dest();
 
+    let import = SubCommand::with_name(IMPORT_CMD)
+        .about("import the mononoke-config into rocksdb blobrepo")
+        .add_interactive()
+        .add_dest()
+        .add_src();
+
     app.about("set of commands to interact with mononoke-config repository")
         .subcommand(clone)
+        .subcommand(import)
 }
 
 trait AppExt {
     fn add_interactive(self) -> Self;
     fn add_dest(self) -> Self;
+    fn add_src(self) -> Self;
 }
 
 impl<'a, 'b> AppExt for App<'a, 'b> {
@@ -80,11 +95,23 @@ impl<'a, 'b> AppExt for App<'a, 'b> {
                 .help("Specify destination folder"),
         )
     }
+
+    fn add_src(self) -> Self {
+        self.arg(
+            Arg::with_name("src")
+                .long("src")
+                .short("s")
+                .takes_value(true)
+                .required(false)
+                .help("Specify source folder"),
+        )
+    }
 }
 
 pub fn handle_command<'a>(matches: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Error> {
     match matches.subcommand() {
         (CLONE_CMD, Some(sub_m)) => handle_clone(sub_m, logger),
+        (IMPORT_CMD, Some(sub_m)) => handle_import(sub_m, logger),
         _ => {
             println!("{}", matches.usage());
             ::std::process::exit(1);
@@ -115,6 +142,46 @@ fn handle_clone<'a>(args: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Erro
     try_boxfuture!(remove_dir(dest.clone(), interactive));
 
     clone(dest)
+}
+
+fn handle_import<'a>(args: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Error> {
+    let interactive = args.is_present("interactive");
+    let dest = {
+        let default = try_boxfuture!(data_dir()).join(IMPORT_DFLT_DIR);
+
+        match args.value_of("dest") {
+            Some(dir) => PathBuf::from(dir),
+            None if interactive => {
+                PathBuf::prompt_default("Specify destination folder for importing", default)
+            }
+            None => default,
+        }
+    };
+
+    info!(
+        logger,
+        "Using {} as destination for importing",
+        dest.display()
+    );
+
+    try_boxfuture!(remove_dir(dest.clone(), interactive));
+
+    let src = {
+        let default = try_boxfuture!(data_dir()).join(CLONE_DFLT_DIR);
+
+        match args.value_of("src") {
+            Some(dir) => PathBuf::from(dir),
+            None if interactive => {
+                PathBuf::prompt_default("Specify src folder for importing", default)
+            }
+            None => default,
+        }
+    };
+
+    info!(logger, "Using {} as source for importing", src.display());
+
+    try_boxfuture!(fs::create_dir_all(&dest));
+    import(logger, src, dest)
 }
 
 fn data_dir() -> Result<PathBuf> {
@@ -172,4 +239,23 @@ fn clone(dest: PathBuf) -> BoxFuture<(), Error> {
             Ok(())
         })
         .boxify()
+}
+
+fn import(logger: Logger, src: PathBuf, dest: PathBuf) -> BoxFuture<(), Error> {
+    try_boxfuture!(setup_blobrepo_dir(&dest, true));
+    let blobrepo = Arc::new(try_boxfuture!(BlobRepo::new_rocksdb(
+        logger.new(o!["BlobRepo:Rocksdb" => dest.to_string_lossy().into_owned()]),
+        &dest,
+        RepositoryId::new(0),
+    )));
+
+    Blobimport {
+        logger,
+        blobrepo,
+        revlogrepo_path: src.join(".hg"),
+        changeset: None,
+        skip: None,
+        commits_limit: None,
+        no_bookmark: false,
+    }.import()
 }

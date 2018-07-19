@@ -167,38 +167,40 @@ pub fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo 
     open_blobrepo_internal(logger, matches, false)
 }
 
-fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: bool) -> BlobRepo {
-    fn setup_local_state(data_dir: &Path, create: bool) -> Result<()> {
-        if !data_dir.is_dir() {
-            bail_msg!("{:?} does not exist or is not a directory", data_dir);
-        }
+pub fn setup_blobrepo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
+    let data_dir = data_dir.as_ref();
 
-        for subdir in &["blobs"] {
-            let subdir = data_dir.join(subdir);
-
-            if subdir.exists() && !subdir.is_dir() {
-                bail_msg!("{:?} already exists and is not a directory", subdir);
-            }
-
-            if create {
-                if subdir.exists() {
-                    let content: Vec<_> = subdir.read_dir()?.collect();
-                    if !content.is_empty() {
-                        bail_msg!(
-                            "{:?} already exists and is not empty: {:?}",
-                            subdir,
-                            content
-                        );
-                    }
-                } else {
-                    fs::create_dir(&subdir)
-                        .with_context(|_| format!("failed to create subdirectory {:?}", subdir))?;
-                }
-            }
-        }
-        Ok(())
+    if !data_dir.is_dir() {
+        bail_msg!("{:?} does not exist or is not a directory", data_dir);
     }
 
+    for subdir in &["blobs"] {
+        let subdir = data_dir.join(subdir);
+
+        if subdir.exists() && !subdir.is_dir() {
+            bail_msg!("{:?} already exists and is not a directory", subdir);
+        }
+
+        if create {
+            if subdir.exists() {
+                let content: Vec<_> = subdir.read_dir()?.collect();
+                if !content.is_empty() {
+                    bail_msg!(
+                        "{:?} already exists and is not empty: {:?}",
+                        subdir,
+                        content
+                    );
+                }
+            } else {
+                fs::create_dir(&subdir)
+                    .with_context(|_| format!("failed to create subdirectory {:?}", subdir))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: bool) -> BlobRepo {
     let repo_id = get_repo_id(matches);
 
     match matches.value_of("blobstore") {
@@ -209,7 +211,7 @@ fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create:
             let data_dir = Path::new(data_dir)
                 .canonicalize()
                 .expect("Failed to read local directory path");
-            setup_local_state(&data_dir, create).expect("Setting up file blobrepo failed");
+            setup_blobrepo_dir(&data_dir, create).expect("Setting up file blobrepo failed");
 
             BlobRepo::new_files(
                 logger.new(o!["BlobRepo:Files" => data_dir.to_string_lossy().into_owned()]),
@@ -224,7 +226,7 @@ fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create:
             let data_dir = Path::new(data_dir)
                 .canonicalize()
                 .expect("Failed to read local directory path");
-            setup_local_state(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
+            setup_blobrepo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
 
             BlobRepo::new_rocksdb(
                 logger.new(o!["BlobRepo:Rocksdb" => data_dir.to_string_lossy().into_owned()]),
