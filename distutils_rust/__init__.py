@@ -16,8 +16,9 @@ import subprocess
 import tarfile
 
 
-SCRIPT_ROOT = os.path.realpath(os.path.join(__file__, "../.."))
-LFS_SCRIPT_PATH = os.path.join(SCRIPT_ROOT, "fb/tools/lfs.py")
+FBSOURCE = os.path.realpath(os.path.join(__file__, "../../../../../"))
+LFS_SCRIPT_PATH = os.path.join(FBSOURCE, "tools/scm/lfs/lfs.py")
+LFS_POINTERS = os.path.join(__file__, '../../fb/tools/.lfs-pointers')
 
 
 @contextlib.contextmanager
@@ -204,7 +205,14 @@ class BuildRustExt(distutils.core.Command):
             pass
 
         distutils.log.info("downloading vendored crates '%s'", ven.name)
-        cmd = ["python", LFS_SCRIPT_PATH, "download", ven.filename]
+        cmd = [
+            "python",
+            LFS_SCRIPT_PATH,
+            '-l',
+            LFS_POINTERS,
+            "download",
+            ven.filename
+        ]
         with chdir(ven.dest):
             rc = subprocess.call(cmd)
             if rc:

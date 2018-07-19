@@ -54,8 +54,8 @@ all: build doc
 
 build/re2-2018-04-01.tar.gz:
 	mkdir -p build
-	if [ -e fb/tools/lfs.py ]; then \
-		fb/tools/lfs.py download build/re2-2018-04-01.tar.gz; \
+	if [ -e ../../../tools/scm/lfs/lfs.py ]; then \
+		../../../tools/scm/lfs/lfs.py -l fb/tools/.lfs-pointers download build/re2-2018-04-01.tar.gz; \
   else \
 		curl -L https://github.com/google/re2/archive/2018-04-01.tar.gz -o $@; \
 	fi
