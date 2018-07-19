@@ -50,7 +50,8 @@ where
 
             let listen_log = root_log.new(o!("repo" => repo.path().clone()));
 
-            let scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
+            let mut scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
+            scuba_logger.add_common_server_data();
 
             let repo = Arc::new(repo);
 
