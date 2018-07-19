@@ -250,7 +250,7 @@ where
             .join(future::lazy({
                 let lease = self.lease.clone();
                 let key = key.clone();
-                move || lease.release_lease(&key, false).or_else(|_| Ok(()))
+                move || lease.release_lease(&key, true).or_else(|_| Ok(()))
             }))
             .then(|_| Ok(()));
 
