@@ -192,7 +192,7 @@ def unsharejournal(orig, ui, repo, repopath):
                 if sharednamespaces.get(e.namespace) in sharedfeatures
             )
             for entry in _mergeentriesiter(local, shared, order=min):
-                storage._write(repo.vfs, entry)
+                storage._write(repo.vfs, [entry])
 
     return orig(ui, repo, repopath)
 
@@ -340,12 +340,43 @@ class journalstorage(object):
           item.
 
         """
+
+        entry = self._buildjournalentry(namespace, name, oldhashes, newhashes)
+        vfs = self._getvfs(namespace)
+
+        self._write(vfs, [entry])
+
+    def recordmany(self, namespace, entrydata):
+        """Batch version of `record()`
+
+        Records a lot of entries at once. namespace is the same as in `record()`
+        `entrydata` is an iterable of `(name, oldhashes, newhashes)`
+        """
+        vfs = self._getvfs(namespace)
+
+        entries = []
+        for name, oldhashes, newhashes in entrydata:
+            entry = self._buildjournalentry(namespace, name, oldhashes, newhashes)
+            entries.append(entry)
+
+        self._write(vfs, entries)
+
+    def _getvfs(self, namespace):
+        vfs = self.vfs
+        if self.sharedvfs is not None:
+            # write to the shared repository if this feature is being
+            # shared between working copies.
+            if sharednamespaces.get(namespace) in self.sharedfeatures:
+                vfs = self.sharedvfs
+        return vfs
+
+    def _buildjournalentry(self, namespace, name, oldhashes, newhashes):
         if not isinstance(oldhashes, list):
             oldhashes = [oldhashes]
         if not isinstance(newhashes, list):
             newhashes = [newhashes]
 
-        entry = journalentry(
+        return journalentry(
             util.makedate(),
             self.user,
             self.command,
@@ -355,16 +386,7 @@ class journalstorage(object):
             newhashes,
         )
 
-        vfs = self.vfs
-        if self.sharedvfs is not None:
-            # write to the shared repository if this feature is being
-            # shared between working copies.
-            if sharednamespaces.get(namespace) in self.sharedfeatures:
-                vfs = self.sharedvfs
-
-        self._write(vfs, entry)
-
-    def _write(self, vfs, entry):
+    def _write(self, vfs, entries):
         with self.jlock(vfs):
             version = None
             # open file in amend mode to ensure it is created if missing
@@ -384,7 +406,8 @@ class journalstorage(object):
                     # empty file, write version first
                     f.write(str(storageversion) + "\0")
                 f.seek(0, os.SEEK_END)
-                f.write(str(entry) + "\0")
+                for entry in entries:
+                    f.write(str(entry) + "\0")
 
     def filtered(self, namespace=None, name=None):
         """Yield all journal entries with the given namespace or name

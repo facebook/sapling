@@ -1706,16 +1706,13 @@ def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
 
         # record a journal entry if journal is loaded
         if util.safehasattr(repo, "journal"):
+            entrydata = []
             for rmbookmark, newnode in bookmarks.iteritems():
                 oldnode = oldbooks.get(rmbookmark, hex(nullid))
                 if oldnode != newnode:
                     joinedremotename = joinremotename(remotepath, rmbookmark)
-                    repo.journal.record(
-                        journalremotebookmarktype,
-                        joinedremotename,
-                        bin(oldnode),
-                        bin(newnode),
-                    )
+                    entrydata.append((joinedremotename, bin(oldnode), bin(newnode)))
+            repo.journal.recordmany(journalremotebookmarktype, entrydata)
 
         for branch, nodes in branches.iteritems():
             for n in nodes:
