@@ -9,7 +9,10 @@ use std::path::Path;
 
 use clap::{App, Arg, ArgMatches};
 use failure::{Result, ResultExt};
-use slog::{Drain, Level, Logger};
+use slog::{Drain, Logger};
+use sloggers::Build;
+use sloggers::terminal::TerminalLoggerBuilder;
+use sloggers::types::{Format, Severity, SourceLocation};
 
 use slog_glog_fmt::default_drain as glog_drain;
 
@@ -31,6 +34,8 @@ pub struct MononokeApp {
     pub hide_advanced_args: bool,
     /// Whether this tool can deal with local instances (which are very useful for testing).
     pub local_instances: bool,
+    /// Whether to use glog by default.
+    pub default_glog: bool,
 }
 
 impl MononokeApp {
@@ -58,6 +63,7 @@ impl MononokeApp {
                     .help(help)
             })
             .collect();
+        let default_log = if self.default_glog { "glog" } else { "compact" };
 
         let mut app = App::new(name)
             .args_from_usage(
@@ -73,6 +79,14 @@ impl MononokeApp {
                     .value_name("ID")
                     .default_value("0")
                     .help("numeric ID of repository")
+            )
+            .arg(
+                Arg::with_name("log-style")
+                    .short("l")
+                    .value_name("STYLE")
+                    .possible_values(&["compact", "glog"])
+                    .default_value(default_log)
+                    .help("log style to use for output")
             )
 
             // Manifold-specific arguments
@@ -136,14 +150,30 @@ impl MononokeApp {
 }
 
 pub fn get_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
-    let level = if matches.is_present("debug") {
-        Level::Debug
+    let severity = if matches.is_present("debug") {
+        Severity::Debug
     } else {
-        Level::Info
+        Severity::Info
     };
 
-    let drain = glog_drain().filter_level(level).fuse();
-    Logger::root(drain, o![])
+    let log_style = matches
+        .value_of("log-style")
+        .expect("default style is always specified");
+    match log_style {
+        "glog" => {
+            let drain = glog_drain().filter_level(severity.as_level()).fuse();
+            Logger::root(drain, o![])
+        }
+        "compact" => {
+            let mut builder = TerminalLoggerBuilder::new();
+            builder.level(severity);
+            builder.format(Format::Compact);
+            builder.source_location(SourceLocation::None);
+
+            builder.build().unwrap()
+        }
+        _other => unreachable!("unknown log style"),
+    }
 }
 
 pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {

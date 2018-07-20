@@ -98,6 +98,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         safe_writes: false,
         hide_advanced_args: true,
         local_instances: false,
+        default_glog: false,
     };
     app.build("Mononoke admin command line tool")
         .version("0.0.0")

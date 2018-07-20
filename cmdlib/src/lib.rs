@@ -18,6 +18,8 @@ extern crate futures;
 extern crate futures_ext;
 #[macro_use]
 extern crate slog;
+extern crate sloggers;
+
 extern crate slog_glog_fmt;
 
 extern crate blobrepo;
