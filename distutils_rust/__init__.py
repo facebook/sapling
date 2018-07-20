@@ -16,7 +16,17 @@ import subprocess
 import tarfile
 
 
-FBSOURCE = os.path.realpath(os.path.join(__file__, "../../../../../"))
+def find_fbsource_root():
+    d = os.getcwd()
+    while d != os.path.dirname(d) and \
+            not os.path.exists(os.path.join(d, '.hg')):
+        d = os.path.dirname(d)
+    if d == os.path.dirname(d):
+        raise Exception('Could not find the fbsource root. CWD=%s' %
+                        os.getcwd())
+    return d
+
+FBSOURCE = find_fbsource_root()
 LFS_SCRIPT_PATH = os.path.join(FBSOURCE, "fbcode/tools/lfs/lfs.py")
 LFS_POINTERS = os.path.join(__file__, '../../fb/tools/.lfs-pointers')
 
