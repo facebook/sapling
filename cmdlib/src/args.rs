@@ -274,12 +274,14 @@ pub fn parse_manifold_args<'a>(
     }
 }
 
+pub fn get_usize_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<usize> {
+    matches.value_of(key).map(|val| {
+        val.parse::<usize>()
+            .expect(&format!("{} must be integer", key))
+    })
+}
+
+#[inline]
 pub fn get_usize<'a>(matches: &ArgMatches<'a>, key: &str, default: usize) -> usize {
-    matches
-        .value_of(key)
-        .map(|val| {
-            val.parse::<usize>()
-                .expect(&format!("{} must be integer", key))
-        })
-        .unwrap_or(default)
+    get_usize_opt(matches, key).unwrap_or(default)
 }
