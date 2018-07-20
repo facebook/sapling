@@ -10,46 +10,35 @@
 #pragma once
 
 #include <folly/Range.h>
-#include <string>
-#include "eden/fs/model/git/GitIgnoreStack.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
 
 class InodeDiffCallback;
+class GitIgnoreStack;
 class ObjectStore;
 class UserInfo;
+class TopLevelIgnores;
 
 /**
- * A small helper class to store parameters for a TreeInode::diff() operation.
+ * A helper class to store parameters for a TreeInode::diff() operation.
  *
- * These are parameters that remain fixed across all subdirectories being
- * diffed.  This class is mostly just for convenience so that we do not have to
- * pass these items in individually as separate parameters to each function
- * being called.
+ * These parameters remain fixed across all subdirectories being diffed.
+ * Primarily intent is to compound related diff attributes.
  */
 class DiffContext {
  public:
-  // Loads the system-wide ignore settings and user-specific
-  // ignore settings into top level git ignore stack
   DiffContext(
       InodeDiffCallback* cb,
       bool listIgnored,
       const ObjectStore* os,
-      const UserInfo& userInfo);
+      std::unique_ptr<TopLevelIgnores> topLevelIgnores);
 
-  // this constructor is primarily intended for testing
-  DiffContext(
-      InodeDiffCallback* cb,
-      bool listIgnored,
-      const ObjectStore* os,
-      folly::StringPiece systemWideIgnoreFileContents,
-      folly::StringPiece userIgnoreFileContents);
-
-  const GitIgnoreStack* getToplevelIgnore() const {
-    return ownedIgnores_.empty() ? nullptr : ownedIgnores_.back().get();
-  }
+  DiffContext(const DiffContext&) = delete;
+  DiffContext& operator=(const DiffContext&) = delete;
+  DiffContext(DiffContext&&) = delete;
+  DiffContext& operator=(DiffContext&&) = delete;
+  ~DiffContext();
 
   InodeDiffCallback* const callback;
   const ObjectStore* const store;
@@ -61,17 +50,10 @@ class DiffContext {
    */
   bool const listIgnored;
 
- private:
-  static AbsolutePath constructUserIgnoreFileName(const UserInfo& userInfo);
-  static std::string tryIngestFile(AbsolutePathPiece fileName);
-  void initOwnedIgnores(
-      folly::StringPiece systemWideIgnoreFileContents,
-      folly::StringPiece userIgnoreFileContents);
-  void pushFrameIfAvailable(folly::StringPiece ignoreFileContents);
+  const GitIgnoreStack* getToplevelIgnore() const;
 
-  static constexpr folly::StringPiece kSystemWideIgnoreFileName =
-      "/etc/eden/ignore";
-  std::vector<std::unique_ptr<GitIgnoreStack>> ownedIgnores_;
+ private:
+  std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
 };
 } // namespace eden
 } // namespace facebook

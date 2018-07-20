@@ -34,6 +34,7 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ServerState.h"
+#include "eden/fs/inodes/TopLevelIgnores.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -576,7 +577,10 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
     InodeDiffCallback* callback,
     bool listIgnored) const {
   return make_unique<DiffContext>(
-      callback, listIgnored, getObjectStore(), serverState_->getUserInfo());
+      callback,
+      listIgnored,
+      getObjectStore(),
+      std::make_unique<TopLevelIgnores>(serverState_->getUserInfo()));
 }
 
 Future<Unit> EdenMount::diff(const DiffContext* ctxPtr, Hash commitHash) const {

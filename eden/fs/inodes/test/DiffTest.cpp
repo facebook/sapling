@@ -16,6 +16,7 @@
 #include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
+#include "eden/fs/inodes/TopLevelIgnores.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -165,11 +166,12 @@ class DiffTest {
       folly::StringPiece systemWideIgnoreFileContents = "",
       folly::StringPiece userIgnoreFileContents = "") {
     DiffResultsCallback callback;
-    DiffContext diffContext{&callback,
-                            listIgnored,
-                            mount_.getEdenMount()->getObjectStore(),
-                            systemWideIgnoreFileContents,
-                            userIgnoreFileContents};
+    DiffContext diffContext{
+        &callback,
+        listIgnored,
+        mount_.getEdenMount()->getObjectStore(),
+        std::make_unique<TopLevelIgnores>(
+            systemWideIgnoreFileContents, userIgnoreFileContents)};
     auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
     auto diffFuture = mount_.getEdenMount()->diff(&diffContext, commitHash);
     EXPECT_FUTURE_RESULT(diffFuture);
