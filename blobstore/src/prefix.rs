@@ -28,6 +28,11 @@ impl<T: Blobstore + Clone> PrefixBlobstore<T> {
     }
 
     #[inline]
+    pub fn into_inner(self) -> T {
+        self.blobstore
+    }
+
+    #[inline]
     fn prepend(&self, key: String) -> String {
         [&self.prefix, key.as_str()].concat()
     }

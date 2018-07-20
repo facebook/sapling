@@ -25,8 +25,8 @@ use stats::Timeseries;
 use time_ext::DurationExt;
 use uuid::Uuid;
 
-use blobstore::{new_memcache_blobstore, Blobstore, EagerMemblob, MemoizedBlobstore,
-                PrefixBlobstore};
+use blobstore::{new_memcache_blobstore, Blobstore, EagerMemblob, MemWritesBlobstore,
+                MemoizedBlobstore, PrefixBlobstore};
 use bonsai_hg_mapping::{BonsaiHgMapping, CachingBonsaiHgMapping, MysqlBonsaiHgMapping,
                         SqliteBonsaiHgMapping};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
@@ -285,6 +285,40 @@ impl BlobRepo {
             Arc::new(bonsai_hg_mapping),
             repoid,
         ))
+    }
+
+    /// Convert this BlobRepo instance into one that only does writes in memory.
+    ///
+    /// ------------
+    /// IMPORTANT!!!
+    /// ------------
+    /// Currently this applies to the blobstore *ONLY*. A future improvement would be to also
+    /// do database writes in-memory.
+    #[allow(non_snake_case)]
+    pub fn in_memory_writes_READ_DOC_COMMENT(self) -> BlobRepo {
+        let BlobRepo {
+            logger,
+            bookmarks,
+            blobstore,
+            filenodes,
+            changesets,
+            bonsai_hg_mapping,
+            repoid,
+        } = self;
+
+        // Drop the PrefixBlobstore (it will be wrapped up in one again by BlobRepo::new)
+        let blobstore = blobstore.into_inner();
+        let blobstore = Arc::new(MemWritesBlobstore::new(blobstore));
+
+        BlobRepo::new(
+            logger,
+            bookmarks,
+            blobstore,
+            filenodes,
+            changesets,
+            bonsai_hg_mapping,
+            repoid,
+        )
     }
 
     fn fetch<K>(&self, key: &K) -> impl Future<Item = K::Value, Error = Error> + Send

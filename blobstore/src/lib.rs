@@ -58,6 +58,9 @@ pub use memblob::{EagerMemblob, LazyMemblob};
 mod memcache_cache_lease;
 pub use memcache_cache_lease::{new_memcache_blobstore, new_memcache_blobstore_no_lease};
 
+mod mem_writes;
+pub use mem_writes::MemWritesBlobstore;
+
 mod prefix;
 pub use prefix::PrefixBlobstore;
 
