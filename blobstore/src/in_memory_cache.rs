@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::fmt;
+
 use failure::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -51,6 +53,15 @@ impl<T: Blobstore + Clone> Blobstore for MemoizedBlobstore<T> {
         } else {
             self.blobstore.is_present(key)
         }
+    }
+}
+
+impl<T: Blobstore + Clone> fmt::Debug for MemoizedBlobstore<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("MemoizedBlobstore")
+            .field("blobstore", &self.blobstore)
+            .field("cache", &"Asyncmemo")
+            .finish()
     }
 }
 

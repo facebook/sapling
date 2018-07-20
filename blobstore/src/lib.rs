@@ -27,6 +27,7 @@ extern crate rust_thrift;
 #[macro_use]
 extern crate stats;
 
+use std::fmt;
 use std::sync::Arc;
 
 use failure::Error;
@@ -87,7 +88,7 @@ pub use errors::*;
 ///
 /// Implementations of Blobstore must be `Clone` if they are to interoperate with other Mononoke
 /// uses of Blobstores
-pub trait Blobstore: Send + Sync + 'static {
+pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
     /// Fetch the value associated with `key`, or None if no value is present
     fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;
     /// Associate `value` with `key` for future gets; if `put` is called with different `value`s

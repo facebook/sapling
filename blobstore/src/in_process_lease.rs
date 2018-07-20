@@ -14,7 +14,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use LeaseOps;
 
 /// LeaseOps that use in-memory data structures to avoid two separate tasks writing to the same key
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct InProcessLease {
     leases: Arc<Mutex<HashMap<String, (Sender<()>, Shared<Receiver<()>>)>>>,
 }

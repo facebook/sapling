@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::fmt;
 use std::sync::Arc;
 
 use bytes::Bytes;
@@ -90,5 +91,12 @@ impl CacheOps for CachelibOps {
         Ok(self.presence_pool.get(key).is_some() || self.blob_pool.get(key).is_some())
             .into_future()
             .boxify()
+    }
+}
+
+impl fmt::Debug for CachelibOps {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // XXX possibly add more debug info here
+        write!(f, "CachelibOps")
     }
 }

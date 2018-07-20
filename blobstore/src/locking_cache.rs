@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::fmt;
 use std::sync::Arc;
 
 use failure::Error;
@@ -43,7 +44,7 @@ pub trait CacheBlobstoreExt: Blobstore {
 /// Known can demote to Present or Empty.
 /// No state is permitted to demote to Leased.
 /// Caches that do not support LeaseOps do not have the Leased state.
-pub trait CacheOps: Send + Sync + 'static {
+pub trait CacheOps: fmt::Debug + Send + Sync + 'static {
     /// Fetch the blob from the cache, if possible. Return `None` if the cache does not have a
     /// copy of the blob (i.e. the cache entry is not in Known state).
     fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreBytes>, ()>;
@@ -64,7 +65,7 @@ pub trait CacheOps: Send + Sync + 'static {
 /// be only one writer to the backing store for any given key - notably, the cache can demote
 /// Leased to Empty, thus letting another writer that shares the same cache through to the backing
 /// store.
-pub trait LeaseOps: Send + Sync + 'static {
+pub trait LeaseOps: fmt::Debug + Send + Sync + 'static {
     /// Ask the cache to attempt to lock out other users of this cache for a particular key.
     /// This is an atomic test-and-set of the cache entry; it tests that the entry is Empty, and if
     /// the entry is Empty, it changes it to the Leased state.
@@ -318,5 +319,20 @@ where
 
     fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.cache_get(&key).boxify()
+    }
+}
+
+impl<C, L, T> fmt::Debug for CacheBlobstore<C, L, T>
+where
+    C: CacheOps + Clone,
+    L: LeaseOps + Clone,
+    T: Blobstore + Clone,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CacheBlobstore")
+            .field("blobstore", &self.blobstore)
+            .field("cache", &self.cache)
+            .field("lease", &self.lease)
+            .finish()
     }
 }

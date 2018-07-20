@@ -33,7 +33,7 @@ define_stats! {
         "{}.assert_present.err", (name: &'static str); RATE, SUM),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CountedBlobstore<T: Blobstore> {
     name: &'static str,
     blobstore: T,

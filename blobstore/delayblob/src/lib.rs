@@ -14,6 +14,7 @@ extern crate futures_ext;
 extern crate blobstore;
 extern crate mononoke_types;
 
+use std::fmt;
 use std::iter::{repeat, Map, Repeat};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -96,5 +97,20 @@ where
         let sleep = self.sleep(self.assert_present_roundtrips);
         let assert_present = self.blobstore.assert_present(key);
         sleep.and_then(move |_| assert_present).boxify()
+    }
+}
+
+impl<F> fmt::Debug for DelayBlob<F>
+where
+    F: FnMut(()) -> Duration + 'static + Send + Sync,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("DelayBlob")
+            .field("blobstore", &self.blobstore)
+            .field("get_roundtrips", &self.get_roundtrips)
+            .field("put_roundtrips", &self.put_roundtrips)
+            .field("is_present_roundtrips", &self.is_present_roundtrips)
+            .field("assert_present_roundtrips", &self.assert_present_roundtrips)
+            .finish()
     }
 }

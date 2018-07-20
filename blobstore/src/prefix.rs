@@ -14,7 +14,7 @@ use mononoke_types::BlobstoreBytes;
 use {Blobstore, CacheBlobstoreExt};
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PrefixBlobstore<T: Blobstore + Clone> {
     // Try to inline the prefix to ensure copies remain cheap. Most prefixes are short anyway.
     prefix: InlinableString,

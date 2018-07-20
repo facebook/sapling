@@ -10,7 +10,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use LeaseOps;
 
 /// A dummy implementation of LeaseOps that meets the letter of the spec, but uselessly
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DummyLease {}
 
 impl LeaseOps for DummyLease {

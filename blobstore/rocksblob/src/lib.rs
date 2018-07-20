@@ -28,7 +28,7 @@ use mononoke_types::BlobstoreBytes;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Rocksblob {
     db: Db,
 }

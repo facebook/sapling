@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::{Arc, Mutex};
 
 use failure::Error;
@@ -79,5 +80,33 @@ impl Blobstore for LazyMemblob {
             let inner = hash.lock().expect("lock poison");
             Ok(inner.get(&key).map(Clone::clone)).into_future()
         }).boxify()
+    }
+}
+
+impl fmt::Debug for EagerMemblob {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("EagerMemblob")
+            .field(
+                "hash",
+                &format!(
+                    "({} entries)",
+                    self.hash.lock().expect("lock poisoned").len()
+                ),
+            )
+            .finish()
+    }
+}
+
+impl fmt::Debug for LazyMemblob {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("LazyMemblob")
+            .field(
+                "hash",
+                &format!(
+                    "({} entries)",
+                    self.hash.lock().expect("lock poisoned").len()
+                ),
+            )
+            .finish()
     }
 }

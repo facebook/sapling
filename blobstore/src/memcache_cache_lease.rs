@@ -50,7 +50,7 @@ define_stats! {
 }
 
 /// A caching layer over an existing blobstore, backed by memcache
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MemcacheOps {
     memcache: MemcacheClient,
     keygen: KeyGen,
