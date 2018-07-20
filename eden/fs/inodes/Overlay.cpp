@@ -13,10 +13,12 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/Range.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+#include <algorithm>
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
@@ -441,11 +443,12 @@ void Overlay::removeOverlayData(InodeNumber inodeNumber) {
   getInodeMetadataTable()->freeInode(inodeNumber);
 
   auto path = getFilePath(inodeNumber);
-  int result = ::unlinkat(dirFile_.fd(), path.data(), 0);
+  int result = ::unlinkat(dirFile_.fd(), path.c_str(), 0);
   if (result == 0) {
     XLOG(DBG4) << "removed overlay data for inode " << inodeNumber;
   } else if (errno != ENOENT) {
-    folly::throwSystemError("error unlinking overlay file: ", path);
+    folly::throwSystemError(
+        "error unlinking overlay file: ", RelativePathPiece{path});
   }
 }
 
@@ -480,7 +483,7 @@ bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
   // this function requires a syscall to see if the overlay has an entry.
   auto path = getFilePath(inodeNumber);
   struct stat st;
-  if (0 == fstatat(dirFile_.fd(), path.data(), &st, AT_SYMLINK_NOFOLLOW)) {
+  if (0 == fstatat(dirFile_.fd(), path.c_str(), &st, AT_SYMLINK_NOFOLLOW)) {
     return S_ISREG(st.st_mode);
   } else {
     return false;
@@ -562,12 +565,14 @@ InodeNumber Overlay::scanForNextInodeNumber() {
 
 Overlay::InodePath Overlay::getFilePath(InodeNumber inodeNumber) {
   InodePath outPath;
-  formatSubdirPath(MutableStringPiece{outPath.data(), 2}, inodeNumber.get());
-  outPath[2] = '/';
+  auto& outPathArray = outPath.rawData();
+  formatSubdirPath(
+      MutableStringPiece{outPathArray.data(), 2}, inodeNumber.get());
+  outPathArray[2] = '/';
   auto index =
-      folly::uint64ToBufferUnsafe(inodeNumber.get(), outPath.data() + 3);
-  DCHECK_LT(index + 3, outPath.size());
-  outPath[index + 3] = '\0';
+      folly::uint64ToBufferUnsafe(inodeNumber.get(), outPathArray.data() + 3);
+  DCHECK_LT(index + 3, outPathArray.size());
+  outPathArray[index + 3] = '\0';
   return outPath;
 }
 
@@ -576,7 +581,7 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
     InodeTimestamps& timeStamps) const {
   // Open the file.  Return folly::none if the file does not exist.
   auto path = getFilePath(inodeNumber);
-  int fd = openat(dirFile_.fd(), path.data(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+  int fd = openat(dirFile_.fd(), path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
   if (fd == -1) {
     int err = errno;
     if (err == ENOENT) {
@@ -600,7 +605,8 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
       // There is no overlay here
       return folly::none;
     }
-    folly::throwSystemErrorExplicit(errno, "failed to read ", path);
+    folly::throwSystemErrorExplicit(
+        errno, "failed to read ", RelativePathPiece{path});
   }
 
   // Removing header and deserializing the contents
@@ -609,7 +615,7 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
     folly::throwSystemErrorExplicit(
         EIO,
         "Overlay file ",
-        path,
+        RelativePathPiece{path},
         " is too short for header: size=",
         serializedData.size());
   }
@@ -680,7 +686,7 @@ folly::File Overlay::openFile(
 folly::File Overlay::openFileNoVerify(InodeNumber inodeNumber) {
   auto path = getFilePath(inodeNumber);
 
-  int fd = openat(dirFile_.fd(), path.data(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+  int fd = openat(dirFile_.fd(), path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
   folly::checkUnixError(
       fd,
       "error opening overlay file for inode ",
@@ -765,7 +771,7 @@ folly::File Overlay::createOverlayFileImpl(
   // a nearly 300 microsecond cost.
 
   auto returnCode =
-      renameat(dirFile_.fd(), tmpPath.data(), dirFile_.fd(), path.data());
+      renameat(dirFile_.fd(), tmpPath.data(), dirFile_.fd(), path.c_str());
   folly::checkUnixError(
       returnCode,
       "error committing overlay file for inode ",
@@ -982,5 +988,21 @@ void Overlay::handleGCRequest(GCRequest& request) {
     processDir(dir);
   }
 }
+
+Overlay::InodePath::InodePath() noexcept : path_{'\0'} {}
+
+const char* Overlay::InodePath::c_str() const noexcept {
+  return path_.data();
+}
+
+Overlay::InodePath::operator RelativePathPiece() const noexcept {
+  return RelativePathPiece{folly::StringPiece{c_str()}};
+}
+
+std::array<char, Overlay::InodePath::kMaxPathLength>&
+Overlay::InodePath::rawData() noexcept {
+  return path_;
+}
+
 } // namespace eden
 } // namespace facebook

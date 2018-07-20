@@ -232,17 +232,17 @@ TEST_F(OverlayTest, getFilePath) {
   Overlay::InodePath path;
 
   path = Overlay::getFilePath(1_ino);
-  EXPECT_STREQ("01/1", path.data());
+  EXPECT_EQ("01/1"_relpath, path);
   path = Overlay::getFilePath(1234_ino);
-  EXPECT_STREQ("d2/1234", path.data());
+  EXPECT_EQ("d2/1234"_relpath, path);
 
   // It's slightly unfortunate that we use hexadecimal for the subdirectory
   // name and decimal for the final inode path.  That doesn't seem worth fixing
   // for now.
   path = Overlay::getFilePath(15_ino);
-  EXPECT_STREQ("0f/15", path.data());
+  EXPECT_EQ("0f/15"_relpath, path);
   path = Overlay::getFilePath(16_ino);
-  EXPECT_STREQ("10/16", path.data());
+  EXPECT_EQ("10/16"_relpath, path);
 }
 
 enum class OverlayRestartMode {
@@ -404,6 +404,11 @@ INSTANTIATE_TEST_CASE_P(
     Unclean,
     RawOverlayTest,
     ::testing::Values(OverlayRestartMode::UNCLEAN));
+
+TEST(OverlayInodePath, defaultInodePathIsEmpty) {
+  Overlay::InodePath path;
+  EXPECT_STREQ(path.c_str(), "");
+}
 
 } // namespace eden
 } // namespace facebook

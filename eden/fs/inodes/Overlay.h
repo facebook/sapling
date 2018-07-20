@@ -13,6 +13,7 @@
 #include <folly/Range.h>
 #include <folly/futures/Promise.h>
 #include <gtest/gtest_prod.h>
+#include <array>
 #include <condition_variable>
 #include <thread>
 #include "eden/fs/fuse/FuseTypes.h"
@@ -56,6 +57,8 @@ struct SerializedInodeMap;
  */
 class Overlay {
  public:
+  class InodePath;
+
   explicit Overlay(AbsolutePathPiece localDir);
   ~Overlay();
 
@@ -202,18 +205,7 @@ class Overlay {
   static constexpr size_t kMaxDecimalInodeNumberLength = 20;
 
  private:
-  /**
-   * The maximum path length for the path to a file inside the overlay
-   * directory.
-   *
-   * This is 2 bytes for the initial subdirectory name, 1 byte for the '/',
-   * 20 bytes for the inode number, and 1 byte for a null terminator.
-   */
-  static constexpr size_t kMaxPathLength =
-      2 + 1 + kMaxDecimalInodeNumberLength + 1;
-
   FRIEND_TEST(OverlayTest, getFilePath);
-  using InodePath = std::array<char, kMaxPathLength>;
 
   /**
    * A request for the background GC thread.  There are two types of requests:
@@ -323,5 +315,29 @@ class Overlay {
   folly::Synchronized<GCQueue, std::mutex> gcQueue_;
   std::condition_variable gcCondVar_;
 };
+
+class Overlay::InodePath {
+ public:
+  explicit InodePath() noexcept;
+
+  /**
+   * The maximum path length for the path to a file inside the overlay
+   * directory.
+   *
+   * This is 2 bytes for the initial subdirectory name, 1 byte for the '/',
+   * 20 bytes for the inode number, and 1 byte for a null terminator.
+   */
+  static constexpr size_t kMaxPathLength =
+      2 + 1 + Overlay::kMaxDecimalInodeNumberLength + 1;
+
+  const char* c_str() const noexcept;
+  /* implicit */ operator RelativePathPiece() const noexcept;
+
+  std::array<char, kMaxPathLength>& rawData() noexcept;
+
+ private:
+  std::array<char, kMaxPathLength> path_;
+};
+
 } // namespace eden
 } // namespace facebook
