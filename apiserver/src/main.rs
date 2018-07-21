@@ -225,7 +225,7 @@ fn main() -> Result<()> {
         .parse::<usize>()
         .unwrap() * 1024 * 1024 * 1024;
 
-    cachelib::init_cache_once(cachelib::LruCacheConfig { size: cache_size }).unwrap();
+    cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size)).unwrap();
 
     cachelib::get_or_create_pool("blobstore-blobs", cachelib::get_available_space() * 3 / 4)
         .unwrap();
