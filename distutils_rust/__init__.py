@@ -16,21 +16,6 @@ import subprocess
 import tarfile
 
 
-def find_fbsource_root():
-    d = os.getcwd()
-    while d != os.path.dirname(d) and \
-            not os.path.exists(os.path.join(d, '.hg')):
-        d = os.path.dirname(d)
-    if d == os.path.dirname(d):
-        raise RuntimeError('Could not find the fbsource root. CWD=%s' %
-                           os.getcwd())
-    return d
-
-FBSOURCE = find_fbsource_root()
-LFS_SCRIPT_PATH = os.path.join(FBSOURCE, "fbcode/tools/lfs/lfs.py")
-LFS_POINTERS = os.path.join(__file__, '../../fb/tools/.lfs-pointers')
-
-
 @contextlib.contextmanager
 def chdir(path):
     cwd = os.getcwd()
@@ -208,31 +193,6 @@ class BuildRustExt(distutils.core.Command):
         else:
             raise distutils.errors.CompileError("Unknown Rust target type")
 
-    def download_vendored_crates(self, ven):
-        try:
-            os.makedirs(ven.dest)
-        except OSError:
-            pass
-
-        distutils.log.info("downloading vendored crates '%s'", ven.name)
-        cmd = [
-            "python",
-            LFS_SCRIPT_PATH,
-            '-l',
-            LFS_POINTERS,
-            "download",
-            ven.filename
-        ]
-        with chdir(ven.dest):
-            rc = subprocess.call(cmd)
-            if rc:
-                raise distutils.errors.CompileError(
-                    "download of Rust vendored crates '%s' failed" % ven.name
-                )
-
-            with tarfile.open(ven.filename, "r:gz") as tar:
-                tar.extractall()
-
     def build_target(self, target):
         """Build Rust target"""
         # Cargo.lock may become out-of-date and make complication fail if
@@ -271,6 +231,13 @@ class BuildRustExt(distutils.core.Command):
     def build_library(self, target):
         distutils.log.info("building '%s' library extension", target.name)
         self.build_target(target)
+
+    try:
+        from distutils_rust.fb import download_vendored_crates
+    except ImportError:
+
+        def download_vendored_crates(self, ven):
+            distutils.log.info("skipping downloading vendored crates")
 
 
 distutils.dist.Distribution.rust_ext_modules = ()
