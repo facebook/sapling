@@ -44,9 +44,6 @@ pub use counted_blobstore::CountedBlobstore;
 
 mod dummy_lease;
 
-mod in_memory_cache;
-pub use in_memory_cache::MemoizedBlobstore;
-
 mod in_process_lease;
 
 mod locking_cache;
