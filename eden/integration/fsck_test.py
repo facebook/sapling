@@ -8,7 +8,6 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
-from typing import Type
 
 from .lib import repobase, testcase
 
@@ -27,7 +26,7 @@ class FsckTest(testcase.EdenRepoTest):
         self.repo.symlink("proj/doc", "../doc")
         self.repo.commit("Initial commit.")
 
-    def create_repo(self, name: str) -> Type[repobase.Repository]:
+    def create_repo(self, name: str) -> repobase.Repository:
         return self.create_hg_repo("main")
 
     def setup_eden_test(self) -> None:

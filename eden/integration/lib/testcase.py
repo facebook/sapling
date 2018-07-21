@@ -363,7 +363,7 @@ class EdenRepoTest(EdenTestCase):
             "individual test classes must implement " "populate_repo()"
         )
 
-    def create_repo(self, name: str) -> Type[repobase.Repository]:
+    def create_repo(self, name: str) -> repobase.Repository:
         """
         Create a new repository.
 
