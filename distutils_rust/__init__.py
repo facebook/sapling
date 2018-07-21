@@ -22,8 +22,8 @@ def find_fbsource_root():
             not os.path.exists(os.path.join(d, '.hg')):
         d = os.path.dirname(d)
     if d == os.path.dirname(d):
-        raise Exception('Could not find the fbsource root. CWD=%s' %
-                        os.getcwd())
+        raise RuntimeError('Could not find the fbsource root. CWD=%s' %
+                           os.getcwd())
     return d
 
 FBSOURCE = find_fbsource_root()
