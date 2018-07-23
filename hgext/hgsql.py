@@ -1087,12 +1087,8 @@ def wraprepo(repo):
             if not self.pendingrevs and not "bookmark_moved" in tr.hookargs:
                 return
 
-            if self.pendingrevs:
-                self._validatependingrevs()
-
             try:
-                self._addrevstosql(self.pendingrevs)
-                self._updaterevisionreferences()
+                self._committodb(self.pendingrevs)
 
                 # Just to be super sure, check the write lock before doing the
                 # final commit
@@ -1101,13 +1097,19 @@ def wraprepo(repo):
                         "attempting to write to sql "
                         + "without holding %s (precommit)" % writelock
                     )
-
                 self.sqlconn.commit()
             except:
                 self.sqlconn.rollback()
                 raise
             finally:
                 del self.pendingrevs[:]
+
+        def _committodb(self, revisions, ignoreduplicates=False):
+            if revisions:
+                self._validatependingrevs(revisions, ignoreduplicates=ignoreduplicates)
+
+            self._addrevstosql(revisions, ignoreduplicates=ignoreduplicates)
+            self._updaterevisionreferences()
 
         def _addrevstosql(self, revisions, ignoreduplicates=False):
             """Inserts the given revisions into the `revisions` table. If
@@ -1203,7 +1205,7 @@ def wraprepo(repo):
             # commit at the end just to make sure we're clean
             self.sqlconn.commit()
 
-        def _validatependingrevs(self):
+        def _validatependingrevs(self, revisions, ignoreduplicates=False):
             """Validates that the current pending revisions will be valid when
             written to the database.
             """
@@ -1233,11 +1235,11 @@ def wraprepo(repo):
                     ("multiple tips for %s in " + " the database") % reponame
                 )
 
-            if (
+            if (not ignoreduplicates) and (
                 not util.safehasattr(self, "sqlreplaytransaction")
                 or not self.sqlreplaytransaction
             ):
-                minlinkrev = min(self.pendingrevs, key=lambda x: x[1])[1]
+                minlinkrev = min(revisions, key=lambda x: x[1])[1]
                 if maxlinkrev == None or maxlinkrev != minlinkrev - 1:
                     raise CorruptionException(
                         "attempting to write non-sequential "
@@ -1257,11 +1259,9 @@ def wraprepo(repo):
 
             # Validate that all rev dependencies (base, p1, p2) have the same
             # node in the database
-            pending = set(
-                [(path, rev) for path, _, rev, _, _, _, _ in self.pendingrevs]
-            )
+            pending = set([(path, rev) for path, _, rev, _, _, _, _ in revisions])
             expectedrevs = set()
-            for revision in self.pendingrevs:
+            for revision in revisions:
                 path, linkrev, rev, node, entry, data0, data1 = revision
                 e = revlog.indexformatng.unpack(entry)
                 _, _, _, base, _, p1r, p2r, _ = e
