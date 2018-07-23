@@ -1200,18 +1200,6 @@ def _definedestmap(
                 )
             return None
 
-    rbsrt.rebasingwcp = repo["."].rev() in rebaseset
-    ui.log("rebase", "", rebase_rebasing_wcp=rbsrt.rebasingwcp)
-
-    if rbsrt.inmemory and rbsrt.rebasingwcp:
-        # Require a clean working copy if rebasing the current commit, as the
-        # last step of the rebase is an update.
-        #
-        # Technically this could be refined to hg update's checker, which can
-        # be more permissive (e.g., allow if only non-conflicting paths are
-        # changed).
-        cmdutil.bailifchanged(repo)
-
     if not destf:
         dest = repo[_destrebase(repo, rebaseset, destspace=destspace)]
         destf = str(dest)
@@ -1245,6 +1233,17 @@ def _definedestmap(
         # single-dest case: assign dest to each rev in rebaseset
         destrev = dest.rev()
         destmap = {r: destrev for r in rebaseset}  # {srcrev: destrev}
+
+    rbsrt.rebasingwcp = destmap is not None and repo["."].rev() in destmap
+    ui.log("rebase", "", rebase_rebasing_wcp=rbsrt.rebasingwcp)
+    if rbsrt.inmemory and rbsrt.rebasingwcp:
+        # Require a clean working copy if rebasing the current commit, as the
+        # last step of the rebase is an update.
+        #
+        # Technically this could be refined to hg update's checker, which can
+        # be more permissive (e.g., allow if only non-conflicting paths are
+        # changed).
+        cmdutil.bailifchanged(repo)
 
     if not destmap:
         ui.status(_("nothing to rebase - empty destination\n"))
