@@ -47,3 +47,10 @@ Fix the server using sqlrefill.
   |/
   o  p
   
+
+
+Show that making a new commit to master fails. This will be fixed in D8925906.
+
+  $ echo s > s
+  $ hg commit -qAm s 2>&1 | grep "CorruptionException:"
+  hgext.hgsql.CorruptionException: expected node )\x8d\xdd>\xb4x\x8dk\x1c\xde]\xf7\xd4\xc7Sc\xc2\xa5\xe0\xa7\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 at rev 2 of 00changelog.i but found 298ddd3eb4788d6b1cde5df7d4c75363c2a5e0a7 (esc)
