@@ -50,4 +50,6 @@ pub enum ErrorKind {
     GenerationFetchFailed(#[cause] BlobRepoErrorCause),
     #[fail(display = "failed to fetch parent nodes")]
     ParentsFetchFailed(#[cause] BlobRepoErrorCause),
+    #[fail(display = "checking existence failed")]
+    CheckExistenceFailed(String, #[cause] BlobRepoErrorCause),
 }

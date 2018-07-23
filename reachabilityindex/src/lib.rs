@@ -15,6 +15,8 @@ extern crate blobrepo;
 extern crate mercurial_types;
 extern crate mononoke_types;
 
+mod helpers;
+
 pub mod errors;
 pub use errors::ErrorKind;
 

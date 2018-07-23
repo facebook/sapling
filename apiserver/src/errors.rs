@@ -97,6 +97,7 @@ impl From<ReachabilityIndexError> for ErrorKind {
     fn from(e: ReachabilityIndexError) -> ErrorKind {
         match e {
             ReachabilityIndexError::NodeNotFound(s) => ErrorKind::NotFound(s),
+            ReachabilityIndexError::CheckExistenceFailed(s, _) => ErrorKind::NotFound(s),
             ReachabilityIndexError::GenerationFetchFailed(_) => ErrorKind::GenerationFetchFailed,
             ReachabilityIndexError::ParentsFetchFailed(_) => ErrorKind::ParentsFetchFailed,
         }

@@ -18,6 +18,7 @@ use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::Generation;
 
 use errors::*;
+use helpers::*;
 use index::ReachabilityIndex;
 
 pub struct GenerationNumberBFS {}
@@ -42,7 +43,6 @@ fn process_bfs_layer(
     dst_gen: Generation,
 ) -> BoxFuture<(HashSet<HgNodeHash>, HashSet<HgNodeHash>), Error> {
     let new_repo_changesets = repo.clone();
-    let new_repo_gennums = repo.clone();
     for next_node in curr_layer.iter() {
         curr_seen.insert(next_node.clone());
     }
@@ -59,24 +59,11 @@ fn process_bfs_layer(
         })
         .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
         .flatten()
-        .and_then(move |node_cs| {
-            new_repo_gennums
-                .get_generation_number(&node_cs)
-                .map_err(|err| {
-                    ErrorKind::GenerationFetchFailed(BlobRepoErrorCause::new(
-                        err.downcast::<blobrepo::ErrorKind>().ok(),
-                    )).into()
-                })
-                .and_then(move |genopt| {
-                    genopt
-                        .ok_or_else(move || ErrorKind::NodeNotFound(format!("{}", node_cs)).into())
-                })
-                .map(move |gen_id| (*node_cs.as_nodehash(), gen_id))
-        })
         .collect()
+        .and_then(|all_parents| changeset_to_nodehashes_with_generation_numbers(repo, all_parents))
         .map(move |flattened_node_generation_pairs| {
             let mut next_layer = HashSet::new();
-            for (parent_hash, parent_gen) in flattened_node_generation_pairs {
+            for (parent_hash, parent_gen) in flattened_node_generation_pairs.into_iter() {
                 if !curr_seen.contains(&parent_hash) && parent_gen >= dst_gen {
                     next_layer.insert(parent_hash);
                 }
@@ -95,46 +82,26 @@ impl ReachabilityIndex for GenerationNumberBFS {
     ) -> BoxFuture<bool, Error> {
         let start_bfs_layer: HashSet<_> = vec![src].into_iter().collect();
         let start_seen: HashSet<_> = HashSet::new();
-        let check_src_exists = repo.get_generation_number(&HgChangesetId::new(src.clone()))
-            .map_err(|err| {
-                ErrorKind::GenerationFetchFailed(BlobRepoErrorCause::new(
-                    err.downcast::<blobrepo::ErrorKind>().ok(),
-                )).into()
-            })
-            .and_then(move |src_gen_opt: Option<_>| {
-                src_gen_opt
-                    .ok_or_else(move || ErrorKind::NodeNotFound(format!("{}", src.clone())).into())
-            });
-        check_src_exists
+        check_if_node_exists(repo.clone(), src.clone())
             .and_then(move |_| {
-                repo.get_generation_number(&HgChangesetId::new(dst.clone()))
-                    .map_err(|err| {
-                        ErrorKind::GenerationFetchFailed(BlobRepoErrorCause::new(
-                            err.downcast::<blobrepo::ErrorKind>().ok(),
-                        )).into()
-                    })
-                    .and_then(move |dst_gen_opt: Option<_>| {
-                        dst_gen_opt
-                            .ok_or_else(move || ErrorKind::NodeNotFound(format!("{}", dst)).into())
-                    })
-                    .and_then(move |dst_gen| {
-                        loop_fn(
-                            (start_bfs_layer, start_seen),
-                            move |(curr_layer, curr_seen)| {
-                                if curr_layer.contains(&dst) {
-                                    ok(Loop::Break(true)).boxify()
-                                } else if curr_layer.is_empty() {
-                                    ok(Loop::Break(false)).boxify()
-                                } else {
-                                    process_bfs_layer(repo.clone(), curr_layer, curr_seen, dst_gen)
-                                        .map(move |(next_layer, next_seen)| {
-                                            Loop::Continue((next_layer, next_seen))
-                                        })
-                                        .boxify()
-                                }
-                            },
-                        )
-                    })
+                fetch_generation(repo.clone(), dst.clone()).and_then(move |dst_gen| {
+                    loop_fn(
+                        (start_bfs_layer, start_seen),
+                        move |(curr_layer, curr_seen)| {
+                            if curr_layer.contains(&dst) {
+                                ok(Loop::Break(true)).boxify()
+                            } else if curr_layer.is_empty() {
+                                ok(Loop::Break(false)).boxify()
+                            } else {
+                                process_bfs_layer(repo.clone(), curr_layer, curr_seen, dst_gen)
+                                    .map(move |(next_layer, next_seen)| {
+                                        Loop::Continue((next_layer, next_seen))
+                                    })
+                                    .boxify()
+                            }
+                        },
+                    )
+                })
             })
             .from_err()
             .boxify()
