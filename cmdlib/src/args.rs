@@ -282,6 +282,7 @@ fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create:
             ).expect("failed to create rocksdb blobrepo")
         }
         None | Some("manifold") => {
+            init_cachelib(&matches);
             let manifold_args = parse_manifold_args(&matches, 100_000_000);
 
             BlobRepo::new_manifold(
