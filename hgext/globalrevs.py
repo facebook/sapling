@@ -173,9 +173,10 @@ def _sqllocalrepowrapper(orig, repo):
 
 
 def _commitwrapper(orig, repo, parents, desc, files, filectx, user, date, extras):
-    # Even though this method is also wrapped for the clients if the
-    # `globalrevs` extension is enabled, it is only called on the servers.
-    extras["global_rev"] = repo.nextrevisionnumber()
+    # Only need the extra functionality on the servers.
+    if issqlrepo(repo):
+        extras["global_rev"] = repo.nextrevisionnumber()
+
     return orig(repo, parents, desc, files, filectx, user, date, extras)
 
 
