@@ -23,6 +23,10 @@ from mercurial.i18n import _
 from pushrebase import isnonpushrebaseblocked
 
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+configitem("format", "useglobalrevs", default=False)
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 templatekeyword = registrar.templatekeyword()
