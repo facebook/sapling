@@ -72,7 +72,7 @@
   $ hgcloneshallow ssh://user@dummy/master shallow2
   streaming all changes
   2 files to transfer, 527 bytes of data
-  transferred 527 bytes in 0.* seconds (*) (glob)
+  transferred 527 bytes in * seconds (*) (glob)
   searching for changes
   no changes found
   updating to branch default
