@@ -66,17 +66,9 @@ Strip using sqlstrip
   abort: You must pass --i-know-what-i-am-doing to run this command. If you have multiple servers using the database, this command will break your servers until you run it on each one. Only the Mercurial server admins should ever run this.
   [255]
 
-- Test that specifying the `--cwd` option fails. This will be fixed in D8925908.
+- Test that specifying the `--cwd` option works.
   $ cd ..
   $ hg --cwd master2 sqlstrip --i-know-what-i-am-doing 1
-  *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
-  abort: repository $TESTTMP not found!
-  [255]
-
-  $ cd master2
-
-- Finally, strip successfully using sqlstrip.
-  $ hg sqlstrip --i-know-what-i-am-doing 1
   *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   stripping locally
   saved backup bundle to $TESTTMP/master2/.hg/strip-backup/bc3a71defa4a-f38e411b-sqlstrip.hg (glob)
@@ -86,6 +78,8 @@ Strip using sqlstrip
   adding new tip reference
   adding new bookmark references
   deleting revision data
+
+  $ cd master2
 
 Repull, and then strip without a backup
   $ hg pull -q ../client

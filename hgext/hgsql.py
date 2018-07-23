@@ -32,6 +32,7 @@ from mercurial import (
     mdiff,
     phases,
     progress,
+    pycompat,
     registrar,
     repair,
     revlog,
@@ -1773,7 +1774,7 @@ def sqlrecover(ui, *args, **opts):
 
     global initialsync
     initialsync = INITIAL_SYNC_DISABLE
-    repo = hg.repository(ui, ui.environ["PWD"])
+    repo = hg.repository(ui, pycompat.getcwd())
     repo.disablesync = True
 
     if repo.recover():
@@ -2017,7 +2018,7 @@ def sqlrefill(ui, startrev, **opts):
     if not opts.get("skip_initial_sync"):
         global initialsync
         initialsync = INITIAL_SYNC_DISABLE
-        repo = hg.repository(ui, ui.environ["PWD"])
+        repo = hg.repository(ui, pycompat.getcwd())
         repo.disablesync = True
 
     startrev = int(startrev)
@@ -2106,7 +2107,7 @@ def sqlstrip(ui, rev, *args, **opts):
 
     global initialsync
     initialsync = INITIAL_SYNC_DISABLE
-    repo = hg.repository(ui, ui.environ["PWD"])
+    repo = hg.repository(ui, pycompat.getcwd())
     repo.disablesync = True
 
     try:
