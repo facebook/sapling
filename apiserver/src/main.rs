@@ -22,6 +22,7 @@ extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_api as api;
 extern crate mononoke_types;
+extern crate reachabilityindex;
 extern crate scuba_ext;
 extern crate secure_utils;
 extern crate serde;
@@ -75,6 +76,12 @@ struct QueryInfo {
     path: String,
 }
 
+#[derive(Deserialize)]
+struct IsAncestorQueryInfo {
+    repo: String,
+    proposed_ancestor: String,
+    proposed_descendent: String,
+}
 // The argument of this function is because the trait `actix_web::FromRequest` is implemented
 // for tuple (A, B, ...) (up to 9 elements) [1]. These arguments must implement
 // `actix_web::FromRequest` as well so actix-web will try to extract them from `actix::HttpRequest`
@@ -88,6 +95,18 @@ fn get_raw_file(
         kind: MononokeRepoQuery::GetRawFile {
             changeset: info.changeset.clone(),
             path: info.path.clone(),
+        },
+    }))
+}
+
+fn is_ancestor(
+    (state, info): (State<HttpServerState>, actix_web::Path<IsAncestorQueryInfo>),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    unwrap_request(state.mononoke.send(MononokeQuery {
+        repo: info.repo.clone(),
+        kind: MononokeRepoQuery::IsAncestor {
+            proposed_ancestor: info.proposed_ancestor.clone(),
+            proposed_descendent: info.proposed_descendent.clone(),
         },
     }))
 }
@@ -294,7 +313,10 @@ fn main() -> Result<()> {
             .scope("/{repo}", |repo| {
                 repo.resource("/raw/{changeset}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(get_raw_file)
-                })
+                }).resource(
+                    "/is_ancestor/{proposed_ancestor}/{proposed_descendent}",
+                    |r| r.method(http::Method::GET).with_async(is_ancestor),
+                )
             })
     });
 

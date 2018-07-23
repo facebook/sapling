@@ -12,11 +12,14 @@ use failure::{Context, Error};
 
 use api::errors::ErrorKind as ApiError;
 use blobrepo::ErrorKind as BlobRepoError;
+use reachabilityindex::errors::ErrorKind as ReachabilityIndexError;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "{} not found", _0)] NotFound(String),
     #[fail(display = "{} is invalid", _0)] InvalidInput(String),
+    #[fail(display = "could not fetch node generation")] GenerationFetchFailed,
+    #[fail(display = "failed to fetch parent nodes")] ParentsFetchFailed,
     #[fail(display = "internal server error: {}", _0)] InternalError(Error),
 }
 
@@ -27,6 +30,8 @@ impl ErrorKind {
         match self {
             NotFound(_) => StatusCode::NOT_FOUND,
             InvalidInput(_) => StatusCode::BAD_REQUEST,
+            GenerationFetchFailed => StatusCode::BAD_REQUEST,
+            ParentsFetchFailed => StatusCode::BAD_REQUEST,
             InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -55,6 +60,7 @@ impl From<Error> for ErrorKind {
         e.downcast::<ErrorKind>()
             .or_else(|err| err.downcast::<BlobRepoError>().map(|e| e.into()))
             .or_else(|err| err.downcast::<ApiError>().map(|e| e.into()))
+            .or_else(|err| err.downcast::<ReachabilityIndexError>().map(|e| e.into()))
             .unwrap_or_else(|e| ErrorKind::InternalError(e))
     }
 }
@@ -83,6 +89,16 @@ impl From<BlobRepoError> for ErrorKind {
         match e {
             ChangesetMissing(cs) => ErrorKind::NotFound(cs.to_string()),
             e => ErrorKind::InternalError(e.into()),
+        }
+    }
+}
+
+impl From<ReachabilityIndexError> for ErrorKind {
+    fn from(e: ReachabilityIndexError) -> ErrorKind {
+        match e {
+            ReachabilityIndexError::NodeNotFound(s) => ErrorKind::NotFound(s),
+            ReachabilityIndexError::GenerationFetchFailed(_) => ErrorKind::GenerationFetchFailed,
+            ReachabilityIndexError::ParentsFetchFailed(_) => ErrorKind::ParentsFetchFailed,
         }
     }
 }

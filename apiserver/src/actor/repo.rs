@@ -4,10 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::str::FromStr;
 use std::sync::Arc;
 
 use actix::{Actor, Context, Handler};
-use failure::{err_msg, Error, Result};
+use failure::{err_msg, Error, Result, ResultExt};
 use futures::Future;
 use futures_ext::BoxFuture;
 use slog::Logger;
@@ -15,10 +16,11 @@ use slog::Logger;
 use api;
 use blobrepo::BlobRepo;
 use futures_ext::FutureExt;
-use mercurial_types::RepositoryId;
+use mercurial_types::{HgNodeHash, RepositoryId};
 use mercurial_types::manifest::Content;
 use metaconfig::repoconfig::RepoConfig;
 use metaconfig::repoconfig::RepoType::{BlobManifold, BlobRocks};
+use reachabilityindex::{GenerationNumberBFS, ReachabilityIndex};
 
 use errors::ErrorKind;
 use from_string as FS;
@@ -71,6 +73,25 @@ impl MononokeRepoActor {
             .from_err()
             .boxify())
     }
+
+    fn is_ancestor(
+        &self,
+        proposed_ancestor: String,
+        proposed_descendent: String,
+    ) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
+        let mut genbfs = GenerationNumberBFS::new();
+        let src_hash = HgNodeHash::from_str(&proposed_descendent)
+            .with_context(|_| ErrorKind::InvalidInput(proposed_descendent))
+            .map_err(|e| -> Error { e.into() })?;
+        let dst_hash = HgNodeHash::from_str(&proposed_ancestor)
+            .with_context(|_| ErrorKind::InvalidInput(proposed_ancestor))
+            .map_err(|e| -> Error { e.into() })?;
+        Ok(genbfs
+            .query_reachability(self.repo.clone(), src_hash, dst_hash)
+            .map(move |answer| MononokeRepoResponse::IsAncestor { answer: answer })
+            .from_err()
+            .boxify())
+    }
 }
 
 impl Actor for MononokeRepoActor {
@@ -85,6 +106,10 @@ impl Handler<MononokeRepoQuery> for MononokeRepoActor {
 
         match msg {
             GetRawFile { changeset, path } => self.get_raw_file(changeset, path),
+            IsAncestor {
+                proposed_ancestor,
+                proposed_descendent,
+            } => self.is_ancestor(proposed_ancestor, proposed_descendent),
         }
     }
 }

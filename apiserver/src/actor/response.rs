@@ -13,6 +13,7 @@ use errors::ErrorKind;
 
 pub enum MononokeRepoResponse {
     GetRawFile { content: Bytes },
+    IsAncestor { answer: bool },
 }
 
 fn binary_response(content: Bytes) -> HttpResponse {
@@ -30,6 +31,13 @@ impl Responder for MononokeRepoResponse {
 
         match self {
             GetRawFile { content } => Ok(binary_response(content)),
+            IsAncestor { answer } => Ok(binary_response({
+                if answer {
+                    "true".into()
+                } else {
+                    "false".into()
+                }
+            })),
         }
     }
 }

@@ -20,6 +20,15 @@ setup testing repo for mononoke
   $ hg mv test test-rename
   $ hg commit -ma
   $ COMMIT2=$(hg --debug id -i)
+  $ touch branch1
+  $ hg add branch1
+  $ hg commit -ma
+  $ COMMITB1=$(hg --debug id -i)
+  $ hg co $COMMIT2 > /dev/null
+  $ touch branch2
+  $ hg add branch2
+  $ hg commit -ma
+  $ COMMITB2=$(hg --debug id -i)
 
 import testing repo to mononoke
   $ cd ..
@@ -89,3 +98,49 @@ test cat renamed file
 
   $ sslcurl -i $APISERVER/sup/raw/ 2> /dev/null | grep 404
   HTTP/2 404 \r (esc)
+
+test reachability in basic repo
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT1/$COMMIT2 2> /dev/null
+  true (no-eol)
+
+  $ sslcurl  $APISERVER/repo/is_ancestor/$COMMIT2/$COMMIT1 2> /dev/null
+  false (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT1/$COMMITB1 2> /dev/null
+  true (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT1/$COMMITB2 2> /dev/null
+  true (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$COMMITB1 2> /dev/null
+  true (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$COMMITB2 2> /dev/null
+  true (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2/$COMMITB1 2> /dev/null
+  false (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB1/$COMMITB2 2> /dev/null
+  false (no-eol)
+
+test reachability response on nonexistent nodes
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT1/0000 2> /dev/null
+  0000 is invalid
+  400 (no-eol)
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/$COMMIT2 2> /dev/null
+  1111 is invalid
+  400 (no-eol)
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/2222 2> /dev/null
+  2222 is invalid
+  400 (no-eol)
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/0123456789123456789012345678901234567890/$COMMIT1 2> /dev/null
+  0123456789123456789012345678901234567890 not found
+  404 (no-eol)
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT2/1234567890123456789012345678901234567890 2> /dev/null
+  1234567890123456789012345678901234567890 not found
+  404 (no-eol)

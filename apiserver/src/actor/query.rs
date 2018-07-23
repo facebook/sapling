@@ -13,7 +13,14 @@ use super::{MononokeRepoActor, MononokeRepoResponse};
 
 #[derive(Debug)]
 pub enum MononokeRepoQuery {
-    GetRawFile { path: String, changeset: String },
+    GetRawFile {
+        path: String,
+        changeset: String,
+    },
+    IsAncestor {
+        proposed_ancestor: String,
+        proposed_descendent: String,
+    },
 }
 
 impl Message for MononokeRepoQuery {
