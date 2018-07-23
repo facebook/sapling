@@ -7,6 +7,7 @@
 //! Diffing Mercurial changesets to produce something suitable for the Bonsai format.
 
 use std::cmp::Ordering;
+use std::fmt;
 
 use failure::Error;
 use futures::{stream, Future, Stream, future::{self, Either}};
@@ -51,6 +52,19 @@ impl BonsaiDiffResult {
     pub fn path(&self) -> &MPath {
         match self {
             BonsaiDiffResult::Changed(path, ..) | BonsaiDiffResult::Deleted(path) => path,
+        }
+    }
+}
+
+impl fmt::Display for BonsaiDiffResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BonsaiDiffResult::Changed(path, ft, entry_id) => write!(
+                f,
+                "[changed] path: {}, hash: {}, type: {}",
+                path, entry_id, ft
+            ),
+            BonsaiDiffResult::Deleted(path) => write!(f, "[deleted] path: {}", path),
         }
     }
 }
