@@ -817,8 +817,9 @@ def _check_json_output(args: List[str]) -> Dict[str, Any]:
     try:
         output = subprocess.check_output(args)
         return typing.cast(Dict[str, Any], json.loads(output))
-    except (subprocess.CalledProcessError, ValueError) as e:
-        # CalledProcessError if check_output() fails.
+    except Exception as e:
+        # FileNotFoundError if the command is not found.
+        # CalledProcessError if the command exits unsuccessfully.
         # ValueError if `output` is not valid JSON.
         errstr = getattr(e, "strerror", str(e))
         log.warning(f'Calling `{" ".join(args)}` failed with: {errstr}')
