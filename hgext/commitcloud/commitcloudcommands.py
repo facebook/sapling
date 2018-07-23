@@ -316,7 +316,6 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
                     _("background cloud sync is already in progress (pid %s on %s%s)\n")
                     % (e.locker.uniqueid, e.locker.namespace, etimemsg),
                 )
-                ui.status(_("waiting for background sync to complete\n"))
                 ui.flush()
 
     # run cloud sync with waiting for background process to complete
@@ -324,7 +323,14 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
         # wait at most 120 seconds, because cloud sync can take a while
         timeout = 120
         srcrepo = shareutil.getsrcrepo(repo)
-        with lock or lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
+        with lock or lockmod.lock(
+            srcrepo.vfs,
+            _backuplockname,
+            timeout=timeout,
+            ui=ui,
+            showspinner=True,
+            spinnermsg=_("waiting for background process to complete"),
+        ):
             currentnode = repo["."].node()
             _docloudsync(ui, repo, cloudrefs, **opts)
             return _maybeupdateworkingcopy(ui, repo, currentnode)
@@ -634,7 +640,7 @@ def _forkname(ui, name, othernames):
     m = re.match("-%s(-[0-9]*)?$" % re.escape(hostname), name)
     if m:
         suffix = "-%s%s" % (hostname, m.group(1) or "")
-        name = name[0: -len(suffix)]
+        name = name[0 : -len(suffix)]
 
     # Find a new name.
     for n in itertools.count():

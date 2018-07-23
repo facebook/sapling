@@ -14,7 +14,7 @@ import socket
 import time
 import warnings
 
-from . import encoding, error, pycompat, util
+from . import encoding, error, progress, pycompat, util
 from .i18n import _
 
 
@@ -216,6 +216,8 @@ class lock(object):
         parentlock=None,
         dolock=True,
         ui=None,
+        showspinner=False,
+        spinnermsg=None,
     ):
         self.vfs = vfs
         self.f = file
@@ -231,12 +233,13 @@ class lock(object):
         self.postrelease = []
         self.pid = self._getpid()
         self.ui = ui
+        self.showspinner = showspinner
+        self.spinnermsg = spinnermsg
+        self._debugmessagesprinted = set([])
         if dolock:
             self.delay = self.lock()
             if self.acquirefn:
                 self.acquirefn()
-
-        self._debugmessagesprinted = set([])
 
     def __enter__(self):
         return self
@@ -266,6 +269,19 @@ class lock(object):
         return "%s:%s" % (locker.getcurrentnamespace(), self.pid)
 
     def lock(self):
+        # wrapper around locking to show spinner
+        if self.showspinner and self.ui:
+            if self.spinnermsg:
+                msg = self.spinnermsg
+            else:
+                msg = _("waiting for the lock to be released")
+            spinner = progress.spinner(self.ui, msg)
+        else:
+            spinner = util.nullcontextmanager()
+        with spinner:
+            self._dolock()
+
+    def _dolock(self):
         timeout = self.timeout
         while True:
             try:
