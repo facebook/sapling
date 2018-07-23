@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use failure::Error;
-use futures::future::Future;
+use futures_ext::BoxFuture;
 
 use blobrepo::BlobRepo;
 use mercurial_types::HgNodeHash;
@@ -20,5 +20,5 @@ pub trait ReachabilityIndex {
         repo: Arc<BlobRepo>,
         src: HgNodeHash,
         dst: HgNodeHash,
-    ) -> Box<Future<Item = bool, Error = Error>>;
+    ) -> BoxFuture<bool, Error>;
 }

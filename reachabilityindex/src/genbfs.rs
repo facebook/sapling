@@ -7,26 +7,24 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use failure::{err_msg, Error};
-use futures::IntoFuture;
+use failure::Error;
 use futures::future::{loop_fn, ok, Future, Loop};
 use futures::stream::{iter_ok, Stream};
-use futures_ext::FutureExt;
+use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo::BlobRepo;
+use blobrepo::{self, BlobRepo};
 use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::Generation;
 
+use errors::*;
 use index::ReachabilityIndex;
 
-pub struct GenerationNumberBFS {
-    repo: Arc<BlobRepo>,
-}
+pub struct GenerationNumberBFS {}
 
 impl GenerationNumberBFS {
-    pub fn new(repo: Arc<BlobRepo>) -> Self {
-        GenerationNumberBFS { repo }
+    pub fn new() -> Self {
+        GenerationNumberBFS {}
     }
 }
 
@@ -35,14 +33,14 @@ impl GenerationNumberBFS {
 // - add all nodes in the current layer to the seen set
 // - get the set of parents of nodes in the current layer
 // - filter out previously seen nodes from the parents
-// - filter out nodes whose generation number is too small
+// - filter out nodes whose generation number is too large
 // - return the parents as the next bfs layer, and the updated seen as the new seen set
 fn process_bfs_layer(
     repo: Arc<BlobRepo>,
     curr_layer: HashSet<HgNodeHash>,
     mut curr_seen: HashSet<HgNodeHash>,
     dst_gen: Generation,
-) -> Box<Future<Item = (HashSet<HgNodeHash>, HashSet<HgNodeHash>), Error = Error> + Send> {
+) -> BoxFuture<(HashSet<HgNodeHash>, HashSet<HgNodeHash>), Error> {
     let new_repo_changesets = repo.clone();
     let new_repo_gennums = repo.clone();
     for next_node in curr_layer.iter() {
@@ -50,14 +48,28 @@ fn process_bfs_layer(
     }
 
     iter_ok::<_, Error>(curr_layer)
-        .and_then(move |hash| new_repo_changesets.get_changeset_parents(&HgChangesetId::new(hash)))
+        .and_then(move |hash| {
+            new_repo_changesets
+                .get_changeset_parents(&HgChangesetId::new(hash))
+                .map_err(|err| {
+                    ErrorKind::ParentsFetchFailed(BlobRepoErrorCause::new(
+                        err.downcast::<blobrepo::ErrorKind>().ok(),
+                    )).into()
+                })
+        })
         .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
         .flatten()
         .and_then(move |node_cs| {
             new_repo_gennums
                 .get_generation_number(&node_cs)
+                .map_err(|err| {
+                    ErrorKind::GenerationFetchFailed(BlobRepoErrorCause::new(
+                        err.downcast::<blobrepo::ErrorKind>().ok(),
+                    )).into()
+                })
                 .and_then(move |genopt| {
-                    genopt.ok_or_else(|| err_msg(format!("{} not found", node_cs)))
+                    genopt
+                        .ok_or_else(move || ErrorKind::NodeNotFound(format!("{}", node_cs)).into())
                 })
                 .map(move |gen_id| (*node_cs.as_nodehash(), gen_id))
         })
@@ -80,31 +92,51 @@ impl ReachabilityIndex for GenerationNumberBFS {
         repo: Arc<BlobRepo>,
         src: HgNodeHash,
         dst: HgNodeHash,
-    ) -> Box<Future<Item = bool, Error = Error>> {
+    ) -> BoxFuture<bool, Error> {
         let start_bfs_layer: HashSet<_> = vec![src].into_iter().collect();
         let start_seen: HashSet<_> = HashSet::new();
-        repo.get_generation_number(&HgChangesetId::new(dst.clone()))
-            .and_then(move |dst_gen_opt: Option<_>| {
-                dst_gen_opt.ok_or_else(|| err_msg(format!("{} not found", dst)))
+        let check_src_exists = repo.get_generation_number(&HgChangesetId::new(src.clone()))
+            .map_err(|err| {
+                ErrorKind::GenerationFetchFailed(BlobRepoErrorCause::new(
+                    err.downcast::<blobrepo::ErrorKind>().ok(),
+                )).into()
             })
-            .and_then(move |dst_gen| {
-                loop_fn(
-                    (start_bfs_layer, start_seen),
-                    move |(curr_layer, curr_seen)| {
-                        if curr_layer.contains(&dst) {
-                            ok(Loop::Break(true)).boxify()
-                        } else if curr_layer.is_empty() {
-                            ok(Loop::Break(false)).boxify()
-                        } else {
-                            process_bfs_layer(repo.clone(), curr_layer, curr_seen, dst_gen)
-                                .map(move |(next_layer, next_seen)| {
-                                    Loop::Continue((next_layer, next_seen))
-                                })
-                                .boxify()
-                        }
-                    },
-                )
+            .and_then(move |src_gen_opt: Option<_>| {
+                src_gen_opt
+                    .ok_or_else(move || ErrorKind::NodeNotFound(format!("{}", src.clone())).into())
+            });
+        check_src_exists
+            .and_then(move |_| {
+                repo.get_generation_number(&HgChangesetId::new(dst.clone()))
+                    .map_err(|err| {
+                        ErrorKind::GenerationFetchFailed(BlobRepoErrorCause::new(
+                            err.downcast::<blobrepo::ErrorKind>().ok(),
+                        )).into()
+                    })
+                    .and_then(move |dst_gen_opt: Option<_>| {
+                        dst_gen_opt
+                            .ok_or_else(move || ErrorKind::NodeNotFound(format!("{}", dst)).into())
+                    })
+                    .and_then(move |dst_gen| {
+                        loop_fn(
+                            (start_bfs_layer, start_seen),
+                            move |(curr_layer, curr_seen)| {
+                                if curr_layer.contains(&dst) {
+                                    ok(Loop::Break(true)).boxify()
+                                } else if curr_layer.is_empty() {
+                                    ok(Loop::Break(false)).boxify()
+                                } else {
+                                    process_bfs_layer(repo.clone(), curr_layer, curr_seen, dst_gen)
+                                        .map(move |(next_layer, next_seen)| {
+                                            Loop::Continue((next_layer, next_seen))
+                                        })
+                                        .boxify()
+                                }
+                            },
+                        )
+                    })
             })
+            .from_err()
             .boxify()
     }
 }
@@ -135,7 +167,7 @@ mod test {
                 string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
                 string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
-            let mut bfs = GenerationNumberBFS::new(repo.clone());
+            let mut bfs = GenerationNumberBFS::new();
 
             for i in 0..ordered_hashes.len() {
                 for j in i..ordered_hashes.len() {
@@ -175,9 +207,9 @@ mod test {
                 string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
             ];
 
-            let merge_node = string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce");
+            let _merge_node = string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce");
 
-            let mut bfs = GenerationNumberBFS::new(repo.clone());
+            let mut bfs = GenerationNumberBFS::new();
 
             for left_node in branch_1.into_iter() {
                 for right_node in branch_2.iter() {
@@ -217,7 +249,7 @@ mod test {
             let b1_2 = string_to_nodehash("c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
             let b2_1 = string_to_nodehash("04decbb0d1a65789728250ddea2fe8d00248e01c");
             let b2_2 = string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449");
-            let mut bfs = GenerationNumberBFS::new(repo.clone());
+            let mut bfs = GenerationNumberBFS::new();
 
             // all nodes can reach the root
             for above_root in vec![b1, b2, b1_1, b1_2, b2_1, b2_2].iter() {
