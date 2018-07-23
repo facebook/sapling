@@ -37,8 +37,13 @@ Configure master as a server backed by sql.
   hgext.hgsql.CorruptionException: heads don't match after sync
 
 
-Show that sqlrefill does not fix the server. This will be fixed in D8925895.
+Fix the server using sqlrefill.
 
   $ hg sqlrefill --i-know-what-i-am-doing 0
-  $ hg log -GT '{files}' 2>&1 | grep "CorruptionException:"
-  hgext.hgsql.CorruptionException: heads don't match after sync
+  $ hg log -GT '{files}'
+  @  r
+  |
+  | o  q
+  |/
+  o  p
+  

@@ -2050,7 +2050,7 @@ def sqlrefill(ui, startrev, **opts):
             revdata = (path, linkrev, rlrev, node, sqlentry, data0, data1)
             pendingrevs.append(revdata)
 
-        repo._addrevstosql(pendingrevs, ignoreduplicates=True)
+        repo._committodb(pendingrevs, ignoreduplicates=True)
         repo.sqlconn.commit()
     finally:
         repo.sqlunlock(writelock)
