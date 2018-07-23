@@ -58,6 +58,7 @@ extern crate failure_ext as failure;
 extern crate itertools;
 extern crate rust_crypto;
 extern crate rust_thrift;
+extern crate slog;
 #[macro_use]
 extern crate url;
 

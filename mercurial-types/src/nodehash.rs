@@ -13,6 +13,7 @@ use std::str::FromStr;
 use ascii::{AsciiStr, AsciiString};
 use quickcheck::{Arbitrary, Gen};
 use serde;
+use slog;
 use thrift;
 
 use RepoPath;
@@ -281,6 +282,11 @@ impl HgManifestId {
         HgManifestId(hash)
     }
 
+    #[inline]
+    pub fn to_hex(&self) -> AsciiString {
+        self.0.to_hex()
+    }
+
     /// Produce a key suitable for using in a blobstore.
     #[inline]
     pub fn blobstore_key(&self) -> String {
@@ -313,6 +319,11 @@ impl HgFileNodeId {
         HgFileNodeId(hash)
     }
 
+    #[inline]
+    pub fn to_hex(&self) -> AsciiString {
+        self.0.to_hex()
+    }
+
     /// Produce a key suitable for using in a blobstore.
     #[inline]
     pub fn blobstore_key(&self) -> String {
@@ -339,6 +350,11 @@ impl HgEntryId {
     pub const fn new(hash: HgNodeHash) -> Self {
         HgEntryId(hash)
     }
+
+    #[inline]
+    pub fn to_hex(&self) -> AsciiString {
+        self.0.to_hex()
+    }
 }
 
 impl Display for HgEntryId {
@@ -360,3 +376,25 @@ impl Display for HgNodeKey {
         write!(f, "path: {}, hash: {}", self.path, self.hash)
     }
 }
+
+macro_rules! impl_hash {
+    ($hash_type: ident) => {
+        impl slog::Value for $hash_type {
+            fn serialize(
+                &self,
+                _record: &slog::Record,
+                key: slog::Key,
+                serializer: &mut slog::Serializer,
+            ) -> slog::Result {
+                let hex = self.to_hex();
+                serializer.emit_str(key, hex.as_str())
+            }
+        }
+    }
+}
+
+impl_hash!(HgNodeHash);
+impl_hash!(HgChangesetId);
+impl_hash!(HgManifestId);
+impl_hash!(HgFileNodeId);
+impl_hash!(HgEntryId);
