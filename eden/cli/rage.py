@@ -20,6 +20,7 @@ from . import (
     filesystem,
     mtab,
     stats as stats_mod,
+    ui as ui_mod,
 )
 
 
@@ -70,11 +71,11 @@ def print_eden_doctor_report(config, out: IO[bytes]):
     dry_run = True
     doctor_output = io.StringIO()
     doctor_rc = doctor_mod.cure_what_ails_you(
-        config,
-        dry_run,
-        doctor_output,
+        config=config,
+        dry_run=dry_run,
         mount_table=mtab.LinuxMountTable(),
         fs_util=filesystem.LinuxFsUtil(),
+        out=ui_mod.PlainOutput(doctor_output),
     )
     out.write(
         b"\neden doctor --dry-run (exit code %d):\n%s\n"
