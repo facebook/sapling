@@ -6,7 +6,6 @@
 
 #![deny(warnings)]
 
-extern crate asyncmemo;
 extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;

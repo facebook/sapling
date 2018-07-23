@@ -5,7 +5,6 @@ members = [
     # build error related to tokio_io::AsyncWrite
     # "async-compression",
     # "mercurial-bundles",
-    "asyncmemo",
     # depends on failure_ext
     # "blobrepo",
     # "blobstore",
