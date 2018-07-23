@@ -45,9 +45,9 @@ def print_diagnostic_info(config: config_mod.Config, out: IO[bytes]) -> None:
     out.write(b"\nList of mount points:\n")
     mountpoint_paths = []
     for key in sorted(config.get_mount_paths()):
-        key = key.encode()
-        out.write(key)
-        mountpoint_paths.append(key)
+        key_bytes = key.encode()
+        out.write(key_bytes)
+        mountpoint_paths.append(key_bytes)
     for key, val in config.get_all_client_config_info().items():
         out.write(b"\nMount point info for path %s:\n" % key.encode())
         for k, v in val.items():
@@ -58,7 +58,7 @@ def print_diagnostic_info(config: config_mod.Config, out: IO[bytes]) -> None:
             out.write(stats_stream.getvalue().encode())
 
 
-def print_rpm_version(out: IO[bytes]):
+def print_rpm_version(out: IO[bytes]) -> None:
     try:
         queryformat = "%{VERSION}"
         output = subprocess.check_output(["rpm", "-q", "--qf", queryformat, "fb-eden"])
@@ -67,7 +67,7 @@ def print_rpm_version(out: IO[bytes]):
         out.write(b"Error getting the Rpm version : %s\n" % str(e).encode())
 
 
-def print_eden_doctor_report(config, out: IO[bytes]):
+def print_eden_doctor_report(config: config_mod.Config, out: IO[bytes]) -> None:
     dry_run = True
     doctor_output = io.StringIO()
     doctor_rc = doctor_mod.cure_what_ails_you(
@@ -83,7 +83,7 @@ def print_eden_doctor_report(config, out: IO[bytes]):
     )
 
 
-def print_tail_of_log_file(path: str, out: IO[bytes]):
+def print_tail_of_log_file(path: str, out: IO[bytes]) -> None:
     try:
         out.write(b"\nMost recent Eden logs:\n")
         LOG_AMOUNT = 20 * 1024
@@ -96,7 +96,7 @@ def print_tail_of_log_file(path: str, out: IO[bytes]):
         out.write(b"Error reading the log file: %s\n" % str(e).encode())
 
 
-def print_running_eden_process(out: IO[bytes]):
+def print_running_eden_process(out: IO[bytes]) -> None:
     try:
         out.write(b"\nList of running Eden processes:\n")
         output = subprocess.check_output(
