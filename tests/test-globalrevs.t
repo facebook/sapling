@@ -55,6 +55,14 @@ commits created through pushrebase extension.
   [255]
 
 
+- We can override the option to allow creation of commits only through
+pushrebase by setting `globalrevs.onlypushrebase` as False which will make the
+previous command succeed as we won't care about the pushrebase configuration.
+
+  $ hg log -r 'tip' -T {node} --config globalrevs.onlypushrebase=False
+  0000000000000000000000000000000000000000 (no-eol)
+
+
 - Configure server repository to only allow commits created through pushrebase.
 
   $ cat >> .hg/hgrc <<EOF

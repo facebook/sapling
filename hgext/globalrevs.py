@@ -15,6 +15,10 @@ template.
     [format]
     # support strictly increasing revision numbers for new repositories.
     useglobalrevs = True
+
+    [globalrevs]
+    # Allow new commits through only pushrebase.
+    onlypushrebase = True
 """
 
 from hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
@@ -26,6 +30,7 @@ from pushrebase import isnonpushrebaseblocked
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("format", "useglobalrevs", default=False)
+configitem("globalrevs", "onlypushrebase", default=True)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -89,7 +94,8 @@ def _validaterepo(repo):
     if ishgsqlbypassed(ui):
         raise error.Abort(_("hgsql using incorrect configuration"))
 
-    if not isnonpushrebaseblocked(repo):
+    allowonlypushrebase = ui.configbool("globalrevs", "onlypushrebase")
+    if allowonlypushrebase and not isnonpushrebaseblocked(repo):
         raise error.Abort(_("pushrebase using incorrect configuration"))
 
 
