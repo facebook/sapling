@@ -8,10 +8,11 @@ from __future__ import absolute_import
 # Standard Library
 import gzip
 import json
+import socket
 import ssl
 import time
 
-from mercurial import util
+from mercurial import error, util
 from mercurial.i18n import _
 
 from . import baseservice, commitcloudcommon
@@ -28,6 +29,8 @@ except NameError:
 
 # clean up helper (to use with json.dumps)
 # filter out the fields with None and empty arrays / maps
+
+
 def cleandict(d):
     if not isinstance(d, dict):
         return d
@@ -126,6 +129,10 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 return data
             except httplib.HTTPException as e:
                 self.connection.connect()
+            except (socket.timeout, socket.gaierror) as e:
+                raise error.Abort(
+                    _("network error: %s") % e, hint=_("check your network connection")
+                )
             time.sleep(sl)
             sl *= 2
         if e:
