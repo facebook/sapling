@@ -739,7 +739,7 @@ fn fetch_treepack_part_input(
                 p2: p2.cloned(),
                 content,
                 name: entry.get_name().cloned(),
-                linknode,
+                linknode: linknode.into_nodehash(),
                 basepath,
             }
         })

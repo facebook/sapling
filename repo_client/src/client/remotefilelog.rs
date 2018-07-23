@@ -15,7 +15,7 @@ use pylz4;
 
 use blobrepo::BlobRepo;
 use filenodes::FilenodeInfo;
-use mercurial_types::{HgNodeHash, HgParents, MPath, RepoPath, NULL_HASH};
+use mercurial_types::{HgChangesetId, HgNodeHash, HgParents, MPath, RepoPath, NULL_HASH};
 use tracing::{TraceContext, Traced};
 
 use errors::*;
@@ -103,7 +103,7 @@ pub fn create_remotefilelog_blob(
                 writer.write_all(node.as_bytes())?;
                 writer.write_all(p1.as_bytes())?;
                 writer.write_all(p2.as_bytes())?;
-                writer.write_all(linknode.as_bytes())?;
+                writer.write_all(linknode.into_nodehash().as_bytes())?;
                 if let Some(copied_from) = copied_from {
                     writer.write_all(&copied_from.to_vec())?;
                 }
@@ -135,7 +135,7 @@ fn get_file_history(
     (
         HgNodeHash,
         HgParents,
-        HgNodeHash,
+        HgChangesetId,
         Option<(MPath, HgNodeHash)>,
     ),
     Error,
@@ -161,7 +161,7 @@ fn get_file_history(
                 let p2 = filenode.p2.map(|p| p.into_nodehash());
                 let parents = Ok(HgParents::new(p1.as_ref(), p2.as_ref())).into_future();
 
-                let linknode = Ok(filenode.linknode.into_nodehash()).into_future();
+                let linknode = Ok(filenode.linknode).into_future();
 
                 let copy =
                     Ok(filenode

@@ -226,10 +226,10 @@ fn create_two_changesets(repo: BlobRepo) {
 
     let linknode = run_future(repo.get_linknode(fake_file_path, &filehash)).unwrap();
     assert!(
-        linknode == commit1.get_changeset_id().into_nodehash(),
+        linknode == commit1.get_changeset_id(),
         "Bad linknode {} - should be {}",
         linknode,
-        commit1.get_changeset_id().into_nodehash()
+        commit1.get_changeset_id()
     );
 }
 
@@ -300,11 +300,11 @@ fn create_double_linknode(repo: BlobRepo) {
 
     let linknode = run_future(repo.get_linknode(fake_file_path, &filehash)).unwrap();
     assert!(
-        linknode != child.get_changeset_id().into_nodehash(),
+        linknode != child.get_changeset_id(),
         "Linknode on child commit = should be on parent"
     );
     assert!(
-        linknode == parent.get_changeset_id().into_nodehash(),
+        linknode == parent.get_changeset_id(),
         "Linknode not on parent commit - ended up on {} instead",
         linknode
     );
@@ -356,7 +356,7 @@ fn check_linknode_creation(repo: BlobRepo) {
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
 
-    let cs_id = cs.get_changeset_id().into_nodehash();
+    let cs_id = cs.get_changeset_id();
     // And check all the linknodes got created
     metadata.into_iter().for_each(|(hash, path)| {
         let linknode = run_future(repo.get_linknode(path, &hash)).unwrap();

@@ -515,7 +515,11 @@ impl BlobRepo {
         self.bookmarks.create_transaction(&self.repoid)
     }
 
-    pub fn get_linknode(&self, path: RepoPath, node: &HgNodeHash) -> BoxFuture<HgNodeHash, Error> {
+    pub fn get_linknode(
+        &self,
+        path: RepoPath,
+        node: &HgNodeHash,
+    ) -> BoxFuture<HgChangesetId, Error> {
         STATS::get_linknode.add_value(1);
         let node = HgFileNodeId::new(*node);
         self.filenodes
@@ -524,7 +528,7 @@ impl BlobRepo {
                 move |filenode| {
                     filenode
                         .ok_or(ErrorKind::MissingFilenode(path, node).into())
-                        .map(|filenode| filenode.linknode.into_nodehash())
+                        .map(|filenode| filenode.linknode)
                 }
             })
             .boxify()
