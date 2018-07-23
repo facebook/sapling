@@ -163,10 +163,10 @@ def uisetup(ui):
             return orig(self, transaction, ifh, dfh, entry, data, link, offset)
 
         e = revlog.indexformatng.unpack(entry)
-        node = hex(e[7])
+        hexnode = hex(e[7])
         data0 = data[0] or ""
         transaction.repo.pendingrevs.append(
-            (self.indexfile, link, len(self) - 1, node, entry, data0, data[1])
+            (self.indexfile, link, len(self) - 1, hexnode, entry, data0, data[1])
         )
         return orig(self, transaction, ifh, dfh, entry, data, link, offset)
 
@@ -2046,8 +2046,9 @@ def sqlrefill(ui, startrev, **opts):
             data = rl._getsegmentforrevs(rlrev, rlrev)[1]
             data0, data1 = _parsecompressedrevision(data)
 
-            sqlentry = rl._io.packentry(entry, node, rl.version, rlrev)
-            revdata = (path, linkrev, rlrev, node, sqlentry, data0, data1)
+            hexnode = hex(node)
+            sqlentry = rl._io.packentry(entry, hexnode, rl.version, rlrev)
+            revdata = (path, linkrev, rlrev, hexnode, sqlentry, data0, data1)
             pendingrevs.append(revdata)
 
         repo._committodb(pendingrevs, ignoreduplicates=True)
