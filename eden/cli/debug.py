@@ -10,6 +10,7 @@
 import argparse
 import binascii
 import collections
+import json
 import os
 import re
 import shlex
@@ -676,9 +677,110 @@ class LogCmd(Subcmd):
         raise Exception("we should never reach here")
 
 
-@debug_cmd(
-    "set_log_level", "Set the log level for a given category in the edenfs daemon"
-)
+@debug_cmd("logging", "Display or modify logging configuration for the edenfs daemon")
+class LoggingCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "-a",
+            "--all",
+            action="store_true",
+            help="Show the configuration of all logging categories, even ones "
+            "with default configuration settings",
+        )
+        parser.add_argument(
+            "--reset",
+            action="store_true",
+            help="Fully reset the logging config to the specified settings rather "
+            "than updating the current configuration with the new settings.  "
+            "(Beware that you need to specify log handlers unless you want them "
+            "all to be deleted.)",
+        )
+        parser.add_argument(
+            "config",
+            type=str,
+            nargs="?",
+            help="A log configuration string to use to modify the log settings.  See "
+            "folly/logging/docs/Config.md (https://git.io/fNZhr)"
+            " for syntax documentation.  The most basic syntax is CATEGORY=LEVEL.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        config = cmd_util.create_config(args)
+
+        if args.reset and args.config is None:
+            # The configuration to use if the caller specifies --reset with no
+            # explicit config argument.
+            args.config = (
+                "WARN:default,eden=DBG2; default=stream:stream=stderr,async=true"
+            )
+
+        with config.get_thrift_client() as client:
+            if args.config is not None:
+                if args.reset:
+                    print(f"Resetting logging configuration to {args.config!r}")
+                    config_str = client.setOption("logging_full", args.config)
+                else:
+                    print(f"Updating logging configuration with {args.config!r}")
+                    config_str = client.setOption("logging", args.config)
+                print("Updated configuration.  New config settings:")
+            else:
+                print("Current logging configuration:")
+
+            if args.all:
+                config_str = client.getOption("logging_full")
+            else:
+                config_str = client.getOption("logging")
+            self.print_config(config_str)
+
+        return 0
+
+    def print_config(self, config_str: str) -> None:
+        config = json.loads(config_str)
+
+        handler_fmt = "  {:12} {:12} {}"
+        separator = "  " + ("-" * 76)
+
+        print("=== Log Handlers ===")
+        if not config["handlers"]:
+            print("  Warning: no log handlers configured!")
+        else:
+            print(handler_fmt.format("Name", "Type", "Options"))
+            print(separator)
+            for name, handler in sorted(config["handlers"].items()):
+                options_str = ", ".join(
+                    sorted("{}={}".format(k, v) for k, v in handler["options"].items())
+                )
+                print(handler_fmt.format(name, handler["type"], options_str))
+
+        print("\n=== Log Categories ===")
+        category_fmt = "  {:50} {:12} {}"
+        print(category_fmt.format("Name", "Level", "Handlers"))
+        print(separator)
+        for name, category in sorted(config["categories"].items()):
+            # For categories that do not inherit their parent's level (unusual)
+            # show the level with a trailing '!'
+            # Don't do this for the root category, though--it never inherits it's
+            # parent's level since it has no parent.
+            level_str = category["level"]
+            if not category["inherit"] and name != "":
+                level_str = level_str + "!"
+
+            # Print the root category name as '.' instead of the empty string just
+            # to help make it clear that there is a category name here.
+            # (The logging config parsing code accepts '.' as the root category
+            # name too.)
+            if name == "":
+                name = "."
+
+            handlers_str = ", ".join(category["handlers"])
+            print(category_fmt.format(name, level_str, handlers_str))
+
+
+# set_log_level is deprecated.
+# We should delete it in a few weeks (from 2018-07-18).
+# The debugSetLogLevel() API in eden/fs/service/eden.thrift can also be removed at the
+# same time.
+@debug_cmd("set_log_level", help=None)
 class SetLogLevelCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("category", type=str, help="Period-separated log category.")
@@ -689,17 +791,13 @@ class SetLogLevelCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
-
-        with config.get_thrift_client() as client:
-            result = client.debugSetLogLevel(args.category, args.level)
-            if result.categoryCreated:
-                util.print_stderr(
-                    "Warning: New category '{}' created. Did you mistype?",
-                    args.category,
-                )
-
-        return 0
+        print(
+            "The set_log_level command is deprecated.  "
+            "Use `eden debug logging` instead:"
+        )
+        log_arg = shlex.quote(f"{args.category}={args.level}")
+        print(f"  eden debug logging {log_arg}")
+        return 1
 
 
 @debug_cmd("journal", "Prints the most recent N entries from the journal")
