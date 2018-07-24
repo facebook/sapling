@@ -56,13 +56,13 @@ impl ConfigSet {
     /// with the following two files:
     ///
     /// ```plain,ignore
-    /// ; This is 1.rc
+    /// # This is 1.rc
     /// [section]
     /// x = 1
     /// %include 2.rc
     /// y = 2
     ///
-    /// ; This is 2.rc
+    /// # This is 2.rc
     /// [section]
     /// x = 3
     /// y = 4
@@ -197,19 +197,17 @@ impl ConfigSet {
     fn load_dir(&mut self, dir: &Path, source: &Bytes, visited: &mut HashSet<PathBuf>) {
         let rc_ext = OsStr::new("rc");
         match dir.read_dir() {
-            Ok(entries) => {
-                for entry in entries {
-                    match entry {
-                        Ok(entry) => {
-                            let path = entry.path();
-                            if path.is_file() && path.extension() == Some(rc_ext) {
-                                self.load_file(&path, source, visited);
-                            }
+            Ok(entries) => for entry in entries {
+                match entry {
+                    Ok(entry) => {
+                        let path = entry.path();
+                        if path.is_file() && path.extension() == Some(rc_ext) {
+                            self.load_file(&path, source, visited);
                         }
-                        Err(error) => self.error(Error::Io(dir.to_path_buf(), error)),
                     }
+                    Err(error) => self.error(Error::Io(dir.to_path_buf(), error)),
                 }
-            }
+            },
             Err(error) => self.error(Error::Io(dir.to_path_buf(), error)),
         }
     }
@@ -442,7 +440,10 @@ fn strip(buf: &Bytes, start: usize, end: usize) -> Bytes {
 /// Expand `~` to home directory.
 fn expand_path(path: &str) -> PathBuf {
     if path.starts_with("~/") {
-        if let Some(home) = ::std::env::home_dir() {
+        // TODO(quark): migrate to dirs or shellexpand once tp2 has them.
+        #[allow(deprecated)]
+        let home_dir = ::std::env::home_dir();
+        if let Some(home) = home_dir {
             return home.join(Path::new(&path[2..]));
         }
     }
@@ -615,7 +616,7 @@ mod tests {
         // Won't be loaded before it does not have ".rc" extension.
         write_file(dir.path().join("dir/unusedrc"), "[unused]\na=1");
 
-        // Will loaded. `%include` shouldn't cause cycles.
+        // Will be loaded. `%include` shouldn't cause cycles.
         write_file(dir.path().join("b.rc"), "[x]\nb=4\n%include dir");
 
         // Will be loaded. Shouldn't cause cycles.
