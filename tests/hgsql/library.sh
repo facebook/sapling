@@ -13,12 +13,6 @@ fi
 
 source "$GETDB_PATH" >/dev/null
 
-# Convert legacy fields from legacy getdb.sh implementation
-if [[ -z $DBHOST && -z $DBPORT && -n $DBHOSTPORT ]]; then
-    # Assuming they are set using the legacy way: $DBHOSTPORT
-    DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
-    DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
-fi
 [[ -z $DBHOST ]] && DBHOST=localhost
 [[ -z $DBPORT ]] && DBPORT=3306
 [[ -z $DBENGINE ]] && DBENGINE=innodb
