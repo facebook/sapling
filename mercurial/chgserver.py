@@ -214,14 +214,6 @@ def _loadnewui(srcui, args):
     options = dispatch._earlyparseopts(newui, args)
     dispatch._parseconfig(newui, options["config"])
 
-    # stolen from tortoisehg.util.copydynamicconfig()
-    for section, name, value in srcui.walkconfig():
-        source = srcui.configsource(section, name)
-        if ":" in source or source == "--config" or source.startswith("$"):
-            # path:line or command line, or environ
-            continue
-        newui.setconfig(section, name, value, source)
-
     # load wd and repo config, copied from dispatch.py
     cwd = options["cwd"]
     cwd = cwd and os.path.realpath(cwd) or None
