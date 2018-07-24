@@ -336,10 +336,10 @@ static py_subtreeiter* subtreeiter_create(
           path, mainManifest, cmpNodes, cmpManifests, fetcher, depth);
       return pyiter;
     } catch (const pyexception& ex) {
-      Py_DECREF(pyiter);
+      PyObject_Del(pyiter);
       return NULL;
     } catch (const std::exception& ex) {
-      Py_DECREF(pyiter);
+      PyObject_Del(pyiter);
       PyErr_SetString(PyExc_RuntimeError, ex.what());
       return NULL;
     }
