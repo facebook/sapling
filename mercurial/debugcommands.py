@@ -445,8 +445,9 @@ def debugcheckstate(ui, repo):
     "debugcolor",
     [("", "style", None, _("show all configured styles"))],
     "hg debugcolor",
+    norepo=True,
 )
-def debugcolor(ui, repo, **opts):
+def debugcolor(ui, **opts):
     """show available color, effects or style"""
     ui.write(("color mode: %s\n") % ui._colormode)
     if opts.get(r"style"):
