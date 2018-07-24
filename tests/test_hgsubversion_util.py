@@ -279,6 +279,88 @@ def fileurl(path):
     return url
 
 
+def _execute_and_get_env(script_path, env_vars):
+    """Executes the shell script located at the path `script_path` and returns a
+    dictionary of the environment variables specified by `env_vars` after the
+    execution."""
+
+    cmd = ["source", script_path]
+    for var in env_vars:
+        cmd.extend(["&&", "export", var])
+    cmd.extend([";", "env"])
+
+    p = subprocess.Popen(
+        " ".join(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+    )
+    out, err = p.communicate()
+    ret = p.returncode
+
+    if ret == 0:
+        return dict(
+            line.split("=", 1)
+            for line in out.splitlines()
+            if line.startswith(tuple(env_vars))
+        )
+    elif ret == 80:
+        # 80 is the return code for skipped tests from the shell scripts.
+        raise SkipTest(out)
+    else:
+        stderr = sys.stderr
+        stderr.write(err)
+        stderr.flush()
+        sys.exit(ret)
+
+
+class TestDb(object):
+    _TEST_DIR = os.environ["TESTDIR"]
+    _LIBRARY_SH = os.path.join(_TEST_DIR, "hgsql", "library.sh")
+
+    _DBENGINE = "DBENGINE"
+    _DBHOST = "DBHOST"
+    _DBNAME = "DBNAME"
+    _DBPASS = "DBPASS"
+    _DBPORT = "DBPORT"
+    _DBUSER = "DBUSER"
+
+    def __init__(self):
+        self._init_config()
+
+    def _init_config(self):
+        env_vars = [
+            self._DBENGINE,
+            self._DBHOST,
+            self._DBNAME,
+            self._DBPASS,
+            self._DBPORT,
+            self._DBUSER,
+        ]
+        self._env = _execute_and_get_env(self._LIBRARY_SH, env_vars)
+
+    @property
+    def engine(self):
+        return self._env[self._DBENGINE]
+
+    @property
+    def host(self):
+        return self._env[self._DBHOST]
+
+    @property
+    def name(self):
+        return self._env[self._DBNAME]
+
+    @property
+    def password(self):
+        return self._env[self._DBPASS]
+
+    @property
+    def port(self):
+        return self._env[self._DBPORT]
+
+    @property
+    def user(self):
+        return self._env[self._DBUSER]
+
+
 class _testui(ui.ui):
     def develwarn(self, msg, stacklevel=1, *args, **kwargs):
         from hgext.hgsubversion import util
