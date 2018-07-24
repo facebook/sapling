@@ -233,7 +233,7 @@ void CheckoutAction::allLoadsComplete() noexcept {
   }
 
   try {
-    doAction().then(
+    doAction().thenTry(
         [this](folly::Try<Unit>&& t) { this->promise_.setTry(std::move(t)); });
   } catch (const std::exception& ex) {
     exception_wrapper ew{std::current_exception(), ex};

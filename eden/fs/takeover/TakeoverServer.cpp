@@ -99,7 +99,7 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
     // never be received.
     auto timeout = std::chrono::seconds(5);
     return socket_.receive(timeout)
-        .then([this](folly::Try<UnixSocket::Message>&& msg) {
+        .thenTry([this](folly::Try<UnixSocket::Message>&& msg) {
           if (msg.hasException()) {
             // most likely cause: timed out waiting for the client to
             // send the protocol version.  FutureUnixSocket::receiveTimeout()

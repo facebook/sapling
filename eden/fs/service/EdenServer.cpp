@@ -583,7 +583,7 @@ Future<Unit> EdenServer::performNormalShutdown() {
   takeoverServer_.reset();
 
   // Clean up all the server mount points before shutting down the privhelper.
-  return unmountAll().then([this](folly::Try<Unit>&& result) {
+  return unmountAll().thenTry([this](folly::Try<Unit>&& result) {
     shutdownPrivhelper();
     result.throwIfFailed();
   });

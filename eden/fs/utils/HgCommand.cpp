@@ -257,8 +257,8 @@ HgTreeInformation::statFiles(const std::vector<std::string>& files) {
                  [this](std::string name) { return fileInfo_.get(name); },
                  sysconf(_SC_NPROCESSORS_ONLN) / 2))
       .toUnsafeFuture()
-      .then([](Try<std::vector<Try<std::shared_ptr<HgFileInformation>>>>&&
-                   items) {
+      .thenTry([](Try<std::vector<Try<std::shared_ptr<HgFileInformation>>>>&&
+                      items) {
         std::vector<std::shared_ptr<HgFileInformation>> res;
         for (auto& item : items.value()) {
           res.push_back(item.value());
