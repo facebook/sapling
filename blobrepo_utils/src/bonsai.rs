@@ -16,7 +16,7 @@ use slog::Logger;
 
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo::{BlobChangeset, BlobManifest, BlobRepo, HgBlobEntry};
+use blobrepo::{BlobManifest, BlobRepo, HgBlobChangeset, HgBlobEntry};
 use blobrepo::internal::MemoryRootManifest;
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use mercurial_types::{Changeset, Entry, HgChangesetId, HgManifestId, HgNodeHash, Type};
@@ -144,7 +144,7 @@ impl ChangesetVisitor for BonsaiVerifyVisitor {
         self,
         logger: Logger,
         repo: BlobRepo,
-        changeset: BlobChangeset,
+        changeset: HgBlobChangeset,
         _follow_remaining: usize,
     ) -> BoxFuture<Self::Item, Error> {
         let changeset_id = changeset.get_changeset_id();
@@ -329,7 +329,7 @@ fn make_entry(repo: &BlobRepo, diff_result: &BonsaiDiffResult) -> Option<HgBlobE
 }
 
 #[inline]
-fn get_root_entry(repo: &BlobRepo, changeset: &BlobChangeset) -> Box<Entry + Sync> {
+fn get_root_entry(repo: &BlobRepo, changeset: &HgBlobChangeset) -> Box<Entry + Sync> {
     let manifest_id = changeset.manifestid();
     repo.get_root_entry(manifest_id)
 }

@@ -25,7 +25,7 @@ use errors::*;
 use repo::{ChangesetMetadata, RepoBlobstore};
 
 #[derive(Debug, Clone)]
-pub struct ChangesetContent {
+pub struct HgChangesetContent {
     p1: Option<HgNodeHash>,
     p2: Option<HgNodeHash>,
     manifestid: HgManifestId,
@@ -36,7 +36,7 @@ pub struct ChangesetContent {
     comments: Vec<u8>,
 }
 
-impl ChangesetContent {
+impl HgChangesetContent {
     pub fn new_from_parts(
         // XXX replace parents with p1 and p2
         parents: HgParents,
@@ -122,17 +122,17 @@ impl ChangesetContent {
 }
 
 #[derive(Debug, Clone)]
-pub struct BlobChangeset {
+pub struct HgBlobChangeset {
     changesetid: HgChangesetId, // redundant - can be computed from revlogcs?
-    content: ChangesetContent,
+    content: HgChangesetContent,
 }
 
-impl BlobChangeset {
-    pub fn new(content: ChangesetContent) -> Result<Self> {
+impl HgBlobChangeset {
+    pub fn new(content: HgChangesetContent) -> Result<Self> {
         Ok(Self::new_with_id(&content.compute_hash()?, content))
     }
 
-    pub fn new_with_id(changesetid: &HgChangesetId, content: ChangesetContent) -> Self {
+    pub fn new_with_id(changesetid: &HgChangesetId, content: HgChangesetContent) -> Self {
         Self {
             changesetid: *changesetid,
             content,
@@ -150,8 +150,10 @@ impl BlobChangeset {
         let changesetid = *changesetid;
         if changesetid == HgChangesetId::new(NULL_HASH) {
             let revlogcs = RevlogChangeset::new_null();
-            let cs =
-                BlobChangeset::new_with_id(&changesetid, ChangesetContent::from_revlogcs(revlogcs));
+            let cs = HgBlobChangeset::new_with_id(
+                &changesetid,
+                HgChangesetContent::from_revlogcs(revlogcs),
+            );
             Either::A(Ok(Some(cs)).into_future())
         } else {
             let key = changesetid.blobstore_key();
@@ -170,9 +172,9 @@ impl BlobChangeset {
                             );
                         }
                         let revlogcs = RevlogChangeset::from_envelope(envelope)?;
-                        let cs = BlobChangeset::new_with_id(
+                        let cs = HgBlobChangeset::new_with_id(
                             &changesetid,
-                            ChangesetContent::from_revlogcs(revlogcs),
+                            HgChangesetContent::from_revlogcs(revlogcs),
                         );
                         Ok(Some(cs))
                     }
@@ -221,7 +223,7 @@ impl BlobChangeset {
     }
 }
 
-impl Changeset for BlobChangeset {
+impl Changeset for HgBlobChangeset {
     fn manifestid(&self) -> &HgManifestId {
         &self.content.manifestid
     }

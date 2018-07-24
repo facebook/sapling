@@ -16,7 +16,7 @@ use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
 
-use blobrepo::{BlobChangeset, BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset,
+use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, HgBlobChangeset,
                HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
                UploadHgTreeEntry};
 use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
@@ -211,7 +211,7 @@ pub struct UploadChangesets {
 }
 
 impl UploadChangesets {
-    pub fn upload(self) -> BoxStream<BoxFuture<SharedItem<BlobChangeset>, Error>, Error> {
+    pub fn upload(self) -> BoxStream<BoxFuture<SharedItem<HgBlobChangeset>, Error>, Error> {
         let Self {
             blobrepo,
             revlogrepo,

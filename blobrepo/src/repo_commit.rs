@@ -27,9 +27,9 @@ use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
 
-use BlobChangeset;
 use BlobRepo;
-use changeset::ChangesetContent;
+use HgBlobChangeset;
+use changeset::HgChangesetContent;
 use errors::*;
 use file::HgBlobEntry;
 use repo::{ChangesetMetadata, RepoBlobstore};
@@ -48,8 +48,8 @@ define_stats! {
     finalize_compute_copy_from_info: timeseries(RATE, SUM),
 }
 
-/// A handle to a possibly incomplete BlobChangeset. This is used instead of
-/// Future<Item = BlobChangeset> where we don't want to fully serialize waiting for completion.
+/// A handle to a possibly incomplete HgBlobChangeset. This is used instead of
+/// Future<Item = HgBlobChangeset> where we don't want to fully serialize waiting for completion.
 /// For example, `create_changeset` takes these as p1/p2 so that it can handle the blobstore side
 /// of creating a new changeset before its parent changesets are complete.
 /// See `get_completed_changeset()` for the public API you can use to extract the final changeset
@@ -61,13 +61,13 @@ pub struct ChangesetHandle {
     // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
     //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
     //   implements Error.
-    completion_future: Shared<BoxFuture<BlobChangeset, Compat<Error>>>,
+    completion_future: Shared<BoxFuture<HgBlobChangeset, Compat<Error>>>,
 }
 
 impl ChangesetHandle {
     pub fn new_pending(
         can_be_parent: Shared<oneshot::Receiver<(HgNodeHash, HgManifestId)>>,
-        completion_future: Shared<BoxFuture<BlobChangeset, Compat<Error>>>,
+        completion_future: Shared<BoxFuture<HgBlobChangeset, Compat<Error>>>,
     ) -> Self {
         Self {
             can_be_parent,
@@ -75,13 +75,13 @@ impl ChangesetHandle {
         }
     }
 
-    pub fn get_completed_changeset(self) -> Shared<BoxFuture<BlobChangeset, Compat<Error>>> {
+    pub fn get_completed_changeset(self) -> Shared<BoxFuture<HgBlobChangeset, Compat<Error>>> {
         self.completion_future
     }
 }
 
-impl From<BlobChangeset> for ChangesetHandle {
-    fn from(bcs: BlobChangeset) -> Self {
+impl From<HgBlobChangeset> for ChangesetHandle {
+    fn from(bcs: HgBlobChangeset) -> Self {
         let (trigger, can_be_parent) = oneshot::channel();
         // The send cannot fail at this point, barring an optimizer noticing that `can_be_parent`
         // is unused and dropping early. Eat the error, as in this case, nothing is blocked waiting
@@ -96,8 +96,8 @@ impl From<BlobChangeset> for ChangesetHandle {
 
 /// This implementation can be used to convert a result of
 /// BlobRepo::get_changeset_by_changesetid into ChangesetHandle
-impl From<BoxFuture<BlobChangeset, Error>> for ChangesetHandle {
-    fn from(bcs: BoxFuture<BlobChangeset, Error>) -> Self {
+impl From<BoxFuture<HgBlobChangeset, Error>> for ChangesetHandle {
+    fn from(bcs: BoxFuture<HgBlobChangeset, Error>) -> Self {
         let (trigger, can_be_parent) = oneshot::channel();
 
         Self {
@@ -661,9 +661,9 @@ pub fn make_new_changeset(
     root_hash: HgManifestId,
     cs_metadata: ChangesetMetadata,
     files: Vec<MPath>,
-) -> Result<BlobChangeset> {
-    let changeset = ChangesetContent::new_from_parts(parents, root_hash, cs_metadata, files);
-    BlobChangeset::new(changeset)
+) -> Result<HgBlobChangeset> {
+    let changeset = HgChangesetContent::new_from_parts(parents, root_hash, cs_metadata, files);
+    HgBlobChangeset::new(changeset)
 }
 
 #[cfg(test)]

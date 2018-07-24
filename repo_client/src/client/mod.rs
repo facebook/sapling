@@ -21,7 +21,7 @@ use futures_stats::{Timed, TimedStreamTrait};
 use itertools::Itertools;
 use slog::Logger;
 
-use blobrepo::BlobChangeset;
+use blobrepo::HgBlobChangeset;
 use bundle2_resolver;
 use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item};
@@ -363,7 +363,7 @@ impl HgCommands for RepoClient {
             }
         }
 
-        impl Stream for ParentStream<BoxFuture<BlobChangeset, hgproto::Error>> {
+        impl Stream for ParentStream<BoxFuture<HgBlobChangeset, hgproto::Error>> {
             type Item = HgNodeHash;
             type Error = hgproto::Error;
 

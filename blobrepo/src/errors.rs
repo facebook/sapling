@@ -15,7 +15,7 @@ use mercurial_types::{HgBlob, HgBlobHash, HgChangesetId, HgFileNodeId, HgNodeHas
                       MPath, RepoPath, Type};
 use mononoke_types::ContentId;
 
-use BlobChangeset;
+use HgBlobChangeset;
 
 #[derive(Debug)]
 pub enum StateOpenError {
@@ -85,7 +85,7 @@ pub enum ErrorKind {
     #[fail(display = "Inconsistent node hash for changeset: provided: {}, \
                       computed: {} for blob: {:#?}",
            _0, _1, _2)]
-    InconsistentChangesetHash(HgNodeHash, HgNodeHash, BlobChangeset),
+    InconsistentChangesetHash(HgNodeHash, HgNodeHash, HgBlobChangeset),
     #[fail(display = "Bookmark {} does not exist", _0)] BookmarkNotFound(AsciiString),
     #[fail(display = "Unresolved conflicts when converting BonsaiChangeset to Manifest")]
     UnresolvedConflicts,

@@ -48,8 +48,8 @@ use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, ContentId, DateTime,
 use rocksblob::Rocksblob;
 use rocksdb;
 
-use BlobChangeset;
 use BlobManifest;
+use HgBlobChangeset;
 use errors::*;
 use file::{fetch_file_content_and_renames_from_blobstore, fetch_raw_filenode_bytes, HgBlobEntry};
 use memory_manifest::MemoryRootManifest;
@@ -433,7 +433,7 @@ impl BlobRepo {
 
     pub fn get_changesets(&self) -> BoxStream<HgNodeHash, Error> {
         STATS::get_changesets.add_value(1);
-        BlobChangesetStream {
+        HgBlobChangesetStream {
             repo: self.clone(),
             state: BCState::Idle,
             heads: self.get_heads().boxify(),
@@ -472,10 +472,10 @@ impl BlobRepo {
     pub fn get_changeset_by_changesetid(
         &self,
         changesetid: &HgChangesetId,
-    ) -> BoxFuture<BlobChangeset, Error> {
+    ) -> BoxFuture<HgBlobChangeset, Error> {
         STATS::get_changeset_by_changesetid.add_value(1);
         let chid = changesetid.clone();
-        BlobChangeset::load(&self.blobstore, &chid)
+        HgBlobChangeset::load(&self.blobstore, &chid)
             .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(chid).into()))
             .boxify()
     }
@@ -1184,7 +1184,7 @@ impl CreateChangeset {
                                     STATS::create_changeset_cf_count.add_value(files.len() as i64);
 
                                     let fut: BoxFuture<
-                                        BlobChangeset,
+                                        HgBlobChangeset,
                                         Error,
                                     > = (move || {
                                         let blobcs = try_boxfuture!(make_new_changeset(
@@ -1327,7 +1327,7 @@ impl Clone for BlobRepo {
     }
 }
 
-pub struct BlobChangesetStream {
+pub struct HgBlobChangesetStream {
     repo: BlobRepo,
     seen: HashSet<HgNodeHash>,
     heads: BoxStream<HgNodeHash, Error>,
@@ -1336,10 +1336,10 @@ pub struct BlobChangesetStream {
 
 enum BCState {
     Idle,
-    WaitCS(HgNodeHash, BoxFuture<BlobChangeset, Error>),
+    WaitCS(HgNodeHash, BoxFuture<HgBlobChangeset, Error>),
 }
 
-impl Stream for BlobChangesetStream {
+impl Stream for HgBlobChangesetStream {
     type Item = HgNodeHash;
     type Error = Error;
 

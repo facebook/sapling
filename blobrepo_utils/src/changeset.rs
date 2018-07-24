@@ -14,7 +14,7 @@ use tokio;
 
 use futures_ext::{send_discard, BoxFuture};
 
-use blobrepo::{BlobChangeset, BlobRepo};
+use blobrepo::{BlobRepo, HgBlobChangeset};
 use mercurial_types::HgChangesetId;
 
 /// This trait enables parallelized walks over changesets.
@@ -31,7 +31,7 @@ pub trait ChangesetVisitor: Clone + Send + Sync + 'static {
         self,
         logger: Logger,
         repo: BlobRepo,
-        changeset: BlobChangeset,
+        changeset: HgBlobChangeset,
         follow_remaining: usize,
     ) -> BoxFuture<Self::Item, Error>;
 }

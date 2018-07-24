@@ -49,7 +49,7 @@ pub mod hook_loader;
 pub mod errors;
 
 use asyncmemo::{Asyncmemo, Filler, Weight};
-use blobrepo::{BlobChangeset, BlobRepo};
+use blobrepo::{BlobRepo, HgBlobChangeset};
 use bookmarks::Bookmark;
 pub use errors::*;
 use failure::Error;
@@ -377,7 +377,7 @@ pub trait ChangesetStore: Send + Sync {
     fn get_changeset_by_changesetid(
         &self,
         changesetid: &HgChangesetId,
-    ) -> BoxFuture<BlobChangeset, Error>;
+    ) -> BoxFuture<HgBlobChangeset, Error>;
 }
 
 pub struct BlobRepoChangesetStore {
@@ -388,7 +388,7 @@ impl ChangesetStore for BlobRepoChangesetStore {
     fn get_changeset_by_changesetid(
         &self,
         changesetid: &HgChangesetId,
-    ) -> BoxFuture<BlobChangeset, Error> {
+    ) -> BoxFuture<HgBlobChangeset, Error> {
         self.repo.get_changeset_by_changesetid(changesetid)
     }
 }
@@ -400,14 +400,14 @@ impl BlobRepoChangesetStore {
 }
 
 pub struct InMemoryChangesetStore {
-    map: HashMap<HgChangesetId, BlobChangeset>,
+    map: HashMap<HgChangesetId, HgBlobChangeset>,
 }
 
 impl ChangesetStore for InMemoryChangesetStore {
     fn get_changeset_by_changesetid(
         &self,
         changesetid: &HgChangesetId,
-    ) -> BoxFuture<BlobChangeset, Error> {
+    ) -> BoxFuture<HgBlobChangeset, Error> {
         match self.map.get(changesetid) {
             Some(cs) => Box::new(finished(cs.clone())),
             None => Box::new(failed(
@@ -424,7 +424,7 @@ impl InMemoryChangesetStore {
         }
     }
 
-    pub fn insert(&mut self, changeset_id: &HgChangesetId, changeset: &BlobChangeset) {
+    pub fn insert(&mut self, changeset_id: &HgChangesetId, changeset: &HgBlobChangeset) {
         self.map.insert(changeset_id.clone(), changeset.clone());
     }
 }
@@ -477,9 +477,9 @@ pub enum HookChangesetParents {
     Two(String, String),
 }
 
-impl TryFrom<BlobChangeset> for HookChangeset {
+impl TryFrom<HgBlobChangeset> for HookChangeset {
     type Error = Error;
-    fn try_from(changeset: BlobChangeset) -> Result<Self, Error> {
+    fn try_from(changeset: HgBlobChangeset) -> Result<Self, Error> {
         let author = str::from_utf8(changeset.user())?.into();
         let files = changeset.files();
         let files = files
