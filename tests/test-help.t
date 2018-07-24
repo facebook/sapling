@@ -298,7 +298,6 @@ Test extension help:
        backups       display recently made backups to recover stripped
                      changesets
        blackbox      log repository events to a blackbox for debugging
-       bugzilla      hooks for integrating with the Bugzilla bug tracker
        bundle2hooks  (no help text available)
        catnotate     (no help text available)
        censor        erase file content at a given revision
