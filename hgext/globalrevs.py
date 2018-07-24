@@ -4,6 +4,8 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+#
+# no-check-code
 
 """extension for providing strictly increasing revision numbers
 
@@ -59,18 +61,26 @@ def uisetup(ui):
         localrepo, "newreporequirements", _newreporequirementswrapper
     )
 
-    def _hgsqlwrapper(loaded):
-        if loaded:
-            hgsqlmod = extensions.find("hgsql")
-            extensions.wrapfunction(hgsqlmod, "wraprepo", _sqllocalrepowrapper)
-
     def _pushrebasewrapper(loaded):
         if loaded:
             pushrebasemod = extensions.find("pushrebase")
             extensions.wrapfunction(pushrebasemod, "_commit", _commitwrapper)
 
+    def _hgsqlwrapper(loaded):
+        if loaded:
+            hgsqlmod = extensions.find("hgsql")
+            extensions.wrapfunction(hgsqlmod, "wraprepo", _sqllocalrepowrapper)
+
+    def _hgsubversionwrapper(loaded):
+        if loaded:
+            hgsubversionmod = extensions.find("hgsubversion")
+            extensions.wrapfunction(
+                hgsubversionmod.svnrepo, "generate_repo_class", _svnlocalrepowrapper
+            )
+
     extensions.afterloaded("pushrebase", _pushrebasewrapper)
     extensions.afterloaded("hgsql", _hgsqlwrapper)
+    extensions.afterloaded("hgsubversion", _hgsubversionwrapper)
 
 
 def reposetup(ui, repo):
@@ -180,6 +190,24 @@ def _sqllocalrepowrapper(orig, repo):
 
     repo._nextrevisionnumber = None
     repo.__class__ = globalrevsrepo
+
+
+def _svnlocalrepowrapper(orig, ui, repo):
+    # This ensures that the repo is of type `svnlocalrepo` which is defined in
+    # hgsubversion extension.
+    orig(ui, repo)
+
+    # Only need the extra functionality on the servers.
+    if issqlrepo(repo):
+        # This class will effectively extend the `svnlocalrepo` class.
+        class globalrevssvnlocalrepo(repo.__class__):
+            def svn_commitctx(self, ctx):
+                with repo.wlock(), repo.lock(), repo.transaction("svncommit"):
+                    extras = ctx.extra()
+                    extras["global_rev"] = repo.nextrevisionnumber()
+                    return super(globalrevssvnlocalrepo, self).svn_commitctx(ctx)
+
+        repo.__class__ = globalrevssvnlocalrepo
 
 
 def _commitwrapper(orig, repo, parents, desc, files, filectx, user, date, extras):
