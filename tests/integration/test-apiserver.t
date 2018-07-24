@@ -29,6 +29,8 @@ setup testing repo for mononoke
   $ hg add branch2
   $ hg commit -ma
   $ COMMITB2=$(hg --debug id -i)
+  $ COMMITB2_BOOKMARK=B2
+  $ hg bookmark $COMMITB2_BOOKMARK
 
 import testing repo to mononoke
   $ cd ..
@@ -144,3 +146,16 @@ test reachability response on nonexistent nodes
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT2/1234567890123456789012345678901234567890 2> /dev/null
   1234567890123456789012345678901234567890 not found
   404 (no-eol)
+
+test reachability on bookmarks
+  $ echo $COMMITB2_BOOKMARK
+  B2
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$COMMITB2_BOOKMARK 2> /dev/null
+  true (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$COMMITB2_BOOKMARK 2> /dev/null
+  true (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$COMMIT2 2> /dev/null
+  false (no-eol)

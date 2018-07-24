@@ -4,19 +4,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::str::FromStr;
 use std::sync::Arc;
 
 use actix::{Actor, Context, Handler};
-use failure::{err_msg, Error, Result, ResultExt};
-use futures::Future;
+use failure::{err_msg, Error, Result};
+use futures::{Future, IntoFuture};
 use futures_ext::BoxFuture;
 use slog::Logger;
 
 use api;
 use blobrepo::BlobRepo;
 use futures_ext::FutureExt;
-use mercurial_types::{HgNodeHash, RepositoryId};
+use mercurial_types::RepositoryId;
 use mercurial_types::manifest::Content;
 use metaconfig::repoconfig::RepoConfig;
 use metaconfig::repoconfig::RepoType::{BlobManifold, BlobRocks};
@@ -80,15 +79,33 @@ impl MononokeRepoActor {
         proposed_descendent: String,
     ) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
         let mut genbfs = GenerationNumberBFS::new();
-        let src_hash = HgNodeHash::from_str(&proposed_descendent)
-            .with_context(|_| ErrorKind::InvalidInput(proposed_descendent))
-            .map_err(|e| -> Error { e.into() })?;
-        let dst_hash = HgNodeHash::from_str(&proposed_ancestor)
-            .with_context(|_| ErrorKind::InvalidInput(proposed_ancestor))
-            .map_err(|e| -> Error { e.into() })?;
-        Ok(genbfs
-            .query_reachability(self.repo.clone(), src_hash, dst_hash)
-            .map(move |answer| MononokeRepoResponse::IsAncestor { answer: answer })
+        let src_hash_maybe = FS::get_nodehash(&proposed_descendent);
+        let dst_hash_maybe = FS::get_nodehash(&proposed_ancestor);
+        let src_hash_future = src_hash_maybe.into_future().or_else({
+            cloned!(self.repo);
+            move |_| {
+                FS::string_to_bookmark_changeset_id(proposed_descendent, repo)
+                    .map(|node_cs| *node_cs.as_nodehash())
+            }
+        });
+        let dst_hash_future = dst_hash_maybe.into_future().or_else({
+            cloned!(self.repo);
+            move |_| {
+                FS::string_to_bookmark_changeset_id(proposed_ancestor, repo)
+                    .map(|node_cs| *node_cs.as_nodehash())
+            }
+        });
+
+        Ok(src_hash_future
+            .and_then(|src_hash| dst_hash_future.map(move |dst_hash| (src_hash, dst_hash)))
+            .and_then({
+                cloned!(self.repo);
+                move |(src_hash, dst_hash)| {
+                    genbfs
+                        .query_reachability(repo, src_hash, dst_hash)
+                        .map(move |answer| MononokeRepoResponse::IsAncestor { answer: answer })
+                }
+            })
             .from_err()
             .boxify())
     }
