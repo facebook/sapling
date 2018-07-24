@@ -22,8 +22,17 @@ extern crate blobrepo;
 extern crate bonsai_utils;
 extern crate mercurial_types;
 
+mod bonsai;
 mod changeset;
 mod errors;
 
+pub use bonsai::{BonsaiVerify, BonsaiVerifyDifference, BonsaiVerifyResult};
 pub use changeset::{visit_changesets, ChangesetVisitor};
 pub use errors::ErrorKind;
+
+pub mod internals {
+    // This shouldn't actually be public, but it needs to be because of
+    // https://github.com/rust-lang/rust/issues/50865.
+    // TODO: (rain1) T31595868 make apply_diff private once Rust 1.29 is released
+    pub use bonsai::apply_diff;
+}

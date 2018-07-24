@@ -11,4 +11,5 @@ use mercurial_types::HgChangesetId;
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "While visiting changeset {}", _0)] VisitError(HgChangesetId),
+    #[fail(display = "While verifying changeset {}", _0)] VerificationError(HgChangesetId),
 }
