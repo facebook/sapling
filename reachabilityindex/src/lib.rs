@@ -36,3 +36,5 @@ pub extern crate branch_wide;
 pub extern crate linear;
 #[cfg(test)]
 pub extern crate merge_uneven;
+#[cfg(test)]
+mod tests;
