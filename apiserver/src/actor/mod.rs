@@ -10,7 +10,7 @@ mod response;
 
 use std::collections::HashMap;
 
-use actix::{Actor, Addr, Context, Handler, Syn};
+use actix::{Actor, Addr, Context, Handler};
 use actix::dev::Request;
 use failure::Error;
 use futures::{Future, IntoFuture};
@@ -25,7 +25,7 @@ pub use self::repo::MononokeRepoActor;
 pub use self::response::MononokeRepoResponse;
 
 pub struct MononokeActor {
-    repos: HashMap<String, Addr<Syn, MononokeRepoActor>>,
+    repos: HashMap<String, Addr<MononokeRepoActor>>,
 }
 
 impl MononokeActor {
@@ -55,7 +55,7 @@ impl Actor for MononokeActor {
 }
 
 impl Handler<MononokeQuery> for MononokeActor {
-    type Result = Result<Request<Syn, MononokeRepoActor, MononokeRepoQuery>, Error>;
+    type Result = Result<Request<MononokeRepoActor, MononokeRepoQuery>, Error>;
 
     fn handle(
         &mut self,
@@ -70,7 +70,7 @@ impl Handler<MononokeQuery> for MononokeActor {
 }
 
 pub fn unwrap_request(
-    request: Request<Syn, MononokeActor, MononokeQuery>,
+    request: Request<MononokeActor, MononokeQuery>,
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     request
         .into_future()

@@ -24,12 +24,12 @@ impl SLogger {
 impl<S> ResponseTime<S> for SLogger {}
 
 impl<S> Middleware<S> for SLogger {
-    fn start(&self, req: &mut HttpRequest<S>) -> Result<Started> {
+    fn start(&self, req: &HttpRequest<S>) -> Result<Started> {
         self.start_timer(req);
         Ok(Started::Done)
     }
 
-    fn finish(&self, req: &mut HttpRequest<S>, resp: &HttpResponse) -> Finished {
+    fn finish(&self, req: &HttpRequest<S>, resp: &HttpResponse) -> Finished {
         let cost = self.time_cost(req).unwrap_or(0);
 
         info!(

@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use actix::{Message, Syn};
+use actix::Message;
 use actix::dev::Request;
 use failure::Error;
 use futures_ext::BoxFuture;
@@ -33,5 +33,5 @@ pub struct MononokeQuery {
 }
 
 impl Message for MononokeQuery {
-    type Result = Result<Request<Syn, MononokeRepoActor, MononokeRepoQuery>, Error>;
+    type Result = Result<Request<MononokeRepoActor, MononokeRepoQuery>, Error>;
 }

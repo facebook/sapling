@@ -34,7 +34,7 @@ impl ScubaMiddleware {
 impl<S> ResponseTime<S> for ScubaMiddleware {}
 
 impl<S> Middleware<S> for ScubaMiddleware {
-    fn start(&self, req: &mut HttpRequest<S>) -> Result<Started> {
+    fn start(&self, req: &HttpRequest<S>) -> Result<Started> {
         let mut scuba = self.scuba.clone();
 
         {
@@ -54,7 +54,7 @@ impl<S> Middleware<S> for ScubaMiddleware {
         Ok(Started::Done)
     }
 
-    fn finish(&self, req: &mut HttpRequest<S>, resp: &HttpResponse) -> Finished {
+    fn finish(&self, req: &HttpRequest<S>, resp: &HttpResponse) -> Finished {
         let response_time = self.time_cost(req);
 
         if let Some(scuba) = req.extensions_mut().get_mut::<ScubaSampleBuilder>() {

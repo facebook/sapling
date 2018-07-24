@@ -46,7 +46,7 @@ mod middleware;
 use std::path::Path;
 use std::str::FromStr;
 
-use actix::{Actor, Addr, Syn};
+use actix::{Actor, Addr};
 use actix_web::{http, server, App, HttpRequest, HttpResponse, State};
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
@@ -162,7 +162,7 @@ fn create_config<P: AsRef<Path>>(
 
 #[derive(Clone)]
 struct HttpServerState {
-    mononoke: Addr<Syn, MononokeActor>,
+    mononoke: Addr<MononokeActor>,
     logger: Logger,
 }
 
@@ -304,7 +304,7 @@ fn main() -> Result<()> {
             .route(
                 "/status",
                 http::Method::GET,
-                |mut req: HttpRequest<HttpServerState>| {
+                |req: HttpRequest<HttpServerState>| {
                     // removing ScubaSampleBuilder will disable scuba logging for this request.
                     req.extensions_mut().remove::<ScubaSampleBuilder>();
                     HttpResponse::Ok().body("ok")

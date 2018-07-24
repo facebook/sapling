@@ -17,12 +17,12 @@ enum TimeMeasurement {
 }
 
 pub trait ResponseTime<S>: Middleware<S> {
-    fn start_timer(&self, req: &mut HttpRequest<S>) {
+    fn start_timer(&self, req: &HttpRequest<S>) {
         req.extensions_mut()
             .insert(TimeMeasurement::StartTime(Instant::now()));
     }
 
-    fn time_cost(&self, req: &mut HttpRequest<S>) -> Option<u64> {
+    fn time_cost(&self, req: &HttpRequest<S>) -> Option<u64> {
         let time = req.extensions().get::<TimeMeasurement>().map(|x| x.clone());
 
         if let Some(time) = time {
