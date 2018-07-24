@@ -285,6 +285,8 @@ def getrepocaps(orig, repo, *args, **kwargs):
     caps = orig(repo, *args, **kwargs)
     if treeenabled(repo.ui):
         caps["treemanifest"] = ("True",)
+        if repo.ui.configbool("treemanifest", "treeonly"):
+            caps["treeonly"] = ("True",)
         if repo.svfs.treemanifestserver:
             caps["treemanifestserver"] = ("True",)
     return caps
@@ -1404,8 +1406,12 @@ def _unpackmanifestscg1(orig, self, repo, revmap, trp, numchanges):
 
 def _convertdeltastotrees(repo, deltas):
     lrucache = util.lrucachedict(10)
+    first = False
     with progress.spinner(repo.ui, _("converting manifests to trees")):
         for chunkdata in deltas:
+            if not first:
+                first = True
+                repo.ui.debug("converting flat manifests to treemanifests\n")
             _convertdeltatotree(repo, lrucache, *chunkdata)
 
 

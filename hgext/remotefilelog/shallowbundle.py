@@ -82,7 +82,7 @@ class shallowcg1packer(changegroup.cg1packer):
 
     def _cansendflat(self, mfnodes):
         repo = self._repo
-        if "treeonly" in self._bundlecaps:
+        if "treeonly" in self._bundlecaps or "True" in self._b2caps.get("treeonly", []):
             return False
 
         if not util.safehasattr(repo.manifestlog, "_revlog"):

@@ -405,15 +405,18 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
   > [hooks]
   > prepushrebase.fail=true
   > EOF
-  $ hg push -r 2 --to master
-  pushing to ssh://user@dummy/master
-  searching for changes
+  $ hg push -r 2 --to master --debug 2>&1 | egrep '(remote:|add|converting)'
+  remote: * (glob)
+  remote: * (glob)
+  remote: 1
   remote: pushing 1 changeset:
   remote:     7ec3c5c54734  add y
   remote: 1 new changeset from the server will be downloaded
   adding changesets
+  add changeset 4f84204095e0
   adding manifests
   adding file changes
+  adding y revisions
   added 1 changesets with 1 changes to 1 files (+1 heads)
 
   $ cd ../master

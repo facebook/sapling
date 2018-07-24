@@ -856,7 +856,9 @@ def _addpushbackchangegroup(repo, reply, outgoing):
         cgversions.add("01")
     version = max(cgversions & set(changegroup.supportedoutgoingversions(repo)))
 
-    cg = changegroup.makestream(repo, outgoing, version, "rebase:reply")
+    cg = changegroup.makestream(
+        repo, outgoing, version, "rebase:reply", b2caps=reply.capabilities
+    )
 
     cgpart = reply.newpart("CHANGEGROUP", data=cg)
     if version != "01":
