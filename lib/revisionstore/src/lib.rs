@@ -3,17 +3,21 @@
 //! and file data)
 
 extern crate byteorder;
+#[cfg(not(fbcode_build))]
 extern crate crypto;
 #[macro_use]
 extern crate failure;
 extern crate lz4_pyframe;
 extern crate memmap;
-extern crate rand;
+#[cfg(fbcode_build)]
+extern crate rust_crypto as crypto;
 extern crate tempfile;
 
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
+#[cfg(test)]
+extern crate rand;
 
 mod dataindex;
 mod fanouttable;
