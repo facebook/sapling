@@ -593,7 +593,7 @@ def _makebundlefile(op, part, cgversion):
                 while data:
                     fp.write(data)
                     data = part.read(mmap.PAGESIZE)
-            elif cgversion == "02":
+            elif cgversion in ["02", "03"]:
                 bundle = bundle2.bundle20(op.repo.ui, {})
                 cgpart = bundle.newpart("CHANGEGROUP", data=part.read())
                 cgpart.addparam("version", cgversion)
