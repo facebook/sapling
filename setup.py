@@ -1540,7 +1540,9 @@ rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
 """
 
 if havefb:
-    rustvendoredcrates.append(RustVendoredCrates("hg-vendored-crates", dest="build"))
+    rustvendoredcrates.append(
+        RustVendoredCrates("tp2-crates-io", dest="build/tp2-crates-io")
+    )
     cargoconfig += """
 # Vendor in Rust crates.  "build/hg-vendored-crates" is populated by the
 # contents of a vendor package downloaded from Dewey with the hash in
@@ -1550,7 +1552,7 @@ if havefb:
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
-directory = "build/hg-vendored-crates"
+directory = "build/tp2-crates-io/vendor"
     """
 
 try:
