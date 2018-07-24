@@ -70,7 +70,7 @@ Do infinitepush (aka commit cloud) push
   47da8b81097c5534f3eb7947a8764dd323cffe3d
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 3 parts total
-  bundle2-output-part: "replycaps" 250 bytes payload
+  bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 0 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   bundle2-input-bundle: 1 params no-transaction
@@ -115,12 +115,12 @@ Pushbackup also works
   95cad53aab1b0b33eceee14473b3983312721529
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 3 parts total
-  bundle2-output-part: "replycaps" 250 bytes payload
+  bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 0 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 2 parts total
-  bundle2-output-part: "replycaps" 250 bytes payload
+  bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   backup complete
   heads added: 95cad53aab1b0b33eceee14473b3983312721529
@@ -156,7 +156,7 @@ Pushbackup that pushes only bookmarks
   remote: 1
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 2 parts total
-  bundle2-output-part: "replycaps" 250 bytes payload
+  bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   backup complete
   heads added: 

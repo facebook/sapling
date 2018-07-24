@@ -256,7 +256,7 @@ push to Mononoke
   634de738bb0ff135e32d48567718fb9d7dedf575
   sending unbundle command
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 196 bytes payload
+  bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
