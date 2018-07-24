@@ -634,7 +634,7 @@ class TestBase(unittest.TestCase):
             tarball.extract(entry, path)
         return path
 
-    def fetch(
+    def clone(
         self,
         repo_path,
         subdir=None,
@@ -676,9 +676,13 @@ class TestBase(unittest.TestCase):
             cmd[:0] = ["--config", "%s=%s" % (k, v)]
 
         r = dispatch(cmd)
-        assert not r, "fetch of %s failed" % projectpath
+        assert not r, "clone of %s failed" % projectpath
 
-        return hg.repository(testui(), self.wc_path)
+        return self.wc_path
+
+    def fetch(self, svn_repo_path, *args, **opts):
+        hg_repo_path = self.clone(svn_repo_path, *args, **opts)
+        return hg.repository(testui(), hg_repo_path)
 
     def load(self, fixture_name):
         if fixture_name.endswith(".svndump"):
@@ -689,6 +693,10 @@ class TestBase(unittest.TestCase):
             assert False, "Unknown fixture type"
 
         return repo_path
+
+    def load_and_clone(self, fixture_name, *args, **opts):
+        svn_repo_path = self.load(fixture_name)
+        return self.clone(svn_repo_path, *args, **opts), svn_repo_path
 
     def load_and_fetch(self, fixture_name, *args, **opts):
         repo_path = self.load(fixture_name)
