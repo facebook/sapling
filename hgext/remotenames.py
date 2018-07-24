@@ -216,7 +216,8 @@ def expull(orig, repo, remote, *args, **kwargs):
     else:
         bookmarks = remote.listkeys("bookmarks")
 
-    res = orig(repo, remote, *args, **kwargs)
+    with extensions.wrappedfunction(setdiscovery, "findcommonheads", exfindcommonheads):
+        res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote, bookmarks)
     if repo.vfs.exists(_selectivepullenabledfile):
         if not _isselectivepull(repo.ui):
@@ -800,7 +801,6 @@ def extsetup(ui):
     extensions.wrapfunction(exchange.pushoperation, "__init__", expushop)
     extensions.wrapfunction(exchange, "push", expush)
     extensions.wrapfunction(exchange, "pull", expull)
-    extensions.wrapfunction(setdiscovery, "findcommonheads", exfindcommonheads)
     # _getdynamicblockers was renamed to pinnedrevs in 4.3
     blockername = "pinnedrevs"
     if not util.safehasattr(repoview, blockername):
