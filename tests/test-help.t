@@ -378,7 +378,6 @@ Test extension help:
        mq            manage a stack of patches
        myparent
        nointerrupt   warns but doesn't exit when the user first hits Ctrl+C
-       notify        hooks for sending email push notifications
        obsshelve     save and restore changes to the working directory
        ownercheck    prevent operations on repos not owned by the current user
        p4fastimport  p4fastimport - A fast importer from Perforce to Mercurial
