@@ -280,7 +280,8 @@ fn create_double_linknode(repo: BlobRepo) {
     };
 
     let child_commit = {
-        let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+        let (filehash, file_future) =
+            upload_file_one_parent(&repo, "blob", &fake_file_path, filehash);
 
         let (dirhash, manifest_dir_future) =
             upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
