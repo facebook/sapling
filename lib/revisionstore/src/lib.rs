@@ -3,14 +3,11 @@
 //! and file data)
 
 extern crate byteorder;
-#[cfg(not(fbcode_build))]
 extern crate crypto;
 #[macro_use]
 extern crate failure;
 extern crate lz4_pyframe;
 extern crate memmap;
-#[cfg(fbcode_build)]
-extern crate rust_crypto as crypto;
 extern crate tempfile;
 
 #[cfg(test)]
