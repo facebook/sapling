@@ -303,6 +303,10 @@ def wraprepo(repo):
                 results = [(path, hex(fnode)) for (path, fnode) in files]
                 self.fileservice.prefetch(results)
 
+        def invalidate(self, **kwargs):
+            super(shallowrepository, self).invalidate(**kwargs)
+            makeunionstores(self)
+
     repo.__class__ = shallowrepository
 
     repo.shallowmatch = match.always(repo.root, "")

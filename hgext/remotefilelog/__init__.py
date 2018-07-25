@@ -1199,10 +1199,14 @@ def repack(ui, repo, *pats, **opts):
     options = {"packsonly": opts["packsonly"], "looseonly": opts["looseonly"]}
 
     try:
-        if opts.get("incremental"):
-            repackmod.incrementalrepack(repo, options=options)
-        else:
-            repackmod.fullrepack(repo, options=options)
+        with ui.configoverride({("format", "userustdatapack"): False}):
+            # Rebuild all the packs without rust data packs. Temporary until
+            # rust packs support repack.
+            repo.invalidate()
+            if opts.get("incremental"):
+                repackmod.incrementalrepack(repo, options=options)
+            else:
+                repackmod.fullrepack(repo, options=options)
     except repackmod.RepackAlreadyRunning as ex:
         # Don't propogate the exception if the repack is already in
         # progress, since we want the command to exit 0.
