@@ -165,7 +165,8 @@ def infinitepushbackuplogs(ui, repo):
     if not logdir:
         return "infinitepushbackup.logdir not set"
     try:
-        username = util.shortuser(ui.username())
+        # the user name from the machine
+        username = util.getuser()
     except Exception:
         username = "unknown"
 
@@ -189,7 +190,8 @@ def scmdaemonlog(ui, repo):
         return "commitcloud.scm_daemon_log_path not set"
 
     try:
-        username = util.shortuser(ui.username())
+        # the user name from the machine
+        username = util.getuser()
     except Exception:
         username = "unknown"
 
