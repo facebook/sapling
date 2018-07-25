@@ -13,6 +13,7 @@ import unittest
 
 import mercurial.ui
 import silenttestrunner
+from hgext.extlib.pyrevisionstore import datapack as rustdatapack
 from hgext.remotefilelog import constants
 from hgext.remotefilelog.basepack import (
     LARGEFANOUTPREFIX,
@@ -153,7 +154,7 @@ class datapacktestsbase(object):
             filename = "filename-%s" % i
             filerevs = []
             for j in range(random.randint(1, 100)):
-                content = "content-%s" % j
+                content = "content-%s-%s" % (i, j)
                 node = self.getHash(content)
                 lastnode = nullid
                 if len(filerevs) > 0:
@@ -177,12 +178,7 @@ class datapacktestsbase(object):
             filename = "%s.txt" % i
             content = "put-something-here \n" * i
             node = self.getHash(content)
-            meta = {
-                constants.METAKEYFLAG: i ** 4,
-                constants.METAKEYSIZE: len(content),
-                "Z": "random_string",
-                "_": "\0" * i,
-            }
+            meta = {constants.METAKEYFLAG: i ** 4, constants.METAKEYSIZE: len(content)}
             revisions.append((filename, node, nullid, content, meta))
         pack = self.createPack(revisions, version=1)
         for name, node, x, content, origmeta in revisions:
@@ -234,7 +230,7 @@ class datapacktestsbase(object):
         try:
             pack.add("filename", nullid, "contents")
             self.assertTrue(False, "datapack.add should throw")
-        except RuntimeError:
+        except (AttributeError, RuntimeError):
             pass
 
     def testBadVersionThrows(self):
@@ -501,6 +497,12 @@ class datapacktests(datapacktestsbase, unittest.TestCase):
 class fastdatapacktests(datapacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
         datapacktestsbase.__init__(self, fastdatapack, False, True)
+        unittest.TestCase.__init__(self, *args, **kwargs)
+
+
+class rustdatapacktests(datapacktestsbase, unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        datapacktestsbase.__init__(self, rustdatapack, False, True)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 
