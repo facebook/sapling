@@ -244,17 +244,23 @@ def unbundle(orig, repo, cg, heads, source, url):
                 repo.manifestlog[bin(mfnode)].read()
 
     try:
+        start_time = time.time()
         result = orig(repo, cg, heads, source, url)
-        recording.recordpushrebaserequest(repo, conflicts=None, pushrebase_errmsg=None)
+        recording.recordpushrebaserequest(
+            repo, conflicts=None, pushrebase_errmsg=None, start_time=start_time
+        )
         return result
     except ConflictsError as ex:
         recording.recordpushrebaserequest(
-            repo, conflicts="\n".join(sorted(ex.conflicts)), pushrebase_errmsg=None
+            repo,
+            conflicts="\n".join(sorted(ex.conflicts)),
+            pushrebase_errmsg=None,
+            start_time=start_time,
         )
         raise
     except Exception as ex:
         recording.recordpushrebaserequest(
-            repo, conflicts=None, pushrebase_errmsg="%s" % ex
+            repo, conflicts=None, pushrebase_errmsg="%s" % ex, start_time=start_time
         )
         raise
 

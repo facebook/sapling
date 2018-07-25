@@ -10,5 +10,6 @@ CREATE TABLE `pushrebaserecording` (
   `timestamps` LONGTEXT NOT NULL,
   `recorded_manifest_hashes` LONGTEXT NOT NULL,
   `real_manifest_hashes` LONGTEXT NOT NULL,
+  `duration_ms` int(10),
 PRIMARY KEY (`id`) )
 ENGINE=InnoDB DEFAULT CHARSET=utf8;

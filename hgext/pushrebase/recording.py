@@ -6,21 +6,17 @@
 # Facilities to record pushrebase traffic. Primary motivation is to replay it
 # on another hg backend e. g. Mononoke
 
-import functools
 import json
-import os
 import subprocess
-import tempfile
-from collections import defaultdict
+import time
 
-from mercurial import bundle2
 from mercurial.i18n import _
 from mercurial.node import hex
 
 from ..extlib import mysqlutil
 
 
-def recordpushrebaserequest(repo, conflicts, pushrebase_errmsg):
+def recordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
     """Uploads bundle parts to a bundlestore, and then inserts the parameters
     in the mysql table
     """
@@ -29,15 +25,22 @@ def recordpushrebaserequest(repo, conflicts, pushrebase_errmsg):
         return
 
     try:
-        return _dorecordpushrebaserequest(repo, conflicts, pushrebase_errmsg)
+        return _dorecordpushrebaserequest(
+            repo, conflicts, pushrebase_errmsg, start_time
+        )
     except Exception as ex:
         # There is no need to fail the push, but at least let's log
         # the problem
         repo.ui.warn(_("error while recording pushrebase request %s") % ex)
 
 
-def _dorecordpushrebaserequest(repo, conflicts, pushrebase_errmsg):
-    logparams = {"conflicts": conflicts, "pushrebase_errmsg": pushrebase_errmsg}
+def _dorecordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
+    durationms = (time.time() - start_time) * 1000
+    logparams = {
+        "conflicts": conflicts,
+        "pushrebase_errmsg": pushrebase_errmsg,
+        "duration_ms": durationms,
+    }
     uploaderrmsg = None
 
     # Upload bundle to the remote storage, and collect the handles.
