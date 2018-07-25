@@ -3,12 +3,16 @@ use cpython::{exc, FromPyObject, PyBytes, PyErr, PyObject, PyResult, PyTuple, Py
 use failure::Error;
 use pyerror::pyerr_to_error;
 use revisionstore::datastore::Delta;
-use revisionstore::error::Result;
+use revisionstore::error::{KeyError, Result};
 use revisionstore::key::Key;
 use revisionstore::node::Node;
 
 pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
-    PyErr::new::<exc::KeyError, _>(py, format!("{}", error.cause()))
+    if error.downcast_ref::<KeyError>().is_some() {
+        PyErr::new::<exc::KeyError, _>(py, format!("{}", error.cause()))
+    } else {
+        PyErr::new::<exc::RuntimeError, _>(py, format!("{}", error.cause()))
+    }
 }
 
 pub fn to_key(py: Python, name: &PyBytes, node: &PyBytes) -> Key {
