@@ -92,9 +92,15 @@ use node::Node;
 #[fail(display = "Datapack Error: {:?}", _0)]
 struct DataPackError(String);
 
+#[derive(Clone, PartialEq)]
+pub enum DataPackVersion {
+    Zero,
+    One,
+}
+
 pub struct DataPack {
     mmap: Mmap,
-    version: u8,
+    version: DataPackVersion,
     index: DataIndex,
 }
 
@@ -109,8 +115,29 @@ pub struct DataEntry<'a> {
     next_offset: u64,
 }
 
+impl DataPackVersion {
+    fn new(value: u8) -> Result<Self> {
+        match value {
+            0 => Ok(DataPackVersion::Zero),
+            1 => Ok(DataPackVersion::One),
+            _ => {
+                Err(DataPackError(format!("invalid datapack version number '{:?}'", value)).into())
+            }
+        }
+    }
+}
+
+impl From<DataPackVersion> for u8 {
+    fn from(version: DataPackVersion) -> u8 {
+        match version {
+            DataPackVersion::Zero => 0,
+            DataPackVersion::One => 1,
+        }
+    }
+}
+
 impl<'a> DataEntry<'a> {
-    pub fn new(buf: &'a [u8], offset: u64, version: u8) -> Result<Self> {
+    pub fn new(buf: &'a [u8], offset: u64, version: DataPackVersion) -> Result<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(offset);
 
@@ -156,7 +183,7 @@ impl<'a> DataEntry<'a> {
             flags: None,
             size: None,
         };
-        if version == 1 {
+        if version == DataPackVersion::One {
             metadata = Metadata::read(&mut cur)?;
         }
 
@@ -237,7 +264,7 @@ impl DataPack {
         }
 
         let mmap = unsafe { MmapOptions::new().len(len as usize).map(&file)? };
-        let version = mmap[0];
+        let version = DataPackVersion::new(mmap[0])?;
         let index_path = path.with_extension("dataidx");
         Ok(DataPack {
             mmap: mmap,
@@ -251,7 +278,7 @@ impl DataPack {
     }
 
     pub fn read_entry(&self, offset: u64) -> Result<DataEntry> {
-        DataEntry::new(self.mmap.as_ref(), offset, self.version)
+        DataEntry::new(self.mmap.as_ref(), offset, self.version.clone())
     }
 }
 
@@ -322,7 +349,7 @@ mod tests {
     use tempfile::TempDir;
 
     fn make_pack(tempdir: &TempDir, deltas: &Vec<(Delta, Option<Metadata>)>) -> DataPack {
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
+        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         for &(ref delta, ref metadata) in deltas.iter() {
             mutdatapack.add(&delta, metadata.clone()).unwrap();
         }

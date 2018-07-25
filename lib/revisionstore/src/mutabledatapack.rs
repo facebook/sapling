@@ -7,7 +7,7 @@ use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use dataindex::{DataIndex, DeltaLocation};
-use datapack::DataEntry;
+use datapack::{DataEntry, DataPackVersion};
 use datastore::{DataStore, Delta, Metadata};
 use failure::Error;
 use key::Key;
@@ -18,7 +18,7 @@ use tempfile::NamedTempFile;
 use error::Result;
 
 pub struct MutableDataPack {
-    version: u8,
+    version: DataPackVersion,
     dir: PathBuf,
     data_file: NamedTempFile,
     mem_index: HashMap<Node, DeltaLocation>,
@@ -36,7 +36,7 @@ impl MutableDataPack {
     /// when close() is called, at which point the MutableDataPack is consumed. If
     /// close() is not called, the temporary file is cleaned up when the object is
     /// release.
-    pub fn new(dir: &Path, version: u8) -> Result<Self> {
+    pub fn new(dir: &Path, version: DataPackVersion) -> Result<Self> {
         if !dir.is_dir() {
             return Err(format_err!(
                 "cannot create mutable datapack in non-directory '{:?}'",
@@ -46,8 +46,9 @@ impl MutableDataPack {
 
         let mut data_file = NamedTempFile::new_in(&dir)?;
         let mut hasher = Sha1::new();
-        data_file.write_u8(version)?;
-        hasher.input(&[version]);
+        let version_u8: u8 = version.clone().into();
+        data_file.write_u8(version_u8)?;
+        hasher.input(&[version_u8]);
 
         Ok(MutableDataPack {
             version: version,
@@ -80,7 +81,7 @@ impl MutableDataPack {
         if delta.key.name().len() >= u16::MAX as usize {
             return Err(MutableDataPackError("delta name is longer than 2^16".into()).into());
         }
-        if self.version == 0 && metadata.is_some() {
+        if self.version == DataPackVersion::Zero && metadata.is_some() {
             return Err(MutableDataPackError("v0 data pack cannot store metadata".into()).into());
         }
 
@@ -105,7 +106,7 @@ impl MutableDataPack {
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
         buf.write_all(&compressed)?;
 
-        if self.version == 1 {
+        if self.version == DataPackVersion::One {
             metadata.unwrap_or_default().write(&mut buf)?;
         }
 
@@ -137,7 +138,7 @@ impl MutableDataPack {
         // The add function assumes the file position is always at the end, so reset it.
         file.seek(SeekFrom::End(0))?;
 
-        let entry = DataEntry::new(&data, 0, self.version as u8)?;
+        let entry = DataEntry::new(&data, 0, self.version.clone())?;
         Ok((
             Delta {
                 data: entry.delta()?,
@@ -205,7 +206,7 @@ mod tests {
     #[test]
     fn test_basic_creation() {
         let tempdir = tempdir().unwrap();
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
+        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
             data: Rc::new([0, 1, 2]),
             base: None,
@@ -238,7 +239,8 @@ mod tests {
     fn test_basic_abort() {
         let tempdir = tempdir().unwrap();
         {
-            let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
+            let mut mutdatapack =
+                MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
             let delta = Delta {
                 data: Rc::new([0, 1, 2]),
                 base: None,
@@ -255,7 +257,7 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
 
         let tempdir = tempdir().unwrap();
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
+        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
             data: Rc::new([0, 1, 2]),
             base: None,
@@ -281,7 +283,7 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = tempdir().unwrap();
 
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
+        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
             data: Rc::new([0, 1, 2]),
             base: None,
@@ -319,7 +321,7 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = tempdir().unwrap();
 
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), 1).unwrap();
+        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
             data: Rc::new([0, 1, 2]),
             base: None,
