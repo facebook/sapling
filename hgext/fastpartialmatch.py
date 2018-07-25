@@ -90,6 +90,9 @@ except NameError:
 
 
 def extsetup(ui):
+    if ui.config("extensions", "clindex") == "":
+        # do nothing, if clindex is enabled
+        return
     extensions.wrapfunction(changelog.changelog, "_partialmatch", _partialmatch)
     extensions.wrapfunction(localrepo.localrepository, "commit", _localrepocommit)
     extensions.wrapfunction(
@@ -120,6 +123,9 @@ def extsetup(ui):
 
 
 def reposetup(ui, repo):
+    if ui.config("extensions", "clindex") == "":
+        # do nothing, if clindex is enabled
+        return
     isbundlerepo = repo.url().startswith("bundle:")
     if repo.local() and not isbundlerepo:
         # Add `ui` object and `usefastpartialmatch` to access it

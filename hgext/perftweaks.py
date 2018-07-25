@@ -55,7 +55,7 @@ configitem("perftweaks", "largecheckoutcount", default=0)
 
 def extsetup(ui):
     # developer config: extensions.clindex
-    if not (ui.config("extensions", "clindex") or "!").startswith("!"):
+    if ui.config("extensions", "clindex") == "":
         # disable cachenoderevs if clindex is enabled.
         ui.setconfig("perftweaks", "cachenoderevs", "false", "perftweaks")
     wrapfunction(tags, "_readtagcache", _readtagcache)
