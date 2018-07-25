@@ -26,10 +26,10 @@ Check if ":hg:`help TOPIC`" is valid:
   $ NPROC=`python -c 'import multiprocessing; print(multiprocessing.cpu_count())'`
   $ testrepohg files 'glob:{hgdemandimport,hgext,mercurial}/**/*.py' \
   > | sed 's|\\|/|g' \
-  > | xargs $PYTHON "$TESTTMP/scanhelptopics.py" > topics
+  > | xargs $PYTHON "$TESTTMP/scanhelptopics.py" > $TESTTMP/topics
 
 Remove subversion from the list; it does not work on macOS and casuses this test
 to print errors.
-  $ grep -v subversion topics > topics_filtered
-  $ cat topics_filtered | xargs -n1 -P $NPROC hg --cwd / help >/dev/null 2>$TESTTMP/results
+  $ grep -v subversion $TESTTMP/topics > $TESTTMP/topics_filtered
+  $ cat $TESTTMP/topics_filtered | xargs -n1 -P $NPROC hg --cwd / help >/dev/null 2>$TESTTMP/results
   $ sort $TESTTMP/results
