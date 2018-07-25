@@ -76,6 +76,7 @@ def makepackstores(repo):
         packpath,
         usecdatapack=repo.ui.configbool("remotefilelog", "fastdatapack"),
         deletecorruptpacks=True,
+        userustdatapack=repo.ui.configbool("format", "userustdatapack"),
     )
     packmetadatastore = historypackstore(repo.ui, packpath, deletecorruptpacks=True)
 

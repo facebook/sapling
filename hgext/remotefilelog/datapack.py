@@ -8,6 +8,7 @@ from mercurial.i18n import _
 from mercurial.node import hex, nullid
 
 from . import basepack, constants, shallowutil
+from ..extlib.pyrevisionstore import datapack as rustdatapack
 from .lz4wrapper import lz4compress, lz4decompress
 
 
@@ -23,7 +24,6 @@ try:
 except ImportError:
     cstore = None
 
-
 NODELENGTH = 20
 
 # The indicator value in the index for a fulltext entry.
@@ -38,14 +38,24 @@ class datapackstore(basepack.basepackstore):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
-    def __init__(self, ui, path, usecdatapack=False, deletecorruptpacks=False):
+    def __init__(
+        self,
+        ui,
+        path,
+        usecdatapack=False,
+        deletecorruptpacks=False,
+        userustdatapack=False,
+    ):
         self.usecdatapack = usecdatapack
+        self.userustdatapack = userustdatapack
         super(datapackstore, self).__init__(
             ui, path, deletecorruptpacks=deletecorruptpacks
         )
 
     def getpack(self, path):
-        if self.usecdatapack:
+        if self.userustdatapack:
+            return rustdatapack(path)
+        elif self.usecdatapack:
             return fastdatapack(path)
         else:
             return datapack(path)

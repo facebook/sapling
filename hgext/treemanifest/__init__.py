@@ -440,7 +440,12 @@ def setuptreestores(repo, mfl):
         ondemandstore = ondemandtreedatastore(repo)
 
         # Data store
-        datastore = datapackstore(ui, packpath, usecdatapack=True)
+        datastore = datapackstore(
+            ui,
+            packpath,
+            usecdatapack=True,
+            userustdatapack=ui.configbool("format", "userustdatapack"),
+        )
         revlogstore = manifestrevlogstore(repo)
         mfl.revlogstore = revlogstore
         if ui.configbool("treemanifest", "cacheserverstore"):
@@ -492,9 +497,18 @@ def setuptreestores(repo, mfl):
     # Data store
     # TODO: support cstore.uniondatapackstore here
     datastore = datapackstore(
-        ui, packpath, usecdatapack=usecdatapack, deletecorruptpacks=True
+        ui,
+        packpath,
+        usecdatapack=usecdatapack,
+        deletecorruptpacks=True,
+        userustdatapack=ui.configbool("format", "userustdatapack"),
     )
-    localdatastore = datapackstore(ui, localpackpath, usecdatapack=usecdatapack)
+    localdatastore = datapackstore(
+        ui,
+        localpackpath,
+        usecdatapack=usecdatapack,
+        userustdatapack=ui.configbool("format", "userustdatapack"),
+    )
     datastores = [datastore, localdatastore, mutablelocalstore, mutablesharedstore]
     if demanddownload:
         datastores.append(remotestore)

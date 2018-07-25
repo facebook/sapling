@@ -61,6 +61,8 @@ Configs:
     linkrev-fixup fastpath when creating a filectx from a descendant rev.
     The default is true, but this may make some operations cause many tree
     fetches when used in conjunction with treemanifest in treeonly mode.
+    ``format.userustdatapack`` switches to using the rust data pack
+    implementation.
 """
 from __future__ import absolute_import
 
