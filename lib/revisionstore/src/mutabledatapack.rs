@@ -159,6 +159,11 @@ impl DataStore for MutableDataPack {
         )
     }
 
+    fn get_delta(&self, key: &Key) -> Result<Delta> {
+        let (delta, _metadata) = self.read_entry(&key)?;
+        Ok(delta)
+    }
+
     fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_key = Some(key.clone());

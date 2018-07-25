@@ -261,6 +261,20 @@ impl DataStore for DataPack {
             "DataPack doesn't support raw get(), only getdeltachain"
         ))
     }
+
+    fn get_delta(&self, key: &Key) -> Result<Delta> {
+        let entry = self.index.get_entry(key.node())?;
+        let data_entry = self.read_entry(entry.pack_entry_offset)?;
+
+        Ok(Delta {
+            data: data_entry.delta()?,
+            base: data_entry
+                .delta_base()
+                .map(|delta_base| Key::new(key.name().into(), delta_base.clone())),
+            key: Key::new(key.name().into(), data_entry.node().clone()),
+        })
+    }
+
     fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_entry = self.index.get_entry(key.node())?;
@@ -418,6 +432,37 @@ mod tests {
         for &(ref delta, ref metadata) in revisions.iter() {
             let chain = pack.get_delta_chain(&delta.key).unwrap();
             assert_eq!(chain[0], *delta);
+        }
+    }
+
+    #[test]
+    fn test_get_delta() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let revisions = vec![
+            (
+                Delta {
+                    data: Rc::new([1, 2, 3, 4]),
+                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                },
+                None,
+            ),
+            (
+                Delta {
+                    data: Rc::new([1, 2, 3, 4]),
+                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                },
+                None,
+            ),
+        ];
+
+        let pack = make_pack(&tempdir, &revisions);
+        for &(ref expected_delta, _) in revisions.iter() {
+            let delta = pack.get_delta(&expected_delta.key).unwrap();
+            assert_eq!(expected_delta, &delta);
         }
     }
 

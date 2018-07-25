@@ -1,15 +1,17 @@
 // Copyright Facebook, Inc. 2018
 //! Python bindings for a Rust hg store
 use cpython::{PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult, PyString, Python,
-              PythonObject};
+              PythonObject, ToPyObject};
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
 use pythondatastore::PythonDataStore;
-use pythonutil::{from_delta_to_tuple, from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr};
+use pythonutil::{from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_key,
+                 to_pyerr};
 use revisionstore::datapack::DataPack;
 use revisionstore::datastore::DataStore;
 use revisionstore::key::Key;
+use revisionstore::node::Node;
 
 py_module_initializer!(
     pyrevisionstore,        // module name
@@ -82,6 +84,10 @@ py_class!(class datapack |py| {
         <DataStorePyExt>::get(self.store(py).as_ref(), py, name, node)
     }
 
+    def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+        <DataStorePyExt>::get_delta(self.store(py).as_ref(), py, name, node)
+    }
+
     def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
         <DataStorePyExt>::get_delta_chain(self.store(py).as_ref(), py, name, node)
     }
@@ -98,6 +104,7 @@ py_class!(class datapack |py| {
 trait DataStorePyExt {
     fn get(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes>;
     fn get_delta_chain(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList>;
+    fn get_delta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject>;
     fn get_meta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
     fn get_missing(&self, py: Python, keys: &PyList) -> PyResult<PyList>;
 }
@@ -108,6 +115,30 @@ impl<T: DataStore> DataStorePyExt for T {
         let result = <DataStore>::get(self, &key).map_err(|e| to_pyerr(py, &e))?;
 
         Ok(PyBytes::new(py, &result[..]))
+    }
+
+    fn get_delta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+        let key = to_key(py, name, node);
+        let delta = self.get_delta(&key).map_err(|e| to_pyerr(py, &e))?;
+
+        let (base_name, base_node) = if let Some(key) = delta.base {
+            from_key(py, &key)
+        } else {
+            (
+                PyBytes::new(py, key.name()),
+                PyBytes::new(py, Node::null_id().as_ref()),
+            )
+        };
+
+        let bytes = PyBytes::new(py, &delta.data);
+        let meta = <DataStorePyExt>::get_meta(self, py.clone(), &name, &node)?;
+        Ok((
+            bytes.into_object(),
+            base_name.into_object(),
+            base_node.into_object(),
+            meta.into_object(),
+        ).into_py_object(py)
+            .into_object())
     }
 
     fn get_delta_chain(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {

@@ -1,7 +1,9 @@
 use cpython::{exc, FromPyObject, PyBytes, PyErr, PyObject, PyResult, PyTuple, Python,
               PythonObject, ToPyObject};
 use failure::Error;
+use pyerror::pyerr_to_error;
 use revisionstore::datastore::Delta;
+use revisionstore::error::Result;
 use revisionstore::key::Key;
 use revisionstore::node::Node;
 
@@ -77,4 +79,8 @@ pub fn from_tuple_to_key(py: Python, py_tuple: &PyObject) -> PyResult<Key> {
     let name = <&PyBytes>::extract(py, &py_tuple[0])?;
     let node = <&PyBytes>::extract(py, &py_tuple[1])?;
     Ok(to_key(py, &name, &node))
+}
+
+pub fn bytes_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Result<PyBytes> {
+    PyBytes::extract(py, &tuple.get_item(py, index)).map_err(|e| pyerr_to_error(py, e))
 }

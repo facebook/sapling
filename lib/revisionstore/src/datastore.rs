@@ -19,6 +19,7 @@ pub struct Metadata {
 
 pub trait DataStore {
     fn get(&self, key: &Key) -> Result<Vec<u8>>;
+    fn get_delta(&self, key: &Key) -> Result<Delta>;
     fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>>;
     fn get_meta(&self, key: &Key) -> Result<Metadata>;
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>>;

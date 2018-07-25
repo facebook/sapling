@@ -1,7 +1,8 @@
-use cpython::{FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python,
+use cpython::{FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python,
               PythonObject};
 use pyerror::pyerr_to_error;
-use pythonutil::{from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key};
+use pythonutil::{bytes_from_tuple, from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key,
+                 to_key};
 use revisionstore::datastore::{DataStore, Delta, Metadata};
 use revisionstore::error::Result;
 use revisionstore::key::Key;
@@ -35,6 +36,34 @@ impl DataStore for PythonDataStore {
         let py_bytes = PyBytes::extract(py, &py_data).map_err(|e| pyerr_to_error(py, e))?;
 
         Ok(py_bytes.data(py).to_vec())
+    }
+
+    fn get_delta(&self, key: &Key) -> Result<Delta> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let py_name = PyBytes::new(py, key.name());
+        let py_node = PyBytes::new(py, key.node().as_ref());
+        let py_delta = self.py_store
+            .call_method(py, "getdelta", (py_name, py_node), None)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        let py_tuple = PyTuple::extract(py, &py_delta).map_err(|e| pyerr_to_error(py, e))?;
+
+        let py_name = bytes_from_tuple(py, &py_tuple, 0)?;
+        let py_node = bytes_from_tuple(py, &py_tuple, 1)?;
+        let py_delta_name = bytes_from_tuple(py, &py_tuple, 2)?;
+        let py_delta_node = bytes_from_tuple(py, &py_tuple, 3)?;
+        let py_bytes = bytes_from_tuple(py, &py_tuple, 4)?;
+
+        let base_key = to_key(py, &py_delta_name, &py_delta_node);
+        Ok(Delta {
+            data: py_bytes.data(py).to_vec().into(),
+            base: if base_key.node().is_null() {
+                None
+            } else {
+                Some(base_key)
+            },
+            key: to_key(py, &py_name, &py_node),
+        })
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {

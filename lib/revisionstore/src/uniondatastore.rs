@@ -60,6 +60,23 @@ impl DataStore for UnionDataStore {
         get_full_text(basetext.data.as_ref(), &deltas).map_err(|e| err_msg(e))
     }
 
+    fn get_delta(&self, key: &Key) -> Result<Delta> {
+        for store in self {
+            match store.get_delta(key) {
+                Ok(res) => return Ok(res),
+                Err(e) => match e.downcast_ref::<KeyError>() {
+                    Some(_) => continue,
+                    None => return Err(e),
+                },
+            }
+        }
+
+        Err(KeyError::from(UnionDataStoreError(format!(
+            "No delta found for key {:?}",
+            key
+        ))).into())
+    }
+
     fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
         let mut current_key = Some(key.clone());
         let mut delta_chain = Vec::new();
@@ -133,6 +150,10 @@ mod tests {
             Err(KeyError::from(EmptyDataStoreError).into())
         }
 
+        fn get_delta(&self, _key: &Key) -> Result<Delta> {
+            Err(KeyError::from(EmptyDataStoreError).into())
+        }
+
         fn get_delta_chain(&self, _key: &Key) -> Result<Vec<Delta>> {
             Err(KeyError::from(EmptyDataStoreError).into())
         }
@@ -148,6 +169,10 @@ mod tests {
 
     impl DataStore for BadDataStore {
         fn get(&self, _key: &Key) -> Result<Vec<u8>> {
+            Err(BadDataStoreError.into())
+        }
+
+        fn get_delta(&self, _key: &Key) -> Result<Delta> {
             Err(BadDataStoreError.into())
         }
 
