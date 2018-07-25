@@ -282,6 +282,7 @@ impl RepoConfigs {
                         bucket: manifold_bucket,
                         prefix: this.manifold_prefix.unwrap_or("".into()),
                         db_address,
+                        blobstore_cache_size: this.blobstore_cache_size.unwrap_or(100_000_000),
                         changesets_cache_size: this.changesets_cache_size.unwrap_or(100_000_000),
                         filenodes_cache_size: this.filenodes_cache_size.unwrap_or(100_000_000),
                         bonsai_hg_mapping_cache_size: this.bonsai_hg_mapping_cache_size

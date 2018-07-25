@@ -98,5 +98,4 @@ pub enum ErrorKind {
     #[fail(display = "Remove called on non-directory")] NotADirectory,
     #[fail(display = "Empty file path")] EmptyFilePath,
     #[fail(display = "Memory manifest conflict can not contain single entry")] SingleEntryConflict,
-    #[fail(display = "Cannot find cache pool {}", _0)] MissingCachePool(String),
 }

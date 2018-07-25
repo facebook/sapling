@@ -42,6 +42,7 @@ extern crate quickcheck;
 
 extern crate serde;
 
+extern crate asyncmemo;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate mononoke_types;

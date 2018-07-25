@@ -15,7 +15,6 @@
 
 extern crate blobrepo;
 extern crate blobstore;
-extern crate cachelib;
 extern crate clap;
 extern crate failure_ext as failure;
 extern crate futures;
@@ -149,6 +148,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
             bucket: bucket.to_string(),
             prefix: prefix.to_string(),
             db_address: xdb_tier.to_string(),
+            blobstore_cache_size: default_cache_size,
             changesets_cache_size: default_cache_size,
             filenodes_cache_size: default_cache_size,
             bonsai_hg_mapping_cache_size: default_cache_size,

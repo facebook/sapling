@@ -12,7 +12,6 @@ extern crate actix_web;
 extern crate blobrepo;
 extern crate bookmarks;
 extern crate bytes;
-extern crate cachelib;
 extern crate clap;
 #[macro_use]
 extern crate cloned;
@@ -235,22 +234,7 @@ fn main() -> Result<()> {
                 .value_name("PATH")
                 .help("path to the ssl ca file"),
         )
-        .arg(Arg::from_usage(
-            "--cache-size-gb [SIZE] 'size of the cachelib cache, in GiB'",
-        ))
         .get_matches();
-
-    let cache_size = matches
-        .value_of("cache-size-gb")
-        .unwrap_or("20")
-        .parse::<usize>()
-        .unwrap() * 1024 * 1024 * 1024;
-
-    cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size)).unwrap();
-
-    cachelib::get_or_create_pool("blobstore-blobs", cachelib::get_available_space() * 3 / 4)
-        .unwrap();
-    cachelib::get_or_create_pool("blobstore-presence", cachelib::get_available_space()).unwrap();
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");

@@ -13,6 +13,7 @@ memmap = "0.6.1"
 nom = "3.2.1"
 time = "0.1.38"
 
+asyncmemo = { path = "../asyncmemo" }
 bookmarks = { path = "../bookmarks" }
 futures-ext = { path = "../futures-ext" }
 mercurial-types = { path = "../mercurial-types" }

@@ -6,6 +6,7 @@
 
 #![deny(warnings)]
 
+extern crate asyncmemo;
 extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;
@@ -42,6 +43,9 @@ mod counted_blobstore;
 pub use counted_blobstore::CountedBlobstore;
 
 mod dummy_lease;
+
+mod in_memory_cache;
+pub use in_memory_cache::MemoizedBlobstore;
 
 mod in_process_lease;
 

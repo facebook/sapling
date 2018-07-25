@@ -10,7 +10,6 @@
 
 extern crate ascii;
 extern crate bytes;
-extern crate cachelib;
 extern crate clap;
 #[macro_use]
 extern crate failure_ext as failure;
