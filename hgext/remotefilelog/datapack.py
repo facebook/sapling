@@ -257,8 +257,8 @@ class datapack(basepack.basepack):
 
         if len(allkeys - repackedkeys) == 0:
             if self._path not in ledger.created:
-                util.unlinkpath(self.indexpath, ignoremissing=True)
-                util.unlinkpath(self.packpath, ignoremissing=True)
+                util.unlinkpath(self.indexpath(), ignoremissing=True)
+                util.unlinkpath(self.packpath(), ignoremissing=True)
 
     def __iter__(self):
         for f, n, deltabase, deltalen in self.iterentries():
@@ -366,12 +366,9 @@ class fastdatapack(basepack.basepack):
 
     def __init__(self, path):
         self._path = path
-        self.packpath = path + self.PACKSUFFIX
-        self.indexpath = path + self.INDEXSUFFIX
+        self._packpath = path + self.PACKSUFFIX
+        self._indexpath = path + self.INDEXSUFFIX
         self.datapack = cstore.datapack(path)
-
-    def path(self):
-        return self._path
 
     def getmissing(self, keys):
         missing = []
@@ -424,8 +421,8 @@ class fastdatapack(basepack.basepack):
 
         if len(allkeys - repackedkeys) == 0:
             if self._path not in ledger.created:
-                util.unlinkpath(self.indexpath, ignoremissing=True)
-                util.unlinkpath(self.packpath, ignoremissing=True)
+                util.unlinkpath(self.indexpath(), ignoremissing=True)
+                util.unlinkpath(self.packpath(), ignoremissing=True)
 
     def __iter__(self):
         return self.datapack.__iter__()

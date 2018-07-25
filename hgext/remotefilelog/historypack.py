@@ -291,8 +291,8 @@ class historypack(basepack.basepack):
 
         if len(allkeys - repackedkeys) == 0:
             if self._path not in ledger.created:
-                util.unlinkpath(self.indexpath, ignoremissing=True)
-                util.unlinkpath(self.packpath, ignoremissing=True)
+                util.unlinkpath(self.indexpath(), ignoremissing=True)
+                util.unlinkpath(self.packpath(), ignoremissing=True)
 
     def __iter__(self):
         for f, n, x, x, x, x in self.iterentries():

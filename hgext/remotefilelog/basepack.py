@@ -317,8 +317,8 @@ class basepackstore(object):
                 for pack in badpacks:
                     self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path())
                     self.packs.remove(pack)
-                    util.tryunlink(pack.packpath)
-                    util.tryunlink(pack.indexpath)
+                    util.tryunlink(pack.packpath())
+                    util.tryunlink(pack.indexpath())
             else:
                 for pack in badpacks:
                     self.ui.warn(
@@ -351,11 +351,11 @@ class basepack(versionmixin):
 
     def __init__(self, path):
         self._path = path
-        self.packpath = path + self.PACKSUFFIX
-        self.indexpath = path + self.INDEXSUFFIX
+        self._packpath = path + self.PACKSUFFIX
+        self._indexpath = path + self.INDEXSUFFIX
 
-        self.indexsize = os.stat(self.indexpath).st_size
-        self.datasize = os.stat(self.packpath).st_size
+        self.indexsize = os.stat(self._indexpath).st_size
+        self.datasize = os.stat(self._packpath).st_size
 
         self._index = None
         self._data = None
@@ -374,6 +374,12 @@ class basepack(versionmixin):
 
     def path(self):
         return self._path
+
+    def packpath(self):
+        return self._packpath
+
+    def indexpath(self):
+        return self._indexpath
 
     @util.propertycache
     def _fanouttable(self):
@@ -407,12 +413,12 @@ class basepack(versionmixin):
             self._data.close()
 
         # TODO: use an opener/vfs to access these paths
-        with util.posixfile(self.indexpath, PACKOPENMODE) as indexfp:
+        with util.posixfile(self.indexpath(), PACKOPENMODE) as indexfp:
             # memory-map the file, size 0 means whole file
             self._index = litemmap.mmap(
                 indexfp.fileno(), 0, access=litemmap.pymmap.ACCESS_READ
             )
-        with util.posixfile(self.packpath, PACKOPENMODE) as datafp:
+        with util.posixfile(self.packpath(), PACKOPENMODE) as datafp:
             self._data = litemmap.mmap(
                 datafp.fileno(), 0, access=litemmap.pymmap.ACCESS_READ
             )

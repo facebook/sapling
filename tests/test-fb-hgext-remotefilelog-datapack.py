@@ -347,9 +347,9 @@ class datapacktestsbase(object):
 
             pack = self.createPack(chain, packdir)
             if firstpack is None:
-                firstpack = pack.packpath
+                firstpack = pack.packpath()
             elif secondindex is None:
-                secondindex = pack.indexpath
+                secondindex = pack.indexpath()
 
             deltachains.append(chain)
 
