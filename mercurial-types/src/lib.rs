@@ -51,12 +51,12 @@ extern crate ascii;
 extern crate asyncmemo;
 extern crate bincode;
 extern crate bytes;
+extern crate crypto;
 #[macro_use]
 extern crate diesel;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate itertools;
-extern crate rust_crypto;
 extern crate rust_thrift;
 extern crate slog;
 #[macro_use]

@@ -8,9 +8,8 @@ use std::fmt::{self, Debug, Display};
 use std::str::FromStr;
 
 use ascii::{AsciiStr, AsciiString};
+use crypto::{digest::Digest, sha1};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
-use rust_crypto::digest::Digest;
-use rust_crypto::sha1;
 
 use thrift;
 
