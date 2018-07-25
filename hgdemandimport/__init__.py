@@ -57,6 +57,7 @@ ignore = [
     "__builtin__",
     "builtins",
     "urwid.command_map",  # for pudb
+    "_thread",  # For RLock
 ]
 
 _pypy = "__pypy__" in sys.builtin_module_names
