@@ -82,7 +82,7 @@ use std::io::{Cursor, Read};
 use std::path::Path;
 use std::rc::Rc;
 
-use dataindex::DataIndex;
+use dataindex::{DataIndex, DeltaBaseOffset};
 use datastore::{DataStore, Delta, Metadata};
 use error::Result;
 use key::Key;
@@ -288,9 +288,8 @@ impl DataStore for DataPack {
                 key: Key::new(key.name().into(), data_entry.node().clone()),
             });
 
-            if next_entry.delta_base_offset() != -1 {
-                next_entry = self.index
-                    .read_entry(next_entry.delta_base_offset() as usize)?;
+            if let DeltaBaseOffset::Offset(offset) = next_entry.delta_base_offset() {
+                next_entry = self.index.read_entry(offset as usize)?;
             } else {
                 break;
             }

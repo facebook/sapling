@@ -33,7 +33,7 @@ pub struct DeltaLocation {
 #[derive(Debug)]
 pub struct IndexEntry {
     node: Node,
-    delta_base_offset: i32,
+    delta_base_offset: u32,
     pack_entry_offset: u64,
     pack_entry_size: u64,
 }
@@ -41,13 +41,17 @@ pub struct IndexEntry {
 impl IndexEntry {
     pub fn new(
         node: Node,
-        delta_base_offset: i32,
+        delta_base_offset: DeltaBaseOffset,
         pack_entry_offset: u64,
         pack_entry_size: u64,
     ) -> Self {
         IndexEntry {
             node: node,
-            delta_base_offset: delta_base_offset,
+            delta_base_offset: match delta_base_offset {
+                DeltaBaseOffset::FullText => 0xffffffff,
+                DeltaBaseOffset::Missing => 0xfffffffe,
+                DeltaBaseOffset::Offset(value) => value,
+            },
             pack_entry_offset: pack_entry_offset,
             pack_entry_size: pack_entry_size,
         }
@@ -57,8 +61,14 @@ impl IndexEntry {
         &self.node
     }
 
-    pub fn delta_base_offset(&self) -> i32 {
-        self.delta_base_offset.clone()
+    pub fn delta_base_offset(&self) -> DeltaBaseOffset {
+        if self.delta_base_offset == 0xffffffff {
+            DeltaBaseOffset::FullText
+        } else if self.delta_base_offset == 0xfffffffe {
+            DeltaBaseOffset::Missing
+        } else {
+            DeltaBaseOffset::Offset(self.delta_base_offset.clone())
+        }
     }
 
     pub fn pack_entry_offset(&self) -> u64 {
@@ -67,6 +77,35 @@ impl IndexEntry {
 
     pub fn pack_entry_size(&self) -> u64 {
         self.pack_entry_size.clone()
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum DeltaBaseOffset {
+    Offset(u32),
+    FullText,
+    Missing,
+}
+
+impl DeltaBaseOffset {
+    fn new(value: i32) -> Result<Self> {
+        if value >= 0 {
+            Ok(DeltaBaseOffset::Offset(value as u32))
+        } else if value == -1 {
+            Ok(DeltaBaseOffset::FullText)
+        } else if value == -2 {
+            Ok(DeltaBaseOffset::Missing)
+        } else {
+            Err(DataIndexError(format!("invalid delta base offset value '{:?}'", value)).into())
+        }
+    }
+
+    fn to_i32(&self) -> i32 {
+        match self {
+            &DeltaBaseOffset::Offset(value) => value as i32,
+            &DeltaBaseOffset::FullText => -1,
+            &DeltaBaseOffset::Missing => -2,
+        }
     }
 }
 
@@ -80,6 +119,7 @@ impl IndexEntry {
         )))?;
         let node = Node::from_slice(node_slice)?;
         let delta_base_offset = cur.read_i32::<BigEndian>()?;
+        let delta_base_offset = DeltaBaseOffset::new(delta_base_offset)?;
         let pack_entry_offset = cur.read_u64::<BigEndian>()?;
         let pack_entry_size = cur.read_u64::<BigEndian>()?;
         Ok(IndexEntry::new(
@@ -92,7 +132,7 @@ impl IndexEntry {
 
     fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
         writer.write_all(self.node().as_ref())?;
-        writer.write_i32::<BigEndian>(self.delta_base_offset())?;
+        writer.write_i32::<BigEndian>(self.delta_base_offset().to_i32())?;
         writer.write_u64::<BigEndian>(self.pack_entry_offset())?;
         writer.write_u64::<BigEndian>(self.pack_entry_size())?;
         Ok(())
@@ -191,20 +231,17 @@ impl DataIndex {
         // Write index
         writer.write_u64::<BigEndian>(values.len() as u64)?;
         for &(node, value) in values.iter() {
-            let delta_base_offset = value.delta_base.map_or(-1, |delta_base| {
-                nodelocations
-                    .get(&delta_base)
-                    .map(|x| *x as i32)
-                    .unwrap_or(-1)
-                    .clone()
-            });
+            let delta_base_offset = value.delta_base.map_or(
+                DeltaBaseOffset::FullText,
+                |delta_base| {
+                    nodelocations
+                        .get(&delta_base)
+                        .map(|x| DeltaBaseOffset::Offset(*x as u32))
+                        .unwrap_or(DeltaBaseOffset::Missing)
+                },
+            );
 
-            let entry = IndexEntry {
-                node: node.clone(),
-                delta_base_offset: delta_base_offset,
-                pack_entry_offset: value.offset,
-                pack_entry_size: value.size,
-            };
+            let entry = IndexEntry::new(node.clone(), delta_base_offset, value.offset, value.size);
 
             entry.write(writer)?;
         }
@@ -276,6 +313,26 @@ mod tests {
         DataIndexOptions::read(&mut Cursor::new(buf)).expect_err("invalid read");
     }
 
+    #[test]
+    fn test_missing_delta_base() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let mut values: HashMap<Node, DeltaLocation> = HashMap::new();
+        let node = Node::random(&mut rng);
+        let base = Node::random(&mut rng);
+        values.insert(
+            node.clone(),
+            DeltaLocation {
+                delta_base: Some(base),
+                offset: 1,
+                size: 2,
+            },
+        );
+        let index = make_index(&values);
+
+        let delta = index.get_entry(&node).unwrap();
+        assert_eq!(delta.delta_base_offset(), DeltaBaseOffset::Missing);
+    }
+
     quickcheck! {
         fn test_header_serialization(version: u8, large: bool) -> bool {
             let version = version % 2;
@@ -313,10 +370,10 @@ mod tests {
             for &(node, size) in nodes.iter() {
                 let size = size + 1;
                 let entry = index.get_entry(&node).expect("get_entry");
-                assert_eq!(entry.node, node);
-                assert_eq!(entry.delta_base_offset, -1);
-                assert_eq!(entry.pack_entry_offset, offset);
-                assert_eq!(entry.pack_entry_size, size);
+                assert_eq!(entry.node(), &node);
+                assert_eq!(entry.delta_base_offset(), DeltaBaseOffset::FullText);
+                assert_eq!(entry.pack_entry_offset(), offset);
+                assert_eq!(entry.pack_entry_size(), size);
                 offset += size;
             }
 
