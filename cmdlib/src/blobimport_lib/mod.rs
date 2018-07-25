@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use failure::{err_msg, Error};
 use futures::{future, Future, Stream};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use slog::Logger;
 
 use blobrepo::BlobRepo;
@@ -60,12 +60,11 @@ impl Blobimport {
             commits_limit,
         }.upload()
             .buffer_unordered(100)
+            .enumerate()
             .map({
-                let mut cs_count = 0;
                 let logger = logger.clone();
-                move |cs| {
-                    debug!(logger, "inserted: {}", cs.get_changeset_id());
-                    cs_count = cs_count + 1;
+                move |(cs_count, cs)| {
+                    debug!(logger, "{} inserted: {}", cs_count, cs.get_changeset_id());
                     if cs_count % 5000 == 0 {
                         info!(logger, "inserted commits # {}", cs_count);
                     }
