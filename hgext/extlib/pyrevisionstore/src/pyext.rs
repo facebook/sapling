@@ -1,7 +1,7 @@
 // Copyright Facebook, Inc. 2018
 //! Python bindings for a Rust hg store
-use cpython::{PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult, PyString, Python,
-              PythonObject, ToPyObject};
+use cpython::{ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyIterator, PyList, PyObject,
+              PyResult, PyString, Python, PythonObject, ToPyObject};
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
@@ -50,8 +50,8 @@ py_class!(class datastore |py| {
         self.store(py).get_meta(py, name, node)
     }
 
-    def getmissing(&self, keys: &PyList) -> PyResult<PyList> {
-        self.store(py).get_missing(py, keys)
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        self.store(py).get_missing(py, &mut keys.iter(py)?)
     }
 });
 
@@ -96,8 +96,8 @@ py_class!(class datapack |py| {
         <DataStorePyExt>::get_meta(self.store(py).as_ref(), py, name, node)
     }
 
-    def getmissing(&self, keys: &PyList) -> PyResult<PyList> {
-        <DataStorePyExt>::get_missing(self.store(py).as_ref(), py, keys)
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        <DataStorePyExt>::get_missing(self.store(py).as_ref(), py, &mut keys.iter(py)?)
     }
 });
 
@@ -106,7 +106,7 @@ trait DataStorePyExt {
     fn get_delta_chain(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList>;
     fn get_delta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject>;
     fn get_meta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
-    fn get_missing(&self, py: Python, keys: &PyList) -> PyResult<PyList>;
+    fn get_missing(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
 }
 
 impl<T: DataStore> DataStorePyExt for T {
@@ -165,12 +165,13 @@ impl<T: DataStore> DataStorePyExt for T {
         Ok(metadict)
     }
 
-    fn get_missing(&self, py: Python, keys: &PyList) -> PyResult<PyList> {
+    fn get_missing(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
         // Copy the PyObjects into a vector so we can get a reference iterator.
         // This lets us get a Vector of Keys without copying the strings.
-        let keys = keys.iter(py)
-            .map(|k| from_tuple_to_key(py, &k))
-            .collect::<Result<Vec<Key>, PyErr>>()?;
+        let keys = keys.map(|k| match k {
+            Ok(k) => from_tuple_to_key(py, &k),
+            Err(e) => Err(e),
+        }).collect::<Result<Vec<Key>, PyErr>>()?;
         let missing = self.get_missing(&keys[..]).map_err(|e| to_pyerr(py, &e))?;
 
         let results = PyList::new(py, &[]);
