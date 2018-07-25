@@ -125,7 +125,7 @@ test_both_repotypes!(
 );
 
 fn create_one_changeset(repo: BlobRepo) {
-    let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
+    let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
     let expected_files = vec![
         RepoPath::file("dir/file")
@@ -172,8 +172,8 @@ test_both_repotypes!(
 );
 
 fn create_two_changesets(repo: BlobRepo) {
-    let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
-    let fake_dir_path = RepoPath::file("dir").expect("Can't generate fake RepoPath");
+    let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
+    let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
     let utf_author: String = "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into();
 
     let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
@@ -190,6 +190,8 @@ fn create_two_changesets(repo: BlobRepo) {
         vec![file_future, manifest_dir_future],
     );
 
+    let fake_file_path_no_dir = RepoPath::file("file").expect("Can't generate fake RepoPath");
+    let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path_no_dir);
     let (roothash, root_manifest_future) = upload_manifest_one_parent(
         &repo,
         format!("file\0{}\n", filehash),
@@ -200,7 +202,7 @@ fn create_two_changesets(repo: BlobRepo) {
     let commit2 = create_changeset_one_parent(
         &repo,
         root_manifest_future.map(Some).boxify(),
-        vec![],
+        vec![file_future],
         commit1.clone(),
     );
 
@@ -259,7 +261,7 @@ test_both_repotypes!(
 );
 
 fn create_double_linknode(repo: BlobRepo) {
-    let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
+    let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
 
     let (filehash, parent_commit) = {
@@ -325,10 +327,10 @@ fn check_linknode_creation(repo: BlobRepo) {
         .into_iter()
         .map(|id| {
             let path = RepoPath::file(
-                MPath::new(format!("file{}", id)).expect("String to MPath failed"),
+                MPath::new(format!("dir/file{}", id)).expect("String to MPath failed"),
             ).expect("Can't generate fake RepoPath");
             let (hash, future) = upload_file_no_parents(&repo, format!("blob id {}", id), &path);
-            ((hash, path), future)
+            ((hash, format!("file{}", id)), future)
         })
         .collect();
 
@@ -336,8 +338,8 @@ fn check_linknode_creation(repo: BlobRepo) {
 
     let manifest = metadata
         .iter()
-        .fold(String::new(), |mut acc, &(hash, ref path)| {
-            acc.push_str(format!("{}\0{}\n", path, hash).as_str());
+        .fold(String::new(), |mut acc, &(hash, ref basename)| {
+            acc.push_str(format!("{}\0{}\n", basename, hash).as_str());
             acc
         });
 
@@ -359,7 +361,9 @@ fn check_linknode_creation(repo: BlobRepo) {
 
     let cs_id = cs.get_changeset_id();
     // And check all the linknodes got created
-    metadata.into_iter().for_each(|(hash, path)| {
+    metadata.into_iter().for_each(|(hash, basename)| {
+        let path = RepoPath::file(format!("dir/{}", basename).as_str())
+            .expect("Can't generate fake RepoPath");
         let linknode = run_future(repo.get_linknode(path, &hash)).unwrap();
         assert!(
             linknode == cs_id,
