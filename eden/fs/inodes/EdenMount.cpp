@@ -229,7 +229,7 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
         folly::none);
   }
   return objectStore_->getTreeForCommit(parentCommits.parent1())
-      .then([this](std::shared_ptr<const Tree> tree) {
+      .thenValue([this](std::shared_ptr<const Tree> tree) {
         return TreeInodePtr::makeNew(this, std::move(tree));
       });
 }
@@ -676,7 +676,7 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
 
     return serverState_->getPrivHelper()
         ->fuseMount(getPath().stringPiece())
-        .then([this](folly::File&& fuseDevice) {
+        .thenValue([this](folly::File&& fuseDevice) {
           createFuseChannel(std::move(fuseDevice));
           return channel_->initialize()
               .then([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
@@ -721,7 +721,7 @@ void EdenMount::fuseInitSuccessful(
 
   std::move(fuseCompleteFuture)
       .via(serverState_->getThreadPool().get())
-      .then([this](FuseChannel::StopData&& stopData) {
+      .thenValue([this](FuseChannel::StopData&& stopData) {
         // If the FUSE device is no longer valid then the mount point has
         // been unmounted.
         if (!stopData.fuseDevice) {

@@ -1253,7 +1253,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRead(
 
   auto fh = dispatcher_->getFileHandle(read->fh);
   XLOG(DBG7) << "reading " << read->size << "@" << read->offset;
-  return fh->read(read->size, read->offset).then([](BufVec&& buf) {
+  return fh->read(read->size, read->offset).thenValue([](BufVec&& buf) {
     RequestData::get().sendReply(buf.getIov());
   });
 }
@@ -1286,7 +1286,7 @@ folly::Future<folly::Unit> FuseChannel::fuseLookup(
 
   XLOG(DBG7) << "FUSE_LOOKUP";
 
-  return dispatcher_->lookup(parent, name).then([](fuse_entry_out param) {
+  return dispatcher_->lookup(parent, name).thenValue([](fuse_entry_out param) {
     RequestData::get().sendReply(param);
   });
 }
@@ -1312,7 +1312,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
     if (getattr->getattr_flags & FUSE_GETATTR_FH) {
       return dispatcher_->getGenericFileHandle(getattr->fh)
           ->getattr()
-          .then([](Dispatcher::Attr attr) {
+          .thenValue([](Dispatcher::Attr attr) {
             RequestData::get().sendReply(attr.asFuseAttr());
           });
     }
@@ -1320,7 +1320,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
   }
 
   return dispatcher_->getattr(InodeNumber{header->nodeid})
-      .then([](Dispatcher::Attr attr) {
+      .thenValue([](Dispatcher::Attr attr) {
         RequestData::get().sendReply(attr.asFuseAttr());
       });
 }
@@ -1333,12 +1333,12 @@ folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
   if (setattr->valid & FATTR_FH) {
     return dispatcher_->getGenericFileHandle(setattr->fh)
         ->setattr(*setattr)
-        .then([](Dispatcher::Attr attr) {
+        .thenValue([](Dispatcher::Attr attr) {
           RequestData::get().sendReply(attr.asFuseAttr());
         });
   } else {
     return dispatcher_->setattr(InodeNumber{header->nodeid}, *setattr)
-        .then([](Dispatcher::Attr attr) {
+        .thenValue([](Dispatcher::Attr attr) {
           RequestData::get().sendReply(attr.asFuseAttr());
         });
   }
@@ -1363,7 +1363,8 @@ folly::Future<folly::Unit> FuseChannel::fuseSymlink(
   const StringPiece link{nameStr + name.stringPiece().size() + 1};
 
   return dispatcher_->symlink(InodeNumber{header->nodeid}, name, link)
-      .then([](fuse_entry_out param) { RequestData::get().sendReply(param); });
+      .thenValue(
+          [](fuse_entry_out param) { RequestData::get().sendReply(param); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseMknod(
@@ -1386,7 +1387,8 @@ folly::Future<folly::Unit> FuseChannel::fuseMknod(
 
   return dispatcher_
       ->mknod(InodeNumber{header->nodeid}, name, nod->mode, nod->rdev)
-      .then([](fuse_entry_out entry) { RequestData::get().sendReply(entry); });
+      .thenValue(
+          [](fuse_entry_out entry) { RequestData::get().sendReply(entry); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseMkdir(
@@ -1406,7 +1408,8 @@ folly::Future<folly::Unit> FuseChannel::fuseMkdir(
 
   return dispatcher_
       ->mkdir(InodeNumber{header->nodeid}, name, dir->mode & ~dir->umask)
-      .then([](fuse_entry_out entry) { RequestData::get().sendReply(entry); });
+      .thenValue(
+          [](fuse_entry_out entry) { RequestData::get().sendReply(entry); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseUnlink(
@@ -1465,7 +1468,8 @@ folly::Future<folly::Unit> FuseChannel::fuseLink(
 
   return dispatcher_
       ->link(InodeNumber{link->oldnodeid}, InodeNumber{header->nodeid}, newName)
-      .then([](fuse_entry_out param) { RequestData::get().sendReply(param); });
+      .thenValue(
+          [](fuse_entry_out param) { RequestData::get().sendReply(param); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseOpen(
@@ -1474,7 +1478,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpen(
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
   XLOG(DBG7) << "FUSE_OPEN";
   return dispatcher_->open(InodeNumber{header->nodeid}, open->flags)
-      .then([this](std::shared_ptr<FileHandle> fh) {
+      .thenValue([this](std::shared_ptr<FileHandle> fh) {
         if (!fh) {
           throw std::runtime_error("Dispatcher::open failed to set fh");
         }
@@ -1504,7 +1508,7 @@ folly::Future<folly::Unit> FuseChannel::fuseStatFs(
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_STATFS";
   return dispatcher_->statfs(InodeNumber{header->nodeid})
-      .then([](struct fuse_kstatfs&& info) {
+      .thenValue([](struct fuse_kstatfs&& info) {
         fuse_statfs_out out = {};
         out.st = info;
         RequestData::get().sendReply(out);
@@ -1579,7 +1583,7 @@ folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
   const auto listattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
   XLOG(DBG7) << "FUSE_LISTXATTR";
   return dispatcher_->listxattr(InodeNumber{header->nodeid})
-      .then([size = listattr->size](std::vector<std::string> attrs) {
+      .thenValue([size = listattr->size](std::vector<std::string> attrs) {
         auto& request = RequestData::get();
 
         // Initialize count to include the \0 for each
@@ -1636,7 +1640,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
   XLOG(DBG7) << "FUSE_OPENDIR";
   return dispatcher_->opendir(InodeNumber{header->nodeid}, open->flags)
-      .then([this](std::shared_ptr<DirHandle> dh) {
+      .thenValue([this](std::shared_ptr<DirHandle> dh) {
         if (!dh) {
           throw std::runtime_error("Dispatcher::opendir failed to set dh");
         }
@@ -1660,7 +1664,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReadDir(
   XLOG(DBG7) << "FUSE_READDIR";
   const auto dh = dispatcher_->getDirHandle(read->fh);
   return dh->readdir(DirList(read->size), read->offset)
-      .then([](DirList&& list) {
+      .thenValue([](DirList&& list) {
         const auto buf = list.getBuf();
         RequestData::get().sendReply(StringPiece(buf));
       });
@@ -1707,7 +1711,7 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
   XLOG(DBG7) << "FUSE_CREATE " << name;
   return dispatcher_
       ->create(InodeNumber{header->nodeid}, name, create->mode, create->flags)
-      .then([this](Dispatcher::Create info) {
+      .thenValue([this](Dispatcher::Create info) {
         fuse_open_out out = {};
         if (info.fh->usesDirectIO()) {
           out.open_flags |= FOPEN_DIRECT_IO;

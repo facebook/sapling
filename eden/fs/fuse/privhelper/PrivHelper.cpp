@@ -336,7 +336,7 @@ Future<File> PrivHelperClientImpl::fuseMount(StringPiece mountPath) {
   auto xid = getNextXid();
   auto request = PrivHelperConn::serializeMountRequest(xid, mountPath);
   return sendAndRecv(xid, std::move(request))
-      .then([](UnixSocket::Message&& response) {
+      .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_MOUNT_FUSE, response);
         if (response.files.size() != 1) {
@@ -353,7 +353,7 @@ Future<Unit> PrivHelperClientImpl::fuseUnmount(StringPiece mountPath) {
   auto xid = getNextXid();
   auto request = PrivHelperConn::serializeUnmountRequest(xid, mountPath);
   return sendAndRecv(xid, std::move(request))
-      .then([](UnixSocket::Message&& response) {
+      .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_UNMOUNT_FUSE, response);
       });
@@ -367,7 +367,7 @@ Future<Unit> PrivHelperClientImpl::bindMount(
       PrivHelperConn::serializeBindMountRequest(xid, clientPath, mountPath);
 
   return sendAndRecv(xid, std::move(request))
-      .then([](UnixSocket::Message&& response) {
+      .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_MOUNT_BIND, response);
       });
@@ -379,7 +379,7 @@ Future<Unit> PrivHelperClientImpl::fuseTakeoverShutdown(StringPiece mountPath) {
       PrivHelperConn::serializeTakeoverShutdownRequest(xid, mountPath);
 
   return sendAndRecv(xid, std::move(request))
-      .then([](UnixSocket::Message&& response) {
+      .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_TAKEOVER_SHUTDOWN, response);
       });
@@ -393,7 +393,7 @@ Future<Unit> PrivHelperClientImpl::fuseTakeoverStartup(
       xid, mountPath, bindMounts);
 
   return sendAndRecv(xid, std::move(request))
-      .then([](UnixSocket::Message&& response) {
+      .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_TAKEOVER_STARTUP, response);
       });
@@ -405,7 +405,7 @@ Future<Unit> PrivHelperClientImpl::setLogFile(folly::File logFile) {
       PrivHelperConn::serializeSetLogFileRequest(xid, std::move(logFile));
 
   return sendAndRecv(xid, std::move(request))
-      .then([](UnixSocket::Message&& response) {
+      .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_SET_LOG_FILE, response);
       });

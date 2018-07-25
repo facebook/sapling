@@ -283,7 +283,7 @@ Future<Unit> CheckoutAction::doAction() {
   // All the data is ready and we're ready to go!
 
   // Check for conflicts first.
-  return hasConflict().then([this](bool conflictWasAddedToCtx) {
+  return hasConflict().thenValue([this](bool conflictWasAddedToCtx) {
     // Note that even if we know we are not going to apply the changes, we must
     // still run hasConflict() first because we rely on its side-effects.
     if (conflictWasAddedToCtx && !ctx_->forceUpdate()) {
@@ -339,7 +339,7 @@ Future<bool> CheckoutAction::hasConflict() {
 
     // Check that the file contents are the same as the old source control entry
     return fileInode->isSameAs(*oldBlob_, oldScmEntry_.value().getType())
-        .then([this](bool isSame) {
+        .thenValue([this](bool isSame) {
           if (isSame) {
             // no conflict
             return false;

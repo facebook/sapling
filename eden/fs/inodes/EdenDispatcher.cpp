@@ -67,7 +67,7 @@ fuse_entry_out computeEntryParam(
 
 folly::Future<Dispatcher::Attr> EdenDispatcher::getattr(InodeNumber ino) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "getattr({})", ino);
-  return inodeMap_->lookupInode(ino).then(
+  return inodeMap_->lookupInode(ino).thenValue(
       [](const InodePtr& inode) { return inode->getattr(); });
 }
 
@@ -116,7 +116,7 @@ folly::Future<Dispatcher::Attr> EdenDispatcher::setattr(
     InodeNumber ino,
     const fuse_setattr_in& attr) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "setattr({})", ino);
-  return inodeMap_->lookupInode(ino).then(
+  return inodeMap_->lookupInode(ino).thenValue(
       [attr](const InodePtr& inode) { return inode->setattr(attr); });
 }
 
@@ -307,7 +307,7 @@ Future<string> EdenDispatcher::getxattr(InodeNumber ino, StringPiece name) {
 
 Future<vector<string>> EdenDispatcher::listxattr(InodeNumber ino) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "listxattr({})", ino);
-  return inodeMap_->lookupInode(ino).then(
+  return inodeMap_->lookupInode(ino).thenValue(
       [](const InodePtr& inode) { return inode->listxattr(); });
 }
 } // namespace eden

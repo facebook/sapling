@@ -550,7 +550,7 @@ folly::Future<Dispatcher::Attr> FileInode::getattr() {
   // materialized the data from the entry, we have to materialize it
   // from the store.  If we augmented our metadata we could avoid this,
   // and this would speed up operations like `ls`.
-  return stat().then(
+  return stat().thenValue(
       [](const struct stat& st) { return Dispatcher::Attr{st}; });
 }
 
@@ -659,7 +659,7 @@ folly::Future<bool> FileInode::isSameAs(
   }
 
   auto blobSha1 = Hash::sha1(&blob.getContents());
-  return getSha1().then(
+  return getSha1().thenValue(
       [blobSha1](const Hash& sha1) { return sha1 == blobSha1; });
 }
 
@@ -673,7 +673,7 @@ folly::Future<bool> FileInode::isSameAs(
 
   auto f1 = getSha1();
   auto f2 = getMount()->getObjectStore()->getBlobMetadata(blobID);
-  return folly::collect(f1, f2).then(
+  return folly::collect(f1, f2).thenValue(
       [](std::tuple<Hash, BlobMetadata>&& result) {
         return std::get<0>(result) == std::get<1>(result).sha1;
       });
@@ -766,7 +766,7 @@ Future<string> FileInode::getxattr(StringPiece name) {
     return makeFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
   }
 
-  return getSha1().then([](Hash hash) { return hash.toString(); });
+  return getSha1().thenValue([](Hash hash) { return hash.toString(); });
 }
 
 Future<Hash> FileInode::getSha1() {
@@ -779,7 +779,8 @@ Future<Hash> FileInode::getSha1() {
       // If a file is not materialized it should have a hash value.
       return getObjectStore()
           ->getBlobMetadata(state->hash.value())
-          .then([](const BlobMetadata& metadata) { return metadata.sha1; });
+          .thenValue(
+              [](const BlobMetadata& metadata) { return metadata.sha1; });
     case State::MATERIALIZED_IN_OVERLAY:
       state.ensureFileOpen(this);
       if (state->sha1Valid) {

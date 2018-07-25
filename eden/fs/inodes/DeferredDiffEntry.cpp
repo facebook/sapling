@@ -293,7 +293,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     }
 
     return fileInode->isSameAs(scmEntry_.getHash(), scmEntry_.getType())
-        .then([this](bool isSame) {
+        .thenValue([this](bool isSame) {
           if (!isSame) {
             XLOG(DBG5) << "modified file: " << getPath();
             context_->callback->modifiedFile(getPath(), scmEntry_);
@@ -323,7 +323,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
   folly::Future<folly::Unit> run() override {
     auto f1 = context_->store->getBlobMetadata(scmEntry_.getHash());
     auto f2 = context_->store->getBlobMetadata(currentBlobHash_);
-    return folly::collect(f1, f2).then(
+    return folly::collect(f1, f2).thenValue(
         [this](const std::tuple<BlobMetadata, BlobMetadata>& info) {
           if (std::get<0>(info).sha1 != std::get<1>(info).sha1) {
             XLOG(DBG5) << "modified file: " << getPath();
