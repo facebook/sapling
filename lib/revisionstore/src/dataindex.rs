@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
 
-use error::Result;
+use error::{KeyError, Result};
 use fanouttable::FanoutTable;
 use node::Node;
 
@@ -280,7 +280,9 @@ impl DataIndex {
             unsafe { ::std::slice::from_raw_parts(slice.as_ptr() as *const [u8; ENTRY_LEN], size) };
         match slice.binary_search_by(|entry| entry[0..20].cmp(key.as_ref())) {
             Ok(offset) => Ok(offset * ENTRY_LEN),
-            Err(_offset) => Err(DataIndexError(format!("no node {:?} in slice", key)).into()),
+            Err(_offset) => Err(KeyError::new(
+                DataIndexError(format!("no node {:?} in slice", key)).into(),
+            ).into()),
         }
     }
 
@@ -331,6 +333,31 @@ mod tests {
 
         let delta = index.get_entry(&node).unwrap();
         assert_eq!(delta.delta_base_offset(), DeltaBaseOffset::Missing);
+    }
+
+    #[test]
+    fn test_missing_key() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let mut values: HashMap<Node, DeltaLocation> = HashMap::new();
+        let node = Node::random(&mut rng);
+        values.insert(
+            node.clone(),
+            DeltaLocation {
+                delta_base: None,
+                offset: 1,
+                size: 2,
+            },
+        );
+        let index = make_index(&values);
+
+        let other = Node::random(&mut rng);
+        assert!(
+            index
+                .get_entry(&other)
+                .unwrap_err()
+                .downcast_ref::<KeyError>()
+                .is_some()
+        )
     }
 
     quickcheck! {
