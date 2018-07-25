@@ -32,10 +32,42 @@ pub struct DeltaLocation {
 
 #[derive(Debug)]
 pub struct IndexEntry {
-    pub node: Node,
-    pub delta_base_offset: i32,
-    pub pack_entry_offset: u64,
-    pub pack_entry_size: u64,
+    node: Node,
+    delta_base_offset: i32,
+    pack_entry_offset: u64,
+    pack_entry_size: u64,
+}
+
+impl IndexEntry {
+    pub fn new(
+        node: Node,
+        delta_base_offset: i32,
+        pack_entry_offset: u64,
+        pack_entry_size: u64,
+    ) -> Self {
+        IndexEntry {
+            node: node,
+            delta_base_offset: delta_base_offset,
+            pack_entry_offset: pack_entry_offset,
+            pack_entry_size: pack_entry_size,
+        }
+    }
+
+    pub fn node(&self) -> &Node {
+        &self.node
+    }
+
+    pub fn delta_base_offset(&self) -> i32 {
+        self.delta_base_offset.clone()
+    }
+
+    pub fn pack_entry_offset(&self) -> u64 {
+        self.pack_entry_offset.clone()
+    }
+
+    pub fn pack_entry_size(&self) -> u64 {
+        self.pack_entry_size.clone()
+    }
 }
 
 impl IndexEntry {
@@ -50,19 +82,19 @@ impl IndexEntry {
         let delta_base_offset = cur.read_i32::<BigEndian>()?;
         let pack_entry_offset = cur.read_u64::<BigEndian>()?;
         let pack_entry_size = cur.read_u64::<BigEndian>()?;
-        Ok(IndexEntry {
+        Ok(IndexEntry::new(
             node,
             delta_base_offset,
             pack_entry_offset,
             pack_entry_size,
-        })
+        ))
     }
 
     fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
-        writer.write_all(self.node.as_ref())?;
-        writer.write_i32::<BigEndian>(self.delta_base_offset)?;
-        writer.write_u64::<BigEndian>(self.pack_entry_offset)?;
-        writer.write_u64::<BigEndian>(self.pack_entry_size)?;
+        writer.write_all(self.node().as_ref())?;
+        writer.write_i32::<BigEndian>(self.delta_base_offset())?;
+        writer.write_u64::<BigEndian>(self.pack_entry_offset())?;
+        writer.write_u64::<BigEndian>(self.pack_entry_size())?;
         Ok(())
     }
 }

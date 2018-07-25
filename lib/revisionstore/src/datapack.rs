@@ -264,7 +264,7 @@ impl DataStore for DataPack {
 
     fn get_delta(&self, key: &Key) -> Result<Delta> {
         let entry = self.index.get_entry(key.node())?;
-        let data_entry = self.read_entry(entry.pack_entry_offset)?;
+        let data_entry = self.read_entry(entry.pack_entry_offset())?;
 
         Ok(Delta {
             data: data_entry.delta()?,
@@ -279,7 +279,7 @@ impl DataStore for DataPack {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_entry = self.index.get_entry(key.node())?;
         loop {
-            let data_entry = self.read_entry(next_entry.pack_entry_offset)?;
+            let data_entry = self.read_entry(next_entry.pack_entry_offset())?;
             chain.push(Delta {
                 data: data_entry.delta()?,
                 base: data_entry
@@ -288,9 +288,9 @@ impl DataStore for DataPack {
                 key: Key::new(key.name().into(), data_entry.node().clone()),
             });
 
-            if next_entry.delta_base_offset != -1 {
+            if next_entry.delta_base_offset() != -1 {
                 next_entry = self.index
-                    .read_entry(next_entry.delta_base_offset as usize)?;
+                    .read_entry(next_entry.delta_base_offset() as usize)?;
             } else {
                 break;
             }
@@ -301,7 +301,7 @@ impl DataStore for DataPack {
 
     fn get_meta(&self, key: &Key) -> Result<Metadata> {
         let index_entry = self.index.get_entry(key.node())?;
-        Ok(self.read_entry(index_entry.pack_entry_offset)?.metadata)
+        Ok(self.read_entry(index_entry.pack_entry_offset())?.metadata)
     }
 
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
