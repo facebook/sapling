@@ -163,7 +163,7 @@ test reachability on bookmarks
   false (no-eol)
 
 test folder list
-  $ sslcurl $APISERVER/repo/list/$COMMIT2/folder | python -mjson.tool
+  $ sslcurl $APISERVER/repo/list/$COMMIT2/folder | tee output | python -mjson.tool
   [
       {
           "name": "subfolder",
@@ -171,6 +171,8 @@ test folder list
           "hash": "9b5497965e634f261cca0247a7a48b709a7be2b9"
       }
   ]
+
+  $ TREEHASH=$(cat output | jq -r ".[0].hash")
 
   $ sslcurl $APISERVER/repo/list/$COMMIT2/folder/subfolder | python -mjson.tool
   [
@@ -195,10 +197,36 @@ test get blob by hash
   $ sslcurl $APISERVER/repo/blob/$BLOBHASH > output
   $ diff output - <<< $TEST_CONTENT
 
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/$TREEHASH | extract_json_error
+  9b5497965e634f261cca0247a7a48b709a7be2b9 is not found
+  404
+
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000 | extract_json_error
   0000 is invalid
   400
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000000000000000000000000000000000000001 | extract_json_error
+  0000000000000000000000000000000000000001 is not found
+  404
+
+test get tree
+  $ sslcurl $APISERVER/repo/tree/$TREEHASH | python -mjson.tool
+  [
+      {
+          "name": ".keep",
+          "type": "file",
+          "hash": "b80de5d138758541c5f05265ad144ab9fa86d1db"
+      }
+  ]
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/$BLOBHASH | extract_json_error > output
+  $ echo -e "$BLOBHASH is not found\n404" > baseline
+  $ diff output baseline
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/0000 | extract_json_error
+  0000 is invalid
+  400
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/0000000000000000000000000000000000000001 | extract_json_error
   0000000000000000000000000000000000000001 is not found
   404

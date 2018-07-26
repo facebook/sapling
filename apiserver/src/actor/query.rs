@@ -24,6 +24,9 @@ pub enum MononokeRepoQuery {
     GetBlobContent {
         hash: String,
     },
+    GetTree {
+        hash: String,
+    },
     IsAncestor {
         proposed_ancestor: String,
         proposed_descendent: String,

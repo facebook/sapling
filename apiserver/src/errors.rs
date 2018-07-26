@@ -131,6 +131,9 @@ impl From<BlobRepoError> for ErrorKind {
             HgContentMissing(id, _t) => {
                 ErrorKind::NotFound(id.to_string(), Some(HgContentMissing(id, _t).into()))
             }
+            ManifestMissing(id) => {
+                ErrorKind::NotFound(id.to_string(), Some(ManifestMissing(id).into()))
+            }
             _ => ErrorKind::InternalError(e.into()),
         }
     }

@@ -22,6 +22,9 @@ pub enum MononokeRepoResponse {
     ListDirectory {
         files: Box<Iterator<Item = Entry> + Send>,
     },
+    GetTree {
+        files: Box<Iterator<Item = Entry> + Send>,
+    },
     IsAncestor {
         answer: bool,
     },
@@ -42,7 +45,9 @@ impl Responder for MononokeRepoResponse {
 
         match self {
             GetRawFile { content } | GetBlobContent { content } => Ok(binary_response(content)),
-            ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
+            ListDirectory { files } | GetTree { files } => {
+                Json(files.collect::<Vec<_>>()).respond_to(req)
+            }
             IsAncestor { answer } => Ok(binary_response({
                 if answer {
                     "true".into()

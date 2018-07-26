@@ -141,6 +141,17 @@ fn get_blob_content(
     }))
 }
 
+fn get_tree(
+    (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    unwrap_request(state.mononoke.send(MononokeQuery {
+        repo: info.repo.clone(),
+        kind: MononokeRepoQuery::GetTree {
+            hash: info.hash.clone(),
+        },
+    }))
+}
+
 fn setup_logger(debug: bool) -> Logger {
     let level = if debug { Level::Debug } else { Level::Info };
 
@@ -337,6 +348,9 @@ fn main() -> Result<()> {
                     })
                     .resource("/blob/{hash}", |r| {
                         r.method(http::Method::GET).with_async(get_blob_content)
+                    })
+                    .resource("/tree/{hash}", |r| {
+                        r.method(http::Method::GET).with_async(get_tree)
                     })
             })
     });

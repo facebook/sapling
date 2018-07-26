@@ -155,6 +155,22 @@ impl MononokeRepoActor {
             .from_err()
             .boxify())
     }
+
+    fn get_tree(&self, hash: String) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
+        let treehash = FS::get_nodehash(&hash)?;
+
+        Ok(self.repo
+            .get_manifest_by_nodeid(&treehash)
+            .map(|tree| {
+                tree.list()
+                    .filter_map(|entry| -> Option<Entry> { entry.try_into().ok() })
+            })
+            .map(|files| MononokeRepoResponse::GetTree {
+                files: Box::new(files),
+            })
+            .from_err()
+            .boxify())
+    }
 }
 
 impl Actor for MononokeRepoActor {
@@ -171,6 +187,7 @@ impl Handler<MononokeRepoQuery> for MononokeRepoActor {
             GetRawFile { changeset, path } => self.get_raw_file(changeset, path),
             GetBlobContent { hash } => self.get_blob_content(hash),
             ListDirectory { changeset, path } => self.list_directory(changeset, path),
+            GetTree { hash } => self.get_tree(hash),
             IsAncestor {
                 proposed_ancestor,
                 proposed_descendent,
