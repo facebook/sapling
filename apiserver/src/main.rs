@@ -82,6 +82,13 @@ struct IsAncestorQueryInfo {
     proposed_ancestor: String,
     proposed_descendent: String,
 }
+
+#[derive(Deserialize)]
+struct HashQueryInfo {
+    repo: String,
+    hash: String,
+}
+
 // The argument of this function is because the trait `actix_web::FromRequest` is implemented
 // for tuple (A, B, ...) (up to 9 elements) [1]. These arguments must implement
 // `actix_web::FromRequest` as well so actix-web will try to extract them from `actix::HttpRequest`
@@ -119,6 +126,17 @@ fn list_directory(
         kind: MononokeRepoQuery::ListDirectory {
             changeset: info.changeset.clone(),
             path: info.path.clone(),
+        },
+    }))
+}
+
+fn get_blob_content(
+    (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    unwrap_request(state.mononoke.send(MononokeQuery {
+        repo: info.repo.clone(),
+        kind: MononokeRepoQuery::GetBlobContent {
+            hash: info.hash.clone(),
         },
     }))
 }
@@ -316,6 +334,9 @@ fn main() -> Result<()> {
                     )
                     .resource("/list/{changeset}/{path:.*}", |r| {
                         r.method(http::Method::GET).with_async(list_directory)
+                    })
+                    .resource("/blob/{hash}", |r| {
+                        r.method(http::Method::GET).with_async(get_blob_content)
                     })
             })
     });

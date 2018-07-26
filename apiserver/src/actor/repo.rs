@@ -20,6 +20,7 @@ use mercurial_types::RepositoryId;
 use mercurial_types::manifest::Content;
 use metaconfig::repoconfig::RepoConfig;
 use metaconfig::repoconfig::RepoType::{BlobManifold, BlobRocks};
+use mononoke_types::FileContents;
 use reachabilityindex::{GenerationNumberBFS, ReachabilityIndex};
 
 use errors::ErrorKind;
@@ -112,6 +113,20 @@ impl MononokeRepoActor {
             .boxify())
     }
 
+    fn get_blob_content(&self, hash: String) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
+        let blobhash = FS::get_nodehash(&hash)?;
+
+        Ok(self.repo
+            .get_file_content(&blobhash)
+            .and_then(move |content| match content {
+                FileContents::Bytes(content) => {
+                    Ok(MononokeRepoResponse::GetBlobContent { content })
+                }
+            })
+            .from_err()
+            .boxify())
+    }
+
     fn list_directory(
         &self,
         changeset: String,
@@ -154,6 +169,7 @@ impl Handler<MononokeRepoQuery> for MononokeRepoActor {
 
         match msg {
             GetRawFile { changeset, path } => self.get_raw_file(changeset, path),
+            GetBlobContent { hash } => self.get_blob_content(hash),
             ListDirectory { changeset, path } => self.list_directory(changeset, path),
             IsAncestor {
                 proposed_ancestor,

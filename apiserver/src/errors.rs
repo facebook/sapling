@@ -128,6 +128,9 @@ impl From<BlobRepoError> for ErrorKind {
             ChangesetMissing(id) => {
                 ErrorKind::NotFound(id.to_string(), Some(ChangesetMissing(id).into()))
             }
+            HgContentMissing(id, _t) => {
+                ErrorKind::NotFound(id.to_string(), Some(HgContentMissing(id, _t).into()))
+            }
             _ => ErrorKind::InternalError(e.into()),
         }
     }

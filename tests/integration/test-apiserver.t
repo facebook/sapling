@@ -17,6 +17,7 @@ setup testing repo for mononoke
   $ hg add test link folder/subfolder/.keep
   $ hg commit -ma
   $ COMMIT1=$(hg --debug id -i)
+  $ BLOBHASH=$(hg manifest --debug | grep test | cut -d' ' -f1)
   $ hg mv test test-rename
   $ hg commit -ma
   $ COMMIT2=$(hg --debug id -i)
@@ -189,3 +190,15 @@ test list a file
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/list/$COMMIT2/test-rename | extract_json_error
   test-rename is invalid
   400
+
+test get blob by hash
+  $ sslcurl $APISERVER/repo/blob/$BLOBHASH > output
+  $ diff output - <<< $TEST_CONTENT
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000 | extract_json_error
+  0000 is invalid
+  400
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000000000000000000000000000000000000001 | extract_json_error
+  0000000000000000000000000000000000000001 is not found
+  404

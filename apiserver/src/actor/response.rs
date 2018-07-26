@@ -16,6 +16,9 @@ pub enum MononokeRepoResponse {
     GetRawFile {
         content: Bytes,
     },
+    GetBlobContent {
+        content: Bytes,
+    },
     ListDirectory {
         files: Box<Iterator<Item = Entry> + Send>,
     },
@@ -38,7 +41,7 @@ impl Responder for MononokeRepoResponse {
         use self::MononokeRepoResponse::*;
 
         match self {
-            GetRawFile { content } => Ok(binary_response(content)),
+            GetRawFile { content } | GetBlobContent { content } => Ok(binary_response(content)),
             ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
             IsAncestor { answer } => Ok(binary_response({
                 if answer {
