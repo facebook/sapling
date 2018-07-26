@@ -113,10 +113,8 @@ impl IndexEntry {
     pub fn read(buf: &[u8]) -> Result<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
-        let node_slice: &[u8] = buf.get(0..20).ok_or(DataIndexError(format!(
-            "buffer too short ({:?} < 20",
-            buf.len()
-        )))?;
+        let node_slice: &[u8] = buf.get(0..20)
+            .ok_or_else(|| DataIndexError(format!("buffer too short ({:?} < 20)", buf.len())))?;
         let node = Node::from_slice(node_slice)?;
         let delta_base_offset = cur.read_i32::<BigEndian>()?;
         let delta_base_offset = DeltaBaseOffset::new(delta_base_offset)?;
@@ -263,13 +261,13 @@ impl DataIndex {
 
     pub fn read_entry(&self, offset: usize) -> Result<IndexEntry> {
         let offset = offset + self.index_start;
-        let raw_entry = &self.mmap
-            .get(offset..offset + ENTRY_LEN)
-            .ok_or(DataIndexError(format!(
+        let raw_entry = &self.mmap.get(offset..offset + ENTRY_LEN).ok_or_else(|| {
+            DataIndexError(format!(
                 "attempted to read offset outside the file (offset {:?} from file len {:?}",
                 offset,
                 self.mmap.len()
-            )))?;
+            ))
+        })?;
         IndexEntry::read(raw_entry)
     }
 
