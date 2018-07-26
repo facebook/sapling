@@ -14,6 +14,7 @@
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
+#include <cstring>
 #include <shared_mutex>
 
 #include "eden/fs/fuse/DirHandle.h"
@@ -23,6 +24,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/utils/SystemError.h"
 
@@ -63,6 +65,13 @@ fuse_entry_out computeEntryParam(
   entry.entry_valid_nsec = fuse_attr.attr_valid_nsec;
   return entry;
 }
+
+Dispatcher::Attr attrForInodeWithCorruptOverlay() noexcept {
+  struct stat st;
+  std::memset(&st, 0, sizeof(st));
+  st.st_mode = S_IFREG;
+  return Dispatcher::Attr{st};
+}
 } // namespace
 
 folly::Future<Dispatcher::Attr> EdenDispatcher::getattr(InodeNumber ino) {
@@ -89,12 +98,36 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
         return tree->getOrLoadChild(name);
       })
       .then([](const InodePtr& inode) {
-        return inode->getattr().then([inode](Dispatcher::Attr attr) {
-          inode->incFuseRefcount();
-          // Preserve inode's life for the duration of the prefetch.
-          inode->prefetch().ensure([inode] {});
-          return computeEntryParam(inode->getNodeId(), attr);
-        });
+        return folly::makeFutureWith([&]() { return inode->getattr(); })
+            .then([inode](folly::Try<Dispatcher::Attr> maybeAttr) {
+              if (maybeAttr.hasValue()) {
+                // Preserve inode's life for the duration of the prefetch.
+                inode->prefetch().ensure([inode] {});
+                inode->incFuseRefcount();
+                return computeEntryParam(inode->getNodeId(), maybeAttr.value());
+              } else {
+                // The most common case for getattr() failing is if this file is
+                // materialized but the data for it in the overlay is missing
+                // or corrupt.  This can happen after a hard reboot where the
+                // overlay data was not synced to disk first.
+                //
+                // We intentionally want to return a result here rather than
+                // failing; otherwise we can't return the inode number to the
+                // kernel at all.  This blocks other operations on the file,
+                // like FUSE_UNLINK.  By successfully returning from the
+                // lookup we allow clients to remove this corrupt file with an
+                // unlink operation.  (Even though FUSE_UNLINK does not require
+                // the child inode number, the kernel does not appear to send a
+                // FUSE_UNLINK request to us if it could not get the child inode
+                // number first.)
+                XLOG(WARN) << "error getting attributes for inode "
+                           << inode->getNodeId() << " (" << inode->getLogPath()
+                           << "): " << maybeAttr.exception().what();
+                inode->incFuseRefcount();
+                return computeEntryParam(
+                    inode->getNodeId(), attrForInodeWithCorruptOverlay());
+              }
+            });
       })
       .onError([](const std::system_error& err) {
         // Translate ENOENT into a successful response with an

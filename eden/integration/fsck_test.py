@@ -9,7 +9,7 @@
 
 import os
 
-from .lib import repobase, testcase
+from .lib import overlay, repobase, testcase
 
 
 class FsckTest(testcase.EdenRepoTest):
@@ -31,35 +31,18 @@ class FsckTest(testcase.EdenRepoTest):
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
-        self.client_dir = os.readlink(os.path.join(self.mount, ".eden", "client"))
-        self.overlay_dir = os.path.join(self.client_dir, "local")
-
-    def _update_file(self, path: str, contents: str) -> int:
-        """
-        Update a file by path and return its inode number.
-
-        Updating the file contents ensures it will be materialized and present in the
-        overlay.
-        """
-        with open(os.path.join(self.mount, path), "w") as f:
-            f.write(contents)
-            stat_info = os.fstat(f.fileno())
-        return stat_info.st_ino
-
-    def _get_overlay_path(self, inode_number: int) -> str:
-        subdir = "{:02x}".format(inode_number % 256)
-        return os.path.join(self.overlay_dir, subdir, str(inode_number))
+        self.overlay = overlay.OverlayStore(self.eden, self.mount_path)
 
     def test_fsck_no_issues(self) -> None:
         output = self.eden.run_cmd("fsck", self.mount)
         self.assertIn("No issues found", output)
 
     def test_fsck_empty_overlay_file(self) -> None:
-        inode_number = self._update_file("doc/foo.txt", "new contents\n")
+        overlay_path = self.overlay.materialize_file("doc/foo.txt")
         self.eden.run_cmd("unmount", self.mount)
 
         # Truncate the file to 0 length
-        with open(self._get_overlay_path(inode_number), "w"):
+        with overlay_path.open("wb"):
             pass
 
         self.eden.run_cmd("mount", self.mount)

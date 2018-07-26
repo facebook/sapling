@@ -13,6 +13,7 @@ import errno
 import inspect
 import logging
 import os
+import pathlib
 import shutil
 import tempfile
 import time
@@ -232,6 +233,10 @@ class EdenTestCase(TestParent):
 
         self.mount = os.path.join(self.mounts_dir, "main")
 
+    @property
+    def mount_path(self) -> pathlib.Path:
+        return pathlib.Path(self.mount)
+
     def get_thrift_client(self) -> eden.thrift.EdenClient:
         """
         Get a thrift client to the edenfs daemon.
@@ -441,13 +446,11 @@ def test_replicator(
 def _replicate_eden_repo_test(
     test_class: Type[EdenRepoTest]
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
-    class HgRepoTest(test_class):
-        def create_repo(self, name: str) -> repobase.Repository:
-            return self.create_hg_repo(name)
+    class HgRepoTest(HgRepoTestMixin, test_class):
+        pass
 
-    class GitRepoTest(test_class):
-        def create_repo(self, name: str) -> repobase.Repository:
-            return self.create_git_repo(name)
+    class GitRepoTest(GitRepoTestMixin, test_class):
+        pass
 
     return [("Hg", HgRepoTest), ("Git", GitRepoTest)]
 
@@ -459,3 +462,13 @@ def _replicate_eden_repo_test(
 # classes named "MyTestHg" and "MyTestGit", which run the tests with
 # mercurial and git repositories, respectively.
 eden_repo_test = test_replicator(_replicate_eden_repo_test)
+
+
+class HgRepoTestMixin:
+    def create_repo(self, name: str) -> repobase.Repository:
+        return self.create_hg_repo(name)
+
+
+class GitRepoTestMixin:
+    def create_repo(self, name: str) -> repobase.Repository:
+        return self.create_git_repo(name)

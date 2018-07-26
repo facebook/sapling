@@ -9,6 +9,7 @@
 
 import logging
 import os
+import pathlib
 import shlex
 import shutil
 import subprocess
@@ -362,6 +363,19 @@ class EdenFS(object):
     def set_log_level(self, category: str, level: str) -> None:
         with self.get_thrift_client() as client:
             client.debugSetLogLevel(category, level)
+
+    def client_dir_for_mount(self, mount_path: pathlib.Path) -> pathlib.Path:
+        client_link = mount_path / ".eden" / "client"
+        return pathlib.Path(os.readlink(str(client_link)))
+
+    def overlay_dir_for_mount(self, mount_path: pathlib.Path) -> pathlib.Path:
+        return self.client_dir_for_mount(mount_path) / "local"
+
+    def mount(self, mount_path: pathlib.Path) -> None:
+        self.run_cmd("mount", "--", str(mount_path))
+
+    def unmount(self, mount_path: pathlib.Path) -> None:
+        self.run_cmd("unmount", "--", str(mount_path))
 
 
 class EdenCommandError(subprocess.CalledProcessError):
