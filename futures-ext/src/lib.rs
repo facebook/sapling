@@ -271,6 +271,34 @@ pub trait StreamExt: Stream {
         ReturnRemainder::new(self)
     }
 
+    /// Whether this stream is empty.
+    ///
+    /// This will consume one element from the stream if returned.
+    fn is_empty<'a>(self) -> Box<Future<Item = bool, Error = Self::Error> + Send + 'a>
+    where
+        Self: 'a + Send + Sized,
+    {
+        Box::new(
+            self.into_future()
+                .map(|(first, _rest)| first.is_none())
+                .map_err(|(err, _rest)| err),
+        )
+    }
+
+    /// Whether this stream is not empty (has at least one element).
+    ///
+    /// This will consume one element from the stream if returned.
+    fn not_empty<'a>(self) -> Box<Future<Item = bool, Error = Self::Error> + Send + 'a>
+    where
+        Self: 'a + Send + Sized,
+    {
+        Box::new(
+            self.into_future()
+                .map(|(first, _rest)| first.is_some())
+                .map_err(|(err, _rest)| err),
+        )
+    }
+
     /// Create a `Send`able boxed version of this `Stream`.
     #[inline]
     fn boxify(self) -> BoxStream<Self::Item, Self::Error>
@@ -663,6 +691,21 @@ mod test {
         let v = es.collect().wait();
 
         assert_eq!(v, Ok(vec![(0, "hello"), (1, "there"), (2, "world")]));
+    }
+
+    #[test]
+    fn empty() {
+        let mut s = stream::empty::<(), ()>();
+        // Ensure that the stream doesn't have to be consumed.
+        assert!(s.by_ref().is_empty().wait().unwrap());
+        assert!(!s.not_empty().wait().unwrap());
+
+        let mut s = stream::once::<_, ()>(Ok("foo"));
+        assert!(!s.by_ref().is_empty().wait().unwrap());
+        // The above is_empty would consume the first element, so the stream has to be
+        // reinitialized.
+        let s = stream::once::<_, ()>(Ok("foo"));
+        assert!(s.not_empty().wait().unwrap());
     }
 
     #[test]
