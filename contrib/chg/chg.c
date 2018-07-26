@@ -30,10 +30,10 @@
 #define PATH_MAX 4096
 #endif
 
-/* Maximum time waiting for the hello message.
+/* Maximum time waiting for the validate message.
  * Start a new server if exceeds. */
-#ifndef CHG_HELLO_THRESHOLD
-#define CHG_HELLO_THRESHOLD 0.05
+#ifndef CHG_VALIDATE_THRESHOLD
+#define CHG_VALIDATE_THRESHOLD 0.1
 #endif
 
 struct cmdserveropts {
@@ -377,17 +377,20 @@ int main(int argc, const char* argv[], const char* envp[]) {
       debugmsg("version matched (%llu)", versionhash);
     }
 #endif
-    if (!needreconnect && retry == 0 && configint("CHGSTARTTIMECHECK", 1) &&
-        hgc_elapsed(hgc) > CHG_HELLO_THRESHOLD) {
-      debugmsg("server too slow - killing");
-      killcmdserver(&opts);
-      needreconnect = 1;
-    }
     if (!needreconnect) {
       hgc_setenv(hgc, envp);
+      double validate_start = hgc_elapsed(hgc);
       const char** insts = hgc_validate(hgc, argv + 1, argc - 1);
+      double validate_interval = hgc_elapsed(hgc) - validate_start;
       needreconnect = runinstructions(&opts, insts);
       free(insts);
+      debugmsg("validate took %.4f seconds", validate_interval);
+      if (!needreconnect && retry == 0 && configint("CHGSTARTTIMECHECK", 1) &&
+          validate_interval > CHG_VALIDATE_THRESHOLD) {
+        debugmsg("server too slow - killing");
+        killcmdserver(&opts);
+        needreconnect = 1;
+      }
     }
     if (!needreconnect)
       break;
