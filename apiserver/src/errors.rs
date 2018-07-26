@@ -4,23 +4,29 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::fmt;
+
 use actix::MailboxError;
 use actix_web::HttpResponse;
 use actix_web::error::ResponseError;
 use actix_web::http::StatusCode;
-use failure::{Context, Error};
+use failure::{Context, Error, Fail};
 
 use api::errors::ErrorKind as ApiError;
 use blobrepo::ErrorKind as BlobRepoError;
 use reachabilityindex::errors::ErrorKind as ReachabilityIndexError;
 
-#[derive(Debug, Fail)]
+#[derive(Serialize, Debug)]
+struct ErrorResponse {
+    message: String,
+    causes: Vec<String>,
+}
+
+#[derive(Debug)]
 pub enum ErrorKind {
-    #[fail(display = "{} not found", _0)] NotFound(String),
-    #[fail(display = "{} is invalid", _0)] InvalidInput(String),
-    #[fail(display = "could not fetch node generation")] GenerationFetchFailed,
-    #[fail(display = "failed to fetch parent nodes")] ParentsFetchFailed,
-    #[fail(display = "internal server error: {}", _0)] InternalError(Error),
+    NotFound(String, Option<Error>),
+    InvalidInput(String, Option<Error>),
+    InternalError(Error),
 }
 
 impl ErrorKind {
@@ -28,11 +34,42 @@ impl ErrorKind {
         use errors::ErrorKind::*;
 
         match self {
-            NotFound(_) => StatusCode::NOT_FOUND,
-            InvalidInput(_) => StatusCode::BAD_REQUEST,
-            GenerationFetchFailed => StatusCode::BAD_REQUEST,
-            ParentsFetchFailed => StatusCode::BAD_REQUEST,
+            NotFound(..) => StatusCode::NOT_FOUND,
+            InvalidInput(..) => StatusCode::BAD_REQUEST,
             InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
+    fn into_error_response(&self) -> ErrorResponse {
+        ErrorResponse {
+            message: self.to_string(),
+            causes: self.causes()
+                .skip(1)
+                .map(|cause| cause.to_string())
+                .collect(),
+        }
+    }
+}
+
+impl Fail for ErrorKind {
+    fn cause(&self) -> Option<&Fail> {
+        use errors::ErrorKind::*;
+
+        match self {
+            NotFound(_, cause) | InvalidInput(_, cause) => cause.as_ref().map(|e| e.cause()),
+            InternalError(err) => Some(err.cause()),
+        }
+    }
+}
+
+impl fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use errors::ErrorKind::*;
+
+        match self {
+            NotFound(_0, _) => write!(f, "{} is not found", _0),
+            InvalidInput(_0, _) => write!(f, "{} is invalid", _0),
+            InternalError(_0) => write!(f, "internal server error: {}", _0),
         }
     }
 }
@@ -51,7 +88,7 @@ impl ResponseError for ErrorKind {
             }
         };
 
-        HttpResponse::build(err.status_code()).body(err.to_string())
+        HttpResponse::build(err.status_code()).json(err.into_error_response())
     }
 }
 
@@ -76,8 +113,8 @@ impl From<ApiError> for ErrorKind {
         use self::ApiError::*;
 
         match e {
-            NotFound(t) => ErrorKind::NotFound(t),
-            InvalidInput(t) => ErrorKind::InvalidInput(t),
+            NotFound(t) => ErrorKind::NotFound(t, None),
+            InvalidInput(t) => ErrorKind::InvalidInput(t, None),
         }
     }
 }
@@ -86,20 +123,28 @@ impl From<BlobRepoError> for ErrorKind {
     fn from(e: BlobRepoError) -> ErrorKind {
         use self::BlobRepoError::*;
 
+        // TODO: changes this match to P59854201 when NLL is stabilized
         match e {
-            ChangesetMissing(cs) => ErrorKind::NotFound(cs.to_string()),
-            e => ErrorKind::InternalError(e.into()),
+            ChangesetMissing(id) => {
+                ErrorKind::NotFound(id.to_string(), Some(ChangesetMissing(id).into()))
+            }
+            _ => ErrorKind::InternalError(e.into()),
         }
     }
 }
 
 impl From<ReachabilityIndexError> for ErrorKind {
     fn from(e: ReachabilityIndexError) -> ErrorKind {
+        use self::ReachabilityIndexError::*;
+
         match e {
-            ReachabilityIndexError::NodeNotFound(s) => ErrorKind::NotFound(s),
-            ReachabilityIndexError::CheckExistenceFailed(s, _) => ErrorKind::NotFound(s),
-            ReachabilityIndexError::GenerationFetchFailed(_) => ErrorKind::GenerationFetchFailed,
-            ReachabilityIndexError::ParentsFetchFailed(_) => ErrorKind::ParentsFetchFailed,
+            NodeNotFound(s) => ErrorKind::NotFound(s.clone(), Some(NodeNotFound(s).into())),
+            CheckExistenceFailed(s, t) => {
+                ErrorKind::NotFound(s.clone(), Some(CheckExistenceFailed(s, t).into()))
+            }
+            e @ GenerationFetchFailed(_) | e @ ParentsFetchFailed(_) => {
+                ErrorKind::InternalError(e.into())
+            }
         }
     }
 }

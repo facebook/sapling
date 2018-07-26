@@ -10,7 +10,7 @@ use std::convert::TryFrom;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use failure::{Error, Result, ResultExt};
+use failure::{Error, Result};
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -23,26 +23,22 @@ use mononoke_types::MPath;
 use errors::ErrorKind;
 
 pub fn get_mpath(path: String) -> Result<MPath> {
-    MPath::try_from(&*path)
-        .with_context(|_| ErrorKind::InvalidInput(path))
-        .map_err(From::from)
+    MPath::try_from(&*path).map_err(|e| ErrorKind::InvalidInput(path, Some(e)).into())
 }
 
 pub fn get_changeset_id(changesetid: String) -> Result<HgChangesetId> {
     HgChangesetId::from_str(&changesetid)
-        .with_context(|_| ErrorKind::InvalidInput(changesetid))
-        .map_err(From::from)
+        .map_err(|e| ErrorKind::InvalidInput(changesetid, Some(e)).into())
 }
 
 pub fn get_bookmark(bookmark: String) -> Result<Bookmark> {
     Bookmark::new(bookmark.clone())
-        .with_context(|_| ErrorKind::InvalidInput(bookmark))
-        .map_err(From::from)
+        .map_err(|e| ErrorKind::InvalidInput(bookmark.to_string(), Some(e)).into())
 }
+
 pub fn get_nodehash(hash: &str) -> Result<HgNodeHash> {
     HgNodeHash::from_str(hash)
-        .with_context(|_| ErrorKind::InvalidInput(hash.to_string()))
-        .map_err(From::from)
+        .map_err(|e| ErrorKind::InvalidInput(hash.to_string(), Some(e)).into())
 }
 
 // interpret a string as a bookmark and find the corresponding changeset id.
@@ -55,10 +51,6 @@ pub fn string_to_bookmark_changeset_id(
     get_bookmark(node_string.clone())
         .into_future()
         .and_then({ move |bookmark| api::get_changeset_by_bookmark(repo, bookmark).from_err() })
-        .map_err({
-            cloned!(node_string);
-            |_| ErrorKind::InvalidInput(node_string)
-        })
-        .from_err()
+        .map_err(move |e| ErrorKind::InvalidInput(node_string.to_string(), Some(e)).into())
         .boxify()
 }

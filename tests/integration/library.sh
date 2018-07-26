@@ -146,6 +146,12 @@ function apiserver {
   echo $! >> "$DAEMON_PIDS"
 }
 
+function extract_json_error {
+  input=$(cat)
+  echo "$input" | head -1 | jq -r '.message'
+  echo "$input" | tail -n +2
+}
+
 # Run an hg binary configured with the settings required to talk to Mononoke.
 function hgmn {
   hg --config ui.ssh="$DUMMYSSH" --config paths.default=ssh://user@dummy/repo --config ui.remotecmd="$MONONOKE_HGCLI" "$@"

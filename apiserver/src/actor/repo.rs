@@ -67,7 +67,7 @@ impl MononokeRepoActor {
                 | Content::Symlink(content) => Ok(MononokeRepoResponse::GetRawFile {
                     content: content.into_bytes(),
                 }),
-                _ => Err(ErrorKind::InvalidInput(path.to_string()).into()),
+                _ => Err(ErrorKind::InvalidInput(path.to_string(), None).into()),
             })
             .from_err()
             .boxify())

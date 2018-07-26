@@ -64,7 +64,7 @@ impl Handler<MononokeQuery> for MononokeActor {
     ) -> Self::Result {
         match self.repos.get(&repo) {
             Some(repo) => Ok(repo.send(kind)),
-            None => Err(ErrorKind::NotFound(repo).into()),
+            None => Err(ErrorKind::NotFound(repo, None).into()),
         }
     }
 }

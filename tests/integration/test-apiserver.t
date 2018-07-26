@@ -51,49 +51,50 @@ starts api server
   > fi
 
   $ APISERVER="https://localhost:$PORT"
+  $ alias sslcurl="sslcurl --silent"
 
 ping test
-  $ sslcurl -i $APISERVER/status 2> /dev/null | grep -iv "date"
+  $ sslcurl -i $APISERVER/status | grep -iv "date"
   HTTP/2 200 \r (esc)
   content-length: 2\r (esc)
   \r (esc)
   ok
 
 test cat file
-  $ sslcurl $APISERVER/repo/raw/$COMMIT1/test 2> /dev/null > output
+  $ sslcurl $APISERVER/repo/raw/$COMMIT1/test > output
   $ diff output - <<< $TEST_CONTENT
 
 test link file (no follow)
-  $ sslcurl $APISERVER/repo/raw/$COMMIT1/link 2> /dev/null
+  $ sslcurl $APISERVER/repo/raw/$COMMIT1/link
   test (no-eol)
 
 test folder
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/$COMMIT1/folder 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/$COMMIT1/folder | extract_json_error
   folder is invalid
-  400 (no-eol)
+  400
 
 test cat renamed file
-  $ sslcurl $APISERVER/repo/raw/$COMMIT2/test-rename 2> /dev/null > output
+  $ sslcurl $APISERVER/repo/raw/$COMMIT2/test-rename > output
   $ diff output - <<< $TEST_CONTENT
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/$COMMIT2/test 2> /dev/null
-  test not found
-  404 (no-eol)
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/$COMMIT2/test | extract_json_error
+  test is not found
+  404
 
-  $ sslcurl $APISERVER/status 2> /dev/null
+  $ sslcurl $APISERVER/status
   ok (no-eol)
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/0000000000000000000000000000000000000001/test 2> /dev/null
-  0000000000000000000000000000000000000001 not found
-  404 (no-eol)
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/0000000000000000000000000000000000000001/test | extract_json_error
+  0000000000000000000000000000000000000001 is not found
+  404
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/other/raw/0000000000000000000000000000000000000001/test 2> /dev/null
-  other not found
-  404 (no-eol)
+  $ sslcurl -w "\n%{http_code}" $APISERVER/other/raw/0000000000000000000000000000000000000001/test | extract_json_error
+  other is not found
+  404
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/0000/test 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/0000/test | extract_json_error
   0000 is invalid
-  400 (no-eol)
+  400
 
   $ sslcurl -i $APISERVER//raw/000/test 2> /dev/null | grep 404
   HTTP/2 404 \r (esc)
@@ -102,60 +103,60 @@ test cat renamed file
   HTTP/2 404 \r (esc)
 
 test reachability in basic repo
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT1/$COMMIT2 2> /dev/null
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT1/$COMMIT2
   true (no-eol)
 
-  $ sslcurl  $APISERVER/repo/is_ancestor/$COMMIT2/$COMMIT1 2> /dev/null
+  $ sslcurl  $APISERVER/repo/is_ancestor/$COMMIT2/$COMMIT1
   false (no-eol)
 
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT1/$COMMITB1 2> /dev/null
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT1/$COMMITB1
   true (no-eol)
 
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT1/$COMMITB2 2> /dev/null
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT1/$COMMITB2
   true (no-eol)
 
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$COMMITB1 2> /dev/null
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$COMMITB1
   true (no-eol)
 
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$COMMITB2 2> /dev/null
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$COMMITB2
   true (no-eol)
 
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2/$COMMITB1 2> /dev/null
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2/$COMMITB1
   false (no-eol)
 
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB1/$COMMITB2 2> /dev/null
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB1/$COMMITB2
   false (no-eol)
 
 test reachability response on nonexistent nodes
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT1/0000 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT1/0000 | extract_json_error
   0000 is invalid
-  400 (no-eol)
+  400
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/$COMMIT2 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/$COMMIT2 | extract_json_error
   1111 is invalid
-  400 (no-eol)
+  400
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/2222 2> /dev/null
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/2222 | extract_json_error
   2222 is invalid
-  400 (no-eol)
+  400
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/0123456789123456789012345678901234567890/$COMMIT1 2> /dev/null
-  0123456789123456789012345678901234567890 not found
-  404 (no-eol)
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/0123456789123456789012345678901234567890/$COMMIT1 | extract_json_error
+  0123456789123456789012345678901234567890 is not found
+  404
 
-  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT2/1234567890123456789012345678901234567890 2> /dev/null
-  1234567890123456789012345678901234567890 not found
-  404 (no-eol)
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT2/1234567890123456789012345678901234567890 | extract_json_error
+  1234567890123456789012345678901234567890 is not found
+  404
 
 test reachability on bookmarks
   $ echo $COMMITB2_BOOKMARK
   B2
 
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$COMMITB2_BOOKMARK 2> /dev/null
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$COMMITB2_BOOKMARK
   true (no-eol)
 
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$COMMITB2_BOOKMARK 2> /dev/null
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$COMMITB2_BOOKMARK
   true (no-eol)
 
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$COMMIT2 2> /dev/null
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$COMMIT2
   false (no-eol)

@@ -15,7 +15,6 @@ extern crate bytes;
 extern crate clap;
 #[macro_use]
 extern crate cloned;
-#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
