@@ -20,6 +20,8 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Timed, TimedStreamTrait};
 use itertools::Itertools;
 use slog::Logger;
+use stats::Histogram;
+use time_ext::DurationExt;
 
 use blobrepo::HgBlobChangeset;
 use bundle2_resolver;
@@ -42,6 +44,16 @@ use errors::*;
 use mononoke_repo::MononokeRepo;
 
 const MAX_NODES_TO_LOG: usize = 5;
+
+define_stats! {
+    prefix = "mononoke.repo_client";
+    getbundle_ms:
+        histogram(500, 0, 10_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    gettreepack_ms:
+        histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    getfiles_ms:
+        histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+}
 
 mod ops {
     pub const HELLO: &str = "hello";
@@ -502,7 +514,10 @@ impl HgCommands for RepoClient {
         match self.create_bundle(args) {
             Ok(res) => res,
             Err(err) => Err(err).into_future().boxify(),
-        }.timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
+        }.timed(move |stats, _| {
+            STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
+            scuba_logger.add_stats(&stats).log_with_trace(&trace)
+        })
             .boxify()
     }
 
@@ -587,7 +602,10 @@ impl HgCommands for RepoClient {
         let trace = self.trace.clone();
 
         self.gettreepack_untimed(params)
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
+            .timed(move |stats, _| {
+                STATS::gettreepack_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
+                scuba_logger.add_stats(&stats).log_with_trace(&trace)
+            })
             .boxify()
     }
 
@@ -613,7 +631,11 @@ impl HgCommands for RepoClient {
                     )
                     .timed({
                         let trace = trace.clone();
-                        move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace)
+                        move |stats, _| {
+                            STATS::getfiles_ms
+                                .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                            scuba_logger.add_stats(&stats).log_with_trace(&trace)
+                        }
                     })
             })
             .buffered(getfiles_buffer_size)

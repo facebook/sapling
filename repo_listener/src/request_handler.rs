@@ -17,6 +17,8 @@ use futures_stats::Timed;
 use slog::{self, Drain, Level, Logger};
 use slog_kvfilter::KVFilter;
 use slog_term;
+use stats::Histogram;
+use time_ext::DurationExt;
 use tokio::util::FutureExt as TokioFutureExt;
 use tracing::TraceContext;
 use uuid::Uuid;
@@ -27,6 +29,12 @@ use scuba_ext::ScubaSampleBuilderExt;
 use sshrelay::{SenderBytesWrite, Stdio};
 
 use repo_handlers::RepoHandler;
+
+define_stats! {
+    prefix = "mononoke.request_handler";
+    wireproto_ms:
+        histogram(500, 0, 100_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+}
 
 pub fn request_handler(
     (logger, mut scuba_logger, repo): RepoHandler,
@@ -120,6 +128,7 @@ pub fn request_handler(
             let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
             let wireproto_calls = mem::replace(wireproto_calls.deref_mut(), Vec::new());
 
+            STATS::wireproto_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
             scuba_logger
                 .add_stats(&stats)
                 .add("wireproto_commands", wireproto_calls);

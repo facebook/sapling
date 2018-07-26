@@ -17,12 +17,17 @@ extern crate futures;
 extern crate futures_ext;
 extern crate futures_stats;
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate maplit;
 extern crate openssl;
 #[macro_use]
 extern crate slog;
 extern crate slog_kvfilter;
 extern crate slog_term;
+#[macro_use]
+extern crate stats;
+extern crate time_ext;
 extern crate tokio;
 extern crate tokio_codec;
 extern crate tokio_io;

@@ -17,10 +17,15 @@ extern crate futures;
 extern crate futures_ext;
 extern crate futures_stats;
 extern crate itertools;
+#[macro_use]
+extern crate lazy_static;
 extern crate pylz4;
 extern crate rand;
 #[macro_use]
 extern crate slog;
+#[macro_use]
+extern crate stats;
+extern crate time_ext;
 #[macro_use]
 extern crate tracing;
 
