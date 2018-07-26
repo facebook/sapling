@@ -36,17 +36,19 @@ use errors::ErrorKind;
 pub fn get_content_by_path(
     repo: Arc<BlobRepo>,
     changesetid: HgChangesetId,
-    path: MPath,
+    path: Option<MPath>,
 ) -> impl Future<Item = Content, Error = Error> {
     repo.get_changeset_by_changesetid(&changesetid)
         .from_err()
         .map(|changeset| changeset.manifestid().clone().into_nodehash())
         .and_then({
             let path = path.clone();
-            move |manifest| repo.find_path_in_manifest(Some(path), manifest)
+            move |manifest| repo.find_path_in_manifest(path, manifest)
         })
         .and_then(|content| {
-            content.ok_or_else(move || ErrorKind::NotFound(path.to_string()).into())
+            content.ok_or_else(move || {
+                ErrorKind::NotFound(path.map(|p| p.to_string()).unwrap_or("/".to_string())).into()
+            })
         })
 }
 

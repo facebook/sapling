@@ -17,6 +17,10 @@ pub enum MononokeRepoQuery {
         path: String,
         changeset: String,
     },
+    ListDirectory {
+        path: String,
+        changeset: String,
+    },
     IsAncestor {
         proposed_ancestor: String,
         proposed_descendent: String,

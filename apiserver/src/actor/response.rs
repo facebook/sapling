@@ -6,14 +6,22 @@
 
 use std::result::Result;
 
-use actix_web::{Body, HttpRequest, HttpResponse, Responder};
+use actix_web;
+use actix_web::{Body, HttpRequest, HttpResponse, Json, Responder};
 use bytes::Bytes;
 
-use errors::ErrorKind;
+use super::model::Entry;
 
 pub enum MononokeRepoResponse {
-    GetRawFile { content: Bytes },
-    IsAncestor { answer: bool },
+    GetRawFile {
+        content: Bytes,
+    },
+    ListDirectory {
+        files: Box<Iterator<Item = Entry> + Send>,
+    },
+    IsAncestor {
+        answer: bool,
+    },
 }
 
 fn binary_response(content: Bytes) -> HttpResponse {
@@ -24,13 +32,14 @@ fn binary_response(content: Bytes) -> HttpResponse {
 
 impl Responder for MononokeRepoResponse {
     type Item = HttpResponse;
-    type Error = ErrorKind;
+    type Error = actix_web::Error;
 
-    fn respond_to<S: 'static>(self, _req: &HttpRequest<S>) -> Result<Self::Item, Self::Error> {
+    fn respond_to<S: 'static>(self, req: &HttpRequest<S>) -> Result<Self::Item, Self::Error> {
         use self::MononokeRepoResponse::*;
 
         match self {
             GetRawFile { content } => Ok(binary_response(content)),
+            ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
             IsAncestor { answer } => Ok(binary_response({
                 if answer {
                     "true".into()

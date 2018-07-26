@@ -12,9 +12,9 @@ setup testing repo for mononoke
   $ TEST_CONTENT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 1000 | head -n 1)
   $ echo $TEST_CONTENT >> test
   $ ln -s test link
-  $ mkdir folder
-  $ touch folder/.keep
-  $ hg add test link folder/.keep
+  $ mkdir -p folder/subfolder
+  $ touch folder/subfolder/.keep
+  $ hg add test link folder/subfolder/.keep
   $ hg commit -ma
   $ COMMIT1=$(hg --debug id -i)
   $ hg mv test test-rename
@@ -160,3 +160,32 @@ test reachability on bookmarks
 
   $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$COMMIT2
   false (no-eol)
+
+test folder list
+  $ sslcurl $APISERVER/repo/list/$COMMIT2/folder | python -mjson.tool
+  [
+      {
+          "name": "subfolder",
+          "type": "tree",
+          "hash": "9b5497965e634f261cca0247a7a48b709a7be2b9"
+      }
+  ]
+
+  $ sslcurl $APISERVER/repo/list/$COMMIT2/folder/subfolder | python -mjson.tool
+  [
+      {
+          "name": ".keep",
+          "type": "file",
+          "hash": "b80de5d138758541c5f05265ad144ab9fa86d1db"
+      }
+  ]
+
+test nonexist fold
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/list/$COMMIT2/nonexist | extract_json_error
+  nonexist is not found
+  404
+
+test list a file
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/list/$COMMIT2/test-rename | extract_json_error
+  test-rename is invalid
+  400

@@ -111,6 +111,18 @@ fn is_ancestor(
     }))
 }
 
+fn list_directory(
+    (state, info): (State<HttpServerState>, actix_web::Path<QueryInfo>),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    unwrap_request(state.mononoke.send(MononokeQuery {
+        repo: info.repo.clone(),
+        kind: MononokeRepoQuery::ListDirectory {
+            changeset: info.changeset.clone(),
+            path: info.path.clone(),
+        },
+    }))
+}
+
 fn setup_logger(debug: bool) -> Logger {
     let level = if debug { Level::Debug } else { Level::Info };
 
@@ -299,9 +311,12 @@ fn main() -> Result<()> {
                 repo.resource("/raw/{changeset}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(get_raw_file)
                 }).resource(
-                    "/is_ancestor/{proposed_ancestor}/{proposed_descendent}",
-                    |r| r.method(http::Method::GET).with_async(is_ancestor),
-                )
+                        "/is_ancestor/{proposed_ancestor}/{proposed_descendent}",
+                        |r| r.method(http::Method::GET).with_async(is_ancestor),
+                    )
+                    .resource("/list/{changeset}/{path:.*}", |r| {
+                        r.method(http::Method::GET).with_async(list_directory)
+                    })
             })
     });
 

@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::convert::TryInto;
 use std::sync::Arc;
 
 use actix::{Actor, Context, Handler};
@@ -25,6 +26,7 @@ use errors::ErrorKind;
 use from_string as FS;
 
 use super::{MononokeRepoQuery, MononokeRepoResponse};
+use super::model::Entry;
 
 pub struct MononokeRepoActor {
     repo: Arc<BlobRepo>,
@@ -60,7 +62,7 @@ impl MononokeRepoActor {
         let changesetid = FS::get_changeset_id(changeset)?;
         let repo = self.repo.clone();
 
-        Ok(api::get_content_by_path(repo, changesetid, mpath)
+        Ok(api::get_content_by_path(repo, changesetid, Some(mpath))
             .and_then(move |content| match content {
                 Content::File(content)
                 | Content::Executable(content)
@@ -109,6 +111,35 @@ impl MononokeRepoActor {
             .from_err()
             .boxify())
     }
+
+    fn list_directory(
+        &self,
+        changeset: String,
+        path: String,
+    ) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
+        let mpath = if path.is_empty() {
+            None
+        } else {
+            Some(FS::get_mpath(path.clone())?)
+        };
+        let changesetid = FS::get_changeset_id(changeset)?;
+        let repo = self.repo.clone();
+
+        Ok(api::get_content_by_path(repo, changesetid, mpath)
+            .and_then(move |content| match content {
+                Content::Tree(tree) => Ok(tree),
+                _ => Err(ErrorKind::InvalidInput(path.to_string(), None).into()),
+            })
+            .map(|tree| {
+                tree.list()
+                    .filter_map(|entry| -> Option<Entry> { entry.try_into().ok() })
+            })
+            .map(|files| MononokeRepoResponse::ListDirectory {
+                files: Box::new(files),
+            })
+            .from_err()
+            .boxify())
+    }
 }
 
 impl Actor for MononokeRepoActor {
@@ -123,6 +154,7 @@ impl Handler<MononokeRepoQuery> for MononokeRepoActor {
 
         match msg {
             GetRawFile { changeset, path } => self.get_raw_file(changeset, path),
+            ListDirectory { changeset, path } => self.list_directory(changeset, path),
             IsAncestor {
                 proposed_ancestor,
                 proposed_descendent,
