@@ -1,0 +1,10 @@
+language: rust
+rust:
+  - nightly
+
+matrix:
+  fast_finish: true
+
+script:
+  - echo "Testing with nightly version"
+  - cargo build --all
