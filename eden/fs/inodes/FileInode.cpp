@@ -809,9 +809,13 @@ folly::Future<struct stat> FileInode::stat() {
 
           if (overlayStat.st_size <
               static_cast<off_t>(Overlay::kHeaderLength)) {
-            EDEN_BUG() << "Overlay file for " << self->getNodeId()
-                       << " is too short for header: size="
-                       << overlayStat.st_size;
+            // Truncated overlay files can sometimes occur after a hard reboot
+            // where the overlay file data was not flushed to disk before the
+            // system powered off.
+            XLOG(ERR) << "overlay file for " << self->getNodeId()
+                      << " is too short for header: size="
+                      << overlayStat.st_size;
+            throw InodeError(EIO, self, "corrupt overlay file");
           }
           st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
         } else {

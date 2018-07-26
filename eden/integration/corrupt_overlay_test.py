@@ -7,95 +7,62 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import abc
-import contextlib
+import logging
 import os
 import pathlib
-import subprocess
-import typing
+import stat
 
 import eden.integration.lib.overlay as overlay_mod
 from eden.integration.lib import testcase
 
 
-class CorruptOverlayTestBase(
-    testcase.HgRepoTestMixin, testcase.EdenRepoTest, metaclass=abc.ABCMeta
-):
-    """Test file operations when Eden's overlay is corrupted.
-
-    Tests in this class apply to all types of files (regular files, directories,
-    etc.).
-    """
-
-    def test_unmount_succeeds(self) -> None:
-        with self.assert_does_not_raise():
-            self.eden.unmount(self.mount_path)
-
-    @property
-    @abc.abstractmethod
-    def corrupted_path(self) -> pathlib.Path:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def corrupt_overlay_file(self, path: pathlib.Path) -> None:
-        raise NotImplementedError()
-
-    @contextlib.contextmanager
-    def assert_does_not_raise(self) -> typing.Iterator[None]:
-        yield
-
-
-class CorruptOverlayRegularFileTestBase(CorruptOverlayTestBase):
-    """Test a regular file whose overlay was corrupted."""
+class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
+    """Test file operations when Eden's overlay is corrupted."""
 
     def setUp(self) -> None:
         super().setUp()
         self.overlay = overlay_mod.OverlayStore(self.eden, self.mount_path)
-        self.overlay.corrupt_file(self.corrupted_path, self.corrupt_overlay_file)
 
     def populate_repo(self) -> None:
-        self.repo.write_file("committed_file", "committed_file content")
+        self.repo.write_file("src/committed_file", "committed_file content")
+        self.repo.write_file("readme.txt", "readme content")
         self.repo.commit("Initial commit.")
 
-    def test_unlink_deletes_corrupted_file(self) -> None:
-        path = self.mount_path / self.corrupted_path
-        path.unlink()
+    def test_unmount_succeeds(self) -> None:
+        # Materialized some files then corrupt their overlay state
+        tracked_overlay_file_path = self.overlay.materialize_file("src/committed_file")
+        untracked_overlay_file_path = self.overlay.materialize_file("src/new_file")
 
-        self.assertFalse(path.exists(), f"{path} should not exist after being deleted")
+        self.eden.unmount(self.mount_path)
+        os.truncate(tracked_overlay_file_path, 0)
+        os.unlink(untracked_overlay_file_path)
 
-    def test_rm_program_with_force_deletes_corrupted_file(self) -> None:
-        path = self.mount_path / self.corrupted_path
-        subprocess.check_call(["rm", "-f", "--", path])
+        self.eden.mount(self.mount_path)
+        self.eden.unmount(self.mount_path)
 
-        self.assertFalse(path.exists(), f"{path} should not exist after being deleted")
+    def test_unlink_deletes_corrupted_files(self) -> None:
+        tracked_path = pathlib.Path("src/committed_file")
+        untracked_path = pathlib.Path("src/new_file")
+        readme_path = pathlib.Path("readme.txt")
 
+        tracked_overlay_file_path = self.overlay.materialize_file(tracked_path)
+        untracked_overlay_file_path = self.overlay.materialize_file(untracked_path)
+        readme_overlay_file_path = self.overlay.materialize_file(readme_path)
 
-class DeleteTrackedFile(CorruptOverlayRegularFileTestBase):
-    @property
-    def corrupted_path(self) -> pathlib.Path:
-        return pathlib.Path("committed_file")
+        self.eden.unmount(self.mount_path)
+        os.truncate(tracked_overlay_file_path, 0)
+        os.unlink(untracked_overlay_file_path)
+        os.truncate(readme_overlay_file_path, 0)
+        self.eden.mount(self.mount_path)
 
-    def corrupt_overlay_file(self, path: pathlib.Path) -> None:
-        path.unlink()
-
-
-class DeleteUntrackedFile(CorruptOverlayRegularFileTestBase):
-    @property
-    def corrupted_path(self) -> pathlib.Path:
-        return pathlib.Path("new_file")
-
-    def corrupt_overlay_file(self, path: pathlib.Path) -> None:
-        path.unlink()
-
-
-class TruncateTrackedFile(CorruptOverlayRegularFileTestBase):
-    @property
-    def corrupted_path(self) -> pathlib.Path:
-        return pathlib.Path("committed_file")
-
-    def corrupt_overlay_file(self, path: pathlib.Path) -> None:
-        os.truncate(str(path), 0)
-
-
-del CorruptOverlayTestBase
-del CorruptOverlayRegularFileTestBase
+        for path in (tracked_path, untracked_path, readme_path):
+            logging.info(f"stat()ing and unlinking {path}")
+            full_path = self.mount_path / path
+            s = os.lstat(str(full_path))
+            self.assertTrue(stat.S_ISREG, s.st_mode)
+            self.assertEqual(0, s.st_mode & 0o7777)
+            self.assertEqual(0, s.st_size)
+            full_path.unlink()
+            self.assertFalse(
+                full_path.exists(), f"{full_path} should not exist after being deleted"
+            )
