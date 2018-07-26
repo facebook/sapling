@@ -9,6 +9,7 @@
 use std::convert::TryFrom;
 use std::str;
 
+use chrono::{DateTime, FixedOffset};
 use failure::Error;
 
 use blobrepo::HgBlobChangeset;
@@ -65,7 +66,7 @@ impl TryFrom<Box<HgEntry + Sync>> for Entry {
 pub struct Changeset {
     manifest: String,
     comment: String,
-    // date: DateTime<FixedOffset>,
+    date: DateTime<FixedOffset>,
     author: String,
 }
 
@@ -75,13 +76,13 @@ impl TryFrom<HgBlobChangeset> for Changeset {
     fn try_from(changeset: HgBlobChangeset) -> Result<Changeset, Self::Error> {
         let manifest = changeset.manifestid().to_string();
         let comment = str::from_utf8(changeset.comments())?.to_string();
-        // let date = changeset.time().into_chrono();
+        let date = changeset.time().into_chrono();
         let author = str::from_utf8(changeset.user())?.to_string();
 
         Ok(Changeset {
             manifest,
             comment,
-            // date,
+            date,
             author,
         })
     }
