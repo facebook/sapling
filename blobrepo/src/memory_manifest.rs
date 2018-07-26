@@ -11,6 +11,7 @@ use std::fmt::{self, Debug};
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
+use failure::{Error, Result};
 use futures::future::{self, Either, Future, IntoFuture};
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, FutureExt};

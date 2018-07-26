@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::io::Write;
 
 use bytes::Bytes;
-use failure::FutureFailureErrorExt;
+use failure::{Error, FutureFailureErrorExt, Result};
 use futures::future::{Either, Future, IntoFuture};
 
 use blobstore::Blobstore;

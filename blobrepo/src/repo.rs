@@ -13,6 +13,7 @@ use std::usize;
 
 use bytes::Bytes;
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
+use failure::{Error, FutureFailureErrorExt, FutureFailureExt, Result, ResultExt};
 use futures::{Async, IntoFuture, Poll};
 use futures::future::{self, Either, Future};
 use futures::stream::{self, Stream};

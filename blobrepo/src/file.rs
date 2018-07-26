@@ -6,6 +6,7 @@
 
 //! Plain files, symlinks
 
+use failure::{Error, FutureFailureErrorExt};
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 

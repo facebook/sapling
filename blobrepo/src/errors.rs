@@ -9,8 +9,6 @@ use std::fmt;
 use ascii::AsciiString;
 use bincode;
 
-pub use failure::prelude::*;
-
 use mercurial_types::{HgBlob, HgBlobHash, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents,
                       MPath, RepoPath, Type};
 use mononoke_types::ContentId;
@@ -41,8 +39,6 @@ impl fmt::Display for StateOpenError {
         }
     }
 }
-
-pub type Result<T> = ::std::result::Result<T, Error>;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {

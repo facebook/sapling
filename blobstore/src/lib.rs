@@ -65,7 +65,7 @@ mod prefix;
 pub use prefix::PrefixBlobstore;
 
 mod errors;
-pub use errors::*;
+pub use errors::ErrorKind;
 
 /// The blobstore interface, shared across all blobstores.
 /// A blobstore must provide the following guarantees:

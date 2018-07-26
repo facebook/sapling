@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use failure::{err_msg, Compat, FutureFailureErrorExt};
+use failure::{err_msg, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt};
 use futures::IntoFuture;
 use futures::future::{self, Future, Shared, SharedError, SharedItem};
 use futures::stream::{self, Stream};

@@ -9,6 +9,7 @@
 use std::collections::BTreeMap;
 use std::str;
 
+use failure::{Error, FutureFailureErrorExt, Result, ResultExt};
 use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
