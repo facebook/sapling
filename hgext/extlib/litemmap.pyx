@@ -22,7 +22,7 @@ ELSE:
 
     cdef _raise_oserror(message=''):
         if message:
-            message += ': '
+            message += b': '
         message += os.strerror(errno)
         return OSError(errno, message)
 
@@ -35,19 +35,19 @@ ELSE:
             cdef stat.struct_stat st
             # Only support read-only case
             if access != pymmap.ACCESS_READ:
-                raise RuntimeError('access %s is unsupported' % access)
+                raise RuntimeError(b'access %s is unsupported' % access)
 
             # If length is 0, read size from file
             if length == 0:
                 r = stat.fstat(fd, &st)
                 if r != 0:
-                    _raise_oserror('fstat failed')
+                    _raise_oserror(b'fstat failed')
                 length = st.st_size
 
             self.ptr = <char*>mman.mmap(NULL, length, mman.PROT_READ,
                                         mman.MAP_SHARED, fd, 0)
             if self.ptr == MAP_FAILED:
-                _raise_oserror('mmap failed')
+                _raise_oserror(b'mmap failed')
 
             self.len = length
 
@@ -57,12 +57,12 @@ ELSE:
 
             r = mman.munmap(self.ptr, self.len)
             if r != 0:
-                _raise_oserror('munmap failed')
+                _raise_oserror(b'munmap failed')
             self.ptr = NULL
 
         def __getslice__(self, Py_ssize_t i, Py_ssize_t j):
             if self.ptr == NULL:
-                raise RuntimeError('mmap closed')
+                raise RuntimeError(b'mmap closed')
             if i < 0:
                 i = 0
             if j > self.len:

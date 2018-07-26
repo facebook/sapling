@@ -59,9 +59,9 @@ IF UNAME_SYSNAME != "Windows":
             # still be correct.
             # Choose a slightly different error message other than "Directory not
             # empty" so the test could notice the difference.
-            raise OSError(errno.ENOTEMPTY, 'Non-empty directory: %r' % path)
+            raise OSError(errno.ENOTEMPTY, b'Non-empty directory: %r' % path)
         else:
             return orig(path)
 
     def uisetup(ui):
-        extensions.wrapfunction(os, 'rmdir', _rmdir)
+        extensions.wrapfunction(os, b'rmdir', _rmdir)

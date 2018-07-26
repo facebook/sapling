@@ -62,16 +62,16 @@ ELSE:
 
 class LinelogError(Exception):
     _messages = {
-        LINELOG_RESULT_EILLDATA: 'Illegal data',
-        LINELOG_RESULT_ENOMEM: 'Out of memory',
-        LINELOG_RESULT_EOVERFLOW: 'Overflow',
+        LINELOG_RESULT_EILLDATA: b'Illegal data',
+        LINELOG_RESULT_ENOMEM: b'Out of memory',
+        LINELOG_RESULT_EOVERFLOW: b'Overflow',
     }
 
     def __init__(self, result):
         self.result = result
 
     def __str__(self):
-        return self._messages.get(self.result, 'Unknown error %d' % self.result)
+        return self._messages.get(self.result, b'Unknown error %d' % self.result)
 
 cdef class _buffer: # thin wrapper around linelog_buf
     cdef linelog_buf buf
@@ -160,7 +160,7 @@ cdef _excwitherrno(exctype, hint=None, filename=None):
     # (so one day if Cython writes pypy/cffi code, this can be used as-is)
     message = os.strerror(errno)
     if hint is not None:
-        message += ' (' + hint + ')'
+        message += b' (%s)' % hint
     return exctype(errno, message, filename)
 
 IF UNAME_SYSNAME != "Windows":
@@ -187,7 +187,7 @@ IF UNAME_SYSNAME != "Windows":
             self._unmap()
             r = unistd.ftruncate(self.fd, <off_t>newsize)
             if r != 0:
-                raise _excwitherrno(IOError, 'ftruncate')
+                raise _excwitherrno(IOError, b'ftruncate')
             self._map()
 
         cdef flush(self):
@@ -195,7 +195,7 @@ IF UNAME_SYSNAME != "Windows":
                 return
             r = mman.msync(self.buf.data, self.buf.size, mman.MS_ASYNC)
             if r != 0:
-                raise _excwitherrno(OSError, 'msync')
+                raise _excwitherrno(OSError, b'msync')
 
         cdef close(self):
             self.flush()
@@ -220,14 +220,14 @@ IF UNAME_SYSNAME != "Windows":
             cdef stat.struct_stat st
             r = stat.fstat(self.fd, &st)
             if r != 0:
-                raise _excwitherrno(IOError, 'fstat')
+                raise _excwitherrno(IOError, b'fstat')
 
             cdef size_t filelen = <size_t>st.st_size
             self.maplen = (1 if filelen == 0 else filelen) # cannot be 0
             p = mman.mmap(NULL, self.maplen, mman.PROT_READ | mman.PROT_WRITE,
                           mman.MAP_SHARED, self.fd, 0)
             if p == NULL:
-                raise _excwitherrno(OSError, 'mmap')
+                raise _excwitherrno(OSError, b'mmap')
 
             self.buf.data = <uint8_t *>p
             self.buf.size = filelen
@@ -237,7 +237,7 @@ IF UNAME_SYSNAME != "Windows":
                 return
             r = mman.munmap(self.buf.data, self.maplen)
             if r != 0:
-                raise _excwitherrno(OSError, 'munmap')
+                raise _excwitherrno(OSError, b'munmap')
             memset(&self.buf, 0, sizeof(linelog_buf))
             self.maplen = 0
 
@@ -273,8 +273,8 @@ cdef class linelog:
         """
         self.path = path
         if path:
-            IF UNAME_SYSNAME == 'Windows':
-                raise RuntimeError('on-disk linelog is unavailable on Windows')
+            IF UNAME_SYSNAME == b'Windows':
+                raise RuntimeError(b'on-disk linelog is unavailable on Windows')
             ELSE:
                 self.buf = _filebuffer(path)
         else:
@@ -398,19 +398,19 @@ cdef class linelog:
     def getoffset(self, linenum):
         """L.getoffset(int) -> int"""
         if linenum > self.ar.linecount:
-            raise IndexError('line number out of range')
+            raise IndexError(b'line number out of range')
         return self.ar.lines[linenum].offset
 
     cdef _checkclosed(self):
         if self.closed:
-            raise ValueError('I/O operation on closed linelog')
+            raise ValueError(b'I/O operation on closed linelog')
 
     cdef _clearannotateresult(self):
         linelog_annotateresult_clear(&self.ar)
 
     def __repr__(self):
-        return '<%s linelog %s at 0x%x>' % (
-            'closed' if self.closed else 'open',
-            '(in-memory)' if self.path is None else repr(self.path),
+        return b'<%s linelog %s at 0x%x>' % (
+            b'closed' if self.closed else b'open',
+            b'(in-memory)' if self.path is None else repr(self.path),
             id(self)
         )

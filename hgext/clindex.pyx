@@ -55,15 +55,15 @@ indexes.nodemap.emptyindexbuffer() # force demandimport to load indexes
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('clindex', 'nodemap', default=True)
-configitem('clindex', 'verify', default=False)
+configitem(b'clindex', b'nodemap', default=True)
+configitem(b'clindex', b'verify', default=False)
 
 # Inserting 20k nodes takes about 2ms. See https://phab.mercurial-scm.org/D1291
 # for the table of node count and performance.
-configitem('clindex', 'lagthreshold', default=20000)
+configitem(b'clindex', b'lagthreshold', default=20000)
 
 # Path to write logs.
-configitem('clindex', 'logpath', default=None)
+configitem(b'clindex', b'logpath', default=None)
 
 origindextype = parsers.index
 
@@ -139,7 +139,7 @@ cdef class clindex(object):
         return self._nodemap
 
     def destroying(self):
-        _log(self._vfs, 'clindex: destroying')
+        _log(self._vfs, b'clindex: destroying')
         self._nodemap.destroying()
 
     def updatecaches(self):
@@ -168,19 +168,19 @@ cdef class nodemap(object):
         self._overrides = {}
         self._vfs = vfs
         try:
-            index = util.buffer(util.mmapread(vfs(b'nodemap', 'rb')))
+            index = util.buffer(util.mmapread(vfs(b'nodemap', b'rb')))
             if len(index) < len(self.emptyindex):
                 index = self.emptyindex
         except IOError as ex:
             if ex.errno != errno.ENOENT:
                 raise
-            _log(self._vfs, 'nodemap: is empty')
+            _log(self._vfs, b'nodemap: is empty')
             index = self.emptyindex
         if config.nodemap:
             try:
                 rustnodemap = indexes.nodemap(changelog, index)
             except Exception as ex:
-                _log(self._vfs, 'nodemap: corrupted: %r' % ex)
+                _log(self._vfs, b'nodemap: corrupted: %r' % ex)
                 rustnodemap = indexes.nodemap(changelog, self.emptyindex)
             self._rustnodemap = rustnodemap
         self._updated = False
@@ -199,8 +199,8 @@ cdef class nodemap(object):
         lag = self._rustnodemap.lag()
         if lag == 0 or lag < self._config.lagthreshold:
             return
-        _log(self._vfs, 'nodemap: updating (lag=%s)' % lag)
-        with self._vfs('nodemap', 'w', atomictemp=True) as f:
+        _log(self._vfs, b'nodemap: updating (lag=%s)' % lag)
+        with self._vfs(b'nodemap', b'w', atomictemp=True) as f:
             f.write(self._rustnodemap.build())
         self._updated = True
 
@@ -209,7 +209,7 @@ cdef class nodemap(object):
             return self._origindex[node]
 
         if node == nullid:
-            # special case for hg: '\0' * 20 => -1
+            # special case for hg: b'\0' * 20 => -1
             return -1
         if node in self._overrides:
             rev = self._overrides[node]
@@ -221,10 +221,10 @@ cdef class nodemap(object):
             rev = _logifraise(self._vfs,
                               lambda: self._rustnodemap[node],
                               lambda: {'nodemap.getitem': hex(node),
-                                       'revorig': revorig})
+                                       b'revorig': revorig})
             if rev != revorig:
                 _logandraise(self._vfs,
-                             'nodemap: inconsistent getitem(%s): %r vs %r'
+                             b'nodemap: inconsistent getitem(%s): %r vs %r'
                              % (hex(node), rev, revorig))
         else:
             rev = self._rustnodemap[node]
@@ -253,10 +253,10 @@ cdef class nodemap(object):
             res = _logifraise(self._vfs,
                               lambda: node in self._rustnodemap,
                               lambda: {'nodemap.contains': hex(node),
-                                       'resorig': resorig})
+                                       b'resorig': resorig})
             if res != resorig:
                 _logandraise(self._vfs,
-                             'nodemap: inconsistent contains(%s): %r vs %r'
+                             b'nodemap: inconsistent contains(%s): %r vs %r'
                              % (hex(node), res, resorig))
         else:
             res = node in self._rustnodemap
@@ -277,11 +277,11 @@ cdef class nodemap(object):
             res = _logifraise(
                 self._vfs,
                 lambda: self._rustpartialmatch(hexprefix),
-                lambda: {'partialmatch': hexprefix, 'resorig': resorig})
+                lambda: {'partialmatch': hexprefix, b'resorig': resorig})
             if res != resorig:
                 _logandraise(
                     self._vfs,
-                    'nodemap: inconsistent partialmatch(%s): %r vs %r'
+                    b'nodemap: inconsistent partialmatch(%s): %r vs %r'
                     % (hexprefix, res, resorig))
         else:
             res = self._rustpartialmatch(hexprefix)
@@ -297,10 +297,10 @@ cdef class nodemap(object):
             if node is not None:
                 candidates.add(node)
         except RuntimeError as ex:
-            # Convert 'ambiguous prefix' to RevlogError. This is because the
+            # Convert b'ambiguous prefix' to RevlogError. This is because the
             # rust code cannot access RevlogError cleanly. So we do the
             # conversion here.
-            if 'ambiguous prefix' in ex:
+            if b'ambiguous prefix' in ex:
                 raise error.RevlogError
             raise
 
@@ -326,7 +326,7 @@ cdef class nodemap(object):
             return 0
 
     def destroying(self):
-        self._vfs.tryunlink('nodemap')
+        self._vfs.tryunlink(b'nodemap')
         self._config.nodemap = False
 
 # These are unfortunate. But we need vfs access inside index.__init__. Doing
@@ -355,9 +355,9 @@ cdef class localconfig:
     @classmethod
     def fromui(cls, ui):
         self = cls()
-        self.nodemap = ui.configbool('clindex', 'nodemap')
-        self.verify = ui.configbool('clindex', 'verify')
-        self.lagthreshold = ui.configint('clindex', 'lagthreshold')
+        self.nodemap = ui.configbool(b'clindex', b'nodemap')
+        self.verify = ui.configbool(b'clindex', b'verify')
+        self.lagthreshold = ui.configint(b'clindex', b'lagthreshold')
         return self
 
 def _parseindex(orig, self, data, inline):
@@ -377,26 +377,26 @@ def _logifraise(vfs, func, infofunc):
     try:
         return func()
     except RuntimeError as ex:
-        _log(vfs, 'exception: %r %r' % (ex, infofunc()))
+        _log(vfs, b'exception: %r %r' % (ex, infofunc()))
         _recover(vfs)
         raise
 
 def _recover(vfs):
-    vfs.tryunlink('nodemap')
-    vfs.tryunlink('childmap')
+    vfs.tryunlink(b'nodemap')
+    vfs.tryunlink(b'childmap')
 
 _logpath = None
 
 def _log(vfs, message):
     try:
         if _logpath:
-            f = open(_logpath, 'ab')
+            f = open(_logpath, b'ab')
         else:
-            f = vfs('clindex.log', 'ab')
+            f = vfs(b'clindex.log', b'ab')
         with f:
-            timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+            timestamp = datetime.datetime.now().strftime(b'%Y-%m-%d %H:%M:%S.%f')
             pid = os.getpid()
-            f.write('%s [%d] %s\n' % (timestamp, pid, message))
+            f.write(b'%s [%d] %s\n' % (timestamp, pid, message))
     except IOError:
         # The log is not important. IOError like "Permission denied" should not
         # be fatal.
@@ -413,7 +413,7 @@ def _wrapchangelog(orig, repo):
 
     try:
         with extensions.wrappedfunction(revlog.revlogio,
-                                        'parseindex', _parseindex):
+                                        b'parseindex', _parseindex):
             return orig(repo)
     finally:
         # do not leak them outside parseindex
@@ -450,10 +450,10 @@ def reposetup(ui, repo):
             # Force a reload of changelog. The current "self.changelog" object
             # has an outdated snapshot of changelog.i. We need to read the new
             # version before updatecaches().
-            if 'changelog' in self.__dict__:
-                del self.__dict__['changelog']
-            if 'changelog' in self._filecache:
-                del self._filecache['changelog']
+            if b'changelog' in self.__dict__:
+                del self.__dict__[b'changelog']
+            if b'changelog' in self._filecache:
+                del self._filecache[b'changelog']
             # This calls "updatecachess" and will pick up the new changelog.i.
             super(clindexrepo, self).destroyed()
 
@@ -462,8 +462,8 @@ def reposetup(ui, repo):
 def uisetup(ui):
     # global logpath config
     global _logpath
-    _logpath = ui.config('clindex', 'logpath')
+    _logpath = ui.config(b'clindex', b'logpath')
 
     # filecache method has to be wrapped using wrapfilecache
-    extensions.wrapfilecache(localrepo.localrepository, 'changelog',
+    extensions.wrapfilecache(localrepo.localrepository, b'changelog',
                              _wrapchangelog)
