@@ -20,6 +20,10 @@ def _assignobjects(objects, repo):
     if repo:
         objects.update({"repo": repo, "cl": repo.changelog, "mf": repo.manifestlog})
 
+    # Import other handy modules
+    for name in ["os", "hgext", "subprocess", "re"]:
+        objects[name] = __import__(name)
+
 
 def pdb(ui, repo, msg, **opts):
     objects = {}
