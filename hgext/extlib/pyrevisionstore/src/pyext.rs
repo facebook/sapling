@@ -57,7 +57,6 @@ py_class!(class datastore |py| {
 
 py_class!(class datapack |py| {
     data store: Box<DataPack>;
-    data pack_path: PathBuf;
 
     def __new__(
         _cls,
@@ -72,12 +71,19 @@ py_class!(class datapack |py| {
                 Ok(pack) => pack,
                 Err(e) => return Err(to_pyerr(py, &e)),
             }),
-            path,
         )
     }
 
     def path(&self) -> PyResult<PyString> {
-        Ok(PyString::new(py, &self.pack_path(py).to_string_lossy()))
+        Ok(PyString::new(py, &self.store(py).base_path().to_string_lossy()))
+    }
+
+    def packpath(&self) -> PyResult<PyString> {
+        Ok(PyString::new(py, &self.store(py).pack_path().to_string_lossy()))
+    }
+
+    def indexpath(&self) -> PyResult<PyString> {
+        Ok(PyString::new(py, &self.store(py).index_path().to_string_lossy()))
     }
 
     def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {

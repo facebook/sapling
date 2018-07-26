@@ -79,7 +79,7 @@ use std::{fmt, result};
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Cursor, Read};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use dataindex::{DataIndex, DeltaBaseOffset};
@@ -102,6 +102,9 @@ pub struct DataPack {
     mmap: Mmap,
     version: DataPackVersion,
     index: DataIndex,
+    base_path: PathBuf,
+    pack_path: PathBuf,
+    index_path: PathBuf,
 }
 
 pub struct DataEntry<'a> {
@@ -253,8 +256,9 @@ impl<'a> fmt::Debug for DataEntry<'a> {
 
 impl DataPack {
     pub fn new(path: &Path) -> Result<Self> {
-        let path = path.with_extension("datapack");
-        let file = File::open(&path)?;
+        let base_path = PathBuf::from(path);
+        let pack_path = path.with_extension("datapack");
+        let file = File::open(&pack_path)?;
         let len = file.metadata()?.len();
         if len < 1 {
             return Err(format_err!(
@@ -270,6 +274,9 @@ impl DataPack {
             mmap: mmap,
             version: version,
             index: DataIndex::new(&index_path)?,
+            base_path: base_path,
+            pack_path: pack_path,
+            index_path: index_path,
         })
     }
 
@@ -279,6 +286,18 @@ impl DataPack {
 
     pub fn read_entry(&self, offset: u64) -> Result<DataEntry> {
         DataEntry::new(self.mmap.as_ref(), offset, self.version.clone())
+    }
+
+    pub fn base_path(&self) -> &Path {
+        &self.base_path
+    }
+
+    pub fn pack_path(&self) -> &Path {
+        &self.pack_path
+    }
+
+    pub fn index_path(&self) -> &Path {
+        &self.index_path
     }
 }
 
