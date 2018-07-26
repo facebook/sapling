@@ -35,9 +35,9 @@ class Handler : public proxygen::RequestHandler {
  public:
   explicit Handler(const BlobContents& blobs)
       : regex_(
-            "^(/repo/blob/(.*)/|"
-            "/repo/treenode/(.*)/|"
-            "/repo/cs/(.*)/roottreemanifestid/)$"),
+            "^(/repo/blob/(.*)|"
+            "/repo/tree/(.*)|"
+            "/repo/changeset/(.*))$"),
         path_(),
         blobs_(blobs) {}
 
@@ -147,13 +147,19 @@ class MononokeBackingStoreTest : public ::testing::Test {
         std::make_pair(malformedhash.toString(), "{"),
         std::make_pair(
             treehash.toString(),
-            R"([{"hash": "b80de5d138758541c5f05265ad144ab9fa86d1db", "path": "a", "size": 0, "type": "File"},
-                {"hash": "b8e02f6433738021a065f94175c7cd23db5f05be", "path": "b", "size": 2, "type": "File"},
-                {"hash": "3333333333333333333333333333333333333333", "path": "dir", "size": 2, "type": "Tree"},
-                {"hash": "4444444444444444444444444444444444444444", "path": "exec", "size": 2, "type": "Executable"},
-                {"hash": "5555555555555555555555555555555555555555", "path": "link", "size": 2, "type": "Symlink"}
+            R"([{"hash": "b80de5d138758541c5f05265ad144ab9fa86d1db", "name": "a", "type": "file"},
+                {"hash": "b8e02f6433738021a065f94175c7cd23db5f05be", "name": "b", "type": "file"},
+                {"hash": "3333333333333333333333333333333333333333", "name": "dir", "type": "tree"},
+                {"hash": "4444444444444444444444444444444444444444", "name": "exec", "type": "executable"},
+                {"hash": "5555555555555555555555555555555555555555", "name": "link", "type": "symlink"}
             ])"),
-        std::make_pair(commithash.toString(), treehash.toString())};
+        std::make_pair(
+            commithash.toString(),
+            R"({
+              "manifest": "2222222222222222222222222222222222222222",
+              "author": "John Doe <example@fb.com>",
+              "comment": "a commit"
+            })")};
     return blobs;
   }
 

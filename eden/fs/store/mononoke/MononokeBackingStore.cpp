@@ -167,22 +167,22 @@ std::unique_ptr<Tree> convertBufToTree(
 
   std::vector<TreeEntry> entries;
   for (auto i = parsed.begin(); i != parsed.end(); ++i) {
-    auto path_elem = i->at("path").asString();
+    auto name = i->at("name").asString();
     auto hash = Hash(i->at("hash").asString());
     auto str_type = i->at("type").asString();
     TreeEntryType file_type;
-    if (str_type == "File") {
+    if (str_type == "file") {
       file_type = TreeEntryType::REGULAR_FILE;
-    } else if (str_type == "Tree") {
+    } else if (str_type == "tree") {
       file_type = TreeEntryType::TREE;
-    } else if (str_type == "Executable") {
+    } else if (str_type == "executable") {
       file_type = TreeEntryType::EXECUTABLE_FILE;
-    } else if (str_type == "Symlink") {
+    } else if (str_type == "symlink") {
       file_type = TreeEntryType::SYMLINK;
     } else {
       throw std::runtime_error("unknown file type");
     }
-    entries.push_back(TreeEntry(hash, path_elem, file_type));
+    entries.push_back(TreeEntry(hash, name, file_type));
   }
   return std::make_unique<Tree>(std::move(entries), id);
 }
@@ -200,7 +200,7 @@ MononokeBackingStore::~MononokeBackingStore() {}
 
 folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
     const Hash& id) {
-  URL url(folly::sformat("/{}/treenode/{}/", repo_, id.toString()));
+  URL url(folly::sformat("/{}/tree/{}", repo_, id.toString()));
 
   return folly::via(executor_)
       .then([this, url] { return sendRequest(url); })
@@ -211,7 +211,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
 
 folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
     const Hash& id) {
-  URL url(folly::sformat("/{}/blob/{}/", repo_, id.toString()));
+  URL url(folly::sformat("/{}/blob/{}", repo_, id.toString()));
   return folly::via(executor_)
       .then([this, url] { return sendRequest(url); })
       .then([id](std::unique_ptr<folly::IOBuf>&& buf) {
@@ -221,13 +221,14 @@ folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
 
 folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
     const Hash& commitID) {
-  URL url(folly::sformat(
-      "/{}/cs/{}/roottreemanifestid/", repo_, commitID.toString()));
+  URL url(folly::sformat("/{}/changeset/{}", repo_, commitID.toString()));
   return folly::via(executor_)
       .then([this, url] { return sendRequest(url); })
       .then([&](std::unique_ptr<folly::IOBuf>&& buf) {
-        auto treeId = Hash(buf->moveToFbString());
-        return getTree(treeId);
+        auto s = buf->moveToFbString();
+        auto parsed = folly::parseJson(s);
+        auto hash = Hash(parsed.at("manifest").asString());
+        return getTree(hash);
       });
 }
 
