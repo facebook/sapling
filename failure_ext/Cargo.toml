@@ -1,0 +1,10 @@
+[package]
+name = "failure_ext"
+version = "0.0.1"
+authors = ["Source Control Oncall oncall+source_control@xmail.facebook.com"]
+
+[dependencies]
+futures = "0.1.18"
+failure = "0.1.1"
+failure_derive = "0.1.1"
+slog = "2.1.1"
