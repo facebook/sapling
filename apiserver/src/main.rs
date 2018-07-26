@@ -12,6 +12,7 @@ extern crate actix_web;
 extern crate blobrepo;
 extern crate bookmarks;
 extern crate bytes;
+extern crate chrono;
 extern crate clap;
 #[macro_use]
 extern crate cloned;
@@ -147,6 +148,17 @@ fn get_tree(
     unwrap_request(state.mononoke.send(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetTree {
+            hash: info.hash.clone(),
+        },
+    }))
+}
+
+fn get_changeset(
+    (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    unwrap_request(state.mononoke.send(MononokeQuery {
+        repo: info.repo.clone(),
+        kind: MononokeRepoQuery::GetChangeset {
             hash: info.hash.clone(),
         },
     }))
@@ -351,6 +363,9 @@ fn main() -> Result<()> {
                     })
                     .resource("/tree/{hash}", |r| {
                         r.method(http::Method::GET).with_async(get_tree)
+                    })
+                    .resource("/changeset/{hash}", |r| {
+                        r.method(http::Method::GET).with_async(get_changeset)
                     })
             })
     });

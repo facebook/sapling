@@ -10,7 +10,7 @@ use actix_web;
 use actix_web::{Body, HttpRequest, HttpResponse, Json, Responder};
 use bytes::Bytes;
 
-use super::model::Entry;
+use super::model::{Changeset, Entry};
 
 pub enum MononokeRepoResponse {
     GetRawFile {
@@ -24,6 +24,9 @@ pub enum MononokeRepoResponse {
     },
     GetTree {
         files: Box<Iterator<Item = Entry> + Send>,
+    },
+    GetChangeset {
+        changeset: Changeset,
     },
     IsAncestor {
         answer: bool,
@@ -48,6 +51,7 @@ impl Responder for MononokeRepoResponse {
             ListDirectory { files } | GetTree { files } => {
                 Json(files.collect::<Vec<_>>()).respond_to(req)
             }
+            GetChangeset { changeset } => Json(changeset).respond_to(req),
             IsAncestor { answer } => Ok(binary_response({
                 if answer {
                     "true".into()

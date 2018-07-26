@@ -7,10 +7,12 @@
 // This file defines all types can be serialized into JSON
 
 use std::convert::TryFrom;
+use std::str;
 
 use failure::Error;
 
-use mercurial_types::{Entry as HgEntry, Type};
+use blobrepo::HgBlobChangeset;
+use mercurial_types::{Changeset as HgChangeset, Entry as HgEntry, Type};
 
 #[derive(Serialize)]
 pub enum FileType {
@@ -56,5 +58,31 @@ impl TryFrom<Box<HgEntry + Sync>> for Entry {
         let hash = entry.get_hash().to_string();
 
         Ok(Entry { name, ttype, hash })
+    }
+}
+
+#[derive(Serialize)]
+pub struct Changeset {
+    manifest: String,
+    comment: String,
+    // date: DateTime<FixedOffset>,
+    author: String,
+}
+
+impl TryFrom<HgBlobChangeset> for Changeset {
+    type Error = str::Utf8Error;
+
+    fn try_from(changeset: HgBlobChangeset) -> Result<Changeset, Self::Error> {
+        let manifest = changeset.manifestid().to_string();
+        let comment = str::from_utf8(changeset.comments())?.to_string();
+        // let date = changeset.time().into_chrono();
+        let author = str::from_utf8(changeset.user())?.to_string();
+
+        Ok(Changeset {
+            manifest,
+            comment,
+            // date,
+            author,
+        })
     }
 }

@@ -171,6 +171,17 @@ impl MononokeRepoActor {
             .from_err()
             .boxify())
     }
+
+    fn get_changeset(&self, hash: String) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
+        let changesetid = FS::get_changeset_id(hash)?;
+
+        Ok(self.repo
+            .get_changeset_by_changesetid(&changesetid)
+            .and_then(|changeset| changeset.try_into().map_err(From::from))
+            .map(|changeset| MononokeRepoResponse::GetChangeset { changeset })
+            .from_err()
+            .boxify())
+    }
 }
 
 impl Actor for MononokeRepoActor {
@@ -188,6 +199,7 @@ impl Handler<MononokeRepoQuery> for MononokeRepoActor {
             GetBlobContent { hash } => self.get_blob_content(hash),
             ListDirectory { changeset, path } => self.list_directory(changeset, path),
             GetTree { hash } => self.get_tree(hash),
+            GetChangeset { hash } => self.get_changeset(hash),
             IsAncestor {
                 proposed_ancestor,
                 proposed_descendent,

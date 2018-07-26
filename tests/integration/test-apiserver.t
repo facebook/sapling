@@ -230,3 +230,30 @@ test get tree
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/0000000000000000000000000000000000000001 | extract_json_error
   0000000000000000000000000000000000000001 is not found
   404
+
+test get changeset
+  $ sslcurl $APISERVER/repo/changeset/$COMMIT1 | tee output | jq ".comment,.author"
+  "a"
+  "test"
+
+  $ sslcurl $APISERVER/repo/tree/$(cat output | jq -r ".manifest") | jq ".[] | {name, type}"
+  {
+    "name": "folder",
+    "type": "tree"
+  }
+  {
+    "name": "link",
+    "type": "symlink"
+  }
+  {
+    "name": "test",
+    "type": "file"
+  }
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/changeset/0000000000000000000000000000000000000001 | extract_json_error
+  0000000000000000000000000000000000000001 is not found
+  404
+
+  $ sslcurl -w "\n%{http_code}" $APISERVER/repo/changeset/0000 | extract_json_error
+  0000 is invalid
+  400

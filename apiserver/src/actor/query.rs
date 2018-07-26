@@ -27,6 +27,9 @@ pub enum MononokeRepoQuery {
     GetTree {
         hash: String,
     },
+    GetChangeset {
+        hash: String,
+    },
     IsAncestor {
         proposed_ancestor: String,
         proposed_descendent: String,
