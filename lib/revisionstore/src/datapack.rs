@@ -77,17 +77,18 @@ use lz4_pyframe::decompress;
 use memmap::{Mmap, MmapOptions};
 use std::{fmt, result};
 use std::cell::RefCell;
-use std::fs::File;
+use std::fs::{remove_file, File};
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use dataindex::{DataIndex, DeltaBaseOffset};
 use datastore::{DataStore, Delta, Metadata};
 use error::Result;
 use key::Key;
 use node::Node;
-use repack::IterableStore;
+use repack::{IterableStore, RepackOutputType, Repackable};
 
 #[derive(Debug, Fail)]
 #[fail(display = "Datapack Error: {:?}", _0)]
@@ -103,7 +104,7 @@ pub struct DataPack {
     mmap: Mmap,
     version: DataPackVersion,
     index: DataIndex,
-    base_path: PathBuf,
+    base_path: Arc<PathBuf>,
     pack_path: PathBuf,
     index_path: PathBuf,
 }
@@ -275,7 +276,7 @@ impl DataPack {
             mmap: mmap,
             version: version,
             index: DataIndex::new(&index_path)?,
-            base_path: base_path,
+            base_path: Arc::new(base_path),
             pack_path: pack_path,
             index_path: index_path,
         })
@@ -361,6 +362,26 @@ impl DataStore for DataPack {
 impl IterableStore for DataPack {
     fn iter<'a>(&'a self) -> Box<Iterator<Item = Result<Key>> + 'a> {
         Box::new(DataPackIterator::new(self))
+    }
+}
+
+impl Repackable for DataPack {
+    fn delete(&self) -> Result<()> {
+        let result1 = remove_file(&self.pack_path);
+        let result2 = remove_file(&self.index_path);
+        // Only check for errors after both have run. That way if pack_path doesn't exist,
+        // index_path is still deleted.
+        result1?;
+        result2?;
+        Ok(())
+    }
+
+    fn id(&self) -> &Arc<PathBuf> {
+        &self.base_path
+    }
+
+    fn kind(&self) -> RepackOutputType {
+        RepackOutputType::Data
     }
 }
 
@@ -633,6 +654,34 @@ mod tests {
                 .iter()
                 .map(|d| d.0.key.clone())
                 .collect::<Vec<Key>>()
+        );
+    }
+
+    #[test]
+    fn test_delete() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let revisions = vec![
+            (
+                Delta {
+                    data: Rc::new([1, 2, 3, 4]),
+                    base: None,
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                },
+                None,
+            ),
+        ];
+
+        let pack = make_pack(&tempdir, &revisions);
+        assert_eq!(
+            tempdir.path().read_dir().unwrap().collect::<Vec<_>>().len(),
+            2
+        );
+        pack.delete().unwrap();
+        assert_eq!(
+            tempdir.path().read_dir().unwrap().collect::<Vec<_>>().len(),
+            0
         );
     }
 
