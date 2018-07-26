@@ -28,5 +28,6 @@ pub mod key;
 pub mod loosefile;
 pub mod mutabledatapack;
 pub mod node;
+pub mod repack;
 pub mod uniondatastore;
 pub mod unionhistorystore;

@@ -87,6 +87,7 @@ use datastore::{DataStore, Delta, Metadata};
 use error::Result;
 use key::Key;
 use node::Node;
+use repack::IterableStore;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Datapack Error: {:?}", _0)]
@@ -357,6 +358,44 @@ impl DataStore for DataPack {
     }
 }
 
+impl IterableStore for DataPack {
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Result<Key>> + 'a> {
+        Box::new(DataPackIterator::new(self))
+    }
+}
+
+struct DataPackIterator<'a> {
+    pack: &'a DataPack,
+    offset: u64,
+}
+
+impl<'a> DataPackIterator<'a> {
+    pub fn new(pack: &'a DataPack) -> Self {
+        DataPackIterator {
+            pack: pack,
+            offset: 1, // Start after the header byte
+        }
+    }
+}
+
+impl<'a> Iterator for DataPackIterator<'a> {
+    type Item = Result<Key>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset as usize >= self.pack.len() {
+            return None;
+        }
+        let entry = self.pack.read_entry(self.offset);
+        Some(match entry {
+            Ok(ref e) => {
+                self.offset = e.next_offset;
+                Ok(Key::new(e.filename.to_vec().into_boxed_slice(), e.node))
+            }
+            Err(e) => Err(e),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -560,6 +599,66 @@ mod tests {
         for i in 0..2 {
             let chain = pack.get_delta_chain(&revisions[i].0.key).unwrap();
             assert_eq!(&chains[i], &chain);
+        }
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let revisions = vec![
+            (
+                Delta {
+                    data: Rc::new([1, 2, 3, 4]),
+                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                },
+                None,
+            ),
+            (
+                Delta {
+                    data: Rc::new([1, 2, 3, 4]),
+                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                },
+                None,
+            ),
+        ];
+
+        let pack = make_pack(&tempdir, &revisions);
+        assert_eq!(
+            pack.iter().collect::<Result<Vec<Key>>>().unwrap(),
+            revisions
+                .iter()
+                .map(|d| d.0.key.clone())
+                .collect::<Vec<Key>>()
+        );
+    }
+
+    quickcheck! {
+        fn test_iter_quickcheck(keys: Vec<(Vec<u8>, Key)>) -> bool {
+            let tempdir = TempDir::new().unwrap();
+
+            let mut revisions: Vec<(Delta, Option<Metadata>)> = vec![];
+            for (data, key) in keys {
+                revisions.push((
+                    Delta {
+                        data: Rc::from(data.clone()),
+                        base: None,
+                        key: key.clone(),
+                    },
+                    None,
+                ));
+            }
+
+            let pack = make_pack(&tempdir, &revisions);
+            let same = pack.iter().collect::<Result<Vec<Key>>>().unwrap()
+                == revisions
+                    .iter()
+                    .map(|d| d.0.key.clone())
+                    .collect::<Vec<Key>>();
+            same
         }
     }
 }
