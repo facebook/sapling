@@ -2000,6 +2000,10 @@ See :hg:`help templates` for details.
 ``treestate``
 -------------
 
+``mingcage``
+    Seconds. Only files older than that would be garbage collected.
+    (default: 1209600, 2 weeks)
+
 ``minrepackthreshold``
     Bytes. Minimal size to trigger a repack.
     (default: 10M)

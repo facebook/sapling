@@ -387,10 +387,20 @@ class treestatemap(object):
                 # dirstate file does not exist, or is in an incompatible
                 # format.
                 pass
+        from . import dirstate  # avoid cycle
+
+        fsnow = dirstate._getfsnow(self._vfs)
+        maxmtime = fsnow - self._ui.configint("treestate", "mingcage")
         for name in self._vfs.listdir("treestate"):
             if name in self.fileinuse:
                 continue
-            self._ui.debug("removing unreferenced treestate/%s\n" % name)
+            try:
+                if self._vfs.stat("treestate/%s" % name).st_mtime > maxmtime:
+                    continue
+            except OSError:
+                continue
+            self._ui.log("treestate", "removing old unreferenced treestate/%s\n" % name)
+            self._ui.debug("removing old unreferenced treestate/%s\n" % name)
             self._vfs.tryunlink("treestate/%s" % name)
 
     def write(self, st, now):

@@ -3,6 +3,7 @@ Fsmonitor makes the size numbers less predicatable.
 #require no-fsmonitor
 
   $ setconfig format.dirstate=2
+  $ setconfig treestate.mingcage=0
 
 Prepare: fake uuid.uuid4 so it becomes predictable
 
@@ -60,7 +61,7 @@ Auto repack happens when treestate exceeds size threshold
   .
   .
   creating treestate/00000000-0000-0000-0000-000000000002
-  removing unreferenced treestate/00000000-0000-0000-0000-000000000000
+  removing old unreferenced treestate/00000000-0000-0000-0000-000000000000
   $ hg debugtreestate
   dirstate v2 (using treestate/00000000-0000-0000-0000-000000000002, offset 88, 5 files tracked)
 
@@ -68,4 +69,9 @@ Cleanup removes the leftover files
 
   $ touch .hg/treestate/00000000-0000-0000-0000-000000000005
   $ hg debugtreestate cleanup --debug
-  removing unreferenced treestate/00000000-0000-0000-0000-000000000005
+  removing old unreferenced treestate/00000000-0000-0000-0000-000000000005
+
+Cleanup does not remove files that are not old enough
+
+  $ touch .hg/treestate/00000000-0000-0000-0000-000000000007
+  $ hg debugtreestate cleanup --debug --config treestate.mingcage=1000
