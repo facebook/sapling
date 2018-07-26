@@ -1,10 +1,9 @@
 // Copyright Facebook, Inc. 2018
 //! Python bindings for a Rust hg store
 use cpython::{ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyIterator, PyList, PyObject,
-              PyResult, PyString, Python, PythonObject, ToPyObject};
-use std::borrow::Cow;
-use std::path::{Path, PathBuf};
+              PyResult, Python, PythonObject, ToPyObject};
 
+use pathencoding;
 use pythondatastore::PythonDataStore;
 use pythonutil::{from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_key,
                  to_pyerr};
@@ -60,11 +59,10 @@ py_class!(class datapack |py| {
 
     def __new__(
         _cls,
-        path: &PyString
+        path: &PyBytes
     ) -> PyResult<datapack> {
-        let raw_str: Cow<str> = path.to_string(py)?;
-        let path_str = Path::new(raw_str.as_ref());
-        let path = PathBuf::from(&path_str);
+        let path = pathencoding::local_bytes_to_path(path.data(py))
+                                 .map_err(|e| to_pyerr(py, &e.into()))?;
         datapack::create_instance(
             py,
             Box::new(match DataPack::new(&path) {
@@ -74,16 +72,22 @@ py_class!(class datapack |py| {
         )
     }
 
-    def path(&self) -> PyResult<PyString> {
-        Ok(PyString::new(py, &self.store(py).base_path().to_string_lossy()))
+    def path(&self) -> PyResult<PyBytes> {
+        let path = pathencoding::path_to_local_bytes(self.store(py).base_path())
+                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+        Ok(PyBytes::new(py, &path))
     }
 
-    def packpath(&self) -> PyResult<PyString> {
-        Ok(PyString::new(py, &self.store(py).pack_path().to_string_lossy()))
+    def packpath(&self) -> PyResult<PyBytes> {
+        let path = pathencoding::path_to_local_bytes(self.store(py).pack_path())
+                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+        Ok(PyBytes::new(py, &path))
     }
 
-    def indexpath(&self) -> PyResult<PyString> {
-        Ok(PyString::new(py, &self.store(py).index_path().to_string_lossy()))
+    def indexpath(&self) -> PyResult<PyBytes> {
+        let path = pathencoding::path_to_local_bytes(self.store(py).index_path())
+                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+        Ok(PyBytes::new(py, &path))
     }
 
     def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {

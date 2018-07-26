@@ -13,6 +13,7 @@ crate-type = ["cdylib"]
 [dependencies]
 failure = "*"
 failure_derive = "*"
+pathencoding = { path = "../../../lib/pathencoding" }
 revisionstore = { path = "../../../lib/revisionstore" }
 
 [dependencies.cpython]

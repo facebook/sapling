@@ -6,6 +6,7 @@ extern crate cpython;
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
+extern crate pathencoding;
 extern crate revisionstore;
 
 mod pyerror;
