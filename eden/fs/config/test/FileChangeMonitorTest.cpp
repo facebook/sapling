@@ -17,6 +17,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using facebook::eden::AbsolutePath;
+using facebook::eden::AbsolutePathPiece;
 using facebook::eden::RelativePath;
 using namespace std::chrono_literals;
 
@@ -24,6 +25,67 @@ namespace {
 
 using facebook::eden::FileChangeMonitor;
 using folly::test::TemporaryDirectory;
+
+class MockFileChangeProcessor {
+ public:
+  MockFileChangeProcessor(bool throwException = false)
+      : throwException_{throwException} {}
+
+  MockFileChangeProcessor(const MockFileChangeProcessor&) = delete;
+  MockFileChangeProcessor(MockFileChangeProcessor&&) = delete;
+  MockFileChangeProcessor& operator=(const MockFileChangeProcessor&) = delete;
+  MockFileChangeProcessor& operator=(MockFileChangeProcessor&&) = delete;
+
+  /**
+   * Setting the throwException to true will cause exception to be thrown
+   * next time the processor is called.
+   */
+  void setThrowException(bool throwException) {
+    throwException_ = throwException;
+  }
+
+  void
+  operator()(folly::File&& f, int errorNum, AbsolutePathPiece /* unused */) {
+    callbackCount_++;
+    errorNum_ = errorNum;
+    fileContents_ = "";
+    fileProcessError_ = false;
+
+    if (throwException_) {
+      throw std::invalid_argument("Processed invalid value");
+    }
+
+    if (errorNum) {
+      return;
+    }
+    try {
+      if (!folly::readFile(f.fd(), fileContents_)) {
+        fileProcessError_ = true;
+      }
+    } catch (const std::exception& ex) {
+      fileProcessError_ = true;
+    }
+  }
+  bool isFileProcessError() {
+    return fileProcessError_;
+  }
+  int getErrorNum() {
+    return errorNum_;
+  }
+  std::string& getFileContents() {
+    return fileContents_;
+  }
+  int getCallbackCount() {
+    return callbackCount_;
+  }
+
+ private:
+  bool throwException_{false};
+  int errorNum_{0};
+  bool fileProcessError_{false};
+  std::string fileContents_{};
+  int callbackCount_{0};
+};
 
 class FileChangeMonitorTest : public ::testing::Test {
  protected:
@@ -33,191 +95,309 @@ class FileChangeMonitorTest : public ::testing::Test {
   static constexpr folly::StringPiece dataTwo_{"this is file two"};
 
   std::unique_ptr<TemporaryDirectory> rootTestDir_;
-  boost::filesystem::path pathOne_;
-  boost::filesystem::path pathTwo_;
-
+  AbsolutePath pathOne_;
+  AbsolutePath pathTwo_;
   void SetUp() override {
     rootTestDir_ = std::make_unique<TemporaryDirectory>(fcTestName_);
+    auto fsPathOne = rootTestDir_->path() / "file.one";
+    pathOne_ = AbsolutePath{fsPathOne.string()};
+    folly::writeFileAtomic(fsPathOne.string(), dataOne_);
 
-    pathOne_ = rootTestDir_->path() / "file.one";
-    folly::writeFile(dataOne_, pathOne_.c_str());
-
-    pathTwo_ = rootTestDir_->path() / "file.two";
-    folly::writeFile(dataTwo_, pathTwo_.c_str());
+    auto fsPathTwo = rootTestDir_->path() / "file.two";
+    pathTwo_ = AbsolutePath{fsPathTwo.string()};
+    folly::writeFileAtomic(fsPathTwo.string(), dataTwo_);
   }
   void TearDown() override {
     rootTestDir_.reset();
   }
 };
 } // namespace
-TEST_F(FileChangeMonitorTest, simpleIsChangedTest) {
-  auto fcm =
-      std::make_shared<FileChangeMonitor>(AbsolutePath{pathOne_.c_str()}, 200s);
-  EXPECT_TRUE(fcm->changedSinceUpdate());
-  auto filePath = fcm->getFilePath();
-  EXPECT_EQ(filePath, pathOne_.c_str());
+TEST_F(FileChangeMonitorTest, simpleInitTest) {
+  MockFileChangeProcessor fcp;
+  auto fcm = std::make_shared<FileChangeMonitor>(pathOne_, 200s, std::ref(fcp));
+  EXPECT_EQ(fcm->getFilePath(), pathOne_);
 
-  // Initial updateStat after FileChangeMonitor creation
-  folly::File file(filePath.value());
-  fcm->updateStat(file.fd());
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  // File did not change after updateStat (ignoreThrottle = TRUE)
-  EXPECT_FALSE(fcm->changedSinceUpdate(true));
-}
-
-TEST_F(FileChangeMonitorTest, simpleThrottleTest) {
-  auto fcm =
-      std::make_shared<FileChangeMonitor>(AbsolutePath{pathOne_.c_str()}, 200s);
-  EXPECT_TRUE(fcm->changedSinceUpdate());
-  auto filePath = fcm->getFilePath();
-  EXPECT_EQ(filePath, pathOne_.c_str());
-
-  // Initial updateStat after FileChangeMonitor creation
-  folly::File file(filePath.value());
-  fcm->updateStat(file.fd());
-
-  // File did not change after updateStat - throttle should kick in
-  EXPECT_FALSE(fcm->changedSinceUpdate());
-
-  // File did not change after updateStat (ignoreThrottle = TRUE)
-  EXPECT_FALSE(fcm->changedSinceUpdate(true));
+  EXPECT_FALSE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
 }
 
 TEST_F(FileChangeMonitorTest, nameChangeTest) {
-  auto fcm =
-      std::make_shared<FileChangeMonitor>(AbsolutePath{pathOne_.c_str()}, 10s);
-  EXPECT_TRUE(fcm->changedSinceUpdate());
-  auto filePath = fcm->getFilePath();
-  EXPECT_EQ(filePath, pathOne_.c_str());
+  MockFileChangeProcessor fcp;
+  auto fcm = std::make_shared<FileChangeMonitor>(pathOne_, 100s, std::ref(fcp));
 
-  // Initial updateStat after FileChangeMonitor creation
-  folly::File file(filePath.value());
-  fcm->updateStat(file.fd());
-
-  // File did not change after updateStat (ignoreThrottle = TRUE)
-  EXPECT_FALSE(fcm->changedSinceUpdate(true));
+  // Initial path and change check
+  EXPECT_EQ(fcm->getFilePath(), pathOne_);
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
   // Changing the file path should force change
-  fcm->setFilePath(AbsolutePath(pathTwo_.c_str()));
-  EXPECT_TRUE(fcm->changedSinceUpdate(true));
+  fcm->setFilePath(pathTwo_);
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 2);
+  EXPECT_EQ(fcp.getFileContents(), dataTwo_);
+
+  EXPECT_FALSE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 2);
+  EXPECT_EQ(fcp.getFileContents(), dataTwo_);
 
   // Check that the file path was updated
-  EXPECT_EQ(fcm->getFilePath(), pathTwo_.c_str());
+  EXPECT_EQ(fcm->getFilePath(), pathTwo_);
 }
 
-TEST_F(FileChangeMonitorTest, changeTestNoThrottle) {
-  auto fcm =
-      std::make_shared<FileChangeMonitor>(AbsolutePath{pathOne_.c_str()}, 0s);
-  EXPECT_TRUE(fcm->changedSinceUpdate());
-  auto filePath = fcm->getFilePath();
-  EXPECT_EQ(filePath, pathOne_.c_str());
+TEST_F(FileChangeMonitorTest, noOpNameChangeTest) {
+  MockFileChangeProcessor fcp;
+  auto fcm = std::make_shared<FileChangeMonitor>(pathOne_, 100s, std::ref(fcp));
 
-  // Initial updateStat after FileChangeMonitor creation
-  folly::File file(filePath.value());
-  fcm->updateStat(file.fd());
+  // Initial path and change check
+  EXPECT_EQ(fcm->getFilePath(), pathOne_);
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  // File did not change after updateStat
-  EXPECT_FALSE(fcm->changedSinceUpdate());
+  // No-op set of file path - no change!
+  fcm->setFilePath(pathOne_);
+  EXPECT_FALSE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  // Make a change to the file. Change will appear immediately (throttle 0s)
-  folly::writeFileAtomic(pathOne_.c_str(), dataTwo_);
-  EXPECT_TRUE(fcm->changedSinceUpdate());
+  // Check that the file path is the same
+  EXPECT_EQ(fcm->getFilePath(), pathOne_);
 }
 
-TEST_F(FileChangeMonitorTest, changeThrottleExpireTest) {
-  auto fcm =
-      std::make_shared<FileChangeMonitor>(AbsolutePath{pathOne_.c_str()}, 1ms);
-  EXPECT_TRUE(fcm->changedSinceUpdate());
-  auto filePath = fcm->getFilePath();
-  EXPECT_EQ(filePath, pathOne_.c_str());
+TEST_F(FileChangeMonitorTest, modifyExistFileTest) {
+  MockFileChangeProcessor fcp;
+  auto path =
+      AbsolutePath{(rootTestDir_->path() / "ModifyExistFile.txt").string()};
+  folly::writeFileAtomic(path.value(), dataOne_);
 
-  // Initial updateStat after FileChangeMonitor creation
-  folly::File file(filePath.value());
-  fcm->updateStat(file.fd());
+  auto fcm = std::make_shared<FileChangeMonitor>(path, 0s, std::ref(fcp));
 
-  // File did not change after updateStat (ignoreThrottle = TRUE)
-  EXPECT_FALSE(fcm->changedSinceUpdate(true));
+  // Initial path and change check
+  EXPECT_EQ(fcm->getFilePath(), path.value());
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  // Make a change to the file. Change will appear once throttle expires.
-  folly::writeFileAtomic(pathOne_.c_str(), dataTwo_);
+  folly::writeFileAtomic(path.value(), dataTwo_);
 
-  auto rslt = fcm->changedSinceUpdate();
-  // The test ran fast (less than 1 millisecond). In this unlikely event,
-  // sleep for a second and check (rather than allow flaky test)
+  // File should have changed (there is no throttle)
+  EXPECT_EQ(fcm->getFilePath(), path.value());
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 2);
+  EXPECT_EQ(fcp.getFileContents(), dataTwo_);
+}
+
+TEST_F(FileChangeMonitorTest, modifyExistFileThrottleExpiresTest) {
+  MockFileChangeProcessor fcp;
+  auto path = AbsolutePath{
+      (rootTestDir_->path() / "ModifyExistThrottleExpiresTest.txt").string()};
+  folly::writeFileAtomic(path.value(), dataOne_);
+
+  auto fcm = std::make_shared<FileChangeMonitor>(path, 10ms, std::ref(fcp));
+
+  // Initial path and change check
+  EXPECT_EQ(fcm->getFilePath(), path.value());
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
+
+  folly::writeFileAtomic(path.value(), dataTwo_);
+
+  auto rslt = fcm->invokeIfUpdated();
   if (!rslt) {
+    // The test ran fast (less than 10 millisecond). In this event,
+    // check our results (not updated). Then, sleep for a second and validate
+    // the update.
+    EXPECT_EQ(fcp.getCallbackCount(), 1);
+    EXPECT_EQ(fcp.getFileContents(), dataOne_);
     /* sleep override */
     sleep(1);
-    rslt = fcm->changedSinceUpdate();
+    rslt = fcm->invokeIfUpdated();
   }
   EXPECT_TRUE(rslt);
+  EXPECT_EQ(fcp.getCallbackCount(), 2);
+  EXPECT_EQ(fcp.getFileContents(), dataTwo_);
 }
 
-TEST_F(FileChangeMonitorTest, changeThrottleActiveTest) {
-  auto fcm =
-      std::make_shared<FileChangeMonitor>(AbsolutePath{pathOne_.c_str()}, 100s);
-  EXPECT_TRUE(fcm->changedSinceUpdate());
-  auto filePath = fcm->getFilePath();
-  EXPECT_EQ(filePath, pathOne_.c_str());
+TEST_F(FileChangeMonitorTest, modifyExistFileThrottleActiveTest) {
+  MockFileChangeProcessor fcp;
+  auto path = AbsolutePath{
+      (rootTestDir_->path() / "ModifyExistFileThrottleActive.txt").string()};
+  folly::writeFileAtomic(path.value(), dataOne_);
 
-  // Initial updateStat after FileChangeMonitor creation
-  folly::File file(filePath.value());
-  fcm->updateStat(file.fd());
+  auto fcm = std::make_shared<FileChangeMonitor>(path, 10s, std::ref(fcp));
 
-  // File did not change after updateStat (ignoreThrottle = TRUE)
-  EXPECT_FALSE(fcm->changedSinceUpdate(true));
+  // Initial path and change check
+  EXPECT_EQ(fcm->getFilePath(), path.value());
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  // Make a change to the file. Change will appear once throttle expires.
-  folly::writeFileAtomic(pathOne_.c_str(), dataTwo_);
+  folly::writeFileAtomic(path.value(), dataTwo_);
 
-  // Change only reported with ignoreThrottle = TRUE
-  EXPECT_FALSE(fcm->changedSinceUpdate());
-  EXPECT_TRUE(fcm->changedSinceUpdate(true));
+  // File change throttled
+  auto rslt = fcm->invokeIfUpdated();
+
+  EXPECT_FALSE(rslt);
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
+}
+
+TEST_F(FileChangeMonitorTest, nonExistFileTest) {
+  MockFileChangeProcessor fcp;
+  auto path = AbsolutePath{(rootTestDir_->path() / "NonExist.txt").string()};
+
+  auto fcm = std::make_shared<FileChangeMonitor>(path, 0s, std::ref(fcp));
+
+  // Initial path and change check
+  EXPECT_EQ(fcm->getFilePath(), path.value());
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getErrorNum(), ENOENT);
+}
+
+TEST_F(FileChangeMonitorTest, readFailTest) {
+  MockFileChangeProcessor fcp;
+
+  // Note: we are using directory as our path
+  auto path = AbsolutePath{rootTestDir_->path().string()};
+  auto fcm = std::make_shared<FileChangeMonitor>(path, 0s, std::ref(fcp));
+
+  EXPECT_EQ(fcm->getFilePath(), path.value());
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+
+  // Directory can be opened, but read will fail.
+  EXPECT_EQ(fcp.getErrorNum(), 0);
+  EXPECT_TRUE(fcp.isFileProcessError());
 }
 
 TEST_F(FileChangeMonitorTest, rmFileTest) {
+  MockFileChangeProcessor fcp;
   auto path =
-      AbsolutePath{(rootTestDir_->path() / "ExistToNonExist.txt").c_str()};
+      AbsolutePath{(rootTestDir_->path() / "ExistToNonExist.txt").string()};
+  folly::writeFileAtomic(path.value(), dataOne_);
 
-  folly::writeFileAtomic(path.c_str(), dataOne_);
+  auto fcm = std::make_shared<FileChangeMonitor>(path, 0s, std::ref(fcp));
 
-  auto fcm =
-      std::make_shared<FileChangeMonitor>(AbsolutePath{path.c_str()}, 1ms);
-  EXPECT_TRUE(fcm->changedSinceUpdate());
-  auto filePath = fcm->getFilePath();
-  EXPECT_EQ(filePath, path.c_str());
-
-  // Initial updateStat after FileChangeMonitor creation
-  folly::File file(filePath.value());
-  fcm->updateStat(file.fd());
-
-  // File did not change after updateStat (ignoreThrottle = TRUE)
-  EXPECT_FALSE(fcm->changedSinceUpdate(true));
+  // Initial path and change check
+  EXPECT_EQ(fcm->getFilePath(), path.value());
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
   // Delete file
   remove(path.c_str());
 
-  // File should have changed (ignoreThrottle = TRUE)
-  EXPECT_TRUE(fcm->changedSinceUpdate(true));
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 2);
+  EXPECT_EQ(fcp.getErrorNum(), ENOENT);
+}
+
+TEST_F(FileChangeMonitorTest, processExceptionTest) {
+  MockFileChangeProcessor fcp{true};
+  auto fcm = std::make_shared<FileChangeMonitor>(pathOne_, 0s, std::ref(fcp));
+
+  // Processor should throw exception on call to invokeIfUpdated
+  EXPECT_EQ(fcm->getFilePath(), pathOne_);
+  EXPECT_THROW(
+      {
+        try {
+          fcm->invokeIfUpdated();
+        } catch (const std::invalid_argument& e) {
+          EXPECT_STREQ("Processed invalid value", e.what());
+          throw;
+        }
+      },
+      std::invalid_argument);
 }
 
 TEST_F(FileChangeMonitorTest, createFileTest) {
+  MockFileChangeProcessor fcp;
   auto path =
-      AbsolutePath{(rootTestDir_->path() / "NonExistToExist.txt").c_str()};
+      AbsolutePath{(rootTestDir_->path() / "NonExistToExist.txt").string()};
 
-  auto fcm =
-      std::make_shared<FileChangeMonitor>(AbsolutePath{path.c_str()}, 1ms);
-  EXPECT_TRUE(fcm->changedSinceUpdate());
-  auto filePath = fcm->getFilePath();
-  EXPECT_EQ(filePath, path.c_str());
+  auto fcm = std::make_shared<FileChangeMonitor>(path, 0s, std::ref(fcp));
 
-  // Initial updateStat after FileChangeMonitor creation
-  fcm->updateStatWithError(ENOENT);
+  // Initial path and change check
+  EXPECT_EQ(fcm->getFilePath(), path);
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getErrorNum(), ENOENT);
 
-  // File did not change after updateStat (ignoreThrottle = TRUE)
-  EXPECT_FALSE(fcm->changedSinceUpdate(true));
+  // Create the file
+  folly::writeFileAtomic(path.value(), dataOne_);
 
-  folly::writeFileAtomic(path.c_str(), dataOne_);
+  // File should have changed
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 2);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
+}
 
-  // File should have changed (ignoreThrottle = TRUE)
-  EXPECT_TRUE(fcm->changedSinceUpdate(true));
+TEST_F(FileChangeMonitorTest, openFailTest) {
+  // Eden tests are run as root on Sandcastle - which invalidates this test.
+  if (getuid() == 0) {
+    return;
+  }
+  MockFileChangeProcessor fcp;
+  auto path =
+      AbsolutePath{(rootTestDir_->path() / "OpenFailTest.txt").string()};
+
+  // Create the file
+  folly::writeFileAtomic(path.value(), dataOne_);
+  chmod(path.c_str(), __S_IEXEC);
+
+  auto fcm = std::make_shared<FileChangeMonitor>(path, 0s, std::ref(fcp));
+
+  // First time - file changed, but cannot read
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getErrorNum(), EACCES);
+
+  // Nothing changed
+  EXPECT_FALSE(fcm->invokeIfUpdated());
+
+  // Update file - keep permissions same (inaccessible)
+  folly::writeFileAtomic(path.value(), dataTwo_);
+  EXPECT_EQ(chmod(path.c_str(), __S_IEXEC), 0);
+
+  // File changed, still cannot read
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 2);
+  EXPECT_EQ(fcp.getErrorNum(), EACCES);
+}
+
+TEST_F(FileChangeMonitorTest, openFailFixTest) {
+  // Eden tests are run as root on Sandcastle - which invalidates this test.
+  if (getuid() == 0) {
+    return;
+  }
+
+  MockFileChangeProcessor fcp;
+  auto path =
+      AbsolutePath{(rootTestDir_->path() / "OpenFailFixTest.txt").string()};
+
+  // Create the file
+  folly::writeFileAtomic(path.value(), dataOne_);
+  EXPECT_EQ(chmod(path.c_str(), __S_IEXEC), 0);
+
+  auto fcm = std::make_shared<FileChangeMonitor>(path, 0s, std::ref(fcp));
+
+  // First time - file changed, no read permission
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 1);
+  EXPECT_EQ(fcp.getErrorNum(), EACCES);
+
+  // Fix permissions
+  EXPECT_EQ(chmod(path.c_str(), S_IRUSR | S_IRGRP | S_IROTH), 0);
+
+  EXPECT_TRUE(fcm->invokeIfUpdated());
+  EXPECT_EQ(fcp.getCallbackCount(), 2);
+  EXPECT_EQ(fcp.getFileContents(), dataOne_);
 }
