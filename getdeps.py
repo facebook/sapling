@@ -215,7 +215,7 @@ def get_projects(opts):
             "rocksdb",
             opts,
             GitUpdater("https://github.com/facebook/rocksdb.git"),
-            CMakeBuilder(defines={"WITH_TESTS": "OFF"}),
+            CMakeBuilder(defines={"WITH_SNAPPY": "ON", "WITH_TESTS": "OFF"}),
         ),
         Project(
             "googletest",
