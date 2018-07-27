@@ -1204,14 +1204,20 @@ class dirstate(object):
                 # treestate has a fast path to get files inside a subdirectory.
                 # files are prefixes
                 result = set()
+                fastpathvalid = True
                 for prefix in files:
                     if prefix in dmap:
                         # prefix is a file
                         result.add(prefix)
-                    else:
+                    elif dmap.hastrackeddir(prefix + "/"):
                         # prefix is a directory
                         result.update(dmap.keys(prefix=prefix + "/"))
-                return sorted(result)
+                    else:
+                        # unknown pattern (ex. "."), fast path is invalid
+                        fastpathvalid = False
+                        break
+                if fastpathvalid:
+                    return sorted(result)
             else:
                 # fast path -- all the values are known to be files, so just
                 # return that
