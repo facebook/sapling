@@ -33,13 +33,16 @@ RequestData::~RequestData() {
 }
 
 void RequestData::interrupt() {
-  // I don't believe that we have to deal with racing to
-  // process multiple concurrent interrupt() calls.
-  // The potential race is between an interrupt() call
-  // and the completion of the request.
-  if (!interrupted_) {
+  // Set the flag to indicate that an interrupt has been requested.
+  // If the existing value indicates that the request has finished launching
+  // and has not yet been cancelled then we are safe to cancel it.
+  // Otherwise, the thread launching the request will be responsible for
+  // interrupting it after it finishes launching the operation inside
+  // setRequestFuture().
+  auto oldValue = interruptFlag_.fetch_or(
+      kInterruptRequestedFlag, std::memory_order_acq_rel);
+  if (oldValue == kInterrupterInitialisedFlag) {
     interrupter_.cancel();
-    interrupted_ = true;
   }
 }
 
@@ -109,10 +112,6 @@ const fuse_in_header& RequestData::examineReq() const {
 
 Dispatcher* RequestData::getDispatcher() const {
   return dispatcher_;
-}
-
-bool RequestData::wasInterrupted() const {
-  return interrupted_;
 }
 
 void RequestData::replyError(int err) {

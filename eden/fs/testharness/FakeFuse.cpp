@@ -30,7 +30,7 @@ FakeFuse::FakeFuse() {}
 folly::File FakeFuse::start() {
   std::array<int, 2> sockets;
   folly::checkUnixError(
-      socketpair(AF_UNIX, SOCK_STREAM, 0, sockets.data()),
+      socketpair(AF_UNIX, SOCK_SEQPACKET, 0, sockets.data()),
       "socketpair() failed");
   conn_ = folly::File(sockets[0], /* ownsFd */ true);
   auto userConn = folly::File(sockets[1], /* ownsFd */ true);
@@ -85,37 +85,53 @@ uint32_t FakeFuse::sendRequest(uint32_t opcode, uint64_t inode, ByteRange arg) {
   return requestID;
 }
 
-void FakeFuse::recvFull(void* buf, size_t len) {
-  char* ptr = static_cast<char*>(buf);
-  auto bytesLeft = len;
-  while (bytesLeft > 0) {
-    auto bytesRead = recv(conn_.fd(), ptr, bytesLeft, 0);
-    if (bytesRead < 0) {
-      if (errno == EINTR) {
-        continue;
-      }
-      folly::throwSystemError("error receiving data on fake FUSE connection");
-    }
-
-    ptr += bytesRead;
-    bytesLeft -= bytesRead;
-  }
-}
-
 FakeFuse::Response FakeFuse::recvResponse() {
   Response response;
 
-  recvFull(&response.header, sizeof(response.header));
-  if (response.header.len < sizeof(fuse_out_header)) {
-    throw std::runtime_error(folly::to<string>(
-        "received FUSE response with invalid length: ",
-        response.header.len,
-        " is shorter than the response header size"));
-  }
-  auto bodySize = response.header.len - sizeof(fuse_out_header);
+  std::array<iovec, 2> iov;
+  iov[0].iov_base = &response.header;
+  iov[0].iov_len = sizeof(response.header);
 
-  response.body.resize(bodySize);
-  recvFull(response.body.data(), bodySize);
+  msghdr message;
+  memset(&message, 0, sizeof(msghdr));
+  message.msg_iov = iov.data();
+  message.msg_iovlen = 1;
+
+  ssize_t bytesRead = recvmsg(conn_.fd(), &message, MSG_PEEK);
+  folly::checkUnixError(bytesRead, "recvmsg failed on FUSE socket");
+
+  if (static_cast<size_t>(bytesRead) < sizeof(fuse_out_header)) {
+    throw std::runtime_error{folly::to<std::string>(
+        "received FUSE response with incomplete header: ",
+        bytesRead,
+        " is shorter than the response header.")};
+  }
+
+  const auto packetLength = response.header.len;
+  if (packetLength < sizeof(fuse_out_header)) {
+    throw std::runtime_error{folly::to<std::string>(
+        "received FUSE response with invalid length: ",
+        packetLength,
+        " is shorter than the response header.")};
+  }
+
+  const auto dataLength = packetLength - sizeof(fuse_out_header);
+  response.body.resize(dataLength);
+
+  iov[1].iov_base = response.body.data();
+  iov[1].iov_len = dataLength;
+  message.msg_iovlen = 2;
+
+  bytesRead = recvmsg(conn_.fd(), &message, 0);
+  folly::checkUnixError(bytesRead, "recvmsg failed on FUSE socket");
+
+  if (bytesRead != packetLength) {
+    throw std::runtime_error{folly::to<std::string>(
+        "received FUSE response with incorrect message size: ",
+        bytesRead,
+        " expected ",
+        packetLength)};
+  }
 
   return response;
 }

@@ -74,9 +74,6 @@ class RequestData : public folly::RequestData {
   // by checking if (fuseHeader.opcode != 0)
   const fuse_in_header& examineReq() const;
 
-  // Check whether the request has already been interrupted
-  bool wasInterrupted() const;
-
   /** Register the future chain associated with this request so that
    * we can cancel it when we receive an interrupt.
    * This function will append error handling to the future chain by
@@ -86,6 +83,18 @@ class RequestData : public folly::RequestData {
   template <typename FUTURE>
   void setRequestFuture(FUTURE&& fut) {
     this->interrupter_ = this->catchErrors(std::forward<FUTURE>(fut));
+
+    // Flag that the interrupter_ member has been initialised and that
+    // the operation can now be interrupted. If the previous value of the
+    // flag indicates that an interrupt was requested concurrently with this
+    // operation before we could finish launching it then we should interrupt
+    // it now.
+    auto oldValue = interruptFlag_.fetch_or(
+        kInterrupterInitialisedFlag, std::memory_order_acq_rel);
+    CHECK_EQ(0, oldValue & kInterrupterInitialisedFlag);
+    if (oldValue & kInterruptRequestedFlag) {
+      this->interrupter_.cancel();
+    }
   }
 
   /** Append error handling clauses to a future chain
@@ -131,7 +140,19 @@ class RequestData : public folly::RequestData {
 
  private:
   folly::Future<folly::Unit> interrupter_;
-  std::atomic<bool> interrupted_{false};
+
+  // This atomic variable is a set of two flags is used to decide the race
+  // between the thread calling setRequestFuture() to register the future that
+  // will complete when the request completes, and another thread concurrently
+  // calling interrupt() when handling a FUSE_INTERRUPT request that comes in
+  // before we finish launching the corresponding request.
+  //
+  // bit 0 - set if interrupter_ has been initialised.
+  // bit 1 - set if a request has been made to interrupt the operation.
+  std::atomic<std::uint8_t> interruptFlag_{0};
+
+  static constexpr std::uint8_t kInterrupterInitialisedFlag = 1;
+  static constexpr std::uint8_t kInterruptRequestedFlag = 2;
 };
 
 } // namespace eden

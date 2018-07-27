@@ -275,20 +275,12 @@ TEST_F(FuseChannelTest, testDestroyWithPendingRequests) {
   auto completeFuture = performInit(channel.get());
 
   // Send several lookup requests
-  //
-  // Note: it is currently important that we wait for the dispatcher to receive
-  // each request before sending the next one.  The FuseChannel receive code
-  // expects to receive exactly 1 request per read() call on the FUSE device.
-  // Since we are sending over a socket rather than a real FUSE device we
-  // cannot guarantee that our writes will not be coalesced unless we confirm
-  // that the FuseChannel has read each request before sending the next one.
   auto id1 = fuse_.sendLookup(FUSE_ROOT_ID, "foobar");
-  auto req1 = dispatcher_.waitForLookup(id1);
-
   auto id2 = fuse_.sendLookup(FUSE_ROOT_ID, "some_file.txt");
-  auto req2 = dispatcher_.waitForLookup(id2);
-
   auto id3 = fuse_.sendLookup(FUSE_ROOT_ID, "main.c");
+
+  auto req1 = dispatcher_.waitForLookup(id1);
+  auto req2 = dispatcher_.waitForLookup(id2);
   auto req3 = dispatcher_.waitForLookup(id3);
 
   // Destroy the channel object
@@ -346,20 +338,14 @@ TEST_F(FuseChannelTest, getOutstandingRequests) {
   auto completeFuture = performInit(channel.get());
 
   // Send several lookup requests
-  //
-  // Note: it is currently important that we wait for the dispatcher to receive
-  // each request before sending the next one.  The FuseChannel receive code
-  // expects to receive exactly 1 request per read() call on the FUSE device.
-  // Since we are sending over a socket rather than a real FUSE device we
-  // cannot guarantee that our writes will not be coalesced unless we confirm
-  // that the FuseChannel has read each request before sending the next one.
   auto id1 = fuse_.sendLookup(FUSE_ROOT_ID, "foobar");
-  auto req1 = dispatcher_.waitForLookup(id1);
-
   auto id2 = fuse_.sendLookup(FUSE_ROOT_ID, "some_file.txt");
-  auto req2 = dispatcher_.waitForLookup(id2);
-
   auto id3 = fuse_.sendLookup(FUSE_ROOT_ID, "main.c");
+
+  std::unordered_set<unsigned int> requestIds = {id1, id2, id3};
+
+  auto req1 = dispatcher_.waitForLookup(id1);
+  auto req2 = dispatcher_.waitForLookup(id2);
   auto req3 = dispatcher_.waitForLookup(id3);
 
   std::vector<fuse_in_header> outstandingCalls =
@@ -370,5 +356,39 @@ TEST_F(FuseChannelTest, getOutstandingRequests) {
   for (const auto& call : outstandingCalls) {
     EXPECT_EQ(FUSE_ROOT_ID, call.nodeid);
     EXPECT_EQ(FUSE_LOOKUP, call.opcode);
+    EXPECT_EQ(1, requestIds.count(call.unique));
+  }
+}
+
+TEST_F(FuseChannelTest, interruptLookups) {
+  auto channel = createChannel();
+  auto completeFuture = performInit(channel.get());
+
+  // Send a bunch of lookup requests followed immediately by an interrupt
+  // request that cancels the corresponding lookup request. We are trying
+  // to exercise the codepaths here where handling of the interrupt request
+  // may be running concurrently with the launching of the original request
+  // on a different thread.
+
+  for (int i = 0; i < 5000; ++i) {
+    auto requestId = fuse_.sendLookup(FUSE_ROOT_ID, "foo");
+
+    fuse_interrupt_in interruptData;
+    interruptData.unique = requestId;
+
+    (void)fuse_.sendRequest(FUSE_INTERRUPT, FUSE_ROOT_ID, interruptData);
+
+    // For now FuseChannel never actually interrupts requests, so the
+    // dispatcher will definitely receive the request.
+    // We may need to change this code in the future if we do add true
+    // interrupt support to FuseChannel.
+    auto req = dispatcher_.waitForLookup(requestId);
+
+    auto nodeId = 5 + i * 7;
+    auto response = genRandomLookupResponse(nodeId);
+    req.promise.setValue(response);
+
+    auto received = fuse_.recvResponse();
+    EXPECT_EQ(requestId, received.header.unique);
   }
 }

@@ -93,8 +93,6 @@ class FakeFuse {
   FakeFuse(FakeFuse const&) = delete;
   FakeFuse& operator=(FakeFuse const&) = delete;
 
-  void recvFull(void* buf, size_t len);
-
   /**
    * Our end of the FUSE channel.
    * We pretend to be the kernel-side of the FUSE connection.  We can use this

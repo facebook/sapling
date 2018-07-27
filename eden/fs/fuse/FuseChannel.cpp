@@ -1158,12 +1158,16 @@ void FuseChannel::processSession() {
                     RequestContext::saveContext()));
           }
           const auto& entry = handlerIter->second;
-          // TODO: it seems problematic that this code calls
-          // setRequstFuture() without holding any lock.  This races with
-          // other threads processing FUSE_REQUEST.  We should probably fix
-          // this up in a subsequent diff.  We cannot hold the state_ lock
-          // while invoking entry.handler, though, so we perhaps should
-          // re-acquire the state_ lock after calling the handler.
+
+          // We cannot hold the state_ lock while invoking entry.
+          //
+          // This means that the call to .setRequestFuture() may be running
+          // concurrently with the handling of a FUSE_INTERRUPT for this
+          // request on another thread which will call .interrupt().
+          //
+          // These methods are internally synchronised to make this safe
+          // so we don't need to reacquire state_ lock after calling the
+          // handler.
           request.setRequestFuture(
               request.startRequest(dispatcher_->getStats(), entry.histogram)
                   .then([=, &request] {
