@@ -46,7 +46,7 @@ class sqlindexapi(indexapi):
         logfile,
         loglevel,
         shorthasholdrevthreshold,
-        waittimeout=300,
+        waittimeout=600,
         locktimeout=120,
     ):
         super(sqlindexapi, self).__init__()
