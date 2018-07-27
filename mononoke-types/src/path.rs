@@ -14,6 +14,7 @@ use std::slice::Iter;
 
 use asyncmemo::Weight;
 use bincode;
+use failure::err_msg;
 use heapsize::HeapSizeOf;
 
 use quickcheck::{Arbitrary, Gen};
@@ -140,6 +141,31 @@ impl RepoPath {
     /// definition of RepoPath changes.
     pub fn serialize_into<W: Write>(&self, writer: &mut W) -> Result<()> {
         Ok(bincode::serialize_into(writer, self)?)
+    }
+
+    pub fn from_thrift(path: thrift::RepoPath) -> Result<Self> {
+        let path = match path {
+            thrift::RepoPath::RootPath(_) => Self::root(),
+            thrift::RepoPath::DirectoryPath(path) => Self::dir(MPath::from_thrift(path)?)?,
+            thrift::RepoPath::FilePath(path) => Self::file(MPath::from_thrift(path)?)?,
+            thrift::RepoPath::UnknownField(unknown) => bail_msg!(
+                "Unknown field encountered when parsing thrift::RepoPath: {}",
+                unknown,
+            ),
+        };
+        Ok(path)
+    }
+
+    pub fn into_thrift(self) -> thrift::RepoPath {
+        match self {
+            // dummy false here is required because thrift doesn't support mixing enums with and
+            // without payload
+            RepoPath::RootPath => thrift::RepoPath::RootPath(false),
+            RepoPath::DirectoryPath(path) => {
+                thrift::RepoPath::DirectoryPath(MPath::into_thrift(path))
+            }
+            RepoPath::FilePath(path) => thrift::RepoPath::FilePath(MPath::into_thrift(path)),
+        }
     }
 }
 
@@ -286,15 +312,19 @@ impl MPath {
         Ok(MPath { elements })
     }
 
-    pub(crate) fn from_thrift(mpath: thrift::MPath) -> Result<MPath> {
+    pub fn from_thrift(mpath: thrift::MPath) -> Result<MPath> {
         let elements: Result<Vec<_>> = mpath
             .0
             .into_iter()
             .map(|elem| MPathElement::from_thrift(elem))
             .collect();
-        Ok(MPath {
-            elements: elements?,
-        })
+        let elements = elements?;
+
+        if elements.is_empty() {
+            Err(err_msg("Unexpected empty path in thrift::MPath"))
+        } else {
+            Ok(MPath { elements })
+        }
     }
 
     fn verify(p: &[u8]) -> Result<()> {
@@ -635,6 +665,18 @@ impl Arbitrary for MPath {
     }
 }
 
+impl Arbitrary for RepoPath {
+    #[inline]
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        match g.next_u32() % 3 {
+            0 => RepoPath::RootPath,
+            1 => RepoPath::DirectoryPath(MPath::arbitrary(g)),
+            2 => RepoPath::FilePath(MPath::arbitrary(g)),
+            _ => panic!("Unexpected number in RepoPath::arbitrary"),
+        }
+    }
+}
+
 impl Display for MPath {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", String::from_utf8_lossy(&self.to_vec()))
@@ -695,6 +737,13 @@ mod test {
 
         fn path_len(p: MPath) -> bool {
             p.len() == p.to_vec().len()
+        }
+
+        fn repo_path_thrift_roundtrip(p: RepoPath) -> bool {
+            let thrift_path = p.clone().into_thrift();
+            let p2 = RepoPath::from_thrift(thrift_path)
+                .expect("converting a valid Thrift structure should always work");
+            p == p2
         }
 
         fn path_thrift_roundtrip(p: MPath) -> bool {

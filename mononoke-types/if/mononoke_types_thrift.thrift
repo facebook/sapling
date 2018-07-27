@@ -49,6 +49,13 @@ typedef binary Sha1 (hs.newtype)
 typedef binary MPathElement (hs.newtype)
 typedef list<MPathElement> MPath (hs.newtype)
 
+union RepoPath {
+  # Thrift language doesn't support void here, so put a dummy bool
+  1: bool RootPath,
+  2: MPath DirectoryPath,
+  3: MPath FilePath,
+}
+
 // Parent ordering
 // ---------------
 // "Ordered" parents means that behavior will change if the order of parents

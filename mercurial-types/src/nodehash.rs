@@ -42,13 +42,11 @@ impl HgNodeHash {
         Sha1::from_bytes(bytes).map(HgNodeHash)
     }
 
-    pub(crate) fn from_thrift(thrift_hash: thrift::HgNodeHash) -> Result<Self> {
+    pub fn from_thrift(thrift_hash: thrift::HgNodeHash) -> Result<Self> {
         Ok(HgNodeHash(Sha1::from_thrift(thrift_hash.0)?))
     }
 
-    pub(crate) fn from_thrift_opt(
-        thrift_hash_opt: Option<thrift::HgNodeHash>,
-    ) -> Result<Option<Self>> {
+    pub fn from_thrift_opt(thrift_hash_opt: Option<thrift::HgNodeHash>) -> Result<Option<Self>> {
         match thrift_hash_opt {
             Some(h) => Ok(Some(Self::from_thrift(h)?)),
             None => Ok(None),
@@ -87,7 +85,7 @@ impl HgNodeHash {
         }
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::HgNodeHash {
+    pub fn into_thrift(self) -> thrift::HgNodeHash {
         thrift::HgNodeHash(self.0.into_thrift())
     }
 
@@ -263,6 +261,12 @@ impl<'de> serde::de::Deserialize<'de> for HgChangesetId {
     }
 }
 
+impl Arbitrary for HgChangesetId {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        HgChangesetId(HgNodeHash::arbitrary(g))
+    }
+}
+
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf, FromSqlRow, AsExpression)]
 #[sql_type = "HgManifestIdSql"]
@@ -297,6 +301,12 @@ impl HgManifestId {
 impl Display for HgManifestId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
+    }
+}
+
+impl Arbitrary for HgManifestId {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        HgManifestId(HgNodeHash::arbitrary(g))
     }
 }
 
@@ -337,6 +347,12 @@ impl Display for HgFileNodeId {
     }
 }
 
+impl Arbitrary for HgFileNodeId {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        HgFileNodeId(HgNodeHash::arbitrary(g))
+    }
+}
+
 /// TODO: (jsgf) T25576292 HgEntryId should be a (Type, NodeId) tuple
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
@@ -360,6 +376,12 @@ impl HgEntryId {
 impl Display for HgEntryId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
+    }
+}
+
+impl Arbitrary for HgEntryId {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        HgEntryId(HgNodeHash::arbitrary(g))
     }
 }
 

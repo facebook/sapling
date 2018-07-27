@@ -9,17 +9,25 @@
 extern crate asyncmemo;
 extern crate failure_ext as failure;
 extern crate futures;
+#[cfg_attr(test, macro_use)]
+extern crate quickcheck;
 
+extern crate filenodes_if;
 extern crate futures_ext;
 extern crate mercurial_types;
 
 use std::sync::Arc;
 
 use asyncmemo::{Asyncmemo, Filler};
-use failure::Error;
+use failure::{Error, Result};
 use futures::Future;
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
-use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath, RepositoryId};
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath, RepositoryId};
+use quickcheck::{Arbitrary, Gen};
+
+mod thrift {
+    pub use filenodes_if::*;
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FilenodeInfo {
@@ -31,10 +39,62 @@ pub struct FilenodeInfo {
     pub linknode: HgChangesetId,
 }
 
+impl FilenodeInfo {
+    pub fn from_thrift(info: thrift::FilenodeInfo) -> Result<Self> {
+        let catch_block = || {
+            let copyfrom = match info.copyfrom {
+                None => None,
+                Some(copyfrom) => Some((
+                    RepoPath::from_thrift(copyfrom.path)?,
+                    HgFileNodeId::new(HgNodeHash::from_thrift(copyfrom.filenode)?),
+                )),
+            };
+
+            Ok(Self {
+                path: RepoPath::from_thrift(info.path)?,
+                filenode: HgFileNodeId::new(HgNodeHash::from_thrift(info.filenode)?),
+                p1: HgNodeHash::from_thrift_opt(info.p1)?.map(HgFileNodeId::new),
+                p2: HgNodeHash::from_thrift_opt(info.p2)?.map(HgFileNodeId::new),
+                copyfrom,
+                linknode: HgChangesetId::new(HgNodeHash::from_thrift(info.linknode)?),
+            })
+        };
+
+        catch_block()
+    }
+
+    pub fn into_thrift(self) -> thrift::FilenodeInfo {
+        thrift::FilenodeInfo {
+            path: self.path.into_thrift(),
+            filenode: self.filenode.into_nodehash().into_thrift(),
+            p1: self.p1.map(|p| p.into_nodehash().into_thrift()),
+            p2: self.p2.map(|p| p.into_nodehash().into_thrift()),
+            copyfrom: self.copyfrom.map(|copyfrom| thrift::FilenodeCopyFrom {
+                path: copyfrom.0.into_thrift(),
+                filenode: copyfrom.1.into_nodehash().into_thrift(),
+            }),
+            linknode: self.linknode.into_nodehash().into_thrift(),
+        }
+    }
+}
+
 impl asyncmemo::Weight for FilenodeInfo {
     fn get_weight(&self) -> usize {
         self.path.get_weight() + self.filenode.get_weight() + self.p1.get_weight()
             + self.p2.get_weight() + self.copyfrom.get_weight() + self.linknode.get_weight()
+    }
+}
+
+impl Arbitrary for FilenodeInfo {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        Self {
+            path: RepoPath::arbitrary(g),
+            filenode: HgFileNodeId::arbitrary(g),
+            p1: <Option<HgFileNodeId>>::arbitrary(g),
+            p2: <Option<HgFileNodeId>>::arbitrary(g),
+            copyfrom: <Option<(RepoPath, HgFileNodeId)>>::arbitrary(g),
+            linknode: HgChangesetId::arbitrary(g),
+        }
     }
 }
 
@@ -138,4 +198,18 @@ pub trait Filenodes: Send + Sync {
         path: &RepoPath,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error>;
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    quickcheck! {
+        fn filenodes_info_thrift_roundtrip(obj: FilenodeInfo) -> bool {
+            let thrift_struct = obj.clone().into_thrift();
+            let obj2 = FilenodeInfo::from_thrift(thrift_struct)
+                .expect("converting a valid Thrift structure should always work");
+            obj == obj2
+        }
+    }
 }
