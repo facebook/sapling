@@ -170,12 +170,15 @@ class ThreadingHTTPServer(socketserver.ThreadingMixIn, httpserver.httpserver):
         a.close()
 
 
-def runserver(port=8000, bind=""):
-    server_address = (bind, port)
+def runserver(portfile="tinyproxy.port", bind=""):
+    server_address = (bind, 0)
     ProxyHandler.protocol_version = "HTTP/1.0"
     httpd = ThreadingHTTPServer(server_address, ProxyHandler)
     sa = httpd.socket.getsockname()
     print("Serving HTTP on", sa[0], "port", sa[1], "...")
+    with open(portfile + ".tmp", "w") as f:
+        f.write("%s" % sa[1])
+    os.rename(portfile + ".tmp", portfile)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -185,31 +188,27 @@ def runserver(port=8000, bind=""):
 
 
 if __name__ == "__main__":
-    argv = sys.argv
-    if argv[1:] and argv[1] in ("-h", "--help"):
-        print(argv[0], "[port [allowed_client_name ...]]")
-    else:
-        if argv[2:]:
-            allowed = []
-            for name in argv[2:]:
-                client = socket.gethostbyname(name)
-                allowed.append(client)
-                print("Accept: %s (%s)" % (client, name))
-            ProxyHandler.allowed_clients = allowed
-            del argv[2:]
-        else:
-            print("Any clients will be served...")
+    allowed = []
+    for name in ["localhost"]:
+        client = socket.gethostbyname(name)
+        allowed.append(client)
+        print("Accept: %s (%s)" % (client, name))
+    ProxyHandler.allowed_clients = allowed
 
-        parser = optparse.OptionParser()
-        parser.add_option(
-            "-b",
-            "--bind",
-            metavar="ADDRESS",
-            help="Specify alternate bind address " "[default: all interfaces]",
-            default="",
-        )
-        (options, args) = parser.parse_args()
-        port = 8000
-        if len(args) == 1:
-            port = int(args[0])
-        runserver(port, options.bind)
+    parser = optparse.OptionParser()
+    parser.add_option(
+        "-b",
+        "--bind",
+        metavar="ADDRESS",
+        help="Specify alternate bind address [default: all interfaces]",
+        default="",
+    )
+    parser.add_option(
+        "-f",
+        "--portfile",
+        metavar="PORTFILE",
+        help="Specify the port file [default: tinyproxy.port]",
+        default="tinyproxy.port",
+    )
+    (options, args) = parser.parse_args()
+    runserver(options.portfile, options.bind)

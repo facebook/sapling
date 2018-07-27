@@ -549,8 +549,9 @@ Prepare for connecting through proxy
   $ cat hg2.pid >> $DAEMON_PIDS
 tinyproxy.py doesn't fully detach, so killing it may result in extra output
 from the shell. So don't kill it.
-  $ tinyproxy.py $HGPORT1 localhost >proxy.log </dev/null 2>&1 &
-  $ while [ ! -f proxy.pid ]; do sleep 0; done
+  $ tinyproxy.py >proxy.log </dev/null 2>&1 &
+  $ while [ ! -f tinyproxy.port ]; do sleep 0; done
+  $ HGPORT1=`cat tinyproxy.port`
   $ cat proxy.pid >> $DAEMON_PIDS
 
   $ echo "[http_proxy]" >> copy-pull/.hg/hgrc
