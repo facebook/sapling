@@ -11,6 +11,7 @@ import logging
 import os
 import pathlib
 import stat
+from typing import List
 
 import eden.integration.lib.overlay as overlay_mod
 from eden.integration.lib import testcase
@@ -28,19 +29,14 @@ class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         self.repo.write_file("readme.txt", "readme content")
         self.repo.commit("Initial commit.")
 
-    def test_unmount_succeeds(self) -> None:
-        # Materialized some files then corrupt their overlay state
-        tracked_overlay_file_path = self.overlay.materialize_file("src/committed_file")
-        untracked_overlay_file_path = self.overlay.materialize_file("src/new_file")
-
-        self.eden.unmount(self.mount_path)
-        os.truncate(tracked_overlay_file_path, 0)
-        os.unlink(untracked_overlay_file_path)
-
-        self.eden.mount(self.mount_path)
-        self.eden.unmount(self.mount_path)
-
-    def test_unlink_deletes_corrupted_files(self) -> None:
+    def _corrupt_files(self) -> List[pathlib.Path]:
+        """Corrupt some files inside the mount.
+        Returns relative paths to these files inside the mount.
+        """
+        # Corrupt 3 separate files.  2 are tracked by mercurial, one is not.
+        # We will corrupt 2 of them by truncating the overlay file, and one by
+        # completely removing the overlay file.  (In practice an unclean reboot often
+        # leaves overlay files that exist but have 0 length.)
         tracked_path = pathlib.Path("src/committed_file")
         untracked_path = pathlib.Path("src/new_file")
         readme_path = pathlib.Path("readme.txt")
@@ -55,7 +51,24 @@ class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         os.truncate(readme_overlay_file_path, 0)
         self.eden.mount(self.mount_path)
 
-        for path in (tracked_path, untracked_path, readme_path):
+        return [tracked_path, untracked_path, readme_path]
+
+    def test_unmount_succeeds(self) -> None:
+        corrupted_paths = self._corrupt_files()
+
+        # Access the files to make sure that edenfs loads them.
+        # The stat calls should succeed, but reading them would fail.
+        for path in corrupted_paths:
+            os.lstat(str(self.mount_path / path))
+
+        # Make sure that eden can successfully unmount the mount point
+        # Previously we had a bug where the inode unloading code would throw an
+        # exception if it failed to update the overlay state for some inodes.
+        self.eden.unmount(self.mount_path)
+
+    def test_unlink_deletes_corrupted_files(self) -> None:
+        corrupted_paths = self._corrupt_files()
+        for path in corrupted_paths:
             logging.info(f"stat()ing and unlinking {path}")
             full_path = self.mount_path / path
             s = os.lstat(str(full_path))

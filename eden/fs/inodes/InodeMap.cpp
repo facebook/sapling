@@ -771,6 +771,30 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     PathComponentPiece name,
     bool isUnlinked,
     const folly::Synchronized<Members>::LockedPtr& data) {
+  auto fuseCount = inode->getFuseRefcount();
+  try {
+    if (isUnlinked && (data->isUnmounted_ || fuseCount == 0)) {
+      mount_->getOverlay()->removeOverlayData(inode->getNodeId());
+    } else {
+      // This updates the timestamps in the overlay file if the inode is
+      // materialized.  This is a no-op for non-materialized inodes.
+      inode->updateOverlayHeader();
+    }
+  } catch (const std::exception& ex) {
+    // If we fail to update the overlay log an error but do not propagate the
+    // exception to our caller.  There is nothing else we can do to handle this
+    // error.
+    //
+    // We still want to proceed unloading the inode normally in this case.
+    //
+    // The most common case where this can occur if the overlay file was
+    // already corrupt (say, because of a hard reboot that did not sync
+    // filesystem state).
+    XLOG(ERR) << "error saving overlay state while unloading inode "
+              << inode->getNodeId() << " (" << inode->getLogPath()
+              << "): " << folly::exceptionStr(ex);
+  }
+
   // If the mount point has been unmounted, ignore any outstanding FUSE
   // refcounts on inodes that still existed before it was unmounted.
   // Everything is unreferenced by FUSE after an unmount operation, and we no
@@ -778,21 +802,14 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
   if (data->isUnmounted_) {
     XLOG(DBG5) << "forgetting unreferenced inode " << inode->getNodeId()
                << " after unmount: " << inode->getLogPath();
-    if (isUnlinked) {
-      mount_->getOverlay()->removeOverlayData(inode->getNodeId());
-    } else {
-      inode->updateOverlayHeader();
-    }
     return folly::none;
   }
 
   // If the tree is unlinked and no longer referenced we can delete it from
   // the overlay and completely forget about it.
-  auto fuseCount = inode->getFuseRefcount();
   if (isUnlinked && fuseCount == 0) {
     XLOG(DBG5) << "forgetting unreferenced unlinked inode "
                << inode->getNodeId() << ": " << inode->getLogPath();
-    mount_->getOverlay()->removeOverlayData(inode->getNodeId());
     return folly::none;
   }
 
@@ -844,10 +861,6 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     }
     return folly::none;
   } else {
-    // Make sure the timestamp fields are kept up-to-date in the overlay if
-    // this file is materialized.
-    inode->updateOverlayHeader();
-
     // We have to remember files only if their FUSE refcount is non-zero
     if (fuseCount > 0) {
       XLOG(DBG5) << "unloading file inode " << inode->getNodeId()
