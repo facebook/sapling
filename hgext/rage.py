@@ -104,24 +104,6 @@ def localconfig(ui):
     return result
 
 
-def obsoleteinfo(repo, hgcmd):
-    """Return obsolescence markers that are relevant to smartlog revset"""
-    ndays = 180
-    unfi = repo.unfiltered()
-    # take the last ndays
-    fromdate = datetime.datetime.now() + datetime.timedelta(-1 * ndays)
-    # return smartlog subset from 'fromdate'
-    revs = scmutil.revrange(
-        unfi, ['smartlog() and date(">%s")' % fromdate.strftime("%Y-%m-%d")]
-    )
-    # search obsolescence markers that are relevant to that subset
-    hashes = "|".join(unfi[rev].hex() for rev in revs)
-    markers = hgcmd("debugobsolete", rev=[])
-    pat = re.compile("(^.*(?:" + hashes + ").*$)", re.MULTILINE)
-    relevant = pat.findall(markers)
-    return "\n".join(relevant)
-
-
 def usechginfo():
     """FBONLY: Information about whether chg is enabled"""
     files = {"system": "/etc/mercurial/usechg", "user": os.path.expanduser("~/.usechg")}
@@ -320,7 +302,10 @@ def _makerage(ui, repo, **opts):
                 check=False,
             ),
         ),
-        ("hg debugobsolete <smartlog>", lambda: obsoleteinfo(repo, hgcmd)),
+        (
+            'last 100 lines of "hg debugobsolete"',
+            lambda: "\n".join(hgcmd("debugobsolete").splitlines()[-100:]),
+        ),
         ("infinitepush backup state", lambda: readinfinitepushbackupstate(srcrepo)),
         ("commit cloud workspace sync state", lambda: readcommitcloudstate(srcrepo)),
         (
