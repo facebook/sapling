@@ -12,8 +12,18 @@ use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use mercurial_types::{HgFileNodeId, RepoPath, RepositoryId};
+use rust_thrift::compact_protocol;
+use stats::Histogram;
 
-use {FilenodeInfo, Filenodes};
+use {thrift, FilenodeInfo, Filenodes};
+
+define_stats! {
+    prefix = "mononoke.filenodes";
+    gaf_compact_bytes: histogram(
+        "get_all_filenodes.thrift_compact.bytes";
+        500, 0, 1_000_000, AVG, SUM, COUNT; P 50; P 95; P 99
+    ),
+}
 
 pub struct CachingFilenodes {
     filenodes: Arc<Filenodes>,
@@ -62,7 +72,21 @@ impl Filenodes for CachingFilenodes {
         path: &RepoPath,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
-        self.filenodes.get_all_filenodes(path, repo_id)
+        self.filenodes
+            .get_all_filenodes(path, repo_id)
+            .inspect(|all_filenodes| {
+                let all_filenodes = thrift::FilenodeInfoList::Data(
+                    all_filenodes
+                        .into_iter()
+                        .map(|filenode_info| filenode_info.clone().into_thrift())
+                        .collect(),
+                );
+
+                let serialized = compact_protocol::serialize(&all_filenodes);
+
+                STATS::gaf_compact_bytes.add_value(serialized.len() as i64);
+            })
+            .boxify()
     }
 }
 

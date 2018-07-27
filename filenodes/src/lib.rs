@@ -9,8 +9,13 @@
 extern crate asyncmemo;
 extern crate failure_ext as failure;
 extern crate futures;
+#[macro_use]
+extern crate lazy_static;
 #[cfg_attr(test, macro_use)]
 extern crate quickcheck;
+extern crate rust_thrift;
+#[macro_use]
+extern crate stats;
 
 extern crate filenodes_if;
 extern crate futures_ext;
