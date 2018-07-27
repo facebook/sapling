@@ -387,3 +387,9 @@ Test copying obsmarkers
 
   $ hg log -r 'precursors(19437442f9e4)-19437442f9e4' -T '{desc} {node}\n' --hidden
   C 26805aba1e600a82e93661149f2313866a221a7b
+
+Test empty commit
+  $ hg co -q 1be7301b35ae
+  $ hg commit --config ui.allowemptycommit=true -m empty
+  $ hg metaedit -r ".^" -m "parent of empty commit" 2>&1 | grep RuntimeError
+  RuntimeError: can't reuse the manifest: its p1 (c74667c33d85705d7872136b99225b744c924aa5) doesn't match the new ctx p1 (eb79886383871977bccdb3000c275a279f0d4c99)
