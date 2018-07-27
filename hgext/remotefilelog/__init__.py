@@ -71,6 +71,7 @@ import time
 import traceback
 
 from mercurial import (
+    bundle2,
     changegroup,
     changelog,
     cmdutil,
@@ -167,6 +168,7 @@ def uisetup(ui):
     extensions.wrapcommand(commands.table, "debugindexdot", debugcommands.debugindexdot)
     extensions.wrapcommand(commands.table, "log", log)
     extensions.wrapcommand(commands.table, "pull", pull)
+    extensions.wrapfunction(bundle2, "getrepocaps", getrepocaps)
 
     # Prevent 'hg manifest --all'
     def _manifest(orig, ui, repo, *args, **opts):
@@ -194,6 +196,13 @@ def uisetup(ui):
     extensions.wrapcommand(commands.table, "debugdata", debugdatashallow)
 
     wrappackers()
+
+
+def getrepocaps(orig, repo, *args, **kwargs):
+    caps = orig(repo, *args, **kwargs)
+    if shallowrepo.requirement in repo.requirements:
+        caps["remotefilelog"] = ("True",)
+    return caps
 
 
 def wrappackers():

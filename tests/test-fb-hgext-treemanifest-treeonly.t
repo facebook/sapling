@@ -401,10 +401,20 @@ Test pushing to a hybrid server w/ pushrebase w/ hooks
   [255]
 
 Test pushing to a hybrid server w/ pushrebase w/o hooks
-  $ cat >> ../master/.hg/hgrc <<EOF
+  $ cd ../master
+  $ cat >> .hg/hgrc <<EOF
   > [hooks]
   > prepushrebase.fail=true
   > EOF
+- Add an extra head to the master repo so we trigger the slowpath
+- shallowbundle.generatemanifests() codepath, so we can verify it doesnt try to
+- process all the manifests either.
+  $ hg up -q 0
+  $ echo >> extrahead
+  $ hg commit -Aqm 'extra head commit'
+  $ hg up -q 1
+  $ cd ../client3
+
   $ hg push -r 2 --to master --debug 2>&1 | egrep '(remote:|add|converting)'
   remote: * (glob)
   remote: * (glob)
@@ -416,10 +426,12 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
   add changeset 4f84204095e0
   adding manifests
   adding file changes
-  adding y revisions
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files (+1 heads)
 
   $ cd ../master
+- Delete the temporary commit we made earlier
+  $ hg strip -qr 2
+
 - Verify the received tree was written down as a flat
   $ hg debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2

@@ -257,8 +257,9 @@ class shallowcg1packer(changegroup.cg1packer):
             return AllFiles
 
         caps = self._bundlecaps or []
-        if source == "serve" or source == "pull":
-            if "remotefilelog" in caps:
+        b2caps = self._b2caps or {}
+        if source == "serve" or source == "pull" or source == "rebase:reply":
+            if "remotefilelog" in caps or "True" in b2caps.get("remotefilelog", []):
                 return LocalFiles
             else:
                 # Serving to a full repo requires us to serve everything
