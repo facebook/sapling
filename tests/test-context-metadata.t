@@ -37,7 +37,7 @@ Tests about metadataonlyctx
   summary:     Changed
   
   $ hg --config extensions.metaedit=$TESTTMP/metaedit.py metaedit 'parents=0' 2>&1 | egrep '^RuntimeError'
-  RuntimeError: can't reuse the manifest: its p1 (007d8c9d88841325f5c6b06371b35b4e8a2b1a83) doesn't match the new ctx p1 (cb5cbbc1bfbf24cc34b9e8c16914e9caa2d2a7fd)
+  RuntimeError: new p1 manifest (007d8c9d88841325f5c6b06371b35b4e8a2b1a83) is not the old p1 manifest (cb5cbbc1bfbf24cc34b9e8c16914e9caa2d2a7fd)
 
   $ hg --config extensions.metaedit=$TESTTMP/metaedit.py metaedit 'user=foo <foo@example.com>'
   $ hg log -r tip

@@ -391,5 +391,17 @@ Test copying obsmarkers
 Test empty commit
   $ hg co -q 1be7301b35ae
   $ hg commit --config ui.allowemptycommit=true -m empty
-  $ hg metaedit -r ".^" -m "parent of empty commit" 2>&1 | grep RuntimeError
-  RuntimeError: can't reuse the manifest: its p1 (c74667c33d85705d7872136b99225b744c924aa5) doesn't match the new ctx p1 (eb79886383871977bccdb3000c275a279f0d4c99)
+  $ hg metaedit -r ".^" -m "parent of empty commit"
+  $ glog -r 'all()'
+  @  11:e582f22eefc0@default(draft) empty
+  |
+  o  10:539393debc47@default(draft) parent of empty commit
+  |
+  | o  8:52bc6136aa97@default(draft) D
+  | |
+  | x  6:19437442f9e4@default(draft) C
+  |/
+  o  5:888bb4818188@default(draft) B1
+  |
+  o  0:426bada5c675@default(draft) A
+  

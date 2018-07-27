@@ -2925,18 +2925,23 @@ class metadataonlyctx(committablectx):
             parents.append(repo[nullid])
         p1, p2 = self._parents = parents
 
-        # sanity check to ensure that the reused manifest parents are
-        # manifests of our commit parents
-        mp1, mp2 = self.manifestctx().parents
-        if p1 != nullid and p1.manifestnode() != mp1:
+        # sanity check to ensure that our parent's manifest has not changed
+        # from our original parent's manifest to ensure the caller is not
+        # creating invalid commits
+        ops = [repo[p] for p in originalctx.parents() if p is not None]
+        while len(ops) < 2:
+            ops.append(repo[nullid])
+        op1, op2 = ops
+
+        if p1.manifestnode() != op1.manifestnode():
             raise RuntimeError(
-                "can't reuse the manifest: "
-                "its p1 (%s) doesn't match the new ctx p1 (%s)"
-                % (hex(p1.manifestnode()), hex(mp1))
+                "new p1 manifest (%s) is not the old p1 manifest (%s)"
+                % (hex(p1.manifestnode()), hex(op1.manifestnode()))
             )
-        if p2 != nullid and p2.manifestnode() != mp2:
+        if p2.manifestnode() != op2.manifestnode():
             raise RuntimeError(
-                "can't reuse the manifest: " "its p2 doesn't match the new ctx p2"
+                "new p2 manifest (%s) is not the old p2 manifest (%s)"
+                % (hex(p2.manifestnode()), hex(op2.manifestnode()))
             )
 
         self._files = originalctx.files()
