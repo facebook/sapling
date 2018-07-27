@@ -33,7 +33,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::sql_types::HasSqlType;
 use failure::{Error, Result, ResultExt};
-use filenodes::{FilenodeInfo, Filenodes};
+use filenodes::{FilenodeInfo, Filenodes, blake2_path_hash};
 use futures::{Future, Stream};
 use futures_ext::{asynchronize, BoxFuture, BoxStream};
 use mercurial_types::{HgFileNodeId, RepoPath, RepositoryId};
@@ -43,7 +43,6 @@ use stats::Timeseries;
 use std::result;
 use std::sync::MutexGuard;
 
-mod common;
 mod errors;
 mod models;
 mod schema;
@@ -428,11 +427,11 @@ where
 {
     let (path_bytes, is_tree) = convert_from_repo_path(path);
 
-    let path_hash = common::blake2_path_hash(&path_bytes);
+    let path_hash = Vec::from(blake2_path_hash(&path_bytes).as_ref());
 
     schema::filenodes::table
         .filter(schema::filenodes::repo_id.eq(*repo_id))
-        .filter(schema::filenodes::path_hash.eq(path_hash.clone()))
+        .filter(schema::filenodes::path_hash.eq(path_hash))
         .filter(schema::filenodes::is_tree.eq(is_tree))
         .into_boxed()
 }
@@ -448,12 +447,12 @@ where
 {
     let (path_bytes, is_tree) = convert_from_repo_path(path);
 
-    let path_hash = common::blake2_path_hash(&path_bytes);
+    let path_hash = Vec::from(blake2_path_hash(&path_bytes).as_ref());
 
     schema::filenodes::table
         .filter(schema::filenodes::repo_id.eq(*repo_id))
         .filter(schema::filenodes::filenode.eq(*filenode))
-        .filter(schema::filenodes::path_hash.eq(path_hash.clone()))
+        .filter(schema::filenodes::path_hash.eq(path_hash))
         .filter(schema::filenodes::is_tree.eq(is_tree))
         .limit(1)
         .into_boxed()
@@ -470,7 +469,7 @@ where
 {
     let (topath_bytes, is_tree) = convert_from_repo_path(topath);
 
-    let topath_hash = common::blake2_path_hash(&topath_bytes);
+    let topath_hash = Vec::from(blake2_path_hash(&topath_bytes).as_ref());
 
     schema::fixedcopyinfo::table
         .filter(schema::fixedcopyinfo::repo_id.eq(*repo_id))

@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use common::blake2_path_hash;
+use filenodes::blake2_path_hash;
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepositoryId};
 use schema::{filenodes, fixedcopyinfo, paths};
 
@@ -39,7 +39,7 @@ impl FilenodeRow {
         let has_copyinfo = if has_copyinfo { 1 } else { 0 };
         FilenodeRow {
             repo_id: *repo_id,
-            path_hash: blake2_path_hash(path),
+            path_hash: Vec::from(blake2_path_hash(path).as_ref()),
             is_tree,
             filenode: *filenode,
             linknode: *linknode,
@@ -63,7 +63,7 @@ impl PathRow {
     pub(crate) fn new(repo_id: &RepositoryId, path: Vec<u8>) -> Self {
         PathRow {
             repo_id: *repo_id,
-            path_hash: blake2_path_hash(&path),
+            path_hash: Vec::from(blake2_path_hash(&path).as_ref()),
             path,
         }
     }
@@ -90,8 +90,8 @@ impl FixedCopyInfoRow {
         topath: &Vec<u8>,
         tonode: &HgFileNodeId,
     ) -> Self {
-        let frompath_hash = blake2_path_hash(frompath);
-        let topath_hash = blake2_path_hash(topath);
+        let frompath_hash = Vec::from(blake2_path_hash(frompath).as_ref());
+        let topath_hash = Vec::from(blake2_path_hash(topath).as_ref());
 
         FixedCopyInfoRow {
             repo_id: *repo_id,

@@ -11,6 +11,7 @@ extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
 extern crate lazy_static;
+extern crate mononoke_types;
 #[cfg_attr(test, macro_use)]
 extern crate quickcheck;
 extern crate rust_thrift;
@@ -26,12 +27,19 @@ mod caching;
 use failure::{Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath, RepositoryId};
+use mononoke_types::hash;
 use quickcheck::{Arbitrary, Gen};
 
 pub use caching::CachingFilenodes;
 
 mod thrift {
     pub use filenodes_if::*;
+}
+
+pub fn blake2_path_hash(data: &Vec<u8>) -> hash::Blake2 {
+    let mut hash_content = hash::Context::new("path".as_bytes());
+    hash_content.update(data);
+    hash_content.finish()
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
