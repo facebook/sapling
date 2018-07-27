@@ -32,6 +32,12 @@ using std::unique_ptr;
 
 namespace {
 
+// Most of the tests wait on Futures to complete.
+// Define a timeout just to make sure the tests don't hang if there's a problem
+// and a future never completes.  1 second seems to be long enough for the tests
+// to pass even when the system is under fairly heavy CPU load.
+constexpr auto kTimeout = 1s;
+
 fuse_entry_out genRandomLookupResponse(uint64_t nodeid) {
   fuse_entry_out response;
   response.nodeid = nodeid;
@@ -91,7 +97,7 @@ class FuseChannelTest : public ::testing::Test {
     // The init future should be ready very shortly after we receive the INIT
     // response.  The FuseChannel initialization thread makes the future ready
     // shortly after sending the INIT response.
-    return std::move(initFuture).get(100ms);
+    return std::move(initFuture).get(kTimeout);
   }
 
   FakeFuse fuse_;
@@ -134,7 +140,7 @@ TEST_F(FuseChannelTest, testInitDestroyRace) {
   // Wait for the initialization future to complete.
   // It's fine if it fails if the channel was destroyed before initialization
   // completed, or its fine if it succeeded first too.
-  initFuture.wait(100ms);
+  initFuture.wait(kTimeout);
 }
 
 TEST_F(FuseChannelTest, testInitUnmount) {
@@ -146,7 +152,7 @@ TEST_F(FuseChannelTest, testInitUnmount) {
   fuse_.close();
 
   // Wait for the FuseChannel to signal that it has finished.
-  auto stopData = std::move(completeFuture).get(100ms);
+  auto stopData = std::move(completeFuture).get(kTimeout);
   EXPECT_EQ(stopData.reason, FuseChannel::StopReason::UNMOUNTED);
   EXPECT_FALSE(stopData.fuseDevice);
 }
@@ -162,7 +168,7 @@ TEST_F(FuseChannelTest, testTakeoverStop) {
   channel->takeoverStop();
 
   // Wait for the FuseChannel to signal that it has finished.
-  auto stopData = std::move(completeFuture).get(100ms);
+  auto stopData = std::move(completeFuture).get(kTimeout);
   EXPECT_EQ(stopData.reason, FuseChannel::StopReason::TAKEOVER);
   // We should have received the FUSE device and valid settings information
   EXPECT_TRUE(stopData.fuseDevice);
@@ -183,7 +189,7 @@ TEST_F(FuseChannelTest, testInitUnmountRace) {
   channel.reset();
 
   // Wait for the session complete future now.
-  auto stopData = std::move(completeFuture).get(100ms);
+  auto stopData = std::move(completeFuture).get(kTimeout);
   if (stopData.reason == FuseChannel::StopReason::UNMOUNTED) {
     EXPECT_FALSE(stopData.fuseDevice);
   } else if (stopData.reason == FuseChannel::StopReason::DESTRUCTOR) {
@@ -201,7 +207,7 @@ TEST_F(FuseChannelTest, testInitErrorClose) {
   fuse_.close();
 
   EXPECT_THROW_RE(
-      std::move(initFuture).get(100ms),
+      std::move(initFuture).get(kTimeout),
       std::runtime_error,
       "FUSE mount \"/fake/mount/path\" was unmounted before we "
       "received the INIT packet");
@@ -218,7 +224,7 @@ TEST_F(FuseChannelTest, testInitErrorWrongPacket) {
   fuse_.sendRequest(FUSE_LOOKUP, FUSE_ROOT_ID, initArg);
 
   EXPECT_THROW_RE(
-      std::move(initFuture).get(100ms),
+      std::move(initFuture).get(kTimeout),
       std::runtime_error,
       "expected to receive FUSE_INIT for \"/fake/mount/path\" "
       "but got FUSE_LOOKUP");
@@ -237,7 +243,7 @@ TEST_F(FuseChannelTest, testInitErrorOldVersion) {
   fuse_.sendRequest(FUSE_INIT, FUSE_ROOT_ID, initArg);
 
   EXPECT_THROW_RE(
-      std::move(initFuture).get(100ms),
+      std::move(initFuture).get(kTimeout),
       std::runtime_error,
       "Unsupported FUSE kernel version 2.7 while initializing "
       "\"/fake/mount/path\"");
@@ -255,7 +261,7 @@ TEST_F(FuseChannelTest, testInitErrorShortPacket) {
   fuse_.sendRequest(FUSE_INIT, FUSE_ROOT_ID, body);
 
   EXPECT_THROW_RE(
-      std::move(initFuture).get(100ms),
+      std::move(initFuture).get(kTimeout),
       std::runtime_error,
       "received partial FUSE_INIT packet on mount \"/fake/mount/path\": "
       "size=44");
@@ -329,7 +335,7 @@ TEST_F(FuseChannelTest, testDestroyWithPendingRequests) {
   // The completion future should be ready now that the last request
   // is done.
   EXPECT_TRUE(completeFuture.isReady());
-  std::move(completeFuture).get(100ms);
+  std::move(completeFuture).get(kTimeout);
 }
 
 // Test for getOutstandingRequest().
