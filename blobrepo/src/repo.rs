@@ -264,7 +264,12 @@ impl BlobRepo {
 
         let filenodes = MysqlFilenodes::open(&args.db_address, DEFAULT_INSERT_CHUNK_SIZE)
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
-        let filenodes = CachingFilenodes::new(Arc::new(filenodes), args.filenodes_cache_size);
+        let filenodes = CachingFilenodes::new(
+            Arc::new(filenodes),
+            args.filenodes_cache_size,
+            "dieselfilenodes",
+            &args.db_address,
+        );
 
         let changesets = MysqlChangesets::open(&args.db_address)
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;

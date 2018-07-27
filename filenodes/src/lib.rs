@@ -7,16 +7,21 @@
 #![deny(warnings)]
 
 extern crate asyncmemo;
+#[macro_use]
+extern crate cloned;
 extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
 extern crate lazy_static;
+extern crate memcache;
 extern crate mononoke_types;
 #[cfg_attr(test, macro_use)]
 extern crate quickcheck;
+extern crate rand;
 extern crate rust_thrift;
 #[macro_use]
 extern crate stats;
+extern crate tokio;
 
 extern crate filenodes_if;
 extern crate futures_ext;
