@@ -32,5 +32,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/eden/fs/eden-config.h
 )
 
+include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
+
 add_subdirectory(common)
 add_subdirectory(eden/fs)
