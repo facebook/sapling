@@ -39,17 +39,6 @@ from .remotefilelog import constants, shallowutil
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-_failsafeerrors = []
-
-
-def _failsafe(func):
-    try:
-        return func()
-    except Exception as ex:
-        index = len(_failsafeerrors) + 1
-        message = "[%d]: %s\n%s\n" % (index, str(ex), traceback.format_exc())
-        _failsafeerrors.append(message)
-        return "(Failed. See footnote [%d])" % index
 
 
 def shcmd(cmd, input=None, check=True, keeperr=True):
@@ -265,13 +254,6 @@ files (first 20 of %d):
 def _makerage(ui, repo, **opts):
     srcrepo = shareutil.getsrcrepo(repo)
 
-    def format(pair, basic=True):
-        if basic:
-            fmt = "%s: %s\n"
-        else:
-            fmt = "%s:\n---------------------------\n%s\n"
-        return fmt % pair
-
     def hgcmd(cmdname, *args, **additional_opts):
         cmd, opts = cmdutil.getcmdanddefaultopts(cmdname, commands.table)
         opts.update(additional_opts)
@@ -293,83 +275,61 @@ def _makerage(ui, repo, **opts):
             return "File not found: %s" % srcrepo.vfs.join(filename)
 
     basic = [
-        ("date", time.ctime()),
-        ("unixname", encoding.environ.get("LOGNAME")),
-        ("hostname", socket.gethostname()),
-        ("repo location", _failsafe(lambda: repo.root)),
-        (
-            "active bookmark",
-            _failsafe(lambda: bookmarks._readactive(repo, repo._bookmarks)),
-        ),
-        (
-            "hg version",
-            _failsafe(lambda: __import__("mercurial.__version__").__version__.version),
-        ),
-        (
-            "obsstore size",
-            _failsafe(lambda: str(srcrepo.vfs.stat("store/obsstore").st_size)),
-        ),
+        ("date", lambda: time.ctime()),
+        ("unixname", lambda: encoding.environ.get("LOGNAME")),
+        ("hostname", lambda: socket.gethostname()),
+        ("repo location", lambda: repo.root),
+        ("active bookmark", lambda: bookmarks._readactive(repo, repo._bookmarks)),
+        ("hg version", lambda: __import__("mercurial.__version__").__version__.version),
+        ("obsstore size", lambda: str(srcrepo.vfs.stat("store/obsstore").st_size)),
     ]
 
     oldcolormode = ui._colormode
     ui._colormode = None
 
     detailed = [
-        ("df -h", _failsafe(lambda: shcmd("df -h", check=False))),
-        (
-            "hg sl (filtered)",
-            _failsafe(lambda: hgcmd("smartlog", template="{sl_debug}")),
-        ),
+        ("df -h", lambda: shcmd("df -h", check=False)),
+        ("hg sl (filtered)", lambda: hgcmd("smartlog", template="{sl_debug}")),
         # unfiltered smartlog for recent hidden changesets, including full
         # node identity
         (
             "hg sl (unfiltered)",
-            _failsafe(
-                lambda: hgcmd(
-                    "smartlog", _repo=repo.unfiltered(), template="{node}\n{sl_debug}"
-                )
+            lambda: hgcmd(
+                "smartlog", _repo=repo.unfiltered(), template="{node}\n{sl_debug}"
             ),
         ),
         # smartlog as the user sees it
         (
             'first 20 lines of "hg status"',
-            _failsafe(lambda: "\n".join(hgcmd("status").splitlines()[:20])),
+            lambda: "\n".join(hgcmd("status").splitlines()[:20]),
         ),
-        ("hg blackbox -l60", _failsafe(lambda: hgcmd("blackbox", limit=60))),
-        ("hg summary", _failsafe(lambda: hgcmd("summary"))),
-        ("hg config (local)", _failsafe(lambda: "\n".join(localconfig(ui)))),
-        ("hg sparse", _failsafe(lambda: hgcmd("sparse"))),
-        ("usechg", _failsafe(usechginfo)),
-        ("rpm info", _failsafe(partial(rpminfo, ui))),
-        ("klist", _failsafe(lambda: shcmd("klist", check=False))),
-        ("ifconfig", _failsafe(lambda: shcmd("ifconfig"))),
+        ("hg blackbox -l60", lambda: hgcmd("blackbox", limit=60)),
+        ("hg summary", lambda: hgcmd("summary")),
+        ("hg config (local)", lambda: "\n".join(localconfig(ui))),
+        ("hg sparse", lambda: hgcmd("sparse")),
+        ("usechg", (usechginfo)),
+        ("rpm info", (partial(rpminfo, ui))),
+        ("klist", lambda: shcmd("klist", check=False)),
+        ("ifconfig", lambda: shcmd("ifconfig")),
         (
             "airport",
-            _failsafe(
-                lambda: shcmd(
-                    "/System/Library/PrivateFrameworks/Apple80211."
-                    + "framework/Versions/Current/Resources/airport "
-                    + "--getinfo",
-                    check=False,
-                )
+            lambda: shcmd(
+                "/System/Library/PrivateFrameworks/Apple80211."
+                + "framework/Versions/Current/Resources/airport "
+                + "--getinfo",
+                check=False,
             ),
         ),
-        ("hg debugobsolete <smartlog>", _failsafe(lambda: obsoleteinfo(repo, hgcmd))),
-        (
-            "infinitepush backup state",
-            _failsafe(lambda: readinfinitepushbackupstate(srcrepo)),
-        ),
-        (
-            "commit cloud workspace sync state",
-            _failsafe(lambda: readcommitcloudstate(srcrepo)),
-        ),
+        ("hg debugobsolete <smartlog>", lambda: obsoleteinfo(repo, hgcmd)),
+        ("infinitepush backup state", lambda: readinfinitepushbackupstate(srcrepo)),
+        ("commit cloud workspace sync state", lambda: readcommitcloudstate(srcrepo)),
         (
             "infinitepush / commitcloud backup logs",
-            _failsafe(lambda: infinitepushbackuplogs(ui, repo)),
+            lambda: infinitepushbackuplogs(ui, repo),
         ),
-        ("scm daemon logs", _failsafe(lambda: scmdaemonlog(ui, repo))),
-        ("hg config (all)", _failsafe(lambda: hgcmd("config"))),
-        ("fsmonitor state", _failsafe(lambda: readfsmonitorstate(repo))),
+        ("scm daemon logs", lambda: scmdaemonlog(ui, repo)),
+        ("hg config (all)", lambda: hgcmd("config")),
+        ("fsmonitor state", lambda: readfsmonitorstate(repo)),
     ]
 
     msg = ""
@@ -389,8 +349,7 @@ def _makerage(ui, repo, **opts):
                 detailed.append(
                     (
                         "%s packs (%s)" % (loc, constants.getunits(category)),
-                        "%s:\n%s"
-                        % (path, _failsafe(lambda: shcmd("ls -lhS %s" % path))),
+                        lambda: "%s:\n%s" % (path, shcmd("ls -lhS %s" % path)),
                     )
                 )
 
@@ -399,17 +358,52 @@ def _makerage(ui, repo, **opts):
         detailed.append(
             (
                 'hg sl -r "fastmanifestcached()"',
-                _failsafe(lambda: hgcmd("smartlog", rev=["fastmanifestcached()"])),
+                (lambda: hgcmd("smartlog", rev=["fastmanifestcached()"])),
             )
         )
 
-    msg = (
-        "\n".join(map(format, basic))
-        + "\n"
-        + "\n".join(map(lambda x: format(x, False), detailed))
-    )
-    if _failsafeerrors:
-        msg += "\n" + "\n".join(_failsafeerrors)
+    footnotes = []
+
+    def _failsafe(gen):
+        try:
+            return gen()
+        except Exception as ex:
+            index = len(footnotes) + 1
+            footnotes.append(
+                "[%d]: %s\n%s\n\n" % (index, str(ex), traceback.format_exc())
+            )
+            return "(Failed. See footnote [%d])" % index
+
+    msg = []
+    profile = []
+    allstart = time.time()
+    for name, gen in basic:
+        msg.append("%s: %s\n\n" % (name, _failsafe(gen)))
+    profile.append((time.time() - allstart, "basic info", None))
+    for name, gen in detailed:
+        start = time.time()
+        value = _failsafe(gen)
+        finish = time.time()
+        msg.append(
+            "%s: (%.2f s)\n---------------------------\n%s\n\n"
+            % (name, finish - start, value)
+        )
+        profile.append((finish - start, name, value.count("\n")))
+    allfinish = time.time()
+    profile.append((allfinish - allstart, "total time", None))
+
+    msg.append("hg rage profile:\n")
+    width = max([len(name) for _t, name, _l in profile])
+    for timetaken, name, lines in reversed(sorted(profile)):
+        m = "  %-*s  %8.2f s" % (width + 1, name + ":", timetaken)
+        if lines is not None:
+            msg.append("%s for %4d lines\n" % (m, lines))
+        else:
+            msg.append("%s\n" % m)
+    msg.append("\n")
+
+    msg.extend(footnotes)
+    msg = "".join(msg)
 
     ui._colormode = oldcolormode
     return msg

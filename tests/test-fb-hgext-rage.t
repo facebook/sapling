@@ -12,7 +12,7 @@
   $ echo "[rage]" >> .hg/hgrc
   $ echo "rpmbin = /""bin/rpm" >> .hg/hgrc
 #endif
-  $ hg rage --preview | grep -o 'hg blackbox'
+  $ hg rage --preview | grep -o '^hg blackbox'
   hg blackbox
 
 Test with shared repo
