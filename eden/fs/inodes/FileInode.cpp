@@ -1188,7 +1188,7 @@ folly::Future<folly::Unit> FileInode::prefetch() {
   });
 }
 
-void FileInode::updateOverlayHeader() {
+void FileInode::updateOverlayHeaderIfNeeded() {
   auto state = LockedState{this};
   if (state->isMaterialized()) {
     state.ensureFileOpen(this);

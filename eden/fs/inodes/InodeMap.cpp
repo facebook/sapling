@@ -778,7 +778,7 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     } else {
       // This updates the timestamps in the overlay file if the inode is
       // materialized.  This is a no-op for non-materialized inodes.
-      inode->updateOverlayHeader();
+      inode->updateOverlayHeaderIfNeeded();
     }
   } catch (const std::exception& ex) {
     // If we fail to update the overlay log an error but do not propagate the

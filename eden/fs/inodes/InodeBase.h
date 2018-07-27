@@ -144,7 +144,7 @@ class InodeBase {
    * materialized file's header. This is called while unloading an inode of
    * materialized file during unmount.
    */
-  virtual void updateOverlayHeader() = 0;
+  virtual void updateOverlayHeaderIfNeeded() = 0;
 
   /**
    * Check if this Inode has been unlinked from its parent TreeInode.

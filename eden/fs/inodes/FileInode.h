@@ -194,7 +194,7 @@ class FileInode : public InodeBaseMetadata<FileInodeState> {
    * Updates in-memory timestamps in FileInode and TreeInode to the overlay
    * file.
    */
-  void updateOverlayHeader() override;
+  void updateOverlayHeaderIfNeeded() override;
   folly::Future<Hash> getSha1();
 
   /**

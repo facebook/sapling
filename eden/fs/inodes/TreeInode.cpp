@@ -3214,7 +3214,7 @@ folly::Future<folly::Unit> TreeInode::prefetch() {
   });
 }
 
-void TreeInode::updateOverlayHeader() {
+void TreeInode::updateOverlayHeaderIfNeeded() {
   auto contents = contents_.wlock();
   if (contents->isMaterialized()) {
     InodeTimestamps timeStamps;
