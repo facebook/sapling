@@ -17,7 +17,6 @@ use commitcloudsubscriber::{CommitCloudConfig, CommitCloudTcpReceiverService,
                             CommitCloudWorkspaceSubscriberService};
 use std::fs::File;
 use std::io::Read;
-use std::io::Write;
 
 /// This is what we're going to decode toml config into.
 /// Each field is optional, meaning that it doesn't have to be present in TOML.
