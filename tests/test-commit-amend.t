@@ -1,3 +1,4 @@
+  $ setconfig format.dirstate=2
   $ . helpers-usechg.sh
 
   $ cat << EOF >> $HGRCPATH
@@ -349,6 +350,7 @@ Moving bookmarks, preserve active bookmark:
    * book2                     1:a3b65065808c
 
 abort does not loose bookmarks
+(note: with fsmonitor, transaction started before checking commit message)
 
   $ cat > editor.sh << '__EOF__'
   > #!/bin/sh
@@ -356,6 +358,8 @@ abort does not loose bookmarks
   > __EOF__
   $ echo a >> a
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend
+  transaction abort! (fsmonitor !)
+  rollback completed (fsmonitor !)
   abort: empty commit message
   [255]
   $ hg book
