@@ -40,6 +40,10 @@ class ServiceData {
   DynamicCounters *getDynamicCounters() {
     return &counters_;
   }
+  void addStatValue(
+      folly::StringPiece key,
+      int64_t value,
+      stats::ExportType exportType) {}
 
  private:
   DynamicCounters counters_;
