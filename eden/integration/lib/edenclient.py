@@ -283,6 +283,27 @@ class EdenFS(object):
                 "eden exited unsuccessfully with status {}".format(return_code)
             )
 
+    def stop_with_stale_mounts(self) -> None:
+        """Stop edenfs without unmounting any of its mount points.
+        This will leave the mount points mounted but no longer connected to a FUSE
+        daemon.  Attempts to access files or directories inside the mount will fail with
+        an ENOTCONN error after this.
+        """
+        assert self._process is not None
+
+        cmd = [FindExe.TAKEOVER_TOOL, "--edenDir", self._eden_dir]
+        subprocess.check_call(cmd)
+
+        old_process = self._process
+        self._process = None
+
+        return_code = old_process.wait()
+        if return_code != 0:
+            raise Exception(
+                f"eden exited unsuccessfully with status {return_code} "
+                "after a fake takeover stop"
+            )
+
     def add_repository(self, name: str, repo_path: str) -> None:
         """
         Run "eden repository" to define a repository configuration

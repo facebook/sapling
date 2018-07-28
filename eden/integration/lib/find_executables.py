@@ -106,6 +106,18 @@ class FindExeClass(object):
         )
 
     @cached_property
+    def TAKEOVER_TOOL(self) -> str:
+        return self._find_exe(
+            "takeover_tool",
+            env="EDENFS_TAKEOVER_TOOL",
+            candidates=[
+                os.path.join(
+                    self.BUCK_OUT, "gen/eden/integration/helpers/takeover_tool"
+                )
+            ],
+        )
+
+    @cached_property
     def GIT(self) -> str:
         git = distutils.spawn.find_executable(
             "git.real"
