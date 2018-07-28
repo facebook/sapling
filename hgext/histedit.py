@@ -635,17 +635,7 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
     def filectxfn(repo, ctx, path):
         if path in headmf:
             fctx = last[path]
-            flags = fctx.flags()
-            mctx = context.memfilectx(
-                repo,
-                ctx,
-                fctx.path(),
-                fctx.data(),
-                islink="l" in flags,
-                isexec="x" in flags,
-                copied=copied.get(path),
-            )
-            return mctx
+            return context.overlayfilectx(fctx, ctx=ctx, copied=copied.get(path, False))
         return None
 
     if commitopts.get("message"):
