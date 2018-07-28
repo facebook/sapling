@@ -166,6 +166,16 @@ being generated). Seem the wrapped bundle2.writenewbundle is not called?
   $ hg debuglfsupload -r 'all()'
 
 
+This should work even if the HG server does not have access to LFS server
+
+  $ cat >> $TESTTMP/master/.hg/hgrc << EOF
+  > [lfs]
+  > url=null
+  > EOF
+  $ mv $TESTTMP/master/.hg/store/lfs{,.bak}
+
+Push
+
   $ hg push --to master ../master
   pushing to ../master
   searching for changes
@@ -177,6 +187,12 @@ being generated). Seem the wrapped bundle2.writenewbundle is not called?
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
 
+Restore LFS configuration in the master repo
+
+  $ mv $TESTTMP/master/.hg/store/lfs{.bak,}
+  $ rm $TESTTMP/master/.hg/hgrc
+
+Check content
 
   $ cd ../master
   $ hg log -p -r tip -T '{rev}:{node} {desc}\n'

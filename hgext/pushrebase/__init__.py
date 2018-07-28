@@ -748,20 +748,10 @@ def _graft(op, rev, mapping, lastdestnode):
         if path in m:
             # We can't use the normal rev[path] accessor here since it will try
             # to go through the flat manifest, which may not exist.
-            fctx = _getfilectx(rev, m, path)
+            # That is, fctx.flags() might fail. Therefore use m.flags.
             flags = m.flags(path)
-            copied = fctx.renamed()
-            if copied:
-                copied = copied[0]
-            return context.memfilectx(
-                repo,
-                memctx,
-                fctx.path(),
-                fctx.data(),
-                islink="l" in flags,
-                isexec="x" in flags,
-                copied=copied,
-            )
+            fctx = _getfilectx(rev, m, path)
+            return context.overlayfilectx(fctx, ctx=memctx, flags=flags)
         else:
             return None
 
