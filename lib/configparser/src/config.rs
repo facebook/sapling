@@ -44,6 +44,7 @@ struct ValueLocation {
 #[derive(Default)]
 pub struct Options {
     source: Bytes,
+    filters: Vec<Box<Fn(Bytes, Bytes, Option<Bytes>) -> Option<(Bytes, Bytes, Option<Bytes>)>>>,
 }
 
 impl ConfigSet {
@@ -165,17 +166,24 @@ impl ConfigSet {
         location: Option<ValueLocation>,
         opts: &Options,
     ) {
-        self.sections
-            .entry(section)
-            .or_insert_with(|| Default::default())
-            .items
-            .entry(name)
-            .or_insert_with(|| Vec::with_capacity(1))
-            .push(ValueSource {
-                value,
-                location,
-                source: opts.source.clone(),
-            })
+        let filtered = opts.filters
+            .iter()
+            .fold(Some((section, name, value)), move |acc, func| {
+                acc.and_then(|(section, name, value)| func(section, name, value))
+            });
+        if let Some((section, name, value)) = filtered {
+            self.sections
+                .entry(section)
+                .or_insert_with(|| Default::default())
+                .items
+                .entry(name)
+                .or_insert_with(|| Vec::with_capacity(1))
+                .push(ValueSource {
+                    value,
+                    location,
+                    source: opts.source.clone(),
+                })
+        }
     }
 
     fn load_dir_or_file(&mut self, path: &Path, opts: &Options, visited: &mut HashSet<PathBuf>) {
@@ -406,6 +414,20 @@ impl Options {
         Self::default()
     }
 
+    /// Append a filter. A filter can decide to ignore a config item, or change its section,
+    /// config name, or even value. The filter function takes a tuple of `(section, name, value)`
+    /// and outputs `None` to prevent inserting that value, or `Some((section, name, value))` to
+    /// insert it with optionally different name or values.
+    ///
+    /// Filters inserted first will be executed first.
+    pub fn append_filter(
+        mut self,
+        filter: Box<Fn(Bytes, Bytes, Option<Bytes>) -> Option<(Bytes, Bytes, Option<Bytes>)>>,
+    ) -> Self {
+        self.filters.push(filter);
+        self
+    }
+
     /// Set `source` information. It is about who initialized the config loading.  For example,
     /// "user_hgrc" indicates it is from the user config file, "--config" indicates it is from the
     /// global "--config" command line flag, "env" indicates it is translated from an environment
@@ -602,6 +624,53 @@ mod tests {
         assert_eq!(sources.len(), 2);
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
         assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 25..35));
+    }
+
+    #[test]
+    fn test_filters() {
+        fn blacklist_section_x(
+            section: Bytes,
+            name: Bytes,
+            value: Option<Bytes>,
+        ) -> Option<(Bytes, Bytes, Option<Bytes>)> {
+            if section.as_ref() == b"x" {
+                None
+            } else {
+                Some((section, name, value))
+            }
+        }
+
+        fn swap_name_value(
+            section: Bytes,
+            name: Bytes,
+            value: Option<Bytes>,
+        ) -> Option<(Bytes, Bytes, Option<Bytes>)> {
+            Some((section, value.unwrap(), name.into()))
+        }
+
+        fn rename_section_to_z(
+            _section: Bytes,
+            name: Bytes,
+            value: Option<Bytes>,
+        ) -> Option<(Bytes, Bytes, Option<Bytes>)> {
+            Some(("z".into(), name, value))
+        }
+
+        let mut cfg = ConfigSet::new();
+        let opts = Options::new()
+            .append_filter(Box::new(blacklist_section_x))
+            .append_filter(Box::new(swap_name_value))
+            .append_filter(Box::new(rename_section_to_z));
+        cfg.parse(
+            "[x]\n\
+             a=1\n\
+             [y]\n\
+             b=c",
+            &opts,
+        );
+        assert_eq!(cfg.get("x", "a"), None);
+        assert_eq!(cfg.get("y", "b"), None);
+        assert_eq!(cfg.get("z", "c"), Some(Bytes::from("b")));
     }
 
     fn write_file(path: PathBuf, content: &str) {
