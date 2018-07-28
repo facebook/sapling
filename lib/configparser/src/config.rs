@@ -1,10 +1,12 @@
 use bytes::Bytes;
 use error::Error;
 use linked_hash_map::LinkedHashMap;
-use std::collections::HashSet;
+use std::cmp::Eq;
+use std::collections::{HashMap, HashSet};
 use std::convert::AsRef;
 use std::ffi::OsStr;
 use std::fs;
+use std::hash::Hash;
 use std::io::Read;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
@@ -448,6 +450,28 @@ impl Options {
         self.append_filter(Box::new(filter))
     }
 
+    /// Set section remap. If a section name matches an entry key, it will be treated as if the
+    /// name is the entry value. The remap wouldn't happen recursively. For example, with a
+    /// `{"A": "B", "B": "C"}` map, section name "A" will be treated as "B", not "C".
+    /// This is implemented via `append_filter`.
+    pub fn remap_sections<K, V>(self, remap: HashMap<K, V>) -> Self
+    where
+        K: Eq + Hash + Into<Bytes>,
+        V: Into<Bytes>,
+    {
+        let remap: HashMap<Bytes, Bytes> = remap
+            .into_iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect();
+
+        let filter = move |section: Bytes, name: Bytes, value: Option<Bytes>| {
+            let section = remap.get(&section).cloned().unwrap_or(section);
+            Some((section, name, value))
+        };
+
+        self.append_filter(Box::new(filter))
+    }
+
     /// Set `source` information. It is about who initialized the config loading.  For example,
     /// "user_hgrc" indicates it is from the user config file, "--config" indicates it is from the
     /// global "--config" command line flag, "env" indicates it is translated from an environment
@@ -709,6 +733,29 @@ mod tests {
 
         assert_eq!(cfg.sections(), vec![Bytes::from("x"), Bytes::from("y")]);
         assert_eq!(cfg.get("z", "c"), None);
+    }
+
+    #[test]
+    fn test_section_remap() {
+        let mut remap = HashMap::new();
+        remap.insert("x", "y");
+        remap.insert("y", "z");
+
+        let opts = Options::new().remap_sections(remap);
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[x]\n\
+             a=1\n\
+             [y]\n\
+             b=2\n\
+             [z]\n\
+             c=3",
+            &opts,
+        );
+
+        assert_eq!(cfg.get("y", "a"), Some("1".into()));
+        assert_eq!(cfg.get("z", "b"), Some("2".into()));
+        assert_eq!(cfg.get("z", "c"), Some("3".into()));
     }
 
     fn write_file(path: PathBuf, content: &str) {
