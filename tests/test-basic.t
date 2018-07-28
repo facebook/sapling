@@ -5,7 +5,6 @@ Create a repository:
   devel.default-date=0 0
   extensions.fsmonitor= (fsmonitor !)
   fsmonitor.detectrace=1 (fsmonitor !)
-  lfs.usercache=$TESTTMP/.cache/lfs
   ui.slash=True
   ui.interactive=False
   ui.mergemarkers=detailed

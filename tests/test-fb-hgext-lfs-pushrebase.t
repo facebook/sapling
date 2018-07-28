@@ -160,6 +160,12 @@
 
 # Push lfs content to server: succeed
 
+XXX: LFS files should be uploaded automatically during push (when bundle is
+being generated). Seem the wrapped bundle2.writenewbundle is not called?
+
+  $ hg debuglfsupload -r 'all()'
+
+
   $ hg push --to master ../master
   pushing to ../master
   searching for changes

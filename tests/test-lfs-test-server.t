@@ -1,5 +1,6 @@
 #require lfs-test-server
 
+  $ setconfig lfs.usercache=$TESTTMP/lfs-cache
   $ LFS_LISTEN="tcp://:$HGPORT"
   $ LFS_HOST="localhost:$HGPORT"
   $ LFS_PUBLIC=1

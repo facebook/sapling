@@ -1404,9 +1404,6 @@ class Test(unittest.TestCase):
             hgrc.write(b"all-warnings = true\n")
             hgrc.write(b"default-date = 0 0\n")
             hgrc.write(b"[lfs]\n")
-            hgrc.write(
-                b"usercache = %s\n" % (os.path.join(self._testtmp, b".cache/lfs"))
-            )
             if self._watchman:
                 hgrc.write(b"[extensions]\nfsmonitor=\n")
                 hgrc.write(b"[fsmonitor]\ndetectrace=1\n")
