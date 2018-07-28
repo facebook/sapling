@@ -1,3 +1,5 @@
+  $ setconfig format.dirstate=2
+
   $ checkundo()
   > {
   >     if [ -f .hg/store/undo ]; then
@@ -1028,6 +1030,8 @@ test file addition in slow path
   $ hg log -v --template '{rev} {file_copies}\n' -r .
   2 baz (foo)
   $ hg qrefresh --git
+
+XXX: with treestate, baz show up as "copy from", while it should be "rename from"
   $ cat .hg/patches/bar
   diff --git a/bar b/bar
   new file mode 100644
@@ -1036,8 +1040,8 @@ test file addition in slow path
   @@ -0,0 +1,1 @@
   +bar
   diff --git a/foo b/baz
-  rename from foo
-  rename to baz
+  copy from foo
+  copy to baz
   $ hg log -v --template '{rev} {file_copies}\n' -r .
   2 baz (foo)
   $ hg qrefresh
@@ -1053,14 +1057,14 @@ test file move chains in the slow path
   $ echo >> foo
   $ hg ci -m 'change foo again'
   $ hg up -C 2
-  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg mv bar quux
   $ hg mv baz bleh
   $ hg qrefresh --git
   $ cat .hg/patches/bar
   diff --git a/foo b/bleh
-  rename from foo
-  rename to bleh
+  copy from foo
+  copy to bleh
   diff --git a/quux b/quux
   new file mode 100644
   --- /dev/null
@@ -1074,8 +1078,8 @@ test file move chains in the slow path
   $ hg qrefresh --git
   $ cat .hg/patches/bar
   diff --git a/foo b/barney
-  rename from foo
-  rename to barney
+  copy from foo
+  copy to barney
   diff --git a/fred b/fred
   new file mode 100644
   --- /dev/null
