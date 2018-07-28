@@ -428,6 +428,26 @@ impl Options {
         self
     }
 
+    /// Set section whitelist. Sections outside the whitelist won't be loaded.
+    /// This is implemented via `append_filter`.
+    pub fn whitelist_sections<B: Clone + Into<Bytes>>(self, sections: Vec<B>) -> Self {
+        let whitelist: HashSet<Bytes> = sections
+            .iter()
+            .cloned()
+            .map(|section| section.into())
+            .collect();
+
+        let filter = move |section: Bytes, name: Bytes, value: Option<Bytes>| {
+            if whitelist.contains(&section) {
+                Some((section, name, value))
+            } else {
+                None
+            }
+        };
+
+        self.append_filter(Box::new(filter))
+    }
+
     /// Set `source` information. It is about who initialized the config loading.  For example,
     /// "user_hgrc" indicates it is from the user config file, "--config" indicates it is from the
     /// global "--config" command line flag, "env" indicates it is translated from an environment
@@ -671,6 +691,24 @@ mod tests {
         assert_eq!(cfg.get("x", "a"), None);
         assert_eq!(cfg.get("y", "b"), None);
         assert_eq!(cfg.get("z", "c"), Some(Bytes::from("b")));
+    }
+
+    #[test]
+    fn test_section_whitelist() {
+        let opts = Options::new().whitelist_sections(vec!["x", "y"]);
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[x]\n\
+             a=1\n\
+             [y]\n\
+             b=2\n\
+             [z]\n\
+             c=3",
+            &opts,
+        );
+
+        assert_eq!(cfg.sections(), vec![Bytes::from("x"), Bytes::from("y")]);
+        assert_eq!(cfg.get("z", "c"), None);
     }
 
     fn write_file(path: PathBuf, content: &str) {
