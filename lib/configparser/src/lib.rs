@@ -68,10 +68,9 @@ extern crate failure;
 #[macro_use]
 extern crate failure_derive;
 
-mod config;
-mod error;
+pub mod config;
+pub mod error;
 
-pub use config::{ConfigSet, ValueSource};
 pub use error::Error;
 
 #[cfg(test)]

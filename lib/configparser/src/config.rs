@@ -18,7 +18,7 @@ pub struct ConfigSet {
 }
 
 /// Internal representation of a config section.
-#[derive(Default)]
+#[derive(Clone, Default)]
 struct Section {
     items: LinkedHashMap<Bytes, Vec<ValueSource>>,
 }
@@ -37,6 +37,13 @@ pub struct ValueSource {
 struct ValueLocation {
     path: Arc<PathBuf>,
     location: Range<usize>,
+}
+
+/// Options that affects config setting functions like `load_path`, `parse`,
+/// and `set`.
+#[derive(Default)]
+pub struct Options {
+    source: Bytes,
 }
 
 impl ConfigSet {
@@ -74,30 +81,21 @@ impl ConfigSet {
     /// to avoid infinite loop. A separate `load_path` call would not ignore files loaded by
     /// other `load_path` calls.
     ///
-    /// The `source` field is to extra information about who initialized the config loading. For
-    /// example, "user_hgrc" indicates it is from user config file.
-    ///
     /// Errors will be pushed to an internal array, and can be retrieved by `errors`. Non-existed
     /// path is not considered as an error.
-    pub fn load_path<P: AsRef<Path>, S: Into<Bytes>>(&mut self, path: P, source: S) {
+    pub fn load_path<P: AsRef<Path>>(&mut self, path: P, opts: &Options) {
         let mut visited = HashSet::new();
-        let source = source.into();
-        self.load_dir_or_file(path.as_ref(), &source, &mut visited);
+        self.load_dir_or_file(path.as_ref(), opts, &mut visited);
     }
 
     /// Load content of an unnamed config file. The `ValueLocation`s of loaded config items will
     /// have an empty `path`.
     ///
-    /// The `source` field is to extra information about who initialized the config loading. For
-    /// example, "--config" indicates it is from the global "--config" flag, "env" indicates
-    /// it is from environment variables (ex. "PAGER").
-    ///
     /// Errors will be pushed to an internal array, and can be retrieved by `errors`.
-    pub fn parse<B: Into<Bytes>, S: Into<Bytes>>(&mut self, content: B, source: S) {
+    pub fn parse<B: Into<Bytes>>(&mut self, content: B, opts: &Options) {
         let mut visited = HashSet::new();
         let buf = content.into();
-        let source = source.into();
-        self.load_file_content(Path::new(""), buf, &source, &mut visited);
+        self.load_file_content(Path::new(""), buf, opts, &mut visited);
     }
 
     /// Get config sections.
@@ -141,18 +139,17 @@ impl ConfigSet {
 
     /// Set a config item directly. `section`, `name` locates the config. `value` is the new value.
     /// `source` is some annotation about who set it, ex. "reporc", "userrc", "--config", etc.
-    pub fn set<T: Into<Bytes>, N: Into<Bytes>, S: Into<Bytes>>(
+    pub fn set<T: Into<Bytes>, N: Into<Bytes>>(
         &mut self,
         section: T,
         name: N,
         value: Option<&[u8]>,
-        source: S,
+        opts: &Options,
     ) {
         let section = section.into();
         let name = name.into();
-        let source = source.into();
         let value = value.map(|v| Bytes::from(v));
-        self.set_internal(section, name, value, None, &source)
+        self.set_internal(section, name, value, None, &opts)
     }
 
     /// Get errors caused by parsing config files previously.
@@ -166,7 +163,7 @@ impl ConfigSet {
         name: Bytes,
         value: Option<Bytes>,
         location: Option<ValueLocation>,
-        source: &Bytes,
+        opts: &Options,
     ) {
         self.sections
             .entry(section)
@@ -177,16 +174,16 @@ impl ConfigSet {
             .push(ValueSource {
                 value,
                 location,
-                source: source.clone(),
+                source: opts.source.clone(),
             })
     }
 
-    fn load_dir_or_file(&mut self, path: &Path, source: &Bytes, visited: &mut HashSet<PathBuf>) {
+    fn load_dir_or_file(&mut self, path: &Path, opts: &Options, visited: &mut HashSet<PathBuf>) {
         if let Ok(path) = path.canonicalize() {
             if path.is_dir() {
-                self.load_dir(&path, source, visited);
+                self.load_dir(&path, opts, visited);
             } else {
-                self.load_file(&path, source, visited);
+                self.load_file(&path, opts, visited);
             }
         }
         // If `path.canonicalize` reports an error. It's usually the path cannot
@@ -194,7 +191,7 @@ impl ConfigSet {
         // reported in `self.errors`.
     }
 
-    fn load_dir(&mut self, dir: &Path, source: &Bytes, visited: &mut HashSet<PathBuf>) {
+    fn load_dir(&mut self, dir: &Path, opts: &Options, visited: &mut HashSet<PathBuf>) {
         let rc_ext = OsStr::new("rc");
         match dir.read_dir() {
             Ok(entries) => for entry in entries {
@@ -202,7 +199,7 @@ impl ConfigSet {
                     Ok(entry) => {
                         let path = entry.path();
                         if path.is_file() && path.extension() == Some(rc_ext) {
-                            self.load_file(&path, source, visited);
+                            self.load_file(&path, opts, visited);
                         }
                     }
                     Err(error) => self.error(Error::Io(dir.to_path_buf(), error)),
@@ -212,7 +209,7 @@ impl ConfigSet {
         }
     }
 
-    fn load_file(&mut self, path: &Path, source: &Bytes, visited: &mut HashSet<PathBuf>) {
+    fn load_file(&mut self, path: &Path, opts: &Options, visited: &mut HashSet<PathBuf>) {
         debug_assert!(path.is_absolute());
 
         if !visited.insert(path.to_path_buf()) {
@@ -230,7 +227,7 @@ impl ConfigSet {
                 buf.push(b'\n');
                 let buf = Bytes::from(buf);
 
-                self.load_file_content(path, buf, source, visited);
+                self.load_file_content(path, buf, opts, visited);
             }
             Err(error) => self.error(Error::Io(path.to_path_buf(), error)),
         }
@@ -240,7 +237,7 @@ impl ConfigSet {
         &mut self,
         path: &Path,
         buf: Bytes,
-        source: &Bytes,
+        opts: &Options,
         visited: &mut HashSet<PathBuf>,
     ) {
         let mut pos = 0;
@@ -289,7 +286,7 @@ impl ConfigSet {
                                     let full_include_path = path.parent()
                                         .unwrap()
                                         .join(expand_path(literal_include_path));
-                                    self.load_dir_or_file(&full_include_path, source, visited);
+                                    self.load_dir_or_file(&full_include_path, opts, visited);
                                 }
                                 Err(_error) => {
                                     self.error(Error::Parse(
@@ -311,7 +308,7 @@ impl ConfigSet {
                             path: shared_path.clone(),
                             location: pos..name_end,
                         };
-                        self.set_internal(section.clone(), name, None, location.into(), source);
+                        self.set_internal(section.clone(), name, None, location.into(), opts);
                         pos = name_end;
                     } else {
                         self.error(Error::Parse(path.to_path_buf(), pos, "unknown instruction"));
@@ -355,7 +352,7 @@ impl ConfigSet {
                                 name,
                                 value.into(),
                                 location.into(),
-                                source,
+                                opts,
                             );
                             pos = value_end;
                         }
@@ -400,6 +397,29 @@ impl ValueSource {
             Some(ref src) => Some((src.path.as_ref().to_path_buf(), src.location.clone())),
             None => None,
         }
+    }
+}
+
+impl Options {
+    /// Create a default `Options`.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set `source` information. It is about who initialized the config loading.  For example,
+    /// "user_hgrc" indicates it is from the user config file, "--config" indicates it is from the
+    /// global "--config" command line flag, "env" indicates it is translated from an environment
+    /// variable (ex.  "PAGER"), etc.
+    pub fn source<B: Into<Bytes>>(mut self, source: B) -> Self {
+        self.source = source.into();
+        self
+    }
+}
+
+/// Convert a "source" string to an `Options`.
+impl<S: Into<Bytes>> From<S> for Options {
+    fn from(source: S) -> Options {
+        Options::new().source(source.into())
     }
 }
 
@@ -469,11 +489,11 @@ mod tests {
     #[test]
     fn test_set() {
         let mut cfg = ConfigSet::new();
-        cfg.set("y", "b", Some(b"1"), "set1");
-        cfg.set("y", "b", Some(b"2"), "set2");
-        cfg.set("y", "a", Some(b"3"), "set3");
-        cfg.set("z", "p", Some(b"4"), "set4");
-        cfg.set("z", "p", None, "set5");
+        cfg.set("y", "b", Some(b"1"), &"set1".into());
+        cfg.set("y", "b", Some(b"2"), &"set2".into());
+        cfg.set("y", "a", Some(b"3"), &"set3".into());
+        cfg.set("z", "p", Some(b"4"), &"set4".into());
+        cfg.set("z", "p", None, &"set5".into());
         assert_eq!(cfg.sections(), vec![Bytes::from("y"), Bytes::from("z")]);
         assert_eq!(cfg.keys("y"), vec![Bytes::from("b"), Bytes::from("a")]);
         assert_eq!(cfg.get("y", "b"), Some(Bytes::from("2")));
@@ -506,7 +526,7 @@ mod tests {
              multi lines\n\
              ; comment again\n\
              n =",
-            "test_parse_basic",
+            &"test_parse_basic".into(),
         );
 
         assert_eq!(cfg.sections(), vec![Bytes::from("y"), Bytes::from("x")]);
@@ -534,21 +554,21 @@ mod tests {
     #[test]
     fn test_parse_errors() {
         let mut cfg = ConfigSet::new();
-        cfg.parse("# foo\n[y", "test_parse_errors");
+        cfg.parse("# foo\n[y", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", cfg.errors()[0]),
             "\"\": parse error around byte 6: missing \']\' for section name"
         );
 
         let mut cfg = ConfigSet::new();
-        cfg.parse("\n\n%unknown", "test_parse_errors");
+        cfg.parse("\n\n%unknown", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", cfg.errors()[0]),
             "\"\": parse error around byte 2: unknown instruction"
         );
 
         let mut cfg = ConfigSet::new();
-        cfg.parse("[section]\nabc", "test_parse_errors");
+        cfg.parse("[section]\nabc", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", cfg.errors()[0]),
             "\"\": parse error around byte 10: missing \'=\' for config value"
@@ -570,7 +590,7 @@ mod tests {
              %unset  c\n\
              [x]\n\
              %unset  d ",
-            "test_parse_unset",
+            &"test_parse_unset".into(),
         );
 
         assert_eq!(cfg.get("x", "a"), None);
@@ -627,7 +647,7 @@ mod tests {
         );
 
         let mut cfg = ConfigSet::new();
-        cfg.load_path(dir.path().join("rootrc"), "test_parse_include");
+        cfg.load_path(dir.path().join("rootrc"), &"test_parse_include".into());
         assert!(cfg.errors().is_empty());
 
         assert_eq!(cfg.sections(), vec![Bytes::from("x"), Bytes::from("y")]);
