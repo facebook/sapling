@@ -1873,13 +1873,12 @@ class localrepository(object):
         fname = fctx.path()
         fparent1 = manifest1.get(fname, nullid)
         fparent2 = manifest2.get(fname, nullid)
-        if isinstance(fctx, context.filectx):
-            node = fctx.filenode()
-            if node in [fparent1, fparent2]:
-                self.ui.debug("reusing %s filelog entry\n" % fname)
-                if manifest1.flags(fname) != fctx.flags():
-                    changelist.append(fname)
-                return node
+        node = fctx.filenode()
+        if node in [fparent1, fparent2]:
+            self.ui.debug("reusing %s filelog entry (parent match)\n" % fname)
+            if manifest1.flags(fname) != fctx.flags():
+                changelist.append(fname)
+            return node
 
         flog = self.file(fname)
         meta = {}
