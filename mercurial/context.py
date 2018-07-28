@@ -2831,7 +2831,14 @@ class overlayfilectx(committablefilectx):
             ctx = originalfctx.changectx()
             ctxmatch = lambda: True
         else:
-            ctxmatch = lambda: ctx == originalfctx.changectx()
+
+            def ctxmatch():
+                if ctx == originalfctx.changectx():
+                    return True
+                if ctx.node() is None:
+                    # memory context
+                    return True
+                return False
 
         repo = originalfctx.repo()
         flog = originalfctx.filelog()

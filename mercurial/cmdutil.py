@@ -333,9 +333,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
         try:
             # backup continues
             for f in tobackup:
-                fd, tmpname = tempfile.mkstemp(
-                    dir=backupdir
-                )
+                fd, tmpname = tempfile.mkstemp(dir=backupdir)
                 os.close(fd)
                 ui.debug("backup %r as %r\n" % (f, tmpname))
                 util.copyfile(repo.wjoin(f), tmpname, copystat=True)
@@ -3551,19 +3549,11 @@ def amend(ui, repo, old, extra, pats, opts):
                         return None
 
                     fctx = wctx[path]
-                    flags = fctx.flags()
-                    mctx = context.memfilectx(
-                        repo,
-                        ctx_,
-                        fctx.path(),
-                        fctx.data(),
-                        islink="l" in flags,
-                        isexec="x" in flags,
-                        copied=copied.get(path),
-                    )
-                    return mctx
                 except KeyError:
                     return None
+                else:
+                    c = copied.get(path, False)
+                    return context.overlayfilectx(fctx, ctx=ctx_, copied=c)
 
         else:
             ui.note(_("copying changeset %s to %s\n") % (old, base))
