@@ -1,3 +1,4 @@
+  $ setconfig format.dirstate=2
   $ . helpers-usechg.sh
 
   $ hg init
@@ -38,8 +39,8 @@ Removing foo1 and bar:
   $ hg rm -f foo1 bar
 
   $ hg debugstate --nodates
-  r   0         -1 set                 bar
-  r   0         -1 set                 foo1
+  r   0         -2 unset               bar
+  r   0         -2 unset               foo1
   copy: foo -> foo1
 
   $ hg st -qC
