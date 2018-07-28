@@ -193,3 +193,30 @@ with repo.wlock(), repo.lock(), repo.transaction("test"):
     revsafter = len(repo.changelog)
     if revsbefore != revsafter:
         print("changeset lost by repo.invalidate()")
+
+# Copy filectx from repo to newrepo using overlayfilectx and memctx
+# overlayfilectx implements rawdata, rawflags, and a fast path would
+# be used to skip calculating hash.
+print("=== filelog rawdata reuse ===")
+os.chdir(os.getenv("TESTTMP"))
+u.setconfig("ui", "debug", "1")
+newrepo = hg.repository(u, "test3", create=1)
+
+
+def copyctx(newrepo, ctx):
+    cl = newrepo.changelog
+    p1 = cl.node(len(cl) - 1)
+    files = ctx.files()
+    desc = "copied: %s" % ctx.description()
+
+    def getfctx(repo, memctx, path):
+        if path not in ctx:
+            return None
+        return context.overlayfilectx(ctx[path])
+
+    return context.memctx(newrepo, [p1, None], desc, files, getfctx)
+
+
+for rev in repo:
+    print("copying rev %d from test1 to test3" % rev)
+    copyctx(newrepo, repo[rev]).commit()

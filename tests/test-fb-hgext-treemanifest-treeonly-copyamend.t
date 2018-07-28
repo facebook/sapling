@@ -386,7 +386,6 @@ Amend the commit to add a new file with an empty cache
   1 trees fetched over *s (glob)
   fetching tree 'a/b/c/d/e/f/g/h/i/j' 3724b7d74346d81b3dc95251596dcb69d000cda3
   1 trees fetched over *s (glob)
-  * files fetched over * fetches - (* misses, * hit ratio) over * (glob)
 
 Try again, disabling the descendantrevfastpath
   $ clearcache
@@ -394,4 +393,3 @@ Try again, disabling the descendantrevfastpath
   $ hg amend -A --config remotefilelog.debug=True --config remotefilelog.descendantrevfastpath=False
   fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0, found via 9f95b8f1011f
   11 trees fetched over *s (glob)
-  * files fetched over * fetches - (* misses, * hit ratio) over * (glob)

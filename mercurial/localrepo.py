@@ -1883,6 +1883,16 @@ class localrepository(object):
         flog = self.file(fname)
         meta = {}
         copy = fctx.renamed()
+
+        # Is filelog metadata (currently only the copy information) unchanged?
+        # If it is, then filenode hash could be unchanged if data is also known
+        # unchanged. This allows fast path of adding new file nodes without
+        # calculating .data() or new hash.
+        #
+        # Metadata is unchanged if there is no copy information.
+        # Otherwise, the "copy from" revision needs to be checked.
+        metamatched = not bool(copy)
+
         if copy and copy[0] != fname:
             # Mark the new revision of this file as a copy of another
             # file.  This copy data will effectively act as a parent
@@ -1903,7 +1913,7 @@ class localrepository(object):
             #    \- 2 --- 4        as the merge base
             #
 
-            cfname = copy[0]
+            cfname, oldcrev = copy
             crev = manifest1.get(cfname)
             newfparent = fparent2
 
@@ -1926,6 +1936,7 @@ class localrepository(object):
                 self.ui.debug(" %s: copy %s:%s\n" % (fname, cfname, hex(crev)))
                 meta["copy"] = cfname
                 meta["copyrev"] = hex(crev)
+                metamatched = crev == oldcrev
                 fparent1, fparent2 = nullid, newfparent
             else:
                 self.ui.warn(
@@ -1942,6 +1953,29 @@ class localrepository(object):
                 fparent1, fparent2 = fparent2, nullid
             elif fparent2 in fparentancestors:
                 fparent2 = nullid
+
+        # Fast path: reuse rawdata? (skip .data() (ex. flagprocessors) and hash
+        # calculation)
+        if (
+            metamatched
+            and node is not None
+            # some filectxs do not support rawdata or flags
+            and util.safehasattr(fctx, "rawdata")
+            and util.safehasattr(fctx, "rawflags")
+            # some (external) filelogs do not have addrawrevision
+            and util.safehasattr(flog, "addrawrevision")
+            # parents must match to be able to reuse rawdata
+            and fctx.filelog().parents(node) == (fparent1, fparent2)
+        ):
+            # node is different from fparents, no need to check manifest flag
+            changelist.append(fname)
+            if node in flog.nodemap:
+                self.ui.debug("reusing %s filelog node (exact match)\n" % fname)
+                return node
+            self.ui.debug("reusing %s filelog rawdata\n" % fname)
+            return flog.addrawrevision(
+                fctx.rawdata(), tr, linkrev, fparent1, fparent2, node, fctx.rawflags()
+            )
 
         # is the file changed?
         text = fctx.data()

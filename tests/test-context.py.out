@@ -48,3 +48,32 @@ wcctx._status=<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[
 commit 1: 2efe531a913fa648867ab8824360371679d05a65
 commit 2: 2caca91f6362020334384ebe27bae67315298abf
 commit 3: abd6b0f49f338be22b094ef2b7425e8048f8337b
+=== filelog rawdata reuse ===
+copying rev 0 from test1 to test3
+committing files:
+1
+reusing 1 filelog rawdata
+committing manifest
+committing changelog
+updating the branch cache
+copying rev 1 from test1 to test3
+committing files:
+2
+reusing 2 filelog rawdata
+committing manifest
+committing changelog
+updating the branch cache
+copying rev 2 from test1 to test3
+committing files:
+3
+reusing 3 filelog rawdata
+committing manifest
+committing changelog
+updating the branch cache
+copying rev 3 from test1 to test3
+committing files:
+4
+reusing 4 filelog rawdata
+committing manifest
+committing changelog
+updating the branch cache
