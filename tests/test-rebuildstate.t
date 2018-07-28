@@ -1,4 +1,3 @@
-  $ setconfig format.dirstate=2
 
   $ cat > adddrop.py <<EOF
   > from mercurial import registrar

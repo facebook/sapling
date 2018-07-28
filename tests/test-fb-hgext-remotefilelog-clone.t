@@ -28,7 +28,7 @@
   remotefilelog
   revlogv1
   store
-  treedirstate
+  treestate
 
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -62,7 +62,7 @@
   remotefilelog
   revlogv1
   store
-  treedirstate
+  treestate
   $ ls .hg/store/data
   4a0a19218e082a343a1b17e5333409af9d98f0f5
 
@@ -112,4 +112,4 @@ check its contents separately.
   remotefilelog
   revlogv1
   store
-  treedirstate
+  treestate

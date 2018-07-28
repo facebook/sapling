@@ -1,5 +1,4 @@
 
-  $ setconfig format.dirstate=2
 
 https://bz.mercurial-scm.org/660 and:
 https://bz.mercurial-scm.org/322

@@ -23,7 +23,7 @@ Can create and open repo with revlog v2 requirement
   exp-revlogv2.0
   fncache
   store
-  treedirstate
+  treestate
 
   $ hg log
 

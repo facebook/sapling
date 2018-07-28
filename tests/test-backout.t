@@ -1,5 +1,4 @@
   $ . helpers-usechg.sh
-  $ setconfig format.dirstate=2
 
   $ hg init basic
   $ cd basic

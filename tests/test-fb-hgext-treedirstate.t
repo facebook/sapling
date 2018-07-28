@@ -1,5 +1,6 @@
 Setup
 
+  $ setconfig format.dirstate=1
   $ hg init repo
   $ cd repo
   $ echo base > base

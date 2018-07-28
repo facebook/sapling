@@ -1,4 +1,3 @@
-  $ setconfig format.dirstate=2
   $ newrepo
   $ setconfig repogenerator.filenamedircount=2
   $ setconfig repogenerator.filenameleaflength=1

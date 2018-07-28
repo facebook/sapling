@@ -1,4 +1,3 @@
-  $ setconfig format.dirstate=2
   $ hg init rep; cd rep
 
   $ touch empty-file

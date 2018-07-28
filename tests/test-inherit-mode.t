@@ -72,8 +72,6 @@ new directories are setgid
   00660 ./.hg/cache/rbc-names-v1
   00660 ./.hg/cache/rbc-revs-v1
   00660 ./.hg/dirstate
-  00600 ./.hg/dirstate.tree.* (glob)
-  00660 ./.hg/fsmonitor.state (fsmonitor !)
   00660 ./.hg/last-message.txt
   00600 ./.hg/requires
   00770 ./.hg/store/
@@ -88,6 +86,8 @@ new directories are setgid
   00660 ./.hg/store/undo
   00660 ./.hg/store/undo.backupfiles
   00660 ./.hg/store/undo.phaseroots
+  00700 ./.hg/treestate/
+  00600 ./.hg/treestate/* (glob)
   00660 ./.hg/undo.backup.dirstate
   00660 ./.hg/undo.bookmarks
   00660 ./.hg/undo.branch
@@ -121,7 +121,6 @@ group can still write everything
   00770 ../push/.hg/cache/
   00660 ../push/.hg/cache/branch2-base
   00660 ../push/.hg/dirstate
-  00600 ../push/.hg/dirstate.tree.* (glob)
   00660 ../push/.hg/requires
   00770 ../push/.hg/store/
   00660 ../push/.hg/store/00changelog.i
@@ -134,6 +133,8 @@ group can still write everything
   00660 ../push/.hg/store/undo
   00660 ../push/.hg/store/undo.backupfiles
   00660 ../push/.hg/store/undo.phaseroots
+  00700 ../push/.hg/treestate/
+  00600 ../push/.hg/treestate/* (glob)
   00660 ../push/.hg/undo.bookmarks
   00660 ../push/.hg/undo.branch
   00660 ../push/.hg/undo.desc

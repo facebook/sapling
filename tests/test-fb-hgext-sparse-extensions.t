@@ -1,4 +1,3 @@
-  $ setconfig format.dirstate=2
 
 test sparse interaction with other extensions
 

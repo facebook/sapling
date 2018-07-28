@@ -31,8 +31,8 @@
   remotefilelog
   revlogv1
   store
-  treedirstate
   treemanifest
+  treestate
   $ find .hg/store/meta | sort
   .hg/store/meta
   .hg/store/meta/_a
@@ -72,8 +72,8 @@
   remotefilelog
   revlogv1
   store
-  treedirstate
   treemanifest
+  treestate
   $ ls .hg/store/data
   ca31988f085bfb945cb8115b78fabdee40f741aa
 
@@ -115,5 +115,5 @@
   remotefilelog
   revlogv1
   store
-  treedirstate
   treemanifest
+  treestate

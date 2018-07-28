@@ -290,7 +290,7 @@ coreconfigitem(
     "format", "cgdeltabase", default="default"  # changegroup.CFG_CGDELTA_DEFAULT
 )
 coreconfigitem("format", "chunkcachesize", default=None)
-coreconfigitem("format", "dirstate", default=1)
+coreconfigitem("format", "dirstate", default=2)
 coreconfigitem("format", "dotencode", default=True)
 coreconfigitem("format", "generaldelta", default=False)
 coreconfigitem("format", "manifestcachesize", default=None)

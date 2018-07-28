@@ -1242,6 +1242,8 @@ Check that share works with subrepo
   ../shared/subrepo-1/.hg/hgrc
   ../shared/subrepo-1/.hg/requires
   ../shared/subrepo-1/.hg/sharedpath
+  ../shared/subrepo-1/.hg/treestate
+  ../shared/subrepo-1/.hg/treestate/* (glob)
   ../shared/subrepo-2
   ../shared/subrepo-2/.hg
   ../shared/subrepo-2/.hg/branch
@@ -1252,10 +1254,11 @@ Check that share works with subrepo
   ../shared/subrepo-2/.hg/cache/storehash
   ../shared/subrepo-2/.hg/cache/storehash/* (glob)
   ../shared/subrepo-2/.hg/dirstate
-  ../shared/subrepo-2/.hg/dirstate.tree* (glob)
   ../shared/subrepo-2/.hg/hgrc
   ../shared/subrepo-2/.hg/requires
   ../shared/subrepo-2/.hg/sharedpath
+  ../shared/subrepo-2/.hg/treestate
+  ../shared/subrepo-2/.hg/treestate/* (glob)
   ../shared/subrepo-2/file
   $ hg -R ../shared in
   abort: repository default not found!

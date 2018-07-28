@@ -1,6 +1,5 @@
 #require killdaemons
 
-  $ setconfig format.dirstate=2
   $ hg clone http://localhost:$HGPORT/ copy
   abort: * (glob)
   [255]

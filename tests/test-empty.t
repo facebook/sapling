@@ -22,6 +22,7 @@ Check the basic files created:
   00changelog.i
   requires
   store
+  treestate
 
 Should be empty:
 
@@ -45,6 +46,7 @@ Poke at a clone:
   hgrc
   requires
   store
+  treestate
 
 Should be empty:
 
