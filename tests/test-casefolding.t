@@ -149,57 +149,6 @@ issue 4481: revert across case only renames
 
   $ cd ..
 
-issue 3340: mq does not handle case changes correctly
-
-in addition to reported case, 'hg qrefresh' is also tested against
-case changes.
-
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
-
-  $ hg init issue3340
-  $ cd issue3340
-
-  $ echo a > mIxEdCaSe
-  $ hg add mIxEdCaSe
-  $ hg commit -m '#0'
-  $ hg rename mIxEdCaSe tmp
-  $ hg rename tmp MiXeDcAsE
-  $ hg status -A
-  A MiXeDcAsE
-    mIxEdCaSe
-  R mIxEdCaSe
-  $ hg qnew changecase
-  $ hg status -A
-  C MiXeDcAsE
-
-  $ hg qpop -a
-  popping changecase
-  patch queue now empty
-  $ hg qnew refresh-casechange
-  $ hg status -A
-  C mIxEdCaSe
-  $ hg rename mIxEdCaSe tmp
-  $ hg rename tmp MiXeDcAsE
-  $ hg status -A
-  A MiXeDcAsE
-    mIxEdCaSe
-  R mIxEdCaSe
-  $ hg qrefresh
-  $ hg status -A
-  C MiXeDcAsE
-
-  $ hg qpop -a
-  popping refresh-casechange
-  patch queue now empty
-  $ hg qnew refresh-pattern
-  $ hg status
-  $ echo A > A
-  $ hg add
-  adding A
-  $ hg qrefresh a # issue 3271, qrefresh with file handled case wrong
-  $ hg status # empty status means the qrefresh worked
-
 #if osx
 
 We assume anyone running the tests on a case-insensitive volume on OS

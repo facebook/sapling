@@ -5,7 +5,7 @@ setup
   > [extensions]
   > blackbox=
   > mock=$TESTDIR/mockblackbox.py
-  > mq=
+  > strip=
   > [alias]
   > confuse = log --limit 3
   > so-confusing = confuse --style compact

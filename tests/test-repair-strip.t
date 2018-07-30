@@ -8,7 +8,7 @@
   > EOF
 
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=">> $HGRCPATH
+  $ echo "strip=">> $HGRCPATH
 
   $ teststrip() {
   >   hg -q up -C $1

@@ -22,14 +22,15 @@ _disabledextensions = {}
 _aftercallbacks = {}
 _order = []
 _builtin = {
-    "hbisect",
     "bookmarks",
     "color",
+    "hbisect",
+    "hgcia",
+    "inotify",
+    "interhg",
+    "mq",
     "parentrevspec",
     "progress",
-    "interhg",
-    "inotify",
-    "hgcia",
 }
 _blacklist = {"extlib"}
 

@@ -3,7 +3,7 @@
 
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
-  > mq =
+  > strip =
   > obsshelve=
   > [defaults]
   > diff = --nodates --git
@@ -79,11 +79,9 @@ Make sure shelve files were backed up
   default.oshelve
   default.patch
 
-Create an mq patch - shelving should work fine with a patch applied
   $ echo n > n
   $ hg add n
   $ hg commit n -m second
-  $ hg qnew second.patch
 
 Shelve a change that we will delete later
   $ echo a >> a/a
@@ -112,10 +110,10 @@ The common case - no options or filenames
 
 Ensure that our shelved changes exist
   $ hg shelve -l
-  default-01      (*)* shelve changes to: [mq]: second.patch (glob)
-  default         (*)* shelve changes to: [mq]: second.patch (glob)
+  default-01      (*)    shelve changes to: second (glob)
+  default         (*)    shelve changes to: second (glob)
   $ hg shelve -l -p default
-  default         (*)* shelve changes to: [mq]: second.patch (glob)
+  default         (*)    shelve changes to: second (glob)
   
   diff --git a/a/a b/a/a
   --- a/a/a
@@ -130,7 +128,6 @@ Ensure that our shelved changes exist
 
 Delete our older shelved change
   $ hg shelve -d default
-  $ hg qfinish -a -q
 
 Ensure shelve backups aren't overwritten
   $ ls .hg/shelve-backup/
@@ -145,7 +142,7 @@ Local edits should not prevent a shelved change from applying
   unshelving change 'default-01'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 5:cbe2a5d1d8ce "shelve changes to: [mq]: second.patch"
+  rebasing 4:4893561a85b4 "shelve changes to: second"
   merging a/a
 
   $ hg revert --all -q
@@ -256,7 +253,7 @@ Force a conflicted merge to occur
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 5:cbe2a5d1d8ce "shelve changes to: [mq]: second.patch"
+  rebasing 4:4893561a85b4 "shelve changes to: second"
   merging a/a
   warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -264,11 +261,11 @@ Force a conflicted merge to occur
 
 Ensure that we have a merge with unresolved conflicts
   $ hg heads -q --template '{rev}\n'
-  12
-  5
+  11
+  4
   $ hg parents -q --template '{rev}\n'
-  12
-  5
+  11
+  4
   $ hg status
   M a/a
   M b.rename/b
@@ -281,11 +278,11 @@ Ensure that we have a merge with unresolved conflicts
   +++ b/a/a
   @@ -1,2 +1,6 @@
    a
-  +<<<<<<< dest:   fe6f4c061bb3 - test: pending changes temporary commit
+  +<<<<<<< dest:   83ed350dc2d6 - test: pending changes temporary commit
    c
   +=======
   +a
-  +>>>>>>> source: cbe2a5d1d8ce - test: shelve changes to: [mq]: second.patch
+  +>>>>>>> source: 4893561a85b4 - test: shelve changes to: second
   diff --git a/b/b b/b.rename/b
   rename from b/b
   rename to b.rename/b
@@ -311,9 +308,9 @@ Abort the unshelve and be happy
   rebase aborted
   unshelve of 'default' aborted
   $ hg heads -q
-  11:2e69b451d1ea
+  10:ceefc37abe1e
   $ hg parents | grep changeset
-  changeset:   11:2e69b451d1ea
+  changeset:   10:ceefc37abe1e
   $ hg resolve -l
   $ hg status
   A foo/foo
@@ -351,14 +348,14 @@ Attempt to continue
   (continue: hg unshelve --continue)
   [255]
   $ hg unshelve -c --trace
-  rebasing 5:cbe2a5d1d8ce "shelve changes to: [mq]: second.patch"
+  rebasing 4:4893561a85b4 "shelve changes to: second"
   unshelve of 'default' complete
 
 Ensure the repo is as we hope
   $ hg parents | grep changeset
-  changeset:   11:2e69b451d1ea
+  changeset:   10:ceefc37abe1e
   $ hg heads -q
-  11:2e69b451d1ea
+  10:ceefc37abe1e
   $ hg status -C
   A b.rename/b
     b/b
@@ -431,7 +428,7 @@ If we resolve a conflict while unshelving, the unshelve should succeed
   rebasing shelved changes
   rebasing .* "shelve changes to: second" (re)
   merging a/a
-  note: rebase of 19:63c7ffbb8f4a created no changes to commit
+  note: rebase of 18:056f8c92b111 created no changes to commit
   $ hg shelve -l
   $ hg status
   A foo/foo
@@ -748,7 +745,7 @@ is a no-op), works (issue4398)
   continue: hg unshelve --continue
   $ hg unshelve -c
   rebasing * "shelve changes to: second" (tip) (glob)
-  note: rebase of 24:4ab3876fc9ac created no changes to commit
+  note: rebase of 23:f3b9a2b33e15 created no changes to commit
   unshelve of 'default' complete
   $ hg bookmark
    * test                      * (glob)
@@ -949,25 +946,25 @@ Test visibility of in-memory changes inside transaction to external hook
 
   $ sh $TESTTMP/checkvisibility.sh before-unshelving
   ==== before-unshelving:
-  VISIBLE a898f8472618
-  ACTUAL  a898f8472618
+  VISIBLE 47f190a8b2e0
+  ACTUAL  47f190a8b2e0
   ====
 
   $ hg unshelve --keep default
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 28:6bab293cd024 "shelve changes to: create conflict"
+  rebasing 27:80096f006bb2 "shelve changes to: create conflict"
   ==== preupdate:
   VISIBLE (?!f77bf047d4c5).* (re)
-  ACTUAL  a898f8472618
+  ACTUAL  47f190a8b2e0
   ====
   ==== preupdate:
   VISIBLE (?!f77bf047d4c5).* (re)
-  ACTUAL  a898f8472618
+  ACTUAL  47f190a8b2e0
   ====
   ==== preupdate:
   VISIBLE (?!f77bf047d4c5).* (re)
-  ACTUAL  a898f8472618
+  ACTUAL  47f190a8b2e0
   ====
 
   $ cat >> .hg/hgrc <<EOF
@@ -977,8 +974,8 @@ Test visibility of in-memory changes inside transaction to external hook
 
   $ sh $TESTTMP/checkvisibility.sh after-unshelving
   ==== after-unshelving:
-  VISIBLE a898f8472618
-  ACTUAL  a898f8472618
+  VISIBLE 47f190a8b2e0
+  ACTUAL  47f190a8b2e0
   ====
 
 == test visibility to external update hook
@@ -994,26 +991,26 @@ Test visibility of in-memory changes inside transaction to external hook
 
   $ sh $TESTTMP/checkvisibility.sh before-unshelving
   ==== before-unshelving:
-  VISIBLE a898f8472618
-  ACTUAL  a898f8472618
+  VISIBLE 47f190a8b2e0
+  ACTUAL  47f190a8b2e0
   ====
 
   $ hg unshelve --keep default
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 28:6bab293cd024 "shelve changes to: create conflict"
+  rebasing 27:80096f006bb2 "shelve changes to: create conflict"
   ==== update:
-  VISIBLE 2a92f0b2f5fa
-  VISIBLE 6bab293cd024
-  ACTUAL  a898f8472618
+  VISIBLE f08f4865d656
+  VISIBLE 80096f006bb2
+  ACTUAL  47f190a8b2e0
   ====
   ==== update:
-  VISIBLE 2a92f0b2f5fa
-  ACTUAL  a898f8472618
+  VISIBLE f08f4865d656
+  ACTUAL  47f190a8b2e0
   ====
   ==== update:
-  VISIBLE a898f8472618
-  ACTUAL  a898f8472618
+  VISIBLE 47f190a8b2e0
+  ACTUAL  47f190a8b2e0
   ====
 
   $ cat >> .hg/hgrc <<EOF
@@ -1023,8 +1020,8 @@ Test visibility of in-memory changes inside transaction to external hook
 
   $ sh $TESTTMP/checkvisibility.sh after-unshelving
   ==== after-unshelving:
-  VISIBLE a898f8472618
-  ACTUAL  a898f8472618
+  VISIBLE 47f190a8b2e0
+  ACTUAL  47f190a8b2e0
   ====
   $ hg bookmark -d unshelvedest
   $ cd ..
@@ -1089,31 +1086,31 @@ Keep active bookmark while (un)shelving even on shared repo (issue4940)
   > evolution=createmarkers
   > EOF
   $ hg bookmarks -R obsrepo
-     test                      *:33f7f61e6c5e (glob)
+     test                      19:a72d63c69876
   $ hg share -B obsrepo obsshare
   updating working directory
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd obsshare
 
   $ hg bookmarks
-     test                      *:33f7f61e6c5e (glob)
+     test                      19:a72d63c69876
   $ hg bookmarks foo
   $ hg bookmarks
-   \* foo                       *:a898f8472618 (glob)
-     test                      *:33f7f61e6c5e (glob)
+   * foo                       29:47f190a8b2e0
+     test                      19:a72d63c69876
   $ echo x >> x
   $ hg shelve
   shelved as foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bookmarks
-   \* foo                       *:a898f8472618 (glob)
-     test                      *:33f7f61e6c5e (glob)
+   * foo                       29:47f190a8b2e0
+     test                      19:a72d63c69876
 
   $ hg unshelve
   unshelving change 'foo'
   $ hg bookmarks
-   \* foo                       *:a898f8472618 (glob)
-     test                      *:33f7f61e6c5e (glob)
+   * foo                       29:47f190a8b2e0
+     test                      19:a72d63c69876
 
   $ cd ..
 

@@ -253,7 +253,7 @@ check that branch cache with "served" filter are properly computed and stored
 
 
 Restore condition prior extra insertion.
-  $ hg -q --config extensions.mq= strip .
+  $ hg -q --config extensions.strip= strip .
   $ hg up -q 7
   $ cd ..
 

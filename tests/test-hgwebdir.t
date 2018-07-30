@@ -15,9 +15,6 @@ collection, different forms of 404s and the subdirectory support.
   $ hg --cwd a ci -Ama -d'1 0'
   adding a
 
-create a mercurial queue repository
-
-  $ hg --cwd a qinit --config extensions.hgext.mq= -c
   $ hg init b
   $ echo b > b/b
   $ hg --cwd b ci -Amb -d'2 0'
@@ -172,13 +169,11 @@ should succeed, slashy names
   /t/a/
   /b/
   /coll/a/
-  /coll/a/.hg/patches/
   /coll/b/
   /coll/c/
   /coll/notrepo/e/
   /coll/notrepo/f/
   /rcoll/a/
-  /rcoll/a/.hg/patches/
   /rcoll/b/
   /rcoll/b/d/
   /rcoll/c/
@@ -187,13 +182,11 @@ should succeed, slashy names
   /rcoll/notrepo/f/
   /rcoll/notrepo/f/f2/
   /star/webdir/a/
-  /star/webdir/a/.hg/patches/
   /star/webdir/b/
   /star/webdir/c/
   /star/webdir/notrepo/e/
   /star/webdir/notrepo/f/
   /starstar/webdir/a/
-  /starstar/webdir/a/.hg/patches/
   /starstar/webdir/b/
   /starstar/webdir/b/d/
   /starstar/webdir/c/
@@ -202,7 +195,6 @@ should succeed, slashy names
   /starstar/webdir/notrepo/f/
   /starstar/webdir/notrepo/f/f2/
   /astar/
-  /astar/.hg/patches/
   
 
   $ get-with-headers.py localhost:$HGPORT1 '?style=json'
@@ -223,12 +215,6 @@ should succeed, slashy names
   "labels": []
   }, {
   "name": "coll/a",
-  "description": "unknown",
-  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
-  "lastchange": [*, *], (glob)
-  "labels": []
-  }, {
-  "name": "coll/a/.hg/patches",
   "description": "unknown",
   "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
   "lastchange": [*, *], (glob)
@@ -259,12 +245,6 @@ should succeed, slashy names
   "labels": ["foo", "bar"]
   }, {
   "name": "rcoll/a",
-  "description": "unknown",
-  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
-  "lastchange": [*, *], (glob)
-  "labels": []
-  }, {
-  "name": "rcoll/a/.hg/patches",
   "description": "unknown",
   "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
   "lastchange": [*, *], (glob)
@@ -318,12 +298,6 @@ should succeed, slashy names
   "lastchange": [*, *], (glob)
   "labels": []
   }, {
-  "name": "star/webdir/a/.hg/patches",
-  "description": "unknown",
-  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
-  "lastchange": [*, *], (glob)
-  "labels": []
-  }, {
   "name": "star/webdir/b",
   "description": "unknown",
   "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
@@ -349,12 +323,6 @@ should succeed, slashy names
   "labels": ["foo", "bar"]
   }, {
   "name": "starstar/webdir/a",
-  "description": "unknown",
-  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
-  "lastchange": [*, *], (glob)
-  "labels": []
-  }, {
-  "name": "starstar/webdir/a/.hg/patches",
   "description": "unknown",
   "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
   "lastchange": [*, *], (glob)
@@ -403,12 +371,6 @@ should succeed, slashy names
   "labels": []
   }, {
   "name": "astar",
-  "description": "unknown",
-  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
-  "lastchange": [*, *], (glob)
-  "labels": []
-  }, {
-  "name": "astar/.hg/patches",
   "description": "unknown",
   "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
   "lastchange": [*, *], (glob)
@@ -492,19 +454,6 @@ should succeed, slashy names
   </tr>
   
   <tr>
-  <td><a href="/coll/a/.hg/patches/?style=paper">coll/a/.hg/patches</a></td>
-  <td>unknown</td>
-  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">*</td> (glob)
-  <td class="indexlinks"></td>
-  <td>
-  <a href="/coll/a/.hg/patches/atom-log" title="subscribe to repository atom feed">
-  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
-  </a>
-  </td>
-  </tr>
-  
-  <tr>
   <td><a href="/coll/b/?style=paper">coll/b</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
@@ -564,19 +513,6 @@ should succeed, slashy names
   <td class="indexlinks"></td>
   <td>
   <a href="/rcoll/a/atom-log" title="subscribe to repository atom feed">
-  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
-  </a>
-  </td>
-  </tr>
-  
-  <tr>
-  <td><a href="/rcoll/a/.hg/patches/?style=paper">rcoll/a/.hg/patches</a></td>
-  <td>unknown</td>
-  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">*</td> (glob)
-  <td class="indexlinks"></td>
-  <td>
-  <a href="/rcoll/a/.hg/patches/atom-log" title="subscribe to repository atom feed">
   <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
   </a>
   </td>
@@ -687,19 +623,6 @@ should succeed, slashy names
   </tr>
   
   <tr>
-  <td><a href="/star/webdir/a/.hg/patches/?style=paper">star/webdir/a/.hg/patches</a></td>
-  <td>unknown</td>
-  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">*</td> (glob)
-  <td class="indexlinks"></td>
-  <td>
-  <a href="/star/webdir/a/.hg/patches/atom-log" title="subscribe to repository atom feed">
-  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
-  </a>
-  </td>
-  </tr>
-  
-  <tr>
   <td><a href="/star/webdir/b/?style=paper">star/webdir/b</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
@@ -759,19 +682,6 @@ should succeed, slashy names
   <td class="indexlinks"></td>
   <td>
   <a href="/starstar/webdir/a/atom-log" title="subscribe to repository atom feed">
-  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
-  </a>
-  </td>
-  </tr>
-  
-  <tr>
-  <td><a href="/starstar/webdir/a/.hg/patches/?style=paper">starstar/webdir/a/.hg/patches</a></td>
-  <td>unknown</td>
-  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">*</td> (glob)
-  <td class="indexlinks"></td>
-  <td>
-  <a href="/starstar/webdir/a/.hg/patches/atom-log" title="subscribe to repository atom feed">
   <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
   </a>
   </td>
@@ -876,19 +786,6 @@ should succeed, slashy names
   <td class="indexlinks"></td>
   <td>
   <a href="/astar/atom-log" title="subscribe to repository atom feed">
-  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
-  </a>
-  </td>
-  </tr>
-  
-  <tr>
-  <td><a href="/astar/.hg/patches/?style=paper">astar/.hg/patches</a></td>
-  <td>unknown</td>
-  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">*</td> (glob)
-  <td class="indexlinks"></td>
-  <td>
-  <a href="/astar/.hg/patches/atom-log" title="subscribe to repository atom feed">
   <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
   </a>
   </td>
@@ -1099,7 +996,6 @@ Test [paths] '*' extension
   
   
   /coll/a/
-  /coll/a/.hg/patches/
   /coll/b/
   /coll/c/
   /coll/notrepo/e/
@@ -1117,7 +1013,6 @@ Test [paths] '**' extension
   
   
   /rcoll/a/
-  /rcoll/a/.hg/patches/
   /rcoll/b/
   /rcoll/b/d/
   /rcoll/c/
@@ -1147,7 +1042,6 @@ Test collapse = True
   
   
   /coll/a/
-  /coll/a/.hg/patches/
   /coll/b/
   /coll/c/
   /coll/notrepo/
@@ -1161,7 +1055,6 @@ Test collapse = True
   
   
   /rcoll/a/
-  /rcoll/a/.hg/patches/
   /rcoll/b/
   /rcoll/b/d/
   /rcoll/c/
@@ -1456,7 +1349,6 @@ collections: should succeed
   
   
   /a/
-  /a/.hg/patches/
   /b/
   /c/
   /notrepo/e/

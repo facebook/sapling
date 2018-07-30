@@ -7,7 +7,7 @@
 # Activate extensions
 echo "[extensions]" >> $HGRCPATH
 echo "hggit=$(echo $(dirname $TESTDIR))/hgext/hggit" >> $HGRCPATH
-echo 'mq=' >> $HGRCPATH
+echo 'strip=' >> $HGRCPATH
 
 # Defaults for testing against hg < 4.3
 echo '[defaults]' >> $HGRCPATH

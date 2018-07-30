@@ -470,7 +470,7 @@ cache of phase roots should be invalidated on strip (issue3827):
   ...     runcommand(server, ['phase', '.'], outfilter=sep)
   ... 
   ...     # strip 1::4 outside server
-  ...     os.system('hg -q --config extensions.mq= strip 1')
+  ...     os.system('hg -q --config extensions.strip= strip 1')
   ... 
   ...     # shouldn't raise "7966c8e3734d: no node!"
   ...     runcommand(server, ['branches'])
@@ -570,36 +570,6 @@ changelog and manifest would have invalid node:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-
-  $ cat <<EOF >> .hg/hgrc
-  > [extensions]
-  > mq =
-  > EOF
-
-  >>> import os
-  >>> from hgclient import check, readchannel, runcommand
-  >>> @check
-  ... def mqoutsidechanges(server):
-  ...     readchannel(server)
-  ... 
-  ...     # load repo.mq
-  ...     runcommand(server, ['qapplied'])
-  ...     os.system('hg qnew 0.diff')
-  ...     # repo.mq should be invalidated
-  ...     runcommand(server, ['qapplied'])
-  ... 
-  ...     runcommand(server, ['qpop', '--all'])
-  ...     os.system('hg qqueue --create foo')
-  ...     # repo.mq should be recreated to point to new queue
-  ...     runcommand(server, ['qqueue', '--active'])
-  *** runcommand qapplied
-  *** runcommand qapplied
-  0.diff
-  *** runcommand qpop --all
-  popping 0.diff
-  patch queue now empty
-  *** runcommand qqueue --active
-  foo
 
   $ cat <<EOF > dbgui.py
   > import os

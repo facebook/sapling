@@ -2,11 +2,10 @@
 
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
-  > mq =
+  > strip =
   > shelve =
   > [defaults]
   > diff = --nodates --git
-  > qnew = --date '0 0'
   > [shelve]
   > maxbackups = 2
   > EOF
@@ -75,7 +74,6 @@ shelve has a help message
       --stat                output diffstat-style summary of changes
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-      --mq                  operate on patch repository
   
   (some details hidden, use --verbose to show complete help)
 
@@ -142,13 +140,6 @@ cleaning the branches made for name checking tests
   $ hg strip 2 -q
   $ hg strip 1 -q
 
-create an mq patch - shelving should work fine with a patch applied
-
-  $ echo n > n
-  $ hg add n
-  $ hg commit n -m second
-  $ hg qnew second.patch
-
 shelve a change that we will delete later
 
   $ echo a >> a/a
@@ -180,11 +171,11 @@ the common case - no options or filenames
 ensure that our shelved changes exist
 
   $ hg shelve -l
-  default-01      (*)* changes to: [mq]: second.patch (glob)
-  default         (*)* changes to: [mq]: second.patch (glob)
+  default-01      (*)    changes to: initial commit (glob)
+  default         (*)    changes to: initial commit (glob)
 
   $ hg shelve -l -p default
-  default         (*)* changes to: [mq]: second.patch (glob)
+  default         (*)    changes to: initial commit (glob)
   
   diff --git a/a/a b/a/a
   --- a/a/a
@@ -200,7 +191,6 @@ ensure that our shelved changes exist
 delete our older shelved change
 
   $ hg shelve -d default
-  $ hg qfinish -a -q
 
 ensure shelve backups aren't overwritten
 
@@ -217,7 +207,7 @@ local edits should not prevent a shelved change from applying
   unshelving change 'default-01'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 4:32c69314e062 "changes to: [mq]: second.patch" (tip)
+  rebasing 2:b7896f90e52d "changes to: initial commit" (tip)
   merging a/a
 
   $ hg revert --all -q
@@ -339,7 +329,7 @@ force a conflicted merge to occur
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 5:32c69314e062 "changes to: [mq]: second.patch" (tip)
+  rebasing 3:b7896f90e52d "changes to: initial commit" (tip)
   merging a/a
   warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -365,11 +355,11 @@ force a conflicted merge to occur
 ensure that we have a merge with unresolved conflicts
 
   $ hg heads -q --template '{rev}\n'
-  5
-  4
+  3
+  2
   $ hg parents -q --template '{rev}\n'
-  4
-  5
+  2
+  3
   $ hg status
   M a/a
   M b.rename/b
@@ -386,7 +376,7 @@ ensure that we have a merge with unresolved conflicts
    c
   +=======
   +a
-  +>>>>>>> source: 32c69314e062 - shelve: changes to: [mq]: second.patch
+  +>>>>>>> source: b7896f90e52d - shelve: changes to: initial commit
   diff --git a/b/b b/b.rename/b
   rename from b/b
   rename to b.rename/b
@@ -413,9 +403,9 @@ abort the unshelve and be happy
   rebase aborted
   unshelve of 'default' aborted
   $ hg heads -q
-  3:2e69b451d1ea
+  1:71743bbd8fc8
   $ hg parents
-  changeset:   3:2e69b451d1ea
+  changeset:   1:71743bbd8fc8
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -464,20 +454,20 @@ attempt to continue
   (continue: hg unshelve --continue)
   [255]
   $ hg unshelve -c
-  rebasing 5:32c69314e062 "changes to: [mq]: second.patch" (tip)
+  rebasing 3:b7896f90e52d "changes to: initial commit" (tip)
   unshelve of 'default' complete
 
 ensure the repo is as we hope
 
   $ hg parents
-  changeset:   3:2e69b451d1ea
+  changeset:   1:71743bbd8fc8
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second
   
   $ hg heads -q
-  3:2e69b451d1ea
+  1:71743bbd8fc8
 
   $ hg status -C
   A b.rename/b
@@ -535,10 +525,10 @@ if we resolve a conflict while unshelving, the unshelve should succeed
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 6:2f694dd83a13 "changes to: second" (tip)
+  rebasing 4:3f80fc7cfc4c "changes to: second" (tip)
   merging a/a
   $ hg parents -q
-  4:33f7f61e6c5e
+  2:c784213004b0
   $ hg shelve -l
   default         (*)* changes to: second (glob)
   $ hg status
@@ -558,11 +548,11 @@ if we resolve a conflict while unshelving, the unshelve should succeed
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 6:2f694dd83a13 "changes to: second" (tip)
+  rebasing 4:3f80fc7cfc4c "changes to: second" (tip)
   merging a/a
-  note: rebase of 6:2f694dd83a13 created no changes to commit
+  note: rebase of 4:3f80fc7cfc4c created no changes to commit
   $ hg parents -q
-  4:33f7f61e6c5e
+  2:c784213004b0
   $ hg shelve -l
   $ hg status
   A foo/foo
@@ -599,16 +589,16 @@ test bookmarks
 
   $ hg bookmark test
   $ hg bookmark
-   * test                      4:33f7f61e6c5e
+   * test                      2:c784213004b0
   $ hg shelve
   shelved as test
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg bookmark
-   * test                      4:33f7f61e6c5e
+   * test                      2:c784213004b0
   $ hg unshelve
   unshelving change 'test'
   $ hg bookmark
-   * test                      4:33f7f61e6c5e
+   * test                      2:c784213004b0
 
 shelve should still work even if mq is disabled
 
@@ -618,11 +608,11 @@ shelve should still work even if mq is disabled
   $ hg --config extensions.mq=! shelve --list
   test            (*)* changes to: create conflict (glob)
   $ hg bookmark
-   * test                      4:33f7f61e6c5e
+   * test                      2:c784213004b0
   $ hg --config extensions.mq=! unshelve
   unshelving change 'test'
   $ hg bookmark
-   * test                      4:33f7f61e6c5e
+   * test                      2:c784213004b0
 
 shelve should leave dirstate clean (issue4055)
 
@@ -875,54 +865,47 @@ Recreate some conflict again
 
   $ cd ../repo
   $ hg up -C -r 3
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (leaving bookmark test)
+  abort: unknown revision '3'!
+  [255]
   $ echo y >> a/a
   $ hg shelve
-  shelved as default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  shelved as test
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg up test
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark test)
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bookmark
-   * test                      4:33f7f61e6c5e
+   * test                      2:c784213004b0
   $ hg unshelve
-  unshelving change 'default'
-  rebasing shelved changes
-  rebasing 5:e42a7da90865 "changes to: second" (tip)
-  merging a/a
-  warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
-  unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
-  [1]
+  unshelving change 'test'
   $ hg bookmark
-     test                      4:33f7f61e6c5e
+   * test                      2:c784213004b0
 
 Test that resolving all conflicts in one direction (so that the rebase
 is a no-op), works (issue4398)
 
   $ hg revert -a -r .
   reverting a/a
+  forgetting foo/foo
   $ hg resolve -m a/a
-  (no more unresolved files)
-  continue: hg unshelve --continue
+  abort: resolve command not applicable when not merging
+  [255]
   $ hg unshelve -c
-  rebasing 5:e42a7da90865 "changes to: second" (tip)
-  note: rebase of 5:e42a7da90865 created no changes to commit
-  unshelve of 'default' complete
+  abort: no unshelve in progress
+  [255]
   $ hg bookmark
-   * test                      4:33f7f61e6c5e
+   * test                      2:c784213004b0
   $ hg diff
   $ hg status
   ? a/a.orig
   ? foo/foo
   $ hg summary
-  parent: 4:33f7f61e6c5e tip
+  parent: 2:c784213004b0 tip
    create conflict
   branch: default
   bookmarks: *test
   commit: 2 unknown (clean)
   update: (current)
-  phases: 5 draft
+  phases: 3 draft
 
   $ hg shelve --delete --stat
   abort: options '--delete' and '--stat' may not be used together
@@ -994,15 +977,15 @@ Test interactive shelve
   M a/a
   ? foo/foo
   $ hg bookmark
-   * test                      4:33f7f61e6c5e
+   * test                      2:c784213004b0
   $ hg unshelve
   unshelving change 'test'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 6:96a1354f65f6 "changes to: create conflict" (tip)
+  rebasing 4:7323c0d97c7f "changes to: create conflict" (tip)
   merging a/a
   $ hg bookmark
-   * test                      4:33f7f61e6c5e
+   * test                      2:c784213004b0
   $ cat a/a
   a
   a
@@ -1088,10 +1071,10 @@ no general delta
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 8 changes to 6 files
-  new changesets cc01e2b0c59f:33f7f61e6c5e
+  added 3 changesets with 7 changes to 5 files
+  new changesets cc01e2b0c59f:c784213004b0
   updating to branch default
-  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd bundle1
   $ echo babar > jungle
   $ hg add jungle
@@ -1101,7 +1084,7 @@ no general delta
   $ hg debugbundle .hg/shelved/*.hg
   Stream params: {Compression: BZ}
   changegroup -- {nbchanges: 1, version: 02}
-      45993d65fe9dc3c6d8764b9c3b07fa831ee7d92d
+      f928825453a8fc71bcd206bbf021451605d1177b
   $ cd ..
 
 with general delta
@@ -1111,10 +1094,10 @@ with general delta
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 8 changes to 6 files
-  new changesets cc01e2b0c59f:33f7f61e6c5e
+  added 3 changesets with 7 changes to 5 files
+  new changesets cc01e2b0c59f:c784213004b0
   updating to branch default
-  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd bundle2
   $ echo babar > jungle
   $ hg add jungle
@@ -1124,7 +1107,7 @@ with general delta
   $ hg debugbundle .hg/shelved/*.hg
   Stream params: {Compression: BZ}
   changegroup -- {nbchanges: 1, version: 02}
-      45993d65fe9dc3c6d8764b9c3b07fa831ee7d92d
+      f928825453a8fc71bcd206bbf021451605d1177b
   $ cd ..
 
 Test visibility of in-memory changes inside transaction to external hook
@@ -1171,25 +1154,24 @@ Test visibility of in-memory changes inside transaction to external hook
 
   $ sh $TESTTMP/checkvisibility.sh before-unshelving
   ==== before-unshelving:
-  VISIBLE 5:703117a2acfb
-  ACTUAL  5:703117a2acfb
+  VISIBLE 3:5d988a3ef25b
+  ACTUAL  3:5d988a3ef25b
   ====
 
   $ hg unshelve --keep default
-  temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 7:206bf5d4f922 "changes to: create conflict" (tip)
+  rebasing 4:ff7bce52e964 "changes to: create conflict" (tip)
   ==== preupdate:
-  VISIBLE 6:66b86db80ee4
-  ACTUAL  5:703117a2acfb
+  VISIBLE 3:5d988a3ef25b
+  ACTUAL  3:5d988a3ef25b
   ====
   ==== preupdate:
-  VISIBLE 8:a0e04704317e
-  ACTUAL  5:703117a2acfb
+  VISIBLE 5:b5d8d63aa9ae
+  ACTUAL  3:5d988a3ef25b
   ====
   ==== preupdate:
-  VISIBLE 6:66b86db80ee4
-  ACTUAL  5:703117a2acfb
+  VISIBLE 3:5d988a3ef25b
+  ACTUAL  3:5d988a3ef25b
   ====
 
   $ cat >> .hg/hgrc <<EOF
@@ -1199,8 +1181,8 @@ Test visibility of in-memory changes inside transaction to external hook
 
   $ sh $TESTTMP/checkvisibility.sh after-unshelving
   ==== after-unshelving:
-  VISIBLE 5:703117a2acfb
-  ACTUAL  5:703117a2acfb
+  VISIBLE 3:5d988a3ef25b
+  ACTUAL  3:5d988a3ef25b
   ====
 
 == test visibility to external update hook
@@ -1216,26 +1198,25 @@ Test visibility of in-memory changes inside transaction to external hook
 
   $ sh $TESTTMP/checkvisibility.sh before-unshelving
   ==== before-unshelving:
-  VISIBLE 5:703117a2acfb
-  ACTUAL  5:703117a2acfb
+  VISIBLE 3:5d988a3ef25b
+  ACTUAL  3:5d988a3ef25b
   ====
 
   $ hg unshelve --keep default
-  temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 7:206bf5d4f922 "changes to: create conflict" (tip)
+  rebasing 4:ff7bce52e964 "changes to: create conflict" (tip)
   ==== update:
-  VISIBLE 6:66b86db80ee4
-  VISIBLE 7:206bf5d4f922
-  ACTUAL  5:703117a2acfb
+  VISIBLE 3:5d988a3ef25b
+  VISIBLE 4:ff7bce52e964
+  ACTUAL  3:5d988a3ef25b
   ====
   ==== update:
-  VISIBLE 6:66b86db80ee4
-  ACTUAL  5:703117a2acfb
+  VISIBLE 3:5d988a3ef25b
+  ACTUAL  3:5d988a3ef25b
   ====
   ==== update:
-  VISIBLE 5:703117a2acfb
-  ACTUAL  5:703117a2acfb
+  VISIBLE 3:5d988a3ef25b
+  ACTUAL  3:5d988a3ef25b
   ====
 
   $ cat >> .hg/hgrc <<EOF
@@ -1245,8 +1226,8 @@ Test visibility of in-memory changes inside transaction to external hook
 
   $ sh $TESTTMP/checkvisibility.sh after-unshelving
   ==== after-unshelving:
-  VISIBLE 5:703117a2acfb
-  ACTUAL  5:703117a2acfb
+  VISIBLE 3:5d988a3ef25b
+  ACTUAL  3:5d988a3ef25b
   ====
 
   $ cd ..
@@ -1308,31 +1289,31 @@ Keep active bookmark while (un)shelving even on shared repo (issue4940)
   > EOF
 
   $ hg bookmarks -R repo
-     test                      4:33f7f61e6c5e
+     test                      2:c784213004b0
   $ hg share -B repo share
   updating working directory
-  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd share
 
   $ hg bookmarks
-     test                      4:33f7f61e6c5e
+     test                      2:c784213004b0
   $ hg bookmarks foo
   $ hg bookmarks
-   * foo                       5:703117a2acfb
-     test                      4:33f7f61e6c5e
+   * foo                       3:5d988a3ef25b
+     test                      2:c784213004b0
   $ echo x >> x
   $ hg shelve
   shelved as foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bookmarks
-   * foo                       5:703117a2acfb
-     test                      4:33f7f61e6c5e
+   * foo                       3:5d988a3ef25b
+     test                      2:c784213004b0
 
   $ hg unshelve
   unshelving change 'foo'
   $ hg bookmarks
-   * foo                       5:703117a2acfb
-     test                      4:33f7f61e6c5e
+   * foo                       3:5d988a3ef25b
+     test                      2:c784213004b0
 
   $ cd ..
 

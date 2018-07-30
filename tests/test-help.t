@@ -374,7 +374,6 @@ Test extension help:
        lz4revlog     store revlog deltas using lz4 compression
        morecolors    make more output colorful
        morestatus    make status give a bit more context
-       mq            manage a stack of patches
        myparent
        nointerrupt   warns but doesn't exit when the user first hits Ctrl+C
        obsshelve     save and restore changes to the working directory
@@ -1687,10 +1686,6 @@ Test keyword search help
    clonebundles advertise pre-generated bundles to seed clones
    prefixedname matched against word "clone"
    relink       recreates hardlinks between repository clones
-  
-  Extension Commands:
-  
-   qclone clone main and patch repository at same time
 
 Test unfound topic
 

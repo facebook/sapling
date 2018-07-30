@@ -26,7 +26,6 @@
   ext1 (untested!)
   ext2 (3.2.1!)
   histedit
-  mq
   patchbomb
   rebase
   treedirstate (untested!)
@@ -42,9 +41,6 @@
     bug reporting: https://example.org/bts
   histedit
     location: */hgext/histedit.py* (glob)
-    bundled: yes
-  mq
-    location: */hgext/mq.py* (glob)
     bundled: yes
   patchbomb
     location: */hgext/patchbomb.py* (glob)
@@ -77,13 +73,6 @@
     "bundled": true,
     "name": "histedit",
     "source": "*/hgext/histedit.py*", (glob)
-    "testedwith": []
-   },
-   {
-    "buglink": "",
-    "bundled": true,
-    "name": "mq",
-    "source": "*/hgext/mq.py*", (glob)
     "testedwith": []
    },
    {

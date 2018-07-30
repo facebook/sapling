@@ -864,17 +864,12 @@ Test help topic with same name as extension
 Issue811: Problem loading extensions twice (by site and by user)
 
   $ cat <<EOF >> $HGRCPATH
-  > mq =
   > strip =
-  > hgext.mq =
-  > hgext/mq =
+  > hgext.strip =
+  > hgext/strip =
   > EOF
 
-Show extensions:
-(note that mq force load strip, also checking it's not loaded twice)
-
   $ hg debugextensions | egrep -v "(default)"
-  mq
   strip
   treedirstate (untested!)
 
@@ -963,10 +958,6 @@ Make sure that single '-v' option shows help and built-ins only for 'dodo' comma
   Does nothing
   
   (use 'hg help -e dodo' to show help for the dodo extension)
-  
-  options:
-  
-    --mq operate on patch repository
   
   global options ([+] can be repeated):
   
@@ -1121,16 +1112,6 @@ Disabled extension commands:
       patchbomb     command to send changesets as (a series of) patch emails
   
   (use 'hg help extensions' for information on enabling extensions)
-
-
-  $ hg qdel
-  hg: unknown command 'qdel'
-  'qdelete' is provided by the following extension:
-  
-      mq            manage a stack of patches
-  
-  (use 'hg help extensions' for information on enabling extensions)
-  [255]
 
 
   $ hg churn
@@ -1630,7 +1611,7 @@ Prohibit registration of commands that don't use @command (issue5137)
 
  the extension shouldn't be loaded at all so the mq works:
 
-  $ hg qseries --config extensions.mq= > /dev/null
+  $ hg log -r null --config extensions.mq= > /dev/null
   *** failed to import extension deprecatedcmd from $TESTTMP/deprecated/deprecatedcmd.py: missing attributes: norepo, optionalrepo, inferrepo
   *** (use @command decorator to register 'deprecatedcmd')
 

@@ -84,8 +84,7 @@ new hg rev
 
 adding an empty revision
 
-  $ hg qnew -m emtpy empty
-  $ hg qfinish -a
+  $ hg commit -m emtpy --config ui.allowemptycommit=1
   $ cd ..
 
 echo hg to svn

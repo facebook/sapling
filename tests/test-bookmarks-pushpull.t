@@ -829,7 +829,7 @@ be exchanged)
   $ hg -R repo1 bookmarks -f -r 2 ADV_ON_REPO1
   $ hg -R repo1 bookmarks -f -r 3 DIFF_ADV_ON_REPO1
   $ hg -R repo1 bookmarks -f -r 3 DIFF_DIVERGED
-  $ hg -R repo1 -q --config extensions.mq= strip 4
+  $ hg -R repo1 -q --config extensions.strip= strip 4
   $ hg -R repo1 log -G --template '{node|short} ({bookmarks})'
   o  6100d3090acf (DIFF_ADV_ON_REPO1 DIFF_DIVERGED)
   |
@@ -846,7 +846,7 @@ be exchanged)
   $ hg -R repo2 bookmarks -f -r 2 DIVERGED
   $ hg -R repo2 bookmarks -f -r 4 DIFF_ADV_ON_REPO2
   $ hg -R repo2 bookmarks -f -r 4 DIFF_DIVERGED
-  $ hg -R repo2 -q --config extensions.mq= strip 3
+  $ hg -R repo2 -q --config extensions.strip= strip 3
   $ hg -R repo2 log -G --template '{node|short} ({bookmarks})'
   o  e7bd5218ca15 (DIFF_ADV_ON_REPO2 DIFF_DIVERGED)
   |

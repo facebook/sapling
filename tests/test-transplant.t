@@ -549,7 +549,7 @@ test transplant into empty repository
 
 test "--merge" causing pull from source repository on local host
 
-  $ hg --config extensions.mq= -q strip 2
+  $ hg --config extensions.strip= -q strip 2
   $ hg transplant -s ../t --merge tip
   searching for changes
   searching for changes

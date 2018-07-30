@@ -10,7 +10,7 @@ datapackversion=1
 [extensions]
 remotefilelog=
 rebase=
-mq=
+strip=
 [ui]
 ssh=python "$TESTDIR/dummyssh"
 [server]

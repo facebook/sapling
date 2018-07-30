@@ -2,7 +2,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=
-  > mq=
+  > strip=
   > 
   > [phases]
   > publish=False

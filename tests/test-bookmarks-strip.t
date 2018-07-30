@@ -1,5 +1,5 @@
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
+  $ echo "strip=" >> $HGRCPATH
 
   $ hg init
 

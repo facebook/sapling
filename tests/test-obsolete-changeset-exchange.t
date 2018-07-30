@@ -62,7 +62,7 @@ marker to obsolete him)
   $ hg phase --draft --force f89bcc95eba5
   $ hg phase -R ../other --draft --force f89bcc95eba5
   $ hg commit --amend -m "A''"
-  $ hg --hidden --config extensions.mq= strip  --no-backup f89bcc95eba5
+  $ hg --hidden --config extensions.strip= strip  --no-backup f89bcc95eba5
   $ hg pull ../other
   pulling from ../other
   searching for changes
@@ -77,7 +77,7 @@ check that bundle is not affected
 
   $ hg bundle --hidden --rev f89bcc95eba5 --base "f89bcc95eba5^" ../f89bcc95eba5.hg
   1 changesets found
-  $ hg --hidden --config extensions.mq= strip --no-backup f89bcc95eba5
+  $ hg --hidden --config extensions.strip= strip --no-backup f89bcc95eba5
   $ hg unbundle ../f89bcc95eba5.hg
   adding changesets
   adding manifests

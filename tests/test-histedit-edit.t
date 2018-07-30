@@ -146,51 +146,7 @@ commit, then edit the revision
   $ hg ci -m 'wat'
   $ echo a > e
 
-qnew should fail while we're in the middle of the edit step
-
-  $ hg --config extensions.mq= qnew please-fail
-  abort: histedit in progress
-  (use 'hg histedit --continue' or 'hg histedit --abort')
-  [255]
   $ HGEDITOR='echo foobaz > ' hg histedit --continue 2>&1 | fixbundle
-
-  $ hg log --graph
-  @  changeset:   6:b5f70786f9b0
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
-  o  changeset:   5:a5e1ba2f7afb
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     foobaz
-  |
-  o  changeset:   4:1a60820cd1f6
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     wat
-  |
-  o  changeset:   3:055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
-  o  changeset:   2:177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
-  o  changeset:   1:d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
-  o  changeset:   0:cb9a9f314b8b
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     a
-  
 
   $ hg cat e
   a

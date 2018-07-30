@@ -1,5 +1,5 @@
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
+  $ echo "strip=" >> $HGRCPATH
 
   $ tipparents() {
   > hg parents --template "{rev}:{node|short} {desc|firstline}\n" -r tip
