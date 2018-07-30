@@ -39,22 +39,16 @@ fn diff_basic() {
 
         let diff = compute_diff(working_entry, Some(parent_entry), None);
         let expected_diff = vec![
-            diff_result("dir1/file-to-dir", None),
+            deleted("dir1/file-to-dir"),
             // dir1/file-to-dir/foobar *is* a result, because it has changed and its parent is
             // deleted.
-            diff_result(
-                "dir1/file-to-dir/foobar",
-                Some((FileType::Symlink, THREES_EID)),
-            ),
-            diff_result("dir1/foo", Some((FileType::Regular, THREES_EID))),
-            diff_result("dir2/bar", None),
-            diff_result("dir2/dir-to-file", Some((FileType::Executable, DS_EID))),
+            changed("dir1/file-to-dir/foobar", FileType::Symlink, THREES_EID),
+            changed("dir1/foo", FileType::Regular, THREES_EID),
+            deleted("dir2/bar"),
+            changed("dir2/dir-to-file", FileType::Executable, DS_EID),
             // dir2/dir-to-file/foo is *not* a result, because its parent is marked changed
-            diff_result(
-                "dir2/only-file-type",
-                Some((FileType::Executable, ONES_EID)),
-            ),
-            diff_result("dir2/quux", Some((FileType::Symlink, FOURS_EID))),
+            changed("dir2/only-file-type", FileType::Executable, ONES_EID),
+            changed("dir2/quux", FileType::Symlink, FOURS_EID),
         ];
 
         assert_eq!(diff, expected_diff);
@@ -92,16 +86,13 @@ fn diff_merge1() {
 
         // Compare this result to expected_diff in diff_basic.
         let expected_diff = vec![
-            diff_result("dir1/file-to-dir", None),
+            deleted("dir1/file-to-dir"),
             // dir1/file-to-dir/foobar is *not* a result because p1 doesn't have it and p2 has the
             // same contents.
-            diff_result("dir1/foo", Some((FileType::Regular, THREES_EID))),
-            diff_result("dir2/bar", None),
-            diff_result("dir2/dir-to-file", Some((FileType::Executable, DS_EID))),
-            diff_result(
-                "dir2/only-file-type",
-                Some((FileType::Executable, ONES_EID)),
-            ),
+            changed("dir1/foo", FileType::Regular, THREES_EID),
+            deleted("dir2/bar"),
+            changed("dir2/dir-to-file", FileType::Executable, DS_EID),
+            changed("dir2/only-file-type", FileType::Executable, ONES_EID),
             // dir2/quux is not a result because it isn't present in p1 and is present in p2, so
             // the version from p2 is implicitly chosen.
         ];
@@ -137,13 +128,12 @@ fn compute_diff(
     paths
 }
 
-fn diff_result<P>(path: P, details: Option<(FileType, HgEntryId)>) -> BonsaiDiffResult
-where
-    P: AsRef<[u8]>,
-{
+fn changed(path: impl AsRef<[u8]>, ft: FileType, hash: HgEntryId) -> BonsaiDiffResult {
     let path = MPath::new(path).expect("valid path");
-    match details {
-        Some((ft, hash)) => BonsaiDiffResult::Changed(path, ft, hash),
-        None => BonsaiDiffResult::Deleted(path),
-    }
+    BonsaiDiffResult::Changed(path, ft, hash)
+}
+
+fn deleted(path: impl AsRef<[u8]>) -> BonsaiDiffResult {
+    let path = MPath::new(path).expect("valid path");
+    BonsaiDiffResult::Deleted(path)
 }
