@@ -19,21 +19,19 @@ Ensure that dirsync does not cause an abort when cwd goes missing
   rebasing 1:6f52fdb3a577 "change"
   current directory was removed
   (consider changing to repo root: $TESTTMP/repo1)
-  abort: $ENOENT$
-  [255]
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/6f52fdb3a577-1340ca06-rebase.hg
 
   $ cd -
   $TESTTMP/repo1
   $ hg status
-  M a
-  M change
 
   $ hg log -Gr ":" -T "{node|short} {desc}"
-  @  5f45087392e8 delete
+  @  74e7da63e173 change
   |
-  | @  6f52fdb3a577 change
-  |/
+  o  5f45087392e8 delete
+  |
   o  aa6caddcd04f base
   
   $ hg rebase --abort
-  rebase aborted
+  abort: no rebase in progress
+  [255]

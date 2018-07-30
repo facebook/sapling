@@ -37,6 +37,7 @@ import errno
 
 from mercurial import (
     cmdutil,
+    config,
     error,
     extensions,
     localrepo,
@@ -76,17 +77,15 @@ def _bypassdirsync(orig, ui, repo, *args, **kwargs):
 
 
 def getconfigs(repo):
-    # bypass "repoui.copy = baseui.copy # prevent copying repo configuration"
-    ui = repo.ui.__class__.copy(repo.ui)
-
-    # also read from wvfs/.hgdirsync
+    # read from wvfs/.hgdirsync
     filename = ".hgdirsync"
     content = repo.wvfs.tryread(filename)
+    cfg = config.config()
     if content:
-        ui._tcfg.parse(filename, "[dirsync]\n%s" % content, ["dirsync"])
+        cfg.parse(filename, "[dirsync]\n%s" % content, ["dirsync"])
 
     maps = util.sortdict()
-    for key, value in ui.configitems("dirsync"):
+    for key, value in repo.ui.configitems("dirsync") + cfg.items("dirsync"):
         if "." not in key:
             continue
         name, disambig = key.split(".", 1)
