@@ -37,7 +37,11 @@ pub enum EntryStatus {
 }
 
 impl EntryStatus {
-    fn is_tree(&self) -> bool {
+    /// Whether this status represents a tree.
+    ///
+    /// If a tree is replaced by a file or vice versa, it will always be represented as an `Added`
+    /// and a `Deleted`, not a single `Modified`.
+    pub fn is_tree(&self) -> bool {
         match self {
             EntryStatus::Added(entry) => entry.get_type().is_tree(),
             EntryStatus::Deleted(entry) => entry.get_type().is_tree(),
@@ -52,6 +56,15 @@ impl EntryStatus {
                 to_entry.get_type().is_tree()
             }
         }
+    }
+
+    /// Whether this status represents a file.
+    ///
+    /// If a tree is replaced by a file or vice versa, it will always be represented as an `Added`
+    /// and a `Deleted`, not a single `Modified`.
+    #[inline]
+    pub fn is_file(&self) -> bool {
+        !self.is_tree()
     }
 }
 
