@@ -10,8 +10,7 @@ use failure::Error;
 use futures::future::{err, join_all, ok, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo;
-use blobrepo::BlobRepo;
+use blobrepo::{self, BlobRepo};
 use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::Generation;
@@ -70,4 +69,19 @@ pub fn changeset_to_nodehashes_with_generation_numbers(
             })
             .map(move |gen_id| (*node_cs.as_nodehash(), gen_id))
     })).boxify()
+}
+
+/// Attempt to get the changeset parents of a hash node,
+/// and cast into the appropriate ErrorKind if it fails
+pub fn get_parents_from_nodehash(
+    repo: Arc<BlobRepo>,
+    node: HgNodeHash,
+) -> BoxFuture<Vec<HgChangesetId>, Error> {
+    repo.get_changeset_parents(&HgChangesetId::new(node))
+        .map_err(|err| {
+            ErrorKind::ParentsFetchFailed(BlobRepoErrorCause::new(
+                err.downcast::<blobrepo::ErrorKind>().ok(),
+            )).into()
+        })
+        .boxify()
 }
