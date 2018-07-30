@@ -605,17 +605,9 @@ pub fn extract_parents_complete(
 
 pub fn handle_parents(
     mut scuba_logger: ScubaSampleBuilder,
-    repo: BlobRepo,
     p1: Option<ChangesetHandle>,
     p2: Option<ChangesetHandle>,
-) -> BoxFuture<
-    (
-        HgParents,
-        (Option<Box<Manifest + Sync>>),
-        (Option<Box<Manifest + Sync>>),
-    ),
-    Error,
-> {
+) -> BoxFuture<(HgParents, Vec<HgManifestId>), Error> {
     let p1 = p1.map(|cs| cs.can_be_parent);
     let p2 = p2.map(|cs| cs.can_be_parent);
     p1.join(p2)
@@ -637,13 +629,16 @@ pub fn handle_parents(
             future::ok((p1, p2))
         })
         .map_err(|e| Error::from(e))
-        .and_then(move |((p1_hash, p1_manifest), (p2_hash, p2_manifest))| {
+        .map(move |((p1_hash, p1_manifest), (p2_hash, p2_manifest))| {
             let parents = HgParents::new(p1_hash.as_ref(), p2_hash.as_ref());
-            let p1_manifest = p1_manifest.map(|m| repo.get_manifest_by_nodeid(&m.into_nodehash()));
-            let p2_manifest = p2_manifest.map(|m| repo.get_manifest_by_nodeid(&m.into_nodehash()));
-            p1_manifest
-                .join(p2_manifest)
-                .map(move |(p1_manifest, p2_manifest)| (parents, p1_manifest, p2_manifest))
+            let mut parent_manifest_hashes = vec![];
+            if let Some(p1_manifest) = p1_manifest {
+                parent_manifest_hashes.push(p1_manifest);
+            }
+            if let Some(p2_manifest) = p2_manifest {
+                parent_manifest_hashes.push(p2_manifest);
+            }
+            (parents, parent_manifest_hashes)
         })
         .timed(move |stats, result| {
             if result.is_ok() {
@@ -654,6 +649,22 @@ pub fn handle_parents(
             Ok(())
         })
         .boxify()
+}
+
+pub fn fetch_parent_manifests(
+    repo: BlobRepo,
+    parent_manifest_hashes: Vec<HgManifestId>,
+) -> BoxFuture<(Option<Box<Manifest + Sync>>, Option<Box<Manifest + Sync>>), Error> {
+    let p1_manifest_hash = parent_manifest_hashes.get(0);
+    let p2_manifest_hash = parent_manifest_hashes.get(1);
+    let p1_manifest = p1_manifest_hash.map({
+        cloned!(repo);
+        move |m| repo.get_manifest_by_nodeid(&m.into_nodehash())
+    });
+    let p2_manifest =
+        p2_manifest_hash.map(move |m| repo.get_manifest_by_nodeid(&m.into_nodehash()));
+
+    p1_manifest.join(p2_manifest).boxify()
 }
 
 pub fn make_new_changeset(

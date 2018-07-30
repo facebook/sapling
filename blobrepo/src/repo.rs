@@ -1149,7 +1149,7 @@ impl CreateChangeset {
         ).context("While processing entries");
 
         let parents_complete = extract_parents_complete(&self.p1, &self.p2);
-        let parents_data = handle_parents(scuba_logger.clone(), repo.clone(), self.p1, self.p2)
+        let parents_data = handle_parents(scuba_logger.clone(), self.p1, self.p2)
             .context("While waiting for parents to upload data");
         let changeset = {
             let mut scuba_logger = scuba_logger.clone();
@@ -1157,11 +1157,11 @@ impl CreateChangeset {
                 .join(parents_data)
                 .from_err()
                 .and_then({
-                    cloned!(repo.filenodes, repo.blobstore, mut scuba_logger);
+                    cloned!(repo, repo.filenodes, repo.blobstore, mut scuba_logger);
                     let expected_files = self.expected_files;
                     let cs_metadata = self.cs_metadata;
 
-                    move |((root_manifest, root_hash), (parents, p1_manifest, p2_manifest))| {
+                    move |((root_manifest, root_hash), (parents, parent_manifest_hashes))| {
                         let files = if let Some(expected_files) = expected_files {
                             STATS::create_changeset_expected_cf.add_value(1);
                             // We are trusting the callee to provide a list of changed files, used
@@ -1169,11 +1169,15 @@ impl CreateChangeset {
                             future::ok(expected_files).boxify()
                         } else {
                             STATS::create_changeset_compute_cf.add_value(1);
-                            compute_changed_files(
-                                &root_manifest,
-                                p1_manifest.as_ref(),
-                                p2_manifest.as_ref(),
-                            )
+                            fetch_parent_manifests(repo, parent_manifest_hashes)
+                                .and_then(move |(p1_manifest, p2_manifest)| {
+                                    compute_changed_files(
+                                        &root_manifest,
+                                        p1_manifest.as_ref(),
+                                        p2_manifest.as_ref(),
+                                    )
+                                })
+                                .boxify()
                         };
 
                         files
