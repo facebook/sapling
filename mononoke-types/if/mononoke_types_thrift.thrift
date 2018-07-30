@@ -98,7 +98,7 @@ struct BonsaiChangeset {
   4: optional string committer,
   5: optional DateTime committer_date,
   6: string message,
-  7: map<string, string> extra,
+  7: map<string, binary> extra,
   8: map<MPath, FileChangeOpt> file_changes,
 }
 

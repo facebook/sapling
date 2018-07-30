@@ -31,7 +31,7 @@ pub struct BonsaiChangesetMut {
     // max(author date, max(committer date of parents) + epsilon)
     pub committer_date: Option<DateTime>,
     pub message: String,
-    pub extra: BTreeMap<String, String>,
+    pub extra: BTreeMap<String, Vec<u8>>,
     pub file_changes: BTreeMap<MPath, Option<FileChange>>,
 }
 
@@ -160,11 +160,11 @@ impl BonsaiChangeset {
     }
 
     /// Get the extra fields for this message.
-    pub fn extra(&self) -> impl Iterator<Item = (&str, &str)> {
+    pub fn extra(&self) -> impl Iterator<Item = (&str, &[u8])> {
         self.inner
             .extra
             .iter()
-            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .map(|(k, v)| (k.as_str(), v.as_slice()))
     }
 
     /// Allow mutating this instance of `BonsaiChangeset`.
