@@ -21,6 +21,7 @@ extern crate futures_ext;
 extern crate blobrepo;
 extern crate bonsai_utils;
 extern crate mercurial_types;
+extern crate mononoke_types;
 
 mod bonsai;
 mod changeset;

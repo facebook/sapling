@@ -14,13 +14,14 @@ use std::sync::Arc;
 use futures::{Future, Stream, future::{self, Either}};
 use slog::Logger;
 
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
 use blobrepo::{BlobManifest, BlobRepo, HgBlobChangeset, HgBlobEntry};
 use blobrepo::internal::MemoryRootManifest;
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use mercurial_types::{Changeset, Entry, HgChangesetId, HgManifestId, HgNodeHash, Type};
 use mercurial_types::manifest_utils::{changed_entry_stream, ChangedEntry};
+use mononoke_types::DateTime;
 
 use changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
 use errors::*;
@@ -82,10 +83,15 @@ impl BonsaiVerifyDifference {
     /// Whether there are any changes beyond the root manifest ID being different.
     #[inline]
     pub fn has_changes(&self) -> impl Future<Item = bool, Error = Error> + Send {
+        self.changes().not_empty()
+    }
+
+    /// Whether there are any files that changed.
+    #[inline]
+    pub fn has_file_changes(&self) -> impl Future<Item = bool, Error = Error> + Send {
         self.changes()
-            .into_future()
-            .map(|(first, _rest)| first.is_some())
-            .map_err(|(err, _rest)| err)
+            .filter(|item| !item.status.is_tree())
+            .not_empty()
     }
 
     // XXX might need to return repo here if callers want to do direct queries
@@ -106,6 +112,7 @@ pub struct BonsaiVerify {
     pub repo: BlobRepo,
     pub follow_limit: usize,
     pub ignores: HashSet<HgChangesetId>,
+    pub broken_merges_before: Option<DateTime>,
     pub debug_bonsai_diff: bool,
 }
 
@@ -122,8 +129,9 @@ impl BonsaiVerify {
             self.logger,
             repo,
             BonsaiVerifyVisitor {
-                debug_bonsai_diff: self.debug_bonsai_diff,
                 ignores: Arc::new(self.ignores),
+                broken_merges_before: self.broken_merges_before,
+                debug_bonsai_diff: self.debug_bonsai_diff,
             },
             start_points,
             self.follow_limit,
@@ -134,6 +142,7 @@ impl BonsaiVerify {
 #[derive(Clone, Debug)]
 struct BonsaiVerifyVisitor {
     ignores: Arc<HashSet<HgChangesetId>>,
+    broken_merges_before: Option<DateTime>,
     debug_bonsai_diff: bool,
 }
 
@@ -151,6 +160,20 @@ impl ChangesetVisitor for BonsaiVerifyVisitor {
         if self.ignores.contains(&changeset_id) {
             debug!(logger, "Changeset ignored");
             return future::ok(BonsaiVerifyResult::Ignored(changeset_id)).boxify();
+        }
+
+        let broken_merge = match &self.broken_merges_before {
+            Some(before) => {
+                changeset.p1().is_some() && changeset.p2().is_some() && changeset.time() <= before
+            }
+            None => false,
+        };
+
+        if broken_merge {
+            debug!(
+                logger,
+                "Potentially broken merge -- will check for file changes, not just manifest hash"
+            );
         }
 
         debug!(logger, "Starting bonsai diff computation");
@@ -252,18 +275,32 @@ impl ChangesetVisitor for BonsaiVerifyVisitor {
                                 roundtrip_mf_id,
                                 repo,
                             };
-                            // At the moment, the only case where this expects a different hash but
-                            // no actual difference is with an empty changeset. Mercurial is
-                            // relatively inconsistent about creating new manifest nodes for such
-                            // changesets, so it can happen.
-                            if diff_count == 0 {
-                                Either::B(difference.has_changes().map(move |has_changes| {
-                                    if has_changes {
-                                        BonsaiVerifyResult::Invalid(difference)
-                                    } else {
-                                        BonsaiVerifyResult::ValidDifferentId(difference)
-                                    }
-                                }))
+
+                            if broken_merge {
+                                // This is a (potentially) broken merge. Ignore tree changes and
+                                // only check for file changes.
+                                Either::B(Either::A(difference.has_file_changes().map(
+                                    move |has_file_changes| {
+                                        if has_file_changes {
+                                            BonsaiVerifyResult::Invalid(difference)
+                                        } else {
+                                            BonsaiVerifyResult::ValidDifferentId(difference)
+                                        }
+                                    },
+                                )))
+                            } else if diff_count == 0 {
+                                // This is an empty changeset. Mercurial is relatively inconsistent
+                                // about creating new manifest nodes for such changesets, so it can
+                                // happen.
+                                Either::B(Either::B(difference.has_changes().map(
+                                    move |has_changes| {
+                                        if has_changes {
+                                            BonsaiVerifyResult::Invalid(difference)
+                                        } else {
+                                            BonsaiVerifyResult::ValidDifferentId(difference)
+                                        }
+                                    },
+                                )))
                             } else {
                                 Either::A(future::ok(BonsaiVerifyResult::Invalid(difference)))
                             }

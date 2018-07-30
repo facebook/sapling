@@ -21,6 +21,7 @@ extern crate futures_ext;
 extern crate blobrepo_utils;
 extern crate cmdlib;
 extern crate mercurial_types;
+extern crate mononoke_types;
 
 mod config;
 
@@ -109,6 +110,7 @@ fn main() {
                 repo,
                 follow_limit,
                 ignores: config.ignores.into_iter().collect(),
+                broken_merges_before: config.broken_merges_before,
                 debug_bonsai_diff,
             };
             bonsai_verify

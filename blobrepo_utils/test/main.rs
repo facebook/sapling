@@ -61,6 +61,7 @@ mod test {
                             repo,
                             follow_limit: 1024,
                             ignores: HashSet::new(),
+                            broken_merges_before: None,
                             debug_bonsai_diff: false,
                         };
                         let verify_stream = verify.verify(heads);
