@@ -31,6 +31,7 @@ extern crate serde;
 extern crate serde_derive;
 #[macro_use]
 extern crate slog;
+extern crate slog_async;
 extern crate slog_glog_fmt;
 extern crate slog_logview;
 extern crate slog_scope;
@@ -168,9 +169,8 @@ fn setup_logger(debug: bool) -> Logger {
     let level = if debug { Level::Debug } else { Level::Info };
 
     let decorator = slog_term::TermDecorator::new().build();
-    let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
-    // TODO: (zeyi) T30501634 replace this with slog-async for better performance
-    let stderr_drain = std::sync::Mutex::new(stderr_drain).fuse();
+    let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer).fuse();
+    let stderr_drain = slog_async::Async::new(stderr_drain).build().fuse();
     let logview_drain = LogViewDrain::new("errorlog_mononoke_apiserver");
 
     let drain = slog::Duplicate::new(stderr_drain, logview_drain);
