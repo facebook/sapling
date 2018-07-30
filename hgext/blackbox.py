@@ -38,6 +38,7 @@ Examples::
 from __future__ import absolute_import
 
 import errno
+import os
 import re
 import weakref
 
@@ -94,18 +95,26 @@ def _openlogfile(ui, vfs):
 
     maxsize = ui.configbytes("blackbox", "maxsize")
     name = "blackbox.log"
-    if maxsize > 0:
+    # If the user can write to the directory, but not the file, rotate
+    # automatically. This happens if "sudo" hg command was executed and
+    # blackbox.log became owned by root.
+    if os.access(vfs.join(""), os.W_OK) and not os.access(vfs.join(name), os.W_OK):
+        needrotate = True
+    elif maxsize > 0:
         try:
             st = vfs.stat(name)
         except OSError:
-            pass
+            needrotate = False
         else:
-            if st.st_size >= maxsize:
-                path = vfs.join(name)
-                maxfiles = ui.configint("blackbox", "maxfiles")
-                for i in xrange(maxfiles - 1, 1, -1):
-                    rotate(oldpath="%s.%d" % (path, i - 1), newpath="%s.%d" % (path, i))
-                rotate(oldpath=path, newpath=maxfiles > 0 and path + ".1")
+            needrotate = st.st_size >= maxsize
+    else:
+        needrotate = False
+    if needrotate:
+        path = vfs.join(name)
+        maxfiles = ui.configint("blackbox", "maxfiles")
+        for i in xrange(maxfiles - 1, 1, -1):
+            rotate(oldpath="%s.%d" % (path, i - 1), newpath="%s.%d" % (path, i))
+        rotate(oldpath=path, newpath=maxfiles > 0 and path + ".1")
     return vfs(name, "a")
 
 
