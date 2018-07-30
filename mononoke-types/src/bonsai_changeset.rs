@@ -167,6 +167,10 @@ impl BonsaiChangeset {
             .map(|(k, v)| (k.as_str(), v.as_slice()))
     }
 
+    pub fn get_changeset_id(&self) -> ChangesetId {
+        *self.clone().into_blob().id()
+    }
+
     /// Allow mutating this instance of `BonsaiChangeset`.
     pub fn into_mut(self) -> BonsaiChangesetMut {
         self.inner
@@ -342,11 +346,10 @@ mod test {
             ],
         };
         let tc = tc.freeze().expect("fixed bonsai changeset must be valid");
-        let blob = tc.into_blob();
 
         assert_eq!(
-            blob.id(),
-            &ChangesetId::new(
+            tc.get_changeset_id(),
+            ChangesetId::new(
                 Blake2::from_str(
                     "189e67041363f9dc7d10de57aaf0fbd202dec989357e76cada7fa940936c712a"
                 ).unwrap()
