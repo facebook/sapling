@@ -35,6 +35,16 @@ impl DateTime {
         Ok(Self::new(dt))
     }
 
+    /// Construct a new `DateTime` from an RFC3339 string.
+    ///
+    /// RFC3339 is a standardized way to represent a specific moment in time. See
+    /// https://tools.ietf.org/html/rfc3339.
+    pub fn from_rfc3339(rfc3339: &str) -> Result<Self> {
+        let dt = ChronoDateTime::parse_from_rfc3339(rfc3339)
+            .with_context(|_| ErrorKind::InvalidDateTime("while parsing rfc3339".into()))?;
+        Ok(Self::new(dt))
+    }
+
     pub(crate) fn from_thrift(dt: thrift::DateTime) -> Result<Self> {
         Self::from_timestamp(dt.timestamp_secs, dt.tz_offset_secs)
     }
@@ -106,6 +116,21 @@ mod test {
             // in order to be consistent with Ord.
             dt == dt2 && dt.tz_offset_secs() == dt2.tz_offset_secs()
         }
+    }
+
+    #[test]
+    fn rfc3339() {
+        // Valid RFC3339 strings.
+        DateTime::from_rfc3339("2018-01-01T00:00:00Z").expect("unexpected err - UTC");
+        DateTime::from_rfc3339("2018-01-01T00:00:00+04:00").expect("unexpected err - +04:00");
+        DateTime::from_rfc3339("2018-01-01T00:00:00-04:00").expect("unexpected err - -04:00");
+        DateTime::from_rfc3339("2018-01-01T01:02:03.04+05:45").expect("unexpected err - subsecond");
+
+        // Missing information.
+        DateTime::from_rfc3339("2018-01-01").expect_err("unexpected Ok - no time");
+        DateTime::from_rfc3339("12:23:36").expect_err("unexpected Ok - no date");
+        DateTime::from_rfc3339("2018-01-01T12:23").expect_err("unexpected Ok - no seconds");
+        DateTime::from_rfc3339("2018-01-01T12:23:36").expect_err("unexpected Ok - no timezone");
     }
 
     #[test]
