@@ -8,7 +8,6 @@
  *
  */
 
-#include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/logging/xlog.h>
 
@@ -31,84 +30,106 @@ bool FileChangeMonitor::throttle() {
   return (std::chrono::steady_clock::now() - lastCheck_) < throttleDuration_;
 }
 
-bool FileChangeMonitor::invokeIfUpdated(bool noThrottle) {
+folly::Optional<folly::Expected<folly::File, int>>
+FileChangeMonitor::checkIfUpdated(bool noThrottle) {
+  folly::Optional<folly::Expected<folly::File, int>> rslt;
+
   if (!noThrottle && throttle()) {
-    return false;
+    return rslt;
   }
 
-  if (!isChanged()) {
-    return false;
+  // Update lastCheck - we use it for throttling
+  lastCheck_ = std::chrono::steady_clock::now();
+
+  // If there was an open error last time around, we can by-pass stat because
+  // the most likely scenario is for open to continue failing.
+  // If there was no open error, proceed to do stat to check for file changes.
+  if (!openErrno_) {
+    if (!isChanged()) {
+      return rslt;
+    }
   }
 
-  // We want the fileChangeProcessor to be called even if open fails
+  // Limit open/fstat calls to the following scenarios:
+  // - open failed last time around. We didn't do stat (isChanged) above
+  // - the file changed AND stat succeeded. We just did stat (isChanged) above
+  // Even if we skip open/fstat, we will indicate the file is updated
   folly::File file;
-  int errNum{statErrno_};
-  if (statErrno_ == 0) {
-    auto fileDescriptor = open(filePath_.copy().c_str(), O_RDONLY);
+  if (openErrno_ || !statErrno_) {
+    auto fileDescriptor = open(filePath_.c_str(), O_RDONLY);
     if (fileDescriptor != -1) {
       file = folly::File(fileDescriptor, /**ownsFd=*/true);
       int rc = fstat(file.fd(), &fileStat_);
+      int currentStatErrno{0};
       if (rc != 0) {
-        errNum = errno;
-        statErrno_ = errNum;
+        currentStatErrno = errno;
         XLOG(WARN) << "error calling fstat() on " << filePath_ << ": "
-                   << folly::errnoStr(errno);
+                   << folly::errnoStr(currentStatErrno);
       }
+      openErrno_ = 0;
+      statErrno_ = currentStatErrno;
     } else {
-      errNum = errno;
-      if (errNum != ENOENT) {
+      int currentOpenErrno{errno};
+      // Log an error only if the error code has changed
+      if (currentOpenErrno != openErrno_) {
         XLOG(WARN) << "error accessing file " << filePath_ << ": "
-                   << folly::errnoStr(errno);
+                   << folly::errnoStr(currentOpenErrno);
+      } else {
+        // Open is failing, for the same reason. It is possible that the file
+        // has changed, but, not meaningful for the client.
+        return rslt;
       }
+      openErrno_ = currentOpenErrno;
     }
   }
-  // We DO want to call processor since the file has changed.
-  // They can determine correct action for themselves (since open failed)
-  fileChangeProcessor_(std::move(file), errNum, filePath_);
-  return true;
+
+  if (openErrno_ || statErrno_) {
+    rslt = folly::Unexpected<int>(openErrno_ ? openErrno_ : statErrno_);
+  } else {
+    rslt = folly::makeExpected<int>(std::move(file));
+  }
+  return rslt;
 }
 
 bool FileChangeMonitor::isChanged() {
-  // Update lastCheck - we use it for throttling
-  lastCheck_ = std::chrono::steady_clock::now();
-  struct stat prevStat = fileStat_;
-  int prevErrno = statErrno_;
+  struct stat currentStat;
+  int prevStatErrno{statErrno_};
 
   // We are using stat to check for file deltas. Since we don't open file,
   // there is no chance of TOCTOU attack.
-  int rslt = stat(filePath_.c_str(), &fileStat_);
   statErrno_ = 0;
-  // Log error if not ENOENT as they are unexpected and useful for debugging.
-  // If error, return file change so that we update error and file contents.
+  int rslt = stat(filePath_.c_str(), &currentStat);
   if (rslt != 0) {
     statErrno_ = errno;
-    if (errno != ENOENT) {
+    // Log an error only if the error has changed (i.e., first time)
+    if (statErrno_ != prevStatErrno) {
       XLOG(WARN) << "error accessing file " << filePath_ << ": "
-                 << folly::errnoStr(errno);
+                 << folly::errnoStr(statErrno_);
     }
   }
 
   // If error is different, report a change.
-  if (statErrno_ != prevErrno) {
+  if (prevStatErrno != statErrno_) {
     return true;
   }
 
-  // If there is a stat error, it is the same error as before. We can't check
-  // the stat values. We don't really need to report a change - for example, if
-  // the file is STILL does not exist (ENOENT) or is STILL inaccessible
+  // If there is a stat error, we don't have a valid stat structure to check for
+  // file changes. But, we now know that the stat error is the same as before
+  // so, even if the file has changed, it is not interesting to the user. For
+  // example, if the file STILL does not exist (ENOENT) or is STILL inaccessible
   // (EACCESS).
   if (statErrno_ != 0) {
     return false;
   }
 
-  if (prevStat.st_dev != fileStat_.st_dev ||
-      prevStat.st_size != fileStat_.st_size ||
-      prevStat.st_ino != fileStat_.st_ino ||
-      prevStat.st_mode != fileStat_.st_mode ||
-      prevStat.st_ctim.tv_sec != fileStat_.st_ctim.tv_sec ||
-      prevStat.st_ctim.tv_nsec != fileStat_.st_ctim.tv_nsec ||
-      prevStat.st_mtim.tv_sec != fileStat_.st_mtim.tv_sec ||
-      prevStat.st_mtim.tv_nsec != fileStat_.st_mtim.tv_nsec) {
+  if (currentStat.st_dev != fileStat_.st_dev ||
+      currentStat.st_size != fileStat_.st_size ||
+      currentStat.st_ino != fileStat_.st_ino ||
+      currentStat.st_mode != fileStat_.st_mode ||
+      currentStat.st_ctim.tv_sec != fileStat_.st_ctim.tv_sec ||
+      currentStat.st_ctim.tv_nsec != fileStat_.st_ctim.tv_nsec ||
+      currentStat.st_mtim.tv_sec != fileStat_.st_mtim.tv_sec ||
+      currentStat.st_mtim.tv_nsec != fileStat_.st_mtim.tv_nsec) {
     return true;
   }
   return false;

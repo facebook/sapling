@@ -9,26 +9,23 @@
  */
 #pragma once
 
+#include <folly/File.h>
 #include <sys/stat.h>
 #include <chrono>
 #include <functional>
-#include "eden/fs/utils/PathFuncs.h"
 
-namespace folly {
-class File;
-};
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
 
 /**
  * FileChangeMonitor monitors a file for changes. The "invokeIfUpdated()"
- * method initiates a check. If the file has changed, it will run the
- * FileChangeProcessor call-back method. Typical usage:
- * - construct, FileChangeMonitor with FileChangeProcessor to handle call-backs
- *   eg. FileChangeMonitor fcm{path, 4s, cb}
- * - Periodically call invokeIfUpdated() to initiate check/call-back on file
- *   changes.
+ * method initiates a check and, if the file has changed, will run the
+ * provided call-back method. Typical usage:
+ * - construct, a FileChangeMonitor eg. FileChangeMonitor fcm{path, 4s}
+ * - periodically call invokeIfUpdated() to check for changes and potentially
+ * run the call-back.
  *
  * FileChangeMonitor performs checks on demand. The throttleDuration setting
  * can further limit resource usage (to a maximum of 1 check/throttleDuration).
@@ -38,25 +35,14 @@ namespace eden {
  */
 class FileChangeMonitor {
  public:
-  /** The FileChangeProcessor is a call-back function for file changes.
-   * If stat or open failed, the errorNum will be set, otherwise, the file can
-   * be used.
-   */
-  using FileChangeProcessor = std::function<
-      void(folly::File&& f, int errorNum, AbsolutePathPiece filePath)>;
-
   /**
    * Construct a FileChangeMonitor for the provided filePath.
    * @param throttleDuration specifies minimum time between file stats.
-   * @param fileChangeProcessor will be called when the file is changed.
    */
   FileChangeMonitor(
       AbsolutePathPiece filePath,
-      std::chrono::milliseconds throttleDuration,
-      FileChangeProcessor fileChangeProcessor)
-      : filePath_{filePath},
-        throttleDuration_{throttleDuration},
-        fileChangeProcessor_{fileChangeProcessor} {
+      std::chrono::milliseconds throttleDuration)
+      : filePath_{filePath}, throttleDuration_{throttleDuration} {
     resetToForceChange();
   }
 
@@ -71,13 +57,39 @@ class FileChangeMonitor {
   FileChangeMonitor& operator=(FileChangeMonitor&& fcm) = default;
 
   /**
-   * Check if the file has been change by doing a stat. If it has changed, the
+   * Check if the monitored file has been updated in a meaningful way.
+   * Meaningful changes include:
+   * - file modifications where file can be opened;
+   * - file modifications, where file cannot be opened AND its stat or open
+   * error code has changed;
+   * We suppress file change notifications where the same error exists. For
+   * example, no call-back will be issued for a file that has changed but, open
+   * still returns EACCES.
+   */
+  folly::Optional<folly::Expected<folly::File, int>> checkIfUpdated(
+      bool noThrottle = false);
+
+  /**
+   * If the monitored file has changed in a "meaningful" way, the
    * FileChangeProcessor call-back will be invoked. The call-back will always
    * be invoked on the first call. This method will not catch exceptions
    * thrown by the call-back.
+   * @ see checkIfUpdated for details on "meaningful" changes.
    * @return TRUE if the call-back was invoked, else, FALSE.
    */
-  bool invokeIfUpdated(bool noThrottle = false);
+  template <typename Fn>
+  bool invokeIfUpdated(Fn&& fn, bool noThrottle = false) {
+    auto result = checkIfUpdated(noThrottle);
+    if (!result.hasValue()) {
+      return false;
+    }
+    if (result.value().hasValue()) {
+      fn(std::move(result.value()).value(), 0, filePath_);
+    } else {
+      fn(std::move(folly::File()), result->error(), filePath_);
+    }
+    return true;
+  }
 
   /**
    * Change the path of the monitored file. Resets stat and lastCheck_ to force
@@ -98,14 +110,15 @@ class FileChangeMonitor {
   bool throttle();
 
   /** Stat the monitored file and compare results against last call to
-   * isChanged(). It updates fileStat_ and statErrno_.
+   * isChanged(). It updates statErrno_ which can be used to by invokeIfUpdated
+   * to make optimizations.
    */
   bool isChanged();
 
   /**
-   * Reset to the base state. The next call to isChanged will return true
-   * (requires throttle to not activate). Useful during initialization and if
-   * the monitored file's path has changed.
+   * Reset to base state. The next call to isChanged will return true
+   * (this requires throttle to NOT activate). Useful during initialization and
+   * if the monitored file's path has changed.
    */
   void resetToForceChange() {
     // Set values for stat to force changedSinceUpdate() to return TRUE.
@@ -114,6 +127,7 @@ class FileChangeMonitor {
     fileStat_.st_mtim.tv_sec = 1;
     fileStat_.st_mtim.tv_nsec = 1;
     statErrno_ = 0;
+    openErrno_ = 0;
     // Set lastCheck in past so throttle does not apply.
     lastCheck_ = std::chrono::steady_clock::now() - throttleDuration_ -
         std::chrono::seconds{1};
@@ -122,9 +136,9 @@ class FileChangeMonitor {
   AbsolutePath filePath_;
   struct stat fileStat_;
   int statErrno_{0};
+  int openErrno_{0};
   std::chrono::milliseconds throttleDuration_;
   std::chrono::steady_clock::time_point lastCheck_;
-  FileChangeProcessor fileChangeProcessor_;
 };
 } // namespace eden
 } // namespace facebook

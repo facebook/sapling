@@ -379,6 +379,28 @@ TEST_F(CachedParsedFileMonitorTest, modifyTest) {
   EXPECT_EQ(fcm->getUpdateCount(), 2);
 }
 
+TEST_F(CachedParsedFileMonitorTest, moveTest) {
+  auto path = AbsolutePath{(rootTestDir_->path() / "moveTest.txt").c_str()};
+
+  // Create file with valid data
+  folly::writeFileAtomic(path.c_str(), dataOne_);
+
+  auto fcm = std::make_shared<CachedParsedFileMonitor<TestFileParser>>(
+      AbsolutePath{path.c_str()}, 0s);
+
+  auto rslt = fcm->getFileContents();
+  EXPECT_EQ(rslt.value(), dataOne_);
+  EXPECT_EQ(fcm->getUpdateCount(), 1);
+
+  auto otherFcm = std::move(fcm);
+
+  folly::writeFileAtomic(path.c_str(), dataTwo_);
+
+  rslt = otherFcm->getFileContents();
+  EXPECT_EQ(rslt.value(), dataTwo_);
+  EXPECT_EQ(otherFcm->getUpdateCount(), 2);
+}
+
 TEST_F(CachedParsedFileMonitorTest, gitParserTest) {
   auto fcm = std::make_shared<CachedParsedFileMonitor<GitIgnoreFileParser>>(
       AbsolutePath{gitIgnorePathOne_.c_str()}, 10s);

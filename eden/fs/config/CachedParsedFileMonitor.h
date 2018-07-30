@@ -39,11 +39,7 @@ class CachedParsedFileMonitor {
   CachedParsedFileMonitor(
       AbsolutePathPiece filePath,
       std::chrono::milliseconds throttleDuration)
-      : fileChangeMonitor_{filePath,
-                           throttleDuration,
-                           [this](auto&& file, int error, auto path) {
-                             processUpdatedFile(std::move(file), error, path);
-                           }} {}
+      : fileChangeMonitor_{filePath, throttleDuration} {}
 
   /**
    * Get the parsed file contents.  If the file (or its path) has changed we
@@ -66,7 +62,10 @@ class CachedParsedFileMonitor {
    * failed)
    */
   folly::Expected<T, int> getFileContents() {
-    fileChangeMonitor_.invokeIfUpdated();
+    fileChangeMonitor_.invokeIfUpdated(
+        [this](folly::File&& f, int errorNum, AbsolutePathPiece filePath) {
+          processUpdatedFile(std::move(f), errorNum, filePath);
+        });
     if (lastErrno_) {
       return folly::makeUnexpected<int>((int)lastErrno_);
     }
