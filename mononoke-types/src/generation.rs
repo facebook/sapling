@@ -31,4 +31,13 @@ impl Generation {
     pub fn max_gen() -> Self {
         Generation(u64::MAX)
     }
+
+    /// The difference from this generation to the other as the difference in their
+    /// generation numbers.
+    /// If this Generation is smaller than the other, return None.
+    pub fn difference_from(&self, other: Generation) -> Option<u64> {
+        let Generation(self_gen) = self;
+        let Generation(other_gen) = other;
+        self_gen.checked_sub(other_gen)
+    }
 }
