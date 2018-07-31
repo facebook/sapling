@@ -297,6 +297,12 @@ def writenewbundle(
     return orig(ui, repo, source, filename, bundletype, outgoing, *args, **kwargs)
 
 
+def _pushbundle2(orig, pushop):
+    """upload LFS blobs added by outgoing revisions on 'hg push' using bundle2"""
+    uploadblobsfromrevs(pushop.repo, pushop.outgoing.missing)
+    return orig(pushop)
+
+
 def extractpointers(repo, revs):
     """return a list of lfs pointers added by given revs"""
     ui = repo.ui

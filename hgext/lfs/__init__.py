@@ -171,6 +171,9 @@ def extsetup(ui):
     # when writing a bundle via "hg bundle" command, upload related LFS blobs
     wrapfunction(bundle2, "writenewbundle", wrapper.writenewbundle)
 
+    # when "hg push" uses bundle2, upload related LFS blobs
+    wrapfunction(exchange, "_pushbundle2", wrapper._pushbundle2)
+
 
 @templatekeyword("lfs_files")
 def lfsfiles(repo, ctx, **args):

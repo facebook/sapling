@@ -84,7 +84,6 @@
      +THIS-IS-LFS-FILE
   
 
-
 # Clone a second client
 
   $ cp -R . ../client2
@@ -146,7 +145,6 @@
   o  0:0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
   
 
-
 # Push lfs content to server: conflict in x expected
 
   $ cd ../client
@@ -160,13 +158,7 @@
 
 # Push lfs content to server: succeed
 
-XXX: LFS files should be uploaded automatically during push (when bundle is
-being generated). Seem the wrapped bundle2.writenewbundle is not called?
-
-  $ hg debuglfsupload -r 'all()'
-
-
-This should work even if the HG server does not have access to LFS server
+# This should work even if the HG server does not have access to LFS server
 
   $ cat >> $TESTTMP/master/.hg/hgrc << EOF
   > [lfs]
@@ -174,7 +166,7 @@ This should work even if the HG server does not have access to LFS server
   > EOF
   $ mv $TESTTMP/master/.hg/store/lfs{,.bak}
 
-Push
+# Push
 
   $ hg push --to master ../master
   pushing to ../master
@@ -187,12 +179,12 @@ Push
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
 
-Restore LFS configuration in the master repo
+# Restore LFS configuration in the master repo
 
   $ mv $TESTTMP/master/.hg/store/lfs{.bak,}
   $ rm $TESTTMP/master/.hg/hgrc
 
-Check content
+# Check content
 
   $ cd ../master
   $ hg log -p -r tip -T '{rev}:{node} {desc}\n'
@@ -207,7 +199,6 @@ Check content
    BECOME-LFS-AGAIN
   +ADD-A-LINE
   
-
 
 # Verify the server has lfs content after the pushrebase
 
@@ -256,7 +247,6 @@ Check content
   new changesets * (glob)
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
-
   $ hg update tip
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
@@ -272,7 +262,6 @@ Check content
    BECOME-LFS-AGAIN
   +ADD-A-LINE
   
-
 
   $ hg log -T '{rev}:{node} {bookmarks} {desc}\n' -G
   @  7:*  shallow.lfs.commit (glob)
