@@ -355,7 +355,7 @@ fn make_entry(repo: &BlobRepo, diff_result: &BonsaiDiffResult) -> Option<HgBlobE
     use self::BonsaiDiffResult::*;
 
     match diff_result {
-        Changed(path, ft, entry_id) => {
+        Changed(path, ft, entry_id) | ChangedReusedId(path, ft, entry_id) => {
             let blobstore = repo.get_blobstore();
             let basename = path.basename().clone();
             let hash = entry_id.into_nodehash();

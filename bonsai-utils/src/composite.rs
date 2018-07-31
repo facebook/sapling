@@ -45,6 +45,23 @@ impl CompositeEntry {
         self.files.contains_key(&(*file_type, *hash))
     }
 
+    /// Whether this composite entry contains the same hash but a different type.
+    #[inline]
+    pub fn contains_file_other_type(&self, file_type: &FileType, hash: &HgEntryId) -> bool {
+        file_type
+            .complement()
+            .iter()
+            .any(|ft| self.contains_file(ft, hash))
+    }
+
+    /// Whether this composite entry contains a file with this hash but with any possible type.
+    #[inline]
+    pub fn contains_file_any_type(&self, hash: &HgEntryId) -> bool {
+        FileType::all()
+            .iter()
+            .any(|ft| self.contains_file(ft, hash))
+    }
+
     #[inline]
     pub fn num_trees(&self) -> usize {
         self.trees.len()

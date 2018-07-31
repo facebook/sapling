@@ -47,7 +47,7 @@ fn diff_basic() {
             deleted("dir2/bar"),
             changed("dir2/dir-to-file", FileType::Executable, DS_EID),
             // dir2/dir-to-file/foo is *not* a result, because its parent is marked changed
-            changed("dir2/only-file-type", FileType::Executable, ONES_EID),
+            changed_reused_id("dir2/only-file-type", FileType::Executable, ONES_EID),
             changed("dir2/quux", FileType::Symlink, FOURS_EID),
         ];
 
@@ -89,10 +89,13 @@ fn diff_merge1() {
             deleted("dir1/file-to-dir"),
             // dir1/file-to-dir/foobar is *not* a result because p1 doesn't have it and p2 has the
             // same contents.
-            changed("dir1/foo", FileType::Regular, THREES_EID),
+            //
+            // This ID was reused from parent2.
+            changed_reused_id("dir1/foo", FileType::Regular, THREES_EID),
             deleted("dir2/bar"),
-            changed("dir2/dir-to-file", FileType::Executable, DS_EID),
-            changed("dir2/only-file-type", FileType::Executable, ONES_EID),
+            // This ID was reused from parent2.
+            changed_reused_id("dir2/dir-to-file", FileType::Executable, DS_EID),
+            changed_reused_id("dir2/only-file-type", FileType::Executable, ONES_EID),
             // dir2/quux is not a result because it isn't present in p1 and is present in p2, so
             // the version from p2 is implicitly chosen.
         ];
@@ -120,7 +123,9 @@ fn compute_diff(
     paths.sort_unstable();
 
     check_pcf(paths.iter().map(|diff_result| match diff_result {
-        BonsaiDiffResult::Changed(path, ..) => (path, true),
+        BonsaiDiffResult::Changed(path, ..) | BonsaiDiffResult::ChangedReusedId(path, ..) => {
+            (path, true)
+        }
         BonsaiDiffResult::Deleted(path) => (path, false),
     })).expect("paths must be path-conflict-free");
 
@@ -131,6 +136,11 @@ fn compute_diff(
 fn changed(path: impl AsRef<[u8]>, ft: FileType, hash: HgEntryId) -> BonsaiDiffResult {
     let path = MPath::new(path).expect("valid path");
     BonsaiDiffResult::Changed(path, ft, hash)
+}
+
+fn changed_reused_id(path: impl AsRef<[u8]>, ft: FileType, hash: HgEntryId) -> BonsaiDiffResult {
+    let path = MPath::new(path).expect("valid path");
+    BonsaiDiffResult::ChangedReusedId(path, ft, hash)
 }
 
 fn deleted(path: impl AsRef<[u8]>) -> BonsaiDiffResult {

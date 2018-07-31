@@ -169,6 +169,20 @@ pub enum FileType {
 }
 
 impl FileType {
+    /// All possible file types.
+    pub fn all() -> [FileType; 3] {
+        [FileType::Regular, FileType::Executable, FileType::Symlink]
+    }
+
+    /// All the file types that `self` is not.
+    pub fn complement(&self) -> [FileType; 2] {
+        match self {
+            FileType::Regular => [FileType::Executable, FileType::Symlink],
+            FileType::Executable => [FileType::Regular, FileType::Symlink],
+            FileType::Symlink => [FileType::Regular, FileType::Executable],
+        }
+    }
+
     pub(crate) fn from_thrift(ft: thrift::FileType) -> Result<Self> {
         let file_type = match ft {
             thrift::FileType::Regular => FileType::Regular,

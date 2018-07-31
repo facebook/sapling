@@ -42,7 +42,18 @@ pub fn bonsai_diff(
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BonsaiDiffResult {
+    /// This file was changed (was added or modified) in this changeset.
     Changed(MPath, FileType, HgEntryId),
+    /// The file was marked changed, but one of the parent file node IDs was reused. This can
+    /// happen in these situations:
+    ///
+    /// 1. The file type was changed without a corresponding change in file contents.
+    /// 2. There's a merge and one of the parent nodes was picked as the resolution.
+    ///
+    /// This is separate from `Changed` because in these instances, if copy information is part
+    /// of the node it wouldn't be recorded.
+    ChangedReusedId(MPath, FileType, HgEntryId),
+    /// This file was deleted in this changeset.
     Deleted(MPath),
 }
 
@@ -51,7 +62,9 @@ impl BonsaiDiffResult {
     #[inline]
     pub fn path(&self) -> &MPath {
         match self {
-            BonsaiDiffResult::Changed(path, ..) | BonsaiDiffResult::Deleted(path) => path,
+            BonsaiDiffResult::Changed(path, ..)
+            | BonsaiDiffResult::ChangedReusedId(path, ..)
+            | BonsaiDiffResult::Deleted(path) => path,
         }
     }
 }
@@ -62,6 +75,11 @@ impl fmt::Display for BonsaiDiffResult {
             BonsaiDiffResult::Changed(path, ft, entry_id) => write!(
                 f,
                 "[changed] path: {}, hash: {}, type: {}",
+                path, entry_id, ft
+            ),
+            BonsaiDiffResult::ChangedReusedId(path, ft, entry_id) => write!(
+                f,
+                "[changed, reused id] path: {}, hash: {}, type: {}",
                 path, entry_id, ft
             ),
             BonsaiDiffResult::Deleted(path) => write!(f, "[deleted] path: {}", path),
@@ -80,17 +98,28 @@ impl PartialOrd for BonsaiDiffResult {
 impl Ord for BonsaiDiffResult {
     fn cmp(&self, other: &BonsaiDiffResult) -> Ordering {
         match self.path().cmp(other.path()) {
-            Ordering::Equal => {
-                use BonsaiDiffResult::*;
-                // treat changed as less than deleted
-                match (self, other) {
-                    (Changed(..), Deleted(_)) => Ordering::Less,
-                    (Deleted(_), Changed(..)) => Ordering::Greater,
-                    (Changed(_, ft, hash), Changed(_, oft, ohash)) => (ft, hash).cmp(&(oft, ohash)),
-                    (Deleted(_), Deleted(_)) => Ordering::Equal,
-                }
-            }
+            Ordering::Equal => DiffResultCmp::from(self).cmp(&DiffResultCmp::from(other)),
             other => other,
+        }
+    }
+}
+
+// (seems like this is the easiest way to do the Ord comparisons necessary)
+#[derive(Eq, Ord, PartialEq, PartialOrd)]
+enum DiffResultCmp<'a> {
+    Changed(&'a FileType, &'a HgEntryId),
+    ChangedReusedId(&'a FileType, &'a HgEntryId),
+    Deleted,
+}
+
+impl<'a> From<&'a BonsaiDiffResult> for DiffResultCmp<'a> {
+    fn from(result: &'a BonsaiDiffResult) -> Self {
+        match result {
+            BonsaiDiffResult::Changed(_, ft, entry_id) => DiffResultCmp::Changed(ft, entry_id),
+            BonsaiDiffResult::ChangedReusedId(_, ft, entry_id) => {
+                DiffResultCmp::ChangedReusedId(ft, entry_id)
+            }
+            BonsaiDiffResult::Deleted(_) => DiffResultCmp::Deleted,
         }
     }
 }
@@ -137,11 +166,13 @@ impl WorkingEntry {
     ) -> impl Stream<Item = BonsaiDiffResult, Error = Error> + Send {
         let file_result = self.bonsai_diff_file(&path, &composite_entry);
         let tree_stream = match &file_result {
-            Some(BonsaiDiffResult::Changed(..)) => {
+            Some(BonsaiDiffResult::Changed(..)) | Some(BonsaiDiffResult::ChangedReusedId(..)) => {
                 // A changed entry automatically means any entries underneath are deleted.
                 stream::empty().boxify()
             }
-            _other => self.bonsai_diff_tree(Some(path), composite_entry),
+            Some(BonsaiDiffResult::Deleted(..)) | None => {
+                self.bonsai_diff_tree(Some(path), composite_entry)
+            }
         };
         let file_stream = stream::iter_ok(file_result);
         // Fetching the composite and working manifests will be kicked off immediately in
@@ -158,22 +189,26 @@ impl WorkingEntry {
     ) -> Option<BonsaiDiffResult> {
         match self {
             WorkingEntry::File(ft, entry) => {
+                let hash = entry.get_hash();
                 // Any tree entries being present indicates a file-directory conflict which must be
                 // resolved.
                 // >= 2 entries means there's a file-file conflict which must be resolved.
                 // 0 entries means an added file.
                 // A different entry means a changed file.
-                if composite_entry.num_trees() == 0 && composite_entry.num_files() == 1
-                    && composite_entry.contains_file(ft, entry.get_hash())
-                {
-                    None
+                //
+                // See the doc comment for `BonsaiDiffResult::ChangedReusedId` for more about it.
+                if composite_entry.num_trees() == 0 && composite_entry.num_files() == 1 {
+                    if composite_entry.contains_file(ft, hash) {
+                        None
+                    } else if composite_entry.contains_file_other_type(ft, hash) {
+                        Some(BonsaiDiffResult::ChangedReusedId(path.clone(), *ft, *hash))
+                    } else {
+                        Some(BonsaiDiffResult::Changed(path.clone(), *ft, *hash))
+                    }
+                } else if composite_entry.contains_file_any_type(hash) {
+                    Some(BonsaiDiffResult::ChangedReusedId(path.clone(), *ft, *hash))
                 } else {
-                    // XXX compare contents
-                    Some(BonsaiDiffResult::Changed(
-                        path.clone(),
-                        *ft,
-                        *entry.get_hash(),
-                    ))
+                    Some(BonsaiDiffResult::Changed(path.clone(), *ft, *hash))
                 }
             }
             _other => {
