@@ -266,10 +266,14 @@ class treestatemap(object):
 
         def lookup(path):
             tree = self._tree
-            f = tree.getfiltered(path, filterfunc, id(filterfunc))
-            if f is not None and not (tree.get(f, None)[0] & treestate.EXIST_NEXT):
-                f = None
-            return f
+            # Treestate returns all matched files. Only return one to be
+            # compatible with the old API.
+            candidates = tree.getfiltered(path, filterfunc, id(filterfunc))
+            for candidate in candidates:
+                # Skip untracked or removed files.
+                if (self.get(candidate, None) or ("?",))[0] not in "r?":
+                    return candidate
+            return None
 
         return _overlaydict(lookup)
 
@@ -485,10 +489,12 @@ class treestatemap(object):
 
         def lookup(path):
             tree = self._tree
-            f = tree.getfiltered(path + "/", filterfunc, id(filterfunc))
-            if f is not None and not self.hastrackeddir(path):
-                f = None
-            return f.rstrip("/") if f is not None else f
+            candidates = tree.getfiltered(path + "/", filterfunc, id(filterfunc))
+            for candidate in candidates:
+                # The mapped directory should have at least one tracked file.
+                if self.hastrackeddir(candidate):
+                    return candidate.rstrip("/")
+            return None
 
         return _overlaydict(lookup)
 

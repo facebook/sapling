@@ -102,10 +102,13 @@ pub struct Node<T> {
 ///
 /// The map is associated with an integer, the identity of the filter function used. So the
 /// map could be invalidated correctly if filter function changes.
+///
+/// If a filtered key maps to multiple keys. The more "interesting" one is kept. An entry
+/// is more interesting if it is different from the original key.
 #[derive(Debug)]
 struct FilteredKeyCache {
     filter_id: u64,
-    map: VecMap<Key, Key>,
+    map: VecMap<Key, Vec<Key>>,
 }
 
 /// The root of the tree.  The count of files in the tree is maintained for fast size
@@ -676,8 +679,7 @@ where
     /// matches the name provided.  The name may contain a path, in which case the subdirectories
     /// of this node are also queried.
     ///
-    /// Returns a reversed vector of key references for each path element, or None if no file
-    /// matches the requested name after filtering.
+    /// Returns a list of reversed vector of key references for each path element.
     ///
     /// `filter_id` should be different for logically different `filter` functions. It is used for
     /// cache invalidation.
@@ -687,7 +689,7 @@ where
         name: KeyRef,
         filter: &mut F,
         filter_id: u64,
-    ) -> Result<Option<Vec<KeyRef<'a>>>>
+    ) -> Result<Vec<Vec<Key>>>
     where
         F: FnMut(KeyRef) -> Result<Key>,
     {
@@ -697,9 +699,19 @@ where
         {
             let new_map = {
                 let entries = self.load_entries(store)?;
-                let mut new_map = VecMap::with_capacity(entries.len());
+                let mut new_map: VecMap<Key, Vec<Key>> = VecMap::with_capacity(entries.len());
                 for (k, _v) in entries.iter() {
-                    new_map.insert(filter(k)?, k.to_vec().into_boxed_slice());
+                    let filtered = filter(k)?;
+                    let inserted = match new_map.get_mut(&filtered) {
+                        Some(keys) => {
+                            keys.push(k.to_vec().into_boxed_slice());
+                            true
+                        }
+                        None => false,
+                    };
+                    if !inserted {
+                        new_map.insert(filtered, vec![k.to_vec().into_boxed_slice()]);
+                    }
                 }
                 new_map
             };
@@ -709,26 +721,35 @@ where
             });
         }
         if let Some(path) = path {
-            if let Some(mapped_elem) = self.filtered_keys.as_ref().unwrap().map.get(elem) {
-                if let Some(&mut NodeEntry::Directory(ref mut node)) =
-                    self.entries.as_mut().unwrap().get_mut(mapped_elem)
-                {
-                    if let Some(mut mapped_path) =
-                        node.get_filtered_key(store, path, filter, filter_id)?
+            let mut result = Vec::new();
+            if let Some(mapped_elems) = self.filtered_keys.as_ref().unwrap().map.get(elem) {
+                let mut entries = self.entries.as_mut().unwrap();
+                let entries = &mut entries;
+                for mapped_elem in mapped_elems {
+                    if let Some(&mut NodeEntry::Directory(ref mut node)) =
+                        entries.get_mut(mapped_elem)
                     {
-                        mapped_path.push(mapped_elem);
-                        return Ok(Some(mapped_path));
+                        for mut mapped_path in
+                            node.get_filtered_key(store, path, filter, filter_id)?
+                        {
+                            mapped_path.push(mapped_elem.clone());
+                            result.push(mapped_path);
+                        }
                     }
                 }
             }
-            Ok(None)
+            Ok(result)
         } else {
             Ok(self.filtered_keys
                 .as_ref()
                 .unwrap()
                 .map
                 .get(elem)
-                .map(|e| vec![e.as_ref()]))
+                .cloned()
+                .unwrap_or_else(|| Vec::new())
+                .iter()
+                .map(|e| vec![e.to_vec().into_boxed_slice()])
+                .collect())
         }
     }
 
@@ -969,16 +990,18 @@ where
         name: KeyRef,
         filter: &mut F,
         filter_id: u64,
-    ) -> Result<Option<Key>>
+    ) -> Result<Vec<Key>>
     where
         F: FnMut(KeyRef) -> Result<Key>,
     {
         Ok(self.root
             .get_filtered_key(store, name, filter, filter_id)?
-            .map(|mut path| {
+            .iter_mut()
+            .map(|path| {
                 path.reverse();
                 path.concat().into_boxed_slice()
-            }))
+            })
+            .collect())
     }
 
     pub fn path_complete<FA, FV>(
@@ -1242,21 +1265,60 @@ mod tests {
         assert_eq!(
             t.get_filtered_key(&ms, b"dirA/subdirA/file1", &mut map_upper_a, 0)
                 .expect("should succeed"),
-            Some(b"dirA/subdira/file1".to_vec().into_boxed_slice())
+            vec![b"dirA/subdira/file1".to_vec().into_boxed_slice()]
         );
 
         // Look-up with non-normalized name should match nothing.
         assert_eq!(
             t.get_filtered_key(&ms, b"dirA/subdira/file1", &mut map_upper_a, 0)
                 .expect("should succeed"),
-            None
+            vec![]
         );
 
         // Change filter function should invalid existing cache.
-        assert!(
+        assert_eq!(
             t.get_filtered_key(&ms, b"dirA/subdirA/file1", &mut map_noop, 1)
-                .unwrap()
-                .is_none()
+                .unwrap(),
+            vec![]
+        );
+    }
+
+    #[test]
+    fn filtered_keys_surjective() {
+        let mut t = Tree::new();
+        let ms = MapStore::new();
+        t.add(&ms, b"a/a/A", &FileState::new(b'a', 0, 0, 0))
+            .unwrap();
+        t.add(&ms, b"A/a/A", &FileState::new(b'a', 0, 0, 0))
+            .unwrap();
+        t.add(&ms, b"A/A/a", &FileState::new(b'a', 0, 0, 0))
+            .unwrap();
+
+        fn map_upper_a(key: KeyRef) -> Result<Key> {
+            Ok(key.iter()
+                .map(|c| if *c == b'a' { b'A' } else { *c })
+                .collect::<Vec<u8>>()
+                .into_boxed_slice())
+        }
+
+        assert_eq!(
+            t.get_filtered_key(&ms, b"A/A/", &mut map_upper_a, 0)
+                .unwrap(),
+            vec![
+                b"A/A/".to_vec().into_boxed_slice(),
+                b"A/a/".to_vec().into_boxed_slice(),
+                b"a/a/".to_vec().into_boxed_slice(),
+            ]
+        );
+
+        assert_eq!(
+            t.get_filtered_key(&ms, b"A/A/A", &mut map_upper_a, 0)
+                .unwrap(),
+            vec![
+                b"A/A/a".to_vec().into_boxed_slice(),
+                b"A/a/A".to_vec().into_boxed_slice(),
+                b"a/a/A".to_vec().into_boxed_slice(),
+            ]
         );
     }
 }

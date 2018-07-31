@@ -131,7 +131,7 @@ impl TreeState {
         name: KeyRef,
         filter: &mut F,
         filter_id: u64,
-    ) -> Result<Option<Key>>
+    ) -> Result<Vec<Key>>
     where
         F: FnMut(KeyRef) -> Result<Key>,
     {

@@ -210,6 +210,7 @@ impl TreeDirstate {
     {
         self.tracked
             .get_filtered_key(self.store.store_view(), name, filter, filter_id)
+            .map(|keys| keys.first().cloned())
     }
 
     /// Visit all tracked files with a visitor.

@@ -612,7 +612,7 @@ py_class!(class treestate |py| {
 
     def getfiltered(
         &self, path: PyBytes, filter: PyObject, filterid: u64
-    ) -> PyResult<Option<PyBytes>> {
+    ) -> PyResult<Vec<PyBytes>> {
         let mut state = self.state(py).borrow_mut();
         let path = path.data(py);
 
@@ -630,7 +630,7 @@ py_class!(class treestate |py| {
             filterid,
         ))?;
 
-        Ok(result.map(|o| PyBytes::new(py, &o[..])))
+        Ok(result.iter().map(|o| PyBytes::new(py, &o[..])).collect())
     }
 
     def pathcomplete(

@@ -340,10 +340,10 @@ class casecollisionauditor(object):
         shouldwarn = False
         if ds._istreestate:
             dmap = ds._map
-            existing = dmap.getfiltered(fl, encoding.lower)
+            candidates = dmap.getfiltered(fl, encoding.lower)
             # Note: fl might be outside dirstate, but got "tested" here. In
             # that case, the next "if" would catch it.
-            shouldwarn = f not in ds and existing and existing != f
+            shouldwarn = any(f not in ds and candidate != f for candidate in candidates)
         if not shouldwarn:
             shouldwarn = fl in self._loweredfiles and f not in ds
             self._loweredfiles.add(fl)

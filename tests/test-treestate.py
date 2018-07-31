@@ -192,9 +192,9 @@ class testtreestate(unittest.TestCase):
         tree = treestate.treestate(treepath, 0)
         tree.insert("a/B/c", 1, 2, 3, 4, None)
         filtered = tree.getfiltered("A/B/C", lambda x: x.upper(), 1)
-        self.assertEqual(filtered, "a/B/c")
+        self.assertEqual(filtered, ["a/B/c"])
         filtered = tree.getfiltered("A/B/C", lambda x: x, 2)
-        self.assertIsNone(filtered)
+        self.assertEqual(filtered, [])
 
     def testpathcomplete(self):
         treepath = os.path.join(testtmp, "pathcomplete")
