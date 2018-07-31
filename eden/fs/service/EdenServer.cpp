@@ -164,16 +164,15 @@ class EdenServer::ThriftServerEventHandler
 EdenServer::EdenServer(
     UserInfo userInfo,
     std::unique_ptr<PrivHelper> privHelper,
-    std::unique_ptr<const EdenConfig> edenConfig)
-    : edenConfig_(std::move(edenConfig)),
-      serverState_{make_shared<ServerState>(
+    std::shared_ptr<const EdenConfig> edenConfig)
+    : serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(),
-          std::make_shared<UnixClock>())} {
-  auto cfgPtr = *edenConfig_.rlock();
-  edenDir_ = cfgPtr->getEdenDir();
-  configPath_ = cfgPtr->getUserConfigPath();
+          std::make_shared<UnixClock>(),
+          edenConfig)} {
+  edenDir_ = edenConfig->getEdenDir();
+  configPath_ = edenConfig->getUserConfigPath();
 }
 
 EdenServer::~EdenServer() {}

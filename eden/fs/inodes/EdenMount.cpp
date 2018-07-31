@@ -580,7 +580,7 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
       callback,
       listIgnored,
       getObjectStore(),
-      std::make_unique<TopLevelIgnores>(serverState_->getUserInfo()));
+      serverState_->getTopLevelIgnores());
 }
 
 Future<Unit> EdenMount::diff(const DiffContext* ctxPtr, Hash commitHash) const {

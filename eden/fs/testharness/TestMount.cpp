@@ -70,18 +70,24 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
       type == other.type;
 }
 
-TestMount::TestMount()
-    : privHelper_{make_shared<FakePrivHelper>()},
-      serverState_{make_shared<ServerState>(
-          UserInfo::lookup(),
-          privHelper_,
-          make_shared<UnboundedQueueThreadPool>(
-              FLAGS_num_eden_test_threads,
-              "EdenCPUThread"),
-          clock_)} {
+TestMount::TestMount() : privHelper_{make_shared<FakePrivHelper>()} {
   // Initialize the temporary directory.
   // This sets both testDir_, config_, localStore_, and backingStore_
   initTestDirectory();
+
+  serverState_ = {make_shared<ServerState>(
+      UserInfo::lookup(),
+      privHelper_,
+      make_shared<UnboundedQueueThreadPool>(
+          FLAGS_num_eden_test_threads, "EdenCPUThread"),
+      clock_,
+      make_shared<EdenConfig>(
+          /*userHomePath=*/AbsolutePath{testDir_->path().string()},
+          /*userConfigPath=*/
+          AbsolutePath{testDir_->path().string() + ".edenrc"},
+          /*systemConfigDir=*/AbsolutePath{testDir_->path().string()},
+          /*systemConfigPath=*/
+          AbsolutePath{testDir_->path().string() + "edenfs.rc"}))};
 }
 
 TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady)

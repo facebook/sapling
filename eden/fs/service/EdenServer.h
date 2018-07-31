@@ -75,7 +75,7 @@ class EdenServer : private TakeoverHandler {
   EdenServer(
       UserInfo userInfo,
       std::unique_ptr<PrivHelper> privHelper,
-      std::unique_ptr<const EdenConfig> edenConfig);
+      std::shared_ptr<const EdenConfig> edenConfig);
 
   virtual ~EdenServer();
 
@@ -205,10 +205,6 @@ class EdenServer : private TakeoverHandler {
 
   AbsolutePathPiece getEdenDir() {
     return edenDir_;
-  }
-
-  std::shared_ptr<const EdenConfig> getEdenConfig() {
-    return *edenConfig_.rlock();
   }
 
   const std::shared_ptr<ServerState>& getServerState() {
@@ -391,11 +387,6 @@ class EdenServer : private TakeoverHandler {
     folly::File takeoverThriftSocket;
   };
   folly::Synchronized<RunStateData> runningState_;
-
-  /**
-   * EdenConfig
-   */
-  folly::Synchronized<std::shared_ptr<const EdenConfig>> edenConfig_;
 
   /**
    * Common state shared by all of the EdenMount objects.

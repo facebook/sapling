@@ -10,18 +10,23 @@
 #pragma once
 
 #include <folly/ThreadLocal.h>
+#include <chrono>
 #include <memory>
 
+#include "eden/fs/config/CachedParsedFileMonitor.h"
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/model/git/GitIgnoreFileParser.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
 
 class Clock;
+class EdenConfig;
 class PrivHelper;
 class UnboundedQueueThreadPool;
+class TopLevelIgnores;
 
 /**
  * ServerState contains state shared across multiple mounts.
@@ -35,7 +40,8 @@ class ServerState {
       UserInfo userInfo,
       std::shared_ptr<PrivHelper> privHelper,
       std::shared_ptr<UnboundedQueueThreadPool> threadPool,
-      std::shared_ptr<Clock> clock);
+      std::shared_ptr<Clock> clock,
+      std::shared_ptr<const EdenConfig> edenConfig);
   ~ServerState();
 
   /**
@@ -63,6 +69,20 @@ class ServerState {
   ThreadLocalEdenStats& getStats() {
     return edenStats_;
   }
+
+  /**
+   * Get the EdenConfig; We check for changes in the config files, reload as
+   * necessary and return an updated EdenConfig. The update checks are
+   * throttleSeconds to kEdenConfigMinPollSeconds. If 'skipUpdate' is set, no
+   * update check is performed and the current EdenConfig is returned.
+   */
+  std::shared_ptr<const EdenConfig> getEdenConfig(bool skipUpdate = false);
+
+  /**
+   * Get the TopLevelIgnores. It is based on the system and user git ignore
+   * files.
+   */
+  std::unique_ptr<TopLevelIgnores> getTopLevelIgnores();
 
   /**
    * Get the UserInfo object describing the user running this edenfs process.
@@ -96,12 +116,32 @@ class ServerState {
   }
 
  private:
+  struct ConfigState {
+    explicit ConfigState(const std::shared_ptr<const EdenConfig>& config)
+        : config{config} {}
+    std::chrono::steady_clock::time_point lastCheck;
+    std::shared_ptr<const EdenConfig> config;
+  };
+
+  /**
+   * Check if any if system or user configuration files have changed. If so,
+   * parse and apply the changes to the EdenConfig. This method throttles
+   * update requests to once per kEdenConfigMinPollSeconds.
+   * @return the updated EdenConfig.
+   */
+  std::shared_ptr<const EdenConfig> getUpdatedEdenConfig();
+
   AbsolutePath socketPath_;
   UserInfo userInfo_;
   ThreadLocalEdenStats edenStats_;
   std::shared_ptr<PrivHelper> privHelper_;
   std::shared_ptr<UnboundedQueueThreadPool> threadPool_;
   std::shared_ptr<Clock> clock_;
+  folly::Synchronized<ConfigState> configState_;
+  folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>
+      userIgnoreFileMonitor_;
+  folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>
+      systemIgnoreFileMonitor_;
 };
 } // namespace eden
 } // namespace facebook
