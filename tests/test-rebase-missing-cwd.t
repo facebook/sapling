@@ -1,3 +1,5 @@
+#require rmcwd
+
 Ensure that dirsync does not cause an abort when cwd goes missing
 
   $ enable rebase dirsync
