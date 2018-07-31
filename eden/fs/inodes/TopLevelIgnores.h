@@ -15,8 +15,6 @@
 namespace facebook {
 namespace eden {
 
-class UserInfo;
-
 /**
  * Encapsulate the system and user ignore files loaded from configuration files.
  * They are created by ServerState and used to populate the DiffState.
@@ -39,12 +37,6 @@ class TopLevelIgnores {
       : systemIgnoreStack_{nullptr, systemIgnoreFileContents},
         userIgnoreStack_{&systemIgnoreStack_, userIgnoreFileContents} {}
 
-  /**
-   * Construct by parsing the user and system ignore files.
-   * TODO: Remove these once ServerState changes with TopLevelIgnores land
-   */
-  explicit TopLevelIgnores(const UserInfo& userInfo);
-
   TopLevelIgnores(const TopLevelIgnores&) = delete;
   TopLevelIgnores(TopLevelIgnores&&) = delete;
   TopLevelIgnores& operator=(const TopLevelIgnores&) = delete;
@@ -61,12 +53,6 @@ class TopLevelIgnores {
   }
 
  private:
-  // TODO: Remove these once ServerState changes with TopLevelIgnores land
-  std::string tryIngestFile(AbsolutePathPiece fileName);
-  AbsolutePath constructUserIgnoreFileName(const UserInfo& userInfo);
-
-  static constexpr folly::StringPiece kSystemWideIgnoreFileName =
-      "/etc/eden/ignore";
   GitIgnoreStack systemIgnoreStack_;
   GitIgnoreStack userIgnoreStack_;
 };
