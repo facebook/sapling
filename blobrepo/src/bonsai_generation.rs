@@ -121,6 +121,17 @@ fn find_file_changes(
                     })
                     .boxify()
             }
+            bonsai_utils::BonsaiDiffResult::ChangedReusedId(path, ty, entry_id) => {
+                let file_node_id = entry_id.into_nodehash();
+                cloned!(repo);
+                repo.get_file_content(&file_node_id).and_then(move |file_contents| {
+                    let size = file_contents.size();
+                    let content_id = file_contents.into_blob().id().clone();
+
+                    // Reused ID means copy info is *not* stored.
+                    Ok((path, Some(FileChange::new(content_id, ty, size as u64, None))))
+                }).boxify()
+            }
             bonsai_utils::BonsaiDiffResult::Deleted(path) => {
                 Ok((path, None)).into_future().boxify()
             }
