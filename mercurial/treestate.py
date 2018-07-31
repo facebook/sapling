@@ -325,7 +325,8 @@ class treestatemap(object):
         content = ""
         try:
             fp, _mode = txnutil.trypending(self._root, self._vfs, "dirstate")
-            content = fp.read()
+            with fp:
+                content = fp.read()
         except IOError as ex:
             if ex.errno != errno.ENOENT:
                 raise
