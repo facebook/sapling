@@ -996,9 +996,17 @@ def _changegroupinfo(repo, nodes, source):
             repo.ui.debug("%s\n" % hex(node))
 
 
-def makechangegroup(repo, outgoing, version, source, fastpath=False, bundlecaps=None):
+def makechangegroup(
+    repo, outgoing, version, source, fastpath=False, bundlecaps=None, b2caps=None
+):
     cgstream = makestream(
-        repo, outgoing, version, source, fastpath=fastpath, bundlecaps=bundlecaps
+        repo,
+        outgoing,
+        version,
+        source,
+        fastpath=fastpath,
+        bundlecaps=bundlecaps,
+        b2caps=b2caps,
     )
     return getunbundler(
         version, util.chunkbuffer(cgstream), None, {"clcount": len(outgoing.missing)}

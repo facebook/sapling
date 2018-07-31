@@ -1594,18 +1594,18 @@ def writenewbundle(
     elif not bundletype.startswith("HG20"):
         raise error.ProgrammingError("unknown bundle type: %s" % bundletype)
 
-    caps = {}
+    caps = getrepocaps(repo)
     if "obsolescence" in opts:
         caps["obsmarkers"] = ("V1",)
     bundle = bundle20(ui, caps)
     bundle.setcompression(compression, compopts)
-    _addpartsfromopts(ui, repo, bundle, source, outgoing, opts)
+    _addpartsfromopts(ui, repo, bundle, source, outgoing, opts, caps)
     chunkiter = bundle.getchunks()
 
     return changegroup.writechunks(ui, chunkiter, filename, vfs=vfs)
 
 
-def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
+def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts, caps):
     # We should eventually reconcile this logic with the one behind
     # 'exchange.getbundle2partsgenerator'.
     #
@@ -1617,7 +1617,7 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
     cgversion = opts.get("cg.version")
     if cgversion is None:
         cgversion = changegroup.safeversion(repo)
-    cg = changegroup.makechangegroup(repo, outgoing, cgversion, source)
+    cg = changegroup.makechangegroup(repo, outgoing, cgversion, source, b2caps=caps)
     part = bundler.newpart("changegroup", data=cg.getchunks())
     part.addparam("version", cg.version)
     if "clcount" in cg.extras:

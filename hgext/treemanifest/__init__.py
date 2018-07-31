@@ -2454,10 +2454,12 @@ def striptrees(orig, repo, tr, striprev, files):
         treerevlog.strip(striprev, tr)
 
 
-def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, opts):
-    orig(ui, repo, bundler, source, outgoing, opts)
+def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, *args, **kwargs):
+    orig(ui, repo, bundler, source, outgoing, *args, **kwargs)
 
-    if treeenabled(repo.ui):
+    # Only add trees to bundles for tree enabled clients. Servers use revlogs
+    # and therefore will use changegroup tree storage.
+    if treeenabled(repo.ui) and not repo.svfs.treemanifestserver:
         # Only add trees if we have them
         sendtrees = shallowbundle.cansendtrees(
             repo, outgoing.missing, b2caps=bundler.capabilities
