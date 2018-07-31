@@ -103,8 +103,7 @@ pub struct Node<T> {
 /// The map is associated with an integer, the identity of the filter function used. So the
 /// map could be invalidated correctly if filter function changes.
 ///
-/// If a filtered key maps to multiple keys. The more "interesting" one is kept. An entry
-/// is more interesting if it is different from the original key.
+/// If a filtered key maps to multiple keys. All of them are stored, sorted by alphabet order.
 #[derive(Debug)]
 struct FilteredKeyCache {
     filter_id: u64,
