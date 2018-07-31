@@ -290,15 +290,23 @@ fn main() -> Result<()> {
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");
+    let debug = matches.is_present("debug");
+    let stdlog = matches.is_present("stdlog");
+    let config_path = matches
+        .value_of("config-path")
+        .expect("must set config path");
+    let with_scuba = matches.is_present("with-scuba");
 
-    let root_logger = setup_logger(matches.is_present("debug"));
+    let address = format!("{}:{}", host, port);
+
+    let root_logger = setup_logger(debug);
     let actix_logger = root_logger.clone();
     let mononoke_logger = root_logger.clone();
 
     // These guards have to be placed in main or they would be destoried once the function ends
     let global_logger = root_logger.clone();
 
-    let (_scope_guard, _log_guard) = if matches.is_present("stdlog") {
+    let (_scope_guard, _log_guard) = if stdlog {
         (
             Some(slog_scope::set_global_logger(global_logger)),
             slog_stdlog::init().ok(),
@@ -307,16 +315,36 @@ fn main() -> Result<()> {
         (None, None)
     };
 
-    let sys = actix::System::new("mononoke-apiserver");
-
     let repo_configs = create_config(
         &root_logger,
-        matches
-            .value_of("config-path")
-            .expect("must set config-path"),
+        config_path,
         matches.value_of("config-bookmark"),
         matches.value_of("config-commit"),
     )?;
+
+    let ssl_acceptor = if let Some(cert) = matches.value_of("ssl-certificate") {
+        let cert = cert.to_string();
+        let private_key = matches
+            .value_of("ssl-private-key")
+            .expect("must specify ssl private key")
+            .to_string();
+        let ca_pem = matches
+            .value_of("ssl-ca")
+            .expect("must specify CA")
+            .to_string();
+
+        let ssl = secure_utils::SslConfig {
+            cert,
+            private_key,
+            ca_pem,
+        };
+        Some(secure_utils::build_tls_acceptor_builder(ssl)?)
+    } else {
+        None
+    };
+    let use_ssl = ssl_acceptor.is_some();
+
+    let sys = actix::System::new("mononoke-apiserver");
 
     let addr =
         MononokeActor::create(move |_| MononokeActor::new(mononoke_logger.clone(), repo_configs));
@@ -325,7 +353,6 @@ fn main() -> Result<()> {
         logger: actix_logger.clone(),
     };
 
-    let with_scuba = matches.is_present("with-scuba");
     let server = server::new(move || {
         App::with_state(state.clone())
             .middleware(middleware::SLogger::new(actix_logger.clone()))
@@ -370,27 +397,8 @@ fn main() -> Result<()> {
             })
     });
 
-    let address = format!("{}:{}", host, port);
-
-    let server = if let Some(cert) = matches.value_of("ssl-certificate") {
-        let cert = cert.to_string();
-        let private_key = matches
-            .value_of("ssl-private-key")
-            .expect("must specify ssl private key")
-            .to_string();
-        let ca_pem = matches
-            .value_of("ssl-ca")
-            .expect("must specify CA")
-            .to_string();
-
-        let ssl = secure_utils::SslConfig {
-            cert,
-            private_key,
-            ca_pem,
-        };
-        let ssl = secure_utils::build_tls_acceptor_builder(ssl)?;
-
-        server.bind_ssl(address, ssl)?
+    let server = if let Some(acceptor) = ssl_acceptor {
+        server.bind_ssl(address, acceptor)?
     } else {
         server.bind(address)?
     };
@@ -399,7 +407,7 @@ fn main() -> Result<()> {
 
     server.start();
 
-    if matches.is_present("ssl-private-key") {
+    if use_ssl {
         info!(root_logger, "Listening to https://{}", address);
     } else {
         info!(root_logger, "Listening to http://{}", address);
