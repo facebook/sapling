@@ -22,6 +22,7 @@ use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, Hg
 use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
                       NULL_HASH};
+use mononoke_types::BonsaiChangeset;
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
@@ -211,7 +212,9 @@ pub struct UploadChangesets {
 }
 
 impl UploadChangesets {
-    pub fn upload(self) -> BoxStream<BoxFuture<SharedItem<HgBlobChangeset>, Error>, Error> {
+    pub fn upload(
+        self,
+    ) -> BoxStream<BoxFuture<SharedItem<(BonsaiChangeset, HgBlobChangeset)>, Error>, Error> {
         let Self {
             blobrepo,
             revlogrepo,
@@ -300,10 +303,11 @@ impl UploadChangesets {
                         if is_import_from_beggining {
                             maybe_handle.expect(&format!("parent {} not found for {}", p, csid))
                         } else {
-                            maybe_handle.unwrap_or_else(|| {
-                                ChangesetHandle::from(
-                                    blobrepo.get_changeset_by_changesetid(&HgChangesetId::new(p)),
-                                )
+                            let hg_cs_id = HgChangesetId::new(p);
+
+                            maybe_handle.unwrap_or_else({
+                                cloned!(blobrepo);
+                                move || ChangesetHandle::ready_cs_handle(blobrepo, hg_cs_id)
                             })
                         }
                     });

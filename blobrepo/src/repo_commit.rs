@@ -26,13 +26,14 @@ use mercurial_types::{Changeset, Entry, HgChangesetId, HgEntryId, HgNodeHash, Hg
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 
 use BlobRepo;
 use HgBlobChangeset;
 use changeset::HgChangesetContent;
 use errors::*;
 use file::HgBlobEntry;
-use repo::{ChangesetMetadata, RepoBlobstore};
+use repo::{generate_fake_bonsai_changeset, ChangesetMetadata, RepoBlobstore};
 
 define_stats! {
     prefix = "mononoke.blobrepo_commit";
@@ -55,19 +56,19 @@ define_stats! {
 /// See `get_completed_changeset()` for the public API you can use to extract the final changeset
 #[derive(Clone)]
 pub struct ChangesetHandle {
-    can_be_parent: Shared<oneshot::Receiver<(HgNodeHash, HgManifestId)>>,
+    can_be_parent: Shared<oneshot::Receiver<(ChangesetId, HgNodeHash, HgManifestId)>>,
     // * Shared is required here because a single changeset can have more than one child, and
     //   all of those children will want to refer to the corresponding future for their parents.
     // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
     //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
     //   implements Error.
-    completion_future: Shared<BoxFuture<HgBlobChangeset, Compat<Error>>>,
+    completion_future: Shared<BoxFuture<(BonsaiChangeset, HgBlobChangeset), Compat<Error>>>,
 }
 
 impl ChangesetHandle {
     pub fn new_pending(
-        can_be_parent: Shared<oneshot::Receiver<(HgNodeHash, HgManifestId)>>,
-        completion_future: Shared<BoxFuture<HgBlobChangeset, Compat<Error>>>,
+        can_be_parent: Shared<oneshot::Receiver<(ChangesetId, HgNodeHash, HgManifestId)>>,
+        completion_future: Shared<BoxFuture<(BonsaiChangeset, HgBlobChangeset), Compat<Error>>>,
     ) -> Self {
         Self {
             can_be_parent,
@@ -75,41 +76,32 @@ impl ChangesetHandle {
         }
     }
 
-    pub fn get_completed_changeset(self) -> Shared<BoxFuture<HgBlobChangeset, Compat<Error>>> {
-        self.completion_future
-    }
-}
+    pub fn ready_cs_handle(repo: Arc<BlobRepo>, hg_cs: HgChangesetId) -> Self {
+        // TODO(stash): actually find real BonsaiMapping
+        let bonsai_cs = Ok(generate_fake_bonsai_changeset()).into_future();
+        let cs = repo.get_changeset_by_changesetid(&hg_cs);
 
-impl From<HgBlobChangeset> for ChangesetHandle {
-    fn from(bcs: HgBlobChangeset) -> Self {
         let (trigger, can_be_parent) = oneshot::channel();
-        // The send cannot fail at this point, barring an optimizer noticing that `can_be_parent`
-        // is unused and dropping early. Eat the error, as in this case, nothing is blocked waiting
-        // for the send
-        let _ = trigger.send((bcs.get_changeset_id().into_nodehash(), *bcs.manifestid()));
+        let fut = bonsai_cs.join(cs);
         Self {
             can_be_parent: can_be_parent.shared(),
-            completion_future: future::ok(bcs).boxify().shared(),
-        }
-    }
-}
-
-/// This implementation can be used to convert a result of
-/// BlobRepo::get_changeset_by_changesetid into ChangesetHandle
-impl From<BoxFuture<HgBlobChangeset, Error>> for ChangesetHandle {
-    fn from(bcs: BoxFuture<HgBlobChangeset, Error>) -> Self {
-        let (trigger, can_be_parent) = oneshot::channel();
-
-        Self {
-            can_be_parent: can_be_parent.shared(),
-            completion_future: bcs.map_err(Error::compat)
-                .inspect(move |bcs| {
-                    let _ =
-                        trigger.send((bcs.get_changeset_id().into_nodehash(), *bcs.manifestid()));
+            completion_future: fut.map_err(Error::compat)
+                .inspect(move |(bonsai_cs, hg_cs)| {
+                    let _ = trigger.send((
+                        bonsai_cs.get_changeset_id(),
+                        hg_cs.get_changeset_id().into_nodehash(),
+                        *hg_cs.manifestid(),
+                    ));
                 })
                 .boxify()
                 .shared(),
         }
+    }
+
+    pub fn get_completed_changeset(
+        self,
+    ) -> Shared<BoxFuture<(BonsaiChangeset, HgBlobChangeset), Compat<Error>>> {
+        self.completion_future
     }
 }
 
@@ -607,39 +599,44 @@ pub fn handle_parents(
     mut scuba_logger: ScubaSampleBuilder,
     p1: Option<ChangesetHandle>,
     p2: Option<ChangesetHandle>,
-) -> BoxFuture<(HgParents, Vec<HgManifestId>), Error> {
+) -> BoxFuture<(HgParents, Vec<HgManifestId>, Vec<ChangesetId>), Error> {
     let p1 = p1.map(|cs| cs.can_be_parent);
     let p2 = p2.map(|cs| cs.can_be_parent);
     p1.join(p2)
         .and_then(|(p1, p2)| {
+            let mut bonsai_parents = vec![];
             let p1 = match p1 {
                 Some(item) => {
-                    let (hash, manifest) = *item;
+                    let (bonsai_cs_id, hash, manifest) = *item;
+                    bonsai_parents.push(bonsai_cs_id);
                     (Some(hash), Some(manifest))
                 }
                 None => (None, None),
             };
             let p2 = match p2 {
                 Some(item) => {
-                    let (hash, manifest) = *item;
+                    let (bonsai_cs_id, hash, manifest) = *item;
+                    bonsai_parents.push(bonsai_cs_id);
                     (Some(hash), Some(manifest))
                 }
                 None => (None, None),
             };
-            future::ok((p1, p2))
+            Ok((p1, p2, bonsai_parents))
         })
         .map_err(|e| Error::from(e))
-        .map(move |((p1_hash, p1_manifest), (p2_hash, p2_manifest))| {
-            let parents = HgParents::new(p1_hash.as_ref(), p2_hash.as_ref());
-            let mut parent_manifest_hashes = vec![];
-            if let Some(p1_manifest) = p1_manifest {
-                parent_manifest_hashes.push(p1_manifest);
-            }
-            if let Some(p2_manifest) = p2_manifest {
-                parent_manifest_hashes.push(p2_manifest);
-            }
-            (parents, parent_manifest_hashes)
-        })
+        .map(
+            move |((p1_hash, p1_manifest), (p2_hash, p2_manifest), bonsai_parents)| {
+                let parents = HgParents::new(p1_hash.as_ref(), p2_hash.as_ref());
+                let mut parent_manifest_hashes = vec![];
+                if let Some(p1_manifest) = p1_manifest {
+                    parent_manifest_hashes.push(p1_manifest);
+                }
+                if let Some(p2_manifest) = p2_manifest {
+                    parent_manifest_hashes.push(p2_manifest);
+                }
+                (parents, parent_manifest_hashes, bonsai_parents)
+            },
+        )
         .timed(move |stats, result| {
             if result.is_ok() {
                 scuba_logger
@@ -653,7 +650,7 @@ pub fn handle_parents(
 
 pub fn fetch_parent_manifests(
     repo: BlobRepo,
-    parent_manifest_hashes: Vec<HgManifestId>,
+    parent_manifest_hashes: &Vec<HgManifestId>,
 ) -> BoxFuture<(Option<Box<Manifest + Sync>>, Option<Box<Manifest + Sync>>), Error> {
     let p1_manifest_hash = parent_manifest_hashes.get(0);
     let p2_manifest_hash = parent_manifest_hashes.get(1);

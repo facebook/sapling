@@ -43,8 +43,9 @@ use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFil
                       HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
                       Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest::Content;
-use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, ContentId, DateTime, FileChange,
-                     FileContents, FileType, Generation, MPath, MPathElement, MononokeId};
+use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId,
+                     ContentId, DateTime, FileChange, FileContents, FileType, Generation, MPath,
+                     MPathElement, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 
@@ -57,6 +58,7 @@ use repo_commit::*;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
+    get_bonsai_changeset: timeseries(RATE, SUM),
     get_file_content: timeseries(RATE, SUM),
     get_raw_hg_content: timeseries(RATE, SUM),
     get_parents: timeseries(RATE, SUM),
@@ -66,10 +68,12 @@ define_stats! {
     changeset_exists: timeseries(RATE, SUM),
     get_changeset_parents: timeseries(RATE, SUM),
     get_changeset_by_changesetid: timeseries(RATE, SUM),
+    get_hg_file_copy_from_blobstore: timeseries(RATE, SUM),
     get_manifest_by_nodeid: timeseries(RATE, SUM),
     get_root_entry: timeseries(RATE, SUM),
     get_bookmark: timeseries(RATE, SUM),
     get_bookmarks: timeseries(RATE, SUM),
+    get_bonsai_from_hg: timeseries(RATE, SUM),
     update_bookmark_transaction: timeseries(RATE, SUM),
     get_linknode: timeseries(RATE, SUM),
     get_all_filenodes: timeseries(RATE, SUM),
@@ -81,6 +85,21 @@ define_stats! {
     create_changeset_compute_cf: timeseries("create_changeset.compute_changed_files"; RATE, SUM),
     create_changeset_expected_cf: timeseries("create_changeset.expected_changed_files"; RATE, SUM),
     create_changeset_cf_count: timeseries("create_changeset.changed_files_count"; AVG, SUM),
+}
+
+// TODO(stash): remove this function as soon as migration to bonsai changeset has completed
+pub(crate) fn generate_fake_bonsai_changeset() -> BonsaiChangeset {
+    BonsaiChangesetMut {
+        parents: vec![],
+        author: String::new(),
+        author_date: DateTime::from_timestamp(0, 0).unwrap(),
+        committer: None,
+        committer_date: None,
+        message: String::new(),
+        extra: BTreeMap::new(),
+        file_changes: BTreeMap::new(),
+    }.freeze()
+        .unwrap()
 }
 
 /// Making PrefixBlobstore part of every blobstore does two things:
@@ -430,6 +449,19 @@ impl BlobRepo {
             .boxify()
     }
 
+    // Fetches copy data from blobstore instead of from filenodes db. This should be used only
+    // during committing.
+    pub(crate) fn get_hg_file_copy_from_blobstore(
+        &self,
+        key: &HgNodeHash,
+    ) -> BoxFuture<Option<(RepoPath, HgNodeHash)>, Error> {
+        STATS::get_hg_file_copy_from_blobstore.add_value(1);
+        fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
+            .map(|contentrename| contentrename.1)
+            .map(|rename| rename.map(|(path, hash)| (RepoPath::FilePath(path), hash)))
+            .boxify()
+    }
+
     pub fn get_changesets(&self) -> BoxStream<HgNodeHash, Error> {
         STATS::get_changesets.add_value(1);
         HgBlobChangesetStream {
@@ -536,6 +568,30 @@ impl BlobRepo {
     pub fn get_all_filenodes(&self, path: RepoPath) -> BoxFuture<Vec<FilenodeInfo>, Error> {
         STATS::get_all_filenodes.add_value(1);
         self.filenodes.get_all_filenodes(&path, &self.repoid)
+    }
+
+    pub fn get_bonsai_from_hg(
+        &self,
+        hg_cs_id: &HgChangesetId,
+    ) -> BoxFuture<Option<ChangesetId>, Error> {
+        STATS::get_bonsai_from_hg.add_value(1);
+        self.bonsai_hg_mapping
+            .get_bonsai_from_hg(self.repoid, *hg_cs_id)
+    }
+
+    pub fn get_bonsai_changeset(
+        &self,
+        bonsai_cs_id: ChangesetId,
+    ) -> BoxFuture<BonsaiChangeset, Error> {
+        STATS::get_bonsai_changeset.add_value(1);
+        self.blobstore
+            .get(bonsai_cs_id.blobstore_key())
+            .and_then(move |value| value.ok_or(ErrorKind::BonsaiNotFound(bonsai_cs_id).into()))
+            .and_then(|value| {
+                let blob: Blob<ChangesetId> = value.into();
+                BonsaiChangeset::from_blob(blob)
+            })
+            .boxify()
     }
 
     pub fn get_generation_number(
@@ -1161,7 +1217,10 @@ impl CreateChangeset {
                     let expected_files = self.expected_files;
                     let cs_metadata = self.cs_metadata;
 
-                    move |((root_manifest, root_hash), (parents, parent_manifest_hashes))| {
+                    move |(
+                        (root_manifest, root_hash),
+                        (parents, parent_manifest_hashes, _bonsai_parents),
+                    )| {
                         let files = if let Some(expected_files) = expected_files {
                             STATS::create_changeset_expected_cf.add_value(1);
                             // We are trusting the callee to provide a list of changed files, used
@@ -1169,7 +1228,7 @@ impl CreateChangeset {
                             future::ok(expected_files).boxify()
                         } else {
                             STATS::create_changeset_compute_cf.add_value(1);
-                            fetch_parent_manifests(repo, parent_manifest_hashes)
+                            fetch_parent_manifests(repo.clone(), &parent_manifest_hashes)
                                 .and_then(move |(p1_manifest, p2_manifest)| {
                                     compute_changed_files(
                                         &root_manifest,
@@ -1226,7 +1285,13 @@ impl CreateChangeset {
                                         // We deliberately eat this error - this is only so that
                                         // another changeset can start verifying data in the blob
                                         // store while we verify this one
-                                        let _ = signal_parent_ready.send((cs_id, manifest_id));
+
+                                        // TODO(stash): generate real bonsai changeset
+                                        let _ = signal_parent_ready.send((
+                                            generate_fake_bonsai_changeset().get_changeset_id(),
+                                            cs_id,
+                                            manifest_id,
+                                        ));
 
                                         blobcs
                                             .save(blobstore)
@@ -1290,7 +1355,7 @@ impl CreateChangeset {
                     };
                     complete_changesets
                         .add(completion_record)
-                        .map(|_| cs)
+                        .map(|_| (generate_fake_bonsai_changeset(), cs))
                         .context("While inserting into changeset table")
                 })
                 .with_context(move |_| {

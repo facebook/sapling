@@ -14,6 +14,7 @@ extern crate failure_ext as failure;
 extern crate futures;
 
 extern crate bincode;
+extern crate bonsai_utils;
 extern crate bytes;
 extern crate db;
 #[macro_use]
@@ -57,6 +58,7 @@ extern crate many_files_dirs;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
 
+mod bonsai_generation;
 mod changeset;
 mod errors;
 mod file;

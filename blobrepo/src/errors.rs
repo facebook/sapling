@@ -11,7 +11,7 @@ use bincode;
 
 use mercurial_types::{HgBlob, HgBlobHash, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents,
                       MPath, RepoPath, Type};
-use mononoke_types::ContentId;
+use mononoke_types::{ChangesetId, ContentId};
 
 use HgBlobChangeset;
 
@@ -94,4 +94,12 @@ pub enum ErrorKind {
     #[fail(display = "Remove called on non-directory")] NotADirectory,
     #[fail(display = "Empty file path")] EmptyFilePath,
     #[fail(display = "Memory manifest conflict can not contain single entry")] SingleEntryConflict,
+    #[fail(display = "Cannot find cache pool {}", _0)] MissingCachePool(String),
+    #[fail(display = "Bonsai cs not found")] BonsaiNotFound(ChangesetId),
+    #[fail(display = "Bonsai changeset not found for hg changeset {}", _0)]
+    BonsaiMappingNotFound(HgChangesetId),
+    #[fail(display = "Root path wasn't expected at this context")] UnexpectedRootPath,
+    #[fail(display = "Incorrect copy info: not found a commit the file {} {} was copied from",
+           _0, _1)]
+    IncorrectCopyInfo(MPath, HgNodeHash),
 }

@@ -53,7 +53,7 @@ pub mod sql_types;
 pub mod typed_hash;
 
 pub use blob::{Blob, BlobstoreBytes, BlobstoreValue, ChangesetBlob, ContentBlob};
-pub use bonsai_changeset::BonsaiChangeset;
+pub use bonsai_changeset::{BonsaiChangeset, BonsaiChangesetMut};
 pub use datetime::DateTime;
 pub use file_change::{FileChange, FileType};
 pub use file_contents::FileContents;

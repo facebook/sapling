@@ -150,7 +150,8 @@ fn create_one_changeset(repo: BlobRepo) {
         vec![file_future, manifest_dir_future],
     );
 
-    let cs = run_future(commit.get_completed_changeset()).unwrap();
+    let bonsai_hg = run_future(commit.get_completed_changeset()).unwrap();
+    let cs = &bonsai_hg.1;
     assert!(cs.manifestid() == &HgManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
@@ -212,6 +213,8 @@ fn create_two_changesets(repo: BlobRepo) {
             .join(commit2.get_completed_changeset()),
     ).unwrap();
 
+    let commit1 = &commit1.1;
+    let commit2 = &commit2.1;
     assert!(commit2.manifestid() == &HgManifestId::new(roothash));
     assert!(commit2.user() == utf_author.as_bytes());
     let files: Vec<_> = commit2.files().into();
@@ -299,7 +302,9 @@ fn create_double_linknode(repo: BlobRepo) {
         )
     };
     let child = run_future(child_commit.get_completed_changeset()).unwrap();
+    let child = &child.1;
     let parent = run_future(parent_commit.get_completed_changeset()).unwrap();
+    let parent = &parent.1;
 
     let linknode = run_future(repo.get_linknode(fake_file_path, &filehash)).unwrap();
     assert!(
@@ -355,6 +360,7 @@ fn check_linknode_creation(repo: BlobRepo) {
         create_changeset_no_parents(&repo, root_manifest_future.map(Some).boxify(), uploads);
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
+    let cs = &cs.1;
     assert!(cs.manifestid() == &HgManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));

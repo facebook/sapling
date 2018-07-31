@@ -64,7 +64,7 @@ impl Blobimport {
             .map({
                 let logger = logger.clone();
                 move |(cs_count, cs)| {
-                    debug!(logger, "{} inserted: {}", cs_count, cs.get_changeset_id());
+                    debug!(logger, "{} inserted: {}", cs_count, cs.1.get_changeset_id());
                     if cs_count % 5000 == 0 {
                         info!(logger, "inserted commits # {}", cs_count);
                     }

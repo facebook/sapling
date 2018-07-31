@@ -12,10 +12,13 @@ extern crate ascii;
 extern crate bytes;
 extern crate clap;
 #[macro_use]
+extern crate cloned;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
 extern crate futures_ext;
+extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
 extern crate sloggers;

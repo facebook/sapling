@@ -630,16 +630,18 @@ fn get_parent(
     repo: &BlobRepo,
     map: &UploadedChangesets,
     p: Option<HgNodeHash>,
-) -> BoxFuture<Option<ChangesetHandle>, Error> {
-    match p {
-        None => ok(None).boxify(),
+) -> impl Future<Item = Option<ChangesetHandle>, Error = Error> {
+    let res = match p {
+        None => None,
         Some(p) => match map.get(&p) {
-            None => repo.get_changeset_by_changesetid(&HgChangesetId::new(p))
-                .map(|cs| Some(cs.into()))
-                .boxify(),
-            Some(cs) => ok(Some(cs.clone())).boxify(),
+            None => Some(ChangesetHandle::ready_cs_handle(
+                Arc::new(repo.clone()),
+                HgChangesetId::new(p),
+            )),
+            Some(cs) => Some(cs.clone()),
         },
-    }
+    };
+    ok(res)
 }
 
 type HgBlobFuture = BoxFuture<(HgBlobEntry, RepoPath), Error>;
