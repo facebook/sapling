@@ -16,7 +16,9 @@ use blobrepo::BlobRepo;
 use mercurial_types::HgNodeHash;
 use mononoke_types::Generation;
 
-use helpers::{changeset_to_nodehashes_with_generation_numbers, get_parents_from_nodehash};
+use helpers::{changeset_to_nodehashes_with_generation_numbers, fetch_generation_and_join,
+              get_parents_from_nodehash};
+use index::ReachabilityIndex;
 
 const DEFAULT_EDGE_COUNT: u32 = 10;
 
@@ -168,6 +170,131 @@ fn lazy_index_node(
     }
 }
 
+/// Query for reachability between two node hashes, assuming knowledge of their generation numbers.
+/// Assumes that the nodes exist in the repo if their generation numbers have been successfully
+/// computed ahead of time.
+fn query_reachability_with_generation_hints(
+    repo: Arc<BlobRepo>,
+    skip_list_edges: Arc<SkiplistEdgeMapping>,
+    src_hash_gen: (HgNodeHash, Generation),
+    dst_hash_gen: (HgNodeHash, Generation),
+) -> BoxFuture<bool, Error> {
+    if src_hash_gen.0 == dst_hash_gen.0 {
+        ok(true).boxify()
+    } else if src_hash_gen.1 <= dst_hash_gen.1 {
+        ok(false).boxify()
+    } else if let Some(skip_node_guard) = skip_list_edges.mapping.get(&src_hash_gen.0) {
+        let skip_node = skip_node_guard.deref();
+        match skip_node {
+            SkiplistNodeType::SkipEdges(edges) => {
+                let best_edge = edges
+                    .iter()
+                    .take_while(|edge_pair| edge_pair.1 >= dst_hash_gen.1)
+                    .last()
+                    .cloned();
+                match best_edge {
+                    Some(edge_pair) => {
+                        // best skip list edge that doesnt go past the dst
+                        query_reachability_with_generation_hints(
+                            repo.clone(),
+                            skip_list_edges.clone(),
+                            edge_pair,
+                            dst_hash_gen,
+                        )
+                    }
+                    None => {
+                        // no good skip list edge
+                        // this shouldnt really happen because of the checks above
+                        // the "safe" choice is to simply recurse on the parents
+                        // TODO: Add some kind of logging here,
+                        // since if the logic reaches this point something is wrong
+                        cloned!(skip_list_edges);
+                        get_parents_from_nodehash(repo.clone(), src_hash_gen.0)
+                            .and_then({
+                                cloned!(repo);
+                                |parent_changesets| {
+                                    changeset_to_nodehashes_with_generation_numbers(
+                                        repo,
+                                        parent_changesets,
+                                    )
+                                }
+                            })
+                            .and_then(move |parent_edges| {
+                                join_all(parent_edges.clone().into_iter().map({
+                                    move |parent_gen_pair| {
+                                        query_reachability_with_generation_hints(
+                                            repo.clone(),
+                                            skip_list_edges.clone(),
+                                            parent_gen_pair,
+                                            dst_hash_gen,
+                                        )
+                                    }
+                                }))
+                            })
+                            .map(|parent_results| parent_results.into_iter().any(|x| x))
+                            .boxify()
+                    }
+                }
+            }
+            SkiplistNodeType::ParentEdges(edges) => {
+                join_all(edges.clone().into_iter().map({
+                    cloned!(skip_list_edges);
+                    move |parent_gen_pair| {
+                        query_reachability_with_generation_hints(
+                            repo.clone(),
+                            skip_list_edges.clone(),
+                            parent_gen_pair,
+                            dst_hash_gen,
+                        )
+                    }
+                })).map(|parent_results| parent_results.into_iter().any(|x| x))
+                    .boxify()
+            }
+        }
+    } else {
+        if let Some(distance) = (src_hash_gen.1).difference_from(dst_hash_gen.1) {
+            lazy_index_node(
+                repo.clone(),
+                skip_list_edges.clone(),
+                src_hash_gen.0,
+                distance + 1,
+            ).and_then({
+                cloned!(skip_list_edges);
+                move |_| {
+                    query_reachability_with_generation_hints(
+                        repo.clone(),
+                        skip_list_edges.clone(),
+                        src_hash_gen,
+                        dst_hash_gen,
+                    )
+                }
+            })
+                .boxify()
+        } else {
+            ok(false).boxify()
+        }
+    }
+}
+
+fn query_reachability(
+    repo: Arc<BlobRepo>,
+    skip_list_edges: Arc<SkiplistEdgeMapping>,
+    src_hash: HgNodeHash,
+    dst_hash: HgNodeHash,
+) -> BoxFuture<bool, Error> {
+    fetch_generation_and_join(repo.clone(), src_hash)
+        .join(fetch_generation_and_join(repo.clone(), dst_hash))
+        .and_then(|(src_hash_gen, dst_hash_gen)| {
+            query_reachability_with_generation_hints(
+                repo,
+                skip_list_edges,
+                src_hash_gen,
+                dst_hash_gen,
+            )
+        })
+        .boxify()
+}
+
 impl SkiplistIndex {
     pub fn new() -> Self {
         SkiplistIndex {
@@ -220,6 +347,17 @@ impl SkiplistIndex {
     }
 }
 
+impl ReachabilityIndex for SkiplistIndex {
+    fn query_reachability(
+        &mut self,
+        repo: Arc<BlobRepo>,
+        src: HgNodeHash,
+        dst: HgNodeHash,
+    ) -> BoxFuture<bool, Error> {
+        query_reachability(repo, self.skip_list_edges.clone(), src, dst)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use async_unit;
@@ -234,6 +372,10 @@ mod test {
     use linear;
     use merge_uneven;
     use tests::string_to_nodehash;
+    use tests::test_branch_wide_reachability;
+    use tests::test_linear_reachability;
+    use tests::test_merge_uneven_reachability;
+    use unshared_merge_even;
 
     #[test]
     fn simple_init() {
@@ -493,6 +635,272 @@ mod test {
                     .collect();
                 assert!(skip_edges.contains(&root_node));
             }
+        });
+    }
+
+    #[test]
+    fn linear_reachability() {
+        let sli_constructor = || SkiplistIndex::new();
+        test_linear_reachability(sli_constructor);
+    }
+
+    #[test]
+    fn merge_uneven_reachability() {
+        let sli_constructor = || SkiplistIndex::new();
+        test_merge_uneven_reachability(sli_constructor);
+    }
+
+    #[test]
+    fn branch_wide_reachability() {
+        let sli_constructor = || SkiplistIndex::new();
+        test_branch_wide_reachability(sli_constructor);
+    }
+
+    #[test]
+    fn test_query_reachability_hint_on_self_is_true() {
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(linear::getrepo(None));
+            let sli = SkiplistIndex::new();
+            let mut ordered_hashes_oldest_to_newest = vec![
+                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+            ];
+            ordered_hashes_oldest_to_newest.reverse();
+            // indexing doesn't even take place if the query can conclude true or false right away
+            for (i, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
+                assert!(
+                    query_reachability_with_generation_hints(
+                        repo.clone(),
+                        sli.skip_list_edges.clone(),
+                        (node, Generation::new(i as u64 + 1)),
+                        (node, Generation::new(i as u64 + 1))
+                    ).wait()
+                        .unwrap()
+                );
+            }
+        });
+    }
+
+    #[test]
+    fn test_query_reachability_to_higher_gen_is_false() {
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(linear::getrepo(None));
+            let sli = SkiplistIndex::new();
+            let mut ordered_hashes_oldest_to_newest = vec![
+                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+            ];
+            ordered_hashes_oldest_to_newest.reverse();
+
+            // indexing doesn't even take place if the query can conclude true or false right away
+            for i in 0..ordered_hashes_oldest_to_newest.len() {
+                let src_node = ordered_hashes_oldest_to_newest.get(i).unwrap();
+                for j in i + 1..ordered_hashes_oldest_to_newest.len() {
+                    let dst_node = ordered_hashes_oldest_to_newest.get(j).unwrap();
+                    assert!(!query_reachability_with_generation_hints(
+                        repo.clone(),
+                        sli.skip_list_edges.clone(),
+                        (*src_node, Generation::new(i as u64 + 1)),
+                        (*dst_node, Generation::new(j as u64 + 1))
+                    ).wait()
+                        .unwrap());
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn test_query_reachability_from_unindexed_node() {
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(linear::getrepo(None));
+            let sli = SkiplistIndex::new();
+
+            let src_node = string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
+            let dst_node = string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
+            // performing this query should index all the nodes inbetween
+            assert!(
+                query_reachability_with_generation_hints(
+                    repo.clone(),
+                    sli.skip_list_edges.clone(),
+                    (src_node, Generation::new(8)),
+                    (dst_node, Generation::new(1))
+                ).wait()
+                    .unwrap()
+            );
+            let ordered_hashes = vec![
+                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+            ];
+            assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
+            for node in ordered_hashes.into_iter() {
+                assert!(sli.is_node_indexed(node));
+            }
+        });
+    }
+
+    #[test]
+    fn test_query_reachability_on_partially_indexed_graph() {
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(linear::getrepo(None));
+            let sli = SkiplistIndex::new();
+
+            let src_node = string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
+            let dst_node = string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0");
+            // performing this query should index all the nodes inbetween
+            assert!(
+                query_reachability_with_generation_hints(
+                    repo.clone(),
+                    sli.skip_list_edges.clone(),
+                    (src_node, Generation::new(8)),
+                    (dst_node, Generation::new(4))
+                ).wait()
+                    .unwrap()
+            );
+            let indexed_hashes = vec![
+                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+            ];
+            let unindexed_hashes = vec![
+                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+            ];
+            assert_eq!(sli.indexed_node_count(), indexed_hashes.len());
+            for node in indexed_hashes.clone().into_iter() {
+                assert!(sli.is_node_indexed(node));
+            }
+            for node in unindexed_hashes.clone().into_iter() {
+                assert!(!sli.is_node_indexed(node));
+            }
+
+            // perform a query from the middle of the indexed hashes to the end of the graph
+            let src_node = string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372");
+            let dst_node = string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
+            // performing this query should index all the nodes inbetween
+            assert!(
+                query_reachability_with_generation_hints(
+                    repo.clone(),
+                    sli.skip_list_edges.clone(),
+                    (src_node, Generation::new(5)),
+                    (dst_node, Generation::new(1))
+                ).wait()
+                    .unwrap()
+            );
+            assert_eq!(
+                sli.indexed_node_count(),
+                unindexed_hashes.len() + indexed_hashes.len()
+            );
+            for node in unindexed_hashes.into_iter() {
+                assert!(sli.is_node_indexed(node));
+            }
+        });
+    }
+
+    #[test]
+    fn test_query_from_indexed_merge_node() {
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(unshared_merge_even::getrepo(None));
+            let sli = SkiplistIndex::new();
+            let branch_1 = vec![
+                string_to_nodehash("1700524113b1a3b1806560341009684b4378660b"),
+                string_to_nodehash("36ff88dd69c9966c9fad9d6d0457c52153039dde"),
+                string_to_nodehash("f61fdc0ddafd63503dcd8eed8994ec685bfc8941"),
+                string_to_nodehash("0b94a2881dda90f0d64db5fae3ee5695a38e7c8f"),
+                string_to_nodehash("2fa8b4ee6803a18db4649a3843a723ef1dfe852b"),
+                string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
+            ];
+            let branch_2 = vec![
+                string_to_nodehash("9d374b7e8180f933e3043ad1ffab0a9f95e2bac6"),
+                string_to_nodehash("3775a86c64cceeaf68ffe3f012fc90774c42002b"),
+                string_to_nodehash("eee492dcdeaae18f91822c4359dd516992e0dbcd"),
+                string_to_nodehash("163adc0d0f5d2eb0695ca123addcb92bab202096"),
+                string_to_nodehash("f01e186c165a2fbe931fd1bf4454235398c591c9"),
+                string_to_nodehash("33fb49d8a47b29290f5163e30b294339c89505a2"),
+            ];
+
+            let merge_node = string_to_nodehash("d592490c4386cdb3373dd93af04d563de199b2fb");
+            let commit_after_merge = string_to_nodehash("cc7f14bc631bca43eaa32c25b04a638d54d10b70");
+            // performing this query should index just the tip and the merge node
+            assert!(
+                query_reachability_with_generation_hints(
+                    repo.clone(),
+                    sli.skip_list_edges.clone(),
+                    (commit_after_merge, Generation::new(8)),
+                    (merge_node, Generation::new(7))
+                ).wait()
+                    .unwrap()
+            );
+
+            // indexing shouldn't have gone past the merge node because it was the destination
+            assert_eq!(sli.indexed_node_count(), 2);
+            for node in branch_1.clone().into_iter() {
+                assert!(!sli.is_node_indexed(node));
+            }
+            for node in branch_2.clone().into_iter() {
+                assert!(!sli.is_node_indexed(node));
+            }
+
+            // perform a query from the merge to the start of branch 1
+            let dst_node = string_to_nodehash("1700524113b1a3b1806560341009684b4378660b");
+            // performing this query should index all the nodes inbetween
+            assert!(
+                query_reachability_with_generation_hints(
+                    repo.clone(),
+                    sli.skip_list_edges.clone(),
+                    (merge_node, Generation::new(7)),
+                    (dst_node, Generation::new(1))
+                ).wait()
+                    .unwrap()
+            );
+            // because its a merge node, all the parents need to be indexed
+            assert_eq!(
+                sli.indexed_node_count(),
+                2 + branch_1.len() + branch_2.len()
+            );
+            for node in branch_1.iter() {
+                assert!(sli.is_node_indexed(*node));
+            }
+            for node in branch_2.iter() {
+                assert!(sli.is_node_indexed(*node));
+            }
+
+            // perform a query from the merge to the start of branch 2
+            let dst_node = string_to_nodehash("1700524113b1a3b1806560341009684b4378660b");
+            assert!(
+                query_reachability_with_generation_hints(
+                    repo.clone(),
+                    sli.skip_list_edges.clone(),
+                    (merge_node, Generation::new(7)),
+                    (dst_node, Generation::new(1))
+                ).wait()
+                    .unwrap()
+            );
+            // index count doesn't change
+            assert_eq!(
+                sli.indexed_node_count(),
+                2 + branch_1.len() + branch_2.len()
+            );
         });
     }
 }

@@ -39,4 +39,6 @@ pub extern crate linear;
 #[cfg(test)]
 pub extern crate merge_uneven;
 #[cfg(test)]
+pub extern crate unshared_merge_even;
+#[cfg(test)]
 mod tests;
