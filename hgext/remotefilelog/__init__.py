@@ -63,6 +63,8 @@ Configs:
     fetches when used in conjunction with treemanifest in treeonly mode.
     ``format.userustdatapack`` switches to using the rust data pack
     implementation.
+    ``treemanifest.blocksendflat`` causes an exception to be thrown if the
+    current repository attempts to add flat manifests to a changegroup.
 """
 from __future__ import absolute_import
 

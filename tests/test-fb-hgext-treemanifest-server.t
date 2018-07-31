@@ -355,3 +355,53 @@ Test fetching from the server populates the cache
   A subdir2/z
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | wc -l
   \s*8 (re)
+
+Try pulling while treemanifest.blocksendflat is True
+  $ cat >> ../master/.hg/hgrc <<EOF
+  > [treemanifest]
+  > blocksendflat=True
+  > EOF
+
+- Pull to a treeonly repo
+  $ hg config treemanifest.treeonly
+  True
+  $ hg strip -qr a30b520ebf7a
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  new changesets a30b520ebf7a
+  (run 'hg update' to get a working copy)
+  $ hg status --change a30b520ebf7a
+  A subdir2/z
+
+- Pull to a flat manifest only repo
+  $ cd ../client
+  $ hg config treemanifest.treeonly
+  [1]
+  $ hg strip -qr a30b520ebf7a
+  $ hg pull --config extension.treemanifest=! --config fastmanifest.usetree=False
+  pulling from ssh://user@dummy/master
+  searching for changes
+  remote: abort: must produce treeonly changegroups in a treeonly repository
+  adding changesets
+  remote: abort: unexpected error: must produce treeonly changegroups in a treeonly repository
+  transaction abort!
+  rollback completed
+  abort: pull failed on remote
+  [255]
+
+- Pull to a hybrid manifest repo
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  searching for changes
+  remote: abort: must produce treeonly changegroups in a treeonly repository
+  adding changesets
+  remote: abort: unexpected error: must produce treeonly changegroups in a treeonly repository
+  transaction abort!
+  rollback completed
+  abort: pull failed on remote
+  [255]

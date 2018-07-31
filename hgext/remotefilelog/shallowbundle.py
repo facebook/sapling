@@ -96,6 +96,11 @@ class shallowcg1packer(changegroup.cg1packer):
             if mfnode not in revlog.nodemap:
                 return False
 
+        if repo.ui.configbool("treemanifest", "blocksendflat"):
+            raise error.Abort(
+                "must produce treeonly changegroups in a treeonly repository"
+            )
+
         return True
 
     def generatemanifests(
