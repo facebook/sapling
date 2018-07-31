@@ -35,7 +35,7 @@ use std::marker::PhantomData;
 
 use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
 use mercurial_types::{manifest, Changeset, Entry, FileType, HgChangesetId, HgEntryId,
-                      HgManifestId, HgNodeHash, HgParents, MPath, MPathElement, RepoPath};
+                      HgManifestId, HgParents, MPath, MPathElement, RepoPath};
 use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents,
                      MononokeId};
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
@@ -530,17 +530,15 @@ fn make_file_change(
 fn test_get_manifest_from_bonsai() {
     async_unit::tokio_unit_test(|| {
         let repo = merge_uneven::getrepo(None);
-        let get_manifest_for_changeset =
-            |cs_nodehash: &str| -> HgNodeHash {
-                run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(
-                    string_to_nodehash(cs_nodehash),
-                ))).unwrap()
-                    .manifestid()
-                    .into_nodehash()
-            };
+        let get_manifest_for_changeset = |cs_nodehash: &str| -> HgManifestId {
+            *run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(
+                string_to_nodehash(cs_nodehash),
+            ))).unwrap()
+                .manifestid()
+        };
         let get_entries =
-            |ms_hash: &HgNodeHash| -> BoxFuture<HashMap<String, Box<Entry + Sync>>, Error> {
-                repo.get_manifest_by_nodeid(ms_hash)
+            |ms_hash: &HgManifestId| -> BoxFuture<HashMap<String, Box<Entry + Sync>>, Error> {
+                repo.get_manifest_by_nodeid(&ms_hash.into_nodehash())
                     .map(|ms| {
                         ms.list()
                             .map(|e| {
@@ -586,7 +584,7 @@ fn test_get_manifest_from_bonsai() {
 
         // resolves same content different parents for `branch` file
         {
-            let ms_hash = run_future(repo.get_manifest_from_bonsai(
+            let (ms_hash, _) = run_future(repo.get_manifest_from_bonsai(
                 make_bonsai_changeset(None, None, vec![("base", None)]),
                 Some(&ms1),
                 Some(&ms2),
@@ -632,8 +630,9 @@ fn test_get_manifest_from_bonsai() {
             let content_expected = &b"some awesome content"[..];
             let fc = run_future(make_file_change(content_expected, &repo)).unwrap();
             let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
-            let ms_hash = run_future(repo.get_manifest_from_bonsai(bcs, Some(&ms1), Some(&ms2)))
-                .expect("adding new file should not produce coflict");
+            let (ms_hash, _) =
+                run_future(repo.get_manifest_from_bonsai(bcs, Some(&ms1), Some(&ms2)))
+                    .expect("adding new file should not produce coflict");
             let entries = run_future(get_entries(&ms_hash)).unwrap();
             let new = entries.get("new").expect("new file should be in entries");
             match run_future(new.get_content()).unwrap() {

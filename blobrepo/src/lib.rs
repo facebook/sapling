@@ -66,6 +66,7 @@ mod manifest;
 mod memory_manifest;
 mod repo;
 mod repo_commit;
+mod utils;
 
 pub use errors::*;
 
@@ -81,4 +82,5 @@ pub use repo_commit::compute_changed_files;
 
 pub mod internal {
     pub use memory_manifest::{MemoryManifestEntry, MemoryRootManifest};
+    pub use utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 }

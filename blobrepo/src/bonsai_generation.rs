@@ -13,7 +13,7 @@ use futures::future::{join_all, Future};
 use futures_ext::FutureExt;
 
 use bonsai_utils;
-use mercurial_types::{Changeset, HgManifestId, HgNodeHash, MPath};
+use mercurial_types::{Changeset, HgFileNodeId, HgManifestId, HgNodeHash, MPath};
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange,
                      MononokeId};
 use repo::RepoBlobstore;
@@ -163,11 +163,14 @@ fn get_copy_info(
                         join_all(parents_bonsai_and_mfs.map({
                             cloned!(repopath);
                             move |(bonsai_parent, parent_mf)| {
-                                repo.find_file_in_manifest(&repopath, parent_mf.into_nodehash())
-                                    .map(move |maybenode| match maybenode {
-                                        Some(node) if node == copyfromnode => Some(bonsai_parent),
+                                repo.find_file_in_manifest(&repopath, parent_mf).map(
+                                    move |maybenode| match maybenode {
+                                        Some(node) if node == HgFileNodeId::new(copyfromnode) => {
+                                            Some(bonsai_parent)
+                                        }
                                         _ => None,
-                                    })
+                                    },
+                                )
                             }
                         })).map(move |res| (res, repopath))
                     })

@@ -18,8 +18,8 @@ use futures_ext::{BoxFuture, FutureExt};
 
 use slog::Logger;
 
-use mercurial_types::{Entry, HgManifestId, HgNodeHash, MPath, MPathElement, Manifest, RepoPath,
-                      Type};
+use mercurial_types::{Entry, HgFileNodeId, HgManifestId, HgNodeHash, MPath, MPathElement,
+                      Manifest, RepoPath, Type};
 use mercurial_types::manifest::Content;
 use mononoke_types::{FileContents, FileType};
 
@@ -28,6 +28,7 @@ use repo::{RepoBlobstore, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeH
            UploadHgTreeEntry};
 
 use super::BlobRepo;
+use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use errors::*;
 use manifest::BlobManifest;
 
@@ -172,6 +173,7 @@ impl MemoryManifestEntry {
         &self,
         blobstore: &RepoBlobstore,
         logger: &Logger,
+        incomplete_filenodes: &IncompleteFilenodes,
         path: RepoPath,
     ) -> BoxFuture<HgBlobEntry, Error> {
         match self {
@@ -192,32 +194,31 @@ impl MemoryManifestEntry {
                 if self.is_modified() {
                     self.get_new_children(blobstore)
                         .and_then({
-                            let logger = logger.clone();
-                            let blobstore = blobstore.clone();
-
+                            cloned!(logger, blobstore, incomplete_filenodes);
                             move |new_children| {
                                 // First save only the non-empty children
                                 let entries = stream::iter_ok(new_children.into_iter())
                                     .and_then({
-                                        let blobstore = blobstore.clone();
+                                        cloned!(blobstore);
                                         move |(path_elem, entry)| {
-                                            entry
-                                                .is_empty(&blobstore)
-                                                .join3(Ok(path_elem), Ok(entry))
+                                            (entry.is_empty(&blobstore), Ok(path_elem), Ok(entry))
                                         }
                                     })
                                     .filter(|(empty, ..)| !empty)
                                     .and_then({
-                                        let logger = logger.clone();
-                                        let blobstore = blobstore.clone();
-                                        let path = path.clone();
+                                        cloned!(logger, blobstore, path, incomplete_filenodes);
                                         move |(_, path_elem, entry)| {
                                             let path_elem = path_elem.clone();
                                             // This is safe, because we only save trees
                                             let entry_path =
                                                 extend_repopath_with_dir(&path, &path_elem);
                                             entry
-                                                .save(&blobstore, &logger, entry_path)
+                                                .save(
+                                                    &blobstore,
+                                                    &logger,
+                                                    &incomplete_filenodes,
+                                                    entry_path,
+                                                )
                                                 .map(move |entry| (path_elem, entry))
                                         }
                                     })
@@ -225,8 +226,7 @@ impl MemoryManifestEntry {
 
                                 // Then write out a manifest for this tree node
                                 entries.and_then({
-                                    let blobstore = blobstore.clone();
-                                    let logger = logger.clone();
+                                    cloned!(blobstore, logger, incomplete_filenodes);
                                     move |entries| {
                                         let mut manifest: Vec<u8> = Vec::new();
                                         entries.iter().for_each(|&(ref path, ref entry)| {
@@ -242,8 +242,8 @@ impl MemoryManifestEntry {
                                         let upload_manifest = UploadHgTreeEntry {
                                             upload_node_id: UploadHgNodeHash::Generate,
                                             contents: manifest.into(),
-                                            p1,
-                                            p2,
+                                            p1: p1.clone(),
+                                            p2: p2.clone(),
                                             path,
                                         };
                                         upload_manifest
@@ -251,7 +251,19 @@ impl MemoryManifestEntry {
                                             .map(|(_hash, future)| future)
                                             .into_future()
                                             .flatten()
-                                            .map(|(entry, _path)| entry)
+                                            .map(move |(entry, path)| {
+                                                incomplete_filenodes.add(IncompleteFilenodeInfo {
+                                                    path: path,
+                                                    filenode: HgFileNodeId::new(
+                                                        entry.get_hash().into_nodehash(),
+                                                    ),
+                                                    p1: p1.map(|h| HgFileNodeId::new(h)),
+                                                    p2: p2.map(|h| HgFileNodeId::new(h)),
+                                                    // this is treated as merge so no copyfrom is present
+                                                    copyfrom: None,
+                                                });
+                                                entry
+                                            })
                                     }
                                 })
                             }
@@ -375,6 +387,7 @@ impl MemoryManifestEntry {
         other_children: BTreeMap<MPathElement, MemoryManifestEntry>,
         blobstore: RepoBlobstore,
         logger: Logger,
+        incomplete_filenodes: IncompleteFilenodes,
         repo_path: RepoPath,
         p1: Option<HgNodeHash>,
         p2: Option<HgNodeHash>,
@@ -398,6 +411,7 @@ impl MemoryManifestEntry {
                                 other_entry,
                                 blobstore.clone(),
                                 logger.clone(),
+                                incomplete_filenodes.clone(),
                                 repo_path,
                             )
                             .map(move |entry| (path, entry)),
@@ -431,23 +445,45 @@ impl MemoryManifestEntry {
         other: Self,
         blobstore: RepoBlobstore,
         logger: Logger,
+        incomplete_filenodes: IncompleteFilenodes,
         repo_path: RepoPath,
     ) -> BoxFuture<Self, Error> {
         use self::MemoryManifestEntry::*;
         if self.is_modified() {
-            return self.save(&blobstore, &logger, repo_path.clone())
-                .map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
+            return self.save(
+                &blobstore,
+                &logger,
+                &incomplete_filenodes,
+                repo_path.clone(),
+            ).map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
                 .and_then(move |saved| {
-                    saved.merge_with_conflicts(other, blobstore, logger, repo_path)
+                    saved.merge_with_conflicts(
+                        other,
+                        blobstore,
+                        logger,
+                        incomplete_filenodes,
+                        repo_path,
+                    )
                 })
                 .boxify();
         }
         if other.is_modified() {
             return other
-                .save(&blobstore, &logger, repo_path.clone())
+                .save(
+                    &blobstore,
+                    &logger,
+                    &incomplete_filenodes,
+                    repo_path.clone(),
+                )
                 .map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
                 .and_then(move |saved| {
-                    self.merge_with_conflicts(saved, blobstore, logger, repo_path)
+                    self.merge_with_conflicts(
+                        saved,
+                        blobstore,
+                        logger,
+                        incomplete_filenodes,
+                        repo_path,
+                    )
                 })
                 .boxify();
         }
@@ -520,6 +556,7 @@ impl MemoryManifestEntry {
                                     other_children,
                                     blobstore,
                                     logger,
+                                    incomplete_filenodes,
                                     repo_path,
                                     p1,
                                     p2,
@@ -711,6 +748,7 @@ impl MemoryManifestEntry {
     pub fn resolve_trivial_conflicts(
         &self,
         repo: BlobRepo,
+        incomplete_filenodes: IncompleteFilenodes,
     ) -> impl Future<Item = (), Error = Error> + Send {
         fn merge_content(
             entries: Vec<HgBlobEntry>,
@@ -749,6 +787,7 @@ impl MemoryManifestEntry {
             path: Option<MPath>,
             entries: Vec<HgBlobEntry>,
             repo: BlobRepo,
+            incomplete_filenodes: IncompleteFilenodes,
         ) -> impl Future<Item = Option<MemoryManifestEntry>, Error = Error> + Send {
             let parents = entries
                 .iter()
@@ -758,18 +797,30 @@ impl MemoryManifestEntry {
                 let mut parents = parents.into_iter();
                 if let Some((file_type, file_content)) = content {
                     let path = try_boxfuture!(path.ok_or(ErrorKind::EmptyFilePath).into());
+                    let p1 = parents.next();
+                    let p2 = parents.next();
+                    assert!(parents.next().is_none(), "Only support two parents");
+
                     let upload_entry = UploadHgFileEntry {
                         upload_node_id: UploadHgNodeHash::Generate,
                         contents: UploadHgFileContents::RawBytes(file_content.into_bytes()),
                         file_type: file_type,
-                        p1: parents.next(),
-                        p2: parents.next(),
+                        p1: p1.clone(),
+                        p2: p2.clone(),
                         path: path,
                     };
-                    assert!(parents.next().is_none(), "Only support two parents");
                     let (_, upload_future) = try_boxfuture!(upload_entry.upload(&repo));
                     upload_future
-                        .map(|(entry, _)| Some(MemoryManifestEntry::Blob(entry)))
+                        .map(move |(entry, path)| {
+                            incomplete_filenodes.add(IncompleteFilenodeInfo {
+                                path: path,
+                                filenode: HgFileNodeId::new(entry.get_hash().into_nodehash()),
+                                p1: p1.map(|h| HgFileNodeId::new(h)),
+                                p2: p2.map(|h| HgFileNodeId::new(h)),
+                                copyfrom: None,
+                            });
+                            Some(MemoryManifestEntry::Blob(entry))
+                        })
                         .boxify()
                 } else {
                     future::ok(None).boxify()
@@ -781,6 +832,7 @@ impl MemoryManifestEntry {
             path: Option<MPath>,
             node: MemoryManifestEntry,
             repo: BlobRepo,
+            incomplete_filenodes: IncompleteFilenodes,
         ) -> BoxFuture<Option<MemoryManifestEntry>, Error> {
             match node {
                 MemoryManifestEntry::MemTree { ref changes, .. } => {
@@ -791,10 +843,11 @@ impl MemoryManifestEntry {
                             .flat_map(|(k, v)| v.clone().map(|v| (k, v)))
                             .map(|(name, child)| {
                                 let path = MPath::join_opt(path.as_ref(), name);
-                                resolve_rec(path, child, repo.clone()).map({
-                                    let name = name.clone();
-                                    move |v| v.map(|v| (name, v))
-                                })
+                                resolve_rec(path, child, repo.clone(), incomplete_filenodes.clone())
+                                    .map({
+                                        let name = name.clone();
+                                        move |v| v.map(|v| (name, v))
+                                    })
                             })
                             .collect::<Vec<_>>()
                     };
@@ -821,7 +874,7 @@ impl MemoryManifestEntry {
                         })
                         .collect::<Option<Vec<_>>>();
                     if let Some(entries) = entries {
-                        merge_entries(path, entries, repo).boxify()
+                        merge_entries(path, entries, repo, incomplete_filenodes).boxify()
                     } else {
                         future::ok(None).boxify()
                     }
@@ -829,7 +882,7 @@ impl MemoryManifestEntry {
                 _ => future::ok(None).boxify(),
             }
         }
-        resolve_rec(None, self.clone(), repo).map(|_| ())
+        resolve_rec(None, self.clone(), repo, incomplete_filenodes).map(|_| ())
     }
 }
 
@@ -837,15 +890,25 @@ impl MemoryManifestEntry {
 pub struct MemoryRootManifest {
     repo: BlobRepo,
     root_entry: MemoryManifestEntry,
+    incomplete_filenodes: IncompleteFilenodes,
 }
 
 impl MemoryRootManifest {
-    fn create(repo: BlobRepo, root_entry: MemoryManifestEntry) -> Self {
-        Self { repo, root_entry }
+    fn create(
+        repo: BlobRepo,
+        incomplete_filenodes: IncompleteFilenodes,
+        root_entry: MemoryManifestEntry,
+    ) -> Self {
+        Self {
+            repo,
+            root_entry,
+            incomplete_filenodes,
+        }
     }
 
     fn create_conflict(
         repo: BlobRepo,
+        incomplete_filenodes: IncompleteFilenodes,
         p1_root: MemoryManifestEntry,
         p2_root: MemoryManifestEntry,
     ) -> BoxFuture<Self, Error> {
@@ -854,31 +917,42 @@ impl MemoryRootManifest {
                 p2_root,
                 repo.get_blobstore(),
                 repo.get_logger(),
+                incomplete_filenodes.clone(),
                 RepoPath::root(),
             )
-            .map(move |root| Self::create(repo, root))
+            .map(move |root| Self::create(repo, incomplete_filenodes, root))
             .boxify()
     }
 
     /// Create an in-memory manifest, backed by the given blobstore, and based on mp1 and mp2
     pub fn new(
         repo: BlobRepo,
+        incomplete_filenodes: IncompleteFilenodes,
         mp1: Option<&HgNodeHash>,
         mp2: Option<&HgNodeHash>,
     ) -> BoxFuture<Self, Error> {
         match (mp1, mp2) {
-            (None, None) => {
-                future::ok(Self::create(repo, MemoryManifestEntry::empty_tree())).boxify()
-            }
-            (Some(p), None) | (None, Some(p)) => {
-                future::ok(Self::create(repo, MemoryManifestEntry::convert_treenode(p))).boxify()
-            }
+            (None, None) => future::ok(Self::create(
+                repo,
+                incomplete_filenodes,
+                MemoryManifestEntry::empty_tree(),
+            )).boxify(),
+            (Some(p), None) | (None, Some(p)) => future::ok(Self::create(
+                repo,
+                incomplete_filenodes,
+                MemoryManifestEntry::convert_treenode(p),
+            )).boxify(),
             (Some(p1), Some(p2)) => Self::create_conflict(
                 repo,
+                incomplete_filenodes,
                 MemoryManifestEntry::convert_treenode(p1),
                 MemoryManifestEntry::convert_treenode(p2),
             ),
         }
+    }
+
+    pub fn get_incomplete_filenodes(&self) -> IncompleteFilenodes {
+        self.incomplete_filenodes.clone()
     }
 
     /// Save this manifest to the blobstore, recursing down to ensure that
@@ -892,6 +966,7 @@ impl MemoryRootManifest {
             .save(
                 &self.repo.get_blobstore(),
                 &self.repo.get_logger(),
+                &self.incomplete_filenodes,
                 RepoPath::root(),
             )
             .boxify()
@@ -930,7 +1005,8 @@ impl MemoryRootManifest {
     }
 
     pub fn resolve_trivial_conflicts(&self) -> impl Future<Item = (), Error = Error> + Send {
-        self.root_entry.resolve_trivial_conflicts(self.repo.clone())
+        self.root_entry
+            .resolve_trivial_conflicts(self.repo.clone(), self.incomplete_filenodes.clone())
     }
 
     pub fn unittest_root(&self) -> &MemoryManifestEntry {

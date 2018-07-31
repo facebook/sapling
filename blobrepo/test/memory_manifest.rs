@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use utils::run_future;
 
 use blobrepo::HgBlobEntry;
-use blobrepo::internal::{MemoryManifestEntry, MemoryRootManifest};
+use blobrepo::internal::{IncompleteFilenodes, MemoryManifestEntry, MemoryRootManifest};
 use many_files_dirs;
 use mercurial_types::{Entry, FileType, HgNodeHash, MPath, MPathElement, Type, nodehash::HgEntryId};
 use mercurial_types_mocks::nodehash;
@@ -33,7 +33,7 @@ fn empty_manifest() {
         let repo = many_files_dirs::getrepo(None);
 
         // Create an empty memory manifest
-        let memory_manifest = MemoryRootManifest::new(repo, None, None)
+        let memory_manifest = MemoryRootManifest::new(repo, IncompleteFilenodes::new(), None, None)
             .wait()
             .expect("Could not create empty manifest");
 
@@ -64,9 +64,10 @@ fn load_manifest() {
             .expect("Could not get nodehash");
 
         // Load a memory manifest
-        let memory_manifest = MemoryRootManifest::new(repo, Some(&manifest_id), None)
-            .wait()
-            .expect("Could not load manifest");
+        let memory_manifest =
+            MemoryRootManifest::new(repo, IncompleteFilenodes::new(), Some(&manifest_id), None)
+                .wait()
+                .expect("Could not load manifest");
 
         if let MemoryManifestEntry::MemTree {
             base_manifest_id,
@@ -105,9 +106,10 @@ fn save_manifest() {
         let repo = many_files_dirs::getrepo(None);
 
         // Create an empty memory manifest
-        let memory_manifest = MemoryRootManifest::new(repo.clone(), None, None)
-            .wait()
-            .expect("Could not create empty manifest");
+        let memory_manifest =
+            MemoryRootManifest::new(repo.clone(), IncompleteFilenodes::new(), None, None)
+                .wait()
+                .expect("Could not create empty manifest");
 
         // Add an unmodified entry
         let dir_nodehash = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
@@ -154,8 +156,12 @@ fn remove_item() {
         let dir2 = MPathElement::new(b"dir2".to_vec()).expect("Can't create MPathElement dir2");
 
         // Load a memory manifest
-        let memory_manifest = MemoryRootManifest::new(repo.clone(), Some(&manifest_id), None)
-            .wait()
+        let memory_manifest = MemoryRootManifest::new(
+            repo.clone(),
+            IncompleteFilenodes::new(),
+            Some(&manifest_id),
+            None,
+        ).wait()
             .expect("Could not load manifest");
 
         if !memory_manifest.unittest_root().is_dir() {
@@ -227,8 +233,12 @@ fn add_item() {
             MPathElement::new(b"new_file".to_vec()).expect("Can't create MPathElement new_file");
 
         // Load a memory manifest
-        let memory_manifest = MemoryRootManifest::new(repo.clone(), Some(&manifest_id), None)
-            .wait()
+        let memory_manifest = MemoryRootManifest::new(
+            repo.clone(),
+            IncompleteFilenodes::new(),
+            Some(&manifest_id),
+            None,
+        ).wait()
             .expect("Could not load manifest");
 
         // Add a file
@@ -278,8 +288,12 @@ fn replace_item() {
         let new_file = MPathElement::new(b"1".to_vec()).expect("Can't create MPathElement 1");
 
         // Load a memory manifest
-        let memory_manifest = MemoryRootManifest::new(repo.clone(), Some(&manifest_id), None)
-            .wait()
+        let memory_manifest = MemoryRootManifest::new(
+            repo.clone(),
+            IncompleteFilenodes::new(),
+            Some(&manifest_id),
+            None,
+        ).wait()
             .expect("Could not load manifest");
 
         // Add a file
@@ -378,9 +392,13 @@ fn conflict_resolution() {
             }
         };
 
-        let merge =
-            run_future(base.merge_with_conflicts(other, blobstore, logger, RepoPath::root()))
-                .unwrap();
+        let merge = run_future(base.merge_with_conflicts(
+            other,
+            blobstore,
+            logger,
+            IncompleteFilenodes::new(),
+            RepoPath::root(),
+        )).unwrap();
         match &merge {
             MemoryManifestEntry::MemTree { changes, .. } => {
                 let changes = changes.lock().expect("lock poisoned");
@@ -497,8 +515,13 @@ fn merge_manifests() {
             }
         };
 
-        let merged = base.merge_with_conflicts(other, blobstore, logger, RepoPath::root())
-            .wait()
+        let merged = base.merge_with_conflicts(
+            other,
+            blobstore,
+            logger,
+            IncompleteFilenodes::new(),
+            RepoPath::root(),
+        ).wait()
             .unwrap();
 
         if let MemoryManifestEntry::MemTree { changes, .. } = merged {

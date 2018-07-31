@@ -40,10 +40,9 @@ pub fn get_content_by_path(
 ) -> impl Future<Item = Content, Error = Error> {
     repo.get_changeset_by_changesetid(&changesetid)
         .from_err()
-        .map(|changeset| changeset.manifestid().clone().into_nodehash())
         .and_then({
             let path = path.clone();
-            move |manifest| repo.find_path_in_manifest(path, manifest)
+            move |changeset| repo.find_path_in_manifest(path, *changeset.manifestid())
         })
         .and_then(|content| {
             content.ok_or_else(move || {

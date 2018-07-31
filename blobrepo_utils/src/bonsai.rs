@@ -17,7 +17,7 @@ use slog::Logger;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
 use blobrepo::{BlobManifest, BlobRepo, HgBlobChangeset, HgBlobEntry};
-use blobrepo::internal::MemoryRootManifest;
+use blobrepo::internal::{IncompleteFilenodes, MemoryRootManifest};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use mercurial_types::{Changeset, Entry, HgChangesetId, HgManifestId, HgNodeHash, Type};
 use mercurial_types::manifest_utils::{changed_entry_stream, ChangedEntry};
@@ -322,7 +322,12 @@ pub fn apply_diff(
     manifest_p1: Option<&HgNodeHash>,
     manifest_p2: Option<&HgNodeHash>,
 ) -> impl Future<Item = HgNodeHash, Error = Error> + Send {
-    MemoryRootManifest::new(repo.clone(), manifest_p1, manifest_p2).and_then({
+    MemoryRootManifest::new(
+        repo.clone(),
+        IncompleteFilenodes::new(),
+        manifest_p1,
+        manifest_p2,
+    ).and_then({
         move |memory_manifest| {
             let memory_manifest = Arc::new(memory_manifest);
             let futures: Vec<_> = diff_result
