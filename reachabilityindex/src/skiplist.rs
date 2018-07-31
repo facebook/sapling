@@ -33,12 +33,21 @@ enum SkiplistNodeType {
 
 struct SkiplistEdgeMapping {
     pub mapping: CHashMap<HgNodeHash, SkiplistNodeType>,
+    pub skip_edges_per_node: u32,
 }
 
 impl SkiplistEdgeMapping {
     pub fn new() -> Self {
         SkiplistEdgeMapping {
             mapping: CHashMap::new(),
+            skip_edges_per_node: DEFAULT_EDGE_COUNT,
+        }
+    }
+
+    pub fn with_skip_edge_count(self, skip_edges_per_node: u32) -> Self {
+        SkiplistEdgeMapping {
+            skip_edges_per_node,
+            ..self
         }
     }
 }
@@ -56,10 +65,10 @@ fn nth_node_or_last<T: Clone>(v: &Vec<T>, i: usize) -> Option<T> {
 fn compute_skip_edges(
     start_node: (HgNodeHash, Generation),
     skip_edge_mapping: Arc<SkiplistEdgeMapping>,
-    max_skip_edge_count: usize,
 ) -> Vec<(HgNodeHash, Generation)> {
     let mut curr = start_node;
 
+    let max_skip_edge_count = skip_edge_mapping.skip_edges_per_node as usize;
     let mut skip_edges = vec![curr];
     let mut i: usize = 0;
 
@@ -83,8 +92,6 @@ fn compute_skip_edges(
 }
 /// Structure for indexing skip list edges for reachability queries.
 pub struct SkiplistIndex {
-    repo: Arc<BlobRepo>,
-
     // Each hash that the structure knows about is mapped to a  collection
     // of (Gen, Hash) pairs, wrapped in an enum. The semantics behind this are:
     // - If the hash isn't in the hash map, the node hasn't been indexed yet.
@@ -94,7 +101,6 @@ pub struct SkiplistIndex {
     //   from this node (which is always the case for a merge node), so we must
     //   recurse on all the children.
     skip_list_edges: Arc<SkiplistEdgeMapping>,
-    skip_edges_per_node: u32,
 }
 
 /// From a starting node, index all nodes that are reachable within a given distance.
@@ -103,8 +109,7 @@ fn lazy_index_node(
     repo: Arc<BlobRepo>,
     skip_edge_mapping: Arc<SkiplistEdgeMapping>,
     node: HgNodeHash,
-    max_depth: u32,
-    skip_edges_per_node: u32,
+    max_depth: u64,
 ) -> BoxFuture<(), Error> {
     // if this node is indexed or we've passed the max depth, return
     if max_depth == 0 || skip_edge_mapping.mapping.contains_key(&node) {
@@ -121,7 +126,6 @@ fn lazy_index_node(
                             skip_edge_mapping.clone(),
                             *parent.as_nodehash(),
                             max_depth - 1,
-                            skip_edges_per_node,
                         )
                     }})
                 )
@@ -152,7 +156,6 @@ fn lazy_index_node(
                             ok(compute_skip_edges(
                                 unique_parent_gen_pair,
                                 skip_edge_mapping.clone(),
-                                skip_edges_per_node as usize,
                                 ))
                             .map(move |new_edges| skip_edge_mapping.clone()
                                 .mapping
@@ -166,33 +169,31 @@ fn lazy_index_node(
 }
 
 impl SkiplistIndex {
-    pub fn new(repo: Arc<BlobRepo>) -> Self {
+    pub fn new() -> Self {
         SkiplistIndex {
-            repo,
             skip_list_edges: Arc::new(SkiplistEdgeMapping::new()),
-            skip_edges_per_node: DEFAULT_EDGE_COUNT,
         }
     }
 
     pub fn with_skip_edge_count(self, skip_edges_per_node: u32) -> Self {
         SkiplistIndex {
-            skip_edges_per_node,
-            ..self
+            skip_list_edges: Arc::new(
+                SkiplistEdgeMapping::new().with_skip_edge_count(skip_edges_per_node),
+            ),
         }
     }
 
     pub fn skip_edge_count(&self) -> u32 {
-        self.skip_edges_per_node
+        self.skip_list_edges.skip_edges_per_node
     }
 
-    pub fn add_node(&self, node: HgNodeHash, max_index_depth: u32) -> BoxFuture<(), Error> {
-        lazy_index_node(
-            self.repo.clone(),
-            self.skip_list_edges.clone(),
-            node,
-            max_index_depth,
-            self.skip_edges_per_node,
-        )
+    pub fn add_node(
+        &self,
+        repo: Arc<BlobRepo>,
+        node: HgNodeHash,
+        max_index_depth: u64,
+    ) -> BoxFuture<(), Error> {
+        lazy_index_node(repo, self.skip_list_edges.clone(), node, max_index_depth)
     }
 
     /// get skiplist edges originating from a particular node hash
@@ -237,11 +238,10 @@ mod test {
     #[test]
     fn simple_init() {
         async_unit::tokio_unit_test(|| {
-            let repo = Arc::new(linear::getrepo(None));
-            let sli = SkiplistIndex::new(repo.clone());
+            let sli = SkiplistIndex::new();
             assert_eq!(sli.skip_edge_count(), DEFAULT_EDGE_COUNT);
 
-            let sli_with_20 = SkiplistIndex::new(repo.clone()).with_skip_edge_count(20);
+            let sli_with_20 = SkiplistIndex::new().with_skip_edge_count(20);
             assert_eq!(sli_with_20.skip_edge_count(), 20);
         });
     }
@@ -259,9 +259,9 @@ mod test {
     fn test_add_node() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let sli = SkiplistIndex::new(repo.clone());
+            let sli = SkiplistIndex::new();
             let master_node = string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            sli.add_node(master_node, 100).wait().unwrap();
+            sli.add_node(repo, master_node, 100).wait().unwrap();
             let ordered_hashes = vec![
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
@@ -283,9 +283,9 @@ mod test {
     fn test_skip_edges_reach_end_in_linear() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let sli = SkiplistIndex::new(repo.clone());
+            let sli = SkiplistIndex::new();
             let master_node = string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            sli.add_node(master_node, 100).wait().unwrap();
+            sli.add_node(repo, master_node, 100).wait().unwrap();
             let ordered_hashes = vec![
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
@@ -317,9 +317,9 @@ mod test {
     fn test_skip_edges_progress_powers_of_2() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
-            let sli = SkiplistIndex::new(repo.clone());
+            let sli = SkiplistIndex::new();
             let master_node = string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            sli.add_node(master_node, 100).wait().unwrap();
+            sli.add_node(repo, master_node, 100).wait().unwrap();
             // hashes in order from newest to oldest are:
             // a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157
             // 0ed509bf086fadcb8a8a5384dc3b550729b0fc17
@@ -377,8 +377,8 @@ mod test {
             ];
 
             let merge_node = string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce");
-            let sli = SkiplistIndex::new(repo.clone());
-            sli.add_node(merge_node, 100).wait().unwrap();
+            let sli = SkiplistIndex::new();
+            sli.add_node(repo, merge_node, 100).wait().unwrap();
             for node in branch_1.into_iter() {
                 let skip_edges: Vec<HgNodeHash> = sli.get_skip_edges(node)
                     .unwrap()
@@ -430,10 +430,12 @@ mod test {
             let branch_2_head = string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc");
 
             let _merge_node = string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce");
-            let sli = SkiplistIndex::new(repo.clone());
+            let sli = SkiplistIndex::new();
 
             // index just one branch first
-            sli.add_node(branch_1_head, 100).wait().unwrap();
+            sli.add_node(repo.clone(), branch_1_head, 100)
+                .wait()
+                .unwrap();
             for node in branch_1.into_iter() {
                 let skip_edges: Vec<HgNodeHash> = sli.get_skip_edges(node)
                     .unwrap()
@@ -446,7 +448,7 @@ mod test {
                 assert!(!sli.is_node_indexed(node));
             }
             // index second branch
-            sli.add_node(branch_2_head, 100).wait().unwrap();
+            sli.add_node(repo, branch_2_head, 100).wait().unwrap();
             for node in branch_2.into_iter() {
                 let skip_edges: Vec<HgNodeHash> = sli.get_skip_edges(node)
                     .unwrap()
@@ -472,9 +474,9 @@ mod test {
             let b2_1 = string_to_nodehash("04decbb0d1a65789728250ddea2fe8d00248e01c");
             let b2_2 = string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449");
 
-            let sli = SkiplistIndex::new(repo.clone());
+            let sli = SkiplistIndex::new();
             iter_ok::<_, Error>(vec![b1_1, b1_2, b2_1, b2_2])
-                .map(|branch_tip| sli.add_node(branch_tip, 100))
+                .map(|branch_tip| sli.add_node(repo.clone(), branch_tip, 100))
                 .buffered(4)
                 .for_each(|_| ok(()))
                 .wait()
