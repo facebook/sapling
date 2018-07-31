@@ -6,7 +6,6 @@
 
 use async_unit;
 use futures::future::Future;
-use std::panic::UnwindSafe;
 use std::sync::Arc;
 
 use mercurial_types::HgNodeHash;
@@ -21,9 +20,10 @@ pub fn string_to_nodehash(hash: &'static str) -> HgNodeHash {
 
 use index::ReachabilityIndex;
 
-pub fn test_linear_reachability<T: 'static + ReachabilityIndex + UnwindSafe + Send>(mut index: T) {
+pub fn test_linear_reachability<T: ReachabilityIndex + 'static>(index_creator: fn() -> T) {
     async_unit::tokio_unit_test(move || {
         let repo = Arc::new(linear::getrepo(None));
+        let mut index = index_creator();
         let ordered_hashes = vec![
             string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
             string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
@@ -48,11 +48,10 @@ pub fn test_linear_reachability<T: 'static + ReachabilityIndex + UnwindSafe + Se
     });
 }
 
-pub fn test_merge_uneven_reachability<T: 'static + ReachabilityIndex + UnwindSafe + Send>(
-    mut index: T,
-) {
+pub fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(index_creator: fn() -> T) {
     async_unit::tokio_unit_test(move || {
         let repo = Arc::new(merge_uneven::getrepo(None));
+        let mut index = index_creator();
         let root_node = string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
 
         // order is oldest to newest
@@ -102,12 +101,11 @@ pub fn test_merge_uneven_reachability<T: 'static + ReachabilityIndex + UnwindSaf
         }
     });
 }
-pub fn test_branch_wide_reachability<T: 'static + ReachabilityIndex + UnwindSafe + Send>(
-    mut index: T,
-) {
+pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(index_creator: fn() -> T) {
     async_unit::tokio_unit_test(move || {
         // this repo has no merges but many branches
         let repo = Arc::new(branch_wide::getrepo(None));
+        let mut index = index_creator();
         let root_node = string_to_nodehash("ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
 
         let b1 = string_to_nodehash("9e8521affb7f9d10e9551a99c526e69909042b20");

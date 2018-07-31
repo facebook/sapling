@@ -117,19 +117,19 @@ mod test {
 
     #[test]
     fn linear_reachability() {
-        let bfs = GenerationNumberBFS::new();
-        test_linear_reachability(bfs);
+        let bfs_constructor = || GenerationNumberBFS::new();
+        test_linear_reachability(bfs_constructor);
     }
 
     #[test]
     fn merge_uneven_reachability() {
-        let bfs = GenerationNumberBFS::new();
-        test_merge_uneven_reachability(bfs);
+        let bfs_constructor = || GenerationNumberBFS::new();
+        test_merge_uneven_reachability(bfs_constructor);
     }
 
     #[test]
     fn branch_wide_reachability() {
-        let bfs = GenerationNumberBFS::new();
-        test_branch_wide_reachability(bfs);
+        let bfs_constructor = || GenerationNumberBFS::new();
+        test_branch_wide_reachability(bfs_constructor);
     }
 }
