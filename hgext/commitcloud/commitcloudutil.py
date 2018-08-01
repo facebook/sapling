@@ -297,7 +297,7 @@ class WorkspaceManager(object):
 
     def _getdefaultworkspacename(self):
         """
-        Worspace naming convention:
+        Workspace naming convention:
         section/section_name/workspace_name
             where section is one of ('user', 'group', 'team', 'project')
         Examples:
@@ -305,7 +305,9 @@ class WorkspaceManager(object):
             user/<username>/default
             project/commit_cloud/default
         """
-        return "user/" + util.shortuser(self.ui.username()) + "/default"
+        username = self.ui.username()
+        domain = self.ui.config("commitcloud", "email_domain")
+        return "user/" + util.emaildomainuser(username, domain) + "/default"
 
     @property
     def reponame(self):

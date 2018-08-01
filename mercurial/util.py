@@ -2499,6 +2499,14 @@ def email(author):
     return author[author.find("<") + 1 : r]
 
 
+def emaildomainuser(user, domain):
+    """get email of author, abbreviating users in the given domain."""
+    useremail = email(user)
+    if domain and useremail.endswith("@" + domain):
+        useremail = useremail[: -len(domain) - 1]
+    return useremail
+
+
 def ellipsis(text, maxlength=400):
     """Trim string to at most maxlength (default: 400) columns in display."""
     return encoding.trim(text, maxlength, ellipsis="...")
