@@ -381,7 +381,7 @@ class fancyrenderer(baserenderer):
             ],
         )
         line = self._applyspans(self._bar._ui, line, spans)
-        self._writeerr("\r" + line)
+        self._writeerr("\r" + line + "\r")
         self._flusherr()
 
 
