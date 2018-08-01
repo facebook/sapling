@@ -79,6 +79,7 @@ configitem("hgsql", "maxinsertsize", default=1048576)
 configitem("hgsql", "maxrowsize", default=1048576)
 configitem("hgsql", "profileoutput", default="/tmp")
 configitem("hgsql", "profiler", default=None)
+configitem("hgsql", "rootpidnsonly", default=False)
 configitem("hgsql", "verifybatchsize", default=1000)
 configitem("hgsql", "waittimeout", default=300)
 configitem("format", "usehgsql", default=True)
@@ -109,7 +110,21 @@ class CorruptionException(Exception):
     pass
 
 
+def isrootpidns():
+    """False if we're sure it's not a root pid namespace. True otherwise."""
+    try:
+        # Linux implementation detail - inode number is 0xeffffffc for root
+        # namespaces.
+        return os.stat("/proc/self/ns/pid").st_ino == 0xeffffffc
+    except Exception:
+        # Cannot tell (not Linux, or no /proc mounted).
+        return True
+
+
 def ishgsqlbypassed(ui):
+    # developer config: hgsql.rootpidnsonly
+    if ui.configbool("hgsql", "rootpidnsonly") and not isrootpidns():
+        return True
     return ui.configbool("hgsql", "bypass")
 
 
