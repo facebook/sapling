@@ -811,11 +811,13 @@ def _racedetect(orig, self, other, s, match, listignored, listclean, listunknown
                 "empty_on_fresh_instance": True,
             },
         )
+        ignore = repo.dirstate._ignore
         racenames = [
             name
             for name in raceresult["files"]
             # hg-checklink*, hg-checkexec* are ignored.
-            if not name.startswith("hg-check")
+            # Ignored files are allowed unless listignored is set.
+            if not name.startswith("hg-check") and (listignored or not ignore(name))
         ]
         if racenames:
             msg = _(

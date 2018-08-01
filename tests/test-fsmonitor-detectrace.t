@@ -16,6 +16,7 @@ No races for common operations
 
 Create a race by write files by writing files if context._dirstatestatus is called
 
+  $ echo 'f' > .gitignore
   $ mkdir c
   $ touch e f g
   $ cat > $TESTTMP/racy.py << EOF
@@ -33,6 +34,14 @@ Create a race by write files by writing files if context._dirstatestatus is call
   abort: [race-detector] files changed when scanning changes in working copy:
     a
     c/d.txt
+  
+  (this is an error because HGDETECTRACE or fsmonitor.detectrace is set to true)
+  [75]
+
+  $ hg status -i --config extensions.racy=$TESTTMP/racy.py
+  abort: [race-detector] files changed when scanning changes in working copy:
+    a
+    c/d.txt
     f
   
   (this is an error because HGDETECTRACE or fsmonitor.detectrace is set to true)
@@ -41,9 +50,9 @@ Create a race by write files by writing files if context._dirstatestatus is call
 Race detector can be turned off:
 
   $ hg status --config extensions.racy=$TESTTMP/racy.py --config fsmonitor.detectrace=0
+  ? .gitignore
   ? a
   ? c/d.txt
   ? e
-  ? f
   ? g
   ? y
