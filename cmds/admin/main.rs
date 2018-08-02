@@ -17,6 +17,7 @@ extern crate tokio_process;
 
 extern crate blobrepo;
 extern crate blobstore;
+extern crate bookmarks;
 extern crate cmdlib;
 #[macro_use]
 extern crate futures_ext;
@@ -42,6 +43,7 @@ use futures::stream::iter_ok;
 
 use blobrepo::BlobRepo;
 use blobstore::{new_memcache_blobstore, Blobstore, CacheBlobstoreExt, PrefixBlobstore};
+use bookmarks::Bookmark;
 use cmdlib::args;
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
@@ -135,10 +137,22 @@ fn fetch_content(
     rev: &str,
     path: &str,
 ) -> BoxFuture<Content, Error> {
-    let cs_id = try_boxfuture!(HgChangesetId::from_str(rev));
     let path = try_boxfuture!(MPath::new(path));
+    let book = Bookmark::new(&rev).unwrap();
+    let hash = HgChangesetId::from_str(rev);
 
-    let mf = repo.get_changeset_by_changesetid(&cs_id)
+    let resolved_cs_id = repo.get_bookmark(&book).and_then({
+        move |r| match r {
+            Some(cs) => Ok(cs),
+            None => hash,
+        }
+    });
+
+    let mf = resolved_cs_id
+        .and_then({
+            cloned!(repo);
+            move |cs_id| repo.get_changeset_by_changesetid(&cs_id)
+        })
         .map(|cs| cs.manifestid().clone())
         .and_then({
             cloned!(repo);
