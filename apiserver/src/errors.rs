@@ -40,6 +40,7 @@ impl ErrorKind {
         }
     }
 
+    #[allow(deprecated)] // self.causes()
     fn into_error_response(&self) -> ErrorResponse {
         ErrorResponse {
             message: self.to_string(),
@@ -56,8 +57,8 @@ impl Fail for ErrorKind {
         use errors::ErrorKind::*;
 
         match self {
-            NotFound(_, cause) | InvalidInput(_, cause) => cause.as_ref().map(|e| e.cause()),
-            InternalError(err) => Some(err.cause()),
+            NotFound(_, cause) | InvalidInput(_, cause) => cause.as_ref().map(|e| e.as_fail()),
+            InternalError(err) => Some(err.as_fail()),
         }
     }
 }

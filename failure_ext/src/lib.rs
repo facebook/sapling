@@ -16,7 +16,8 @@ pub mod prelude {
                     StreamFailureExt};
 }
 
-pub use failure::{err_msg, Backtrace, Causes, Compat, Context, Error, Fail, ResultExt, SyncFailure};
+pub use failure::{_core, err_msg, Backtrace, Causes, Compat, Context, Error, Fail, ResultExt,
+                  SyncFailure};
 pub use failure_derive::*;
 
 #[macro_use]
@@ -40,7 +41,7 @@ impl<'a> fmt::Display for DisplayChain<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let e = self.0;
         writeln!(fmt, "Error: {}", e)?;
-        for c in e.causes().skip(1) {
+        for c in e.iter_chain().skip(1) {
             writeln!(fmt, "Caused by: {}", c)?;
         }
         Ok(())
@@ -54,10 +55,10 @@ impl slog::KV for SlogKVError {
         let err = &self.0;
 
         serializer.emit_str("error", &format!("{}", err))?;
-        serializer.emit_str("root_cause", &format!("{:#?}", err.root_cause()))?;
+        serializer.emit_str("root_cause", &format!("{:#?}", err.find_root_cause()))?;
         serializer.emit_str("backtrace", &format!("{:#?}", err.backtrace()))?;
 
-        for c in err.causes().skip(1) {
+        for c in err.iter_chain().skip(1) {
             serializer.emit_str("cause", &format!("{}", c))?;
         }
 

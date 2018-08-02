@@ -76,10 +76,10 @@ impl Blobimport {
                 move |err| {
                     error!(logger, "failed to blobimport: {}", err);
 
-                    for cause in err.causes() {
+                    for cause in err.iter_chain() {
                         info!(logger, "cause: {}", cause);
                     }
-                    info!(logger, "root cause: {:?}", err.root_cause());
+                    info!(logger, "root cause: {:?}", err.find_root_cause());
 
                     let msg = format!("failed to blobimport: {}", err);
                     err_msg(msg)
