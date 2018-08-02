@@ -878,17 +878,24 @@ impl BlobRepo {
                             cloned!(bcs, repo);
                             move |parents| {
                                 let mut parents = parents.into_iter();
-                                let p0 = parents.next().map(|p0| *p0.manifestid());
-                                let p1 = parents.next().map(|p1| *p1.manifestid());
+                                let p0 = parents.next();
+                                let p1 = parents.next();
+
+                                let p0_hash = p0.as_ref().map(|p0| p0.get_changeset_id());
+                                let p1_hash = p1.as_ref().map(|p1| p1.get_changeset_id());
+
+                                let mf_p0 = p0.map(|p| *p.manifestid());
+                                let mf_p1 = p1.map(|p| *p.manifestid());
+
                                 assert!(
                                     parents.next().is_none(),
                                     "more than 2 parents are not supported by hg"
                                 );
                                 let hg_parents = HgParents::new(
-                                    p0.map(|h| h.into_nodehash()).as_ref(),
-                                    p1.map(|h| h.into_nodehash()).as_ref(),
+                                    p0_hash.map(|h| h.into_nodehash()).as_ref(),
+                                    p1_hash.map(|h| h.into_nodehash()).as_ref(),
                                 );
-                                repo.get_manifest_from_bonsai(bcs, p0.as_ref(), p1.as_ref())
+                                repo.get_manifest_from_bonsai(bcs, mf_p0.as_ref(), mf_p1.as_ref())
                                     .map(move |(manifest_id, incomplete_filenodes)| {
                                         (manifest_id, incomplete_filenodes, hg_parents)
                                     })
