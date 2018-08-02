@@ -44,6 +44,15 @@ infinitepushbackup = None
 # mutual exclusivity with infinitepushbackups.
 _backuplockname = "infinitepushbackup.lock"
 
+workspaceopts = [
+    (
+        "w",
+        "workspace",
+        "",
+        _("workspace to join (default: 'user/<username>/default') (EXPERIMENTAL)"),
+    )
+]
+
 
 @command("cloud", [], "SUBCOMMAND ...", subonly=True)
 def cloud(ui, repo, **opts):
@@ -68,7 +77,7 @@ def cloud(ui, repo, **opts):
 subcmd = cloud.subcommand()
 
 
-@subcmd("join|connect", [])
+@subcmd("join|connect", [] + workspaceopts)
 def cloudjoin(ui, repo, **opts):
     """connect the local repository to commit cloud
 
@@ -82,7 +91,7 @@ def cloudjoin(ui, repo, **opts):
     checkauthenticated(ui, repo, tokenlocator)
 
     workspacemanager = commitcloudutil.WorkspaceManager(repo)
-    workspacemanager.setworkspace()
+    workspacemanager.setworkspace(opts.get("workspace"))
 
     highlightstatus(
         ui,
@@ -95,7 +104,7 @@ def cloudjoin(ui, repo, **opts):
     cloudsync(ui, repo, **opts)
 
 
-@subcmd("rejoin|reconnect", [])
+@subcmd("rejoin|reconnect", [] + workspaceopts)
 def cloudrejoin(ui, repo, **opts):
     """reconnect the local repository to commit cloud
 
@@ -114,6 +123,8 @@ def cloudrejoin(ui, repo, **opts):
             serv = service.get(ui, token)
             serv.check()
             reponame, workspace = getdefaultrepoworkspace(ui, repo)
+            if opts.get("workspace"):
+                workspace = opts.get("workspace")
             highlightstatus(
                 ui,
                 _("trying to reconnect to the '%s' workspace for the '%s' repo\n")
