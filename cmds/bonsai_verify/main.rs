@@ -37,7 +37,7 @@ use slog::Logger;
 
 use futures_ext::FutureExt;
 
-use blobrepo_utils::{BonsaiVerify, BonsaiVerifyResult};
+use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use cmdlib::args;
 use mercurial_types::HgChangesetId;
 
@@ -105,7 +105,7 @@ fn main() {
         let errors = errors.clone();
         let ignored = ignored.clone();
         move || {
-            let bonsai_verify = BonsaiVerify {
+            let bonsai_verify = BonsaiMFVerify {
                 logger: logger.clone(),
                 repo,
                 follow_limit,
@@ -138,12 +138,12 @@ fn main() {
                     }
 
                     let fut = match &result {
-                        BonsaiVerifyResult::Valid { .. } => {
+                        BonsaiMFVerifyResult::Valid { .. } => {
                             debug!(logger, "VALID");
                             valid.fetch_add(1, Ordering::Relaxed);
                             Either::A(future::ok(()))
                         }
-                        BonsaiVerifyResult::ValidDifferentId(difference) => {
+                        BonsaiMFVerifyResult::ValidDifferentId(difference) => {
                             debug!(
                                 logger,
                                 "VALID but with a different hash: \
@@ -154,7 +154,7 @@ fn main() {
                             valid.fetch_add(1, Ordering::Relaxed);
                             Either::A(future::ok(()))
                         }
-                        BonsaiVerifyResult::Invalid(difference) => {
+                        BonsaiMFVerifyResult::Invalid(difference) => {
                             warn!(logger, "INVALID");
                             info!(
                                 logger, "manifest hash differs";
@@ -180,7 +180,7 @@ fn main() {
                                 Either::A(future::ok(()))
                             }
                         }
-                        BonsaiVerifyResult::Ignored(..) => {
+                        BonsaiMFVerifyResult::Ignored(..) => {
                             ignored.fetch_add(1, Ordering::Relaxed);
                             Either::A(future::ok(()))
                         }

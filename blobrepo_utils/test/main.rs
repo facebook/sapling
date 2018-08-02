@@ -38,7 +38,7 @@ mod test {
                 use async_unit;
                 use slog_glog_fmt::default_drain as glog_drain;
 
-                use blobrepo_utils::{BonsaiVerify, BonsaiVerifyResult};
+                use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
                 use mercurial_types::HgChangesetId;
 
                 use $repo;
@@ -56,7 +56,7 @@ mod test {
                             .expect("getting all heads should work");
                         let heads = heads.into_iter().map(HgChangesetId::new);
 
-                        let verify = BonsaiVerify {
+                        let verify = BonsaiMFVerify {
                             logger,
                             repo,
                             follow_limit: 1024,
@@ -71,7 +71,7 @@ mod test {
                             .expect("verifying should work");
                         let diffs = results.into_iter().filter_map(|(res, meta)| {
                             match res {
-                                BonsaiVerifyResult::Invalid(difference) => {
+                                BonsaiMFVerifyResult::Invalid(difference) => {
                                     let changes = difference
                                         .changes()
                                         .collect()

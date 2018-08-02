@@ -27,7 +27,7 @@ mod bonsai;
 mod changeset;
 mod errors;
 
-pub use bonsai::{BonsaiVerify, BonsaiVerifyDifference, BonsaiVerifyResult};
+pub use bonsai::{BonsaiMFVerify, BonsaiMFVerifyDifference, BonsaiMFVerifyResult};
 pub use changeset::{visit_changesets, ChangesetVisitor};
 pub use errors::ErrorKind;
 

@@ -27,36 +27,36 @@ use changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
 use errors::*;
 
 #[derive(Clone, Debug)]
-pub enum BonsaiVerifyResult {
+pub enum BonsaiMFVerifyResult {
     Valid {
         lookup_mf_id: HgNodeHash,
         computed_mf_id: HgNodeHash,
     },
     // ValidDifferentHash means that the root manifest ID didn't match up, but that that was
     // because of an expected difference in hash that isn't substantive.
-    ValidDifferentId(BonsaiVerifyDifference),
-    Invalid(BonsaiVerifyDifference),
+    ValidDifferentId(BonsaiMFVerifyDifference),
+    Invalid(BonsaiMFVerifyDifference),
     Ignored(HgChangesetId),
 }
 
-impl BonsaiVerifyResult {
+impl BonsaiMFVerifyResult {
     pub fn is_valid(&self) -> bool {
         match self {
-            BonsaiVerifyResult::Valid { .. } | BonsaiVerifyResult::ValidDifferentId(..) => true,
+            BonsaiMFVerifyResult::Valid { .. } | BonsaiMFVerifyResult::ValidDifferentId(..) => true,
             _ => false,
         }
     }
 
     pub fn is_ignored(&self) -> bool {
         match self {
-            BonsaiVerifyResult::Ignored(..) => true,
+            BonsaiMFVerifyResult::Ignored(..) => true,
             _ => false,
         }
     }
 }
 
 #[derive(Clone)]
-pub struct BonsaiVerifyDifference {
+pub struct BonsaiMFVerifyDifference {
     // Root manifests in treemanifest hybrid mode use a different ID than what's computed.
     // See the documentation in mercurial-types/if/mercurial_thrift.thrift's HgManifestEnvelope
     // for more.
@@ -67,7 +67,7 @@ pub struct BonsaiVerifyDifference {
     repo: BlobRepo,
 }
 
-impl BonsaiVerifyDifference {
+impl BonsaiMFVerifyDifference {
     /// What entries changed from the original manifest to the roundtripped one.
     pub fn changes(&self) -> impl Stream<Item = ChangedEntry, Error = Error> + Send {
         let original_mf = self.repo.get_manifest_by_nodeid(&self.lookup_mf_id);
@@ -97,9 +97,9 @@ impl BonsaiVerifyDifference {
     // XXX might need to return repo here if callers want to do direct queries
 }
 
-impl fmt::Debug for BonsaiVerifyDifference {
+impl fmt::Debug for BonsaiMFVerifyDifference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("BonsaiVerifyDifference")
+        f.debug_struct("BonsaiMFVerifyDifference")
             .field("lookup_mf_id", &format!("{}", self.lookup_mf_id))
             .field("expected_mf_id", &format!("{}", self.expected_mf_id))
             .field("roundtrip_mf_id", &format!("{}", self.roundtrip_mf_id))
@@ -107,7 +107,7 @@ impl fmt::Debug for BonsaiVerifyDifference {
     }
 }
 
-pub struct BonsaiVerify {
+pub struct BonsaiMFVerify {
     pub logger: Logger,
     pub repo: BlobRepo,
     pub follow_limit: usize,
@@ -116,19 +116,19 @@ pub struct BonsaiVerify {
     pub debug_bonsai_diff: bool,
 }
 
-impl BonsaiVerify {
+impl BonsaiMFVerify {
     /// Verify that a list of changesets roundtrips through bonsai. Returns a stream of
     /// inconsistencies and errors encountered, which completes once verification is complete.
     pub fn verify(
         self,
         start_points: impl IntoIterator<Item = HgChangesetId>,
-    ) -> impl Stream<Item = (BonsaiVerifyResult, ChangesetVisitMeta), Error = Error> + Send {
+    ) -> impl Stream<Item = (BonsaiMFVerifyResult, ChangesetVisitMeta), Error = Error> + Send {
         let repo = self.repo.in_memory_writes_READ_DOC_COMMENT();
 
         visit_changesets(
             self.logger,
             repo,
-            BonsaiVerifyVisitor {
+            BonsaiMFVerifyVisitor {
                 ignores: Arc::new(self.ignores),
                 broken_merges_before: self.broken_merges_before,
                 debug_bonsai_diff: self.debug_bonsai_diff,
@@ -140,14 +140,14 @@ impl BonsaiVerify {
 }
 
 #[derive(Clone, Debug)]
-struct BonsaiVerifyVisitor {
+struct BonsaiMFVerifyVisitor {
     ignores: Arc<HashSet<HgChangesetId>>,
     broken_merges_before: Option<DateTime>,
     debug_bonsai_diff: bool,
 }
 
-impl ChangesetVisitor for BonsaiVerifyVisitor {
-    type Item = BonsaiVerifyResult;
+impl ChangesetVisitor for BonsaiMFVerifyVisitor {
+    type Item = BonsaiMFVerifyResult;
 
     fn visit(
         self,
@@ -159,7 +159,7 @@ impl ChangesetVisitor for BonsaiVerifyVisitor {
         let changeset_id = changeset.get_changeset_id();
         if self.ignores.contains(&changeset_id) {
             debug!(logger, "Changeset ignored");
-            return future::ok(BonsaiVerifyResult::Ignored(changeset_id)).boxify();
+            return future::ok(BonsaiMFVerifyResult::Ignored(changeset_id)).boxify();
         }
 
         let broken_merge = match &self.broken_merges_before {
@@ -264,12 +264,12 @@ impl ChangesetVisitor for BonsaiVerifyVisitor {
                             computed_mf_id
                         };
                         if &roundtrip_mf_id == expected_mf_id {
-                            Either::A(future::ok(BonsaiVerifyResult::Valid {
+                            Either::A(future::ok(BonsaiMFVerifyResult::Valid {
                                 lookup_mf_id: *lookup_mf_id,
                                 computed_mf_id: roundtrip_mf_id,
                             }))
                         } else {
-                            let difference = BonsaiVerifyDifference {
+                            let difference = BonsaiMFVerifyDifference {
                                 lookup_mf_id: *lookup_mf_id,
                                 expected_mf_id: *expected_mf_id,
                                 roundtrip_mf_id,
@@ -282,9 +282,9 @@ impl ChangesetVisitor for BonsaiVerifyVisitor {
                                 Either::B(Either::A(difference.has_file_changes().map(
                                     move |has_file_changes| {
                                         if has_file_changes {
-                                            BonsaiVerifyResult::Invalid(difference)
+                                            BonsaiMFVerifyResult::Invalid(difference)
                                         } else {
-                                            BonsaiVerifyResult::ValidDifferentId(difference)
+                                            BonsaiMFVerifyResult::ValidDifferentId(difference)
                                         }
                                     },
                                 )))
@@ -295,14 +295,14 @@ impl ChangesetVisitor for BonsaiVerifyVisitor {
                                 Either::B(Either::B(difference.has_changes().map(
                                     move |has_changes| {
                                         if has_changes {
-                                            BonsaiVerifyResult::Invalid(difference)
+                                            BonsaiMFVerifyResult::Invalid(difference)
                                         } else {
-                                            BonsaiVerifyResult::ValidDifferentId(difference)
+                                            BonsaiMFVerifyResult::ValidDifferentId(difference)
                                         }
                                     },
                                 )))
                             } else {
-                                Either::A(future::ok(BonsaiVerifyResult::Invalid(difference)))
+                                Either::A(future::ok(BonsaiMFVerifyResult::Invalid(difference)))
                             }
                         }
                     })
