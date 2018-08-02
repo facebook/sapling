@@ -2,12 +2,14 @@ use error::*;
 use ini::Ini;
 use std::{fs, io};
 use std::collections::HashMap;
+use std::env;
 use std::path::{Path, PathBuf};
-#[cfg(target_os = "macos")]
-use std::process::Command;
-#[cfg(target_os = "macos")]
-use std::str;
 use subscriber::Subscription;
+
+#[cfg(unix)]
+use std::process::Command;
+#[cfg(unix)]
+use std::str;
 
 static JOINED_DIR: &str = ".commitcloud";
 static JOINED: &str = "joined";
@@ -110,7 +112,7 @@ pub fn read_subscriptions(
     return Ok(subscriptions);
 }
 
-static TOKEN_FILENAME: &str = ".commitcloudrc";
+pub static TOKEN_FILENAME: &str = ".commitcloudrc";
 
 pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
     // try to read token from file
@@ -161,6 +163,31 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
                 bail!("Token is not found in the keychain")
             } else {
                 info!("Token is found in the keychain");
+                return Ok(token);
+            }
+        }
+    }
+    #[cfg(unix)]
+    {
+        // try to read token from secrets tool
+        if token.is_none() {
+            // try to read from secrets_tool
+            info!("Reading commitcloud Oauth token from secrets_tool...");
+            let user = env::var("USER")?.to_uppercase();
+            let key = format!("COMMITCLOUD_{}", user);
+            let output = Command::new("secrets_tool")
+                .args(vec!["get", key.as_str()])
+                .output()?;
+            if !output.status.success() {
+                error!("Process exited with: {}", output.status);
+                bail!("Failed to retrieve token from secrets using key {}", key)
+            }
+            let token = str::from_utf8(&output.stdout)?.trim().to_string();
+            if token.is_empty() {
+                error!("Token not found in secrets");
+                bail!("Token not found in secrets");
+            } else {
+                info!("Token is found in secrets");
                 return Ok(token);
             }
         }

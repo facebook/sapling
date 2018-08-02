@@ -22,3 +22,9 @@ pub(crate) mod util;
 pub use config::CommitCloudConfig;
 pub use receiver::TcpReceiverService as CommitCloudTcpReceiverService;
 pub use subscriber::WorkspaceSubscriberService as CommitCloudWorkspaceSubscriberService;
+
+#[cfg(test)]
+pub mod tests;
+
+#[cfg(test)]
+extern crate tempfile;

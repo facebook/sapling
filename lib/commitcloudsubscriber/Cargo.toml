@@ -26,3 +26,5 @@ reqwest = "*"
 rust-ini = "*"
 regex = "*"
 
+[dev-dependencies]
+tempfile = "*"
