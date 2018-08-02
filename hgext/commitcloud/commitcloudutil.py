@@ -309,6 +309,9 @@ class WorkspaceManager(object):
         domain = self.ui.config("commitcloud", "email_domain")
         return "user/" + util.emaildomainuser(username, domain) + "/default"
 
+    def getdefaultworkspacename(self, user):
+        return "user/" + user + "/default"
+
     @property
     def reponame(self):
         return self.ui.config(

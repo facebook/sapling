@@ -11,7 +11,7 @@ import os
 
 from mercurial import error
 
-from . import baseservice
+from . import baseservice, commitcloudcommon
 
 
 class LocalService(baseservice.BaseService):
@@ -103,3 +103,16 @@ class LocalService(baseservice.BaseService):
         )
         self._save(data)
         return True, baseservice.References(newversion, None, None, None)
+
+    def getsmartlog(self, reponame, workspace, repo):
+        filename = os.path.join(self.path, "usersmartlogdata")
+        if not os.path.exists(filename):
+            nodes = {}
+        else:
+            with open(filename) as f:
+                data = json.load(f)
+                nodes = self._makenodes(data["smartlog"])
+        try:
+            return self._makefakedag(nodes, repo)
+        except Exception as e:
+            raise commitcloudcommon.UnexpectedError(self._ui, e)

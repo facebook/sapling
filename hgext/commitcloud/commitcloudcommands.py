@@ -13,15 +13,18 @@ import socket
 import time
 
 from mercurial import (
+    cmdutil,
     commands,
     error,
     exchange,
     extensions,
+    graphmod,
     hg,
     hintutil,
     lock as lockmod,
-    node,
+    node as nodemod,
     obsutil,
+    progress,
     registrar,
     util,
 )
@@ -206,6 +209,64 @@ def cloudauth(ui, repo, **opts):
         else:
             # Run through interactive authentication
             authenticate(ui, repo, tokenlocator)
+
+
+@subcmd(
+    "smartlog|sl", [("u", "user", "", _("short username to fetch smartlog view for"))]
+)
+def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
+    """get smartlog view for the default workspace of the given user
+
+    If the requested template is not defined in the config
+    the command provides a simple view as a list of draft commits.
+    """
+
+    workspacemanager = commitcloudutil.WorkspaceManager(repo)
+    reponame = workspacemanager.reponame
+    username = opts.get("user")
+
+    if username:
+        workspace = workspacemanager.getdefaultworkspacename(username)
+    else:
+        workspace = workspacemanager.defaultworkspace
+
+    highlightstatus(
+        ui,
+        _("searching draft commits for the '%s' workspace for the '%s' repo\n")
+        % (workspace, reponame),
+    )
+
+    serv = service.get(ui, commitcloudutil.TokenLocator(ui).token)
+
+    with progress.spinner(ui, _("fetching")):
+        revdag = serv.getsmartlog(reponame, workspace, repo)
+
+    ui.status(_("Smartlog:\n\n"))
+
+    # set up pager
+    ui.pager("smartlog")
+
+    smartlogstyle = ui.config("templatealias", template)
+    # if style is defined in templatealias section of config apply that style
+    if smartlogstyle:
+        opts["template"] = "{%s}" % smartlogstyle
+    else:
+        highlightdebug(ui, _("style %s is not defined, skipping") % smartlogstyle)
+
+    # show all the nodes
+    displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
+    cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
+
+
+@subcmd(
+    "supersmartlog|ssl",
+    [("u", "user", "", _("short username to fetch smartlog view for"))],
+)
+def cloudsupersmartlog(ui, repo, **opts):
+    """get super smartlog view for the give workspace
+    """
+
+    cloudsmartlog(ui, repo, "ssl_cloud", **opts)
 
 
 def authenticate(ui, repo, tokenlocator):
@@ -488,7 +549,7 @@ def _maybeupdateworkingcopy(ui, repo, currentnode):
         highlightstatus(
             ui,
             _("current revision %s has been moved remotely to %s\n")
-            % (node.short(currentnode), node.short(destination)),
+            % (nodemod.short(currentnode), nodemod.short(destination)),
         )
         if ui.configbool("commitcloud", "updateonmove"):
             return _update(ui, repo, destination)
@@ -503,7 +564,7 @@ def _maybeupdateworkingcopy(ui, repo, currentnode):
                 "with multiple revisions\n"
                 "Please run `hg update` to go to the desired revision\n"
             )
-            % node.short(currentnode),
+            % nodemod.short(currentnode),
         )
         return 0
 
@@ -586,7 +647,7 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
 
 def _update(ui, repo, destination):
     # update to new head with merging local uncommited changes
-    ui.status(_("updating to %s\n") % node.short(destination))
+    ui.status(_("updating to %s\n") % nodemod.short(destination))
     updatecheck = "noconflict"
     return hg.updatetotally(ui, repo, destination, destination, updatecheck=updatecheck)
 
@@ -611,7 +672,7 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncbookmarks):
                 # bookmark
                 forkname = _forkname(repo.ui, name, allnames | newnames)
                 newnames.add(forkname)
-                changes.append((forkname, node.bin(localnode)))
+                changes.append((forkname, nodemod.bin(localnode)))
                 repo.ui.warn(
                     _(
                         "%s changed locally and remotely, "
@@ -623,7 +684,7 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncbookmarks):
             if cloudnode != lastnode:
                 if cloudnode is not None:
                     if cloudnode in repo:
-                        changes.append((name, node.bin(cloudnode)))
+                        changes.append((name, nodemod.bin(cloudnode)))
                     else:
                         repo.ui.warn(
                             _("%s not found, not creating %s bookmark\n")
@@ -666,7 +727,7 @@ def _getheads(repo):
 
 
 def _getbookmarks(repo):
-    return {n: node.hex(v) for n, v in repo._bookmarks.items()}
+    return {n: nodemod.hex(v) for n, v in repo._bookmarks.items()}
 
 
 def _getcommandandoptions(command):

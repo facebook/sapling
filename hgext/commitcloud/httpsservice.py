@@ -41,7 +41,7 @@ def cleandict(d):
     )
 
 
-DEFAULT_TIMEOUT = 60
+DEFAULT_TIMEOUT = 180
 MAX_CONNECT_RETRIES = 2
 
 
@@ -258,3 +258,35 @@ class HttpsCommitCloudService(baseservice.BaseService):
         )
 
         return True, baseservice.References(newversion, None, None, None)
+
+    def getsmartlog(self, reponame, workspace, repo):
+
+        highlightdebug(self.ui, "sending 'get_smartlog' request\n")
+
+        path = "/commit_cloud/get_smartlog"
+        data = {"repo_name": reponame, "workspace": workspace}
+
+        start = time.time()
+        response = self._send(path, data)
+        elapsed = time.time() - start
+        highlightdebug(self.ui, "responce received in %0.2f sec\n" % elapsed)
+
+        if "error" in response:
+            raise commitcloudcommon.ServiceError(self.ui, response["error"])
+
+        # if 200 OK response format is:
+        # {
+        #   "rc":0,
+        #   "smartlog": <thrift structure SmartlogData serialized to json using Thrift JSON serialization>
+        # }
+        smartlog = response["smartlog"]
+
+        highlightdebug(
+            self.ui, "'get_smartlog' returns %d entries\n" % len(smartlog["nodes"])
+        )
+
+        nodes = self._makenodes(smartlog)
+        try:
+            return self._makefakedag(nodes, repo)
+        except Exception as e:
+            raise commitcloudcommon.UnexpectedError(self.ui, e)

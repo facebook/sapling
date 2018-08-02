@@ -235,13 +235,13 @@ def revdescendants(repo, revs, followfirst, startdepth=None, stopdepth=None):
     return generatorset(gen, iterasc=True)
 
 
-def _reachablerootspure(repo, minroot, roots, heads, includepath):
+def _reachablerootspure(repo, minroot, roots, heads, includepath, parentrevs=None):
     """return (heads(::<roots> and ::<heads>))
 
     If includepath is True, return (<roots>::<heads>)."""
     if not roots:
         return []
-    parentrevs = repo.changelog.parentrevs
+    parentrevs = parentrevs or repo.changelog.parentrevs
     roots = set(roots)
     visit = list(heads)
     reachable = set()

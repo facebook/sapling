@@ -6,7 +6,6 @@
 from __future__ import absolute_import
 
 # Standard Library
-import sys
 import traceback
 
 from mercurial import error
@@ -34,11 +33,8 @@ commit cloud error wrappers
 
 class UnexpectedError(error.Abort):
     def __init__(self, ui, message, *args):
-        tb = sys.exc_info()[-1]
-        functionname = traceback.extract_tb(tb, 1)[0][3]
-
         topic = highlightmsg(ui, _("unexpected error"))
-        details = _("the failing function was %s") % functionname
+        details = traceback.format_exc()  # last part of traceback
         contact = _("please contact %s to report the error") % getownerteam(ui)
         message = "%s: %s\n%s\n%s" % (topic, message, details, contact)
         super(UnexpectedError, self).__init__(message, *args)
