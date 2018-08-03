@@ -42,7 +42,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
-#include "eden/fs/utils/UnboundedQueueThreadPool.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using folly::Future;
 using folly::makeFuture;
@@ -369,7 +369,7 @@ EdenMount::shutdownImpl(bool doTakeover) {
         return std::make_tuple(fileHandleMap, inodeMap);
       });
 }
-const shared_ptr<UnboundedQueueThreadPool>& EdenMount::getThreadPool() const {
+const shared_ptr<UnboundedQueueExecutor>& EdenMount::getThreadPool() const {
   return serverState_->getThreadPool();
 }
 

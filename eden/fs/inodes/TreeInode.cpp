@@ -44,7 +44,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
-#include "eden/fs/utils/UnboundedQueueThreadPool.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using folly::ByteRange;
 using folly::Future;

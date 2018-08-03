@@ -22,7 +22,7 @@
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
-#include "eden/fs/utils/UnboundedQueueThreadPool.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using folly::ByteRange;
 using folly::Future;
@@ -103,7 +103,7 @@ class HgImporterTestExecutor : public folly::InlineExecutor {
 HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     LocalStore* localStore,
-    UnboundedQueueThreadPool* serverThreadPool)
+    UnboundedQueueExecutor* serverThreadPool)
     : localStore_(localStore),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,

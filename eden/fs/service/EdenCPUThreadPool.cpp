@@ -17,7 +17,7 @@ namespace facebook {
 namespace eden {
 
 EdenCPUThreadPool::EdenCPUThreadPool()
-    : UnboundedQueueThreadPool(FLAGS_num_eden_threads, "EdenCPUThread") {}
+    : UnboundedQueueExecutor(FLAGS_num_eden_threads, "EdenCPUThread") {}
 
 } // namespace eden
 } // namespace facebook

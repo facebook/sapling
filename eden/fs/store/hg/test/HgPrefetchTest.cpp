@@ -19,7 +19,7 @@
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/UnboundedQueueThreadPool.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -172,7 +172,7 @@ usecunionstore=True
       catOutputs.second, HasSubstr("no remotefilelog server configured"));
 
   // Build an HgBackingStore for this repository
-  UnboundedQueueThreadPool resultThreadPool(1, "ResultThread");
+  UnboundedQueueExecutor resultThreadPool(1, "ResultThread");
   HgBackingStore store(clientRepo.path(), &localStore, &resultThreadPool);
 
   // Now test running prefetch

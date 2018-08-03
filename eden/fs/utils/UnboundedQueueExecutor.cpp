@@ -7,22 +7,28 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/utils/UnboundedQueueThreadPool.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
+#include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/ManualExecutor.h>
 #include <folly/executors/task_queue/UnboundedBlockingQueue.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 
 namespace facebook {
 namespace eden {
 
-UnboundedQueueThreadPool::UnboundedQueueThreadPool(
+UnboundedQueueExecutor::UnboundedQueueExecutor(
     size_t threadCount,
     folly::StringPiece threadNamePrefix)
-    : folly::CPUThreadPoolExecutor(
+    : executor_{std::make_unique<folly::CPUThreadPoolExecutor>(
           threadCount,
           std::make_unique<folly::UnboundedBlockingQueue<
               folly::CPUThreadPoolExecutor::CPUTask>>(),
-          std::make_unique<folly::NamedThreadFactory>(threadNamePrefix)) {}
+          std::make_unique<folly::NamedThreadFactory>(threadNamePrefix))} {}
+
+UnboundedQueueExecutor::UnboundedQueueExecutor(
+    std::unique_ptr<folly::ManualExecutor> executor)
+    : executor_{std::move(executor)} {}
 
 } // namespace eden
 } // namespace facebook

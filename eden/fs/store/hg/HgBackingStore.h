@@ -11,7 +11,6 @@
 
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 #include <folly/Executor.h>
 #include <folly/Range.h>
@@ -21,7 +20,7 @@ namespace facebook {
 namespace eden {
 
 class LocalStore;
-class UnboundedQueueThreadPool;
+class UnboundedQueueExecutor;
 class Importer;
 
 /**
@@ -39,7 +38,7 @@ class HgBackingStore : public BackingStore {
   HgBackingStore(
       AbsolutePathPiece repository,
       LocalStore* localStore,
-      UnboundedQueueThreadPool* serverThreadPool);
+      UnboundedQueueExecutor* serverThreadPool);
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline

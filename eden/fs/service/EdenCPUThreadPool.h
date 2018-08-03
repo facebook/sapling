@@ -9,13 +9,13 @@
  */
 #pragma once
 
-#include "eden/fs/utils/UnboundedQueueThreadPool.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook {
 namespace eden {
 
 // The Eden CPU thread pool is intended for miscellaneous background tasks.
-class EdenCPUThreadPool : public UnboundedQueueThreadPool {
+class EdenCPUThreadPool : public UnboundedQueueExecutor {
  public:
   explicit EdenCPUThreadPool();
 };

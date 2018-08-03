@@ -40,7 +40,7 @@
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/UnboundedQueueThreadPool.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using folly::ByteRange;
 using folly::Future;
@@ -78,7 +78,7 @@ TestMount::TestMount() : privHelper_{make_shared<FakePrivHelper>()} {
   serverState_ = {make_shared<ServerState>(
       UserInfo::lookup(),
       privHelper_,
-      make_shared<UnboundedQueueThreadPool>(
+      make_shared<UnboundedQueueExecutor>(
           FLAGS_num_eden_test_threads, "EdenCPUThread"),
       clock_,
       make_shared<EdenConfig>(

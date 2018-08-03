@@ -25,8 +25,8 @@ namespace eden {
 class Clock;
 class EdenConfig;
 class PrivHelper;
-class UnboundedQueueThreadPool;
 class TopLevelIgnores;
+class UnboundedQueueExecutor;
 
 /**
  * ServerState contains state shared across multiple mounts.
@@ -39,7 +39,7 @@ class ServerState {
   ServerState(
       UserInfo userInfo,
       std::shared_ptr<PrivHelper> privHelper,
-      std::shared_ptr<UnboundedQueueThreadPool> threadPool,
+      std::shared_ptr<UnboundedQueueExecutor> threadPool,
       std::shared_ptr<Clock> clock,
       std::shared_ptr<const EdenConfig> edenConfig);
   ~ServerState();
@@ -104,7 +104,7 @@ class ServerState {
    *
    * Adding new tasks to this thread pool executor will never block.
    */
-  const std::shared_ptr<UnboundedQueueThreadPool>& getThreadPool() const {
+  const std::shared_ptr<UnboundedQueueExecutor>& getThreadPool() const {
     return threadPool_;
   }
 
@@ -135,7 +135,7 @@ class ServerState {
   UserInfo userInfo_;
   ThreadLocalEdenStats edenStats_;
   std::shared_ptr<PrivHelper> privHelper_;
-  std::shared_ptr<UnboundedQueueThreadPool> threadPool_;
+  std::shared_ptr<UnboundedQueueExecutor> threadPool_;
   std::shared_ptr<Clock> clock_;
   folly::Synchronized<ConfigState> configState_;
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>

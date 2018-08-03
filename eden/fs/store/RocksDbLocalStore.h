@@ -10,7 +10,7 @@
 #pragma once
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/utils/UnboundedQueueThreadPool.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook {
 namespace eden {
@@ -43,7 +43,7 @@ class RocksDbLocalStore : public LocalStore {
 
  private:
   RocksHandles dbHandles_;
-  mutable UnboundedQueueThreadPool ioPool_;
+  mutable UnboundedQueueExecutor ioPool_;
 };
 
 } // namespace eden

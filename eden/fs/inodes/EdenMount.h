@@ -60,7 +60,7 @@ class ObjectStore;
 class Overlay;
 class ServerState;
 class Tree;
-class UnboundedQueueThreadPool;
+class UnboundedQueueExecutor;
 
 class RenameLock;
 class SharedRenameLock;
@@ -223,7 +223,7 @@ class EdenMount {
   /**
    * Returns the server's thread pool.
    */
-  const std::shared_ptr<UnboundedQueueThreadPool>& getThreadPool() const;
+  const std::shared_ptr<UnboundedQueueExecutor>& getThreadPool() const;
 
   /**
    * Returns the Clock with which this mount was configured.

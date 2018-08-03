@@ -15,7 +15,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/TopLevelIgnores.h"
 #include "eden/fs/utils/Clock.h"
-#include "eden/fs/utils/UnboundedQueueThreadPool.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook {
 namespace eden {
@@ -32,7 +32,7 @@ constexpr std::chrono::seconds kSystemIgnoreMinPollSeconds{5};
 ServerState::ServerState(
     UserInfo userInfo,
     std::shared_ptr<PrivHelper> privHelper,
-    std::shared_ptr<UnboundedQueueThreadPool> threadPool,
+    std::shared_ptr<UnboundedQueueExecutor> threadPool,
     std::shared_ptr<Clock> clock,
     std::shared_ptr<const EdenConfig> edenConfig)
     : userInfo_{std::move(userInfo)},
