@@ -149,6 +149,7 @@ show pattern error in hgignore file as expected (issue197)
   $ cat > $TESTTMP/invalidhgignore <<EOF
   > # invalid syntax in regexp
   > foo(
+  > syntax: re
   > EOF
   $ hg status --config ui.ignore=$TESTTMP/invalidhgignore
   abort: $TESTTMP/invalidhgignore: invalid pattern (relre): foo(

@@ -207,7 +207,7 @@ Test relative ignore path (issue4473):
   <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>
 
   $ hg debugignore --config ui.hgignore=0 --config ui.gitignore=0
-  <includematcher includes=''>
+  <nevermatcher>
 
   $ hg debugignore b.o
   b.o is ignored

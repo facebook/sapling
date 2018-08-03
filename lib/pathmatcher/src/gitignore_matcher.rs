@@ -1,12 +1,11 @@
-use ignore::Match;
-use ignore::gitignore::Gitignore;
+use ignore::{self, gitignore};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 
-/// Lazy `.gitignore` matcher - load and unload `.gitignore` files on demand.
+/// Lazy `.gitignore` matcher that loads `.gitignore` files on demand.
 pub struct GitignoreMatcher {
-    ignore: Gitignore,
+    ignore: gitignore::Gitignore,
 
     // PERF: Each Gitignore object stores "root" as "PathBuf" to support
     // matching against an absolute path. Since we enforce relative path
@@ -42,12 +41,12 @@ enum MatchResult {
     Whitelisted,
 }
 
-impl<T> From<Match<T>> for MatchResult {
-    fn from(v: Match<T>) -> MatchResult {
+impl<T> From<ignore::Match<T>> for MatchResult {
+    fn from(v: ignore::Match<T>) -> MatchResult {
         match v {
-            Match::None => MatchResult::Unspecified,
-            Match::Ignore(_) => MatchResult::Ignored,
-            Match::Whitelist(_) => MatchResult::Whitelisted,
+            ignore::Match::None => MatchResult::Unspecified,
+            ignore::Match::Ignore(_) => MatchResult::Ignored,
+            ignore::Match::Whitelist(_) => MatchResult::Whitelisted,
         }
     }
 }
@@ -57,8 +56,20 @@ impl GitignoreMatcher {
     ///
     /// The `.gitignore` in the root directory will be parsed immediately.
     /// `.gitignore` in subdirectories are parsed lazily.
-    pub fn new<P: AsRef<Path>>(root: P) -> Self {
-        let ignore = Gitignore::new(root.as_ref().join(".gitignore")).0;
+    ///
+    /// `global_gitignore_paths` is an additional list of gitignore files
+    /// to be parsed.
+    pub fn new<P: AsRef<Path>>(root: P, global_gitignore_paths: Vec<&Path>) -> Self {
+        let root = root.as_ref();
+        let mut builder = gitignore::GitignoreBuilder::new(root);
+        for path in global_gitignore_paths {
+            builder.add(path);
+        }
+        builder.add(root.join(".gitignore"));
+        let ignore = builder
+            .build()
+            .unwrap_or_else(|_| gitignore::Gitignore::empty());
+
         let submatchers = RefCell::new(HashMap::new());
         GitignoreMatcher {
             ignore,
@@ -73,9 +84,9 @@ impl GitignoreMatcher {
         let dir_root_relative = dir.strip_prefix(root.ignore.path()).unwrap();
         let submatchers = RefCell::new(HashMap::new());
         let (ignored, ignore) = if root.match_relative(dir_root_relative, true) {
-            (true, Gitignore::empty())
+            (true, gitignore::Gitignore::empty())
         } else {
-            (false, Gitignore::new(dir.join(".gitignore")).0)
+            (false, gitignore::Gitignore::new(dir.join(".gitignore")).0)
         };
         GitignoreMatcher {
             ignore,
@@ -170,7 +181,7 @@ mod tests {
         let dir = TempDir::new("gitignore").expect("tempdir");
         write(dir.path().join(".gitignore"), b"FILE\nDIR/\n");
 
-        let m = GitignoreMatcher::new(dir.path());
+        let m = GitignoreMatcher::new(dir.path(), Vec::new());
         assert!(m.match_relative("x/FILE", false));
         assert!(m.match_relative("x/FILE", true));
         assert!(!m.match_relative("x/DIR", false));
@@ -189,12 +200,26 @@ mod tests {
         write(dir.path().join("c/.gitignore"), b"d/e\n!d/f");
         write(dir.path().join("c/d/.gitignore"), b"!e\nf");
 
-        let m = GitignoreMatcher::new(dir.path());
+        let m = GitignoreMatcher::new(dir.path(), Vec::new());
         assert!(m.match_relative("a/b", false));
         assert!(m.match_relative("a/b/c", false));
         assert!(m.match_relative("a/b/d", false));
         assert!(m.match_relative("c/d/f", false));
         assert!(!m.match_relative("c/d/e", false));
+    }
+
+    #[test]
+    fn test_global_gitignore() {
+        let dir = TempDir::new("gitignore").expect("tempdir");
+        let ignore1_path = dir.path().join("ignore1");
+        let ignore2_path = dir.path().join("ignore2");
+
+        write(&ignore1_path, b"a*");
+        write(&ignore2_path, b"b*");
+
+        let m = GitignoreMatcher::new(dir.path(), vec![&ignore1_path, &ignore2_path]);
+        assert!(m.match_relative("a1", true));
+        assert!(m.match_relative("b1", true));
     }
 
     fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) {

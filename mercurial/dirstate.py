@@ -62,6 +62,22 @@ def _getfsnow(vfs):
         vfs.unlink(tmpname)
 
 
+def _ishgignore(path):
+    """Return True if the file looks like an hgignore file"""
+    try:
+        with open(path) as f:
+            content = "\n" + f.read()
+            return any(
+                keyword in content for keyword in ("\nsyntax:", "\nglob:", "\nre:")
+            )
+    except Exception:
+        return False
+
+
+def _isgitignore(path):
+    return not _ishgignore(path)
+
+
 class dirstate(object):
     def __init__(self, opener, ui, root, validate, sparsematchfn, istreestate=False):
         """Create a new dirstate object.
@@ -182,7 +198,10 @@ class dirstate(object):
     def _ignore(self):
         # gitignore
         if self._ui.configbool("ui", "gitignore"):
-            gitignore = matchmod.gitignorematcher(self._root, "")
+            globalignores = self._globalignorefiles(_isgitignore)
+            gitignore = matchmod.gitignorematcher(
+                self._root, "", gitignorepaths=globalignores
+            )
         else:
             gitignore = None
 
@@ -766,11 +785,23 @@ class dirstate(object):
         if self._ui.configbool("ui", "hgignore"):
             if os.path.exists(self._join(".hgignore")):
                 files.append(self._join(".hgignore"))
+        files += self._globalignorefiles(_ishgignore)
+        return files
+
+    def _globalignorefiles(self, filterfunc):
+        """Paths will be passed to filterfunc, and only included if filterfunc
+        returns True.
+        """
+        files = []
         for name, path in self._ui.configitems("ui"):
+            # A path could have an optional prefix (ex. "git:") to select file
+            # format
             if name == "ignore" or name.startswith("ignore."):
                 # we need to use os.path.join here rather than self._join
                 # because path is arbitrary and user-specified
-                files.append(os.path.join(self._rootdir, util.expandpath(path)))
+                fullpath = os.path.join(self._rootdir, util.expandpath(path))
+                if filterfunc(fullpath):
+                    files.append(fullpath)
         return files
 
     def _ignorefileandline(self, f):

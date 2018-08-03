@@ -434,9 +434,10 @@ class nevermatcher(basematcher):
 class gitignorematcher(basematcher):
     """Match files specified by ".gitignore"s"""
 
-    def __init__(self, root, cwd, badfn=None):
+    def __init__(self, root, cwd, badfn=None, gitignorepaths=None):
         super(gitignorematcher, self).__init__(root, cwd, badfn)
-        self._matcher = rustmatcher.gitignorematcher(root)
+        gitignorepaths = gitignorepaths or []
+        self._matcher = rustmatcher.gitignorematcher(root, gitignorepaths)
 
     def matchfn(self, f):
         # XXX: is_dir is set to True here for performance.

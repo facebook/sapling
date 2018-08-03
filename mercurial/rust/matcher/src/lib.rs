@@ -6,12 +6,11 @@ extern crate pathencoding;
 extern crate pathmatcher;
 
 use cpython::{PyBytes, PyErr, PyResult, Python};
-use cpython::exc::RuntimeError;
 use pathencoding::local_bytes_to_path;
 use pathmatcher::GitignoreMatcher;
 
 fn encoding_error(py: Python) -> PyErr {
-    PyErr::new::<RuntimeError, _>(py, "invalid encoding")
+    PyErr::new::<cpython::exc::RuntimeError, _>(py, "invalid encoding")
 }
 
 py_module_initializer!(matcher, initmatcher, PyInit_matcher, |py, m| {
@@ -22,9 +21,12 @@ py_module_initializer!(matcher, initmatcher, PyInit_matcher, |py, m| {
 py_class!(class gitignorematcher |py| {
     data matcher: GitignoreMatcher;
 
-    def __new__(_cls, path: &PyBytes) -> PyResult<gitignorematcher> {
-        let path = local_bytes_to_path(path.data(py)).map_err(|_|encoding_error(py))?;
-        let matcher = GitignoreMatcher::new(&path);
+    def __new__(_cls, root: &PyBytes, global_paths: Vec<PyBytes>) -> PyResult<gitignorematcher> {
+        let root = local_bytes_to_path(root.data(py)).map_err(|_|encoding_error(py))?;
+        let global_paths : Result<Vec<_>, _> = global_paths.iter()
+            .map(|path| local_bytes_to_path(path.data(py))).collect();
+        let global_paths = global_paths.map_err(|_|encoding_error(py))?;
+        let matcher = GitignoreMatcher::new(&root, global_paths);
         gitignorematcher::create_instance(py, matcher)
     }
 
