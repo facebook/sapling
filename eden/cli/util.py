@@ -44,7 +44,7 @@ class NotAnEdenMountError(Exception):
 
 
 class HealthStatus(object):
-    def __init__(self, status: int, pid: Optional[int], detail: str) -> None:
+    def __init__(self, status: fb_status, pid: Optional[int], detail: str) -> None:
         self.status = status
         self.pid = pid  # The process ID, or None if not running
         self.detail = detail  # a human-readable message

@@ -20,7 +20,7 @@ class EdenClientTest(testcase.EdenRepoTest):
 
     def test_client_dir_for_mount(self) -> None:
         clone_path = pathlib.Path(self.tmp_dir, "test_checkout")
-        self.eden.run_cmd("clone", self.repo_name, clone_path)
+        self.eden.run_cmd("clone", self.repo_name, str(clone_path))
         self.assertEqual(
             self.eden.client_dir_for_mount(clone_path),
             pathlib.Path(self.eden_dir, "clients", "test_checkout"),

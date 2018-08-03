@@ -62,12 +62,10 @@ class ThriftTest(testcase.EdenRepoTest):
 
     def test_get_sha1(self) -> None:
         expected_sha1_for_hello = hashlib.sha1(b"hola\n").digest()
-        result_for_hello = SHA1Result()
-        result_for_hello.set_sha1(expected_sha1_for_hello)
+        result_for_hello = SHA1Result(expected_sha1_for_hello)
 
         expected_sha1_for_adir_file = hashlib.sha1(b"foo!\n").digest()
-        result_for_adir_file = SHA1Result()
-        result_for_adir_file.set_sha1(expected_sha1_for_adir_file)
+        result_for_adir_file = SHA1Result(expected_sha1_for_adir_file)
 
         self.assertEqual(
             [result_for_hello, result_for_adir_file],

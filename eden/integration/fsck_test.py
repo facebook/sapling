@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+import pathlib
 
 from .lib import overlay, repobase, testcase
 
@@ -38,7 +39,7 @@ class FsckTest(testcase.EdenRepoTest):
         self.assertIn("No issues found", output)
 
     def test_fsck_empty_overlay_file(self) -> None:
-        overlay_path = self.overlay.materialize_file("doc/foo.txt")
+        overlay_path = self.overlay.materialize_file(pathlib.Path("doc/foo.txt"))
         self.eden.run_cmd("unmount", self.mount)
 
         # Truncate the file to 0 length

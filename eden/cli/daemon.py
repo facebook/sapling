@@ -12,7 +12,7 @@ import os
 import signal
 import subprocess
 import sys
-from typing import Dict, List, NoReturn, Optional, Tuple
+from typing import Dict, List, NoReturn, Optional, Tuple, Union
 
 from . import config as config_mod
 from .util import ShutdownError, poll_until, print_stderr
@@ -118,7 +118,7 @@ def exec_daemon(
     This method uses os.exec() to replace the current process with the edenfs daemon.
     It does not return on success.  It may throw an exception on error.
     """
-    cmd, env = _get_daemon_args(
+    result = _get_daemon_args(
         config=config,
         daemon_binary=daemon_binary,
         edenfs_args=edenfs_args,
@@ -128,6 +128,10 @@ def exec_daemon(
         strace_file=strace_file,
         foreground=foreground,
     )
+    if isinstance(result, int):
+        os._exit(result)
+
+    cmd, env = result
     os.execve(cmd[0], cmd, env)
 
 
@@ -137,9 +141,13 @@ def start_daemon(
     edenfs_args: Optional[List[str]] = None,
 ) -> int:
     """Start the edenfs daemon."""
-    cmd, env = _get_daemon_args(
+    result = _get_daemon_args(
         config=config, daemon_binary=daemon_binary, edenfs_args=edenfs_args
     )
+    if isinstance(result, int):
+        return result
+
+    cmd, env = result
     return subprocess.call(cmd, env=env)
 
 
@@ -152,7 +160,7 @@ def _get_daemon_args(
     gdb_args: Optional[List[str]] = None,
     strace_file: Optional[str] = None,
     foreground: bool = False,
-) -> Tuple[List[str], Dict[str, str]]:
+) -> Union[Tuple[List[str], Dict[str, str]], int]:
     """Get the command and environment to use to start edenfs."""
     if daemon_binary is None:
         valid_daemon_binary = _find_default_daemon_binary()

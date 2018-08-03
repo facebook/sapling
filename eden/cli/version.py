@@ -8,7 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import subprocess
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 
 from . import config as config_mod
 
@@ -21,7 +21,7 @@ def get_installed_eden_rpm_version() -> str:
     )
     if proc.returncode != 0:
         return "<Not Installed>"
-    return proc.stdout
+    return cast(str, proc.stdout)
 
 
 # returns (runing_version, release) tuple

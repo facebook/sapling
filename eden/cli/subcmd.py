@@ -9,7 +9,7 @@
 
 import abc
 import argparse
-from typing import Callable, List, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, Type, cast
 
 from . import util
 
@@ -29,7 +29,7 @@ class Subcmd(abc.ABC):
         # If get_help() returns None, do not pass in a help argument at all.
         # This will prevent the command from appearing in the help output at
         # all.
-        kwargs = {"aliases": self.get_aliases()}
+        kwargs: Dict[str, Any] = {"aliases": self.get_aliases()}
         help = self.get_help()
         if help is not None:
             # The add_parser() code checks if 'help' is present in the keyword
@@ -94,7 +94,10 @@ def subcmd(
     """
 
     def wrapper(cls: Type[Subcmd]) -> Type[Subcmd]:
-        class SubclassedCmd(cls):
+        # https://github.com/python/mypy/issues/2477
+        cls_mypy: Any = cls
+
+        class SubclassedCmd(cls_mypy):
             NAME = name
             HELP = help
             ALIASES = aliases
@@ -120,7 +123,7 @@ class Decorator(object):
         self.commands: CmdTable = []
 
     def __call__(
-        self, name: str, help: str, aliases: Optional[List[str]] = None
+        self, name: str, help: Optional[str], aliases: Optional[List[str]] = None
     ) -> Callable[[Type[Subcmd]], Type[Subcmd]]:
         return subcmd(name, help, aliases=aliases, cmd_table=self.commands)
 
@@ -145,10 +148,11 @@ def add_subcommands(
 def _get_subparsers(
     parser: argparse.ArgumentParser
 ) -> Optional[argparse._SubParsersAction]:
-    if parser._subparsers is None:
+    subparsers = cast(Any, parser)
+    if subparsers is None:
         return None
 
-    for action in parser._subparsers._actions:
+    for action in subparsers._actions:
         if action.option_strings:
             continue
         if not isinstance(action, argparse._SubParsersAction):
@@ -162,7 +166,7 @@ def _get_subparsers(
 def do_help(parser: argparse.ArgumentParser, help_args: List[str]) -> int:
     # Figure out what subcommand we have been asked to show the help for.
     for idx, arg in enumerate(help_args):
-        subcmds = _get_subparsers(parser)
+        subcmds: Any = _get_subparsers(parser)
         if subcmds is None:
             cmd_so_far = " ".join(help_args[:idx])
             # The remaining arguments may be positional arguments

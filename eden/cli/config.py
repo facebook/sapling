@@ -256,7 +256,11 @@ class Config:
         return info
 
     def get_thrift_client(self) -> eden.thrift.EdenClient:
-        return eden.thrift.create_thrift_client(self._config_dir)
+        # TODO: Thrift doesn't generate type annotations for create_thrift_client
+        # yet.
+        return typing.cast(
+            eden.thrift.EdenClient, eden.thrift.create_thrift_client(self._config_dir)
+        )
 
     def get_client_info(self, path: str) -> collections.OrderedDict:
         path = os.path.realpath(path)
@@ -371,7 +375,7 @@ Do you want to run `eden mount %s` instead?"""
         site_readme_path = os.path.join(
             self._etc_eden_dir, NOT_MOUNTED_SITE_SPECIFIC_README_PATH
         )
-        help_contents = NOT_MOUNTED_DEFAULT_TEXT
+        help_contents: Optional[str] = NOT_MOUNTED_DEFAULT_TEXT
         try:
             # Create a symlink to the site-specific readme file.  This helps ensure that
             # users will see up-to-date contents if the site-specific file is updated
@@ -795,7 +799,9 @@ Do you want to run `eden mount %s` instead?"""
 
     def get_server_build_info(self) -> Dict[str, str]:
         with self.get_thrift_client() as client:
-            return client.getRegexExportedValues("^build_.*")
+            return typing.cast(
+                Dict[str, str], client.getRegexExportedValues("^build_.*")
+            )
 
     def get_uptime(self) -> datetime.timedelta:
         now = datetime.datetime.now()

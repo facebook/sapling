@@ -16,7 +16,7 @@ import re
 import shlex
 import stat
 import sys
-from typing import IO, Any, Dict, Iterator, List, Optional, Pattern, Tuple
+from typing import IO, Any, Callable, Dict, Iterator, Optional, Pattern, Tuple, cast
 
 import eden.dirstate
 from facebook.eden.overlay.ttypes import OverlayDir
@@ -840,7 +840,7 @@ class DebugJournalCmd(Subcmd):
             from_position = JournalPosition(
                 mountGeneration=to_position.mountGeneration,
                 sequenceNumber=from_sequence,
-                snapshotHash="",
+                snapshotHash=b"",
             )
 
             params = DebugGetRawJournalParams(
@@ -849,7 +849,7 @@ class DebugJournalCmd(Subcmd):
             raw_journal = client.debugGetRawJournal(params)
             if args.pattern:
                 flags = re.IGNORECASE if args.ignore_case else 0
-                pattern = re.compile(args.pattern, flags)
+                pattern: Optional[Pattern] = re.compile(args.pattern, flags)
             else:
                 pattern = None
             # debugGetRawJournal() returns the most recent entries first, but
@@ -863,7 +863,9 @@ class DebugJournalCmd(Subcmd):
 def print_raw_journal_deltas(
     deltas: Iterator[FileDelta], pattern: Optional[Pattern]
 ) -> None:
-    matcher = (lambda x: True) if pattern is None else pattern.match
+    matcher: Callable[[str], bool] = (lambda x: True) if pattern is None else cast(
+        Any, pattern.match
+    )
     for delta in deltas:
         # Note that filter() returns an Iterator not a List.
         changed_paths = filter(matcher, delta.changedPaths)

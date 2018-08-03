@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import binascii
 import hashlib
 import struct
+from typing import IO, Any, Callable, Dict, Tuple
 
 from six import iteritems
 
@@ -25,8 +26,7 @@ MERGE_STATE_OTHER_PARENT = -2
 
 
 def write(file, parents, tuples_dict, copymap):
-    # type(IO[bytes], Tuple[bytes, bytes], Dict[bytes, Tuple[char, int, byte],
-    #     Dict[bytes, bytes]])
+    # type: (IO[bytes], Tuple[bytes, bytes], Dict[bytes, Tuple[str, int, bytes]], Dict[bytes, bytes]) -> None
     #
     # The serialization format of the dirstate is as follows:
     # - The first 40 bytes are the hashes of the two parent pointers.
@@ -63,7 +63,7 @@ def write(file, parents, tuples_dict, copymap):
     sha = hashlib.sha256()
 
     def hashing_write(data):
-        # type(bytes) -> None
+        # type: (bytes) -> None
         sha.update(data)
         file.write(data)
 
@@ -86,8 +86,7 @@ def write(file, parents, tuples_dict, copymap):
 
 
 def read(fp, filename):  # noqa: C901
-    # type(IO[bytes], string) -> ([bytes, bytes], Dict[str, [...]],
-    #                             Dict[str, str])
+    # type: (IO[bytes], str) -> Tuple[Tuple[bytes, bytes], Dict[str, Tuple[str, Any, int]], Dict[str, str]]
     """Returns a tuple of (parents, tuples_dict, copymap) if successful.
 
     Any exception from create_file(), such as IOError with errno == ENOENT, will
@@ -186,13 +185,13 @@ def read(fp, filename):  # noqa: C901
 
 
 def _write_path(writer, path):
-    # type(Callable[[bytes], None], bytes) -> None
+    # type: (Callable[[bytes], None], bytes) -> None
     writer(struct.pack(">H", len(path)))
     writer(path)
 
 
 def _read_path(reader, filename):
-    # type(Callable[[int], bytes], str, Callable[[str], None]) -> str
+    # type: (Callable[[int], bytes], str) -> str
     binary_path_len = reader(2)
     if len(binary_path_len) != 2:
         raise DirstateParseException(

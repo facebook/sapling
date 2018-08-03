@@ -17,6 +17,7 @@ from textwrap import dedent
 from typing import Optional, Set
 
 from eden.cli import util
+from eden.integration.lib.hgrepo import HgRepository
 
 from .lib import edenclient, testcase
 from .lib.find_executables import FindExe
@@ -147,6 +148,7 @@ class CloneTest(testcase.EdenRepoTest):
         # TODO: GitRepository doesn't yet have an update() method, so make
         # this hg specific for now.
         if self.repo.get_type() == "hg":
+            assert isinstance(self.repo, HgRepository)
             head_rev = self.repo.get_head_hash()
             self.repo.update(before_arcconfig)
             alt_eden_clone = self._new_tmp_dir()
