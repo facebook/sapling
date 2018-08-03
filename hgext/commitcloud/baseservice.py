@@ -384,3 +384,8 @@ class BaseService(object):
                 node, bookmarks, parents, author, date, message, phase
             )
         return nodes
+
+    @abstractmethod
+    def filterpushedheads(self, reponame, workspace, heads):
+        """Filter heads that have already been pushed to Commit Cloud backend
+        """

@@ -116,3 +116,8 @@ class LocalService(baseservice.BaseService):
             return self._makefakedag(nodes, repo)
         except Exception as e:
             raise commitcloudcommon.UnexpectedError(self._ui, e)
+
+    def filterpushedheads(self, reponame, workspace, heads):
+        """Filter heads that have already been pushed to Commit Cloud backend
+        """
+        return heads

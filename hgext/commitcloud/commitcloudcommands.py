@@ -104,7 +104,7 @@ def cloudjoin(ui, repo, **opts):
         )
         % (workspacemanager.workspace, workspacemanager.reponame),
     )
-    cloudsync(ui, repo, **opts)
+    cloudsync(ui, repo, checkbackedup=True, **opts)
 
 
 @subcmd("rejoin|reconnect", [] + workspaceopts)
@@ -148,7 +148,7 @@ def cloudrejoin(ui, repo, **opts):
             else:
                 commitcloudutil.WorkspaceManager(repo).setworkspace(workspace)
                 highlightstatus(ui, _("the repository is now reconnected\n"))
-                cloudsync(ui, repo, cloudrefs, **opts)
+                cloudsync(ui, repo, checkbackedup=True, cloudrefs=cloudrefs, **opts)
             return
         except commitcloudcommon.RegistrationError:
             pass
@@ -363,7 +363,7 @@ def getdefaultrepoworkspace(ui, repo):
         ),
     ],
 )
-def cloudsync(ui, repo, cloudrefs=None, **opts):
+def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
     """synchronize commits with the commit cloud service"""
     repo.ignoreautobackup = True
     if opts.get("use_bgssh"):
@@ -404,7 +404,7 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
             spinnermsg=_("waiting for background process to complete"),
         ):
             currentnode = repo["."].node()
-            _docloudsync(ui, repo, cloudrefs, **opts)
+            _docloudsync(ui, repo, checkbackedup, cloudrefs, **opts)
             return _maybeupdateworkingcopy(ui, repo, currentnode)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
@@ -414,7 +414,7 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
             raise
 
 
-def _docloudsync(ui, repo, cloudrefs=None, **opts):
+def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
     start = time.time()
 
     # external services can run cloud sync and require to check if
@@ -470,6 +470,11 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
 
             # Push commits that the server doesn't have.
             newheads = list(set(localheads) - set(lastsyncstate.heads))
+
+            # Fast server-side check of what hasn't been pushed yet
+            if checkbackedup:
+                newheads = serv.filterpushedheads(reponame, workspace, newheads)
+
             newheads, failedheads = infinitepush.pushbackupbundlestacks(
                 ui, repo, getconnection, newheads
             )

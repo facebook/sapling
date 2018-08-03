@@ -162,7 +162,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         start = time.time()
         response = self._send(path, data)
         elapsed = time.time() - start
-        highlightdebug(self.ui, "responce received in %0.2f sec\n" % elapsed)
+        highlightdebug(self.ui, "response received in %0.2f sec\n" % elapsed)
 
         if "error" in response:
             raise commitcloudcommon.ServiceError(self.ui, response["error"])
@@ -232,7 +232,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         start = time.time()
         response = self._send(path, data)
         elapsed = time.time() - start
-        highlightdebug(self.ui, "responce received in %0.2f sec\n" % elapsed)
+        highlightdebug(self.ui, "response received in %0.2f sec\n" % elapsed)
 
         if "error" in response:
             raise commitcloudcommon.ServiceError(self.ui, response["error"])
@@ -290,3 +290,32 @@ class HttpsCommitCloudService(baseservice.BaseService):
             return self._makefakedag(nodes, repo)
         except Exception as e:
             raise commitcloudcommon.UnexpectedError(self.ui, e)
+
+    def filterpushedheads(self, reponame, workspace, heads):
+        """Filter heads that have already been pushed to Commit Cloud backend
+        """
+
+        highlightdebug(self.ui, "sending 'get_bundles_handles' request\n")
+
+        # send request
+        path = "/commit_cloud/get_bundles_handles"
+
+        data = {"repo_name": reponame, "workspace": workspace, "heads": heads}
+
+        start = time.time()
+        response = self._send(path, data)
+        elapsed = time.time() - start
+        highlightdebug(self.ui, "response received in %0.2f sec\n" % elapsed)
+
+        if "error" in response:
+            raise commitcloudcommon.ServiceError(self.ui, response["error"])
+
+        notbackeduphandles = set(
+            [i for i, s in enumerate(response["data"]["handles"]) if not s]
+        )
+
+        highlightdebug(
+            self.ui, "%d heads are not backed up\n" % len(notbackeduphandles)
+        )
+
+        return [h for i, h in enumerate(heads) if i in notbackeduphandles]
