@@ -29,7 +29,7 @@ import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
 import toml
 
-from . import configinterpolator, util
+from . import configinterpolator, configutil, util
 from .util import EdenStartError, HealthStatus, print_stderr
 
 
@@ -119,13 +119,24 @@ class ClientConfig:
 
 
 class Config:
-    def __init__(self, config_dir: str, etc_eden_dir: str, home_dir: str) -> None:
+    def __init__(
+        self,
+        config_dir: str,
+        etc_eden_dir: str,
+        home_dir: str,
+        interpolate_dict: Optional[Dict[str, str]] = None,
+        use_toml_cfg: Optional[bool] = None,
+    ) -> None:
         self._config_dir = config_dir
         self._etc_eden_dir = etc_eden_dir
         if not self._etc_eden_dir:
             self._etc_eden_dir = DEFAULT_ETC_EDEN_DIR
         self._user_config_path = os.path.join(home_dir, USER_CONFIG)
         self._home_dir = home_dir
+        self._interpolate_dict = interpolate_dict
+        self._use_toml_cfg = (
+            use_toml_cfg if use_toml_cfg is not None else self._toml_config_exists()
+        )
 
     def _loadConfig(self) -> configparser.ConfigParser:
         """ to facilitate templatizing a centrally deployed config, we
@@ -135,20 +146,56 @@ class Config:
             These are coupled with the equivalent code in
             eden/fs/config/ClientConfig.cpp and must be kept in sync.
         """
-        defaults = {"USER": os.environ.get("USER"), "HOME": self._home_dir}
+        defaults = (
+            self._interpolate_dict
+            if self._interpolate_dict is not None
+            else {"USER": os.environ.get("USER"), "HOME": self._home_dir}
+        )
         parser = configparser.ConfigParser(
             interpolation=configinterpolator.EdenConfigInterpolator(defaults)
         )
-        parser.read(self.get_rc_files())
+        parser.optionxform = str  # ConfigParser should not convert case
+        # Load rc files
+        rc_files = self.get_rc_files()
+        if not self._use_toml_cfg:
+            parser.read(rc_files)
+            return parser
+
+        # Load toml rc files
+        for f in rc_files:
+            try:
+                toml_cfg = toml.load(f)
+            except (FileNotFoundError) as exc:
+                # Ignore missing config files. Eg. user_config_path is optional
+                continue
+            parser.read_dict(toml_cfg)
         return parser
+
+    def _toml_config_exists(self) -> bool:
+        toml_active_name = os.path.join(
+            self._etc_eden_dir, CONFIG_DOT_D, "_use_toml_configs_"
+        )
+        try:
+            with open(toml_active_name):
+                pass
+        except IOError as e:
+            return False
+        return True
 
     def get_rc_files(self) -> List[str]:
         result: List[str] = []
         config_d = os.path.join(self._etc_eden_dir, CONFIG_DOT_D)
         if os.path.isdir(config_d):
-            result = os.listdir(config_d)
-            result = [os.path.join(config_d, f) for f in result]
-            result.sort()
+            rc_files = os.listdir(config_d)
+            if self._use_toml_cfg:
+                for f in rc_files:
+                    if f.endswith(".toml"):
+                        result.append(os.path.join(config_d, f))
+            else:
+                for f in rc_files:
+                    if not f.endswith(".toml"):
+                        result.append(os.path.join(config_d, f))
+        result.sort()
         result.append(self._user_config_path)
         return result
 
@@ -290,7 +337,7 @@ class Config:
         self, name: str, repo_type: str, source: str, with_buck: bool = False
     ) -> None:
         # Check if repository already exists
-        with ConfigUpdater(self._user_config_path) as config:
+        with ConfigUpdater(self._user_config_path, self._use_toml_cfg) as config:
             if name in self.get_repository_list(config):
                 raise UsageError(
                     """\
@@ -824,11 +871,13 @@ class ConfigUpdater(object):
     has partially written contents.
     """
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, use_toml_cfg: bool) -> None:
         self.path = path
         self._lock_path = self.path + ".lock"
         self._lock_file: Optional[typing.TextIO] = None
         self.config = configparser.ConfigParser()
+        self.config.optionxform = str  # ConfigParser should not convert case
+        self._use_toml_cfg = use_toml_cfg
 
         # Acquire a lock.
         # This makes sure that another process can't modify the config in the
@@ -836,7 +885,14 @@ class ConfigUpdater(object):
         # from manually editing the file while we work, but we can stop
         # other eden CLI processes.)
         self._acquire_lock()
-        self.config.read(self.path)
+        if not self._use_toml_cfg:
+            self.config.read(self.path)
+        else:
+            try:
+                toml_cfg = toml.load(self.path)
+                self.config.read_dict(toml_cfg)
+            except (FileNotFoundError) as exc:
+                pass
 
     def __enter__(self) -> "ConfigUpdater":
         return self
@@ -916,7 +972,12 @@ class ConfigUpdater(object):
             "w", dir=dirname, prefix=prefix, delete=False
         )
         try:
-            self.config.write(tmpf)
+            if not self._use_toml_cfg:
+                self.config.write(tmpf)
+            else:
+                toml_config = configutil.config_to_raw_dict(self.config)
+                toml_data = toml.dumps(toml_config)
+                tmpf.write(toml_data)
             tmpf.close()
             os.chmod(tmpf.name, perms)
             os.rename(tmpf.name, self.path)
