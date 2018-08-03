@@ -5,6 +5,7 @@ extern crate cpython;
 extern crate pathencoding;
 extern crate pathmatcher;
 
+use std::path::Path;
 use cpython::{PyBytes, PyErr, PyResult, Python};
 use pathencoding::local_bytes_to_path;
 use pathmatcher::GitignoreMatcher;
@@ -26,6 +27,7 @@ py_class!(class gitignorematcher |py| {
         let global_paths : Result<Vec<_>, _> = global_paths.iter()
             .map(|path| local_bytes_to_path(path.data(py))).collect();
         let global_paths = global_paths.map_err(|_|encoding_error(py))?;
+        let global_paths: Vec<&Path> = global_paths.iter().map(AsRef::as_ref).collect();
         let matcher = GitignoreMatcher::new(&root, global_paths);
         gitignorematcher::create_instance(py, matcher)
     }
