@@ -224,7 +224,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
         info.takeoverPromise.emplace();
         auto future = info.takeoverPromise->getFuture();
         info.edenMount->getFuseChannel()->takeoverStop();
-        futures.emplace_back(future.then(
+        futures.emplace_back(std::move(future).then(
             [self = this,
              edenMount = info.edenMount](TakeoverData::MountInfo takeover)
                 -> Future<Optional<TakeoverData::MountInfo>> {
@@ -465,8 +465,8 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
           "Could not parse config.json file: ",
           ex.what(),
           "\nSkipping remount step.");
-      return thriftRunningFuture.then(
-          [ew = folly::exception_wrapper(std::current_exception(), ex)] {
+      return std::move(thriftRunningFuture)
+          .then([ew = folly::exception_wrapper(std::current_exception(), ex)] {
             return makeFuture<Unit>(ew);
           });
     }
@@ -653,9 +653,9 @@ Future<Unit> EdenServer::performTakeoverFuseStart(
   }
   auto future = serverState_->getPrivHelper()->fuseTakeoverStartup(
       info.mountPath.stringPiece(), bindMounts);
-  return future.then([this,
-                      edenMount = std::move(edenMount),
-                      info = std::move(info)]() mutable {
+  return std::move(future).then([this,
+                                 edenMount = std::move(edenMount),
+                                 info = std::move(info)]() mutable {
     return completeTakeoverFuseStart(std::move(edenMount), std::move(info));
   });
 }
@@ -721,53 +721,54 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto initFuture = edenMount->initialize(
       optionalTakeover ? folly::make_optional(optionalTakeover->inodeMap)
                        : folly::none);
-  return initFuture.then([this,
-                          doTakeover,
-                          edenMount,
-                          optionalTakeover =
-                              std::move(optionalTakeover)]() mutable {
-    addToMountPoints(edenMount);
+  return std::move(initFuture)
+      .then([this,
+             doTakeover,
+             edenMount,
+             optionalTakeover = std::move(optionalTakeover)]() mutable {
+        addToMountPoints(edenMount);
 
-    return (optionalTakeover ? performTakeoverFuseStart(
-                                   edenMount, std::move(*optionalTakeover))
-                             : performFreshFuseStart(edenMount))
-        // If an error occurs we want to call mountFinished and throw the
-        // error here.  Once the pool is up and running, the finishFuture
-        // will ensure that this happens.
-        .onError([this, edenMount](folly::exception_wrapper ew) {
-          mountFinished(edenMount.get(), folly::none);
-          return makeFuture<folly::Unit>(ew);
-        })
-        .then([edenMount, doTakeover, this]() mutable {
-          // Now that we've started the workers, arrange to call
-          // mountFinished once the pool is torn down.
-          auto finishFuture = edenMount->getFuseCompletionFuture().then(
-              [this,
-               edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
-                folly::Optional<TakeoverData::MountInfo> optTakeover;
-                if (takeover.hasValue()) {
-                  optTakeover = std::move(takeover.value());
-                }
-                mountFinished(edenMount.get(), std::move(optTakeover));
-              });
-          // We're deliberately discarding the future here; we don't
-          // need to wait for it to finish.
-          (void)finishFuture;
+        return (optionalTakeover ? performTakeoverFuseStart(
+                                       edenMount, std::move(*optionalTakeover))
+                                 : performFreshFuseStart(edenMount))
+            // If an error occurs we want to call mountFinished and throw the
+            // error here.  Once the pool is up and running, the finishFuture
+            // will ensure that this happens.
+            .onError([this, edenMount](folly::exception_wrapper ew) {
+              mountFinished(edenMount.get(), folly::none);
+              return makeFuture<folly::Unit>(ew);
+            })
+            .then([edenMount, doTakeover, this]() mutable {
+              // Now that we've started the workers, arrange to call
+              // mountFinished once the pool is torn down.
+              auto finishFuture = edenMount->getFuseCompletionFuture().then(
+                  [this,
+                   edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
+                    folly::Optional<TakeoverData::MountInfo> optTakeover;
+                    if (takeover.hasValue()) {
+                      optTakeover = std::move(takeover.value());
+                    }
+                    mountFinished(edenMount.get(), std::move(optTakeover));
+                  });
+              // We're deliberately discarding the future here; we don't
+              // need to wait for it to finish.
+              (void)finishFuture;
 
-          registerStats(edenMount);
+              registerStats(edenMount);
 
-          if (doTakeover) {
-            // The bind mounts are already mounted in the takeover case
-            return makeFuture<std::shared_ptr<EdenMount>>(std::move(edenMount));
-          } else {
-            // Perform all of the bind mounts associated with the
-            // client.  We don't need to do this for the takeover
-            // case as they are already mounted.
-            return edenMount->performBindMounts().then(
-                [edenMount] { return edenMount; });
-          }
-        });
-  });
+              if (doTakeover) {
+                // The bind mounts are already mounted in the takeover case
+                return makeFuture<std::shared_ptr<EdenMount>>(
+                    std::move(edenMount));
+              } else {
+                // Perform all of the bind mounts associated with the
+                // client.  We don't need to do this for the takeover
+                // case as they are already mounted.
+                return edenMount->performBindMounts().then(
+                    [edenMount] { return edenMount; });
+              }
+            });
+      });
 }
 
 Future<Unit> EdenServer::unmount(StringPiece mountPath) {

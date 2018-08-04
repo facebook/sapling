@@ -201,7 +201,7 @@ Future<Unit> TreeDiffer::diffOneTree(
     return diffOneTree(path, *std::move(future).get(), status);
   }
 
-  return future.then(
+  return std::move(future).then(
       [this, status, path = path.copy()](std::shared_ptr<const Tree>&& tree) {
         return diffOneTree(path, *tree, status);
       });

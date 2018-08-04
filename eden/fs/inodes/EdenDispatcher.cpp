@@ -298,15 +298,16 @@ folly::Future<folly::Unit> EdenDispatcher::rename(
   auto parentFuture = inodeMap_->lookupTreeInode(parent);
   auto newParentFuture = inodeMap_->lookupTreeInode(newParent);
   // Do the rename once we have looked up both parents.
-  return parentFuture.then([npFuture = std::move(newParentFuture),
-                            name = PathComponent{namePiece},
-                            newName = PathComponent{newNamePiece}](
-                               const TreeInodePtr& parent) mutable {
-    return npFuture.then(
-        [parent, name, newName](const TreeInodePtr& newParent) {
-          return parent->rename(name, newParent, newName);
-        });
-  });
+  return std::move(parentFuture)
+      .then([npFuture = std::move(newParentFuture),
+             name = PathComponent{namePiece},
+             newName = PathComponent{newNamePiece}](
+                const TreeInodePtr& parent) mutable {
+        return std::move(npFuture).then(
+            [parent, name, newName](const TreeInodePtr& newParent) {
+              return parent->rename(name, newParent, newName);
+            });
+      });
 }
 
 folly::Future<fuse_entry_out> EdenDispatcher::link(

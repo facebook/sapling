@@ -259,8 +259,9 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
       break;
   }
 
-  return future.then([self = inodePtrFromThis(), fn = std::forward<Fn>(fn)](
-                         FileHandlePtr /* handle */) mutable {
+  return std::move(future).then([self = inodePtrFromThis(),
+                                 fn = std::forward<Fn>(fn)](
+                                    FileHandlePtr /* handle */) mutable {
     // Simply call runWhileDataLoaded() again when we we finish loading the blob
     // data.  The state should be BLOB_LOADED or MATERIALIZED_IN_OVERLAY this
     // time around.
@@ -317,8 +318,9 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
       break;
   }
 
-  return future.then([self = inodePtrFromThis(), fn = std::forward<Fn>(fn)](
-                         FileHandlePtr /* handle */) mutable {
+  return std::move(future).then([self = inodePtrFromThis(),
+                                 fn = std::forward<Fn>(fn)](
+                                    FileHandlePtr /* handle */) mutable {
     // Simply call runWhileDataLoaded() again when we we finish loading the blob
     // data.  The state should be BLOB_LOADED or MATERIALIZED_IN_OVERLAY this
     // time around.
@@ -1022,7 +1024,7 @@ Future<FileInode::FileHandlePtr> FileInode::startLoadingData(
   state.unlock();
 
   auto self = inodePtrFromThis(); // separate line for formatting
-  blobFuture
+  std::move(blobFuture)
       .then([self](folly::Try<std::shared_ptr<const Blob>> tryBlob) mutable {
         auto state = LockedState{self};
 

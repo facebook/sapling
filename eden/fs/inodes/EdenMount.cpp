@@ -473,8 +473,9 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
     // before LHS, thus moving value of joinedExpected (in RHS) before using
     // it in LHS
     auto f = getInode(joinedExpected.value()); // get inode for symlink target
-    return f.then([this, joinedPath = std::move(joinedExpected.value()), depth](
-                      InodePtr target) mutable {
+    return std::move(f).then([this,
+                              joinedPath = std::move(joinedExpected.value()),
+                              depth](InodePtr target) mutable {
       // follow the symlink chain recursively
       return resolveSymlinkImpl(target, std::move(joinedPath), depth);
     });
@@ -528,10 +529,12 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
 
         // Perform the requested checkout operation after the journal diff
         // completes.
-        return journalDiffFuture.then([this, ctx, fromTree, toTree]() {
-          ctx->start(this->acquireRenameLock());
-          return this->getRootInode()->checkout(ctx.get(), fromTree, toTree);
-        });
+        return std::move(journalDiffFuture)
+            .then([this, ctx, fromTree, toTree]() {
+              ctx->start(this->acquireRenameLock());
+              return this->getRootInode()->checkout(
+                  ctx.get(), fromTree, toTree);
+            });
       })
       .then([ctx, snapshotHash] {
         // Complete the checkout and save the new snapshot hash

@@ -461,7 +461,7 @@ void TreeInode::registerInodeLoadComplete(
     InodeNumber number) {
   // This method should never be called with the contents_ lock held.  If the
   // future is already ready we will try to acquire the contents_ lock now.
-  future
+  std::move(future)
       .then([self = inodePtrFromThis(), childName = PathComponent{name}](
                 unique_ptr<InodeBase>&& childInode) {
         self->inodeLoadComplete(childName, std::move(childInode));
@@ -1222,12 +1222,13 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // the left side of "." will always get evaluated before the right
   // side.
   auto childFuture = getOrLoadChild(name);
-  return childFuture.then([self = inodePtrFromThis(),
-                           childName = PathComponent{std::move(name)},
-                           attemptNum](const InodePtr& loadedChild) {
-    return self->removeImpl<InodePtrType>(
-        childName, loadedChild, attemptNum + 1);
-  });
+  return std::move(childFuture)
+      .then([self = inodePtrFromThis(),
+             childName = PathComponent{std::move(name)},
+             attemptNum](const InodePtr& loadedChild) {
+        return self->removeImpl<InodePtrType>(
+            childName, loadedChild, attemptNum + 1);
+      });
 }
 
 template <typename InodePtrType>
@@ -1838,20 +1839,21 @@ Future<Unit> TreeInode::diff(
   }
 
   if (!inode) {
-    return inodeFuture.then([self = inodePtrFromThis(),
-                             context,
-                             currentPath = RelativePath{currentPath},
-                             tree = std::move(tree),
-                             parentIgnore,
-                             isIgnored](InodePtr&& loadedInode) mutable {
-      return self->loadGitIgnoreThenDiff(
-          std::move(loadedInode),
-          context,
-          currentPath,
-          std::move(tree),
-          parentIgnore,
-          isIgnored);
-    });
+    return std::move(inodeFuture)
+        .then([self = inodePtrFromThis(),
+               context,
+               currentPath = RelativePath{currentPath},
+               tree = std::move(tree),
+               parentIgnore,
+               isIgnored](InodePtr&& loadedInode) mutable {
+          return self->loadGitIgnoreThenDiff(
+              std::move(loadedInode),
+              context,
+              currentPath,
+              std::move(tree),
+              parentIgnore,
+              isIgnored);
+        });
   } else {
     return loadGitIgnoreThenDiff(
         std::move(inode),
@@ -2957,7 +2959,7 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren(
   for (auto& future : inodeFutures) {
     results.emplace_back(
         recurse == Recurse::DEEP
-            ? future.then(recursivelyLoadMaterializedChildren)
+            ? std::move(future).then(recursivelyLoadMaterializedChildren)
             : future.unit());
   }
 

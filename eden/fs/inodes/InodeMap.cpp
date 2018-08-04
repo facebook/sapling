@@ -594,7 +594,7 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
   // we know that all inodes have been destroyed and we can complete shutdown.
   root_.manualDecRef();
 
-  return future.then([this, doTakeover] {
+  return std::move(future).then([this, doTakeover] {
     // TODO: This check could occur after the loadedInodes_ assertion below to
     // maximize coverage of any invariants that are broken during shutdown.
     if (!doTakeover) {

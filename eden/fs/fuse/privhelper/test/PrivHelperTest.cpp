@@ -471,9 +471,9 @@ TEST_F(PrivHelperTest, detachEventBase) {
     }
 
     bool success = false;
-    result.then([&success](folly::File&&) { success = true; }).ensure([&evb] {
-      evb.terminateLoopSoon();
-    });
+    std::move(result)
+        .then([&success](folly::File&&) { success = true; })
+        .ensure([&evb] { evb.terminateLoopSoon(); });
 
     filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
     evb.loopForever();

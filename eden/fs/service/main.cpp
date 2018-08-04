@@ -242,20 +242,21 @@ int main(int argc, char** argv) {
         EX_SOFTWARE, "error starting edenfs: ", folly::exceptionStr(ex));
   }
 
-  prepareFuture.then([startupLogger](folly::Try<folly::Unit>&& result) {
-    // If an error occurred this means that we failed to mount all of the mount
-    // points.  However, we have still started and will continue running, so we
-    // report successful startup here no matter what.
-    if (result.hasException()) {
-      // Log an overall error message here.
-      // We will have already logged more detailed messages for each mount
-      // failure when it occurred.
-      startupLogger->warn(
-          "did not successfully remount all repositories: ",
-          result.exception().what());
-    }
-    startupLogger->success();
-  });
+  std::move(prepareFuture)
+      .then([startupLogger](folly::Try<folly::Unit>&& result) {
+        // If an error occurred this means that we failed to mount all of the
+        // mount points.  However, we have still started and will continue
+        // running, so we report successful startup here no matter what.
+        if (result.hasException()) {
+          // Log an overall error message here.
+          // We will have already logged more detailed messages for each mount
+          // failure when it occurred.
+          startupLogger->warn(
+              "did not successfully remount all repositories: ",
+              result.exception().what());
+        }
+        startupLogger->success();
+      });
 
   server->run();
 

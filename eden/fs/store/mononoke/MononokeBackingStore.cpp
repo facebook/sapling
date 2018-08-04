@@ -255,7 +255,7 @@ Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequest(
 
   /* capture `connector` to make sure it stays alive for the duration of the
      connection */
-  return future.then(
+  return std::move(future).then(
       [connector = std::move(connector), timer = std::move(timer)](
           std::unique_ptr<folly::IOBuf>&& buf) { return std::move(buf); });
 }
