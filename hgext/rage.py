@@ -334,7 +334,8 @@ def _makerage(ui, repo, **opts):
                 detailed.append(
                     (
                         "%s packs (%s)" % (loc, constants.getunits(category)),
-                        lambda: "%s:\n%s" % (path, shcmd("ls -lhS %s" % path)),
+                        lambda path=path: "%s:\n%s"
+                        % (path, shcmd("ls -lhS %s" % path)),
                     )
                 )
 
