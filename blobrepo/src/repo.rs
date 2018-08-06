@@ -30,7 +30,7 @@ use super::changeset::HgChangesetContent;
 use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use blobstore::{new_memcache_blobstore, Blobstore, EagerMemblob, MemWritesBlobstore,
                 MemoizedBlobstore, PrefixBlobstore};
-use bonsai_generation::{create_bonsai_changeset, save_bonsai_changeset};
+use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, CachingBonsaiHgMapping,
                         MysqlBonsaiHgMapping, SqliteBonsaiHgMapping};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
@@ -1421,7 +1421,7 @@ impl CreateChangeset {
                                 make_new_changeset(parents, root_hash, cs_metadata, files)
                             })
                             .and_then(move |hg_cs| {
-                                create_bonsai_changeset(
+                                create_bonsai_changeset_object(
                                     hg_cs.clone(),
                                     parent_manifest_hashes,
                                     bonsai_parents,
@@ -1471,7 +1471,7 @@ impl CreateChangeset {
                                         let _ =
                                             signal_parent_ready.send((bcs_id, cs_id, manifest_id));
 
-                                        let bonsai_cs_fut = save_bonsai_changeset(
+                                        let bonsai_cs_fut = save_bonsai_changeset_object(
                                             blobstore.clone(),
                                             bonsai_cs.clone(),
                                         );

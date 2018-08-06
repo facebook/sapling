@@ -23,7 +23,7 @@ use HgBlobChangeset;
 use errors::*;
 
 /// Creates bonsai changeset from already created HgBlobChangeset.
-pub fn create_bonsai_changeset(
+pub fn create_bonsai_changeset_object(
     cs: HgBlobChangeset,
     parent_manifests: Vec<HgManifestId>,
     bonsai_parents: Vec<ChangesetId>,
@@ -66,7 +66,7 @@ pub fn create_bonsai_changeset(
     })
 }
 
-pub fn save_bonsai_changeset(
+pub fn save_bonsai_changeset_object(
     blobstore: RepoBlobstore,
     bonsai_cs: BonsaiChangeset,
 ) -> impl Future<Item = (), Error = Error> {
