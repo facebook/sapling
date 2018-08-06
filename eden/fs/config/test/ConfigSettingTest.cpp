@@ -123,11 +123,19 @@ TEST(ConfigSettingTest, configSetEnvSubTest) {
   auto dirKey = "dirKey"_sp;
   ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
 
-  folly::StringPiece userConfigDir{"$HOME/test_dir"};
+  folly::StringPiece userConfigDir{"${HOME}/test_dir"};
   std::map<std::string, std::string> attrMap;
   attrMap["HOME"] = "/home/bob";
+  attrMap["USER"] = "bob";
   auto rslt = testDir.setStringValue(
       userConfigDir, attrMap, facebook::eden::USER_CONFIG_FILE);
+  EXPECT_EQ(rslt.hasError(), false);
+  EXPECT_EQ(testDir.getSource(), facebook::eden::USER_CONFIG_FILE);
+  EXPECT_EQ(testDir.getValue(), "/home/bob/test_dir");
+
+  folly::StringPiece homeUserConfigDir{"/home/${USER}/test_dir"};
+  rslt = testDir.setStringValue(
+      homeUserConfigDir, attrMap, facebook::eden::USER_CONFIG_FILE);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), facebook::eden::USER_CONFIG_FILE);
   EXPECT_EQ(testDir.getValue(), "/home/bob/test_dir");

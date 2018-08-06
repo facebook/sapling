@@ -33,6 +33,7 @@ class EdenConfigTest : public ::testing::Test {
   std::unique_ptr<TemporaryDirectory> rootTestDir_;
 
   // Default paths for when the path does not have to exist
+  std::string testUser_{"bob"};
   AbsolutePath testHomeDir_{"/home/bob"};
   AbsolutePath defaultUserConfigPath_{"/home/bob/.edenrc"};
   AbsolutePath defaultSystemConfigPath_{"/etc/eden/edenfs.rc"};
@@ -66,7 +67,7 @@ class EdenConfigTest : public ::testing::Test {
     auto userConfigPath = userConfigDir / ".edenrc";
     auto userConfigFileData = folly::StringPiece{
         "[core]\n"
-        "ignoreFile=\"/home/bob/userCustomIgnore\"\n"};
+        "ignoreFile=\"${HOME}/${USER}/userCustomIgnore\"\n"};
     folly::writeFile(userConfigFileData, userConfigPath.c_str());
 
     auto systemConfigDir = testCaseDir / "etc-eden";
@@ -92,7 +93,11 @@ TEST_F(EdenConfigTest, defaultTest) {
   AbsolutePath systemConfigDir{"/etc/eden"};
 
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
-      testHomeDir_, userConfigPath, systemConfigDir, systemConfigPath);
+      testUser_,
+      testHomeDir_,
+      userConfigPath,
+      systemConfigDir,
+      systemConfigPath);
 
   // Config path
   EXPECT_EQ(edenConfig->getUserConfigPath(), userConfigPath);
@@ -111,7 +116,11 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   AbsolutePath systemConfigDir{"/etc/eden/fix"};
 
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
-      testHomeDir_, userConfigPath, systemConfigPath, systemConfigDir);
+      testUser_,
+      testHomeDir_,
+      userConfigPath,
+      systemConfigPath,
+      systemConfigDir);
 
   AbsolutePath ignoreFile{"/home/bob/alternativeIgnore"};
   AbsolutePath systemIgnoreFile{"/etc/eden/fix/systemIgnore"};
@@ -156,7 +165,11 @@ TEST_F(EdenConfigTest, cloneTest) {
   std::shared_ptr<EdenConfig> configCopy;
   {
     auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
-        testHomeDir_, userConfigPath, systemConfigDir, systemConfigPath);
+        testUser_,
+        testHomeDir_,
+        userConfigPath,
+        systemConfigDir,
+        systemConfigPath);
 
     // Configuration
     edenConfig->setUserIgnoreFile(ignoreFile, facebook::eden::COMMAND_LINE);
@@ -198,7 +211,11 @@ TEST_F(EdenConfigTest, clearAllTest) {
   AbsolutePath systemConfigDir{"/etc/eden"};
 
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
-      testHomeDir_, userConfigPath, systemConfigDir, systemConfigPath);
+      testUser_,
+      testHomeDir_,
+      userConfigPath,
+      systemConfigDir,
+      systemConfigPath);
 
   AbsolutePath fromUserConfigPath{"/home/bob/FROM_USER_CONFIG"};
   AbsolutePath fromSystemConfigPath{"/etc/eden/FROM_SYSTEM_CONFIG"};
@@ -245,7 +262,11 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
   AbsolutePath systemConfigDir{"/etc/eden"};
 
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
-      testHomeDir_, userConfigPath, systemConfigDir, systemConfigPath);
+      testUser_,
+      testHomeDir_,
+      userConfigPath,
+      systemConfigDir,
+      systemConfigPath);
 
   // Check default (starting point)
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/home/bob/ignore");
@@ -269,6 +290,7 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
 TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
   // TODO: GET THE BASE NAME FOR THE SYSTEM CONFIG DIR!
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
+      testUser_,
       testHomeDir_,
       testPathMap_[simpleOverRideTest_].second,
       testPathMap_[simpleOverRideTest_].first,
@@ -282,7 +304,7 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
 
   edenConfig->loadUserConfig();
 
-  EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/home/bob/userCustomIgnore");
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/home/bob/bob/userCustomIgnore");
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), "/etc/eden/systemCustomIgnore");
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
 }
@@ -293,7 +315,11 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
   auto systemConfigPath = AbsolutePath{"/etc/eden/FILE_DOES_NOT_EXIST.rc"};
 
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
-      testHomeDir_, userConfigPath, systemConfigDir, systemConfigPath);
+      testUser_,
+      testHomeDir_,
+      userConfigPath,
+      systemConfigDir,
+      systemConfigPath);
 
   edenConfig->loadSystemConfig();
   edenConfig->loadUserConfig();

@@ -82,6 +82,7 @@ TestMount::TestMount() : privHelper_{make_shared<FakePrivHelper>()} {
           FLAGS_num_eden_test_threads, "EdenCPUThread"),
       clock_,
       make_shared<EdenConfig>(
+          /*userName=*/folly::StringPiece{"bob"},
           /*userHomePath=*/AbsolutePath{testDir_->path().string()},
           /*userConfigPath=*/
           AbsolutePath{testDir_->path().string() + ".edenrc"},

@@ -26,7 +26,9 @@ using folly::StringPiece;
 using std::string;
 using namespace folly::string_piece_literals;
 
-constexpr folly::StringPiece kHomeEnvVar{"$HOME"};
+constexpr std::array<folly::StringPiece, 2> kEnvVars = {
+    folly::StringPiece{"HOME"},
+    folly::StringPiece{"USER"}};
 
 const facebook::eden::RelativePathPiece kDefaultEdenDirectory{".eden"};
 const facebook::eden::RelativePathPiece kDefaultIgnoreFile{"ignore"};
@@ -115,11 +117,13 @@ std::string EdenConfig::toString() const {
 }
 
 EdenConfig::EdenConfig(
+    folly::StringPiece userName,
     AbsolutePath userHomePath,
     AbsolutePath userConfigPath,
     AbsolutePath systemConfigDir,
     AbsolutePath systemConfigPath)
-    : userHomePath_(userHomePath),
+    : userName_(userName),
+      userHomePath_(userHomePath),
       userConfigPath_(userConfigPath),
       systemConfigPath_(systemConfigPath),
       systemConfigDir_(systemConfigDir) {
@@ -330,6 +334,7 @@ void EdenConfig::parseAndApplyConfigFile(
   std::shared_ptr<cpptoml::table> configRoot;
   std::map<std::string, std::string> attrMap;
   attrMap["HOME"] = userHomePath_.value();
+  attrMap["USER"] = userName_;
 
   try {
     std::string fileContents;
@@ -391,13 +396,17 @@ operator()(
     folly::StringPiece value,
     const std::map<std::string, std::string>& convData) const {
   auto sString = value.str();
-  auto it = convData.find("HOME");
-  if (it != convData.end()) {
-    auto idx = value.find(kHomeEnvVar);
-    if (idx != std::string::npos) {
-      sString.replace(idx, kHomeEnvVar.size(), it->second);
+  for (auto varName : kEnvVars) {
+    auto it = convData.find(varName.str());
+    if (it != convData.end()) {
+      auto envVar = folly::to<std::string>("${", varName, "}");
+      auto idx = sString.find(envVar);
+      if (idx != std::string::npos) {
+        sString.replace(idx, envVar.size(), it->second);
+      }
     }
   }
+
   if (!::isValidAbsolutePath(sString)) {
     return folly::makeUnexpected<std::string>(folly::to<std::string>(
         "Cannot convert value '", value, "' to an absolute path"));

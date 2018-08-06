@@ -279,6 +279,7 @@ class EdenConfig : public ConfigSettingManager {
    * load methods to populate the EdenConfig.
    */
   explicit EdenConfig(
+      folly::StringPiece userName,
       AbsolutePath userHomePath,
       AbsolutePath userConfigPath,
       AbsolutePath systemConfigDir,
@@ -396,6 +397,7 @@ class EdenConfig : public ConfigSettingManager {
    */
   std::map<std::string, std::map<std::string, ConfigSettingBase*>> configMap_;
 
+  std::string userName_;
   AbsolutePath userHomePath_;
   AbsolutePath userConfigPath_;
   AbsolutePath systemConfigPath_;

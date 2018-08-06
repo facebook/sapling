@@ -175,6 +175,7 @@ int main(int argc, char** argv) {
   // Create the default EdenConfig. Next, update with command line arguments.
   // Command line areguments will take precedence over config file settings.
   auto edenConfig = std::make_unique<EdenConfig>(
+      identity.getUsername(),
       identity.getHomeDirectory(),
       userConfigPath,
       systemConfigDir,
