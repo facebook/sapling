@@ -12,7 +12,7 @@ use utils::run_future;
 
 use blobrepo::HgBlobEntry;
 use blobrepo::internal::{IncompleteFilenodes, MemoryManifestEntry, MemoryRootManifest};
-use many_files_dirs;
+use fixtures::many_files_dirs;
 use mercurial_types::{Entry, FileType, HgNodeHash, MPath, MPathElement, Type, nodehash::HgEntryId};
 use mercurial_types_mocks::nodehash;
 use mononoke_types::RepoPath;
@@ -60,7 +60,7 @@ fn load_manifest() {
     async_unit::tokio_unit_test(|| {
         let repo = many_files_dirs::getrepo(None);
 
-        let manifest_id = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+        let manifest_id = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
             .expect("Could not get nodehash");
 
         // Load a memory manifest
@@ -112,7 +112,7 @@ fn save_manifest() {
                 .expect("Could not create empty manifest");
 
         // Add an unmodified entry
-        let dir_nodehash = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+        let dir_nodehash = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
             .expect("Could not get nodehash");
         let dir = MemoryManifestEntry::MemTree {
             base_manifest_id: Some(dir_nodehash),
@@ -150,7 +150,7 @@ fn remove_item() {
         let repo = many_files_dirs::getrepo(None);
         let blobstore = repo.get_blobstore();
 
-        let manifest_id = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+        let manifest_id = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
             .expect("Could not get nodehash");
 
         let dir2 = MPathElement::new(b"dir2".to_vec()).expect("Can't create MPathElement dir2");
@@ -226,7 +226,7 @@ fn add_item() {
         let repo = many_files_dirs::getrepo(None);
         let blobstore = repo.get_blobstore();
 
-        let manifest_id = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+        let manifest_id = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
             .expect("Could not get nodehash");
 
         let new_file =
@@ -242,7 +242,7 @@ fn add_item() {
             .expect("Could not load manifest");
 
         // Add a file
-        let nodehash = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+        let nodehash = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
             .expect("Could not get nodehash");
         memory_manifest
             .change_entry(
@@ -282,7 +282,7 @@ fn replace_item() {
         let repo = many_files_dirs::getrepo(None);
         let blobstore = repo.get_blobstore();
 
-        let manifest_id = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+        let manifest_id = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
             .expect("Could not get nodehash");
 
         let new_file = MPathElement::new(b"1".to_vec()).expect("Can't create MPathElement 1");
@@ -297,7 +297,7 @@ fn replace_item() {
             .expect("Could not load manifest");
 
         // Add a file
-        let nodehash = HgNodeHash::from_static_str("b267a6869fcc39b37741408b5823cc044233201d")
+        let nodehash = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
             .expect("Could not get nodehash");
         memory_manifest
             .change_entry(

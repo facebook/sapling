@@ -58,7 +58,7 @@ impl Stream for SingleNodeHash {
 mod test {
     use super::*;
     use async_unit;
-    use linear;
+    use fixtures::linear;
     use std::sync::Arc;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;

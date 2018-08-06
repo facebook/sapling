@@ -16,14 +16,9 @@ extern crate slog_glog_fmt;
 extern crate blobrepo_utils;
 extern crate mercurial_types;
 
-extern crate branch_even;
-extern crate branch_uneven;
-extern crate branch_wide;
-extern crate linear;
-extern crate merge_even;
-extern crate merge_uneven;
-extern crate unshared_merge_even;
-extern crate unshared_merge_uneven;
+extern crate fixtures;
+
+use fixtures::*;
 
 // An extra level of nesting is required to avoid clashes between crate and module names.
 mod test {

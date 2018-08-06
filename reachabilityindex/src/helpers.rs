@@ -91,8 +91,8 @@ mod test {
     use std::sync::Arc;
 
     use async_unit;
+    use fixtures::linear;
     use futures::Future;
-    use linear;
     use mononoke_types::Generation;
 
     use helpers::fetch_generation_and_join;

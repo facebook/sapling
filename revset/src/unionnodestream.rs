@@ -148,9 +148,9 @@ impl Stream for UnionNodeStream {
 mod test {
     use super::*;
     use {NodeStream, SingleNodeHash};
-    use {branch_even, branch_uneven, branch_wide, linear};
     use async_unit;
     use errors::ErrorKind;
+    use fixtures::{branch_even, branch_uneven, branch_wide, linear};
     use futures::executor::spawn;
     use setcommon::{NotReadyEmptyStream, RepoErrorStream};
     use std::sync::Arc;

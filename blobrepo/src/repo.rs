@@ -34,7 +34,8 @@ use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_ob
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, CachingBonsaiHgMapping,
                         MysqlBonsaiHgMapping, SqliteBonsaiHgMapping};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
-use changesets::{CachingChangests, ChangesetInsert, Changesets, MysqlChangesets, SqliteChangesets};
+use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, MysqlChangesets,
+                 SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use delayblob::DelayBlob;
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
@@ -467,25 +468,66 @@ impl BlobRepo {
             .map(|(_, cs)| cs.into_nodehash())
     }
 
+    // TODO(stash): make it accept ChangesetId
     pub fn changeset_exists(&self, changesetid: &HgChangesetId) -> BoxFuture<bool, Error> {
         STATS::changeset_exists.add_value(1);
-        self.changesets
-            .get(self.repoid, *changesetid)
-            .map(|res| res.is_some())
+        let changesetid = changesetid.clone();
+        let repo = self.clone();
+        let repoid = self.repoid.clone();
+
+        self.get_bonsai_from_hg(&changesetid)
+            .and_then(move |maybebonsai| match maybebonsai {
+                Some(bonsai) => repo.changesets
+                    .get(repoid, bonsai)
+                    .map(|res| res.is_some())
+                    .left_future(),
+                None => Ok(false).into_future().right_future(),
+            })
             .boxify()
     }
 
+    // TODO(stash): make it accept ChangesetId
     pub fn get_changeset_parents(
         &self,
         changesetid: &HgChangesetId,
     ) -> BoxFuture<Vec<HgChangesetId>, Error> {
         STATS::get_changeset_parents.add_value(1);
         let changesetid = *changesetid;
-        self.changesets
-            .get(self.repoid, changesetid.clone())
-            .and_then(move |res| res.ok_or(ErrorKind::ChangesetMissing(changesetid).into()))
-            .map(|res| res.parents)
+        let repo = self.clone();
+
+        self.get_bonsai_cs_entry_or_fail(changesetid)
+            .map(|bonsai| bonsai.parents)
+            .and_then({
+                cloned!(repo);
+                move |bonsai_parents| {
+                    future::join_all(
+                        bonsai_parents.into_iter().map(move |bonsai_parent| {
+                            repo.get_hg_from_bonsai_changeset(bonsai_parent)
+                        }),
+                    )
+                }
+            })
             .boxify()
+    }
+
+    fn get_bonsai_cs_entry_or_fail(
+        &self,
+        changesetid: HgChangesetId,
+    ) -> impl Future<Item = ChangesetEntry, Error = Error> {
+        let repoid = self.repoid.clone();
+        let changesets = self.changesets.clone();
+
+        self.get_bonsai_from_hg(&changesetid)
+            .and_then(move |maybebonsai| {
+                maybebonsai.ok_or(ErrorKind::BonsaiMappingNotFound(changesetid).into())
+            })
+            .and_then(move |bonsai| {
+                changesets
+                    .get(repoid, bonsai)
+                    .and_then(move |maybe_bonsai| {
+                        maybe_bonsai.ok_or(ErrorKind::BonsaiNotFound(bonsai).into())
+                    })
+            })
     }
 
     pub fn get_changeset_by_changesetid(
@@ -582,15 +624,23 @@ impl BlobRepo {
             .boxify()
     }
 
+    // TODO(stash): make it accept ChangesetId
     pub fn get_generation_number(
         &self,
         cs: &HgChangesetId,
-    ) -> BoxFuture<Option<Generation>, Error> {
+    ) -> impl Future<Item = Option<Generation>, Error = Error> {
         STATS::get_generation_number.add_value(1);
-        self.changesets
-            .get(self.repoid, *cs)
-            .map(|res| res.map(|res| Generation::new(res.gen)))
-            .boxify()
+        let repo = self.clone();
+        let repoid = self.repoid.clone();
+
+        self.get_bonsai_from_hg(&cs)
+            .and_then(move |maybebonsai| match maybebonsai {
+                Some(bonsai) => repo.changesets
+                    .get(repoid, bonsai)
+                    .map(|res| res.map(|res| Generation::new(res.gen)))
+                    .left_future(),
+                None => Ok(None).into_future().right_future(),
+            })
     }
 
     pub fn upload_blob<Id>(&self, blob: Blob<Id>) -> impl Future<Item = Id, Error = Error> + Send
@@ -625,7 +675,7 @@ impl BlobRepo {
             })
     }
 
-    // This is used by tests in memory_manifest.rs
+    // This is used by tests
     pub fn get_blobstore(&self) -> RepoBlobstore {
         self.blobstore.clone()
     }
@@ -929,21 +979,6 @@ impl BlobRepo {
                                             hg_cs_id: cs_id,
                                             bcs_id,
                                         })
-                                    })
-                                    .and_then({
-                                        cloned!(repo, cs_id);
-                                        move |_| {
-                                            repo.changesets
-                                                .add(ChangesetInsert {
-                                                    repo_id: repo.repoid,
-                                                    cs_id: cs_id,
-                                                    parents: parents
-                                                        .clone()
-                                                        .into_iter()
-                                                        .map(HgChangesetId::new)
-                                                        .collect(),
-                                                })
-                                        }
                                     })
                                     .map(move |_| cs_id)
                                     .boxify()
@@ -1345,6 +1380,26 @@ pub struct ChangesetMetadata {
     pub comments: String,
 }
 
+pub fn save_bonsai_changeset(
+    bonsai_cs: BonsaiChangeset,
+    repo: BlobRepo,
+) -> impl Future<Item = (), Error = Error> {
+    let complete_changesets = repo.changesets.clone();
+    let blobstore = repo.blobstore.clone();
+    let repoid = repo.repoid.clone();
+
+    save_bonsai_changeset_object(blobstore, bonsai_cs.clone())
+        .and_then(move |()| {
+            let completion_record = ChangesetInsert {
+                repo_id: repoid,
+                cs_id: bonsai_cs.get_changeset_id(),
+                parents: bonsai_cs.parents().into_iter().cloned().collect(),
+            };
+            complete_changesets.add(completion_record)
+        })
+        .map(|_| ())
+}
+
 pub struct CreateChangeset {
     /// This should always be provided, keeping it an Option for tests
     pub expected_nodeid: Option<HgNodeHash>,
@@ -1547,12 +1602,8 @@ impl CreateChangeset {
                 .and_then(move |(hg_cs, bonsai_cs)| {
                     let completion_record = ChangesetInsert {
                         repo_id: repoid,
-                        cs_id: hg_cs.get_changeset_id(),
-                        parents: hg_cs
-                            .parents()
-                            .into_iter()
-                            .map(|n| HgChangesetId::new(n))
-                            .collect(),
+                        cs_id: bonsai_cs.get_changeset_id(),
+                        parents: bonsai_cs.parents().into_iter().cloned().collect(),
                     };
                     complete_changesets
                         .add(completion_record)

@@ -345,9 +345,9 @@ impl Stream for GroupedByGenenerationStream {
 mod test {
     use super::*;
     use async_unit;
+    use fixtures::linear;
+    use fixtures::merge_uneven;
     use futures::executor::spawn;
-    use linear;
-    use merge_uneven;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
 
@@ -413,7 +413,7 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new(
                 &repo,
-                string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
             ).boxify();
             let inputstream = add_generations(nodestream, repo.clone());
 
@@ -425,7 +425,7 @@ mod test {
                 res,
                 vec![
                     (
-                        hashset!{string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce")},
+                        hashset!{string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7")},
                         Generation::new(10),
                     ),
                     (
@@ -582,7 +582,7 @@ mod test {
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
                 vec![
-                    string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                 ],
                 vec![
                     string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
@@ -593,7 +593,7 @@ mod test {
             assert_node_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
                     string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                 ],
@@ -610,7 +610,7 @@ mod test {
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
                 vec![
-                    string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                 ],
                 vec![
                     string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
@@ -620,7 +620,7 @@ mod test {
             assert_node_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
                     string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                     string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),

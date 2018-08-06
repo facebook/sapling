@@ -10,9 +10,9 @@ use std::sync::Arc;
 
 use mercurial_types::HgNodeHash;
 
-use branch_wide;
-use linear;
-use merge_uneven;
+use fixtures::branch_wide;
+use fixtures::linear;
+use fixtures::merge_uneven;
 
 pub fn string_to_nodehash(hash: &'static str) -> HgNodeHash {
     HgNodeHash::from_static_str(hash).expect("Can't turn string to HgNodeHash")
@@ -73,7 +73,7 @@ pub fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(index_crea
             string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
         ];
 
-        let _merge_node = string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce");
+        let _merge_node = string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7");
 
         for left_node in branch_1.into_iter() {
             for right_node in branch_2.iter() {

@@ -19,14 +19,14 @@ extern crate blobrepo;
 extern crate blobstore;
 extern crate changesets;
 extern crate dbbookmarks;
-extern crate many_files_dirs;
+extern crate fixtures;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
-extern crate merge_uneven;
 extern crate mononoke_types;
 
 use failure::Error;
+use fixtures::{many_files_dirs, merge_uneven};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
@@ -540,7 +540,7 @@ test_both_repotypes!(
 fn test_compute_changed_files_no_parents() {
     async_unit::tokio_unit_test(|| {
         let repo = many_files_dirs::getrepo(None);
-        let nodehash = string_to_nodehash("a6cb7dddec32acaf9a28db46cdb3061682155531");
+        let nodehash = string_to_nodehash("0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480");
         let expected = vec![
             MPath::new(b"1").unwrap(),
             MPath::new(b"2").unwrap(),
@@ -569,8 +569,8 @@ fn test_compute_changed_files_one_parent() {
         // hg log -T"{node}\n{files % '    MPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
         // to see how Mercurial would compute the files list and confirm that it's the same
         let repo = many_files_dirs::getrepo(None);
-        let nodehash = string_to_nodehash("a6cb7dddec32acaf9a28db46cdb3061682155531");
-        let parenthash = string_to_nodehash("473b2e715e0df6b2316010908879a3c78e275dd9");
+        let nodehash = string_to_nodehash("0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480");
+        let parenthash = string_to_nodehash("d261bc7900818dea7c86935b3fb17a33b2e3a6b4");
         let expected = vec![
             MPath::new(b"dir1").unwrap(),
             MPath::new(b"dir1/file_1_in_dir1").unwrap(),

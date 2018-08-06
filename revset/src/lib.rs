@@ -60,14 +60,7 @@ mod test {
     pub extern crate async_unit;
     pub extern crate quickcheck;
 
-    pub extern crate branch_even;
-    pub extern crate branch_uneven;
-    pub extern crate branch_wide;
-    pub extern crate linear;
-    pub extern crate merge_even;
-    pub extern crate merge_uneven;
-    pub extern crate unshared_merge_even;
-    pub extern crate unshared_merge_uneven;
+    pub extern crate fixtures;
 }
 #[cfg(not(test))]
 mod test {}

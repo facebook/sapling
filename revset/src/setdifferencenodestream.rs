@@ -115,10 +115,10 @@ mod test {
     use SingleNodeHash;
     use UnionNodeStream;
     use async_unit;
+    use fixtures::linear;
+    use fixtures::merge_even;
+    use fixtures::merge_uneven;
     use futures::executor::spawn;
-    use linear;
-    use merge_even;
-    use merge_uneven;
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
     use tests::assert_node_sequence;
@@ -339,7 +339,7 @@ mod test {
             // Top three commits in my hg log -G -r 'all()' output
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
-                    string_to_nodehash("babf5e4dea7ffcf32c3740ff2f1351de4e15c889"),
+                    string_to_nodehash("6120679e1fedb0b2f3717bbf042e5fd718763042"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
@@ -380,7 +380,7 @@ mod test {
             assert_node_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("babf5e4dea7ffcf32c3740ff2f1351de4e15c889"),
+                    string_to_nodehash("6120679e1fedb0b2f3717bbf042e5fd718763042"),
                     string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
                 ],
                 nodestream,
@@ -396,7 +396,7 @@ mod test {
             // Merge commit, and one from each branch
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
-                    string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
@@ -437,7 +437,7 @@ mod test {
             assert_node_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                 ],
                 nodestream,

@@ -25,7 +25,7 @@ extern crate mercurial;
 extern crate mercurial_types;
 
 #[cfg(test)]
-extern crate linear;
+extern crate fixtures;
 
 mod errors;
 
@@ -135,7 +135,7 @@ mod test {
                 "new_hash" => "a5ffa77602a066db7d5cfb9fb5823a0895717c5a".into(),
             };
             let mut hook_manager = HookManager::new();
-            let repo = linear::getrepo(None);
+            let repo = fixtures::linear::getrepo(None);
             let hook = HookContext {
                 name: "test",
                 repo: Arc::new(repo),

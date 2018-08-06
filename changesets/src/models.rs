@@ -4,7 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::{HgChangesetId, RepositoryId};
+use mercurial_types::RepositoryId;
+use mononoke_types::ChangesetId;
 
 use schema::{changesets, csparents};
 
@@ -15,7 +16,7 @@ pub struct ChangesetRow {
     // TODO (rain1) T26215455: use a custom type here
     pub id: i64,
     pub repo_id: RepositoryId,
-    pub cs_id: HgChangesetId,
+    pub cs_id: ChangesetId,
     pub gen: i64,
 }
 
@@ -33,6 +34,6 @@ pub(crate) struct ChangesetParentRow {
 #[table_name = "changesets"]
 pub(crate) struct ChangesetInsertRow {
     pub repo_id: RepositoryId,
-    pub cs_id: HgChangesetId,
+    pub cs_id: ChangesetId,
     pub gen: i64,
 }

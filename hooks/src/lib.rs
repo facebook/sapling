@@ -26,6 +26,8 @@ extern crate bookmarks;
 extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;
+#[cfg(test)]
+extern crate fixtures;
 extern crate futures;
 #[macro_use]
 extern crate futures_ext;
@@ -33,8 +35,6 @@ extern crate hlua;
 extern crate hlua_futures;
 #[macro_use]
 extern crate lazy_static;
-#[cfg(test)]
-extern crate many_files_dirs;
 #[macro_use]
 extern crate maplit;
 extern crate mercurial_types;
@@ -642,9 +642,9 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use fixtures::many_files_dirs;
     use futures::Future;
     use futures::future::finished;
-    use many_files_dirs;
     use std::collections::hash_map::Entry;
     use std::str::FromStr;
 
@@ -826,7 +826,7 @@ mod test {
                 "dir1/subdir1/subsubdir2/file_2".into(),
             ];
             let parents =
-                HookChangesetParents::One("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec".into());
+                HookChangesetParents::One("2f866e7e549760934e31bf0420a873f65100ad63".into());
             let data = HookChangeset::new(
                 "Stanislau Hlebik <stash@fb.com>".into(),
                 files,
@@ -1121,7 +1121,7 @@ mod test {
     }
 
     fn default_changeset_id() -> HgChangesetId {
-        HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap()
+        HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap()
     }
 
     fn hook_manager_blobrepo() -> HookManager {
@@ -1140,7 +1140,7 @@ mod test {
     fn hook_manager_inmem() -> HookManager {
         let repo = many_files_dirs::getrepo(None);
         // Load up an in memory store with a single commit from the many_files_dirs store
-        let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         let cs = repo.get_changeset_by_changesetid(&cs_id).wait().unwrap();
         let mut changeset_store = InMemoryChangesetStore::new();
         changeset_store.insert(&cs_id, &cs);

@@ -65,7 +65,7 @@ mod test {
     use super::ErrorKind;
     use super::super::*;
     use async_unit;
-    use many_files_dirs;
+    use fixtures::many_files_dirs;
     use metaconfig::repoconfig::{BookmarkParams, HookParams, RepoType};
 
     #[test]

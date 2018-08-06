@@ -17,6 +17,7 @@ extern crate futures;
 
 extern crate changesets;
 extern crate mercurial_types_mocks;
+extern crate mononoke_types_mocks;
 
 use std::sync::Arc;
 
@@ -24,8 +25,8 @@ use futures::Future;
 
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, MysqlChangesets,
                  SqliteChangesets};
-use mercurial_types_mocks::nodehash::*;
 use mercurial_types_mocks::repo::*;
+use mononoke_types_mocks::changesetid::*;
 
 fn add_and_get<C: Changesets + 'static>(changesets: C) {
     let row = ChangesetInsert {

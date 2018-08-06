@@ -9,9 +9,9 @@
 
 extern crate async_unit;
 extern crate blobrepo;
+extern crate fixtures;
 extern crate futures;
 extern crate futures_ext;
-extern crate many_files_dirs;
 #[macro_use]
 extern crate maplit;
 extern crate mercurial_types;
@@ -24,6 +24,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
+use fixtures::many_files_dirs;
 use futures::{Future, Stream};
 use futures::executor::spawn;
 use futures_ext::select_all;
@@ -346,7 +347,7 @@ fn do_check(
 fn test_recursive_changed_entry_stream_simple() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = HgNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let main_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         let base_hash = HgNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
@@ -379,9 +380,9 @@ fn test_recursive_changed_entry_stream_simple() {
 fn test_recursive_entry_stream() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let changesetid = HgNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let changesetid = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
 
-        // hg up ecafdc4a4b6748b7a7215c6995f14c837dc1ebec
+        // hg up 2f866e7e549760934e31bf0420a873f65100ad63
         // $ hg files
         // 1
         // 2
@@ -453,8 +454,8 @@ fn test_recursive_entry_stream() {
 fn test_recursive_changed_entry_stream_changed_dirs() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = HgNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-        let base_hash = HgNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let main_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
+        let base_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
         // A dir1/subdir1/subsubdir1/file_1
@@ -484,8 +485,8 @@ fn test_recursive_changed_entry_stream_changed_dirs() {
 fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = HgNodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
-        let base_hash = HgNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let main_hash = HgNodeHash::from_str("0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480").unwrap();
+        let base_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
         // A dir1
@@ -525,8 +526,8 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
 fn test_recursive_changed_entry_prune() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash = HgNodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
-        let base_hash = HgNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let main_hash = HgNodeHash::from_str("0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480").unwrap();
+        let base_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         // main_hash is a child of base_hash
         // hg st --change .
         // A dir1
@@ -595,8 +596,8 @@ fn test_recursive_changed_entry_prune() {
 fn test_recursive_changed_entry_prune_visited() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash_1 = HgNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
-        let main_hash_2 = HgNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let main_hash_1 = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
+        let main_hash_2 = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         let base_hash = HgNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
 
         // VisitedPruner let's us merge stream without producing the same entries twice.
@@ -650,8 +651,8 @@ fn test_recursive_changed_entry_prune_visited() {
 fn test_recursive_changed_entry_prune_visited_no_files() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
-        let main_hash_1 = HgNodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
-        let main_hash_2 = HgNodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let main_hash_1 = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
+        let main_hash_2 = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         let base_hash = HgNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
 
         // VisitedPruner let's us merge stream without producing the same entries twice.

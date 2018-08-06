@@ -33,12 +33,6 @@ pub use skiplist::SkiplistIndex;
 #[cfg(test)]
 pub extern crate async_unit;
 #[cfg(test)]
-pub extern crate branch_wide;
-#[cfg(test)]
-pub extern crate linear;
-#[cfg(test)]
-pub extern crate merge_uneven;
-#[cfg(test)]
-pub extern crate unshared_merge_even;
+pub extern crate fixtures;
 #[cfg(test)]
 mod tests;

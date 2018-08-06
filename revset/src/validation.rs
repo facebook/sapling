@@ -75,7 +75,7 @@ mod test {
     use super::*;
     use SingleNodeHash;
     use async_unit;
-    use linear;
+    use fixtures::linear;
 
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;

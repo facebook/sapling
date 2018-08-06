@@ -157,14 +157,14 @@ mod test {
     use super::*;
     use {NodeStream, SingleNodeHash, UnionNodeStream};
     use async_unit;
+    use fixtures::linear;
+    use fixtures::unshared_merge_even;
+    use fixtures::unshared_merge_uneven;
     use futures::executor::spawn;
-    use linear;
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
-    use unshared_merge_even;
-    use unshared_merge_uneven;
 
     #[test]
     fn intersect_identical_node() {
@@ -398,7 +398,7 @@ mod test {
             // Post-merge, merge, and both unshared branches
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
-                    string_to_nodehash("cc7f14bc631bca43eaa32c25b04a638d54d10b70"),
+                    string_to_nodehash("7fe9947f101acb4acf7d945e69f0d6ce76a81113"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
@@ -458,11 +458,11 @@ mod test {
             // Post-merge, merge, and both unshared branches
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
-                    string_to_nodehash("ec27ab4e7aeb7088e8a0234f712af44fb7b43a46"),
+                    string_to_nodehash("339ec3d2a986d55c5ac4670cca68cf36b8dc0b82)"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
-                    string_to_nodehash("9c6dd4e2c2f43c89613b094efb426cc42afdee2a"),
+                    string_to_nodehash("396c60c14337b31ffd0b6aa58a026224713dc07d)"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(

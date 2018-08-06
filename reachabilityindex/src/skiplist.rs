@@ -368,14 +368,14 @@ mod test {
     use futures::stream::iter_ok;
 
     use super::*;
-    use branch_wide;
-    use linear;
-    use merge_uneven;
+    use fixtures::branch_wide;
+    use fixtures::linear;
+    use fixtures::merge_uneven;
+    use fixtures::unshared_merge_even;
     use tests::string_to_nodehash;
     use tests::test_branch_wide_reachability;
     use tests::test_linear_reachability;
     use tests::test_merge_uneven_reachability;
-    use unshared_merge_even;
 
     #[test]
     fn simple_init() {
@@ -518,7 +518,7 @@ mod test {
                 string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
             ];
 
-            let merge_node = string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce");
+            let merge_node = string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7");
             let sli = SkiplistIndex::new();
             sli.add_node(repo, merge_node, 100).wait().unwrap();
             for node in branch_1.into_iter() {
@@ -571,7 +571,7 @@ mod test {
             ];
             let branch_2_head = string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc");
 
-            let _merge_node = string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce");
+            let _merge_node = string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7");
             let sli = SkiplistIndex::new();
 
             // index just one branch first
@@ -840,7 +840,7 @@ mod test {
             ];
 
             let merge_node = string_to_nodehash("d592490c4386cdb3373dd93af04d563de199b2fb");
-            let commit_after_merge = string_to_nodehash("cc7f14bc631bca43eaa32c25b04a638d54d10b70");
+            let commit_after_merge = string_to_nodehash("7fe9947f101acb4acf7d945e69f0d6ce76a81113");
             // performing this query should index just the tip and the merge node
             assert!(
                 query_reachability_with_generation_hints(

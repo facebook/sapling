@@ -11,12 +11,12 @@
 table! {
     use diesel::sql_types::{BigInt, Integer};
 
-    use mercurial_types::sql_types::HgChangesetIdSql;
+    use mononoke_types::sql_types::ChangesetIdSql;
 
     changesets {
         id -> BigInt,
         repo_id -> Integer,
-        cs_id -> HgChangesetIdSql,
+        cs_id -> ChangesetIdSql,
         gen -> BigInt,
     }
 }

@@ -33,7 +33,7 @@ extern crate tokio;
 extern crate async_unit;
 extern crate bookmarks;
 #[cfg(test)]
-extern crate linear;
+extern crate fixtures;
 #[cfg(test)]
 extern crate tempdir;
 
@@ -181,7 +181,6 @@ fn main() -> Result<()> {
 mod test {
     use super::*;
 
-    use linear;
     use std::fs::File;
     use tempdir::TempDir;
 
@@ -259,7 +258,7 @@ mod test {
     }
 
     fn test_blobrepo(_logger: &Logger, _matches: &ArgMatches) -> BlobRepo {
-        linear::getrepo(None)
+        fixtures::linear::getrepo(None)
     }
 
 }

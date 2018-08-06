@@ -229,8 +229,8 @@ impl Stream for RangeNodeStream {
 mod test {
     use super::*;
     use async_unit;
-    use linear;
-    use merge_uneven;
+    use fixtures::linear;
+    use fixtures::merge_uneven;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
 
@@ -326,13 +326,13 @@ mod test {
             let nodestream = RangeNodeStream::new(
                 &repo,
                 string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
             ).boxed();
 
             assert_node_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                     string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
                     string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
                 ],
@@ -349,13 +349,13 @@ mod test {
             let nodestream = RangeNodeStream::new(
                 &repo,
                 string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
-                string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
             ).boxed();
 
             assert_node_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
                     string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                     string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),

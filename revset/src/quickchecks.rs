@@ -17,14 +17,14 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use mercurial_types::HgNodeHash;
 
-use branch_even;
-use branch_uneven;
-use branch_wide;
-use linear;
-use merge_even;
-use merge_uneven;
-use unshared_merge_even;
-use unshared_merge_uneven;
+use fixtures::branch_even;
+use fixtures::branch_uneven;
+use fixtures::branch_wide;
+use fixtures::linear;
+use fixtures::merge_even;
+use fixtures::merge_uneven;
+use fixtures::unshared_merge_even;
+use fixtures::unshared_merge_uneven;
 
 use NodeStream;
 use ancestors::AncestorsNodeStream;
