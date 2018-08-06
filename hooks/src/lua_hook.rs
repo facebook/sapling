@@ -162,9 +162,12 @@ impl LuaHook {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::{HookChangeset, HookChangesetParents};
+    use super::super::{HookChangeset, HookChangesetParents, InMemoryFileContentStore};
     use async_unit;
     use futures::Future;
+    use std::str::FromStr;
+    use std::sync::Arc;
+    use test::to_mpath;
 
     #[test]
     fn test_cs_hook_simple_rejected() {
@@ -620,6 +623,10 @@ mod test {
     }
 
     fn default_hook_file() -> HookFile {
-        HookFile::new("/a/b/c.txt".into())
+        let mut content_store = InMemoryFileContentStore::new();
+        let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        content_store.insert((cs_id.clone(), to_mpath("/a/b/c.txt")), "sausages".into());
+        HookFile::new("/a/b/c.txt".into(), Arc::new(content_store), cs_id)
     }
+
 }

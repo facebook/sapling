@@ -156,8 +156,15 @@ mod test {
 
     fn hook_manager_blobrepo() -> HookManager {
         let repo = many_files_dirs::getrepo(None);
-        let store = BlobRepoChangesetStore { repo };
-        HookManager::new("some_repo".into(), Box::new(store), 1024, 1024 * 1024)
+        let changeset_store = BlobRepoChangesetStore::new(repo.clone());
+        let content_store = BlobRepoFileContentStore::new(repo);
+        HookManager::new(
+            "some_repo".into(),
+            Box::new(changeset_store),
+            Arc::new(content_store),
+            1024,
+            1024 * 1024,
+        )
     }
 
 }
