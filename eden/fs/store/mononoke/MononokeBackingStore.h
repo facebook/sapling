@@ -15,6 +15,8 @@
 #include <folly/SocketAddress.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
+#include <folly/io/async/EventBase.h>
+#include <folly/io/async/SSLOptions.h>
 
 namespace folly {
 class IOBuf;
@@ -39,10 +41,17 @@ class Tree;
 class MononokeBackingStore : public BackingStore {
  public:
   MononokeBackingStore(
-      const folly::SocketAddress& sa,
       const std::string& repo,
       const std::chrono::milliseconds& timeout,
-      folly::Executor* executor);
+      folly::Executor* executor,
+      const std::shared_ptr<folly::SSLContext> sslContext);
+  MononokeBackingStore(
+      const folly::SocketAddress& socketAddress,
+      const std::string& repo,
+      const std::chrono::milliseconds& timeout,
+      folly::Executor* executor,
+      const std::shared_ptr<folly::SSLContext> sslContext);
+
   virtual ~MononokeBackingStore();
 
   virtual folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
@@ -55,13 +64,18 @@ class MononokeBackingStore : public BackingStore {
   MononokeBackingStore(MononokeBackingStore const&) = delete;
   MononokeBackingStore& operator=(MononokeBackingStore const&) = delete;
 
+  folly::Future<folly::SocketAddress> getAddress(folly::EventBase*);
   folly::Future<std::unique_ptr<folly::IOBuf>> sendRequest(
       const proxygen::URL& url);
+  folly::Future<std::unique_ptr<folly::IOBuf>> sendRequestImpl(
+      folly::SocketAddress addr,
+      const proxygen::URL& url);
 
-  folly::SocketAddress sa_;
+  folly::Optional<folly::SocketAddress> socketAddress_;
   std::string repo_;
   std::chrono::milliseconds timeout_;
   folly::Executor* executor_;
+  std::shared_ptr<folly::SSLContext> sslContext_ = nullptr;
 };
 } // namespace eden
 } // namespace facebook

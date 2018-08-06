@@ -16,10 +16,12 @@
 #include <folly/futures/Promise.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseManager.h>
+#include <folly/io/async/SSLOptions.h>
 #include <folly/json.h>
 #include <proxygen/lib/http/HTTPConnector.h>
 #include <proxygen/lib/http/session/HTTPUpstreamSession.h>
 #include <proxygen/lib/utils/URL.h>
+#include <servicerouter/client/cpp2/ServiceRouter.h>
 
 using folly::Future;
 using folly::IOBuf;
@@ -189,12 +191,29 @@ std::unique_ptr<Tree> convertBufToTree(
 
 } // namespace
 
+// This constructor should only be used in testing.
 MononokeBackingStore::MononokeBackingStore(
-    const folly::SocketAddress& sa,
+    const folly::SocketAddress& socketAddress,
     const std::string& repo,
     const std::chrono::milliseconds& timeout,
-    folly::Executor* executor)
-    : sa_(sa), repo_(repo), timeout_(timeout), executor_(executor) {}
+    folly::Executor* executor,
+    const std::shared_ptr<folly::SSLContext> sslContext)
+    : socketAddress_(folly::Optional<folly::SocketAddress>(socketAddress)),
+      repo_(repo),
+      timeout_(timeout),
+      executor_(executor),
+      sslContext_(sslContext) {}
+
+MononokeBackingStore::MononokeBackingStore(
+    const std::string& repo,
+    const std::chrono::milliseconds& timeout,
+    folly::Executor* executor,
+    const std::shared_ptr<folly::SSLContext> sslContext)
+    : socketAddress_(folly::none),
+      repo_(repo),
+      timeout_(timeout),
+      executor_(executor),
+      sslContext_(sslContext) {}
 
 MononokeBackingStore::~MononokeBackingStore() {}
 
@@ -232,7 +251,53 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
       });
 }
 
-Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequest(
+folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
+    folly::EventBase* eventBase) {
+  if (socketAddress_.hasValue()) {
+    return folly::makeFuture(socketAddress_.value());
+  }
+  auto promise = folly::Promise<folly::SocketAddress>();
+  auto future = promise.getFuture();
+
+  auto& factory = servicerouter::cpp2::getClientFactory();
+  auto selector = factory.getSelector();
+
+  selector->getSelectionAsync(
+      "mononoke-apiserver",
+      servicerouter::DebugContext(),
+      servicerouter::SelectionCacheCallback(
+          [promise = std::move(promise)](
+              const servicerouter::Selection& selection,
+              servicerouter::DebugContext&& /* unused */) mutable {
+            if (selection.hosts.empty()) {
+              auto ex = make_exception_wrapper<std::runtime_error>(
+                  std::string("no host found"));
+              promise.setException(ex);
+              return;
+            }
+            auto selected = folly::Random::rand32(selection.hosts.size());
+            auto host = selection.hosts[selected];
+            auto addr =
+                folly::SocketAddress(host->getIpAddress(), host->getPort());
+            promise.setValue(addr);
+          }),
+      eventBase,
+      servicerouter::ServiceOptions(),
+      servicerouter::ConnConfigs());
+
+  return future;
+}
+
+folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequest(
+    const URL& url) {
+  auto eventBase = folly::EventBaseManager::get()->getEventBase();
+
+  return getAddress(eventBase).then(
+      [=](folly::SocketAddress addr) { return sendRequestImpl(addr, url); });
+}
+
+folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequestImpl(
+    folly::SocketAddress addr,
     const URL& url) {
   auto eventBase = folly::EventBaseManager::get()->getEventBase();
   IOBufPromise promise;
@@ -251,7 +316,13 @@ Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequest(
       std::make_unique<proxygen::HTTPConnector>(callback, timer.get());
 
   const folly::AsyncSocket::OptionMap opts{{{SOL_SOCKET, SO_REUSEADDR}, 1}};
-  connector->connect(eventBase, sa_, timeout_, opts);
+
+  if (sslContext_ != nullptr) {
+    connector->connectSSL(
+        eventBase, addr, sslContext_, nullptr, timeout_, opts);
+  } else {
+    connector->connect(eventBase, addr, timeout_, opts);
+  }
 
   /* capture `connector` to make sure it stays alive for the duration of the
      connection */

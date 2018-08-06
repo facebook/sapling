@@ -185,7 +185,8 @@ TEST_F(MononokeBackingStoreTest, testGetBlob) {
         server->addresses()[0].address,
         "repo",
         std::chrono::milliseconds(400),
-        &mainEventBase);
+        &mainEventBase,
+        nullptr);
     auto blob = store.getBlob(kZeroHash).get();
     auto buf = blob->getContents();
     EXPECT_EQ(blobs[kZeroHash.toString()], buf.moveToFbString());
@@ -200,7 +201,7 @@ TEST_F(MononokeBackingStoreTest, testConnectFailed) {
   auto port = server->addresses()[0].address.getPort();
   auto sa = SocketAddress("localhost", port, true);
   MononokeBackingStore store(
-      sa, "repo", std::chrono::milliseconds(300), &mainEventBase);
+      sa, "repo", std::chrono::milliseconds(300), &mainEventBase, nullptr);
   try {
     store.getBlob(kZeroHash).get();
     // Request should fail
@@ -218,7 +219,8 @@ TEST_F(MononokeBackingStoreTest, testEmptyBuffer) {
         server->addresses()[0].address,
         "repo",
         std::chrono::milliseconds(300),
-        &mainEventBase);
+        &mainEventBase,
+        nullptr);
     auto blob = store.getBlob(emptyhash).get();
     auto buf = blob->getContents();
     EXPECT_EQ(blobs[emptyhash.toString()], buf.moveToFbString());
@@ -235,7 +237,8 @@ TEST_F(MononokeBackingStoreTest, testGetTree) {
         server->addresses()[0].address,
         "repo",
         std::chrono::milliseconds(300),
-        &mainEventBase);
+        &mainEventBase,
+        nullptr);
     auto tree = store.getTree(treehash).get();
     auto tree_entries = tree->getTreeEntries();
 
@@ -277,7 +280,8 @@ TEST_F(MononokeBackingStoreTest, testMalformedGetTree) {
         server->addresses()[0].address,
         "repo",
         std::chrono::milliseconds(300),
-        &mainEventBase);
+        &mainEventBase,
+        nullptr);
     EXPECT_THROW(store.getTree(treehash).get(), std::exception);
     server->stop();
   });
@@ -293,7 +297,8 @@ TEST_F(MononokeBackingStoreTest, testGetTreeForCommit) {
         server->addresses()[0].address,
         "repo",
         std::chrono::milliseconds(300),
-        &mainEventBase);
+        &mainEventBase,
+        nullptr);
     auto tree = store.getTreeForCommit(commithash).get();
     auto tree_entries = tree->getTreeEntries();
 
