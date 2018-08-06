@@ -144,6 +144,10 @@ class HttpsCommitCloudService(baseservice.BaseService):
         # ''.  That always returns a valid response indicating there is no
         # workspace with that name for that repo.
         # TODO: Make this a dedicated request
+
+        highlightdebug(
+            self.ui, "sending empty 'get_references' request to check authentication\n"
+        )
         path = "/commit_cloud/get_references"
         response = self._send(path, {})
         if "error" in response:
@@ -294,6 +298,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
     def filterpushedheads(self, reponame, workspace, heads):
         """Filter heads that have already been pushed to Commit Cloud backend
         """
+        # do not send empty list
+        if not heads:
+            return heads
 
         highlightdebug(self.ui, "sending 'get_bundles_handles' request\n")
 
