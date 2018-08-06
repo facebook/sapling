@@ -75,7 +75,7 @@ fn process_bfs_layer(
 
 impl ReachabilityIndex for GenerationNumberBFS {
     fn query_reachability(
-        &mut self,
+        &self,
         repo: Arc<BlobRepo>,
         src: HgNodeHash,
         dst: HgNodeHash,

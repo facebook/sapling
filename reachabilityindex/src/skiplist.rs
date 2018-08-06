@@ -349,7 +349,7 @@ impl SkiplistIndex {
 
 impl ReachabilityIndex for SkiplistIndex {
     fn query_reachability(
-        &mut self,
+        &self,
         repo: Arc<BlobRepo>,
         src: HgNodeHash,
         dst: HgNodeHash,

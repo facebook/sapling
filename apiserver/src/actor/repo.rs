@@ -81,7 +81,7 @@ impl MononokeRepoActor {
         proposed_ancestor: String,
         proposed_descendent: String,
     ) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
-        let mut genbfs = GenerationNumberBFS::new();
+        let genbfs = GenerationNumberBFS::new();
         let src_hash_maybe = FS::get_nodehash(&proposed_descendent);
         let dst_hash_maybe = FS::get_nodehash(&proposed_ancestor);
         let src_hash_future = src_hash_maybe.into_future().or_else({

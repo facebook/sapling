@@ -16,7 +16,7 @@ use mercurial_types::HgNodeHash;
 pub trait ReachabilityIndex {
     /// Return a Future for whether the src node can reach the dst node
     fn query_reachability(
-        &mut self,
+        &self,
         repo: Arc<BlobRepo>,
         src: HgNodeHash,
         dst: HgNodeHash,
