@@ -13,6 +13,12 @@ from . import error, progress, pycompat, util, wireproto
 from .i18n import _
 
 
+# Record of the bytes sent and received to SSH peers.  This records the
+# cumulative total bytes sent to all peers for the life of the process.
+_totalbytessent = 0
+_totalbytesreceived = 0
+
+
 def _serverquote(s):
     if not s:
         return s
@@ -53,6 +59,7 @@ class doublepipe(object):
         self._ui = ui
         self._main = main
         self._side = side
+        self._totalbytes = 0
 
     def _wait(self):
         """wait until some data are available on main or side
@@ -72,6 +79,7 @@ class doublepipe(object):
         return (self._main.fileno() in act, self._side.fileno() in act)
 
     def write(self, data):
+        self._totalbytes += len(data)
         return self._call("write", data)
 
     def read(self, size):
@@ -83,10 +91,13 @@ class doublepipe(object):
             # letting anyone know the main part of the pipe
             # closed prematurely.
             _forwardoutput(self._ui, self._side)
+        self._totalbytes += len(r)
         return r
 
     def readline(self):
-        return self._call("readline")
+        r = self._call("readline")
+        self._totalbytes += len(r)
+        return r
 
     def _call(self, methname, data=None):
         """call <methname> on "main", forward output of "side" while blocking
@@ -257,10 +268,19 @@ class sshpeer(wireproto.wirepeer):
         raise exception
 
     def _cleanup(self):
+        global _totalbytessent, _totalbytesreceived
         if self._pipeo is None:
             return
         self._pipeo.close()
         self._pipei.close()
+        _totalbytessent += self._pipeo._totalbytes
+        _totalbytesreceived += self._pipei._totalbytes
+        self.ui.log(
+            "sshbytes",
+            "",
+            sshbytessent=_totalbytessent,
+            sshbytesreceived=_totalbytesreceived,
+        )
         try:
             # read the error descriptor until EOF
             for l in self._pipee:
