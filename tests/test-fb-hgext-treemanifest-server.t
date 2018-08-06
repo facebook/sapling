@@ -405,3 +405,14 @@ Try pulling while treemanifest.blocksendflat is True
   rollback completed
   abort: pull failed on remote
   [255]
+
+- Bypass the block
+  $ hg pull --config treemanifest.forceallowflat=True
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets a30b520ebf7a
+  (run 'hg heads .' to see heads, 'hg merge' to merge)

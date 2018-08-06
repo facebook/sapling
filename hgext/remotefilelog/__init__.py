@@ -65,6 +65,9 @@ Configs:
     implementation.
     ``treemanifest.blocksendflat`` causes an exception to be thrown if the
     current repository attempts to add flat manifests to a changegroup.
+    ``treemanifest.forceallowflat`` lets a client tell the server that it
+    requires flat manifests, despite blocksendflat being set. This is primarily
+    used for mirroring infrastructure.
 """
 from __future__ import absolute_import
 
@@ -204,6 +207,8 @@ def getrepocaps(orig, repo, *args, **kwargs):
     caps = orig(repo, *args, **kwargs)
     if shallowrepo.requirement in repo.requirements:
         caps["remotefilelog"] = ("True",)
+        if repo.ui.configbool("treemanifest", "forceallowflat"):
+            caps["allowflatmanifest"] = ("True",)
     return caps
 
 
