@@ -459,6 +459,43 @@ def perfannotate(ui, repo, f, **opts):
     timer(lambda: len(fc.annotate(True)))
     fm.end()
 
+@command("perfdatapack", formatteropts)
+def perfdatapack(ui, repo, packpath, **opts):
+    from hgext.remotefilelog.datapack import datapack
+
+    keys = list(iter(datapack(packpath)))
+    ui.write("\nGetMissing (Key Count: %s)\n" % len(keys))
+    _packtestfn(ui, packpath, opts, lambda pack: pack.getmissing(keys))
+
+    partkeys = keys[:100]
+    ui.write("\nGetMissing (Key Count: %s)\n" % len(partkeys))
+    _packtestfn(ui, packpath, opts, lambda pack: pack.getmissing(partkeys))
+
+    key = keys[0]
+    ui.write("\nGet\n")
+    def f(pack):
+        pack.getdelta(*key)
+    _packtestfn(ui, packpath, opts, f)
+
+    ui.write("\nMark Ledger (Key Count: %s)\n" % len(keys))
+    from hgext.remotefilelog.repack import repackledger
+    def f(pack):
+        ledger = repackledger()
+        pack.markledger(ledger, None)
+    _packtestfn(ui, packpath, opts, f)
+
+def _packtestfn(ui, packpath, opts, func):
+    from hgext.remotefilelog.datapack import datapack, fastdatapack
+    from hgext.extlib.pyrevisionstore import datapack as rustdatapack
+    kinds = [("Python", datapack), ("C", fastdatapack), ("Rust", rustdatapack)]
+
+    prepacks = [(name, f(packpath)) for name, f in kinds]
+
+    for name, pack in prepacks:
+        ui.write("%s\n" % name)
+        timer, fm = gettimer(ui, opts)
+        timer(lambda: func(pack))
+        fm.end()
 
 @command(
     "perfstatus",
