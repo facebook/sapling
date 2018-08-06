@@ -244,6 +244,112 @@ test_both_repotypes!(
     create_two_changesets_eager
 );
 
+fn check_bonsai_creation(repo: BlobRepo) {
+    let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
+    let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
+
+    let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+
+    let (dirhash, manifest_dir_future) =
+        upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
+
+    let (_, root_manifest_future) =
+        upload_manifest_no_parents(&repo, format!("dir\0{}t\n", dirhash), &RepoPath::root());
+
+    let commit = create_changeset_no_parents(
+        &repo,
+        root_manifest_future.map(Some).boxify(),
+        vec![file_future, manifest_dir_future],
+    );
+
+    let commit = run_future(commit.get_completed_changeset()).unwrap();
+    let commit = &commit.1;
+    let bonsai_cs_id = run_future(repo.get_bonsai_from_hg(&commit.get_changeset_id())).unwrap();
+    assert!(bonsai_cs_id.is_some());
+    let bonsai = run_future(repo.get_bonsai_changeset(bonsai_cs_id.unwrap())).unwrap();
+    assert_eq!(
+        bonsai
+            .file_changes()
+            .map(|fc| format!("{}", fc.0))
+            .collect::<Vec<_>>(),
+        vec![String::from("dir/file")]
+    );
+}
+
+test_both_repotypes!(
+    check_bonsai_creation,
+    check_bonsai_creation_lazy,
+    check_bonsai_creation_eager
+);
+
+fn check_bonsai_creation_with_rename(repo: BlobRepo) {
+    let parent = {
+        let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
+
+        let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+
+        let (_, root_manifest_future) =
+            upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &RepoPath::root());
+
+        create_changeset_no_parents(
+            &repo,
+            root_manifest_future.map(Some).boxify(),
+            vec![file_future],
+        )
+    };
+
+    let child = {
+        let fake_renamed_file_path =
+            RepoPath::file("file_rename").expect("Can't generate fake RepoPath");
+
+        let (filehash, file_future) = upload_file_no_parents(
+            &repo,
+            "\x01\ncopy: file\ncopyrev: c3127cdbf2eae0f09653f9237d85c8436425b246\x01\nblob",
+            &fake_renamed_file_path,
+        );
+
+        let (_, root_manifest_future) = upload_manifest_no_parents(
+            &repo,
+            format!("file_rename\0{}\n", filehash),
+            &RepoPath::root(),
+        );
+
+        create_changeset_one_parent(
+            &repo,
+            root_manifest_future.map(Some).boxify(),
+            vec![file_future],
+            parent.clone(),
+        )
+    };
+
+    let parent_cs = run_future(parent.get_completed_changeset()).unwrap();
+    let parent_cs = &parent_cs.1;
+    let child_cs = run_future(child.get_completed_changeset()).unwrap();
+    let child_cs = &child_cs.1;
+
+    let parent_bonsai_cs_id = run_future(repo.get_bonsai_from_hg(&parent_cs.get_changeset_id()))
+        .unwrap()
+        .unwrap();
+
+    let bonsai_cs_id = run_future(repo.get_bonsai_from_hg(&child_cs.get_changeset_id())).unwrap();
+    let bonsai = run_future(repo.get_bonsai_changeset(bonsai_cs_id.unwrap())).unwrap();
+    let fc = bonsai.file_changes().collect::<BTreeMap<_, _>>();
+    let file = MPath::new("file").unwrap();
+    assert!(!fc[&file].is_some());
+    let file_rename = MPath::new("file_rename").unwrap();
+    assert!(fc[&file_rename].is_some());
+    assert_eq!(
+        fc[&file_rename].unwrap().copy_from(),
+        Some(&(file, parent_bonsai_cs_id))
+    );
+}
+
+test_both_repotypes!(
+    check_bonsai_creation_with_rename,
+    check_bonsai_creation_with_rename_lazy,
+    check_bonsai_creation_with_rename_eager
+);
+
 fn create_bad_changeset(repo: BlobRepo) {
     let dirhash = string_to_nodehash("c2d60b35a8e7e034042a9467783bbdac88a0d219");
 

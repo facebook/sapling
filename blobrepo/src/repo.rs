@@ -30,6 +30,7 @@ use super::changeset::HgChangesetContent;
 use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use blobstore::{new_memcache_blobstore, Blobstore, EagerMemblob, MemWritesBlobstore,
                 MemoizedBlobstore, PrefixBlobstore};
+use bonsai_generation::{create_bonsai_changeset, save_bonsai_changeset};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, CachingBonsaiHgMapping,
                         MysqlBonsaiHgMapping, SqliteBonsaiHgMapping};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
@@ -45,9 +46,9 @@ use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFil
                       HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
                       Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest::Content;
-use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId,
-                     ContentId, DateTime, FileChange, FileContents, FileType, Generation, MPath,
-                     MPathElement, MononokeId};
+use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, DateTime,
+                     FileChange, FileContents, FileType, Generation, MPath, MPathElement,
+                     MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 
@@ -87,21 +88,6 @@ define_stats! {
     create_changeset_compute_cf: timeseries("create_changeset.compute_changed_files"; RATE, SUM),
     create_changeset_expected_cf: timeseries("create_changeset.expected_changed_files"; RATE, SUM),
     create_changeset_cf_count: timeseries("create_changeset.changed_files_count"; AVG, SUM),
-}
-
-// TODO(stash): remove this function as soon as migration to bonsai changeset has completed
-pub(crate) fn generate_fake_bonsai_changeset() -> BonsaiChangeset {
-    BonsaiChangesetMut {
-        parents: vec![],
-        author: String::new(),
-        author_date: DateTime::from_timestamp(0, 0).unwrap(),
-        committer: None,
-        committer_date: None,
-        message: String::new(),
-        extra: BTreeMap::new(),
-        file_changes: BTreeMap::new(),
-    }.freeze()
-        .unwrap()
 }
 
 /// Making PrefixBlobstore part of every blobstore does two things:
@@ -1409,7 +1395,7 @@ impl CreateChangeset {
 
                     move |(
                         (root_manifest, root_hash),
-                        (parents, parent_manifest_hashes, _bonsai_parents),
+                        (parents, parent_manifest_hashes, bonsai_parents),
                     )| {
                         let files = if let Some(expected_files) = expected_files {
                             STATS::create_changeset_expected_cf.add_value(1);
@@ -1429,22 +1415,30 @@ impl CreateChangeset {
                                 .boxify()
                         };
 
-                        files
+                        let changesets = files
+                            .and_then(move |files| {
+                                STATS::create_changeset_cf_count.add_value(files.len() as i64);
+                                make_new_changeset(parents, root_hash, cs_metadata, files)
+                            })
+                            .and_then(move |hg_cs| {
+                                create_bonsai_changeset(
+                                    hg_cs.clone(),
+                                    parent_manifest_hashes,
+                                    bonsai_parents,
+                                    repo.clone(),
+                                ).map(|bonsai_cs| (hg_cs, bonsai_cs))
+                            });
+
+                        changesets
                             .context("While computing changed files")
                             .and_then({
-                                move |files| {
-                                    STATS::create_changeset_cf_count.add_value(files.len() as i64);
-
+                                move |(blobcs, bonsai_cs)| {
                                     let fut: BoxFuture<
-                                        HgBlobChangeset,
+                                        (HgBlobChangeset, BonsaiChangeset),
                                         Error,
                                     > = (move || {
-                                        let blobcs = try_boxfuture!(make_new_changeset(
-                                            parents,
-                                            root_hash,
-                                            cs_metadata,
-                                            files,
-                                        ));
+                                        let bonsai_blob = bonsai_cs.clone().into_blob();
+                                        let bcs_id = bonsai_blob.id().clone();
 
                                         let cs_id = blobcs.get_changeset_id().into_nodehash();
                                         let manifest_id = *blobcs.manifestid();
@@ -1464,7 +1458,6 @@ impl CreateChangeset {
                                         scuba_logger
                                             .add("changeset_id", format!("{}", cs_id))
                                             .log_with_msg("Changeset uuid to hash mapping", None);
-
                                         // NOTE(luk): an attempt was made in D8187210 to split the
                                         // upload_entries signal into upload_entries and
                                         // processed_entries and to signal_parent_ready after
@@ -1475,16 +1468,17 @@ impl CreateChangeset {
                                         // We deliberately eat this error - this is only so that
                                         // another changeset can start verifying data in the blob
                                         // store while we verify this one
+                                        let _ =
+                                            signal_parent_ready.send((bcs_id, cs_id, manifest_id));
 
-                                        // TODO(stash): generate real bonsai changeset
-                                        let _ = signal_parent_ready.send((
-                                            generate_fake_bonsai_changeset().get_changeset_id(),
-                                            cs_id,
-                                            manifest_id,
-                                        ));
+                                        let bonsai_cs_fut = save_bonsai_changeset(
+                                            blobstore.clone(),
+                                            bonsai_cs.clone(),
+                                        );
 
                                         blobcs
                                             .save(blobstore)
+                                            .join(bonsai_cs_fut)
                                             .context("While writing to blobstore")
                                             .join(
                                                 entry_processor
@@ -1492,7 +1486,7 @@ impl CreateChangeset {
                                                     .context("While finalizing processing"),
                                             )
                                             .from_err()
-                                            .map(move |_| blobcs)
+                                            .map(move |_| (blobcs, bonsai_cs))
                                             .boxify()
                                     })();
 
@@ -1529,23 +1523,40 @@ impl CreateChangeset {
             });
 
         let complete_changesets = repo.changesets.clone();
-        let repo_id = repo.repoid;
+        cloned!(repo.bonsai_hg_mapping, repo.repoid);
         ChangesetHandle::new_pending(
             can_be_parent.shared(),
             changeset
                 .join(parents_complete)
-                .and_then(move |(cs, _)| {
+                .and_then({
+                    cloned!(bonsai_hg_mapping);
+                    move |((hg_cs, bonsai_cs), _)| {
+                        let bcs_id = bonsai_cs.get_changeset_id();
+                        let bonsai_hg_entry = BonsaiHgMappingEntry {
+                            repo_id: repoid.clone(),
+                            hg_cs_id: hg_cs.get_changeset_id(),
+                            bcs_id,
+                        };
+
+                        bonsai_hg_mapping
+                            .add(bonsai_hg_entry)
+                            .map(move |_| (hg_cs, bonsai_cs))
+                            .context("While inserting mapping")
+                    }
+                })
+                .and_then(move |(hg_cs, bonsai_cs)| {
                     let completion_record = ChangesetInsert {
-                        repo_id: repo_id,
-                        cs_id: cs.get_changeset_id(),
-                        parents: cs.parents()
+                        repo_id: repoid,
+                        cs_id: hg_cs.get_changeset_id(),
+                        parents: hg_cs
+                            .parents()
                             .into_iter()
                             .map(|n| HgChangesetId::new(n))
                             .collect(),
                     };
                     complete_changesets
                         .add(completion_record)
-                        .map(|_| (generate_fake_bonsai_changeset(), cs))
+                        .map(|_| (bonsai_cs, hg_cs))
                         .context("While inserting into changeset table")
                 })
                 .with_context(move |_| {

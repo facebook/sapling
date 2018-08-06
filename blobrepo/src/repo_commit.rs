@@ -33,7 +33,7 @@ use HgBlobChangeset;
 use changeset::HgChangesetContent;
 use errors::*;
 use file::HgBlobEntry;
-use repo::{generate_fake_bonsai_changeset, ChangesetMetadata, RepoBlobstore};
+use repo::{ChangesetMetadata, RepoBlobstore};
 
 define_stats! {
     prefix = "mononoke.blobrepo_commit";
@@ -77,8 +77,15 @@ impl ChangesetHandle {
     }
 
     pub fn ready_cs_handle(repo: Arc<BlobRepo>, hg_cs: HgChangesetId) -> Self {
-        // TODO(stash): actually find real BonsaiMapping
-        let bonsai_cs = Ok(generate_fake_bonsai_changeset()).into_future();
+        let bonsai_cs = repo.get_bonsai_from_hg(&hg_cs)
+            .and_then(move |bonsai_id| {
+                bonsai_id.ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs).into())
+            })
+            .and_then({
+                cloned!(repo);
+                move |bonsai_id| repo.get_bonsai_changeset(bonsai_id)
+            });
+
         let cs = repo.get_changeset_by_changesetid(&hg_cs);
 
         let (trigger, can_be_parent) = oneshot::channel();

@@ -22,7 +22,6 @@ use BlobRepo;
 use HgBlobChangeset;
 use errors::*;
 
-#[allow(unused)]
 /// Creates bonsai changeset from already created HgBlobChangeset.
 pub fn create_bonsai_changeset(
     cs: HgBlobChangeset,
@@ -67,7 +66,6 @@ pub fn create_bonsai_changeset(
     })
 }
 
-#[allow(unused)]
 pub fn save_bonsai_changeset(
     blobstore: RepoBlobstore,
     bonsai_cs: BonsaiChangeset,
