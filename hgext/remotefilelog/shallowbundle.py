@@ -473,13 +473,14 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
     # Apply the revisions in topological order such that a revision
     # is only written once it's deltabase and parents have been written.
+    maxskipcount = len(queue) + 1
     while queue:
         f, node = queue.pop(0)
         if (f, node) in processed:
             continue
 
         skipcount += 1
-        if skipcount > len(queue) + 1:
+        if skipcount > maxskipcount:
             raise error.Abort(_("circular node dependency"))
 
         fl = repo.file(f)
