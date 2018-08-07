@@ -25,6 +25,7 @@ extern crate tracing_fb303;
 
 extern crate blobrepo;
 extern crate bookmarks;
+extern crate cachelib;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate ready_state;
@@ -82,6 +83,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             <ca_pem>      --ca-pem [PATH]                       'path to a file with CA certificate'
 
             -d, --debug                                          'print debug level output'
+            --cache-size-gb [SIZE]                                  'size of the cachelib cache, in GiB'
         "#,
         )
 }
@@ -150,6 +152,17 @@ fn main() {
     setup_panic_hook();
     let matches = setup_app().get_matches();
     let root_log = setup_logger(&matches);
+
+    let cache_size = matches
+        .value_of("cache-size-gb")
+        .unwrap_or("20")
+        .parse::<usize>()
+        .unwrap() * 1024 * 1024 * 1024;
+    cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size)).unwrap();
+
+    cachelib::get_or_create_pool("blobstore-blobs", cachelib::get_available_space() * 3 / 4)
+        .unwrap();
+    cachelib::get_or_create_pool("blobstore-presence", cachelib::get_available_space()).unwrap();
 
     fn run_server<'a>(root_log: &Logger, matches: ArgMatches<'a>) -> Result<!> {
         info!(root_log, "Starting up");

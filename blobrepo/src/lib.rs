@@ -34,6 +34,7 @@ extern crate ascii;
 extern crate blobstore;
 extern crate bonsai_hg_mapping;
 extern crate bookmarks;
+extern crate cachelib;
 extern crate changesets;
 extern crate dbbookmarks;
 extern crate delayblob;

@@ -14,13 +14,13 @@ use sloggers::Build;
 use sloggers::terminal::TerminalLoggerBuilder;
 use sloggers::types::{Format, Severity, SourceLocation};
 
+use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
 use blobrepo::{BlobRepo, ManifoldArgs};
 use mercurial_types::RepositoryId;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
-    ("blobstore-cache-size", "size of the blobstore cache"),
     ("changesets-cache-size", "size of the changesets cache"),
     ("filenodes-cache-size", "size of the filenodes cache"),
 ];
@@ -127,7 +127,10 @@ impl MononokeApp {
                     .default_value("5")
                     .hidden(hide_advanced_args)
                     .help("maximum open requests per Manifold IO thread")
-            );
+            )
+            .arg(Arg::from_usage(
+                    "--cache-size-gb [SIZE] 'size of the cachelib cache, in GiB'",
+            ));
 
         if self.local_instances {
             app = app.arg(
@@ -230,6 +233,20 @@ pub fn setup_blobrepo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<(
     Ok(())
 }
 
+pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
+    let cache_size = matches
+        .value_of("cache-size-gb")
+        .unwrap_or("20")
+        .parse::<usize>()
+        .unwrap() * 1024 * 1024 * 1024;
+
+    cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size)).unwrap();
+
+    cachelib::get_or_create_pool("blobstore-blobs", cachelib::get_available_space() * 3 / 4)
+        .unwrap();
+    cachelib::get_or_create_pool("blobstore-presence", cachelib::get_available_space()).unwrap();
+}
+
 fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: bool) -> BlobRepo {
     let repo_id = get_repo_id(matches);
 
@@ -287,7 +304,6 @@ pub fn parse_manifold_args<'a>(
         bucket: matches.value_of("manifold-bucket").unwrap().to_string(),
         prefix: matches.value_of("manifold-prefix").unwrap().to_string(),
         db_address: matches.value_of("db-address").unwrap().to_string(),
-        blobstore_cache_size: get_usize(matches, "blobstore-cache-size", default_cache_size),
         changesets_cache_size: get_usize(matches, "changesets-cache-size", default_cache_size),
         filenodes_cache_size: get_usize(matches, "filenodes-cache-size", default_cache_size),
         bonsai_hg_mapping_cache_size: get_usize(

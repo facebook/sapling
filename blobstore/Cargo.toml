@@ -7,5 +7,3 @@ license = "GPLv2+"
 [dependencies]
 futures = "0.1.17"
 tokio-core = "0.1.17"
-
-asyncmemo = { path = "../asyncmemo" }

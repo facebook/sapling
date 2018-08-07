@@ -28,12 +28,13 @@ use uuid::Uuid;
 
 use super::changeset::HgChangesetContent;
 use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
-use blobstore::{new_memcache_blobstore, Blobstore, EagerMemblob, MemWritesBlobstore,
-                MemoizedBlobstore, PrefixBlobstore};
+use blobstore::{new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob,
+                MemWritesBlobstore, PrefixBlobstore};
 use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, CachingBonsaiHgMapping,
                         MysqlBonsaiHgMapping, SqliteBonsaiHgMapping};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
+use cachelib;
 use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, MysqlChangesets,
                  SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
@@ -106,10 +107,8 @@ pub struct ManifoldArgs {
     pub prefix: String,
     /// Identifies the SQL database to connect to.
     pub db_address: String,
-    /// Size of the blobstore cache.
-    /// Currently we need to set separate cache size for each cache (blobstore, filenodes etc)
+    /// Currently we need to set separate cache size for each cache (changesets, filenodes etc)
     /// TODO(stash): have single cache size for all caches
-    pub blobstore_cache_size: usize,
     /// Size of the changesets cache.
     pub changesets_cache_size: usize,
     /// Size of the filenodes cache.
@@ -268,7 +267,14 @@ impl BlobRepo {
             args.max_concurrent_requests_per_io_thread,
         );
         let blobstore = new_memcache_blobstore(blobstore, "manifold", args.bucket.as_ref())?;
-        let blobstore = MemoizedBlobstore::new(blobstore, usize::MAX, args.blobstore_cache_size);
+        let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
+            ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
+        ))?);
+        let presence_pool =
+            Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::from(
+                ErrorKind::MissingCachePool("blobstore-presence".to_string()),
+            ))?);
+        let blobstore = new_cachelib_blobstore(blobstore, blob_pool, presence_pool);
 
         let filenodes = MysqlFilenodes::open(&args.db_address, DEFAULT_INSERT_CHUNK_SIZE)
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
