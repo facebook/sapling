@@ -305,6 +305,9 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
                 },
             }),
     ).unwrap();
+
+    cachelib::init_cacheadmin("mononoke").unwrap();
+
     cachelib::get_or_create_pool(
         "blobstore-blobs",
         get_usize(matches, "blob-cache-size", 100_000_000),
