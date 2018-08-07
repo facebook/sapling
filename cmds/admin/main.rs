@@ -36,7 +36,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::{App, Arg, SubCommand};
-use failure::{Error, Result};
+use failure::{err_msg, Error, Result};
 use futures::future;
 use futures::prelude::*;
 use futures::stream::iter_ok;
@@ -50,10 +50,11 @@ use manifoldblob::ManifoldBlob;
 use mercurial_types::{Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope,
                       HgManifestEnvelope, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
-use mononoke_types::{BlobstoreBytes, BlobstoreValue, FileContents};
+use mononoke_types::{BlobstoreBytes, BlobstoreValue, BonsaiChangeset, FileContents};
 use slog::Logger;
 
 const BLOBSTORE_FETCH: &'static str = "blobstore-fetch";
+const BONSAI_FETCH: &'static str = "bonsai-fetch";
 const CONTENT_FETCH: &'static str = "content-fetch";
 const CONFIG_REPO: &'static str = "config";
 const MAX_CONCURRENT_REQUESTS_PER_IO_THREAD: usize = 4;
@@ -89,12 +90,16 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .help("Don't prepend a prefix based on the repo id to the key"),
         );
 
-    let content_fetch = SubCommand::with_name(CONTENT_FETCH)
+    let bonsai_fetch = SubCommand::with_name(CONTENT_FETCH)
         .about("fetches content of the file or manifest from blobrepo")
         .args_from_usage(
             "<CHANGESET_ID>    'revision to fetch file from'
              <PATH>            'path to fetch'",
         );
+
+    let content_fetch = SubCommand::with_name(BONSAI_FETCH)
+        .about("fetches content of the file or manifest from blobrepo")
+        .args_from_usage("<HG_CHANGESET_OR_BOOKMARK>    'revision to fetch file from'");
 
     let app = args::MononokeApp {
         safe_writes: false,
@@ -106,6 +111,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .version("0.0.0")
         .about("Poke at mononoke internals for debugging and investigating data structures.")
         .subcommand(blobstore_fetch)
+        .subcommand(bonsai_fetch)
         .subcommand(content_fetch)
         .subcommand(config_repo::prepare_command(SubCommand::with_name(
             CONFIG_REPO,
@@ -131,6 +137,21 @@ fn fetch_content_from_manifest(
     }
 }
 
+fn resolve_hg_rev(
+    repo: &Arc<BlobRepo>,
+    rev: &str,
+) -> impl Future<Item = HgChangesetId, Error = Error> {
+    let book = Bookmark::new(&rev).unwrap();
+    let hash = HgChangesetId::from_str(rev);
+
+    repo.get_bookmark(&book).and_then({
+        move |r| match r {
+            Some(cs) => Ok(cs),
+            None => hash,
+        }
+    })
+}
+
 fn fetch_content(
     logger: Logger,
     repo: Arc<BlobRepo>,
@@ -138,15 +159,7 @@ fn fetch_content(
     path: &str,
 ) -> BoxFuture<Content, Error> {
     let path = try_boxfuture!(MPath::new(path));
-    let book = Bookmark::new(&rev).unwrap();
-    let hash = HgChangesetId::from_str(rev);
-
-    let resolved_cs_id = repo.get_bookmark(&book).and_then({
-        move |r| match r {
-            Some(cs) => Ok(cs),
-            None => hash,
-        }
-    });
+    let resolved_cs_id = resolve_hg_rev(&repo, rev);
 
     let mf = resolved_cs_id
         .and_then({
@@ -179,6 +192,24 @@ fn fetch_content(
     folded
         .and_then(move |mf| fetch_content_from_manifest(logger.clone(), mf, basename))
         .boxify()
+}
+
+fn fetch_bonsai_changeset(
+    rev: &str,
+    repo: Arc<BlobRepo>,
+) -> impl Future<Item = BonsaiChangeset, Error = Error> {
+    let hg_changeset_id = resolve_hg_rev(&repo, rev);
+
+    hg_changeset_id
+        .and_then({
+            let repo = repo.clone();
+            move |hg_cs| repo.get_bonsai_from_hg(&hg_cs)
+        })
+        .and_then({
+            let rev = rev.to_string();
+            move |maybe_bonsai| maybe_bonsai.ok_or(err_msg(format!("bonsai not found for {}", rev)))
+        })
+        .and_then(move |bonsai| repo.get_bonsai_changeset(bonsai))
 }
 
 fn get_cache<B: CacheBlobstoreExt>(
@@ -261,6 +292,15 @@ fn main() {
                     }
                 }
             })
+                .boxify()
+        }
+        (BONSAI_FETCH, Some(sub_m)) => {
+            let rev = sub_m.value_of("HG_CHANGESET_OR_BOOKMARK").unwrap();
+            let repo = args::open_blobrepo(&logger, &matches);
+            fetch_bonsai_changeset(rev, Arc::new(repo))
+                .map(|bcs| {
+                    println!("{:?}", bcs);
+                })
                 .boxify()
         }
         (CONTENT_FETCH, Some(sub_m)) => {
