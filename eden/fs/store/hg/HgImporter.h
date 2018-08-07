@@ -14,6 +14,7 @@
 
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/mononoke/MononokeBackingStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -176,6 +177,7 @@ class HgImporter : public Importer {
    */
   enum StartFlag : uint32_t {
     TREEMANIFEST_SUPPORTED = 0x01,
+    MONONOKE_SUPPORTED = 0x02,
   };
   /**
    * Command type values.
@@ -212,6 +214,11 @@ class HgImporter : public Importer {
      * If this vector is empty treemanifest import should not be used.
      */
     std::vector<std::string> treeManifestPackPaths;
+
+    /**
+     * The name of the repo
+     */
+    std::string repoName;
   };
 
   // Forbidden copy constructor and assignment operator
@@ -260,6 +267,13 @@ class HgImporter : public Importer {
    * this repository.
    */
   void initializeTreeManifestImport(const Options& options);
+
+  /**
+   * Initialize the mononoke_ needed for Mononoke API Server support.
+   *
+   * This leaves mononoke_ null if mononoke does not support the repository.
+   */
+  void initializeMononoke(const Options& options);
 
   /**
    * Send a request to the helper process, asking it to send us the manifest
@@ -315,6 +329,8 @@ class HgImporter : public Importer {
 #if EDEN_HAVE_HG_TREEMANIFEST
   std::vector<std::unique_ptr<DatapackStore>> dataPackStores_;
   std::unique_ptr<UnionDatapackStore> unionStore_;
+
+  std::unique_ptr<MononokeBackingStore> mononoke_;
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 };
 } // namespace eden

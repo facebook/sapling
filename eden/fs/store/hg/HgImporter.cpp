@@ -15,6 +15,7 @@
 #include <folly/FileUtil.h>
 #include <folly/container/Array.h>
 #include <folly/dynamic.h>
+#include <folly/executors/GlobalExecutor.h>
 #include <folly/experimental/EnvUtil.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
@@ -34,6 +35,7 @@
 #include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/SSLContext.h"
 #include "eden/fs/utils/TimeUtil.h"
 
 #if EDEN_HAVE_HG_TREEMANIFEST
@@ -89,8 +91,13 @@ DEFINE_int32(
     256 * 1024 * 1024, // 256MB
     "Buffer size for batching LocalStore writes during hg manifest imports");
 
-namespace {
+DEFINE_bool(use_mononoke, false, "Try to fetch trees from Mononoke");
+DEFINE_int32(
+    mononoke_timeout,
+    2000, // msec
+    "[unit: ms] Timeout for Mononoke requests");
 
+namespace {
 using namespace facebook::eden;
 
 /**
@@ -216,6 +223,7 @@ HgImporter::HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
 
   auto options = waitForHelperStart();
   initializeTreeManifestImport(options);
+  initializeMononoke(options);
   XLOG(DBG1) << "hg_import_helper started for repository " << repoPath_;
 }
 
@@ -266,6 +274,11 @@ HgImporter::Options HgImporter::waitForHelperStart() {
     options.treeManifestPackPaths.push_back(cursor.readFixedString(pathLength));
   }
 
+  if (flags & StartFlag::MONONOKE_SUPPORTED) {
+    auto nameLength = cursor.readBE<uint32_t>();
+    options.repoName = cursor.readFixedString(nameLength);
+  }
+
   return options;
 }
 
@@ -297,6 +310,39 @@ void HgImporter::initializeTreeManifestImport(const Options& options) {
   unionStore_ = std::make_unique<UnionDatapackStore>(storePtrs);
   XLOG(DBG2) << "treemanifest import enabled in repository " << repoPath_;
 #endif // EDEN_HAVE_HG_TREEMANIFEST
+}
+
+void HgImporter::initializeMononoke(const Options& options) {
+#if EDEN_HAVE_HG_TREEMANIFEST
+  if (options.repoName.empty()) {
+    XLOG(DBG2) << "mononoke is disabled because it is not supported.";
+    return;
+  }
+
+  if (!FLAGS_use_mononoke) {
+    XLOG(DBG2) << "mononoke is disabled by command line flags.";
+    return;
+  }
+
+  auto executor = folly::getIOExecutor();
+
+  std::shared_ptr<folly::SSLContext> sslContext;
+  try {
+    sslContext = buildSSLContext();
+  } catch (std::runtime_error& ex) {
+    XLOG(WARN) << "mononoke is disabled because of build failure when "
+                  "creating SSLContext: "
+               << ex.what();
+    return;
+  }
+
+  mononoke_ = std::make_unique<MononokeBackingStore>(
+      options.repoName,
+      std::chrono::milliseconds(FLAGS_mononoke_timeout),
+      executor.get(),
+      sslContext);
+  XLOG(DBG2) << "mononoke enabled for repository " << options.repoName;
+#endif
 }
 
 HgImporter::~HgImporter() {
@@ -383,6 +429,35 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
       if (!FLAGS_hg_fetch_missing_trees) {
         throw;
       }
+    }
+  }
+
+  if (!content.content() && mononoke_) {
+    // ask Mononoke API Server
+    XLOG(DBG4) << "importing tree \"" << manifestNode << "\" from mononoke";
+    try {
+      auto mononokeTree =
+          mononoke_->getTree(manifestNode)
+              .get(std::chrono::milliseconds(FLAGS_mononoke_timeout));
+      std::vector<TreeEntry> entries;
+
+      for (const auto& entry : mononokeTree->getTreeEntries()) {
+        auto blobHash = entry.getHash();
+        auto entryName = entry.getName();
+        auto proxyHash =
+            HgProxyHash::store(path + entryName, blobHash, writeBatch);
+
+        entries.emplace_back(
+            proxyHash, entryName.stringPiece(), entry.getType());
+      }
+
+      auto tree = std::make_unique<Tree>(std::move(entries), edenTreeID);
+      auto serialized = LocalStore::serializeTree(tree.get());
+      writeBatch->put(
+          KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
+      return tree;
+    } catch (const std::exception& ex) {
+      XLOG(WARN) << "got exception from MononokeBackingStore: " << ex.what();
     }
   }
 

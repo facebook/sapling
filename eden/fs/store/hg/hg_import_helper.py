@@ -82,6 +82,7 @@ SHA1_NUM_BYTES = 20
 PROTOCOL_VERSION = 1
 
 START_FLAGS_TREEMANIFEST_SUPPORTED = 0x01
+START_FLAGS_MONONOKE_SUPPORTED = 0x02
 
 #
 # Message types.
@@ -254,10 +255,13 @@ class HgServer(object):
         logging.debug("hg_import_helper shutting down normally")
         return 0
 
+    def _is_mononoke_supported(self, name):
+        return name in ["fbsource"]
+
     def _gen_options(self):
-        use_treemanifest = (self.treemanifest is not None) and bool(
-            getattr(self.repo, "name", None)
-        )
+        repo_name = getattr(self.repo, "name", None)
+        use_treemanifest = (self.treemanifest is not None) and bool(repo_name)
+        use_mononoke = use_treemanifest and self._is_mononoke_supported(repo_name)
 
         flags = 0
         treemanifest_paths = []
@@ -269,6 +273,9 @@ class HgServer(object):
                 ),
                 shallowutil.getcachepackpath(self.repo, constants.TREEPACK_CATEGORY),
             ]
+
+        if use_mononoke:
+            flags |= START_FLAGS_MONONOKE_SUPPORTED
 
         # Options format:
         # - Protocol version number
@@ -282,6 +289,10 @@ class HgServer(object):
         for path in treemanifest_paths:
             parts.append(struct.pack(b">I", len(path)))
             parts.append(path)
+
+        if use_mononoke:
+            parts.append(struct.pack(b">I", len(repo_name)))
+            parts.append(repo_name)
 
         return "".join(parts)
 
