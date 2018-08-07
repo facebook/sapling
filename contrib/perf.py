@@ -464,20 +464,20 @@ def perfdatapack(ui, repo, packpath, **opts):
     from hgext.remotefilelog.datapack import datapack
 
     keys = list(iter(datapack(packpath)))
-    ui.write("\nGetMissing (Key Count: %s)\n" % len(keys))
+    ui.write(("\nGetMissing (Key Count: %s)\n") % len(keys))
     _packtestfn(ui, packpath, opts, lambda pack: pack.getmissing(keys))
 
     partkeys = keys[:100]
-    ui.write("\nGetMissing (Key Count: %s)\n" % len(partkeys))
+    ui.write(("\nGetMissing (Key Count: %s)\n") % len(partkeys))
     _packtestfn(ui, packpath, opts, lambda pack: pack.getmissing(partkeys))
 
     key = keys[0]
-    ui.write("\nGet\n")
+    ui.write(("\nGet\n"))
     def f(pack):
         pack.getdelta(*key)
     _packtestfn(ui, packpath, opts, f)
 
-    ui.write("\nMark Ledger (Key Count: %s)\n" % len(keys))
+    ui.write(("\nMark Ledger (Key Count: %s)\n") % len(keys))
     from hgext.remotefilelog.repack import repackledger
     def f(pack):
         ledger = repackledger()

@@ -63,6 +63,7 @@ perfstatus
    perfchangeset
                  (no help text available)
    perfctxfiles  (no help text available)
+   perfdatapack  (no help text available)
    perfdiffwd    Profile diff of working directory changes
    perfdirfoldmap
                  (no help text available)
