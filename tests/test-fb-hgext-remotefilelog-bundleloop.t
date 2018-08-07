@@ -20,8 +20,7 @@
   adding changesets
   adding manifests
   adding file changes
-  transaction abort!
-  rollback completed
-  abort: no remotefilelog server configured - is your .hg/hgrc trusted?
-  [255]
+  added 4 changesets with 8 changes to 6 files
+  new changesets 52f22a21f8db:bf8514b268e7
+  (run 'hg update' to get a working copy)
 

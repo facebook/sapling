@@ -523,10 +523,8 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
             if not available(f, node, copyfrom, copynode):
                 continue
 
-        for p in [p1, p2]:
-            if p != nullid:
-                if not available(f, node, f, p):
-                    continue
+        if any(not available(f, node, f, p) for p in [p1, p2] if p != nullid):
+            continue
 
         # Use addrawrevision so if it's already LFS, take it as-is, do not
         # re-calculate the LFS object.
