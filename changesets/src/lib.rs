@@ -10,7 +10,7 @@
 extern crate abomonation;
 #[macro_use]
 extern crate abomonation_derive;
-extern crate asyncmemo;
+extern crate cachelib;
 extern crate db_conn;
 #[macro_use]
 extern crate diesel;
@@ -36,7 +36,6 @@ use std::convert::TryFrom;
 use std::result;
 use std::sync::{Arc, MutexGuard};
 
-use asyncmemo::{Asyncmemo, Filler, Weight};
 use db_conn::{MysqlConnInner, SqliteConnInner};
 use diesel::{insert_into, Connection, MysqlConnection, SqliteConnection};
 use diesel::backend::Backend;
@@ -46,8 +45,7 @@ use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use diesel::sql_types::HasSqlType;
 use failure::ResultExt;
 
-use futures::Future;
-use futures_ext::{asynchronize, BoxFuture, FutureExt};
+use futures_ext::{asynchronize, BoxFuture};
 use mercurial_types::RepositoryId;
 use mononoke_types::ChangesetId;
 use mononoke_types::sql_types::ChangesetIdSql;
@@ -100,18 +98,15 @@ pub trait Changesets: Send + Sync {
 
 pub struct CachingChangests {
     changesets: Arc<Changesets>,
-    cache: asyncmemo::Asyncmemo<ChangesetsFiller>,
+    cache_pool: cachelib::LruCachePool,
 }
 
 impl CachingChangests {
-    pub fn new(changesets: Arc<Changesets>, sizelimit: usize) -> Self {
-        let cache = asyncmemo::Asyncmemo::with_limits(
-            "changesets",
-            ChangesetsFiller::new(changesets.clone()),
-            std::usize::MAX,
-            sizelimit,
-        );
-        Self { changesets, cache }
+    pub fn new(changesets: Arc<Changesets>, cache_pool: cachelib::LruCachePool) -> Self {
+        Self {
+            changesets,
+            cache_pool,
+        }
     }
 }
 
@@ -125,46 +120,11 @@ impl Changesets for CachingChangests {
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
-        self.cache
-            .get((repo_id, cs_id))
-            .then(|val| match val {
-                Ok(val) => Ok(Some(val)),
-                Err(Some(err)) => Err(err),
-                Err(None) => Ok(None),
-            })
-            .boxify()
-    }
-}
+        let cache_key = format!("{}.{}", repo_id.prefix(), cs_id).to_string();
 
-pub struct ChangesetsFiller {
-    changesets: Arc<Changesets>,
-}
-
-impl ChangesetsFiller {
-    fn new(changesets: Arc<Changesets>) -> Self {
-        ChangesetsFiller { changesets }
-    }
-}
-
-impl Filler for ChangesetsFiller {
-    type Key = (RepositoryId, ChangesetId);
-    type Value = Box<Future<Item = ChangesetEntry, Error = Option<Error>> + Send>;
-
-    fn fill(&self, _cache: &Asyncmemo<Self>, &(ref repo_id, ref cs_id): &Self::Key) -> Self::Value {
-        self.changesets
-            .get(*repo_id, *cs_id)
-            .map_err(|err| Some(err))
-            .and_then(|res| match res {
-                Some(val) => Ok(val),
-                None => Err(None),
-            })
-            .boxify()
-    }
-}
-
-impl Weight for ChangesetEntry {
-    fn get_weight(&self) -> usize {
-        self.repo_id.get_weight() + self.cs_id.get_weight() + self.gen.get_weight()
+        cachelib::get_cached(&self.cache_pool, cache_key, || {
+            self.changesets.get(repo_id, cs_id)
+        })
     }
 }
 

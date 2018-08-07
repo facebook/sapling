@@ -148,16 +148,12 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
         .value_of("xdb-tier")
         .unwrap_or("xdb.mononoke_test_2");
     let io_threads = 5;
-    let default_cache_size = 1000000;
     BlobRepo::new_manifold(
         logger.clone(),
         &ManifoldArgs {
             bucket: bucket.to_string(),
             prefix: prefix.to_string(),
             db_address: xdb_tier.to_string(),
-            changesets_cache_size: default_cache_size,
-            filenodes_cache_size: default_cache_size,
-            bonsai_hg_mapping_cache_size: default_cache_size,
             io_threads,
             max_concurrent_requests_per_io_thread: MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
         },

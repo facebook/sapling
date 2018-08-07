@@ -230,7 +230,7 @@ fn main() {
     let matches = setup_app().get_matches();
 
     let logger = args::get_logger(&matches);
-    let manifold_args = args::parse_manifold_args(&matches, 1_000_000);
+    let manifold_args = args::parse_manifold_args(&matches);
 
     let repo_id = args::get_repo_id(&matches);
 

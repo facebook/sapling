@@ -9,7 +9,7 @@
 extern crate abomonation;
 #[macro_use]
 extern crate abomonation_derive;
-extern crate asyncmemo;
+extern crate cachelib;
 #[macro_use]
 extern crate cloned;
 extern crate failure_ext as failure;
@@ -96,13 +96,6 @@ impl FilenodeInfo {
             }),
             linknode: self.linknode.into_nodehash().into_thrift(),
         }
-    }
-}
-
-impl asyncmemo::Weight for FilenodeInfo {
-    fn get_weight(&self) -> usize {
-        self.path.get_weight() + self.filenode.get_weight() + self.p1.get_weight()
-            + self.p2.get_weight() + self.copyfrom.get_weight() + self.linknode.get_weight()
     }
 }
 

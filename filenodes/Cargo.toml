@@ -3,7 +3,3 @@ name = "filenodes"
 version = "0.0.1"
 authors = ["Facebook"]
 license = "GPLv2+"
-
-[dependencies]
-
-asyncmemo = { path = "../asyncmemo" }

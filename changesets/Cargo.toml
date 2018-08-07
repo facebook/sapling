@@ -7,4 +7,3 @@ license = "GPLv2+"
 [dependencies]
 diesel = "1.3.2"
 
-asyncmemo = { path = "../asyncmemo" }

@@ -282,10 +282,6 @@ impl RepoConfigs {
                         bucket: manifold_bucket,
                         prefix: this.manifold_prefix.unwrap_or("".into()),
                         db_address,
-                        changesets_cache_size: this.changesets_cache_size.unwrap_or(100_000_000),
-                        filenodes_cache_size: this.filenodes_cache_size.unwrap_or(100_000_000),
-                        bonsai_hg_mapping_cache_size: this.bonsai_hg_mapping_cache_size
-                            .unwrap_or(100_000_000),
                         io_threads: this.io_thread_num.unwrap_or(5),
                         max_concurrent_requests_per_io_thread:
                             this.max_concurrent_requests_per_io_thread.unwrap_or(4),
@@ -359,9 +355,6 @@ struct RawRepoConfig {
     scuba_table: Option<String>,
     delay_mean: Option<u64>,
     delay_stddev: Option<u64>,
-    changesets_cache_size: Option<usize>,
-    filenodes_cache_size: Option<usize>,
-    bonsai_hg_mapping_cache_size: Option<usize>,
     io_thread_num: Option<usize>,
     cache_warmup: Option<RawCacheWarmupConfig>,
     max_concurrent_requests_per_io_thread: Option<usize>,

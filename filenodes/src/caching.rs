@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::usize;
 
-use asyncmemo::{Asyncmemo, Filler};
+use cachelib::{get_cached, LruCachePool};
 use failure::{Error, Result};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
@@ -51,7 +51,7 @@ struct PathHash(String);
 
 pub struct CachingFilenodes {
     filenodes: Arc<Filenodes>,
-    cache: Asyncmemo<FilenodesFiller>,
+    cache_pool: LruCachePool,
     memcache: MemcacheClient,
     keygen: KeyGen,
 }
@@ -59,17 +59,10 @@ pub struct CachingFilenodes {
 impl CachingFilenodes {
     pub fn new(
         filenodes: Arc<Filenodes>,
-        sizelimit: usize,
+        cache_pool: LruCachePool,
         backing_store_name: impl ToString,
         backing_store_params: impl ToString,
     ) -> Self {
-        let cache = Asyncmemo::with_limits(
-            "filenodes",
-            FilenodesFiller::new(filenodes.clone()),
-            usize::MAX,
-            sizelimit,
-        );
-
         let key_prefix = format!(
             "scm.mononoke.filenodes.{}.{}",
             backing_store_name.to_string(),
@@ -78,7 +71,7 @@ impl CachingFilenodes {
 
         Self {
             filenodes,
-            cache,
+            cache_pool,
             memcache: MemcacheClient::new(),
             keygen: KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER),
         }
@@ -100,14 +93,10 @@ impl Filenodes for CachingFilenodes {
         filenode: &HgFileNodeId,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error> {
-        self.cache
-            .get((path.clone(), *filenode, *repo_id))
-            .then(|val| match val {
-                Ok(val) => Ok(Some(val)),
-                Err(Some(err)) => Err(err),
-                Err(None) => Ok(None),
-            })
-            .boxify()
+        let cache_key = format!("{}.{}.{}", repo_id.prefix(), filenode, path).to_string();
+        get_cached(&self.cache_pool, cache_key, || {
+            self.filenodes.get_filenode(path, filenode, repo_id)
+        })
     }
 
     fn get_all_filenodes(
@@ -345,35 +334,5 @@ impl Iterator for PointersIter {
                 break Some(pointer);
             }
         }
-    }
-}
-
-pub struct FilenodesFiller {
-    filenodes: Arc<Filenodes>,
-}
-
-impl FilenodesFiller {
-    fn new(filenodes: Arc<Filenodes>) -> Self {
-        FilenodesFiller { filenodes }
-    }
-}
-
-impl Filler for FilenodesFiller {
-    type Key = (RepoPath, HgFileNodeId, RepositoryId);
-    type Value = Box<Future<Item = FilenodeInfo, Error = Option<Error>> + Send>;
-
-    fn fill(
-        &self,
-        _cache: &Asyncmemo<Self>,
-        &(ref path, ref filenode, ref repo_id): &Self::Key,
-    ) -> Self::Value {
-        self.filenodes
-            .get_filenode(path, filenode, repo_id)
-            .map_err(|err| Some(err))
-            .and_then(|res| match res {
-                Some(val) => Ok(val),
-                None => Err(None),
-            })
-            .boxify()
     }
 }

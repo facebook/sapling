@@ -10,7 +10,7 @@
 extern crate abomonation;
 #[macro_use]
 extern crate abomonation_derive;
-extern crate asyncmemo;
+extern crate cachelib;
 extern crate db_conn;
 #[macro_use]
 extern crate diesel;
@@ -34,13 +34,13 @@ extern crate stats;
 use std::result;
 use std::sync::{Arc, MutexGuard};
 
-use asyncmemo::{Asyncmemo, Filler, Weight};
 use db_conn::{MysqlConnInner, SqliteConnInner};
 use diesel::{insert_into, MysqlConnection, SqliteConnection};
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 
+use cachelib::{get_cached, LruCachePool};
 use futures::Future;
 use futures_ext::{asynchronize, BoxFuture, FutureExt};
 use mercurial_types::{HgChangesetId, RepositoryId};
@@ -133,18 +133,15 @@ impl BonsaiHgMapping for Arc<BonsaiHgMapping> {
 
 pub struct CachingBonsaiHgMapping {
     mapping: Arc<BonsaiHgMapping>,
-    cache: asyncmemo::Asyncmemo<BonsaiHgMappingFiller>,
+    cache_pool: LruCachePool,
 }
 
 impl CachingBonsaiHgMapping {
-    pub fn new(mapping: Arc<BonsaiHgMapping>, sizelimit: usize) -> Self {
-        let cache = asyncmemo::Asyncmemo::with_limits(
-            "bonsai-hg-mapping",
-            BonsaiHgMappingFiller::new(mapping.clone()),
-            std::usize::MAX,
-            sizelimit,
-        );
-        Self { mapping, cache }
+    pub fn new(mapping: Arc<BonsaiHgMapping>, cache_pool: LruCachePool) -> Self {
+        Self {
+            mapping,
+            cache_pool,
+        }
     }
 }
 
@@ -158,55 +155,10 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
         repo_id: RepositoryId,
         cs: BonsaiOrHgChangesetId,
     ) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
-        self.cache
-            .get((repo_id, cs.into()))
-            .then(|val| match val {
-                Ok(val) => Ok(Some(val)),
-                Err(Some(err)) => Err(err),
-                Err(None) => Ok(None),
-            })
-            .boxify()
-    }
-}
-
-pub struct BonsaiHgMappingFiller {
-    mapping: Arc<BonsaiHgMapping>,
-}
-
-impl BonsaiHgMappingFiller {
-    fn new(mapping: Arc<BonsaiHgMapping>) -> Self {
-        BonsaiHgMappingFiller { mapping }
-    }
-}
-
-impl Filler for BonsaiHgMappingFiller {
-    type Key = (RepositoryId, BonsaiOrHgChangesetId);
-    type Value = Box<Future<Item = BonsaiHgMappingEntry, Error = Option<Error>> + Send>;
-
-    fn fill(&self, _cache: &Asyncmemo<Self>, &(ref repo_id, ref cs_id): &Self::Key) -> Self::Value {
-        self.mapping
-            .get(*repo_id, *cs_id)
-            .map_err(|err| Some(err))
-            .and_then(|res| match res {
-                Some(val) => Ok(val),
-                None => Err(None),
-            })
-            .boxify()
-    }
-}
-
-impl Weight for BonsaiOrHgChangesetId {
-    fn get_weight(&self) -> usize {
-        match self {
-            &BonsaiOrHgChangesetId::Bonsai(ref id) => id.get_weight(),
-            &BonsaiOrHgChangesetId::Hg(ref id) => id.get_weight(),
-        }
-    }
-}
-
-impl Weight for BonsaiHgMappingEntry {
-    fn get_weight(&self) -> usize {
-        self.repo_id.get_weight() + self.hg_cs_id.get_weight() + self.bcs_id.get_weight()
+        let cache_key = format!("{}.{:?}", repo_id.prefix(), cs).to_string();
+        get_cached(&self.cache_pool, cache_key, || {
+            self.mapping.get(repo_id, cs)
+        })
     }
 }
 

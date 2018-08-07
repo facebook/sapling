@@ -26,6 +26,10 @@ const CACHE_ARGS: &[(&str, &str)] = &[
     ("presence-cache-size", "size of the blob presence cache"),
     ("changesets-cache-size", "size of the changesets cache"),
     ("filenodes-cache-size", "size of the filenodes cache"),
+    (
+        "idmapping-cache-size",
+        "size of the bonsai/hg mapping cache",
+    ),
 ];
 
 pub struct MononokeApp {
@@ -309,6 +313,18 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
         "blobstore-presence",
         get_usize(matches, "presence-cache-size", 100_000_000),
     ).unwrap();
+    cachelib::get_or_create_pool(
+        "changesets",
+        get_usize(matches, "changesets-cache-size", 100_000_000),
+    ).unwrap();
+    cachelib::get_or_create_pool(
+        "filenodes",
+        get_usize(matches, "filenodes-cache-size", 100_000_000),
+    ).unwrap();
+    cachelib::get_or_create_pool(
+        "bonsai_hg_mapping",
+        get_usize(matches, "idmapping-cache-size", 100_000_000),
+    ).unwrap();
 }
 
 fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: bool) -> BlobRepo {
@@ -346,7 +362,7 @@ fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create:
             ).expect("failed to create rocksdb blobrepo")
         }
         None | Some("manifold") => {
-            let manifold_args = parse_manifold_args(&matches, 100_000_000);
+            let manifold_args = parse_manifold_args(&matches);
 
             BlobRepo::new_manifold(
                 logger.new(o!["BlobRepo:TestManifold" => manifold_args.bucket.clone()]),
@@ -358,23 +374,13 @@ fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create:
     }
 }
 
-pub fn parse_manifold_args<'a>(
-    matches: &ArgMatches<'a>,
-    default_cache_size: usize,
-) -> ManifoldArgs {
+pub fn parse_manifold_args<'a>(matches: &ArgMatches<'a>) -> ManifoldArgs {
     // The unwraps here are safe because default values have already been provided in mononoke_app
     // above.
     ManifoldArgs {
         bucket: matches.value_of("manifold-bucket").unwrap().to_string(),
         prefix: matches.value_of("manifold-prefix").unwrap().to_string(),
         db_address: matches.value_of("db-address").unwrap().to_string(),
-        changesets_cache_size: get_usize(matches, "changesets-cache-size", default_cache_size),
-        filenodes_cache_size: get_usize(matches, "filenodes-cache-size", default_cache_size),
-        bonsai_hg_mapping_cache_size: get_usize(
-            matches,
-            "bonsai-hg-mapping-cache-size",
-            default_cache_size,
-        ),
         io_threads: get_usize(matches, "io-threads", 5),
         max_concurrent_requests_per_io_thread: get_usize(
             matches,

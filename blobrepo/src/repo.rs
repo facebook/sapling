@@ -107,14 +107,6 @@ pub struct ManifoldArgs {
     pub prefix: String,
     /// Identifies the SQL database to connect to.
     pub db_address: String,
-    /// Currently we need to set separate cache size for each cache (changesets, filenodes etc)
-    /// TODO(stash): have single cache size for all caches
-    /// Size of the changesets cache.
-    pub changesets_cache_size: usize,
-    /// Size of the filenodes cache.
-    pub filenodes_cache_size: usize,
-    /// Size of the bonsai_hg_mapping cache.
-    pub bonsai_hg_mapping_cache_size: usize,
     /// Number of IO threads the blobstore uses.
     pub io_threads: usize,
     /// This is a (hopefully) short term hack to overcome the problem of overloading Manifold.
@@ -280,20 +272,29 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let filenodes = CachingFilenodes::new(
             Arc::new(filenodes),
-            args.filenodes_cache_size,
+            cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(
+                "filenodes".to_string(),
+            )))?,
             "dieselfilenodes",
             &args.db_address,
         );
 
         let changesets = MysqlChangesets::open(&args.db_address)
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
-        let changesets = CachingChangests::new(Arc::new(changesets), args.changesets_cache_size);
+        let changesets = CachingChangests::new(
+            Arc::new(changesets),
+            cachelib::get_pool("changesets").ok_or(Error::from(ErrorKind::MissingCachePool(
+                "changesets".to_string(),
+            )))?,
+        );
 
         let bonsai_hg_mapping = MysqlBonsaiHgMapping::open(&args.db_address)
             .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
         let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
             Arc::new(bonsai_hg_mapping),
-            args.bonsai_hg_mapping_cache_size,
+            cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(
+                ErrorKind::MissingCachePool("bonsai_hg_mapping".to_string()),
+            ))?,
         );
 
         Ok(Self::new(
