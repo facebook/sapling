@@ -16,6 +16,7 @@ use actix::dev::Request;
 use failure::Error;
 use futures::{Future, IntoFuture};
 use slog::Logger;
+use tokio::runtime::TaskExecutor;
 
 use metaconfig::repoconfig::RepoConfigs;
 
@@ -30,18 +31,19 @@ pub struct MononokeActor {
 }
 
 impl MononokeActor {
-    pub fn new(logger: Logger, config: RepoConfigs) -> Self {
+    pub fn new(logger: Logger, config: RepoConfigs, executor: TaskExecutor) -> Self {
         let logger = logger.clone();
         let repos = config
             .repos
             .into_iter()
             .filter(move |&(_, ref config)| config.enabled)
             .map(move |(reponame, config)| {
-                let logger = logger.clone();
+                cloned!(logger, executor);
                 (
                     reponame,
                     MononokeRepoActor::create(move |_| {
-                        MononokeRepoActor::new(logger, config).expect("Unable to initialize repo")
+                        MononokeRepoActor::new(logger, config, executor)
+                            .expect("Unable to initialize repo")
                     }),
                 )
             })

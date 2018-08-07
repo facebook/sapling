@@ -10,8 +10,10 @@ use std::sync::Arc;
 use actix::{Actor, Context, Handler};
 use failure::{err_msg, Error, Result};
 use futures::{Future, IntoFuture};
+use futures::sync::oneshot;
 use futures_ext::BoxFuture;
 use slog::Logger;
+use tokio::runtime::TaskExecutor;
 
 use api;
 use blobrepo::BlobRepo;
@@ -32,10 +34,11 @@ use super::model::Entry;
 pub struct MononokeRepoActor {
     repo: Arc<BlobRepo>,
     logger: Logger,
+    executor: TaskExecutor,
 }
 
 impl MononokeRepoActor {
-    pub fn new(logger: Logger, config: RepoConfig) -> Result<Self> {
+    pub fn new(logger: Logger, config: RepoConfig, executor: TaskExecutor) -> Result<Self> {
         let repoid = RepositoryId::new(config.repoid);
         let repo = match config.repotype {
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid),
@@ -46,6 +49,7 @@ impl MononokeRepoActor {
         repo.map(|repo| Self {
             repo: Arc::new(repo),
             logger: logger,
+            executor: executor,
         })
     }
 
@@ -99,16 +103,20 @@ impl MononokeRepoActor {
             }
         });
 
-        Ok(src_hash_future
-            .and_then(|src_hash| dst_hash_future.map(move |dst_hash| (src_hash, dst_hash)))
-            .and_then({
-                cloned!(self.repo);
-                move |(src_hash, dst_hash)| {
-                    genbfs
-                        .query_reachability(repo, src_hash, dst_hash)
-                        .map(move |answer| MononokeRepoResponse::IsAncestor { answer: answer })
-                }
-            })
+        let (tx, rx) = oneshot::channel::<Result<bool>>();
+
+        self.executor.spawn(
+            src_hash_future
+                .and_then(|src| dst_hash_future.map(move |dst| (src, dst)))
+                .and_then({
+                    cloned!(self.repo);
+                    move |(src, dst)| genbfs.query_reachability(repo, src, dst)
+                })
+                .then(|r| tx.send(r).map_err(|_| ())),
+        );
+
+        Ok(rx.flatten()
+            .map(|answer| MononokeRepoResponse::IsAncestor { answer })
             .from_err()
             .boxify())
     }

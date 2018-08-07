@@ -39,6 +39,7 @@ extern crate slog_stats;
 extern crate slog_stdlog;
 extern crate slog_term;
 extern crate time_ext;
+extern crate tokio;
 
 mod actor;
 mod errors;
@@ -58,6 +59,7 @@ use futures::Future;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
+use tokio::runtime::Runtime;
 
 use mercurial_types::RepositoryId;
 use mercurial_types::nodehash::HgChangesetId;
@@ -344,10 +346,14 @@ fn main() -> Result<()> {
     };
     let use_ssl = ssl_acceptor.is_some();
 
+    let runtime = Runtime::new().expect("tokio runtime for blocking jobs");
+    let executor = runtime.executor();
+
     let sys = actix::System::new("mononoke-apiserver");
 
-    let addr =
-        MononokeActor::create(move |_| MononokeActor::new(mononoke_logger.clone(), repo_configs));
+    let addr = MononokeActor::create(move |_| {
+        MononokeActor::new(mononoke_logger.clone(), repo_configs, executor)
+    });
     let state = HttpServerState {
         mononoke: addr,
         logger: actix_logger.clone(),
