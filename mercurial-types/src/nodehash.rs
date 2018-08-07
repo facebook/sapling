@@ -29,7 +29,7 @@ pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
 /// This is why the main constructors to create this structure are from_bytes and from_ascii_str
 /// which parses raw bytes or hex string to create HgNodeHash.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf)]
+#[derive(HeapSizeOf, Abomonation)]
 pub struct HgNodeHash(pub(crate) Sha1);
 
 impl HgNodeHash {
@@ -190,7 +190,7 @@ impl Arbitrary for HgNodeHash {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf, FromSqlRow, AsExpression)]
+#[derive(HeapSizeOf, FromSqlRow, AsExpression, Abomonation)]
 #[sql_type = "HgChangesetIdSql"]
 pub struct HgChangesetId(HgNodeHash);
 
@@ -311,7 +311,7 @@ impl Arbitrary for HgManifestId {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf, FromSqlRow, AsExpression)]
+#[derive(Abomonation, HeapSizeOf, FromSqlRow, AsExpression)]
 #[sql_type = "HgFileNodeIdSql"]
 pub struct HgFileNodeId(HgNodeHash);
 

@@ -35,7 +35,7 @@ impl Weight for RepoPath {
 
 /// A path or filename within Mononoke, with information about whether
 /// it's the root of the repo, a directory or a file.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, HeapSizeOf)]
+#[derive(Abomonation, Clone, Debug, PartialEq, Eq, Hash, HeapSizeOf)]
 #[derive(Serialize, Deserialize)]
 pub enum RepoPath {
     // It is now *completely OK* to create a RepoPath directly. All MPaths are valid once
@@ -191,7 +191,7 @@ impl<'a> From<&'a RepoPath> for RepoPath {
 /// Mercurial treats pathnames as sequences of bytes, but the manifest format
 /// assumes they cannot contain zero bytes. The bytes are not necessarily utf-8
 /// and so cannot be converted into a string (or - strictly speaking - be displayed).
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
+#[derive(Abomonation, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
 #[derive(Serialize, Deserialize)]
 pub struct MPathElement(Vec<u8>);
 
@@ -284,7 +284,7 @@ impl From<MPathElement> for MPath {
 /// A path or filename within Mononoke (typically within manifests or changegroups).
 ///
 /// This is called `MPath` so that it can be differentiated from `std::path::Path`.
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
+#[derive(Abomonation, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
 #[derive(Serialize, Deserialize)]
 pub struct MPath {
     elements: Vec<MPathElement>,

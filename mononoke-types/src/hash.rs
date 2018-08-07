@@ -27,7 +27,7 @@ use thrift;
 /// hashes.
 ///
 /// For more on BLAKE2b, see https://blake2.net/
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
 pub struct Blake2([u8; 32]);
 

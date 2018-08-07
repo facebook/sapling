@@ -7,6 +7,9 @@
 #![deny(warnings)]
 #![feature(try_from, never_type)]
 
+extern crate abomonation;
+#[macro_use]
+extern crate abomonation_derive;
 extern crate asyncmemo;
 extern crate db_conn;
 #[macro_use]
@@ -59,7 +62,7 @@ define_stats! {
     adds: timeseries(RATE, SUM),
 }
 
-#[derive(Clone, Debug, Eq, Hash, HeapSizeOf, PartialEq)]
+#[derive(Abomonation, Clone, Debug, Eq, Hash, HeapSizeOf, PartialEq)]
 pub struct BonsaiHgMappingEntry {
     pub repo_id: RepositoryId,
     pub hg_cs_id: HgChangesetId,

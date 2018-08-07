@@ -22,7 +22,7 @@ pub const NULL: Sha1 = Sha1([0; 20]);
 /// Mercurial bases all its hashing on SHA-1, but this type is only used to build
 /// more specific typed hashes.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Serialize, Deserialize, HeapSizeOf)]
+#[derive(Serialize, Deserialize, HeapSizeOf, Abomonation)]
 pub struct Sha1([u8; 20]);
 
 const HEX_CHARS: &[u8] = b"0123456789abcdef";

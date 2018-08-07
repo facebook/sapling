@@ -6,6 +6,9 @@
 
 #![deny(warnings)]
 
+extern crate abomonation;
+#[macro_use]
+extern crate abomonation_derive;
 extern crate asyncmemo;
 #[macro_use]
 extern crate cloned;
@@ -47,7 +50,7 @@ pub fn blake2_path_hash(data: &Vec<u8>) -> hash::Blake2 {
     hash_content.finish()
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Abomonation, Clone, Debug, Eq, PartialEq)]
 pub struct FilenodeInfo {
     pub path: RepoPath,
     pub filenode: HgFileNodeId,

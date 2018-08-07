@@ -36,7 +36,7 @@ pub trait MononokeId: Copy + Send + 'static {
 
 /// An identifier for a changeset in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf, FromSqlRow, AsExpression)]
+#[derive(Abomonation, HeapSizeOf, FromSqlRow, AsExpression)]
 #[sql_type = "ChangesetIdSql"]
 pub struct ChangesetId(Blake2);
 

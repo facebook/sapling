@@ -47,6 +47,9 @@
 #![feature(never_type)]
 #![feature(try_from)]
 
+extern crate abomonation;
+#[macro_use]
+extern crate abomonation_derive;
 extern crate ascii;
 extern crate asyncmemo;
 extern crate bincode;

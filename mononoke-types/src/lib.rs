@@ -12,6 +12,9 @@
 #![feature(try_from)]
 #![feature(const_fn)]
 
+extern crate abomonation;
+#[macro_use]
+extern crate abomonation_derive;
 extern crate ascii;
 extern crate asyncmemo;
 extern crate bincode;
