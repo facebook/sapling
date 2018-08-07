@@ -172,7 +172,7 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
         // try to read token from secrets tool
         if token.is_none() {
             // try to read from secrets_tool
-            info!("Reading commitcloud Oauth token from secrets_tool...");
+            info!("Reading commitcloud OAuth token from secrets_tool...");
             let user = env::var("USER")?.to_uppercase();
             let key = format!("COMMITCLOUD_{}", user);
             let output = Command::new("secrets_tool")
