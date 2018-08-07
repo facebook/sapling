@@ -22,6 +22,6 @@
   adding file changes
   transaction abort!
   rollback completed
-  abort: circular node dependency
+  abort: no remotefilelog server configured - is your .hg/hgrc trusted?
   [255]
 

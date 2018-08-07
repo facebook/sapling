@@ -471,6 +471,29 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
     repo.fileservice.prefetch(prefetchfiles)
 
+    # Get rawtext by applying delta chains.
+    @util.lrucachefunc
+    def reconstruct(f, node):
+        revisiondata = revisiondatas.get((f, node), None)
+        if revisiondata is None:
+            # Read from repo.
+            return repo.file(f).revision(node, raw=False)
+        else:
+            # Apply delta-chain.
+            # revisiondata: (node, p1, p2, cs, deltabase, delta, flags)
+            deltabase, delta, flags = revisiondata[4:]
+            if deltabase == nullid:
+                base = ""
+            else:
+                if flags:
+                    # LFS (flags != 0) should always use nullid as deltabase.
+                    raise error.Abort("unexpected deltabase")
+                base = reconstruct(f, deltabase)
+            rawtext = mdiff.patch(base, delta)
+            if isinstance(rawtext, buffer):  # noqa
+                rawtext = bytes(rawtext)
+            return rawtext
+
     # Apply the revisions in topological order such that a revision
     # is only written once it's deltabase and parents have been written.
     maxskipcount = len(queue) + 1
@@ -481,35 +504,18 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
         skipcount += 1
         if skipcount > maxskipcount:
-            raise error.Abort(_("circular node dependency"))
-
-        fl = repo.file(f)
+            raise error.Abort(_("circular node dependency on ancestormap"))
 
         revisiondata = revisiondatas[(f, node)]
         # revisiondata: (node, p1, p2, cs, deltabase, delta, flags)
         node, p1, p2, linknode, deltabase, delta, flags = revisiondata
-
-        if not available(f, node, f, deltabase):
-            continue
 
         # Deltas are always against flags=0 rawtext (see revdiff and its
         # callers), if deltabase is not nullid.
         if flags and deltabase != nullid:
             raise error.Abort("unexpected deltabase")
 
-        # If deltabase does not have flags=0, convert it to flags=0
-        # rawtext, which is equivalent to raw=False text.
-        #
-        # This happens if a non-LFS delta is being applied to a LFS base.
-        base = fl.revision(deltabase, raw=False)
-
-        # For LFS pointer (rawtext), delta contains flags!=0 rawtext. So
-        # "rawtext" will be the original LFS rawtext, and base should be
-        # an empty string in this case.
-        rawtext = mdiff.patch(base, delta)
-        if isinstance(rawtext, buffer):  # noqa
-            rawtext = bytes(rawtext)
-
+        rawtext = reconstruct(f, node)
         meta, text = shallowutil.parsemeta(rawtext, flags)
         if "copy" in meta:
             copyfrom = meta["copy"]
@@ -524,6 +530,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
         # Use addrawrevision so if it's already LFS, take it as-is, do not
         # re-calculate the LFS object.
+        fl = repo.file(f)
         fl.addrawrevision(rawtext, trp, linknode, p1, p2, node=node, flags=flags)
         processed.add((f, node))
         skipcount = 0
