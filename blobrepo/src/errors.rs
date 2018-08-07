@@ -95,7 +95,7 @@ pub enum ErrorKind {
     #[fail(display = "Empty file path")] EmptyFilePath,
     #[fail(display = "Memory manifest conflict can not contain single entry")] SingleEntryConflict,
     #[fail(display = "Cannot find cache pool {}", _0)] MissingCachePool(String),
-    #[fail(display = "Bonsai cs not found")] BonsaiNotFound(ChangesetId),
+    #[fail(display = "Bonsai cs {} not found", _0)] BonsaiNotFound(ChangesetId),
     #[fail(display = "Bonsai changeset not found for hg changeset {}", _0)]
     BonsaiMappingNotFound(HgChangesetId),
     #[fail(display = "Root path wasn't expected at this context")] UnexpectedRootPath,
