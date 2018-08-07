@@ -50,7 +50,7 @@ void StartupLogger::writeMessage(
     StringPiece message) {
   // Log the message
   static folly::Logger logger("eden.fs.startup");
-  FB_LOG_RAW(logger, level, __FILE__, __LINE__) << message;
+  FB_LOG_RAW(logger, level, __FILE__, __LINE__, __func__) << message;
 
   // If we also have a file where we should write the message directly,
   // do so now.

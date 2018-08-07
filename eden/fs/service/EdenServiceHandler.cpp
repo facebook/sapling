@@ -92,8 +92,8 @@ std::string logHash(StringPiece thriftArg) {
 }
 } // namespace
 
-#define TLOG(logger, level, file, line) \
-  FB_LOG_RAW(logger, level, file, line) \
+#define TLOG(logger, level, file, line)     \
+  FB_LOG_RAW(logger, level, file, line, "") \
       << "[" << folly::RequestContext::get() << "] "
 
 namespace /* anonymous namespace for helper functions */ {
