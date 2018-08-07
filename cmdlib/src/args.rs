@@ -22,6 +22,8 @@ use blobrepo::{BlobRepo, ManifoldArgs};
 use mercurial_types::RepositoryId;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
+    ("blob-cache-size", "size of the blob cache"),
+    ("presence-cache-size", "size of the blob presence cache"),
     ("changesets-cache-size", "size of the changesets cache"),
     ("filenodes-cache-size", "size of the filenodes cache"),
 ];
@@ -268,28 +270,45 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
         .unwrap_or(Ok(cache_size * 8 / (10 * 1024 * 1024 * 1024)))
         .unwrap() as u32;
 
-    cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size).set_shrinker(
-        cachelib::ShrinkMonitor {
-            shrinker_type: cachelib::ShrinkMonitorType::ResidentSize {
-                max_process_size_gib: max_process_size_gib,
-                min_process_size_gib: min_process_size_gib,
-            },
-            interval: Duration::new(10, 0),
-            max_resize_per_iteration_percent: 25,
-            max_removed_percent: 50,
-            strategy: cachelib::RebalanceStrategy::HitsPerSlab {
-                // A small increase in hit ratio is desired
-                diff_ratio: 0.05,
-                min_retained_slabs: 1,
-                // Objects newer than 30 seconds old might be about to become interesting
-                min_tail_age: Duration::new(30, 0),
-                ignore_untouched_slabs: false,
-            },
-        },
-    )).unwrap();
-    cachelib::get_or_create_pool("blobstore-blobs", cachelib::get_available_space() * 3 / 4)
-        .unwrap();
-    cachelib::get_or_create_pool("blobstore-presence", cachelib::get_available_space()).unwrap();
+    cachelib::init_cache_once(
+        cachelib::LruCacheConfig::new(cache_size)
+            .set_shrinker(cachelib::ShrinkMonitor {
+                shrinker_type: cachelib::ShrinkMonitorType::ResidentSize {
+                    max_process_size_gib: max_process_size_gib,
+                    min_process_size_gib: min_process_size_gib,
+                },
+                interval: Duration::new(10, 0),
+                max_resize_per_iteration_percent: 25,
+                max_removed_percent: 50,
+                strategy: cachelib::RebalanceStrategy::HitsPerSlab {
+                    // A small increase in hit ratio is desired
+                    diff_ratio: 0.05,
+                    min_retained_slabs: 1,
+                    // Objects newer than 30 seconds old might be about to become interesting
+                    min_tail_age: Duration::new(30, 0),
+                    ignore_untouched_slabs: false,
+                },
+            })
+            .set_pool_rebalance(cachelib::PoolRebalanceConfig {
+                interval: Duration::new(10, 0),
+                strategy: cachelib::RebalanceStrategy::HitsPerSlab {
+                    // A small increase in hit ratio is desired
+                    diff_ratio: 0.05,
+                    min_retained_slabs: 1,
+                    // Objects newer than 30 seconds old might be about to become interesting
+                    min_tail_age: Duration::new(30, 0),
+                    ignore_untouched_slabs: false,
+                },
+            }),
+    ).unwrap();
+    cachelib::get_or_create_pool(
+        "blobstore-blobs",
+        get_usize(matches, "blob-cache-size", 100_000_000),
+    ).unwrap();
+    cachelib::get_or_create_pool(
+        "blobstore-presence",
+        get_usize(matches, "presence-cache-size", 100_000_000),
+    ).unwrap();
 }
 
 fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: bool) -> BlobRepo {
