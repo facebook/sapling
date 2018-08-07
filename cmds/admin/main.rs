@@ -307,6 +307,8 @@ fn main() {
             let rev = sub_m.value_of("CHANGESET_ID").unwrap();
             let path = sub_m.value_of("PATH").unwrap();
 
+            args::init_cachelib(&matches);
+
             let repo = args::open_blobrepo(&logger, &matches);
             fetch_content(logger.clone(), Arc::new(repo), rev, path)
                 .and_then(|content| {

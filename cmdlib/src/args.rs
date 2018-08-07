@@ -6,6 +6,7 @@
 
 use std::fs;
 use std::path::Path;
+use std::time::Duration;
 
 use clap::{App, Arg, ArgMatches};
 use failure::{Result, ResultExt};
@@ -127,10 +128,9 @@ impl MononokeApp {
                     .default_value("5")
                     .hidden(hide_advanced_args)
                     .help("maximum open requests per Manifold IO thread")
-            )
-            .arg(Arg::from_usage(
-                    "--cache-size-gb [SIZE] 'size of the cachelib cache, in GiB'",
-            ));
+            );
+
+        app = add_cachelib_args(app);
 
         if self.local_instances {
             app = app.arg(
@@ -233,15 +233,60 @@ pub fn setup_blobrepo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<(
     Ok(())
 }
 
+pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(Arg::from_usage(
+            "--cache-size-gb [SIZE] 'size of the cachelib cache, in GiB'",
+    ))
+    .arg(Arg::from_usage(
+            "--max-process-size [SIZE] 'process size at which cachelib will shrink, in GiB'"
+    ))
+    .arg(Arg::from_usage(
+            "--min-process-size [SIZE] 'process size at which cachelib will grow back to cache-size-gb, in GiB'"
+    ))
+}
+
 pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
     let cache_size = matches
         .value_of("cache-size-gb")
         .unwrap_or("20")
         .parse::<usize>()
         .unwrap() * 1024 * 1024 * 1024;
+    let max_process_size_gib = matches
+        .value_of("max-process-size")
+        .map(str::parse::<usize>)
+        // This is a fixed-point calculation. The process can grow to 1.2 times the size of the
+        // cache before the cache shrinks, but cachelib is inconsistent and wants cache size in
+        // bytes but process sizes in GiB
+        .unwrap_or(Ok(cache_size * 12 / (10 * 1024 * 1024 * 1024)))
+        .unwrap() as u32;
+    let min_process_size_gib = matches
+        .value_of("min-process-size")
+        .map(str::parse::<usize>)
+        // This is a fixed-point calculation. The process can fall to 0.8 times the size of the
+        // cache before the cache will regrow to target size, but cachelib is inconsistent
+        // and wants cache size in bytes but process sizes in GiB
+        .unwrap_or(Ok(cache_size * 8 / (10 * 1024 * 1024 * 1024)))
+        .unwrap() as u32;
 
-    cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size)).unwrap();
-
+    cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size).set_shrinker(
+        cachelib::ShrinkMonitor {
+            shrinker_type: cachelib::ShrinkMonitorType::ResidentSize {
+                max_process_size_gib: max_process_size_gib,
+                min_process_size_gib: min_process_size_gib,
+            },
+            interval: Duration::new(10, 0),
+            max_resize_per_iteration_percent: 25,
+            max_removed_percent: 50,
+            strategy: cachelib::RebalanceStrategy::HitsPerSlab {
+                // A small increase in hit ratio is desired
+                diff_ratio: 0.05,
+                min_retained_slabs: 1,
+                // Objects newer than 30 seconds old might be about to become interesting
+                min_tail_age: Duration::new(30, 0),
+                ignore_untouched_slabs: false,
+            },
+        },
+    )).unwrap();
     cachelib::get_or_create_pool("blobstore-blobs", cachelib::get_available_space() * 3 / 4)
         .unwrap();
     cachelib::get_or_create_pool("blobstore-presence", cachelib::get_available_space()).unwrap();

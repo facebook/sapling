@@ -17,6 +17,7 @@ extern crate chrono;
 extern crate clap;
 #[macro_use]
 extern crate cloned;
+extern crate cmdlib;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
@@ -223,88 +224,76 @@ struct HttpServerState {
 }
 
 fn main() -> Result<()> {
-    let matches = clap::App::new("Mononoke API Server")
-        .version("0.0.1")
-        .about("An API server serves requests for Mononoke")
-        .arg(
-            Arg::with_name("http-host")
-                .short("H")
-                .long("http-host")
-                .value_name("HOST")
-                .default_value("127.0.0.1")
-                .help("HTTP host to listen to"),
-        )
-        .arg(
-            Arg::with_name("http-port")
-                .short("p")
-                .long("http-port")
-                .value_name("PORT")
-                .default_value("8000")
-                .help("HTTP port to listen to"),
-        )
-        .arg(Arg::with_name("with-scuba").long("with-scuba"))
-        .arg(Arg::with_name("debug").short("p").long("debug"))
-        .arg(
-            Arg::with_name("stdlog")
-                .long("stdlog")
-                .help("print logs from third-party crates"),
-        )
-        .arg(
-            Arg::with_name("config-path")
-                .long("config-path")
-                .value_name("PATH")
-                .required(true)
-                .help("directory of the config repository"),
-        )
-        .arg(
-            Arg::with_name("config-bookmark")
-                .long("config-bookmark")
-                .value_name("BOOKMARK")
-                .required_unless("config-commit")
-                .help("bookmark of the config repository"),
-        )
-        .arg(
-            Arg::with_name("config-commit")
-                .long("config-commit")
-                .value_name("HASH")
-                .required_unless("config-bookmark")
-                .help("commit hash of the config repository"),
-        )
-        .arg(
-            Arg::with_name("ssl-certificate")
-                .long("ssl-certificate")
-                .value_name("PATH")
-                .help("path to the ssl certificate file"),
-        )
-        .arg(
-            Arg::with_name("ssl-private-key")
-                .long("ssl-private-key")
-                .value_name("PATH")
-                .help("path to the ssl private key file")
-                .requires("ssl-ca"),
-        )
-        .arg(
-            Arg::with_name("ssl-ca")
-                .long("ssl-ca")
-                .value_name("PATH")
-                .help("path to the ssl ca file"),
-        )
-        .arg(Arg::from_usage(
-            "--cache-size-gb [SIZE] 'size of the cachelib cache, in GiB'",
-        ))
-        .get_matches();
+    let matches = cmdlib::args::add_cachelib_args(
+        clap::App::new("Mononoke API Server")
+            .version("0.0.1")
+            .about("An API server serves requests for Mononoke")
+            .arg(
+                Arg::with_name("http-host")
+                    .short("H")
+                    .long("http-host")
+                    .value_name("HOST")
+                    .default_value("127.0.0.1")
+                    .help("HTTP host to listen to"),
+            )
+            .arg(
+                Arg::with_name("http-port")
+                    .short("p")
+                    .long("http-port")
+                    .value_name("PORT")
+                    .default_value("8000")
+                    .help("HTTP port to listen to"),
+            )
+            .arg(Arg::with_name("with-scuba").long("with-scuba"))
+            .arg(Arg::with_name("debug").short("p").long("debug"))
+            .arg(
+                Arg::with_name("stdlog")
+                    .long("stdlog")
+                    .help("print logs from third-party crates"),
+            )
+            .arg(
+                Arg::with_name("config-path")
+                    .long("config-path")
+                    .value_name("PATH")
+                    .required(true)
+                    .help("directory of the config repository"),
+            )
+            .arg(
+                Arg::with_name("config-bookmark")
+                    .long("config-bookmark")
+                    .value_name("BOOKMARK")
+                    .required_unless("config-commit")
+                    .help("bookmark of the config repository"),
+            )
+            .arg(
+                Arg::with_name("config-commit")
+                    .long("config-commit")
+                    .value_name("HASH")
+                    .required_unless("config-bookmark")
+                    .help("commit hash of the config repository"),
+            )
+            .arg(
+                Arg::with_name("ssl-certificate")
+                    .long("ssl-certificate")
+                    .value_name("PATH")
+                    .help("path to the ssl certificate file"),
+            )
+            .arg(
+                Arg::with_name("ssl-private-key")
+                    .long("ssl-private-key")
+                    .value_name("PATH")
+                    .help("path to the ssl private key file")
+                    .requires("ssl-ca"),
+            )
+            .arg(
+                Arg::with_name("ssl-ca")
+                    .long("ssl-ca")
+                    .value_name("PATH")
+                    .help("path to the ssl ca file"),
+            ),
+    ).get_matches();
 
-    let cache_size = matches
-        .value_of("cache-size-gb")
-        .unwrap_or("20")
-        .parse::<usize>()
-        .unwrap() * 1024 * 1024 * 1024;
-
-    cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size)).unwrap();
-
-    cachelib::get_or_create_pool("blobstore-blobs", cachelib::get_available_space() * 3 / 4)
-        .unwrap();
-    cachelib::get_or_create_pool("blobstore-presence", cachelib::get_available_space()).unwrap();
+    cmdlib::args::init_cachelib(&matches);
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");

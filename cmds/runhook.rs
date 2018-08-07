@@ -17,6 +17,7 @@ extern crate blobrepo;
 extern crate blobstore;
 extern crate cachelib;
 extern crate clap;
+extern crate cmdlib;
 extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
@@ -62,16 +63,19 @@ fn run_hook(
     repo_creator: fn(&Logger, &ArgMatches) -> BlobRepo,
 ) -> BoxFuture<HookExecution, Error> {
     // Define command line args and parse command line
-    let matches = App::new("runhook")
-        .version("0.0.0")
-        .about("run a hook")
-        .args_from_usage(concat!(
-            "<REPO_NAME>           'name of repository\n",
-            "<HOOK_FILE>           'file containing hook code\n",
-            "<HOOK_TYPE>           'the type of the hook (perfile, percs)\n",
-            "<REV>                 'revision hash'"
-        ))
-        .get_matches_from(args);
+    let matches = cmdlib::args::add_cachelib_args(
+        App::new("runhook")
+            .version("0.0.0")
+            .about("run a hook")
+            .args_from_usage(concat!(
+                "<REPO_NAME>               'name of repository\n",
+                "<HOOK_FILE>               'file containing hook code\n",
+                "<HOOK_TYPE>               'the type of the hook (perfile, percs)\n",
+                "<REV>                     'revision hash'\n",
+            )),
+    ).get_matches_from(args);
+
+    cmdlib::args::init_cachelib(&matches);
 
     let logger = {
         let level = if matches.is_present("debug") {
