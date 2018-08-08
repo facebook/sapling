@@ -49,6 +49,7 @@ use hooks::{BlobRepoChangesetStore, BlobRepoFileContentStore, HookExecution, Hoo
 use hooks::lua_hook::LuaHook;
 use mercurial_types::{HgChangesetId, RepositoryId};
 use slog::{Drain, Level, Logger};
+use slog::Discard;
 use slog_glog_fmt::default_drain as glog_drain;
 use std::env::args;
 use std::fs::File;
@@ -112,8 +113,15 @@ fn run_hook(
 
     let changeset_store = Box::new(BlobRepoChangesetStore::new(repo.clone()));
     let content_store = Arc::new(BlobRepoFileContentStore::new(repo.clone()));
-    let mut hook_manager =
-        HookManager::new(repo_name, changeset_store, content_store, 1024, 1024 * 1024);
+    let logger = Logger::root(Discard {}.ignore_res(), o!());
+    let mut hook_manager = HookManager::new(
+        repo_name,
+        changeset_store,
+        content_store,
+        1024,
+        1024 * 1024,
+        logger,
+    );
     let hook = LuaHook {
         name: String::from("testhook"),
         code,

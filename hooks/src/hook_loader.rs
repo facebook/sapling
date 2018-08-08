@@ -67,6 +67,7 @@ mod test {
     use async_unit;
     use fixtures::many_files_dirs;
     use metaconfig::repoconfig::{BookmarkParams, HookParams, RepoType};
+    use slog::{Discard, Drain};
 
     #[test]
     fn test_load_hooks() {
@@ -158,12 +159,14 @@ mod test {
         let repo = many_files_dirs::getrepo(None);
         let changeset_store = BlobRepoChangesetStore::new(repo.clone());
         let content_store = BlobRepoFileContentStore::new(repo);
+        let logger = Logger::root(Discard {}.ignore_res(), o!());
         HookManager::new(
             "some_repo".into(),
             Box::new(changeset_store),
             Arc::new(content_store),
             1024,
             1024 * 1024,
+            logger,
         )
     }
 

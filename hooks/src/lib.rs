@@ -40,6 +40,8 @@ extern crate maplit;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
+#[macro_use]
+extern crate slog;
 #[cfg(test)]
 extern crate tempdir;
 
@@ -58,6 +60,7 @@ use futures::{failed, finished, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, HgParents, MPath};
 use mononoke_types::FileContents;
+use slog::Logger;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::mem;
@@ -77,6 +80,7 @@ pub struct HookManager {
     bookmark_hooks: HashMap<Bookmark, Vec<String>>,
     repo_name: String,
     changeset_store: Box<ChangesetStore>,
+    logger: Logger,
 }
 
 impl HookManager {
@@ -86,6 +90,7 @@ impl HookManager {
         content_store: Arc<FileContentStore>,
         entrylimit: usize,
         weightlimit: usize,
+        logger: Logger,
     ) -> HookManager {
         let changeset_hooks = HashMap::new();
         let file_hooks = Arc::new(Mutex::new(HashMap::new()));
@@ -104,6 +109,7 @@ impl HookManager {
             bookmark_hooks: HashMap::new(),
             repo_name,
             changeset_store,
+            logger,
         }
     }
 
@@ -142,9 +148,16 @@ impl HookManager {
         &self,
         changeset_id: HgChangesetId,
         bookmark: &Bookmark,
-    ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
+    ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
         match self.bookmark_hooks.get(bookmark) {
-            Some(hooks) => self.run_changeset_hooks_for_changeset_id(changeset_id, hooks.to_vec()),
+            Some(hooks) => {
+                let hooks = hooks
+                    .clone()
+                    .into_iter()
+                    .filter(|name| self.changeset_hooks.contains_key(name))
+                    .collect();
+                self.run_changeset_hooks_for_changeset_id(changeset_id, hooks)
+            }
             None => return finished(Vec::new()).boxify(),
         }
     }
@@ -153,7 +166,7 @@ impl HookManager {
         &self,
         changeset_id: HgChangesetId,
         hooks: Vec<String>,
-    ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
+    ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
         let hooks: Result<Vec<(String, Arc<Hook<HookChangeset>>)>, Error> = hooks
             .iter()
             .map(|hook_name| {
@@ -172,6 +185,19 @@ impl HookManager {
                     hcs.clone(),
                     hooks.clone(),
                 )
+            })
+            .map(move |res| {
+                res.into_iter()
+                    .map(|(hook_name, exec)| {
+                        (
+                            ChangesetHookExecutionID {
+                                cs_id: changeset_id,
+                                hook_name,
+                            },
+                            exec,
+                        )
+                    })
+                    .collect()
             })
             .boxify()
     }
@@ -209,8 +235,21 @@ impl HookManager {
         changeset_id: HgChangesetId,
         bookmark: &Bookmark,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
+        debug!(
+            self.logger.clone(),
+            "Running file hooks for bookmark {:?}",
+            bookmark
+        );
         match self.bookmark_hooks.get(bookmark) {
-            Some(hooks) => self.run_file_hooks_for_changeset_id(changeset_id, hooks.to_vec()),
+            Some(hooks) => {
+                let file_hooks = self.file_hooks.lock().unwrap();
+                let hooks = hooks
+                    .clone()
+                    .into_iter()
+                    .filter(|name| file_hooks.contains_key(name))
+                    .collect();
+                self.run_file_hooks_for_changeset_id(changeset_id, hooks, self.logger.clone())
+            }
             None => return Box::new(finished(Vec::new())),
         }
     }
@@ -219,7 +258,12 @@ impl HookManager {
         &self,
         changeset_id: HgChangesetId,
         hooks: Vec<String>,
+        logger: Logger,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
+        debug!(
+            self.logger,
+            "Running file hooks for changeset id {:?}", changeset_id
+        );
         let cache = self.cache.clone();
         self.get_hook_changeset(changeset_id)
             .and_then(move |hcs| {
@@ -228,6 +272,7 @@ impl HookManager {
                     hcs.clone(),
                     hooks.clone(),
                     cache,
+                    logger,
                 )
             })
             .boxify()
@@ -238,6 +283,7 @@ impl HookManager {
         changeset: HookChangeset,
         hooks: Vec<String>,
         cache: Cache,
+        logger: Logger,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         let v: Vec<BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, _>> = changeset
             .files
@@ -248,6 +294,7 @@ impl HookManager {
                     path.to_string(),
                     hooks.clone(),
                     cache.clone(),
+                    logger.clone(),
                 )
             })
             .collect();
@@ -261,6 +308,7 @@ impl HookManager {
         path: String,
         hooks: Vec<String>,
         cache: Cache,
+        logger: Logger,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         let v: Vec<BoxFuture<(FileHookExecutionID, HookExecution), _>> = hooks
             .iter()
@@ -272,6 +320,7 @@ impl HookManager {
                         path: path.clone(),
                     },
                     cache.clone(),
+                    logger.clone(),
                 )
             })
             .collect();
@@ -281,7 +330,9 @@ impl HookManager {
     fn run_file_hook(
         key: FileHookExecutionID,
         cache: Cache,
+        logger: Logger,
     ) -> BoxFuture<(FileHookExecutionID, HookExecution), Error> {
+        debug!(logger, "Running file hook {:?}", key);
         cache.get(key.clone()).map(|he| (key, he)).boxify()
     }
 
@@ -557,7 +608,7 @@ impl Filler for HookCacheFiller {
                     HookContext::new(key.hook_name.clone(), self.repo_name.clone(), hook_file);
                 arc_hook.run(hook_context)
             }
-            None => panic!("Can't find hook"), // TODO
+            None => panic!("Can't find hook {}", key.hook_name), // TODO
         }
     }
 }
@@ -569,6 +620,12 @@ pub struct FileHookExecutionID {
     pub cs_id: HgChangesetId,
     pub hook_name: String,
     pub path: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Hash, Eq)]
+pub struct ChangesetHookExecutionID {
+    pub cs_id: HgChangesetId,
+    pub hook_name: String,
 }
 
 impl Weight for FileHookExecutionID {
@@ -645,6 +702,7 @@ mod test {
     use fixtures::many_files_dirs;
     use futures::Future;
     use futures::future::finished;
+    use slog::{Discard, Drain};
     use std::collections::hash_map::Entry;
     use std::str::FromStr;
 
@@ -1062,7 +1120,9 @@ mod test {
             &Bookmark::new(bookmark_name).unwrap(),
         );
         let res = fut.wait().unwrap();
-        let map: HashMap<String, HookExecution> = res.into_iter().collect();
+        let map: HashMap<String, HookExecution> = res.into_iter()
+            .map(|(exec_id, exec)| (exec_id.hook_name, exec))
+            .collect();
         assert_eq!(expected, map);
     }
 
@@ -1128,12 +1188,14 @@ mod test {
         let repo = many_files_dirs::getrepo(None);
         let changeset_store = BlobRepoChangesetStore::new(repo.clone());
         let content_store = BlobRepoFileContentStore::new(repo);
+        let logger = Logger::root(Discard {}.ignore_res(), o!());
         HookManager::new(
             "some_repo".into(),
             Box::new(changeset_store),
             Arc::new(content_store),
             1024,
             1024 * 1024,
+            logger,
         )
     }
 
@@ -1157,12 +1219,14 @@ mod test {
             (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir2/file_2")),
             "content_d2_f2".into(),
         );
+        let logger = Logger::root(Discard {}.ignore_res(), o!());
         HookManager::new(
             "some_repo".into(),
             Box::new(changeset_store),
             Arc::new(content_store),
             1024,
             1024 * 1024,
+            logger,
         )
     }
 
