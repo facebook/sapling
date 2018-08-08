@@ -149,12 +149,14 @@ class Config:
         defaults = (
             self._interpolate_dict
             if self._interpolate_dict is not None
-            else {"USER": os.environ.get("USER"), "HOME": self._home_dir}
+            else {"USER": os.environ.get("USER", ""), "HOME": self._home_dir}
         )
         parser = configparser.ConfigParser(
             interpolation=configinterpolator.EdenConfigInterpolator(defaults)
         )
-        parser.optionxform = str  # ConfigParser should not convert case
+        # ConfigParser should not convert case
+        # use setattr() to satisfy mypy https://github.com/python/mypy/issues/2427
+        setattr(parser, "optionxform", str)
         # Load rc files
         rc_files = self.get_rc_files()
         if not self._use_toml_cfg:
@@ -682,7 +684,7 @@ Do you want to run `eden mount %s` instead?"""
             use_mononoke = False
 
         try:
-            certificate = self.get_config_value("ssl.client-certificate")
+            certificate: Optional[str] = self.get_config_value("ssl.client-certificate")
         except KeyError:
             # probably need to log this case
             certificate = None
@@ -894,7 +896,9 @@ class ConfigUpdater(object):
         self._lock_path = self.path + ".lock"
         self._lock_file: Optional[typing.TextIO] = None
         self.config = configparser.ConfigParser()
-        self.config.optionxform = str  # ConfigParser should not convert case
+        # ConfigParser should not convert case
+        # use setattr() to satisfy mypy https://github.com/python/mypy/issues/2427
+        setattr(self.config, "optionxform", str)
         self._use_toml_cfg = use_toml_cfg
 
         # Acquire a lock.
