@@ -245,9 +245,9 @@ class MalformedLock(Abort):
 
 
 class LockHeld(LockError):
-    def __init__(self, errno, filename, desc, locker):
+    def __init__(self, errno, filename, desc, info):
         LockError.__init__(self, errno, "Lock held", filename, desc)
-        self.locker = locker
+        self.lockinfo = info
 
 
 class LockUnavailable(LockError):

@@ -22,38 +22,28 @@ if pycompat.iswindows:
     from . import win32
 
 
-class _emptylocker(object):
+class _emptylockinfo(object):
     def getwarning(self, l):
         return _("waiting for lock on %r") % l.desc
 
 
-emptylocker = _emptylocker()
+emptylockinfo = _emptylockinfo()
 
 
-class locker(object):
-    """Container for a process that originally created a file lock
+class lockinfo(object):
+    """Information about who is holding the lock.
 
-    It is constructed by parsing a `namespace:uniqueid` string, where
-    `namespace` can be:
-    - just a 'hostname' (Windows, non-pid-namespacing POSIX)
-    - 'hostname/pid-namespace' (modern linux)
-
-    `uniqueid` can be:
-    - just a 'pid' (POSIX)
-    - pid/starttime (Windows)
+    Does not have write side-effect (ex. take or release a lock).
     """
 
     _currentnamespace = None
 
     def __init__(self, fromstr, path=None):
-        """Create a locker object by parsing a string
-
-        Modern `fromstr` should be a string of the following
-        format: `<namespacing part>:<identification part>`
-        Supports the following formats:
-        - `host:pid`
-        - `host/pidnamespace:pid`
-        - `host:pid/starttime"""
+        """
+        fromstr := namespace + ":" + identification
+        namespace := hostname (non-Linux) | hostname + "/" + pid-namespace (Linux)
+        identification := pid (non-Windows) | pid + "/" + starttime (Windows)
+        """
         self.pidnamespace = None
         self.host = None
         self.pid = None
@@ -79,10 +69,10 @@ class locker(object):
             self.pid = uid
 
     def __eq__(self, other):
-        if other is None or other == emptylocker:
+        if other is None or other == emptylockinfo:
             return False
         if isinstance(other, str):
-            return self == locker(other)
+            return self == lockinfo(other)
         return self.namespace == other.namespace and self.uniqueid == other.uniqueid
 
     @property
@@ -120,11 +110,11 @@ class locker(object):
         return str(util.getpid())
 
     def issamenamespace(self):
-        """Check if the current process is in the same namespace as locker"""
+        """Check if the current process is in the same namespace as lockinfo"""
         return self.namespace == self.getcurrentnamespace()
 
     def isrunning(self):
-        """Check if locker is still running"""
+        """Check if locker process is still running"""
         if self.pid is None:
             return False
         pid = int(self.pid)
@@ -135,7 +125,7 @@ class locker(object):
         return result
 
     def getwarning(self, l):
-        """Get a locker's warning string while trying to acquire `l` lock"""
+        """Get a lockinfo's warning string while trying to acquire `l` lock"""
         msg = _("waiting for lock on %s held by process %r on host %r\n")
         msg %= (l.desc, self.pid, self.host)
         return "".join(msg)
@@ -162,12 +152,12 @@ def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
             break
         except error.LockHeld as inst:
             if delay == debugidx:
-                ui.debug(inst.locker.getwarning(l))
+                ui.debug(inst.lockinfo.getwarning(l))
             if delay == warningidx:
-                ui.warn(inst.locker.getwarning(l))
+                ui.warn(inst.lockinfo.getwarning(l))
             if timeout <= delay:
                 raise error.LockHeld(
-                    errno.ETIMEDOUT, inst.filename, l.desc, inst.locker
+                    errno.ETIMEDOUT, inst.filename, l.desc, inst.lockinfo
                 )
             time.sleep(1)
             delay += 1
@@ -262,11 +252,11 @@ class lock(object):
         self.release()
 
     def _getpid(self):
-        # wrapper around locker.getcurrentid() to make testing easier
-        return locker.getcurrentid()
+        # wrapper around lockinfo.getcurrentid() to make testing easier
+        return lockinfo.getcurrentid()
 
     def _getlockname(self):
-        return "%s:%s" % (locker.getcurrentnamespace(), self.pid)
+        return "%s:%s" % (lockinfo.getcurrentnamespace(), self.pid)
 
     def lock(self):
         # wrapper around locking to show spinner
@@ -294,7 +284,7 @@ class lock(object):
                         timeout -= 1
                     continue
                 raise error.LockHeld(
-                    errno.ETIMEDOUT, inst.filename, self.desc, inst.locker
+                    errno.ETIMEDOUT, inst.filename, self.desc, inst.lockinfo
                 )
 
     def _trylock(self):
@@ -312,20 +302,20 @@ class lock(object):
                     lockfilecontents = self._readlock()
                     if lockfilecontents is None:
                         continue
-                    lockerdesc = locker(lockfilecontents, path=self.vfs.join(self.f))
+                    info = lockinfo(lockfilecontents, path=self.vfs.join(self.f))
 
                     # special case where a parent process holds the lock -- this
                     # is different from the pid being different because we do
                     # want the unlock and postrelease functions to be called,
                     # but the lockfile to not be removed.
-                    if lockerdesc == self.parentlock:
+                    if info == self.parentlock:
                         self._parentheld = True
                         self.held = 1
                         return
-                    lockerdesc = self._testlock(lockerdesc)
-                    if lockerdesc is not None:
+                    info = self._testlock(info)
+                    if info is not None:
                         raise error.LockHeld(
-                            errno.EAGAIN, self.vfs.join(self.f), self.desc, lockerdesc
+                            errno.EAGAIN, self.vfs.join(self.f), self.desc, info
                         )
                 else:
                     raise error.LockUnavailable(
@@ -333,10 +323,10 @@ class lock(object):
                     )
 
         if not self.held:
-            # use empty locker to mean "busy for frequent lock/unlock
+            # use empty lockinfo to mean "busy for frequent lock/unlock
             # by many processes"
             raise error.LockHeld(
-                errno.EAGAIN, self.vfs.join(self.f), self.desc, emptylocker
+                errno.EAGAIN, self.vfs.join(self.f), self.desc, emptylockinfo
             )
 
     def _readlock(self):
@@ -359,23 +349,23 @@ class lock(object):
         self._debugmessagesprinted.add(msg)
         self.ui.debug(msg)
 
-    def _testlock(self, lockerdesc):
-        if lockerdesc is None:
+    def _testlock(self, info):
+        if info is None:
             return None
-        if not lockerdesc.issamenamespace():
+        if not info.issamenamespace():
             # this and below debug prints will hopefully help us
             # understand the issue with stale lock files not being
             # cleaned up on Windows (T25415269)
             m = _("locker is not in the same namespace(locker: %r, us: %r)\n")
-            m %= (lockerdesc.namespace, locker.getcurrentnamespace())
+            m %= (info.namespace, lockinfo.getcurrentnamespace())
             self._debugprintonce(m)
-            return lockerdesc
-        if lockerdesc.isrunning():
+            return info
+        if info.isrunning():
             m = _("locker is still running (full unique id: %r)\n")
-            m %= (lockerdesc.uniqueid,)
+            m %= (info.uniqueid,)
             self._debugprintonce(m)
-            return lockerdesc
-        # if locker dead, break lock.  must do this with another lock
+            return info
+        # if lockinfo dead, break lock.  must do this with another lock
         # held, or can race and break valid lock.
         try:
             msg = _(
@@ -387,23 +377,23 @@ class lock(object):
             self.vfs.unlink(self.f)
             l.release()
             self._debugprintonce(_("removed the stale lock file\n"))
-        except error.LockError:
+        except error.lockinforor:
             self._debugprintonce(_("failed to remove the stale lock file\n"))
-            return lockerdesc
+            return info
 
     def testlock(self):
-        """return id of locker if lock is valid, else None.
+        """return id of lockinfo if lock is valid, else None.
 
-        If old-style lock, we cannot tell what machine locker is on.
-        with new-style lock, if locker is on this machine, we can
-        see if locker is alive.  If locker is on this machine but
+        If old-style lock, we cannot tell what machine lockinfo is on.
+        with new-style lock, if lockinfo is on this machine, we can
+        see if lockinfo is alive.  If lockinfo is on this machine but
         not alive, we can safely break lock.
 
         The lock file is only deleted when None is returned.
 
         """
-        lockerdesc = locker(self._readlock(), path=self.vfs.join(self.f))
-        return self._testlock(lockerdesc)
+        info = lockinfo(self._readlock(), path=self.vfs.join(self.f))
+        return self._testlock(info)
 
     @contextlib.contextmanager
     def inherit(self):

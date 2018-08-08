@@ -281,7 +281,7 @@ class testlock(unittest.TestCase):
     def testfrequentlockunlock(self):
         """This tests whether lock acquisition fails as expected, even if
         (1) lock can't be acquired (makelock fails by EEXIST), and
-        (2) locker info can't be read in (readlock fails by ENOENT) while
+        (2) lockinfo can't be read in (readlock fails by ENOENT) while
         retrying 5 times.
         """
 
@@ -302,7 +302,7 @@ class testlock(unittest.TestCase):
             self.fail("unexpected lock acquisition")
         except error.LockHeld as why:
             self.assertTrue(why.errno == errno.ETIMEDOUT)
-            self.assertTrue(why.locker == lock.emptylocker)
+            self.assertTrue(why.lockinfo == lock.emptylockinfo)
             state.assertlockexists(False)
 
 
