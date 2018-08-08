@@ -1,3 +1,4 @@
+#require symlink
 
   $ setup() {
   > cat << EOF >> .hg/hgrc
@@ -186,7 +187,8 @@ Check backup status with an unbacked up changeset that is disjoint from existing
 Test template keyword for when a backup is in progress
   $ hg log -T '{if(backingup,"Yes","No")}\n' -r .
   No
-  $ echo fakelock > .hg/infinitepushbackup.lock
+  $ rm -f .hg/infinitepushbackup.lock
+  $ ln -s fakelock .hg/infinitepushbackup.lock
   $ hg log -T '{if(backingup,"Yes","No")}\n' -r .
   Yes
   $ rm -f .hg/infinitepushbackup.lock

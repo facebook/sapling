@@ -592,11 +592,16 @@ def notbackedup(repo, subset, x):
 
 
 @templatekeyword("backingup")
-def backingup(repo, ctx, **args):
+def backingup(repo, **args):
     """Whether infinitepush is currently backing up commits."""
     # If the backup lock exists then a backup should be in progress.
+    return _islocked(repo)
+
+
+def _islocked(repo):
     srcrepo = shareutil.getsrcrepo(repo)
-    return srcrepo.vfs.lexists(_backuplockname)
+    path = srcrepo.vfs.join(_backuplockname)
+    return util.islocked(path)
 
 
 def _smartlogbackupsuggestion(ui, repo):
@@ -663,8 +668,7 @@ def smartlogsummary(ui, repo):
         _smartlogbackuphealthcheckmsg(ui, repo)
 
     # Don't output the summary if a backup is currently in progress.
-    srcrepo = shareutil.getsrcrepo(repo)
-    if srcrepo.vfs.lexists(_backuplockname):
+    if _islocked(repo):
         return
 
     unbackeduprevs = repo.revs("notbackedup()")

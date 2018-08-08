@@ -119,6 +119,7 @@ groupmembers = platform.groupmembers
 groupname = platform.groupname
 hidewindow = platform.hidewindow
 isexec = platform.isexec
+islocked = platform.islocked
 isowner = platform.isowner
 listdir = osutil.listdir
 localpath = platform.localpath
@@ -138,6 +139,7 @@ poll = platform.poll
 popen = platform.popen
 posixfile = platform.posixfile
 quotecommand = platform.quotecommand
+readlock = platform.readlock
 readpipe = platform.readpipe
 rename = platform.rename
 removedirs = platform.removedirs
@@ -1496,20 +1498,6 @@ else:
 
 if safehasattr(time, "perf_counter"):
     timer = time.perf_counter
-
-
-def readlock(pathname):
-    try:
-        return os.readlink(pathname)
-    except OSError as why:
-        if why.errno not in (errno.EINVAL, errno.ENOSYS):
-            raise
-    except AttributeError:  # no symlink in os
-        pass
-    fp = posixfile(pathname)
-    r = fp.read()
-    fp.close()
-    return r
 
 
 def fstat(fp):

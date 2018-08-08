@@ -1594,15 +1594,23 @@ def debuglocks(ui, repo, **opts):
     ull = None
     if repo.vfs.exists("undolog"):
         ull = os.path.join("undolog", "lock")
-    if opts.get(r"force_lock"):
-        repo.svfs.unlink("lock")
-        done = True
-    if opts.get(r"force_wlock"):
-        repo.vfs.unlink("wlock")
-        done = True
-    if opts.get(r"force_undolog_lock"):
-        repo.vfs.unlink(ull)
-        done = True
+    if pycompat.iswindows:
+        if opts.get(r"force_lock"):
+            repo.svfs.unlink("lock")
+            done = True
+        if opts.get(r"force_wlock"):
+            repo.vfs.unlink("wlock")
+            done = True
+        if opts.get(r"force_undolog_lock"):
+            repo.vfs.unlink(ull)
+            done = True
+    else:
+        if (
+            opts.get(r"force_lock")
+            or opts.get(r"force_wlock")
+            or opts.get(r"force_undolog_lock")
+        ):
+            raise error.Abort(_("cannot force release lock on POSIX"))
     if done:
         return 0
 

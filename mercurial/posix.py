@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import contextlib
 import errno
 import fcntl
 import getpass
@@ -71,18 +72,171 @@ def split(p):
     return ht[0] + "/", ht[1]
 
 
-def makelock(info, pathname):
-    try:
-        return os.symlink(info, pathname)
-    except OSError as why:
-        if why.errno == errno.EEXIST:
-            raise
-    except AttributeError:  # no symlink in os
-        pass
+@contextlib.contextmanager
+def _locked(pathname):
+    """Context manager locking on a path. Use this to make short decisions
+    in an "atomic" way across multiple processes.
 
-    ld = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
-    os.write(ld, info)
-    os.close(ld)
+    pathname must already exist.
+    """
+    fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW)
+    fcntl.flock(fd, fcntl.LOCK_EX)
+    try:
+        yield
+    finally:
+        os.close(fd)
+
+
+def makelock(info, pathname):
+    """Try to make a lock at given path. Write info inside it.
+
+    Stale non-symlink locks are removed automatically. Symlink locks
+    are only used by legacy code.
+
+    Return file descriptor on success. The file descriptor must be kept
+    for the lock to be effective.
+
+    Raise EEXIST if another process is holding the lock.
+    Raise ELOOP if another legacy hg process is holding the lock.
+    Can also raise other errors.
+    """
+
+    # This is a bit complex, since it aims to support old lock code where the
+    # lock file is removed when the lock is released.  The simpler version
+    # where the lock file does not get unlinked when releasing the lock is:
+    #
+    #     # Open the file. Create on demand. Fail if it's a symlink.
+    #     fd = os.open(pathname, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW)
+    #     try:
+    #         fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
+    #         os.write(fd, info)
+    #     except (OSError, IOError):
+    #         os.close(fd)
+    #         raise
+    #     else:
+    #         return fd
+    #
+    # With "unlink" on release, the above simple logic can break in this way:
+    #
+    #     [process 1] got fd.
+    #     [process 2] got fd pointing to a same file.
+    #     [process 1] .... release lock. file unlinked.
+    #     [process 2] flock on fd. (broken lock - file was gone)
+    #
+    # A direct fix is to use O_EXCL to make sure the file is created by the
+    # current process, then use "flock". That means there needs to be a way to
+    # remove stale lock, and that is not easy. A naive check and delete can
+    # break subtly:
+    #
+    #     [process 1] to check stale lock - got fd.
+    #     [process 2] ... release lock. file unlinked.
+    #     [process 1] flock taken, decided to remove file.
+    #     [process 3] create a new lock.
+    #     [process 1] unlink lock file. (wrong - removed the wrong lock)
+    #
+    # Instead of figuring out how to handle all corner cases carefully, we just
+    # always lock the parent directory when doing "racy" write operations
+    # (creating a lock, or removing a stale lock). So they become "atomic" and
+    # safe. There are 2 kinds of write operations that can happen without
+    # taking the directory lock:
+    #
+    #   - Legacy symlink lock creation or deletion. The new code errors out
+    #     when it saw a symlink lock (os.open(..., O_NOFOLLOW) and os.rename).
+    #     So they play well with each other.
+    #   - Unlinking lock file when when releasing. The release logic is holding
+    #     the flock. So it knows nobody else has the lock. Therefore it can do
+    #     the unlink without extra locking.
+    dirname = os.path.dirname(pathname)
+    with _locked(dirname or "."):
+        # Check and remove stale lock
+        try:
+            fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW)
+        except (OSError, IOError) as ex:
+            # ELOOP: symlink, lock taken by legacy process - return directly
+            if ex.errno != errno.ENOENT:
+                raise
+        else:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
+                os.unlink(pathname)
+            except (OSError, IOError) as ex:
+                # EAGAIN: lock taken - return directly
+                # ENOENT: lock removed already - continue
+                if ex.errno != errno.ENOENT:
+                    raise
+            finally:
+                os.close(fd)
+
+        # Create symlink placeholder. Make sure the file replaced by
+        # "os.rename" can only be this symlink. This avoids race condition
+        # when legacy code creates the symlink lock without locking the
+        # parent directory.
+        #
+        # This is basically the legacy lock logic.
+        placeholdercreated = False
+        try:
+            os.symlink(info, pathname)
+            placeholdercreated = True
+        except (IOError, OSError) as ex:
+            if ex.errno == errno.EEXIST:
+                raise
+        except AttributeError:
+            pass
+
+        if not placeholdercreated:
+            # No symlink support. Suboptimal. Create a placeholder by using an
+            # empty file.  Other legacy process might see a "malformed lock"
+            # temporarily. New processes won't see this because both "readlock"
+            # and "islocked" take the directory lock.
+            fd = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
+            os.close(fd)
+
+        # Create new lock
+        fd, tmppath = tempfile.mkstemp(prefix="makelock", dir=dirname)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
+            os.write(fd, info)
+            os.rename(tmppath, pathname)
+            return fd
+        except Exception:
+            unlink(tmppath)
+            os.close(fd)
+            raise
+
+
+def readlock(pathname):
+    with _locked(os.path.dirname(pathname) or "."):
+        try:
+            return os.readlink(pathname)
+        except OSError as why:
+            if why.errno not in (errno.EINVAL, errno.ENOSYS):
+                raise
+        except AttributeError:  # no symlink in os
+            pass
+        fp = posixfile(pathname)
+        r = fp.read()
+        fp.close()
+        return r
+
+
+def islocked(pathname):
+    with _locked(os.path.dirname(pathname) or "."):
+        try:
+            fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW)
+        except OSError as ex:
+            # ELOOP, ENOENT, EPERM, ...
+            # Only treat ENOENT as "not locked".
+            return ex.errno != errno.ENOENT
+        try:
+            fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
+            return False
+        except IOError as ex:
+            if ex.errno == errno.EAGAIN:
+                return True
+            else:
+                raise
+        finally:
+            os.close(fd)
 
 
 def openhardlinks():

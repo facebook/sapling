@@ -101,7 +101,7 @@ Add an extension that logs whenever `manifest.readmf()` is called when the lock 
   > def readmf(orig, self, nodeorrev, **kwargs):
   >     haslock = False
   >     try:
-  >       haslock = os.path.islink(os.path.join(self.opener.join(''), "../wlock"))
+  >       haslock = os.path.lexists(os.path.join(self.opener.join(''), "../wlock"))
   >     except Exception as e:
   >       print >> sys.stderr, 'manifest: %s' % e
   >       pass

@@ -130,6 +130,7 @@ On processs waiting on another, warning disabled, (debug output on)
   $ cat stdout
   adding f
 
+#if windows
 Pushing to a local read-only repo that can't be locked
 
   $ chmod 100 a/.hg/store
@@ -163,4 +164,31 @@ Having an undolog lock file
   lock:          free
   wlock:         free
   undolog/lock:  free
+
+#else
+
+Having an empty lock file
+  $ cd a
+  $ touch .hg/wlock
+  $ hg backout # a command which always acquires a lock
+  abort: please specify a revision to backout
+  [255]
+
+Non-symlink stale lock is removed automatically.
+
+Having an empty undolog lock file
+  $ mkdir .hg/undolog && touch .hg/undolog/lock
+  $ hg debuglocks
+  lock:          free
+  wlock:         free
+  undolog/lock:  free
+  $ hg debuglocks --force-undolog-lock
+  abort: cannot force release lock on POSIX
+  [255]
+  $ hg debuglocks
+  lock:          free
+  wlock:         free
+  undolog/lock:  free
+#endif
+
   $ cd ..

@@ -49,7 +49,7 @@ class looselock(object):
         try:
             self.vfs.makelock(lockcontents, self.lockname)
         except (OSError, IOError) as ex:
-            if ex.errno == errno.EEXIST:
+            if ex.errno in (errno.EEXIST, errno.EAGAIN):
                 raise error.LockHeld(
                     ex.errno,
                     self.vfs.join(self.lockname),

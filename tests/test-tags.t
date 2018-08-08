@@ -1,4 +1,4 @@
-#require no-fsmonitor
+#require no-fsmonitor symlink
 
 setup
 
@@ -152,8 +152,8 @@ Tag cache debug info written to blackbox log
 
 Failure to acquire lock results in no write
 
-  $ rm -f .hg/cache/tags2-visible .hg/cache/hgtagsfnodes1
-  $ echo 'foo:1' > .hg/wlock
+  $ rm -f .hg/cache/tags2-visible .hg/cache/hgtagsfnodes1 .hg/wlock
+  $ ln -s 'foo:1' .hg/wlock
   $ hg identify
   b9154636be93 tip
   $ hg blackbox -l 6

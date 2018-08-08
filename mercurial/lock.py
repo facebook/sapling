@@ -226,6 +226,7 @@ class lock(object):
         self.showspinner = showspinner
         self.spinnermsg = spinnermsg
         self._debugmessagesprinted = set([])
+        self._lockfd = None
         if dolock:
             self.delay = self.lock()
             if self.acquirefn:
@@ -291,14 +292,18 @@ class lock(object):
         if self.held:
             self.held += 1
             return
+        assert self._lockfd is None
         retry = 5
         while not self.held and retry:
             retry -= 1
             try:
-                self.vfs.makelock(self._getlockname(), self.f)
+                self._lockfd = self.vfs.makelock(self._getlockname(), self.f)
                 self.held = 1
             except (OSError, IOError) as why:
-                if why.errno == errno.EEXIST:
+                # EEXIST: lockfile exists (Windows)
+                # ELOOP: lockfile exists as a symlink (POSIX)
+                # EAGAIN: lockfile flock taken by other process (POSIX)
+                if why.errno in {errno.EEXIST, errno.ELOOP, errno.EAGAIN}:
                     lockfilecontents = self._readlock()
                     if lockfilecontents is None:
                         continue
@@ -317,6 +322,7 @@ class lock(object):
                         raise error.LockHeld(
                             errno.EAGAIN, self.vfs.join(self.f), self.desc, info
                         )
+
                 else:
                     raise error.LockUnavailable(
                         why.errno, why.strerror, why.filename, self.desc
@@ -365,9 +371,19 @@ class lock(object):
             m %= (info.uniqueid,)
             self._debugprintonce(m)
             return info
+        # POSIX util.makelock removes stale lock based on flock information.
+        # So it's unnecessary to remove stale lock here. It's also less
+        # reliable to remove stale lock based on pid due to pid namespaces.
+        if not pycompat.iswindows:
+            m = _("some process that claims itself as %r is holding the lock\n")
+            m %= (info.uniqueid,)
+            self._debugprintonce(m)
+            return info
         # if lockinfo dead, break lock.  must do this with another lock
         # held, or can race and break valid lock.
         try:
+            # The "remove dead lock" logic is done by posix.makelock, not here.
+            assert pycompat.iswindows
             msg = _(
                 "trying to removed the stale lock file " "(will acquire %s for that)\n"
             )
@@ -446,6 +462,9 @@ class lock(object):
                 if not self._parentheld:
                     try:
                         self.vfs.unlink(self.f)
+                        if self._lockfd is not None:
+                            os.close(self._lockfd)
+                            self._lockfd = None
                     except OSError:
                         pass
             # The postrelease functions typically assume the lock is not held

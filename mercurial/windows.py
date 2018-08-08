@@ -582,3 +582,21 @@ def makelock(info, pathname):
     except WindowsError:
         os.unlink(tname)
         raise
+
+
+def readlock(pathname):
+    try:
+        return os.readlink(pathname)
+    except OSError as why:
+        if why.errno not in (errno.EINVAL, errno.ENOSYS):
+            raise
+    except AttributeError:  # no symlink in os
+        pass
+    fp = posixfile(pathname)
+    r = fp.read()
+    fp.close()
+    return r
+
+
+def islocked(pathname):
+    return os.path.exists(pathname)
