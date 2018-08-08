@@ -16,6 +16,7 @@ import stat
 from . import (
     encoding,
     error,
+    hintutil,
     match as matchmod,
     pathutil,
     policy,
@@ -66,10 +67,18 @@ def _ishgignore(path):
     """Return True if the file looks like an hgignore file"""
     try:
         with open(path) as f:
-            content = "\n" + f.read()
-            return any(
+            content = "\n%s\n" % f.read()
+            # High probability to be hgignore?
+            ishgignore = any(
                 keyword in content for keyword in ("\nsyntax:", "\nglob:", "\nre:")
             )
+            # High probability to be gitignore?
+            isgitignore = "\n!" in content
+            # Maybe hgignore?
+            maybehgignore = any(keyword in content for keyword in ("\n^", "$\n"))
+            if (ishgignore or maybehgignore) and not isgitignore:
+                hintutil.trigger("hgignore-deprecate", path)
+            return ishgignore and not isgitignore
     except Exception:
         return False
 

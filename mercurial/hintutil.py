@@ -13,7 +13,15 @@ from . import rcutil, util
 from .i18n import _
 
 
-hinttable = {}
+hinttable = {
+    "hgignore-deprecate": lambda path: (
+        (
+            "hgignore format is being deprecated. "
+            "Consider updating %s to gitignore format."
+        )
+        % path
+    )
+}
 messages = []
 triggered = set()
 
