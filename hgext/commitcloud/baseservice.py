@@ -184,6 +184,10 @@ class BaseService(object):
 
         This generator function walks the given fake nodes.
         """
+
+        if not nodeinfos:
+            return []
+
         DRAFTPHASE = "draft"
 
         parentchildmap = {}

@@ -49,8 +49,19 @@ Registration
 
 
 Tests for hg cloud sl
+  $ cat > $TESTTMP/usersmartlogdata << EOF
+  > {
+  >   "smartlog": {
+  >     "nodes": []
+  >   }
+  > }
+  > EOF
+  $ hg cloud sl
+  #commitcloud searching draft commits for the 'user/test/default' workspace for the 'server' repo
+  Smartlog:
+  
 
-  $ cat >> $TESTTMP/usersmartlogdata << EOF
+  $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
   >   "smartlog": {
   >     "nodes": [
