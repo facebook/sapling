@@ -295,7 +295,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         except Exception as e:
             raise commitcloudcommon.UnexpectedError(self.ui, e)
 
-    def filterpushedheads(self, reponame, workspace, heads):
+    def filterpushedheads(self, reponame, heads):
         """Filter heads that have already been pushed to Commit Cloud backend
         """
         # do not send empty list
@@ -307,7 +307,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         # send request
         path = "/commit_cloud/get_bundles_handles"
 
-        data = {"repo_name": reponame, "workspace": workspace, "heads": heads}
+        data = {"repo_name": reponame, "heads": heads}
 
         start = time.time()
         response = self._send(path, data)

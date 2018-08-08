@@ -473,7 +473,7 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
 
             # Fast server-side check of what hasn't been pushed yet
             if checkbackedup:
-                newheads = serv.filterpushedheads(reponame, workspace, newheads)
+                newheads = serv.filterpushedheads(reponame, newheads)
 
             newheads, failedheads = infinitepush.pushbackupbundlestacks(
                 ui, repo, getconnection, newheads
