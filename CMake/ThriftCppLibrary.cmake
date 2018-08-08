@@ -61,7 +61,7 @@ function(add_thrift_cpp2_library LIB_NAME THRIFT_FILE)
     )
     list(APPEND generated_sources
       ${output_dir}/gen-cpp2/${service}.cpp
-      ${output_dir}/gen-cpp2/${service}_client.cpp
+      ${output_dir}/gen-cpp2/${service}AsyncClient.cpp
       ${output_dir}/gen-cpp2/${service}_processmap_binary.cpp
       ${output_dir}/gen-cpp2/${service}_processmap_compact.cpp
     )
