@@ -5,6 +5,7 @@ members = [
     "configparser",
     "hg_watchman_client",
     "indexedlog",
+    "lz4-pyframe",
     "minibench",
     "mpatch-sys",
     "mpatch",
