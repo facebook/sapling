@@ -60,8 +60,16 @@ clone a branch
 
 clone with mapsavefreq set
   $ rm -rf hgrepo-b
-  $ hg clone -r beta gitrepo hgrepo-b --config hggit.mapsavefrequency=1 --debug | grep saving
+  $ hg clone -r beta gitrepo hgrepo-b --config hggit.mapsavefrequency=1 --debug | egrep "(saving|committing)"
+  committing files:
+  committing manifest
+  committing changelog
+  committing transaction
   saving mapfile
+  committing files:
+  committing manifest
+  committing changelog
+  committing transaction
   saving mapfile
 
 Make sure that a deleted .hgsubstate does not confuse hg-git

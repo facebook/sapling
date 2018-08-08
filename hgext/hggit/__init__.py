@@ -265,7 +265,8 @@ if hgutil.safehasattr(manifest, "_lazymanifest"):
 @command("gimport")
 def gimport(ui, repo, remote_name=None):
     """import commits from Git to Mercurial"""
-    repo.githandler.import_commits(remote_name)
+    with repo.wlock(), repo.lock():
+        repo.githandler.import_commits(remote_name)
 
 
 @command("gexport")

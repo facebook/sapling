@@ -831,11 +831,20 @@ class GitHandler(object):
 
         mapsavefreq = compat.config(self.ui, "int", "hggit", "mapsavefrequency")
         with progress.bar(self.ui, _("importing"), "commits", total=total) as prog:
-            for i, csha in enumerate(commits):
-                prog.value = i
-                commit = commit_cache[csha]
-                self.import_git_commit(commit)
-                if mapsavefreq and i % mapsavefreq == 0:
+            icommits = enumerate(commits)
+            while True:
+                isubcommits = list(itertools.islice(icommits, mapsavefreq or 1))
+                if not isubcommits:
+                    break
+
+                with self.repo.transaction("git import"):
+                    for i, csha in isubcommits:
+                        prog.value = i
+                        commit = commit_cache[csha]
+                        self.import_git_commit(commit)
+                    self.ui.debug("committing transaction\n")
+
+                if mapsavefreq:
                     self.ui.debug("saving mapfile\n")
                     self.save_map(self.map_file)
 
