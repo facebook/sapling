@@ -11,8 +11,8 @@ use datapack::{DataEntry, DataPackVersion};
 use datastore::{DataStore, Delta, Metadata};
 use failure::Error;
 use key::Key;
-use lz4_pyframe::compress;
 use node::Node;
+use pylz4::compress;
 use tempfile::NamedTempFile;
 
 use error::Result;

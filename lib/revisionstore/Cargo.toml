@@ -6,7 +6,7 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 [dependencies]
 byteorder = "*"
 failure = "*"
-lz4-pyframe = { path = "../lz4-pyframe" }
+pylz4 = { path = "../../common/pylz4" }
 memmap = "*"
 mpatch = { path = "../mpatch" }
 rust-crypto = "*"

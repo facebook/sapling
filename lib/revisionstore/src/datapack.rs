@@ -73,8 +73,8 @@
 //! ```
 //! [1]: new in version 1.
 use byteorder::{BigEndian, ReadBytesExt};
-use lz4_pyframe::decompress;
 use memmap::{Mmap, MmapOptions};
+use pylz4::decompress;
 use std::{fmt, result};
 use std::cell::RefCell;
 use std::fs::{remove_file, File};
@@ -225,7 +225,7 @@ impl<'a> DataEntry<'a> {
     pub fn delta(&self) -> Result<Rc<[u8]>> {
         let mut cell = self.data.borrow_mut();
         if cell.is_none() {
-            *cell = Some(Rc::<[u8]>::from(decompress(&self.compressed_data)?));
+            *cell = Some(Rc::<[u8]>::from(decompress(&self.compressed_data)?.0));
         }
 
         Ok(Rc::clone(cell.as_ref().unwrap()))
