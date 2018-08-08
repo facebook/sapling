@@ -25,6 +25,8 @@ extern crate blobrepo;
 extern crate bookmarks;
 extern crate bytes;
 #[macro_use]
+extern crate cloned;
+#[macro_use]
 extern crate failure_ext as failure;
 #[cfg(test)]
 extern crate fixtures;
@@ -33,8 +35,6 @@ extern crate futures;
 extern crate futures_ext;
 extern crate hlua;
 extern crate hlua_futures;
-#[macro_use]
-extern crate lazy_static;
 #[macro_use]
 extern crate maplit;
 extern crate mercurial_types;

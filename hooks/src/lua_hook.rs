@@ -14,49 +14,30 @@ use super::errors::*;
 use failure::Error;
 use futures::{failed, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use hlua::{Lua, LuaFunctionCallError, LuaTable, PushGuard, TuplePushError, Void};
-use hlua_futures::{LuaCoroutine, LuaCoroutineBuilder};
+use hlua::{AnyLuaValue, Lua, LuaError, LuaFunctionCallError, LuaTable, PushGuard, TuplePushError,
+           Void, function1};
+use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
 
-const HOOK_START_CODE_BASE: &'static str = "
+const HOOK_START_CODE_BASE: &str = include_str!("hook_start_base.lua");
+
+const HOOK_START_CODE_CS: &str = "
 __hook_start = function(info, arg)
-     if hook == nil then
-        error(\"no hook function\")
-     end
-     local ctx = {}
-     ctx.info=info
-     @@@
-     acc, desc, long_desc = hook(ctx)
-     if type(acc) ~= \"boolean\" then
-        error(\"invalid hook return type\")
-     end
-     if acc and desc ~= nil then
-        error(\"failure description must only be set if hook fails\")
-     end
-     if acc and long_desc ~= nil then
-        error(\"failure long description must only be set if hook fails\")
-     end
-     if desc ~= nil and type(desc) ~= \"string\" then
-        error(\"invalid hook failure short description type\")
-     end
-     if long_desc ~= nil and type(long_desc) ~= \"string\" then
-        error(\"invalid hook failure long description type\")
-     end
-     res = {acc, desc, long_desc}
-     return res
+    return __hook_start_base(info, arg, function(arg, ctx)
+        ctx.files=arg
+    end)
 end
 ";
 
-lazy_static! {
-    static ref HOOK_START_CODE_CS: String = {
-        HOOK_START_CODE_BASE.to_string().replace("@@@", "ctx.files=arg")
-    };
-}
-
-lazy_static! {
-    static ref HOOK_START_CODE_FILE: String = {
-        HOOK_START_CODE_BASE.to_string().replace("@@@", "ctx.file=arg")
-    };
-}
+const HOOK_START_CODE_FILE: &str = "
+__hook_start = function(info, arg)
+    return __hook_start_base(info, arg, function(arg, ctx)
+        local file = {}
+        file.path = arg
+        file.contains_string = function(s) return coroutine.yield(__contains_string(s)) end
+        ctx.file = file
+    end)
+end
+";
 
 #[derive(Clone)]
 pub struct LuaHook {
@@ -82,7 +63,30 @@ impl Hook<HookChangeset> for LuaHook {
                 hook_info.insert("parent2_hash", parent2_hash.to_string());
             }
         }
-        let builder = match self.create_builder(&format!("{}{}", &*HOOK_START_CODE_CS, self.code)) {
+        let mut code = HOOK_START_CODE_CS.to_string();
+        code.push_str(HOOK_START_CODE_BASE);
+        code.push_str(&self.code);
+        let mut lua = Lua::new();
+        // Note that we explicitly open libraries not use lua.openlibs as we do not
+        // want to load some packages e.g. io and os.
+        lua.open_base();
+        lua.open_bit32();
+        lua.open_coroutine();
+        lua.open_math();
+        lua.open_package();
+        lua.open_string();
+        lua.open_table();
+        let res: Result<(), Error> = lua.execute::<()>(&code)
+            .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
+        if let Err(e) = res {
+            return failed(e).boxify();
+        }
+        // Note the lifetime becomes static as the into_get method moves the lua
+        // and the later create moves it again into the coroutine
+        let res: Result<LuaCoroutineBuilder<PushGuard<Lua<'static>>>, Error> = lua.into_get(
+            "__hook_start",
+        ).map_err(|_| panic!("No __hook_start"));
+        let builder = match res {
             Ok(builder) => builder,
             Err(e) => return failed(e).boxify(),
         };
@@ -95,9 +99,37 @@ impl Hook<HookFile> for LuaHook {
         let hook_info = hashmap! {
             "repo_name" => context.repo_name.to_string(),
         };
-        let mut code = HOOK_START_CODE_FILE.clone();
+        let mut code = HOOK_START_CODE_FILE.to_string();
+        code.push_str(HOOK_START_CODE_BASE);
         code.push_str(&self.code);
-        let builder = match self.create_builder(&code) {
+        let contains_string = {
+            cloned!(context);
+            move |string: String| -> Result<AnyFuture, Error> {
+                let future = context
+                    .data
+                    .contains_string(&string)
+                    .map_err(|err| {
+                        LuaError::ExecutionError(format!("failed to get file content: {}", err))
+                    })
+                    .map(|contains| AnyLuaValue::LuaBoolean(contains));
+                Ok(AnyFuture::new(future))
+            }
+        };
+        let contains_string = function1(contains_string);
+        let mut lua = Lua::new();
+        lua.openlibs();
+        lua.set("__contains_string", contains_string);
+        let res: Result<(), Error> = lua.execute::<()>(&code)
+            .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
+        if let Err(e) = res {
+            return failed(e).boxify();
+        }
+        // Note the lifetime becomes static as the into_get method moves the lua
+        // and the later create moves it again into the coroutine
+        let res: Result<LuaCoroutineBuilder<PushGuard<Lua<'static>>>, Error> = lua.into_get(
+            "__hook_start",
+        ).map_err(|_| panic!("No __hook_start"));
+        let builder = match res {
             Ok(builder) => builder,
             Err(e) => return failed(e).boxify(),
         };
@@ -108,21 +140,6 @@ impl Hook<HookFile> for LuaHook {
 impl LuaHook {
     pub fn new(name: String, code: String) -> LuaHook {
         LuaHook { name, code }
-    }
-
-    fn create_builder(
-        &self,
-        code: &str,
-    ) -> Result<LuaCoroutineBuilder<PushGuard<Lua<'static>>>, Error> {
-        let mut lua = Lua::new();
-        lua.openlibs();
-        let res: Result<(), Error> = lua.execute::<()>(code)
-            .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
-        res?;
-        // Note the lifetime becomes static as the into_get method moves the lua
-        // and the later create moves it again into the coroutine
-        lua.into_get("__hook_start")
-            .map_err(|_| panic!("No __hook_start"))
     }
 
     fn convert_coroutine_res(
@@ -165,6 +182,7 @@ mod test {
     use super::super::{HookChangeset, HookChangesetParents, InMemoryFileContentStore};
     use async_unit;
     use futures::Future;
+    use mercurial_types::HgChangesetId;
     use std::str::FromStr;
     use std::sync::Arc;
     use test::to_mpath;
@@ -463,11 +481,39 @@ mod test {
             let hook_file = default_hook_file();
             let code = String::from(
                 "hook = function (ctx)\n\
-                 print(\"file is\", ctx.file)\n\
-                 return ctx.file == \"/a/b/c.txt\"\n\
+                 return ctx.file.path == \"/a/b/c.txt\"\n\
                  end",
             );
             assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_file_hook_content_matches() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.contains_string(\"sausages\")\n\
+                 end",
+            );
+            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_file_hook_content_no_matche() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.contains_string(\"gerbils\")\n\
+                 end",
+            );
+            assert_matches!(
+                run_file_hook(code, hook_file),
+                Ok(HookExecution::Rejected(_))
+            );
         });
     }
 
@@ -535,7 +581,7 @@ mod test {
             let hook_file = default_hook_file();
             let code = String::from(
                 "hook = function (ctx)\n\
-                 if ctx.file == \"/a/b/c.txt\" then\n\
+                 if ctx.file.path == \"/a/b/c.txt\" then\n\
                  error(\"fubar\")\n\
                  end\n\
                  return true\n\
