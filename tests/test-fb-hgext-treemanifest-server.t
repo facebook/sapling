@@ -383,24 +383,16 @@ Try pulling while treemanifest.blocksendflat is True
   $ hg config treemanifest.treeonly
   [1]
   $ hg strip -qr a30b520ebf7a
-  $ hg pull --config extension.treemanifest=! --config fastmanifest.usetree=False
-  pulling from ssh://user@dummy/master
-  searching for changes
+  $ hg pull --config extension.treemanifest=! --config fastmanifest.usetree=False 1>/dev/null
   remote: abort: must produce treeonly changegroups in a treeonly repository
-  adding changesets
-  remote: abort: unexpected error: must produce treeonly changegroups in a treeonly repository
   transaction abort!
   rollback completed
   abort: pull failed on remote
   [255]
 
 - Pull to a hybrid manifest repo
-  $ hg pull
-  pulling from ssh://user@dummy/master
-  searching for changes
+  $ hg pull 1>/dev/null
   remote: abort: must produce treeonly changegroups in a treeonly repository
-  adding changesets
-  remote: abort: unexpected error: must produce treeonly changegroups in a treeonly repository
   transaction abort!
   rollback completed
   abort: pull failed on remote
