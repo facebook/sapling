@@ -265,7 +265,7 @@ impl ConfigSet {
 
         while pos < buf.len() {
             match buf[pos] {
-                b'\n' | b'\r' => pos += 1,
+                b'\n' | b'\r' | b' ' | b'\t' => pos += 1,
                 b'[' => {
                     let section_start = pos + 1;
                     match memchr(b']', &buf.as_ref()[section_start..]) {
@@ -651,6 +651,18 @@ mod tests {
         assert_eq!(sources[1].source(), "test_parse_basic");
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
         assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 52..53));
+    }
+
+    #[test]
+    fn test_parse_spaces() {
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[a]\n\
+             \t#\n\
+             x=1",
+            &"".into(),
+        );
+        assert_eq!(cfg.get("a", "x"), Some("1".into()));
     }
 
     #[test]
