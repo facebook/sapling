@@ -472,6 +472,25 @@ impl Options {
         self.append_filter(Box::new(filter))
     }
 
+    /// Set read-only config items. `items` contains a list of tuple `(section, name)`.
+    /// Setting those items to new value will be ignored.
+    pub fn readonly_items<S: Into<Bytes>, N: Into<Bytes>>(self, items: Vec<(S, N)>) -> Self {
+        let readonly_items: HashSet<(Bytes, Bytes)> = items
+            .into_iter()
+            .map(|(section, name)| (section.into(), name.into()))
+            .collect();
+
+        let filter = move |section: Bytes, name: Bytes, value: Option<Bytes>| {
+            if readonly_items.contains(&(section.clone(), name.clone())) {
+                None
+            } else {
+                Some((section, name, value))
+            }
+        };
+
+        self.append_filter(Box::new(filter))
+    }
+
     /// Set `source` information. It is about who initialized the config loading.  For example,
     /// "user_hgrc" indicates it is from the user config file, "--config" indicates it is from the
     /// global "--config" command line flag, "env" indicates it is translated from an environment
@@ -758,6 +777,24 @@ mod tests {
         assert_eq!(cfg.get("z", "c"), Some("3".into()));
     }
 
+    #[test]
+    fn test_readonly_items() {
+        let opts = Options::new().readonly_items(vec![("x", "a"), ("y", "b")]);
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[x]\n\
+             a=1\n\
+             [y]\n\
+             b=2\n\
+             [z]\n\
+             c=3",
+            &opts,
+        );
+
+        assert_eq!(cfg.get("x", "a"), None);
+        assert_eq!(cfg.get("y", "b"), None);
+        assert_eq!(cfg.get("z", "c"), Some("3".into()));
+    }
     fn write_file(path: PathBuf, content: &str) {
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         let mut f = fs::File::create(path).unwrap();
