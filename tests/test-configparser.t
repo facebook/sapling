@@ -73,3 +73,14 @@ Config whitelist
   >>> print(cfg.get('a', 'x'))
   1
 
+Clone
+
+  >>> from mercurial.rust import config
+  >>> cfg1 = config.config()
+  >>> cfg1.set("a", "x", "1", "set1")
+  >>> cfg2 = cfg1.clone()
+  >>> cfg2.set("b", "y", "2", "set2")
+  >>> print(cfg2.sections())
+  ['a', 'b']
+  >>> print(cfg1.sections())
+  ['a']

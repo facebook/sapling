@@ -55,6 +55,14 @@ impl ConfigSet {
         Default::default()
     }
 
+    /// Return a cloned `ConfigSet`, without errors.
+    pub fn clone(&self) -> Self {
+        ConfigSet {
+            sections: self.sections.clone(),
+            errors: Vec::new(),
+        }
+    }
+
     /// Load config files at given path. The path could be either a directory or a file.
     ///
     /// If `path` is a directory, files directly inside it with extension `.rc` will be loaded.
@@ -593,6 +601,15 @@ mod tests {
         assert_eq!(sources[1].source(), "set5");
         assert_eq!(sources[0].location(), None);
         assert_eq!(sources[1].location(), None);
+    }
+
+    #[test]
+    fn test_clone() {
+        let mut cfg = ConfigSet::new();
+        assert!(cfg.clone().sections().is_empty());
+        cfg.set("x", "a", Some(b"1"), &"set1".into());
+        assert_eq!(cfg.clone().sections(), vec![Bytes::from("x")]);
+        assert_eq!(cfg.clone().get("x", "a"), Some("1".into()));
     }
 
     #[test]

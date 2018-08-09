@@ -25,6 +25,11 @@ py_class!(class config |py| {
         config::create_instance(py, RefCell::new(ConfigSet::new()))
     }
 
+    def clone(&self) -> PyResult<config> {
+        let cfg = self.cfg(py).borrow();
+        config::create_instance(py, RefCell::new(cfg.clone()))
+    }
+
     def readpath(
         &self,
         path: &PyBytes,
