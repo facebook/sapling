@@ -55,7 +55,7 @@ py_class!(class config |py| {
         }
         if let Some(readonly_items) = readonly_items {
             let items: Vec<(Vec<u8>, Vec<u8>)> = readonly_items.iter()
-                .map(|(section, name)| {
+                .map(|&(ref section, ref name)| {
                     (section.data(py).to_vec(), name.data(py).to_vec())
                 }).collect();
             opts = opts.readonly_items(items);
