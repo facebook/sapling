@@ -70,6 +70,7 @@ extern crate failure_derive;
 
 pub mod config;
 pub mod error;
+pub mod hg;
 
 pub use error::Error;
 
