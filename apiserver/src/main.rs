@@ -25,6 +25,7 @@ extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_api as api;
 extern crate mononoke_types;
+extern crate panichandler;
 extern crate reachabilityindex;
 extern crate scuba_ext;
 extern crate secure_utils;
@@ -58,6 +59,7 @@ use bookmarks::Bookmark;
 use clap::Arg;
 use failure::{err_msg, Result};
 use futures::Future;
+use panichandler::Fate;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
@@ -224,6 +226,8 @@ struct HttpServerState {
 }
 
 fn main() -> Result<()> {
+    panichandler::set_panichandler(Fate::Abort);
+
     let matches = cmdlib::args::add_cachelib_args(
         clap::App::new("Mononoke API Server")
             .version("0.0.1")
