@@ -1567,9 +1567,7 @@ with open(".cargo/config", "w") as f:
 
 rustextmodules = [
     RustExtension(
-        "pyrevisionstore",
-        package="hgext.extlib",
-        manifest="hgext/extlib/pyrevisionstore/Cargo.toml",
+        "config", package="mercurial.rust", manifest="mercurial/rust/config/Cargo.toml"
     ),
     RustExtension(
         "indexes", package="hgext.extlib", manifest="hgext/extlib/indexes/Cargo.toml"
@@ -1578,6 +1576,11 @@ rustextmodules = [
         "matcher",
         package="mercurial.rust",
         manifest="mercurial/rust/matcher/Cargo.toml",
+    ),
+    RustExtension(
+        "pyrevisionstore",
+        package="hgext.extlib",
+        manifest="hgext/extlib/pyrevisionstore/Cargo.toml",
     ),
     RustExtension(
         "treestate",
