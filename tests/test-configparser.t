@@ -11,6 +11,10 @@
   > z = 3
   > [a]
   > %unset y
+  > %include broken.rc
+  > EOF
+
+  $ cat >> broken.rc << EOF
   > %not-implemented
   > EOF
 
@@ -27,7 +31,7 @@
   section [c] has names ['x']
   section [d] has names ['y', 'x']
   >>> print("errors: %r" % cfg.errors())
-  errors: ['"$TESTTMP/b.rc": parse error around byte 37: unknown instruction']
+  errors: ['"$TESTTMP/broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset']
   >>> for item in ["a.x", "a.y", "b.z", "c.x", "d.x", "d.y", "e.x"]:
   ...     section, name = item.split(".")
   ...     print("%s = %r" % (item, cfg.get(section, name)))
@@ -35,7 +39,7 @@
   a.x = '1'
     sources: [('1', ('$TESTTMP/a.rc', 6, 7), 'readpath')]
   a.y = None
-    sources: [('2', ('$TESTTMP/a.rc', 10, 11), 'readpath'), (None, ('$TESTTMP/b.rc', 28, 36), 'readpath')]
+    sources: [('2', ('$TESTTMP/a.rc', 10, 11), 'readpath'), (None, ('$TESTTMP/b.rc', 29, 36), 'readpath')]
   b.z = '3'
     sources: [('3', ('$TESTTMP/b.rc', 22, 23), 'readpath')]
   c.x = '1'

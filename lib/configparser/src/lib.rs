@@ -68,9 +68,12 @@ extern crate failure;
 #[macro_use]
 extern crate failure_derive;
 
+extern crate pest;
+
 pub mod config;
 pub mod error;
 pub mod hg;
+pub mod parser;
 
 pub use error::Error;
 

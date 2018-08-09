@@ -1,6 +1,8 @@
 use bytes::Bytes;
 use error::Error;
 use linked_hash_map::LinkedHashMap;
+use parser::{ConfigParser, Rule};
+use pest::{self, Parser, Span};
 use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::convert::AsRef;
@@ -10,7 +12,10 @@ use std::hash::Hash;
 use std::io::Read;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
+use std::str;
 use std::sync::Arc;
+
+type Pair<'a> = pest::iterators::Pair<'a, Rule>;
 
 /// Collection of config sections loaded from various sources.
 #[derive(Default)]
@@ -258,133 +263,135 @@ impl ConfigSet {
         opts: &Options,
         visited: &mut HashSet<PathBuf>,
     ) {
-        let mut pos = 0;
         let mut section = Bytes::new();
         let shared_path = Arc::new(path.to_path_buf()); // use Arc to do shallow copy
         let skip_include = path.parent().is_none(); // skip handling %include if path is empty
 
-        while pos < buf.len() {
-            match buf[pos] {
-                b'\n' | b'\r' | b' ' | b'\t' => pos += 1,
-                b'[' => {
-                    let section_start = pos + 1;
-                    match memchr(b']', &buf.as_ref()[section_start..]) {
-                        Some(len) => {
-                            let section_end = section_start + len;
-                            section = strip(&buf, section_start, section_end);
-                            pos = section_end + 1;
-                        }
-                        None => {
-                            self.error(Error::Parse(
-                                path.to_path_buf(),
-                                pos,
-                                "missing ']' for section name",
-                            ));
-                            return;
-                        }
-                    }
-                }
-                b';' | b'#' => {
-                    match memchr(b'\n', &buf.as_ref()[pos..]) {
-                        Some(len) => pos += len, // skip this line
-                        None => return,          // reach file end
-                    }
-                }
-                b'%' => {
-                    static INCLUDE: &[u8] = b"%include ";
-                    static UNSET: &[u8] = b"%unset ";
-                    if buf.get(pos..pos + INCLUDE.len()) == Some(INCLUDE) {
-                        let path_start = pos + INCLUDE.len();
-                        let path_end = memchr(b'\n', &buf.as_ref()[pos..])
-                            .map(|len| len + pos)
-                            .unwrap_or(buf.len());
-                        if !skip_include {
-                            match ::std::str::from_utf8(&buf[path_start..path_end]) {
-                                Ok(literal_include_path) => {
-                                    let full_include_path = path.parent()
-                                        .unwrap()
-                                        .join(expand_path(literal_include_path));
-                                    self.load_dir_or_file(&full_include_path, opts, visited);
-                                }
-                                Err(_error) => {
-                                    self.error(Error::Parse(
-                                        path.to_path_buf(),
-                                        path_start,
-                                        "invalid utf-8",
-                                    ));
-                                }
-                            }
-                        }
-                        pos = path_end;
-                    } else if buf.get(pos..pos + UNSET.len()) == Some(UNSET) {
-                        let name_start = pos + UNSET.len();
-                        let name_end = memchr(b'\n', &buf.as_ref()[pos..])
-                            .map(|len| len + pos)
-                            .unwrap_or(buf.len());
-                        let name = strip(&buf, name_start, name_end);
+        // Utilities to avoid too much indentation.
+        let handle_config_item = |this: &mut ConfigSet, pair: Pair, section: Bytes| {
+            let pairs = pair.into_inner();
+            let mut name = Bytes::new();
+            for pair in pairs {
+                match pair.as_rule() {
+                    Rule::name => name = extract(&buf, pair.into_span()),
+                    Rule::value => {
+                        let span = pair.into_span();
+                        let (start, end) = strip_offsets(&buf, span.start(), span.end());
+                        // TODO(quark): value needs post-processing
+                        let value = buf.slice(start, end);
                         let location = ValueLocation {
                             path: shared_path.clone(),
-                            location: pos..name_end,
+                            location: start..end,
                         };
-                        self.set_internal(section.clone(), name, None, location.into(), opts);
-                        pos = name_end;
-                    } else {
-                        self.error(Error::Parse(path.to_path_buf(), pos, "unknown instruction"));
+                        return this.set_internal(
+                            section,
+                            name,
+                            value.into(),
+                            location.into(),
+                            opts,
+                        );
+                    }
+                    _ => (),
+                }
+            }
+            unreachable!();
+        };
+
+        let handle_section = |pair: Pair, section: &mut Bytes| {
+            let pairs = pair.into_inner();
+            for pair in pairs {
+                match pair.as_rule() {
+                    Rule::name => {
+                        *section = extract(&buf, pair.into_span());
                         return;
                     }
+                    _ => (),
                 }
-                _ => {
-                    let name_start = pos;
-                    match memchr(b'=', &buf.as_ref()[name_start..]) {
-                        Some(len) => {
-                            let equal_pos = name_start + len;
-                            let name = strip(&buf, name_start, equal_pos);
-                            // Find the end of value. It could be multi-line.
-                            let value_start = equal_pos + 1;
-                            let mut value_end = value_start;
-                            loop {
-                                match memchr(b'\n', &buf.as_ref()[value_end..]) {
-                                    Some(len) => {
-                                        value_end += len + 1;
-                                        let next_line_first_char =
-                                            *buf.get(value_end).unwrap_or(&b'.');
-                                        if !is_space(next_line_first_char) {
-                                            break;
-                                        }
-                                    }
-                                    None => {
-                                        value_end = buf.len();
-                                        break;
-                                    }
-                                }
-                            }
-                            let (start, end) = strip_offsets(&buf, value_start, value_end);
-                            let value = buf.slice(start, end);
-                            let location = ValueLocation {
-                                path: shared_path.clone(),
-                                location: start..end,
-                            };
+            }
+            unreachable!();
+        };
 
-                            self.set_internal(
-                                section.clone(),
-                                name,
-                                value.into(),
-                                location.into(),
-                                opts,
-                            );
-                            pos = value_end;
-                        }
-                        None => {
-                            self.error(Error::Parse(
-                                path.to_path_buf(),
-                                pos,
-                                "missing '=' for config value",
-                            ));
-                            return;
-                        }
-                    }
+        let mut handle_include = |this: &mut ConfigSet, pair: Pair| {
+            let pairs = pair.into_inner();
+            for pair in pairs {
+                match pair.as_rule() {
+                    Rule::line => if !skip_include {
+                        let include_path = pair.as_str();
+                        let full_include_path =
+                            path.parent().unwrap().join(expand_path(include_path));
+                        this.load_dir_or_file(&full_include_path, opts, visited);
+                    },
+                    _ => (),
                 }
-            } // match buf[pos]
+            }
+        };
+
+        let handle_unset = |this: &mut ConfigSet, pair: Pair, section: &Bytes| {
+            let unset_span = pair.clone().into_span();
+            let pairs = pair.into_inner();
+            for pair in pairs {
+                match pair.as_rule() {
+                    Rule::name => {
+                        let name = extract(&buf, pair.into_span());
+                        let location = ValueLocation {
+                            path: shared_path.clone(),
+                            location: unset_span.start()..unset_span.end(),
+                        };
+                        return this.set_internal(
+                            section.clone(),
+                            name,
+                            None,
+                            location.into(),
+                            opts,
+                        );
+                    }
+                    _ => (),
+                }
+            }
+            unreachable!();
+        };
+
+        let mut handle_directive = |this: &mut ConfigSet, pair: Pair, section: &Bytes| {
+            let pairs = pair.into_inner();
+            for pair in pairs {
+                match pair.as_rule() {
+                    Rule::include => handle_include(this, pair),
+                    Rule::unset => handle_unset(this, pair, section),
+                    _ => (),
+                }
+            }
+        };
+
+        let text = match str::from_utf8(&buf) {
+            Ok(text) => text,
+            Err(error) => return self.error(Error::Utf8(path.to_path_buf(), error)),
+        };
+
+        let pairs = match ConfigParser::parse(Rule::file, &text) {
+            Ok(pairs) => pairs,
+            Err(error) => return self.error(Error::Parse(path.to_path_buf(), format!("{}", error))),
+        };
+
+        for pair in pairs {
+            match pair.as_rule() {
+                Rule::config_item => handle_config_item(self, pair, section.clone()),
+                Rule::section => handle_section(pair, &mut section),
+                Rule::directive => handle_directive(self, pair, &section),
+                Rule::blank_line | Rule::comment_line | Rule::new_line => (),
+
+                Rule::comment_start
+                | Rule::compound
+                | Rule::equal_sign
+                | Rule::file
+                | Rule::include
+                | Rule::left_bracket
+                | Rule::line
+                | Rule::name
+                | Rule::right_bracket
+                | Rule::space
+                | Rule::unset
+                | Rule::value => unreachable!(),
+            }
         }
     }
 
@@ -516,12 +523,6 @@ impl<S: Into<Bytes>> From<S> for Options {
     }
 }
 
-/// C memchr-like API
-#[inline]
-fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
-    haystack.iter().position(|&x| x == needle)
-}
-
 /// Test if a binary char is a space.
 #[inline]
 fn is_space(byte: u8) -> bool {
@@ -543,11 +544,9 @@ fn strip_offsets(buf: &Bytes, start: usize, end: usize) -> (usize, usize) {
     (start, end)
 }
 
-/// Strip spaces and return a `Bytes` sub-slice.
 #[inline]
-fn strip(buf: &Bytes, start: usize, end: usize) -> Bytes {
-    let (start, end) = strip_offsets(buf, start, end);
-    buf.slice(start, end)
+fn extract<'a>(buf: &Bytes, span: Span<'a>) -> Bytes {
+    buf.slice(span.start(), span.end())
 }
 
 /// Expand `~` to home directory.
@@ -619,15 +618,15 @@ mod tests {
             "[y]\n\
              a = 0\n\
              b=1\n\
-             # override a to 2
-              a  =  2 \n\
+             # override a to 2\n\
+             a  =  2 \n\
              \n\
              [x]\n\
              m = this\n \
              value has\n \
              multi lines\n\
              ; comment again\n\
-             n =",
+             n =\n",
             &"test_parse_basic".into(),
         );
 
@@ -650,7 +649,7 @@ mod tests {
         assert_eq!(sources[0].source(), "test_parse_basic");
         assert_eq!(sources[1].source(), "test_parse_basic");
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
-        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 52..53));
+        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 38..39));
     }
 
     #[test]
@@ -658,10 +657,11 @@ mod tests {
         let mut cfg = ConfigSet::new();
         cfg.parse(
             "[a]\n\
-             \t#\n\
-             x=1",
+             #\n\
+             x= \t1",
             &"".into(),
         );
+
         assert_eq!(cfg.get("a", "x"), Some("1".into()));
     }
 
@@ -671,21 +671,39 @@ mod tests {
         cfg.parse("# foo\n[y", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", cfg.errors()[0]),
-            "\"\": parse error around byte 6: missing \']\' for section name"
+            "\"\":
+ --> 2:3
+  |
+2 | [y
+  |   ^---
+  |
+  = expected right_bracket"
         );
 
         let mut cfg = ConfigSet::new();
         cfg.parse("\n\n%unknown", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", cfg.errors()[0]),
-            "\"\": parse error around byte 2: unknown instruction"
+            "\"\":
+ --> 3:2
+  |
+3 | %unknown
+  |  ^---
+  |
+  = expected include or unset"
         );
 
         let mut cfg = ConfigSet::new();
         cfg.parse("[section]\nabc", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", cfg.errors()[0]),
-            "\"\": parse error around byte 10: missing \'=\' for config value"
+            "\"\":
+ --> 2:4
+  |
+2 | abc
+  |    ^---
+  |
+  = expected equal_sign"
         );
     }
 
@@ -715,7 +733,7 @@ mod tests {
         let sources = cfg.get_sources("x", "a");
         assert_eq!(sources.len(), 2);
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
-        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 25..35));
+        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 26..35));
     }
 
     #[test]
