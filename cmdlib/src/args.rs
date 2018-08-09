@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use clap::{App, Arg, ArgMatches};
 use failure::{Result, ResultExt};
+use panichandler::{self, Fate};
 use slog::{Drain, Logger};
 use sloggers::Build;
 use sloggers::terminal::TerminalLoggerBuilder;
@@ -90,10 +91,19 @@ impl MononokeApp {
             .arg(
                 Arg::with_name("log-style")
                     .short("l")
+                    .long("log-style")
                     .value_name("STYLE")
                     .possible_values(&["compact", "glog"])
                     .default_value(default_log)
                     .help("log style to use for output")
+            )
+            .arg(
+                Arg::with_name("panic-fate")
+                    .long("panic-fate")
+                    .value_name("PANIC_FATE")
+                    .possible_values(&["continue", "exit", "abort"])
+                    .default_value("abort")
+                    .help("fate of the process when a panic happens")
             )
 
             // Manifold-specific arguments
@@ -159,6 +169,19 @@ impl MononokeApp {
 }
 
 pub fn get_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
+    // Set the panic handler up here. Not really relevent to logger other than it emits output
+    // when things go wrong. This writes directly to stderr as coredumper expects.
+    let fate = match matches
+        .value_of("panic-fate")
+        .expect("no default on panic-fate")
+    {
+        "continue" => Fate::Continue,
+        "exit" => Fate::Exit(101),
+        "abort" => Fate::Abort,
+        bad => panic!("bad panic-fate {}", bad),
+    };
+    panichandler::set_panichandler(fate);
+
     let severity = if matches.is_present("debug") {
         Severity::Debug
     } else {

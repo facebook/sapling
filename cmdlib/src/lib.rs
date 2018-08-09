@@ -30,6 +30,7 @@ extern crate blobrepo;
 extern crate bookmarks;
 extern crate mercurial;
 extern crate mercurial_types;
+extern crate panichandler;
 extern crate scuba_ext;
 
 pub mod args;

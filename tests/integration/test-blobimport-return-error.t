@@ -38,5 +38,5 @@ Init treemanifest and remotefilelog
   $ cd $TESTTMP
 
 blobimport with missing first commit, it should fail
-  $ blobimport repo-hg/.hg repo --skip 1
+  $ blobimport --panic-fate=exit repo-hg/.hg repo --skip 1
   [101]

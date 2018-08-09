@@ -29,6 +29,7 @@ extern crate cachelib;
 extern crate cmdlib;
 extern crate mercurial_types;
 extern crate metaconfig;
+extern crate panichandler;
 extern crate ready_state;
 extern crate repo_listener;
 
@@ -36,7 +37,6 @@ mod errors;
 mod monitoring;
 
 use std::io;
-use std::panic;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -52,16 +52,6 @@ use mercurial_types::RepositoryId;
 use metaconfig::RepoConfigs;
 
 use errors::*;
-
-// Exit the whole process if any of the threads fails to catch a panic
-fn setup_panic_hook() {
-    let original_hook = panic::take_hook();
-
-    panic::set_hook(Box::new(move |info| {
-        original_hook(info);
-        std::process::exit(1);
-    }));
-}
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     cmdlib::args::add_cachelib_args(App::new("mononoke server")
@@ -149,9 +139,10 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
 }
 
 fn main() {
-    setup_panic_hook();
     let matches = setup_app().get_matches();
     let root_log = setup_logger(&matches);
+
+    panichandler::set_panichandler(panichandler::Fate::Abort);
 
     cmdlib::args::init_cachelib(&matches);
 
