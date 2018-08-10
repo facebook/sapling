@@ -774,7 +774,8 @@ def wraprepo(repo):
             # afterwards.
             oldmancache = self.manifestlog._dirmancache
 
-            wlock = lock = None
+            wlock = util.nullcontextmanager()
+            lock = util.nullcontextmanager()
             try:
                 wlock = self.wlock(wait=waitforlock)
                 lock = self.lock(wait=waitforlock)
@@ -785,24 +786,20 @@ def wraprepo(repo):
                 ui.debug("skipping sync for current operation\n")
                 return
 
-            configbackups = []
-            try:
-                # Disable all pretxnclose hooks, since these revisions are
-                # technically already commited.
-                for name, value in ui.configitems("hooks"):
-                    if name.startswith("pretxnclose"):
-                        configbackups.append(ui.backupconfig("hooks", name))
-                        ui.setconfig("hooks", name, None)
+            # Disable all pretxnclose hooks, since these revisions are
+            # technically already committed.
+            overrides = {}
+            for name, value in ui.configitems("hooks"):
                 # The hg-ssh wrapper installs a hook to block all writes. We need to
                 # circumvent this when we sync from the server.
-                configbackups.append(ui.backupconfig("hooks", "pretxnopen.hg-ssh"))
-                self.ui.setconfig("hooks", "pretxnopen.hg-ssh", None)
-                configbackups.append(ui.backupconfig("hooks", "pretxnopen.hg-rsh"))
-                self.ui.setconfig("hooks", "pretxnopen.hg-rsh", None)
-                configbackups.append(
-                    ui.backupconfig("hooks", "pretxnopen.readonlyrejectpush")
-                )
-                self.ui.setconfig("hooks", "pretxnopen.readonlyrejectpush", None)
+                if name.startswith("pretxnclose") or name in {
+                    "pretxnopen.hg-ssh",
+                    "pretxnopen.hg-rsh",
+                    "pretxnopen.readonlyrejectpush",
+                }:
+                    overrides[("hooks", name)] = None
+
+            with ui.configoverride(overrides, "hgsql"), wlock, lock:
                 # Someone else may have synced us while we were waiting.
                 # Restart the transaction so we have access to the latest rows.
                 self.sqlconn.rollback()
@@ -897,13 +894,6 @@ def wraprepo(repo):
 
                 if bm != sqlbookmarks:
                     raise CorruptionException("bookmarks don't match after sync")
-            finally:
-                for backup in configbackups:
-                    ui.restoreconfig(backup)
-                if lock:
-                    lock.release()
-                if wlock:
-                    wlock.release()
 
             # Since we just exited the lock, the changelog and bookmark
             # in-memory structures will need to be reloaded. If we loaded
