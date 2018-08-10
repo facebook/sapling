@@ -115,7 +115,6 @@ def show(ui, repo, *args, **opts):
         ("diff", "unified"): opts.get("unified"),
         ("ui", "verbose"): True,
     }
-    overrides.update({("diff", opt): opts.get(opt) for opt in commands.diffwsopts})
 
     logcmd, defaultlogopts = cmdutil.getcmdanddefaultopts("log", commands.table)
     defaultlogopts.update(opts)

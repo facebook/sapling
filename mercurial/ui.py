@@ -387,6 +387,7 @@ class ui(object):
         self._ucfg.restore(data[1])
 
     def setconfig(self, section, name, value, source=""):
+        assert isinstance(name, str)
         for cfg in (self._ocfg, self._ucfg):
             cfg.set(section, name, value, source)
         self.fixconfig(section=section)
