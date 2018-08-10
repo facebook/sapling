@@ -31,6 +31,8 @@ pub fn create_remotefilelog_blob(
     path: MPath,
     trace: TraceContext,
 ) -> BoxFuture<Bytes, Error> {
+    let trace_args = trace_args!("node" => node.to_string(), "path" => path.to_string());
+
     // raw_content includes copy information
     let raw_content_bytes = repo.get_file_content(&node)
         .and_then(move |raw_content| {
@@ -56,25 +58,27 @@ pub fn create_remotefilelog_blob(
                 .map_err(Error::from)
                 .map(|_| writer.into_inner())
         })
-        .traced(&trace, "fetching remotefilelog content", trace_args!());
+        .traced(&trace, "fetching remotefilelog content", trace_args.clone());
 
     // Do bulk prefetch of the filenodes first. That saves lots of db roundtrips.
     // Prefetched filenodes are used as a cache. If filenode is not in the cache, then it will
     // be fetched again.
     let prefetched_filenodes = repo.get_all_filenodes(RepoPath::FilePath(path.clone()))
-        .map(|filenodes| {
+        .map(move |filenodes| {
             filenodes
                 .into_iter()
                 .map(|filenode| (filenode.filenode.into_nodehash(), filenode))
                 .collect()
-        });
+        })
+        .traced(&trace, "prefetching file history", trace_args.clone());
 
     let file_history_bytes = prefetched_filenodes
         .and_then({
-            let node = node.clone();
-            let trace = trace.clone();
+            cloned!(node, path, trace_args, trace);
             move |prefetched_filenodes| {
-                get_file_history(repo, node, path, prefetched_filenodes, trace).collect()
+                get_file_history(repo, node, path, prefetched_filenodes)
+                    .collect()
+                    .traced(&trace, "fetching non-prefetched history", trace_args)
             }
         })
         .and_then(|history| {
@@ -112,7 +116,7 @@ pub fn create_remotefilelog_blob(
             }
             Ok(writer.into_inner())
         })
-        .traced(&trace, "fetching file history", trace_args!());
+        .traced(&trace, "fetching file history", trace_args);
 
     raw_content_bytes
         .join(file_history_bytes)
@@ -130,7 +134,6 @@ fn get_file_history(
     startnode: HgNodeHash,
     path: MPath,
     prefetched_history: HashMap<HgNodeHash, FilenodeInfo>,
-    trace: TraceContext,
 ) -> BoxStream<
     (
         HgNodeHash,
@@ -150,63 +153,38 @@ fn get_file_history(
 
     stream::unfold(
         (startstate, seen_nodes),
-        move |cur_data: (VecDeque<HgNodeHash>, HashSet<HgNodeHash>)| {
-            let (mut nodes, mut seen_nodes) = cur_data;
+        move |(mut nodes, mut seen_nodes): (VecDeque<HgNodeHash>, HashSet<HgNodeHash>)| {
             let node = nodes.pop_front()?;
 
-            let futs = if prefetched_history.contains_key(&node) {
-                let filenode = prefetched_history.get(&node).unwrap();
-
-                let p1 = filenode.p1.map(|p| p.into_nodehash());
-                let p2 = filenode.p2.map(|p| p.into_nodehash());
-                let parents = Ok(HgParents::new(p1.as_ref(), p2.as_ref())).into_future();
-
-                let linknode = Ok(filenode.linknode).into_future();
-
-                let copy =
-                    Ok(filenode
-                        .copyfrom
-                        .clone()
-                        .map(|(frompath, node)| (frompath, node.into_nodehash())))
-                        .into_future();
-
-                (Either::A(parents), Either::A(linknode), Either::A(copy))
+            let fut = if let Some(filenode) = prefetched_history.get(&node) {
+                Either::A(Ok(filenode.clone()).into_future())
             } else {
-                let parents = repo.get_parents(&path, &node);
-                let parents = parents.traced(&trace, "fetching parents", trace_args!());
-
-                let copy = repo.get_file_copy(&path, &node);
-                let copy = copy.traced(&trace, "fetching copy info", trace_args!());
-
-                let linknode = Ok(path.clone()).into_future().and_then({
-                    let repo = repo.clone();
-                    move |path| repo.get_linknode(path, &node)
-                });
-                let linknode = linknode.traced(&trace, "fetching linknode info", trace_args!());
-
-                (Either::B(parents), Either::B(linknode), Either::B(copy))
+                Either::B(repo.get_filenode(&path, &node))
             };
 
-            let (parents, linknode, copy) = futs;
+            let fut = fut.and_then(move |filenode| {
+                let p1 = filenode.p1.map(|p| p.into_nodehash());
+                let p2 = filenode.p2.map(|p| p.into_nodehash());
+                let parents = HgParents::new(p1.as_ref(), p2.as_ref());
 
-            let copy = copy.and_then({
-                let path = path.clone();
-                move |filecopy| match filecopy {
-                    Some((RepoPath::FilePath(copyto), rev)) => Ok(Some((copyto, rev))),
-                    Some((copyto, _)) => Err(ErrorKind::InconsistenCopyInfo(path, copyto).into()),
-                    None => Ok(None),
-                }
+                let linknode = filenode.linknode;
+
+                let copy = filenode
+                    .copyfrom
+                    .map(|(frompath, node)| (frompath, node.into_nodehash()));
+                let copy = match copy {
+                    Some((RepoPath::FilePath(copyto), rev)) => Some((copyto, rev)),
+                    Some((copyto, _)) => {
+                        return Err(ErrorKind::InconsistenCopyInfo(filenode.path, copyto).into())
+                    }
+                    None => None,
+                };
+
+                nodes.extend(parents.into_iter().filter(|p| seen_nodes.insert(*p)));
+                Ok(((node, parents, linknode, copy), (nodes, seen_nodes)))
             });
 
-            let joined = parents
-                .join(linknode)
-                .join(copy)
-                .map(|(pl, c)| (pl.0, pl.1, c));
-
-            Some(joined.map(move |(parents, linknode, copy)| {
-                nodes.extend(parents.into_iter().filter(|p| seen_nodes.insert(*p)));
-                ((node, parents, linknode, copy), (nodes, seen_nodes))
-            }))
+            Some(fut)
         },
     ).boxify()
 }

@@ -728,7 +728,7 @@ fn fetch_treepack_part_input(
             ),
     );
 
-    let linknode_fut = repo.get_linknode(repo_path, &entry.get_hash().into_nodehash())
+    let linknode_fut = repo.get_linknode(&repo_path, &entry.get_hash().into_nodehash())
         .traced(
             &trace,
             "fetching linknode",

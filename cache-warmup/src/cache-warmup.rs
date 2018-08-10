@@ -69,7 +69,7 @@ fn blobstore_and_filenodes_warmup(
                             Some(path) => RepoPath::DirectoryPath(path),
                             None => RepoPath::RootPath,
                         };
-                        repo.get_linknode(path, &hash.into_nodehash())
+                        repo.get_linknode(&path, &hash.into_nodehash())
                     })
                     .buffered(buffer_size)
                     .for_each(move |_| {

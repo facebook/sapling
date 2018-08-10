@@ -66,8 +66,6 @@ define_stats! {
     get_bonsai_changeset: timeseries(RATE, SUM),
     get_file_content: timeseries(RATE, SUM),
     get_raw_hg_content: timeseries(RATE, SUM),
-    get_parents: timeseries(RATE, SUM),
-    get_file_copy: timeseries(RATE, SUM),
     get_changesets: timeseries(RATE, SUM),
     get_heads: timeseries(RATE, SUM),
     changeset_exists: timeseries(RATE, SUM),
@@ -401,50 +399,6 @@ impl BlobRepo {
         fetch_raw_filenode_bytes(&self.blobstore, *key)
     }
 
-    pub fn get_parents(&self, path: &RepoPath, node: &HgNodeHash) -> BoxFuture<HgParents, Error> {
-        STATS::get_parents.add_value(1);
-        let path = path.clone();
-        let node = HgFileNodeId::new(*node);
-        self.filenodes
-            .get_filenode(&path, &node, &self.repoid)
-            .and_then({
-                move |filenode| {
-                    filenode
-                        .ok_or(ErrorKind::MissingFilenode(path, node).into())
-                        .map(|filenode| {
-                            let p1 = filenode.p1.map(|p| p.into_nodehash());
-                            let p2 = filenode.p2.map(|p| p.into_nodehash());
-                            HgParents::new(p1.as_ref(), p2.as_ref())
-                        })
-                }
-            })
-            .boxify()
-    }
-
-    pub fn get_file_copy(
-        &self,
-        path: &RepoPath,
-        node: &HgNodeHash,
-    ) -> BoxFuture<Option<(RepoPath, HgNodeHash)>, Error> {
-        STATS::get_file_copy.add_value(1);
-        let path = path.clone();
-        let node = HgFileNodeId::new(*node);
-        self.filenodes
-            .get_filenode(&path, &node, &self.repoid)
-            .and_then({
-                move |filenode| {
-                    filenode
-                        .ok_or(ErrorKind::MissingFilenode(path, node).into())
-                        .map(|filenode| {
-                            filenode
-                                .copyfrom
-                                .map(|(repo, node)| (repo, node.into_nodehash()))
-                        })
-                }
-            })
-            .boxify()
-    }
-
     // Fetches copy data from blobstore instead of from filenodes db. This should be used only
     // during committing.
     pub(crate) fn get_hg_file_copy_from_blobstore(
@@ -585,19 +539,26 @@ impl BlobRepo {
 
     pub fn get_linknode(
         &self,
-        path: RepoPath,
+        path: &RepoPath,
         node: &HgNodeHash,
     ) -> BoxFuture<HgChangesetId, Error> {
         STATS::get_linknode.add_value(1);
+        self.get_filenode(path, node)
+            .map(|filenode| filenode.linknode)
+            .boxify()
+    }
+
+    pub fn get_filenode(
+        &self,
+        path: &RepoPath,
+        node: &HgNodeHash,
+    ) -> BoxFuture<FilenodeInfo, Error> {
+        let path = path.clone();
         let node = HgFileNodeId::new(*node);
         self.filenodes
             .get_filenode(&path, &node, &self.repoid)
             .and_then({
-                move |filenode| {
-                    filenode
-                        .ok_or(ErrorKind::MissingFilenode(path, node).into())
-                        .map(|filenode| filenode.linknode)
-                }
+                move |filenode| filenode.ok_or(ErrorKind::MissingFilenode(path, node).into())
             })
             .boxify()
     }
