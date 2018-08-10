@@ -2,6 +2,7 @@
 
 use bytes::Bytes;
 use config::{ConfigSet, Options};
+use dirs;
 use std::collections::HashSet;
 use std::env;
 use std::path::Path;
@@ -143,8 +144,7 @@ impl ConfigSetHgExt for ConfigSet {
                 self.load_path(path, &opts);
             }
         } else {
-            #[allow(deprecated)]
-            let option_home_dir = env::home_dir();
+            let option_home_dir = dirs::home_dir();
             if let Some(home_dir) = option_home_dir {
                 #[cfg(unix)]
                 {

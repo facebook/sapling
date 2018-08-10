@@ -61,6 +61,8 @@
 
 extern crate bytes;
 
+extern crate dirs;
+
 // TODO: Migrate to indexmap if it's available. It's more efficient.
 extern crate linked_hash_map;
 
