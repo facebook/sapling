@@ -44,6 +44,7 @@ pub struct ValueSource {
 #[derive(Clone)]
 struct ValueLocation {
     path: Arc<PathBuf>,
+    content: Bytes,
     location: Range<usize>,
 }
 
@@ -310,6 +311,7 @@ impl ConfigSet {
                         let span = pair.clone().into_span();
                         let location = ValueLocation {
                             path: shared_path.clone(),
+                            content: buf.clone(),
                             location: span.start()..span.end(),
                         };
                         return handle_value(this, pair, section, name, location);
@@ -358,6 +360,7 @@ impl ConfigSet {
                         let name = extract(&buf, pair.into_span());
                         let location = ValueLocation {
                             path: shared_path.clone(),
+                            content: buf.clone(),
                             location: unset_span.start()..unset_span.end(),
                         };
                         return this.set_internal(
@@ -441,6 +444,14 @@ impl ValueSource {
     pub fn location(&self) -> Option<(PathBuf, Range<usize>)> {
         match self.location {
             Some(ref src) => Some((src.path.as_ref().to_path_buf(), src.location.clone())),
+            None => None,
+        }
+    }
+
+    /// Return the file content. Or `None` if there is no such information.
+    pub fn file_content(&self) -> Option<Bytes> {
+        match self.location {
+            Some(ref src) => Some(src.content.clone()),
             None => None,
         }
     }
@@ -617,6 +628,7 @@ mod tests {
         assert_eq!(sources[1].source(), "set5");
         assert_eq!(sources[0].location(), None);
         assert_eq!(sources[1].location(), None);
+        assert_eq!(sources[1].file_content(), None);
     }
 
     #[test]
@@ -667,6 +679,7 @@ mod tests {
         assert_eq!(sources[1].source(), "test_parse_basic");
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
         assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 38..40));
+        assert_eq!(sources[1].file_content().unwrap().len(), 99);
     }
 
     #[test]
