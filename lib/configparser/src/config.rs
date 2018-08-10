@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use error::Error;
-use linked_hash_map::LinkedHashMap;
+use indexmap::IndexMap;
 use parser::{ConfigParser, Rule};
 use pest::{self, Parser, Span};
 use shellexpand;
@@ -22,14 +22,14 @@ type Pair<'a> = pest::iterators::Pair<'a, Rule>;
 /// Collection of config sections loaded from various sources.
 #[derive(Default)]
 pub struct ConfigSet {
-    sections: LinkedHashMap<Bytes, Section>,
+    sections: IndexMap<Bytes, Section>,
     errors: Vec<Error>,
 }
 
 /// Internal representation of a config section.
 #[derive(Clone, Default)]
 struct Section {
-    items: LinkedHashMap<Bytes, Vec<ValueSource>>,
+    items: IndexMap<Bytes, Vec<ValueSource>>,
 }
 
 /// A config value with associated metadata like where it comes from.
