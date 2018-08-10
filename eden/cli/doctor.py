@@ -11,6 +11,7 @@ import abc
 import binascii
 import collections
 import errno
+import io
 import json
 import logging
 import os
@@ -647,14 +648,14 @@ def check_nuclide_watchman_subscriptions(
         else:
             subscription_counts[name] = 1
 
-    missing_subscriptions = []
+    missing_or_duplicate_subscriptions = []
     for nuclide_root in connected_nuclide_roots:
         filewatcher_subscription = f"filewatcher-{nuclide_root}"
         # Note that even if the user has `nuclide_root` opened in multiple
         # Nuclide windows, the Nuclide server should not create the
         # "filewatcher-" subscription multiple times.
         if subscription_counts.get(filewatcher_subscription) != 1:
-            missing_subscriptions.append(filewatcher_subscription)
+            missing_or_duplicate_subscriptions.append(filewatcher_subscription)
 
     # Today, Nuclide creates a number of Watchman subscriptions per root
     # folder that is under an Hg working copy. (It should probably
@@ -678,25 +679,48 @@ def check_nuclide_watchman_subscriptions(
     num_roots = len(connected_nuclide_roots)
     for hg_subscription in NUCLIDE_HG_SUBSCRIPTIONS:
         if subscription_counts.get(hg_subscription, 0) < num_roots:
-            missing_subscriptions.append(hg_subscription)
+            missing_or_duplicate_subscriptions.append(hg_subscription)
 
-    if missing_subscriptions:
+    if missing_or_duplicate_subscriptions:
 
         def format_paths(paths: List[str]) -> str:
             return "\n  ".join(paths)
 
-        msg = (
+        missing_subscriptions = [
+            sub
+            for sub in missing_or_duplicate_subscriptions
+            if 0 == subscription_counts.get(sub, 0)
+        ]
+        duplicate_subscriptions = [
+            sub
+            for sub in missing_or_duplicate_subscriptions
+            if 1 < subscription_counts.get(sub, 0)
+        ]
+
+        output = io.StringIO()
+        output.write(
             "Nuclide appears to be used to edit the following directories\n"
             f"under {path}:\n\n"
             f"  {format_paths(connected_nuclide_roots)}\n\n"
-            "but the following Watchman subscriptions appear to be missing:\n\n"
-            f"  {format_paths(missing_subscriptions)}\n\n"
+        )
+        if missing_subscriptions:
+            output.write(
+                "but the following Watchman subscriptions appear to be missing:\n\n"
+                f"  {format_paths(missing_subscriptions)}\n\n"
+            )
+        if duplicate_subscriptions:
+            conj = "and" if missing_subscriptions else "but"
+            output.write(
+                f"{conj} the following Watchman subscriptions have duplicates:\n\n"
+                f"  {format_paths(duplicate_subscriptions)}\n\n"
+            )
+        output.write(
             "This can cause file changes to fail to show up in Nuclide.\n"
             "Currently, the only workaround for this is to run\n"
             '"Nuclide Remote Projects: Kill And Restart" from the\n'
             "command palette in Atom.\n"
         )
-        tracker.add_problem(Problem(msg))
+        tracker.add_problem(Problem(output.getvalue()))
 
 
 def check_snapshot_dirstate_consistency(

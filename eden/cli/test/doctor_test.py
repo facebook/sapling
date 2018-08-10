@@ -132,7 +132,7 @@ class DoctorTest(DoctorTestBase):
         calls.append(call(["debug-get-subscriptions", edenfs_path1]))
         side_effects.append(
             _create_watchman_subscription(
-                filewatcher_subscription=f"filewatcher-{edenfs_path1}"
+                filewatcher_subscriptions=[f"filewatcher-{edenfs_path1}"]
             )
         )
 
@@ -144,16 +144,14 @@ class DoctorTest(DoctorTestBase):
         side_effects.append({"watcher": "eden"})
 
         calls.append(call(["debug-get-subscriptions", edenfs_path2]))
-        side_effects.append(
-            _create_watchman_subscription(filewatcher_subscription=None)
-        )
+        side_effects.append(_create_watchman_subscription(filewatcher_subscriptions=[]))
 
         calls.append(call(["watch-project", edenfs_path3]))
         side_effects.append({"watcher": "eden"})
         calls.append(call(["debug-get-subscriptions", edenfs_path3]))
         side_effects.append(
             _create_watchman_subscription(
-                filewatcher_subscription=f"filewatcher-{edenfs_path3}"
+                filewatcher_subscriptions=[f"filewatcher-{edenfs_path3}"]
             )
         )
 
@@ -403,7 +401,7 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor._call_watchman")
     def test_no_issue_when_expected_nuclide_subscriptions_present(self, mock_watchman):
         fixer, out = self._test_nuclide_check(
-            mock_watchman=mock_watchman, include_filewatcher_subscription=True
+            mock_watchman=mock_watchman, include_filewatcher_subscriptions=True
         )
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
@@ -451,6 +449,46 @@ command palette in Atom.
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     @patch("eden.cli.doctor._call_watchman")
+    def test_filewatcher_watchman_subscription_has_duplicate(self, mock_watchman):
+        fixer, out = self._test_nuclide_check(
+            mock_watchman=mock_watchman,
+            include_hg_subscriptions=False,
+            dry_run=False,
+            include_filewatcher_subscriptions=2,
+        )
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+Nuclide appears to be used to edit the following directories
+under /path/to/eden-mount:
+
+  /path/to/eden-mount/subdirectory
+
+but the following Watchman subscriptions appear to be missing:
+
+  hg-repository-watchman-subscription-primary
+  hg-repository-watchman-subscription-conflicts
+  hg-repository-watchman-subscription-hgbookmark
+  hg-repository-watchman-subscription-hgbookmarks
+  hg-repository-watchman-subscription-dirstate
+  hg-repository-watchman-subscription-progress
+  hg-repository-watchman-subscription-lock-files
+
+and the following Watchman subscriptions have duplicates:
+
+  filewatcher-/path/to/eden-mount/subdirectory
+
+This can cause file changes to fail to show up in Nuclide.
+Currently, the only workaround for this is to run
+"Nuclide Remote Projects: Kill And Restart" from the
+command palette in Atom.
+
+""",
+            out,
+        )
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+
+    @patch("eden.cli.doctor._call_watchman")
     def test_filewatcher_subscription_is_missing_dry_run(self, mock_watchman):
         fixer, out = self._test_nuclide_check(mock_watchman=mock_watchman)
         self.assertEqual(
@@ -479,7 +517,7 @@ command palette in Atom.
         self,
         mock_watchman,
         dry_run: bool = True,
-        include_filewatcher_subscription: bool = False,
+        include_filewatcher_subscriptions: int = 0,
         include_path_in_nuclide_roots: bool = True,
         include_hg_subscriptions: bool = True,
     ) -> Tuple[doctor.ProblemFixer, str]:
@@ -491,13 +529,12 @@ command palette in Atom.
             watchman_calls.append(call(["debug-get-subscriptions", edenfs_path]))
 
         nuclide_root = os.path.join(edenfs_path, "subdirectory")
-        if include_filewatcher_subscription:
-            # Note that a "filewatcher-" subscription in a subdirectory of the
-            # Eden mount should signal that the proper Watchman subscription is
-            # set up.
-            filewatcher_sub: Optional[str] = f"filewatcher-{nuclide_root}"
-        else:
-            filewatcher_sub = None
+        # Note that a "filewatcher-" subscription in a subdirectory of the
+        # Eden mount should signal that the proper Watchman subscription is
+        # set up.
+        filewatcher_sub: List[str] = [
+            f"filewatcher-{nuclide_root}"
+        ] * include_filewatcher_subscriptions
 
         unrelated_path = "/path/to/non-eden-mount"
         if include_path_in_nuclide_roots:
@@ -507,7 +544,7 @@ command palette in Atom.
 
         side_effects.append(
             _create_watchman_subscription(
-                filewatcher_subscription=filewatcher_sub,
+                filewatcher_subscriptions=filewatcher_sub,
                 include_hg_subscriptions=include_hg_subscriptions,
             )
         )
@@ -1672,11 +1709,13 @@ Unmounting 1 stale edenfs mount...<green>fixed<reset>
 
 
 def _create_watchman_subscription(
-    filewatcher_subscription: Optional[str] = None,
+    filewatcher_subscriptions: Optional[List[str]] = None,
     include_hg_subscriptions: bool = True,
 ) -> Dict:
+    if filewatcher_subscriptions is None:
+        filewatcher_subscriptions = []
     subscribers = []
-    if filewatcher_subscription is not None:
+    for filewatcher_subscription in filewatcher_subscriptions:
         subscribers.append(
             {
                 "info": {
