@@ -27,6 +27,9 @@ import mercurial.ui
 import mercurial.util
 
 
+hex = binascii.hexlify
+
+
 # remotefilelog is available just as "remotefilelog" in older mercurial
 # releases, but "hgext.remotefilelog" moving forwards.
 # TODO: Switch to unconditionally using hgext.remotefilelog once the
@@ -395,7 +398,7 @@ class HgServer(object):
             "(pid:%s) getting contents of file %r revision %s",
             os.getpid(),
             path,
-            binascii.hexlify(rev_hash),
+            hex(rev_hash),
         )
 
         contents = self.get_file(path, rev_hash)
@@ -441,9 +444,7 @@ class HgServer(object):
         manifest_node = request.body[:SHA1_NUM_BYTES]
         path = request.body[SHA1_NUM_BYTES:]
         self.debug(
-            "fetching tree for path %r manifest node %s",
-            path,
-            binascii.hexlify(manifest_node),
+            "fetching tree for path %r manifest node %s", path, hex(manifest_node)
         )
 
         self.fetch_tree(path, manifest_node)
@@ -594,6 +595,20 @@ class HgServer(object):
             return self._get_manifest_node_impl(rev)
 
     def get_file(self, path, rev_hash):
+        contents = self._get_file_impl(path, rev_hash)
+
+        if not contents:
+            # T24406969: We have been encountering a bug where we appear to sometimes
+            # incorrectly receive empty file contents.  We haven't tracked down what the
+            # exact issue is yet.
+            #
+            # For now, if we receive empty file contents perform some additional checks
+            # to try and make sure this really seems like the right result.
+            contents = self._check_empty_file(path, rev_hash)
+
+        return contents
+
+    def _get_file_impl(self, path, rev_hash):
         try:
             fctx = self.repo.filectx(path, fileid=rev_hash)
         except Exception:
@@ -614,6 +629,71 @@ class HgServer(object):
             self._reopen_repo()
             fctx = self.repo.filectx(path, fileid=rev_hash)
             return fctx.data()
+
+    def _check_empty_file(self, path, rev_hash):
+        # The rev_hash is computed from the file contents plus the file's parent history
+        # information as well as rename metadata.  This is somewhat unfortunate, as it
+        # makes it difficult to verify the hash matches the contents without also
+        # knowing information about the file history as well.
+        #
+        # However, many empty files were initially created as empty and have never been
+        # changed.  In this case they have no parents, and their rev hash is the
+        # following value.
+        #
+        # If the rev hash is the following value we can be confident that the file is
+        # legitimately empty.
+        no_history_rev_hash = (
+            b"\xb8\r\xe5\xd18u\x85A\xc5\xf0Re\xad\x14J\xb9\xfa\x86\xd1\xdb"
+        )
+        if rev_hash == no_history_rev_hash:
+            return b""
+
+        # If the remotefilelog extension is in use we can check with it to get the
+        # expected file length.
+        remotefilelog_file_size = None
+        if hasattr(self.repo, "contentstore"):
+            metadata = self.repo.contentstore.getmeta(path, rev_hash)
+            remotefilelog_file_size = metadata.get(constants.METAKEYSIZE, None)
+            if remotefilelog_file_size:
+                # Log if the length is different
+                logging.error(
+                    "hg_import_helper incorrectly received empty contents "
+                    "from mercurial for %s:%s; remotefilelog reports length as %s",
+                    path,
+                    rev_hash,
+                    remotefilelog_file_size,
+                )
+
+        # Re-opening the repository and get the file contents again, to really confirm
+        # that the file is empty.
+        self._reopen_repo()
+        contents = self._get_file_impl(path, rev_hash)
+        if contents:
+            # We received non-empty contents, so the original import attempt presumably
+            # got incorrect data.  Log an error message about this before we return the
+            # contents.
+            logging.error(
+                "hg_import_helper incorrectly obtained empty contents for for %s:%s, "
+                "but non-empty contents after re-opening the repository.  "
+                "remotefilelog size=%s",
+                path,
+                hex(rev_hash),
+                remotefilelog_file_size,
+            )
+        elif remotefilelog_file_size:
+            raise Exception(
+                (
+                    "mercurial repeatedly incorrectly returned empty contents for "
+                    "%s:%s; remotefilelog size=%s"
+                )
+                % (path, hex(rev_hash), remotefilelog_file_size)
+            )
+        else:
+            logging.info(
+                "confirmed import of %s:%s as an empty file", path, hex(rev_hash)
+            )
+
+        return contents
 
     def prefetch(self, rev):
         if not hasattr(self.repo, "prefetch"):
@@ -782,7 +862,7 @@ def main():
     if args.get_manifest_node:
         server.initialize()
         node = server.get_manifest_node(args.get_manifest_node)
-        print(binascii.hexlify(node))
+        print(hex(node))
         return 0
 
     if args.manifest is not None:
