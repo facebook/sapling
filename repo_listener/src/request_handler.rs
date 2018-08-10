@@ -20,7 +20,7 @@ use slog_term;
 use stats::Histogram;
 use time_ext::DurationExt;
 use tokio::util::FutureExt as TokioFutureExt;
-use tracing::TraceContext;
+use tracing::{TraceContext, Traced};
 use uuid::Uuid;
 
 use hgproto::{sshproto, HgProtoHandler};
@@ -107,7 +107,12 @@ pub fn request_handler(
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
         stdin,
-        RepoClient::new(repo.clone(), conn_log.clone(), scuba_logger.clone(), trace),
+        RepoClient::new(
+            repo.clone(),
+            conn_log.clone(),
+            scuba_logger.clone(),
+            trace.clone(),
+        ),
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
         &conn_log,
@@ -124,6 +129,11 @@ pub fn request_handler(
     endres
         // Don't wait for more that 15 mins for a request
         .deadline(Instant::now() + Duration::from_secs(15 * 60))
+        .traced(
+            &trace,
+            "wireproto request",
+            trace_args!(),
+        )
         .timed(move |stats, result| {
             let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
             let wireproto_calls = mem::replace(wireproto_calls.deref_mut(), Vec::new());
@@ -146,7 +156,7 @@ pub fn request_handler(
                     );
                 },
             }
-            Ok(())
+            scuba_logger.log_with_trace(&trace)
         })
         .map_err(move |err| {
             if err.is_inner() {

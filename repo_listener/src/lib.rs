@@ -32,6 +32,7 @@ extern crate tokio;
 extern crate tokio_codec;
 extern crate tokio_io;
 extern crate tokio_openssl;
+#[macro_use]
 extern crate tracing;
 extern crate uuid;
 

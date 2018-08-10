@@ -56,15 +56,16 @@ define_stats! {
 }
 
 mod ops {
-    pub const HELLO: &str = "hello";
-    pub const UNBUNDLE: &str = "unbundle";
-    pub const HEADS: &str = "heads";
-    pub const LOOKUP: &str = "lookup";
-    pub const KNOWN: &str = "known";
-    pub const BETWEEN: &str = "between";
-    pub const GETBUNDLE: &str = "getbundle";
-    pub const GETTREEPACK: &str = "gettreepack";
-    pub const GETFILES: &str = "getfiles";
+    pub static HELLO: &str = "hello";
+    pub static UNBUNDLE: &str = "unbundle";
+    pub static HEADS: &str = "heads";
+    pub static LOOKUP: &str = "lookup";
+    pub static LISTKEYS: &str = "listkeys";
+    pub static KNOWN: &str = "known";
+    pub static BETWEEN: &str = "between";
+    pub static GETBUNDLE: &str = "getbundle";
+    pub static GETTREEPACK: &str = "gettreepack";
+    pub static GETFILES: &str = "getfiles";
 }
 
 fn format_nodes_list(mut nodes: Vec<HgNodeHash>) -> String {
@@ -402,7 +403,6 @@ impl HgCommands for RepoClient {
         }
 
         let mut scuba_logger = self.scuba_logger(ops::BETWEEN, None);
-        let trace = self.trace.clone();
 
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
@@ -424,7 +424,13 @@ impl HgCommands for RepoClient {
                     .collect()
             })
             .collect()
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
+            .traced(&self.trace, ops::BETWEEN, trace_args!())
+            .timed(move |stats, _| {
+                scuba_logger
+                    .add_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
             .boxify()
     }
 
@@ -434,7 +440,6 @@ impl HgCommands for RepoClient {
         // TODO: directly return stream of heads
         let logger = self.logger.clone();
         let mut scuba_logger = self.scuba_logger(ops::HEADS, None);
-        let trace = self.trace.clone();
 
         self.repo
             .blobrepo()
@@ -443,7 +448,13 @@ impl HgCommands for RepoClient {
             .map(|v| v.into_iter().collect())
             .from_err()
             .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
+            .traced(&self.trace, ops::HEADS, trace_args!())
+            .timed(move |stats, _| {
+                scuba_logger
+                    .add_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
             .boxify()
     }
 
@@ -453,7 +464,6 @@ impl HgCommands for RepoClient {
         // TODO(stash): T25928839 lookup should support bookmarks and prefixes too
         let repo = self.repo.blobrepo();
         let mut scuba_logger = self.scuba_logger(ops::LOOKUP, None);
-        let trace = self.trace.clone();
 
         HgNodeHash::from_str(&key)
             .into_future()
@@ -480,7 +490,13 @@ impl HgCommands for RepoClient {
                     Ok(buf.freeze())
                 }
             })
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
+            .traced(&self.trace, ops::LOOKUP, trace_args!())
+            .timed(move |stats, _| {
+                scuba_logger
+                    .add_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
             .boxify()
     }
 
@@ -494,13 +510,18 @@ impl HgCommands for RepoClient {
         let blobrepo = self.repo.blobrepo();
 
         let mut scuba_logger = self.scuba_logger(ops::KNOWN, None);
-        let trace = self.trace.clone();
 
         future::join_all(
             nodes
                 .into_iter()
                 .map(move |node| blobrepo.changeset_exists(&HgChangesetId::new(node))),
-        ).timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
+        ).traced(&self.trace, ops::KNOWN, trace_args!())
+            .timed(move |stats, _| {
+                scuba_logger
+                    .add_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
             .boxify()
     }
 
@@ -509,15 +530,18 @@ impl HgCommands for RepoClient {
         info!(self.logger, "Getbundle: {:?}", args);
 
         let mut scuba_logger = self.scuba_logger(ops::GETBUNDLE, None);
-        let trace = self.trace.clone();
 
         match self.create_bundle(args) {
             Ok(res) => res,
             Err(err) => Err(err).into_future().boxify(),
-        }.timed(move |stats, _| {
-            STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-            scuba_logger.add_stats(&stats).log_with_trace(&trace)
-        })
+        }.traced(&self.trace, ops::GETBUNDLE, trace_args!())
+            .timed(move |stats, _| {
+                STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
+                scuba_logger
+                    .add_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
             .boxify()
     }
 
@@ -531,16 +555,23 @@ impl HgCommands for RepoClient {
         res.insert("capabilities".to_string(), caps);
 
         let mut scuba_logger = self.scuba_logger(ops::HELLO, None);
-        let trace = self.trace.clone();
 
         future::ok(res)
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
+            .traced(&self.trace, ops::HELLO, trace_args!())
+            .timed(move |stats, _| {
+                scuba_logger
+                    .add_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
             .boxify()
     }
 
     // @wireprotocommand('listkeys', 'namespace')
     fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
         if namespace == "bookmarks" {
+            let mut scuba_logger = self.scuba_logger(ops::LISTKEYS, None);
+
             self.repo
                 .blobrepo()
                 .get_bookmarks()
@@ -554,6 +585,13 @@ impl HgCommands for RepoClient {
                         .into_iter()
                         .map(|(name, value)| (Vec::from(name.to_string()), value));
                     HashMap::from_iter(bookiter)
+                })
+                .traced(&self.trace, ops::LISTKEYS, trace_args!())
+                .timed(move |stats, _| {
+                    scuba_logger
+                        .add_stats(&stats)
+                        .log_with_msg("Command processed", None);
+                    Ok(())
                 })
                 .boxify()
         } else {
@@ -573,7 +611,6 @@ impl HgCommands for RepoClient {
         stream: BoxStream<Bundle2Item, Error>,
     ) -> HgCommandRes<Bytes> {
         let mut scuba_logger = self.scuba_logger(ops::UNBUNDLE, None);
-        let trace = self.trace.clone();
 
         let res = bundle2_resolver::resolve(
             self.repo.blobrepo(),
@@ -583,8 +620,13 @@ impl HgCommands for RepoClient {
             stream,
         );
 
-        res.traced(&trace, "unbundle", trace_args!())
-            .timed(move |stats, _| scuba_logger.add_stats(&stats).log_with_trace(&trace))
+        res.traced(&self.trace, ops::UNBUNDLE, trace_args!())
+            .timed(move |stats, _| {
+                scuba_logger
+                    .add_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
             .boxify()
     }
 
@@ -599,12 +641,15 @@ impl HgCommands for RepoClient {
         );
 
         let mut scuba_logger = self.scuba_logger(ops::GETTREEPACK, Some(args));
-        let trace = self.trace.clone();
 
         self.gettreepack_untimed(params)
+            .traced(&self.trace, ops::GETTREEPACK, trace_args!())
             .timed(move |stats, _| {
                 STATS::gettreepack_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-                scuba_logger.add_stats(&stats).log_with_trace(&trace)
+                scuba_logger
+                    .add_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
             })
             .boxify()
     }
@@ -625,17 +670,17 @@ impl HgCommands for RepoClient {
                 let repo = this.repo.clone();
                 create_remotefilelog_blob(repo.blobrepo(), node, path.clone(), trace.clone())
                     .traced(
-                        &trace,
-                        "getfile",
-                        trace_args!("node" => format!("{}", node), "path" => format!("{}", path)),
+                        &this.trace,
+                        ops::GETFILES,
+                        trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
                     )
-                    .timed({
-                        let trace = trace.clone();
-                        move |stats, _| {
-                            STATS::getfiles_ms
-                                .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                            scuba_logger.add_stats(&stats).log_with_trace(&trace)
-                        }
+                    .timed(move |stats, _| {
+                        STATS::getfiles_ms
+                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                        scuba_logger
+                            .add_stats(&stats)
+                            .log_with_msg("Command processed", None);
+                        Ok(())
                     })
             })
             .buffered(getfiles_buffer_size)
@@ -723,9 +768,9 @@ fn fetch_treepack_part_input(
         &trace,
         "fetching parents",
         trace_args!(
-                "node" => format!("{}", node),
-                "path" => format!("{}", path)
-            ),
+            "node" => node.to_string(),
+            "path" => path.to_string()
+        ),
     );
 
     let linknode_fut = repo.get_linknode(&repo_path, &entry.get_hash().into_nodehash())
@@ -733,8 +778,8 @@ fn fetch_treepack_part_input(
             &trace,
             "fetching linknode",
             trace_args!(
-                "node" => format!("{}", node),
-                "path" => format!("{}", path)
+                "node" => node.to_string(),
+                "path" => path.to_string()
             ),
         );
 
@@ -745,8 +790,8 @@ fn fetch_treepack_part_input(
             &trace,
             "fetching raw content",
             trace_args!(
-                "node" => format!("{}", node),
-                "path" => format!("{}", path)
+                "node" => node.to_string(),
+                "path" => path.to_string()
             ),
         );
 
