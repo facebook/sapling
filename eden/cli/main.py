@@ -468,6 +468,19 @@ class FsckCmd(Subcmd):
             return 1
 
 
+@subcmd("gc", "Minimize disk and memory usage by freeing caches")
+class GcCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        config = create_config(args)
+
+        with config.get_thrift_client() as client:
+            # TODO: unload
+            print("Clearing and compacting local caches...", end="", flush=True)
+            client.clearAndCompactLocalStore()
+            print()
+            # TODO: clear kernel caches
+
+
 @subcmd(
     "mount",
     "Remount an existing checkout (for instance, after it was manually unmounted)",

@@ -24,7 +24,7 @@ class SqliteLocalStore : public LocalStore {
   explicit SqliteLocalStore(AbsolutePathPiece pathToDb);
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
-  void compactStorage() override;
+  void compactKeySpace(KeySpace keySpace) override;
   StoreResult get(LocalStore::KeySpace keySpace, folly::ByteRange key)
       const override;
   bool hasKey(LocalStore::KeySpace keySpace, folly::ByteRange key)

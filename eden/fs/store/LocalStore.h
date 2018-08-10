@@ -56,7 +56,7 @@ class LocalStore {
    * should be used to store a specific key.  The values of these are
    * coupled to the ordering of the columnFamilies descriptor in
    * RocksDbLocalStore.cpp and tableNames in SqliteLocalStore.cpp */
-  enum KeySpace {
+  enum KeySpace : uint8_t {
     /* 0 is the default column family, which we are not using */
     BlobFamily = 1,
     BlobMetaDataFamily = 2,
@@ -73,10 +73,21 @@ class LocalStore {
   virtual void close() = 0;
 
   /**
+   * Iterate through every KeySpace, clearing the ones that are safe to forget
+   * and compacting all of them.
+   */
+  void clearCachesAndCompactAll();
+
+  /**
    * Delete every object from the store that cannot be repopulated from the
    * backing store. Notably, this does not include proxy hashes.
    */
   void clearCaches();
+
+  /**
+   * Compacts storage for all key spaces.
+   */
+  void compactStorage();
 
   /**
    * Clears all entries from the given KeySpace.
@@ -84,9 +95,9 @@ class LocalStore {
   virtual void clearKeySpace(KeySpace keySpace) = 0;
 
   /**
-   * Ask the storage engine to compact itself.
+   * Ask the storage engine to compact the KeySpace.
    */
-  virtual void compactStorage() = 0;
+  virtual void compactKeySpace(KeySpace keySpace) = 0;
 
   /**
    * Get arbitrary unserialized data from the store.

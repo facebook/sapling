@@ -896,6 +896,11 @@ void EdenServiceHandler::debugSetLogLevel(
       folly::stringToLogLevel(*level), inherit);
 }
 
+void EdenServiceHandler::clearAndCompactLocalStore() {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
+  server_->getLocalStore()->clearCachesAndCompactAll();
+}
+
 void EdenServiceHandler::debugClearLocalStoreCaches() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
   server_->getLocalStore()->clearCaches();

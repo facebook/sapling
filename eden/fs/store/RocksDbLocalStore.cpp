@@ -216,13 +216,12 @@ void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
   }
 }
 
-void RocksDbLocalStore::compactStorage() {
+void RocksDbLocalStore::compactKeySpace(KeySpace keySpace) {
   auto options = rocksdb::CompactRangeOptions{};
   options.allow_write_stall = true;
-  for (auto& columnFamily : dbHandles_.columns) {
-    dbHandles_.db->CompactRange(
-        options, columnFamily.get(), /*begin=*/nullptr, /*end=*/nullptr);
-  }
+  auto columnFamily = dbHandles_.columns[keySpace].get();
+  dbHandles_.db->CompactRange(
+      options, columnFamily, /*begin=*/nullptr, /*end=*/nullptr);
 }
 
 StoreResult RocksDbLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)

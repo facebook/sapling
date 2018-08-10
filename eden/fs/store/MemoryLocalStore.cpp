@@ -68,7 +68,7 @@ void MemoryLocalStore::clearKeySpace(KeySpace keySpace) {
   (*storage_.wlock())[keySpace].clear();
 }
 
-void MemoryLocalStore::compactStorage() {}
+void MemoryLocalStore::compactKeySpace(KeySpace) {}
 
 StoreResult MemoryLocalStore::get(
     LocalStore::KeySpace keySpace,

@@ -84,25 +84,56 @@ class SerializedBlobMetadata {
    */
   std::array<uint8_t, SIZE> data_;
 };
+
+enum class Persistence : bool {
+  Ephemeral = false,
+  Persistent = true,
+};
+
+static constexpr struct KeySpaceRecord {
+  LocalStore::KeySpace keySpace;
+  Persistence persistence;
+} kKeySpaceRecords[] = {
+    {LocalStore::BlobFamily, Persistence::Ephemeral},
+    {LocalStore::BlobMetaDataFamily, Persistence::Ephemeral},
+
+    // If the trees were imported from a flatmanifest, we cannot delete them.
+    // See test_contents_are_the_same_if_handle_is_held_open when running
+    // against a flatmanifest repository.
+    {LocalStore::TreeFamily, Persistence::Persistent},
+
+    // Proxy hashes are required to fetch objects from hg from a hash.
+    // Deleting them breaks re-importing after an inode is unloaded.
+    {LocalStore::HgProxyHashFamily, Persistence::Persistent},
+
+    {LocalStore::HgCommitToTreeFamily, Persistence::Ephemeral},
+};
 } // namespace
 
 namespace facebook {
 namespace eden {
 
+void LocalStore::clearCachesAndCompactAll() {
+  for (auto ks : kKeySpaceRecords) {
+    if (ks.persistence == Persistence::Ephemeral) {
+      clearKeySpace(ks.keySpace);
+    }
+    compactKeySpace(ks.keySpace);
+  }
+}
+
 void LocalStore::clearCaches() {
-  clearKeySpace(BlobFamily);
-  clearKeySpace(BlobMetaDataFamily);
+  for (auto ks : kKeySpaceRecords) {
+    if (ks.persistence == Persistence::Ephemeral) {
+      clearKeySpace(ks.keySpace);
+    }
+  }
+}
 
-  // If the trees were imported from a flatmanifest, we cannot delete them.
-  // See test_contents_are_the_same_if_handle_is_held_open when running against
-  // a flatmanifest repository.
-  // clearKeySpace(TreeFamily);
-
-  // Proxy hashes are required to fetch objects from hg from a hash. Deleting
-  // them breaks re-importing after an inode is unloaded.
-  // clearKeySpace(HgProxyHashFamily);
-
-  clearKeySpace(HgCommitToTreeFamily);
+void LocalStore::compactStorage() {
+  for (auto ks : kKeySpaceRecords) {
+    compactKeySpace(ks.keySpace);
+  }
 }
 
 StoreResult LocalStore::get(KeySpace keySpace, const Hash& id) const {
