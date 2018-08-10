@@ -270,6 +270,27 @@ impl ConfigSet {
         let skip_include = path.parent().is_none(); // skip handling %include if path is empty
 
         // Utilities to avoid too much indentation.
+        let handle_value = |this: &mut ConfigSet,
+                            pair: Pair,
+                            section: Bytes,
+                            name: Bytes,
+                            location: ValueLocation| {
+            let pairs = pair.into_inner();
+            let mut lines = Vec::with_capacity(1);
+            for pair in pairs {
+                if Rule::line == pair.as_rule() {
+                    lines.push(extract(&buf, pair.into_span()));
+                }
+            }
+
+            let value = match lines.len() {
+                1 => lines[0].clone(),
+                _ => Bytes::from(lines.join(&b'\n')),
+            };
+
+            this.set_internal(section, name, value.into(), location.into(), opts)
+        };
+
         let handle_config_item = |this: &mut ConfigSet, pair: Pair, section: Bytes| {
             let pairs = pair.into_inner();
             let mut name = Bytes::new();
@@ -277,21 +298,12 @@ impl ConfigSet {
                 match pair.as_rule() {
                     Rule::name => name = extract(&buf, pair.into_span()),
                     Rule::value => {
-                        let span = pair.into_span();
-                        let (start, end) = strip_offsets(&buf, span.start(), span.end());
-                        // TODO(quark): value needs post-processing
-                        let value = buf.slice(start, end);
+                        let span = pair.clone().into_span();
                         let location = ValueLocation {
                             path: shared_path.clone(),
-                            location: start..end,
+                            location: span.start()..span.end(),
                         };
-                        return this.set_internal(
-                            section,
-                            name,
-                            value.into(),
-                            location.into(),
-                            opts,
-                        );
+                        return handle_value(this, pair, section, name, location);
                     }
                     _ => (),
                 }
@@ -548,7 +560,8 @@ fn strip_offsets(buf: &Bytes, start: usize, end: usize) -> (usize, usize) {
 
 #[inline]
 fn extract<'a>(buf: &Bytes, span: Span<'a>) -> Bytes {
-    buf.slice(span.start(), span.end())
+    let (start, end) = strip_offsets(buf, span.start(), span.end());
+    buf.slice(start, end)
 }
 
 /// Expand `~` to home directory and expand environment variables.
@@ -637,7 +650,7 @@ mod tests {
         assert_eq!(cfg.get("x", "n"), Some(Bytes::new()));
         assert_eq!(
             cfg.get("x", "m"),
-            Some(Bytes::from(&b"this\n value has\n multi lines"[..]))
+            Some(Bytes::from(&b"this\nvalue has\nmulti lines"[..]))
         );
 
         let sources = cfg.get_sources("y", "a");
@@ -647,7 +660,7 @@ mod tests {
         assert_eq!(sources[0].source(), "test_parse_basic");
         assert_eq!(sources[1].source(), "test_parse_basic");
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
-        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 38..39));
+        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 38..40));
     }
 
     #[test]

@@ -29,7 +29,7 @@ comment_start = { ("#" | ";") }
 line = @{ (!new_line ~ any)* }
 name = @{ (!(space | new_line | comment_start | "=" | "[" | "]" | "%") ~ any)+ }
 
-value = @{ line ~ (new_line ~ space+ ~ line)* }
+value = ${ line ~ (new_line ~ space+ ~ line)* }
 equal_sign = @{ space* ~ "=" ~ space* }
 config_item = ${ name ~ equal_sign ~ value }
 
