@@ -3,6 +3,7 @@
 use bytes::Bytes;
 use config::{ConfigSet, Options};
 use dirs;
+use error::Error;
 use std::collections::HashSet;
 use std::env;
 use std::path::Path;
@@ -18,10 +19,12 @@ pub trait OptionsHgExt {
 pub trait ConfigSetHgExt {
     /// Load system config files.
     /// `data_dir` is `mercurial.util.datapath`.
-    fn load_system<P: AsRef<Path>>(&mut self, data_dir: P);
+    /// Return errors parsing files.
+    fn load_system<P: AsRef<Path>>(&mut self, data_dir: P) -> Vec<Error>;
 
     /// Load user config files (and environment variables).
-    fn load_user(&mut self);
+    /// Return errors parsing files.
+    fn load_user(&mut self) -> Vec<Error>;
 }
 
 impl OptionsHgExt for Options {
@@ -88,28 +91,33 @@ impl OptionsHgExt for Options {
 }
 
 impl ConfigSetHgExt for ConfigSet {
-    fn load_system<P: AsRef<Path>>(&mut self, data_dir: P) {
+    fn load_system<P: AsRef<Path>>(&mut self, data_dir: P) -> Vec<Error> {
         let opts = Options::new().source("system").process_hgplain();
         let data_dir = data_dir.as_ref();
+        let mut errors = Vec::new();
 
         if env::var("HGRCPATH").is_err() {
             #[cfg(unix)]
             {
-                self.load_path(data_dir.join("default.d/"), &opts);
-                self.load_path("/etc/mercurial/hgrc", &opts);
-                self.load_path("/etc/mercurial/hgrc.d/", &opts);
+                errors.append(&mut self.load_path(data_dir.join("default.d/"), &opts));
+                errors.append(&mut self.load_path("/etc/mercurial/hgrc", &opts));
+                errors.append(&mut self.load_path("/etc/mercurial/hgrc.d/", &opts));
             }
 
             #[cfg(windows)]
             {
-                self.load_path(data_dir.join("default.d/"), &opts);
-                self.load_path(data_dir.join("mercurial.ini"), &opts);
-                self.load_path(data_dir.join("hgrc.d/"), &opts);
+                errors.append(&mut self.load_path(data_dir.join("default.d/"), &opts));
+                errors.append(&mut self.load_path(data_dir.join("mercurial.ini"), &opts));
+                errors.append(&mut self.load_path(data_dir.join("hgrc.d/"), &opts));
             }
         }
+
+        errors
     }
 
-    fn load_user(&mut self) {
+    fn load_user(&mut self) -> Vec<Error> {
+        let mut errors = Vec::new();
+
         // Covert "$VISUAL", "$EDITOR" to "ui.editor".
         //
         // Unlike Mercurial, don't convert the "$PAGER" environment variable
@@ -141,26 +149,29 @@ impl ConfigSetHgExt for ConfigSet {
             #[cfg(windows)]
             let paths = rcpath.split(';');
             for path in paths {
-                self.load_path(path, &opts);
+                errors.append(&mut self.load_path(path, &opts));
             }
         } else {
             let option_home_dir = dirs::home_dir();
             if let Some(home_dir) = option_home_dir {
                 #[cfg(unix)]
                 {
-                    self.load_path(home_dir.join(".hgrc"), &opts);
+                    errors.append(&mut self.load_path(home_dir.join(".hgrc"), &opts));
                     if let Ok(config_home) = ::std::env::var("XDG_CONFIG_HOME") {
-                        self.load_path(format!("{}/hg/hgrc", config_home), &opts);
+                        errors
+                            .append(&mut self.load_path(format!("{}/hg/hgrc", config_home), &opts));
                     }
                 }
 
                 #[cfg(windows)]
                 {
-                    self.load_path(home_dir.join("mercurial.ini"), &opts);
-                    self.load_path(home_dir.join(".hgrc"), &opts);
+                    errors.append(&mut self.load_path(home_dir.join("mercurial.ini"), &opts));
+                    errors.append(&mut self.load_path(home_dir.join(".hgrc"), &opts));
                 }
             }
         }
+
+        errors
     }
 }
 

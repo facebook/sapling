@@ -120,13 +120,15 @@ py_class!(class config |py| {
     }
 
     @staticmethod
-    def load(datapath: PyBytes) -> PyResult<config> {
+    def load(datapath: PyBytes) -> PyResult<(config, Vec<PyBytes>)> {
         let datapath = local_bytes_to_path(datapath.data(py))
             .map_err(|_| encoding_error(py, &datapath))?;
         let mut cfg = ConfigSet::new();
-        cfg.load_system(datapath);
-        cfg.load_user();
-        config::create_instance(py, RefCell::new(cfg))
+        let mut errors = Vec::new();
+        errors.append(&mut cfg.load_system(datapath));
+        errors.append(&mut cfg.load_user());
+        let errors = errors_to_pybytes_vec(py, errors);
+        config::create_instance(py, RefCell::new(cfg)).map(|cfg| (cfg, errors))
     }
 });
 
