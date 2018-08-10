@@ -659,15 +659,10 @@ class sortdict(collections.OrderedDict):
     >>> d2 = d1.copy()
     >>> d2
     sortdict([('a', 0), ('b', 1)])
-    >>> d2.update([(b'a', 2)])
-    >>> list(d2.keys()) # should still be in last-set order
-    ['b', 'a']
+    >>> d2.update([(b'a', 2), (b'c', 3)])
+    >>> list(d2.keys())
+    ['a', 'b', 'c']
     """
-
-    def __setitem__(self, key, value):
-        if key in self:
-            del self[key]
-        super(sortdict, self).__setitem__(key, value)
 
     if pycompat.ispypy:
         # __setitem__() isn't called as of PyPy 5.8.0
@@ -676,6 +671,24 @@ class sortdict(collections.OrderedDict):
                 src = src.iteritems()
             for k, v in src:
                 self[k] = v
+
+
+class altsortdict(sortdict):
+    """alternative sortdict, slower, and changes order on setitem
+
+    This is for compatibility. Do not use it in new code.
+
+    >>> d1 = altsortdict([(b'a', 0), (b'b', 1)])
+    >>> d2 = d1.copy()
+    >>> d2.update([(b'a', 2)])
+    >>> list(d2.keys()) # should still be in last-set order
+    ['b', 'a']
+    """
+
+    def __setitem__(self, key, value):
+        if key in self:
+            del self[key]
+        super(altsortdict, self).__setitem__(key, value)
 
 
 class cowdict(cow, dict):

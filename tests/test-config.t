@@ -156,8 +156,8 @@ sub-options in [paths] aren't expanded
   > EOF
 
   $ hg showconfig paths
-  paths.foo:suboption=~/foo
   paths.foo=$TESTTMP/foo
+  paths.foo:suboption=~/foo
 
 edit failure
 

@@ -311,10 +311,10 @@ class KeepAliveHandler(object):
         # What follows mostly reimplements HTTPConnection.request()
         # except it adds self.parent.addheaders in the mix and sends headers
         # in a deterministic order (to make testing easier).
-        headers = util.sortdict(self.parent.addheaders)
+        headers = util.altsortdict(self.parent.addheaders)
         headers.update(sorted(req.headers.items()))
         headers.update(sorted(req.unredirected_hdrs.items()))
-        headers = util.sortdict((n.lower(), v) for n, v in headers.items())
+        headers = util.altsortdict((n.lower(), v) for n, v in headers.items())
         skipheaders = {}
         for n in ("host", "accept-encoding"):
             if n in headers:
