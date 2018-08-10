@@ -25,7 +25,7 @@ Also note that this extension will run only once.
     obsstoresizelimit = 500000
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 from mercurial import obsutil, repair
 from mercurial.i18n import _
