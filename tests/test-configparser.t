@@ -21,7 +21,9 @@
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", None, None, None)
+  ['"$TESTTMP/broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset']
   >>> cfg.parse("[c]\nx=1", "parse")
+  []
   >>> cfg.set("d", "y", "2", "set1")
   >>> cfg.set("d", "x", None, "set2")
   >>> for section in cfg.sections():
@@ -30,8 +32,6 @@
   section [b] has names ['z']
   section [c] has names ['x']
   section [d] has names ['y', 'x']
-  >>> print("errors: %r" % cfg.errors())
-  errors: ['"$TESTTMP/broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset']
   >>> for item in ["a.x", "a.y", "b.z", "c.x", "d.x", "d.y", "e.x"]:
   ...     section, name = item.split(".")
   ...     print("%s = %r" % (item, cfg.get(section, name)))
@@ -56,6 +56,7 @@ Section whitelist
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", ["a"], None, None)
+  ['"$TESTTMP/broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset']
   >>> print(cfg.sections())
   ['a']
 
@@ -64,6 +65,7 @@ Section remap
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", None, {'a': 'x'}.items(), None)
+  ['"$TESTTMP/broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset']
   >>> print(cfg.sections())
   ['x', 'b']
 
@@ -72,6 +74,7 @@ Config whitelist
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", None, None, [('a', 'y')])
+  ['"$TESTTMP/broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset']
   >>> print(cfg.get('a', 'y'))
   None
   >>> print(cfg.get('a', 'x'))

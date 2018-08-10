@@ -20,10 +20,9 @@ use std::sync::Arc;
 type Pair<'a> = pest::iterators::Pair<'a, Rule>;
 
 /// Collection of config sections loaded from various sources.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct ConfigSet {
     sections: IndexMap<Bytes, Section>,
-    errors: Vec<Error>,
 }
 
 /// Internal representation of a config section.
@@ -62,14 +61,6 @@ impl ConfigSet {
         Default::default()
     }
 
-    /// Return a cloned `ConfigSet`, without errors.
-    pub fn clone(&self) -> Self {
-        ConfigSet {
-            sections: self.sections.clone(),
-            errors: Vec::new(),
-        }
-    }
-
     /// Load config files at given path. The path could be either a directory or a file.
     ///
     /// If `path` is a directory, files directly inside it with extension `.rc` will be loaded.
@@ -99,21 +90,25 @@ impl ConfigSet {
     /// to avoid infinite loop. A separate `load_path` call would not ignore files loaded by
     /// other `load_path` calls.
     ///
-    /// Errors will be pushed to an internal array, and can be retrieved by `errors`. Non-existed
-    /// path is not considered as an error.
-    pub fn load_path<P: AsRef<Path>>(&mut self, path: P, opts: &Options) {
+    /// Return a list of errors. An error pasing a file will stop that file from loading, without
+    /// affecting other files.
+    pub fn load_path<P: AsRef<Path>>(&mut self, path: P, opts: &Options) -> Vec<Error> {
         let mut visited = HashSet::new();
-        self.load_dir_or_file(path.as_ref(), opts, &mut visited);
+        let mut errors = Vec::new();
+        self.load_dir_or_file(path.as_ref(), opts, &mut visited, &mut errors);
+        errors
     }
 
     /// Load content of an unnamed config file. The `ValueLocation`s of loaded config items will
     /// have an empty `path`.
     ///
-    /// Errors will be pushed to an internal array, and can be retrieved by `errors`.
-    pub fn parse<B: Into<Bytes>>(&mut self, content: B, opts: &Options) {
+    /// Return a list of errors.
+    pub fn parse<B: Into<Bytes>>(&mut self, content: B, opts: &Options) -> Vec<Error> {
         let mut visited = HashSet::new();
+        let mut errors = Vec::new();
         let buf = content.into();
-        self.load_file_content(Path::new(""), buf, opts, &mut visited);
+        self.load_file_content(Path::new(""), buf, opts, &mut visited, &mut errors);
+        errors
     }
 
     /// Get config sections.
@@ -170,11 +165,6 @@ impl ConfigSet {
         self.set_internal(section, name, value, None, &opts)
     }
 
-    /// Get errors caused by parsing config files previously.
-    pub fn errors(&self) -> &Vec<Error> {
-        &self.errors
-    }
-
     fn set_internal(
         &mut self,
         section: Bytes,
@@ -203,20 +193,32 @@ impl ConfigSet {
         }
     }
 
-    fn load_dir_or_file(&mut self, path: &Path, opts: &Options, visited: &mut HashSet<PathBuf>) {
+    fn load_dir_or_file(
+        &mut self,
+        path: &Path,
+        opts: &Options,
+        visited: &mut HashSet<PathBuf>,
+        errors: &mut Vec<Error>,
+    ) {
         if let Ok(path) = path.canonicalize() {
             if path.is_dir() {
-                self.load_dir(&path, opts, visited);
+                self.load_dir(&path, opts, visited, errors);
             } else {
-                self.load_file(&path, opts, visited);
+                self.load_file(&path, opts, visited, errors);
             }
         }
         // If `path.canonicalize` reports an error. It's usually the path cannot
         // be resolved (ex. does not exist). It is considered normal and is not
-        // reported in `self.errors`.
+        // reported in `errors`.
     }
 
-    fn load_dir(&mut self, dir: &Path, opts: &Options, visited: &mut HashSet<PathBuf>) {
+    fn load_dir(
+        &mut self,
+        dir: &Path,
+        opts: &Options,
+        visited: &mut HashSet<PathBuf>,
+        errors: &mut Vec<Error>,
+    ) {
         let rc_ext = OsStr::new("rc");
         match dir.read_dir() {
             Ok(entries) => for entry in entries {
@@ -224,17 +226,23 @@ impl ConfigSet {
                     Ok(entry) => {
                         let path = entry.path();
                         if path.is_file() && path.extension() == Some(rc_ext) {
-                            self.load_file(&path, opts, visited);
+                            self.load_file(&path, opts, visited, errors);
                         }
                     }
-                    Err(error) => self.error(Error::Io(dir.to_path_buf(), error)),
+                    Err(error) => errors.push(Error::Io(dir.to_path_buf(), error)),
                 }
             },
-            Err(error) => self.error(Error::Io(dir.to_path_buf(), error)),
+            Err(error) => errors.push(Error::Io(dir.to_path_buf(), error)),
         }
     }
 
-    fn load_file(&mut self, path: &Path, opts: &Options, visited: &mut HashSet<PathBuf>) {
+    fn load_file(
+        &mut self,
+        path: &Path,
+        opts: &Options,
+        visited: &mut HashSet<PathBuf>,
+        errors: &mut Vec<Error>,
+    ) {
         debug_assert!(path.is_absolute());
 
         if !visited.insert(path.to_path_buf()) {
@@ -246,15 +254,15 @@ impl ConfigSet {
             Ok(mut file) => {
                 let mut buf = Vec::with_capacity(256);
                 if let Err(error) = file.read_to_end(&mut buf) {
-                    self.error(Error::Io(path.to_path_buf(), error));
+                    errors.push(Error::Io(path.to_path_buf(), error));
                     return;
                 }
                 buf.push(b'\n');
                 let buf = Bytes::from(buf);
 
-                self.load_file_content(path, buf, opts, visited);
+                self.load_file_content(path, buf, opts, visited, errors);
             }
-            Err(error) => self.error(Error::Io(path.to_path_buf(), error)),
+            Err(error) => errors.push(Error::Io(path.to_path_buf(), error)),
         }
     }
 
@@ -264,6 +272,7 @@ impl ConfigSet {
         buf: Bytes,
         opts: &Options,
         visited: &mut HashSet<PathBuf>,
+        errors: &mut Vec<Error>,
     ) {
         let mut section = Bytes::new();
         let shared_path = Arc::new(path.to_path_buf()); // use Arc to do shallow copy
@@ -325,7 +334,7 @@ impl ConfigSet {
             unreachable!();
         };
 
-        let mut handle_include = |this: &mut ConfigSet, pair: Pair| {
+        let mut handle_include = |this: &mut ConfigSet, pair: Pair, errors: &mut Vec<Error>| {
             let pairs = pair.into_inner();
             for pair in pairs {
                 match pair.as_rule() {
@@ -333,7 +342,7 @@ impl ConfigSet {
                         let include_path = pair.as_str();
                         let full_include_path =
                             path.parent().unwrap().join(expand_path(include_path));
-                        this.load_dir_or_file(&full_include_path, opts, visited);
+                        this.load_dir_or_file(&full_include_path, opts, visited, errors);
                     },
                     _ => (),
                 }
@@ -365,32 +374,35 @@ impl ConfigSet {
             unreachable!();
         };
 
-        let mut handle_directive = |this: &mut ConfigSet, pair: Pair, section: &Bytes| {
-            let pairs = pair.into_inner();
-            for pair in pairs {
-                match pair.as_rule() {
-                    Rule::include => handle_include(this, pair),
-                    Rule::unset => handle_unset(this, pair, section),
-                    _ => (),
+        let mut handle_directive =
+            |this: &mut ConfigSet, pair: Pair, section: &Bytes, errors: &mut Vec<Error>| {
+                let pairs = pair.into_inner();
+                for pair in pairs {
+                    match pair.as_rule() {
+                        Rule::include => handle_include(this, pair, errors),
+                        Rule::unset => handle_unset(this, pair, section),
+                        _ => (),
+                    }
                 }
-            }
-        };
+            };
 
         let text = match str::from_utf8(&buf) {
             Ok(text) => text,
-            Err(error) => return self.error(Error::Utf8(path.to_path_buf(), error)),
+            Err(error) => return errors.push(Error::Utf8(path.to_path_buf(), error)),
         };
 
         let pairs = match ConfigParser::parse(Rule::file, &text) {
             Ok(pairs) => pairs,
-            Err(error) => return self.error(Error::Parse(path.to_path_buf(), format!("{}", error))),
+            Err(error) => {
+                return errors.push(Error::Parse(path.to_path_buf(), format!("{}", error)))
+            }
         };
 
         for pair in pairs {
             match pair.as_rule() {
                 Rule::config_item => handle_config_item(self, pair, section.clone()),
                 Rule::section => handle_section(pair, &mut section),
-                Rule::directive => handle_directive(self, pair, &section),
+                Rule::directive => handle_directive(self, pair, &section, errors),
                 Rule::blank_line | Rule::comment_line | Rule::new_line => (),
 
                 Rule::comment_start
@@ -407,11 +419,6 @@ impl ConfigSet {
                 | Rule::value => unreachable!(),
             }
         }
-    }
-
-    #[inline]
-    fn error(&mut self, error: Error) {
-        self.errors.push(error);
     }
 }
 
@@ -586,7 +593,6 @@ mod tests {
         assert!(cfg.keys("foo").is_empty());
         assert!(cfg.get("foo", "bar").is_none());
         assert!(cfg.get_sources("foo", "bar").is_empty());
-        assert!(cfg.errors().is_empty());
     }
 
     #[test]
@@ -679,9 +685,9 @@ mod tests {
     #[test]
     fn test_parse_errors() {
         let mut cfg = ConfigSet::new();
-        cfg.parse("# foo\n[y", &"test_parse_errors".into());
+        let errors = cfg.parse("# foo\n[y", &"test_parse_errors".into());
         assert_eq!(
-            format!("{}", cfg.errors()[0]),
+            format!("{}", errors[0]),
             "\"\":
  --> 2:3
   |
@@ -692,9 +698,9 @@ mod tests {
         );
 
         let mut cfg = ConfigSet::new();
-        cfg.parse("\n\n%unknown", &"test_parse_errors".into());
+        let errors = cfg.parse("\n\n%unknown", &"test_parse_errors".into());
         assert_eq!(
-            format!("{}", cfg.errors()[0]),
+            format!("{}", errors[0]),
             "\"\":
  --> 3:2
   |
@@ -705,9 +711,9 @@ mod tests {
         );
 
         let mut cfg = ConfigSet::new();
-        cfg.parse("[section]\nabc", &"test_parse_errors".into());
+        let errors = cfg.parse("[section]\nabc", &"test_parse_errors".into());
         assert_eq!(
-            format!("{}", cfg.errors()[0]),
+            format!("{}", errors[0]),
             "\"\":
  --> 2:4
   |
@@ -896,8 +902,8 @@ mod tests {
         );
 
         let mut cfg = ConfigSet::new();
-        cfg.load_path(dir.path().join("rootrc"), &"test_parse_include".into());
-        assert!(cfg.errors().is_empty());
+        let errors = cfg.load_path(dir.path().join("rootrc"), &"test_parse_include".into());
+        assert!(errors.is_empty());
 
         assert_eq!(cfg.sections(), vec![Bytes::from("x"), Bytes::from("y")]);
         assert_eq!(

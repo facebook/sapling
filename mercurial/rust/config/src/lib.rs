@@ -37,7 +37,7 @@ py_class!(class config |py| {
         sections: Option<Vec<PyBytes>>,
         remap: Option<Vec<(PyBytes, PyBytes)>>,
         readonly_items: Option<Vec<(PyBytes, PyBytes)>>
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Vec<PyBytes>> {
         let path = local_bytes_to_path(path.data(py)).map_err(|_| encoding_error(py, path))?;
         let mut cfg = self.cfg(py).borrow_mut();
 
@@ -61,15 +61,15 @@ py_class!(class config |py| {
             opts = opts.readonly_items(items);
         }
 
-        cfg.load_path(path, &opts);
-        Ok(py.None())
+        let errors = cfg.load_path(path, &opts);
+        Ok(errors_to_pybytes_vec(py, errors))
     }
 
-    def parse(&self, content: &PyBytes, source: &PyBytes) -> PyResult<PyObject> {
+    def parse(&self, content: &PyBytes, source: &PyBytes) -> PyResult<Vec<PyBytes>> {
         let mut cfg = self.cfg(py).borrow_mut();
         let opts = source.data(py).into();
-        cfg.parse(content.data(py), &opts);
-        Ok(py.None())
+        let errors = cfg.parse(content.data(py), &opts);
+        Ok(errors_to_pybytes_vec(py, errors))
     }
 
     def get(&self, section: &PyBytes, name: &PyBytes) -> PyResult<Option<PyBytes>> {
@@ -105,13 +105,6 @@ py_class!(class config |py| {
         Ok(py.None())
     }
 
-    def errors(&self) -> PyResult<Vec<PyBytes>> {
-        let cfg = self.cfg(py).borrow();
-        let errors: Vec<PyBytes> = cfg.errors()
-            .iter().map(|err| PyBytes::new(py, format!("{}", err).as_bytes())).collect();
-        Ok(errors)
-    }
-
     def sections(&self) -> PyResult<Vec<PyBytes>> {
         let cfg = self.cfg(py).borrow();
         let sections: Vec<PyBytes> = cfg.sections()
@@ -144,4 +137,11 @@ fn encoding_error(py: Python, input: &PyBytes) -> PyErr {
     let input = input.data(py);
     let err = UnicodeDecodeError::new(py, utf8, input, 0..input.len(), reason).unwrap();
     PyErr::from_instance(py, err)
+}
+
+fn errors_to_pybytes_vec(py: Python, errors: Vec<configparser::error::Error>) -> Vec<PyBytes> {
+    errors
+        .iter()
+        .map(|err| PyBytes::new(py, format!("{}", err).as_bytes()))
+        .collect()
 }
