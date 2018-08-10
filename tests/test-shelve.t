@@ -1695,7 +1695,7 @@ Unshelve respects --keep even if user intervention is needed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 3 >> file && hg ci -Am 13
   $ hg shelve --list
-  default         (*s ago)    changes to: 1 (glob)
+  default * changes to: 1 (glob)
   $ hg unshelve --keep
   unshelving change 'default'
   rebasing shelved changes
@@ -1711,7 +1711,7 @@ Unshelve respects --keep even if user intervention is needed
   rebasing 2:3fbe6fbb0bef "changes to: 1" (tip)
   unshelve of 'default' complete
   $ hg shelve --list
-  default         (*s ago)    changes to: 1 (glob)
+  default * changes to: 1 (glob)
   $ cd ..
 
 Unshelving when there are deleted files does not crash (issue4176)

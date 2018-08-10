@@ -34,7 +34,7 @@ Make sure obs-based shelve can be used with an empty repo
   shelved as default
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
   $ hg shelve --list
-  default         (*s ago)    (changes in empty repository) (glob)
+  default * (changes in empty repository) (glob)
   $ hg revert --all
   $ hg unshelve
   unshelving change 'default'
@@ -863,7 +863,7 @@ Shelve --patch and shelve --stat should work with a single valid shelfname
   shelved as default-01
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg shelve --patch default default-01
-  default-01      (*s ago)    shelve changes to: create conflict (glob)
+  default-01 * shelve changes to: create conflict (glob)
   
   diff --git a/shelf-patch-b b/shelf-patch-b
   new file mode 100644
@@ -871,7 +871,7 @@ Shelve --patch and shelve --stat should work with a single valid shelfname
   +++ b/shelf-patch-b
   @@ -0,0 +1,1 @@
   +patch b
-  default         (*s ago)    shelve changes to: create conflict (glob)
+  default * shelve changes to: create conflict (glob)
   
   diff --git a/shelf-patch-a b/shelf-patch-a
   new file mode 100644
@@ -880,14 +880,14 @@ Shelve --patch and shelve --stat should work with a single valid shelfname
   @@ -0,0 +1,1 @@
   +patch a
   $ hg shelve --stat default default-01
-  default-01      (*s ago)    shelve changes to: create conflict (glob)
+  default-01 * shelve changes to: create conflict (glob)
    shelf-patch-b |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
-  default         (*s ago)    shelve changes to: create conflict (glob)
+  default * shelve changes to: create conflict (glob)
    shelf-patch-a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   $ hg shelve --patch default
-  default         (*)* shelve changes to: create conflict (glob)
+  default * shelve changes to: create conflict (glob)
   
   diff --git a/shelf-patch-a b/shelf-patch-a
   new file mode 100644
@@ -896,7 +896,7 @@ Shelve --patch and shelve --stat should work with a single valid shelfname
   @@ -0,0 +1,1 @@
   +patch a
   $ hg shelve --stat default
-  default         (*)* shelve changes to: create conflict (glob)
+  default * shelve changes to: create conflict (glob)
    shelf-patch-a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   $ hg shelve --patch nonexistentshelf
@@ -1519,7 +1519,7 @@ Unshelve respects --keep even if user intervention is needed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 3 >> file && hg ci -Am 13
   $ hg shelve --list
-  default         (*s ago)    shelve changes to: 1 (glob)
+  default * shelve changes to: 1 (glob)
   $ hg unshelve --keep
   unshelving change 'default'
   rebasing shelved changes
@@ -1535,7 +1535,7 @@ Unshelve respects --keep even if user intervention is needed
   rebasing 1:49351a7ca591 "shelve changes to: 1"
   unshelve of 'default' complete
   $ hg shelve --list
-  default         (*s ago)    shelve changes to: 1 (glob)
+  default * shelve changes to: 1 (glob)
   $ cd ..
 
 Unshelving a stripped commit aborts with an explanatory message
