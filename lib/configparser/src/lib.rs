@@ -70,6 +70,8 @@ extern crate failure_derive;
 
 extern crate pest;
 
+extern crate shellexpand;
+
 pub mod config;
 pub mod error;
 pub mod hg;

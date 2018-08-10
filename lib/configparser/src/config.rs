@@ -3,6 +3,8 @@ use error::Error;
 use linked_hash_map::LinkedHashMap;
 use parser::{ConfigParser, Rule};
 use pest::{self, Parser, Span};
+use shellexpand;
+use std::borrow::Cow;
 use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::convert::AsRef;
@@ -549,17 +551,13 @@ fn extract<'a>(buf: &Bytes, span: Span<'a>) -> Bytes {
     buf.slice(span.start(), span.end())
 }
 
-/// Expand `~` to home directory.
+/// Expand `~` to home directory and expand environment variables.
 fn expand_path(path: &str) -> PathBuf {
-    if path.starts_with("~/") {
-        // TODO(quark): migrate to dirs or shellexpand once tp2 has them.
-        #[allow(deprecated)]
-        let home_dir = ::std::env::home_dir();
-        if let Some(home) = home_dir {
-            return home.join(Path::new(&path[2..]));
-        }
-    }
-    Path::new(path).to_path_buf()
+    Path::new(
+        shellexpand::full(&path)
+            .unwrap_or(Cow::Borrowed(path))
+            .as_ref(),
+    ).to_path_buf()
 }
 
 #[cfg(test)]
