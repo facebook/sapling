@@ -871,7 +871,7 @@ repo)
   abort: pretxnclose hook exited with status 1
   [255]
 
-Hook from untrusted hgrc are reported as failure
+Hook from untrusted hgrc are no longer failures
 ================================================
 
   $ cat << EOF > $TESTTMP/untrusted.py
@@ -899,7 +899,7 @@ Non-blocking hook
   > txnclose.testing=echo txnclose hook called
   > EOF
   $ touch a && hg commit -Aqm a
-  warning: untrusted hook txnclose.testing not executed
+  txnclose hook called
   $ hg log
   changeset:   0:3903775176ed
   tag:         tip
@@ -916,14 +916,16 @@ Non-blocking hook
   > pretxnclose.testing=echo pre-txnclose hook called
   > EOF
   $ touch b && hg commit -Aqm a
-  transaction abort!
-  rollback completed
-  abort: untrusted hook pretxnclose.testing not executed
-  (see 'hg help config.trusted')
-  [255]
+  pre-txnclose hook called
+  txnclose hook called
   $ hg log
-  changeset:   0:3903775176ed
+  changeset:   1:f9ae6ef0865e
   tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
+  changeset:   0:3903775176ed
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

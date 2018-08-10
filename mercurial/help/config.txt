@@ -103,12 +103,6 @@ particular repository. This file is not version-controlled, and
 will not get transferred during a "clone" operation. Options in
 this file override options in all other configuration files.
 
-.. container:: unix.plan9
-
-  On Plan 9 and Unix, most of this file will be ignored if it doesn't
-  belong to a trusted user or to a trusted group. See
-  :hg:`help config.trusted` for more details.
-
 Per-user configuration file(s) are for the user running Mercurial.  Options
 in these files apply to all Mercurial commands executed by this user in any
 directory. Options in these files override per-system and per-installation
@@ -144,6 +138,11 @@ configuration files should never be edited by users or administrators but can
 be overridden in other configuration files. So far the directory only contains
 merge tool configuration but packagers can also put other default configuration
 there.
+
+Warning: Running hg inside, pushing to, pulling from, or cloning local
+repositories owned by other users will load the their config files. That could
+be potentially harmful. A config file can run arbitrary code by defining
+extensions or hooks.
 
 Syntax
 ======
@@ -2013,29 +2012,6 @@ See :hg:`help templates` for details.
     Set to 0 to disable automatic repack.
     (default: 3)
 
-``trusted``
------------
-
-Mercurial will not use the settings in the
-``.hg/hgrc`` file from a repository if it doesn't belong to a trusted
-user or to a trusted group, as various hgrc features allow arbitrary
-commands to be run. This issue is often encountered when configuring
-hooks or extensions for shared repositories or servers. However,
-the web interface will use some safe settings from the ``[web]``
-section.
-
-This section specifies what users and groups are trusted. The
-current user is always trusted. To trust everybody, list a user or a
-group with name ``*``. These settings must be placed in an
-*already-trusted file* to take effect, such as ``$HOME/.hgrc`` of the
-user or service running Mercurial.
-
-``users``
-  Comma-separated list of trusted users.
-
-``groups``
-  Comma-separated list of trusted groups.
-
 
 ``ui``
 ------
@@ -2268,11 +2244,6 @@ User interface controls.
 ``remotecmd``
     Remote command to use for clone/push/pull operations.
     (default: ``hg``)
-
-``report_untrusted``
-    Warn if a ``.hg/hgrc`` file is ignored due to not being owned by a
-    trusted user or group.
-    (default: True)
 
 ``slash``
     (Deprecated. Use ``slashpath`` template filter instead.)

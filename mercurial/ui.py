@@ -210,13 +210,9 @@ class ui(object):
         # This exists to prevent an extra list lookup.
         self._bufferapplylabels = None
         self.quiet = self.verbose = self.debugflag = self.tracebackflag = False
-        self._reportuntrusted = True
         self._knownconfig = configitems.coreitems
         self._ocfg = config.config()  # overlay
-        self._tcfg = config.config()  # trusted
-        self._ucfg = config.config()  # untrusted
-        self._trustusers = set()
-        self._trustgroups = set()
+        self._ucfg = config.config()  # config
         self.callhooks = True
         # Insecure server connections requested.
         self.insecureconnections = False
@@ -235,11 +231,8 @@ class ui(object):
             self._disablepager = src._disablepager
             self._tweaked = src._tweaked
 
-            self._tcfg = src._tcfg.copy()
             self._ucfg = src._ucfg.copy()
             self._ocfg = src._ocfg.copy()
-            self._trustusers = src._trustusers.copy()
-            self._trustgroups = src._trustgroups.copy()
             self.environ = src.environ
             self.callhooks = src.callhooks
             self.insecureconnections = src.insecureconnections
@@ -287,7 +280,6 @@ class ui(object):
                 for section, name, value, source in f:
                     # do not set u._ocfg
                     # XXX clean this up once immutable config object is a thing
-                    u._tcfg.set(section, name, value, source)
                     u._ucfg.set(section, name, value, source)
                     sections.add(section)
                 for section in sections:
@@ -345,27 +337,6 @@ class ui(object):
     def formatter(self, topic, opts):
         return formatter.formatter(self, self, topic, opts)
 
-    def _trusted(self, fp, f):
-        st = util.fstat(fp)
-        if util.isowner(st):
-            return True
-
-        tusers, tgroups = self._trustusers, self._trustgroups
-        if "*" in tusers or "*" in tgroups:
-            return True
-
-        user = util.username(st.st_uid)
-        group = util.groupname(st.st_gid)
-        if user in tusers or group in tgroups or user == util.username():
-            return True
-
-        if self._reportuntrusted:
-            self.warn(
-                _("not trusting file %s from untrusted " "user %s, group %s\n")
-                % (f, user, group)
-            )
-        return False
-
     def readconfig(self, filename, root=None, trust=False, sections=None, remap=None):
         try:
             fp = open(filename, u"rb")
@@ -375,14 +346,11 @@ class ui(object):
             raise
 
         cfg = config.config()
-        trusted = sections or trust or self._trusted(fp, filename)
 
         try:
             cfg.read(filename, fp, sections=sections, remap=remap)
             fp.close()
         except error.ConfigError as inst:
-            if trusted:
-                raise
             self.warn(_("ignored: %s\n") % str(inst))
 
         if self.plain():
@@ -418,9 +386,6 @@ class ui(object):
             if "exitcodemask" in cfg["ui"]:
                 del cfg["ui"]["exitcodemask"]
 
-        if trusted:
-            self._tcfg.update(cfg)
-            self._tcfg.update(self._ocfg)
         self._ucfg.update(cfg)
         self._ucfg.update(self._ocfg)
 
@@ -433,7 +398,7 @@ class ui(object):
             # expand vars and ~
             # translate paths relative to root (or home) into absolute paths
             root = root or pycompat.getcwd()
-            for c in self._tcfg, self._ucfg, self._ocfg:
+            for c in self._ucfg, self._ocfg:
                 for n, p in c.items("paths"):
                     # Ignore sub-options.
                     if ":" in n:
@@ -458,37 +423,24 @@ class ui(object):
             self.quiet = not self.debugflag and self.configbool("ui", "quiet")
             if self.verbose and self.quiet:
                 self.quiet = self.verbose = False
-            self._reportuntrusted = self.debugflag or self.configbool(
-                "ui", "report_untrusted"
-            )
             self.tracebackflag = self.configbool("ui", "traceback")
             self.logmeasuredtimes = self.configbool("ui", "logmeasuredtimes")
 
-        if section in (None, "trusted"):
-            # update trust information
-            self._trustusers.update(self.configlist("trusted", "users"))
-            self._trustgroups.update(self.configlist("trusted", "groups"))
-
     def backupconfig(self, section, item):
-        return (
-            self._ocfg.backup(section, item),
-            self._tcfg.backup(section, item),
-            self._ucfg.backup(section, item),
-        )
+        return (self._ocfg.backup(section, item), self._ucfg.backup(section, item))
 
     def restoreconfig(self, data):
         self._ocfg.restore(data[0])
-        self._tcfg.restore(data[1])
-        self._ucfg.restore(data[2])
+        self._ucfg.restore(data[1])
 
     def setconfig(self, section, name, value, source=""):
-        for cfg in (self._ocfg, self._tcfg, self._ucfg):
+        for cfg in (self._ocfg, self._ucfg):
             cfg.set(section, name, value, source)
         self.fixconfig(section=section)
         self._maybetweakdefaults()
 
     def _data(self, untrusted):
-        return untrusted and self._ucfg or self._tcfg
+        return self._ucfg
 
     def configsource(self, section, name, untrusted=False):
         return self._data(untrusted).source(section, name)
@@ -547,14 +499,6 @@ class ui(object):
                 name = n
                 break
 
-        if self.debugflag and not untrusted and self._reportuntrusted:
-            for s, n in alternates:
-                uvalue = self._ucfg.get(s, n)
-                if uvalue is not None and uvalue != value:
-                    self.debug(
-                        "ignoring untrusted configuration option "
-                        "%s.%s = %s\n" % (s, n, uvalue)
-                    )
         return value
 
     def configsuboptions(self, section, name, default=_unset, untrusted=False):
@@ -574,16 +518,6 @@ class ui(object):
         for k, v in data.items(section):
             if k.startswith(prefix):
                 sub[k[len(prefix) :]] = v
-
-        if self.debugflag and not untrusted and self._reportuntrusted:
-            for k, v in sub.items():
-                uvalue = self._ucfg.get(section, "%s:%s" % (name, k))
-                if uvalue is not None and uvalue != v:
-                    self.debug(
-                        "ignoring untrusted configuration option "
-                        "%s:%s.%s = %s\n" % (section, name, k, uvalue)
-                    )
-
         return main, sub
 
     def configpath(self, section, name, default=_unset, untrusted=False):
@@ -780,13 +714,6 @@ class ui(object):
                 if ":" not in k:
                     newitems[k] = v
             items = newitems.items()
-        if self.debugflag and not untrusted and self._reportuntrusted:
-            for k, v in self._ucfg.items(section):
-                if self._tcfg.get(section, k) != v:
-                    self.debug(
-                        "ignoring untrusted configuration option "
-                        "%s.%s = %s\n" % (section, k, v)
-                    )
         return items
 
     def walkconfig(self, untrusted=False):

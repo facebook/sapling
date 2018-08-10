@@ -181,6 +181,7 @@ def _hookitems(ui, _untrusted=False):
     for name, cmd in ui.configitems("hooks", untrusted=_untrusted):
         if not name.startswith("priority"):
             priority = ui.configint("hooks", "priority.%s" % name, 0)
+            # TODO: check whether the hook item is trusted or not
             hooks[name] = (-priority, len(hooks), name, cmd)
     return hooks
 

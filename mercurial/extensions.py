@@ -103,6 +103,7 @@ def loadpath(path, module_name):
     """
     module_name = module_name.replace(".", "_")
     path = util.normpath(util.expandpath(path))
+    # TODO: check whether path is "trusted" or not
     module_name = pycompat.fsdecode(module_name)
     path = pycompat.fsdecode(path)
     if os.path.isdir(path):
