@@ -79,12 +79,8 @@ def generate_repo_class(ui, repo):
     class svnlocalrepo(superclass):
         def svn_commitctx(self, ctx):
             """Commits a ctx, but defeats manifest recycling introduced in hg 1.9."""
-            ncbackup = self.ui.backupconfig("phases", "new-commit")
-            try:
-                self.ui.setconfig("phases", "new-commit", "public")
+            with self.ui.configoverride({("phases", "new-commit"): "public"}, "hgsvn"):
                 hash = self.commitctx(ctxctx(ctx))
-            finally:
-                self.ui.restoreconfig(ncbackup)
             if phases is not None and getattr(self, "pushkey", False):
                 # set phase to be public
                 self.pushkey(
