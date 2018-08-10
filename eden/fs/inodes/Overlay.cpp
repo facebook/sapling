@@ -765,10 +765,30 @@ folly::File Overlay::createOverlayFileImpl(
       " in ",
       localDir_);
 
-  // Eden used to call fdatasync() here because technically that's required to
-  // reliably, atomically write a file.  But, per docs/InodeStorage.md, Eden
-  // does not claim to handle disk, kernel, or power failure, and fdatasync has
-  // a nearly 300 microsecond cost.
+  // fdatasync() is required to ensure that we are really reliably and
+  // atomically writing out the new file.  Without calling fdatasync() the file
+  // contents may not be flushed to disk even though the rename has been
+  // written.
+  //
+  // However, fdatasync() has a significant performance overhead.  We've
+  // measured it at a nearly 300 microsecond cost, which can significantly
+  // impact performance of source control update operations when many inodes are
+  // affected.
+  //
+  // Per docs/InodeStorage.md, Eden does not claim to handle disk, kernel, or
+  // power failure, so we do not call fdatasync() in the common case.  However,
+  // the root inode is particularly important; if its data is corrupt Eden will
+  // not be able to remount the checkout.  Therefore we always call fdatasync()
+  // when writing out the root inode.
+  if (inodeNumber == kRootNodeId) {
+    auto syncReturnCode = folly::fdatasyncNoInt(tmpFD);
+    folly::checkUnixError(
+        syncReturnCode,
+        "error flushing data to overlay file for inode ",
+        inodeNumber,
+        " in ",
+        localDir_);
+  }
 
   auto returnCode =
       renameat(dirFile_.fd(), tmpPath.data(), dirFile_.fd(), path.c_str());
