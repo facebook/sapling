@@ -79,8 +79,9 @@ py_class!(class config |py| {
 
     def sources(
         &self, section: &PyBytes, name: &PyBytes
-    ) -> PyResult<Vec<(Option<PyBytes>, Option<(PyBytes, usize, usize)>, PyBytes)>> {
+    ) -> PyResult<Vec<(Option<PyBytes>, Option<(PyBytes, usize, usize, usize)>, PyBytes)>> {
         // Return [(value, file_source, source)]
+        // file_source is a tuple of (file_path, byte_start, byte_end, line)
         let cfg = self.cfg(py).borrow();
         let sources = cfg.get_sources(section.data(py), name.data(py));
         let mut result = Vec::with_capacity(sources.len());
@@ -88,7 +89,10 @@ py_class!(class config |py| {
             let value = source.value().clone().map(|bytes| PyBytes::new(py, &bytes));
             let file = source.location().map(|(path, range)| {
                 let bytes = path_to_local_bytes(&path).unwrap();
-                (PyBytes::new(py, bytes), range.start, range.end)
+                // Calculate the line number - count "\n" till range.start
+                let file = source.file_content().unwrap();
+                let line = 1 + file.slice(0, range.start).iter().filter(|ch| **ch == b'\n').count();
+                (PyBytes::new(py, &bytes), range.start, range.end, line)
             });
             let source = PyBytes::new(py, source.source());
             result.push((value, file, source));

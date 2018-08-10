@@ -37,13 +37,13 @@
   ...     print("%s = %r" % (item, cfg.get(section, name)))
   ...     print("  sources: %r" % (cfg.sources(section, name)))
   a.x = '1'
-    sources: [('1', ('$TESTTMP/a.rc', 6, 7), 'readpath')]
+    sources: [('1', ('$TESTTMP/a.rc', 6, 7, 2), 'readpath')]
   a.y = None
-    sources: [('2', ('$TESTTMP/a.rc', 10, 11), 'readpath'), (None, ('$TESTTMP/b.rc', 29, 36), 'readpath')]
+    sources: [('2', ('$TESTTMP/a.rc', 10, 11, 3), 'readpath'), (None, ('$TESTTMP/b.rc', 29, 36, 5), 'readpath')]
   b.z = '3'
-    sources: [('3', ('$TESTTMP/b.rc', 22, 23), 'readpath')]
+    sources: [('3', ('$TESTTMP/b.rc', 22, 23, 3), 'readpath')]
   c.x = '1'
-    sources: [('1', ('', 6, 7), 'parse')]
+    sources: [('1', ('', 6, 7, 2), 'parse')]
   d.x = None
     sources: [(None, None, 'set2')]
   d.y = '2'
